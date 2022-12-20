@@ -208,7 +208,7 @@ backup:
 
 lsblk
 
-sudo dd if=/dev/mmcblk0 of=sda1/cinepi+cinemate_$(date +%m/%d/%Y).img bs=1M
+sudo dd if=/dev/mmcblk0 of=sda1/cinepi+cinemate_$(date +%m-%d-%Y).img bs=1M
 
 cd /media/RAW
 

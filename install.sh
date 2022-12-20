@@ -80,5 +80,14 @@ cd /camera/mmal_render_ui
 # Recompile the file using the command make -j 4
 make -j 4
 
+# Change /camera/cameracore3.py
+
+# Rename the file
+mv /camera/cameracore3.py /camera/cameracore3_original.py
+
+# Copy the file
+cp /cinemate/cameracore3.py /camera/cameracore3.py
+
+
 echo "Install complete, rebooting."
 reboot

@@ -70,26 +70,26 @@ echo "rtc-ds1307" >> $MODULES
 sed -i '/exit 0/i \echo ds1307 0x68 > /sys/class/i2c-adapter/i2c-6/new_device &\hwclock -s &' /etc/rc.local
 
 # Change shutter speed display to shutter angle display
-
+cd ~
 # Rename the file /camera/mmal_render_ui/render.c to render_original.c
-mv ~/mmal_render_ui/render.c ~/mmal_render_ui/render_original.c
+mv mmal_render_ui/render.c mmal_render_ui/render_original.c
 
 # Copy the file /cinemate/render.c to the folder /camera/mmal_render_ui
-cp ~/cinemate/render.c ~//mmal_render_ui
+cp cinemate/render.c mmal_render_ui/render.c
 
 # Change to the directory containing the file
-cd ~/mmal_render_ui
+cd mmal_render_ui
 
 # Recompile the file using the command make -j 4
 make -j 4
 
 # Change /camera/cameracore3.py
-
+cd ~ 
 # Rename the file
-mv ~/camera/cameracore3.py ~/camera/cameracore3_original.py
+mv camera/cameracore3.py camera/cameracore3_original.py
 
 # Copy the file
-cp ~/cinemate/cameracore3.py ~/camera/cameracore3.py
+cp cinemate/cameracore3.py camera/cameracore3.py
 
 # Install Pi-shrink, for backing up SD card
 cd ~

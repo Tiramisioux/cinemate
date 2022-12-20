@@ -204,4 +204,12 @@ backup
 
 https://www.tomshardware.com/how-to/back-up-raspberry-pi-as-disk-image
 
+backup:
 
+lsblk
+
+sudo dd if=/dev/mmcblk0 of=sda1/cinepi+cinemate_$(date +%m/%d/%Y).img bs=1M
+
+cd /media/RAW
+
+sudo pishrink.sh -z myimg.img

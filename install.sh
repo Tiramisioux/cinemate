@@ -68,13 +68,13 @@ sed -i '/exit 0/i \echo ds1307 0x68 > /sys/class/i2c-adapter/i2c-6/new_device &\
 # Change shutter speed display to shutter angle display
 
 # Rename the file /camera/mmal_render_ui/render.c to render_original.c
-mv camera/mmal_render_ui/render.c /camera/mmal_render_ui/render_original.c
+mv ~/camera/mmal_render_ui/render.c /camera/mmal_render_ui/render_original.c
 
 # Copy the file /cinemate/render.c to the folder /camera/mmal_render_ui
-cp cinemate/render.c /camera/mmal_render_ui
+cp ~/cinemate/render.c /camera/mmal_render_ui
 
 # Change to the directory containing the file
-cd camera/mmal_render_ui
+cd ~/camera/mmal_render_ui
 
 # Recompile the file using the command make -j 4
 make -j 4
@@ -82,10 +82,10 @@ make -j 4
 # Change /camera/cameracore3.py
 
 # Rename the file
-mv camera/cameracore3.py /camera/cameracore3_original.py
+mv ~/camera/cameracore3.py /camera/cameracore3_original.py
 
 # Copy the file
-cp cinemate/cameracore3.py /camera/cameracore3.py
+cp ~/cinemate/cameracore3.py /camera/cameracore3.py
 
 #Reboot
 echo "Install complete, rebooting."

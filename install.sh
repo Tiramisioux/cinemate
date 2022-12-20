@@ -1,6 +1,10 @@
 #!/bin/sh
 # install.sh will install the necessary packages to get the CineMate-HAT working. Will also add a second I2C channel on channel 6.
 
+# git clone https://github.com/Tiramisioux/cinemate.git
+# cd cinemate
+# chmod +x install.sh
+# sudo ./install.sh
 
 ## Enable I2C, SPI and second I2C channel on GPIO pins 22 (SDA channel 6) and 23 (SCL channel6) and change monitor resolution to 1920x1080
 

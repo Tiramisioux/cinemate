@@ -66,6 +66,10 @@ echo "rtc-ds1307" >> $MODULES
 
 sed -i '/exit 0/i \echo ds1307 0x68 > /sys/class/i2c-adapter/i2c-6/new_device &\hwclock -s &' /etc/rc.local
 
+#Clone the Cinemate repository
+cd ~
+git clone https://github.com/Tiramisioux/cinemate.git
+
 # Change shutter speed display to shutter angle display
 
 # Rename the file /camera/mmal_render_ui/render.c to render_original.c

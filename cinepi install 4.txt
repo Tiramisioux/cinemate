@@ -1,0 +1,207 @@
+// startx.elf
+
+// RTC + I2C
+
+config.txt
+
+sudo nano /boot/config.txt
+
+dtparam=i2c_arm=on
+dtoverlay=i2c6
+dtoverlay=pi3-disable-bt
+dtoverlay=gpio-shutdown
+
+sudo nano /etc/modules
+
+i2c-bcm2708
+i2c-dev
+rtc-ds1307
+
+sudo nano /etc/rc.local
+
+Add the following lines before exit 0
+echo ds1307 0x68 > /sys/class/i2c-adapter/i2c-2/new_device &
+hwclock -s &
+
+date - check the system time
+sudo hwclock -r - check the date and time of the RTC
+sudo hwclock -w - write the system time to the RTC
+sudo hwclock -s - set the system time from the RTC
+
+//ADC
+
+sudo apt-get install build-essential python-dev python-smbus git -y
+git clone https://github.com/adafruit/Adafruit_Python_ADS1x15.git
+cd ~
+cd Adafruit_Python_ADS1x15
+sudo python3 setup.py install
+
+---
+
+sudo apt-get update -y
+
+sudo pip3 install smbus2
+sudo apt-get install -y python-smbus
+sudo apt-get install -y i2c-tools
+
+sudo apt-get install python3 python3-pip python3-pil libjpeg-dev zlib1g-dev libfreetype6-dev liblcms2-dev libopenjp2-7 libtiff5 -y
+sudo -H pip3 install luma.oled
+sudo usermod -a -G spi,gpio,i2c pi
+
+//OLED, ADC, RTC
+
+		sudo apt-get update -y
+		sudo apt upgrade -y
+		sudo apt-get -y install git
+
+
+---
+
+sudo -H pip3 install --upgrade luma.oled
+sudo apt-get update
+sudo apt-get install python3 python3-pip python3-pil libjpeg-dev zlib1g-dev libfreetype6-dev liblcms2-dev libopenjp2-7 libtiff5 -y
+sudo -H pip3 install luma.oled
+	sudo apt-get install python3-pil
+sudo usermod -a -G spi,gpio,i2c pi
+
+
+---
+
+	python3 -m pip install --upgrade pip
+	python3 -m pip install --upgrade Pillow
+
+---
+
+
+sudo apt-get install build-essential python-dev python-smbus git -y
+git clone https://github.com/adafruit/Adafruit_Python_ADS1x15.git
+cd ~
+cd Adafruit_Python_ADS1x15
+sudo python3 setup.py install
+
+---
+
+sudo apt-get install build-essential python-dev python-smbus python-pip -y
+
+	nano simpletest.py
+
+	# Create an ADS1115 ADC (16-bit) instance.
+	adc = Adafruit_ADS1x15.ADS1115()
+
+	# Or create an ADS1015 ADC (12-bit) instance.
+	#adc = Adafruit_ADS1x15.ADS1015()
+
+	# Note you can change the I2C address from its default (0x48), and/or the I2C
+	# bus by passing in these optional parameters:
+	#adc = Adafruit_ADS1x15.ADS1015(address=0x48, bus=2)
+
+---
+#funkar tom hit
+
+sudo nano /etc/modules
+
+Add the following to the to the end of this file
+i2c-bcm2708
+i2c-dev
+rtc-ds1307
+
+sudo nano /etc/rc.local
+
+Add the following lines before exit 0
+echo ds1307 0x68 > /sys/class/i2c-adapter/i2c-2/new_device &
+hwclock -s &
+
+date - check the system time
+sudo hwclock -r - check the date and time of the RTC
+sudo hwclock -w - write the system time to the RTC
+sudo hwclock -s - set the system time from the RTC
+
+---
+
+https://stackoverflow.com/questions/56592522/python-simple-audio-tone-generator
+
+---
+
+Nokia 
+
+https://github.com/aviralverma-8877/pi-clock
+
+install.sh
+                               
+#!/bin/sh
+
+cd ~
+sudo apt update -y
+sudo apt autoremove -y
+sudo apt update --fix-missing -y
+sudo apt install git python3-pip python3-pil -y
+sudo pip3 install adafruit-circuitpython-pcd8544
+sudo pip3 install psutil
+sudo pip3 install gpiozero
+git clone https://github.com/aviralverma-8877/pi-clock.git
+cd pi-clock
+crontab -l > crontab_new 
+echo "@reboot cd $PWD && sudo python3 main.py" > crontab_new
+crontab crontab_new
+rm crontab_new
+reboot
+
+Sen: https://github.com/adafruit/Adafruit_CircuitPython_PCD8544/blob/main/examples/pcd8544_pillow_demo.py
+
+git clone https://github.com/Tiramisioux/CineMate-HAT.git
+cd CineMate-HAT && sudo chmod 777 install.sh && sudo ./install.sh
+	
+git clone http://github.com/adafruit/Adafruit_Nokia_LCD.git
+
+---
+Large oled
+
+---
+
+GPIO	Funktion
+13	dig in 1a
+19	dig in 1b
+
+5	dig in 2a
+
+23	adc0 alert pin
+
+27	SDA	bus2
+18	SCL	bus2
+
+
+
+---
+
+To change this, you will need to ssh into the Pi and recompile the record module:
+-find the yavtar2/rawcam.c file in the home directory
+-find the area of the code labelled "// CINEPI VARIABLES" and locate the line "int pin = 7;" ( should be around line ~3245 )
+-change that value to another available pin you want to use for record trigger ( you will need to use the pin# and not the GPIO pin # for this. In this case pin 7 is GPIO4 )
+
+-once you've changed the pin value, you can recompile by doing a simple "sudo make -j 4"
+-reboot the pi and you should notice the changes take effect.
+
+---
+
+pip3cin install pydub
+pip3 install ffmpeg-python
+
+#!/usr/bin/sudo /usr/bin/python3
+in the shebang line, make the script executable with chmod +x /home/pi/mypythonthing.py and it will run with sudo as ./mypythonthing.py
+
+Shutdown with paperclip
+https://www.recantha.co.uk/blog/?p=13999
+
+https://www.zdnet.com/article/booting-my-raspberry-pi-4-from-a-usb-device/
+
+https://florianmuller.com/quickly-resize-and-shrink-raspberry-pi-sd-card-image-on-macos
+
+http://pi.bek.no/cloneSDcard/
+
+--
+
+backup
+
+https://www.tomshardware.com/how-to/back-up-raspberry-pi-as-disk-image
+
+

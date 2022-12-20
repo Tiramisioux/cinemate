@@ -87,6 +87,12 @@ mv ~/camera/cameracore3.py ~/camera/cameracore3_original.py
 # Copy the file
 cp ~/cinemate/cameracore3.py ~/camera/cameracore3.py
 
+# Install Pi-shrink, for backing up SD card
+cd ~
+wget https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh
+sudo chmod +x pishrink.sh
+sudo mv pishrink.sh /usr/local/bin
+
 #Reboot
 echo "Install complete, rebooting."
 reboot

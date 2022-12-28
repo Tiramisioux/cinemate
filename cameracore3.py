@@ -64,7 +64,10 @@ async def main():
         run3("./home/pi/mmal_render_ui/render"),
         # run3("sudo -E python3 /home/pi/audio_rec.py"),
         run3("watch -n 6 /home/pi/clear_cache.sh"),
-        run3("python3 /home/pi/cinemate/manual_controls.py"))
+        # CineMate scripts
+        run3("python3 /home/pi/cinemate/manual_controls.py"),
+        run3("python3 /home/pi/cinemate/rec_detect.p"),
+        run3("python3 /home/pi/cinemate/metadata.py"))
         
 asyncio.run(main())
         

@@ -38,11 +38,25 @@ fps_setting = CameraParameters("FPS")
 is_recording_setting = CameraParameters("IS_RECORDING")
 
 # Callback function for the subscription
-def handle_message(message):
-    print("Received message:", message['data'].decode())
-    key = message['data'].decode()
-    value = r.get(key)
-    return [key, value]
+# def handle_message(message):
+#     print("Received message:", message['data'].decode())
+#     key = message['data'].decode()
+#     value = r.get(key)
+#     return [key, value]
+
+def check_drive_mounted():
+    mount_point = "/media/RAW"
+    if os.path.ismount(mount_point):
+        # Get disk usage
+        total_bytes, used_bytes, free_bytes = disk_usage(path.realpath('/media/RAW'))
+        drive_mounted = 1
+        min_left = int((free_bytes / 1000000) / (3.3 * int(fps) * 60))
+        
+    else:
+        drive_mounted = 0
+        min_left = None
+    
+    return drive_mounted, min_left
 
 def get_values():
     global iso, shutter_a, fps, is_recording
@@ -57,17 +71,14 @@ def get_system_stats():
     # Get cpu statistics
     cpu_load = str(psutil.cpu_percent()) + '%'
     cpu_temp = ('{}\u00B0'.format(int(CPUTemperature().temperature)))
-    
-    # Get disk usage
-    total_bytes, used_bytes, free_bytes = disk_usage(path.realpath('/media/RAW'))
-    min_left = int((free_bytes / 1000000) / (3.3 * int(fps) * 60))
 
-    return [cpu_load, cpu_temp, total_bytes, min_left]
+    return cpu_load, cpu_temp
 
 def draw_display():
     # Get disk usage
     
     fill_color = "black"
+    drive_mounted, min_left = check_drive_mounted()
     
     if is_recording == "1":
         fill_color = "red"
@@ -94,8 +105,11 @@ def draw_display():
     draw.text((400, 400), "cinepi-raw", font = font2, align ="left", fill="white")
     
     # GUI Lower line
-    draw.text((10, 1051), str((str(min_left)) + " min"), font = font, align ="left", fill="white")
-    draw.text((190, 1051), str(is_recording), font = font, align ="left", fill="white")
+    if drive_mounted:
+        draw.text((10, 1051), str((str(min_left)) + " min"), font = font, align ="left", fill="white")
+    else:
+        draw.text((10, 1051), "no disk", font = font, align ="left", fill="white")
+    # draw.text((190, 1051), str(is_recording), font = font, align ="left", fill="white")
             
     fb.show(image)
     
@@ -113,17 +127,13 @@ iso, shutter_a, fps, is_recording = (get_values())
 # Get cpu statistics
 cpu_load = str(psutil.cpu_percent()) + '%'
 cpu_temp = ('{}\u00B0'.format(int(CPUTemperature().temperature)))
-
-# Get disk usage
-total_bytes, used_bytes, free_bytes = disk_usage(path.realpath('/media/RAW'))
-min_left = int((free_bytes / 1000000) / (3.3 * int(fps) * 60))
     
 # Draw display
 draw_display()
 
 while True:
     iso, shutter_a, fps, is_recording = (get_values())
-    cpu_load, cpu_temp, total_bytes, min_left = get_system_stats()
+    cpu_load, cpu_temp = get_system_stats()
     draw_display()
     time.sleep(0.01)
 

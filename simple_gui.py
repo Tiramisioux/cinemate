@@ -80,7 +80,7 @@ def draw_display():
     fill_color = "black"
     drive_mounted, min_left = check_drive_mounted()
     
-    if is_recording == "1":
+    if is_recording == "1" and drive_mounted == 1:
         fill_color = "red"
         GPIO.output(21,GPIO.HIGH)
     if is_recording == "0":
@@ -91,8 +91,8 @@ def draw_display():
     draw = ImageDraw.Draw(image)
     draw.rectangle(((0, 0), fb.size), fill=fill_color)
 
-    font = ImageFont.truetype('fonts/smallest_pixel-7.ttf', 33)
-    font2 = ImageFont.truetype('fonts/smallest_pixel-7.ttf', 233)  
+    font = ImageFont.truetype('/home/pi/cinemate2/fonts/smallest_pixel-7.ttf', 33)
+    font2 = ImageFont.truetype('/home/pi/cinemate2/fonts/smallest_pixel-7.ttf', 233)  
 
     # GUI Upper line
     draw.text((10, -0), str(iso_setting.get()), font = font, align ="left", fill="white")

@@ -60,8 +60,9 @@ async def main():
 
     await asyncio.gather(
         run3("cinepi-raw"),
-        run3("python3 /home/pi/cinemate/manual_controls.py"),
-        run3("python3 /home/pi/cinemate/simple_gui.py"))
+        run3("python3 /home/pi/cinemate2/simple_gui.py"),
+        run3("python3 /home/pi/cinemate2/manual_controls.py"))
+
         
 asyncio.run(main())
         

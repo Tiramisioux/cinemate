@@ -63,6 +63,7 @@ def check_drive_mounted():
     return drive_mounted, min_left
 
 def check_last_clip_folder_name():
+    
     # get a list of all directories in the folder_path
     dirs = os.listdir('/media/RAW')
 
@@ -115,8 +116,8 @@ def draw_display():
     draw.text((10, -0), str(iso), font = font, align ="left", fill="white")
     draw.text((110, 0), str(shutter_a), font = font, align ="left", fill="white")
     draw.text((190, 0), str(fps), font = font, align ="left", fill="white")
-    draw.text((310, 0), str(cpu_load), font = font, align ="left", fill="white")
-    draw.text((445, 0), str(cpu_temp), font = font, align ="left", fill="white")
+    # draw.text((310, 0), str(cpu_load), font = font, align ="left", fill="white")
+    # draw.text((445, 0), str(cpu_temp), font = font, align ="left", fill="white")
     
     # GUI Middle logo
     draw.text((400, 400), "cinepi-raw", font = font2, align ="left", fill="white")
@@ -143,13 +144,17 @@ pubsub.psubscribe("cp_controls")
 # Get initial values
 iso, shutter_a, fps, resolution, is_recording = (get_values())
 resolution = int(resolution)
-last_clip = check_last_clip_folder_name()
+
 file_size = 3.3
 if resolution == 1080: 
     file_size = 3.3
 if resolution == 1520: 
     file_size = 4.8
 drive_mounted, min_left = check_drive_mounted()
+if drive_mounted: 
+    last_clip = check_last_clip_folder_name()
+else:
+    last_clip = ""
 
 
 # Get cpu statistics
@@ -162,8 +167,12 @@ draw_display()
 while True:
     iso, shutter_a, fps, resolution, is_recording = get_values()
     cpu_load, cpu_temp = get_system_stats()
-    last_clip = check_last_clip_folder_name()
     drive_mounted, min_left = check_drive_mounted()
+    if drive_mounted: 
+        last_clip = check_last_clip_folder_name()
+    else:
+        last_clip = ""
+
     draw_display()
     time.sleep(0.5)
 

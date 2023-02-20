@@ -58,6 +58,19 @@ def check_drive_mounted():
     
     return drive_mounted, min_left
 
+def check_last_clip_folder_name():
+    # get a list of all directories in the folder_path
+    dirs = os.listdir('/media/RAW')
+
+    # sort the directories by their creation time (mtime)
+    dirs = sorted(dirs, key=lambda d: os.path.getmtime(os.path.join('/media/RAW', d)))
+
+    # get the last (most recently created) directory
+    last_dir = dirs[-1]
+    
+    return last_dir
+
+
 def get_values():
     global iso, shutter_a, fps, is_recording
     
@@ -109,7 +122,8 @@ def draw_display():
         draw.text((10, 1051), str((str(min_left)) + " min"), font = font, align ="left", fill="white")
     else:
         draw.text((10, 1051), "no disk", font = font, align ="left", fill="white")
-    # draw.text((190, 1051), str(is_recording), font = font, align ="left", fill="white")
+    
+    draw.text((725, 1051), str(last_clip), font = font, align ="left", fill="white")
             
     fb.show(image)
     
@@ -123,6 +137,7 @@ pubsub.psubscribe("cp_controls")
 
 # Get initial values
 iso, shutter_a, fps, is_recording = (get_values())
+last_clip = check_last_clip_folder_name()
 
 # Get cpu statistics
 cpu_load = str(psutil.cpu_percent()) + '%'
@@ -134,8 +149,9 @@ draw_display()
 while True:
     iso, shutter_a, fps, is_recording = (get_values())
     cpu_load, cpu_temp = get_system_stats()
+    last_clip = check_last_clip_folder_name()
     draw_display()
-    time.sleep(0.01)
+    time.sleep(0.5)
 
 # # Start listening for messages
 # for message in pubsub.listen():

@@ -35,6 +35,7 @@ r = redis.Redis(host='localhost', port=6379, db=0)
 iso_setting = CameraParameters("ISO")
 shutter_a_setting = CameraParameters("SHUTTER")
 fps_setting = CameraParameters("FPS")
+resolution_setting = CameraParameters("RESOLUTION")
 is_recording_setting = CameraParameters("IS_RECORDING")
 
 # Callback function for the subscription
@@ -45,12 +46,15 @@ is_recording_setting = CameraParameters("IS_RECORDING")
 #     return [key, value]
 
 def check_drive_mounted():
+
     mount_point = "/media/RAW"
     if os.path.ismount(mount_point):
         # Get disk usage
         total_bytes, used_bytes, free_bytes = disk_usage(path.realpath('/media/RAW'))
         drive_mounted = 1
-        min_left = int((free_bytes / 1000000) / (3.3 * int(fps) * 60))
+        if resolution_setting.get() == "1080": file_size = 3.2
+        if resolution_setting.get() == "1520": file_size = 4.8
+        min_left = int((free_bytes / 1000000) / (file_size * int(fps) * 60))
         
     else:
         drive_mounted = 0
@@ -72,13 +76,15 @@ def check_last_clip_folder_name():
 
 
 def get_values():
-    global iso, shutter_a, fps, is_recording
+    global iso, shutter_a, fps, resolution, is_recording
     
     iso = iso_setting.get()
     shutter_a = shutter_a_setting.get()
     fps = fps_setting.get()
+    resolution = resolution_setting.get()
     is_recording = is_recording_setting.get()
-    return [iso, shutter_a, fps, is_recording]
+    
+    return iso, shutter_a, fps, resolution, is_recording
 
 def get_system_stats():
     # Get cpu statistics
@@ -88,10 +94,8 @@ def get_system_stats():
     return cpu_load, cpu_temp
 
 def draw_display():
-    # Get disk usage
-    
+
     fill_color = "black"
-    drive_mounted, min_left = check_drive_mounted()
     
     if is_recording == "1" and drive_mounted == 1:
         fill_color = "red"
@@ -108,7 +112,7 @@ def draw_display():
     font2 = ImageFont.truetype('/home/pi/cinemate2/fonts/smallest_pixel-7.ttf', 233)  
 
     # GUI Upper line
-    draw.text((10, -0), str(iso_setting.get()), font = font, align ="left", fill="white")
+    draw.text((10, -0), str(iso), font = font, align ="left", fill="white")
     draw.text((110, 0), str(shutter_a), font = font, align ="left", fill="white")
     draw.text((190, 0), str(fps), font = font, align ="left", fill="white")
     draw.text((310, 0), str(cpu_load), font = font, align ="left", fill="white")
@@ -123,7 +127,8 @@ def draw_display():
     else:
         draw.text((10, 1051), "no disk", font = font, align ="left", fill="white")
     
-    draw.text((725, 1051), str(last_clip), font = font, align ="left", fill="white")
+    #draw.text((160, 1051), str(resolution), font = font, align ="left", fill="white")
+    draw.text((722, 1051), str(last_clip), font = font, align ="left", fill="white")
             
     fb.show(image)
     
@@ -136,8 +141,16 @@ pubsub = r.pubsub()
 pubsub.psubscribe("cp_controls")
 
 # Get initial values
-iso, shutter_a, fps, is_recording = (get_values())
+iso, shutter_a, fps, resolution, is_recording = (get_values())
+resolution = int(resolution)
 last_clip = check_last_clip_folder_name()
+file_size = 3.3
+if resolution == 1080: 
+    file_size = 3.3
+if resolution == 1520: 
+    file_size = 4.8
+drive_mounted, min_left = check_drive_mounted()
+
 
 # Get cpu statistics
 cpu_load = str(psutil.cpu_percent()) + '%'
@@ -147,9 +160,10 @@ cpu_temp = ('{}\u00B0'.format(int(CPUTemperature().temperature)))
 draw_display()
 
 while True:
-    iso, shutter_a, fps, is_recording = (get_values())
+    iso, shutter_a, fps, resolution, is_recording = get_values()
     cpu_load, cpu_temp = get_system_stats()
     last_clip = check_last_clip_folder_name()
+    drive_mounted, min_left = check_drive_mounted()
     draw_display()
     time.sleep(0.5)
 

@@ -16,6 +16,7 @@ GPIO.setwarnings(False) # Ignore warning for now
 GPIO.setmode(GPIO.BCM) # Use GPIO pin numbering
 
 alert_pin0 = 27
+
 pin4 = 4        #rec pin
 pin21 = 21      #rec out pin
 
@@ -24,6 +25,8 @@ pin12 = 12      #speed ramping button
 pin13 = 13      #3 way switch position -1 - half speed 
 pin6 = 6        #3 way switch position +1 - double speed
 
+pwmPin = 41
+
 GPIO.setup(alert_pin0, GPIO.IN, pull_up_down = GPIO.PUD_DOWN) # Set GPIO 21 as input for alert
 
 GPIO.setup(pin4, GPIO.IN, pull_up_down=GPIO.PUD_UP)     # Rec button
@@ -31,6 +34,9 @@ GPIO.setup(pin12, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(pin16, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(pin13, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(pin6, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(pwmPin, GPIO.OUT)
+
+p = GPIO.PWM(pwmPin, 50)
 
 iso_steps = [100,200,400,500,640,800,1000,1200,2000,2500,3200]
 shutter_angle_steps = [*range(0, 361, 1)]
@@ -127,10 +133,12 @@ def change_res_button(channel):
     
 def start_stop_record(channel):
     if is_recording_setting.get() == "0":
-        is_recording_setting.set("1")    
+        is_recording_setting.set("1") 
+        p.start(20)   
         
     elif is_recording_setting.get() == "1":
-        is_recording_setting.set("0") 
+        is_recording_setting.set("0")
+        p.stop()
     
 GPIO.add_event_detect(pin4, GPIO.FALLING, callback=start_stop_record, bouncetime=600)
 GPIO.add_event_detect(alert_pin0, GPIO.FALLING, callback=set_camera_parameters)

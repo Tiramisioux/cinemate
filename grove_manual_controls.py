@@ -142,24 +142,24 @@ while True:
     shutter_angle_read = adc.read(shutter_angle_pot)
     fps_read = adc.read(fps_pot)
     
-    # if abs(iso_read - iso_read_old) > 1000/len(iso_steps):
-    #     iso_new = iso_steps[round((len(iso_steps)-1)*adc.read(iso_pot)/999)]
-    #     iso_setting.set(iso_new)
-    #     iso_read_old = iso_read
+    if abs(iso_read - iso_read_old) > 1000/len(iso_steps):
+        iso_new = iso_steps[round((len(iso_steps)-1)*adc.read(iso_pot)/999)]
+        iso_setting.set(iso_new)
+        iso_read_old = iso_read
         
-    # if abs(shutter_angle_read - shutter_angle_read_old) > 1000/len(shutter_angle_steps):
-    #     shutter_angle_new = shutter_angle_steps[round((len(shutter_angle_steps)-1)*adc.read(shutter_angle_pot)/1000)]
-    #     shutter_angle_setting.set(shutter_angle_new)
-    #     shutter_angle_read_old = shutter_angle_read
-    # shutter_angle_set = 180
+    if abs(shutter_angle_read - shutter_angle_read_old) > 1000/len(shutter_angle_steps):
+        shutter_angle_new = shutter_angle_steps[round((len(shutter_angle_steps)-1)*adc.read(shutter_angle_pot)/1000)]
+        shutter_angle_setting.set(shutter_angle_new)
+        shutter_angle_read_old = shutter_angle_read
+    shutter_angle_set = 180
         
-    # if abs(fps_read - fps_read_old) > 1000/len(fps_steps) and not fps_lock:
-    #     fps_new = fps_steps[round((len(fps_steps)-1)*adc.read(fps_pot)/999)]
-    #     print("fps: " + str(fps_new))
-    #     fps_setting.set(fps_new)
-    #     fps_read_old = fps_read
-    #     if shu_sync_mode == 1:
-    #         shutter_angle_fps_synced_setting.set(shutter_angle_set)
+    if abs(fps_read - fps_read_old) > 1000/len(fps_steps) and not fps_lock:
+        fps_new = fps_steps[round((len(fps_steps)-1)*adc.read(fps_pot)/999)]
+        print("fps: " + str(fps_new))
+        fps_setting.set(fps_new)
+        fps_read_old = fps_read
+        if shu_sync_mode == 1:
+            shutter_angle_fps_synced_setting.set(shutter_angle_set)
             
     print("iso: ", iso_setting.get())
     print("shutter_angle: ", shutter_angle_setting.get())

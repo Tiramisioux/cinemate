@@ -1,6 +1,7 @@
 from fractions import Fraction 
 import subprocess as sp
 import redis
+import os
 
 r = redis.Redis(host='localhost', port=6379, db=0)
 
@@ -92,3 +93,49 @@ class CameraParameters:
         self.__convert__(value=value)
         self.value = value
         return self.value
+    
+class RedisMonitor:
+    
+    def __init__(self, channel):
+        self.redis_client = redis.Redis(host='localhost', port=6379, db=0)
+        self.redis_sub = self.redis_client.pubsub()
+        self.redis_sub.subscribe(channel)
+        self.last_number = None
+        self.increasing_number = None
+        self.is_increasing = False
+
+    def check_number(self):
+        return self.increasing_number
+
+    def is_number_increasing(self):
+        return self.is_increasing
+
+    def listen(self):
+        counter = 0
+        self.is_increasing = False
+        for message in self.redis_sub.listen():
+            if counter >= 5:
+                break
+            
+            message_data = message['data']
+            
+            if isinstance(message_data, bytes):
+                decoded_message = message_data.decode()
+                message_str = (f'{decoded_message}')
+            else:
+                message_str = (f'{message_data}')
+            
+            if message_str.startswith('F:'):
+                number_str = message_str.split(':')[1]
+                number = int(number_str)
+                if self.last_number is not None and number > self.last_number:
+                    self.last_number = number
+                    if self.increasing_number is None or number > self.increasing_number:
+                        self.increasing_number = number
+                        self.is_increasing = True
+                    else:
+                        self.is_increasing = False
+                elif self.last_number is None:
+                    self.last_number = number
+                
+                counter += 1

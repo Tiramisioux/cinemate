@@ -13,7 +13,9 @@ import RPi.GPIO as GPIO
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
-GPIO.setup(21,GPIO.OUT)
+
+rec_out_pin = 19
+GPIO.setup(rec_out_pin,GPIO.OUT)
 
 # Frame buffer coordinates
 fb = Framebuffer(0)
@@ -38,12 +40,6 @@ fps_setting = CameraParameters("FPS")
 resolution_setting = CameraParameters("RESOLUTION")
 is_recording_setting = CameraParameters("IS_RECORDING")
 
-# Callback function for the subscription
-# def handle_message(message):
-#     print("Received message:", message['data'].decode())
-#     key = message['data'].decode()
-#     value = r.get(key)
-#     return [key, value]
 
 def check_drive_mounted():
 
@@ -71,7 +67,10 @@ def check_last_clip_folder_name():
     dirs = sorted(dirs, key=lambda d: os.path.getmtime(os.path.join('/media/RAW', d)))
 
     # get the last (most recently created) directory
-    last_dir = dirs[-1]
+    if dirs: 
+        last_dir = dirs[-1]
+    else:
+        last_dir = ""
     
     return last_dir
 
@@ -100,9 +99,9 @@ def draw_display():
     
     if is_recording == "1" and drive_mounted == 1:
         fill_color = "red"
-        GPIO.output(21,GPIO.HIGH)
+        GPIO.output(rec_out_pin,GPIO.HIGH)
     if is_recording == "0":
-        GPIO.output(21,GPIO.LOW)
+        GPIO.output(rec_out_pin,GPIO.LOW)
         fill_color = "black"
         
     image = Image.new("RGBA", fb.size)
@@ -116,8 +115,8 @@ def draw_display():
     draw.text((10, -0), str(iso), font = font, align ="left", fill="white")
     draw.text((110, 0), str(shutter_a), font = font, align ="left", fill="white")
     draw.text((190, 0), str(fps), font = font, align ="left", fill="white")
-    # draw.text((310, 0), str(cpu_load), font = font, align ="left", fill="white")
-    # draw.text((445, 0), str(cpu_temp), font = font, align ="left", fill="white")
+    draw.text((310, 0), str(cpu_load), font = font, align ="left", fill="white")
+    draw.text((445, 0), str(cpu_temp), font = font, align ="left", fill="white")
     
     # GUI Middle logo
     draw.text((400, 400), "cinepi-raw", font = font2, align ="left", fill="white")
@@ -135,7 +134,7 @@ def draw_display():
     
 # Program
 
-GPIO.output(21,GPIO.LOW)
+GPIO.output(rec_out_pin,GPIO.LOW)
 
 # Subscribe to a pattern
 pubsub = r.pubsub()

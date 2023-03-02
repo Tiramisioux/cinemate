@@ -31,7 +31,7 @@ resolution_setting = CameraParameters("RESOLUTION")
 
 # Define interrupt callbacks
 def start_stop_record(channel):
-    # Check if number is increasing or decreasing
+    # Check if cinepi frame count is increasing (= camera is recording)
     if is_increasing == False:
         is_recording_setting.set("1") # Start recording
     elif is_increasing == True:
@@ -70,7 +70,7 @@ GPIO.add_event_detect(res_pin, GPIO.FALLING, callback=change_res)
 while True:
     # Listen for changes to camera parameters
     monitor.listen()
-    # Check if number is increasing or decreasing
+    # Check if cinepi frame count is increasing (= camera is recording)
     is_increasing = monitor.is_number_increasing()
     # Set recording LED status based on number trend
     if is_increasing == True:

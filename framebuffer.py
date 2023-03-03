@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# From https://github.com/robertmuth/Pytorinox
 
 """Framebuffer helper that makes lots of simpifying assumptions
 bits_per_pixel    assumed memory layout

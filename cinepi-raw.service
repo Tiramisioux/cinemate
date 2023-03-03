@@ -1,0 +1,13 @@
+[Unit]
+Description=cinepi-raw
+
+[Service]
+ExecStart=cinepi-raw
+WorkingDirectory=/home/pi/cinepi-raw
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+User=pi
+
+[Install]
+WantedBy=multi-user.target

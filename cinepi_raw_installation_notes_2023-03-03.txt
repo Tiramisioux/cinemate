@@ -59,7 +59,7 @@ std::strftime(time_string, sizeof(time_string), "%y-%m-%d_%H%M%S", time_info);
 
 exit with ctrl+x and answer y to save changes
 	
-// Add a "F:" label to the frame count variable, accessible by redis-cli, to make the number easier to parse. This allows for python scripts to detect if the camera is writing frames to the SSD:
+// Add a "F:" prefix to the frame count variable, accessible by redis-cli, to make the number easier to parse. This allows for python scripts to detect if the camera is writing frames to the SSD:
 
 sudo nano cinepi-raw/cinepi/cinepi_controller.cpp
 

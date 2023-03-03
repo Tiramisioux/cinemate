@@ -1,5 +1,3 @@
-from fractions import Fraction 
-import subprocess as sp
 import redis
 import os
 
@@ -93,6 +91,7 @@ class CameraParameters:
         self.__convert__(value=value)
         self.value = value
         return self.value
+    
     
 class RedisMonitor:
     

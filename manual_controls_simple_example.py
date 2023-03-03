@@ -24,14 +24,18 @@ GPIO.setup(iso_increase_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(iso_decrease_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(res_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-# Load instances for reading and writing camera parameters
-is_recording_setting = CameraParameters("IS_RECORDING")
+# Load objects for reading and writing camera parameters
 iso_setting = CameraParameters("ISO")
+shutter_angle_setting = CameraParameters("SHUTTER")
+shutter_angle_fps_synced_setting = CameraParameters("SHUTTER_FPS_SYNCED")
+fps_setting = CameraParameters("FPS")
+is_recording_setting = CameraParameters("IS_RECORDING")
 resolution_setting = CameraParameters("RESOLUTION")
+
 
 # Define interrupt callbacks
 def start_stop_record(channel):
-    # Check if cinepi frame count is increasing (= camera is recording)
+    # Check if number is increasing or decreasing
     if is_increasing == False:
         is_recording_setting.set("1") # Start recording
     elif is_increasing == True:
@@ -52,6 +56,8 @@ def decrease_iso(channel):
     new_iso = int(max(min(current_iso / 2, 3200), 100))
     # Update ISO setting
     iso_setting.set(new_iso)
+    
+## Here you can add methods for changing shutter angle and frame rate
         
 def change_res(channel):
     # Toggle between full-frame and cropped-frame resolutions
@@ -70,7 +76,7 @@ GPIO.add_event_detect(res_pin, GPIO.FALLING, callback=change_res)
 while True:
     # Listen for changes to camera parameters
     monitor.listen()
-    # Check if cinepi frame count is increasing (= camera is recording)
+    # Check if number is increasing or decreasing
     is_increasing = monitor.is_number_increasing()
     # Set recording LED status based on number trend
     if is_increasing == True:

@@ -5,7 +5,7 @@ For the scripts to work properly, some modifications need to be made to the cine
 
 ## Basic functions
 
-Autostarts cinepi-raw, manual controls and a simple gui
+Autostarts cinepi-raw, manual controls and a simple gui on the HDMI display.
 
 Enables recording on GPIO 4.
 
@@ -62,21 +62,20 @@ We can add control classes from <code>redis_proxy.py</code>, allowing us to read
 
 Simple Python example:
 
-<code>from redis_proxy import CameraParameters
+<code>from redis_proxy import CameraParameters</code>
 
-fps_setting = CameraParameters("FPS")
+<code>fps_setting = CameraParameters("FPS")</code>
 
-current_fps = fps_setting.get()
+<code>current_fps = fps_setting.get()</code>
 
-print(current_fps)
+<code>print(current_fps)</code>
 
-new_fps = fps_setting.set(50)
+<code>new_fps = fps_setting.set(50)</code>
 
-current_fps = fps_setting.get()
+<code>current_fps = fps_setting.get()</code>
 
-print(current_fps)
+<code>print(current_fps)</code>
 
-</code>
 
 
 

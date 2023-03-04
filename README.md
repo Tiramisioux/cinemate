@@ -7,13 +7,13 @@ For the scripts to work properly, some modifications need to be made to the cine
 
 Autostarts cinepi-raw with a simple GUI on the HDMI display.
 
-Enables recording on GPIO 4.
+- Enables recording on GPIO 4.
 
-Enables LED rec light on GPIO 21 (be sure to use a resistor between GPIO and LED!)
+- Enables LED rec light on GPIO 21 (be sure to use a resistor between GPIO and LED!)
 
-Enables toggling of ISO (100, 200, 400, 800, 1600, 3200) on GPIO 23 (up) and GPIO 25 (down). 
+- Enables toggling of ISO (100, 200, 400, 800, 1600, 3200) on GPIO 23 (up) and GPIO 25 (down). 
 
-Enables toggling of resolution (full frame/cropped frame) on GPIO 13
+- Enables toggling of resolution (full frame/cropped frame) on GPIO 13
 
 ## Dependencies
 <code>sudo apt update</code>

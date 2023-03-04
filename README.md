@@ -5,7 +5,7 @@ For the scripts to work properly, some modifications need to be made to the cine
 
 ## Basic functions
 
-Autostarts cinepi-raw, manual controls and a simple gui on the HDMI display.
+Autostarts cinepi-raw with a simple GUI on the HDMI display.
 
 Enables recording on GPIO 4.
 

@@ -78,7 +78,7 @@ Simple Python example:
 
 ## Using the Seeed Studio Grove Base Hat
 
-The file <code>manual_controls_grove_base_hat</code> is also autostarted in the above install process. The script allow you to add a Grove Base Hat for easier connection of potentiometers for ISO, shutter speed and frame rate and buttons and switches for other controls.
+The file <code>manual_controls_grove_base_hat.py</code> is also autostarted in the above install process. The script allow you to add a Grove Base Hat for easier connection of potentiometers for ISO, shutter speed and frame rate and buttons and switches for other controls.
 
 The script makes use of the inputs as follows:
 

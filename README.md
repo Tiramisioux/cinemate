@@ -80,6 +80,35 @@ Simple Python example:
 
 The file <code>manual_controls_grove_base_hat.py</code> is also autostarted in the above install process. The script allow you to add a Grove Base Hat for easier connection of potentiometers for ISO, shutter speed and frame rate and buttons and switches for other controls.
 
+### Installing the Grove Base Hat
+
+<code>sudo apt-get install build-essential python3-dev python3-pip python3-smbus python3-serial git</code>
+
+<code>sudo pip3 install -U setuptools wheel</code>
+
+<code>sudo pip3 install -U grove.py</code>
+
+
+<code>git clone https://github.com/Seeed-Studio/grove.py.git</code>
+
+<code>cd grove.py</code>
+
+<code>sudo python3 setup.py install</code>
+
+### Enable I2C
+
+<code>sudo raspi-config</code>
+
+<code>3 Interface Options > I5 I2C Enable > Yes</code>
+
+<code>sudo reboot</code>
+
+
+
+### Connections overview
+
+![IMG_0489](https://user-images.githubusercontent.com/74836180/223535996-650c867d-eef6-4191-b2cb-
+
 The script makes use of the inputs as follows:
 
 |Connection |Function  |
@@ -94,6 +123,10 @@ The script makes use of the inputs as follows:
 |GPIO 17|     frame rate double speed|
 |GPIO 5 |     shutter angle fps sync mode for constant exposure OR constant motion blur on fps change|
 |GPIO 22 |    frame rate lock switch|
+
+_Note that GPIO 4 and 21 (rec pin/rec out pin), 23 and 25 (ISO up/down and 13 (toggle resolution) from the basic setup above still works._
+
+
 
 
 

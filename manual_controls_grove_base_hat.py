@@ -116,7 +116,7 @@ def set_shu_sync_mode(channel):
         
 def set_fps_lock(channel):
     global fps_lock
-    fps_lock = GPIO.input(shu_sync_mode_switch)
+    fps_lock = GPIO.input(fps_lock_switch)
 
     
 # Set callbacks for interrupts

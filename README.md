@@ -1,19 +1,19 @@
 # cinemate2
-Handy scripts for manual control of cinepi-raw, adding basic functionality of starting and stopping recording and changing camera parameters (ISO, shutter angle and frame rate) via the GPIO pins.
+Manual controls and a simple GUI for cinepi-raw, adding basic functionality of starting and stopping recording and changing camera parameters (ISO, shutter angle and frame rate) via the GPIO pins.
 
 For the scripts to work properly, some modifications need to be made to the cinepi-raw installation. You can find instructions in the file <code>cinepi_raw_installation_notes_2023-03-03.txt</code> or download and install the ready made image file in the release section of this repository.
 
 ## Basic functions
 
-Autostarts cinepi-raw, manual controls and a simple gui on the HDMI display.
+- Autostarts cinepi-raw with a simple GUI on the HDMI display.
 
-Enables recording on GPIO 4.
+- Enables recording on GPIO 4.
 
-Enables LED rec light on GPIO 21 (be sure to use a resistor between GPIO and LED!)
+- Enables LED rec light on GPIO 21 (be sure to use a resistor between GPIO and LED!)
 
-Enables toggling of ISO (100, 200, 400, 800, 1600, 3200) on GPIO 23 (up) and GPIO 25 (down). 
+- Enables toggling of ISO (100, 200, 400, 800, 1600, 3200) on GPIO 23 (up) and GPIO 25 (down). 
 
-Enables toggling of resolution (full frame/cropped frame) on GPIO 13
+- Enables toggling of resolution (full frame/cropped frame) on GPIO 13
 
 ## Dependencies
 <code>sudo apt update</code>

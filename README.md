@@ -91,7 +91,7 @@ GPIO 19     rec signal out pin, for LED rec light (be sure to use a resistor on 
 GPIO 26     resolution switch
 GPIO 16     frame rate half speed
 GPIO 17     frame rate double speed
-GPIO 5      shutter angle fps_sync mode
+GPIO 5      shutter angle fps sync mode for constant exposure OR constant motion blur on fps change
 GPIO 22     frame rate lock switch
 
 

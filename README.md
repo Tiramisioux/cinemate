@@ -76,6 +76,26 @@ Simple Python example:
 
 <code>print(current_fps)</code>
 
+## Using the Seeed Studio Grove Base Hat
+
+The file <code>manual_controls_grove_base_hat</code> is also autostarted in the above install process. The script allow you to add a Grove Base Hat for easier connection of potentiometers for ISO, shutter speed and frame rate and buttons and switches for other controls.
+
+The script makes use of the inputs as follows:
+
+A0          ISO potentiometer
+A2          shutter angle potentiometer
+A4          frame rate potentiometer
+
+GPIO 18     recording pin
+GPIO 19     rec signal out pin, for LED rec light (be sure to use a resistor on this pin!)
+GPIO 26     resolution switch
+GPIO 16     frame rate half speed
+GPIO 17     frame rate double speed
+GPIO 5      shutter angle fps_sync mode
+GPIO 22     frame rate lock switch
+
+
+
 
 
 

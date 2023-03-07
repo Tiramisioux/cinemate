@@ -107,7 +107,7 @@ The file <code>manual_controls_grove_base_hat.py</code> is also autostarted in t
 
 ### Connections overview
 
-![IMG_0489](https://user-images.githubusercontent.com/74836180/223535996-650c867d-eef6-4191-b2cb-
+![IMG_0489](https://user-images.githubusercontent.com/74836180/223561273-fed7e4df-c563-4959-aa38-d72583ad1880.JPG)
 
 The script makes use of the inputs as follows:
 

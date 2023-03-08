@@ -10,14 +10,15 @@ GPIO.setwarnings(False) # Ignore warning for now
 GPIO.setmode(GPIO.BCM) # Use GPIO pin numbering
 
 # Set GPIO functions
-rec_pin = 18            #rec pin
-rec_out_pin = 19        #rec out pin
-res_switch = 26         #resolution switch
-fps_half_switch = 16    #frame rate half speed
-fps_double_switch = 17  #frame rate double speed
-shu_sync_mode_switch = 5     #shutter angle fps_sync mode
-fps_lock_switch = 22    #frame rate lock switch 
-safe_shutdown_pin = 24  #pin for safe shutdown
+rec_pin = 5             #rec pin
+rec_out_pin = 6         #rec out pin
+res_switch = 24         #resolution switch
+fps_half_switch = 17    #frame rate half speed
+fps_double_switch = 16  #frame rate double speed
+
+shu_sync_mode_switch = 26     #shutter angle fps_sync mode
+fps_lock_switch = 18    #frame rate lock switch 
+safe_shutdown_pin = 7  #pin for safe shutdown
 pwmPin = 41             #rec signal out pin (RPi headphone jack right channel)
 
 GPIO.setup(rec_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)

@@ -116,13 +116,13 @@ The script makes use of the inputs as follows:
 |A0|ISO potentiometer|
 |A2|shutter angle potentiometer|
 |A4|frame rate potentiometer|
-|GPIO 18|     recording pin|
-|GPIO 19|     rec signal out pin, for LED rec light (be sure to use a resistor on this pin!)|
-|GPIO 26|     resolution switch|
-|GPIO 16|     frame rate half speed|
-|GPIO 17|     frame rate double speed|
-|GPIO 5 |     shutter angle fps sync mode for constant exposure OR constant motion blur on fps change|
-|GPIO 22 |    frame rate lock switch|
+|GPIO 5|     recording pin|
+|GPIO 6|     rec signal out pin, for LED rec light (be sure to use a resistor on this pin!)|
+|GPIO 24|     resolution switch|
+|GPIO 17|     frame rate half speed|
+|GPIO 16|     frame rate double speed|
+|GPIO 26 |     shutter angle fps sync mode for constant exposure OR constant motion blur on fps change|
+|GPIO 18 |    frame rate lock switch|
 
 _Note that GPIO 4 and 21 (rec pin/rec out pin), 23 and 25 (ISO up/down and 13 (toggle resolution) from the basic setup above still works._
 

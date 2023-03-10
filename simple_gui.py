@@ -36,6 +36,7 @@ os.system('sudo sh -c "TERM=linux setterm -foreground black -clear all >/dev/tty
 iso_setting = CameraParameters("ISO")
 shutter_a_setting = CameraParameters("SHUTTER")
 fps_setting = CameraParameters("FPS")
+is_recording_setting = CameraParameters("IS_RECORDING")
 resolution_setting = CameraParameters("RESOLUTION")
 
 def check_drive_mounted():
@@ -53,14 +54,15 @@ def check_drive_mounted():
     return drive_mounted, min_left
 
 def get_values():
-    global iso, shutter_a, fps, resolution
+    global iso, shutter_a, fps, is_recording, resolution
     
     iso = iso_setting.get()
     shutter_a = shutter_a_setting.get()
     fps = fps_setting.get()
+    is_recording =  is_recording_setting.get()
     resolution = resolution_setting.get()
     
-    return iso, shutter_a, fps, resolution
+    return iso, shutter_a, fps, is_recording, resolution
 
 def get_system_stats():
     # Get cpu statistics
@@ -73,9 +75,9 @@ def draw_display():
 
     fill_color = "black"
     
-    if is_increasing == True:
+    if is_recording == "1":
         fill_color = "red"
-    if is_increasing == False:
+    if is_recording == "0":
         fill_color = "black"
         
     image = Image.new("RGBA", fb.size)
@@ -109,7 +111,7 @@ pubsub = r.pubsub()
 pubsub.psubscribe("cp_controls")
 
 # Get initial values
-iso, shutter_a, fps, resolution = get_values()
+iso, shutter_a, fps, is_recording, resolution = get_values()
 resolution = int(resolution)
 
 file_size = 3.3
@@ -126,10 +128,8 @@ cpu_temp = ('{}\u00B0'.format(int(CPUTemperature().temperature)))
 while True:
     
     monitor.listen()
-
-    is_increasing = monitor.is_number_increasing()
     
-    iso, shutter_a, fps, resolution = get_values()
+    iso, shutter_a, fps, is_recording, resolution = get_values()
     cpu_load, cpu_temp = get_system_stats()
     drive_mounted, min_left = check_drive_mounted()
 

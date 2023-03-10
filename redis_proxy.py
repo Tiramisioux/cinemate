@@ -113,7 +113,7 @@ class RedisMonitor:
         counter = 0
         self.is_increasing = False
         for message in self.redis_sub.listen():
-            if counter >= 10:
+            if counter >= 4:
                 break
             
             message_data = message['data']

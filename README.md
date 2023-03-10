@@ -1,19 +1,19 @@
 # cinemate2
-Handy scripts for manual control of cinepi-raw, adding basic functionality of starting and stopping recording and changing camera parameters (ISO, shutter angle and frame rate) via the GPIO pins.
+Manual controls and a simple GUI for cinepi-raw, adding basic functionality of starting and stopping recording and changing camera parameters (ISO, shutter angle and frame rate) via the GPIO pins.
 
 For the scripts to work properly, some modifications need to be made to the cinepi-raw installation. You can find instructions in the file <code>cinepi_raw_installation_notes_2023-03-03.txt</code> or download and install the ready made image file in the release section of this repository.
 
 ## Basic functions
 
-Autostarts cinepi-raw, manual controls and a simple gui on the HDMI display.
+- Autostarts cinepi-raw with a simple GUI on the HDMI display.
 
-Enables recording on GPIO 4.
+- Enables recording on GPIO 4.
 
-Enables LED rec light on GPIO 21 (be sure to use a resistor between GPIO and LED!)
+- Enables LED rec light on GPIO 21 (be sure to use a resistor between GPIO and LED!)
 
-Enables toggling of ISO (100, 200, 400, 800, 1600, 3200) on GPIO 23 (up) and GPIO 25 (down). 
+- Enables toggling of ISO (100, 200, 400, 800, 1600, 3200) on GPIO 23 (up) and GPIO 25 (down). 
 
-Enables toggling of resolution (full frame/cropped frame) on GPIO 13
+- Enables toggling of resolution (full frame/cropped frame) on GPIO 13
 
 ## Dependencies
 <code>sudo apt update</code>
@@ -75,6 +75,60 @@ Simple Python example:
 <code>current_fps = fps_setting.get()</code>
 
 <code>print(current_fps)</code>
+
+## Using the Seeed Studio Grove Base Hat
+
+The file <code>manual_controls_grove_base_hat.py</code> is also autostarted in the above install process. The script allow you to add a Grove Base Hat for easier connection of potentiometers for ISO, shutter speed and frame rate and buttons and switches for other controls.
+
+### Installing the Grove Base Hat
+
+<code>sudo apt-get install build-essential python3-dev python3-pip python3-smbus python3-serial git</code>
+
+<code>sudo pip3 install -U setuptools wheel</code>
+
+<code>sudo pip3 install -U grove.py</code>
+
+
+<code>git clone https://github.com/Seeed-Studio/grove.py.git</code>
+
+<code>cd grove.py</code>
+
+<code>sudo python3 setup.py install</code>
+
+### Enable I2C
+
+<code>sudo raspi-config</code>
+
+<code>3 Interface Options > I5 I2C Enable > Yes</code>
+
+<code>sudo reboot</code>
+
+
+
+### Connections overview
+
+![IMG_0489](https://user-images.githubusercontent.com/74836180/223561273-fed7e4df-c563-4959-aa38-d72583ad1880.JPG)
+
+The script makes use of the inputs as follows:
+
+|Connection |Function  |
+--- | --- |
+|A0|ISO potentiometer|
+|A2|shutter angle potentiometer|
+|A4|frame rate potentiometer|
+|GPIO 5|     recording pin|
+|GPIO 6|     rec signal out pin, for LED rec light (be sure to use a resistor on this pin!)|
+|GPIO 24|     resolution switch|
+|GPIO 17|     frame rate half speed|
+|GPIO 16|     frame rate double speed|
+|GPIO 26 |     shutter angle fps sync mode for constant exposure OR constant motion blur on fps change|
+|GPIO 18 |    frame rate lock switch|
+
+_Note that GPIO 4 and 21 (rec pin/rec out pin), 23 and 25 (ISO up/down and 13 (toggle resolution) from the basic setup above still works._
+
+
+
+
 
 
 

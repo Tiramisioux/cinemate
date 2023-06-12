@@ -15,6 +15,14 @@ For the scripts to work properly, some modifications need to be made to the cine
 
 - Enables toggling of resolution (full frame/cropped frame) on GPIO 13
 
+## Advanced functions
+
+- Automatic recording of audio scratch track (needs a USB microphone)
+
+- Assign your own GPIO pins for various camera control (start /stop recording, change ISO, resolution etc) 
+
+- Attach a Grove Base HAT for control of ISO, shutter angle and fps via potentiometers
+
 ## Dependencies
 <code>sudo apt update</code>
 
@@ -36,49 +44,22 @@ To install the scripts and make them run as services:
 
 ## Uninstall
 
-To uninstall (or stop) the scripts:
+To uninstall:
 
 <code>cd cinemate2</code>
 
 <code>make uninstall</code>
 
-## Set initial shutter angle value
+## Starting and stopping the scripts
 
-Do this once, for the cinepi-raw installation: 
+<code>cd cinemate2</code>
 
-<code>redis-cli</code>
+<code>make start</code> or <code>make stop</code>
 
-<code>set shutter_a 180</code>
+or
 
-<code>publish cp_controls shutter_a</code>
+<code>python3 main.py</code>
 
-<code>exit</code> 
-
-## How it works
-
-Script works similar to <code>bmd_proxy.py</code> in CinePi version 1. It uses the file  <code>redis_proxy.py</code> to load control objects of camera parameters and a monitor object to monitor the framecount of cinepi-raw. 
-
-We can add control classes from <code>redis_proxy.py</code>, allowing us to read and write shutter angle and frame rate.
-
-Simple Python example:
-
-<code>from redis_proxy import CameraParameters</code>
-
-<code>fps_setting = CameraParameters("FPS")</code>
-
-<code>current_fps = fps_setting.get()</code>
-
-<code>print(current_fps)</code>
-
-<code>new_fps = fps_setting.set(50)</code>
-
-<code>current_fps = fps_setting.get()</code>
-
-<code>print(current_fps)</code>
-
-## Using the Seeed Studio Grove Base Hat
-
-The file <code>manual_controls_grove_base_hat.py</code> is also autostarted in the above install process. The script allow you to add a Grove Base Hat for easier connection of potentiometers for ISO, shutter speed and frame rate and buttons and switches for other controls.
 
 ### Installing the Grove Base Hat
 
@@ -88,14 +69,13 @@ The file <code>manual_controls_grove_base_hat.py</code> is also autostarted in t
 
 <code>sudo pip3 install -U grove.py</code>
 
-
 <code>git clone https://github.com/Seeed-Studio/grove.py.git</code>
 
 <code>cd grove.py</code>
 
 <code>sudo python3 setup.py install</code>
 
-### Enable I2C
+#### Enable I2C
 
 <code>sudo raspi-config</code>
 
@@ -103,28 +83,28 @@ The file <code>manual_controls_grove_base_hat.py</code> is also autostarted in t
 
 <code>sudo reboot</code>
 
+### Default GPIO settings
 
+The script makes use of the GPIO pins as follows:
 
-### Connections overview
-
-![IMG_0489](https://user-images.githubusercontent.com/74836180/223561273-fed7e4df-c563-4959-aa38-d72583ad1880.JPG)
-
-The script makes use of the inputs as follows:
-
-|Connection |Function  |
+|Basic GPIO |Function  |
 --- | --- |
-|A0|ISO potentiometer|
-|A2|shutter angle potentiometer|
-|A4|frame rate potentiometer|
-|GPIO 5|     recording pin|
-|GPIO 6|     rec signal out pin, for LED rec light (be sure to use a resistor on this pin!)|
+|GPIO 4|     recording pins|
+|GPIO 21|     rec signal out pisn, for LED rec light (be sure to use a resistor on these pin!)|
 |GPIO 24|     resolution switch|
-|GPIO 17|     frame rate half speed|
-|GPIO 16|     frame rate double speed|
-|GPIO 26 |     shutter angle fps sync mode for constant exposure OR constant motion blur on fps change|
+|GPIO 26 |     shutter angle lock switch|
 |GPIO 18 |    frame rate lock switch|
 
-_Note that GPIO 4 and 21 (rec pin/rec out pin), 23 and 25 (ISO up/down and 13 (toggle resolution) from the basic setup above still works._
+|Grove Base HAT |Function  |
+--- | --- |
+|GPIO 5|     recording pin|
+|GPIO 6|     rec signal out pin, for LED rec light (be sure to use a resistor on these pin!)
+|A0|ISO potentiometer (overrides any GPIO pins assigned to iso)|
+|A2|shutter angle potentiometer|
+|A4|frame rate potentiometer|
+
+Multiple pins can be assigned to a camera functions. Pins can be defined by the user when instantiating the manual_controls class.
+
 
 
 

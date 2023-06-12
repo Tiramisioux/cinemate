@@ -1,0 +1,150 @@
+// digest from the cinepi-raw discord community, as of 2023-03-03
+
+// install latest 64bit raspbian 11 bulleye
+
+// install cinepi-raw package
+
+sudo apt update && sudo apt install -y build-essential cmake wget git libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev
+sudo apt-get install redis-server
+sudo apt-get install libhiredis-dev
+cd ~
+git clone https://github.com/sewenew/redis-plus-plus.git
+cd redis-plus-plus
+mkdir build
+cd build
+cmake ..
+make
+sudo make install
+cd ~
+
+
+// Install udev-media-automount
+
+git clone https://github.com/cinepi/udev-media-automount.git
+
+cd udev-media-automount-master
+sudo make install
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+
+Sudo reboot
+
+
+// Clone cinepi-raw
+
+git clone https://github.com/cinepi/cinepi-raw.git 
+
+
+// changes to the cinepi-raw
+
+sudo nano cinepi-raw/CMakeLists.txt
+
+Uncomment line 59:
+
+cineadd_subdirectory(output)
+
+exit with ctrl+x and answer y to save changes
+	
+// change folder and file naming conventions, adding seconds to allow recording to start on each new RPi clock second
+
+sudo nano cinepi-raw/cinepi/utils.hpp
+
+change the line 
+
+std::strftime(time_string, sizeof(time_string), "%y-%m-%d_%H%M", time_info);
+
+to:
+
+std::strftime(time_string, sizeof(time_string), "%y-%m-%d_%H%M%S", time_info);
+
+exit with ctrl+x and answer y to save changes
+	
+// Add a "F:" prefix to the frame count variable, accessible by redis-cli, to make the number easier to parse. This allows for python scripts to detect if the camera is writing frames to the SSD:
+
+sudo nano cinepi-raw/cinepi/cinepi_controller.cpp
+
+change line 125 from
+
+redis_->publish(CHANNEL_STATS, to_string(app_->GetEncoder()->getFrameCount()));
+
+to:
+
+redis_->publish(CHANNEL_STATS, "F:" + to_string(app_->GetEncoder()->getFrameCount()));
+
+
+// Build cinepi-raw package
+
+cd cinepi-raw 
+mkdir build
+cd build
+cmake .. -DENABLE_DRM=1 -DENABLE_X11=0 -DENABLE_QT=0 -DENABLE_OPENCV=0 -DENABLE_TFLITE=0
+make -j4  # use -j1 on Raspberry Pi 3 or earlier devices
+sudo make install
+sudo ldconfig # this is only necessary on the first build
+cd ~
+cinepi-raw (VIOLA!!)
+
+at this point you should see the camera output on the HDMI monitor (don't forget to do raspi-config and change the boot mode to CLI with autologin)
+open another ssh window and follow along via redis-cli commands:
+    redis-cli
+    set width 2028
+    publish cp_controls width 
+    set height 1520
+    publish cp_controls height
+    set fps 24
+    publish cp_controls fps
+    set iso 400
+    publish cp_controls iso
+    set shutter_a 180
+    publish cp_controls shutter_a
+    set cg_rb 1.5,1.5
+    publish cp_controls cg_rb
+    set compress 1
+    publish cp_controls compress
+    set cam_init 1
+    publish cp_controls cam_init
+    set is_recording 1
+    publish cp_controls is_recording
+    set is_recording 0
+    publish cp_controls is_recording
+
+
+// another change to cinepi-raw
+
+sudo nano cinepi-raw/cinepi/cinepi-raw.cpp
+
+After line 73, add his line:
+
+app.GetEncoder()->still_capture = false;
+
+So the section reads:
+
+		if(trigger > 0){
+			app.GetEncoder()->still_capture = false;
+			controller.folderOpen = create_clip_folder(app.GetOptions(), controller.getClipNumber());
+
+cd ~
+
+cd /cinepi-raw/build
+
+sudo make -j4 install
+
+// install PiShrink (optional)
+wget https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh
+chmod +x pishrink.sh
+sudo mv pishrink.sh /usr/local/bin
+
+
+// Installing Grove Base Hat
+
+Grove Base hat
+
+sudo apt-get install build-essential python3-dev python3-pip python3-smbus python3-serial git
+sudo pip3 install -U setuptools wheel
+sudo pip3 install -U grove.py
+
+git clone https://github.com/Seeed-Studio/grove.py.git
+cd grove.py
+sudo python3 setup.py install
+
+sudo reboot

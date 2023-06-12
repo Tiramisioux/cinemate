@@ -60,8 +60,7 @@ or
 
 <code>python3 main.py</code>
 
-
-### Installing the Grove Base Hat
+## Installing the Grove Base Hat
 
 <code>sudo apt-get install build-essential python3-dev python3-pip python3-smbus python3-serial git</code>
 
@@ -75,7 +74,7 @@ or
 
 <code>sudo python3 setup.py install</code>
 
-#### Enable I2C
+### Enable I2C
 
 <code>sudo raspi-config</code>
 
@@ -83,7 +82,7 @@ or
 
 <code>sudo reboot</code>
 
-### Default GPIO settings
+## Default GPIO settings
 
 The script makes use of the GPIO pins as follows:
 

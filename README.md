@@ -1,7 +1,7 @@
 # cinemate2
 Manual controls and a simple GUI for cinepi-raw, adding basic functionality of starting and stopping recording and changing camera parameters (ISO, shutter angle and frame rate) via the GPIO pins.
 
-For the scripts to work properly, some modifications need to be made to the cinepi-raw installation. You can find instructions in the file <code>cinepi_raw_installation_notes_2023-03-03.txt</code> or download and install the ready made image file in the release section of this repository.
+Preinstalled image file with CinePi with and without cinemate2 can be found in the release section of this repository.
 
 ## Basic functions
 

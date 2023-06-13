@@ -11,7 +11,7 @@ Preinstalled image file with CinePi with and without cinemate2 can be found in t
 
 - Enables LED rec light on GPIO 21 (be sure to use a resistor between GPIO and LED!)
 
-- Enables toggling of ISO (100, 200, 400, 800, 1600, 3200) on GPIO 23 (up) and GPIO 25 (down). 
+- Enables toggling of ISO (100, 200, 400, 800, 1600, 3200) on GPIO 23 (increase one step) and GPIO 25 (decrease one step). 
 
 - Enables toggling of resolution (full frame/cropped frame) on GPIO 13
 

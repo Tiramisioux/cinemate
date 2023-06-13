@@ -89,7 +89,7 @@ The script makes use of the GPIO pins as follows:
 |Basic GPIO |Function  |
 --- | --- |
 |GPIO 4|     recording pins|
-|GPIO 21|     rec signal out pisn, for LED rec light (be sure to use a resistor on these pin!)|
+|GPIO 21|     rec signal out pisn, for LED rec light (be sure to use a resistor on this pin!)|
 |GPIO 24|     resolution switch|
 |GPIO 26 |     shutter angle lock switch|
 |GPIO 18 |    frame rate lock switch|
@@ -97,7 +97,7 @@ The script makes use of the GPIO pins as follows:
 |Grove Base HAT |Function  |
 --- | --- |
 |GPIO 5|     recording pin|
-|GPIO 6|     rec signal out pin, for LED rec light (be sure to use a resistor on these pin!)
+|GPIO 6|     rec signal out pin, for LED rec light (be sure to use a resistor on this pin!)
 |A0|ISO potentiometer (overrides any GPIO pins assigned to iso)|
 |A2|shutter angle potentiometer|
 |A4|frame rate potentiometer|

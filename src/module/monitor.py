@@ -78,19 +78,32 @@ class DriveMonitor:
         folders = [os.path.join(self.path, d) for d in os.listdir(self.path) if os.path.isdir(os.path.join(self.path, d))]
         return max(folders, key=os.path.getctime) if folders else None
 
-    def get_last_created_wav_file(self):
-        if not self.is_drive_connected():
+    def get_last_created_wav_file(self):  
+        wav_directory = "/media/RAW/"
+        if not os.path.isdir(wav_directory):
+            print(f"Directory {wav_directory} does not exist.")
             return None
-        wavs = glob.glob(self.path + '/**/*.wav', recursive=True)
-        wavs += glob.glob(self.path + '/**/*.WAV', recursive=True)
-        return max(wavs, key=os.path.getctime) if wavs else None
+
+        wavs = glob.glob(wav_directory + '/**/*.wav', recursive=True)  
+        wavs += glob.glob(wav_directory + '/**/*.WAV', recursive=True)
+        
+        if not wavs:
+            return None
+        
+        # Sort the files lexicographically and return the last one
+        wavs.sort()
+        return os.path.basename(wavs[-1])
+
+
+
+
     
-    def scratch_track_recorded(self):
-        if self.is_drive_connected():
-            if self.get_last_created_folder()[:22] == self.get_last_created_wav_file()[:22]:
-                return True
-            else:
-                return False
+    # def scratch_track_recorded(self):
+    #     if self.is_drive_connected():
+    #         if self.get_last_created_folder()[:22] == self.get_last_created_wav_file()[:22]:
+    #             return True
+    #         else:
+    #             return False
         
 
     def get_file_count_of_last_created_folder(self):

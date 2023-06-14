@@ -1,7 +1,7 @@
 # cinemate2
 Manual controls and a simple GUI for cinepi-raw, adding basic functionality of starting and stopping recording and changing camera parameters (ISO, shutter angle and frame rate) via the GPIO pins.
 
-For the scripts to work properly, some modifications need to be made to the cinepi-raw installation. You can find instructions in the file <code>cinepi_raw_installation_notes_2023-03-03.txt</code> or download and install the ready made image file in the release section of this repository.
+Preinstalled image file with CinePi RAW can be found in the release section of this repository.
 
 ## Basic functions
 
@@ -11,7 +11,7 @@ For the scripts to work properly, some modifications need to be made to the cine
 
 - Enables LED rec light on GPIO 21 (be sure to use a resistor between GPIO and LED!)
 
-- Enables toggling of ISO (100, 200, 400, 800, 1600, 3200) on GPIO 23 (up) and GPIO 25 (down). 
+- Enables toggling of ISO (100, 200, 400, 800, 1600, 3200) on GPIO 23 (increase one step) and GPIO 25 (decrease one step). 
 
 - Enables toggling of resolution (full frame/cropped frame) on GPIO 13
 
@@ -34,7 +34,7 @@ For the scripts to work properly, some modifications need to be made to the cine
 
 ## Installation
 
-To install the scripts and make them run as services:
+To install the scripts and make them run as a service.
 
 <code>git clone https://github.com/Tiramisioux/cinemate2</code>
 
@@ -60,8 +60,7 @@ or
 
 <code>python3 main.py</code>
 
-
-### Installing the Grove Base Hat
+## Installing the Grove Base Hat
 
 <code>sudo apt-get install build-essential python3-dev python3-pip python3-smbus python3-serial git</code>
 
@@ -75,7 +74,7 @@ or
 
 <code>sudo python3 setup.py install</code>
 
-#### Enable I2C
+### Enable I2C
 
 <code>sudo raspi-config</code>
 
@@ -83,14 +82,14 @@ or
 
 <code>sudo reboot</code>
 
-### Default GPIO settings
+## Default GPIO settings
 
 The script makes use of the GPIO pins as follows:
 
 |Basic GPIO |Function  |
 --- | --- |
-|GPIO 4|     recording pins|
-|GPIO 21|     rec signal out pisn, for LED rec light (be sure to use a resistor on these pin!)|
+|GPIO 4|     recording pin|
+|GPIO 21|     rec signal out pisn, for LED rec light (be sure to use a resistor on this pin!)|
 |GPIO 24|     resolution switch|
 |GPIO 26 |     shutter angle lock switch|
 |GPIO 18 |    frame rate lock switch|
@@ -98,21 +97,9 @@ The script makes use of the GPIO pins as follows:
 |Grove Base HAT |Function  |
 --- | --- |
 |GPIO 5|     recording pin|
-|GPIO 6|     rec signal out pin, for LED rec light (be sure to use a resistor on these pin!)
+|GPIO 6|     rec signal out pin, for LED rec light (be sure to use a resistor on this pin!)
 |A0|ISO potentiometer (overrides any GPIO pins assigned to iso)|
 |A2|shutter angle potentiometer|
 |A4|frame rate potentiometer|
 
 Multiple pins can be assigned to a camera functions. Pins can be defined by the user when instantiating the manual_controls class.
-
-
-
-
-
-
-
-
-
-
-
-

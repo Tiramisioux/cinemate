@@ -34,7 +34,7 @@ Preinstalled image file with CinePi with and without cinemate2 can be found in t
 
 ## Installation
 
-To install the scripts and make them run as services:
+To install the scripts and make them run as a service.
 
 <code>git clone https://github.com/Tiramisioux/cinemate2</code>
 

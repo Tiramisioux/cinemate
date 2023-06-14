@@ -101,19 +101,24 @@ class SimpleGUI(threading.Thread):
             font = ImageFont.truetype('/home/pi/cinemate2/resources/fonts/smallest_pixel-7.ttf', 33)
             font2 = ImageFont.truetype('/home/pi/cinemate2/resources/fonts/smallest_pixel-7.ttf', 233)  
 
-            # Get the latest values from the monitor
+            # Get the latest values from the monitor object
             last_subfolder = self.monitor.get_last_created_folder()
-            # scratch_track_recorded = self.monitor.scratch_track_recorded()
+            last_wav = self.monitor.get_last_created_wav_file()
             last_folder_file_count = self.monitor.get_file_count_of_last_created_folder()
 
             if last_subfolder is None:
                 last_subfolder = "N/A"
             elif isinstance(last_subfolder, str):
                 last_subfolder = last_subfolder[11:]  # Exclude the first 12 characters
+            
+            if last_wav is None:
+                last_wav = "N/A"
+            elif isinstance(last_wav, str):
+                if last_subfolder[:22] == last_wav[:22]:
+                    last_wav= "+ WAV"
+                else:
+                    last_wav="N/A"
 
-            #     last_wav_file = "WAVE"
-            # else:
-            #     last_wav_file = "N/A"
             if last_folder_file_count is None:
                 last_folder_file_count = "N/A"
 
@@ -132,7 +137,7 @@ class SimpleGUI(threading.Thread):
                 draw.text((10, 1051), "no disk", font=font, align="left", fill="white")
                 
             draw.text((725, 1051), f"{last_subfolder}", font=font, align="left", fill="white")
-            # draw.text((1325, 1051), last_wav_file, font=font, align="left", fill="white")
+            draw.text((1325, 1051), f"{last_wav}", font=font, align="left", fill="white")
             draw.text((1525, 1051), f"{last_folder_file_count}", font=font, align="left", fill="white")
 
             self.fb.show(image)

@@ -1,7 +1,7 @@
 # cinemate2
 Manual controls and a simple GUI for cinepi-raw, adding basic functionality of starting and stopping recording and changing camera parameters (ISO, shutter angle and frame rate) via the GPIO pins.
 
-Preinstalled image file with CinePi with and without cinemate2 can be found in the release section of this repository.
+Preinstalled image file with CinePi RAW can be found in the release section of this repository.
 
 ## Basic functions
 
@@ -88,7 +88,7 @@ The script makes use of the GPIO pins as follows:
 
 |Basic GPIO |Function  |
 --- | --- |
-|GPIO 4|     recording pins|
+|GPIO 4|     recording pin|
 |GPIO 21|     rec signal out pisn, for LED rec light (be sure to use a resistor on this pin!)|
 |GPIO 24|     resolution switch|
 |GPIO 26 |     shutter angle lock switch|

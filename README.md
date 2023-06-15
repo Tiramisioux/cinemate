@@ -3,7 +3,7 @@ Manual controls and a simple GUI for cinepi-raw, adding basic functionality of s
 
 Preinstalled image file with Raspbian + CinePi RAW can be found in the release section of this repository.
 
-For adding cinemate2, follow install istructions below. 
+For adding cinemate2, follow install instructions below. 
 
 ## Basic functions
 

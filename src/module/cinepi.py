@@ -25,7 +25,7 @@ import os
 
 class CinePi:
     _instance = None  # Singleton instance
-    LINES_THRESHOLD = 10  # The number of lines to check
+    LINES_THRESHOLD = 20  # The number of lines to check
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -65,15 +65,8 @@ class CinePi:
                         self.is_recording.clear()
                         self.audio_recorder.stop_recording()  # Stop audio recording
                         
-                if "frame" in line:
-                    self.last_lines.insert(0, line)
-                    self.last_lines = self.last_lines[:self.LINES_THRESHOLD]  # Keep only the last lines
-                    self.lines_counter += 1
-
-                    if self.lines_counter >= self.LINES_THRESHOLD:
-                        if not any("save" in s for s in self.last_lines):
-                            self.is_recording.clear()
-                        self.lines_counter = 0  # Reset the counter
+ 
+                
                         
     def get_recording_status(self):
         with self._lock:

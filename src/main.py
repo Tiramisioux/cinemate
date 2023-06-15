@@ -38,9 +38,8 @@ manual_controls = ManualControls(cinepi_controller, monitor,
                                  rec_out_pin=[21, 6])                           # GPIO rec light pins (be sure to use a resistor between LED and pin!)
 
 # Instantiate the Keyboard class
-keyboard = Keyboard(cinepi_controller, monitor)
+keyboard_thread = Keyboard(cinepi_controller, monitor)
+keyboard_thread.start()
 
-# Start listening for keyboard events
-keyboard.start_listening()
 
 pause()

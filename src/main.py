@@ -5,6 +5,7 @@ from module.cinepi import Config, CinePi, CinePiController
 from module.monitor import DriveMonitor
 from module.simple_gui import SimpleGUI
 from module.manual_controls import ManualControls
+from module.keyboard import Keyboard
 
 # Create the Redis connection
 r = redis.Redis(host=Config.REDIS_HOST, port=Config.REDIS_PORT, db=Config.REDIS_DB)
@@ -35,5 +36,11 @@ manual_controls = ManualControls(cinepi_controller, monitor,
                                  res_button_pin=24,                             # GPIO resolution button - switches between 1080 (cropped) and 1520 (full frame)
                                  rec_pin=[4, 5],                                # GPIO recording pins
                                  rec_out_pin=[21, 6])                           # GPIO rec light pins (be sure to use a resistor between LED and pin!)
+
+# Instantiate the Keyboard class
+keyboard = Keyboard(cinepi_controller, monitor)
+
+# Start listening for keyboard events
+keyboard.start_listening()
 
 pause()

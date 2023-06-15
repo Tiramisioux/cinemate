@@ -9,7 +9,9 @@ For adding cinemate2, follow install instructions below.
 
 - Autostarts cinepi-raw with a simple GUI on the HDMI display.
 
-- Enables recording on GPIO 4.
+- Enables recording on GPIO 4
+
+- Start/stop recording with USB keyboard ('r')
 
 - Enables LED rec light on GPIO 21 (be sure to use a resistor between GPIO and LED!)
 
@@ -32,7 +34,7 @@ For adding cinemate2, follow install instructions below.
 
 <code>sudo apt install python3-pip</code>
 
-<code>sudo pip3 install psutil Pillow redis</code>
+<code>sudo pip3 install psutil Pillow redis keyboard</code>
 
 ## Installation
 

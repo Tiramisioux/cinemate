@@ -90,7 +90,7 @@ main.py has to be run as root to enable the keyboard module
 
 <code>sudo reboot</code>
 
-## Default GPIO settings
+## Default manual control settings
 
 |GPIO |USB Keyboard|Grove Base HAT Analog channel| Function  |
 --- | --- | --- | --- |

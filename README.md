@@ -46,6 +46,8 @@ To install the scripts and make them run as a service.
 
 <code>make install</code>
 
+Main.py will now run automatically at startup.
+
 ## Uninstall
 
 To uninstall:
@@ -90,22 +92,13 @@ main.py has to be run as root to enable the keyboard module
 
 ## Default GPIO settings
 
-The script makes use of the GPIO pins as follows:
-
-|Basic GPIO |Function  |
---- | --- |
-|GPIO 4|     recording pin|
-|GPIO 21|     rec signal out pisn, for LED rec light (be sure to use a resistor on this pin!)|
-|GPIO 24|     resolution switch|
-|GPIO 26 |     shutter angle lock switch|
-|GPIO 18 |    frame rate lock switch|
-
-|Grove Base HAT |Function  |
---- | --- |
-|GPIO 5|     recording pin|
-|GPIO 6|     rec signal out pin, for LED rec light (be sure to use a resistor on this pin!)
-|A0|ISO potentiometer (overrides any GPIO pins assigned to iso)|
-|A2|shutter angle potentiometer|
-|A4|frame rate potentiometer|
-
-Multiple pins can be assigned to a camera functions. Pins can be defined by the user when instantiating the manual_controls class.
+|GPIO |USB Keyboard|Grove Base HAT Analog channel| Function  |
+--- | --- | --- | --- |
+|4, 5|r ||    start/stop recording|
+|21, 6|||     rec signal out, for LED rec light (be sure to use a resistor on this pin!)|
+|24|||     change resolution (cropped and full frame)|
+|26 |||     lock shutter angle |
+|18 |||    lock frame rate|
+|||A0|ISO potentiometer (overrides any GPIO pins assigned to iso)|
+|||A2|shutter angle potentiometer|
+|||A4|frame rate potentiometer|

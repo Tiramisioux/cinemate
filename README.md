@@ -62,7 +62,7 @@ Even if we are not using the Grove Base HAT, we need to install it for scripts t
 
 <code>sudo reboot</code> 
 
-###Install Cinemate2 scripts
+### Install Cinemate2 scripts
 
 <code>git clone https://github.com/Tiramisioux/cinemate2</code>
 

@@ -34,11 +34,35 @@ For adding cinemate2, follow install instructions below.
 
 <code>sudo apt install python3-pip</code>
 
-<code>sudo pip3 install psutil Pillow redis keyboard</code>
+<code>sudo pip3 install psutil Pillow redis keyboard pyudev</code>
 
 ## Installation
 
-To install the scripts and make them run as a service.
+Even if we are not using the Grove Base HAT, we need to install it for scripts to work
+
+### Installing the Grove Base Hat
+
+<code>sudo apt-get install build-essential python3-dev python3-pip python3-smbus python3-serial git</code>
+
+<code>sudo pip3 install -U setuptools wheel</code>
+
+<code>sudo pip3 install -U grove.py</code>
+
+<code>git clone https://github.com/Seeed-Studio/grove.py.git</code>
+
+<code>cd grove.py</code>
+
+<code>sudo python3 setup.py install</code>
+
+#### Enable I2C
+
+<code>sudo raspi-config</code>
+
+<code>3 Interface Options > I5 I2C Enable > Yes</code>
+
+<code>sudo reboot</code> 
+
+###Install Cinemate2 scripts
 
 <code>git clone https://github.com/Tiramisioux/cinemate2</code>
 

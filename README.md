@@ -64,6 +64,8 @@ To uninstall:
 
 or
 
+<code>cd src</code>
+
 <code>sudo python3 main.py</code>
 
 main.py has to be run as root to enable the keyboard module

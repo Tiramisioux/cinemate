@@ -94,28 +94,6 @@ or
 
 main.py has to be run as root to enable the keyboard module
 
-## Installing the Grove Base Hat
-
-<code>sudo apt-get install build-essential python3-dev python3-pip python3-smbus python3-serial git</code>
-
-<code>sudo pip3 install -U setuptools wheel</code>
-
-<code>sudo pip3 install -U grove.py</code>
-
-<code>git clone https://github.com/Seeed-Studio/grove.py.git</code>
-
-<code>cd grove.py</code>
-
-<code>sudo python3 setup.py install</code>
-
-### Enable I2C
-
-<code>sudo raspi-config</code>
-
-<code>3 Interface Options > I5 I2C Enable > Yes</code>
-
-<code>sudo reboot</code>
-
 ## Default manual control settings
 
 |GPIO |USB Keyboard|Grove Base HAT Analog channel| Function  |

@@ -3,8 +3,6 @@ Manual controls and a simple GUI for cinepi-raw, adding basic functionality of s
 
 Preinstalled image file with Raspbian + cinepi-raw + cinemate2 can be found in the release section of this repository.
 
-For adding cinemate2 manually to an existing cinepi-raw installation, follow install instructions below. 
-
 ## Basic functions
 
 - Autostarts cinepi-raw with a simple GUI on the HDMI display.
@@ -26,6 +24,8 @@ For adding cinemate2 manually to an existing cinepi-raw installation, follow ins
 - Assign your own GPIO pins for various camera control (start /stop recording, change ISO, resolution etc) 
 
 - Attach a Grove Base HAT for control of ISO, shutter angle and fps via potentiometers
+
+_For adding cinemate2 manually to an existing cinepi-raw installation, follow install instructions below._
 
 ## Dependencies
 <code>sudo apt update</code>

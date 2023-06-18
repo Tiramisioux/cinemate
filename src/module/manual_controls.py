@@ -5,7 +5,7 @@ from module.adc import ADC
 
 class ManualControls(threading.Thread):
     def __init__(self, cinepi_controller, monitor, iso_steps=None, shutter_angle_steps=None, fps_steps=None, iso_pot=0, shutter_angle_pot=2, fps_pot=4,
-                 iso_inc_pin=None, iso_dec_pin=None, shu_lock_pin=None, fps_lock_pin=None, res_button_pin=None,
+                 iso_inc_pin=None, iso_dec_pin=None, pot_lock_pin=None, res_button_pin=None,
                  rec_pin=None, rec_out_pin=None):
         threading.Thread.__init__(self)
 
@@ -19,8 +19,7 @@ class ManualControls(threading.Thread):
         pin_configurations = [
             (iso_inc_pin, GPIO.BOTH, self.iso_inc_callback),
             (iso_dec_pin, GPIO.RISING, self.iso_dec_callback),
-            (shu_lock_pin, GPIO.BOTH, self.shu_lock_callback),
-            (fps_lock_pin, GPIO.BOTH, self.fps_lock_callback),
+            (pot_lock_pin, GPIO.BOTH, self.pot_lock_callback),
             (res_button_pin, GPIO.RISING, self.res_button_callback),
         ]
 
@@ -49,8 +48,7 @@ class ManualControls(threading.Thread):
         self.rec_out_pin = rec_out_pin
         self.iso_inc_pin = iso_inc_pin
         self.iso_dec_pin = iso_dec_pin
-        self.shu_lock_pin = shu_lock_pin
-        self.fps_lock_pin = fps_lock_pin
+        self.pot_lock_pin = pot_lock_pin
         self.res_button_pin = res_button_pin
         self.iso_pot = iso_pot
         self.shutter_angle_pot = shutter_angle_pot
@@ -65,10 +63,8 @@ class ManualControls(threading.Thread):
         self.last_fps = self.calculate_fps(self.adc.read(self.fps_pot))
         
         # Check if shu_lock_pin and fps_lock_pin are defined
-        if shu_lock_pin is not None:
-            self.shutter_angle_locked = GPIO.input(shu_lock_pin) == GPIO.HIGH
-        if fps_lock_pin is not None:
-            self.fps_locked = GPIO.input(fps_lock_pin) == GPIO.HIGH
+        if pot_lock_pin is not None:
+            self.pot_locked = GPIO.input(pot_lock_pin) == GPIO.HIGH
         
         self.start()
 
@@ -87,13 +83,9 @@ class ManualControls(threading.Thread):
                         for pin in self.rec_out_pin:
                             GPIO.output(pin, GPIO.LOW)  # set rec_out_pin to low when not recording
 
-    def shu_lock_callback(self, channel):
-        if channel == self.shu_lock_pin and GPIO.input(channel) == GPIO.HIGH:
-            self.shutter_angle_locked = not self.shutter_angle_locked
-
-    def fps_lock_callback(self, channel):
-        if channel == self.fps_lock_pin and GPIO.input(channel) == GPIO.HIGH:
-            self.fps_locked = not self.fps_locked
+    def pot_lock_callback(self, channel):
+        if channel == self.pot_lock_pin and GPIO.input(channel) == GPIO.HIGH:
+            self.pot_lock_pin = not self.pot_lock_pin
         
     def res_button_callback(self, channel):
             if channel == self.res_button_pin:
@@ -137,10 +129,10 @@ class ManualControls(threading.Thread):
         shutter_angle_new = self.calculate_shutter_angle(shutter_angle_read)
         fps_new = self.calculate_fps(fps_read)
 
-        if not self.shutter_angle_locked and shutter_angle_new != self.last_shutter_angle:
+        if not self.pot_lock_pin and shutter_angle_new != self.last_shutter_angle:
             self.cinepi_controller.set_control_value('shutter_a', shutter_angle_new)
             self.last_shutter_angle = shutter_angle_new
-        if not self.fps_locked and fps_new != self.last_fps:
+        if not self.pot_lock_pin and fps_new != self.last_fps:
             fps_new =int(max(min(fps_new, 50), 1))
             self.cinepi_controller.set_control_value('fps', int(fps_new))
             self.last_fps = fps_new
@@ -152,16 +144,31 @@ class ManualControls(threading.Thread):
         return fps_new
 
     def calculate_iso(self, value):
-        index = round((len(self.iso_steps) - 1) * value / 700)
-        return self.iso_steps[index]
+        index = round((len(self.iso_steps) - 1) * value / 1000)
+        try:
+            return self.iso_steps[index]
+        except IndexError:
+            print("Error occurred while accessing ISO list elements.")
+            print("List length: ", len(self.iso_steps))
+            print("Index value: ", index)
 
     def calculate_shutter_angle(self, value):
-        index = round((len(self.shutter_angle_steps) - 1) * value / 700)
-        return self.shutter_angle_steps[index]
+        index = round((len(self.shutter_angle_steps) - 1) * value / 1000)
+        try:
+            return self.shutter_angle_steps[index]
+        except IndexError:
+            print("Error occurred while accessing shutter angle list elements.")
+            print("List length: ", len(self.shutter_angle_steps))
+            print("Index value: ", index)
 
     def calculate_fps(self, value):
-        index = round((len(self.fps_steps) - 1) * value / 700)
-        return self.fps_steps[index]
+        index = round((len(self.fps_steps) - 1) * value / 1000)
+        try:
+            return self.fps_steps[index]
+        except IndexError:
+            print("Error occurred while accessing fps list elements.")
+            print("List length: ", len(self.fps_steps))
+            print("Index value: ", index)
 
     def run(self):
         try:

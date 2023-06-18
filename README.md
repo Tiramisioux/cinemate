@@ -1,9 +1,9 @@
 # cinemate2
 Manual controls and a simple GUI for cinepi-raw, adding basic functionality of starting and stopping recording and changing camera parameters (ISO, shutter angle and frame rate) via the GPIO pins. Start/stop recording with USB keyboard.
 
-Preinstalled image file with Raspbian + CinePi RAW can be found in the release section of this repository.
+Preinstalled image file with Raspbian + cinepi-raw + cinemate2 can be found in the release section of this repository.
 
-For adding cinemate2, follow install instructions below. 
+For adding cinemate2 manually to an existing cinepi-raw installation, follow install instructions below. 
 
 ## Basic functions
 

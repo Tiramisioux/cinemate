@@ -26,9 +26,9 @@ class ManualControls(threading.Thread):
         if rec_pin is not None:
             if isinstance(rec_pin, list):
                 for pin in rec_pin:
-                    pin_configurations.append((pin, GPIO.FALLING, self.gpio_callback))
+                    pin_configurations.append((pin, GPIO.RISING, self.gpio_callback))
             else:
-                pin_configurations.append((rec_pin, GPIO.FALLING, self.gpio_callback))
+                pin_configurations.append((rec_pin, GPIO.RISING, self.gpio_callback))
 
         if rec_out_pin is not None:
             if isinstance(rec_out_pin, list):

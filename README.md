@@ -1,9 +1,7 @@
 # cinemate2
 Manual controls and a simple GUI for cinepi-raw, adding basic functionality of starting and stopping recording and changing camera parameters (ISO, shutter angle and frame rate) via the GPIO pins. Start/stop recording with USB keyboard.
 
-Preinstalled image file with Raspbian + CinePi RAW can be found in the release section of this repository.
-
-For adding cinemate2, follow install instructions below. 
+Preinstalled image file with Raspbian + cinepi-raw + cinemate2 can be found in the release section of this repository.
 
 ## Basic functions
 
@@ -26,6 +24,8 @@ For adding cinemate2, follow install instructions below.
 - Assign your own GPIO pins for various camera control (start /stop recording, change ISO, resolution etc) 
 
 - Attach a Grove Base HAT for control of ISO, shutter angle and fps via potentiometers
+
+_For adding cinemate2 manually to an existing cinepi-raw installation, follow install instructions below._
 
 ## Dependencies
 <code>sudo apt update</code>
@@ -101,8 +101,7 @@ main.py has to be run as root to enable the keyboard module
 |4, 5|r ||    start/stop recording|
 |21, 6|||     rec signal out, for LED rec light (be sure to use a resistor on this pin!)|
 |24|||     change resolution (cropped and full frame)|
-|26 |||     lock shutter angle |
-|18 |||    lock frame rate|
+|26 |||     lock shutter angle and frame rate controls|
 |||A0|ISO potentiometer (overrides any GPIO pins assigned to iso)|
 |||A2|shutter angle potentiometer|
 |||A4|frame rate potentiometer|

@@ -5,10 +5,17 @@ import signal
 import os
 import logging
 import pathlib
+from queue import Queue, Empty
+from threading import Thread
 
 # Set up the logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def enqueue_output(out, queue):
+    for line in iter(out.readline, b''):
+        queue.put(line)
+    out.close()
 
 class Config:
     # Configurations for the application
@@ -19,9 +26,9 @@ class Config:
     CINEPI_CMD = ['cinepi-raw']
     EXTERNAL_DRIVE_PATH = "/media/RAW"
 
-import threading
-import subprocess
-import os
+import logging
+
+import logging
 
 class CinePi:
     _instance = None  # Singleton instance
@@ -36,9 +43,17 @@ class CinePi:
         if not hasattr(self, 'initialized'):  # only initialize once
             self.r = r
             self.suppress_output = False
-            self.process = subprocess.Popen(['cinepi-raw'], 
-                                            stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE)
+            self.process = subprocess.Popen(['cinepi-raw'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            
+            self.out_queue = Queue()
+            self.err_queue = Queue()
+            self.out_thread = Thread(target=enqueue_output, args=(self.process.stdout, self.out_queue))
+            self.err_thread = Thread(target=enqueue_output, args=(self.process.stderr, self.err_queue))
+            self.out_thread.daemon = True
+            self.err_thread.daemon = True
+            self.out_thread.start()
+            self.err_thread.start()
+            
             self.is_recording = threading.Event()
             self._lock = threading.Lock() 
             self.thread = threading.Thread(target=self._listen)
@@ -51,23 +66,25 @@ class CinePi:
             self.initialized = True  # indicate that the instance has been initialized
 
     def _listen(self):
-        for line in iter(self.process.stdout.readline, b''):
-            with self._lock:
-                line = line.rstrip().decode('utf-8')
+            while True:
+                # read line without blocking
+                try:  
+                    line = self.out_queue.get_nowait() # or q.get(timeout=.1)
+                except Empty:
+                    pass
+                else: # got line
+                    line = line.rstrip().decode('utf-8')
+                    print(line)  # print the line to console
+                    if line == 'is_recording from: cp_controls':
+                        is_recording = self.r.get('is_recording')
+                        is_recording_int = int(is_recording.decode('utf-8'))
+                        if is_recording_int == 1:
+                            self.is_recording.set()
+                            self.audio_recorder.start_recording()  # Start audio recording
+                        elif is_recording_int == 0:
+                            self.is_recording.clear()
+                            self.audio_recorder.stop_recording()  # Stop audio recording
 
-                if line == 'is_recording from: cp_controls':
-                    is_recording = self.r.get('is_recording')
-                    is_recording_int = int(is_recording.decode('utf-8'))
-                    if is_recording_int == 1:
-                        self.is_recording.set()
-                        self.audio_recorder.start_recording()  # Start audio recording
-                    elif is_recording_int == 0:
-                        self.is_recording.clear()
-                        self.audio_recorder.stop_recording()  # Stop audio recording
-                        
- 
-                
-                        
     def get_recording_status(self):
         with self._lock:
             return self.is_recording.is_set()

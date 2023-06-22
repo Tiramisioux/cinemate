@@ -2,6 +2,7 @@ import threading
 import time
 import RPi.GPIO as GPIO
 from module.adc import ADC
+from queue import Queue, Empty
 
 class ManualControls(threading.Thread):
     def __init__(self, cinepi_controller, monitor, iso_steps=None, shutter_angle_steps=None, fps_steps=None, iso_pot=0, shutter_angle_pot=2, fps_pot=4,

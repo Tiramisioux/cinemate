@@ -96,12 +96,14 @@ main.py has to be run as root to enable the keyboard module
 
 ## Default manual control settings
 
-|GPIO |USB Keyboard|Grove Base HAT Analog channel| Function  |
---- | --- | --- | --- |
-|4, 5|r ||    start/stop recording|
-|21, 6|||     rec signal out, for LED rec light (be sure to use a resistor on this pin!)|
-|24|||     change resolution (cropped and full frame)|
-|26 |||     lock shutter angle and frame rate controls|
-|||A0|ISO potentiometer (overrides any GPIO pins assigned to iso)|
-|||A2|shutter angle potentiometer|
-|||A4|frame rate potentiometer|
+|GPIO |USB Keyboard|Grove Base HAT Analog channel| Type |Function  |
+--- | --- | --- | --- | --- |
+|4, 5|r ||push button|    start/stop recording|
+|21, 6|||LED (be sure to use a 320k resistor on this pin!)|     rec signal out, for LED rec light |
+|24|||  push button|change resolution (cropped and full frame)|
+|26 |||switch |lock shutter angle and frame rate controls|
+|18 |||switch |50% frame rate|
+|19 |||switch |200% frame rate (up to 50 fps)|
+|||A0|potentiometer|ISO control (overrides any GPIO pins assigned to iso)|
+|||A2|potentiometer |shutter angle control|
+|||A4|potentiometer|frame rate control|

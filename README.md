@@ -107,3 +107,11 @@ main.py has to be run as root to enable the keyboard module
 |||A0|potentiometer|ISO control (overrides any GPIO pins assigned to iso)|
 |||A2|potentiometer |shutter angle control|
 |||A4|potentiometer|frame rate control|
+
+GPIO pin numbers and Grove Base HAT analog channels can be in main.py
+
+## Known issues
+
+If SSD disk is connected after startup, Simple GUI disk indicator is still indicating "NO DISK". Recording seems to work.
+
+HDMI monitor has to be connected on startup for scripts to work.

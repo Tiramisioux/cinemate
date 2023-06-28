@@ -7,7 +7,7 @@ from queue import Queue, Empty
 class ManualControls(threading.Thread):
     def __init__(self, cinepi_controller, monitor, iso_steps=None, shutter_angle_steps=None, fps_steps=None, iso_pot=0, shutter_angle_pot=2, fps_pot=4,
                  iso_inc_pin=None, iso_dec_pin=None, pot_lock_pin=None, res_button_pin=None,
-                 rec_pin=None, rec_out_pin=None):
+                 rec_pin=None, rec_out_pin=None, fps_mult_pin1=None, fps_mult_pin2=None):
         threading.Thread.__init__(self)
 
         self.cinepi_controller = cinepi_controller
@@ -22,6 +22,8 @@ class ManualControls(threading.Thread):
             (iso_dec_pin, GPIO.RISING, self.iso_dec_callback),
             (pot_lock_pin, GPIO.BOTH, self.pot_lock_callback),
             (res_button_pin, GPIO.RISING, self.res_button_callback),
+            (fps_mult_pin1, GPIO.BOTH, self.fps_mult_callback), 
+            (fps_mult_pin2, GPIO.BOTH, self.fps_mult_callback),
         ]
 
         if rec_pin is not None:
@@ -51,6 +53,8 @@ class ManualControls(threading.Thread):
         self.iso_dec_pin = iso_dec_pin
         self.pot_lock_pin = pot_lock_pin
         self.res_button_pin = res_button_pin
+        self.fps_mult_pin1 = fps_mult_pin1
+        self.fps_mult_pin2 = fps_mult_pin2
         self.iso_pot = iso_pot
         self.shutter_angle_pot = shutter_angle_pot
         self.fps_pot = fps_pot
@@ -62,10 +66,13 @@ class ManualControls(threading.Thread):
         self.last_iso = self.calculate_iso(self.adc.read(self.iso_pot))
         self.last_shutter_angle = self.calculate_shutter_angle(self.adc.read(self.shutter_angle_pot))
         self.last_fps = self.calculate_fps(self.adc.read(self.fps_pot))
+        self.last_fps_set = self.calculate_fps(self.adc.read(self.fps_pot))
         
         # Check if shu_lock_pin and fps_lock_pin are defined
         if pot_lock_pin is not None:
             self.pot_locked = GPIO.input(pot_lock_pin) == GPIO.HIGH
+            
+        self.flip_switched = 0
         
         self.start()
 
@@ -85,8 +92,12 @@ class ManualControls(threading.Thread):
                             GPIO.output(pin, GPIO.LOW)  # set rec_out_pin to low when not recording
 
     def pot_lock_callback(self, channel):
-        if channel == self.pot_lock_pin and GPIO.input(channel) == GPIO.HIGH:
-            self.pot_lock_pin = not self.pot_lock_pin
+        if GPIO.input(self.pot_lock_pin) == GPIO.LOW:  # GPIO pin 18 is high
+            self.pot_locked = False
+        if GPIO.input(self.pot_lock_pin) == GPIO.HIGH:  # GPIO pin 19 is high
+            self.pot_locked = True
+            
+        print("pot lock: ", self.pot_locked)
         
     def res_button_callback(self, channel):
             if channel == self.res_button_pin:
@@ -94,7 +105,20 @@ class ManualControls(threading.Thread):
                     self.cinepi_controller.set_control_value('height', 1520)
                 elif self.cinepi_controller.get_control_value('height') == '1520':
                     self.cinepi_controller.set_control_value('height', 1080)
-                
+                    
+    def fps_mult(self):
+        if GPIO.input(self.fps_mult_pin1) == GPIO.LOW:  # GPIO pin 18 is high
+            fps_multiplier = 0.5
+        elif GPIO.input(self.fps_mult_pin2) == GPIO.LOW:  # GPIO pin 19 is high
+            fps_multiplier = 2
+        else:  # Both GPIO pins are low
+            fps_multiplier = 1
+            
+        return fps_multiplier
+    
+    def fps_mult_callback(self, channel):
+        self.flip_switched = 1
+    
     def calculate_iso_index(self, iso_value):
         iso_steps = ManualControls.iso_steps
         return iso_steps.index(iso_value)
@@ -121,29 +145,6 @@ class ManualControls(threading.Thread):
                     self.cinepi_controller.set_control_value('iso', iso_new)
                     self.last_iso = iso_new
                  
-    def update_parameters(self):
-        iso_read = self.adc.read(self.iso_pot)
-        shutter_angle_read = self.adc.read(self.shutter_angle_pot)
-        fps_read = self.adc.read(self.fps_pot)
-
-        iso_new = self.calculate_iso(iso_read)
-        shutter_angle_new = self.calculate_shutter_angle(shutter_angle_read)
-        fps_new = self.calculate_fps(fps_read)
-
-        if not self.pot_lock_pin and shutter_angle_new != self.last_shutter_angle:
-            self.cinepi_controller.set_control_value('shutter_a', shutter_angle_new)
-            self.last_shutter_angle = shutter_angle_new
-        if not self.pot_lock_pin and fps_new != self.last_fps:
-            fps_new =int(max(min(fps_new, 50), 1))
-            self.cinepi_controller.set_control_value('fps', int(fps_new))
-            self.last_fps = fps_new
-
-        if iso_new != self.last_iso:
-            self.cinepi_controller.set_control_value('iso', iso_new)
-            self.last_iso = iso_new
-            
-        return fps_new
-
     def calculate_iso(self, value):
         index = round((len(self.iso_steps) - 1) * value / 1000)
         try:
@@ -170,6 +171,37 @@ class ManualControls(threading.Thread):
             print("Error occurred while accessing fps list elements.")
             print("List length: ", len(self.fps_steps))
             print("Index value: ", index)
+
+    def update_parameters(self):
+        iso_read = self.adc.read(self.iso_pot)
+        shutter_angle_read = self.adc.read(self.shutter_angle_pot)
+        fps_read = self.adc.read(self.fps_pot)
+
+        iso_new = self.calculate_iso(iso_read)
+        shutter_angle_new = self.calculate_shutter_angle(shutter_angle_read)
+        fps_new = self.calculate_fps(fps_read)
+        
+        fps_multiplier = self.fps_mult()
+        fps_new = round(fps_new*fps_multiplier)
+        
+        if iso_new != self.last_iso:
+            self.cinepi_controller.set_control_value('iso', iso_new)
+            self.last_iso = iso_new
+
+        if not self.pot_locked and shutter_angle_new != self.last_shutter_angle:
+            self.cinepi_controller.set_control_value('shutter_a', shutter_angle_new)
+            self.last_shutter_angle = shutter_angle_new
+        
+        if not self.pot_locked and fps_new != self.last_fps:
+            self.cinepi_controller.set_control_value('fps', int(fps_new))
+            self.last_fps = fps_new
+            
+            
+        if self.pot_locked and fps_new != self.last_fps and self.flip_switched == 1:
+            self.cinepi_controller.set_control_value('fps', int(fps_new))
+            self.last_fps = fps_new
+            self.flip_switched = 0
+
 
     def run(self):
         try:

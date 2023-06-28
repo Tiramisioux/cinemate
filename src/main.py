@@ -33,8 +33,8 @@ manual_controls = ManualControls(cinepi_controller, monitor,
                                  iso_dec_pin=25,                                # GPIO pin for button for decreasing ISO
                                  pot_lock_pin=26,                               # GPIO pin for attaching shutter angle and fps potentiometer lock switch
                                  res_button_pin=24,                             # GPIO resolution button - switches between 1080 (cropped) and 1520 (full frame)
-                                 fps_mult_pin1=18,
-                                 fps_mult_pin2=19,
+                                 fps_mult_pin1=18,                              # Flip switch for 50% frame rate
+                                 fps_mult_pin2=19,                              # Flip switch for 200% frame rate (up to 50 fps)
                                  rec_pin=[4, 6],                                # GPIO recording pins
                                  rec_out_pin=[5, 21])                           # GPIO rec light pins (be sure to use a resistor between LED and pin!)
 

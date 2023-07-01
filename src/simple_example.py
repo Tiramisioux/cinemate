@@ -4,7 +4,7 @@ from signal import pause
 import redis
 import RPi.GPIO as GPIO
 from module.cinepi import Config, CinePi, CinePiController
-from module.monitor import Monitor
+from module.monitor import DriveMonitor
 from module.simple_gui import SimpleGUI
 from module.manual_controls import ManualControls
 
@@ -18,7 +18,9 @@ cinepi = CinePi(r)
 cinepi_controller = CinePiController(cinepi, r)
 
 # Instantiate and start the Monitor instance
-monitor = Monitor("/media/RAW")
+monitor = DriveMonitor('/media/RAW/', gpio_pin=5)
+threading.Thread(target=monitor.start_space_monitoring, args=(0.1,)).start()
+
 
 # Initialize SimpleGUI with the controller and monitor instances
 simple_gui = SimpleGUI(cinepi_controller, monitor)

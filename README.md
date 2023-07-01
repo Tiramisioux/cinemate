@@ -112,6 +112,4 @@ GPIO pin numbers and Grove Base HAT analog channels can be in main.py
 
 ## Known issues
 
-If SSD disk is connected after startup, Simple GUI disk indicator is still indicating "NO DISK". Recording seems to work.
-
 HDMI monitor has to be connected on startup for scripts to work.

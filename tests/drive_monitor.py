@@ -8,28 +8,28 @@ import RPi.GPIO as GPIO
 class DriveMonitor:
     def __init__(self, path, gpio_pin=None):
         self.path = path
-        self.connection_status = self.is_drive_connected()
+        self.connection_status = self.check_drive_status()
         self.gpio_pin = gpio_pin
         self.space_decreasing = False
         self.last_free_space = 0
         self.last_change_time = time.time()
         self.led_status = False  # Flag indicating LED status
 
-        if self.gpio_pin is not None:
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setup(self.gpio_pin, GPIO.OUT)
-            GPIO.output(self.gpio_pin, GPIO.LOW)
+        GPIO.setmode(GPIO.BCM)
+
+        if self.gpio_pins is not None:
+            GPIO.setup(self.gpio_pins, GPIO.OUT, initial=GPIO.LOW)
 
         print('Initial connection status:', 'Connected' if self.connection_status else 'Disconnected')
 
         self.monitor_thread = threading.Thread(target=self.monitor_drive)
         self.monitor_thread.start()
 
-    def is_drive_connected(self):
+    def check_drive_status(self):
         """Check if the drive is connected and return True or False"""
         return os.path.exists(self.path)
 
-    def get_remaining_space(self):
+    def check_drive_space(self):
         """Check the free space of the drive and print it"""
         if self.connection_status:
             total, used, free = shutil.disk_usage(self.path)
@@ -56,10 +56,10 @@ class DriveMonitor:
                 old_status = self.connection_status
                 if device.action == 'add':
                     time.sleep(5)
-                    self.connection_status = self.is_drive_connected()
+                    self.connection_status = self.check_drive_status()
                     if self.connection_status and self.connection_status != old_status:
                         print('Drive connected')
-                        self.get_remaining_space()
+                        self.check_drive_space()
                 elif device.action == 'remove':
                     self.connection_status = False
                     if self.connection_status != old_status:
@@ -80,5 +80,5 @@ class DriveMonitor:
         self.last_free_space = 0
 
         while True:
-            self.get_remaining_space()
+            self.check_drive_space()
             time.sleep(interval)

@@ -7,6 +7,8 @@ import logging
 import pathlib
 from queue import Queue, Empty
 from threading import Thread
+import pyudev
+import keyboard
 
 # Set up the logger
 logging.basicConfig(level=logging.INFO)
@@ -25,10 +27,6 @@ class Config:
     DIRECTORY = "/media/RAW"
     CINEPI_CMD = ['cinepi-raw']
     EXTERNAL_DRIVE_PATH = "/media/RAW"
-
-import logging
-
-import logging
 
 class CinePi:
     _instance = None  # Singleton instance
@@ -60,9 +58,17 @@ class CinePi:
             self.last_lines = []  # Keep track of the last lines
             self.lines_counter = 0  # Counter for lines read
             self.thread.start()
+            
             self.monitor = monitor
             self.controller = CinePiController(self, self.r, self.monitor)  # Instantiate the controller here
-            self.audio_recorder = AudioRecorder(self.r)
+            self.USBMonitor = USBMonitor()
+            self.USBMonitor.monitor_devices()
+            self.audio_recorder = AudioRecorder(self.r, self.USBMonitor)
+            self.keyboard = Keyboard(self.controller)  # Instantiate the keyboard handler
+            self.keyboard_thread = threading.Thread(target=self.keyboard.start)  # Create a thread for the keyboard listener
+            self.keyboard_thread.daemon = True  # Set the thread as a daemon thread to automatically exit when the main program ends
+            self.keyboard_thread.start()  # Start the keyboard listener thread
+
             self.initialized = True  # indicate that the instance has been initialized
 
     def _listen(self):
@@ -80,10 +86,12 @@ class CinePi:
                         is_recording_int = int(is_recording.decode('utf-8'))
                         if is_recording_int == 1:
                             self.is_recording.set()
-                            self.audio_recorder.start_recording()  # Start audio recording
+                            if self.USBMonitor.usb_mic:
+                                self.audio_recorder.start_recording()  # Start audio recording
                         elif is_recording_int == 0:
                             self.is_recording.clear()
-                            self.audio_recorder.stop_recording()  # Stop audio recording
+                            if self.USBMonitor.usb_mic:
+                                self.audio_recorder.stop_recording()  # Stop audio recording
 
     def get_recording_status(self):
         with self._lock:
@@ -118,74 +126,142 @@ class CinePiController:
         return res.decode() if res is not None else None
 
     def set_control_value(self, control, value):
-        self.r.set(control, value)
+        
+        if control == 'fps':
+            value = max(1,min(50, value))
+        
+        self.r.set(control, value)        
         self.r.publish("cp_controls", control)
+        
         if control == 'height':
             self.r.set("cam_init", 1)
             self.r.publish("cp_controls", "cam_init")
 
         return True
 
-
 class AudioRecorder:
 
-    # Class for managing audio recording.
-    def __init__(self, r):
+    def __init__(self, r, USBMonitor):
         self.r = r
+        self.USBMonitor = USBMonitor
         self.directory = Config.DIRECTORY
         self.process = None
+        self.usb_mic = None
 
     def start_recording(self):
-
-        # Start recording.
-
-        # Check if the directory exists
-        if not os.path.exists(self.directory):
-            logger.warning(f"Directory {self.directory} does not exist. Please attach the drive.")
-            return
-
-        # Check if a USB microphone is connected
-        usb_microphone = self.get_usb_microphone()
-        if not usb_microphone:
-            logger.warning("No USB microphone detected. Recording of audio cannot be started.")
-            return
-
-        # Start recording
-        file_name = f"CINEPI_{time.strftime('%y-%m-%d_%H%M%S')}_AUDIO_SCRATCH.wav"
-        self.file_path = os.path.join(self.directory, file_name)
-        command = f"arecord -D plughw:{usb_microphone} -f cd -c 1 -t wav {self.file_path}"
-
         try:
+            file_name = f"CINEPI_{time.strftime('%y-%m-%d_%H%M%S')}_AUDIO_SCRATCH.wav"
+            self.file_path = os.path.join(self.directory, file_name)
+            command = f"arecord -D plughw:{self.USBMonitor.usb_mic} -f cd -c 1 -t wav {self.file_path}"
             self.process = subprocess.Popen(command, shell=True, preexec_fn=os.setsid, stderr=subprocess.DEVNULL)
             logger.info(f"Audio recording started and will be saved to {self.file_path}")
         except Exception as e:
             logger.error(f"Failed to start recording. Error: {str(e)}")
 
     def stop_recording(self):
-
-        # Stop recording.
-
         if self.process:
             try:
                 os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
                 logger.info(f"Audio recording stopped. File saved at {self.file_path}")
+            except OSError as e:
+                if e.errno == 19:  # No such device
+                    logger.info("Microphone was disconnected. Stopping recording.")
+                else:
+                    raise e
             except Exception as e:
                 logger.error(f"Failed to stop recording. Error: {str(e)}")
         else:
             logger.info("No audio recording to stop.")
 
+
+class USBMonitor:
+    def __init__(self):
+        self.context = pyudev.Context()
+        self.monitor = pyudev.Monitor.from_netlink(self.context)
+        self.monitor.filter_by(subsystem='usb')
+        self.usb_mic = None
+        self.usb_mic_path = None
+        self.usb_keyboard = None
+        self.usb_hd = None
+        self.check_initial_devices()
+
+    def device_event(self, monitor, device):
+        if device.action == 'add':
+            if 'USB_PNP_SOUND_DEVICE' in device.get('ID_MODEL', '').upper():
+                self.usb_mic_path = device.device_path
+                print(f'USB Microphone connected: {device}')
+                self.get_usb_microphone()
+            elif 'KEYBOARD' in device.get('ID_MODEL', '').upper():
+                self.usb_keyboard = device
+                print(f'USB Keyboard connected: {device}')
+            elif 'SSD' in device.get('ID_MODEL', '').upper():
+                self.usb_hd = device
+                print(f'USB SSD connected: {device}')
+        elif device.action == 'remove':
+            print(f'Device disconnected: {device}')
+            if self.usb_mic_path is not None and self.usb_mic_path == device.device_path:
+
+                self.usb_mic_path = None
+                print(f'USB Microphone disconnected: {device}')
+                self.get_usb_microphone()
+            elif self.usb_keyboard is not None and self.usb_keyboard == device:
+                self.usb_keyboard = None
+                print(f'USB Keyboard disconnected: {device}')
+            elif self.usb_hd is not None and self.usb_hd == device:
+                self.usb_hd = None
+                print(f'USB SSD disconnected: {device}')
+
+
+    def check_initial_devices(self):
+        for device in self.context.list_devices(subsystem='usb'):
+            if 'USB_PNP_SOUND_DEVICE' in device.get('ID_MODEL', '').upper():
+                self.usb_mic_serial = device.get('ID_SERIAL')
+                print(f'USB Microphone connected: {device}')
+                self.get_usb_microphone()
+            elif 'KEYBOARD' in device.get('ID_MODEL', '').upper():
+                self.usb_keyboard = device
+                print(f'USB Keyboard connected: {device}')
+            elif 'SSD' in device.get('ID_MODEL', '').upper():
+                self.usb_hd = device
+                print(f'USB SSD connected: {device}')
+                
     def get_usb_microphone(self):
-
-        # Get the device number of the USB microphone.
-
         try:
             # Get a list of connected USB audio devices
             devices = subprocess.check_output("arecord -l | grep card", shell=True).decode("utf-8")
-
+            
             # Find the USB microphone device number
             for device in devices.split("\n"):
                 if "USB" in device:
                     device_number = device.split(":")[0][-1]
-                    return device_number
+                    self.usb_mic = device_number
+ 
+                    # return device_number
+            print(self.usb_mic)    
         except subprocess.CalledProcessError:
             logger.error("Failed to retrieve USB microphone. Continuing without USB microphone.")
+            self.usb_mic = None
+
+
+    def monitor_devices(self):
+        observer = pyudev.MonitorObserver(self.monitor, self.device_event)
+        observer.start()
+        
+class Keyboard:
+    def __init__(self, controller):
+        self.controller = controller
+
+    def start(self):
+        keyboard.on_press_key("r", self.handle_key_event)
+        keyboard.wait("esc")  # Wait for the "esc" key to exit the event loop
+
+    def handle_key_event(self, event):
+        if event.name == "r":
+            # Start/stop recording
+            if self.controller.get_recording_status():
+                self.controller.stop_recording()
+                print("Recording stopped")
+            else:
+                self.controller.start_recording()
+                print("Recording started")
+        # Add more key handling code as needed

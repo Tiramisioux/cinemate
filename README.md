@@ -94,7 +94,7 @@ or
 
 <code>sudo python3 main.py</code>
 
-<code>main.py</code> has to be run as root to enable the keyboard module
+<code>main.py</code> must be run as root.
 
 ## Default manual control settings
 

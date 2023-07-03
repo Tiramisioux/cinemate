@@ -94,14 +94,14 @@ or
 
 <code>sudo python3 main.py</code>
 
-<code>main.py</code> has to be run as root to enable the keyboard module
+<code>main.py</code> must be run as root.
 
 ## Default manual control settings
 
 |RPi GPIO |USB Keyboard|Grove Base HAT| Type |Function  |
 --- | --- | --- | --- | --- |
-|4|r |5, 22|push button|    start/stop recording|
-|21||6, 23|LED (be sure to use a 320k resistor on this pin!)|     rec signal out, for LED rec light |
+|4, 5, 22|r |5, 22|push button|    start/stop recording|
+|6, 21, 23||6, 23|LED (be sure to use a 320k resistor on this pin!)|     rec signal out, for LED rec light |
 |24|h|24|  push button|change resolution (cropped and full frame)|
 |25 |1||push button |ISO decrease (100, 200, 400, 800, 1600, 3200)|
 |23 |2||push button |ISO increase (100, 200, 400, 800, 1600, 3200)|
@@ -115,7 +115,7 @@ or
 |||A2|potentiometer |shutter angle control|
 |||A4|potentiometer|frame rate control|
 
-GPIO pin numbers and Grove Base HAT analog channels can be in <code>main.py</code>.
+GPIO pin numbers and Grove Base HAT analog channels can be changed in <code>main.py</code>.
 
 If USB keyboard is connected, Grove Base HAT analog channels are disabled.
 
@@ -123,4 +123,4 @@ If USB keyboard is connected, Grove Base HAT analog channels are disabled.
 
 HDMI monitor has to be connected on startup for scripts to work.
 
-Sometimes script does not recognize SSD drive on startup. Then disconnect and connect the drive again.
+Sometimes script does not recognize SSD drive on startup. Then try disconnecting and connecting the drive again.

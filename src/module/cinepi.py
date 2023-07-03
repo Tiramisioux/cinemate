@@ -187,14 +187,15 @@ class USBMonitor:
         self.keyboard_handler = None
         self.check_initial_devices()
 
-
     def device_event(self, monitor, device):
         if device.action == 'add':
+            # Check if the connected device is a USB Microphone
             if 'USB_PNP_SOUND_DEVICE' in device.get('ID_MODEL', '').upper():
+                # Store the device's path and a unique identifier
                 self.usb_mic_path = device.device_path
+                self.usb_mic_id = device.get('ID_SERIAL')
                 print(f'USB Microphone connected: {device}')
                 self.get_usb_microphone()
-            
             elif 'KEYBOARD' in device.get('ID_MODEL', '').upper():
                 self.usb_keyboard = device
                 print(f'USB Keyboard connected: {device}')
@@ -208,10 +209,11 @@ class USBMonitor:
             elif 'SSD' in device.get('ID_MODEL', '').upper():
                 self.usb_hd = device
                 print(f'USB SSD connected: {device}')
+                
         elif device.action == 'remove':
             print(f'Device disconnected: {device}')
-            if self.usb_mic_path is not None and self.usb_mic_path == device.device_path:
-
+            # Check if the disconnected device is the same as the stored USB microphone
+            if self.usb_mic_path is not None and device.device_path.startswith(self.usb_mic_path):
                 self.usb_mic_path = None
                 print(f'USB Microphone disconnected: {device}')
                 self.get_usb_microphone()

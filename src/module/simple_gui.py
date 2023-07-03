@@ -120,9 +120,9 @@ class SimpleGUI(threading.Thread):
             else:
                 draw.text((10, 1051), "no disk", font=font, align="left", fill="white")
 
-            draw.text((335, 1051), f"{self.keyboard_connected}", font=font, align="left", fill="white")
+            draw.text((313, 1051), f"{self.keyboard_connected}", font=font, align="left", fill="white")
             # draw.text((1325, 1051), f"{self.last_wav}", font=font, align="left", fill="white")
-            draw.text((200, 1051), f"{self.mic_connected}", font=font, align="left", fill="white")
+            draw.text((195, 1051), f"{self.mic_connected}", font=font, align="left", fill="white")
             self.fb.show(image)
         except OSError as e:
             print(f"Error occurred in draw_display: {e}")

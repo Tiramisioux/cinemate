@@ -34,7 +34,9 @@ _For adding cinemate2 manually to an existing cinepi-raw installation, follow in
 
 <code>sudo apt install python3-pip</code>
 
-<code>sudo pip3 install psutil Pillow redis keyboard pyudev</code>
+<code>sudo apt-get install portaudio19-dev</code>
+
+<code>sudo pip3 install psutil Pillow redis keyboard pyudev sounddevice</code>
 
 ## Installation
 

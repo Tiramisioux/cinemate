@@ -14,7 +14,7 @@ from gpiozero import CPUTemperature
 from module.framebuffer import Framebuffer  # pytorinox
 
 class SimpleGUI(threading.Thread):
-    def __init__(self, controller, monitor):
+    def __init__(self, cinepi, controller, monitor):
         threading.Thread.__init__(self)
 
         # Frame buffer coordinates
@@ -25,7 +25,7 @@ class SimpleGUI(threading.Thread):
         # Frame buffer coordinates
         self.fill_color = "black"
 
-        # Initialize CameraControls and Monitor
+        self.cinepi = cinepi
         self.controller = controller
         self.monitor = monitor
 
@@ -39,6 +39,8 @@ class SimpleGUI(threading.Thread):
 
         self.cpu_load = None
         self.cpu_temp = None
+        
+        self.mic_connected = None
 
          # Hide the cursor
         self.hide_cursor() 
@@ -75,6 +77,11 @@ class SimpleGUI(threading.Thread):
         else:
             self.min_left = 0  # Set to 0 when the drive is not connected
             
+        if self.cinepi.USBMonitor.usb_mic:
+            self.mic_connected = "MIC"
+        else:
+            self.mic_connected = ""
+            
 
         # Get cpu statistics
         self.cpu_load = str(psutil.cpu_percent()) + '%'
@@ -110,7 +117,7 @@ class SimpleGUI(threading.Thread):
 
             # draw.text((725, 1051), f"{self.last_subfolder}", font=font, align="left", fill="white")
             # draw.text((1325, 1051), f"{self.last_wav}", font=font, align="left", fill="white")
-            # draw.text((1525, 1051), f"{self.last_frame_count}", font=font, align="left", fill="white")
+            draw.text((200, 1051), f"{self.mic_connected}", font=font, align="left", fill="white")
             self.fb.show(image)
         except OSError as e:
             print(f"Error occurred in draw_display: {e}")

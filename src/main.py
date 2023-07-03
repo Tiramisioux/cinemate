@@ -26,7 +26,7 @@ if __name__ == "__main__":
         cinepi_controller = CinePiController(cinepi, r, monitor)
 
         # Initialize SimpleGUI with the controller and monitor instances
-        simple_gui = SimpleGUI(cinepi_controller, monitor)
+        simple_gui = SimpleGUI(cinepi, cinepi_controller, monitor)
 
         # Instantiate the ManualControls class with the necessary GPIO pins
         manual_controls = ManualControls(cinepi_controller, monitor, 
@@ -44,10 +44,10 @@ if __name__ == "__main__":
                                         fps_mult_pin2=19,                              # Flip switch for 200% frame rate (up to 50 fps)
                                         rec_pin=[4, 6],                                # GPIO recording pins
                                         rec_out_pin=[21])                               # GPIO rec light pins (be sure to use a 320 Ohm resistor between LED and pin!)
-
-        # Instantiate the Keyboard class
-        keyboard_thread = Keyboard(cinepi_controller, monitor)
-        keyboard_thread.start()
+    
+        # # Instantiate the Keyboard class
+        # keyboard_thread = Keyboard(cinepi_controller, monitor)
+        # keyboard_thread.start()
 
         pause()
     finally:

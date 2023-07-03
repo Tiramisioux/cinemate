@@ -15,6 +15,8 @@ class DriveMonitor:
         self.last_change_time = time.time()
         self.led_status = False  # Flag indicating LED status
 
+        GPIO.setmode(GPIO.BCM)
+
         if self.gpio_pin is not None:
             GPIO.setmode(GPIO.BCM)
             GPIO.setup(self.gpio_pin, GPIO.OUT)
@@ -33,8 +35,8 @@ class DriveMonitor:
         """Check the free space of the drive and print it"""
         if self.connection_status:
             total, used, free = shutil.disk_usage(self.path)
-            print(f'\rFree space: {free / (1024**3):.10f} GB', end='', flush=True)
-
+            #print(f'\rFree space: {free / (1024**3):.10f} GB', end='', flush=True)
+            GPIO.setmode(GPIO.BCM)
             if self.gpio_pin is not None:
                 if free < self.last_free_space:
                     GPIO.output(self.gpio_pin, GPIO.HIGH)

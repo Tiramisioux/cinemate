@@ -123,4 +123,4 @@ If USB keyboard is connected, Grove Base HAT analog channels are disabled.
 
 HDMI monitor has to be connected on startup for scripts to work.
 
-Sometimes script does not recognize SSD drive on startup. Then disconnect and connect the drive again.
+Sometimes script does not recognize SSD drive on startup. Then try disconnecting and connecting the drive again.

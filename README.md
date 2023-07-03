@@ -115,7 +115,7 @@ or
 |||A2|potentiometer |shutter angle control|
 |||A4|potentiometer|frame rate control|
 
-GPIO pin numbers and Grove Base HAT analog channels can be in <code>main.py</code>.
+GPIO pin numbers and Grove Base HAT analog channels can be changed in <code>main.py</code>.
 
 If USB keyboard is connected, Grove Base HAT analog channels are disabled.
 

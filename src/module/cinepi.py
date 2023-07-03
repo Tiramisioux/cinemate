@@ -61,15 +61,15 @@ class CinePi:
             
             self.monitor = monitor
             self.controller = CinePiController(self, self.r, self.monitor)  # Instantiate the controller here
-            self.USBMonitor = USBMonitor()
+            
+            # Initialize USBMonitor with the controller
+            self.USBMonitor = USBMonitor(self.controller)
             self.USBMonitor.monitor_devices()
-            self.audio_recorder = AudioRecorder(self.r, self.USBMonitor)
-            self.keyboard = Keyboard(self.controller)  # Instantiate the keyboard handler
-            self.keyboard_thread = threading.Thread(target=self.keyboard.start)  # Create a thread for the keyboard listener
-            self.keyboard_thread.daemon = True  # Set the thread as a daemon thread to automatically exit when the main program ends
-            self.keyboard_thread.start()  # Start the keyboard listener thread
+            
+            self.audio_recorder = AudioRecorder(self.r, self.USBMonitor) 
 
             self.initialized = True  # indicate that the instance has been initialized
+
 
     def _listen(self):
             while True:
@@ -175,7 +175,8 @@ class AudioRecorder:
 
 
 class USBMonitor:
-    def __init__(self):
+    def __init__(self, controller):
+        self.controller = controller
         self.context = pyudev.Context()
         self.monitor = pyudev.Monitor.from_netlink(self.context)
         self.monitor.filter_by(subsystem='usb')
@@ -183,7 +184,9 @@ class USBMonitor:
         self.usb_mic_path = None
         self.usb_keyboard = None
         self.usb_hd = None
+        self.keyboard_handler = None
         self.check_initial_devices()
+
 
     def device_event(self, monitor, device):
         if device.action == 'add':
@@ -191,9 +194,17 @@ class USBMonitor:
                 self.usb_mic_path = device.device_path
                 print(f'USB Microphone connected: {device}')
                 self.get_usb_microphone()
+            
             elif 'KEYBOARD' in device.get('ID_MODEL', '').upper():
                 self.usb_keyboard = device
                 print(f'USB Keyboard connected: {device}')
+                
+                # Initialize the keyboard class
+                self.keyboard = Keyboard(self.controller)  # Instantiate the keyboard handler
+                self.keyboard_thread = threading.Thread(target=self.keyboard.start)  # Create a thread for the keyboard listener
+                self.keyboard_thread.daemon = True  # Set the thread as a daemon thread to automatically exit when the main program ends
+                self.keyboard_thread.start()  # Start the keyboard listener thread
+            
             elif 'SSD' in device.get('ID_MODEL', '').upper():
                 self.usb_hd = device
                 print(f'USB SSD connected: {device}')
@@ -207,6 +218,10 @@ class USBMonitor:
             elif self.usb_keyboard is not None and self.usb_keyboard == device:
                 self.usb_keyboard = None
                 print(f'USB Keyboard disconnected: {device}')
+                # Stop the keyboard listener here
+                if self.keyboard_thread and self.keyboard_thread.is_alive():
+                    keyboard.unhook_all()  # Unhook all the keyboard listeners
+                    print("Keyboard listener stopped")
             elif self.usb_hd is not None and self.usb_hd == device:
                 self.usb_hd = None
                 print(f'USB SSD disconnected: {device}')
@@ -221,9 +236,16 @@ class USBMonitor:
             elif 'KEYBOARD' in device.get('ID_MODEL', '').upper():
                 self.usb_keyboard = device
                 print(f'USB Keyboard connected: {device}')
+                
+                # Initialize the keyboard class here
+                self.keyboard = Keyboard(self.controller)  # Instantiate the keyboard handler
+                self.keyboard_thread = threading.Thread(target=self.keyboard.start)  # Create a thread for the keyboard listener
+                self.keyboard_thread.daemon = True  # Set the thread as a daemon thread to automatically exit when the main program ends
+                self.keyboard_thread.start()  # Start the keyboard listener thread
             elif 'SSD' in device.get('ID_MODEL', '').upper():
                 self.usb_hd = device
                 print(f'USB SSD connected: {device}')
+
                 
     def get_usb_microphone(self):
         try:
@@ -253,6 +275,7 @@ class Keyboard:
 
     def start(self):
         keyboard.on_press_key("r", self.handle_key_event)
+        keyboard.on_press_key("h", self.handle_key_event)
         keyboard.wait("esc")  # Wait for the "esc" key to exit the event loop
 
     def handle_key_event(self, event):
@@ -265,3 +288,9 @@ class Keyboard:
                 self.controller.start_recording()
                 print("Recording started")
         # Add more key handling code as needed
+        if event.name == "h":
+            if self.controller.get_control_value('height') == '1080':
+                self.controller.set_control_value('height', 1520)
+            elif self.controller.get_control_value('height') == '1520':
+                self.controller.set_control_value('height', 1080)
+

@@ -82,6 +82,11 @@ class SimpleGUI(threading.Thread):
         else:
             self.mic_connected = ""
             
+        if self.cinepi.USBMonitor.usb_keyboard:
+            self.keyboard_connected = "KEYBOARD"
+        else:
+            self.keyboard_connected = ""
+            
 
         # Get cpu statistics
         self.cpu_load = str(psutil.cpu_percent()) + '%'
@@ -115,7 +120,7 @@ class SimpleGUI(threading.Thread):
             else:
                 draw.text((10, 1051), "no disk", font=font, align="left", fill="white")
 
-            # draw.text((725, 1051), f"{self.last_subfolder}", font=font, align="left", fill="white")
+            draw.text((335, 1051), f"{self.keyboard_connected}", font=font, align="left", fill="white")
             # draw.text((1325, 1051), f"{self.last_wav}", font=font, align="left", fill="white")
             draw.text((200, 1051), f"{self.mic_connected}", font=font, align="left", fill="white")
             self.fb.show(image)

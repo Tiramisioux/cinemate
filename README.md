@@ -102,7 +102,7 @@ main.py has to be run as root to enable the keyboard module
 --- | --- | --- | --- | --- |
 |4, 5|r ||push button|    start/stop recording|
 |21, 6|||LED (be sure to use a 320k resistor on this pin!)|     rec signal out, for LED rec light |
-|24|||  push button|change resolution (cropped and full frame)|
+|24|h||  push button|change resolution (cropped and full frame)|
 |26 |||switch |lock shutter angle and frame rate controls|
 |18 |||switch |50% frame rate|
 |19 |||switch |200% frame rate (up to 50 fps)|

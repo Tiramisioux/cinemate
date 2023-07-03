@@ -7,8 +7,6 @@ from module.cinepi import Config, CinePi, CinePiController
 from module.monitor import DriveMonitor
 from module.simple_gui import SimpleGUI
 from module.manual_controls import ManualControls
-from module.keyboard import Keyboard
-
 
 # Create the Redis connection
 r = redis.Redis(host=Config.REDIS_HOST, port=Config.REDIS_PORT, db=Config.REDIS_DB)
@@ -42,12 +40,8 @@ if __name__ == "__main__":
                                         res_button_pin=24,                             # GPIO resolution button - switches between 1080 (cropped) and 1520 (full frame)
                                         fps_mult_pin1=18,                              # Flip switch for 50% frame rate
                                         fps_mult_pin2=19,                              # Flip switch for 200% frame rate (up to 50 fps)
-                                        rec_pin=[4, 6],                                # GPIO recording pins
-                                        rec_out_pin=[21])                               # GPIO rec light pins (be sure to use a 320 Ohm resistor between LED and pin!)
-    
-        # # Instantiate the Keyboard class
-        # keyboard_thread = Keyboard(cinepi_controller, monitor)
-        # keyboard_thread.start()
+                                        rec_pin=[4, 6, 22],                                # GPIO recording pins
+                                        rec_out_pin=[21, 23])                               # GPIO rec light pins (be sure to use a 320 Ohm resistor between LED and pin!)
 
         pause()
     finally:

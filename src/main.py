@@ -27,7 +27,7 @@ if __name__ == "__main__":
         simple_gui = SimpleGUI(cinepi, cinepi_controller, monitor)
 
         # Instantiate the ManualControls class with the necessary GPIO pins
-        manual_controls = ManualControls(cinepi_controller, monitor, 
+        manual_controls = ManualControls(cinepi_controller, monitor, cinepi.USBMonitor,
                                         iso_steps=[100, 200, 400, 800, 1600, 3200],    # Define an array for selectable ISO values (100-3200)
                                         shutter_angle_steps=list(range(1, 361)),       # Define an array for selectable shutter angle values (1-360 degrees)
                                         fps_steps=[1,2,4,8,16,18,24,25,33,48,50],      # Define an array for selectable fps values (1-50). To create and array of all frame rates from 1 - 50, replace the array with "list(range(1, 50))""

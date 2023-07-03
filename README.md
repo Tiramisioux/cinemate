@@ -9,7 +9,7 @@ Preinstalled image file with Raspbian + cinepi-raw + cinemate2 can be found in t
 
 - Enables recording on GPIO 4
 
-- Start/stop recording with USB keyboard ('r')
+- Change camera parameters and start/stop recording via USB keyboard
 
 - Enables LED rec light on GPIO 21 (be sure to use a resistor between GPIO and LED!)
 
@@ -94,7 +94,7 @@ or
 
 <code>sudo python3 main.py</code>
 
-main.py has to be run as root to enable the keyboard module
+<code>main.py</code> has to be run as root to enable the keyboard module
 
 ## Default manual control settings
 
@@ -103,15 +103,24 @@ main.py has to be run as root to enable the keyboard module
 |4, 5|r ||push button|    start/stop recording|
 |21, 6|||LED (be sure to use a 320k resistor on this pin!)|     rec signal out, for LED rec light |
 |24|h||  push button|change resolution (cropped and full frame)|
-|26 |||switch |lock shutter angle and frame rate controls|
+|25 |1||push button |ISO decrease (100, 200, 400, 800, 1600, 3200)|
+|23 |2||push button |ISO increase (100, 200, 400, 800, 1600, 3200)|
+||3|||shutter angle decrease (1-360 degrees)|
+||4|||shutter angle increase (1-360 degrees)|
+||5|||fps decrease (1-50)|
+||6|||fps increase (1-50)|
 |18 |||switch |50% frame rate|
 |19 |||switch |200% frame rate (up to 50 fps)|
 |||A0|potentiometer|ISO control (overrides any GPIO pins assigned to iso)|
 |||A2|potentiometer |shutter angle control|
 |||A4|potentiometer|frame rate control|
 
-GPIO pin numbers and Grove Base HAT analog channels can be in main.py
+GPIO pin numbers and Grove Base HAT analog channels can be in <code>main.py</code>.
+
+If USB keyboard is connected, Grove Base HAT analog channels are disabled.
 
 ## Known issues
 
 HDMI monitor has to be connected on startup for scripts to work.
+
+Sometimes script does not recognize SSD drive on startup. Then disconnect and connect the drive again.

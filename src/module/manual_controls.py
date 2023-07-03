@@ -5,7 +5,7 @@ from module.adc import ADC
 from queue import Queue, Empty
 
 class ManualControls(threading.Thread):
-    def __init__(self, cinepi_controller, monitor, iso_steps=None, shutter_angle_steps=None, fps_steps=None, iso_pot=0, shutter_angle_pot=2, fps_pot=4,
+    def __init__(self, cinepi_controller, monitor, USBmonitor, iso_steps=None, shutter_angle_steps=None, fps_steps=None, iso_pot=0, shutter_angle_pot=2, fps_pot=4,
                  iso_inc_pin=None, iso_dec_pin=None, pot_lock_pin=None, res_button_pin=None,
                  rec_pin=None, rec_out_pin=None, fps_mult_pin1=None, fps_mult_pin2=None):
         threading.Thread.__init__(self)
@@ -13,6 +13,7 @@ class ManualControls(threading.Thread):
         self.cinepi_controller = cinepi_controller
         self.adc = ADC() 
         self.monitor = monitor
+        self.USBmonitor = USBmonitor
 
         GPIO.setwarnings(False)
         GPIO.setmode(GPIO.BCM)
@@ -173,6 +174,7 @@ class ManualControls(threading.Thread):
             print("Index value: ", index)
 
     def update_parameters(self):
+        
         iso_read = self.adc.read(self.iso_pot)
         shutter_angle_read = self.adc.read(self.shutter_angle_pot)
         fps_read = self.adc.read(self.fps_pot)
@@ -206,7 +208,8 @@ class ManualControls(threading.Thread):
     def run(self):
         try:
             while True:
-                self.update_parameters()
+                if not self.USBmonitor.usb_keyboard:    #USB keyboard disables pots
+                    self.update_parameters()
                 time.sleep(0.02)
         except Exception as e:
             print(f"Error occurred in ManualControls run loop: {e}")

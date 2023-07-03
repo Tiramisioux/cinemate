@@ -274,23 +274,66 @@ class Keyboard:
         self.controller = controller
 
     def start(self):
-        keyboard.on_press_key("r", self.handle_key_event)
-        keyboard.on_press_key("h", self.handle_key_event)
+        keyboard.on_press_key("r", self.handle_key_event)   #Toggle recording on/off
+        keyboard.on_press_key("h", self.handle_key_event)   #Toggle resolution
+        keyboard.on_press_key("1", self.handle_key_event)   #ISO decrease
+        keyboard.on_press_key("2", self.handle_key_event)   #ISO increase
+        keyboard.on_press_key("3", self.handle_key_event)   #Shutter angle increase
+        keyboard.on_press_key("4", self.handle_key_event)   #Shugger angle decrease
+        keyboard.on_press_key("5", self.handle_key_event)   #Frame rate increase
+        keyboard.on_press_key("6", self.handle_key_event)   #Frame rate decrease
+        
         keyboard.wait("esc")  # Wait for the "esc" key to exit the event loop
 
     def handle_key_event(self, event):
+        # Start/stop recording
         if event.name == "r":
-            # Start/stop recording
             if self.controller.get_recording_status():
                 self.controller.stop_recording()
                 print("Recording stopped")
             else:
                 self.controller.start_recording()
                 print("Recording started")
-        # Add more key handling code as needed
+        
+        # Change resolution
         if event.name == "h":
             if self.controller.get_control_value('height') == '1080':
                 self.controller.set_control_value('height', 1520)
             elif self.controller.get_control_value('height') == '1520':
                 self.controller.set_control_value('height', 1080)
-
+        
+        # Change ISO
+        if event.name == "1":
+            iso_old = int(self.controller.get_control_value('iso'))
+            iso_new = round(iso_old/2)
+            iso_new =  max(100,min(3200, iso_new))
+            self.controller.set_control_value('iso', iso_new)
+        if event.name == "2":
+            iso_old = int(self.controller.get_control_value('iso'))
+            iso_new = round(iso_old*2)
+            iso_new =  max(100,min(3200, iso_new))
+            self.controller.set_control_value('iso', iso_new)
+        
+        # Change shutter angle
+        if event.name == "3":
+            shutter_a_old = int(self.controller.get_control_value('shutter_a'))
+            shutter_a_new = round(shutter_a_old-1)
+            shutter_a_new =  max(1,min(360, shutter_a_new))
+            self.controller.set_control_value('shutter_a', shutter_a_new)
+        if event.name == "4":
+            shutter_a_old = int(self.controller.get_control_value('shutter_a'))
+            shutter_a_new = round(shutter_a_old+1)
+            shutter_a_new =  max(1,min(360, shutter_a_new))
+            self.controller.set_control_value('shutter_a', shutter_a_new)
+        
+        # Change FPS
+        if event.name == "5":
+            fps_old = int(self.controller.get_control_value('fps'))
+            fps_new = round(fps_old-1)
+            fps_new =  max(1,min(50, fps_new))
+            self.controller.set_control_value('fps', fps_new)
+        if event.name == "6":
+            fps_old = int(self.controller.get_control_value('fps'))
+            fps_new = round(fps_old+1)
+            fps_new =  max(1,min(50, fps_new))
+            self.controller.set_control_value('fps', fps_new)

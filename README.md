@@ -121,6 +121,6 @@ If USB keyboard is connected, Grove Base HAT analog channels are disabled.
 
 ## Known issues
 
-HDMI monitor has to be connected on startup for scripts to work.
-
-Sometimes script does not recognize SSD drive on startup. Then try disconnecting and connecting the drive again.
+- HDMI monitor has to be connected on startup for scripts to work.
+- Sometimes script does not recognize SSD drive on startup. Then try disconnecting and connecting the drive again.
+- Be sure to do a safe shutdown of the Pi before removing the SSD.

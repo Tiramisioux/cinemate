@@ -48,16 +48,16 @@ class DriveMonitor:
             total, used, free = shutil.disk_usage(self.path)
             #print(f'\rFree space: {free / (1024**3):.10f} GB', end='', flush=True)
             GPIO.setmode(GPIO.BCM)
-            if self.gpio_pin is not None and self.last_free_space is not None:
+            if self.rec_out_pins is not None and self.last_free_space is not None:
                 if free < self.last_free_space:
-                    GPIO.output(self.gpio_pin, GPIO.HIGH)
+                    GPIO.output(self.rec_out_pins, GPIO.HIGH)
                     self.last_change_time = time.time()
                     self.led_status = True  # LED is on, set flag to True
                 else:
                     if time.time() - self.last_change_time < 0.5:
-                        GPIO.output(self.gpio_pin, GPIO.HIGH)
+                        GPIO.output(self.rec_out_pins, GPIO.HIGH)
                     else:
-                        GPIO.output(self.gpio_pin, GPIO.LOW)
+                        GPIO.output(self.rec_out_pins, GPIO.LOW)
                         self.led_status = False  # LED is off, set flag to False
 
             self.last_free_space = free

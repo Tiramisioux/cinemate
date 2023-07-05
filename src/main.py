@@ -14,7 +14,7 @@ r = redis.Redis(host=Config.REDIS_HOST, port=Config.REDIS_PORT, db=Config.REDIS_
 if __name__ == "__main__":
     try:
         # Instantiate and start the Monitor instance, for monitoring of SSD
-        monitor = DriveMonitor('/media/RAW/', rec_out_pins=[5], button_pin=10)
+        monitor = DriveMonitor('/media/RAW/', rec_out_pins=[5], button_pins=[10)
         threading.Thread(target=monitor.start_space_monitoring, args=(0.1,)).start()
 
 

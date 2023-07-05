@@ -100,20 +100,21 @@ or
 
 |RPi GPIO |USB Keyboard|Grove Base HAT| Type |Function  |
 --- | --- | --- | --- | --- |
-|4, 5, 22|r |5, 22|push button|    start/stop recording|
-|6, 21, 23||6, 23|LED (be sure to use a 320k resistor on this pin!)|     rec signal out, for LED rec light |
-|24|h|24|  push button|change resolution (cropped and full frame)|
+|4, 5, 22|r |D5, D22|push button|    start/stop recording|
+|6, 21, 23||D6, D23|LED (be sure to use a 320k resistor on this pin!)|     rec signal out, for LED rec light |
+|24|h|D24|  push button|change resolution (cropped and full frame)|
 |25 |1||push button |ISO decrease (100, 200, 400, 800, 1600, 3200)|
 |23 |2||push button |ISO increase (100, 200, 400, 800, 1600, 3200)|
 ||3|||shutter angle decrease (1-360 degrees)|
 ||4|||shutter angle increase (1-360 degrees)|
 ||5|||fps decrease (1-50)|
 ||6|||fps increase (1-50)|
-|18 ||18|switch |50% frame rate|
-|19 ||19|switch |200% frame rate (up to 50 fps)|
+|18 ||D18|switch |50% frame rate|
+|19 ||D19|switch |200% frame rate (up to 50 fps)|
 |||A0|potentiometer|ISO control (overrides any GPIO pins assigned to iso)|
 |||A2|potentiometer |shutter angle control|
 |||A4|potentiometer|frame rate control|
+|19,26|D26|push button|unmount SSD (press and hold for 2 sec) / safe shutdown (press and hold for 10 sec)|
 
 GPIO pin numbers and Grove Base HAT analog channels can be changed in <code>main.py</code>.
 
@@ -128,4 +129,3 @@ If USB keyboard is connected, Grove Base HAT analog channels are disabled.
 ## To-do
 
 - Fix issue with keyboard not working when disconnected and connected
-- Add button for SSD unmount / safe shutdown / startup

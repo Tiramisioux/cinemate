@@ -7,10 +7,10 @@ import RPi.GPIO as GPIO
 import subprocess
 
 class DriveMonitor:
-    def __init__(self, path, gpio_pins=None, button_pins=None):  # Change button_pin to button_pins
+    def __init__(self, path, rec_out_pins=None, button_pins=None):  # Change button_pin to button_pins
         self.path = path
         self.connection_status = self.is_drive_connected()
-        self.gpio_pins = gpio_pins if gpio_pins else []
+        self.rec_out_pins = rec_out_pins if rec_out_pins else []
         self.button_pins = button_pins if button_pins else []  # Change button_pin to button_pins
         self.last_free_space = 0
         self.last_change_time = time.time()
@@ -19,8 +19,8 @@ class DriveMonitor:
         
         GPIO.setmode(GPIO.BCM)
 
-        # Set up each pin in gpio_pins list
-        for pin in self.gpio_pins:
+        # Set up each pin in rec_out_pins list
+        for pin in self.rec_out_pins:
             GPIO.setup(pin, GPIO.OUT)
             GPIO.output(pin, GPIO.LOW)
 

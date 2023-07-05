@@ -14,7 +14,7 @@ r = redis.Redis(host=Config.REDIS_HOST, port=Config.REDIS_PORT, db=Config.REDIS_
 if __name__ == "__main__":
     try:
         # Instantiate and start the Monitor instance, for monitoring of SSD
-        monitor = DriveMonitor('/media/RAW/', gpio_pin=5)
+        monitor = DriveMonitor('/media/RAW/', rec_out_pins=[5], button_pin=10)
         threading.Thread(target=monitor.start_space_monitoring, args=(0.1,)).start()
 
 
@@ -40,8 +40,7 @@ if __name__ == "__main__":
                                         res_button_pin=24,                             # GPIO resolution button - switches between 1080 (cropped) and 1520 (full frame)
                                         fps_mult_pin1=18,                              # Flip switch for 50% frame rate
                                         fps_mult_pin2=19,                              # Flip switch for 200% frame rate (up to 50 fps)
-                                        rec_pin=[4, 6, 22],                                # GPIO recording pins
-                                        rec_out_pin=[21, 23])                               # GPIO rec light pins (be sure to use a 320 Ohm resistor between LED and pin!)
+                                        rec_pin=[4, 6, 22])                                # GPIO recording pins
 
         pause()
     finally:

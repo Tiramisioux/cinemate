@@ -115,7 +115,7 @@ class SimpleGUI(threading.Thread):
             draw.text((410, 400), "cinepi-raw", font=font2, align="left", fill="white")
             draw.text((760, 640), "by Csaba Nagy", font=font3, align="left", fill="white")
             # GUI Lower line
-            if self.drive_connected:
+            if self.drive_connected and self.monitor.last_free_space:
                 draw.text((10, 1051), str((str(self.min_left)) + " min"), font=font, align="left", fill="white")
             else:
                 draw.text((10, 1051), "no disk", font=font, align="left", fill="white")

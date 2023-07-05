@@ -83,14 +83,14 @@ class ManualControls(threading.Thread):
             if drive_mounted:
                 if not self.cinepi_controller.get_recording_status():
                     self.cinepi_controller.start_recording()
-                    if self.rec_out_pin is not None:
-                        for pin in self.rec_out_pin:
-                            GPIO.output(pin, GPIO.HIGH)  # set rec_out_pin to high when recording
+                    # if self.rec_out_pin is not None:
+                    #     for pin in self.rec_out_pin:
+                    #         GPIO.output(pin, GPIO.HIGH)  # set rec_out_pin to high when recording
                 else:
                     self.cinepi_controller.stop_recording()
-                    if self.rec_out_pin is not None:
-                        for pin in self.rec_out_pin:
-                            GPIO.output(pin, GPIO.LOW)  # set rec_out_pin to low when not recording
+                    # if self.rec_out_pin is not None:
+                    #     for pin in self.rec_out_pin:
+                    #         GPIO.output(pin, GPIO.LOW)  # set rec_out_pin to low when not recording
 
     def pot_lock_callback(self, channel):
         if GPIO.input(self.pot_lock_pin) == GPIO.LOW:  # GPIO pin 18 is high

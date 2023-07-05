@@ -105,7 +105,7 @@ class CinePiController:
         self.drive_mounted = self.monitor.is_drive_connected()
         
     def get_recording_status(self):
-        return self.cinepi.get_recording_status()
+        return self.monitor.led_status
 
     def start_recording(self):
         drive_mounted = self.monitor.is_drive_connected()

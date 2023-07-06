@@ -27,7 +27,7 @@ if __name__ == "__main__":
         simple_gui = SimpleGUI(cinepi, cinepi_controller, monitor)
 
         # Instantiate the ManualControls class with the necessary GPIO pins
-        manual_controls = ManualControls(cinepi_controller, monitor, cinepi.USBMonitor,
+        manual_controls = ManualControls(cinepi_controller, monitor, cinepi.USBMonitor, 
                                         iso_steps=[100, 200, 400, 800, 1600, 3200],    # Define an array for selectable ISO values (100-3200)
                                         shutter_angle_steps=list(range(1, 361)),       # Define an array for selectable shutter angle values (1-360 degrees)
                                         fps_steps=[1,2,4,8,16,18,24,25,33,48,50],      # Define an array for selectable fps values (1-50). To create and array of all frame rates from 1 - 50, replace the array with "list(range(1, 50))""
@@ -38,13 +38,6 @@ if __name__ == "__main__":
                                         iso_dec_pin=25,                                # GPIO pin for button for decreasing ISO
                                         pot_lock_pin=16,                               # GPIO pin for attaching shutter angle and fps potentiometer lock switch
                                         res_button_pin=[13, 24],                             # GPIO resolution button - switches between 1080 (cropped) and 1520 (full frame)
-                                        iso_pot=0,                                     # Analog channel for ISO control, if Grove Base HAT is attached (if defined, it overrides any iso_inc and iso_dec pins). Set to None if no Grove Base HAT is attached.
-                                        shutter_angle_pot=4,                           # Analog channel for shutter angle control, if Grove Base HAT is attached. Set to None if no Grove Base HAT is attached.
-                                        fps_pot=2,                                     # Analog channel for fps control, if Grove Base HAT is attached. Set to None if no Grove Base HAT is attached.
-                                        iso_inc_pin=23,                                # GPIO pin for button for increasing ISO
-                                        iso_dec_pin=25,                                # GPIO pin for button for decreasing ISO
-                                        pot_lock_pin=16,                               # GPIO pin for attaching shutter angle and fps potentiometer lock switch
-                                        res_button_pin=24,                             # GPIO resolution button - switches between 1080 (cropped) and 1520 (full frame)
                                         fps_mult_pin1=18,                              # Flip switch for 50% frame rate
                                         fps_mult_pin2=19,                              # Flip switch for 200% frame rate (up to 50 fps)
                                         rec_pin=[4, 6, 22])                            # GPIO recording pins

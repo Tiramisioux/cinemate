@@ -128,11 +128,7 @@ Connect GPIO 26 to GPIO 03 using a jumper wire, and the safe shutdown button att
 
 - HDMI monitor has to be connected on startup for scripts to work.
 - Sometimes script does not recognize SSD drive on startup. Then try disconnecting and connecting the drive again.
-<<<<<<< HEAD
 - Be sure to do a safe shutdown of the Pi before removing the SSD, otherwise the last two clip folders on the drive might become corrupted.
-=======
-- Be sure to unmount or do safe shutdown of the Pi before removing the SSD.
->>>>>>> 089077534cb72ac554851d25e988cd22954ca4cc
 
 ## To-do
 

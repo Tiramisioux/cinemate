@@ -114,7 +114,12 @@ or
 |||A0|potentiometer|ISO control (overrides any GPIO pins assigned to iso)|
 |||A2|potentiometer |shutter angle control|
 |||A4|potentiometer|frame rate control|
+<<<<<<< HEAD
 |26|D26|push button|unmount SSD (press and hold for 2 sec) / safe shutdown (press and hold for 6 sec)|
+=======
+|16||D16|switch|lock shutter angle and frame rate controls|
+|26||D26|push button|unmount SSD (press and hold for 2 sec) / safe shutdown (press and hold for 10 sec)|
+>>>>>>> 089077534cb72ac554851d25e988cd22954ca4cc
 
 GPIO pin numbers and Grove Base HAT analog channels can be changed in <code>main.py</code>.
 
@@ -126,7 +131,11 @@ Connect GPIO 26 to GPIO 03 using a jumper wire, and the safe shutdown button att
 
 - HDMI monitor has to be connected on startup for scripts to work.
 - Sometimes script does not recognize SSD drive on startup. Then try disconnecting and connecting the drive again.
+<<<<<<< HEAD
 - Be sure to do a safe shutdown of the Pi before removing the SSD, otherwise the last two clip folders on the drive might become corrupted.
+=======
+- Be sure to unmount or do safe shutdown of the Pi before removing the SSD.
+>>>>>>> 089077534cb72ac554851d25e988cd22954ca4cc
 
 ## To-do
 

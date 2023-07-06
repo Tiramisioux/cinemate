@@ -43,10 +43,19 @@ class ManualControls(threading.Thread):
                 GPIO.setup(rec_out_pin, GPIO.OUT)
                 GPIO.output(rec_out_pin, GPIO.LOW)
 
-        for pin, edge, callback in pin_configurations:
-            if pin is not None:
-                GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-                GPIO.add_event_detect(pin, edge, callback=callback, bouncetime=400)
+        for pins, edge, callback in pin_configurations:
+            if pins is not None:
+                # Check if 'pins' is a list
+                if isinstance(pins, list):
+                    # If it's a list, iterate through each pin in the list
+                    for pin in pins:
+                        GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                        GPIO.add_event_detect(pin, edge, callback=callback, bouncetime=400)
+                else:
+                    # If it's a single pin
+                    GPIO.setup(pins, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                    GPIO.add_event_detect(pins, edge, callback=callback, bouncetime=400)
+
 
         self.rec_pin = rec_pin
         self.rec_out_pin = rec_out_pin

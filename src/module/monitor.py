@@ -100,12 +100,12 @@ class DriveMonitor:
             
             while GPIO.input(button_pin) == GPIO.LOW:
                 elapsed_time = time.time() - start_time
-                if 2 <= elapsed_time < 10 and not drive_dismounted:
+                if 2 <= elapsed_time < 6 and not drive_dismounted:
                     self.dismount_drive()
                     self.flash_led(5)
                     drive_dismounted = True
                 
-                if elapsed_time >= 10:
+                if elapsed_time >= 6:
                     self.safe_shutdown()
                     
                 time.sleep(0.1)

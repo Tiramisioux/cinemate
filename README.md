@@ -111,11 +111,10 @@ or
 ||6|||fps increase (1-50)|
 |18 ||D18|switch |50% frame rate|
 |19 ||D19|switch |200% frame rate (up to 50 fps)|
+|16||D16|switch|lock shutter angle and frame rate controls|
 |||A0|potentiometer|ISO control (overrides any GPIO pins assigned to iso)|
 |||A2|potentiometer |shutter angle control|
 |||A4|potentiometer|frame rate control|
-|26||D26|push button|unmount SSD (press and hold for 2 sec) / safe shutdown (press and hold for 2 sec)|
-|16||D16|switch|lock shutter angle and frame rate controls|
 |26||D26|push button|unmount SSD (press and hold for 2 sec) / safe shutdown (press and hold for 6 sec)|
 
 GPIO pin numbers and Grove Base HAT analog channels can be changed in <code>main.py</code>.

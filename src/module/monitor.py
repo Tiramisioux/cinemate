@@ -44,9 +44,13 @@ class DriveMonitor:
 
     def get_remaining_space(self):
         """Check the free space of the drive and print it"""
+
         if self.disk_ready:
             total, used, free = shutil.disk_usage(self.path)
             #print(f'\rFree space: {free / (1024**3):.10f} GB', end='', flush=True)
+            if not all(self.is_output(pin) for pin in self.rec_out_pins):
+                for pin in self.rec_out_pins:
+                    GPIO.setup(pin, GPIO.OUT)
             GPIO.setmode(GPIO.BCM)
             if self.rec_out_pins is not None and self.last_free_space is not None:
                 if free < self.last_free_space:
@@ -93,6 +97,7 @@ class DriveMonitor:
         
     def monitor_button(self, button_pin):
         """Monitor the button press"""
+        GPIO.setmode(GPIO.BCM)  # Set GPIO mode before using GPIO functions
         while True:
             GPIO.wait_for_edge(button_pin, GPIO.FALLING)
             start_time = time.time()
@@ -132,6 +137,10 @@ class DriveMonitor:
         """Perform a safe shutdown"""
         print("Performing a safe shutdown...")
         subprocess.run(["sudo", "shutdown", "-h", "now"])
+        
+    def is_output(self, pin):
+        GPIO.setmode(GPIO.BCM)  # Set GPIO mode before using GPIO functions
+        return GPIO.gpio_function(pin) == GPIO.OUT
 
     def start_space_monitoring(self, interval):
         """Monitor the free space on the drive at the specified interval"""

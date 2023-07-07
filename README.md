@@ -100,8 +100,8 @@ or
 
 |RPi GPIO |USB Keyboard|Grove Base HAT| Type |Function  |
 --- | --- | --- | --- | --- |
-|4, 5, 22|r |D5, D22|push button|    start/stop recording|
-|6, 21, 23||D6, D23|LED (be sure to use a 320k resistor on this pin!)|     rec signal out, for LED rec light |
+|4, 6, 22|r |D6, D22|push button|    start/stop recording|
+|5||D5|LED (be sure to use a 320k resistor on this pin!)|     rec signal out, for LED rec light |
 |24|h|D24|  push button|change resolution (cropped and full frame)|
 |25 |1||push button |ISO decrease (100, 200, 400, 800, 1600, 3200)|
 |23 |2||push button |ISO increase (100, 200, 400, 800, 1600, 3200)|

@@ -29,7 +29,7 @@ class DriveMonitor:
             GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
             threading.Thread(target=self.monitor_button, args=(pin,)).start()
 
-        print('Initial connection status:', 'Connected' if self.connection_status else 'Disconnected')
+        print('SSD', 'connected!' if self.connection_status else 'disconnected')
 
         self.monitor_thread = threading.Thread(target=self.monitor_drive)
         self.monitor_thread.start()
@@ -63,7 +63,7 @@ class DriveMonitor:
             self.last_free_space = free
         else:
             self.last_free_space = None
-        print(f"\rSpace left: {self.last_free_space}", end="", flush=True)
+        print(f"\rSpace left: {self.last_free_space}\n", end="", flush=True)
 
     def handle_event(self, device):
         """Handle the connect/disconnect event"""
@@ -74,12 +74,12 @@ class DriveMonitor:
                     time.sleep(5)
                     self.connection_status = self.is_drive_connected()
                     if self.connection_status and self.connection_status != old_status:
-                        print('Drive connected')
+                        print('SSD connected')
                         self.get_remaining_space()
                 elif device.action == 'remove':
                     self.connection_status = False
                     if self.connection_status != old_status:
-                        print('Drive disconnected')
+                        print('SSD disconnected')
 
     def monitor_drive(self):
         """Monitor the drive connect/disconnect events"""

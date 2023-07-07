@@ -2,7 +2,7 @@ import threading
 import time
 import RPi.GPIO as GPIO
 from module.adc import ADC
-from queue import Queue, Empty
+import smbus2
 
 class ManualControls(threading.Thread):
     def __init__(self, cinepi_controller, monitor, USBmonitor, iso_steps=None, shutter_angle_steps=None, fps_steps=None, iso_pot=0, shutter_angle_pot=2, fps_pot=4,
@@ -17,6 +17,28 @@ class ManualControls(threading.Thread):
 
         GPIO.setwarnings(False)
         GPIO.setmode(GPIO.BCM)
+        
+        #Check if Grove Base HAT is connected
+        
+        # I2C address of Grove Base HAT
+        GROVE_BASE_HAT_ADDRESS = 0x08
+
+        # Raspberry Pi I2C bus (usually bus 1)
+        I2C_BUS = 1
+
+        try:
+            # Try to read a byte from the Grove Base HAT
+            bus = smbus2.SMBus(I2C_BUS)
+            bus.read_byte(GROVE_BASE_HAT_ADDRESS)
+            self.grove_base_hat_connected = True
+            print("Grove Base HAT is connected! Analog controls available.")
+        except OSError as e:
+            # If an error occurs, the device is not connected
+            self.grove_base_hat_connected = False
+            print("Grove Base HAT is not connected. Analog controls not available.")
+
+        # Close the I2C bus
+        bus.close()
 
         pin_configurations = [
             (iso_inc_pin, GPIO.BOTH, self.iso_inc_callback),
@@ -217,7 +239,7 @@ class ManualControls(threading.Thread):
     def run(self):
         try:
             while True:
-                if not self.USBmonitor.usb_keyboard:    #USB keyboard disables pots
+                if self.grove_base_hat_connected and not self.USBmonitor.usb_keyboard:    #USB keyboard disables pots
                     self.update_parameters()
                 time.sleep(0.02)
         except Exception as e:

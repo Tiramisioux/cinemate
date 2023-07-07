@@ -63,7 +63,7 @@ class DriveMonitor:
             self.last_free_space = free
         else:
             self.last_free_space = None
-        print(f"\rSpace left: {self.last_free_space}\n", end="", flush=True)
+        print(f"\rSpace left: {self.last_free_space}", end="", flush=True)
 
     def handle_event(self, device):
         """Handle the connect/disconnect event"""

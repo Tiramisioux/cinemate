@@ -112,14 +112,14 @@ class CinePiController:
         if drive_mounted:
             self.r.set('is_recording', 1)
             self.r.publish('cp_controls', 'is_recording')
-            logger.info("Recording started")
+            print("\nRecording started")
         else:
-            print("Drive is not attached. Cannot start recording.")
+            print("\nDrive is not attached. Cannot start recording.")
 
     def stop_recording(self):
         self.r.set('is_recording', 0)
         self.r.publish('cp_controls', 'is_recording')
-        logger.info("Recording stopped")
+        print("\nRecording stopped")
         
     def get_control_value(self, control):
         res = self.r.get(control)
@@ -136,7 +136,7 @@ class CinePiController:
         if control == 'height':
             self.r.set("cam_init", 1)
             self.r.publish("cp_controls", "cam_init")
-
+        print(f"\n{control} set to {value}")
         return True
 
 class AudioRecorder:
@@ -154,24 +154,24 @@ class AudioRecorder:
             self.file_path = os.path.join(self.directory, file_name)
             command = f"arecord -D plughw:{self.USBMonitor.usb_mic} -f cd -c 1 -t wav {self.file_path}"
             self.process = subprocess.Popen(command, shell=True, preexec_fn=os.setsid, stderr=subprocess.DEVNULL)
-            logger.info(f"Audio recording started and will be saved to {self.file_path}")
+            logger.info(f"\nAudio recording started and will be saved to {self.file_path}")
         except Exception as e:
-            logger.error(f"Failed to start recording. Error: {str(e)}")
+            logger.error(f"\nFailed to start recording. Error: {str(e)}")
 
     def stop_recording(self):
         if self.process:
             try:
                 os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
-                logger.info(f"Audio recording stopped. File saved at {self.file_path}")
+                logger.info(f"\nAudio recording stopped. File saved at {self.file_path}")
             except OSError as e:
                 if e.errno == 19:  # No such device
-                    logger.info("Microphone was disconnected. Stopping recording.")
+                    logger.info("\nMicrophone was disconnected. Stopping recording.")
                 else:
                     raise e
             except Exception as e:
-                logger.error(f"Failed to stop recording. Error: {str(e)}")
+                logger.error(f"\nFailed to stop recording. Error: {str(e)}")
         else:
-            logger.info("No audio recording to stop.")
+            logger.info("\nNo audio recording to stop.")
 
 
 class USBMonitor:
@@ -194,11 +194,11 @@ class USBMonitor:
                 # Store the device's path and a unique identifier
                 self.usb_mic_path = device.device_path
                 self.usb_mic_id = device.get('ID_SERIAL')
-                print(f'USB Microphone connected: {device}')
+                print(f'\nUSB Microphone connected: {device}')
                 self.get_usb_microphone()
             elif 'KEYBOARD' in device.get('ID_MODEL', '').upper():
                 self.usb_keyboard = device
-                print(f'USB Keyboard connected: {device}')
+                print(f'\nUSB Keyboard connected: {device}')
                 
                 # Initialize the keyboard class
                 self.keyboard = Keyboard(self.controller)  # Instantiate the keyboard handler
@@ -206,47 +206,47 @@ class USBMonitor:
                 self.keyboard_thread.daemon = True  # Set the thread as a daemon thread to automatically exit when the main program ends
                 self.keyboard_thread.start()  # Start the keyboard listener thread
             
-            elif 'SSD' in device.get('ID_MODEL', '').upper():
-                self.usb_hd = device
-                print(f'USB SSD connected: {device}')
+            # elif 'SSD' in device.get('ID_MODEL', '').upper():
+            #     self.usb_hd = device
+            #     print(f'\nUSB SSD connected: {device}')
                 
         elif device.action == 'remove':
-            print(f'Device disconnected: {device}')
+            print(f'\nDevice disconnected: {device}')
             # Check if the disconnected device is the same as the stored USB microphone
             if self.usb_mic_path is not None and device.device_path.startswith(self.usb_mic_path):
                 self.usb_mic_path = None
-                print(f'USB Microphone disconnected: {device}')
+                print(f'\nUSB Microphone disconnected: {device}')
                 self.get_usb_microphone()
             elif self.usb_keyboard is not None and self.usb_keyboard == device:
                 self.usb_keyboard = None
-                print(f'USB Keyboard disconnected: {device}')
+                print(f'\nUSB Keyboard disconnected: {device}')
                 # Stop the keyboard listener here
                 if self.keyboard_thread and self.keyboard_thread.is_alive():
                     keyboard.unhook_all()  # Unhook all the keyboard listeners
-                    print("Keyboard listener stopped")
-            elif self.usb_hd is not None and self.usb_hd == device:
-                self.usb_hd = None
-                print(f'USB SSD disconnected: {device}')
+                    print("\nKeyboard listener stopped")
+            # elif self.usb_hd is not None and self.usb_hd == device:
+            #     self.usb_hd = None
+            #     print(f'\nUSB SSD disconnected: {device}')
 
 
     def check_initial_devices(self):
         for device in self.context.list_devices(subsystem='usb'):
             if 'USB_PNP_SOUND_DEVICE' in device.get('ID_MODEL', '').upper():
                 self.usb_mic_serial = device.get('ID_SERIAL')
-                print(f'USB Microphone connected: {device}')
+                print(f'\nUSB Microphone connected: {device}')
                 self.get_usb_microphone()
             elif 'KEYBOARD' in device.get('ID_MODEL', '').upper():
                 self.usb_keyboard = device
-                print(f'USB Keyboard connected: {device}')
+                print(f'\nUSB Keyboard connected: {device}')
                 
                 # Initialize the keyboard class here
                 self.keyboard = Keyboard(self.controller)  # Instantiate the keyboard handler
                 self.keyboard_thread = threading.Thread(target=self.keyboard.start)  # Create a thread for the keyboard listener
                 self.keyboard_thread.daemon = True  # Set the thread as a daemon thread to automatically exit when the main program ends
                 self.keyboard_thread.start()  # Start the keyboard listener thread
-            elif 'SSD' in device.get('ID_MODEL', '').upper():
-                self.usb_hd = device
-                print(f'USB SSD connected: {device}')
+            # elif 'SSD' in device.get('ID_MODEL', '').upper():
+            #     self.usb_hd = device
+            #     print(f'USB SSD connected: {device}')
 
                 
     def get_usb_microphone(self):
@@ -263,7 +263,7 @@ class USBMonitor:
                     # return device_number
             print(self.usb_mic)    
         except subprocess.CalledProcessError:
-            logger.error("Failed to retrieve USB microphone. Continuing without USB microphone.")
+            logger.error("\nFailed to retrieve USB microphone. Continuing without USB microphone.")
             self.usb_mic = None
 
 
@@ -292,10 +292,10 @@ class Keyboard:
         if event.name == "r":
             if self.controller.get_recording_status():
                 self.controller.stop_recording()
-                print("Recording stopped")
+                print("\nRecording of raw frames stopped")
             else:
                 self.controller.start_recording()
-                print("Recording started")
+                print("\nRecording of raw frames started")
         
         # Change resolution
         if event.name == "h":

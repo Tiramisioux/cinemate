@@ -3,11 +3,12 @@ import time
 import RPi.GPIO as GPIO
 from module.adc import ADC
 import smbus2
+from collections import deque
 
 class ManualControls(threading.Thread):
     def __init__(self, cinepi_controller, monitor, USBmonitor, iso_steps=None, shutter_angle_steps=None, fps_steps=None, iso_pot=0, shutter_angle_pot=2, fps_pot=4,
                  iso_inc_pin=None, iso_dec_pin=None, pot_lock_pin=None, res_button_pin=None,
-                 rec_pin=None, rec_out_pin=None, fps_mult_pin1=None, fps_mult_pin2=None):
+                 rec_pin=None, fps_mult_pin1=None, fps_mult_pin2=None):
         threading.Thread.__init__(self)
 
         self.cinepi_controller = cinepi_controller
@@ -31,20 +32,25 @@ class ManualControls(threading.Thread):
             bus = smbus2.SMBus(I2C_BUS)
             bus.read_byte(GROVE_BASE_HAT_ADDRESS)
             self.grove_base_hat_connected = True
-            print("Grove Base HAT is connected! Analog controls available.")
+            print("\nGrove Base HAT found! Analog controls available.")
         except OSError as e:
             # If an error occurs, the device is not connected
             self.grove_base_hat_connected = False
-            print("Grove Base HAT is not connected. Analog controls not available.")
+            print("\nGrove Base HAT is not found. Analog controls not available.")
 
         # Close the I2C bus
         bus.close()
+        
+        # Create deques for storing the last N readings
+        self.iso_readings = deque(maxlen=10)
+        self.shutter_angle_readings = deque(maxlen=10)
+        self.fps_readings = deque(maxlen=10)
 
         pin_configurations = [
             (iso_inc_pin, GPIO.BOTH, self.iso_inc_callback),
             (iso_dec_pin, GPIO.RISING, self.iso_dec_callback),
             (pot_lock_pin, GPIO.BOTH, self.pot_lock_callback),
-            (res_button_pin, GPIO.RISING, self.res_button_callback),
+            (res_button_pin, GPIO.BOTH, self.res_button_callback),
             (fps_mult_pin1, GPIO.BOTH, self.fps_mult_callback), 
             (fps_mult_pin2, GPIO.BOTH, self.fps_mult_callback),
         ]
@@ -55,15 +61,6 @@ class ManualControls(threading.Thread):
                     pin_configurations.append((pin, GPIO.RISING, self.gpio_callback))
             else:
                 pin_configurations.append((rec_pin, GPIO.RISING, self.gpio_callback))
-
-        if rec_out_pin is not None:
-            if isinstance(rec_out_pin, list):
-                for pin in rec_out_pin:
-                    GPIO.setup(pin, GPIO.OUT)
-                    GPIO.output(pin, GPIO.LOW)
-            else:
-                GPIO.setup(rec_out_pin, GPIO.OUT)
-                GPIO.output(rec_out_pin, GPIO.LOW)
 
         for pins, edge, callback in pin_configurations:
             if pins is not None:
@@ -80,7 +77,6 @@ class ManualControls(threading.Thread):
 
 
         self.rec_pin = rec_pin
-        self.rec_out_pin = rec_out_pin
         self.iso_inc_pin = iso_inc_pin
         self.iso_dec_pin = iso_dec_pin
         self.pot_lock_pin = pot_lock_pin
@@ -114,14 +110,8 @@ class ManualControls(threading.Thread):
             if drive_mounted:
                 if not self.cinepi_controller.get_recording_status():
                     self.cinepi_controller.start_recording()
-                    # if self.rec_out_pin is not None:
-                    #     for pin in self.rec_out_pin:
-                    #         GPIO.output(pin, GPIO.HIGH)  # set rec_out_pin to high when recording
                 else:
                     self.cinepi_controller.stop_recording()
-                    # if self.rec_out_pin is not None:
-                    #     for pin in self.rec_out_pin:
-                    #         GPIO.output(pin, GPIO.LOW)  # set rec_out_pin to low when not recording
 
     def pot_lock_callback(self, channel):
         if GPIO.input(self.pot_lock_pin) == GPIO.LOW:  # GPIO pin 18 is high
@@ -129,14 +119,14 @@ class ManualControls(threading.Thread):
         if GPIO.input(self.pot_lock_pin) == GPIO.HIGH:  # GPIO pin 19 is high
             self.pot_locked = True
             
-        print("pot lock: ", self.pot_locked)
+        print("\npot lock: ", self.pot_locked)
         
     def res_button_callback(self, channel):
-            if channel == self.res_button_pin:
-                if self.cinepi_controller.get_control_value('height') == '1080':
-                    self.cinepi_controller.set_control_value('height', 1520)
-                elif self.cinepi_controller.get_control_value('height') == '1520':
-                    self.cinepi_controller.set_control_value('height', 1080)
+            # if channel == self.res_button_pin:
+        if self.cinepi_controller.get_control_value('height') == '1080':
+            self.cinepi_controller.set_control_value('height', 1520)
+        elif self.cinepi_controller.get_control_value('height') == '1520':
+            self.cinepi_controller.set_control_value('height', 1080)
                     
     def fps_mult(self):
         if GPIO.input(self.fps_mult_pin1) == GPIO.LOW:  # GPIO pin 18 is high
@@ -176,18 +166,26 @@ class ManualControls(threading.Thread):
                     iso_new = ManualControls.iso_steps[iso_index - 1]
                     self.cinepi_controller.set_control_value('iso', iso_new)
                     self.last_iso = iso_new
-                 
+                    
     def calculate_iso(self, value):
-        index = round((len(self.iso_steps) - 1) * value / 1000)
+        # Add the new reading to the deque
+        self.iso_readings.append(value)
+        # Calculate the average of the readings in the deque
+        average_value = sum(self.iso_readings) / len(self.iso_readings)
+        index = round((len(self.iso_steps) - 1) * average_value / 1000)
         try:
             return self.iso_steps[index]
         except IndexError:
             print("Error occurred while accessing ISO list elements.")
             print("List length: ", len(self.iso_steps))
             print("Index value: ", index)
-
+    
     def calculate_shutter_angle(self, value):
-        index = round((len(self.shutter_angle_steps) - 1) * value / 1000)
+        # Add the new reading to the deque
+        self.shutter_angle_readings.append(value)
+        # Calculate the average of the readings in the deque
+        average_value = sum(self.shutter_angle_readings) / len(self.shutter_angle_readings)
+        index = round((len(self.shutter_angle_steps) - 1) * average_value / 1000)
         try:
             return self.shutter_angle_steps[index]
         except IndexError:
@@ -196,13 +194,17 @@ class ManualControls(threading.Thread):
             print("Index value: ", index)
 
     def calculate_fps(self, value):
-        index = round((len(self.fps_steps) - 1) * value / 1000)
+        # Add the new reading to the deque
+        self.fps_readings.append(value)
+        # Calculate the average of the readings in the deque
+        average_value = sum(self.fps_readings) / len(self.fps_readings)
+        index = round((len(self.fps_steps) - 1) * average_value / 1000)
         try:
             return self.fps_steps[index]
         except IndexError:
             print("Error occurred while accessing fps list elements.")
             print("List length: ", len(self.fps_steps))
-            print("Index value: ", index)
+            print("Index value: ", index)             
 
     def update_parameters(self):
         

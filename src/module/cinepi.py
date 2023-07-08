@@ -9,6 +9,7 @@ from queue import Queue, Empty
 from threading import Thread
 import pyudev
 import keyboard
+import RPi.GPIO as GPIO
 
 # Set up the logger
 logging.basicConfig(level=logging.INFO)
@@ -69,6 +70,16 @@ class CinePi:
             self.audio_recorder = AudioRecorder(self.r, self.USBMonitor) 
 
             self.initialized = True  # indicate that the instance has been initialized
+            
+            # Setup PWM pin
+            
+            self.pwmPin = 40 #Audio jack on RPi4
+
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setwarnings(True)
+            GPIO.setup(self.pwmPin, GPIO.OUT)
+            
+            self.p = GPIO.PWM(self.pwmPin, 50)
 
 
     def _listen(self):
@@ -88,14 +99,23 @@ class CinePi:
                             self.is_recording.set()
                             if self.USBMonitor.usb_mic:
                                 self.audio_recorder.start_recording()  # Start audio recording
+                            self.pwm_tone_start()
                         elif is_recording_int == 0:
                             self.is_recording.clear()
                             if self.USBMonitor.usb_mic:
                                 self.audio_recorder.stop_recording()  # Stop audio recording
+                            self.pwm_tone_stop()
 
     def get_recording_status(self):
         with self._lock:
             return self.is_recording.is_set()
+        
+    def pwm_tone_start(self):
+            self.p.start(50)
+
+    def pwm_tone_stop(self):
+            self.p.stop()
+
         
 class CinePiController:
     def __init__(self, cinepi, r, monitor):

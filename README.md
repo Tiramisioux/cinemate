@@ -25,6 +25,8 @@ Preinstalled image file with Raspbian + cinepi-raw + cinemate2 can be found in t
 
 - Attach a Grove Base HAT for control of ISO, shutter angle and fps via potentiometers
 
+- Plays a tone on RPi audio jack (right channel) during recording of raw frames. Can be used to trigger an external field recorder like the Zoom H6. _Set a limiter on the XY microphone and feed the RPi audio to Track 1 with maximum gain and autostart/stop recording at 0 dB._
+
 _For adding cinemate2 manually to an existing cinepi-raw installation, follow install instructions below._
 
 ## Dependencies

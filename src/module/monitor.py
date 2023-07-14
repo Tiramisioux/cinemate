@@ -84,6 +84,8 @@ class DriveMonitor:
                     self.connection_status = False
                     if self.connection_status != old_status:
                         print('SSD disconnected')
+                        self.get_remaining_space()
+                        self.is_drive_connected()
 
     def monitor_drive(self):
         """Monitor the drive connect/disconnect events"""

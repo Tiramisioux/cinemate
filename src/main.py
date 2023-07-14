@@ -24,7 +24,7 @@ if __name__ == "__main__":
         cinepi_controller = CinePiController(cinepi, r, monitor)
 
         # Initialize SimpleGUI with the controller and monitor instances
-        #simple_gui = SimpleGUI(cinepi, cinepi_controller, monitor)
+        simple_gui = SimpleGUI(cinepi, cinepi_controller, monitor)
 
         # Instantiate the ManualControls class with the necessary GPIO pins
         manual_controls = ManualControls(cinepi_controller, monitor, cinepi.USBMonitor, 

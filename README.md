@@ -11,7 +11,7 @@ Preinstalled image file with Raspbian and cinepi-raw can be found in the release
 
 - Change camera parameters and start/stop recording via USB keyboard
 
-- Enables LED rec light on GPIO 21 (be sure to use a resistor between GPIO and LED!)
+- Enables LED rec light on GPIO 5 (be sure to use a resistor between GPIO and LED!)
 
 - Enables toggling of ISO (100, 200, 400, 800, 1600, 3200) on GPIO 23 (increase one step) and GPIO 25 (decrease one step). 
 

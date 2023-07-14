@@ -117,7 +117,7 @@ or
 |||A0|potentiometer|ISO control (overrides any GPIO pins assigned to iso)|
 |||A2|potentiometer |shutter angle control|
 |||A4|potentiometer|frame rate control|
-|26||D26|push button|unmount SSD (press and hold for 2 sec) / safe shutdown (press and hold for 6 sec)|
+|26|0|D26|push button|unmount SSD (press and hold push button for 2 sec, or keyboard press "0") / safe shutdown (press and hold push button for 6 sec)|
 
 GPIO pin numbers and Grove Base HAT analog channels can be changed in <code>main.py</code>.
 

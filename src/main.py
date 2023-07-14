@@ -24,12 +24,12 @@ if __name__ == "__main__":
         cinepi_controller = CinePiController(cinepi, r, monitor)
 
         # Initialize SimpleGUI with the controller and monitor instances
-        simple_gui = SimpleGUI(cinepi, cinepi_controller, monitor)
+        #simple_gui = SimpleGUI(cinepi, cinepi_controller, monitor)
 
         # Instantiate the ManualControls class with the necessary GPIO pins
         manual_controls = ManualControls(cinepi_controller, monitor, cinepi.USBMonitor, 
                                         iso_steps=[100, 200, 400, 800, 1600, 3200],    # Array for selectable ISO values (100-3200)
-                                        shutter_angle_steps=[0,90,172.8,180,360],#[i for i in range(0, 360) if i % 2 == 0],       # Array for selectable shutter angle values (0-360 degrees in increments of 2 degrees)
+                                        shutter_angle_steps=[i for i in range(0, 360) if i % 2 == 0],       # Array for selectable shutter angle values (0-360 degrees in increments of 2 degrees)
                                         fps_steps=[1,2,4,8,16,18,24,25,33,48,50],      # Array for selectable fps values (1-50). To create and array of all frame rates from 1 - 50, replace the array with "list(range(1, 50))""
                                         iso_pot=0,                                     # Analog channel for ISO control, if Grove Base HAT is attached (if defined, it overrides any iso_inc and iso_dec pins). If no Grove Base HAT is attached, set this to None
                                         shutter_angle_pot=2,                           # Analog channel for shutter angle control, if Grove Base HAT is attached. If no Grove Base HAT is attached, set this to None

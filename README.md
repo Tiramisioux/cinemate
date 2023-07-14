@@ -30,7 +30,9 @@ Preinstalled image file with Raspbian and cinepi-raw can be found in the release
 ## Dependencies
 <code>sudo apt update</code>
 
-<code>sudo apt full-upgrade</code>
+<code>sudo apt upgrade</code>
+
+<code>sudo apt full-upgrade</code> (updates Raspbian, enabling the Raspberry Pi Global Shutter camera)
 
 <code>sudo apt install python3-pip</code>
 

@@ -309,7 +309,7 @@ class Keyboard:
 
     def handle_key_event(self, event):
         # Start/stop recording
-        if event.name == "r":
+        if event.name == "9":
             if self.controller.get_recording_status():
                 self.controller.stop_recording()
                 print("\nRecording of raw frames stopped")
@@ -318,7 +318,7 @@ class Keyboard:
                 print("\nRecording of raw frames started")
         
         # Change resolution
-        if event.name == "h":
+        if event.name == "8":
             if self.controller.get_control_value('height') == '1080':
                 self.controller.set_control_value('height', 1520)
             elif self.controller.get_control_value('height') == '1520':

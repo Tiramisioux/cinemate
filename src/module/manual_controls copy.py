@@ -142,7 +142,7 @@ class ManualControls(threading.Thread):
         self.flip_switched = 1
     
     def calculate_iso_index(self, iso_value):
-        iso_steps = self.iso_steps
+        iso_steps = ManualControls.iso_steps
         return iso_steps.index(iso_value)
             
     def iso_inc_callback(self, channel):
@@ -151,8 +151,8 @@ class ManualControls(threading.Thread):
             if iso_current is not None:
                 iso_current = int(iso_current)
                 iso_index = self.calculate_iso_index(iso_current)
-                if iso_index < len(self.iso_steps) - 1:
-                    iso_new = self.iso_steps[iso_index + 1]
+                if iso_index < len(ManualControls.iso_steps) - 1:
+                    iso_new = ManualControls.iso_steps[iso_index + 1]
                     self.cinepi_controller.set_control_value('iso', iso_new)
                     self.last_iso = iso_new
 
@@ -163,7 +163,7 @@ class ManualControls(threading.Thread):
                 iso_current = int(iso_current)
                 iso_index = self.calculate_iso_index(iso_current)
                 if iso_index > 0:
-                    iso_new = self.iso_steps[iso_index - 1]
+                    iso_new = ManualControls.iso_steps[iso_index - 1]
                     self.cinepi_controller.set_control_value('iso', iso_new)
                     self.last_iso = iso_new
                     

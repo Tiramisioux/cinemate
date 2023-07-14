@@ -27,8 +27,6 @@ Preinstalled image file with Raspbian and cinepi-raw can be found in the release
 
 - Outputs a tone on RPi audio jack (right channel) during recording of raw frames. Can be used to trigger an external field recorder like the Zoom H6. _Set a limiter on the XY microphone and feed the RPi audio to Track 1 with maximum gain and autostart/stop recording at 0 dB._
 
-_For adding cinemate2 manually to an existing cinepi-raw installation, follow install instructions below._
-
 ## Dependencies
 <code>sudo apt update</code>
 

@@ -1,7 +1,7 @@
 # cinemate2
 Manual controls and a simple GUI for cinepi-raw, adding basic functionality of starting and stopping recording and changing camera parameters (ISO, shutter angle and frame rate) via the GPIO pins. You can also start/stop recording using a USB keyboard.
 
-Preinstalled image file with Raspbian + cinepi-raw + cinemate2 can be found in the release section of this repository.
+Preinstalled image file with Raspbian and cinepi-raw can be found in the release section of this repository.
 
 ## Basic functions
 
@@ -11,7 +11,7 @@ Preinstalled image file with Raspbian + cinepi-raw + cinemate2 can be found in t
 
 - Change camera parameters and start/stop recording via USB keyboard
 
-- Enables LED rec light on GPIO 21 (be sure to use a resistor between GPIO and LED!)
+- Enables LED rec light on GPIO 5 (be sure to use a resistor between GPIO and LED!)
 
 - Enables toggling of ISO (100, 200, 400, 800, 1600, 3200) on GPIO 23 (increase one step) and GPIO 25 (decrease one step). 
 
@@ -27,12 +27,12 @@ Preinstalled image file with Raspbian + cinepi-raw + cinemate2 can be found in t
 
 - Outputs a tone on RPi audio jack (right channel) during recording of raw frames. Can be used to trigger an external field recorder like the Zoom H6. _Set a limiter on the XY microphone and feed the RPi audio to Track 1 with maximum gain and autostart/stop recording at 0 dB._
 
-_For adding cinemate2 manually to an existing cinepi-raw installation, follow install instructions below._
-
 ## Dependencies
 <code>sudo apt update</code>
 
 <code>sudo apt upgrade</code>
+
+<code>sudo apt full-upgrade</code> (updates Raspbian, enabling the Raspberry Pi Global Shutter camera)
 
 <code>sudo apt install python3-pip</code>
 
@@ -100,11 +100,11 @@ or
 
 ## Default manual control settings
 
-|RPi GPIO |USB Keyboard|Grove Base HAT| Type |Function  |
+|RPi GPIO |USB Keyboard/Num pad|Grove Base HAT| Type |Function  |
 --- | --- | --- | --- | --- |
-|4, 6, 22|r |D6, D22|push button|    start/stop recording|
+|4, 6, 22|9 |D6, D22|push button|    start/stop recording|
 |5||D5|LED (be sure to use a 320k resistor on this pin!)|     rec signal out, for LED rec light |
-|13, 24|h|D24|  push button|change resolution (cropped and full frame)|
+|13, 24|8|D24|  push button|change resolution (cropped and full frame)|
 |25 |1||push button |ISO decrease (100, 200, 400, 800, 1600, 3200)|
 |23 |2||push button |ISO increase (100, 200, 400, 800, 1600, 3200)|
 ||3|||shutter angle decrease (1-360 degrees)|
@@ -117,7 +117,7 @@ or
 |||A0|potentiometer|ISO control (overrides any GPIO pins assigned to iso)|
 |||A2|potentiometer |shutter angle control|
 |||A4|potentiometer|frame rate control|
-|26||D26|push button|unmount SSD (press and hold for 2 sec) / safe shutdown (press and hold for 6 sec)|
+|26|0|D26|push button|unmount SSD (press and hold push button for 2 sec, or keyboard press "0") / safe shutdown (press and hold push button for 6 sec)|
 
 GPIO pin numbers and Grove Base HAT analog channels can be changed in <code>main.py</code>.
 

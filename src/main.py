@@ -56,7 +56,7 @@ if __name__ == "__main__":
                                         fps_mult_pin1=18,                              # Flip switch for 50% frame rate
                                         fps_mult_pin2=19,                              # Flip switch for 200% frame rate (up to 50 fps)
                                         rec_pin=[4, 6, 22])                            # GPIO recording pins
-
+        # print("manual controls running")
         pause()
     finally:
         GPIO.cleanup()

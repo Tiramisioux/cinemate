@@ -299,13 +299,9 @@ class USBMonitor:
 class Keyboard:
     def __init__(self, controller, shutter_array):
         self.controller = controller
-<<<<<<< HEAD
         self.shutter_array = shutter_array
-
-=======
         self.path = '/media/RAW/'
         
->>>>>>> 0bd885357ba7f2bd135ff298089c10f5b0b28890
     def start(self):
         keyboard.on_press_key("r", self.handle_key_event)   
         keyboard.on_press_key("h", self.handle_key_event)   #Toggle resolution

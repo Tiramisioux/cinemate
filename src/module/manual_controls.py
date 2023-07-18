@@ -41,9 +41,9 @@ class ManualControls(threading.Thread):
             print("\nGrove Base HAT is not connected.")
 
         # Create deques for storing the last N readings
-        self.iso_readings = deque(maxlen=10)
-        self.shutter_angle_readings = deque(maxlen=10)
-        self.fps_readings = deque(maxlen=10)
+        self.iso_readings = deque(maxlen=5)
+        self.shutter_angle_readings = deque(maxlen=5)
+        self.fps_readings = deque(maxlen=5)
 
         pin_configurations = [
             (iso_inc_pin, GPIO.BOTH, self.iso_inc_callback),

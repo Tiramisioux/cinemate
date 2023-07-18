@@ -299,10 +299,15 @@ class USBMonitor:
 class Keyboard:
     def __init__(self, controller, shutter_array):
         self.controller = controller
+<<<<<<< HEAD
         self.shutter_array = shutter_array
 
+=======
+        self.path = '/media/RAW/'
+        
+>>>>>>> 0bd885357ba7f2bd135ff298089c10f5b0b28890
     def start(self):
-        keyboard.on_press_key("r", self.handle_key_event)   #Toggle recording on/off
+        keyboard.on_press_key("r", self.handle_key_event)   
         keyboard.on_press_key("h", self.handle_key_event)   #Toggle resolution
         keyboard.on_press_key("1", self.handle_key_event)   #ISO decrease
         keyboard.on_press_key("2", self.handle_key_event)   #ISO increase
@@ -310,25 +315,15 @@ class Keyboard:
         keyboard.on_press_key("4", self.handle_key_event)   #Shugger angle decrease
         keyboard.on_press_key("5", self.handle_key_event)   #Frame rate increase
         keyboard.on_press_key("6", self.handle_key_event)   #Frame rate decrease
+        keyboard.on_press_key("6", self.handle_key_event)   #Frame rate decrease
+        
+        keyboard.on_press_key("8", self.handle_key_event)   #Toggle resolution
+        keyboard.on_press_key("9", self.handle_key_event)   #Toggle recording on/off
+        keyboard.on_press_key("0", self.handle_key_event)   #Unmount SSD
         
         keyboard.wait("esc")  # Wait for the "esc" key to exit the event loop
 
     def handle_key_event(self, event):
-        # Start/stop recording
-        if event.name == "r":
-            if self.controller.get_recording_status():
-                self.controller.stop_recording()
-                print("\nRecording of raw frames stopped")
-            else:
-                self.controller.start_recording()
-                print("\nRecording of raw frames started")
-        
-        # Change resolution
-        if event.name == "h":
-            if self.controller.get_control_value('height') == '1080':
-                self.controller.set_control_value('height', 1520)
-            elif self.controller.get_control_value('height') == '1520':
-                self.controller.set_control_value('height', 1080)
         
         # Change ISO
         if event.name == "1":
@@ -373,3 +368,25 @@ class Keyboard:
             fps_new = round(fps_old+1)
             fps_new =  max(1,min(50, fps_new))
             self.controller.set_control_value('fps', fps_new)
+            
+            # Change resolution
+        if event.name == "8":
+            if self.controller.get_control_value('height') == '1080':
+                self.controller.set_control_value('height', 1520)
+            elif self.controller.get_control_value('height') == '1520':
+                self.controller.set_control_value('height', 1080)
+                
+        # Start/stop recording
+        if event.name == "9":
+            if self.controller.get_recording_status():
+                self.controller.stop_recording()
+                print("\nRecording of raw frames stopped")
+            else:
+                self.controller.start_recording()
+                print("\nRecording of raw frames started")
+                
+        # Unmount SSD
+        if event.name == "0":
+            """Dismount the drive"""
+            print("Dismounting the drive...")
+            subprocess.run(["umount", self.path])

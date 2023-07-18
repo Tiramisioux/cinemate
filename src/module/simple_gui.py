@@ -65,12 +65,14 @@ class SimpleGUI(threading.Thread):
         if self.drive_connected:
             free_bytes = self.monitor.last_free_space
             if free_bytes is not None:
-                if self.controller.get_control_value('height') == "1080":
+                if self.controller.get_control_value('height') == "1080":   #cropped frame, Raspberry Pi HQ camera
                     file_size = 3.2
-                elif self.controller.get_control_value('height') == "1520":
+                elif self.controller.get_control_value('height') == "1088": #full frame height when using Raspberry Pi HQ global shutter camera
+                    file_size = 2.1
+                elif self.controller.get_control_value('height') == "1520": #full frame, Raspberry Pi HQ camera
                     file_size = 4.8
                 else:
-                    file_size = 0.0
+                    file_size = 4
 
                 self.min_left = int((free_bytes / 1000000) / (file_size * int(self.controller.get_control_value('fps')) * 60))
         

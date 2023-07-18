@@ -88,7 +88,11 @@ class ManualControls(threading.Thread):
         self.fps_pot = fps_pot
 
         self.iso_steps = iso_steps or [100, 200, 400, 800, 1600, 3200]
-        self.shutter_angle_steps = shutter_angle_steps or list(range(1, 361))
+        if shutter_angle_steps is None:
+            self.shutter_angle_steps = list(range(1, 361))
+        else:
+            self.shutter_angle_steps = shutter_angle_steps
+
         self.fps_steps = fps_steps or list(range(1, 50))
 
         self.last_iso = self.calculate_iso(self.adc.read(self.iso_pot))

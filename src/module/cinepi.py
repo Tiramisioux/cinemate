@@ -38,7 +38,7 @@ class CinePi:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, r, monitor):
+    def __init__(self, r, monitor, shutter_array):
         if not hasattr(self, 'initialized'):  # only initialize once
             self.r = r
             self.suppress_output = False
@@ -63,8 +63,10 @@ class CinePi:
             self.monitor = monitor
             self.controller = CinePiController(self, self.r, self.monitor)  # Instantiate the controller here
             
+            self.shutter_array = shutter_array
+            
             # Initialize USBMonitor with the controller
-            self.USBMonitor = USBMonitor(self.controller)
+            self.USBMonitor = USBMonitor(self.controller, self.shutter_array)
             self.USBMonitor.monitor_devices()
             
             self.audio_recorder = AudioRecorder(self.r, self.USBMonitor) 
@@ -195,7 +197,7 @@ class AudioRecorder:
 
 
 class USBMonitor:
-    def __init__(self, controller):
+    def __init__(self, controller, shutter_array):
         self.controller = controller
         self.context = pyudev.Context()
         self.monitor = pyudev.Monitor.from_netlink(self.context)
@@ -205,6 +207,9 @@ class USBMonitor:
         self.usb_keyboard = None
         self.usb_hd = None
         self.keyboard_handler = None
+        
+        self.shutter_array = shutter_array
+        
         self.check_initial_devices()
 
     def device_event(self, monitor, device):
@@ -221,7 +226,7 @@ class USBMonitor:
                 print(f'\nUSB Keyboard connected: {device}')
                 
                 # Initialize the keyboard class
-                self.keyboard = Keyboard(self.controller)  # Instantiate the keyboard handler
+                self.keyboard = Keyboard(self.controller, self.shutter_array)  # Instantiate the keyboard handler
                 self.keyboard_thread = threading.Thread(target=self.keyboard.start)  # Create a thread for the keyboard listener
                 self.keyboard_thread.daemon = True  # Set the thread as a daemon thread to automatically exit when the main program ends
                 self.keyboard_thread.start()  # Start the keyboard listener thread
@@ -260,7 +265,7 @@ class USBMonitor:
                 print(f'\nUSB Keyboard connected: {device}')
                 
                 # Initialize the keyboard class here
-                self.keyboard = Keyboard(self.controller)  # Instantiate the keyboard handler
+                self.keyboard = Keyboard(self.controller, self.shutter_array)  # Instantiate the keyboard handler
                 self.keyboard_thread = threading.Thread(target=self.keyboard.start)  # Create a thread for the keyboard listener
                 self.keyboard_thread.daemon = True  # Set the thread as a daemon thread to automatically exit when the main program ends
                 self.keyboard_thread.start()  # Start the keyboard listener thread
@@ -292,8 +297,9 @@ class USBMonitor:
         observer.start()
         
 class Keyboard:
-    def __init__(self, controller):
+    def __init__(self, controller, shutter_array):
         self.controller = controller
+        self.shutter_array = shutter_array
 
     def start(self):
         keyboard.on_press_key("r", self.handle_key_event)   #Toggle recording on/off
@@ -338,15 +344,23 @@ class Keyboard:
         
         # Change shutter angle
         if event.name == "3":
-            shutter_a_old = int(self.controller.get_control_value('shutter_a'))
-            shutter_a_new = round(shutter_a_old-1)
-            shutter_a_new =  max(1,min(360, shutter_a_new))
-            self.controller.set_control_value('shutter_a', shutter_a_new)
+            shutter_a_old = float(self.controller.get_control_value('shutter_a'))
+            # Find the current value in the array
+            if shutter_a_old in self.shutter_array:
+                index = self.shutter_array.index(shutter_a_old)
+                # If the current value is not the first in the array, move to the previous value
+                if index > 0:
+                    shutter_a_new = self.shutter_array[index - 1]
+                    self.controller.set_control_value('shutter_a', shutter_a_new)
         if event.name == "4":
-            shutter_a_old = int(self.controller.get_control_value('shutter_a'))
-            shutter_a_new = round(shutter_a_old+1)
-            shutter_a_new =  max(1,min(360, shutter_a_new))
-            self.controller.set_control_value('shutter_a', shutter_a_new)
+            shutter_a_old = float(self.controller.get_control_value('shutter_a'))
+            # Find the current value in the array
+            if shutter_a_old in self.shutter_array:
+                index = self.shutter_array.index(shutter_a_old)
+                # If the current value is not the last in the array, move to the next value
+                if index < len(self.shutter_array) - 1:
+                    shutter_a_new = self.shutter_array[index + 1]
+                    self.controller.set_control_value('shutter_a', shutter_a_new)
         
         # Change FPS
         if event.name == "5":

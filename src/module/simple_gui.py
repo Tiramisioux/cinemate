@@ -107,7 +107,7 @@ class SimpleGUI(threading.Thread):
 
             # GUI Upper line
             draw.text((10, -0), str(self.iso), font=font, align="left", fill="white")
-            draw.text((110, 0), str(self.shutter_a), font=font, align="left", fill="white")
+            draw.text((100, 0), str(self.shutter_a), font=font, align="left", fill="white")
             draw.text((190, 0), str(self.fps), font=font, align="left", fill="white")
             draw.text((1760, 0), str(self.cpu_load), font=font, align="left", fill="white")
             draw.text((1860, 0), str(self.cpu_temp), font=font, align="left", fill="white")

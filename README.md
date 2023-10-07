@@ -128,7 +128,7 @@ GPIO settings and arrays for legal values can be customized in `main.py`.
 
 TIP! Connect GPIO 26 to GPIO 03 using a jumper wire, and the safe shutdown button attached to GPIO 26 will also wake up the Pi, after being shutdown.
 
-### Mapping iso, shutter_a and fps to default arrays
+## Mapping iso, shutter_a and fps to default arrays
 
 When changing iso, shutter angle or fps using the `inc` or `dec` commands, default arrays are used. This can be helpful to limit the amount of possible values, making hardware controls easier to design. 
 
@@ -140,7 +140,7 @@ When changing iso, shutter angle or fps using the `inc` or `dec` commands, defau
 
 Above default arrays can be customized in `main.py`. 
 
-### Precise control of iso, shutter_a and fps 
+## Precise control of iso, shutter_a and fps 
 
 When setting iso, shutter angle or fps using Cinemate CLI or serial control, any value can be set. 
 

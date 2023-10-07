@@ -10,7 +10,11 @@ Project aims at offering an easy way to build a custom camera. For basic operati
 - System button for safe shutdown, start-up and unmounting of SSD drive.
 - Attach a Grove Base HAT and control of iso, shutter angle and fps via potentiometers.
 
-For users experimenting with their own build/GPIO configuration, scripts output extensive logging info.
+## CLI example
+
+<img width="500" alt="cinemate_cli_example2" src="https://github.com/Tiramisioux/cinemate/assets/74836180/e920dab4-a37c-494d-a91c-c3eba709ef1b">
+
+Startup sequence showing the output from different CineMate modules. For users experimenting with their own build/GPIO configuration, scripts output extensive logging info.
 
 ## Hardware setup
 In order to get cinepi-raw and CineMate scripts running, you need:
@@ -124,6 +128,8 @@ GPIO settings and arrays for legal values can be customized in `main.py`.
 
 TIP! Connect GPIO 26 to GPIO 03 using a jumper wire, and the safe shutdown button attached to GPIO 26 will also wake up the Pi, after being shutdown.
 
+
+
 ### Mapping iso, shutter_a and fps to default arrays
 
 When changing iso, shutter angle or fps using the `inc` or `dec` commands, default arrays are used. This can be helpful to limit the amount of possible values, making hardware controls easier to design. 
@@ -146,7 +152,17 @@ For CineMate CLI/serial, type the `control name` + `blank space` + `value`. Iso 
 
 `shutter_a 23.4`
 
-`fps 31` 
+`fps 31`
+
+## Simple GUI
+
+<img width="500" alt="cinemate_cli_example2" src="https://github.com/Tiramisioux/cinemate/assets/74836180/8dd9aac9-ea98-4e8c-8691-5c5541f35b54">
+
+Simple GUI is displaying iso, shutter angle, frame rate, CPU load and temperature and minutes of recording left on the disk.
+
+During recording, the GUI shows red bands above and below the preview to indicate recording. If a microphone, keyboard and/or serial device is connected and recognized by the system, this is indicated by the GUI.
+
+Finally GUI diplays the lastly written file to the SSD, and also if the last clip is accompanied by a scratch audio track to help the user to make sure dng files are ending up on the SSD.
 
 ## Ideas for build
 Tinkercad model for the below build can be found here:
@@ -155,6 +171,15 @@ https://www.tinkercad.com/things/eNhTTYdgOM0
 
 
 Step by step instruction + parts list coming soon.
+
+<img width="500" alt="cinemate_3_" src="https://github.com/Tiramisioux/cinemate/assets/74836180/3feb15b4-8ba5-4590-bc9c-a678d1c64ff1">
+
+<img width="500" alt="cinemate_14" src="https://github.com/Tiramisioux/cinemate/assets/74836180/76800c52-ff97-4b83-9995-9046259b1da7">
+
+<img width="500" alt="cinemate_6_" src="https://github.com/Tiramisioux/cinemate/assets/74836180/ae3ef7d1-90c4-4940-ba70-dbcf4c27585e">
+
+<img width="500" alt="cinemate_16" src="https://github.com/Tiramisioux/cinemate/assets/74836180/87f6b97e-f073-4200-bbe4-d12be3d5c396">
+
 
 ## Known issues
 
@@ -170,6 +195,10 @@ Solution to this might be to use an external trigger for the camera board, like 
 
 Currently investigating the possibility to use the hardware PWM signal on the Pi, fed to the camera board via a voltage divider, for the frame rate to be dead on the selected value.
 
+Audio scratch track function has been confirmed to work whih this type of USB microphone:
+
+<img width="200" alt="cinemate_still_4" src="https://github.com/Tiramisioux/cinemate/assets/74836180/f5be69e9-b4cb-4050-9a45-3206ade71b4b">
+
 ## Notes on RTC
 
 Cinepi-raw names the clips according to system time. For clips to use the current time of day, an RTC (realtime clock unit) can be installed.
@@ -182,9 +211,22 @@ To write system time to a connected RTC, in the Cinemate CLI, type `set time`.
 
 Now, if not connected to the internet, on startup the Pi will get its system time from the RTC.
 
-
 ## Notes on rec light logic
 
 Occationaly, the red color in the simple gui, and the LED conencted to the rec light output might blink. This is expected behaviour and does not mean frames are dropped.
 
 The reason is that the rec light logic is based on whether frames are writted to the SSD. Occationaly, cinepi-raw buffers frames before writing them to the SSD, leading to a brief pause in the writing of files to the SSD, causing the light to blink.
+
+
+## Image examples
+
+Images shot with Schneider Kreuznach Variagon 18-40 zoom / 1967. Developed as BMD RAW in Davinci Resolve with Arri LogC to Rec
+
+<img width="500" alt="cinemate_still_3" src="https://github.com/Tiramisioux/cinemate/assets/74836180/5d1a914a-982e-4077-b3a4-683bb2a65615">
+
+
+<img width="500" alt="cinemate_still_2" src="https://github.com/Tiramisioux/cinemate/assets/74836180/b4915ce4-2d02-4892-a21d-ec88e59120c1">
+
+<img width="500" alt="cinemate_still_1" src="https://github.com/Tiramisioux/cinemate/assets/74836180/8c95b7d6-7f7e-4502-94c0-81efdf24fe04">
+
+<img width="500" alt="cinemate_still_5" src="https://github.com/Tiramisioux/cinemate/assets/74836180/6d373857-d086-4ae9-8cea-8987112bffcc">

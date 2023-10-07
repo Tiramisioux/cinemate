@@ -32,6 +32,7 @@ Examples:
 '''
 import sys
 import grove.i2c
+import time
 
 __all__ = [
     "ADC",
@@ -45,7 +46,6 @@ RPI_HAT_NAME     = 'Grove Base Hat RPi'
 """ The HAT name to compare with return value of :class:`ADC.name` """
 RPI_ZERO_HAT_NAME= 'Grove Base Hat RPi Zero'
 """ The HAT name to compare with return value of :class:`ADC.name` """
-
 
 class ADC(object):
     '''
@@ -152,10 +152,9 @@ class ADC(object):
             return 0
 
 
-# if __name__ == '__main__':
-#     import time
+if __name__ == '__main__':
 
-#     adc = ADC()
-#     while True:
-#         print(adc.read(0))
-#         time.sleep(1)
+    adc = ADC()
+    while True:
+        print(adc.read(0))
+        time.sleep(0.1)

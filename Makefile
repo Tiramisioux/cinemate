@@ -1,4 +1,4 @@
-SERVICE_FILE = cinemate2.service
+SERVICE_FILE = cinemate.service
 SERVICE_PATH = /etc/systemd/system/
 
 .PHONY: install start stop uninstall status

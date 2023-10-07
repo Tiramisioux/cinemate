@@ -32,45 +32,61 @@ The scripts can be also manually installed onto a Rasberry Pi 4B already running
 ### Manual install
 #### Dependencies
 `sudo apt update`
+
 `sudo apt upgrade`
+
 `sudo apt full-upgrade` (updates Raspbian, enabling the Raspberry Pi Global Shutter camera)
 
 `sudo apt install python3-pip`
+
 `sudo apt-get install -y i2c-tools portaudio19-dev`
+
 `sudo pip3 install psutil Pillow redis keyboard pyudev sounddevice smbus2 gpiozero RPI.GPIO evdev termcolor pyserial inotify_simple`
 
 #### Grove Base HAT
 `sudo apt-get install build-essential python3-dev python3-pip python3-smbus python3-serial git`
+
 `sudo pip3 install -U setuptools wheel`
+
 `sudo pip3 install -U grove.py`
+
 `git clone https://github.com/Seeed-Studio/grove.py.git``
+
 `cd grove.py`
+
 `sudo python3 setup.py install`
 
 `sudo raspi-config`
+
 3 Interface Options > I5 I2C Enable > Yes
+
 `sudo reboot`
 
 #### CineMate scripts
 `git clone https://github.com/Tiramisioux/cinemate.git`
+
 `cd cinemate
+
 `make install`
 
 `main.py` will now run automatically at startup.
 
 ### Starting and stopping CineMate
 `cd cinemate`
+
 `make start` / `make stop`
 
 `main.py` is located in the cinemate/src folder and can be manually started from there:
 
 `cd cinemate/src`
+
 `sudo python3 main.py`
 
 Note that `main.py` must be run as root.
 
 ### Disable/enable automatic start of CineMate scripts:
 in `home/pi/cinemate`:
+
 `make uninstall` / `make install`
 
 ## Controlling the camera 
@@ -127,7 +143,9 @@ When setting iso, shutter angle or fps using Cinemate CLI or serial control, any
 For CineMate CLI/serial, type the `control name` + `blank space` + `value`. Iso accepts integers. Shutter angle accepts floating point numbers with one decimal. 
 
 `iso 450` 
+
 `shutter_a 23.4`
+
 `fps 31` 
 
 ## Ideas for build
@@ -156,8 +174,6 @@ Currently investigating the possibility to use the hardware PWM signal on the Pi
 
 Cinepi-raw names the clips according to system time. For clips to use the current time of day, an RTC (realtime clock unit) can be installed.
 
-
-
 To get the right system time on the Pi, simply connect to a computer connected to the internet via SSH and the Pi will update its system time.
 
 To check system time in the CineMate CLI, type `time`
@@ -168,3 +184,7 @@ Now, if not connected to the internet, on startup the Pi will get its system tim
 
 
 ## Notes on rec light logic
+
+Occationaly, the red color in the simple gui, and the LED conencted to the rec light output might blink. This is expected behaviour and does not mean frames are dropped.
+
+The reason is that the rec light logic is based on whether frames are writted to the SSD. Occationaly, cinepi-raw buffers frames before writing them to the SSD, leading to a brief pause in the writing of files to the SSD, causing the light to blink.

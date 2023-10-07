@@ -47,7 +47,7 @@ The scripts can be also manually installed onto a Rasberry Pi 4B already running
 
 `sudo pip3 install psutil Pillow redis keyboard pyudev sounddevice smbus2 gpiozero RPI.GPIO evdev termcolor pyserial inotify_simple`
 
-#### Grove Base HAT
+#### Installing the Grove Base HAT
 `sudo apt-get install build-essential python3-dev python3-pip python3-smbus python3-serial git`
 
 `sudo pip3 install -U setuptools wheel`
@@ -66,10 +66,10 @@ The scripts can be also manually installed onto a Rasberry Pi 4B already running
 
 `sudo reboot`
 
-#### CineMate scripts
+#### Installing CineMate scripts
 `git clone https://github.com/Tiramisioux/cinemate.git`
 
-`cd cinemate``
+`cd cinemate`
 
 `make install`
 
@@ -127,8 +127,6 @@ Camera settings can be set by using any one of the following methods:
 GPIO settings and arrays for legal values can be customized in `main.py`.
 
 TIP! Connect GPIO 26 to GPIO 03 using a jumper wire, and the safe shutdown button attached to GPIO 26 will also wake up the Pi, after being shutdown.
-
-
 
 ### Mapping iso, shutter_a and fps to default arrays
 

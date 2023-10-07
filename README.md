@@ -54,7 +54,7 @@ The scripts can be also manually installed onto a Rasberry Pi 4B already running
 
 `sudo pip3 install -U grove.py`
 
-`git clone https://github.com/Seeed-Studio/grove.py.git``
+`git clone https://github.com/Seeed-Studio/grove.py.git`
 
 `cd grove.py`
 

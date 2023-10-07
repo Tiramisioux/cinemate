@@ -65,7 +65,7 @@ The scripts can be also manually installed onto a Rasberry Pi 4B already running
 #### CineMate scripts
 `git clone https://github.com/Tiramisioux/cinemate.git`
 
-`cd cinemate
+`cd cinemate``
 
 `make install`
 
@@ -85,7 +85,7 @@ The scripts can be also manually installed onto a Rasberry Pi 4B already running
 Note that `main.py` must be run as root.
 
 ### Disable/enable automatic start of CineMate scripts:
-in `home/pi/cinemate`:
+in `/home/pi/cinemate/`:
 
 `make uninstall` / `make install`
 

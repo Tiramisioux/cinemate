@@ -75,7 +75,7 @@ The scripts can be also manually installed onto a Rasberry Pi 4B already running
 
 `main.py` will now run automatically at startup.
 
-### Starting and stopping CineMate
+## Starting and stopping CineMate
 `cd cinemate`
 
 `make start` / `make stop`
@@ -88,7 +88,7 @@ The scripts can be also manually installed onto a Rasberry Pi 4B already running
 
 Note that `main.py` must be run as root.
 
-### Disable/enable automatic start of CineMate scripts:
+## Disable/enable automatic start of CineMate scripts:
 in `/home/pi/cinemate/`:
 
 `make uninstall` / `make install`

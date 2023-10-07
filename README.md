@@ -210,7 +210,7 @@ Now, if not connected to the internet, on startup the Pi will get its system tim
 
 ## Notes on rec light logic
 
-Occationaly, the red color in the simple gui, and the LED conencted to the rec light output might blink. This is expected behaviour and does not mean frames are dropped.
+Occationaly, the red color in the simple gui, and the LED connected to the rec light output might blink. This is expected behaviour and does not mean frames are dropped.
 
 The reason is that the rec light logic is based on whether frames are writted to the SSD. Occationaly, cinepi-raw buffers frames before writing them to the SSD, leading to a brief pause in the writing of files to the SSD, causing the light to blink.
 

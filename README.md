@@ -130,9 +130,9 @@ When changing iso, shutter angle or fps using the `inc` or `dec` commands, defau
 
 |Camera setting|Default legal values|
 |---|---|
-|ISO |100, 200, 400, 640, 800, 1000, 1200, 2000, 2500, 3200|
-|Shutter angle |45, 90, 135, 172.8, 180, 225, 270, 315, 360|
-|FPS |1, 2, 4, 8, 16, 20, 24, 25, 33, 48|
+|ISO |100, 200, 400, 640, 800, 1200, 1600, 2500, 3200|
+|Shutter angle |45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360|
+|FPS |1, 2, 4, 8, 16, 18, 24, 25, 33, 48, 50|
 
 Above default arrays can be customized in `main.py`. 
 

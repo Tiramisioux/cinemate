@@ -102,27 +102,27 @@ Camera settings can be set by using any one of the following methods:
 4) Serial control from a microcontroller (such as the Raspberry Pico) connected via USB.
 5) Using a Seeed Grove Base HAT, allowing for control using Grove buttons and potentiometers.
 
-|CLI (via SSH) and serial|GPIO|Keyboard/Num pad|Grove Base HAT|Function|
+|Function|CLI (via SSH) and serial|GPIO|Keyboard/Num pad|Grove Base HAT|
 |---|---|---|---|---|
-|`rec`|4, 6, 22|`9`|D6, D22|start/stop recording|
-|      |5||D5|LED or rec light indicator (be sure to use a 320k resistor on this pin!|
-|`res 1080` / `res 1520`|13, 24|8|D24|change resolution (cropped and full frame)|
-|`iso inc`|25|`1`||ISO decrease|
-|`iso dec`|23|`2`||ISO increase|
-|`shutter_a inc`||`3`||shutter angle decrease|
-|`shutter_a dec`||`4`||shutter angle increase|
-|`fps inc`||`5`||fps decrease|
-|`fps dec`||`6`||fps increase|
-||18||D18|50% frame rate|
-||19||D19|200% frame rate (up to 50 fps)|
-||16||D16|lock shutter angle and frame rate controls|
-|`iso` + `value`|||A0|change iso|
-|`shutter_a` + `value`|||A2|change shutter angle|
-|`fps` + `value`|||A4|change fps|
-|`unmount`|26|`0`|D26|unmount SSD (double click) / safe shutdown (triple click)|
-|`get`||||prints current camera settings to the CLI|
-|`time`||||prints system time and RTC time to the cli|
-|`set time`||||sets RTC time to system time|
+|start/stop recording|`rec`|4, 6, 22|`9`|D6, D22|
+|LED or rec light indicator (be sure to use a 320k resistor on this pin!|      |5||D5|
+|change resolution (cropped and full frame)|`res 1080` / `res 1520`|13, 24|8|D24|
+|ISO decrease|`iso inc`|25|`1`||
+|ISO increase|`iso dec`|23|`2`||
+|shutter angle decrease|`shutter_a inc`||`3`||
+|shutter angle increase|`shutter_a dec`||`4`||
+|fps decrease|`fps inc`||`5`||
+|fps increase|`fps dec`||`6`||
+|50% frame rate||18||D18|
+|200% frame rate (up to 50 fps)||19||D19|
+|lock shutter angle and frame rate controls||16||D16|
+|change iso|`iso` + `value`|||A0|
+|change shutter angle|`shutter_a` + `value`|||A2|
+|change fps|`fps` + `value`|||A4|
+|unmount SSD (double click) / safe shutdown (triple click)|`unmount`|26|`0`|D26|
+|print current camera settings to the CLI|`get`||||
+|print system time and RTC time to the cli|`time`||||
+|set RTC time to system time|`set time`||||
 
 GPIO settings and arrays for legal values can be customized in `main.py`.
 

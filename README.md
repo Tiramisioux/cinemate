@@ -31,9 +31,8 @@ For hardware control of camera settings and recording, see below.
 ### Preinstalled image 
 Preinstalled image file with Raspbian, cinepi-raw and CineMate scripts can be found in the release section of this repository. Burn this image onto an SD card and start up the Pi. Make sure you have an HDMI monitor hooked up on startup, in order for the simple gui module to start up properly.
 
-The scripts can be also manually installed onto a Rasberry Pi 4B already running CinePi v2. 
-
 ### Manual install
+The scripts can be also manually installed onto a Rasberry Pi 4B already running CinePi v2. 
 #### Dependencies
 `sudo apt update`
 

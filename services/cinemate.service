@@ -1,0 +1,15 @@
+[Unit]
+Description=Cinemate Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/pi/cinemate/src/main.py
+WorkingDirectory=/home/pi/cinemate
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=cinemate
+Restart=on-failure  # Change the restart behavior here
+RestartSec=2s     # Adjust the restart delay here
+
+[Install]
+WantedBy=multi-user.target

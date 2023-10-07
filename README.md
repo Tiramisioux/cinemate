@@ -96,7 +96,7 @@ in `/home/pi/cinemate/`:
 Camera settings can be set by using any one of the following methods:
 
 1) Connecting to the Pi via SSH and running the CineMate scripts manually (see above), allowing for a rudimentary CLI.
-2) Connecting a USB Keyboard or Numpad to the Pi.
+2) Connecting a USB keyboard or numpad to the Pi.
 3) Connecting push buttons to the GPIOs of the Raspberry Pi.
 4) Serial control from a microcontroller (such as the Raspberry Pico) connected via USB.
 5) Using a Seeed Grove Base HAT, allowing for control using Grove buttons and potentiometers.

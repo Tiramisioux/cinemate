@@ -231,6 +231,8 @@ Images shot with Schneider Kreuznach Variagon 18-40 zoom / 1967. Developed as BM
 
 <img width="500" alt="cinemate_still_4" src="https://github.com/Tiramisioux/cinemate/assets/74836180/70aaeefb-3e32-41fe-ba7c-783532f02a47">
 
+## CineMate build
+
 <img width="500" alt="cinemate_7" src="https://github.com/Tiramisioux/cinemate/assets/74836180/9f2dd0b7-4236-4910-adf9-51d6eb768ec9">
 
 <img width="500" alt="cinemate_10" src="https://github.com/Tiramisioux/cinemate/assets/74836180/0369ea53-2d9b-4e6d-a2c5-28ed46c6d366">

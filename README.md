@@ -217,13 +217,11 @@ Occationaly, the red color in the simple gui, and the LED conencted to the rec l
 
 The reason is that the rec light logic is based on whether frames are writted to the SSD. Occationaly, cinepi-raw buffers frames before writing them to the SSD, leading to a brief pause in the writing of files to the SSD, causing the light to blink.
 
-
 ## Image examples
 
-Images shot with Schneider Kreuznach Variagon 18-40 zoom / 1967. Developed as BMD RAW in Davinci Resolve with Arri LogC to Rec
+Images shot with Schneider Kreuznach Variagon 18-40 zoom / 1967. Developed as BMD RAW in Davinci Resolve with Arri LogC to Rec LUT
 
 <img width="500" alt="cinemate_still_3" src="https://github.com/Tiramisioux/cinemate/assets/74836180/5d1a914a-982e-4077-b3a4-683bb2a65615">
-
 
 <img width="500" alt="cinemate_still_2" src="https://github.com/Tiramisioux/cinemate/assets/74836180/b4915ce4-2d02-4892-a21d-ec88e59120c1">
 

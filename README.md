@@ -1,20 +1,20 @@
 # CineMate – manual controls for CinePi v2
 CineMate Python scripts is a way for users to implement and customize manual controls for their CinePi v2 build. 
 
-Project aims at offering an easy way to build a custom camera. For basic operation and experimentation, only Raspberry Pi, camera board and monitor. For practical use, buttons and switches can easily be added, allowing for a custom build.
+Project aims at offering an easy way to build a custom camera. For basic operation and experimentation, only Raspberry Pi, camera board and monitor is needed. For practical use, buttons and switches can easily be added, allowing for a custom build.
 
 ## Functions
-- Enables recording and various camera controls via the **RPi GPIO**, **USB Keyboard/Numpad**, **serial input** via USB (works with any microcontroller writing to serial) and (a rudimentary) **CineMate CLI** via SSH.
+- Enables recording and various camera controls with **RPi GPIO**, **USB keyboard/numpad**, **serial input** via USB (works with any microcontroller writing to serial) and (a rudimentary) **CineMate CLI** via SSH.
 - Simple GUI on the HDMI display.
 - Recording of audio scratch track using a USB microphone.
 - System button for safe shutdown, start-up and unmounting of SSD drive.
-- Attach a Grove Base HAT and control of iso, shutter angle and fps via potentiometers.
+- Attach a Grove Base HAT for iso, shutter angle and fps controls via potentiometers.
 
 ## CLI example
 
 <img width="500" alt="cinemate_cli_example2" src="https://github.com/Tiramisioux/cinemate/assets/74836180/e920dab4-a37c-494d-a91c-c3eba709ef1b">
 
-Startup sequence showing the output from different CineMate modules. For users experimenting with their own build/GPIO configuration, scripts output extensive logging info.
+Startup sequence showing the output from the different CineMate modules. For users experimenting with their own build/GPIO configuration, scripts output extensive logging info.
 
 ## Hardware setup
 In order to get cinepi-raw and CineMate scripts running, you need:
@@ -31,9 +31,13 @@ For hardware control of camera settings and recording, see below.
 ### Preinstalled image 
 Preinstalled image file with Raspbian, cinepi-raw and CineMate scripts can be found in the release section of this repository. Burn this image onto an SD card and start up the Pi. Make sure you have an HDMI monitor hooked up on startup, in order for the simple gui module to start up properly.
 
-The scripts can be also manually installed onto a Rasberry Pi 4B already running CinePi v2. 
-
 ### Manual install
+The scripts can be also manually installed onto a Rasberry Pi 4B already running CinePi v2.
+#### Modifications to cinepi-raw
+For CineMate scritps to work properly, some modifications need do be made to the cinepi-raw installation. 
+
+Instructions here: https://github.com/Tiramisioux/cinemate/blob/main/docs/cinepi_raw_installation_notes_2023-03-03.txt
+
 #### Dependencies
 `sudo apt update`
 
@@ -47,14 +51,14 @@ The scripts can be also manually installed onto a Rasberry Pi 4B already running
 
 `sudo pip3 install psutil Pillow redis keyboard pyudev sounddevice smbus2 gpiozero RPI.GPIO evdev termcolor pyserial inotify_simple`
 
-#### Grove Base HAT
+#### Installing the Grove Base HAT
 `sudo apt-get install build-essential python3-dev python3-pip python3-smbus python3-serial git`
 
 `sudo pip3 install -U setuptools wheel`
 
 `sudo pip3 install -U grove.py`
 
-`git clone https://github.com/Seeed-Studio/grove.py.git``
+`git clone https://github.com/Seeed-Studio/grove.py.git`
 
 `cd grove.py`
 
@@ -66,16 +70,16 @@ The scripts can be also manually installed onto a Rasberry Pi 4B already running
 
 `sudo reboot`
 
-#### CineMate scripts
+#### Installing CineMate scripts
 `git clone https://github.com/Tiramisioux/cinemate.git`
 
-`cd cinemate``
+`cd cinemate`
 
 `make install`
 
 `main.py` will now run automatically at startup.
 
-### Starting and stopping CineMate
+## Starting and stopping CineMate scripts
 `cd cinemate`
 
 `make start` / `make stop`
@@ -88,7 +92,7 @@ The scripts can be also manually installed onto a Rasberry Pi 4B already running
 
 Note that `main.py` must be run as root.
 
-### Disable/enable automatic start of CineMate scripts:
+## Disable/enable automatic start of CineMate scripts:
 in `/home/pi/cinemate/`:
 
 `make uninstall` / `make install`
@@ -97,40 +101,38 @@ in `/home/pi/cinemate/`:
 Camera settings can be set by using any one of the following methods:
 
 1) Connecting to the Pi via SSH and running the CineMate scripts manually (see above), allowing for a rudimentary CLI.
-2) Connecting a USB Keyboard or Numpad to the Pi.
+2) Connecting a USB keyboard or numpad to the Pi.
 3) Connecting push buttons to the GPIOs of the Raspberry Pi.
 4) Serial control from a microcontroller (such as the Raspberry Pico) connected via USB.
 5) Using a Seeed Grove Base HAT, allowing for control using Grove buttons and potentiometers.
 
-|CLI (via SSH) and serial|GPIO|Keyboard/Num pad|Grove Base HAT|Function|
+|Function|CLI (via SSH) and serial|GPIO|USB keyboard/num pad|Grove Base HAT|
 |---|---|---|---|---|
-|`rec`|4, 6, 22|`9`|D6, D22|start/stop recording|
-|      |5||D5|LED or rec light indicator (be sure to use a 320k resistor on this pin!|
-|`res 1080` / `res 1520`|13, 24|8|D24|change resolution (cropped and full frame)|
-|`iso inc`|25|`1`||ISO decrease|
-|`iso dec`|23|`2`||ISO increase|
-|`shutter_a inc`||`3`||shutter angle decrease|
-|`shutter_a dec`||`4`||shutter angle increase|
-|`fps inc`||`5`||fps decrease|
-|`fps dec`||`6`||fps increase|
-||18||D18|50% frame rate|
-||19||D19|200% frame rate (up to 50 fps)|
-||16||D16|lock shutter angle and frame rate controls|
-|`iso` + `value`|||A0|change iso|
-|`shutter_a` + `value`|||A2|change shutter angle|
-|`fps` + `value`|||A4|change fps|
-|`unmount`|26|`0`|D26|unmount SSD (double click) / safe shutdown (triple click)|
-|`get`||||prints current camera settings to the CLI|
-|`time`||||prints system time and RTC time to the cli|
-|`set time`||||sets RTC time to system time|
+|start/stop recording|`rec`|4, 6, 22|`9`|D6, D22|
+|LED or rec light indicator (be sure to use a 320k resistor on this pin!|      |5||D5|
+|change iso|`iso` + `value`|||A0|
+|change shutter angle|`shutter_a` + `value`|||A2|
+|change fps|`fps` + `value`|||A4|
+|change resolution (cropped and full frame)|`res 1080` / `res 1520`|13, 24|`8`|D24|
+|iso decrease|`iso inc`|25|`1`||
+|iso increase|`iso dec`|23|`2`||
+|shutter angle decrease|`shutter_a inc`||`3`||
+|shutter angle increase|`shutter_a dec`||`4`||
+|fps decrease|`fps inc`||`5`||
+|fps increase|`fps dec`||`6`||
+|50% frame rate||18||D18|
+|200% frame rate (up to 50 fps)||19||D19|
+|lock shutter angle and frame rate controls||16||D16|
+|unmount SSD (double click) / safe shutdown (triple click)|`unmount`|26|`0`|D26|
+|print current camera settings to the CLI|`get`||||
+|print system time and RTC time to the cli|`time`||||
+|set RTC time to system time|`set time`||||
 
 GPIO settings and arrays for legal values can be customized in `main.py`.
 
 TIP! Connect GPIO 26 to GPIO 03 using a jumper wire, and the safe shutdown button attached to GPIO 26 will also wake up the Pi, after being shutdown.
 
-
-
-### Mapping iso, shutter_a and fps to default arrays
+## Mapping of iso, shutter_a and fps to default arrays
 
 When changing iso, shutter angle or fps using the `inc` or `dec` commands, default arrays are used. This can be helpful to limit the amount of possible values, making hardware controls easier to design. 
 
@@ -142,11 +144,11 @@ When changing iso, shutter angle or fps using the `inc` or `dec` commands, defau
 
 Above default arrays can be customized in `main.py`. 
 
-### Precise control of iso, shutter_a and fps 
+## Precise control of iso, shutter_a and fps 
 
 When setting iso, shutter angle or fps using Cinemate CLI or serial control, any value can be set. 
 
-For CineMate CLI/serial, type the `control name` + `blank space` + `value`. Iso accepts integers. Shutter angle accepts floating point numbers with one decimal. 
+For CineMate CLI/serial, type the `control name` + `blank space` + `value`. Iso and fps accept integers. Shutter angle accepts floating point numbers with one decimal. 
 
 `iso 450` 
 
@@ -169,6 +171,7 @@ Tinkercad model for the below build can be found here:
 
 https://www.tinkercad.com/things/eNhTTYdgOM0
 
+Build is designed to work with a Sony RX100 camera cage.
 
 Step by step instruction + parts list coming soon.
 
@@ -193,6 +196,8 @@ Actual frame rate of the IMX477 sensor fluctuates about 0.01% around the mean va
 
 Solution to this might be to use an external trigger for the camera board, like suggested here:
 
+https://www.raspberrypi.com/documentation/accessories/camera.html#using-the-hq-camera
+
 Currently investigating the possibility to use the hardware PWM signal on the Pi, fed to the camera board via a voltage divider, for the frame rate to be dead on the selected value.
 
 Audio scratch track function has been confirmed to work whih this type of USB microphone:
@@ -213,7 +218,7 @@ Now, if not connected to the internet, on startup the Pi will get its system tim
 
 ## Notes on rec light logic
 
-Occationaly, the red color in the simple gui, and the LED conencted to the rec light output might blink. This is expected behaviour and does not mean frames are dropped.
+Occationaly, the red color in the simple gui, and the LED connected to the rec light output might blink. This is expected behaviour and does not mean frames are dropped.
 
 The reason is that the rec light logic is based on whether frames are writted to the SSD. Occationaly, cinepi-raw buffers frames before writing them to the SSD, leading to a brief pause in the writing of files to the SSD, causing the light to blink.
 
@@ -228,3 +233,16 @@ Images shot with Schneider Kreuznach Variagon 18-40 zoom / 1967. Developed as BM
 <img width="500" alt="cinemate_still_1" src="https://github.com/Tiramisioux/cinemate/assets/74836180/8c95b7d6-7f7e-4502-94c0-81efdf24fe04">
 
 <img width="500" alt="cinemate_still_5" src="https://github.com/Tiramisioux/cinemate/assets/74836180/6d373857-d086-4ae9-8cea-8987112bffcc">
+
+<img width="500" alt="cinemate_still_4" src="https://github.com/Tiramisioux/cinemate/assets/74836180/70aaeefb-3e32-41fe-ba7c-783532f02a47">
+
+## CineMate build
+
+<img width="500" alt="cinemate_7" src="https://github.com/Tiramisioux/cinemate/assets/74836180/9f2dd0b7-4236-4910-adf9-51d6eb768ec9">
+
+<img width="500" alt="cinemate_10" src="https://github.com/Tiramisioux/cinemate/assets/74836180/0369ea53-2d9b-4e6d-a2c5-28ed46c6d366">
+
+<img width="500" alt="cinemate_8" src="https://github.com/Tiramisioux/cinemate/assets/74836180/b024e2a4-d721-4d50-972d-c7bf72116f75">
+
+<img width="500" alt="cinemate_9" src="https://github.com/Tiramisioux/cinemate/assets/74836180/c4331f89-ef47-43b0-818b-8ebda90e28b3">
+

@@ -53,6 +53,10 @@ class SimpleGUI(threading.Thread):
         
         self.height_value = None
         
+        self.latest_frame = None
+            
+        self.latest_wav = None  
+        
          # Hide the cursor
         self.hide_cursor() 
 

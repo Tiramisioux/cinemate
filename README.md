@@ -106,7 +106,7 @@ Camera settings can be set by using any one of the following methods:
 4) Serial control from a microcontroller (such as the Raspberry Pico) connected via USB.
 5) Using a Seeed Grove Base HAT, allowing for control using Grove buttons and potentiometers.
 
-|Function|CLI (via SSH) and serial|GPIO|Keyboard/Num pad|Grove Base HAT|
+|Function|CLI (via SSH) and serial|GPIO|USB keyboard/num pad|Grove Base HAT|
 |---|---|---|---|---|
 |start/stop recording|`rec`|4, 6, 22|`9`|D6, D22|
 |LED or rec light indicator (be sure to use a 320k resistor on this pin!|      |5||D5|

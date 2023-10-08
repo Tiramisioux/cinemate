@@ -252,9 +252,3 @@ Images shot with Schneider Kreuznach Variagon 18-40 zoom / 1967. Developed as BM
 
 <img width="500" alt="cinemate_9" src="https://github.com/Tiramisioux/cinemate/assets/74836180/c4331f89-ef47-43b0-818b-8ebda90e28b3">
 
-## Backing up the SD card
-
-To make a compressed image backup of the SD card onto the SSD:
-
-```sudo dd if=/dev/mmcblk0 bs=1M status=progress | xz -c > /media/RAW/cinepi_cinemate_raspbian_image_$(date +%Y-%m-%d_%H-%M-%S).img.xz```
-

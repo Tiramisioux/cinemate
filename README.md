@@ -110,9 +110,12 @@ Camera settings can be set by using any one of the following methods:
 |---|---|---|---|---|
 |start/stop recording|`rec`|4, 6, 22|`9`|D6, D22|
 |LED or rec light indicator (be sure to use a 320k resistor on this pin!|      |5||D5|
-|change resolution (cropped and full frame)|`res 1080` / `res 1520`|13, 24|8|D24|
-|ISO decrease|`iso inc`|25|`1`||
-|ISO increase|`iso dec`|23|`2`||
+|change iso|`iso` + `value`|||A0|
+|change shutter angle|`shutter_a` + `value`|||A2|
+|change fps|`fps` + `value`|||A4|
+|change resolution (cropped and full frame)|`res 1080` / `res 1520`|13, 24|`8`|D24|
+|iso decrease|`iso inc`|25|`1`||
+|iso increase|`iso dec`|23|`2`||
 |shutter angle decrease|`shutter_a inc`||`3`||
 |shutter angle increase|`shutter_a dec`||`4`||
 |fps decrease|`fps inc`||`5`||
@@ -120,9 +123,6 @@ Camera settings can be set by using any one of the following methods:
 |50% frame rate||18||D18|
 |200% frame rate (up to 50 fps)||19||D19|
 |lock shutter angle and frame rate controls||16||D16|
-|change iso|`iso` + `value`|||A0|
-|change shutter angle|`shutter_a` + `value`|||A2|
-|change fps|`fps` + `value`|||A4|
 |unmount SSD (double click) / safe shutdown (triple click)|`unmount`|26|`0`|D26|
 |print current camera settings to the CLI|`get`||||
 |print system time and RTC time to the cli|`time`||||

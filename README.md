@@ -171,6 +171,7 @@ Tinkercad model for the below build can be found here:
 
 https://www.tinkercad.com/things/eNhTTYdgOM0
 
+Build is designed to work with a Sony RX100 camera cage.
 
 Step by step instruction + parts list coming soon.
 

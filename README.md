@@ -195,6 +195,8 @@ Actual frame rate of the IMX477 sensor fluctuates about 0.01% around the mean va
 
 Solution to this might be to use an external trigger for the camera board, like suggested here:
 
+https://www.raspberrypi.com/documentation/accessories/camera.html#using-the-hq-camera
+
 Currently investigating the possibility to use the hardware PWM signal on the Pi, fed to the camera board via a voltage divider, for the frame rate to be dead on the selected value.
 
 Audio scratch track function has been confirmed to work whih this type of USB microphone:

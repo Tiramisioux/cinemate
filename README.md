@@ -14,7 +14,7 @@ Project aims at offering an easy way to build a custom camera. For basic operati
 
 <img width="500" alt="cinemate_cli_example2" src="https://github.com/Tiramisioux/cinemate/assets/74836180/e920dab4-a37c-494d-a91c-c3eba709ef1b">
 
-Startup sequence showing the output from different CineMate modules. For users experimenting with their own build/GPIO configuration, scripts output extensive logging info.
+Startup sequence showing the output from the different CineMate modules. For users experimenting with their own build/GPIO configuration, scripts output extensive logging info.
 
 ## Hardware setup
 In order to get cinepi-raw and CineMate scripts running, you need:

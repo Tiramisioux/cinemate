@@ -148,7 +148,7 @@ Above default arrays can be customized in `main.py`.
 
 When setting iso, shutter angle or fps using Cinemate CLI or serial control, any value can be set. 
 
-For CineMate CLI/serial, type the `control name` + `blank space` + `value`. Iso accepts integers. Shutter angle accepts floating point numbers with one decimal. 
+For CineMate CLI/serial, type the `control name` + `blank space` + `value`. Iso and fps accept integers. Shutter angle accepts floating point numbers with one decimal. 
 
 `iso 450` 
 

@@ -64,7 +64,7 @@ class SimpleGUI(threading.Thread):
 
     def get_values(self):
         self.iso = self.redis_controller.get_value("iso")
-        self.shutter_a = self.redis_controller.get_value('shutter_a')
+        self.shutter_a = self.redis_controller.get_value('shutter_a').replace('.0', '')
         self.fps = self.redis_controller.get_value('fps')
         self.is_recording = False
         self.latest_frame = None

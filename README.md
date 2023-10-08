@@ -8,7 +8,7 @@ Project aims at offering an easy way to build a custom camera. For basic operati
 - Simple GUI on the HDMI display.
 - Recording of audio scratch track using a USB microphone.
 - System button for safe shutdown, start-up and unmounting of SSD drive.
-- Attach a Grove Base HAT and control of iso, shutter angle and fps via potentiometers.
+- Attach a Grove Base HAT for iso, shutter angle and fps controls via potentiometers.
 
 ## CLI example
 

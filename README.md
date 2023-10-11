@@ -1,4 +1,4 @@
-# CineMate – manual controls for CinePi v2
+# CineMate – manual controls for cinepi-raw
 CineMate Python scripts is a way for users to implement and customize manual controls for their CinePi v2 build. 
 
 Project aims at offering an easy way to build a custom camera. For basic operation and experimentation, only Raspberry Pi, camera board and monitor is needed. For practical use, buttons and switches can easily be added, allowing for a custom build.

@@ -3,6 +3,8 @@ CineMate Python scripts is a way for users to implement and customize manual con
 
 Project aims at offering an easy way to build a custom camera. For basic operation and experimentation, only Raspberry Pi, camera board and monitor is needed. For practical use, buttons and switches can easily be added, allowing for a custom build.
 
+CinePi Discord can be found [here](https://discord.gg/Hr4dfhuK).
+
 ## Functions
 - Enables recording and various camera controls with **RPi GPIO**, **USB keyboard/numpad**, **serial input** via USB (works with any microcontroller writing to serial) and (a rudimentary) **CineMate CLI** via SSH.
 - Simple GUI on the HDMI display.

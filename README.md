@@ -23,7 +23,7 @@ In order to get cinepi-raw and CineMate scripts running, you need:
 
 - Raspberry Pi 4B (4 or 8 GB versions have been tested)
 - Raspberry Pi HQ camera (rolling/global shutter variants both work)
-- HDMI capable monitor/computer screen
+- HDMI field monitor or computer screen
 
 For recording raw frames, a fast SSD is needed. Samsung T5/T7 will work. SSD needs to be formatted as NTFS and named "RAW".
 

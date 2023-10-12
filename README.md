@@ -7,10 +7,10 @@ CinePi Discord can be found [here](https://discord.gg/Hr4dfhuK).
 
 ## Functions
 - Enables recording and various camera controls with **RPi GPIO**, **USB keyboard/numpad**, **serial input** via USB (works with any microcontroller writing to serial) and (a rudimentary) **CineMate CLI** via SSH.
-- Simple GUI on the HDMI display.
-- Recording of audio scratch track using a USB microphone.
-- System button for safe shutdown, start-up and unmounting of SSD drive.
-- Attach a Grove Base HAT for iso, shutter angle and fps controls via potentiometers.
+- **Simple GUI** on the HDMI display (normal computer screen or field monitor can be used).
+- Recording of **audio scratch track** using a USB microphone.
+- System button for **safe shutdown** of the Pi, start-up and unmounting of SSD drive.
+- Support for **Grove Base HAT** for iso, shutter angle and fps controls via potentiometers.
 
 ## CLI example
 

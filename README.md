@@ -22,7 +22,7 @@ Startup sequence showing the output from the different CineMate modules. For use
 In order to get cinepi-raw and CineMate scripts running, you need:
 
 - Raspberry Pi 4B (4 or 8 GB versions have been tested)
-- Raspberry Pi IMX477 HQ camera board (rolling/global shutter variants both work)
+- Raspberry Pi HQ camera (rolling/global shutter variants both work)
 - HDMI capable monitor/computer screen
 
 For recording raw frames, a fast SSD is needed. Samsung T5/T7 will work. SSD needs to be formatted as NTFS and named "RAW".
@@ -195,12 +195,6 @@ Step by step instruction + parts list coming soon.
 ## Notes on audio sync
 
 Actual frame rate of the IMX477 sensor fluctuates about 0.01% around the mean value. This has no visual impact but will impact syncing of external audio. If recording synced audio, make sure to use a clapper board in the beginning and the end of the take. This will make it easier to sync the sound, but sync might still drift back and forth.
-
-Solution to this might be to use an external trigger for the camera board, like suggested here:
-
-https://www.raspberrypi.com/documentation/accessories/camera.html#using-the-hq-camera
-
-Currently investigating the possibility to use the hardware PWM signal on the Pi, fed to the camera board via a voltage divider, for the frame rate to be dead on the selected value.
 
 Audio scratch track function has been confirmed to work whih this type of USB microphone:
 

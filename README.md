@@ -5,7 +5,7 @@ Project aims at offering an easy way to build a custom camera. For basic operati
 
 CinePi Discord can be found [here](https://discord.gg/Hr4dfhuK).
 
-Website for the CineMate build [here](https://patrikerikssonfilm.com/workbench/cinepi-2k/). On the website you can fin more detailed discussion on building/customizing.
+Website for the CineMate build [here](https://patrikerikssonfilm.com/workbench/cinepi-2k/).
 
 
 ## Functions

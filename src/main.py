@@ -64,7 +64,7 @@ def main():
     usb_monitor = USBMonitor()
     ssd_monitor = SSDMonitor()
     system_button = SystemButton(redis_controller, ssd_monitor, system_button_pin=26)
-    gpio_output = GPIOOutput(rec_out_pin=5)
+    gpio_output = GPIOOutput(rec_out_pins=[5, 21])
     audio_recorder = AudioRecorder(usb_monitor, gain = 8)
 
     # Instantiate the CinePiController with all necessary components and settings

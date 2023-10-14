@@ -1,14 +1,19 @@
-# CineMate – manual controls for CinePi v2
-CineMate Python scripts is a way for users to implement and customize manual controls for their CinePi v2 build. 
+# CineMate – manual controls for cinepi-raw
+CineMate Python scripts is a way for users to implement and customize manual controls for their [cinepi-raw](https://github.com/cinepi/cinepi-raw) build. 
 
 Project aims at offering an easy way to build a custom camera. For basic operation and experimentation, only Raspberry Pi, camera board and monitor is needed. For practical use, buttons and switches can easily be added, allowing for a custom build.
 
+CinePi Discord can be found [here](https://discord.gg/Hr4dfhuK).
+
+Website for the CineMate build [here](https://patrikerikssonfilm.com/workbench/cinepi-2k/).
+
+
 ## Functions
 - Enables recording and various camera controls with **RPi GPIO**, **USB keyboard/numpad**, **serial input** via USB (works with any microcontroller writing to serial) and (a rudimentary) **CineMate CLI** via SSH.
-- Simple GUI on the HDMI display.
-- Recording of audio scratch track using a USB microphone.
-- System button for safe shutdown, start-up and unmounting of SSD drive.
-- Attach a Grove Base HAT for iso, shutter angle and fps controls via potentiometers.
+- **Simple GUI** on the HDMI display (normal computer screen or field monitor can be used).
+- Recording of **audio scratch track** using a USB microphone.
+- System button for **safe shutdown** of the Pi, start-up and unmounting of SSD drive.
+- Support for **Grove Base HAT** for iso, shutter angle and fps controls via potentiometers.
 
 ## CLI example
 
@@ -20,8 +25,8 @@ Startup sequence showing the output from the different CineMate modules. For use
 In order to get cinepi-raw and CineMate scripts running, you need:
 
 - Raspberry Pi 4B (4 or 8 GB versions have been tested)
-- Raspberry Pi IMX477 HQ camera board (rolling/global shutter variants both work)
-- HDMI capable monitor/computer screen
+- Raspberry Pi HQ camera (rolling/global shutter variants both work)
+- HDMI field monitor or computer screen
 
 For recording raw frames, a fast SSD is needed. Samsung T5/T7 will work. SSD needs to be formatted as NTFS and named "RAW".
 
@@ -32,7 +37,7 @@ For hardware control of camera settings and recording, see below.
 Preinstalled image file with Raspbian, cinepi-raw and CineMate scripts can be found in the release section of this repository. Burn this image onto an SD card and start up the Pi. Make sure you have an HDMI monitor hooked up on startup, in order for the simple gui module to start up properly.
 
 ### Manual install
-The scripts can be also manually installed onto a Rasberry Pi 4B already running CinePi v2.
+The scripts can be also manually installed onto a Rasberry Pi 4B already running cinepi-raw.
 #### Modifications to cinepi-raw
 For CineMate scritps to work properly, some modifications need do be made to the cinepi-raw installation. 
 
@@ -194,12 +199,6 @@ Step by step instruction + parts list coming soon.
 
 Actual frame rate of the IMX477 sensor fluctuates about 0.01% around the mean value. This has no visual impact but will impact syncing of external audio. If recording synced audio, make sure to use a clapper board in the beginning and the end of the take. This will make it easier to sync the sound, but sync might still drift back and forth.
 
-Solution to this might be to use an external trigger for the camera board, like suggested here:
-
-https://www.raspberrypi.com/documentation/accessories/camera.html#using-the-hq-camera
-
-Currently investigating the possibility to use the hardware PWM signal on the Pi, fed to the camera board via a voltage divider, for the frame rate to be dead on the selected value.
-
 Audio scratch track function has been confirmed to work whih this type of USB microphone:
 
 <img width="200" alt="cinemate_still_4" src="https://github.com/Tiramisioux/cinemate/assets/74836180/f5be69e9-b4cb-4050-9a45-3206ade71b4b">
@@ -221,6 +220,14 @@ Now, if not connected to the internet, on startup the Pi will get its system tim
 Occationaly, the red color in the simple gui, and the LED connected to the rec light output might blink. This is expected behaviour and does not mean frames are dropped.
 
 The reason is that the rec light logic is based on whether frames are writted to the SSD. Occationaly, cinepi-raw buffers frames before writing them to the SSD, leading to a brief pause in the writing of files to the SSD, causing the light to blink.
+
+## Backing up the SD card
+
+To make a compressed image backup of the SD card onto the SSD:
+
+```sudo dd if=/dev/mmcblk0 bs=1M status=progress | xz -c > /media/RAW/cinepi_cinemate_raspbian_image_$(date +%Y-%m-%d_%H-%M-%S).img.xz```
+
+Backing up an 8 GB CineMate image takes about 2 hours.
 
 ## Image examples
 

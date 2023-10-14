@@ -5,6 +5,9 @@ Project aims at offering an easy way to build a custom camera. For basic operati
 
 CinePi Discord can be found [here](https://discord.gg/Hr4dfhuK).
 
+Website for the CineMate build [here](https://patrikerikssonfilm.com/workbench/cinepi-2k/). On the website you can fin more detailed discussion on building/customizing.
+
+
 ## Functions
 - Enables recording and various camera controls with **RPi GPIO**, **USB keyboard/numpad**, **serial input** via USB (works with any microcontroller writing to serial) and (a rudimentary) **CineMate CLI** via SSH.
 - **Simple GUI** on the HDMI display (normal computer screen or field monitor can be used).

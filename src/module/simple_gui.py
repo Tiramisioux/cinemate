@@ -130,7 +130,7 @@ class SimpleGUI(threading.Thread):
             draw.text((205, -2), str(self.fps), font=font, fill="white")
             draw.text((1740, -2), str(self.cpu_load), font=font, fill="white")
             draw.text((1860, -2), str(self.cpu_temp), font=font, fill="white")
-            draw.text((500, -2), str(self.cpu_temp), font=font, fill="white")
+
             # GUI Middle logo
             draw.text((410, 400), "cinepi-raw", font=font2, fill="white")
             draw.text((760, 640), "by Csaba Nagy", font=font3, fill="white")

@@ -33,7 +33,9 @@ class AudioRecorder:
         try:
             #logging.info(f"usb_mic {self.usb_monitor.usb_mic}")
             alsa_device = self.get_alsa_device()
-            file_name = f"CINEPI_{time.strftime('%y-%m-%d_%H%M%S')}_AUDIO_SCRATCH.wav"
+            current_time = time.localtime()
+            current_frame = str(current_time.tm_hour % 24).zfill(2)
+            file_name = f"CINEPI_{time.strftime('%y-%m-%d_%H%M%S')}{current_frame}_AUDIO_SCRATCH.wav"
             self.file_path = os.path.join(self.directory, file_name)
             command = f"arecord -D {alsa_device} -f cd -c 1 -t wav {self.file_path}"
             self.process = subprocess.Popen(command, shell=True, preexec_fn=os.setsid, stderr=subprocess.DEVNULL)

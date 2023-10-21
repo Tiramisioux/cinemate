@@ -76,10 +76,10 @@ class SimpleGUI(threading.Thread):
             self.latest_wav = self.ssd_monitor.directory_watcher.last_wav_file_added
         
         if self.latest_frame is not None:
-            self.latest_frame = self.latest_frame[-43:]
+            self.latest_frame = self.latest_frame[-45:]
             
         if self.latest_wav is not None:   
-            self.latest_wav = self.latest_wav[-40:]
+            self.latest_wav = self.latest_wav[-42:]
             
         if self.latest_frame and self.latest_wav and self.latest_frame[:22] == self.latest_wav[:22]:
             self.wav_recorded = True
@@ -130,6 +130,7 @@ class SimpleGUI(threading.Thread):
             draw.text((205, -2), str(self.fps), font=font, fill="white")
             draw.text((1740, -2), str(self.cpu_load), font=font, fill="white")
             draw.text((1860, -2), str(self.cpu_temp), font=font, fill="white")
+
             # GUI Middle logo
             draw.text((410, 400), "cinepi-raw", font=font2, fill="white")
             draw.text((760, 640), "by Csaba Nagy", font=font3, fill="white")
@@ -152,7 +153,7 @@ class SimpleGUI(threading.Thread):
                     draw.text((345, 1051), 'SER', font=font, fill="white")
 
                 if self.latest_frame is not None:
-                    draw.text((600, 1051), str(self.latest_frame), font=font, fill="white")
+                    draw.text((570, 1051), str(self.latest_frame), font=font, fill="white")
 
                 if self.wav_recorded:
                     draw.text((1345, 1051), ' |   WAV', font=font, fill="white")

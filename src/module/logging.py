@@ -51,8 +51,12 @@ class ModuleFilter(logging.Filter):
         if not is_allowed:
             pass #print(f"Filtered out '{module_name}', because it's not in {self.allowed_modules}")
         return is_allowed
+    
+class BlackHoleHandler(logging.Handler):
+    def emit(self, record):
+        pass
 
-# Configure the logging
+
 def configure_logging(allowed_modules):
     log_format = '%(asctime)s.%(msecs)03d: %(levelname)s: %(module)s %(message)s'
     date_format = '%S'
@@ -61,9 +65,14 @@ def configure_logging(allowed_modules):
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
+    # StreamHandler for displaying logs on CLI
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+
+    # BlackHoleHandler to discard all log messages
+    blackhole_handler = BlackHoleHandler()
+    logger.addHandler(blackhole_handler)
 
     # Create a thread-safe queue to hold log messages
     log_queue = queue.Queue()
@@ -78,3 +87,4 @@ def configure_logging(allowed_modules):
     logger.addHandler(queue_handler)
 
     return logger, log_queue
+

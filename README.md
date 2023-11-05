@@ -32,6 +32,14 @@ For recording raw frames, a fast SSD is needed. Samsung T5/T7 will work. SSD nee
 
 For hardware control of camera settings and recording, see below.
 
+### Some words of caution when powering both the Pi and an external monitor. 
+
+According to discussions in the DSLR community it seems that you can get in a situation when you have HDMI connected and power to the camera but not to the monitor. When connecting the monitor to a power source there is apparently a risc that for a millisecond you have power to the monitor but no ground. Then the ground will be through the HDMI cable, burning everything in its way.
+
+Only way to avoid this is to have separate power sources for monitor and camera. Otherwise HDMI should be connected last and disconnected first. Never hot swap power cables while HDMI is connected to monitor.
+
+Not an issue with the official CinePi v2 build, but with CineMate it might be an issue, if you are powering the camera and monitor from the same source.
+
 ## Installation
 ### Preinstalled image 
 Preinstalled image file with Raspbian, cinepi-raw and CineMate scripts can be found in the release section of this repository. Burn this image onto an SD card and start up the Pi. Make sure you have an HDMI monitor hooked up on startup, in order for the simple gui module to start up properly.
@@ -187,14 +195,6 @@ Step by step instruction + parts list coming soon.
 <img width="500" alt="cinemate_6_" src="https://github.com/Tiramisioux/cinemate/assets/74836180/ae3ef7d1-90c4-4940-ba70-dbcf4c27585e">
 
 <img width="500" alt="cinemate_16" src="https://github.com/Tiramisioux/cinemate/assets/74836180/87f6b97e-f073-4200-bbe4-d12be3d5c396">
-
-## Some words of caution when powering both the Pi and an external monitor. 
-
-According to discussions in the DSLR community it seems that you can get in a situation when you have HDMI connected and power to the camera but not to the monitor. When connecting the monitor to a power source there is apparently a risc that for a millisecond you have power to the monitor but no ground. Then the ground will be through the HDMI cable, burning everything in its way.
-
-Only way to avoid this is to have separate power sources for monitor and camera. Otherwise HDMI should be connected last and disconnected first. Never hot swap power cables while HDMI is connected to monitor.
-
-Not an issue with the official CinePi v2 build, but with CineMate it might be an issue, if you are powering the camera and monitor from the same source.
 
 
 ## Known issues

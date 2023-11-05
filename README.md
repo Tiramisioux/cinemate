@@ -32,7 +32,7 @@ For recording raw frames, a fast SSD is needed. Samsung T5/T7 will work. SSD nee
 
 For hardware control of camera settings and recording, see below.
 
-### Some words of caution when powering both the Pi and an external monitor. 
+### Some words of caution when powering both the Pi and an external monitor 
 
 According to discussions in the DSLR community it seems that you can get in a situation when you have HDMI connected and power to the camera but not to the monitor. When connecting the monitor to a power source there is apparently a risk that for a millisecond you have power to the monitor but no ground. Then the ground will be through the HDMI cable, burning everything in its way.
 

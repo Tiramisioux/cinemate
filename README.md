@@ -43,7 +43,7 @@ Pull the development branch of cinemate:
 |fps rotary encoder clk|rotary enc|8|||
 |fps rotary encoder dt|rotary enc|7|||
 |potentiometer lock|switch|24||Locks shu and fps pots.|
-|sync shutter angle to fps|switch|16|shutter_sync 0 or shutter_sync 1||
+|sync shutter angle to fps|switch|16|`shutter_sync 0` or `shutter_sync 1`||
 |double fps|button|12||Instant slow motion mode, Press once to double fps and press a second time to revert to original fps. If in PWM mode, camera will speed ramp up and down.|
 |pwm mode|switch|22|`pwm 0` or `pwm 1`|Switches camera software to PWM mode.  <br>  <br>Background: https://github.com/Tiramisioux/libcamera-imx477-speed-ramping/|
 |PWM pin|output pin|19||Controls shutter angle and fps with hardware PWM signal from the PI (3V) through a voltage divider to the camera XVS trigger pin (wants 1.65V). Also connect the camera ground pin to Pi ground. Now shutter angle and fps can be changed even while in recording mode, without restarting the sensor.|

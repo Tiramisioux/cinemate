@@ -33,7 +33,7 @@ class AnalogControls(threading.Thread):
             bus = smbus2.SMBus(I2C_BUS)
             bus.read_byte(GROVE_BASE_HAT_ADDRESS)
             self.grove_base_hat_connected = True
-            #logging.info(f"Grove Base HAT found!")
+            logging.info(f"Grove Base HAT found!")
                 # Close the I2C bus
             bus.close()
         except OSError as e:
@@ -47,14 +47,16 @@ class AnalogControls(threading.Thread):
         self.fps_readings = deque(maxlen=10)
 
         if self.grove_base_hat_connected:
-            self.last_iso = self.calculate_iso(self.adc.read(self.iso_pot))
-            self.last_shutter_a = self.calculate_shutter_a(self.adc.read(self.shutter_a_pot))
-            self.last_fps = self.calculate_fps(self.adc.read(self.fps_pot))
-            self.last_fps_set = self.calculate_fps(self.adc.read(self.fps_pot))
-            logging.info(f"A0 {self.adc.read(0)}")
-            logging.info(f"A1 {self.adc.read(1)}")
-            logging.info(f"A2 {self.adc.read(2)}")
-            logging.info(f"A3 {self.adc.read(3)}")
+            self.last_iso = 0
+            self.last_shutter_a = 0
+            self.last_fps = 0
+            self.last_fps_set = 0
+            # logging.info(f"A0 {self.adc.read(0)}")
+            # logging.info(f"A1 {self.adc.read(2)}")
+            # logging.info(f"A2 {self.adc.read(4)}")
+            # logging.info(f"A3 {self.adc.read(6)}")
+        
+            self.update_parameters()
         
         self.start()
     
@@ -65,41 +67,63 @@ class AnalogControls(threading.Thread):
     def calculate_iso(self, value):
         # Add the new reading to the deque
         self.iso_readings.append(value)
-        # Calculate the average of the readings in the deque
-        average_value = sum(self.iso_readings) / len(self.iso_readings)
-        index = round((len(self.iso_steps) - 1) * average_value / 1000)
-        try:
-            return self.iso_steps[index]
-        except IndexError:
-            print("Error occurred while accessing ISO list elements.")
-            print("List length: ", len(self.iso_steps))
-            print("Index value: ", index)
-    
+        
+        if self.iso_readings:
+            # Calculate the average of the readings in the deque
+            average_value = sum(self.iso_readings) / len(self.iso_readings)
+            index = round((len(self.iso_steps) - 1) * average_value / 1000)
+            try:
+                return self.iso_steps[index]
+            except IndexError:
+                # Handle the IndexError gracefully
+                logging.error("Error occurred while accessing ISO list elements.")
+                logging.error("Setting default ISO value.")
+                # You can set a default ISO value here or just return None
+                return None
+        else:
+            logging.warning("No ISO readings available.")
+            return None
+
     def calculate_shutter_a(self, value):
         # Add the new reading to the deque
         self.shutter_a_readings.append(value)
-        # Calculate the average of the readings in the deque
-        average_value = sum(self.shutter_a_readings) / len(self.shutter_a_readings)
-        index = round((len(self.shutter_a_steps) - 1) * average_value / 1000)
-        try:
-            return self.shutter_a_steps[index]
-        except IndexError:
-            print("Error occurred while accessing shutter angle list elements.")
-            print("List length: ", len(self.shutter_a_steps))
-            print("Index value: ", index)
+        
+        if self.shutter_a_readings:
+            # Calculate the average of the readings in the deque
+            average_value = sum(self.shutter_a_readings) / len(self.shutter_a_readings)
+            index = round((len(self.shutter_a_steps) - 1) * average_value / 1000)
+            try:
+                return self.shutter_a_steps[index]
+            except IndexError:
+                # Handle the IndexError gracefully
+                logging.error("Error occurred while accessing shutter angle list elements.")
+                logging.error("Setting default shutter angle value.")
+                # You can set a default shutter angle value here or just return None
+                return None
+        else:
+            logging.warning("No shutter angle readings available.")
+            return None
 
     def calculate_fps(self, value):
         # Add the new reading to the deque
         self.fps_readings.append(value)
-        # Calculate the average of the readings in the deque
-        average_value = sum(self.fps_readings) / len(self.fps_readings)
-        index = round((len(self.fps_steps) - 1) * average_value / 1000)
-        try:
-            return self.fps_steps[index]
-        except IndexError:
-            print("Error occurred while accessing fps list elements.")
-            print("List length: ", len(self.fps_steps))
-            print("Index value: ", index)             
+        
+        if self.fps_readings:
+            # Calculate the average of the readings in the deque
+            average_value = sum(self.fps_readings) / len(self.fps_readings)
+            index = round((len(self.fps_steps) - 1) * average_value / 1000)
+            try:
+                return self.fps_steps[index]
+            except IndexError:
+                # Handle the IndexError gracefully
+                logging.error("Error occurred while accessing fps list elements.")
+                logging.error("Setting default fps value.")
+                # You can set a default fps value here or just return None
+                return None
+        else:
+            logging.warning("No fps readings available.")
+            return None
+            
 
     def update_parameters(self):
         iso_read = self.adc.read(self.iso_pot)
@@ -116,7 +140,7 @@ class AnalogControls(threading.Thread):
             logging.info(f"A{self.iso_pot} ADC read {iso_read}")
 
         if not self.cinepi_controller.parameters_lock and shutter_a_new != self.last_shutter_a:
-            self.cinepi_controller.set_shutter_a(shutter_a_new)
+            self.cinepi_controller.set_shutter_a_nom(shutter_a_new)
             self.last_shutter_a = shutter_a_new
             logging.info(f"A{self.shutter_a_pot} ADC read {shutter_a_read}")
         

@@ -1,85 +1,84 @@
+from gpiozero import Button
+import time
 import threading
 import logging
-import time
-from gpiozero import Button
 import os
-import RPi.GPIO as GPIO
+import signal
+import sys
 
-class SystemButton(threading.Thread):
-    """
-    Threaded class to handle system button interactions.
-    """
+class SystemButton:
+    def __init__(self, cinepi_controller, redis_controller, ssd_monitor, system_button_pin=None):
+        self.system_button_pin = system_button_pin
+        self.system_button = None
+        
+        if self.system_button_pin is not None:
+            self.system_button = Button(self.system_button_pin, pull_up=False, hold_time=3)
+            self.system_button.when_held = self.system_button_held
+            self.system_button.when_pressed = self.system_button_pressed
+            self.system_button.when_released = self.system_button_released
 
-    def __init__(self, redis_controller, ssd_monitor, system_button_pin=26):
-        super().__init__()
-
+        self.cinepi_controller = cinepi_controller
         self.redis_controller = redis_controller
         self.ssd_monitor = ssd_monitor
-        self.system_button = Button(system_button_pin)
-        self.system_button.when_pressed = self.system_button_callback
-        logging.info(f"system_button instantiated on pin {system_button_pin}.")
 
-        self.last_click_time = 0
+        self.last_press_time = 0
         self.click_count = 0
         self.click_timer = None
-        self.system_button_event = threading.Event()
-        self.system_button_lock = threading.Lock()
-        self.running = True  # Control variable for the run loop
+        
+        self.click_was_held = False
 
-    def run(self):
-        """
-        The main run loop. For now, it just keeps the thread alive. Adjust as necessary.
-        """
-        while self.running:
-            time.sleep(0.5)
+        # Set up the signal handler for SIGINT (Ctrl+C)
+        signal.signal(signal.SIGINT, self.cleanup)
 
-    def system_button_callback(self):
-        logging.info("System button pushed")
+    def system_button_held(self):
+        logging.info("System button held for 3 seconds.")
+        #if self.ssd_monitor.disk_mounted == True:
+        self.unmount_drive()
+        # Add your action here
+        self.click_count = 0  # Reset the click count after a hold
+        self.click_was_held = True
+
+    def system_button_pressed(self):
         current_time = time.time()
 
-        if current_time - self.last_click_time < 1.5:
+        if current_time - self.last_press_time < 1.5:
             self.click_count += 1
         else:
             self.click_count = 1
 
-        self.last_click_time = current_time
+        self.last_press_time = current_time
 
-        if self.click_timer:
-            self.click_timer.cancel()
+    def system_button_released(self):
+        if self.click_count > 0:
+            # If there were consecutive clicks, start the timer for handling clicks
+            if self.click_timer:
+                self.click_timer.cancel()
 
-        self.click_timer = threading.Timer(1.5, self.process_clicks)
-        self.click_timer.start()
+            self.click_timer = threading.Timer(1.5, self.handle_clicks)
+            self.click_timer.start()
+        self.click_was_held = False
 
-    def process_clicks(self):
-        if self.click_count == 1:
-            with self.system_button_lock:
-                if not self.system_button_event.is_set():
-                    self.system_button_event.set()
-                    threading.Thread(target=self.monitor_system_button).start()
+    def handle_clicks(self):
+        if self.click_count == 1 and not self.click_was_held:
+            logging.info("System button clicked once.")
+            self.cinepi_controller.switch_resolution()
         elif self.click_count == 2:
-            logging.info("Double click detected. Attempting system restart.")
-            threading.Thread(target=self.system_restart).start()
+            logging.info("System button double-clicked.")
+            self.restart_camera()
         elif self.click_count == 3:
-            logging.info("Triple click detected. Initiating system shutdown.")
+            logging.info("System button triple-clicked.")
+            self.system_restart()
+        elif self.click_count == 4:
+            logging.info("System button quadruple-clicked.")
             self.safe_shutdown()
+        elif self.click_count > 4:
+            logging.info(f"System button clicked {self.click_count} times.")
 
         self.click_count = 0
+        self.click_was_held = False
 
-    def monitor_system_button(self):
-        time_held = 0.0
-        button_pin = self.system_button.pin.number
-        while GPIO.input(button_pin) == GPIO.LOW and time_held < 3:
-            time.sleep(0.1)
-            time_held += 0.1
-
-        if time_held >= 3:
-            logging.info("Button held for 3 seconds. Attempting to unmount SSD.")
-            self.unmount_ssd()
-
-        self.system_button_event.clear()
-
-    def unmount_ssd(self):
-        self.ssd_monitor.unmount_ssd()
+    def unmount_drive(self):
+        self.ssd_monitor.unmount_drive()
 
     def safe_shutdown(self):
         if self.redis_controller.get_value('is_recording') == "1":
@@ -94,11 +93,18 @@ class SystemButton(threading.Thread):
             os.system('sudo reboot')
         except Exception as e:
             logging.error(f"Error restarting system: {e}")
+            
+    def restart_camera(self):
+        self.redis_controller.set_value('cam_init', 1)
 
-    def stop(self):
-        self.running = False
-        self.cleanup()
+    def cleanup(self, signum, frame):
+        # Handle cleanup actions here
+        logging.info("Cleaning up and exiting...")
+        sys.exit(0)
 
-    def cleanup(self):
-        pass
-
+    def run(self):
+        try:
+            while True:
+                time.sleep(0.1)
+        except KeyboardInterrupt:
+            self.cleanup(signal.SIGINT, None)

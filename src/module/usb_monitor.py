@@ -34,10 +34,11 @@ class Event:
                 logging.error(f"Error while invoking listener: {e}")
 
 
-class USBMonitor:
+class USBMonitor():
     def __init__(self):
         self.context = pyudev.Context()
         self.monitor = pyudev.Monitor.from_netlink(self.context)
+        
         
         self.temp_sound_devices = []
         self.sound_timer = None
@@ -59,9 +60,14 @@ class USBMonitor:
         self.connected_devices = []
         
         self.recently_processed = []
+        
+        # Add filter for USB storage devices
+        self.monitor.filter_by(subsystem='usb_storage')
 
         # Start monitoring for new device events
         self.monitor_devices()
+        
+
         
     def filter_sound_device(self, devices_list):
         """
@@ -168,10 +174,11 @@ class USBMonitor:
                 logging.info(f'USB Keyboard connected')
                 self.usb_event.emit(action, device, model, serial)
 
+            #elif self.is_ssd_drive(device):
             elif 'SSD' in model_upper:
                 self.usb_hd = device
                 logging.info(f'USB SSD connected')
-                self.usb_event.emit(action, device, model, serial)
+                self.usb_event.emit('add', device, model, serial)
 
         elif action == 'remove':
             if matching_entry:
@@ -226,6 +233,7 @@ class USBMonitor:
                 logging.info(f'USB SSD connected')
                 self.usb_event.emit('add', device, model, serial)
 
+
         for device in self.context.list_devices(subsystem='sound'):
             general_path = device.device_path.split('/sound/')[0]
             
@@ -246,6 +254,7 @@ class USBMonitor:
                     logging.info(f'USB Microphone connected')  # This is the place where the log is created
                     self.usb_event.emit('add', device, model, serial)
                     #logging.info(f'usb_mic: {self.usb_mic}')
+                
 
     def monitor_devices(self):
         observer = pyudev.MonitorObserver(self.monitor, self.device_event)

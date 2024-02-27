@@ -14,17 +14,25 @@ class QueueHandler(logging.Handler):
 class ColoredFormatter(logging.Formatter):
     
     MODULE_COLORS = {
-        'main2': 'light_grey',
-        'cinepi_app': 'light_blue',
-        'redis_controller': 'green',
-        'usb_monitor': 'light_grey',
-        'audio_recorder': 'cyan',
-        'gpio_controls': 'light_cyan',
-        'cinepi_controller': 'light_green',
-        'analog_controls': 'red',
-        'ssd_monitor': 'dark_grey',
-        'gpio_output': 'magenta'
+        'main': {'color': 'light_grey', 'attrs': []},
+        'cinepi_app': {'color': 'light_blue', 'attrs': ['bold']},
+        'redis_controller': {'color': 'green', 'attrs': ['bold']},
+        'usb_monitor': {'color': 'light_grey', 'attrs': []},
+        'audio_recorder': {'color': 'cyan', 'attrs': []},
+        'gpio_input': {'color': 'light_cyan', 'attrs': []},
+        'cinepi_controller': {'color': 'light_green', 'attrs': []},
+        'analog_controls': {'color': 'yellow', 'attrs': []},
+        'PWMcontroller': {'color': 'light_yellow', 'attrs': []},
+        'ssd_monitor': {'color': 'blue', 'attrs': ['bold']},
+        'gpio_output': {'color': 'light_red', 'attrs': []},
+        'system_button': {'color': 'white', 'attrs': []},
+        'rotary_encoder': {'color': 'yellow', 'attrs': []},
+        'oled': {'color': 'light_blue', 'attrs': []},
+        'simple_gui': {'color': 'light_blue', 'attrs': ['bold']},
+        'sensor_detect': {'color': 'light_blue', 'attrs': ['bold']},
+        'dmesg_monitor': {'color': 'yellow', 'attrs': []},
     }
+
     LEVEL_COLORS = {
         'INFO': 'green',
         'WARNING': 'yellow',
@@ -36,8 +44,13 @@ class ColoredFormatter(logging.Formatter):
     def format(self, record):
         record.module = record.module.ljust(self.MAX_MODULE_LENGTH)
         log_message = super().format(record)
-        colored_message = colored(log_message, self.MODULE_COLORS.get(record.module.strip(), 'white'))
-
+        module_info = self.MODULE_COLORS.get(record.module.strip(), {'color': 'white', 'attrs': []})
+        module_color = module_info['color']
+        module_attrs = module_info['attrs']
+        
+        colored_message = colored(log_message, module_color)
+        colored_message = colored(colored_message, attrs=module_attrs)  # Apply module-specific attributes
+        
         return colored_message
 
 class ModuleFilter(logging.Filter):
@@ -51,12 +64,8 @@ class ModuleFilter(logging.Filter):
         if not is_allowed:
             pass #print(f"Filtered out '{module_name}', because it's not in {self.allowed_modules}")
         return is_allowed
-    
-class BlackHoleHandler(logging.Handler):
-    def emit(self, record):
-        pass
 
-
+# Configure the logging
 def configure_logging(allowed_modules):
     log_format = '%(asctime)s.%(msecs)03d: %(levelname)s: %(module)s %(message)s'
     date_format = '%S'
@@ -65,14 +74,9 @@ def configure_logging(allowed_modules):
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
-    # StreamHandler for displaying logs on CLI
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-
-    # BlackHoleHandler to discard all log messages
-    blackhole_handler = BlackHoleHandler()
-    logger.addHandler(blackhole_handler)
 
     # Create a thread-safe queue to hold log messages
     log_queue = queue.Queue()
@@ -87,4 +91,3 @@ def configure_logging(allowed_modules):
     logger.addHandler(queue_handler)
 
     return logger, log_queue
-

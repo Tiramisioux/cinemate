@@ -54,3 +54,4 @@ Pull the development branch of cinemate:
 |set resolution||n/a|`res 0` or `res 1`||
 |print camera settings to CLI||n/a|`get`||
 |unmount SSD||n/a|`unmount`|
+

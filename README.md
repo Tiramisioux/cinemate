@@ -1,3 +1,4 @@
+test
 # CineMate – manual controls for CinePi v2
 CineMate Python scripts is a way for users to implement and customize manual controls for their CinePi v2 build. 
 

@@ -18,14 +18,17 @@ class CommandExecutor(threading.Thread):
             'rec': (cinepi_controller.rec_button_pushed, None),  # Record command  
             'stop': (cinepi_controller.rec_button_pushed, None),  # Stop command 
             'iso': (cinepi_controller.set_iso, int),  # ISO setting command 
-            'shutter_a': (cinepi_controller.set_shutter_a_free, float),  # Shutter_a setting command 
+            'shutter_a': (cinepi_controller.set_shutter_a, float),  # Shutter_a setting command
+            'shutter_a_nom': (cinepi_controller.set_shutter_a_nom, float),  # Shutter_a_nom setting command  
             'fps': (cinepi_controller.set_fps, int),  # FPS setting command 
             'res': (cinepi_controller.set_resolution, int),  # Resolution setting command 
-            'unmount': (system_button.unmount_ssd, None),  # Unmount command
+            'unmount': (system_button.unmount_drive, None),  # Unmount command
             'time': (self.display_time, None),  # Time display command
             'set_rtc_time': (self.set_rtc_time, None),  # RTC time setting command
             'space': (cinepi_controller.ssd_monitor.output_ssd_space_left, None),  # SSD space left command
-            'get': (cinepi_controller.print_settings, None)
+            'get': (cinepi_controller.print_settings, None),
+            'pwm': (cinepi_controller.set_pwm_mode, int),  # Ramp mode command
+            'shutter_sync': (cinepi_controller.set_shutter_a_sync, int)  # Sync shutter to fps
         }
 
     def is_valid_arg(self, arg, expected_type):

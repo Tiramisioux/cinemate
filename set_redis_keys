@@ -1,0 +1,14 @@
+set fps_actual 24
+publish cp_controls fps
+set shutter_a 180
+publish cp_controls shutter_a
+set shutter_a_nom 180
+publish cp_controls shutter_a_nom
+set is_recording 0
+publish cp_controls is_recording
+set is_writing 0
+publish cp_controls is_writing
+set is_writing_buf 0
+publish cp_controls is_writing
+set current_sensor_mode 0
+publish cp_controls current_sensor_mode

@@ -7,27 +7,32 @@ import subprocess
 from gpiozero import CPUTemperature
 from module.framebuffer import Framebuffer  # pytorinox
 import traceback
+import logging
 
 class SimpleGUI(threading.Thread):
-    def __init__(self, redis_controller, usb_monitor, ssd_monitor, serial_handler):
+    def __init__(self, pwm_controller, redis_controller, cinepi_controller, usb_monitor, ssd_monitor, serial_handler, dmesg_monitor
+                 ):
         threading.Thread.__init__(self)
 
+        self.pwm_controller = pwm_controller
         self.redis_controller = redis_controller
+        self.cinepi_controller = cinepi_controller
         self.usb_monitor = usb_monitor
         self.ssd_monitor = ssd_monitor
         self.serial_handler = serial_handler
+        self.dmesg_monitor = dmesg_monitor
         
         # Get the directory of the current script
         self.current_directory = os.path.dirname(os.path.abspath(__file__))
 
         # Create a relative path from the current script to the font file
-        self.relative_path_to_font = os.path.join(self.current_directory, '../../resources/fonts/Arial.ttf')
+        self.relative_path_to_font = os.path.join(self.current_directory, '../../resources/fonts/SFCompactRounded.ttf')
         self.relative_path_to_font2 = os.path.join(self.current_directory, '../../resources/fonts/smallest_pixel-7.ttf')
         self.relative_path_to_font3 = os.path.join(self.current_directory, '../../resources/fonts/smallest_pixel-7.ttf')
 
         # Frame buffer coordinates
         self.fb = Framebuffer(0)
-        self.cx = self.fb.size[0] // 2
+        self.cx = self.fb.size[0] // 2  
         self.cy = self.fb.size[1] // 2
 
         # Frame buffer coordinates
@@ -55,50 +60,37 @@ class SimpleGUI(threading.Thread):
         
         self.latest_frame = None
             
-        self.latest_wav = None  
+        self.latest_wav = None
         
-         # Hide the cursor
+        # Hide the cursor
         self.hide_cursor() 
+        
+        # Check if /dev/fb0 exists
+        fb_path = "/dev/fb0"
+        if os.path.exists(fb_path):
+            self.fb = Framebuffer(0)
+            self.disp_width, self.disp_height = self.fb.size
+        else:
+            logging.info(f"No HDMI display found")    
 
         self.start()
+        
+        logging.info(f"Simple GUI instantiated. HDMI {self.fb.size}")
 
     def get_values(self):
         self.iso = self.redis_controller.get_value("iso")
-        self.shutter_a = self.redis_controller.get_value('shutter_a').replace('.0', '')
-        self.fps = self.redis_controller.get_value('fps')
-        self.is_recording = False
-        self.latest_frame = None
-        
-        # This check prevents 'NoneType' object has no attribute 'writing_to_drive' error.
-        if hasattr(self.ssd_monitor.directory_watcher, 'writing_to_drive'):
-            self.is_recording = self.ssd_monitor.directory_watcher.writing_to_drive
-            self.latest_frame = self.ssd_monitor.directory_watcher.last_dng_file_added
-            self.latest_wav = self.ssd_monitor.directory_watcher.last_wav_file_added
-        
-        if self.latest_frame is not None:
-            self.latest_frame = self.latest_frame[-45:]
-            
-        if self.latest_wav is not None:   
-            self.latest_wav = self.latest_wav[-42:]
-            
-        if self.latest_frame and self.latest_wav and self.latest_frame[:22] == self.latest_wav[:22]:
-            self.wav_recorded = True
-        else:
-            self.wav_recorded = False
+        self.shutter_a = (str(self.redis_controller.get_value('shutter_a')).replace('.0', ''))
+        self.shutter_a_nom = (str(self.redis_controller.get_value('shutter_a_nom')).replace('.0', ''))
+        self.fps = int(self.cinepi_controller.fps_actual)
+        self.is_recording = int(self.redis_controller.get_value('is_writing_buf'))
+        self.latest_frame = False
         
         self.min_left = None
         
-        self.height_value = self.redis_controller.get_value('height')
-        if self.height_value == "1080":
-            self.file_size = 3.2
-        elif self.height_value == "1520":
-            self.file_size = 4.8
+        self.file_size = self.cinepi_controller.file_size
         
-        fps_value = self.redis_controller.get_value('fps')
-        if self.ssd_monitor.last_space_left is not None and self.file_size is not None and fps_value is not None:
-            self.min_left = int((self.ssd_monitor.last_space_left * 1000) / (self.file_size * int(fps_value) * 60))
-        else:
-            self.min_left = None
+        if self.ssd_monitor.last_space_left:
+            self.min_left = round(int((self.ssd_monitor.last_space_left * 1000) / (self.file_size * float(self.cinepi_controller.fps_actual) * 60)),0)
 
         # Get CPU statistics
         self.cpu_load = str(psutil.cpu_percent()) + '%'
@@ -112,90 +104,176 @@ class SimpleGUI(threading.Thread):
 
     def draw_display(self):
         try:
-            if self.is_recording:
+            if self.is_recording == 1:
                 self.fill_color = "red"
             else:
                 self.fill_color = "black"
             image = Image.new("RGBA", self.fb.size)
             draw = ImageDraw.Draw(image)
             draw.rectangle(((0, 0), self.fb.size), fill=self.fill_color)
-            font = ImageFont.truetype(os.path.realpath(self.relative_path_to_font), 30)
-            font2 = ImageFont.truetype(os.path.realpath(self.relative_path_to_font2), 233)
-            font3 = ImageFont.truetype(os.path.realpath(self.relative_path_to_font3), 63)
+            font = ImageFont.truetype(os.path.realpath(self.relative_path_to_font), 34)
+            font2 = ImageFont.truetype(os.path.realpath(self.relative_path_to_font), 51)
+            font3 = ImageFont.truetype(os.path.realpath(self.relative_path_to_font), 28)
             font4 = ImageFont.truetype(os.path.realpath(self.relative_path_to_font), 26)
+            font5 = ImageFont.truetype(os.path.realpath(self.relative_path_to_font), 16)
 
-            # GUI Upper line
-            draw.text((10, -2), str(self.iso), font=font, fill="white")
-            draw.text((110, -2), str(self.shutter_a), font=font, fill="white")
-            draw.text((205, -2), str(self.fps), font=font, fill="white")
-            draw.text((1740, -2), str(self.cpu_load), font=font, fill="white")
-            draw.text((1860, -2), str(self.cpu_temp), font=font, fill="white")
+            self.exposure_time = int((float(self.shutter_a)/360)*(1/float(self.fps))*1000000)
 
-            # GUI Middle logo
-            draw.text((410, 400), "cinepi-raw", font=font2, fill="white")
-            draw.text((760, 640), "by Csaba Nagy", font=font3, fill="white")
-            
-            if self.height_value == "1080":
+            if self.cinepi_controller.gui_layout == 0:
+
+                # GUI Upper line
+                draw.text((10, -7), str(self.iso), font=font, fill="white")
+                if self.cinepi_controller.pwm_mode == False:
+                    draw.text((110, -7), str(self.shutter_a), font=font, fill="white")
+                    draw.text((205, -7), str(self.fps), font=font, fill="white")
+                elif self.cinepi_controller.pwm_mode == True:
+                    draw.text((110, -7), str(self.pwm_controller.shutter_angle), font=font, fill="lightgreen")
+                    draw.text((205, -7), str(int(round(float(self.pwm_controller.fps),0))), font=font, fill="lightgreen")
+                    
+                if self.cinepi_controller.fps_double == True:
+                    draw.text((205, -7), str(self.fps), font=font, fill="lightgreen")
+                    draw.text((1090, -2), 'FPS SW', font=font4, fill="lightgreen")
+                
+                draw.text((1210, -7), str(self.cinepi_controller.exposure_time_fractions), font=font, fill="white")
+                if self.cinepi_controller.pwm_mode == True:
+                    draw.text((1323, -2), 'PWM', font=font4, fill="lightgreen")
+                
+                if self.cinepi_controller.shutter_a_sync == True:
+                    draw.text((1425, -2), 'SYNC   /', font=font4, fill="white")
+                    draw.text((1525, -2), str(self.shutter_a_nom), font=font4, fill="white")
+                    
+                if self.cinepi_controller.parameters_lock == True:
+                    draw.text((1610, -2), 'LOCK', font=font4, fill=(255,0,0,255))
+
+                if self.dmesg_monitor.undervoltage_flag:
+                    if self.is_recording:
+                        draw.text((1700, -2), str('VOLT'), font=font4, fill="black")
+                    else:                        
+                        draw.text((1700, -2), str('VOLT'), font=font4, fill="yellow")
+                
+                draw.text((1790, -2), str(self.cpu_load), font=font4, fill="white")
+                draw.text((1875, -2), str(self.cpu_temp), font=font4, fill="white")
             
                 # GUI Lower line
-                if self.ssd_monitor.disk_mounted and self.ssd_monitor.last_space_left:
-                    draw.text((10, 1051), str(self.min_left) + " MIN", font=font, fill="white")
+                if self.min_left:
+                    draw.text((10, 1044), str(self.min_left) + " MIN", font=font, fill="white")
                 else:
-                    draw.text((10, 1051), 'NO DISK', font=font, fill="white")
+                    draw.text((10, 1044), 'NO DISK', font=font, fill="white")
                     
                 if self.usb_monitor.usb_mic:
-                    draw.text((160, 1051), 'MIC', font=font, fill="white")
+                    draw.text((160, 1050), 'MIC', font=font4, fill="white")
                     
                 if self.usb_monitor.usb_keyboard:
-                    draw.text((250, 1051), 'KEY', font=font, fill="white")
+                    draw.text((225, 1050), 'KEY', font=font4, fill="white")
 
                 if '/dev/ttyACM0' in self.serial_handler.current_ports:
-                    draw.text((345, 1051), 'SER', font=font, fill="white")
-
-                if self.latest_frame is not None:
-                    draw.text((570, 1051), str(self.latest_frame), font=font, fill="white")
+                    draw.text((290, 1050), 'SER', font=font4, fill="white")
 
                 if self.wav_recorded:
-                    draw.text((1345, 1051), ' |   WAV', font=font, fill="white")
+                    draw.text((1445, 1050), ' |   WAV', font=font4, fill="white")
                 
-            elif self.height_value == "1520":
+            if self.cinepi_controller.gui_layout == 1:
+                
+                # GUI Upper line
+                draw.text((0, -7), str(self.iso), font=font2, fill=("white"))
+                if self.cinepi_controller.pwm_mode == False:
+                    draw.text((10, 80), str(self.shutter_a), font=font2, fill="white")
+                    draw.text((10, 167), str(self.fps), font=font2, fill="white")
+                elif self.cinepi_controller.pwm_mode == True:
+                    draw.text((10, 80), str(self.pwm_controller.shutter_angle), font=font2, fill="lightgreen")
+                    draw.text((10, 167), str(int(round(float(self.pwm_controller.fps),0))), font=font2, fill="lightgreen")
+                    
+                if self.cinepi_controller.fps_double == True:
+                    draw.text((10, 260), 'FPS SW', font=font, fill="lightgreen")
+                    draw.text((10, 167), str(self.fps), font=font2, fill="lightgreen")
+                
+                draw.text((10, 340), str(self.cinepi_controller.exposure_time_fractions), font=font2, fill="white")
+
+                if self.cinepi_controller.pwm_mode == True:
+                    draw.text((10, 427), 'PWM', font=font, fill="lightgreen")
+
+                if self.cinepi_controller.shutter_a_sync == True:
+                    draw.text((10, 495), 'SYNC', font=font, fill="white")
+                    draw.text((10, 540), str(self.shutter_a_nom), font=font, fill="white")
+                    
+                if self.cinepi_controller.parameters_lock == True:
+                    draw.text((10, 610), 'LOCK', font=font, fill=(255,0,0,255))
+                
+                if self.dmesg_monitor.undervoltage_flag:
+                    if self.is_recording:
+                        draw.text((10, 680), str('VOLTAGE'), font=font, fill="black")
+                    else:
+                        draw.text((10, 680), str('VOLTAGE'), font=font, fill="yellow")   
+                    
+
+                draw.text((1740, -7), str(self.cpu_load), font=font, fill="white")
+                draw.text((1860, -7), str(self.cpu_temp), font=font, fill="white")
                 
                 # GUI Lower line
-                if self.ssd_monitor.disk_mounted and self.ssd_monitor.last_space_left:
-                    draw.text((10, 1051), str(self.min_left) + " MIN", font=font, fill="white")
+                if self.min_left:
+                    draw.text((10, 1044), str(self.min_left) + " MIN", font=font, fill="white")
                 else:
-                    draw.text((10, 1051), 'NO DISK', font=font, fill="white")
+                    draw.text((10, 1044), 'NO DISK', font=font, fill="white")
                     
                 if self.usb_monitor.usb_mic:
-                    draw.text((10, 850), 'MIC', font=font, fill="grey")
+                    draw.text((10, 910), 'MIC', font=font4, fill="white")
                     
                 if self.usb_monitor.usb_keyboard:
-                    draw.text((10, 910), 'KEY', font=font, fill="grey")
+                    draw.text((10, 950), 'KEY', font=font4, fill="white")
 
                 if '/dev/ttyACM0' in self.serial_handler.current_ports:
-                    draw.text((10, 970), 'SER', font=font, fill="grey")
+                    draw.text((10, 990), 'SER', font=font4, fill="white")
 
-                if self.latest_frame:
-                    text = str(self.latest_frame)
-                    words = text.split('_')
-                    lines = []
-                    max_width_in_words = 1  # Approximate number of words you expect per line. Adjust as needed.
+            if self.cinepi_controller.gui_layout == 2:
+                
+                # GUI Upper line
+                draw.text((-3, -7), str(self.iso), font=font, fill=("white"))
+                if self.cinepi_controller.pwm_mode == False:
+                    draw.text((-3, 80), str(self.shutter_a), font=font, fill="white")
+                    draw.text((-3, 167), str(self.fps), font=font, fill="white")
+                elif self.cinepi_controller.pwm_mode == True:
+                    draw.text((-3, 80), str(self.pwm_controller.shutter_angle), font=font, fill="lightgreen")
+                    draw.text((-3, 167), str(int(round(float(self.pwm_controller.fps),0))), font=font, fill="lightgreen")
                     
-                    while words:
-                        line = ' '.join(words[:max_width_in_words])
-                        lines.append(line)
-                        words = words[max_width_in_words:]
+                if self.cinepi_controller.fps_double == True:
+                    draw.text((-3, 260), 'FPS SW', font=font, fill="lightgreen")
+                    draw.text((-3, 167), str(self.fps), font=font, fill="lightgreen")
+                
+                draw.text((-3, 340), str(self.cinepi_controller.exposure_time_fractions), font=font, fill="white")
 
-                    y_position = 500
-                    line_height = 30 + 8  # Assuming 5 pixels of padding between lines
+                if self.cinepi_controller.pwm_mode == True:
+                    draw.text((-3, 427), 'PWM', font=font3, fill="lightgreen")
 
-                    for line in lines:
-                        draw.text((10, y_position), line, font=font, fill="grey")
-                        y_position += line_height
+                if self.cinepi_controller.shutter_a_sync == True:
+                    draw.text((-3, 495), 'SYNC', font=font3, fill="white")
+                    draw.text((-3, 540), str(self.shutter_a_nom), font=font, fill="white")
+                    
+                if self.cinepi_controller.parameters_lock == True:
+                    draw.text((-3, 610), 'LOCK', font=font3, fill=(255,0,0,255))
+                
+                if self.dmesg_monitor.undervoltage_flag:
+                    if self.is_recording:
+                        draw.text((-3, 680), str('VOLTAGE'), font=font, fill="black")
+                    else:
+                        draw.text((-3, 680), str('VOLTAGE'), font=font, fill="yellow")   
 
-                if self.wav_recorded:
-                    draw.text((10, 705), 'WAV', font=font, fill="grey")
+                draw.text((1862, -7), str(self.cpu_load), font=font4, fill="white")
+                draw.text((1862, 21), str(self.cpu_temp), font=font4, fill="white")
+                
+                # GUI Lower line
+                if self.min_left:
+                    draw.text((-3, 1044), str(self.min_left) + " MIN", font=font4, fill="white")
+                else:
+                    draw.text((-3, 1044), 'NO DISK', font=font4, fill="white")
+                    
+                if self.usb_monitor.usb_mic:
+                    draw.text((-3, 910), 'MIC', font=font4, fill="white")
+                    
+                if self.usb_monitor.usb_keyboard:
+                    draw.text((-3, 950), 'KEY', font=font4, fill="white")
 
+                if '/dev/ttyACM0' in self.serial_handler.current_ports:
+                    draw.text((-3, 990), 'SER', font=font4, fill="white")
 
             self.fb.show(image)
         except OSError as e:

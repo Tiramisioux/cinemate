@@ -70,8 +70,8 @@ class Keyboard:
             evdev.ecodes.KEY_5: (self.controller.dec_fps, "5 - dec_fps triggered"),
             evdev.ecodes.KEY_6: (self.controller.inc_fps, "6 - inc_fps triggered"),
             evdev.ecodes.KEY_8: (self.controller.switch_resolution, "8 - switch_resolution triggered"),
-            evdev.ecodes.KEY_9: (self.controller.rec_button_pushed, "9 - rec_button_pushed triggered"),
-            evdev.ecodes.KEY_0: (self.handle_zero_key, "0 - handle_zero_key triggered"),
+            evdev.ecodes.KEY_9: (self.controller.unmount_drive, "9 - unmount_drive triggered"),
+            evdev.ecodes.KEY_0: (self.controller.rec_button_pushed, "0 - rec_button_pushed triggered"),
         }
 
     def handle_zero_key(self):

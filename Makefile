@@ -4,9 +4,12 @@ SERVICE_PATH = /etc/systemd/system/
 .PHONY: install start stop uninstall status
 
 install:
+	@sudo systemctl enable pigpiod
+	@sudo systemctl start pigpiod
 	@sudo cp services/$(SERVICE_FILE) $(SERVICE_PATH)
 	@sudo systemctl enable $(SERVICE_FILE)
 	@sudo systemctl daemon-reload
+
 
 start:
 	@sudo systemctl start $(SERVICE_FILE)

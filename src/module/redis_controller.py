@@ -1,6 +1,7 @@
 import redis
 import logging
 import threading
+import RPi.GPIO as GPIO
 
 class Event:
     def __init__(self):
@@ -38,6 +39,7 @@ class RedisController:
         self.listener_thread = threading.Thread(target=self.listen)
         self.listener_thread.daemon = True  # This makes sure the thread will exit when the main program exits
         self.listener_thread.start()
+    
 
     def init_cache(self):
         with self.lock:
@@ -63,12 +65,19 @@ class RedisController:
                 logging.info(f"Changed value: {changed_key} = {value_str}")
                 self.redis_parameter_changed.emit({'key': changed_key, 'value': value_str})
 
-    def get_value(self, key):
+    def get_value(self, key, default=None):
         with self.lock:
-            return self.cache.get(key)
+            return self.cache.get(key, default)
 
     def set_value(self, key, value):
         with self.lock:
+            #cap fps
+            # if key == 'fps':
+            #     if int(self.get_value('height')) == 1080 and value < 50:
+            #         value = 50
+            #     if int(self.get_value('height')) == 1520 and value < 40:
+            #         value = 40
+                
             self.redis_client.set(key, value)
             # Notify about the key change via the cp_controls channel
             self.redis_client.publish('cp_controls', key)

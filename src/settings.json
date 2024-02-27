@@ -1,0 +1,38 @@
+{
+    "pwm_pin": 19,
+    "rec_out_pin": [6, 21],
+    "iso_steps": [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200],
+    "additional_shutter_a_steps": [172.8, 346.6],
+    "fps_steps": null,
+    "analog_controls": {
+        "iso_pot": 0,
+        "shutter_a_pot": 2,
+        "fps_pot": 4
+    },
+    "gpio_input": {
+        "rec_button": [4, 5],
+        "iso_inc_button": 27,
+        "iso_dec_button": 10,
+        "res_switch": null,
+        "pwm_switch": 22,
+        "shutter_a_sync_switch": 16,
+        "fps_button": 12,
+        "fps_switch": null,
+        "pot_lock_switch": 24
+    },
+    "system_button": {
+        "system_button_pin": 26
+    },
+    "iso_encoder": {
+        "clk": 9,
+        "dt": 11
+    },
+    "shu_encoder": {
+        "clk": 23,
+        "dt": 25
+    },
+    "fps_encoder": {
+        "clk": 8,
+        "dt": 7
+    }
+}

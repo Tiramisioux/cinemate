@@ -117,25 +117,25 @@ class Framebuffer(object):
     def off(self):
         pass
 
-if __name__ == "__main__":
-    import time
-    from PIL import ImageDraw
+# if __name__ == "__main__":
+#     import time
+#     from PIL import ImageDraw
 
 
-    def TestFrameBuffer(i):
-        fb = Framebuffer(i)
-        print(fb)
-        image = Image.new("RGBA", fb.size)
-        draw = ImageDraw.Draw(image)
-        draw.rectangle(((0, 0), fb.size), fill="green")
-        draw.ellipse(((0, 0), fb.size), fill="blue", outline="red")
-        draw.line(((0, 0), fb.size), fill="green", width=2)
-        start = time.time()
-        for i in range(5):
-            fb.show(image)
-        stop = time.time()
-        print("fps: %.2f" % (10 / (stop - start)))
+#     def TestFrameBuffer(i):
+#         fb = Framebuffer(i)
+#         print(fb)
+#         image = Image.new("RGBA", fb.size)
+#         draw = ImageDraw.Draw(image)
+#         draw.rectangle(((0, 0), fb.size), fill="green")
+#         draw.ellipse(((0, 0), fb.size), fill="blue", outline="red")
+#         draw.line(((0, 0), fb.size), fill="green", width=2)
+#         start = time.time()
+#         for i in range(5):
+#             fb.show(image)
+#         stop = time.time()
+#         print("fps: %.2f" % (10 / (stop - start)))
 
 
-    for i in [0]:
-        TestFrameBuffer(i)
+#     for i in [0]:
+#         TestFrameBuffer(i)

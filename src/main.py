@@ -59,7 +59,7 @@ if __name__ == "__main__":
     # Instantiate other necessary components
     redis_controller = RedisController()
     ssd_monitor = SSDMonitor()
-    usb_monitor = USBMonitor()
+    usb_monitor = USBMonitor(ssd_monitor)
     gpio_output = GPIOOutput(rec_out_pin=settings['rec_out_pin'])
     
     dmesg_monitor = DmesgMonitor("/var/log/kern.log")

@@ -12,3 +12,4 @@ set is_writing_buf 0
 publish cp_controls is_writing
 set current_sensor_mode 0
 publish cp_controls current_sensor_mode
+ls

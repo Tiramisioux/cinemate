@@ -1,1 +1,1 @@
-```cinemate deveopment branch```
+```cinemate development branch```

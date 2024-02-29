@@ -189,7 +189,7 @@ class SSDMonitor():
         logging.info(f"Space left: {self.last_space_left}.")
     
 
-    def unmount_ssd(self):
+    def unmount_drive(self):
 
         # Stop the SSD thread actions
         if self._ssd_thread and self._ssd_thread.is_alive():

@@ -40,8 +40,7 @@ class Mediator:
         except Exception as e:
             logging.error(f"Failed to load SSD settings: {e}")
             return []
-
-        
+    
     def handle_cinepi_message(self, message):
         # Handle CinePi app messages (currently not logging)
         pass  
@@ -52,6 +51,7 @@ class Mediator:
         if any(ssd_model.upper() in model_upper for ssd_model in self.recognized_ssds):
             # The device is recognized as an SSD from the settings file
             logging.info(f"Recognized SSD connected: {device_model}")
+            logging.info(f"SSD device serial: {device_serial}")
             self.ssd_monitor.update(action, device_model, device_serial)
         # Add else condition if needed to handle non-SSD USB events
 

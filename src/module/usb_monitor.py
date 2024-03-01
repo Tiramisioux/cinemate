@@ -20,21 +20,6 @@ class Event:
                 logging.error(f"Error while invoking listener: {e}")
                 traceback.print_exc()  # Print the traceback for better debugging
 
-class Event:
-    def __init__(self):
-        self._listeners = []
-
-    def subscribe(self, listener):
-        self._listeners.append(listener)
-
-    def emit(self, *args):
-        for listener in self._listeners:
-            try:
-                listener(*args)
-            except Exception as e:
-                logging.error(f"Error while invoking listener: {e}")
-
-
 class USBMonitor():
     def __init__(self, ssd_monitor):
         self.context = pyudev.Context()
@@ -65,7 +50,6 @@ class USBMonitor():
         
         # Load SSD models from settings file
         self.recognized_ssds = self.load_ssd_settings("/home/pi/cinemate/src/module/ssd_settings.json")
-
         
         # Add filter for USB storage devices
         self.monitor.filter_by(subsystem='usb_storage')

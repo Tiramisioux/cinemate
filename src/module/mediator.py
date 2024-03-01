@@ -53,6 +53,8 @@ class Mediator:
             logging.info(f"Recognized SSD connected: {device_model}")
             logging.info(f"SSD device serial: {device_serial}")
             self.ssd_monitor.update(action, device_model, device_serial)
+            self.ssd_monitor.usb_hd_serial = device_serial  # Set the serial number
+
         # Add else condition if needed to handle non-SSD USB events
 
     def handle_ssd_event(self, message):

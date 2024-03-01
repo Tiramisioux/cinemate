@@ -26,6 +26,7 @@ class SSDMonitor():
     def __init__(self,):
         self.active_watches = set()
         self.usb_hd = None
+        self.usb_hd_serial = None  # Initialize the attribute
         self.path = '/media/RAW'
         self.disk_mounted = False
         self.last_space_left = None
@@ -78,29 +79,7 @@ class SSDMonitor():
             logging.info(f"USB SSD disconnected.")
             self.is_drive_mounted()
             self.on_ssd_removed()
-        
-    # def update(self, action, device_model, device_serial):
-    #     if action == 'add' and 'SSD' in device_model.upper():
-    #         self.usb_hd_serial = device_serial
-            
-    #         time.sleep(10)
-
-    #         mounted = self.is_drive_mounted()
-
-    #         if mounted:
-    #             #logging.info(f"SSD mounted at {self.disk_mounted}")
-    #             self.last_space_left = self.get_ssd_space_left()
-    #             logging.info(f"Space left: {self.last_space_left}.")
-    #             #self.ssd_event.emit(f"SSD mounted at {self.disk_mounted}")
-    #         else:
-    #             logging.info(f"SSD not mounted")
-    #         self.on_ssd_added()
-                
-    #     elif action == 'remove' and self.usb_hd_serial and self.usb_hd_serial == device_serial:
-            
-    #         logging.info(f"USB SSD disconnected.")
-    #         self.is_drive_mounted()
-    #         self.on_ssd_removed()
+    
 
     def is_drive_mounted(self):
         """Check if the drive is mounted and return the mount point or None"""

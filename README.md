@@ -7,16 +7,28 @@
 - Official HQ or GS camera
 - Samsung T5/T7 SSD
 
-### Installing development branch
+### Installing 
 
-Remove old CineMate:
+Dowmload disk image from here: https://github.com/Tiramisioux/cinemate/releases/tag/dev
 
-    sudo rm -r cinemate
+Burn to SD card using Raspberry Pi imager or Balena Etcher. CineMate should autostart
 
-Pull the development branch of cinemate: 
+User: pi
+Password: 1
 
-    git clone -b development https://github.com/tiramisioux/cinemate.git
+### CineMate autostart
 
+CineMate autostarts by default. To disable autostart:
+
+    cd cinemate
+    make stop
+
+To enable (and start) again
+
+    cd cinemate
+    make start
+
+To run CineMate manually, wiith 
 
 ### Updating the Development Branch
 

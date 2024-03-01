@@ -28,7 +28,11 @@ To enable (and start) again
     cd cinemate
     make start
 
-To run CineMate manually, wiith 
+To run CineMate manually, type
+
+    cinemate
+
+anywhere in the cli.
 
 ### Updating the Development Branch
 

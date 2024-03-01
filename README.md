@@ -11,8 +11,8 @@ Dowmload disk image from here: https://github.com/Tiramisioux/cinemate/releases/
 
 Burn to SD card using Raspberry Pi imager or Balena Etcher. CineMate should autostart
 
-User: pi
-Password: 1
+    User: pi
+    Password: 1
 
 # CineMate autostart
 

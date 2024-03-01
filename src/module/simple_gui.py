@@ -89,7 +89,7 @@ class SimpleGUI(threading.Thread):
         
         self.file_size = self.cinepi_controller.file_size
         
-        if self.ssd_monitor.last_space_left:
+        if self.ssd_monitor.last_space_left and self.ssd_monitor.disk_mounted:
             self.min_left = round(int((self.ssd_monitor.last_space_left * 1000) / (self.file_size * float(self.cinepi_controller.fps_actual) * 60)),0)
 
         # Get CPU statistics

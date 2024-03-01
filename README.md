@@ -34,6 +34,7 @@ anywhere in the cli.
 
 # Updating the Development Branch
 
+    cd cinemate
     git pull origin development
 
 

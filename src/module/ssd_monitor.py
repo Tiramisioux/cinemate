@@ -3,10 +3,8 @@ import subprocess
 import logging
 import time
 import os
+import json
 from inotify_simple import INotify, flags
-import os
-import time
-
 
 class Event:
     def __init__(self):
@@ -23,7 +21,7 @@ class Event:
                 logging.error(f"Error while invoking listener: {e}")
 
 class SSDMonitor():
-    def __init__(self,):
+    def __init__(self):
         self.active_watches = set()
         self.usb_hd = None
         self.usb_hd_serial = None  # Initialize the attribute
@@ -46,17 +44,22 @@ class SSDMonitor():
         # Add an attribute to store the DirectoryWatcher instance
         self.directory_watcher = None
         
-    def get_mount_point(self, device_path):
-        """Get the mount point of the device if mounted, otherwise return None."""
-        with open('/proc/mounts', 'r') as f:
-            for line in f.readlines():
-                parts = line.split()
-                if parts[0] == device_path:
-                    return parts[1]
-        return None
-
+        # Load recognized SSD models from the settings file
+        self.recognized_ssds = self.load_ssd_settings("/home/pi/cinemate/src/module/ssd_settings.json")
+        
+    def load_ssd_settings(self, settings_file):
+        """Load SSD settings from the specified JSON file."""
+        try:
+            with open(settings_file, 'r') as file:
+                settings = json.load(file)
+                return settings.get('recognized_ssds', [])
+        except Exception as e:
+            logging.error(f"Failed to load SSD settings: {e}")
+            return []
+    
     def update(self, action, device_model, device_serial):
-        if action == 'add' and 'SSD' in device_model.upper():
+        model_upper = device_model.upper()
+        if action == 'add' and any(ssd_model.upper() in model_upper for ssd_model in self.recognized_ssds):
             self.usb_hd_serial = device_serial
             
             # Check for the existence of the path in a loop until it's mounted or a timeout occurs
@@ -66,8 +69,8 @@ class SSDMonitor():
                 if os.path.exists(self.path) and os.path.ismount(self.path):
                     self.disk_mounted = self.path
                     self.last_space_left = self.get_ssd_space_left()
-                    logging.info(f"SSD mounted at {self.disk_mounted}")
-                    logging.info(f"Space left: {self.last_space_left}.")
+                    logging.info(f"SSD mounted at {self.disk_mounted} with model: {device_model}")
+                    logging.info(f"Space left: {self.last_space_left} GB.")
                     self.on_ssd_added()
                     return  # Exit the loop if the path is mounted
                 time.sleep(1)  # Sleep for 1 second before checking again
@@ -76,10 +79,17 @@ class SSDMonitor():
             
         elif action == 'remove' and self.usb_hd_serial and self.usb_hd_serial == device_serial:
             
-            logging.info(f"USB SSD disconnected.")
-            self.is_drive_mounted()
+            logging.info(f"USB SSD disconnected: {device_model}")
             self.on_ssd_removed()
-    
+        
+    def get_mount_point(self, device_path):
+        """Get the mount point of the device if mounted, otherwise return None."""
+        with open('/proc/mounts', 'r') as f:
+            for line in f.readlines():
+                parts = line.split()
+                if parts[0] == device_path:
+                    return parts[1]
+        return None
 
     def is_drive_mounted(self):
         """Check if the drive is mounted and return the mount point or None"""
@@ -345,124 +355,3 @@ class DirectoryWatcher:
                         logging.warning(f"Descriptor {wd} not found in the active watches.")
                 except OSError as e:
                     logging.error(f"Error removing watch descriptor {wd}: {e}")
-
-
-# import threading
-# import logging
-# import time
-# import os
-# import pyinotify
-# import subprocess
-
-# class SSDMonitor:
-#     def __init__(self):
-#         self.path = '/media/RAW'
-#         self.last_space_left = None
-#         self.space_decreasing_event = threading.Event()
-#         self.space_stable_event = threading.Event()
-#         self._monitor_thread_stop_event = threading.Event()
-#         self._monitor_thread = threading.Thread(target=self._monitor_space, daemon=True)
-
-#         # Check if the drive is already mounted at startup
-#         if os.path.exists(self.path) and self.is_drive_mounted():
-#             logging.info("Drive is already mounted at startup.")
-#             self.start_monitoring()
-#         else:
-#             logging.info("Drive is not mounted at startup. Waiting for mount event...")
-
-#     def start_monitoring(self):
-#         if not self._monitor_thread.is_alive():
-#             self._monitor_thread.start()
-#             logging.info("Started monitoring for space on the SSD.")
-
-#     def stop_monitoring(self):
-#         self._monitor_thread_stop_event.set()
-#         self._monitor_thread.join()
-
-#     def _monitor_space(self):
-#         while not self._monitor_thread_stop_event.is_set():
-#             if self.is_drive_mounted():
-#                 current_space = self.get_ssd_space_left()
-#                 if current_space is not None and self.last_space_left is not None:
-#                     if current_space < self.last_space_left:
-#                         self.space_decreasing_event.set()
-#                         #logging.info("Space decreasing on the SSD.")
-#                     elif current_space > self.last_space_left:
-#                         self.space_stable_event.set()
-#                         #logging.info("Space stable on the SSD.")
-#                 self.last_space_left = current_space
-#             else:
-#                 #logging.info("Drive is not mounted.")
-#                 time.sleep(1)  # Check every 10 seconds
-
-#     def get_ssd_space_left(self):
-#         if self.is_drive_mounted():
-#             stat = os.statvfs(self.path)
-#             # Get available space in GB
-#             space_left = (stat.f_bavail * stat.f_frsize) / (1024 ** 3)
-#             return space_left
-#         else:
-#             return None
-
-#     def output_ssd_space_left(self):
-#         space_left = self.get_ssd_space_left()
-#         if space_left is not None:
-#             logging.info(f"Space left: {space_left} GB.")
-#         else:
-#             logging.warning("SSD not mounted or path does not exist.")
-
-#     def unmount_drive(self):
-#         if self.is_drive_mounted():
-#             logging.info("Unmounting the drive...")
-#             subprocess.run(["umount", self.path])
-#             logging.info("Drive is unmounted.")
-#         else:
-#             logging.info("Drive is not mounted.")
-
-#     def is_drive_mounted(self):
-#         """Check if the drive is mounted."""
-#         return os.path.ismount(self.path)
-
-
-# class EventHandler(pyinotify.ProcessEvent):
-#     def __init__(self, path, ssd_monitor, notifier):
-#         self.path = path
-#         self.ssd_monitor = ssd_monitor
-#         self.notifier = notifier
-
-#     def process_default(self, event):
-#         if event.pathname.endswith('RAW') and event.mask & pyinotify.IN_CREATE:
-#             logging.info(f"Drive mounted at: {event.pathname}")
-#             self.ssd_monitor.start_monitoring()  # Start monitoring after drive is mounted
-#             self.notifier.stop()
-#         elif event.pathname == '/media' and event.mask & pyinotify.IN_DELETE:
-#             logging.info("Drive removed.")
-#             self.ssd_monitor.stop_monitoring()  # Stop monitoring when drive is removed
-#             # Check if /media/RAW still exists and remove it if it does
-#             if os.path.exists(self.ssd_monitor.path):
-#                 # Add a delay before attempting to remove the directory
-#                 time.sleep(1)  # Adjust the delay time as needed
-#                 logging.info("Unmounting the drive...")
-#                 subprocess.run(["umount", self.ssd_monitor.path])
-#                 logging.info("Drive is unmounted.")
-#                 logging.info("Removing /media/RAW directory...")
-#                 os.rmdir(self.ssd_monitor.path)
-#                 logging.info("/media/RAW directory removed.")
-
-#         else:
-#             logging.debug(f"Event: {event.pathname}, Mask: {event.mask}")
-
-# if __name__ == "__main__":
-#     logging.basicConfig(level=logging.INFO)
-#     ssd_monitor = SSDMonitor()
-#     wm = pyinotify.WatchManager()
-#     notifier = pyinotify.Notifier(wm, EventHandler(path='/media', ssd_monitor=ssd_monitor, notifier=notifier))
-
-#     wm.add_watch('/media', pyinotify.IN_CREATE | pyinotify.IN_DELETE)
-
-#     # Block the main thread until termination signal is received
-#     try:
-#         notifier.loop()
-#     except KeyboardInterrupt:
-#         logging.info("Exiting...")
-

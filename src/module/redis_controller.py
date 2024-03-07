@@ -39,7 +39,6 @@ class RedisController:
         self.listener_thread = threading.Thread(target=self.listen)
         self.listener_thread.daemon = True  # This makes sure the thread will exit when the main program exits
         self.listener_thread.start()
-    
 
     def init_cache(self):
         with self.lock:
@@ -50,10 +49,9 @@ class RedisController:
                 key_str = key.decode('utf-8')
                 value_str = value.decode('utf-8')
                 self.cache[key_str] = value_str
-                logging.info(f"Cached: {key_str} = {value_str}")
+                #logging.info(f"Cached: {key_str} = {value_str}")
 
     def listen(self):
-
         for message in self.pubsub.listen():
             if message["type"] == "message":
                 changed_key = message["data"].decode('utf-8')
@@ -62,7 +60,7 @@ class RedisController:
                     value_str = value.decode('utf-8')
                     # Update cache with new value
                     self.cache[changed_key] = value_str
-                logging.info(f"Changed value: {changed_key} = {value_str}")
+                #logging.info(f"Changed value: {changed_key} = {value_str}")
                 self.redis_parameter_changed.emit({'key': changed_key, 'value': value_str})
 
     def get_value(self, key, default=None):

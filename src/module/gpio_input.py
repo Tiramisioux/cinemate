@@ -1,292 +1,417 @@
+# component_module.py
+from gpiozero import Button, RotaryEncoder
 import threading
 import logging
-import time
-from gpiozero import Button
+import shlex  # Add this import
+    
+class ComponentInitializer:
+    def __init__(self, cinepi_controller, settings):
+        self.cinepi_controller = cinepi_controller
+        self.settings = settings
+        self.logger = logging.getLogger('ComponentInitializer')
+        
+        self.initialize_components()
+        
+    def initialize_components(self):
+        self.logger.info("Initializing components based on loaded settings")
+        combined_actions = self.settings.get('combined_actions', [])
+        
+        # Initialize Buttons
+        for button_config in self.settings.get('buttons', []):
+            self.logger.info(f"Initializing button on pin {button_config['pin']}")
+            actions_desc = self._describe_actions(button_config)
+            # self.logger.info(f"Initializing button on pin {button_config['pin']} with actions: {actions_desc}")
+            SmartButton(cinepi_controller=self.cinepi_controller,
+                        pin=button_config['pin'],
+                        actions=button_config,
+                        identifier=str(button_config['pin']),
+                        combined_actions=combined_actions)
+        
+        # Initialize Two-Way Switches
+        for switch_config in self.settings.get('two_way_switches', []):
+            self.logger.info(f"Initializing two-way switch on pin {switch_config['pin']}")
+            actions_desc = self._describe_actions(button_config)
+            # self.logger.info(f"Initializing button on pin {button_config['pin']} with actions: {actions_desc}")
+            SimpleSwitch(cinepi_controller=self.cinepi_controller,
+                         pin=switch_config['pin'],
+                         actions=switch_config)
+        
+        # Initialize Rotary Encoders with Buttons
+        for encoder_config in self.settings.get('rotary_encoders', []):
+            actions_desc = self._describe_actions(button_config)
+            # self.logger.info(f"Initializing button on pin {button_config['pin']} with actions: {actions_desc}")
+            self.logger.info(f"Initializing rotary encoder with button on pins {encoder_config['pin_a']}, {encoder_config['pin_b']}")
+            RotaryEncoderWithButton(cinepi_controller=self.cinepi_controller,
+                                    pin_a=encoder_config['pin_a'],
+                                    pin_b=encoder_config['pin_b'],
+                                    button_pin=encoder_config['button_pin'],
+                                    actions=encoder_config,
+                                    button_identifier=str(encoder_config['button_pin']))
+            
+    def _describe_actions(self, config):
+        """
+        Generate a string description of the actions assigned to a component.
+        """
+        actions = []
+        for action_type, action_details in config.items():
+            if isinstance(action_details, dict) and 'method' in action_details:
+                method = action_details['method']
+                args = action_details.get('args', [])
+                actions.append(f"{action_type}: {method}({', '.join(map(str, args))})")
+            elif isinstance(action_details, str) and action_details != 'none':
+                actions.append(f"{action_type}: {action_details}")
 
-class GPIOInput():
+        return "; ".join(actions)
 
-    def __init__(self, cinepi_controller, redis_controller, 
-                rec_button=None,
-                rec_button_inv=False,
+class SmartButton:
+    # Class-level dictionary to track button instances
+    buttons = {}  # Dictionary to hold button instances by identifier (e.g., pin number)
+    predefined_combined_actions = []  # Combined actions defined in your settings
+    logger = logging.getLogger('ButtonManager')
+    
+    def __init__(self, cinepi_controller, pin, actions, identifier, inverse=False, combined_actions=[], debounce_time=0.01):
+        self.logger = logging.getLogger(f"SmartButton{pin}")
+        self.button = Button(pin, bounce_time=debounce_time)
+        self.actions = actions
+        self.identifier = identifier
+        self.inverse = inverse
+        self.cinepi_controller = cinepi_controller
+        
+        self.click_count = 0
+        self.click_timer = None
+        self.click_timer2 = None
+        self.hold_timer = None
+        self.is_held = False
+        self.state = 'released'  # Default state
+        self.button_states = {}
+        # Register this button instance
+        SmartButton.buttons[identifier] = self  
+        self.lock = threading.Lock()
+        self.is_long_press = False
+        self.combined_actions = combined_actions  # Store combined actions relevant to this button
+        self.last_state = 'released'  # Default state
+        
+        self.check_initial_state()
+
+        self.button.when_pressed = self.on_press if not self.inverse else self.on_release
+        self.button.when_released = self.on_release if not self.inverse else self.on_press
+
+        # Removed parse_action method
+        self.logger.debug(f"Initialized with actions: {actions}, inverse={self.inverse}")
+
+    def check_initial_state(self):
+        # Assuming the button is not pressed during initialization,
+        # check if the initial state is high (1), indicating an inverse button.
+        if self.button.is_pressed:  # This actually checks the current state; True if pressed
+            self.inverse = True  # Update the inverse attribute based on the initial state
+            self.logger.debug(f"Button {self.identifier} detected as inverse.")
+
+    def trigger_hold_action(self):
+        with self.lock:
+            action_dict = self.actions.get('hold_action')  # This will be a dictionary now
+            if action_dict:
+                action_method = action_dict.get('method')
+                action_args = action_dict.get('args', [])
+                if action_method:  # Ensure action_method is not None or empty
+                    method = getattr(self.cinepi_controller, action_method, None)
+                    if method:  # Ensure the method exists
+                        self.logger.debug(f"Executing hold action: {action_method} with args: {action_args}")
+                        method(*action_args)  # Call the method with unpacked arguments
+                    else:
+                        self.logger.error(f"Method {action_method} not found in cinepi_controller.")
+                else:
+                    self.logger.error("Hold action method name is not specified.")
+            else:
+                self.logger.error("Hold action is not defined.")
+
+            # Indicate that the button was held and evaluate combined actions if needed
+            self.is_held = True
+            self.evaluate_combined_actions()
+
+    def on_press(self):
+        self.button_states[self.identifier] = {"state": "pressed", "is_held": True}
+        logging.debug(f"Button {self.identifier} pressed. Updated state: {self.button_states[self.identifier]}")
+        
+        with self.lock:
                 
-                iso_inc_button=None,
-                iso_inc_button_inv=False,
-                
-                iso_dec_button=None,
-                iso_dec_button_inv=False,
-                
-                res_switch=None,
-                res_switch_inv = False,
-                
-                pwm_switch=None, 
-                pwm_switch_inv=False,
-                
-                shutter_a_sync_switch=None, 
-                shutter_a_sync_switch_inv=False, 
-                
-                fps_button=None,
-                fps_button_inv=False,
-                
-                fps_switch=None,
-                fps_switch_inv=False,
-                
-                pot_lock_switch=None,
-                pot_lock_switch_inv=False
-                ):
+            self.is_held = True
+            self.state = 'pressed'
+            SmartButton.buttons[self.identifier] = self
+
+            # # Update the button's state in the class-level dictionary
+            # SmartButton.buttons[self.identifier]['state'] = self.state
+            # SmartButton.buttons[self.identifier]['is_held'] = self.is_held
+            # Check for combined actions after updating state
+            self.evaluate_combined_actions()
+            self.logger.debug(f"Button {self.identifier} pressed")
+
+            # Start a second timer to track long presses (0.5 sec)
+            self.click_timer2 = threading.Timer(0.5, self.evaluate_long_press)
+            self.click_timer2.start()
+
+            self.is_held = True
+            self.last_state = 'pressed'
+            
+            self.trigger_action(self.actions.get('press_action'))
+            
+            # Start hold timer to check for hold action
+            if self.hold_timer is not None:
+                self.hold_timer.cancel()
+            self.hold_timer = threading.Timer(3, self.trigger_hold_action)
+            self.hold_timer.start()
+
+            # Evaluate combined actions upon button press
+            self.evaluate_combined_actions()
+
+    def on_release(self):
+        self.button_states[self.identifier] = {"state": "released", "is_held": False}
+        self.logger.debug(f"Button {self.identifier} released")
+        with self.lock:
+            self.is_held = False
+            self.state = 'released'
+
+            SmartButton.buttons[self.identifier] = self
+
+            # Similar update and check as in on_press
+            # SmartButton.buttons[self.identifier]['state'] = self.state
+            # SmartButton.buttons[self.identifier]['is_held'] = self.is_held
+            self.evaluate_combined_actions()
+
+            # Cancel the long press timer
+            if self.click_timer2 is not None:
+                self.click_timer2.cancel()
+
+            # Increment click count if not a long press
+            if not self.is_long_press:
+                self.click_count += 1
+
+            # Reset long press flag
+            self.is_long_press = False
+            self.last_state = 'released'
+
+            # Start a timer to evaluate clicks after release
+            if self.click_timer is not None:
+                self.click_timer.cancel()
+            self.click_timer = threading.Timer(0.5, self.evaluate_clicks)
+            self.click_timer.start()
+
+            # Cancel the hold timer if the button is released before it triggers
+            if self.hold_timer is not None:
+                self.hold_timer.cancel()
+
+            # Evaluate combined actions upon button release
+            self.evaluate_combined_actions()
+
+    def evaluate_long_press(self):
+        self.logger.debug(f"Long press detected for button {self.identifier}")
+        with self.lock:
+            self.is_long_press = True
+            # Reset click count for long press
+            self.click_count = 0
+    
+    def get_button_state(self):
+            # Returns the current state of the button, including 'is_held' and other relevant information
+            return {"state": self.state, "is_held": self.is_held}
+    
+    def evaluate_combined_actions(self):
+        # Log the entry into the method
+        self.logger.debug(f"Starting to evaluate combined actions for button {self.identifier}")
+
+        # Check if there are any combined actions defined
+        if not self.combined_actions:
+            self.logger.debug(f"No combined actions defined for button {self.identifier}")
+            return
+
+        # Iterate through each combined action relevant to this button
+        for ca in self.combined_actions:
+            self.logger.debug(f"Evaluating combined action: {ca} for button {self.identifier}")
+
+            # Attempt to retrieve the hold and action button states
+            try:
+                hold_button_state = SmartButton.buttons[str(ca['hold_button_pin'])].get_button_state()
+                action_button_state = SmartButton.buttons[str(ca['action_button_pin'])].get_button_state()
+            except KeyError as e:
+                self.logger.error(f"KeyError accessing button states: {e}")
+                continue  # Skip this combined action if there's a KeyError
+
+            # Log the retrieved states
+            self.logger.debug(f"Hold Button State: {hold_button_state}, Action Button State: {action_button_state}")
+
+            # Determine if the action condition is met
+            action_met = False
+            if ca['action_type'] == 'press' and action_button_state['is_held']:
+                action_met = True
+            elif ca['action_type'] == 'release' and not action_button_state['is_held']:
+                action_met = True
+
+            # Log whether the action condition was met
+            if action_met:
+                self.logger.debug("Action condition met for combined action.")
+            else:
+                self.logger.debug("Action condition not met for combined action.")
+
+            # If the conditions for the combined action are met, execute the associated action
+            if action_met and hold_button_state['is_held']:
+                action_method_details = ca['action']
+                method_name = action_method_details['method']
+                args = action_method_details.get('args', [])
+                method = getattr(self.cinepi_controller, method_name, None)
+                if method:
+                    self.logger.debug(f"Executing combined action: {method_name} with args: {args}")
+                    try:
+                        method(*args)
+                    except Exception as e:
+                        self.logger.error(f"Error executing combined action {method_name} with args {args}: {e}")
+                else:
+                    self.logger.error(f"Method {method_name} not found in cinepi_controller.")
+            else:
+                self.logger.debug(f"Combined action conditions not met or hold button not held for action: {ca}")
+
+
+    def parse_action(self, action_str):
+        """Parse an action string into a method name and its arguments."""
+        if action_str == "none":
+            return None
+        parts = shlex.split(action_str)  # Use shlex to correctly handle spaces
+        action = {"method": parts[0], "args": parts[1:]}
+        return action
+
+    def evaluate_clicks(self):
+        with self.lock:
+            action_dict = None
+            # Determine the correct action based on click count
+            if self.click_count == 1:
+                action_dict = self.actions.get('single_click_action')
+            elif self.click_count == 2:
+                action_dict = self.actions.get('double_click_action')
+            elif self.click_count >= 3:
+                action_dict = self.actions.get('triple_click_action')
+            
+            if action_dict and isinstance(action_dict, dict):
+                self.logger.debug(f"Action dict before accessing 'method': {action_dict}")
+                action_method = action_dict.get('method')
+                action_args = action_dict.get('args', [])
+                if action_method:
+                    self.trigger_action(action_dict)  # Assuming you have this method implemented
+                else:
+                    self.logger.error("Action method name is not specified.")
+            else:
+                self.logger.debug("No action to execute or action_dict is not properly formatted.")
+
+            self.click_count = 0  # Reset click count after evaluation
+
+    def trigger_action(self, action):
+        # Handle 'none' or missing action as a no-operation
+        if not action or action == "none":
+            self.logger.debug("No action defined or action marked as 'none'.")
+            return
+
+        # Check if action is a string and not 'none', then convert to expected dictionary format
+        if isinstance(action, str):
+            action = {"method": action, "args": []}
+
+        # Extract method name and args with defaults
+        method_name = action.get('method')
+        args = action.get('args', [])
+
+        # Ensure that 'none' is handled even in dictionary format
+        if method_name == "none":
+            self.logger.debug("Action method marked as 'none', skipping execution.")
+            return
+
+        # Retrieve the method from cinepi_controller using getattr
+        method = getattr(self.cinepi_controller, method_name, None)
+
+        if method:
+            # Call the method with unpacked arguments
+            try:
+                method(*args)
+                self.logger.debug(f"Executing action: {method_name} with args: {args}")
+            except TypeError:
+                self.logger.error(f"Method {method_name} does not support the provided args: {args}")
+        else:
+            self.logger.error(f"Method {method_name} not found in cinepi_controller.")
+
+class SimpleSwitch:
+    def __init__(self, cinepi_controller, pin, actions, debounce_time=0.1):
+        self.logger = logging.getLogger(f"SimpleSwitch{pin}")
+        # For an external pull-up resistor and active-low configuration
+        self.switch = Button(pin, pull_up=None, active_state=False, bounce_time=debounce_time)
+        self.actions = actions
+        self.switch.when_pressed = self.on_switch_on
+        self.switch.when_released = self.on_switch_off
         
         self.cinepi_controller = cinepi_controller
-        self.redis_controller = redis_controller
         
-        self.buttons = []  # Store all buttons for future references or cleanups
-
-        self.fps_button_inverse = False
-        
-        self.fps_original = self.cinepi_controller.get_setting('fps')
-        
-        self.fps_temp = 24
-        
-        self.fps_double = False
-        
-        self.ramp_up_speed = 0.1
-        self.ramp_down_speed = 0.1
-
-        self.setup_button(iso_inc_button, self.iso_inc_callback, "iso_inc_button")
-        self.setup_button(iso_dec_button, self.iso_dec_callback, "iso_dec_pin")
-        self.setup_button(res_switch, self.res_switch_callback, "res_switch", react_to_both=True)
-        self.setup_button(pwm_switch, self.pwm_switch_callback, "pwm_switch", react_to_both=True)
-        self.setup_button(shutter_a_sync_switch, self.sync_switch_callback, "shutter_a_sync_switch", react_to_both=True)
-        self.setup_button(fps_button, self.fps_button_callback, "fps_button", react_to_both=True, inverse_control=True)
-        self.setup_button(fps_switch, self.fps_switch_callback, "fps_switch", react_to_both=True)
-        self.setup_button(pot_lock_switch, self.pot_lock_switch_callback, "pot_lock_switch", react_to_both=True)
-
-        if rec_button is not None:
-            if isinstance(rec_button, list):
-                for pin in rec_button:
-                    self.setup_button(pin, self.recording_callback, "rec_button")
-            else:
-                self.setup_button(rec_button, self.recording_callback, "rec_button")
-        
-        # Check the status of res_switch on startup
-        if self.res_switch is not None and hasattr(self, 'res_switch'):
-            if self.res_switch.is_pressed:
-                self.cinepi_controller.set_resolution(1080)
-            else:
-                self.cinepi_controller.set_resolution(1520)
-            logging.info(f"res_switch {self.res_switch.is_active}") 
-        
-        # Check the status of pwm_switch on startup
-        if self.pwm_switch is not None and hasattr(self, 'pwm_switch'):
-            if self.pwm_switch.is_pressed:
-                pwm_mode = True        
-            else:
-                pwm_mode = False
-            self.pwm_switch_callback()
-            logging.info(f"pwm_switch {self.pwm_switch.is_active}")
-            
-        # Check the status of shutter_a_sync_switch on startup
-        if self.shutter_a_sync_switch is not None and hasattr(self, 'shutter_a_sync_switch'):
-            if self.shutter_a_sync_switch.is_pressed:
-                shutter_a_sync = True
-            else:
-                shutter_a_sync = False
-            self.sync_switch_callback()
-            logging.info(f"shutter_a_sync_switch {self.shutter_a_sync_switch.is_active}") 
-                
-        # Check the status of fps_mult_switch on startup
-        if self.fps_switch is not None and hasattr(self, 'fps_switch'):
-            if not self.fps_switch.is_pressed:
-                self.fps_double = False
-                #logging.info(f"fps_switch {self.fps_switch.is_active}")
-            else:
-                self.cinepi_controller.fps_double = False
-                self.cinepi_controller.switch_fps()
-            logging.info(f"fps_switch {self.fps_switch.is_active}")
-
-        # Check the status of fps_button on startup
-        if self.fps_button is not None and hasattr(self, 'fps_button'):
-            logging.info(f"fps_button {self.fps_button.is_active}")
-
-        # Check the status of pot_lock_switch on startup
-        if self.pot_lock_switch is not None and hasattr(self, 'pot_lock_switch'):
-            if self.pot_lock_switch.is_pressed:
-                self.cinepi_controller.set_parameters_lock(True)
-            else:
-                self.cinepi_controller.set_parameters_lock(False)
-            logging.info(f"pot_lock switch {self.pot_lock_switch.is_active}")
-    
-    def _inverse_control(self, inverse_control, default_value):
-        return not inverse_control if inverse_control is not None else default_value
-
-    def setup_button(self, pins, callback, attribute_name, react_to_release=False, react_to_both=False, inverse_control=False):
-        if not isinstance(pins, list):
-            pins = [pins]
-        for i, pin in enumerate(pins):
-            if len(pins) > 1:
-                name = f"{attribute_name}{i+1}"
-            else:
-                name = attribute_name
-            if pin is not None:
-                self._create_button(pin, callback, name, react_to_release, react_to_both, inverse_control)
-            else:
-                setattr(self, name, None)
-
-
-    def _create_button(self, pin, callback, attribute_name=None, react_to_release=False, react_to_both=False, inverse_control=False):
-        if pin is None:
-            return
-        
-        # Set pull_up parameter to True to invert the button behavior
-        btn = Button(pin, pull_up=self._inverse_control(inverse_control, True))
-
-
-        if react_to_both:
-            btn.when_pressed = callback
-            btn.when_released = callback
-        elif react_to_release:
-            btn.when_released = callback
+        # Check initial state of the switch and perform the connected method
+        if self.switch.is_pressed:
+            self.on_switch_on()
         else:
-            btn.when_pressed = callback
-            
-        self.buttons.append(btn)
-        
-        function = callback.__name__.replace("_callback", "")
-        
-        logging.info(f"{attribute_name} instantiated on pin {pin}.")
-        
-        if attribute_name:
-            setattr(self, attribute_name, btn)
-            #logging.info(f"Button attribute set as {attribute_name} for pin {pin}.")
+            self.on_switch_off()
 
-
-    def recording_callback(self):
-        self.cinepi_controller.rec_button_pushed()
-        #logging.info(f"Record button pressed")
-
-    def pot_lock_switch_callback(self):
-        if self.pot_lock_switch.is_pressed:
-            self.cinepi_controller.set_parameters_lock(True)
-        else:
-            self.cinepi_controller.set_parameters_lock(False)
-        logging.info(f"pot_lock_switch state {self.pot_lock_switch.is_active}")
-
-    def res_switch_callback(self):
-        if self.res_switch.is_pressed:
-            self.cinepi_controller.switch_resolution()
-        else:
-            self.cinepi_controller.switch_resolution()
-            #logging.info(f"res_switch state {self.res_switch.is_active}") 
-
-    def fps_switch_callback(self):
-        if self.fps_switch.is_pressed:
-            self.cinepi_controller.fps_double = False
-            self.cinepi_controller.switch_fps()
-        else:
-            self.cinepi_controller.fps_double = True
-            self.cinepi_controller.switch_fps()
-        logging.info(f"fps_switch state {self.fps_switch.is_active}")
-        
-    def fps_button_callback(self):
-        fps_button_state_old = self.cinepi_controller.fps_button_state
-        self.cinepi_controller.lock_override = True
-
-        if self.fps_button.is_pressed:
-            if self.fps_button_inverse:
-                self.cinepi_controller.fps_button_state = False
+    # Assuming action_name is actually a dictionary like {"method": "methodName", "args": ["arg1", "arg2"]}
+    def on_switch_on(self):
+        action = self.actions.get('state_on_action')
+        if action:
+            method_name = action.get('method')
+            args = action.get('args', [])
+            method = getattr(self.cinepi_controller, method_name, None)
+            if method:
+                method(*args)
+                self.logger.info(f"Two-way switch {self.switch} calling method {method_name}.")
             else:
-                self.cinepi_controller.fps_button_state = True
-        else:
-            if self.fps_button_inverse:
-                self.cinepi_controller.fps_button_state = True
+                self.logger.error(f"Method {method_name} not found in cinepi_controller.")
+
+    def on_switch_off(self):
+        action = self.actions.get('state_off_action')
+        if action:
+            method_name = action.get('method')
+            args = action.get('args', [])
+            method = getattr(self.cinepi_controller, method_name, None)
+            if method:
+                method(*args)
+                self.logger.info(f"Two-way switch {self.switch} calling method {method_name} {args}.")
             else:
-                self.cinepi_controller.fps_button_state = False
+                self.logger.error(f"Method {method_name} not found in cinepi_controller.")
 
-            if fps_button_state_old and fps_button_state_old != self.cinepi_controller.fps_button_state:
+class RotaryEncoderWithButton:
+    def __init__(self, cinepi_controller, pin_a, pin_b, button_pin, actions, button_identifier):
+        self.logger = logging.getLogger(f"RotaryEncoder{pin_a}_{pin_b}")
+        self.encoder = RotaryEncoder(pin_a, pin_b)
+        # Within RotaryEncoderWithButton.__init__ in component_module.py
+        self.button = SmartButton(cinepi_controller=cinepi_controller, 
+                          pin=button_pin, 
+                          actions=actions['button_actions'], 
+                          identifier=button_identifier, 
+                          inverse=False, # Assume default value, adjust as needed
+                          combined_actions=[]) # Adjust as per your logic for combined actions
 
-                if self.cinepi_controller.pwm_mode == False:
+        self.actions = actions
+        self.cinepi_controller = cinepi_controller
 
-                    #logging.info('fps button change from 0 to 1, switching frame rate')
+        self.encoder.when_rotated_clockwise = self.on_rotated_clockwise
+        self.encoder.when_rotated_counter_clockwise = self.on_rotated_counter_clockwise
 
-                    # Toggle between doubling and restoring FPS value
-                    if not self.fps_double:
-                        # Store the current fps
-                        self.fps_temp = float(self.redis_controller.get_value('fps_actual'))
-                        
-                        # Set fps_new to double the current temp value
-                        fps_new = self.fps_temp * 2
-                        # Retrieve the current fps_max from Redis
-                        fps_max = float(self.redis_controller.get_value('fps_max', default=50))
-                        # Cap fps_new to the current fps_max
-                        fps_new = min(fps_new, fps_max)
-                        self.cinepi_controller.set_fps(fps_new)
-                        self.fps_double = True
-                    else:
-                        # Restore FPS value to the stored temp value
-                        self.cinepi_controller.set_fps(self.fps_temp)
-                        self.fps_double = False
-                        
-                elif self.cinepi_controller.pwm_mode == True:
+    def on_rotated_clockwise(self):
+        action = self.actions['encoder_actions'].get('rotate_clockwise')
+        if action:
+            method_name = action.get('method')
+            args = action.get('args', [])
+            method = getattr(self.cinepi_controller, method_name, None)
+            if method:
+                method(*args)
+                self.logger.info(f"Rotary encoder {self.encoder} calling method {method_name} {args}.") 
+            else:
+                self.logger.error(f"Method {method_name} not found in cinepi_controller.")
 
-                    if not self.fps_double:
-                        # Ramp up
-                        
-                        # Store the current fps
-                        self.fps_temp = float(self.redis_controller.get_value('fps_actual'))
-                        
-                        # Set fps_new to double the current temp value
-                        fps_target = self.fps_temp * 2
-                        # Retrieve the current fps_max from Redis
-                        fps_max = float(self.redis_controller.get_value('fps_max', default=50))
-                        # Cap fps_new to the current fps_max
-                        fps_target = min(fps_target, fps_max)
-
-                        while float((self.redis_controller.get_value('fps_actual'))) < int(float(self.redis_controller.get_value('fps_max'))):
-                            logging.info('ramping up')
-                            fps_current = float(self.redis_controller.get_value('fps_actual'))
-                            fps_next = fps_current + 1
-                            self.cinepi_controller.set_fps(int(fps_next))
-                            time.sleep(self.ramp_up_speed)
-                        self.fps_double = True
-                        
-                    elif self.fps_double:
-                        # Ramp down
-
-                        while float((self.redis_controller.get_value('fps_actual'))) > self.fps_temp:
-                            logging.info('ramping down')
-                            fps_current = float(self.redis_controller.get_value('fps_actual'))
-                            fps_next = fps_current - 1
-                            self.cinepi_controller.set_fps(int(fps_next))
-                            time.sleep(self.ramp_down_speed)
-                        self.fps_double = False                        
-
-                logging.info(f"fps_button state {self.cinepi_controller.fps_button_state}")
-
-                fps_button_state_old = self.cinepi_controller.fps_button_state
-        
-        self.cinepi_controller.lock_override = False
-
-    def iso_inc_callback(self):
-        pass
-
-    def iso_dec_callback(self):
-        pass
-    
-    def pwm_switch_callback(self):
-        if self.cinepi_controller.pwm_controller.PWM_pin in [None, 18, 19]:
-            if self.pwm_switch.is_pressed:
-                pwm_mode = True
-            elif not self.pwm_switch.is_pressed:
-                pwm_mode = False
-            #logging.info(f"pwm_switch {self.pwm_switch.is_active}.")
-            self.cinepi_controller.set_pwm_mode(pwm_mode)
-                 
-    def sync_switch_callback(self):
-        if self.shutter_a_sync_switch is not None and self.shutter_a_sync_switch.is_pressed:
-            shutter_a_sync = True
-                #logging.info(f"shutter_a_sync_switch {self.shutter_a_sync_switch.is_active}.")
-        elif self.shutter_a_sync_switch is not None and not self.shutter_a_sync_switch.is_pressed:
-            shutter_a_sync = False
-                #logging.info(f"shutter_a_sync_switch {self.shutter_a_sync_switch.is_active}.")
-            
-        self.cinepi_controller.set_shutter_a_sync(shutter_a_sync)
-        
-        
+    def on_rotated_counter_clockwise(self):
+        action = self.actions['encoder_actions'].get('rotate_counterclockwise')
+        if action:
+            method_name = action.get('method')
+            args = action.get('args', [])
+            method = getattr(self.cinepi_controller, method_name, None)
+            if method:
+                method(*args)
+                self.logger.info(f"Rotary encoder {self.encoder} calling method {method_name} {args}.")
+            else:
+                self.logger.error(f"Method {method_name} not found in cinepi_controller.")

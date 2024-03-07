@@ -19,7 +19,7 @@ class ColoredFormatter(logging.Formatter):
         'redis_controller': {'color': 'green', 'attrs': ['bold']},
         'usb_monitor': {'color': 'light_grey', 'attrs': []},
         'audio_recorder': {'color': 'cyan', 'attrs': []},
-        'gpio_input': {'color': 'light_cyan', 'attrs': []},
+        'gpio_input': {'color': 'light_yellow', 'attrs': []},
         'cinepi_controller': {'color': 'light_green', 'attrs': []},
         'analog_controls': {'color': 'yellow', 'attrs': []},
         'PWMcontroller': {'color': 'light_yellow', 'attrs': []},
@@ -66,13 +66,13 @@ class ModuleFilter(logging.Filter):
         return is_allowed
 
 # Configure the logging
-def configure_logging(allowed_modules):
+def configure_logging(allowed_modules, level=logging.INFO):
     log_format = '%(asctime)s.%(msecs)03d: %(levelname)s: %(module)s %(message)s'
     date_format = '%S'
     formatter = ColoredFormatter(log_format, datefmt=date_format)
 
     logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
+    logger.setLevel(level)
 
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)

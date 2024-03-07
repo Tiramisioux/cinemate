@@ -94,15 +94,15 @@ class Mediator:
             self.redis_controller.set_value('is_writing_buf', is_recording)
             # Perform your action or method here based on the is_recording value
             if is_recording:
-                logging.info("Recording started!")
+                #logging.info("Recording started!")
                 self.gpio_output.set_recording(1)
                 # Cancel the stop_recording_timer if it's running
                 if self.stop_recording_timer is not None and self.stop_recording_timer.is_alive():
                     self.stop_recording_timer.cancel()
             else:
-                logging.info("Recording stopped!")
+                #logging.info("Recording stopped!")
                 self.redis_controller.set_value('is_writing', 0)
-                self.gpio_output.set_recording(0)
+                #self.gpio_output.set_recording(0)
         
         # Handle "is_writing" key changes        
         elif data['key'] == 'is_writing':

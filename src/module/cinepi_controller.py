@@ -29,6 +29,11 @@ class CinePiController:
         self.shutter_a_steps = shutter_a_steps
         
         self.parameters_lock = False
+        
+        self.iso_lock = False
+        self.shutter_a_nom_lock = False
+        self.fps_lock = False
+        
         self.lock_override = False
         
         self.exposure_time_seconds = None
@@ -42,7 +47,7 @@ class CinePiController:
         self.fps_temp = 24
         self.fps_temp_old = 24
         
-        self.shutter_a_sync = True
+        self.shutter_a_sync = False
         self.shutter_a_nom = 180
         
         self.fps_saved = float(self.redis_controller.get_value('fps_actual'))
@@ -71,22 +76,40 @@ class CinePiController:
         #Set fps array if not defined in 
         if not fps_steps: self.fps_steps=list(range(1, (self.fps_max + 1)))
         
-    # def check_resolution_match(self):
-    #     current_width = int(self.redis_controller.get_value('width'))
-    #     current_height = int(self.redis_controller.get_value('height'))
+    def iso_lock_toggle(self, value=None):
+        if value is not None:
+            if value in (0, False):
+                self.iso_lock = False
+            elif value in (1, True):
+                self.iso_lock = True
+            else:
+                raise ValueError("Invalid value. Please provide either 0, 1, True, or False.")
+        else:
+            self.iso_lock = not self.iso_lock
 
-    #     for mode, resolution_info in self.sensor_detect.res_modes.items():
-    #         width = resolution_info.get('width', None)
-    #         height = resolution_info.get('height', None)
-    #         if width == current_width and height == current_height:
-    #             # Resolution match found, no action needed
-    #             logging.info(f"Resolution match found for sensor mode {mode}")
-    #             return
-    #     # No resolution match found, set sensor mode to the first available mode (mode 0)
-    #     logging.info("No resolution match found. Setting sensor mode to 0.")
-    #     self.set_resolution(0)
-        
-    def rec_button_pushed(self):
+    def shutter_a_nom_lock_toggle(self, value=None):
+        if value is not None:
+            if value in (0, False):
+                self.shutter_a_nom_lock = False
+            elif value in (1, True):
+                self.shutter_a_nom_lock = True
+            else:
+                raise ValueError("Invalid value. Please provide either 0, 1, True, or False.")
+        else:
+            self.shutter_a_nom_lock = not self.shutter_a_nom_lock
+
+    def fps_lock_toggle(self, value=None):
+        if value is not None:
+            if value in (0, False):
+                self.fps_lock = False
+            elif value in (1, True):
+                self.fps_lock = True
+            else:
+                raise ValueError("Invalid value. Please provide either 0, 1, True, or False.")
+        else:
+            self.fps_lock = not self.fps_lock
+ 
+    def rec_button(self):
         logging.info(f"rec button pushed")
         if self.redis_controller.get_value('is_recording') == "0":
             self.start_recording()
@@ -175,10 +198,11 @@ class CinePiController:
         return None  # Return None if no matching sensor mode is found
 
     def set_iso(self, value):
-        with self.parameters_lock_obj:
-            safe_value = max(min(value, max(self.iso_steps)), min(self.iso_steps))
-            self.redis_controller.set_value('iso', safe_value)
-            logging.info(f"Setting iso to {safe_value}")
+        if not self.iso_lock:
+            with self.parameters_lock_obj:
+                safe_value = max(min(value, max(self.iso_steps)), min(self.iso_steps))
+                self.redis_controller.set_value('iso', safe_value)
+                logging.info(f"Setting iso to {safe_value}")
 
     def set_shutter_a(self, value):
         
@@ -199,94 +223,95 @@ class CinePiController:
         self.exposure_time_s = float(self.redis_controller.get_value('shutter_a'))/360 * 1/self.fps_actual
             
     def set_shutter_a_nom(self, value):
-        
-        with self.parameters_lock_obj:
-            
-            safe_value = max(1, min(value, 360))
-            #safe_value = max(min(value, max(self.shutter_a_steps)), min(self.shutter_a_steps))
-            self.redis_controller.set_value('shutter_a_nom', value)
-            self.exposure_time_seconds = (float(self.redis_controller.get_value('shutter_a'))/360) / 1/self.fps_actual
-            self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_seconds)
- 
-            logging.info(f"Setting shutter_a_nom to {value}")
-            
-        if self.shutter_a_sync == True:
-            
-            # Update the shutter angle
-            nominal_shutter_angle = float(self.redis_controller.get_value('shutter_a_nom'))
-            exposure_time_desired = (nominal_shutter_angle / 360) * (1/ self.fps_actual)
-
-            synced_shutter_angle = (exposure_time_desired / (1/ self.fps_actual)) * 360
-            # Round the new shutter angle to one decimal place
-            synced_shutter_angle = round(synced_shutter_angle, 1)
-
-            # If the new shutter angle is a whole number, convert it to an integer
-            if isinstance(synced_shutter_angle, float) and synced_shutter_angle.is_integer():
-                synced_shutter_angle = int(synced_shutter_angle)
+        if not self.shutter_a_nom_lock:
+            with self.parameters_lock_obj:
                 
-            self.set_shutter_a(synced_shutter_angle)
-            
-        elif self.shutter_a_sync == False:
-            self.set_shutter_a(value)
-            
-        self.exposure_time_s = float(self.redis_controller.get_value('shutter_a'))/360 * 1/self.fps_actual
+                safe_value = max(1, min(value, 360))
+                #safe_value = max(min(value, max(self.shutter_a_steps)), min(self.shutter_a_steps))
+                self.redis_controller.set_value('shutter_a_nom', value)
+                self.exposure_time_seconds = (float(self.redis_controller.get_value('shutter_a'))/360) / 1/self.fps_actual
+                self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_seconds)
+    
+                logging.info(f"Setting shutter_a_nom to {value}")
+                
+            if self.shutter_a_sync == True:
+                
+                # Update the shutter angle
+                nominal_shutter_angle = float(self.redis_controller.get_value('shutter_a_nom'))
+                exposure_time_desired = (nominal_shutter_angle / 360) * (1/ self.fps_actual)
+
+                synced_shutter_angle = (exposure_time_desired / (1/ self.fps_actual)) * 360
+                # Round the new shutter angle to one decimal place
+                synced_shutter_angle = round(synced_shutter_angle, 1)
+
+                # If the new shutter angle is a whole number, convert it to an integer
+                if isinstance(synced_shutter_angle, float) and synced_shutter_angle.is_integer():
+                    synced_shutter_angle = int(synced_shutter_angle)
+                    
+                self.set_shutter_a(synced_shutter_angle)
+                
+            elif self.shutter_a_sync == False:
+                self.set_shutter_a(value)
+                
+            self.exposure_time_s = float(self.redis_controller.get_value('shutter_a'))/360 * 1/self.fps_actual
 
     def set_fps(self, value):
-        # Determine max fps from resolution
-        max_fps = self.fps_max
         
-        safe_value = value
-        
-        if self.fps_double == True:
-            safe_value = value * 2
-        
-        # Cap the value to the range [1, max_fps]
-        safe_value = max(1, min(safe_value, max_fps))
+        if not self.fps_lock:
+            # Determine max fps from resolution
+            max_fps = self.fps_max
+            
+            safe_value = value
+            
+            if self.fps_double == True:
+                safe_value = value * 2
+            
+            # Cap the value to the range [1, max_fps]
+            safe_value = max(1, min(safe_value, max_fps))
 
-        if not self.parameters_lock or self.lock_override == True:
-            if self.pwm_mode == False and self.shutter_a_sync == False:
-                self.redis_controller.set_value('fps', safe_value)
-                self.fps_actual = float(self.redis_controller.get_value('fps'))
-                logging.info(f"Setting fps to {safe_value}")
+            if not self.parameters_lock or self.lock_override == True:
+                if self.pwm_mode == False and self.shutter_a_sync == False:
+                    self.redis_controller.set_value('fps', safe_value)
+                    self.fps_actual = float(self.redis_controller.get_value('fps'))
+                    logging.info(f"Setting fps to {safe_value}")
 
-            elif self.pwm_mode == False and self.shutter_a_sync == True:
-                self.redis_controller.set_value('fps', safe_value)
-                nominal_shutter_angle = float(self.get_setting('shutter_a_nom'))
-                new_shutter_angle = self.exposure_time_saved / (1 / safe_value) * 360
-                new_shutter_angle = max(min(new_shutter_angle, 360), 1)
-                new_shutter_angle = round(new_shutter_angle, 1)
-                if isinstance(new_shutter_angle, float) and new_shutter_angle.is_integer():
-                    new_shutter_angle = int(new_shutter_angle)
-                self.set_shutter_a(new_shutter_angle)
-                self.fps_actual = safe_value
-                logging.info(f"Setting fps to {safe_value}")
+                elif self.pwm_mode == False and self.shutter_a_sync == True:
+                    self.redis_controller.set_value('fps', safe_value)
+                    nominal_shutter_angle = float(self.get_setting('shutter_a_nom'))
+                    new_shutter_angle = self.exposure_time_saved / (1 / safe_value) * 360
+                    new_shutter_angle = max(min(new_shutter_angle, 360), 1)
+                    new_shutter_angle = round(new_shutter_angle, 1)
+                    if isinstance(new_shutter_angle, float) and new_shutter_angle.is_integer():
+                        new_shutter_angle = int(new_shutter_angle)
+                    self.set_shutter_a(new_shutter_angle)
+                    self.fps_actual = safe_value
+                    logging.info(f"Setting fps to {safe_value}")
 
-            elif self.pwm_mode == True and self.shutter_a_sync == True:
-                # safe_value = int(round(max(min(value, self.fps_max), 0)))
-                nominal_shutter_angle = float(self.get_setting('shutter_a_nom'))
-                new_shutter_angle = self.exposure_time_saved / (1 / safe_value) * 360
-                new_shutter_angle = max(min(new_shutter_angle, 360), 1)
-                new_shutter_angle = round(new_shutter_angle, 1)
-                if isinstance(new_shutter_angle, float) and new_shutter_angle.is_integer():
-                    new_shutter_angle = int(new_shutter_angle)
-                self.set_shutter_a(new_shutter_angle)
-                self.fps_actual = safe_value
-                self.pwm_controller.set_pwm(fps=safe_value, shutter_angle=new_shutter_angle)
-                logging.info(f"Setting fps to {safe_value} and shutter angle to {new_shutter_angle}")
+                elif self.pwm_mode == True and self.shutter_a_sync == True:
+                    # safe_value = int(round(max(min(value, self.fps_max), 0)))
+                    nominal_shutter_angle = float(self.get_setting('shutter_a_nom'))
+                    new_shutter_angle = self.exposure_time_saved / (1 / safe_value) * 360
+                    new_shutter_angle = max(min(new_shutter_angle, 360), 1)
+                    new_shutter_angle = round(new_shutter_angle, 1)
+                    if isinstance(new_shutter_angle, float) and new_shutter_angle.is_integer():
+                        new_shutter_angle = int(new_shutter_angle)
+                    self.set_shutter_a(new_shutter_angle)
+                    self.fps_actual = safe_value
+                    self.pwm_controller.set_pwm(fps=safe_value, shutter_angle=new_shutter_angle)
+                    logging.info(f"Setting fps to {safe_value} and shutter angle to {new_shutter_angle}")
 
-            elif self.pwm_mode == True and self.shutter_a_sync == False:
-                # safe_value = int(round(max(min(value, self.fps_max), 0)))
-                new_shutter_angle = float(self.get_setting('shutter_a'))
-                self.pwm_controller.set_pwm(fps=safe_value, shutter_angle=new_shutter_angle)
-                self.fps_actual = safe_value
-                logging.info(f"Setting fps to {safe_value}")
+                elif self.pwm_mode == True and self.shutter_a_sync == False:
+                    # safe_value = int(round(max(min(value, self.fps_max), 0)))
+                    new_shutter_angle = float(self.get_setting('shutter_a'))
+                    self.pwm_controller.set_pwm(fps=safe_value, shutter_angle=new_shutter_angle)
+                    self.fps_actual = safe_value
+                    logging.info(f"Setting fps to {safe_value}")
 
-            self.exposure_time_s = (float(self.redis_controller.get_value('shutter_a')) / 360) / self.fps_actual
-            # self.exposure_time_saved = self.exposure_time_s
-            self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_s)
-            self.redis_controller.set_value('fps_actual', self.fps_actual)
-
-        
+                self.exposure_time_s = (float(self.redis_controller.get_value('shutter_a')) / 360) / self.fps_actual
+                # self.exposure_time_saved = self.exposure_time_s
+                self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_s)
+                self.redis_controller.set_value('fps_actual', self.fps_actual)
+       
     def set_parameters_lock(self, value):
         with self.parameters_lock_obj:
             self.parameters_lock = value
@@ -310,7 +335,7 @@ class CinePiController:
         logging.info("Initiating safe system shutdown.")
         os.system("sudo shutdown -h now")
         
-    def unmount_drive(self):
+    def unmount(self):
         self.ssd_monitor.unmount_drive()
                 
     def increment_setting(self, setting_name, steps):

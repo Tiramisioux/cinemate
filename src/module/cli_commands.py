@@ -7,28 +7,30 @@ import inspect
 import logging  
 
 class CommandExecutor(threading.Thread):
-    def __init__(self, cinepi_controller, system_button):
+    def __init__(self, cinepi_controller):
         threading.Thread.__init__(self)  # Initialize thread
         self.cinepi_controller = cinepi_controller  # Set controller object reference
-        self.system_button = system_button  # Set button object reference
         
         # Define dictionary of available commands and their associated functions along with expected argument type.
         # This allows for dynamic command calling
         self.commands = {
-            'rec': (cinepi_controller.rec_button_pushed, None),  # Record command  
-            'stop': (cinepi_controller.rec_button_pushed, None),  # Stop command 
+            'rec': (cinepi_controller.rec_button, None),  # Record command  
+            'stop': (cinepi_controller.rec_button, None),  # Stop command 
             'iso': (cinepi_controller.set_iso, int),  # ISO setting command 
             'shutter_a': (cinepi_controller.set_shutter_a, float),  # Shutter_a setting command
             'shutter_a_nom': (cinepi_controller.set_shutter_a_nom, float),  # Shutter_a_nom setting command  
             'fps': (cinepi_controller.set_fps, int),  # FPS setting command 
             'res': (cinepi_controller.set_resolution, int),  # Resolution setting command 
-            'unmount': (system_button.unmount_drive, None),  # Unmount command
+            'unmount': (cinepi_controller.unmount, None),  # Unmount command
             'time': (self.display_time, None),  # Time display command
             'set_rtc_time': (self.set_rtc_time, None),  # RTC time setting command
             'space': (cinepi_controller.ssd_monitor.output_ssd_space_left, None),  # SSD space left command
             'get': (cinepi_controller.print_settings, None),
             'pwm': (cinepi_controller.set_pwm_mode, int),  # Ramp mode command
-            'shutter_sync': (cinepi_controller.set_shutter_a_sync, int)  # Sync shutter to fps
+            'shutter_sync': (cinepi_controller.set_shutter_a_sync, int),  # Sync shutter to fps
+            'iso_lock': (cinepi_controller.iso_lock_toggle, int),
+            'shutter_a_nom_lock': (cinepi_controller.shutter_a_nom_lock_toggle, int),
+            'fps_lock': (cinepi_controller.fps_lock_toggle, int)
         }
 
     def is_valid_arg(self, arg, expected_type):

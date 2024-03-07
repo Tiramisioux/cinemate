@@ -71,3 +71,28 @@ anywhere in the cli.
 |print camera settings to CLI||n/a|`get`||
 |unmount SSD||n/a|`unmount`|
 
+## Method index for settings.json
+
+This table includes all the methods defined within the `CinePiController` class, along with their arguments.
+
+| Method Name                  | Arguments                                                                                     |
+|------------------------------|-----------------------------------------------------------------------------------------------|
+| `iso_lock_toggle`            |none (toggle control), `0`, `1` (absolute settings)                                                                                    |
+| `shutter_a_nom_lock_toggle`  |none (toggle control), `0`, `1` (absolute settings)                                                                   |
+| `fps_lock_toggle`            |none (toggle control), `0`, `1` (absolute settings)|
+| `rec_button`          |                                                                                  |                                                                                          |
+| `switch_resolution`          | none (toggle control), `0`, `1` (absolute settings)|self                                                                                          |
+| `set_iso`                    |value 
+| `set_shutter_a_nom`          |value
+| `set_fps`                    |value
+| `safe_shutdown`              |
+| `unmount`                    |
+| `inc_iso`                    |
+| `dec_iso`                    | 
+| `inc_shutter_a_nom`          | 
+| `dec_shutter_a_nom`          | 
+| `inc_fps`                    | 
+| `dec_fps`                    | 
+| `set_pwm_mode`               |none (toggle control), `0`, `1` (absolute settings) pwm_mode                                                                                |
+| `set_shutter_a_sync`         | `0`, `1` |
+

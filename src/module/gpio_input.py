@@ -379,12 +379,13 @@ class RotaryEncoderWithButton:
         self.logger = logging.getLogger(f"RotaryEncoder{pin_a}_{pin_b}")
         self.encoder = RotaryEncoder(pin_a, pin_b)
         # Within RotaryEncoderWithButton.__init__ in component_module.py
-        self.button = SmartButton(cinepi_controller=cinepi_controller, 
-                          pin=button_pin, 
-                          actions=actions['button_actions'], 
-                          identifier=button_identifier, 
-                          inverse=False, # Assume default value, adjust as needed
-                          combined_actions=[]) # Adjust as per your logic for combined actions
+        if button_pin != "None":
+            self.button = SmartButton(cinepi_controller=cinepi_controller, 
+                            pin=button_pin, 
+                            actions=actions['button_actions'], 
+                            identifier=button_identifier, 
+                            inverse=False, # Assume default value, adjust as needed
+                            combined_actions=[]) # Adjust as per your logic for combined actions
 
         self.actions = actions
         self.cinepi_controller = cinepi_controller

@@ -26,20 +26,50 @@
 
     "rotary_encoders": [
         {
-          "pin_a": 12,
-          "pin_b": 13,
-          "button_pin": 27,
+          "pin_a": 9,
+          "pin_b": 11,
+          "button_pin": "None",
           "button_actions": {
             "press_action": "none",
-            "single_click_action": {"method": "action_one", "args": []},
+            "single_click_action": {"method": "iso_lock_toggle", "args": []},
             "double_click_action": "none",
-            "hold_action": {"method": "action_two", "args": []}
+            "hold_action": "none"
           },
           "encoder_actions": {
             "rotate_clockwise": {"method": "inc_iso", "args": []},
             "rotate_counterclockwise": {"method": "dec_iso", "args": []}
           }
-        }
+        },
+        {
+          "pin_a": 23,
+          "pin_b": 25,
+          "button_pin": "None",
+          "button_actions": {
+            "press_action": "none",
+            "single_click_action": {"method": "shutter_a_nom_lock_toggle", "args": []},
+            "double_click_action": "none",
+            "hold_action": "none"
+          },
+          "encoder_actions": {
+            "rotate_clockwise": {"method": "inc_shutter_a_nom", "args": []},
+            "rotate_counterclockwise": {"method": "dec_shutter_a_nom", "args": []}
+          }
+        },
+        {
+            "pin_a": 8,
+            "pin_b": 7,
+            "button_pin": "None",
+            "button_actions": {
+              "press_action": "none",
+              "single_click_action": {"method": "fps_lock_toggle", "args": []},
+              "double_click_action": "none",
+              "hold_action": "none"
+            },
+            "encoder_actions": {
+              "rotate_clockwise": {"method": "inc_fps", "args": []},
+              "rotate_counterclockwise": {"method": "dec_fps", "args": []}
+            }
+          }
       ],
 
     "two_way_switches": [
@@ -49,7 +79,6 @@
         "state_off_action": {"method": "set_pwm_mode", "args": [1]}
       }
     ],
-    
 
     "combined_actions": [
       {

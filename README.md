@@ -43,7 +43,7 @@ anywhere in the cli.
 |Function|type|GPIO|cinemate cli/usb serial command|comment|
 |---|---|---|---|---|
 |start/stop recording|button|4,5|rec||
-|rec light|led|5, 21|||
+|rec light|led|6, 21|||
 ||||||
 |iso increase|button|27|`iso inc`||
 |iso decrease|button|10|`iso dec`||
@@ -80,7 +80,7 @@ This table includes all the methods defined within the `CinePiController` class,
 | `iso_lock_toggle`            |none (toggle control), `0`, `1` (absolute settings)                                                                                    |
 | `shutter_a_nom_lock_toggle`  |none (toggle control), `0`, `1` (absolute settings)                                                                   |
 | `fps_lock_toggle`            |none (toggle control), `0`, `1` (absolute settings)|
-| `rec_button`          |                                                                                  |                                                                                          |
+| `rec_button`                   |                                                                                  |                                                                                          |
 | `switch_resolution`          | none (toggle control), `0`, `1` (absolute settings)|self                                                                                          |
 | `set_iso`                    |value 
 | `set_shutter_a_nom`          |value

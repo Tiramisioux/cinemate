@@ -11,6 +11,10 @@
 
     "buttons": [
       {
+        "pin": 4,
+        "press_action": {"method": "rec_button"}
+      },
+      {
         "pin": 5,
         "press_action": {"method": "rec_button"}
       },

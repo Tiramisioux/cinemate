@@ -75,24 +75,27 @@ anywhere in the cli.
 
 This table includes all the methods defined within the `CinePiController` class, along with their arguments.
 
-| Method Name                  | Arguments                                                                                     |
-|------------------------------|-----------------------------------------------------------------------------------------------|
-| `iso_lock_toggle`            |none (toggle control), `0`, `1` (absolute settings)                                                                                    |
-| `shutter_a_nom_lock_toggle`  |none (toggle control), `0`, `1` (absolute settings)                                                                   |
-| `fps_lock_toggle`            |none (toggle control), `0`, `1` (absolute settings)|
-| `rec_button`                   |                                                                                  |                                                                                          |
-| `switch_resolution`          | none (toggle control), `0`, `1` (absolute settings)|self                                                                                          |
+| Method Name                  | Arguments                      |Comment          |
+|------------------------------|--------------------------------|-----------------|
+| `rec`                        |                                |Start/stops recording
 | `set_iso`                    |value 
 | `set_shutter_a_nom`          |value
 | `set_fps`                    |value
-| `safe_shutdown`              |
-| `unmount`                    |
+| `set_iso_lock`               |none (toggle), `0`, `1` |
+| `set_shutter_a_nom_lock`     |none (toggle), `0`, `1`|
+| `set_shutter_a_nom_fps_lock` |none (toggle), `0`, `1` |
+| `set_fps_lock`               |none (toggle), `0`, `1` |
+| `set_resolution`             |none (toggle), `0`, `1`|
 | `inc_iso`                    |
 | `dec_iso`                    | 
 | `inc_shutter_a_nom`          | 
 | `dec_shutter_a_nom`          | 
 | `inc_fps`                    | 
 | `dec_fps`                    | 
-| `set_pwm_mode`               |none (toggle control), `0`, `1` (absolute settings) pwm_mode                                                                                |
-| `set_shutter_a_sync`         | `0`, `1` |
+| `set_shutter_a_sync`         | none (toggle), `0`, `1`|
+| `set_fps_double`             |none (toggle), `0`, `1`|
+| `set_pwm_mode`               |none (toggle), `0`, `1`|requires soldering
+| `unmount`                    |
+| `safe_shutdown`              |
+
 

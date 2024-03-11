@@ -42,6 +42,9 @@ class CinePiController:
         self.fps_multiplier = 1
         self.pwm_mode = False
         
+        self.ramp_up_speed = 0.2
+        self.ramp_down_speed = 0.2
+        
         self.fps_button_state = False
         
         self.fps_temp = 24
@@ -76,7 +79,7 @@ class CinePiController:
         #Set fps array if not defined in 
         if not fps_steps: self.fps_steps=list(range(1, (self.fps_max + 1)))
         
-    def iso_lock_toggle(self, value=None):
+    def set_iso_lock(self, value=None):
         if value is not None:
             if value in (0, False):
                 self.iso_lock = False
@@ -86,8 +89,9 @@ class CinePiController:
                 raise ValueError("Invalid value. Please provide either 0, 1, True, or False.")
         else:
             self.iso_lock = not self.iso_lock
+        logging.info(f"ISO lock {self.iso_lock}")
 
-    def shutter_a_nom_lock_toggle(self, value=None):
+    def set_shutter_a_nom_lock(self, value=None):
         if value is not None:
             if value in (0, False):
                 self.shutter_a_nom_lock = False
@@ -97,8 +101,9 @@ class CinePiController:
                 raise ValueError("Invalid value. Please provide either 0, 1, True, or False.")
         else:
             self.shutter_a_nom_lock = not self.shutter_a_nom_lock
+        logging.info(f"Shutter angle lock {self.shutter_a_nom_lock}")
 
-    def fps_lock_toggle(self, value=None):
+    def set_fps_lock(self, value=None):
         if value is not None:
             if value in (0, False):
                 self.fps_lock = False
@@ -108,8 +113,9 @@ class CinePiController:
                 raise ValueError("Invalid value. Please provide either 0, 1, True, or False.")
         else:
             self.fps_lock = not self.fps_lock
+        logging.info(f"FPS lock {self.fps_lock}")
  
-    def rec_button(self):
+    def rec(self):
         logging.info(f"rec button pushed")
         if self.redis_controller.get_value('is_recording') == "0":
             self.start_recording()
@@ -149,33 +155,36 @@ class CinePiController:
         except ValueError as error:
             logging.error(f"Error switching resolution: {error}")
 
-    def set_resolution(self, sensor_mode):
-        try:
-            if sensor_mode not in self.sensor_detect.res_modes:
-                raise ValueError("Invalid sensor mode.")
+    def set_resolution(self, value=None):
+        if value is not None:
+            try:
+                if value not in self.sensor_detect.res_modes:
+                    raise ValueError("Invalid sensor mode.")
 
-            resolution_info = self.sensor_detect.res_modes[sensor_mode]
-            height_value = resolution_info.get('height', None)
-            width_value = resolution_info.get('width', None)
-            gui_layout_value = resolution_info.get('gui_layout', None)
+                resolution_info = self.sensor_detect.res_modes[value]
+                height_value = resolution_info.get('height', None)
+                width_value = resolution_info.get('width', None)
+                gui_layout_value = resolution_info.get('gui_layout', None)
 
-            if height_value is None or width_value is None or gui_layout_value is None:
-                raise ValueError("Invalid height, width, or gui_layout value.")
+                if height_value is None or width_value is None or gui_layout_value is None:
+                    raise ValueError("Invalid height, width, or gui_layout value.")
 
-            # Set height, width, and gui_layout in Redis
-            self.redis_controller.set_value('height', str(height_value))
-            self.redis_controller.set_value('width', str(width_value))
-            self.redis_controller.set_value('sensor_mode', str(sensor_mode))
-            self.redis_controller.set_value('gui_layout', str(gui_layout_value))
-            self.redis_controller.set_value('cam_init', 1)
+                # Set height, width, and gui_layout in Redis
+                self.redis_controller.set_value('height', str(height_value))
+                self.redis_controller.set_value('width', str(width_value))
+                self.redis_controller.set_value('value', str(value))
+                self.redis_controller.set_value('gui_layout', str(gui_layout_value))
+                self.redis_controller.set_value('cam_init', 1)
 
-            # Update local attributes
-            self.gui_layout = gui_layout_value
+                # Update local attributes
+                self.gui_layout = gui_layout_value
 
-            logging.info(f"Resolution set to mode {sensor_mode}, height: {height_value}, width: {width_value}, gui_layout: {gui_layout_value}")
+                logging.info(f"Resolution set to mode {value}, height: {height_value}, width: {width_value}, gui_layout: {gui_layout_value}")
 
-        except ValueError as error:
-            logging.error(f"Error setting resolution: {error}")
+            except ValueError as error:
+                logging.error(f"Error setting resolution: {error}")
+        else:
+            self.switch_resolution()
 
     def get_current_sensor_mode(self):
         current_height = int(self.redis_controller.get_value('height'))
@@ -263,9 +272,6 @@ class CinePiController:
             
             safe_value = value
             
-            if self.fps_double == True:
-                safe_value = value * 2
-            
             # Cap the value to the range [1, max_fps]
             safe_value = max(1, min(safe_value, max_fps))
 
@@ -297,13 +303,13 @@ class CinePiController:
                         new_shutter_angle = int(new_shutter_angle)
                     self.set_shutter_a(new_shutter_angle)
                     self.fps_actual = safe_value
-                    self.pwm_controller.set_pwm(fps=safe_value, shutter_angle=new_shutter_angle)
+                    self.pwm_controller.set_pwm(fps=int(safe_value), shutter_angle=new_shutter_angle)
                     logging.info(f"Setting fps to {safe_value} and shutter angle to {new_shutter_angle}")
 
                 elif self.pwm_mode == True and self.shutter_a_sync == False:
                     # safe_value = int(round(max(min(value, self.fps_max), 0)))
                     new_shutter_angle = float(self.get_setting('shutter_a'))
-                    self.pwm_controller.set_pwm(fps=safe_value, shutter_angle=new_shutter_angle)
+                    self.pwm_controller.set_pwm(fps=int(safe_value), shutter_angle=new_shutter_angle)
                     self.fps_actual = safe_value
                     logging.info(f"Setting fps to {safe_value}")
 
@@ -312,10 +318,21 @@ class CinePiController:
                 self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_s)
                 self.redis_controller.set_value('fps_actual', self.fps_actual)
        
-    def set_parameters_lock(self, value):
-        with self.parameters_lock_obj:
-            self.parameters_lock = value
-            logging.info(f"Parameters lock {self.parameters_lock}")
+    def set_shu_fps_lock(self, value=None):
+        if value is not None:
+            if value in (0, False):
+                self.shutter_a_nom_lock = False
+                self.fps_lock = False
+            elif value in (1, True):
+                self.shutter_a_nom_lock = True
+                self.fps_lock = True
+            else:
+                raise ValueError("Invalid value. Please provide either 0, 1, True, or False.")
+        else:
+            self.shutter_a_nom_lock = not self.shutter_a_nom_lock
+            self.fps_lock = not self.fps_lock
+        logging.info(f"Shutter angle lock {self.shutter_a_nom_lock}")
+        logging.info(f"FPS lock {self.fps_lock}")
         
     def set_fps_multiplier(self, value):
         with self.parameters_lock_obj:
@@ -384,7 +401,7 @@ class CinePiController:
     def dec_fps(self):
         self.decrement_setting('fps', self.fps_steps)
         
-    def set_pwm_mode(self, pwm_mode):
+    def set_pwm_mode(self, value=None):
 
         if self.current_sensor != 'imx477':
             logging.info(f"Current sensor {self.current_sensor}. PWM mode not availabe")
@@ -393,20 +410,22 @@ class CinePiController:
             if self.pwm_mode == False:
                 self.fps_saved = float(self.get_setting('fps_actual'))
 
-            #self.pwm_controller.pwm_mode(pwm_mode)
-            self.pwm_mode = pwm_mode
-            logging.info(f"Setting pwm mode mode to {pwm_mode}")
-            #self.shutter_a_nom = float(self.get_setting('shutter_a_nom'))
+            if value is not None:
+                self.pwm_mode = value
+            else:
+                value = not self.pwm_mode
+            
+            logging.info(f"Setting pwm mode mode to {value}")
+                #self.shutter_a_nom = float(self.get_setting('shutter_a_nom'))
 
-
-            if pwm_mode == False:            
+            if value== False:            
                 # Stop PWM
                 self.pwm_controller.stop_pwm()
                 self.set_fps(self.fps_saved)
                 # self.fps_steps = self.fps_steps = list(range(1, 51))  # Assuming original_fps_steps is defined
                 # self.shutter_a_steps = self.original_shutter_a  # Assuming original_shutter_a is defined
                 
-            elif pwm_mode == True:
+            elif value == True:
                 self.fps_saved = float(self.get_setting('fps_actual'))
                 shutter_a_current = float(self.get_setting('shutter_a_nom'))
                 self.redis_controller.set_value('fps', 50)
@@ -418,27 +437,59 @@ class CinePiController:
             self.redis_controller.set_value('cam_init', 1)
             logging.info(f"Restarting camera")
         
-    def set_shutter_a_sync(self, shutter_a_sync):
-        if shutter_a_sync == True:
-            self.shutter_a_sync = True
-            self.exposure_time_saved = self.exposure_time_s
-            self.set_shutter_a_nom(float(self.redis_controller.get_value('shutter_a_nom')))
-        elif shutter_a_sync == False:
-            self.shutter_a_sync = False
-            self.exposure_time_saved = self.exposure_time_s
-            self.set_shutter_a_nom(float(self.redis_controller.get_value('shutter_a_nom')))
-        
+    def set_shutter_a_sync(self, value=None):
+        if value is not None:
+            if value in (0, False):
+                self.shutter_a_sync = False
+                self.exposure_time_saved = self.exposure_time_s
+                self.set_shutter_a_nom(float(self.redis_controller.get_value('shutter_a_nom')))
+            elif value in (1, True):
+                self.shutter_a_sync = False
+                self.exposure_time_saved = self.exposure_time_s
+                self.set_shutter_a_nom(float(self.redis_controller.get_value('shutter_a_nom')))
+            else:
+                raise ValueError("Invalid value. Please provide either 0, 1, True, or False.")
         logging.info(f"Shutter sync {self.shutter_a_sync}")
-        
-    def switch_fps(self):
-        if self.fps_double == False:
-            self.fps_saved = self.fps_actual
-            self.fps_double = True
-            self.set_fps(int(self.fps_actual))
+
+    def set_fps_double(self, value=None):
+        target_double_state = not self.fps_double if value is None else value in (1, True)
+
+        if self.pwm_mode:
+            self._ramp_fps(target_double_state)
+        else:
+            if target_double_state:
+                if not self.fps_double:  # Avoid doubling if already doubled
+                    self.fps_saved = self.fps_actual  # Save the current FPS
+                    target_fps = min(self.fps_actual * 2, self.fps_max)  # Calculate target FPS
+                    self.set_fps(target_fps)
+            else:
+                if self.fps_double:  # Only revert if currently doubled
+                    self.set_fps(self.fps_saved)  # Revert to saved FPS
             
-        elif self.fps_double == True:
-            self.fps_double = False
-            self.set_fps(int(self.fps_saved))
+            self.fps_double = target_double_state  # Update state after action
+
+        logging.info(f"FPS double mode is {'enabled' if self.fps_double else 'disabled'}, Current FPS: {self.fps_actual}")
+
+    def _ramp_fps(self, target_double_state):
+        if target_double_state and not self.fps_double:
+            # Ramp up logic
+            self.fps_saved = self.fps_actual  # Save current FPS
+            target_fps = min(self.fps_temp * 2, self.fps_max)
+
+            while self.fps_actual < target_fps:
+                logging.info('Ramping up')
+                self.fps_actual += 1  # Increment FPS
+                self.set_fps(self.fps_actual)  # Apply incremental FPS
+                time.sleep(self.ramp_up_speed)
+        elif not target_double_state and self.fps_double:
+            # Ramp down logic
+            while self.fps_actual > self.fps_saved:
+                logging.info('Ramping down')
+                self.fps_actual -= 1  # Decrement FPS
+                self.set_fps(self.fps_actual)  # Apply decremental FPS
+                time.sleep(self.ramp_down_speed)
+
+        self.fps_double = target_double_state  # Ensure state is updated after ramping
         
     def print_settings(self):
         iso = self.get_setting('iso')

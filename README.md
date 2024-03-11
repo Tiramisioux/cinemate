@@ -93,7 +93,7 @@ This table includes all the methods defined within the `CinePiController` class,
 | `inc_fps`                    | 
 | `dec_fps`                    | 
 | `set_shutter_a_sync`         | none (toggle), `0`, `1`|
-| `set_fps_double`             |none (toggle), `0`, `1`|
+| `set_fps_double`             |none (toggle), `0`, `1`|ramps if in `pwm mode 1`
 | `set_pwm_mode`               |none (toggle), `0`, `1`|requires soldering
 | `unmount`                    |
 | `safe_shutdown`              |

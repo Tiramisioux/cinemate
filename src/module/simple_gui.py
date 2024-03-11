@@ -205,9 +205,6 @@ class SimpleGUI(threading.Thread):
         # Draw the text in the specified position, not affected by padding
         draw.text(position, text, font=font, fill=text_color)
 
-
-
-
     def run(self):
         while True:
             values = self.populate_values()

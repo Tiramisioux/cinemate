@@ -14,23 +14,25 @@ class CommandExecutor(threading.Thread):
         # Define dictionary of available commands and their associated functions along with expected argument type.
         # This allows for dynamic command calling
         self.commands = {
-            'rec': (cinepi_controller.rec_button, None),  # Record command  
-            'stop': (cinepi_controller.rec_button, None),  # Stop command 
-            'iso': (cinepi_controller.set_iso, int),  # ISO setting command 
-            'shutter_a': (cinepi_controller.set_shutter_a, float),  # Shutter_a setting command
-            'shutter_a_nom': (cinepi_controller.set_shutter_a_nom, float),  # Shutter_a_nom setting command  
-            'fps': (cinepi_controller.set_fps, int),  # FPS setting command 
-            'res': (cinepi_controller.set_resolution, int),  # Resolution setting command 
+            'rec': (cinepi_controller.rec, None),  # Record command  
+            'stop': (cinepi_controller.rec, None),  # Stop command 
+            'set_iso': (cinepi_controller.set_iso, int),  # ISO setting command 
+            'set_shutter_a': (cinepi_controller.set_shutter_a, float),  # Shutter_a setting command
+            'set_shutter_a_nom': (cinepi_controller.set_shutter_a_nom, float),  # Shutter_a_nom setting command  
+            'set_fps': (cinepi_controller.set_fps, int),  # FPS setting command 
+            'set_resolution': (cinepi_controller.set_resolution, [int, None]),  # Resolution setting command 
             'unmount': (cinepi_controller.unmount, None),  # Unmount command
             'time': (self.display_time, None),  # Time display command
             'set_rtc_time': (self.set_rtc_time, None),  # RTC time setting command
             'space': (cinepi_controller.ssd_monitor.output_ssd_space_left, None),  # SSD space left command
             'get': (cinepi_controller.print_settings, None),
-            'pwm': (cinepi_controller.set_pwm_mode, int),  # Ramp mode command
-            'shutter_sync': (cinepi_controller.set_shutter_a_sync, int),  # Sync shutter to fps
-            'iso_lock': (cinepi_controller.iso_lock_toggle, int),
-            'shutter_a_nom_lock': (cinepi_controller.shutter_a_nom_lock_toggle, int),
-            'fps_lock': (cinepi_controller.fps_lock_toggle, int)
+            'set_pwm_mode': (cinepi_controller.set_pwm_mode, [int, None]),  # Ramp mode command
+            'set_shutter_sync': (cinepi_controller.set_shutter_a_sync, [int, None]),  # Sync shutter to fps
+            'set_iso_lock': (cinepi_controller.set_iso_lock, [int, None]),
+            'set_shutter_a_nom_lock': (cinepi_controller.set_shutter_a_nom_lock, [int, None]),
+            'set_shutter_a_nom_fps_lock': (cinepi_controller.set_shu_fps_lock, [int, None]),
+            'set_fps_lock': (cinepi_controller.set_fps_lock, [int, None]),
+            'set_fps_double': (cinepi_controller.set_fps_double, [int, None])
         }
 
     def is_valid_arg(self, arg, expected_type):
@@ -57,51 +59,53 @@ class CommandExecutor(threading.Thread):
         else:
             return None
     
-    # Function to handle received data
     def handle_received_data(self, data):
         logging.info(f"Received: {data}")  # Log the received data
-        input_command = data.split()  # Split the input into command and arguments
+        input_command = data.split()  # Split the input into command and possible arguments
 
-        if len(input_command) == 0 or not input_command[0]:
-            return  # If there's no command provided
-        
-        command_name = input_command[0]  # Extract the command name from the input
-        
+        if len(input_command) == 0:
+            return  # If there's no command provided, just return
+
+        command_name, *command_args = input_command  # Extract the command name and any following arguments
+
         if command_name in self.commands:
-            func, expected_type = self.commands[command_name]  # Extract function and expected type from commands dictionary
-            arg_spec = inspect.getfullargspec(func)  # Get list of arguments that func takes 
-            is_bound_method = inspect.ismethod(func)  # Check if func is bound method
-            num_args = len(arg_spec.args) - 1 if is_bound_method else len(arg_spec.args)  # Get number of required arguments for the function
+            func, expected_types = self.commands[command_name]  # Extract function and expected type(s)
             
-            if len(input_command) > 1:  # If command has arguments
-                command_args = input_command[1]  # Extract command arguments from the input
-
-                # Check if the argument is "inc" or "dec" (increase, decrease), 
-                # and corresponding method is available in cinepi_controller.
-                # If available, execute the function. If not, continue to other checks.
-                if command_args.lower() == "inc" and hasattr(self.cinepi_controller, f"inc_{command_name}"):
-                    getattr(self.cinepi_controller, f"inc_{command_name}")()
-                    return
-                elif command_args.lower() == "dec" and hasattr(self.cinepi_controller, f"dec_{command_name}"):
-                    getattr(self.cinepi_controller, f"dec_{command_name}")()
-                    return
-                # If the input command needs extra argument and the type of the argument is correct, call the command with the argument.
-                elif num_args > 0 and expected_type and self.is_valid_arg(command_args, expected_type):
-                    func(expected_type(command_args))
-                    return
+            # Adjustments to support commands with optional arguments
+            if isinstance(expected_types, list):  # Check if expected_types is a list to accommodate optional args
+                if not command_args:  # No arguments provided
+                    if None in expected_types:  # If None is an acceptable type, call without args
+                        func()
+                        return
+                    else:
+                        logging.info(f"Command '{command_name}' requires an argument")
+                        return
+                else:  # Argument(s) provided
+                    arg = command_args[0]
+                    for expected_type in filter(None, expected_types):  # Ignore None in expected_types
+                        if self.is_valid_arg(arg, expected_type):
+                            func(expected_type(arg))  # Call function with converted argument
+                            return
+                    logging.info(f"Invalid argument type for command '{command_name}'")
+            else:  # Handling for commands not expected to have optional arguments
+                # Original logic for handling commands requiring a single, specific argument type
+                if command_args:  # If there are arguments provided
+                    arg = command_args[0]
+                    if self.is_valid_arg(arg, expected_types):  # Validate argument
+                        func(expected_types(arg))  # Call function with converted argument
+                        return
+                    else:
+                        logging.info(f"Invalid argument type for command '{command_name}'")
+                        return
                 else:
-                    # If command does not take parameters or if an improper parameter type is specify a message will be logged and the function will return.
-                    logging.info(f"Command '{command_name}' does not take parameters or invalid parameter type")
-                    return
-            else:
-                # If no argument is provided and the command requires at least one argument
-                if num_args > 0:
-                    logging.info(f"Command '{command_name}' missing required parameter")
-                else:
-                    # if operration does not require parameters, then call the operation directly
-                    func()
+                    if expected_types is not None:  # If the command expects an argument
+                        logging.info(f"Command '{command_name}' missing required parameter")
+                        return
+                    else:  # If the command does not expect any arguments
+                        func()  # Call the function without arguments
         else:
             logging.info(f"Command '{command_name}' not found")
+
     
     # Function to display system time and RTC time
     def display_time(self):

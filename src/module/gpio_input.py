@@ -23,6 +23,8 @@ class ComponentInitializer:
             # self.logger.info(f"Initializing button on pin {button_config['pin']} with actions: {actions_desc}")
             SmartButton(cinepi_controller=self.cinepi_controller,
                         pin=button_config['pin'],
+                        pull_up=bool(button_config['pull_up']),
+                        debounce_time=float(button_config['debounce_time']),
                         actions=button_config,
                         identifier=str(button_config['pin']),
                         combined_actions=combined_actions)
@@ -40,11 +42,13 @@ class ComponentInitializer:
         for encoder_config in self.settings.get('rotary_encoders', []):
             actions_desc = self._describe_actions(button_config)
             # self.logger.info(f"Initializing button on pin {button_config['pin']} with actions: {actions_desc}")
-            self.logger.info(f"Initializing rotary encoder with button on pins {encoder_config['pin_a']}, {encoder_config['pin_b']}")
+            self.logger.info(f"Initializing rotary encoder with push button {encoder_config['button_pin']} on pins {encoder_config['clk_pin']}, {encoder_config['dt_pin']}")
             RotaryEncoderWithButton(cinepi_controller=self.cinepi_controller,
-                                    pin_a=encoder_config['pin_a'],
-                                    pin_b=encoder_config['pin_b'],
+                                    clk_pin=encoder_config['clk_pin'],
+                                    dt_pin=encoder_config['dt_pin'],
                                     button_pin=encoder_config['button_pin'],
+                                    pull_up=bool(encoder_config['pull_up']),
+                                    debounce_time=float(encoder_config['debounce_time']),
                                     actions=encoder_config,
                                     button_identifier=str(encoder_config['button_pin']))
             
@@ -68,10 +72,11 @@ class SmartButton:
     buttons = {}  # Dictionary to hold button instances by identifier (e.g., pin number)
     predefined_combined_actions = []  # Combined actions defined in your settings
     logger = logging.getLogger('ButtonManager')
+    _currently_held = None
     
-    def __init__(self, cinepi_controller, pin, actions, identifier, inverse=False, combined_actions=[], debounce_time=0.01):
+    def __init__(self, cinepi_controller, pin, pull_up, debounce_time, actions, identifier, inverse=False, combined_actions=[]):
         self.logger = logging.getLogger(f"SmartButton{pin}")
-        self.button = Button(pin, bounce_time=debounce_time)
+        self.button = Button(pin, pull_up=pull_up, bounce_time=debounce_time)
         self.actions = actions
         self.identifier = identifier
         self.inverse = inverse
@@ -91,6 +96,9 @@ class SmartButton:
         self.combined_actions = combined_actions  # Store combined actions relevant to this button
         self.last_state = 'released'  # Default state
         
+        self.button.when_pressed = self.on_press
+        self.button.when_released = self.on_release
+        
         self.check_initial_state()
 
         self.button.when_pressed = self.on_press if not self.inverse else self.on_release
@@ -104,29 +112,29 @@ class SmartButton:
         # check if the initial state is high (1), indicating an inverse button.
         if self.button.is_pressed:  # This actually checks the current state; True if pressed
             self.inverse = True  # Update the inverse attribute based on the initial state
-            self.logger.debug(f"Button {self.identifier} detected as inverse.")
+            self.logger.info(f"Button {self.identifier} detected as inverse.")
 
     def trigger_hold_action(self):
         with self.lock:
-            action_dict = self.actions.get('hold_action')  # This will be a dictionary now
-            if action_dict:
-                action_method = action_dict.get('method')
-                action_args = action_dict.get('args', [])
-                if action_method:  # Ensure action_method is not None or empty
-                    method = getattr(self.cinepi_controller, action_method, None)
-                    if method:  # Ensure the method exists
-                        self.logger.debug(f"Executing hold action: {action_method} with args: {action_args}")
-                        method(*action_args)  # Call the method with unpacked arguments
-                    else:
-                        self.logger.error(f"Method {action_method} not found in cinepi_controller.")
+            action_dict = self.actions.get('hold_action')
+            
+            # Check if action_dict is a dictionary, log an error if not
+            if not isinstance(action_dict, dict):
+                self.logger.error(f"Expected a dictionary for hold_action, but got: {type(action_dict)}. Action: {action_dict}")
+                return
+            
+            action_method = action_dict.get('method')
+            action_args = action_dict.get('args', [])
+            if action_method:  # Ensure action_method is not None or empty
+                method = getattr(self.cinepi_controller, action_method, None)
+                if method:  # Ensure the method exists
+                    self.logger.debug(f"Executing hold action: {action_method} with args: {action_args}")
+                    method(*action_args)  # Call the method with unpacked arguments
                 else:
-                    self.logger.error("Hold action method name is not specified.")
+                    self.logger.error(f"Method {action_method} not found in cinepi_controller.")
             else:
-                self.logger.error("Hold action is not defined.")
+                self.logger.error("Hold action method name is not specified.")
 
-            # Indicate that the button was held and evaluate combined actions if needed
-            self.is_held = True
-            self.evaluate_combined_actions()
 
     def on_press(self):
         self.button_states[self.identifier] = {"state": "pressed", "is_held": True}
@@ -138,16 +146,14 @@ class SmartButton:
             self.state = 'pressed'
             SmartButton.buttons[self.identifier] = self
 
-            # # Update the button's state in the class-level dictionary
-            # SmartButton.buttons[self.identifier]['state'] = self.state
-            # SmartButton.buttons[self.identifier]['is_held'] = self.is_held
-            # Check for combined actions after updating state
-            self.evaluate_combined_actions()
-            self.logger.debug(f"Button {self.identifier} pressed")
+            if SmartButton._currently_held is None:
+                    SmartButton._currently_held = self.identifier
 
-            # Start a second timer to track long presses (0.5 sec)
-            self.click_timer2 = threading.Timer(0.5, self.evaluate_long_press)
-            self.click_timer2.start()
+            logging.info(f"Button {self.identifier} pressed")
+
+            # # Start a second timer to track long presses (0.5 sec)
+            # self.click_timer2 = threading.Timer(0.5, self.evaluate_long_press)
+            # self.click_timer2.start()
 
             self.is_held = True
             self.last_state = 'pressed'
@@ -165,17 +171,15 @@ class SmartButton:
 
     def on_release(self):
         self.button_states[self.identifier] = {"state": "released", "is_held": False}
-        self.logger.debug(f"Button {self.identifier} released")
+        self.logger.info(f"Button {self.identifier} released")
         with self.lock:
             self.is_held = False
             self.state = 'released'
 
-            SmartButton.buttons[self.identifier] = self
-
-            # Similar update and check as in on_press
-            # SmartButton.buttons[self.identifier]['state'] = self.state
-            # SmartButton.buttons[self.identifier]['is_held'] = self.is_held
-            self.evaluate_combined_actions()
+            if SmartButton._currently_held == self.identifier:
+                SmartButton._currently_held = None
+            elif SmartButton._currently_held is None:
+                logging.info(f"Attempted to release button {self.identifier}, but no button was held.")
 
             # Cancel the long press timer
             if self.click_timer2 is not None:
@@ -277,15 +281,19 @@ class SmartButton:
         return action
 
     def evaluate_clicks(self):
+        logging.info('Evaluating clicks ...')
         with self.lock:
             action_dict = None
             # Determine the correct action based on click count
             if self.click_count == 1:
                 action_dict = self.actions.get('single_click_action')
+                logging.info('Single click detected.')
             elif self.click_count == 2:
                 action_dict = self.actions.get('double_click_action')
+                logging.info('Double click detected.')
             elif self.click_count >= 3:
                 action_dict = self.actions.get('triple_click_action')
+                logging.info('Triple click detected.')
             
             if action_dict and isinstance(action_dict, dict):
                 self.logger.debug(f"Action dict before accessing 'method': {action_dict}")
@@ -301,36 +309,41 @@ class SmartButton:
             self.click_count = 0  # Reset click count after evaluation
 
     def trigger_action(self, action):
+        if SmartButton._currently_held == self.identifier or SmartButton._currently_held == None:
         # Handle 'none' or missing action as a no-operation
-        if not action or action == "none":
-            self.logger.debug("No action defined or action marked as 'none'.")
-            return
+            if not action or action == "none":
+                self.logger.debug("No action defined or action marked as 'none'.")
+                return
 
-        # Check if action is a string and not 'none', then convert to expected dictionary format
-        if isinstance(action, str):
-            action = {"method": action, "args": []}
+            # Check if action is a string and not 'none', then convert to expected dictionary format
+            if isinstance(action, str):
+                action = {"method": action, "args": []}
 
-        # Extract method name and args with defaults
-        method_name = action.get('method')
-        args = action.get('args', [])
+            # Extract method name and args with defaults
+            method_name = action.get('method')
+            args = action.get('args', [])
 
-        # Ensure that 'none' is handled even in dictionary format
-        if method_name == "none":
-            self.logger.debug("Action method marked as 'none', skipping execution.")
-            return
+            # Ensure that 'none' is handled even in dictionary format
+            if method_name == "none":
+                self.logger.debug("Action method marked as 'none', skipping execution.")
+                return
 
-        # Retrieve the method from cinepi_controller using getattr
-        method = getattr(self.cinepi_controller, method_name, None)
+            # Retrieve the method from cinepi_controller using getattr
+            method = getattr(self.cinepi_controller, method_name, None)
 
-        if method:
-            # Call the method with unpacked arguments
-            try:
-                method(*args)
-                self.logger.debug(f"Executing action: {method_name} with args: {args}")
-            except TypeError:
-                self.logger.error(f"Method {method_name} does not support the provided args: {args}")
+            if method:
+                # Call the method with unpacked arguments
+                try:
+                    method(*args)
+                    self.logger.debug(f"Executing action: {method_name} with args: {args}")
+                except TypeError:
+                    self.logger.error(f"Method {method_name} does not support the provided args: {args}")
+            else:
+                self.logger.error(f"Method {method_name} not found in cinepi_controller.")
+                
         else:
-            self.logger.error(f"Method {method_name} not found in cinepi_controller.")
+            logging.info(f"Button {self.identifier} individual action ignored. Button {SmartButton._currently_held} is currently held.")
+
 
 class SimpleSwitch:
     def __init__(self, cinepi_controller, pin, actions, debounce_time=0.1):
@@ -375,13 +388,15 @@ class SimpleSwitch:
                 self.logger.error(f"Method {method_name} not found in cinepi_controller.")
 
 class RotaryEncoderWithButton:
-    def __init__(self, cinepi_controller, pin_a, pin_b, button_pin, actions, button_identifier):
-        self.logger = logging.getLogger(f"RotaryEncoder{pin_a}_{pin_b}")
-        self.encoder = RotaryEncoder(pin_a, pin_b)
+    def __init__(self, cinepi_controller, clk_pin, dt_pin, button_pin, pull_up, debounce_time, actions, button_identifier):
+        self.logger = logging.getLogger(f"RotaryEncoder{clk_pin}_{dt_pin}")
+        self.encoder = RotaryEncoder(clk_pin, dt_pin)
         # Within RotaryEncoderWithButton.__init__ in component_module.py
         if button_pin != "None":
             self.button = SmartButton(cinepi_controller=cinepi_controller, 
                             pin=button_pin, 
+                            pull_up=pull_up,
+                            debounce_time=debounce_time,
                             actions=actions['button_actions'], 
                             identifier=button_identifier, 
                             inverse=False, # Assume default value, adjust as needed

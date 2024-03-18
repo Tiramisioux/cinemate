@@ -36,7 +36,7 @@
           "pull_up": "False",
           "debounce_time": "0.05",
           "button_actions": {
-            "press_action": "none",
+            "press_action": {"method": "set_iso_lock"},
             "single_click_action": "none",
             "double_click_action": "none",
             "hold_action": "none"
@@ -53,7 +53,7 @@
           "pull_up": "False",
           "debounce_time": "0.05",
           "button_actions": {
-            "press_action": "none",
+            "press_action": {"method": "set_shutter_a_nom_lock"},
             "single_click_action": "none",
             "double_click_action": "none",
             "hold_action": "none"
@@ -70,7 +70,7 @@
           "pull_up": "False",
           "debounce_time": "0.05",
           "button_actions": {
-            "press_action":{"method": "set_fps_double", "args": []},
+            "press_action": {"method": "set_fps_lock"},
             "single_click_action": "none",
             "double_click_action": "none",
             "hold_action": "none"

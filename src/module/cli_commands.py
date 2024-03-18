@@ -27,7 +27,7 @@ class CommandExecutor(threading.Thread):
             'space': (cinepi_controller.ssd_monitor.output_ssd_space_left, None),  # SSD space left command
             'get': (cinepi_controller.print_settings, None),
             'set_pwm_mode': (cinepi_controller.set_pwm_mode, [int, None]),  # Ramp mode command
-            'set_shutter_sync': (cinepi_controller.set_shutter_a_sync, [int, None]),  # Sync shutter to fps
+            'set_shutter_a_sync': (cinepi_controller.set_shutter_a_sync, [int, None]),  # Sync shutter to fps
             'set_iso_lock': (cinepi_controller.set_iso_lock, [int, None]),
             'set_shutter_a_nom_lock': (cinepi_controller.set_shutter_a_nom_lock, [int, None]),
             'set_shutter_a_nom_fps_lock': (cinepi_controller.set_shu_fps_lock, [int, None]),

@@ -92,7 +92,7 @@ if __name__ == "__main__":
     gpio_input = ComponentInitializer(cinepi_controller, settings)
 
     # Instantiate the AnalogControls component
-    analog_controls = AnalogControls(cinepi_controller, iso_pot=settings['analog_controls']['iso_pot'], shutter_a_pot=settings['analog_controls']['shutter_a_pot'], fps_pot=settings['analog_controls']['fps_pot'])
+    #analog_controls = AnalogControls(cinepi_controller, iso_pot=settings['analog_controls']['iso_pot'], shutter_a_pot=settings['analog_controls']['shutter_a_pot'], fps_pot=settings['analog_controls']['fps_pot'])
 
     # Instantiate the Mediator and pass the components to it
     mediator = Mediator(cinepi_app, redis_controller, usb_monitor, ssd_monitor, gpio_output)

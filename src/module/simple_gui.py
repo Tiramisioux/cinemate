@@ -7,6 +7,7 @@ from gpiozero import CPUTemperature
 from module.framebuffer import Framebuffer  # Assuming this is a custom module
 import subprocess
 import logging
+from sugarpie import pisugar
 
 class SimpleGUI(threading.Thread):
     def __init__(self, pwm_controller, redis_controller, cinepi_controller, usb_monitor, ssd_monitor, serial_handler, dmesg_monitor):
@@ -44,8 +45,16 @@ class SimpleGUI(threading.Thread):
                 "iso": {"position": (10, -7), "font_size": 34},
                 "shutter_speed": {"position": (110, -7), "font_size": 34},
                 "fps": {"position": (205, -7), "font_size": 34},
-                "cpu_load": {"position": (1790, -2), "font_size": 26},
-                "cpu_temp": {"position": (1875, -2), "font_size": 26},
+                
+                "exposure_time": {"position": (1210, -7), "font_size": 34},
+                "pwm_mode": {"position": (1323, -2), "font_size": 26},
+                "shutter_a_sync": {"position": (1425, -2), "font_size": 26},
+                "lock": {"position": (1610, -2), "font_size": 26},
+                "low_voltage": {"position": (1700, -2), "font_size": 26},
+                
+                "cpu_load": {"position": (1780, -2), "font_size": 26},
+                "cpu_temp": {"position": (1860, -2), "font_size": 26},
+                
                 "disk_space": {"position": (10, 1044), "font_size": 34},
                 # Additional elements as needed for layout 0
             },
@@ -53,6 +62,13 @@ class SimpleGUI(threading.Thread):
                 "iso": {"position": (0, -7), "font_size": 51},
                 "shutter_speed": {"position": (10, 80), "font_size": 51},
                 "fps": {"position": (10, 167), "font_size": 51},
+                
+                "exposure_time": {"position": (10, 340), "font_size":34},
+                "pwm_mode": {"position": (10, 427), "font_size": 34},
+                "shutter_a_sync": {"position": (10, 495), "font_size": 34},
+                "lock": {"position": (10, 619), "font_size": 34},
+                "low_voltage": {"position": (10, 680), "font_size": 34},
+                
                 "cpu_load": {"position": (1780, -2), "font_size": 26},
                 "cpu_temp": {"position": (1860, -2), "font_size": 26},
                 "disk_space": {"position": (10, 1044), "font_size": 34},
@@ -73,6 +89,26 @@ class SimpleGUI(threading.Thread):
                 "normal": "white",
                 "inverse": "black"
             },
+            "exposure_time": {
+                "normal": "white",
+                "inverse": "black"
+            },
+            "pwm_mode": {
+                "normal": "lightgreen",
+                "inverse": "black"
+            },
+            "shutter_a_sync": {
+                "normal": "white",
+                "inverse": "black"
+            },
+            "lock": {
+                "normal": (255,0,0,255),
+                "inverse": "black"
+            },
+            "low_voltage": {
+                "normal": "yellow",
+                "inverse": "black"
+            },
             "cpu_load": {
                 "normal": "white",
                 "inverse": "black"
@@ -85,8 +121,8 @@ class SimpleGUI(threading.Thread):
                 "normal": "white",
                 "inverse": "black"
             },
-            # Add more color configurations as needed
         }
+        
         self.fb = None
         self.disp_width = self.disp_height = 0
         self.current_layout = 0  # Default layout; can be changed dynamically
@@ -96,9 +132,38 @@ class SimpleGUI(threading.Thread):
             "iso": self.redis_controller.get_value("iso"),
             "shutter_speed": str(self.redis_controller.get_value('shutter_a')).replace('.0', ''),
             "fps": int(self.cinepi_controller.fps_actual),
+            
+            "exposure_time": str(self.cinepi_controller.exposure_time_fractions),
+            
             "cpu_load": str(psutil.cpu_percent()) + '%',
             "cpu_temp": ('{}\u00B0C'.format(int(CPUTemperature().temperature))),
         }
+        
+        if self.cinepi_controller.fps_double == True:
+            self.colors["fps"]["normal"] = "lightgreen"
+            
+        if self.cinepi_controller.pwm_mode == True:
+            values["pwm_mode"] = "PWM"
+            self.colors["shutter_speed"]["normal"] = "lightgreen"
+            self.colors["fps"]["normal"] = "lightgreen"
+        elif self.cinepi_controller.pwm_mode == False:
+            values["pwm_mode"] = ""
+            
+        if self.cinepi_controller.shutter_a_sync == True:
+            values["shutter_a_sync"] = f"SYNC   /  {self.cinepi_controller.shutter_a_nom}"
+        elif  self.cinepi_controller.shutter_a_sync == False:
+            values["shutter_a_sync"] = ""
+            
+        if self.cinepi_controller.parameters_lock == True:
+            values["lock"] = "LOCK"
+        elif  self.cinepi_controller.shutter_a_sync == False:
+            values["lock"] = ""
+            
+        if self.dmesg_monitor.undervoltage_flag == True:
+            values["low_voltage"] = "VOLTAGE"
+        elif  self.dmesg_monitor.undervoltage_flag == False:
+            values["low_voltage"] = ""
+        
         if self.ssd_monitor.last_space_left and self.ssd_monitor.disk_mounted:
             min_left = round(int((self.ssd_monitor.last_space_left * 1000) / (self.cinepi_controller.file_size * float(self.cinepi_controller.fps_actual) * 60)), 0)
             values["disk_space"] = f"{min_left} MIN"
@@ -133,7 +198,8 @@ class SimpleGUI(threading.Thread):
         lock_mapping = {
             "iso": "iso_lock",
             "shutter_speed": "shutter_a_nom_lock",
-            "fps": "fps_lock"
+            "fps": "fps_lock",
+            "exposure_time": "shutter_a_sync"
             }
 
         # For dynamic boxes around specific elements
@@ -157,7 +223,10 @@ class SimpleGUI(threading.Thread):
             # Check if the corresponding _lock variable for the element is True
             if element in lock_mapping and getattr(self.cinepi_controller, lock_mapping[element]):
                 self.draw_rounded_box(draw, value, position, font_size, 5, "black", "white", image)
-
+                
+            
+            #draw.text(600, -7, str(pisugar.get_battery_level()), font=font, fill=color)
+        
         self.fb.show(image)
         
     def draw_rounded_box(self, draw, text, position, font_size, padding, text_color, fill_color, image):

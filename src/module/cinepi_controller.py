@@ -174,6 +174,7 @@ class CinePiController:
                 self.redis_controller.set_value('width', str(width_value))
                 self.redis_controller.set_value('value', str(value))
                 self.redis_controller.set_value('gui_layout', str(gui_layout_value))
+                self.redis_controller.set_value('sensor_mode', str(value))
                 self.redis_controller.set_value('cam_init', 1)
 
                 # Update local attributes
@@ -438,18 +439,23 @@ class CinePiController:
             logging.info(f"Restarting camera")
         
     def set_shutter_a_sync(self, value=None):
-        if value is not None:
+        if value is None:
+            # Toggle the current state if no value is provided
+            self.shutter_a_sync = not self.shutter_a_sync
+        else:
+            # Set based on the provided value
             if value in (0, False):
                 self.shutter_a_sync = False
-                self.exposure_time_saved = self.exposure_time_s
-                self.set_shutter_a_nom(float(self.redis_controller.get_value('shutter_a_nom')))
             elif value in (1, True):
-                self.shutter_a_sync = False
-                self.exposure_time_saved = self.exposure_time_s
-                self.set_shutter_a_nom(float(self.redis_controller.get_value('shutter_a_nom')))
+                self.shutter_a_sync = True
             else:
                 raise ValueError("Invalid value. Please provide either 0, 1, True, or False.")
-        logging.info(f"Shutter sync {self.shutter_a_sync}")
+
+        # Perform actions based on the new state of shutter_a_sync
+        self.exposure_time_saved = self.exposure_time_s
+        self.set_shutter_a_nom(float(self.redis_controller.get_value('shutter_a_nom')))
+    
+        logging.info(f"Shutter sync {'enabled' if self.shutter_a_sync else 'disabled'}")
 
     def set_fps_double(self, value=None):
         target_double_state = not self.fps_double if value is None else value in (1, True)

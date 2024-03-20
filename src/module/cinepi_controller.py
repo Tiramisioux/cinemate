@@ -233,7 +233,7 @@ class CinePiController:
         self.exposure_time_s = float(self.redis_controller.get_value('shutter_a'))/360 * 1/self.fps_actual
             
     def set_shutter_a_nom(self, value):
-        if not self.shutter_a_nom_lock:
+        if not self.shutter_a_nom_lock == 1:
             with self.parameters_lock_obj:
                 
                 safe_value = max(1, min(value, 360))

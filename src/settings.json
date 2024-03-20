@@ -30,7 +30,7 @@
 
     "rotary_encoders": [
         {
-          "clk_pin": 19,
+          "clk_pin": 9,
           "dt_pin": 11,
           "button_pin": 10,
           "pull_up": "False",
@@ -59,8 +59,8 @@
             "hold_action": "none"
           },
           "encoder_actions": {
-            "rotate_clockwise": {"method": "inc_shutter_a", "args": []},
-            "rotate_counterclockwise": {"method": "dec_shutter_a", "args": []}
+            "rotate_clockwise": {"method": "inc_shutter_a_nom", "args": []},
+            "rotate_counterclockwise": {"method": "dec_shutter_a_nom", "args": []}
           }
         },
         {

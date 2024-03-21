@@ -1,5 +1,6 @@
 import threading
 import logging
+import socket
 import time
 from sugarpie import pisugar
 
@@ -11,24 +12,37 @@ class BatteryMonitor:
         self._stop_event = threading.Event()
         self._init_battery_monitor()
 
-    def _init_battery_monitor(self):
-        """Initialize battery monitoring by fetching the initial battery level and setting up periodic checks."""
+    def send_battery_command_tcp(self, command, host='127.0.0.1', port=8423, timeout=5):
+        """Send TCP command to the server and get the response."""
         try:
-            # Attempt to get the initial battery level
-            self._update_battery_status()
-            if self.battery_level is not None:
-                self.pisugar_detected = True
-                logging.info("Pisugar detected.")
-                # Start the background thread for periodic battery checks
-                self._start_periodic_check()
+            with socket.create_connection((host, port), timeout=timeout) as sock:
+                sock.sendall(f"{command}\n".encode())
+                response = sock.recv(1024)
+            return response.decode().strip()
+        except socket.timeout:
+            logging.error("Timeout: No response received from the server.")
+            return None
+        except socket.error as e:
+            logging.error(f"Socket error: {e}")
+            return None
         except Exception as e:
-            logging.error(f"Failed to initialize battery monitor: {e}")
+            logging.error(f"An error occurred: {e}")
+            return None
 
     def _update_battery_status(self):
-        """Fetch the current battery level and charging status."""
+        """Fetch the current battery level and charging status using TCP commands."""
         try:
-            self.battery_level = pisugar.battery_level()  # Assuming this is the method to get battery level
-            self.charging = pisugar.is_charging()  # Assuming this is the method to check if charging
+            battery_command = 'get battery'
+            power_plugged_command = 'get battery_power_plugged'
+
+            battery_response = self.send_battery_command_tcp(battery_command)
+            if battery_response:
+                self.battery_level = battery_response.split()[1].split('.')[0]
+
+            power_plugged_response = self.send_battery_command_tcp(power_plugged_command)
+            self.charging = power_plugged_response == 'battery_power_plugged: true'
+            if self.battery_level is not None:
+                self.pisugar_detected = True
         except Exception as e:
             logging.error(f"Error updating battery status: {e}")
 
@@ -38,12 +52,19 @@ class BatteryMonitor:
         thread.start()
 
     def _periodic_check(self):
-        """Periodically check the battery status every 5 seconds."""
+        """Periodically check the battery status every 5 seconds and log the information."""
         while not self._stop_event.is_set():
             self._update_battery_status()
             logging.info(f" Battery level: {self.battery_level}")
             logging.info(f" Battery charging: {self.charging}")
             time.sleep(5)
+
+    def _init_battery_monitor(self):
+        """Initialize battery monitoring by fetching the initial battery level and setting up periodic checks."""
+        self._update_battery_status()
+        if self.pisugar_detected:
+            logging.info("pisugar detected successfully.")
+            self._start_periodic_check()
 
     def stop(self):
         """Stop the periodic check."""

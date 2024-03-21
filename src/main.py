@@ -29,7 +29,8 @@ from module.sensor_detect import SensorDetect
 from module.mediator import Mediator
 from module.dmesg_monitor import DmesgMonitor
 from module.redis_listener import RedisListener
-from module.gpio_input import ComponentInitializer 
+from module.gpio_input import ComponentInitializer
+from module.battery_monitor import BatteryMonitor
 
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
 
@@ -158,6 +159,8 @@ if __name__ == "__main__":
                            serial_handler,
                            dmesg_monitor
                            )
+
+    battery_monitor = BatteryMonitor()
 
     # Log initialization complete message
     logging.info(f"--- initialization complete")

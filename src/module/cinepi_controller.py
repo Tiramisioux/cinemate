@@ -77,7 +77,8 @@ class CinePiController:
         self.file_size = self.sensor_detect.get_file_size(self.current_sensor, self.sensor_mode)
         
         #Set fps array if not defined in 
-        if not fps_steps: self.fps_steps=list(range(1, (self.fps_max + 1)))
+        if not fps_steps: 
+            self.fps_steps=list(range(1, (self.fps_max + 1)))
         
     def set_iso_lock(self, value=None):
         if value is not None:

@@ -10,7 +10,7 @@ import logging
 from sugarpie import pisugar
 
 class SimpleGUI(threading.Thread):
-    def __init__(self, pwm_controller, redis_controller, cinepi_controller, usb_monitor, ssd_monitor, serial_handler, dmesg_monitor):
+    def __init__(self, pwm_controller, redis_controller, cinepi_controller, usb_monitor, ssd_monitor, serial_handler, dmesg_monitor, battery_monitor):
         threading.Thread.__init__(self)
         self.setup_resources()
         self.check_display()
@@ -23,6 +23,7 @@ class SimpleGUI(threading.Thread):
         self.ssd_monitor = ssd_monitor
         self.serial_handler = serial_handler
         self.dmesg_monitor = dmesg_monitor
+        self.battery_monitor = battery_monitor
         
         self.start()
 
@@ -56,6 +57,7 @@ class SimpleGUI(threading.Thread):
                 "cpu_temp": {"position": (1860, -2), "font_size": 26},
                 
                 "disk_space": {"position": (10, 1044), "font_size": 34},
+                "battery_level": {"position": (1830, 1044), "font_size":34},
                 # Additional elements as needed for layout 0
             },
             1: {  # Layout 1
@@ -72,6 +74,7 @@ class SimpleGUI(threading.Thread):
                 "cpu_load": {"position": (1780, -2), "font_size": 26},
                 "cpu_temp": {"position": (1860, -2), "font_size": 26},
                 "disk_space": {"position": (10, 1044), "font_size": 34},
+                "battery_level": {"position": (1830, 1044), "font_size": 34},
                 # Additional elements as needed for layout 1
             }
         }
@@ -121,6 +124,10 @@ class SimpleGUI(threading.Thread):
                 "normal": "white",
                 "inverse": "black"
             },
+            "battery_level": {
+                "normal": "white",
+                "inverse": "black"
+            },
         }
         
         self.fb = None
@@ -137,6 +144,7 @@ class SimpleGUI(threading.Thread):
             
             "cpu_load": str(psutil.cpu_percent()) + '%',
             "cpu_temp": ('{}\u00B0C'.format(int(CPUTemperature().temperature))),
+            
         }
         
         if self.cinepi_controller.fps_double == True:
@@ -161,8 +169,18 @@ class SimpleGUI(threading.Thread):
             
         if self.dmesg_monitor.undervoltage_flag == True:
             values["low_voltage"] = "VOLTAGE"
-        elif  self.dmesg_monitor.undervoltage_flag == False:
+        elif self.dmesg_monitor.undervoltage_flag == False:
             values["low_voltage"] = ""
+            
+        if self.battery_monitor.battery_level != None:
+            values["battery_level"] = str(self.battery_monitor.battery_level) + '%'
+        elif self.battery_monitor.battery_level == None:
+            values["battery_level"] = str("100") + '%'
+            
+        if self.battery_monitor.charging == True:
+            self.colors["battery_level"]["normal"] = "lightgreen"
+        elif self.battery_monitor.charging == False:
+            self.colors["battery_level"]["normal"] = "white"
         
         if self.ssd_monitor.last_space_left and self.ssd_monitor.disk_mounted:
             min_left = round(int((self.ssd_monitor.last_space_left * 1000) / (self.cinepi_controller.file_size * float(self.cinepi_controller.fps_actual) * 60)), 0)
@@ -170,6 +188,7 @@ class SimpleGUI(threading.Thread):
         else:
             values["disk_space"] = "NO DISK"
         return values
+    
 
     def draw_gui(self, values):
         if not self.fb:

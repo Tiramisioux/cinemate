@@ -151,16 +151,19 @@ if __name__ == "__main__":
     
     redis_listener = RedisListener(redis_controller)
     
+    battery_monitor = BatteryMonitor()
+    
     simple_gui = SimpleGUI(pwm_controller, 
                            redis_controller, 
                            cinepi_controller, 
                            usb_monitor, 
                            ssd_monitor, 
                            serial_handler,
-                           dmesg_monitor
+                           dmesg_monitor,
+                           battery_monitor
                            )
 
-    battery_monitor = BatteryMonitor()
+
 
     # Log initialization complete message
     logging.info(f"--- initialization complete")

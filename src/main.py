@@ -29,16 +29,50 @@ from module.sensor_detect import SensorDetect
 from module.mediator import Mediator
 from module.dmesg_monitor import DmesgMonitor
 from module.redis_listener import RedisListener
-from module.gpio_input import ComponentInitializer, SmartButton, SimpleSwitch, RotaryEncoderWithButton 
+from module.gpio_input import ComponentInitializer 
 
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
 
+fps_steps = None
+
 def load_settings(filename):
     with open(filename, 'r') as file:
-        settings = json.load(file)
-        additional_shutter_a_steps = settings.get('additional_shutter_a_steps', [])
-        shutter_a_steps = sorted(set(range(1, 361)).union(additional_shutter_a_steps))
-        settings['shutter_a_steps'] = shutter_a_steps
+        original_settings = json.load(file)
+
+        # Initialize an empty settings dictionary
+        settings = {}
+
+        # Dynamically load settings based on what's available in the JSON file
+        if 'gpio_output' in original_settings:
+            settings['gpio_output'] = original_settings['gpio_output']
+
+        if 'arrays' in original_settings:
+            arrays_settings = original_settings['arrays']
+            fps_steps = arrays_settings.get('fps_steps', list(range(1, 51)))
+            # Ensure fps_steps is a list if it's null in the JSON
+            fps_steps = fps_steps if fps_steps is not None else list(range(1, 51))
+
+            settings['arrays'] = {
+                'iso_steps': arrays_settings.get('iso_steps', []),
+                'shutter_a_steps': sorted(set(range(1, 361)).union(arrays_settings.get('additional_shutter_a_steps', []))),
+                'fps_steps': fps_steps
+            }
+
+        if 'analog_controls' in original_settings:
+            settings['analog_controls'] = original_settings['analog_controls']
+
+        if 'buttons' in original_settings:
+            settings['buttons'] = original_settings['buttons']
+
+        if 'two_way_switches' in original_settings:
+            settings['two_way_switches'] = original_settings['two_way_switches']
+
+        if 'rotary_encoders' in original_settings:
+            settings['rotary_encoders'] = original_settings['rotary_encoders']
+
+        if 'combined_actions' in original_settings:
+            settings['combined_actions'] = original_settings['combined_actions']
+
         return settings
     
 if __name__ == "__main__":
@@ -62,9 +96,6 @@ if __name__ == "__main__":
     # Detect sensor
     sensor_detect = SensorDetect()
     
-    # Instantiate the PWMController
-    pwm_controller = PWMController(sensor_detect, PWM_pin=settings['pwm_pin'])
-
     # Instantiate the CinePi instance
     cinepi_app = CinePi()
 
@@ -73,8 +104,10 @@ if __name__ == "__main__":
     ssd_monitor = SSDMonitor()
     usb_monitor = USBMonitor(ssd_monitor)
     
-    gpio_output = GPIOOutput(rec_out_pin=settings['rec_out_pin'])
+    gpio_output = GPIOOutput(rec_out_pin=settings['gpio_output']['rec_out_pin'])
     
+    pwm_controller = PWMController(sensor_detect, PWM_pin=settings['gpio_output']['pwm_pin'])
+     
     dmesg_monitor = DmesgMonitor("/var/log/kern.log")
     dmesg_monitor.start() 
 
@@ -84,16 +117,19 @@ if __name__ == "__main__":
                                         usb_monitor, 
                                         ssd_monitor,
                                         sensor_detect,
-                                        iso_steps=settings['iso_steps'],
-                                        shutter_a_steps=settings['shutter_a_steps'],
-                                        fps_steps=settings['fps_steps']
+                                        iso_steps=settings['arrays']['iso_steps'],
+                                        shutter_a_steps=settings['arrays']['shutter_a_steps'],
+                                        fps_steps=fps_steps
                                         )
     
     gpio_input = ComponentInitializer(cinepi_controller, settings)
 
-    # Instantiate the AnalogControls component
-    #analog_controls = AnalogControls(cinepi_controller, iso_pot=settings['analog_controls']['iso_pot'], shutter_a_pot=settings['analog_controls']['shutter_a_pot'], fps_pot=settings['analog_controls']['fps_pot'])
-
+    analog_controls = AnalogControls(
+        cinepi_controller,
+        iso_pot=settings['analog_controls']['iso_pot'],
+        shutter_a_pot=settings['analog_controls']['shutter_a_pot'],
+        fps_pot=settings['analog_controls']['fps_pot']
+    )
     # Instantiate the Mediator and pass the components to it
     mediator = Mediator(cinepi_app, redis_controller, usb_monitor, ssd_monitor, gpio_output)
 

@@ -13,17 +13,11 @@ class ComponentInitializer:
         self.initialize_components()
         
     def initialize_components(self):
-        self.logger.info("Initializing components based on loaded settings")
+
         combined_actions = self.settings.get('combined_actions', [])
 
         combined_actions_config = self.settings.get('combined_actions', [])
 
-        for action_config in combined_actions_config:
-            # Assuming 'action' structure is consistent with previous patterns
-            action_method = self.extract_action_method(action_config.get('action'))
-            
-            logging.info(f"Combined Action: Hold Button Pin {action_config['hold_button_pin']}, Action Button Pin {action_config['action_button_pin']}")
-            self.logger.info(f"  Action Type: {action_config['action_type']}, Action: {action_method}")
         # Initialize Buttons
         for button_config in self.settings.get('buttons', []):
             # Extract action methods for each type of button press
@@ -35,14 +29,13 @@ class ComponentInitializer:
             
             # Example of logging the extracted methods
             self.logger.info(f"Button on pin {button_config['pin']}:")
-            self.logger.info(f"  Press: {press_action_method}")
-            self.logger.info(f"  Single Click: {single_click_action_method}")
-            self.logger.info(f"  Double Click: {double_click_action_method}")
-            self.logger.info(f"  Triple Click: {triple_click_action_method}")
-            self.logger.info(f"  Hold: {hold_action_method}")
+            if not "None" in str(press_action_method): self.logger.info(f"  Press: {press_action_method}")
+            if not "None" in str(single_click_action_method): self.logger.info(f"  Single Click: {single_click_action_method}")
+            if not "None" in str(double_click_action_method): self.logger.info(f"  Double Click: {double_click_action_method}")
+            if not "None" in str(triple_click_action_method): self.logger.info(f"  Triple Click: {triple_click_action_method}")
+            if not "None" in str(hold_action_method): self.logger.info(f"  Hold: {hold_action_method}")
             
-            self.logger.info(f"Initializing button on pin {button_config['pin']}")
-            actions_desc = self._describe_actions(button_config)
+            #actions_desc = self._describe_actions(button_config)
 
             SmartButton(cinepi_controller=self.cinepi_controller,
                         pin=button_config['pin'],
@@ -59,8 +52,8 @@ class ComponentInitializer:
             state_off_action_method = self.extract_action_method(switch_config.get('state_off_action'))
             
             self.logger.info(f"Two-way switch on pin {switch_config['pin']}:")
-            self.logger.info(f"  State ON action: {state_on_action_method}")
-            self.logger.info(f"  State OFF action: {state_off_action_method}")
+            if not "None" in str(state_on_action_method): self.logger.info(f"  State ON action: {state_on_action_method}")
+            if not "None" in str(state_off_action_method): self.logger.info(f"  State OFF action: {state_off_action_method}")
             
             actions_desc = self._describe_actions(button_config)
 
@@ -83,14 +76,15 @@ class ComponentInitializer:
             rotate_cw_action_method = self.extract_action_method(encoder_actions.get('rotate_clockwise'))
             rotate_ccw_action_method = self.extract_action_method(encoder_actions.get('rotate_counterclockwise'))
             
-            self.logger.info(f"Rotary Encoder with Button on CLK Pin: {encoder_config['clk_pin']}, DT Pin: {encoder_config['dt_pin']}")
-            self.logger.info(f"  Rotate Clockwise: {rotate_cw_action_method}")
-            self.logger.info(f"  Rotate CounterClockwise: {rotate_ccw_action_method}")
-            self.logger.info(f"  Press: {press_action_method}")
-            self.logger.info(f"  Single Click: {single_click_action_method}")
-            self.logger.info(f"  Double Click: {double_click_action_method}")
-            self.logger.info(f"  Triple Click: {triple_click_action_method}")
-            self.logger.info(f"  Hold: {hold_action_method}")
+            self.logger.info(f"Rotary Encoder with Button on CLK pin: {encoder_config['clk_pin']}, DT pin: {encoder_config['dt_pin']}")
+            if not "None" in str(rotate_cw_action_method): self.logger.info(f"  Rotate Clockwise: {rotate_cw_action_method}")
+            if not "None" in str(rotate_ccw_action_method): self.logger.info(f"  Rotate CounterClockwise: {rotate_ccw_action_method}")
+            if not "None" in str(press_action_method): self.logger.info(f"  Press: {press_action_method}")
+            if not "None" in str(single_click_action_method): self.logger.info(f"  Single Click: {single_click_action_method}")
+            if not "None" in str(double_click_action_method): self.logger.info(f"  Double Click: {double_click_action_method}")
+            if not "None" in str(triple_click_action_method): self.logger.info(f"  Triple Click: {triple_click_action_method}")
+            if not "None" in str(hold_action_method): self.logger.info(f"  Hold: {hold_action_method}")
+            
 
             RotaryEncoderWithButton(cinepi_controller=self.cinepi_controller,
                                     clk_pin=encoder_config['clk_pin'],
@@ -100,6 +94,12 @@ class ComponentInitializer:
                                     debounce_time=float(encoder_config['debounce_time']),
                                     actions=encoder_config,
                                     button_identifier=str(encoder_config['button_pin']))
+            
+        for action_config in combined_actions_config:
+            action_method = self.extract_action_method(action_config.get('action'))
+            
+            logging.info(f"Combined Action: Hold Button Pin {action_config['hold_button_pin']}, Action Button Pin {action_config['action_button_pin']}")
+            self.logger.info(f"  Action Type: {action_config['action_type']}, Action: {action_method}")
             
     def extract_action_method(self, action_config):
         """Extracts the action method from the action configuration.

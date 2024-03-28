@@ -27,9 +27,9 @@
       "pin": 26,
       "pull_up": "False",
       "debounce_time": "0.1",
-      "press_action": "none",
-      "single_click_action": "none",
-      "double_click_action": "none",
+      "press_action": "rec",
+      "single_click_action": "None",
+      "double_click_action": "None",
       "triple_click_action": {"method": "safe_shutdown"},
       "hold_action": {"method": "unmount"}
     }
@@ -44,9 +44,9 @@
         "debounce_time": "0.05",
         "button_actions": {
           "press_action": {"method": "set_iso_lock"},
-          "single_click_action": "none",
-          "double_click_action": "none",
-          "hold_action": "none"
+          "single_click_action": "None",
+          "double_click_action": "None",
+          "hold_action": "None"
         },
         "encoder_actions": {
           "rotate_clockwise": {"method": "inc_iso", "args": []},
@@ -61,9 +61,9 @@
         "debounce_time": "0.05",
         "button_actions": {
           "press_action": {"method": "set_shutter_a_nom_lock"},
-          "single_click_action": "none",
-          "double_click_action": "none",
-          "hold_action": "none"
+          "single_click_action": "None",
+          "double_click_action": "None",
+          "hold_action": "None"
         },
         "encoder_actions": {
           "rotate_clockwise": {"method": "inc_shutter_a_nom", "args": []},
@@ -78,9 +78,9 @@
         "debounce_time": "0.05",
         "button_actions": {
           "press_action": {"method": "set_fps_lock"},
-          "single_click_action": "none",
-          "double_click_action": "none",
-          "hold_action": "none"
+          "single_click_action": "None",
+          "double_click_action": "None",
+          "hold_action": "None"
         },
         "encoder_actions": {
           "rotate_clockwise": {"method": "inc_fps", "args": []},

@@ -166,4 +166,4 @@ class AnalogControls(threading.Thread):
                     self.update_parameters()
                 time.sleep(0.02)
         except Exception as e:
-            print(f"Error occurred in ManualControls run loop: {e}")
+            logging.error(f"Error occurred in ManualControls run loop: {e}")

@@ -163,8 +163,6 @@ if __name__ == "__main__":
                            battery_monitor
                            )
 
-
-
     # Log initialization complete message
     logging.info(f"--- initialization complete")
 

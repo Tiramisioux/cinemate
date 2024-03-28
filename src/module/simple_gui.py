@@ -175,7 +175,7 @@ class SimpleGUI(threading.Thread):
         if self.battery_monitor.battery_level != None:
             values["battery_level"] = str(self.battery_monitor.battery_level) + '%'
         elif self.battery_monitor.battery_level == None:
-            values["battery_level"] = str("100") + '%'
+            values["battery_level"] = ''
             
         if self.battery_monitor.charging == True:
             self.colors["battery_level"]["normal"] = "lightgreen"

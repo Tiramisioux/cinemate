@@ -34,6 +34,8 @@ class CinePiController:
         self.shutter_a_nom_lock = False
         self.fps_lock = False
         
+        self.all_lock = False
+        
         self.lock_override = False
         
         self.exposure_time_seconds = None
@@ -319,7 +321,7 @@ class CinePiController:
                 # self.exposure_time_saved = self.exposure_time_s
                 self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_s)
                 self.redis_controller.set_value('fps_actual', self.fps_actual)
-       
+    
     def set_shu_fps_lock(self, value=None):
         if value is not None:
             if value in (0, False):
@@ -336,6 +338,30 @@ class CinePiController:
         logging.info(f"Shutter angle lock {self.shutter_a_nom_lock}")
         logging.info(f"FPS lock {self.fps_lock}")
         
+    def set_all_lock(self, value=None):
+        if value is not None:
+            if value in (0, False):
+                self.all_lock = False
+                self.iso_lock = False
+                self.shutter_a_nom_lock = False
+                self.fps_lock = False
+            elif value in (1, True):
+                self.all_lock = True
+                self.iso_lock = True
+                self.shutter_a_nom_lock = True
+                self.fps_lock = True
+            else:
+                raise ValueError("Invalid value. Please provide either 0, 1, True, or False.")
+        else:
+            self.all_lock = not self.all_lock
+            self.iso_lock = not self.iso_lock
+            self.shutter_a_nom_lock = not self.shutter_a_nom_lock
+            self.fps_lock = not self.fps_lock
+            
+        logging.info(f"ISO lock {self.iso}")  
+        logging.info(f"Shutter angle lock {self.shutter_a_nom_lock}")
+        logging.info(f"FPS lock {self.fps_lock}")
+        
     def set_fps_multiplier(self, value):
         with self.parameters_lock_obj:
             self.fps_multiplier = value
@@ -344,6 +370,15 @@ class CinePiController:
     def get_setting(self, key):
         value = self.redis_controller.get_value(key)
         return value
+    
+    def reboot(self):
+        # First, stop any ongoing operations, like recording
+        if self.redis_controller.get_value('is_recording') == "1":
+            self.stop_recording()
+        
+        # Now, initiate safe shutdown
+        logging.info("Initiating safe system shutdown.")
+        os.system("sudo reboot")
         
     def safe_shutdown(self):
         # First, stop any ongoing operations, like recording

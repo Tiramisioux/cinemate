@@ -14,25 +14,47 @@ class CommandExecutor(threading.Thread):
         # Define dictionary of available commands and their associated functions along with expected argument type.
         # This allows for dynamic command calling
         self.commands = {
-            'rec': (cinepi_controller.rec, None),  # Record command  
-            'stop': (cinepi_controller.rec, None),  # Stop command 
-            'set_iso': (cinepi_controller.set_iso, int),  # ISO setting command 
-            'set_shutter_a': (cinepi_controller.set_shutter_a, float),  # Shutter_a setting command
-            'set_shutter_a_nom': (cinepi_controller.set_shutter_a_nom, float),  # Shutter_a_nom setting command  
-            'set_fps': (cinepi_controller.set_fps, int),  # FPS setting command 
-            'set_resolution': (cinepi_controller.set_resolution, [int, None]),  # Resolution setting command 
-            'unmount': (cinepi_controller.unmount, None),  # Unmount command
-            'time': (self.display_time, None),  # Time display command
-            'set_rtc_time': (self.set_rtc_time, None),  # RTC time setting command
-            'space': (cinepi_controller.ssd_monitor.output_ssd_space_left, None),  # SSD space left command
+            'rec': (cinepi_controller.rec, None),            
+            'stop': (cinepi_controller.rec, None), 
+                     
+            'set_iso': (cinepi_controller.set_iso, int),     
+            'inc_iso': (cinepi_controller.inc_iso, None),  
+            'dec_iso': (cinepi_controller.dec_iso, None),     
+              
+            'set_shutter_a': (cinepi_controller.set_shutter_a, float), 
+            'inc_shutter_a': (cinepi_controller.inc_shutter_a, None),  
+            'dec_shutter_a': (cinepi_controller.dec_shutter_a, None), 
+             
+            'set_shutter_a_nom': (cinepi_controller.set_shutter_a_nom, float),   
+            'inc_shutter_a_nom': (cinepi_controller.inc_shutter_a_nom, None),  
+            'dec_shutter_a_nom': (cinepi_controller.dec_shutter_a_nom, None), 
+                                   
+            'set_fps': (cinepi_controller.set_fps, int),  
+            'inc_fps': (cinepi_controller.inc_fps, None),  
+            'dec_shutter_fps': (cinepi_controller.dec_fps, None), 
+            
+            'set_resolution': (cinepi_controller.set_resolution, [int, None]), 
+             
+            'unmount': (cinepi_controller.unmount, None),  
+            'time': (self.display_time, None),  
+            'set_rtc_time': (self.set_rtc_time, None),  
+            'space': (cinepi_controller.ssd_monitor.output_ssd_space_left, None),  
             'get': (cinepi_controller.print_settings, None),
-            'set_pwm_mode': (cinepi_controller.set_pwm_mode, [int, None]),  # Ramp mode command
-            'set_shutter_a_sync': (cinepi_controller.set_shutter_a_sync, [int, None]),  # Sync shutter to fps
+            
+            'set_pwm_mode': (cinepi_controller.set_pwm_mode, [int, None]),  
+            'set_shutter_a_sync': (cinepi_controller.set_shutter_a_sync, [int, None]),  
+            
             'set_iso_lock': (cinepi_controller.set_iso_lock, [int, None]),
             'set_shutter_a_nom_lock': (cinepi_controller.set_shutter_a_nom_lock, [int, None]),
             'set_shutter_a_nom_fps_lock': (cinepi_controller.set_shu_fps_lock, [int, None]),
             'set_fps_lock': (cinepi_controller.set_fps_lock, [int, None]),
-            'set_fps_double': (cinepi_controller.set_fps_double, [int, None])
+            'set_all_lock': (cinepi_controller.set_all_lock, [int, None]),
+            
+            
+            'set_fps_double': (cinepi_controller.set_fps_double, [int, None]),
+            
+            'reboot': (cinepi_controller.reboot, None),
+            'shutdown': (cinepi_controller.safe_shutdown, None)
         }
 
     def is_valid_arg(self, arg, expected_type):

@@ -1,0 +1,93 @@
+{   "pwm_pin": 19,
+    "rec_out_pin": [6, 21],
+    "iso_steps": [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200],
+    "additional_shutter_a_steps": [172.8, 346.6],
+    "fps_steps": null,
+    "analog_controls": {
+    "iso_pot": "A0",
+    "shutter_a_pot": "A2",
+    "fps_pot": "A4"
+    },
+
+    "buttons": [
+      {
+        "pin": 4,
+        "pull_up": "False",
+        "debounce_time": "0.1",
+        "press_action": {"method": "rec"}
+      },
+      {
+        "pin": 26,
+        "pull_up": "False",
+        "debounce_time": "0.1",
+        "press_action": "none",
+        "single_click_action": "none",
+        "double_click_action": "none",
+        "triple_click_action": {"method": "safe_shutdown"},
+        "hold_action": {"method": "unmount"}
+      }
+    ],
+
+    "rotary_encoders": [
+        {
+          "clk_pin": 9,
+          "dt_pin": 11,
+          "button_pin": 10,
+          "pull_up": "False",
+          "debounce_time": "0.05",
+          "button_actions": {
+            "press_action": {"method": "set_iso_lock"},
+            "single_click_action": "none",
+            "double_click_action": "none",
+            "hold_action": "none"
+          },
+          "encoder_actions": {
+            "rotate_clockwise": {"method": "inc_iso", "args": []},
+            "rotate_counterclockwise": {"method": "dec_iso", "args": []}
+          }
+        },
+        {
+          "clk_pin": 23,
+          "dt_pin": 25,
+          "button_pin": 24,
+          "pull_up": "False",
+          "debounce_time": "0.05",
+          "button_actions": {
+            "press_action": {"method": "set_shutter_a_nom_lock"},
+            "single_click_action": "none",
+            "double_click_action": "none",
+            "hold_action": "none"
+          },
+          "encoder_actions": {
+            "rotate_clockwise": {"method": "inc_shutter_a_nom", "args": []},
+            "rotate_counterclockwise": {"method": "dec_shutter_a_nom", "args": []}
+          }
+        },
+        {
+          "clk_pin": 7,
+          "dt_pin": 8,
+          "button_pin": 1,
+          "pull_up": "False",
+          "debounce_time": "0.05",
+          "button_actions": {
+            "press_action": {"method": "set_fps_lock"},
+            "single_click_action": "none",
+            "double_click_action": "none",
+            "hold_action": "none"
+          },
+          "encoder_actions": {
+            "rotate_clockwise": {"method": "inc_fps", "args": []},
+            "rotate_counterclockwise": {"method": "dec_fps", "args": []}
+          }
+        }
+      ],
+
+    "combined_actions": [
+      {
+        "hold_button_pin": 24,
+        "action_button_pin": 26,
+        "action_type": "press",
+        "action": {"method": "set_resolution"}
+      }
+    ]
+  }

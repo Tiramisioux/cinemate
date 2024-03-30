@@ -244,7 +244,7 @@ Setup buttons with actions for different interactions:
 
     "buttons": [
     {
-        "pin": 4,
+        "pin": 5,
         "pull_up": "False",
         "debounce_time": "0.1",
         "press_action": {"method": "rec"}
@@ -270,9 +270,10 @@ Two-way switches are configured in the two_way_switches section and have actions
 
     "two_way_switches": [
     {
-        "pin": 24,
-        "state_on_action": {"method": "set_pwm_mode", "args": [true]},
-        "state_off_action": {"method": "set_pwm_mode", "args": [false]}
+        "pin": 16,
+        "state_on_action": {"method": "set_shutter_a_sync", "args": [false]},
+        "state_off_action": {"method": "set_shutter_a_sync", "args": [true]}
+      },
     }
     ]
 
@@ -280,15 +281,21 @@ Two-way switches are configured in the two_way_switches section and have actions
 Configure rotary encoders for settings adjustments and optional button presses:
 
     "rotary_encoders": [
-    {
-        "clk_pin": 12,
-        "dt_pin": 13,
-        "button_pin": "None",
+      {
+        "clk_pin": 9,
+        "dt_pin": 11,
+        "button_pin": 10,
         "pull_up": "False",
         "debounce_time": "0.05",
+        "button_actions": {
+          "press_action": "None",
+          "single_click_action": {"method": "set_iso_lock"},
+          "double_click_action": "None",
+          "hold_action": "None"
+        },
         "encoder_actions": {
-        "rotate_clockwise": {"method": "inc_iso"},
-        "rotate_counterclockwise": {"method": "dec_iso"}
+          "rotate_clockwise": {"method": "inc_iso", "args": []},
+          "rotate_counterclockwise": {"method": "dec_iso", "args": []}
         }
     }
     ]
@@ -302,12 +309,11 @@ Set up interactions involving multiple inputs:
 
     "combined_actions": [
     {
-        "hold_button_pin": 5,
-        "action_button_pin": 26,
-        "action_type": "press",
-        "action": {"method": "combine"}
+      "hold_button_pin": 13,
+      "action_button_pin": 26,
+      "action_type": "press",
+      "action": {"method": "set_shutter_a_sync"}
     }
-    ]
 
 Combined actions allow for complex interactions involving multiple buttons or switches:
 

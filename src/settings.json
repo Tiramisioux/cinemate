@@ -18,18 +18,36 @@
 
   "buttons": [
     {
-      "pin": 4,
+      "pin": 5,
       "pull_up": "False",
       "debounce_time": "0.1",
       "press_action": {"method": "rec"}
     },
     {
+      "pin": 17,
+      "pull_up": "False",
+      "debounce_time": "0.1",
+      "press_action": {"method": "inc_iso"}
+    },
+    {
+      "pin": 14,
+      "pull_up": "False",
+      "debounce_time": "0.1",
+      "press_action": {"method": "dec_iso"}
+    },
+    {
+      "pin": 12,
+      "pull_up": "False",
+      "debounce_time": "0.1",
+      "press_action": {"method": "set_fps_double"}
+    },
+    {
       "pin": 26,
       "pull_up": "False",
       "debounce_time": "0.1",
-      "press_action": "rec",
-      "single_click_action": "None",
-      "double_click_action": "None",
+      "press_action": "None",
+      "single_click_action": {"method": "set_resolution"},
+      "double_click_action": {"method": "reboot"},
       "triple_click_action": {"method": "safe_shutdown"},
       "hold_action": {"method": "unmount"}
     }
@@ -43,8 +61,8 @@
         "pull_up": "False",
         "debounce_time": "0.05",
         "button_actions": {
-          "press_action": {"method": "set_iso_lock"},
-          "single_click_action": "None",
+          "press_action": "None",
+          "single_click_action": {"method": "set_iso_lock"},
           "double_click_action": "None",
           "hold_action": "None"
         },
@@ -56,12 +74,12 @@
       {
         "clk_pin": 23,
         "dt_pin": 25,
-        "button_pin": 24,
+        "button_pin": 13,
         "pull_up": "False",
         "debounce_time": "0.05",
         "button_actions": {
-          "press_action": {"method": "set_shutter_a_nom_lock"},
-          "single_click_action": "None",
+          "press_action": "None",
+          "single_click_action": {"method": "set_shutter_a_nom_lock"},
           "double_click_action": "None",
           "hold_action": "None"
         },
@@ -73,12 +91,12 @@
       {
         "clk_pin": 7,
         "dt_pin": 8,
-        "button_pin": 1,
+        "button_pin": 20,
         "pull_up": "False",
         "debounce_time": "0.05",
         "button_actions": {
-          "press_action": {"method": "set_fps_lock"},
-          "single_click_action": "None",
+          "press_action": "None",
+          "single_click_action": {"method": "set_fps_lock"},
           "double_click_action": "None",
           "hold_action": "None"
         },
@@ -89,12 +107,42 @@
       }
     ],
 
+    "two_way_switches": [
+      {
+          "pin": 24,
+          "state_on_action": {"method": "set_shutter_a_nom_fps_lock", "args": [false]},
+          "state_off_action": {"method": "set_shutter_a_nom_fps_lock", "args": [true]}
+      },
+      {
+        "pin": 16,
+        "state_on_action": {"method": "set_shutter_a_sync", "args": [false]},
+        "state_off_action": {"method": "set_shutter_a_sync", "args": [true]}
+      },
+      {
+        "pin": 22,
+        "state_on_action": {"method": "set_pwm_mode", "args": [false]},
+        "state_off_action": {"method": "set_pwm_mode", "args": [true]}
+      }
+    ],
+
   "combined_actions": [
     {
-      "hold_button_pin": 24,
+      "hold_button_pin": 10,
       "action_button_pin": 26,
       "action_type": "press",
-      "action": {"method": "set_resolution"}
+      "action": {"method": "set_pwm_mode"}
+    },
+    {
+      "hold_button_pin": 13,
+      "action_button_pin": 26,
+      "action_type": "press",
+      "action": {"method": "set_shutter_a_sync"}
+    },
+    {
+      "hold_button_pin": 20,
+      "action_button_pin": 26,
+      "action_type": "press",
+      "action": {"method": "set_fps_double"}
     }
   ]
 }

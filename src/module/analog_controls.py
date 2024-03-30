@@ -51,14 +51,14 @@ class AnalogControls(threading.Thread):
             self.last_shutter_a = 0
             self.last_fps = 0
             self.last_fps_set = 0
-            logging.info(f"  A0: {self.adc.read(0)}")
-            logging.info(f"  A1: {self.adc.read(1)}")
-            logging.info(f"  A2: {self.adc.read(2)}")
-            logging.info(f"  A3: {self.adc.read(3)}")
-            logging.info(f"  A4: {self.adc.read(4)}")
-            logging.info(f"  A5: {self.adc.read(5)}")
-            logging.info(f"  A6: {self.adc.read(6)}")
-            logging.info(f"  A7: {self.adc.read(7)}")
+            logging.debug(f"  A0: {self.adc.read(0)}")
+            logging.debug(f"  A1: {self.adc.read(1)}")
+            logging.debug(f"  A2: {self.adc.read(2)}")
+            logging.debug(f"  A3: {self.adc.read(3)}")
+            logging.debug(f"  A4: {self.adc.read(4)}")
+            logging.debug(f"  A5: {self.adc.read(5)}")
+            logging.debug(f"  A6: {self.adc.read(6)}")
+            logging.debug(f"  A7: {self.adc.read(7)}")
         
             self.update_parameters()
         

@@ -1,0 +1,148 @@
+{   
+  "gpio_output": {
+    "pwm_pin": 19,
+    "rec_out_pin": [6, 21]
+    },
+
+  "arrays": {
+    "iso_steps": [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200],
+    "additional_shutter_a_steps": [172.8, 346.6],
+    "fps_steps": null
+  },
+
+  "analog_controls": {
+    "iso_pot": 0,
+    "shutter_a_pot": 2,
+    "fps_pot": 4
+  },
+
+  "buttons": [
+    {
+      "pin": 5,
+      "pull_up": "False",
+      "debounce_time": "0.1",
+      "press_action": {"method": "rec"}
+    },
+    {
+      "pin": 17,
+      "pull_up": "False",
+      "debounce_time": "0.1",
+      "press_action": {"method": "inc_iso"}
+    },
+    {
+      "pin": 14,
+      "pull_up": "False",
+      "debounce_time": "0.1",
+      "press_action": {"method": "dec_iso"}
+    },
+    {
+      "pin": 12,
+      "pull_up": "False",
+      "debounce_time": "0.1",
+      "press_action": {"method": "set_fps_double"}
+    },
+    {
+      "pin": 26,
+      "pull_up": "False",
+      "debounce_time": "0.1",
+      "press_action": "None",
+      "single_click_action": {"method": "set_resolution"},
+      "double_click_action": {"method": "reboot"},
+      "triple_click_action": {"method": "safe_shutdown"},
+      "hold_action": {"method": "unmount"}
+    }
+  ],
+
+  "rotary_encoders": [
+      {
+        "clk_pin": 9,
+        "dt_pin": 11,
+        "button_pin": 10,
+        "pull_up": "False",
+        "debounce_time": "0.05",
+        "button_actions": {
+          "press_action": "None",
+          "single_click_action": {"method": "set_iso_lock"},
+          "double_click_action": "None",
+          "hold_action": "None"
+        },
+        "encoder_actions": {
+          "rotate_clockwise": {"method": "inc_iso", "args": []},
+          "rotate_counterclockwise": {"method": "dec_iso", "args": []}
+        }
+      },
+      {
+        "clk_pin": 23,
+        "dt_pin": 25,
+        "button_pin": 13,
+        "pull_up": "False",
+        "debounce_time": "0.05",
+        "button_actions": {
+          "press_action": "None",
+          "single_click_action": {"method": "set_shutter_a_nom_lock"},
+          "double_click_action": "None",
+          "hold_action": "None"
+        },
+        "encoder_actions": {
+          "rotate_clockwise": {"method": "inc_shutter_a_nom", "args": []},
+          "rotate_counterclockwise": {"method": "dec_shutter_a_nom", "args": []}
+        }
+      },
+      {
+        "clk_pin": 7,
+        "dt_pin": 8,
+        "button_pin": 20,
+        "pull_up": "False",
+        "debounce_time": "0.05",
+        "button_actions": {
+          "press_action": "None",
+          "single_click_action": {"method": "set_fps_lock"},
+          "double_click_action": "None",
+          "hold_action": "None"
+        },
+        "encoder_actions": {
+          "rotate_clockwise": {"method": "inc_fps", "args": []},
+          "rotate_counterclockwise": {"method": "dec_fps", "args": []}
+        }
+      }
+    ],
+
+    "two_way_switches": [
+      {
+          "pin": 24,
+          "state_on_action": {"method": "set_shutter_a_nom_fps_lock", "args": [false]},
+          "state_off_action": {"method": "set_shutter_a_nom_fps_lock", "args": [true]}
+      },
+      {
+        "pin": 16,
+        "state_on_action": {"method": "set_shutter_a_sync", "args": [false]},
+        "state_off_action": {"method": "set_shutter_a_sync", "args": [true]}
+      },
+      {
+        "pin": 22,
+        "state_on_action": {"method": "set_pwm_mode", "args": [false]},
+        "state_off_action": {"method": "set_pwm_mode", "args": [true]}
+      }
+    ],
+
+  "combined_actions": [
+    {
+      "hold_button_pin": 10,
+      "action_button_pin": 26,
+      "action_type": "press",
+      "action": {"method": "set_pwm_mode"}
+    },
+    {
+      "hold_button_pin": 13,
+      "action_button_pin": 26,
+      "action_type": "press",
+      "action": {"method": "set_shutter_a_sync"}
+    },
+    {
+      "hold_button_pin": 20,
+      "action_button_pin": 26,
+      "action_type": "press",
+      "action": {"method": "set_fps_double"}
+    }
+  ]
+}

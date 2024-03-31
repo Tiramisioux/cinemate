@@ -358,7 +358,7 @@ class CinePiController:
             self.shutter_a_nom_lock = not self.shutter_a_nom_lock
             self.fps_lock = not self.fps_lock
             
-        logging.info(f"ISO lock {self.iso}")  
+        logging.info(f"ISO lock {self.iso_lock}")  
         logging.info(f"Shutter angle lock {self.shutter_a_nom_lock}")
         logging.info(f"FPS lock {self.fps_lock}")
         

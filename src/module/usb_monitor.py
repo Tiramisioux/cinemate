@@ -87,6 +87,7 @@ class USBDriveMonitor:
                     time.sleep(1)
             elif device.action == 'remove':
                 self.ssd_monitor.update_on_remove("Detected USB disconnection.")
+                self.ssd_monitor.on_ssd_removed()
 
 class USBMonitor():
     def __init__(self, ssd_monitor):
@@ -294,3 +295,4 @@ class USBMonitor():
     def monitor_devices(self):
         observer = pyudev.MonitorObserver(self.monitor, self.device_event)
         observer.start()
+        

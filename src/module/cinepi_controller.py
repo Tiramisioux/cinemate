@@ -126,7 +126,7 @@ class CinePiController:
             self.stop_recording()
             
     def start_recording(self):
-        if self.ssd_monitor.disk_mounted == True and self.ssd_monitor.disk_mounted:
+        if self.ssd_monitor.disk_mounted == True and self.ssd_monitor.last_space_left:
             self.redis_controller.set_value('is_recording', 1)
             # if self.usb_monitor.usb_mic:
             #     self.audio_recorder.start_recording()

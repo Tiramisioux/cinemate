@@ -12,7 +12,7 @@ GPIO.setmode(GPIO.BCM)
 
 from module.redis_controller import RedisController
 from module.cinepi_app import CinePi
-from module.usb_monitor import USBMonitor
+from module.usb_monitor import USBMonitor, USBDriveMonitor
 from module.ssd_monitor import SSDMonitor
 from module.gpio_output import GPIOOutput
 from module.cinepi_controller import CinePiController
@@ -31,6 +31,7 @@ from module.dmesg_monitor import DmesgMonitor
 from module.redis_listener import RedisListener
 from module.gpio_input import ComponentInitializer
 from module.battery_monitor import BatteryMonitor
+
 
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
 
@@ -104,6 +105,9 @@ if __name__ == "__main__":
     redis_controller = RedisController()
     ssd_monitor = SSDMonitor()
     usb_monitor = USBMonitor(ssd_monitor)
+    
+    usb_drive_monitor = USBDriveMonitor(ssd_monitor=ssd_monitor)
+    threading.Thread(target=usb_drive_monitor.start_monitoring, daemon=True).start()
     
     gpio_output = GPIOOutput(rec_out_pin=settings['gpio_output']['rec_out_pin'])
     

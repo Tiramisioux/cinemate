@@ -40,6 +40,7 @@ Use simple buttons to the Pi for basic camera operation.
 
 Rec light LED can be connected to pins 6 and 21. 
 
+
 | :exclamation:  When connecting an LED to the GPIOs, be sure to use a resistor   |
 |-----------------------------------------|
 
@@ -177,7 +178,6 @@ Commands are also possible to send to the Pi via USB serial.
 
 ## Customizing camera functions and GPIO settings
 
-
 The settings file can be found in `cinemate/src/settings.json`. Here the user can define their own buttons, switches, rotary encoders and combined actions, modifying the table above.
 
 | :exclamation:  Note that if you update this repo, your setting-file will be overwritten with the latest default CineMate settings file. If you are using a custom settings file, be sure to copy it to somewhere outside of the cinemate folder before updating.   |
@@ -300,6 +300,8 @@ to be added
 to be added
 
 ### Pisugar
+
+## PWM mode (experimental)
 
 ## Adding non-Samsung SSD drives
 

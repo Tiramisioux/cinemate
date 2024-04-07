@@ -27,6 +27,7 @@ class SSDMonitor():
         self.usb_hd_serial = None  # Initialize the attribute
         self.path = '/media/RAW'
         self.disk_mounted = False
+
         self.last_space_left = None
         self.space_decreasing = False
         self.ssd_event = Event()
@@ -44,43 +45,32 @@ class SSDMonitor():
         # Add an attribute to store the DirectoryWatcher instance
         self.directory_watcher = None
         
-        # Load recognized SSD models from the settings file
-        self.recognized_ssds = self.load_ssd_settings("/home/pi/cinemate/src/module/ssd_settings.json")
-        
-    def load_ssd_settings(self, settings_file):
-        """Load SSD settings from the specified JSON file."""
+    def is_usb_mounted_at(self, path):
         try:
-            with open(settings_file, 'r') as file:
-                settings = json.load(file)
-                return settings.get('recognized_ssds', [])
-        except Exception as e:
-            logging.error(f"Failed to load SSD settings: {e}")
-            return []
+            output = subprocess.check_output(['findmnt', '-n', '-o', 'SOURCE', path], stderr=subprocess.STDOUT).decode().strip()
+            if '/dev/sd' in output:
+                self.disk_mounted = True
+                return True
+        except subprocess.CalledProcessError:
+            self.disk_mounted = False
+        
+        return False
     
-    def update(self, action, device_model, device_serial):
-        model_upper = device_model.upper()
-        if action == 'add' and any(ssd_model.upper() in model_upper for ssd_model in self.recognized_ssds):
-            self.usb_hd_serial = device_serial
-            
-            # Check for the existence of the path in a loop until it's mounted or a timeout occurs
-            timeout = 30  # Set a timeout value (adjust as needed)
-            start_time = time.time()
-            while time.time() - start_time < timeout:
-                if os.path.exists(self.path) and os.path.ismount(self.path):
-                    self.disk_mounted = self.path
-                    self.last_space_left = self.get_ssd_space_left()
-                    logging.info(f"SSD mounted at {self.disk_mounted} with model: {device_model}")
-                    logging.info(f"Space left: {self.last_space_left} GB.")
-                    self.on_ssd_added()
-                    return  # Exit the loop if the path is mounted
-                time.sleep(1)  # Sleep for 1 second before checking again
+    def update_on_add(self, device_name, serial):
+        if self.is_usb_mounted_at(self.path):
+            logging.info(f"Device '{device_name}' with serial '{serial}' mounted as 'RAW'.")
+            self.disk_mounted = True
+            self.ssd_event.emit('add', self.path)
+            self.on_ssd_added()
+        else:
+            logging.info(f"Device '{device_name}' with serial '{serial}' connected but not mounted as 'RAW'.")
 
-            logging.info(f"SSD not mounted within the timeout period.")
-            
-        elif action == 'remove' and self.usb_hd_serial and self.usb_hd_serial == device_serial:
-            
-            logging.info(f"USB SSD disconnected: {device_model}")
+    def update_on_remove(self, message):
+        if not self.is_usb_mounted_at(self.path) and self.disk_mounted:
+            logging.info("RAW USB drive unmounted: " + message)
+            self.disk_mounted = False
             self.on_ssd_removed()
+            self.last_space_left = None
         
     def get_mount_point(self, device_path):
         """Get the mount point of the device if mounted, otherwise return None."""
@@ -90,15 +80,6 @@ class SSDMonitor():
                 if parts[0] == device_path:
                     return parts[1]
         return None
-
-    def is_drive_mounted(self):
-        """Check if the drive is mounted and return the mount point or None"""
-        if os.path.exists(self.path) and os.path.ismount(self.path):
-            self.disk_mounted = self.path
-        else:
-            self.disk_mounted = None
-        logging.info(f"SSD mount path {self.disk_mounted}")
-        return self.disk_mounted
 
     def on_ssd_added(self):
         # Start a thread to perform continuous actions on SSD connection
@@ -113,8 +94,6 @@ class SSDMonitor():
 
     def on_ssd_removed(self):
         logging.info("SSD removed.")
-        
-        self.unmount_event.emit()
 
         # Stop the SSD thread actions
         if self._ssd_thread and self._ssd_thread.is_alive():
@@ -132,6 +111,7 @@ class SSDMonitor():
         subprocess.run(["umount", self.path])
         self.is_drive_mounted()
         logging.info("SSD is unmounted!")
+        self.last_space_left = None
         
             
     def handle_write_status_change(self, status):
@@ -179,7 +159,6 @@ class SSDMonitor():
     
 
     def unmount_drive(self):
-
         # Stop the SSD thread actions
         if self._ssd_thread and self._ssd_thread.is_alive():
             logging.info("Setting SSD thread stop event...")
@@ -194,7 +173,7 @@ class SSDMonitor():
 
         logging.info("Dismounting the drive...")
         subprocess.run(["umount", self.path])
-        self.is_drive_mounted()
+        self.last_space_left = None
         logging.info("SSD is unmounted!")
         
         

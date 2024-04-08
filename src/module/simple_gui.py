@@ -57,6 +57,11 @@ class SimpleGUI(threading.Thread):
                 "cpu_temp": {"position": (1860, -2), "font_size": 26},
                 
                 "disk_space": {"position": (10, 1044), "font_size": 34},
+                
+                "mic": {"position": (160, 1050), "font_size": 26},
+                "key": {"position": (250, 1050), "font_size": 26},
+                "serial": {"position": (345, 1050), "font_size": 26},
+                
                 "battery_level": {"position": (1830, 1044), "font_size":34},
                 # Additional elements as needed for layout 0
             },
@@ -74,6 +79,11 @@ class SimpleGUI(threading.Thread):
                 "cpu_load": {"position": (1780, -2), "font_size": 26},
                 "cpu_temp": {"position": (1860, -2), "font_size": 26},
                 "disk_space": {"position": (10, 1044), "font_size": 34},
+                
+                "mic": {"position": (10, 880), "font_size": 26},
+                "key": {"position": (10, 928), "font_size": 26},
+                "serial": {"position": (10, 976), "font_size": 26},
+                
                 "battery_level": {"position": (1830, 1044), "font_size": 34},
                 # Additional elements as needed for layout 1
             }
@@ -124,6 +134,18 @@ class SimpleGUI(threading.Thread):
                 "normal": "white",
                 "inverse": "black"
             },
+            "mic": {
+                "normal": "white",
+                "inverse": "black"
+            },
+            "key": {
+                "normal": "white",
+                "inverse": "black"
+            },
+            "serial": {
+                "normal": "white",
+                "inverse": "black"
+            },
             "battery_level": {
                 "normal": "white",
                 "inverse": "black"
@@ -171,6 +193,26 @@ class SimpleGUI(threading.Thread):
             values["low_voltage"] = "VOLTAGE"
         elif self.dmesg_monitor.undervoltage_flag == False:
             values["low_voltage"] = ""
+            
+        if self.usb_monitor.usb_mic:
+            values["mic"] = "MIC" 
+        else:
+            values["mic"] = ""
+            
+        if self.usb_monitor.usb_keyboard:
+            values["key"] = "KEY" 
+        else:
+            values["key"] = ""  
+        
+        if '/dev/ttyACM0' in self.serial_handler.current_ports:
+            values["serial"] = "SER"
+        else:
+            values["serial"] = ""  
+            
+        # values["mic"] = "MIC" 
+        # values["key"] = "KEY" 
+        # values["serial"] = "SER"
+
             
         if self.battery_monitor.battery_level != None:
             values["battery_level"] = str(self.battery_monitor.battery_level) + '%'

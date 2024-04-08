@@ -3,8 +3,8 @@ import evdev
 import threading
 
 class Keyboard:
-    def __init__(self, controller, usb_monitor):
-        self.controller = controller
+    def __init__(self, cinepi_controller, usb_monitor):
+        self.cinepi_controller = cinepi_controller
         self.usb_monitor = usb_monitor
         self.device = None
         self.listener_running = threading.Event()
@@ -63,15 +63,15 @@ class Keyboard:
 
     def setup_callbacks(self):
         self.key_callbacks = {
-            evdev.ecodes.KEY_1: (self.controller.dec_iso, "1 - dec_iso triggered"),
-            evdev.ecodes.KEY_2: (self.controller.inc_iso, "2 - inc_iso triggered"),
-            evdev.ecodes.KEY_3: (self.controller.dec_shutter_a, "3 - dec_shutter_a triggered"),
-            evdev.ecodes.KEY_4: (self.controller.inc_shutter_a, "4 - inc_shutter_a triggered"),
-            evdev.ecodes.KEY_5: (self.controller.dec_fps, "5 - dec_fps triggered"),
-            evdev.ecodes.KEY_6: (self.controller.inc_fps, "6 - inc_fps triggered"),
-            evdev.ecodes.KEY_8: (self.controller.switch_resolution, "8 - switch_resolution triggered"),
-            evdev.ecodes.KEY_9: (self.controller.unmount_drive, "9 - unmount_drive triggered"),
-            evdev.ecodes.KEY_0: (self.controller.rec_button_pushed, "0 - rec_button_pushed triggered"),
+            evdev.ecodes.KEY_1: (self.cinepi_controller.dec_iso, "1 - dec_iso triggered"),
+            evdev.ecodes.KEY_2: (self.cinepi_controller.inc_iso, "2 - inc_iso triggered"),
+            evdev.ecodes.KEY_3: (self.cinepi_controller.dec_shutter_a, "3 - dec_shutter_a triggered"),
+            evdev.ecodes.KEY_4: (self.cinepi_controller.inc_shutter_a, "4 - inc_shutter_a triggered"),
+            evdev.ecodes.KEY_5: (self.cinepi_controller.dec_fps, "5 - dec_fps triggered"),
+            evdev.ecodes.KEY_6: (self.cinepi_controller.inc_fps, "6 - inc_fps triggered"),
+            evdev.ecodes.KEY_8: (self.cinepi_controller.switch_resolution, "8 - switch_resolution triggered"),
+            evdev.ecodes.KEY_9: (self.cinepi_controller.unmount, "9 - unmount_drive triggered"),
+            evdev.ecodes.KEY_0: (self.cinepi_controller.rec, "0 - rec_button_pushed triggered"),
         }
 
     def handle_zero_key(self):

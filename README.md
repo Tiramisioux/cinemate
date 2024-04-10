@@ -163,7 +163,7 @@ Enable or disable doubling the FPS rate.
 
 | Camera function           | CineMate CLI/USB serial command | arguments                     | GPIO button         | GPIO rotary encoder       | GPIO switch |Grove Base HAT|USB keyboard|
 | ------------------------- | ------------------------------- | ----------------------------- | ------------------- | ------------------------- | ----------- |-----------| -----------|
-| start/stop recording      | `rec`                           | None (toggle control)         | 5                   |                           |             |           | `0`           |
+| start/stop recording      | `rec`                           | None (toggle control)         | 4, 5                   |                           |             |           | `0`           |
 | set iso                   | `set_iso`                       | integer                       |                     | clk 9, dt 11, bu 10       |             |A0          |
 | iso increase              | `inc_iso`                       | \-                            | 17                  |                           |             |            | `1`           |
 | iso decrease              | `dec_iso`                       | \-                            | 14                  |                           |             |            |`2`            |

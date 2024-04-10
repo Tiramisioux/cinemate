@@ -45,7 +45,7 @@ Use simple buttons to the Pi for basic camera operation. To just try out the cam
 
 |Camera function                 |GPIO push button |
 |--------------------------------|-----------------|
-|start/stop recording            |5                |
+|start/stop recording            |4, 5                |
 |increase iso one step           |27               |
 |decrease iso one step           |15               |
 |change resolution               |26 (single click)|
@@ -336,5 +336,51 @@ to be added
     cd cinemate
     git pull origin development
 
+## Updating CineMate while keeping your custom ```settings.json```
+
+To ensure that you can update the cinemate repository on your Raspberry Pi while retaining your custom settings in ```/src/settings.json```, follow these steps:
 
 
+1) Navigate to the CineMate directory and stop any autostarted instance of CineMate.
+
+    ```
+    cd cinemate
+    make stop
+    ```
+
+2) Stash Your Custom Settings File
+
+    Before updating, stash your ```settings.json``` file to prevent it from being overwritten during the update:
+    
+    ```
+    git stash push src/settings.json -m "Saving custom settings.json"
+    ```
+
+3. Pull the Latest Updates
+
+    Pull the latest updates from the development branch of the cinemate repository:
+    
+    ```
+    git pull origin development
+    ```
+
+4. Reapply Your Custom Settings
+    
+    After pulling the updates, reapply your ```settings.json``` file:
+
+    ```
+    git stash pop
+    ```
+
+    If you encounter any merge conflicts with ```settings.json```, Git will notify you. Resolve the conflicts by manually merging the changes, and then commit the resolved version of ```settings.json```.
+
+5. Restart CineMate
+
+    ```
+    cinemate
+    ```
+
+
+Note on Future Updates
+
+It's a good practice to keep a backup of your ```settings.json``` file outside the repository directory. This ensures that you have a copy of your custom settings in case of unexpected changes or merge conflicts.

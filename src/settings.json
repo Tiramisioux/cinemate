@@ -18,6 +18,12 @@
 
   "buttons": [
     {
+      "pin": 4,
+      "pull_up": "False",
+      "debounce_time": "0.1",
+      "press_action": {"method": "rec"}
+    },
+    {
       "pin": 5,
       "pull_up": "False",
       "debounce_time": "0.1",

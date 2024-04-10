@@ -209,9 +209,9 @@ class SimpleGUI(threading.Thread):
         else:
             values["serial"] = ""  
             
-        # values["mic"] = "MIC" 
-        # values["key"] = "KEY" 
-        # values["serial"] = "SER"
+            # values["mic"] = "MIC" 
+            # values["key"] = "KEY" 
+            # values["serial"] = "SER"
 
             
         if self.battery_monitor.battery_level != None:

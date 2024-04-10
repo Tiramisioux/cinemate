@@ -9,11 +9,23 @@ A ready made disk image, with a Bullseye installation + cinepi-raw and CineMate 
 
 Join the CinePi Discord [here](https://discord.gg/Hr4dfhuK).
 
+## Functions
+- Recording and various camera controls with **GPIO**, **USB keyboard** and **USB/GPIO serial**
+- Support for **rotary encoders** 
+- **Simple GUI** on the HDMI display
+- **CineMate CLI** via SSH.
+- System button for **safe shutdown** of the Pi, start-up and unmounting of SSD drive.
+- Support for **Grove Base HAT** for iso, shutter angle and fps controls via potentiometers.
+- Support for **PiSugar** (displays battery status in Simple GUI)
+- Easy user customization of GPIO and camera controls using a settings file.
+- Experimental **PWM mode**, for hardware control of frame rate and shutter speed, allowing for **in-camera speed ramping**
+
 ## Hardware requirements
 - Rasberry Pi 4B
 - Official HQ or GS camera
-- External HDMI monitor
-- Samsung T5/T7 SSD or Samsung Extreme SSD 
+- HDMI monitor
+
+For recording, use a high speed SSD (min 200 MB/s write speed). Samsung T5, T7 and Extreme have been confirmed to work.
 
 ## Installing 
 
@@ -26,7 +38,10 @@ Burn to SD card (> 8 GB) using Raspberry Pi imager or Balena Etcher.
 
 ## Basic build
 
-Use simple buttons to the Pi for basic camera operation.
+Insert the SD card into the Pi, connect camera, HDMI monitor and SSD drive.
+
+Use simple buttons to the Pi for basic camera operation. To just try out the camera functions, you can also just short the GPIOs using a paper clip.
+
 
 |Camera function                 |GPIO push button |
 |--------------------------------|-----------------|
@@ -38,18 +53,11 @@ Use simple buttons to the Pi for basic camera operation.
 |safe shutdown                   |26 (triple click)|
 |unmount SSD                     |26 (hold for 3 seconds)|
 
-Rec light LED can be connected to pins 6 and 21. 
+Rec light LED can be connected to pins 6 or 21. 
 
 
 | :exclamation:  When connecting an LED to the GPIOs, be sure to use a resistor   |
 |-----------------------------------------|
-
-
-||Default legal values (arrays)                      |
-|--------------|---------------------------------------------------|
-|iso           |100, 200, 400, 640, 800, 1200, 1600, 2500 and 3200.|
-|shutter angle |1-360 in one degree increments + 172.8 and 346.6   |
-|fps           |1-50 fps @ 2028x1080, 1-40 fps @ 2028x1520         |
 
 
 |:point_up:  Connect GPIO 26 to GPIO 03 using a jumper wire, and the system button attached to GPIO 26 will also wake up the Pi, after being shutdown.   |
@@ -66,7 +74,6 @@ For controlling iso, shutter angle and frame rate rotary encoders can be used. T
 |set fps                          |7   |8   |20            |
 
 The button also allows for combined actions together with the system button (GPIO 26).
-
 
 ## Simple GUI
 
@@ -85,52 +92,61 @@ Cinemate offers a set of Command-Line Interface (CLI) commands that allow users 
 
 #### Disabling CineMate autostart
 
-CineMate autostarts by default. To disable autostart:
+CineMate autostarts by default. To stop the autostarted instance:
 
     cd cinemate
     make stop
 
-To enable (and start) again
+To enable (and start) again:
 
     cd cinemate
     make start
 
-To run CineMate manually, anywhere in the cli, type
+To disable autostart:
+
+    cd cinemate
+    make uninstall
+
+To enable autostart:
+
+    cd cinemate
+    make install
+
+
+#### Running CineMate manually
+
+Anywhere in the cli, type
 
     cinemate
 
-
-## Trying out camera functions
-
-To start CineMate manually, type `cinemate` anywhere in the cli. This will show a startup sequence and the terminal will now accept the commands from the list below.
+This will show a startup sequence. Terminal will now accept the commands from the list below.
 
 ![CineMate startup sequence](docs/images/cinemate_cli.png)
 
 *Example startup sequence, showing the output from CineMates modules*
 
-
-For extensive logging and troubleshooting, start CineMate using the `cinemate -debug` command.
+For extensive logging and troubleshooting, CineMate can be started using the `cinemate -debug` command.
 
 ## Example CLI commands
 
-**Start/stop recording:**
+Start/stop recording:
 
     > rec
 
-**Set ISO:** Adjust the ISO setting. Requires an integer argument.
+Adjust the ISO setting. Requires an integer argument.
 
     > set_iso 800
 
-**Set Shutter Angle:** Set the shutter angle. Requires a float argument for the angle.
+Set the shutter angle. Requires a float argument for the angle.
 
     > set_shutter_a 172.8
 
-**Set FPS:** Configure the frames per second. Requires an integer argument.
+Configure the frames per second. Requires an integer argument.
 
     > set_fps 24
 
 
-**Lock/unlock iso, shutter angle , fps:** Toggle locks or set them directly. Providing an argument directly sets the value. Omitting the argument will toggle the control.
+Lock/unlock iso, shutter angle or fps: Toggle locks or set them directly. Providing an argument directly sets the value. Omitting the argument will toggle the control.
 
     > set_iso_lock
 
@@ -138,43 +154,51 @@ For extensive logging and troubleshooting, start CineMate using the `cinemate -d
 
     > set_fps_lock
 
-**Double FPS (set_fps_double):** Enable or disable doubling the FPS rate.
-
+Enable or disable doubling the FPS rate. 
     > set_fps_double
     
     > set_fps_double 1
 
 ## Command index
 
-| Camera function           | CineMate CLI/USB serial command | arguments                     | GPIO button         | GPIO rotary encoder       | GPIO switch |Grove Base HAT|
-| ------------------------- | ------------------------------- | ----------------------------- | ------------------- | ------------------------- | ----------- | -----------|
-| start/stop recording      | `rec`                           | None (toggle control)         | 5                   |                           |             |            |
+| Camera function           | CineMate CLI/USB serial command | arguments                     | GPIO button         | GPIO rotary encoder       | GPIO switch |Grove Base HAT|USB keyboard|
+| ------------------------- | ------------------------------- | ----------------------------- | ------------------- | ------------------------- | ----------- |-----------| -----------|
+| start/stop recording      | `rec`                           | None (toggle control)         | 5                   |                           |             |           | `0`           |
 | set iso                   | `set_iso`                       | integer                       |                     | clk 9, dt 11, bu 10       |             |A0          |
-| iso increase              | `inc_iso`                       | \-                            | 17                  |                           |             |            |
-| iso decrease              | `dec_iso`                       | \-                            | 14                  |                           |             |            |
+| iso increase              | `inc_iso`                       | \-                            | 17                  |                           |             |            | `1`           |
+| iso decrease              | `dec_iso`                       | \-                            | 14                  |                           |             |            |`2`            |
 | set shutter angle         | `set_shutter_a_nom`             | float                         |                     | clk 23, dt 25, bu 13      |             |A2          |
-| shu increase 1 deg        | `inc_shutter_a_nom`             | \-                            |                     |                           |             |            |
-| shu decrease 1 deg        | `dec_shutter_a_nom`             | \-                            |                     |                           |             |            |
+| shu increase 1 deg        | `inc_shutter_a_nom`             | \-                            |                     |                           |             |            |`3`            |
+| shu decrease 1 deg        | `dec_shutter_a_nom`             | \-                            |                     |                           |             |            |`4`         |
 | set fps                   | `set_fps`                       | integer                       |                     | clk 7, dt 8, bu 20        |             |A4          |
-| fps increase 1 fps        | `inc_fps`                       | \-                            |                     |                           |             |            |
-| fps decrease 1 fps        | `dec_fps`                       | \-                            |                     |                           |             |            |
-| lock iso                  | `set_iso_lock`                  | 0, 1 or None (toggle control) |                     | 10 (single click)         |             |            |
-| lock shutter angle        | `set_shutter_a_nom_lock`        | 0, 1 or None (toggle control) |                     | 13 (single click)         |             |            |
-| lock fps                  | `set_fps_lock`                  | 0, 1 or None (toggle control) |                     | 20 (single click)         |             |            |
-| lock all controls         | `set_all_lock`                  | 0, 1 or None (toggle control) |                     |                           |             |            |
-| lock shutter angle + fps  | `set_shutter_a_nom_fps_lock`    | 0, 1 or None (toggle control) |                     |                           | 24          |            |
-| sync shutter angle to fps | `set_shutter_a_sync`            | 0, 1 or None (toggle control) |                     | hold 13 + single click 26 | 16          |            |
-| double fps                | `set_fps_double`                | 0, 1 or None (toggle control) | 12                  | hold 20 + single click 26 |             |            |
-| pwm mode                  | `set_pwm_mode`                  | 0, 1 or None (toggle control) |                     | hold 10 + single click 26 | 22          |            |
-| change resolution         | `set_resolution`                | 0, 1 or None (toggle control) | 26 (single click)   |                           |             |            |
-| reboot                    | `reboot`                        | \-                            | 26 (double click)   |                           |             |            |
-| safe shutdown             | `shutdown`                      | \-                            | 26 (triple click)   |                           |             |            |
-| unmount drive             | `unmount`                       | \-                            | 26 (hold for 3 sec) |                           |             |            |
+| fps increase 1 fps        | `inc_fps`                       | \-                            |                     |                           |             |            |`5`            |
+| fps decrease 1 fps        | `dec_fps`                       | \-                            |                     |                           |             |            |`6`            |
+| lock iso                  | `set_iso_lock`                  | 0, 1 or None (toggle control) |                     | 10 (single click)         |             |            |            |
+| lock shutter angle        | `set_shutter_a_nom_lock`        | 0, 1 or None (toggle control) |                     | 13 (single click)         |             |            |            |
+| lock fps                  | `set_fps_lock`                  | 0, 1 or None (toggle control) |                     | 20 (single click)         |             |            |            |
+| lock all controls         | `set_all_lock`                  | 0, 1 or None (toggle control) |                     |                           |             |            |            |
+| lock shutter angle + fps  | `set_shutter_a_nom_fps_lock`    | 0, 1 or None (toggle control) |                     |                           | 24          |            |            |
+| sync shutter angle to fps | `set_shutter_a_sync`            | 0, 1 or None (toggle control) |                     | hold 13 + single click 26 | 16          |            |            |
+| double fps                | `set_fps_double`                | 0, 1 or None (toggle control) | 12                  | hold 20 + single click 26 |             |            |            |
+| pwm mode                  | `set_pwm_mode`                  | 0, 1 or None (toggle control) |                     | hold 10 + single click 26 | 22          |            |            |
+| change resolution         | `set_resolution`                | 0, 1 or None (toggle control) | 26 (single click)   |                           |             |            |`8`            |
+| reboot                    | `reboot`                        | \-                            | 26 (double click)   |                           |             |            |            |
+| safe shutdown             | `shutdown`                      | \-                            | 26 (triple click)   |                           |             |            |            |
+| unmount drive             | `unmount`                       | \-                            | 26 (hold for 3 sec) |                           |             |            |`9`            |
 
 
 This table includes all the available commands (method calls) for the CineMate CLI and the GPIO default settings of `cinemate/src/settings.json`. 
 
 Commands are also possible to send to the Pi via USB serial.
+
+## Default iso, shutter angle and fps arrays
+|Setting|Values                     |
+|--------------|---------------------------------------------------|
+|iso           |100, 200, 400, 640, 800, 1200, 1600, 2500 and 3200.|
+|shutter angle |1-360 in one degree increments + 172.8 and 346.6   |
+|fps           |1-50 fps @ 2028x1080, 1-40 fps @ 2028x1520         |
+
+The arrays can be customized using the settings file (see below).
 
 ## Customizing camera functions and GPIO settings
 

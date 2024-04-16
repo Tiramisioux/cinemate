@@ -3,7 +3,9 @@
 # CineMate – manual controls for cinepi-raw
 CineMate scripts is a way for users to implement and customize manual controls for their [cinepi-raw](https://github.com/cinepi/cinepi-raw) build. 
 
-Project aims at offering an easy way to build a custom camera. For basic operation and experimentation, only Raspberry Pi, camera board and monitor is needed. For practical use, buttons and switches can easily be added, allowing for a custom build.
+Project aims at offering an easy way to build a custom camera. 
+
+For basic operation and experimentation, only Raspberry Pi, camera board and monitor is needed. For practical use, buttons and switches can easily be added, allowing for a custom build.
 
 A ready made disk image, with a Bullseye installation + cinepi-raw and CineMate scripts can be found in the release section of this repo.
 
@@ -38,14 +40,16 @@ Burn to SD card (> 8 GB) using Raspberry Pi imager or Balena Etcher.
 
 ## Basic build
 
-Insert the SD card into the Pi, connect camera, HDMI monitor and SSD drive.
+Insert the SD card into the Pi. Connect camera, HDMI monitor and SSD drive.
 
-Use simple buttons to the Pi for basic camera operation. To just try out the camera functions, you can also just short the GPIOs using a paper clip.
+Connect simple push buttons to the Pi for basic camera operation. 
+
+To just try out the camera functions, you can also short the GPIOs using a paper clip.
 
 
 |Camera function                 |GPIO push button |
 |--------------------------------|-----------------|
-|start/stop recording            |4, 5                |
+|start/stop recording            |4, 5             |
 |increase iso one step           |27               |
 |decrease iso one step           |15               |
 |change resolution               |26 (single click)|
@@ -88,11 +92,11 @@ For SSH:ing to the Pi, use the following credentials:
 
 ## CineMate CLI
 
-Cinemate offers a set of Command-Line Interface (CLI) commands that allow users to control camera settings directly from the terminal. This guide will walk you through how to use these commands effectively, including the optional use of arguments to toggle controls.
+Cinemate offers a set of Command-Line Interface (CLI) commands that allow users to control camera settings directly from the terminal.
 
 #### Disabling CineMate autostart
 
-CineMate autostarts by default. To stop the autostarted instance:
+To stop the autostarted instance:
 
     cd cinemate
     make stop
@@ -155,11 +159,16 @@ Lock/unlock iso, shutter angle or fps: Toggle locks or set them directly. Provid
     > set_fps_lock
 
 Enable or disable doubling the FPS rate. 
+
     > set_fps_double
     
     > set_fps_double 1
 
 ## Command index
+
+This table includes all the available commands (method calls) for the CineMate CLI and the GPIO default settings of `cinemate/src/settings.json`. 
+
+Commands are also possible to send to the Pi via USB serial.
 
 | Camera function           | CineMate CLI/USB serial command | arguments                     | GPIO button         | GPIO rotary encoder       | GPIO switch |Grove Base HAT|USB keyboard|
 | ------------------------- | ------------------------------- | ----------------------------- | ------------------- | ------------------------- | ----------- |-----------| -----------|
@@ -187,10 +196,6 @@ Enable or disable doubling the FPS rate.
 | unmount drive             | `unmount`                       | \-                            | 26 (hold for 3 sec) |                           |             |            |`9`            |
 
 
-This table includes all the available commands (method calls) for the CineMate CLI and the GPIO default settings of `cinemate/src/settings.json`. 
-
-Commands are also possible to send to the Pi via USB serial.
-
 ## Default iso, shutter angle and fps arrays
 |Setting|Values                     |
 |--------------|---------------------------------------------------|
@@ -204,12 +209,6 @@ The arrays can be customized using the settings file (see below).
 
 The settings file can be found in `cinemate/src/settings.json`. Here the user can define their own buttons, switches, rotary encoders and combined actions, modifying the table above.
 
-| :exclamation:  Note that if you update this repo, your setting-file will be overwritten with the latest default CineMate settings file. If you are using a custom settings file, be sure to copy it to somewhere outside of the cinemate folder before updating.   |
-|-----------------------------------------|
-
-
-
-
 ### General Settings
 Define your hardware setup and desired application behavior:
 
@@ -222,7 +221,7 @@ Define your hardware setup and desired application behavior:
     }
 
 ### Analog Controls
-Map physical controls to their functions in the application:
+Map Grove Base HAT ADC channels to iso, shutter angle and fps controls:
 
     "analog_controls": {
     "iso_pot": "A0",
@@ -336,10 +335,12 @@ to be added
     cd cinemate
     git pull origin development
 
+| :exclamation:  Note that if you update this repo, your setting-file will be overwritten with the latest default CineMate settings file. If you are using a custom settings file, be sure to copy it to somewhere outside of the cinemate folder before updating, or see below for how to exclude the file from git update.   |
+|-----------------------------------------|
+
 ## Updating CineMate while keeping your custom ```settings.json```
 
 To ensure that you can update the cinemate repository on your Raspberry Pi while retaining your custom settings in ```/src/settings.json```, follow these steps:
-
 
 1) Navigate to the CineMate directory and stop any autostarted instance of CineMate.
 
@@ -381,6 +382,6 @@ To ensure that you can update the cinemate repository on your Raspberry Pi while
     ```
 
 
-Note on Future Updates
+#### Note on future updates
 
 It's a good practice to keep a backup of your ```settings.json``` file outside the repository directory. This ensures that you have a copy of your custom settings in case of unexpected changes or merge conflicts.

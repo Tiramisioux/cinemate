@@ -125,7 +125,7 @@ To enable autostart:
     make install
 
 
-#### Running CineMate manually
+## Running CineMate manually
 
 Anywhere in the CLI, type
 

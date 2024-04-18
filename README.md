@@ -7,7 +7,7 @@ Project aims at offering an easy way to build a custom camera.
 
 For basic operation and experimentation, only Raspberry Pi, camera board and monitor is needed. For practical use, buttons and switches can easily be added, allowing for a custom build.
 
-A ready made disk image, with a Bullseye installation + cinepi-raw and CineMate scripts can be found in the release section of this repo.
+A ready made disk image, with a Raspbian Bullseye Lite installation + cinepi-raw and CineMate scripts can be found in the release section of this repo.
 
 Join the CinePi Discord [here](https://discord.gg/Hr4dfhuK).
 
@@ -19,7 +19,7 @@ Join the CinePi Discord [here](https://discord.gg/Hr4dfhuK).
 - System button for **safe shutdown** of the Pi, start-up and unmounting of SSD drive.
 - Support for **Grove Base HAT** for iso, shutter angle and fps controls via potentiometers.
 - Support for **PiSugar** (displays battery status in Simple GUI)
-- Easy user customization of GPIO and camera controls using a settings file.
+- **Easy user customization** of GPIO and camera controls using a settings file.
 - Experimental **PWM mode**, for hardware control of frame rate and shutter speed, allowing for **in-camera speed ramping**
 
 ## Hardware requirements
@@ -27,7 +27,7 @@ Join the CinePi Discord [here](https://discord.gg/Hr4dfhuK).
 - Official HQ or GS camera
 - HDMI monitor
 
-For recording, use a high speed SSD (min 200 MB/s write speed). Samsung T5, T7 and Extreme have been confirmed to work.
+_For recording, use a high speed SSD (min 200 MB/s write speed). Samsung T5, T7 and Extreme have been confirmed to work. SSD needs to be formatted as NTFS and named "RAW"._
 
 ## Installing 
 
@@ -42,9 +42,9 @@ Burn to SD card (> 8 GB) using Raspberry Pi imager or Balena Etcher.
 
 Insert the SD card into the Pi. Connect camera, HDMI monitor and SSD drive.
 
-Connect simple push buttons to the Pi for basic camera operation. 
+Connect simple push buttons or use a paper clip for basic camera operation. 
 
-To just try out the camera functions, you can also short the GPIOs using a paper clip.
+
 
 
 |Camera function                 |GPIO push button |
@@ -119,7 +119,7 @@ To enable autostart:
 
 #### Running CineMate manually
 
-Anywhere in the cli, type
+Anywhere in the CLI, type
 
     cinemate
 
@@ -166,7 +166,7 @@ Enable or disable doubling the FPS rate.
 
 ## Command index
 
-This table includes all the available commands (method calls) for the CineMate CLI and the GPIO default settings of `cinemate/src/settings.json`. 
+This table includes all the available commands (method calls) + arguments for the CineMate CLI and the GPIO default settings of `cinemate/src/settings.json`. 
 
 Commands are also possible to send to the Pi via USB serial.
 
@@ -208,6 +208,8 @@ The arrays can be customized using the settings file (see below).
 ## Customizing camera functions and GPIO settings
 
 The settings file can be found in `cinemate/src/settings.json`. Here the user can define their own buttons, switches, rotary encoders and combined actions, modifying the table above.
+
+![CineMate settings file](docs/images/cinemate_settings_file.png        )
 
 ### General Settings
 Define your hardware setup and desired application behavior:
@@ -325,9 +327,6 @@ to be added
 ### Pisugar
 
 ## PWM mode (experimental)
-
-## Adding non-Samsung SSD drives
-
 to be added
 
 ## Updating the Development Branch
@@ -385,3 +384,50 @@ To ensure that you can update the cinemate repository on your Raspberry Pi while
 #### Note on future updates
 
 It's a good practice to keep a backup of your ```settings.json``` file outside the repository directory. This ensures that you have a copy of your custom settings in case of unexpected changes or merge conflicts.
+
+## Notes on audio sync
+
+Actual frame rate of the IMX477 sensor fluctuates about 0.01% around the mean value. This has no visual impact but will impact syncing of external audio. If recording synced audio, make sure to use a clapper board in the beginning and the end of the take. This will make it easier to sync the sound, but sync might still drift back and forth.
+
+
+## Notes on RTC
+
+Cinepi-raw names the clips according to system time. For clips to use the current time of day, an RTC (Realtime Clock Unit) can be installed.
+
+To get the right system time on the Pi, simply connect to a computer connected to the internet via SSH and the Pi will update its system time.
+
+To check system time in the CineMate CLI: 
+
+    time
+
+To write system time to a connected RTC, in the Cinemate CLI:
+
+    set time
+
+Now, if not connected to the internet, on startup the Pi will get its system time from the RTC.
+
+
+## Backing up the SD card
+
+To make a compressed image backup of the SD card onto the SSD:
+
+    sudo dd if=/dev/mmcblk0 bs=1M status=progress | xz -c > /media/RAW/cinepi_cinemate_raspbian_image_$(date +%Y-%m-%d_%H-%M-%S).img.xz
+
+Backing up an 8 GB CineMate image takes about 2 hours.
+
+## Image examples
+
+Images shot with Schneider Kreuznach Variagon 18-40 zoom from 1967. Developed as BMD RAW in Davinci Resolve with Arri LogC to Rec LUT
+
+![CineMate still](docs/images/cinemate_still_3.jpeg)
+
+![CineMate still](docs/images/cinemate_still_2.jpeg)
+
+![CineMate still](docs/images/cinemate_still_1.jpeg)
+
+![CineMate still](docs/images/cinemate_still_4.jpeg)
+
+![CineMate still](docs/images/cinemate_still_5.jpeg)
+
+![CineMate still](docs/images/cinemate_still_6.jpeg)
+

@@ -20,14 +20,14 @@ A ready made disk image, with a Raspbian Bullseye Lite installation + cinepi-raw
 Join the CinePi Discord [here](https://discord.gg/Hr4dfhuK).
 
 ## Functions
-- Recording and various camera controls with **GPIO**, **USB keyboard** and **USB/GPIO serial**
+- Enables recording and various camera controls with **RPi GPIO, USB keyboard/numpad, serial input** via USB (works with any microcontroller writing to serial) and (a rudimentary) **CineMate CLI** via SSH.
+- **Simple GUI** on the HDMI display (normal computer screen or field monitor can be used)
 - Support for **rotary encoders** 
-- **Simple GUI** on the HDMI display
-- **CineMate CLI** via SSH.
-- System button for **safe shutdown** of the Pi, start-up and unmounting of SSD drive.
 - Support for **Grove Base HAT** for iso, shutter angle and fps controls via potentiometers.
 - Support for **PiSugar** (displays battery status in Simple GUI)
-- **Easy user customization** of GPIO and camera controls using a settings file.
+- System button for **safe shutdown** of the Pi, start-up and unmounting of SSD drive
+- **Easy user customization** of GPIO and camera controls using a settings file
+- Adds **frame** to .dng and .wav clipnames, making them easier to sync. **HH:MM:SS:ff** is included in clip names (assumes a conform frame rate of 24fps)
 - Experimental **PWM mode**, for hardware control of frame rate and shutter speed, allowing for **in-camera speed ramping**
 
 ## Hardware requirements

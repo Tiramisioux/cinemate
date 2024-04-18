@@ -8,7 +8,7 @@
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 
 
-# CineMate
+# CineMate - manual controls for cinepi-raw
 CineMate scripts is a way for users to implement and customize manual controls for their [cinepi-raw](https://github.com/cinepi/cinepi-raw) build. 
 
 Project aims at offering an easy way to build a custom camera. 

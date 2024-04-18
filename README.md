@@ -1,6 +1,14 @@
 ```cinemate development branch```
 
-# CineMate – manual controls for cinepi-raw
+![CinePI SDK Banner](docs/images/cinemate_banner.jpeg)
+
+![Version](https://img.shields.io/badge/Version-2.0.0-green?style=flat-square)
+
+![Raspberry Pi](https://img.shields.io/badge/-RaspberryPi-C51A4A?style=for-the-badge&logo=Raspberry-Pi)
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+
+
+# CineMate
 CineMate scripts is a way for users to implement and customize manual controls for their [cinepi-raw](https://github.com/cinepi/cinepi-raw) build. 
 
 Project aims at offering an easy way to build a custom camera. 

@@ -171,13 +171,16 @@ class SimpleGUI(threading.Thread):
         
         if self.cinepi_controller.fps_double == True:
             self.colors["fps"]["normal"] = "lightgreen"
+        elif self.cinepi_controller.fps_double == False:
+            self.colors["fps"]["normal"] = "white"
             
         if self.cinepi_controller.pwm_mode == True:
             values["pwm_mode"] = "PWM"
             self.colors["shutter_speed"]["normal"] = "lightgreen"
             self.colors["fps"]["normal"] = "lightgreen"
         elif self.cinepi_controller.pwm_mode == False:
-            values["pwm_mode"] = ""
+            self.colors["shutter_speed"]["normal"] = "white"
+            self.colors["fps"]["normal"] = "white"
             
         if self.cinepi_controller.shutter_a_sync == True:
             values["shutter_a_sync"] = f"SYNC   /  {self.cinepi_controller.shutter_a_nom}"

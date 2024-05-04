@@ -1,4 +1,4 @@
-![CinePI SDK Banner](docs/images/cinemate_banner.jpeg)
+![CineMate RX100 build](docs/images/cinemate_20.png)
 
 ![Version](https://img.shields.io/badge/Version-2.0.0-green?style=flat-square)
 
@@ -321,6 +321,8 @@ Combined actions allow for complex interactions involving multiple buttons or sw
 
 ## Grove Base HAT
 to be added
+
+![CineMate build using a Grove Base HAT](docs/images/cinemate_19.jpg)
 ## Petroblock
 to be added
 

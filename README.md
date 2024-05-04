@@ -322,7 +322,7 @@ Combined actions allow for complex interactions involving multiple buttons or sw
 ## Grove Base HAT
 to be added
 
-![CineMate build using a Grove Base HAT](docs/images/cinemate_21.jpg)
+![CineMate build using a Grove Base HAT](docs/images/cinemate_29.jpg)
 ## Petroblock
 to be added
 
@@ -417,7 +417,7 @@ Backing up an 8 GB CineMate image takes about 2 hours.
 
 ## CineMate vertical
 
-![CineMate verical still](docs/images/cinemate_32.JPG)
+![CineMate verical still](docs/images/cinemate_26.JPG)
 
 Tinkercad model [here](https://www.tinkercad.com/things/7WibyUJoqFL-cinemate-vertical-build).
 

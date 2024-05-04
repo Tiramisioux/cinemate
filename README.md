@@ -81,11 +81,11 @@ For controlling iso, shutter angle and frame rate rotary encoders can be used. T
 
 The button also allows for combined actions together with the system button (GPIO 26).
 
-## Simple GUI
+# Simple GUI
 
 to be added
 
-## Connecting via SSH
+# Connecting via SSH
 
 For SSH:ing to the Pi, use the following credentials:
 

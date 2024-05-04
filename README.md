@@ -413,19 +413,26 @@ To make a compressed image backup of the SD card onto the SSD:
 
 Backing up an 8 GB CineMate image takes about 2 hours.
 
-# Physical builds
+# Builds
 
 ## CineMate vertical
 
-Tinkercad model [here](https://www.tinkercad.com/things/7WibyUJoqFL-cinemate-vertical-build)).
+![CineMate verical still](docs/images/cinemate_32.JPG)
+
+Tinkercad model [here](https://www.tinkercad.com/things/7WibyUJoqFL-cinemate-vertical-build).
 
 ## CineMate Komodo
+![CineMate Komodo still](https://cdn.thingiverse.com/assets/63/24/b0/5e/67/large_display_82aafbd6-e88e-4525-905c-bf00883de18c.png)
 
-Tinkercad model and build by Alexander Weigand [here](https://www.tinkercad.com/things/7WibyUJoqFL-cinemate-vertical-build)).
+Tinkercad model [here](https://www.thingiverse.com/thing:6516798)
+
+by Alexander Weigand
 
 ## CineMate RX100
 
-Tinkercad model [here](https://www.tinkercad.com/things/eNhTTYdgOM0-cinemate-camera-body-for-sony-rx-100-cage)).
+![CineMate still](docs/images/cinemate_3.jpeg)
+
+Tinkercad model [here](https://www.tinkercad.com/things/eNhTTYdgOM0-cinemate-camera-body-for-sony-rx-100-cage).
 
 # Image examples
 

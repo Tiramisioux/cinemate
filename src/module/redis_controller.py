@@ -1,6 +1,7 @@
 import redis
 import logging
 import threading
+import RPi.GPIO as GPIO
 
 class Event:
     def __init__(self):
@@ -48,10 +49,9 @@ class RedisController:
                 key_str = key.decode('utf-8')
                 value_str = value.decode('utf-8')
                 self.cache[key_str] = value_str
-                logging.info(f"Cached: {key_str} = {value_str}")
+                #logging.info(f"Cached: {key_str} = {value_str}")
 
     def listen(self):
-
         for message in self.pubsub.listen():
             if message["type"] == "message":
                 changed_key = message["data"].decode('utf-8')
@@ -60,15 +60,22 @@ class RedisController:
                     value_str = value.decode('utf-8')
                     # Update cache with new value
                     self.cache[changed_key] = value_str
-                logging.info(f"Changed value: {changed_key} = {value_str}")
+                #logging.info(f"Changed value: {changed_key} = {value_str}")
                 self.redis_parameter_changed.emit({'key': changed_key, 'value': value_str})
 
-    def get_value(self, key):
+    def get_value(self, key, default=None):
         with self.lock:
-            return self.cache.get(key)
+            return self.cache.get(key, default)
 
     def set_value(self, key, value):
         with self.lock:
+            #cap fps
+            # if key == 'fps':
+            #     if int(self.get_value('height')) == 1080 and value < 50:
+            #         value = 50
+            #     if int(self.get_value('height')) == 1520 and value < 40:
+            #         value = 40
+                
             self.redis_client.set(key, value)
             # Notify about the key change via the cp_controls channel
             self.redis_client.publish('cp_controls', key)

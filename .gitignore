@@ -190,6 +190,7 @@ $RECYCLE.BIN/
 
 # Directories
 __pycache__/
+tests/
 
 # Files
 *.pyc

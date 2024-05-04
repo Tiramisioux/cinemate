@@ -211,7 +211,7 @@ The arrays can be customized using the settings file (see below).
 
 The settings file can be found in `cinemate/src/settings.json`. Here the user can define their own buttons, switches, rotary encoders and combined actions, modifying the table above.
 
-![CineMate settings file](docs/images/cinemate_settings_file.png        )
+![CineMate settings file](docs/images/cinemate_settings_file.png | width=200)
 
 ## General Settings
 Define your hardware setup and desired application behavior:
@@ -412,6 +412,20 @@ To make a compressed image backup of the SD card onto the SSD:
     sudo dd if=/dev/mmcblk0 bs=1M status=progress | xz -c > /media/RAW/cinepi_cinemate_raspbian_image_$(date +%Y-%m-%d_%H-%M-%S).img.xz
 
 Backing up an 8 GB CineMate image takes about 2 hours.
+
+# Physical builds
+
+## CineMate vertical
+
+Tinkercad model [here](https://www.tinkercad.com/things/7WibyUJoqFL-cinemate-vertical-build)).
+
+## CineMate Komodo
+
+Tinkercad model and build by Alexander Weigand [here](https://www.tinkercad.com/things/7WibyUJoqFL-cinemate-vertical-build)).
+
+## CineMate RX100
+
+Tinkercad model [here](https://www.tinkercad.com/things/eNhTTYdgOM0-cinemate-camera-body-for-sony-rx-100-cage)).
 
 # Image examples
 

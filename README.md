@@ -27,14 +27,14 @@ Join the CinePi Discord [here](https://discord.gg/Hr4dfhuK).
 - Support for PiSugar (displays battery status in Simple GUI)
 - Experimental PWM mode, for hardware control of frame rate and shutter speed, allowing for in-camera speed ramping
 
-## Hardware requirements
+# Hardware requirements
 - Rasberry Pi 4B
 - Official HQ or GS camera
 - HDMI monitor
 
 _For recording, use a high speed SSD (min 200 MB/s write speed). Samsung T5, T7 and Extreme have been confirmed to work. SSD needs to be formatted as NTFS and named "RAW"._
 
-## Installing 
+# Getting started 
 
 Download the disk image from here: https://github.com/Tiramisioux/cinemate/releases/tag/dev
 
@@ -48,9 +48,6 @@ Burn to SD card (> 8 GB) using Raspberry Pi imager or Balena Etcher.
 Insert the SD card into the Pi. Connect camera, HDMI monitor and SSD drive.
 
 Connect simple push buttons or use a paper clip for basic camera operation. 
-
-
-
 
 |Camera function                 |GPIO push button |
 |--------------------------------|-----------------|
@@ -95,11 +92,11 @@ For SSH:ing to the Pi, use the following credentials:
     User: pi
     Password: 1
 
-## CineMate CLI
+# CineMate CLI
 
 Cinemate offers a set of Command-Line Interface (CLI) commands that allow users to control camera settings directly from the terminal.
 
-#### Disabling CineMate autostart
+## Disabling CineMate autostart
 
 To stop the autostarted instance:
 
@@ -210,13 +207,13 @@ Commands are also possible to send to the Pi via USB serial.
 
 The arrays can be customized using the settings file (see below).
 
-## Customizing camera functions and GPIO settings
+# Customizing camera functions and GPIO settings
 
 The settings file can be found in `cinemate/src/settings.json`. Here the user can define their own buttons, switches, rotary encoders and combined actions, modifying the table above.
 
 ![CineMate settings file](docs/images/cinemate_settings_file.png        )
 
-### General Settings
+## General Settings
 Define your hardware setup and desired application behavior:
 
     {
@@ -227,7 +224,7 @@ Define your hardware setup and desired application behavior:
     "fps_steps": null
     }
 
-### Analog Controls
+## Analog Controls
 Map Grove Base HAT ADC channels to iso, shutter angle and fps controls:
 
     "analog_controls": {
@@ -236,8 +233,7 @@ Map Grove Base HAT ADC channels to iso, shutter angle and fps controls:
     "fps_pot": "A4"
     }
 
-### Buttons
-
+## Buttons
 Setup buttons with actions for different interactions:
 
     "buttons": [
@@ -261,7 +257,7 @@ Each action can specify a method that corresponds to a function within the appli
 
 Note that if you have both a Press Action and a Single-Click action on a pin, the pin will first execute the Press Action and when released, execute the Single-Click Action. Combining Press Action and Click actions on the same pin is therefore not recommended.
 
-### Two-way switches
+## Two-way switches
 Two-way switches are configured in the two_way_switches section and have actions for both states:
 
 **State On Action** and **State Off Action**: Define what actions to take when the switch is turned on or off, respectively. Similar to button actions, these can specify a method and args.
@@ -275,7 +271,7 @@ Two-way switches are configured in the two_way_switches section and have actions
     }
     ]
 
-### Rotary Encoders
+## Rotary Encoders
 Configure rotary encoders for settings adjustments and optional button presses:
 
     "rotary_encoders": [
@@ -302,7 +298,7 @@ Configure rotary encoders for settings adjustments and optional button presses:
 
 **Button Actions:** If the encoder has a push button, configure actions similar to standalone buttons, including press, click, and hold interactions.
 
-### Combined Actions
+## Combined Actions
 Set up interactions involving multiple inputs:
 
     "combined_actions": [
@@ -321,28 +317,23 @@ Combined actions allow for complex interactions involving multiple buttons or sw
 
 **Action:** Determines the method to execute when the combined action condition is met.
 
-## Additional hardware
+# Additional hardware
 
-### Grove Base HAT
+## Grove Base HAT
 to be added
-### Petroblock
-
+## Petroblock
 to be added
 
-### Pisugar
+## Pisugar
+to be added
 
 ## PWM mode (experimental)
 to be added
 
-## Updating the Development Branch
-
-    cd cinemate
-    git pull origin development
-
 | :exclamation:  Note that if you update this repo, your setting-file will be overwritten with the latest default CineMate settings file. If you are using a custom settings file, be sure to copy it to somewhere outside of the cinemate folder before updating, or see below for how to exclude the file from git update.   |
 |-----------------------------------------|
 
-## Updating CineMate while keeping your custom ```settings.json```
+# Updating CineMate while keeping your custom ```settings.json```
 
 To ensure that you can update the cinemate repository on your Raspberry Pi while retaining your custom settings in ```/src/settings.json```, follow these steps:
 
@@ -386,16 +377,16 @@ To ensure that you can update the cinemate repository on your Raspberry Pi while
     ```
 
 
-#### Note on future updates
+# Note on future updates
 
 It's a good practice to keep a backup of your ```settings.json``` file outside the repository directory. This ensures that you have a copy of your custom settings in case of unexpected changes or merge conflicts.
 
-## Notes on audio sync
+# Notes on audio sync
 
 Actual frame rate of the IMX477 sensor fluctuates about 0.01% around the mean value. This has no visual impact but will impact syncing of external audio. If recording synced audio, make sure to use a clapper board in the beginning and the end of the take. This will make it easier to sync the sound, but sync might still drift back and forth.
 
 
-## Notes on RTC
+# Notes on RTC
 
 Cinepi-raw names the clips according to system time. For clips to use the current time of day, an RTC (Realtime Clock Unit) can be installed.
 
@@ -412,7 +403,7 @@ To write system time to a connected RTC, in the Cinemate CLI:
 Now, if not connected to the internet, on startup the Pi will get its system time from the RTC.
 
 
-## Backing up the SD card
+# Backing up the SD card
 
 To make a compressed image backup of the SD card onto the SSD:
 
@@ -420,7 +411,7 @@ To make a compressed image backup of the SD card onto the SSD:
 
 Backing up an 8 GB CineMate image takes about 2 hours.
 
-## Image examples
+# Image examples
 
 Images shot with Schneider Kreuznach Variagon 18-40 zoom from 1967. Developed as BMD RAW in Davinci Resolve with Arri LogC to Rec LUT
 

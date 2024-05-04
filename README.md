@@ -416,7 +416,7 @@ Backing up an 8 GB CineMate image takes about 2 hours.
 
 # Builds
 
-## CineMate vertical
+## CineMate Vertical
 
 ![CineMate verical still](docs/images/cinemate_29.JPG)
 

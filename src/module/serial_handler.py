@@ -23,7 +23,7 @@ class SerialHandler(threading.Thread):
         self.update_available_ports()
 
         if len(self.serials) == 0:
-            logging.error("Could not open ports. Continuing without any open ports.")
+            logging.info("No USB serial devices")
 
         self.running = True
         
@@ -129,17 +129,17 @@ class SerialHandler(threading.Thread):
                 for port, response in responses:   
                     logging.info(f'Received from {port}: {response.strip()}') 
                 
-            # Check the log queue and send log messages over the serial port
-        #    try:
-        #        # if '/dev/serial0' in self.current_ports:
-        #        while not self.log_queue.empty():  # Process all log messages in the queue
-        #            log_message = self.log_queue.get_nowait()  # Non-blocking get
-        #            try:
-        #                self.write_to_ports(log_message)  # Write each log message to the ports
-        #            except Exception as e:  # Handle exceptions that occur while writing to the ports
-        #                logging.error(f"Failed to write log message to ports: {str(e)}")
-        #    except queue.Empty:
-        #        print("Queue is Empty!")  # Debugging print
+            # # Check the log queue and send log messages over the serial port
+            # try:
+            #     # if '/dev/serial0' in self.current_ports:
+            #     while not self.log_queue.empty():  # Process all log messages in the queue
+            #         log_message = self.log_queue.get_nowait()  # Non-blocking get
+            #         try:
+            #             self.write_to_ports(log_message)  # Write each log message to the ports
+            #         except Exception as e:  # Handle exceptions that occur while writing to the ports
+            #             logging.error(f"Failed to write log message to ports: {str(e)}")
+            # except queue.Empty:
+            #     print("Queue is Empty!")  # Debugging print
 
             time.sleep(0.01)
 

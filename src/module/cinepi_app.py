@@ -19,7 +19,6 @@ def enqueue_output(out, queue, event):
         queue.put(line)
         # emit the line to all subscribers
         event.emit(line.decode('utf-8'))
-        #logging.info(line.decode('utf-8'))
     out.close()
 
 class CinePi:

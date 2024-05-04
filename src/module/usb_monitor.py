@@ -3,6 +3,9 @@ import logging
 import traceback
 import threading
 import re
+import json
+import subprocess
+import time
 
 class Event:
     def __init__(self):
@@ -19,25 +22,79 @@ class Event:
                 logging.error(f"Error while invoking listener: {e}")
                 traceback.print_exc()  # Print the traceback for better debugging
 
-class Event:
-    def __init__(self):
-        self._listeners = []
 
-    def subscribe(self, listener):
-        self._listeners.append(listener)
-
-    def emit(self, *args):
-        for listener in self._listeners:
-            try:
-                listener(*args)
-            except Exception as e:
-                logging.error(f"Error while invoking listener: {e}")
-
-
-class USBMonitor:
-    def __init__(self):
+class USBDriveMonitor:
+    def __init__(self, ssd_monitor):
         self.context = pyudev.Context()
         self.monitor = pyudev.Monitor.from_netlink(self.context)
+        self.monitor.filter_by(subsystem='block')
+        self.ssd_monitor = ssd_monitor
+        self.device_processing_lock = threading.Lock()
+        self.processed_devices = {}  # Tracks devices and their last processed time
+
+        self.check_mounted_devices_on_startup()  # Check for already mounted devices
+
+    def is_usb_mounted_at(self, path):
+        try:
+            output = subprocess.check_output(['findmnt', '-n', '-o', 'SOURCE', path], stderr=subprocess.STDOUT).decode().strip()
+            if '/dev/sd' in output:
+                self.ssd_monitor.disk_mounted = True
+                return True
+        except subprocess.CalledProcessError:
+            self.ssd_monitor.disk_mounted = False
+        
+        return False
+
+    def device_key(self, device):
+        # Combine model and serial for a unique device identifier
+        return (device.get('ID_MODEL', 'Unknown'), device.get('ID_SERIAL_SHORT', 'Unknown'))
+
+    def is_within_cooldown(self, device_key):
+        current_time = time.time()
+        with self.device_processing_lock:
+            last_processed = self.processed_devices.get(device_key, 0)
+            return current_time - last_processed < 5
+
+    def mark_device_processed(self, device_key):
+        with self.device_processing_lock:
+            self.processed_devices[device_key] = time.time()
+
+    def check_mounted_devices_on_startup(self):
+        # Perform an initial scan for mounted block devices
+        for device in self.context.list_devices(subsystem='block'):
+            if self.is_usb_mounted_at('/media/RAW'):
+                device_key = self.device_key(device)
+                logging.info(f"SSD already mounted at startup: Model={device_key[0]}, Serial={device_key[1]}")
+                self.ssd_monitor.update_on_add(device_key[0], device_key[1])
+                break  # Assume only one SSD is mounted as "RAW"
+
+    def start_monitoring(self):
+        for device in iter(self.monitor.poll, None):
+            device_key = self.device_key(device)
+            
+            if device.action == 'add':
+                if self.is_within_cooldown(device_key):
+                    logging.debug(f"Device {device_key} within cooldown period, skipping detection.")
+                    continue
+                
+                self.mark_device_processed(device_key)
+                logging.info(f"USB device connected: Model={device_key[0]}, Serial={device_key[1]}")
+                
+                for _ in range(10):
+                    if self.is_usb_mounted_at('/media/RAW'):
+                        self.ssd_monitor.update_on_add(device_key[0], device_key[1])
+                        break
+                    time.sleep(1)
+            elif device.action == 'remove':
+                self.ssd_monitor.update_on_remove("Detected USB disconnection.")
+                self.ssd_monitor.on_ssd_removed()
+
+class USBMonitor():
+    def __init__(self, ssd_monitor):
+        self.context = pyudev.Context()
+        self.monitor = pyudev.Monitor.from_netlink(self.context)
+        
+        self.ssd_monitor = ssd_monitor
         
         self.temp_sound_devices = []
         self.sound_timer = None
@@ -59,6 +116,9 @@ class USBMonitor:
         self.connected_devices = []
         
         self.recently_processed = []
+        
+        # Add filter for USB storage devices
+        self.monitor.filter_by(subsystem='usb_storage')
 
         # Start monitoring for new device events
         self.monitor_devices()
@@ -168,11 +228,6 @@ class USBMonitor:
                 logging.info(f'USB Keyboard connected')
                 self.usb_event.emit(action, device, model, serial)
 
-            elif 'SSD' in model_upper:
-                self.usb_hd = device
-                logging.info(f'USB SSD connected')
-                self.usb_event.emit(action, device, model, serial)
-
         elif action == 'remove':
             if matching_entry:
                 # Extract the model and serial from the stored data
@@ -192,11 +247,6 @@ class USBMonitor:
             elif self.usb_keyboard and self.usb_keyboard == device:
                 self.usb_keyboard = None
                 logging.info(f'USB Keyboard disconnected')
-                self.usb_event.emit(action, device, model, serial)
-
-            elif self.usb_hd and self.usb_hd == device:
-                self.usb_hd = None
-                logging.info(f'USB SSD disconnected')
                 self.usb_event.emit(action, device, model, serial)
 
     def check_initial_devices(self):
@@ -219,11 +269,6 @@ class USBMonitor:
             elif 'KEYBOARD' in model_upper:
                 self.usb_keyboard = device
                 logging.info(f'USB Keyboard connected')
-                self.usb_event.emit('add', device, model, serial)
-
-            elif 'SSD' in model_upper:
-                self.usb_hd = device
-                logging.info(f'USB SSD connected')
                 self.usb_event.emit('add', device, model, serial)
 
         for device in self.context.list_devices(subsystem='sound'):
@@ -250,3 +295,4 @@ class USBMonitor:
     def monitor_devices(self):
         observer = pyudev.MonitorObserver(self.monitor, self.device_event)
         observer.start()
+        

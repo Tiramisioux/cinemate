@@ -36,7 +36,7 @@ _For recording, use a high speed SSD (min 200 MB/s write speed). Samsung T5, T7 
 
 # Getting started 
 
-Download the disk image from here: https://github.com/Tiramisioux/cinemate/releases/tag/dev
+Download the disk image from here: https://github.com/Tiramisioux/cinemate/releases/tag/custom_cinepi%2Bcinemate2
 
 Burn to SD card (> 8 GB) using Raspberry Pi imager or Balena Etcher. 
 

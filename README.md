@@ -322,7 +322,7 @@ Combined actions allow for complex interactions involving multiple buttons or sw
 ## Grove Base HAT
 to be added
 
-![CineMate build using a Grove Base HAT](docs/images/cinemate_19.jpg)
+![CineMate build using a Grove Base HAT](docs/images/cinemate_21.jpg)
 ## Petroblock
 to be added
 

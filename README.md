@@ -211,7 +211,7 @@ The arrays can be customized using the settings file (see below).
 
 The settings file can be found in `cinemate/src/settings.json`. Here the user can define their own buttons, switches, rotary encoders and combined actions, modifying the table above.
 
-![CineMate settings file](docs/images/cinemate_settings_file.png | width=200)
+![CineMate settings file](docs/images/cinemate_settings_file.png)
 
 ## General Settings
 Define your hardware setup and desired application behavior:

@@ -331,12 +331,22 @@ to be added
 to be added
 
 ## PWM mode (experimental)
-to be added
+PWM mode sets the Raspberry Pi HQ/GS sensors in sink mode, as explained here: https://github.com/Tiramisioux/libcamera-imx477-speed-ramping
+
+This makes it possible to feed the sensor XVS input with hardware PWM signal from the pi (CineMate uses pin 19 as default, but pin 18 also supports hardware PWM), allowing for hardware control of fps and shutter angle during recording, without restarting the camera. 
+
+| :exclamation:  Note! Be sure to use a voltage divider so PWM signal is converted to 1.65V.   |
+|-----------------------------------------|
+
+
+This function is an experiment to achieve in-camera speedramping, inspired by my old Nio 8mm camera which has a button for doubling the motor speed, achieving in-camera speed ramping. 
+
+From my tests I have noticed that changing fps works fine, but sometimes camera has to be reset a couple of times to work properly (toggling the PWM mode button). Changing shutter angle in PWM mode (or having shutter angle sync engaged) also doesn't seem to work properly.
+
+# Updating CineMate while keeping your custom ```settings.json```
 
 | :exclamation:  Note that if you update this repo, your setting-file will be overwritten with the latest default CineMate settings file. If you are using a custom settings file, be sure to copy it to somewhere outside of the cinemate folder before updating, or see below for how to exclude the file from git update.   |
 |-----------------------------------------|
-
-# Updating CineMate while keeping your custom ```settings.json```
 
 To ensure that you can update the cinemate repository on your Raspberry Pi while retaining your custom settings in ```/src/settings.json```, follow these steps:
 

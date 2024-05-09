@@ -338,8 +338,7 @@ This makes it possible to feed the sensor XVS input with hardware PWM signal fro
 | :exclamation:  Note! Be sure to use a voltage divider so PWM signal is converted to 1.65V.   |
 |-----------------------------------------|
 
-
-This function is an experiment to achieve in-camera speedramping, inspired by my old Nizo 8mm camera which has a button for doubling the motor speed, achieving in-camera speed ramping. 
+This function is an experiment inspired by my old Nizo 8mm camera which has a button for doubling the motor speed, achieving in-camera speed ramping. 
 
 From my tests I have noticed that changing fps works fine, but sometimes camera has to be reset a couple of times to work properly (toggling the PWM mode button). Changing shutter angle in PWM mode (or having shutter angle sync engaged) also doesn't seem to work properly.
 

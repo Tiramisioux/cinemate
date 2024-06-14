@@ -4,9 +4,12 @@ import os
 import time
 from fractions import Fraction
 import math
+import subprocess
+from threading import Thread
 
 class CinePiController:
     def __init__(self,
+                 cinepi_app,
                  pwm_controller, 
                  redis_controller,
                  usb_monitor,
@@ -19,6 +22,7 @@ class CinePiController:
         
         self.parameters_lock_obj = threading.Lock()
         
+        self.cinepi_app = cinepi_app
         self.pwm_controller = pwm_controller
         self.redis_controller = redis_controller
         self.ssd_monitor = ssd_monitor

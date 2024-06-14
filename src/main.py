@@ -152,7 +152,7 @@ if __name__ == "__main__":
     keyboard = Keyboard(cinepi_controller, usb_monitor)
     
     # Instantiate the CommandExecutor with all necessary components and settings
-    command_executor = CommandExecutor(cinepi_controller)
+    command_executor = CommandExecutor(cinepi_controller, cinepi_app)
 
     # Start the CommandExecutor thread
     command_executor.start()

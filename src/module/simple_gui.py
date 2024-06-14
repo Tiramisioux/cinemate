@@ -10,7 +10,7 @@ import logging
 from sugarpie import pisugar
 
 class SimpleGUI(threading.Thread):
-    def __init__(self, pwm_controller, redis_controller, cinepi_controller, usb_monitor, ssd_monitor, serial_handler, dmesg_monitor, battery_monitor):
+    def __init__(self, pwm_controller, redis_controller, cinepi_controller, usb_monitor, ssd_monitor, serial_handler, dmesg_monitor, battery_monitor, sensor_detect,):
         threading.Thread.__init__(self)
         self.setup_resources()
         self.check_display()
@@ -24,6 +24,7 @@ class SimpleGUI(threading.Thread):
         self.serial_handler = serial_handler
         self.dmesg_monitor = dmesg_monitor
         self.battery_monitor = battery_monitor
+        self.sensor_detect = sensor_detect
         
         self.start()
 
@@ -47,7 +48,10 @@ class SimpleGUI(threading.Thread):
                 "shutter_speed": {"position": (110, -7), "font_size": 34},
                 "fps": {"position": (205, -7), "font_size": 34},
                 
-                "exposure_time": {"position": (1210, -7), "font_size": 34},
+                "sensor": {"position": (305, -7), "font_size": 34},
+                
+                "exposure_time": {"position": (1210, -2), "font_size": 34},
+                
                 "pwm_mode": {"position": (1323, -2), "font_size": 26},
                 "shutter_a_sync": {"position": (1425, -2), "font_size": 26},
                 "lock": {"position": (1610, -2), "font_size": 26},

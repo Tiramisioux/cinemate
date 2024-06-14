@@ -8,53 +8,37 @@ import logging
 
 class SensorDetect:
     def __init__(self):
-        
         self.camera_model = None
         self.res_modes = []
-        
-        # Define sensor resolutions and modes for different camera models
-        # Add more entries as needed for additional camera models
+
         self.sensor_resolutions = {
-            
-            # Raspberry Pi HQ camera
             'imx477': {                                                             
                 0: {'aspect': 1.87, 'width': 2028, 'height': 1080, 'bit_depth': 12, 'fps_max': 50, 'gui_layout': 0, 'file_size': 3.2}, 
-                1: {'aspect': 1.33, 'width': 2028, 'height': 1520, 'bit_depth': 12, 'fps_max': 40, 'gui_layout': 1, 'file_size': 4.5}, 
+                1: {'aspect': 1.33, 'width': 2028, 'height': 1520, 'bit_depth': 12, 'fps_max': 40, 'gui_layout': 0, 'file_size': 4.5}, 
             },
-            
-            #Raspberry Pi GS Camera
             'imx296': {                                                        
-                0: {'aspect': 1.33, 'width': 1456, 'height': 1088, 'bit_depth': 12, 'fps_max': 60, 'gui_layout': 1, 'file_size': 2},
-                
+                0: {'aspect': 1.33, 'width': 1456, 'height': 1088, 'bit_depth': 12, 'fps_max': 60, 'gui_layout': 0, 'file_size': 2},
             },
-            #OneInchEye
             'imx283': {                                                        
-                0: {'aspect': 1.33, 'width': 3936, 'height': 2176,  'bit_depth': 10, 'fps_max': 40, 'gui_layout': 0, 'file_size': 2},
-                1: {'aspect': 1.33, 'width': 5568, 'height': 3094,  'bit_depth': 10, 'fps_max': 21, 'gui_layout': 0, 'file_size': 2},
-                2: {'aspect': 1.33, 'width': 5568, 'height': 3664,  'bit_depth': 10, 'fps_max': 17, 'gui_layout': 0, 'file_size': 2},
-                3: {'aspect': 1.33, 'width': 2784, 'height': 1548,  'bit_depth': 12, 'fps_max': 40, 'gui_layout': 0, 'file_size': 2},
-                4: {'aspect': 1.33, 'width': 2784, 'height': 1824,  'bit_depth': 12, 'fps_max': 35, 'gui_layout': 0, 'file_size': 2},
-                4: {'aspect': 1.33, 'width': 5568, 'height': 3664,  'bit_depth': 12, 'fps_max': 17, 'gui_layout': 0, 'file_size': 2},
-                
+                0: {'aspect': 1.33, 'width': 3936, 'height': 2176, 'bit_depth': 10, 'fps_max': 40, 'gui_layout': 0, 'file_size': 14},
+                1: {'aspect': 1.33, 'width': 5568, 'height': 3094, 'bit_depth': 10, 'fps_max': 21, 'gui_layout': 0, 'file_size': 2},
+                2: {'aspect': 1.33, 'width': 5568, 'height': 3664, 'bit_depth': 10, 'fps_max': 17, 'gui_layout': 0, 'file_size': 31},
+                3: {'aspect': 1.33, 'width': 2784, 'height': 1548, 'bit_depth': 12, 'fps_max': 40, 'gui_layout': 0, 'file_size': 7.1},
+                4: {'aspect': 1.33, 'width': 2784, 'height': 1824, 'bit_depth': 12, 'fps_max': 35, 'gui_layout': 0, 'file_size': 8.2},
+                5: {'aspect': 1.33, 'width': 5568, 'height': 3664, 'bit_depth': 12, 'fps_max': 17, 'gui_layout': 0, 'file_size': 31},
             },
-            # Add more camera models here..
-            
         }
         
         self.detect_camera_model()
 
     def detect_camera_model(self):
         try:
-            # Run the libcamera-vid command to list cameras
             result = subprocess.run(['libcamera-vid', '--list-cameras'], capture_output=True, text=True, check=True)
-
-            # Extract the camera model from the output using a regular expression
             match = re.search(r'\d+\s*:\s*(\w+)\s*\[', result.stdout)
             if match:
                 self.camera_model = match.group(1)
-                self.load_sensor_resolutions()  # Call to load_sensor_resolutions
+                self.load_sensor_resolutions()
             else:
-                # Reset camera_model and res_modes if no match is found
                 self.camera_model = None
                 self.res_modes = []
 
@@ -66,9 +50,7 @@ class SensorDetect:
         else:
             logging.info("Unable to detect sensor.")
 
-
     def load_sensor_resolutions(self):
-        # Load resolutions and modes for the detected camera model
         if self.camera_model in self.sensor_resolutions:
             self.res_modes = self.sensor_resolutions[self.camera_model]
         else:
@@ -86,8 +68,6 @@ class SensorDetect:
                 logging.error(f"Unknown sensor mode {sensor_mode} for camera {camera_name}")
         else:
             logging.error(f"Unknown camera model: {camera_name}")
-
-        # Return default values if not found
         return {'width': None, 'height': None, 'fps_max': None, 'gui_layout': None}
     
     def get_fps_max(self, camera_name, sensor_mode):
@@ -102,6 +82,26 @@ class SensorDetect:
         resolution_info = self.get_resolution_info(camera_name, sensor_mode)
         return resolution_info.get('width', None)
     
+    def get_height(self, camera_name, sensor_mode):
+        resolution_info = self.get_resolution_info(camera_name, sensor_mode)
+        return resolution_info.get('height', None)
+    
+    def bit_depth(self, camera_name, sensor_mode):
+        resolution_info = self.get_resolution_info(camera_name, sensor_mode)
+        return resolution_info.get('bit_depth', None)
+    
+    def get_fps_max(self, camera_name, sensor_mode):
+        resolution_info = self.get_resolution_info(camera_name, sensor_mode)
+        return resolution_info.get('fps_max', None)
+    
     def get_file_size(self, camera_name, sensor_mode):
         resolution_info = self.get_resolution_info(camera_name, sensor_mode)
         return resolution_info.get('file_size', None)
+    
+    def get_lores_width(self, camera_name, sensor_mode):
+        # Placeholder method, replace with actual implementation
+        return 1280
+    
+    def get_lores_height(self, camera_name, sensor_mode):
+        # Placeholder method, replace with actual implementation
+        return 720

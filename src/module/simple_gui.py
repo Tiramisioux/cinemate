@@ -48,9 +48,12 @@ class SimpleGUI(threading.Thread):
                 "shutter_speed": {"position": (110, -7), "font_size": 34},
                 "fps": {"position": (205, -7), "font_size": 34},
                 
-                "sensor": {"position": (305, -7), "font_size": 34},
+                "sensor": {"position": (495, -7), "font_size": 34},
+                "width": {"position": (620, -7), "font_size": 34},
+                "height": {"position": (720, -7), "font_size": 34},
+                "bit_depth": {"position": (812, -7), "font_size": 34},
                 
-                "exposure_time": {"position": (1210, -2), "font_size": 34},
+                "exposure_time": {"position": (1210, -7), "font_size": 34},
                 
                 "pwm_mode": {"position": (1323, -2), "font_size": 26},
                 "shutter_a_sync": {"position": (1425, -2), "font_size": 26},
@@ -103,6 +106,22 @@ class SimpleGUI(threading.Thread):
                 "inverse": "black"
             },
             "fps": {
+                "normal": "white",
+                "inverse": "black"
+            },
+            "sensor": {
+                "normal": "grey",
+                "inverse": "black"
+            },
+            "height": {
+                "normal": "white",
+                "inverse": "black"
+            },
+            "width": {
+                "normal": "white",
+                "inverse": "black"
+            },
+            "bit_depth": {
                 "normal": "white",
                 "inverse": "black"
             },
@@ -165,6 +184,12 @@ class SimpleGUI(threading.Thread):
             "iso": self.redis_controller.get_value("iso"),
             "shutter_speed": str(self.redis_controller.get_value('shutter_a')).replace('.0', ''),
             "fps": int(self.cinepi_controller.fps_actual),
+            
+            "sensor": str.upper(self.redis_controller.get_value("sensor")),
+            "width": str(self.redis_controller.get_value("width") + " : "),
+            "height": str(self.redis_controller.get_value("height") + " : ") ,
+
+            "bit_depth": str(self.redis_controller.get_value("bit_depth") + "b"),
             
             "exposure_time": str(self.cinepi_controller.exposure_time_fractions),
             

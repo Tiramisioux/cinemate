@@ -21,29 +21,6 @@ def enqueue_output(out, queue, event):
         event.emit(line.decode('utf-8'))
     out.close()
 
-import subprocess
-import logging
-from queue import Queue
-from threading import Thread
-
-class Event:
-    def __init__(self):
-        self._listeners = []
-
-    def subscribe(self, listener):
-        self._listeners.append(listener)
-
-    def emit(self, data=None):
-        for listener in self._listeners:
-            listener(data)
-
-def enqueue_output(out, queue, event):
-    for line in iter(out.readline, b''):
-        queue.put(line)
-        # emit the line to all subscribers
-        event.emit(line.decode('utf-8'))
-    out.close()
-
 class CinePi:
     _instance = None  # Singleton instance
 
@@ -56,6 +33,7 @@ class CinePi:
         if not hasattr(self, 'initialized'):  # only initialize once
             self.message = Event()
             self.suppress_output = False
+            self.cinepi_args = cinepi_args
             
             # Construct the command with the provided arguments
             command = ['cinepi-raw'] + list(cinepi_args)
@@ -73,3 +51,28 @@ class CinePi:
             self.err_thread.start()                        
             self.initialized = True  # indicate that the instance has been initialized
             logging.info('CinePi instantiated')
+
+    def shutdown(self):
+        """Shut down the CinePi instance."""
+        logging.info('Shutting down CinePi instance.')
+        self.process.terminate()
+        self.process.wait()
+        logging.info('CinePi instance shut down.')
+
+    def restart(self):
+        """Restart the CinePi instance."""
+        logging.info('Restarting CinePi instance.')
+        self.shutdown()
+        
+        # Construct the command with the provided arguments
+        command = ['cinepi-raw'] + list(self.cinepi_args)
+        self.process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        self.out_thread = Thread(target=enqueue_output, args=(self.process.stdout, self.out_queue, self.message))
+        self.err_thread = Thread(target=enqueue_output, args=(self.process.stderr, self.err_queue, self.message))
+        
+        self.out_thread.daemon = True
+        self.err_thread.daemon = True
+        self.out_thread.start()
+        self.err_thread.start() 
+        logging.info('CinePi instance restarted.')

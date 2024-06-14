@@ -7,9 +7,10 @@ import inspect
 import logging  
 
 class CommandExecutor(threading.Thread):
-    def __init__(self, cinepi_controller):
+    def __init__(self, cinepi_controller, cinepi_app):
         threading.Thread.__init__(self)  # Initialize thread
         self.cinepi_controller = cinepi_controller  # Set controller object reference
+        self.cinepi_app = cinepi_app
         
         # Define dictionary of available commands and their associated functions along with expected argument type.
         # This allows for dynamic command calling
@@ -54,7 +55,9 @@ class CommandExecutor(threading.Thread):
             'set_fps_double': (cinepi_controller.set_fps_double, [int, None]),
             
             'reboot': (cinepi_controller.reboot, None),
-            'shutdown': (cinepi_controller.safe_shutdown, None)
+            'shutdown': (cinepi_controller.safe_shutdown, None),
+            
+            'restart': (cinepi_app.restart, None)
         }
 
     def is_valid_arg(self, arg, expected_type):

@@ -17,7 +17,6 @@ class Event:
 def enqueue_output(out, queue, event):
     for line in iter(out.readline, b''):
         queue.put(line)
-        # emit the line to all subscribers
         event.emit(line.decode('utf-8'))
     out.close()
 
@@ -35,22 +34,24 @@ class CinePi:
             self.suppress_output = False
             self.cinepi_args = cinepi_args
             
-            # Construct the command with the provided arguments
-            command = ['cinepi-raw'] + list(cinepi_args)
-            self.process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            
-            self.out_queue = Queue()
-            self.err_queue = Queue()
-
-            self.out_thread = Thread(target=enqueue_output, args=(self.process.stdout, self.out_queue, self.message))
-            self.err_thread = Thread(target=enqueue_output, args=(self.process.stderr, self.err_queue, self.message))
-            
-            self.out_thread.daemon = True
-            self.err_thread.daemon = True
-            self.out_thread.start()
-            self.err_thread.start()                        
+            self.start_cinepi_process(cinepi_args)
             self.initialized = True  # indicate that the instance has been initialized
             logging.info('CinePi instantiated')
+
+    def start_cinepi_process(self, cinepi_args):
+        command = ['cinepi-raw'] + list(cinepi_args)
+        self.process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        self.out_queue = Queue()
+        self.err_queue = Queue()
+
+        self.out_thread = Thread(target=enqueue_output, args=(self.process.stdout, self.out_queue, self.message))
+        self.err_thread = Thread(target=enqueue_output, args=(self.process.stderr, self.err_queue, self.message))
+        
+        self.out_thread.daemon = True
+        self.err_thread.daemon = True
+        self.out_thread.start()
+        self.err_thread.start()
 
     def shutdown(self):
         """Shut down the CinePi instance."""
@@ -59,20 +60,14 @@ class CinePi:
         self.process.wait()
         logging.info('CinePi instance shut down.')
 
-    def restart(self):
+    def restart(self, *new_args):
         """Restart the CinePi instance."""
         logging.info('Restarting CinePi instance.')
         self.shutdown()
         
-        # Construct the command with the provided arguments
-        command = ['cinepi-raw'] + list(self.cinepi_args)
-        self.process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        self.out_thread = Thread(target=enqueue_output, args=(self.process.stdout, self.out_queue, self.message))
-        self.err_thread = Thread(target=enqueue_output, args=(self.process.stderr, self.err_queue, self.message))
+        # Update the args for the new process
+        self.cinepi_args = new_args
         
-        self.out_thread.daemon = True
-        self.err_thread.daemon = True
-        self.out_thread.start()
-        self.err_thread.start() 
+        # Restart the process with new arguments
+        self.start_cinepi_process(new_args)
         logging.info('CinePi instance restarted.')

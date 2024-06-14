@@ -65,9 +65,10 @@ class CinePiController:
         #logging.info(f"{self.current_sensor}")
         
         self.sensor_mode = int(self.redis_controller.get_value('sensor_mode'))
+        #logging.info(f"{self.sensor_mode}")
         
         self.set_resolution(self.sensor_mode)
-        #logging.info(f"{self.current_sensor_mode}")
+        #logging.info(f"{self.get_current_sensor_mode}")
         self.fps_max = int(self.sensor_detect.get_fps_max(self.current_sensor, self.sensor_mode))
         #logging.info(f"{self.fps_max}")
         self.gui_layout = (self.sensor_detect.get_gui_layout(self.current_sensor, self.sensor_mode))

@@ -2,7 +2,7 @@ import logging
 import threading
 import json
 
-import RPi.GPIO as GPIO
+import RPi
 
 class Mediator:
     def __init__(self, cinepi_app, redis_controller, usb_monitor, ssd_monitor, gpio_output):

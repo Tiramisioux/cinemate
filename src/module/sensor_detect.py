@@ -18,13 +18,23 @@ class SensorDetect:
             
             # Raspberry Pi HQ camera
             'imx477': {                                                             
-                0: {'aspect': 1.87, 'width': 2028, 'height': 1080, 'fps_max': 50, 'gui_layout': 0, 'file_size': 3.2}, 
-                1: {'aspect': 1.33, 'width': 2028, 'height': 1520, 'fps_max': 40, 'gui_layout': 1, 'file_size': 4.5}, 
+                0: {'aspect': 1.87, 'width': 2028, 'height': 1080, 'bit_depth': 12, 'fps_max': 50, 'gui_layout': 0, 'file_size': 3.2}, 
+                1: {'aspect': 1.33, 'width': 2028, 'height': 1520, 'bit_depth': 12, 'fps_max': 40, 'gui_layout': 1, 'file_size': 4.5}, 
             },
             
             #Raspberry Pi GS Camera
             'imx296': {                                                        
-                0: {'aspect': 1.33, 'width': 1456, 'height': 1088, 'fps_max': 60, 'gui_layout': 1, 'file_size': 2},
+                0: {'aspect': 1.33, 'width': 1456, 'height': 1088, 'bit_depth': 12, 'fps_max': 60, 'gui_layout': 1, 'file_size': 2},
+                
+            },
+            #OneInchEye
+            'imx283': {                                                        
+                0: {'aspect': 1.33, 'width': 3936, 'height': 2176,  'bit_depth': 10, 'fps_max': 40, 'gui_layout': 0, 'file_size': 2},
+                1: {'aspect': 1.33, 'width': 5568, 'height': 3094,  'bit_depth': 10, 'fps_max': 21, 'gui_layout': 0, 'file_size': 2},
+                2: {'aspect': 1.33, 'width': 5568, 'height': 3664,  'bit_depth': 10, 'fps_max': 17, 'gui_layout': 0, 'file_size': 2},
+                3: {'aspect': 1.33, 'width': 2784, 'height': 1548,  'bit_depth': 12, 'fps_max': 40, 'gui_layout': 0, 'file_size': 2},
+                4: {'aspect': 1.33, 'width': 2784, 'height': 1824,  'bit_depth': 12, 'fps_max': 35, 'gui_layout': 0, 'file_size': 2},
+                4: {'aspect': 1.33, 'width': 5568, 'height': 3664,  'bit_depth': 12, 'fps_max': 17, 'gui_layout': 0, 'file_size': 2},
                 
             },
             # Add more camera models here..

@@ -10,3 +10,4 @@ serial
 psutil
 inotify_simple
 pyudev
+sugarpi

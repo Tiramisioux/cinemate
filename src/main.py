@@ -99,7 +99,14 @@ if __name__ == "__main__":
     sensor_detect = SensorDetect()
     
     # Instantiate the CinePi instance
-    cinepi_app = CinePi()
+    cinepi_app = CinePi(
+        '--mode', '2736:1824:12:U',
+        '--width', '1920',
+        '--height', '1080',
+        '--lores-width', '1280',
+        '--lores-height', '720',
+        '-p', '0,27,1920,1026'
+    )
 
     # Instantiate other necessary components
     redis_controller = RedisController()
@@ -109,12 +116,12 @@ if __name__ == "__main__":
     usb_drive_monitor = USBDriveMonitor(ssd_monitor=ssd_monitor)
     threading.Thread(target=usb_drive_monitor.start_monitoring, daemon=True).start()
     
-    gpio_output = GPIOOutput(rec_out_pin=settings['gpio_output']['rec_out_pin'])
+    gpio_output = GPIOOutput(rec_out_pins=settings['gpio_output']['rec_out_pin'])  # Use rec_out_pins
     
     pwm_controller = PWMController(sensor_detect, PWM_pin=settings['gpio_output']['pwm_pin'])
      
-    dmesg_monitor = DmesgMonitor("/var/log/kern.log")
-    dmesg_monitor.start() 
+    dmesg_monitor = DmesgMonitor()
+    dmesg_monitor.start()
 
     # Instantiate the CinePiController with all necessary components and settings
     cinepi_controller = CinePiController(pwm_controller,
@@ -127,7 +134,7 @@ if __name__ == "__main__":
                                         fps_steps=fps_steps
                                         )
     
-    gpio_input = ComponentInitializer(cinepi_controller, settings)
+    #gpio_input = ComponentInitializer(cinepi_controller, settings)
 
     analog_controls = AnalogControls(
         cinepi_controller,
@@ -164,7 +171,8 @@ if __name__ == "__main__":
                            ssd_monitor, 
                            serial_handler,
                            dmesg_monitor,
-                           battery_monitor
+                           battery_monitor,
+                           sensor_detect
                            )
 
     # Log initialization complete message
@@ -188,7 +196,7 @@ if __name__ == "__main__":
         redis_controller.set_value('is_writing', 0)
         
         # Set recording status to 0  
-        gpio_output.set_recording(0)
+        #gpio_output.set_recording(0)
         
         dmesg_monitor.join()
         serial_handler.join()

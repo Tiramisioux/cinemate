@@ -71,7 +71,7 @@ class CinePiController:
         self.sensor_mode = int(self.redis_controller.get_value('sensor_mode'))
         #logging.info(f"{self.sensor_mode}")
         
-        self.set_resolution(self.sensor_mode)
+        #self.set_resolution(self.sensor_mode)
         #logging.info(f"{self.get_current_sensor_mode}")
         self.fps_max = int(self.sensor_detect.get_fps_max(self.current_sensor, self.sensor_mode))
         #logging.info(f"{self.fps_max}")
@@ -86,6 +86,8 @@ class CinePiController:
         #Set fps array if not defined in 
         if not fps_steps: 
             self.fps_steps=list(range(1, (self.fps_max + 1)))
+        
+        self.set_resolution()
         
     def set_iso_lock(self, value=None):
         if value is not None:
@@ -168,27 +170,42 @@ class CinePiController:
             try:
                 if value not in self.sensor_detect.res_modes:
                     raise ValueError("Invalid sensor mode.")
-
+                
                 resolution_info = self.sensor_detect.res_modes[value]
                 height_value = resolution_info.get('height', None)
                 width_value = resolution_info.get('width', None)
+                bit_depth_value = resolution_info.get('bit_depth', None)
+                fps_max_value = resolution_info.get('fps_max', None)
                 gui_layout_value = resolution_info.get('gui_layout', None)
-
+                
                 if height_value is None or width_value is None or gui_layout_value is None:
                     raise ValueError("Invalid height, width, or gui_layout value.")
-
-                # Set height, width, and gui_layout in Redis
+                
+                self.redis_controller.set_value('sensor', str(self.sensor_detect.camera_model))
                 self.redis_controller.set_value('height', str(height_value))
                 self.redis_controller.set_value('width', str(width_value))
-                self.redis_controller.set_value('value', str(value))
+                self.redis_controller.set_value('bit_depth', str(bit_depth_value))
+                self.redis_controller.set_value('fps_max', str(fps_max_value))
                 self.redis_controller.set_value('gui_layout', str(gui_layout_value))
                 self.redis_controller.set_value('sensor_mode', str(value))
                 self.redis_controller.set_value('cam_init', 1)
-
-                # Update local attributes
+                
                 self.gui_layout = gui_layout_value
-
+                
                 logging.info(f"Resolution set to mode {value}, height: {height_value}, width: {width_value}, gui_layout: {gui_layout_value}")
+
+                # Restart the CinePi instance with new resolution settings
+                new_args = [
+                    '--mode', f'{width_value}:{height_value}:{bit_depth_value}:U',
+                    '--width', str(width_value),
+                    '--height', str(height_value),
+                    '--lores-width', str(self.sensor_detect.get_lores_width(self.current_sensor, value)),
+                    '--lores-height', str(self.sensor_detect.get_lores_height(self.current_sensor, value)),
+                    '-p', '0,30,1920,1020'
+                ]
+                self.cinepi_app.restart(*new_args)
+                
+                self.set_fps(int(self.redis_controller.get_value('fps')))
 
             except ValueError as error:
                 logging.error(f"Error setting resolution: {error}")
@@ -277,7 +294,7 @@ class CinePiController:
         
         if not self.fps_lock:
             # Determine max fps from resolution
-            max_fps = self.fps_max
+            max_fps = int(self.redis_controller.get_value('fps_max'))
             
             safe_value = value
             

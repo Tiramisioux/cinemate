@@ -98,14 +98,17 @@ if __name__ == "__main__":
     # Detect sensor
     sensor_detect = SensorDetect()
     
-    # Instantiate the CinePi instance
+    # Get current sensor mode
+    sensor_mode = 0  # Default sensor mode, adjust if necessary
+
+    # Initialize cinepi_app with sensor_detect values
     cinepi_app = CinePi(
-        '--mode', '2736:1824:12:U',
-        '--width', '1920',
-        '--height', '1080',
-        '--lores-width', '1280',
-        '--lores-height', '720',
-        '-p', '0,27,1920,1026'
+        '--mode', f"{sensor_detect.get_width(sensor_detect.camera_model, sensor_mode)}:{sensor_detect.get_height(sensor_detect.camera_model, sensor_mode)}:{sensor_mode}:U",
+        '--width', str(sensor_detect.get_width(sensor_detect.camera_model, sensor_mode)),
+        '--height', str(sensor_detect.get_height(sensor_detect.camera_model, sensor_mode)),
+        '--lores-width', str(sensor_detect.get_lores_width(sensor_detect.camera_model, sensor_mode)),
+        '--lores-height', str(sensor_detect.get_lores_height(sensor_detect.camera_model, sensor_mode)),
+        '-p', '0,30,1920,1020'
     )
 
     # Instantiate other necessary components
@@ -124,7 +127,8 @@ if __name__ == "__main__":
     dmesg_monitor.start()
 
     # Instantiate the CinePiController with all necessary components and settings
-    cinepi_controller = CinePiController(pwm_controller,
+    cinepi_controller = CinePiController(cinepi_app,
+                                        pwm_controller,
                                         redis_controller,
                                         usb_monitor, 
                                         ssd_monitor,
@@ -136,12 +140,12 @@ if __name__ == "__main__":
     
     #gpio_input = ComponentInitializer(cinepi_controller, settings)
 
-    analog_controls = AnalogControls(
-        cinepi_controller,
-        iso_pot=settings['analog_controls']['iso_pot'],
-        shutter_a_pot=settings['analog_controls']['shutter_a_pot'],
-        fps_pot=settings['analog_controls']['fps_pot']
-    )
+    # analog_controls = AnalogControls(
+    #     cinepi_controller,
+    #     iso_pot=settings['analog_controls']['iso_pot'],
+    #     shutter_a_pot=settings['analog_controls']['shutter_a_pot'],
+    #     fps_pot=settings['analog_controls']['fps_pot']
+    # )
     # Instantiate the Mediator and pass the components to it
     mediator = Mediator(cinepi_app, redis_controller, usb_monitor, ssd_monitor, gpio_output)
 

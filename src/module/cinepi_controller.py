@@ -87,7 +87,12 @@ class CinePiController:
         if not fps_steps: 
             self.fps_steps=list(range(1, (self.fps_max + 1)))
         
-        self.set_resolution()
+        self.set_resolution(int(self.redis_controller.get_value('sensor_mode')))
+        self.redis_controller.set_value('awb', 1)
+        time.sleep(1)
+        self.redis_controller.set_value('awb', 0)
+        
+
         
     def set_iso_lock(self, value=None):
         if value is not None:
@@ -206,6 +211,10 @@ class CinePiController:
                 self.cinepi_app.restart(*new_args)
                 
                 self.set_fps(int(self.redis_controller.get_value('fps')))
+                
+                self.redis_controller.set_value('awb', 1)
+                time.sleep(1)
+                self.redis_controller.set_value('awb', 0)
 
             except ValueError as error:
                 logging.error(f"Error setting resolution: {error}")

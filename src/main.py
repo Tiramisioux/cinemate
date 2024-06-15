@@ -185,6 +185,7 @@ if __name__ == "__main__":
     try:
         redis_controller.set_value('is_recording', 0)
         redis_controller.set_value('is_writing', 0)
+
         # Pause program execution, keeping it running until interrupted
         pause()
     except Exception:

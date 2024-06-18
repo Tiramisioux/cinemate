@@ -86,8 +86,7 @@ class Mediator:
         # Reset the timer when recording starts (status = 1)
         elif status == 1:
             if self.stop_recording_timer and self.stop_recording_timer.is_alive():
-                self.stop_recording_timer.cancel()
-                
+                self.stop_recording_timer.cancel()        
 
     def handle_redis_event(self, data):
         # Handle "is_recording" key changes

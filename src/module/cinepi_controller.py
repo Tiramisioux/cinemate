@@ -71,6 +71,8 @@ class CinePiController:
         self.sensor_mode = int(self.redis_controller.get_value('sensor_mode'))
         #logging.info(f"{self.sensor_mode}")
         
+        ## Add check if sensor mode is valid
+        
         #self.set_resolution(self.sensor_mode)
         #logging.info(f"{self.get_current_sensor_mode}")
         self.fps_max = int(self.sensor_detect.get_fps_max(self.current_sensor, self.sensor_mode))
@@ -91,7 +93,6 @@ class CinePiController:
         self.redis_controller.set_value('awb', 1)
         time.sleep(1)
         self.redis_controller.set_value('awb', 0)
-        
 
         
     def set_iso_lock(self, value=None):
@@ -166,6 +167,9 @@ class CinePiController:
             next_sensor_mode = sensor_modes[next_index]
 
             self.set_resolution(next_sensor_mode)
+            
+            self.file_size = self.sensor_detect.get_file_size(self.current_sensor, self.sensor_mode)
+
 
         except ValueError as error:
             logging.error(f"Error switching resolution: {error}")

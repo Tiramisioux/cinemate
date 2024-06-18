@@ -14,18 +14,20 @@ class SensorDetect:
         self.sensor_resolutions = {
             'imx477': {                                                             
                 0: {'aspect': 1.87, 'width': 2028, 'height': 1080, 'bit_depth': 12, 'fps_max': 50, 'gui_layout': 0, 'file_size': 3.2}, 
-                1: {'aspect': 1.33, 'width': 2028, 'height': 1520, 'bit_depth': 12, 'fps_max': 40, 'gui_layout': 0, 'file_size': 4.5}, 
+                1: {'aspect': 1.33, 'width': 2028, 'height': 1520, 'bit_depth': 12, 'fps_max': 40, 'gui_layout': 0, 'file_size': 4.5},
+                2: {'aspect': 1.34, 'width': 1332, 'height': 990, 'bit_depth': 10, 'fps_max': 120, 'gui_layout': 0, 'file_size': 2.8}, 
             },
             'imx296': {                                                        
                 0: {'aspect': 1.33, 'width': 1456, 'height': 1088, 'bit_depth': 12, 'fps_max': 60, 'gui_layout': 0, 'file_size': 2},
             },
             'imx283': {                                                        
-                0: {'aspect': 1.81, 'width': 3936, 'height': 2176, 'bit_depth': 10, 'fps_max': 43, 'gui_layout': 0, 'file_size': 14},
-                1: {'aspect': 1.80, 'width': 5568, 'height': 3094, 'bit_depth': 10, 'fps_max': 21, 'gui_layout': 0, 'file_size': 2},
-                2: {'aspect': 1.52, 'width': 5568, 'height': 3664, 'bit_depth': 10, 'fps_max': 17, 'gui_layout': 0, 'file_size': 31},
-                3: {'aspect': 1.80, 'width': 2736, 'height': 1538, 'bit_depth': 12, 'fps_max': 41, 'gui_layout': 0, 'file_size': 7.1},
-                4: {'aspect': 1.53, 'width': 2736, 'height': 1824, 'bit_depth': 12, 'fps_max': 35, 'gui_layout': 0, 'file_size': 8.2},
-                5: {'aspect': 1.52, 'width': 5568, 'height': 3664, 'bit_depth': 12, 'fps_max': 17, 'gui_layout': 0, 'file_size': 31},
+                0: {'aspect': 1.81, 'width': 3936, 'height': 2176, 'bit_depth': 10, 'fps_max': 43, 'gui_layout': 0, 'file_size': 14}, # ok
+                1: {'aspect': 1.80, 'width': 2736, 'height': 1538, 'bit_depth': 12, 'fps_max': 41, 'gui_layout': 0, 'file_size': 7.1}, # ok
+                2: {'aspect': 1.53, 'width': 2736, 'height': 1824, 'bit_depth': 12, 'fps_max': 35, 'gui_layout': 0, 'file_size': 8.2}, # ok
+
+                3: {'aspect': 1.52, 'width': 5568, 'height': 3664, 'bit_depth': 10, 'fps_max': 17, 'gui_layout': 0, 'file_size': 31},
+                4: {'aspect': 1.52, 'width': 5568, 'height': 3664, 'bit_depth': 12, 'fps_max': 17, 'gui_layout': 0, 'file_size': 31},
+                5: {'aspect': 1.80, 'width': 5568, 'height': 3094, 'bit_depth': 10, 'fps_max': 21, 'gui_layout': 0, 'file_size': 2},
             },
         }
         

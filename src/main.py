@@ -183,8 +183,8 @@ if __name__ == "__main__":
     logging.info(f"--- initialization complete")
 
     try:
-        redis_controller.set_value('is_recording', 0)
-        redis_controller.set_value('is_writing', 0)
+        #redis_controller.set_value('is_recording', 0)
+        #redis_controller.set_value('is_writing', 0)
 
         # Pause program execution, keeping it running until interrupted
         pause()
@@ -193,8 +193,8 @@ if __name__ == "__main__":
         sys.exit(1)
     finally:
         # Reset trigger mode to deafult 0
-        pwm_controller.stop_pwm()
-        pwm_controller.set_trigger_mode(0)
+        #pwm_controller.stop_pwm()
+        #pwm_controller.set_trigger_mode(0)
         # Reset redis values to default
         redis_controller.set_value('fps', 24)
         redis_controller.set_value('is_recording', 0)

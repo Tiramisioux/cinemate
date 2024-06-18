@@ -10,10 +10,11 @@ import logging
 from sugarpie import pisugar
 
 class SimpleGUI(threading.Thread):
-    def __init__(self, pwm_controller, redis_controller, cinepi_controller, usb_monitor, ssd_monitor, serial_handler, dmesg_monitor, battery_monitor, sensor_detect,):
+    def __init__(self, pwm_controller, redis_controller, cinepi_controller, usb_monitor, ssd_monitor, serial_handler, dmesg_monitor, battery_monitor, sensor_detect):
         threading.Thread.__init__(self)
         self.setup_resources()
         self.check_display()
+        self.hide_cursor()  # Hide the cursor when initializing the GUI
         self.color_mode = "normal"  # Can be changed to "inverse" as needed
         
         self.pwm_controller = pwm_controller
@@ -27,6 +28,12 @@ class SimpleGUI(threading.Thread):
         self.sensor_detect = sensor_detect
         
         self.start()
+
+    def hide_cursor(self):
+        os.system("setterm -cursor off")
+
+    def show_cursor(self):
+        os.system("setterm -cursor on")
 
     def check_display(self):
         fb_path = "/dev/fb0"
@@ -53,13 +60,14 @@ class SimpleGUI(threading.Thread):
                 "height": {"position": (720, -7), "font_size": 34},
                 "bit_depth": {"position": (812, -7), "font_size": 34},
                 
-                "exposure_time": {"position": (1210, -7), "font_size": 34},
+                "exposure_time": {"position": (1130, -7), "font_size": 34},
                 
-                "pwm_mode": {"position": (1323, -2), "font_size": 26},
-                "shutter_a_sync": {"position": (1425, -2), "font_size": 26},
-                "lock": {"position": (1610, -2), "font_size": 26},
-                "low_voltage": {"position": (1700, -2), "font_size": 26},
+                "pwm_mode": {"position": (1243, -2), "font_size": 26},
+                "shutter_a_sync": {"position": (1345, -2), "font_size": 26},
+                "lock": {"position": (1530, -2), "font_size": 26},
+                "low_voltage": {"position": (1620, -2), "font_size": 26},
                 
+                "ram_load": {"position": (1700, -2), "font_size": 26},
                 "cpu_load": {"position": (1780, -2), "font_size": 26},
                 "cpu_temp": {"position": (1860, -2), "font_size": 26},
                 
@@ -68,6 +76,8 @@ class SimpleGUI(threading.Thread):
                 "mic": {"position": (160, 1050), "font_size": 26},
                 "key": {"position": (250, 1050), "font_size": 26},
                 "serial": {"position": (345, 1050), "font_size": 26},
+                
+                "last_dng_added": {"position": (610, 1044), "font_size": 34},
                 
                 "battery_level": {"position": (1830, 1044), "font_size":34},
                 # Additional elements as needed for layout 0
@@ -145,6 +155,10 @@ class SimpleGUI(threading.Thread):
                 "normal": "yellow",
                 "inverse": "black"
             },
+            "ram_load": {
+                "normal": "white",
+                "inverse": "black"
+            },
             "cpu_load": {
                 "normal": "white",
                 "inverse": "black"
@@ -166,6 +180,10 @@ class SimpleGUI(threading.Thread):
                 "inverse": "black"
             },
             "serial": {
+                "normal": "white",
+                "inverse": "black"
+            },
+            "last_dng_added": {
                 "normal": "white",
                 "inverse": "black"
             },
@@ -193,11 +211,14 @@ class SimpleGUI(threading.Thread):
             
             "exposure_time": str(self.cinepi_controller.exposure_time_fractions),
             
-            "cpu_load": str(psutil.cpu_percent()) + '%',
+            "ram_load": f"{100 - psutil.virtual_memory().available / psutil.virtual_memory().total * 100:.0f}%",
+            "cpu_load": str(int(psutil.cpu_percent())) + '%',
             "cpu_temp": ('{}\u00B0C'.format(int(CPUTemperature().temperature))),
             
+            "last_dng_added": str(self.ssd_monitor.directory_watcher.last_dng_file_added)[41:80]
+            
         }
-        
+
         if self.cinepi_controller.fps_double == True:
             self.colors["fps"]["normal"] = "lightgreen"
         elif self.cinepi_controller.fps_double == False:
@@ -244,7 +265,6 @@ class SimpleGUI(threading.Thread):
             # values["mic"] = "MIC" 
             # values["key"] = "KEY" 
             # values["serial"] = "SER"
-
             
         if self.battery_monitor.battery_level != None:
             values["battery_level"] = str(self.battery_monitor.battery_level) + '%'
@@ -368,8 +388,11 @@ class SimpleGUI(threading.Thread):
         draw.text(position, text, font=font, fill=text_color)
 
     def run(self):
-        while True:
-            values = self.populate_values()
-            self.draw_gui(values)
-            time.sleep(0.1)
+        try:
+            while True:
+                values = self.populate_values()
+                self.draw_gui(values)
+                time.sleep(0.1)
+        finally:
+            self.show_cursor()  # Ensure the cursor is shown again when the program ends
 

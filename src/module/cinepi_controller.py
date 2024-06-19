@@ -209,7 +209,8 @@ class CinePiController:
                     '--height', str(height_value),
                     '--lores-width', str(self.sensor_detect.get_lores_width(self.current_sensor, value)),
                     '--lores-height', str(self.sensor_detect.get_lores_height(self.current_sensor, value)),
-                    '-p', '0,30,1920,1020'
+                    '-p', '0,30,1920,1020',
+                    '--post-process-file', '/home/pi/post-processing.json',
                 ]
                 self.cinepi_app.restart(*new_args)
                 

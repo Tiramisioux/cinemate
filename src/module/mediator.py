@@ -64,7 +64,7 @@ class Mediator:
         logging.info(f"SSDMonitor says: {action} {message}")
         self.ssd_monitor.get_ssd_space_left()
         space_left = self.ssd_monitor.last_space_left
-        logging.info('Space left:', space_left)
+        logging.info(f'Space left: {space_left}')
         
     def handle_ssd_unmount(self):
         logging.info("SSD unmounted.")

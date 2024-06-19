@@ -142,7 +142,7 @@ if __name__ == "__main__":
 
     # analog_controls = AnalogControls(
     #     cinepi_controller,
-    #     iso_pot=settings['analog_controls']['iso_pot'],
+    #     iso_pot=settings  ['analog_controls']['iso_pot'],
     #     shutter_a_pot=settings['analog_controls']['shutter_a_pot'],
     #     fps_pot=settings['analog_controls']['fps_pot']
     # )
@@ -176,7 +176,8 @@ if __name__ == "__main__":
                            serial_handler,
                            dmesg_monitor,
                            battery_monitor,
-                           sensor_detect
+                           sensor_detect,
+                           redis_listener
                            )
 
     # Log initialization complete message
@@ -196,7 +197,7 @@ if __name__ == "__main__":
         #pwm_controller.stop_pwm()
         #pwm_controller.set_trigger_mode(0)
         # Reset redis values to default
-        redis_controller.set_value('fps', 24)
+        #redis_controller.set_value('fps', 24)
         redis_controller.set_value('is_recording', 0)
         redis_controller.set_value('is_writing', 0)
         

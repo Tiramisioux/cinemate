@@ -31,6 +31,7 @@ from module.dmesg_monitor import DmesgMonitor
 from module.redis_listener import RedisListener
 from module.gpio_input import ComponentInitializer
 from module.battery_monitor import BatteryMonitor
+from module.hotspot import WiFiHotspotManager
 
 
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
@@ -108,7 +109,8 @@ if __name__ == "__main__":
         '--height', str(sensor_detect.get_height(sensor_detect.camera_model, sensor_mode)),
         '--lores-width', str(sensor_detect.get_lores_width(sensor_detect.camera_model, sensor_mode)),
         '--lores-height', str(sensor_detect.get_lores_height(sensor_detect.camera_model, sensor_mode)),
-        '-p', '0,30,1920,1020'
+        '-p', '0,30,1920,1020',
+        '--post-process-file', 'home/pi/post-processing.json',
     )
 
     # Instantiate other necessary components
@@ -179,6 +181,9 @@ if __name__ == "__main__":
                            sensor_detect,
                            redis_listener
                            )
+    
+    manager = WiFiHotspotManager(iface='wlan0')
+    manager.create_hotspot('CinePi', '11111111')
 
     # Log initialization complete message
     logging.info(f"--- initialization complete")

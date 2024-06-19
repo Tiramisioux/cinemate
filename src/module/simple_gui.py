@@ -278,7 +278,7 @@ class SimpleGUI(threading.Thread):
             # values["serial"] = "SER"
             
         if self.ssd_monitor and self.ssd_monitor.directory_watcher and self.ssd_monitor.directory_watcher.last_dng_file_added:
-            values["last_dng_added"] = str(self.ssd_monitor.directory_watcher.last_dng_file_added)[41:80]
+            values["last_dng_added"] = str(self.ssd_monitor.directory_watcher.last_dng_file_added)[39:76]
         else:
             values["last_dng_added"] = ""  # or some default value if not available
 

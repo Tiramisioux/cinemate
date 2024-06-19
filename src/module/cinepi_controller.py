@@ -167,9 +167,6 @@ class CinePiController:
             next_sensor_mode = sensor_modes[next_index]
 
             self.set_resolution(next_sensor_mode)
-            
-            self.file_size = self.sensor_detect.get_file_size(self.current_sensor, self.sensor_mode)
-
 
         except ValueError as error:
             logging.error(f"Error switching resolution: {error}")
@@ -186,6 +183,7 @@ class CinePiController:
                 bit_depth_value = resolution_info.get('bit_depth', None)
                 fps_max_value = resolution_info.get('fps_max', None)
                 gui_layout_value = resolution_info.get('gui_layout', None)
+                file_size_value = resolution_info.get('file_size', None)
                 
                 if height_value is None or width_value is None or gui_layout_value is None:
                     raise ValueError("Invalid height, width, or gui_layout value.")
@@ -196,6 +194,7 @@ class CinePiController:
                 self.redis_controller.set_value('bit_depth', str(bit_depth_value))
                 self.redis_controller.set_value('fps_max', str(fps_max_value))
                 self.redis_controller.set_value('gui_layout', str(gui_layout_value))
+                self.redis_controller.set_value('file_size', str(file_size_value))
                 self.redis_controller.set_value('sensor_mode', str(value))
                 self.redis_controller.set_value('cam_init', 1)
                 
@@ -219,11 +218,18 @@ class CinePiController:
                 self.redis_controller.set_value('awb', 1)
                 time.sleep(1)
                 self.redis_controller.set_value('awb', 0)
+                
+                self.file_size = file_size_value
+                print(self.file_size)
 
             except ValueError as error:
                 logging.error(f"Error setting resolution: {error}")
+                
+
         else:
             self.switch_resolution()
+            
+
 
     def get_current_sensor_mode(self):
         current_height = int(self.redis_controller.get_value('height'))

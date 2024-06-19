@@ -10,7 +10,7 @@ import logging
 from sugarpie import pisugar
 
 class SimpleGUI(threading.Thread):
-    def __init__(self, pwm_controller, redis_controller, cinepi_controller, usb_monitor, ssd_monitor, serial_handler, dmesg_monitor, battery_monitor, sensor_detect):
+    def __init__(self, pwm_controller, redis_controller, cinepi_controller, usb_monitor, ssd_monitor, serial_handler, dmesg_monitor, battery_monitor, sensor_detect, redis_listener):
         threading.Thread.__init__(self)
         self.setup_resources()
         self.check_display()
@@ -26,6 +26,7 @@ class SimpleGUI(threading.Thread):
         self.dmesg_monitor = dmesg_monitor
         self.battery_monitor = battery_monitor
         self.sensor_detect = sensor_detect
+        self.redis_listener = redis_listener
         
         self.start()
 
@@ -55,12 +56,14 @@ class SimpleGUI(threading.Thread):
                 "shutter_speed": {"position": (110, -7), "font_size": 34},
                 "fps": {"position": (205, -7), "font_size": 34},
                 
-                "sensor": {"position": (495, -7), "font_size": 34},
-                "width": {"position": (620, -7), "font_size": 34},
-                "height": {"position": (720, -7), "font_size": 34},
-                "bit_depth": {"position": (812, -7), "font_size": 34},
                 
-                "exposure_time": {"position": (1130, -7), "font_size": 34},
+                "sensor": {"position": (505, -7), "font_size": 34},
+                "width": {"position": (630, -7), "font_size": 34},
+                "height": {"position": (730, -7), "font_size": 34},
+                "bit_depth": {"position": (822, -7), "font_size": 34},
+                
+                "color_temp": {"position": (950, -7), "font_size": 34},
+                "exposure_time": {"position": (1110, -7), "font_size": 34},
                 
                 "pwm_mode": {"position": (1243, -2), "font_size": 26},
                 "shutter_a_sync": {"position": (1345, -2), "font_size": 26},
@@ -119,6 +122,11 @@ class SimpleGUI(threading.Thread):
                 "normal": "white",
                 "inverse": "black"
             },
+            "exposure_time": {
+                "normal": "white",
+                "inverse": "black"
+            },
+            
             "sensor": {
                 "normal": "grey",
                 "inverse": "black"
@@ -131,14 +139,17 @@ class SimpleGUI(threading.Thread):
                 "normal": "white",
                 "inverse": "black"
             },
+            
             "bit_depth": {
                 "normal": "white",
                 "inverse": "black"
             },
-            "exposure_time": {
+
+            "color_temp": {
                 "normal": "white",
                 "inverse": "black"
             },
+            
             "pwm_mode": {
                 "normal": "lightgreen",
                 "inverse": "black"
@@ -203,20 +214,20 @@ class SimpleGUI(threading.Thread):
             "shutter_speed": str(self.redis_controller.get_value('shutter_a')).replace('.0', ''),
             "fps": int(self.cinepi_controller.fps_actual),
             
+            "exposure_time": str(self.cinepi_controller.exposure_time_fractions),
+            
             "sensor": str.upper(self.redis_controller.get_value("sensor")),
             "width": str(self.redis_controller.get_value("width") + " : "),
             "height": str(self.redis_controller.get_value("height") + " : ") ,
 
             "bit_depth": str(self.redis_controller.get_value("bit_depth") + "b"),
             
-            "exposure_time": str(self.cinepi_controller.exposure_time_fractions),
+            "color_temp": (str(self.redis_listener.colorTemp) + "K"),
             
             "ram_load": f"{100 - psutil.virtual_memory().available / psutil.virtual_memory().total * 100:.0f}%",
             "cpu_load": str(int(psutil.cpu_percent())) + '%',
             "cpu_temp": ('{}\u00B0C'.format(int(CPUTemperature().temperature))),
-            
-            "last_dng_added": str(self.ssd_monitor.directory_watcher.last_dng_file_added)[41:80]
-            
+                        
         }
 
         if self.cinepi_controller.fps_double == True:
@@ -266,6 +277,12 @@ class SimpleGUI(threading.Thread):
             # values["key"] = "KEY" 
             # values["serial"] = "SER"
             
+        if self.ssd_monitor and self.ssd_monitor.directory_watcher and self.ssd_monitor.directory_watcher.last_dng_file_added:
+            values["last_dng_added"] = str(self.ssd_monitor.directory_watcher.last_dng_file_added)[41:80]
+        else:
+            values["last_dng_added"] = ""  # or some default value if not available
+
+            
         if self.battery_monitor.battery_level != None:
             values["battery_level"] = str(self.battery_monitor.battery_level) + '%'
         elif self.battery_monitor.battery_level == None:
@@ -287,10 +304,21 @@ class SimpleGUI(threading.Thread):
     def draw_gui(self, values):
         if not self.fb:
             return  # Exit if there is no display
-        
-        if int(self.redis_controller.get_value('is_writing_buf')) == 1:
+            
+        if int(values["ram_load"].rstrip('%')) > 60:
+            self.fill_color = "yellow"
+            self.color_mode = "inverse"
+            self.cinepi_controller.stop_recording()
+            logging.info("RAM full")
+            
+        elif int(self.redis_controller.get_value('is_writing_buf')) == 1:
             self.fill_color = "red"
             self.color_mode = "inverse"
+            
+        elif self.redis_listener.bufferSize != 0:
+            self.fill_color = "green"
+            self.color_mode = "inverse"
+        
         else:
             self.fill_color = "black"
             self.color_mode = "normal"

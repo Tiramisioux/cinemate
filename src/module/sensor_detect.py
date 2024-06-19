@@ -25,9 +25,9 @@ class SensorDetect:
                 1: {'aspect': 1.80, 'width': 2736, 'height': 1538, 'bit_depth': 12, 'fps_max': 41, 'gui_layout': 0, 'file_size': 7.1}, # ok
                 2: {'aspect': 1.53, 'width': 2736, 'height': 1824, 'bit_depth': 12, 'fps_max': 35, 'gui_layout': 0, 'file_size': 8.2}, # ok
 
-                3: {'aspect': 1.52, 'width': 5568, 'height': 3664, 'bit_depth': 10, 'fps_max': 17, 'gui_layout': 0, 'file_size': 31},
-                4: {'aspect': 1.52, 'width': 5568, 'height': 3664, 'bit_depth': 12, 'fps_max': 17, 'gui_layout': 0, 'file_size': 31},
-                5: {'aspect': 1.80, 'width': 5568, 'height': 3094, 'bit_depth': 10, 'fps_max': 21, 'gui_layout': 0, 'file_size': 2},
+                #3: {'aspect': 1.52, 'width': 5568, 'height': 3664, 'bit_depth': 10, 'fps_max': 17, 'gui_layout': 0, 'file_size': 31},
+                #4: {'aspect': 1.52, 'width': 5568, 'height': 3664, 'bit_depth': 12, 'fps_max': 17, 'gui_layout': 0, 'file_size': 31},
+                #5: {'aspect': 1.80, 'width': 5568, 'height': 3094, 'bit_depth': 10, 'fps_max': 21, 'gui_layout': 0, 'file_size': 2},
             },
         }
         

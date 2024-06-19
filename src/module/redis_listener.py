@@ -4,6 +4,7 @@ import threading
 import time
 import statistics
 import datetime
+import json
 
 class RedisListener:
     def __init__(self, redis_controller, host='localhost', port=6379, db=0):
@@ -26,6 +27,12 @@ class RedisListener:
         
         self.framerate = float(self.redis_controller.get_value('fps_actual'))
         
+        self.bufferSize = 0
+        self.colorTemp = 0
+        self.focus = 0
+        self.frameCount = 0
+        self.framerate = 0
+        
         self.start_listeners()
 
     def start_listeners(self):
@@ -43,20 +50,29 @@ class RedisListener:
         self.listener_thread_controls.start()
 
     def listen_stats(self):
+        for message in self.pubsub_stats.listen():
+            if message['type'] == 'message':
+                message_data = message['data'].decode('utf-8').strip()
+                if message_data.startswith("{") and message_data.endswith("}"):
+                    try:
+                        stats_data = json.loads(message_data)
+                        self.bufferSize = stats_data.get('bufferSize', None)
+                        self.colorTemp = stats_data.get('colorTemp', None)
+                        self.focus = stats_data.get('focus', None)
+                        self.frameCount = stats_data.get('frameCount', None)
+                        self.framerate = stats_data.get('framerate', None)
 
-            for message in self.pubsub_stats.listen():
-                if message['type'] == 'message':
-                    message_data = message['data'].decode('utf-8')
-                    if message_data.startswith("framerate:"):
-                        framerate_str = message_data.split("framerate:")[1]
-                        try:
-                            framerate_value = float(framerate_str)
-                            with self.lock:
-                                if self.is_recording == True:
-                                    self.framerate_values.append(framerate_value)
-                                    #logging.info(f"Registered framerate value: {framerate_value}")
-                        except ValueError as e:
-                            logging.error(f"Failed to convert framerate value to float: {e}")
+                        # Optionally, log or use these variables as needed
+                        #logging.info(f"bufferSize: {self.bufferSize}, colorTemp: {self.colorTemp}, focus: {self.focus}, frameCount: {self.frameCount}, framerate: {self.framerate}")
+
+                        # You can update other parts of your application with these values
+                        # For example, you might want to store these values or trigger events
+                        # based on specific conditions.
+
+                    except json.JSONDecodeError as e:
+                        logging.error(f"Failed to parse JSON data: {e}")
+                else:
+                    logging.warning(f"Received unexpected data format: {message_data}")
 
     def listen_controls(self):
         for message in self.pubsub_controls.listen():

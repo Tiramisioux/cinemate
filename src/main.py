@@ -33,6 +33,18 @@ from module.gpio_input import ComponentInitializer
 from module.battery_monitor import BatteryMonitor
 from module.hotspot import WiFiHotspotManager
 
+def get_raspberry_pi_model():
+    try:
+        with open('/proc/device-tree/model', 'r') as f:
+            model = f.read()
+            if 'Raspberry Pi 5' in model:
+                return 'pi5'
+            elif 'Raspberry Pi 4' in model:
+                return 'pi4'
+            else:
+                return 'other'
+    except FileNotFoundError:
+        return 'unknown'
 
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
 
@@ -182,6 +194,7 @@ if __name__ == "__main__":
                            redis_listener
                            )
     
+    #if get_raspberry_pi_model == 'pi5':
     manager = WiFiHotspotManager(iface='wlan0')
     manager.create_hotspot('CinePi', '11111111')
 

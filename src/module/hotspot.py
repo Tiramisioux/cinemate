@@ -1,3 +1,5 @@
+# https://pimylifeup.com/raspberry-pi-wireless-access-point/
+
 import subprocess
 import logging
 
@@ -19,10 +21,6 @@ class WiFiHotspotManager:
             logging.debug(f"Activation info: {activation_info}")
             
         except subprocess.CalledProcessError as e:
-            self.logger.error(f"Error: Failed to create Wi-Fi hotspot. {e}")            
+            self.logging.error(f"Error: Failed to create Wi-Fi hotspot. {e}")            
             
-        except subprocess.CalledProcessError as e:
-            self.logger.error(f"Error: Failed to create Wi-Fi hotspot. {e}")
-            
-        except subprocess.CalledProcessError as e:
-            self.logger.error(f"Error: Failed to create Wi-Fi hotspot. {e}")
+

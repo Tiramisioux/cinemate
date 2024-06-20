@@ -175,7 +175,8 @@ class CinePiController:
         if value is not None:
             try:
                 if value not in self.sensor_detect.res_modes:
-                    raise ValueError("Invalid sensor mode.")
+                    logging.info(f"Couldn't find sensor mode {value}. Trying with sensor_mode 0.")
+                    value = 0
                 
                 resolution_info = self.sensor_detect.res_modes[value]
                 height_value = resolution_info.get('height', None)
@@ -221,7 +222,7 @@ class CinePiController:
                 self.redis_controller.set_value('awb', 0)
                 
                 self.file_size = file_size_value
-                print(self.file_size)
+
 
             except ValueError as error:
                 logging.error(f"Error setting resolution: {error}")

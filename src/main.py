@@ -32,6 +32,7 @@ from module.redis_listener import RedisListener
 from module.gpio_input import ComponentInitializer
 from module.battery_monitor import BatteryMonitor
 from module.hotspot import WiFiHotspotManager
+from module.stream import Stream
 
 def get_raspberry_pi_model():
     try:
@@ -197,6 +198,11 @@ if __name__ == "__main__":
     #if get_raspberry_pi_model == 'pi5':
     manager = WiFiHotspotManager(iface='wlan0')
     manager.create_hotspot('CinePi', '11111111')
+    
+    # Instantiate the Stream module
+    stream = Stream()
+    # Call the run method to start the Flask application
+    stream.run()
 
     # Log initialization complete message
     logging.info(f"--- initialization complete")

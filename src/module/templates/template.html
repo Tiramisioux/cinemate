@@ -1,35 +1,3 @@
-from flask import Flask, render_template_string, jsonify, request
-import redis
-
-app = Flask(__name__)
-
-# Redis configuration
-redis_host = 'localhost'
-redis_port = 6379
-redis_db = 0
-
-# Example Redis controller class (adjust based on your actual implementation)
-class RedisController:
-    def __init__(self):
-        self.redis_conn = redis.StrictRedis(host=redis_host, port=redis_port, db=redis_db)
-
-    def get_value(self, key):
-        return self.redis_conn.get(key).decode('utf-8') if self.redis_conn.exists(key) else None
-
-    def set_value(self, key, value):
-        self.redis_conn.set(key, value)
-
-    def publish_message(self, channel, message):
-        self.redis_conn.publish(channel, message)
-
-# Mock RedisController instance (replace with your actual initialization logic)
-redis_controller = RedisController()
-
-# Your MJPEG stream URL
-stream_url = "http://cinepi.local:8000/stream"
-
-# HTML template with dynamic data overlay and dropdown menu
-html_template = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -41,16 +9,17 @@ html_template = """
             margin: 0;
             padding: 0;
             font-family: 'Arial', sans-serif; /* Set custom font family */
+            background-color: black; /* Default background color */
         }
-        .top-bar {
+        .top-bar, .bottom-bar {
             background-color: black;
             color: #fff;
             padding: 10px;
             display: flex;
             justify-content: space-between;
-            align-items: left;
+            align-items: center;
         }
-        .top-bar select {
+        .top-bar select, .bottom-bar select {
             margin-left: 10px;
             padding: 8px;
             font-size: 16px;
@@ -60,7 +29,7 @@ html_template = """
             border-radius: 5px;
             cursor: pointer;
         }
-        .top-bar select:focus {
+        .top-bar select:focus, .bottom-bar select:focus {
             outline: none;
         }
         #stream-container {
@@ -152,6 +121,25 @@ html_template = """
     <div id="stream-container">
         <img id="stream" src="{{ stream_url }}" alt="Stream">
     </div>
+    <div class="bottom-bar">
+        <div>Static Number 1: 1234</div>
+        <div>Static Number 2: 5678</div>
+        <div>Dropdown 1:
+            <select id="dropdown1">
+                <option value="option1">Option 1</option>
+                <option value="option2">Option 2</option>
+                <option value="option3">Option 3</option>
+            </select>
+        </div>
+        <div>Dropdown 2:
+            <select id="dropdown2">
+                <option value="optionA">Option A</option>
+                <option value="optionB">Option B</option>
+                <option value="optionC">Option C</option>
+            </select>
+        </div>
+        <button id="fullscreen-btn">Enter Fullscreen</button>
+    </div>
     <div id="overlay">ISO: {{ dynamic_data.iso }} | Shutter Angle: {{ dynamic_data.shutter_a }} | FPS: {{ dynamic_data.fps }}</div>
     <div id="iso-dropdown">
         <select>
@@ -182,139 +170,92 @@ html_template = """
             <option value="50">50</option>
         </select>
     </div>
-    <button id="fullscreen-btn">Enter Fullscreen</button>
     <script>
         function fetchISO() {
-            // Replace '/iso_value' with your actual endpoint to fetch ISO value
             fetch('/iso_value')
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('overlay').innerText = `ISO: ${data.iso} | Shutter Angle: ${getCurrentShutterSpeed()} | FPS: ${getCurrentFPS()}`;
+                    document.getElementById('iso-select').value = data.iso;
+                    updateOverlayText();
                 })
-                .catch(error => {
-                    console.error('Error fetching ISO value:', error);
-                });
+                .catch(error => console.error('Error fetching ISO value:', error));
         }
 
         function fetchShutterSpeed() {
-            // Replace '/shutter_a_value' with your actual endpoint to fetch Shutter Angle value
             fetch('/shutter_a_value')
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('overlay').innerText = `ISO: ${getCurrentISO()} | Shutter Angle: ${data.shutter_a} | FPS: ${getCurrentFPS()}`;
+                    document.getElementById('shutter-speed-select').value = data.shutter_a;
+                    updateOverlayText();
                 })
-                .catch(error => {
-                    console.error('Error fetching Shutter Angle value:', error);
-                });
+                .catch(error => console.error('Error fetching Shutter Angle value:', error));
         }
 
         function fetchFPS() {
-            // Replace '/fps_value' with your actual endpoint to fetch FPS value
             fetch('/fps_value')
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('overlay').innerText = `ISO: ${getCurrentISO()} | Shutter Angle: ${getCurrentShutterSpeed()} | FPS: ${data.fps}`;
+                    document.getElementById('fps-select').value = data.fps;
+                    updateOverlayText();
                 })
-                .catch(error => {
-                    console.error('Error fetching FPS value:', error);
-                });
+                .catch(error => console.error('Error fetching FPS value:', error));
         }
 
-        function getCurrentISO() {
-            const overlayText = document.getElementById('overlay').innerText;
-            return overlayText.split(' | ')[0].split(': ')[1];
+        function updateOverlayText() {
+            const iso = document.getElementById('iso-select').value;
+            const shutterAngle = document.getElementById('shutter-speed-select').value;
+            const fps = document.getElementById('fps-select').value;
+            document.getElementById('overlay').innerText = `ISO: ${iso} | Shutter Angle: ${shutterAngle} | FPS: ${fps}`;
         }
 
-        function getCurrentShutterSpeed() {
-            const overlayText = document.getElementById('overlay').innerText;
-            return overlayText.split(' | ')[1].split(': ')[1];
-        }
-
-        function getCurrentFPS() {
-            const overlayText = document.getElementById('overlay').innerText;
-            return overlayText.split(' | ')[2].split(': ')[1];
-        }
-
-        // Fetch ISO value initially and set interval to update every 1 second
         fetchISO();
-        setInterval(fetchISO, 1000); // Update ISO every 1 second
-
-        // Fetch Shutter Angle value initially and set interval to update every 1 second
         fetchShutterSpeed();
-        setInterval(fetchShutterSpeed, 1000); // Update Shutter Angle every 1 second
-
-        // Fetch FPS value initially and set interval to update every 1 second
         fetchFPS();
+
+        setInterval(fetchISO, 1000); // Update ISO every 1 second
+        setInterval(fetchShutterSpeed, 1000); // Update Shutter Angle every 1 second
         setInterval(fetchFPS, 1000); // Update FPS every 1 second
 
-        // Add event listener for clicking on overlay to show dropdown
-        document.getElementById('overlay').addEventListener('click', function() {
-            document.getElementById('iso-dropdown').classList.toggle('show');
-            document.getElementById('shutter-dropdown').classList.remove('show');
-            document.getElementById('fps-dropdown').classList.remove('show');
-        });
-
-        // Add event listener for selecting ISO from dropdown
         document.getElementById('iso-select').addEventListener('change', function() {
-            const selectedIso = this.value;
+            const iso = this.value;
             fetch('/set_iso', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ iso: selectedIso }),
+                body: JSON.stringify({ iso }),
             })
             .then(response => response.json())
-            .then(data => {
-                console.log('ISO set successfully:', data);
-                // Optionally update UI or provide feedback
-            })
-            .catch(error => {
-                console.error('Error setting ISO:', error);
-                // Handle error as needed
-            });
+            .then(data => console.log('ISO set successfully:', data))
+            .catch(error => console.error('Error setting ISO:', error));
         });
 
-        // Add event listener for selecting Shutter Angle from dropdown
         document.getElementById('shutter-speed-select').addEventListener('change', function() {
-            const selectedShutterSpeed = this.value;
+            const shutterAngle = this.value;
             fetch('/set_shutter_a', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ shutter_a: selectedShutterSpeed }),
+                body: JSON.stringify({ shutter_a: shutterAngle }),
             })
             .then(response => response.json())
-            .then(data => {
-                console.log('Shutter Angle set successfully:', data);
-                // Optionally update UI or provide feedback
-                })
-            .catch(error => {
-                console.error('Error setting Shutter Angle:', error);
-                // Handle error as needed
-            });
+            .then(data => console.log('Shutter Angle set successfully:', data))
+            .catch(error => console.error('Error setting Shutter Angle:', error));
         });
 
-        // Add event listener for selecting FPS from dropdown
         document.getElementById('fps-select').addEventListener('change', function() {
-            const selectedFPS = this.value;
+            const fps = this.value;
             fetch('/set_fps', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ fps: selectedFPS }),
+                body: JSON.stringify({ fps }),
             })
             .then(response => response.json())
-            .then(data => {
-                console.log('FPS set successfully:', data);
-                // Optionally update UI or provide feedback
-            })
-            .catch(error => {
-                console.error('Error setting FPS:', error);
-                // Handle error as needed
-            });
+            .then(data => console.log('FPS set successfully:', data))
+            .catch(error => console.error('Error setting FPS:', error));
         });
 
         // Function to toggle full-screen mode
@@ -382,65 +323,15 @@ html_template = """
             toggleFullScreen();
             updateFullscreenButton(); // Update button text immediately after touch
         });
+
+        // Add event listener for changing background color between red and black
+        let isRed = false;
+        document.getElementById('stream-container').addEventListener('click', function() {
+            document.querySelectorAll('*').forEach(element => {
+                element.style.backgroundColor = isRed ? 'black' : 'red';
+            });
+            isRed = !isRed;
+        });
     </script>
 </body>
 </html>
-"""
-
-@app.route('/')
-def index():
-    dynamic_data = {
-        "iso": "Initializing...",  # Initial data for ISO (replace with actual initialization logic)
-        "shutter_a": "Initializing...",  # Initial data for shutter angle
-        "fps": "Initializing..."  # Initial data for FPS
-    }
-    return render_template_string(html_template, stream_url=stream_url, dynamic_data=dynamic_data)
-
-@app.route('/iso_value')
-def get_iso_value():
-    iso_value = redis_controller.get_value("iso")  # Fetch ISO value from Redis (adjust based on your implementation)
-    return jsonify({"iso": iso_value})
-
-@app.route('/shutter_a_value')
-def get_shutter_a_value():
-    shutter_a_value = redis_controller.get_value("shutter_a")  # Fetch Shutter Angle value from Redis
-    return jsonify({"shutter_a": shutter_a_value})
-
-@app.route('/fps_value')
-def get_fps_value():
-    fps_value = redis_controller.get_value("fps")  # Fetch FPS value from Redis
-    return jsonify({"fps": fps_value})
-
-@app.route('/set_iso', methods=['POST'])
-def set_iso_value():
-    iso = request.json.get('iso')
-    if iso:
-        redis_controller.set_value("iso", iso)
-        redis_controller.publish_message("cp_controls", "iso")  # Publish ISO value to 'cp_controls'
-        return jsonify({"status": "success", "iso": iso})
-    else:
-        return jsonify({"status": "error", "message": "ISO value not provided"})
-
-@app.route('/set_shutter_a', methods=['POST'])
-def set_shutter_a_value():
-    shutter_a = request.json.get('shutter_a')
-    if shutter_a:
-        redis_controller.set_value("shutter_a", shutter_a)
-        redis_controller.publish_message("cp_controls", "shutter_a")  # Publish Shutter Angle value
-        return jsonify({"status": "success", "shutter_a": shutter_a})
-    else:
-        return jsonify({"status": "error", "message": "Shutter Angle value not provided"})
-
-@app.route('/set_fps', methods=['POST'])
-def set_fps_value():
-    fps = request.json.get('fps')
-    if fps:
-        redis_controller.set_value("fps", fps)
-        redis_controller.publish_message("cp_controls", "fps")  # Publish FPS value
-        return jsonify({"status": "success", "fps": fps})
-    else:
-        return jsonify({"status": "error", "message": "FPS value not provided"})
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
-           

@@ -60,7 +60,7 @@ class RedisController:
                     value_str = value.decode('utf-8')
                     # Update cache with new value
                     self.cache[changed_key] = value_str
-                #logging.info(f"Changed value: {changed_key} = {value_str}")
+                logging.info(f"Changed value: {changed_key} = {value_str}")
                 self.redis_parameter_changed.emit({'key': changed_key, 'value': value_str})
 
     def get_value(self, key, default=None):

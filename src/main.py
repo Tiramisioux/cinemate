@@ -150,7 +150,7 @@ if __name__ == "__main__":
                                         sensor_detect,
                                         iso_steps=settings['arrays']['iso_steps'],
                                         shutter_a_steps=settings['arrays']['shutter_a_steps'],
-                                        fps_steps=fps_steps
+                                        fps_steps=settings['arrays']['fps_steps'],
                                         )
     
     #gpio_input = ComponentInitializer(cinepi_controller, settings)
@@ -161,8 +161,7 @@ if __name__ == "__main__":
     #     shutter_a_pot=settings['analog_controls']['shutter_a_pot'],
     #     fps_pot=settings['analog_controls']['fps_pot']
     # )
-    # Instantiate the Mediator and pass the components to it
-    mediator = Mediator(cinepi_app, redis_controller, usb_monitor, ssd_monitor, gpio_output)
+
 
     # Only after the mediator has been set up and subscribed to the events,
     # we can trigger methods that may cause the events to fire.
@@ -200,9 +199,13 @@ if __name__ == "__main__":
     manager.create_hotspot('CinePi', '11111111')
     
     # Instantiate the Stream module
-    stream = Stream()
+    stream = Stream(redis_controller, cinepi_controller, simple_gui)
+            # Instantiate the Mediator and pass the components to it
+    mediator = Mediator(cinepi_app, redis_controller, usb_monitor, ssd_monitor, gpio_output, stream)
     # Call the run method to start the Flask application
     stream.run()
+    
+
 
     # Log initialization complete message
     logging.info(f"--- initialization complete")

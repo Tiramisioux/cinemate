@@ -31,6 +31,10 @@ class CinePiController:
         
         self.iso_steps = iso_steps
         self.shutter_a_steps = shutter_a_steps
+        self.fps_steps = fps_steps
+        
+        self.shutter_a_steps_trunc = [45, 135, 172.5, 180, 225, 270, 315, 360]
+        self.fps_steps_trunc = [12, 18, 24, 25, 30, 33, 40, 50]
         
         self.parameters_lock = False
         

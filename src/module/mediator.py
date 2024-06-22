@@ -5,12 +5,13 @@ import json
 import RPi
 
 class Mediator:
-    def __init__(self, cinepi_app, redis_controller, usb_monitor, ssd_monitor, gpio_output):
+    def __init__(self, cinepi_app, redis_controller, usb_monitor, ssd_monitor, gpio_output, stream):
         self.cinepi_app = cinepi_app
         self.redis_controller = redis_controller
         self.usb_monitor = usb_monitor
         self.ssd_monitor = ssd_monitor
         self.gpio_output = gpio_output
+        self.stream = stream
         
         # # Load recognized SSD models from the settings file
         # self.recognized_ssds = self.load_ssd_settings("/home/pi/cinemate/src/module/ssd_settings.json")
@@ -32,6 +33,8 @@ class Mediator:
         self.ssd_monitor.unmount_event.subscribe(self.handle_ssd_unmount)
         
         self.ssd_monitor.ssd_event.subscribe(self.handle_ssd_event)
+        
+        logging.info("Mediator instantiated")
         
     def load_ssd_settings(self, settings_file):
         """Load SSD settings from the specified JSON file."""
@@ -95,20 +98,24 @@ class Mediator:
             self.redis_controller.set_value('is_writing_buf', is_recording)
             # Perform your action or method here based on the is_recording value
             if is_recording:
-                #logging.info("Recording started!")
+                logging.info("Recording started!")
                 self.gpio_output.set_recording(1)
+                
                 # Cancel the stop_recording_timer if it's running
                 if self.stop_recording_timer is not None and self.stop_recording_timer.is_alive():
                     self.stop_recording_timer.cancel()
             else:
-                #logging.info("Recording stopped!")
+                logging.info("Recording stopped!")
                 self.redis_controller.set_value('is_writing', 0)
-                #self.gpio_output.set_recording(0)
+                self.gpio_output.set_recording(0)
+
         
         # Handle "is_writing" key changes        
         elif data['key'] == 'is_writing':
             is_writing = int(data['value'])
-            if is_writing:
+            logging.info("Is writing changed")
+            if is_writing == 1:
+                self.stream.toggle_background_color()
                 pass
             else:
                 self.gpio_output.set_recording(0)    

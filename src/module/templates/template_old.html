@@ -9,7 +9,7 @@
             margin: 0;
             padding: 0;
             font-family: 'Arial', sans-serif; /* Set custom font family */
-            background-color: {{ simple_gui_color }}; /* Default background color */
+            background-color: black; /* Default background color */
         }
         .top-bar, .bottom-bar {
             background-color: black;
@@ -86,27 +86,35 @@
         }
     </style>
 </head>
-<body style="background-color: {{ simple_gui_background_color }};">
+<body>
     <div class="top-bar">
         <div>ISO:
             <select id="iso-select">
-                {% for iso_value in iso_values %}
-                    <option value="{{ iso_value }}">{{ iso_value }}</option>
-                {% endfor %}
+                <option value="100">100</option>
+                <option value="400">400</option>
+                <option value="800">800</option>
+                <option value="1600">1600</option>
             </select>
         </div>
         <div>Shutter Angle:
             <select id="shutter-speed-select">
-                {% for shutter_speed_value in shutter_speed_values %}
-                    <option value="{{ shutter_speed_value }}">{{ shutter_speed_value }}</option>
-                {% endfor %}
+                <option value="45">45</option>
+                <option value="135">135</option>
+                <option value="172.8">172.8</option>
+                <option value="180">180</option>
+                <option value="225">225</option>
+                <option value="275">275</option>
+                <option value="360">360</option>
             </select>
         </div>
         <div>FPS:
             <select id="fps-select">
-                {% for fps_value in fps_values %}
-                    <option value="{{ fps_value }}">{{ fps_value }}</option>
-                {% endfor %}
+                <option value="1">1</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="30">30</option>
+                <option value="40">40</option>
+                <option value="50">50</option>
             </select>
         </div>
     </div>
@@ -135,23 +143,31 @@
     <div id="overlay">ISO: {{ dynamic_data.iso }} | Shutter Angle: {{ dynamic_data.shutter_a }} | FPS: {{ dynamic_data.fps }}</div>
     <div id="iso-dropdown">
         <select>
-            {% for iso_value in iso_values %}
-                <option value="{{ iso_value }}">{{ iso_value }}</option>
-            {% endfor %}
+            <option value="100">100</option>
+            <option value="400">400</option>
+            <option value="800">800</option>
+            <option value="1600">1600</option>
         </select>
     </div>
     <div id="shutter-dropdown">
         <select>
-            {% for shutter_speed_value in shutter_speed_values %}
-                <option value="{{ shutter_speed_value }}">{{ shutter_speed_value }}</option>
-            {% endfor %}
+            <option value="45">45</option>
+            <option value="135">135</option>
+            <option value="172.8">172.8</option>
+            <option value="180">180</option>
+            <option value="225">225</option>
+            <option value="275">275</option>
+            <option value="360">360</option>
         </select>
     </div>
     <div id="fps-dropdown">
         <select>
-            {% for fps_value in fps_values %}
-                <option value="{{ fps_value }}">{{ fps_value }}</option>
-            {% endfor %}
+            <option value="1">1</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="30">30</option>
+            <option value="40">40</option>
+            <option value="50">50</option>
         </select>
     </div>
     <script>
@@ -164,7 +180,7 @@
                 })
                 .catch(error => console.error('Error fetching ISO value:', error));
         }
-    
+
         function fetchShutterSpeed() {
             fetch('/shutter_a_value')
                 .then(response => response.json())
@@ -174,7 +190,7 @@
                 })
                 .catch(error => console.error('Error fetching Shutter Angle value:', error));
         }
-    
+
         function fetchFPS() {
             fetch('/fps_value')
                 .then(response => response.json())
@@ -185,65 +201,21 @@
                 .catch(error => console.error('Error fetching FPS value:', error));
         }
 
-        function fetchBackgroundColor() {
-            fetch('/background_color_value')
-                .then(response => response.json())
-                .then(data => {
-                    updateBackgroundColor(data.background_color);
-                })
-                .catch(error => console.error('Error fetching background color:', error));
-        }
-    
         function updateOverlayText() {
             const iso = document.getElementById('iso-select').value;
             const shutterAngle = document.getElementById('shutter-speed-select').value;
             const fps = document.getElementById('fps-select').value;
             document.getElementById('overlay').innerText = `ISO: ${iso} | Shutter Angle: ${shutterAngle} | FPS: ${fps}`;
         }
-        
-        let previousBackgroundColor = '';
 
-        function updateBackgroundColor(color) {
-            if (color !== previousBackgroundColor) {
-                document.querySelectorAll('*').forEach(element => {
-                    element.style.backgroundColor = color;
-                });
-                previousBackgroundColor = color;
-            }
-        }
-
-        function containerTap() {
-            fetch('/handle_container_tap', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log(data.status);
-            })
-            .catch(error => console.error('Error toggling container_tap color:', error));
-        }
-
-        // Example: Toggle background color on click
-        document.getElementById('stream-container').addEventListener('click', function() {
-            containerTap();
-        });
-    
-        // Initial fetch and update
         fetchISO();
         fetchShutterSpeed();
         fetchFPS();
-        fetchBackgroundColor();
-    
-        // Set intervals for regular updates
+
         setInterval(fetchISO, 1000); // Update ISO every 1 second
         setInterval(fetchShutterSpeed, 1000); // Update Shutter Angle every 1 second
         setInterval(fetchFPS, 1000); // Update FPS every 1 second
-        setInterval(fetchBackgroundColor, 200); // Update Background Color every 1 second
-    
-        // Event listeners for dropdown changes
+
         document.getElementById('iso-select').addEventListener('change', function() {
             const iso = this.value;
             fetch('/set_iso', {
@@ -257,7 +229,7 @@
             .then(data => console.log('ISO set successfully:', data))
             .catch(error => console.error('Error setting ISO:', error));
         });
-    
+
         document.getElementById('shutter-speed-select').addEventListener('change', function() {
             const shutterAngle = this.value;
             fetch('/set_shutter_a', {
@@ -271,7 +243,7 @@
             .then(data => console.log('Shutter Angle set successfully:', data))
             .catch(error => console.error('Error setting Shutter Angle:', error));
         });
-    
+
         document.getElementById('fps-select').addEventListener('change', function() {
             const fps = this.value;
             fetch('/set_fps', {
@@ -285,11 +257,11 @@
             .then(data => console.log('FPS set successfully:', data))
             .catch(error => console.error('Error setting FPS:', error));
         });
-    
+
         // Function to toggle full-screen mode
         function toggleFullScreen() {
             const elem = document.documentElement;
-    
+
             if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
                 // Enter full-screen mode
                 if (elem.requestFullscreen) {
@@ -322,22 +294,22 @@
                 }
             }
         }
-    
+
         // Add event listener for full-screen button
         document.getElementById('fullscreen-btn').addEventListener('click', function() {
             toggleFullScreen();
             updateFullscreenButton(); // Update button text immediately after click
         });
-    
+
         // Detect changes in full-screen state and update button text accordingly
         document.addEventListener('fullscreenchange', updateFullscreenButton);
         document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
         document.addEventListener('msfullscreenchange', updateFullscreenButton);
-    
+
         function updateFullscreenButton() {
             const isInFullScreen = (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) !== null;
             const fullscreenBtn = document.getElementById('fullscreen-btn');
-    
+
             if (isInFullScreen) {
                 fullscreenBtn.textContent = 'Exit Fullscreen';
             } else {
@@ -351,7 +323,15 @@
             toggleFullScreen();
             updateFullscreenButton(); // Update button text immediately after touch
         });
+
+        // Add event listener for changing background color between red and black
+        let isRed = false;
+        document.getElementById('stream-container').addEventListener('click', function() {
+            document.querySelectorAll('*').forEach(element => {
+                element.style.backgroundColor = isRed ? 'black' : 'red';
+            });
+            isRed = !isRed;
+        });
     </script>
-    
 </body>
 </html>

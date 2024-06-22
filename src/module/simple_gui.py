@@ -28,7 +28,20 @@ class SimpleGUI(threading.Thread):
         self.sensor_detect = sensor_detect
         self.redis_listener = redis_listener
         
+        self.background_color_changed = False
+        
         self.start()
+        
+        # Initialize current background color
+        self.current_background_color = "black"  # Default background color
+
+    # Method to set the current background color
+    def set_background_color(self, color):
+        self.current_background_color = color
+
+    # Method to fetch the current background color
+    def get_background_color(self):
+        return self.current_background_color
 
     def hide_cursor(self):
         os.system("setterm -cursor off")
@@ -302,30 +315,36 @@ class SimpleGUI(threading.Thread):
     
 
     def draw_gui(self, values):
-        if not self.fb:
-            return  # Exit if there is no display
-            
-        if int(values["ram_load"].rstrip('%')) > 60:
-            self.fill_color = "yellow"
+        
+        # Determine background color based on conditions
+        if int(values["ram_load"].rstrip('%')) > 95:
+            self.current_background_color = "yellow"
             self.color_mode = "inverse"
-            self.cinepi_controller.stop_recording()
+            self.cinepi_controller.rec()
             logging.info("RAM full")
+            self.background_color_changed = True  # Flag to indicate background color change
             
         elif int(self.redis_controller.get_value('is_writing_buf')) == 1:
-            self.fill_color = "red"
+            self.current_background_color = "red"
             self.color_mode = "inverse"
+            self.background_color_changed = True  # Flag to indicate background color change
             
         elif self.redis_listener.bufferSize != 0:
-            self.fill_color = "green"
+            self.current_background_color = "green"
             self.color_mode = "inverse"
+            self.background_color_changed = True  # Flag to indicate background color change
         
         else:
-            self.fill_color = "black"
+            self.current_background_color = "black"
             self.color_mode = "normal"
+            self.background_color_changed = False  # No background color change
+        
+        if not self.fb:
+            return
         
         image = Image.new("RGBA", self.fb.size)
         draw = ImageDraw.Draw(image)
-        draw.rectangle(((0, 0), self.fb.size), fill=self.fill_color)
+        draw.rectangle(((0, 0), self.fb.size), fill=self.current_background_color)
         
     # Determine the current layout
         gui_layout_key = self.cinepi_controller.gui_layout

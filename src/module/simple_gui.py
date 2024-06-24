@@ -8,6 +8,7 @@ from module.framebuffer import Framebuffer  # Assuming this is a custom module
 import subprocess
 import logging
 from sugarpie import pisugar
+from flask_socketio import SocketIO, emit
 
 class SimpleGUI(threading.Thread):
     def __init__(self, pwm_controller, redis_controller, cinepi_controller, usb_monitor, ssd_monitor, serial_handler, dmesg_monitor, battery_monitor, sensor_detect, redis_listener):

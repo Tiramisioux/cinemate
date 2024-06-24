@@ -96,7 +96,7 @@ class CinePiController:
         self.set_resolution(int(self.redis_controller.get_value('sensor_mode')))
         self.redis_controller.set_value('awb', 1)
         time.sleep(1)
-        self.redis_controller.set_value('awb', 0)
+        self.redis_controller.set_value('awb', 1)
 
         
     def set_iso_lock(self, value=None):
@@ -209,6 +209,7 @@ class CinePiController:
 
                 # Restart the CinePi instance with new resolution settings
                 new_args = [
+                    #'--tuning-file', '~/libcamera/src/ipa/rpi/pisp/data/imx477.json',
                     '--mode', f'{width_value}:{height_value}:{bit_depth_value}:U',
                     '--width', str(width_value),
                     '--height', str(height_value),
@@ -216,14 +217,11 @@ class CinePiController:
                     '--lores-height', str(self.sensor_detect.get_lores_height(self.current_sensor, value)),
                     '-p', '0,30,1920,1020',
                     '--post-process-file', '/home/pi/post-processing.json',
+
                 ]
                 self.cinepi_app.restart(*new_args)
                 
                 self.set_fps(int(self.redis_controller.get_value('fps')))
-                
-                self.redis_controller.set_value('awb', 1)
-                time.sleep(1)
-                self.redis_controller.set_value('awb', 0)
                 
                 self.file_size = file_size_value
 

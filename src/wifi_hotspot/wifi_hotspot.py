@@ -1,4 +1,4 @@
-# https://pimylifeup.com/raspberry-pi-wireless-access-point/
+#!/usr/bin/env python3
 
 import subprocess
 import logging
@@ -21,6 +21,9 @@ class WiFiHotspotManager:
             logging.debug(f"Activation info: {activation_info}")
             
         except subprocess.CalledProcessError as e:
-            self.logging.error(f"Error: Failed to create Wi-Fi hotspot. {e}")            
-            
+            logging.error(f"Error: Failed to create Wi-Fi hotspot. {e}")
 
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    manager = WiFiHotspotManager()
+    manager.create_hotspot('CinePi', '11111111')

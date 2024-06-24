@@ -1,0 +1,13 @@
+[Unit]
+Description=WiFi Hotspot Manager Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/pi/cinemate/src/wifi_hotspot/wifi_hotspot.py
+Restart=on-failure
+User=root
+
+[Install]
+WantedBy=multi-user.target
+
+

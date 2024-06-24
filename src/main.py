@@ -6,6 +6,7 @@ import RPi.GPIO as GPIO
 from signal import pause
 import json
 import argparse
+import subprocess
 
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
@@ -31,8 +32,7 @@ from module.dmesg_monitor import DmesgMonitor
 from module.redis_listener import RedisListener
 from module.gpio_input import ComponentInitializer
 from module.battery_monitor import BatteryMonitor
-from module.hotspot import WiFiHotspotManager
-from module.stream import Stream
+from module.app import create_app
 
 def get_raspberry_pi_model():
     try:
@@ -46,6 +46,11 @@ def get_raspberry_pi_model():
                 return 'other'
     except FileNotFoundError:
         return 'unknown'
+    
+def check_hotspot_status():
+    result = subprocess.run(['nmcli', 'con', 'show', '--active'], capture_output=True, text=True)
+    return any('wifi' in line and 'Hotspot' in line for line in result.stdout.split('\n'))
+
 
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
 
@@ -124,8 +129,8 @@ if __name__ == "__main__":
         '--lores-height', str(sensor_detect.get_lores_height(sensor_detect.camera_model, sensor_mode)),
         '-p', '0,30,1920,1020',
         '--post-process-file', 'home/pi/post-processing.json',
+        '--tuning-file', '~/libcamera/src/ipa/rpi/pisp/data/imx477.json'
     )
-
     # Instantiate other necessary components
     redis_controller = RedisController()
     ssd_monitor = SSDMonitor()
@@ -194,18 +199,17 @@ if __name__ == "__main__":
                            redis_listener
                            )
     
-    #if get_raspberry_pi_model == 'pi5':
-    manager = WiFiHotspotManager(iface='wlan0')
-    manager.create_hotspot('CinePi', '11111111')
-    
-    # Instantiate the Stream module
-    stream = Stream(redis_controller, cinepi_controller, simple_gui)
-            # Instantiate the Mediator and pass the components to it
-    mediator = Mediator(cinepi_app, redis_controller, usb_monitor, ssd_monitor, gpio_output, stream)
-    # Call the run method to start the Flask application
-    stream.run()
-    
+stream = None
+if check_hotspot_status():
+    app, socketio = create_app(redis_controller, cinepi_controller, simple_gui)
+    stream = threading.Thread(target=socketio.run, args=(app,), kwargs={'host': '0.0.0.0', 'port': 5000})
+    stream.start()
+    logging.info(f"Stream module loaded")
+else:
+    logging.error("Didn't find Wi-Fi hotspot. Stream module not loaded")
 
+    
+    mediator = Mediator(cinepi_app, redis_controller, usb_monitor, ssd_monitor, gpio_output, stream)
 
     # Log initialization complete message
     logging.info(f"--- initialization complete")

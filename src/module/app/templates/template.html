@@ -13,6 +13,7 @@
         }
         .top-bar, .bottom-bar {
             background-color: black;
+            font-size: 16px;
             color: #fff;
             padding: 10px;
             display: flex;
@@ -39,27 +40,15 @@
             height: 0;
             padding-bottom: 56.25%;
             overflow: hidden;
-            margin: auto;
+            margin: 0;
         }
         #stream {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
-            height: 100%;
+            height: 100 %;
             object-fit: contain;
-        }
-        #overlay {
-            display: none;
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            color: #fff;
-            font-size: 24px;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 10px;
-            border-radius: 10px;
-            cursor: pointer;
         }
     </style>
 </head>
@@ -107,9 +96,8 @@
                 <option value="optionC">Option C</option>
             </select>
         </div>
-        <button id="fullscreen-btn">Enter Fullscreen</button>
+        #<button id="fullscreen-btn">Enter Fullscreen</button>
     </div>
-    <div id="overlay">ISO: {{ dynamic_data.iso }} | Shutter Angle: {{ dynamic_data.shutter_a }} | FPS: {{ dynamic_data.fps }}</div>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script>
         const socket = io();
@@ -136,7 +124,7 @@
         });
 
         socket.on('background_color_change', data => {
-            document.body.style.backgroundColor = data.background_color;
+            updateBackgroundColor(data.background_color);
         });
 
         function updateOverlayText() {
@@ -144,6 +132,13 @@
             const shutterAngle = document.getElementById('shutter-speed-select').value;
             const fps = document.getElementById('fps-select').value;
             document.getElementById('overlay').innerText = `ISO: ${iso} | Shutter Angle: ${shutterAngle} | FPS: ${fps}`;
+        }
+
+        function updateBackgroundColor(color) {
+            document.body.style.backgroundColor = color;
+            document.querySelectorAll('*').forEach(element => {
+                element.style.backgroundColor = color;
+            });
         }
 
         document.getElementById('iso-select').addEventListener('change', function() {
@@ -193,7 +188,7 @@
         });
 
         socket.on('background_color_change', data => {
-            document.body.style.backgroundColor = data.background_color;
+            updateBackgroundColor(data.background_color);
         });
 
         function updateFullscreenButton() {
@@ -206,7 +201,6 @@
             toggleFullScreen();
             updateFullscreenButton();
         });
-
     </script>
 </body>
 </html>

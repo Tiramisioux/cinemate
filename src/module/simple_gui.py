@@ -49,6 +49,9 @@ class SimpleGUI(threading.Thread):
     def emit_background_color_change(self):
         self.socketio.emit('background_color_change', {'background_color': self.current_background_color})
 
+    def emit_gui_data_change(self, data):
+        self.socketio.emit('gui_data_change', data)
+
     def hide_cursor(self):
         os.system("setterm -cursor off")
 
@@ -207,6 +210,7 @@ class SimpleGUI(threading.Thread):
             values["disk_space"] = f"{min_left} MIN"
         else:
             values["disk_space"] = "NO DISK"
+
         return values
 
     def draw_gui(self, values):
@@ -241,6 +245,19 @@ class SimpleGUI(threading.Thread):
 
         if self.background_color_changed:
             self.emit_background_color_change()  # Emit event if the background color changes
+
+        # Compare current values with previous values to detect changes
+        if hasattr(self, 'previous_values'):
+            changed_data = {}
+            for key in values.keys():
+                if values[key] != self.previous_values[key]:
+                    changed_data[key] = values[key]
+
+            if changed_data:
+                self.emit_gui_data_change(changed_data)
+        
+        # Update previous_values with current values
+        self.previous_values = values.copy()
 
         if not self.fb:
             return
@@ -315,3 +332,6 @@ class SimpleGUI(threading.Thread):
                 time.sleep(0.1)
         finally:
             self.show_cursor()
+
+    def emit_gui_data_change(self, changed_data):
+        self.socketio.emit('gui_data_change', changed_data)

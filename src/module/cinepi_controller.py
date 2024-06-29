@@ -209,7 +209,6 @@ class CinePiController:
 
                 # Restart the CinePi instance with new resolution settings
                 new_args = [
-                    #'--tuning-file', '~/libcamera/src/ipa/rpi/pisp/data/imx477.json',
                     '--mode', f'{width_value}:{height_value}:{bit_depth_value}:U',
                     '--width', str(width_value),
                     '--height', str(height_value),
@@ -217,24 +216,20 @@ class CinePiController:
                     '--lores-height', str(self.sensor_detect.get_lores_height(self.current_sensor, value)),
                     '-p', '0,30,1920,1020',
                     '--post-process-file', '/home/pi/post-processing.json',
-
                 ]
+                
                 self.cinepi_app.restart(*new_args)
                 
                 self.set_fps(int(self.redis_controller.get_value('fps')))
                 
                 self.file_size = file_size_value
 
-
             except ValueError as error:
                 logging.error(f"Error setting resolution: {error}")
-                
 
         else:
             self.switch_resolution()
-            
-
-
+        
     def get_current_sensor_mode(self):
         current_height = int(self.redis_controller.get_value('height'))
 

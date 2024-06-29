@@ -37,8 +37,8 @@
             background-color: black;
             position: relative;
             width: 100%;
-            height: 0;
-            padding-bottom: 56.25%;
+            height: 100%%;
+            padding-bottom: 46.25%;
             overflow: hidden;
             margin: 0;
         }
@@ -98,7 +98,7 @@
         </div>
         #<button id="fullscreen-btn">Enter Fullscreen</button>
     </div>
-    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
     <script>
         const socket = io();
 

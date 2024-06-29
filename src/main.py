@@ -2,14 +2,15 @@ import logging
 import sys
 import traceback
 import threading
-import RPi.GPIO as GPIO
+import RPi.GPIO
 from signal import pause
 import json
 import argparse
 import subprocess
+import time
 
-GPIO.setwarnings(False)
-GPIO.setmode(GPIO.BCM)
+RPi.GPIO.setwarnings(False)
+RPi.GPIO.setmode(RPi.GPIO.BCM)
 
 from module.redis_controller import RedisController
 from module.cinepi_app import CinePi
@@ -30,9 +31,10 @@ from module.sensor_detect import SensorDetect
 from module.mediator import Mediator
 from module.dmesg_monitor import DmesgMonitor
 from module.redis_listener import RedisListener
-from module.gpio_input import ComponentInitializer
+from module.gpio_input import ComponentInitializer, SmartButton
 from module.battery_monitor import BatteryMonitor
 from module.app import create_app
+from module.adafruit_i2c_quad_rotary_encoder import QuadRotaryEncoder
 
 def get_raspberry_pi_model():
     try:
@@ -174,10 +176,19 @@ if __name__ == "__main__":
     else:
         logging.error("Didn't find Wi-Fi hotspot. Stream module not loaded")
 
+    settings_mapping = {
+        0: {'setting_name': 'iso', 'gpio_pin': 4},
+        1: {'setting_name': 'shutter_a', 'gpio_pin': 4},
+        2: {'setting_name': 'fps', 'gpio_pin': 4},
+        3: {'setting_name': 'shutter_a', 'gpio_pin': None},  # Adjust as needed
+    }
+
+    QuadRotaryEncoder(cinepi_controller, settings_mapping)
+
     mediator = Mediator(cinepi_app, redis_controller, usb_monitor, ssd_monitor, gpio_output, stream)
     logging.info(f"--- initialization complete")
 
-    try:
+    try:    
         pause()
     except Exception:
         logging.error("An unexpected error occurred:\n" + traceback.format_exc())
@@ -188,4 +199,4 @@ if __name__ == "__main__":
         dmesg_monitor.join()
         serial_handler.join()
         command_executor.join()
-        GPIO.cleanup()
+        RPi.GPIO.cleanup()

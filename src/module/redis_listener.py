@@ -58,12 +58,31 @@ class RedisListener:
                         stats_data = json.loads(message_data)
                         self.bufferSize = stats_data.get('bufferSize', None)
                         self.colorTemp = stats_data.get('colorTemp', None)
-                        self.focus = stats_data.get('focus', None)
-                        self.frameCount = stats_data.get('frameCount', None)
-                        self.framerate = stats_data.get('framerate', None)
+                        self.focus = stats_data.get('focus', None)        
+                        self.frameCount = stats_data.get('frameCount', None)  
+                        self.framerate = stats_data.get('framerate', None) 
+                        
+                        # Update frame count and framerate
+                        new_frame_count = stats_data.get('frameCount', None)
+                        if new_frame_count is not None:
+                            if self.frameCount == 0:
+                                self.frameCount = new_frame_count
+                            elif new_frame_count > self.frameCount:
+                                self.frameCount = new_frame_count
+                                # If frame count increases, assume recording has started
+                                if not self.is_recording:
+                                    self.is_recording = True
+                                    self.recording_start_time = datetime.datetime.now()
+                                    logging.info(f"Recording started at: {self.recording_start_time}")
+                                    self.framerate = stats_data.get('framerate', None)
+                    
+                        # Add current framerate value to the list
+                        current_framerate = stats_data.get('framerate', None)
+                        if current_framerate is not None:
+                            self.framerate_values.append(current_framerate)
 
                         # Optionally, log or use these variables as needed
-                        #logging.info(f"bufferSize: {self.bufferSize}, colorTemp: {self.colorTemp}, focus: {self.focus}, frameCount: {self.frameCount}, framerate: {self.framerate}")
+                        # logging.info(f"bufferSize: {self.bufferSize}, colorTemp: {self.colorTemp}, focus: {self.focus}, frameCount: {self.frameCount}, framerate: {self.framerate}")
 
                         # You can update other parts of your application with these values
                         # For example, you might want to store these values or trigger events
@@ -73,6 +92,7 @@ class RedisListener:
                         logging.error(f"Failed to parse JSON data: {e}")
                 else:
                     logging.warning(f"Received unexpected data format: {message_data}")
+
 
     def listen_controls(self):
         for message in self.pubsub_controls.listen():
@@ -105,16 +125,17 @@ class RedisListener:
         else:
             logging.warning("Cannot calculate expected frames: Recording start or end time not registered.")
         
-        num_frames = len(self.framerate_values)
+        num_frames = self.frameCount  # Use the frame count received from listen_stats
         
         if num_frames > 0:
-            average_framerate = sum(self.framerate_values) / len(self.framerate_values)
+            average_framerate = num_frames / time_diff_seconds
+            self.framerate_values.append(average_framerate)
             min_framerate = min(self.framerate_values)
             max_framerate = max(self.framerate_values)
             median_framerate = statistics.median(self.framerate_values)
-            stdev_framerate = statistics.stdev(self.framerate_values)
-            variance_framerate = statistics.variance(self.framerate_values)
-            cv_framerate = stdev_framerate / average_framerate
+            stdev_framerate = statistics.stdev(self.framerate_values) if len(self.framerate_values) > 1 else 0
+            variance_framerate = statistics.variance(self.framerate_values) if len(self.framerate_values) > 1 else 0
+            cv_framerate = stdev_framerate / average_framerate if average_framerate != 0 else 0
             
             logging.info(f"Total number of frames registered: {num_frames}")
             logging.info(f"Total number of frames expected: {expected_frames}")
@@ -128,5 +149,3 @@ class RedisListener:
             logging.info(f"Coefficient of variation of framerate values: {cv_framerate}")
         else:
             logging.warning("No framerate values recorded.")
-
-

@@ -3,6 +3,17 @@ from gpiozero import Button, RotaryEncoder
 import threading
 import logging
 import shlex  # Add this import
+
+import board
+import busio
+import digitalio
+import adafruit_seesaw.seesaw
+import adafruit_seesaw.rotaryio
+import adafruit_seesaw.digitalio
+import adafruit_seesaw.neopixel
+import warnings
+import logging
+import time
     
 class ComponentInitializer:
     def __init__(self, cinepi_controller, settings):
@@ -10,32 +21,30 @@ class ComponentInitializer:
         self.settings = settings
         self.logger = logging.getLogger('ComponentInitializer')
         
+        self.smart_buttons_list = []
+        
         self.initialize_components()
         
     def initialize_components(self):
-
         combined_actions = self.settings.get('combined_actions', [])
-
+        
         combined_actions_config = self.settings.get('combined_actions', [])
+
 
         # Initialize Buttons
         for button_config in self.settings.get('buttons', []):
-            # Extract action methods for each type of button press
             press_action_method = self.extract_action_method(button_config.get('press_action'))
             single_click_action_method = self.extract_action_method(button_config.get('single_click_action'))
             double_click_action_method = self.extract_action_method(button_config.get('double_click_action'))
             triple_click_action_method = self.extract_action_method(button_config.get('triple_click_action'))
             hold_action_method = self.extract_action_method(button_config.get('hold_action'))
             
-            # Example of logging the extracted methods
             self.logger.info(f"Button on pin {button_config['pin']}:")
             if not "None" in str(press_action_method): self.logger.info(f"  Press: {press_action_method}")
             if not "None" in str(single_click_action_method): self.logger.info(f"  Single Click: {single_click_action_method}")
             if not "None" in str(double_click_action_method): self.logger.info(f"  Double Click: {double_click_action_method}")
             if not "None" in str(triple_click_action_method): self.logger.info(f"  Triple Click: {triple_click_action_method}")
             if not "None" in str(hold_action_method): self.logger.info(f"  Hold: {hold_action_method}")
-            
-            #actions_desc = self._describe_actions(button_config)
 
             SmartButton(cinepi_controller=self.cinepi_controller,
                         pin=button_config['pin'],
@@ -44,18 +53,17 @@ class ComponentInitializer:
                         actions=button_config,
                         identifier=str(button_config['pin']),
                         combined_actions=combined_actions)
+            
+            self.smart_buttons_list.append(button_config['pin'])  # Track SmartButton instances
         
         # Initialize Two-Way Switches
         for switch_config in self.settings.get('two_way_switches', []):
-            # Extract action methods for each state of the switch
             state_on_action_method = self.extract_action_method(switch_config.get('state_on_action'))
             state_off_action_method = self.extract_action_method(switch_config.get('state_off_action'))
             
             self.logger.info(f"Two-way switch on pin {switch_config['pin']}:")
             if not "None" in str(state_on_action_method): self.logger.info(f"  State ON action: {state_on_action_method}")
             if not "None" in str(state_off_action_method): self.logger.info(f"  State OFF action: {state_off_action_method}")
-            
-            actions_desc = self._describe_actions(button_config)
 
             SimpleSwitch(cinepi_controller=self.cinepi_controller,
                          pin=switch_config['pin'],
@@ -63,7 +71,6 @@ class ComponentInitializer:
         
         # Initialize Rotary Encoders with Buttons
         for encoder_config in self.settings.get('rotary_encoders', []):
-            # Extracting button actions
             button_actions = encoder_config.get('button_actions', {})
             press_action_method = self.extract_action_method(button_actions.get('press_action'))
             single_click_action_method = self.extract_action_method(button_actions.get('single_click_action'))
@@ -71,7 +78,6 @@ class ComponentInitializer:
             triple_click_action_method = self.extract_action_method(button_actions.get('triple_click_action'))
             hold_action_method = self.extract_action_method(button_actions.get('hold_action'))
             
-            # Extracting encoder actions
             encoder_actions = encoder_config.get('encoder_actions', {})
             rotate_cw_action_method = self.extract_action_method(encoder_actions.get('rotate_clockwise'))
             rotate_ccw_action_method = self.extract_action_method(encoder_actions.get('rotate_counterclockwise'))
@@ -84,7 +90,6 @@ class ComponentInitializer:
             if not "None" in str(double_click_action_method): self.logger.info(f"  Double Click: {double_click_action_method}")
             if not "None" in str(triple_click_action_method): self.logger.info(f"  Triple Click: {triple_click_action_method}")
             if not "None" in str(hold_action_method): self.logger.info(f"  Hold: {hold_action_method}")
-            
 
             RotaryEncoderWithButton(cinepi_controller=self.cinepi_controller,
                                     clk_pin=encoder_config['clk_pin'],
@@ -94,24 +99,29 @@ class ComponentInitializer:
                                     debounce_time=float(encoder_config['debounce_time']),
                                     actions=encoder_config,
                                     button_identifier=str(encoder_config['button_pin']))
-            
+        
+
+               
+
         for action_config in combined_actions_config:
             action_method = self.extract_action_method(action_config.get('action'))
             
             logging.info(f"Combined Action: Hold Button Pin {action_config['hold_button_pin']}, Action Button Pin {action_config['action_button_pin']}")
             self.logger.info(f"  Action Type: {action_config['action_type']}, Action: {action_method}")
+
+        #Initialize Quad Rotary Encoder
             
-    def extract_action_method(self, action_config):
-        """Extracts the action method from the action configuration.
+        quad_rotary_settings = self.settings['quad_rotary_encoders']
         
-        Args:
-            action_config: The action configuration, which can be a string,
-                        a dictionary with 'method' (and optionally 'args'),
-                        or 'None' for no action defined.
-                        
-        Returns:
-            The action method name if defined; otherwise, None.
-        """
+        QuadRotaryEncoder(
+            self.cinepi_controller, 
+            quad_rotary_settings,
+            self.smart_buttons_list  # Pass the list of smart buttons
+        )
+        logging.info("Quad Rotary Encoder instantiated")
+
+
+    def extract_action_method(self, action_config):
         if action_config == "None":
             return None
         elif isinstance(action_config, str):
@@ -413,7 +423,6 @@ class SmartButton:
         else:
             logging.info(f"Button {self.identifier} individual action ignored. Button {SmartButton._currently_held} is currently held.")
 
-
 class SimpleSwitch:
     def __init__(self, cinepi_controller, pin, actions, debounce_time=0.1):
         self.logger = logging.getLogger(f"SimpleSwitch{pin}")
@@ -501,3 +510,123 @@ class RotaryEncoderWithButton:
                 self.logger.info(f"Rotary encoder {self.encoder} calling method {method_name} {args}.")
             else:
                 self.logger.error(f"Method {method_name} not found in cinepi_controller.")
+
+# Suppress specific warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning, module="adafruit_blinka.microcontroller.generic_linux.i2c")
+
+class QuadRotaryEncoder:
+    def __init__(self, cinepi_controller, settings_mapping, smart_buttons):
+        self.i2c = busio.I2C(board.SCL, board.SDA, frequency=50000)
+        self.seesaw = adafruit_seesaw.seesaw.Seesaw(self.i2c, 0x49)
+        self.cinepi_controller = cinepi_controller
+
+        self.encoders = [adafruit_seesaw.rotaryio.IncrementalEncoder(self.seesaw, n) for n in range(4)]
+        self.switches = [adafruit_seesaw.digitalio.DigitalIO(self.seesaw, pin) for pin in (12, 14, 17, 9)]
+        for switch in self.switches:
+            switch.switch_to_input(digitalio.Pull.UP)
+
+        self.pixels = adafruit_seesaw.neopixel.NeoPixel(self.seesaw, 18, 4)
+        self.pixels.brightness = 0.5
+
+        self.colors = [0, 0, 0, 0]
+        self.last_positions = [-1, -1, -1, -1]
+        self.settings_mapping = settings_mapping
+        self.settings = {settings_mapping[key]['setting_name']: 100 for key in settings_mapping}
+
+        self.smart_buttons = smart_buttons  # Store the list of SmartButton instances
+
+        logging.info(self.smart_buttons)
+
+        self.start()
+        
+    def start(self):
+        thread = threading.Thread(target=self.run, daemon=True)
+        thread.start()
+
+    def update(self):
+        positions = [encoder.position for encoder in self.encoders]
+
+        for n, rotary_pos in enumerate(positions):
+            if rotary_pos != self.last_positions[n]:
+                if self.switches[n].value:
+                    setting_name = self.settings_mapping[n].get('setting_name')
+                    if setting_name is not None:
+                        if self.last_positions[n] != -1:
+                            if rotary_pos > self.last_positions[n]:
+                                self.settings[setting_name] += 1
+                            else:
+                                self.settings[setting_name] -= 1
+                            self.settings[setting_name] = max(0, self.settings[setting_name])
+                            self.update_setting(n)
+                            logging.info(f"Quad Rotary #{n}: {rotary_pos}")
+                    else:
+                        logging.info(f"No setting mapped for encoder index {n}")
+
+                if not self.switches[n].value:
+                    self.pixels[n] = 0xFFFFFF
+                else:
+                    self.pixels[n] = self.colorwheel(self.colors[n])
+
+                self.last_positions[n] = rotary_pos
+            else:
+                if not self.switches[n].value:
+                    self.pixels[n] = 0xFFFFFF
+                    logging.info(f"Quad Rotary button #{n}: pressed")
+                    time.sleep(0.1)
+                    # Check if this encoder button matches any SmartButton
+                    button_pin = self.settings_mapping[n].get('gpio_pin')
+                    logging.info(button_pin)
+                    if button_pin in self.smart_buttons:
+                        existing_button = self.smart_buttons[button_pin]
+                        self.clone_smart_button_behavior(existing_button)
+                else:
+                    pass
+
+    def update_setting(self, encoder_index):
+        setting_name = self.settings_mapping[encoder_index].get('setting_name')
+        if setting_name is not None:
+            try:
+                inc_func_name = f"inc_{setting_name}"
+                dec_func_name = f"dec_{setting_name}"
+
+                if hasattr(self.cinepi_controller, inc_func_name) and hasattr(self.cinepi_controller, dec_func_name):
+                    current_position = self.encoders[encoder_index].position
+                    last_position = self.last_positions[encoder_index]
+
+                    if current_position > last_position:
+                        getattr(self.cinepi_controller, inc_func_name)()
+                        self.colors[encoder_index] = (self.colors[encoder_index] + 8) % 256
+                    elif current_position < last_position:
+                        getattr(self.cinepi_controller, dec_func_name)()
+                        self.colors[encoder_index] = (self.colors[encoder_index] - 8) % 256
+
+                    self.last_positions[encoder_index] = current_position
+
+                else:
+                    raise AttributeError(f"{self.cinepi_controller.__name__} module does not have functions for {setting_name}.")
+            except KeyError:
+                raise ValueError(f"Invalid setting_name: {setting_name}")
+        else:
+            logging.info(f"Encoder index {encoder_index} is out of range of settings_mapping.")
+
+    def run(self):
+        while True:
+            self.update()
+
+    @staticmethod
+    def colorwheel(pos):
+        if pos < 85:
+            return (255 - pos * 3, pos * 3, 0)
+        elif pos < 170:
+            pos -= 85
+            return (0, 255 - pos * 3, pos * 3)
+        else:
+            pos -= 170
+            return (pos * 3, 0, 255 - pos * 3)
+
+    def clone_smart_button_behavior(self, existing_button):
+        # Clone the behavior of the existing smart button
+        # Assuming SmartButton class allows cloning or has a method to trigger its behavior
+        logging.info(f"Cloning behavior of SmartButton {existing_button} for Quad Rotary Encoder.")
+        # Example logic to trigger the existing button behavior
+        existing_button.on_press()  # Or trigger whatever behavior is needed

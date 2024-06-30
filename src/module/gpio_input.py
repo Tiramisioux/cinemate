@@ -24,13 +24,13 @@ class ComponentInitializer:
         self.smart_buttons_list = []
         
         self.initialize_components()
+        self.initialize_quad_rotary_encoder()  # Initialize Quad Rotary Encoder
         
     def initialize_components(self):
         combined_actions = self.settings.get('combined_actions', [])
         
         combined_actions_config = self.settings.get('combined_actions', [])
-
-
+        
         # Initialize Buttons
         for button_config in self.settings.get('buttons', []):
             press_action_method = self.extract_action_method(button_config.get('press_action'))
@@ -40,21 +40,24 @@ class ComponentInitializer:
             hold_action_method = self.extract_action_method(button_config.get('hold_action'))
             
             self.logger.info(f"Button on pin {button_config['pin']}:")
-            if not "None" in str(press_action_method): self.logger.info(f"  Press: {press_action_method}")
-            if not "None" in str(single_click_action_method): self.logger.info(f"  Single Click: {single_click_action_method}")
-            if not "None" in str(double_click_action_method): self.logger.info(f"  Double Click: {double_click_action_method}")
-            if not "None" in str(triple_click_action_method): self.logger.info(f"  Triple Click: {triple_click_action_method}")
-            if not "None" in str(hold_action_method): self.logger.info(f"  Hold: {hold_action_method}")
+            if press_action_method is not None: self.logger.info(f"  Press: {press_action_method}")
+            if single_click_action_method is not None: self.logger.info(f"  Single Click: {single_click_action_method}")
+            if double_click_action_method is not None: self.logger.info(f"  Double Click: {double_click_action_method}")
+            if triple_click_action_method is not None: self.logger.info(f"  Triple Click: {triple_click_action_method}")
+            if hold_action_method is not None: self.logger.info(f"  Hold: {hold_action_method}")
 
-            SmartButton(cinepi_controller=self.cinepi_controller,
-                        pin=button_config['pin'],
-                        pull_up=bool(button_config['pull_up']),
-                        debounce_time=float(button_config['debounce_time']),
-                        actions=button_config,
-                        identifier=str(button_config['pin']),
-                        combined_actions=combined_actions)
+            # Create and store SmartButton instance
+            smart_button = SmartButton(
+                cinepi_controller=self.cinepi_controller,
+                pin=button_config['pin'],
+                pull_up=bool(button_config['pull_up']),
+                debounce_time=float(button_config['debounce_time']),
+                actions=button_config,
+                identifier=str(button_config['pin']),
+                combined_actions=combined_actions
+            )
             
-            self.smart_buttons_list.append(button_config['pin'])  # Track SmartButton instances
+            self.smart_buttons_list.append(smart_button)  # Store SmartButton instance
         
         # Initialize Two-Way Switches
         for switch_config in self.settings.get('two_way_switches', []):
@@ -109,17 +112,22 @@ class ComponentInitializer:
             logging.info(f"Combined Action: Hold Button Pin {action_config['hold_button_pin']}, Action Button Pin {action_config['action_button_pin']}")
             self.logger.info(f"  Action Type: {action_config['action_type']}, Action: {action_method}")
 
-        #Initialize Quad Rotary Encoder
-            
-        quad_rotary_settings = self.settings['quad_rotary_encoders']
+    def initialize_quad_rotary_encoder(self):
+        quad_rotary_settings = self.settings.get('quad_rotary_encoders', {})
         
-        QuadRotaryEncoder(
-            self.cinepi_controller, 
+        self.quad_rotary_encoder = QuadRotaryEncoder(
+            self.cinepi_controller,
             quad_rotary_settings,
+            self,
             self.smart_buttons_list  # Pass the list of smart buttons
         )
         logging.info("Quad Rotary Encoder instantiated")
 
+    def get_smart_button_by_pin(self, pin):
+        for button in self.smart_buttons_list:
+            if button.identifier == str(pin):
+                return button
+        return None  # Or handle the case where button with 'pin' is not found
 
     def extract_action_method(self, action_config):
         if action_config == "None":
@@ -515,7 +523,7 @@ class RotaryEncoderWithButton:
 warnings.filterwarnings("ignore", category=RuntimeWarning, module="adafruit_blinka.microcontroller.generic_linux.i2c")
 
 class QuadRotaryEncoder:
-    def __init__(self, cinepi_controller, settings_mapping, smart_buttons):
+    def __init__(self, cinepi_controller, settings_mapping, component_initializer, smart_buttons):
         self.i2c = busio.I2C(board.SCL, board.SDA, frequency=50000)
         self.seesaw = adafruit_seesaw.seesaw.Seesaw(self.i2c, 0x49)
         self.cinepi_controller = cinepi_controller
@@ -533,12 +541,16 @@ class QuadRotaryEncoder:
         self.settings_mapping = settings_mapping
         self.settings = {settings_mapping[key]['setting_name']: 100 for key in settings_mapping}
 
-        self.smart_buttons = smart_buttons  # Store the list of SmartButton instances
+        self.component_initializer = component_initializer
 
-        logging.info(self.smart_buttons)
+        self.smart_buttons = smart_buttons  # Store the list of SmartButton instances
+        
+        self.last_positions = [0] * len(settings_mapping)
+        self.debounced_time = 0.1  # Example debounce time in seconds
+        self.button_states = [False] * len(settings_mapping)
 
         self.start()
-        
+
     def start(self):
         thread = threading.Thread(target=self.run, daemon=True)
         thread.start()
@@ -568,19 +580,39 @@ class QuadRotaryEncoder:
                     self.pixels[n] = self.colorwheel(self.colors[n])
 
                 self.last_positions[n] = rotary_pos
+
+            # Handle button press and hold
+            if not self.switches[n].value:  # Button pressed
+                if not self.button_states[n]:  # First detection of press
+                    self.button_states[n] = True
+                    self.handle_button_press(n)
             else:
-                if not self.switches[n].value:
-                    self.pixels[n] = 0xFFFFFF
-                    logging.info(f"Quad Rotary button #{n}: pressed")
-                    time.sleep(0.1)
-                    # Check if this encoder button matches any SmartButton
-                    button_pin = self.settings_mapping[n].get('gpio_pin')
-                    logging.info(button_pin)
-                    if button_pin in self.smart_buttons:
-                        existing_button = self.smart_buttons[button_pin]
-                        self.clone_smart_button_behavior(existing_button)
-                else:
-                    pass
+                if self.button_states[n]:  # Button released
+                    self.button_states[n] = False
+                    self.handle_button_release(n)
+                
+    def handle_button_press(self, encoder_index):
+        button_pin = self.settings_mapping[encoder_index].get('gpio_pin')
+        if button_pin is not None:
+            smart_button = self.component_initializer.get_smart_button_by_pin(button_pin)
+            if smart_button is not None:
+                smart_button.on_press()
+            else:
+                logging.error(f"No SmartButton found for pin {button_pin}")
+        else:
+            logging.error(f"No button pin mapped for encoder index {encoder_index}")
+
+    def handle_button_release(self, encoder_index):
+        button_pin = self.settings_mapping[encoder_index].get('gpio_pin')
+        if button_pin is not None:
+            smart_button = self.component_initializer.get_smart_button_by_pin(button_pin)
+            if smart_button is not None:
+                smart_button.on_release()
+            else:
+                logging.error(f"No SmartButton found for pin {button_pin}")
+        else:
+            logging.error(f"No button pin mapped for encoder index {encoder_index}")
+
 
     def update_setting(self, encoder_index):
         setting_name = self.settings_mapping[encoder_index].get('setting_name')
@@ -605,7 +637,7 @@ class QuadRotaryEncoder:
                 else:
                     raise AttributeError(f"{self.cinepi_controller.__name__} module does not have functions for {setting_name}.")
             except KeyError:
-                raise ValueError(f"Invalid setting_name: {setting_name}")
+                raise ValueError(f"Invalid setting_name: {setting_name}.")
         else:
             logging.info(f"Encoder index {encoder_index} is out of range of settings_mapping.")
 
@@ -625,8 +657,7 @@ class QuadRotaryEncoder:
             return (pos * 3, 0, 255 - pos * 3)
 
     def clone_smart_button_behavior(self, existing_button):
-        # Clone the behavior of the existing smart button
-        # Assuming SmartButton class allows cloning or has a method to trigger its behavior
         logging.info(f"Cloning behavior of SmartButton {existing_button} for Quad Rotary Encoder.")
-        # Example logic to trigger the existing button behavior
-        existing_button.on_press()  # Or trigger whatever behavior is needed
+        existing_button.on_press()  # Or trigger the required behavior
+
+

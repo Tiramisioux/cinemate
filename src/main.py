@@ -90,9 +90,12 @@ def load_settings(filename):
 
         if 'combined_actions' in original_settings:
             settings['combined_actions'] = original_settings['combined_actions']
+
+        # if 'quad_rotary_encoders' in original_settings:
+        #     settings['quad_rotary_encoders'] = original_settings['quad_rotary_encoders']
             
         settings['quad_rotary_encoders'] =  {
-        0: {'setting_name': 'iso', 'gpio_pin': 4},
+        0: {'setting_name': 'iso', 'gpio_pin': 26},
         1: {'setting_name': 'shutter_a', 'gpio_pin': 5},
         2: {'setting_name': 'fps', 'gpio_pin': 4},
         3: {'setting_name': 'shutter_a', 'gpio_pin': 5},  # Adjust as needed
@@ -120,7 +123,7 @@ if __name__ == "__main__":
         '--lores-height', str(sensor_detect.get_lores_height(sensor_detect.camera_model, sensor_mode)),
         '-p', '0,30,1920,1020',
         '--post-process-file', 'home/pi/post-processing.json',
-        '--tuning-file', '~/libcamera/src/ipa/rpi/pisp/data/imx477.json'
+        # '--tuning-file', '~/libcamera/src/ipa/rpi/pisp/data/imx477.json'
     )
 
     redis_controller = RedisController()
@@ -145,6 +148,10 @@ if __name__ == "__main__":
                                          )
 
     gpio_input = ComponentInitializer(cinepi_controller, settings)
+    
+    cinepi_controller.set_resolution(0)
+
+
 
     usb_monitor.check_initial_devices()
     keyboard = Keyboard(cinepi_controller, usb_monitor)
@@ -166,7 +173,6 @@ if __name__ == "__main__":
                            sensor_detect,
                            redis_listener,
                            None)
-
     stream = None
     if check_hotspot_status():
         app, socketio = create_app(redis_controller, cinepi_controller, simple_gui)
@@ -179,6 +185,11 @@ if __name__ == "__main__":
         logging.error("Didn't find Wi-Fi hotspot. Stream module not loaded")
 
     mediator = Mediator(cinepi_app, redis_controller, usb_monitor, ssd_monitor, gpio_output, stream)
+    time.sleep(1)
+    
+    fps_current = redis_controller.get_value('fps')
+    cinepi_controller.set_fps(fps_current)
+        
     logging.info(f"--- initialization complete")
 
     try:    

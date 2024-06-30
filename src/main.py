@@ -25,16 +25,14 @@ from module.keyboard import Keyboard
 from module.cli_commands import CommandExecutor
 from module.serial_handler import SerialHandler
 from module.logger import configure_logging
-from module.rotary_encoder import SimpleRotaryEncoder
 from module.PWMcontroller import PWMController
 from module.sensor_detect import SensorDetect
 from module.mediator import Mediator
 from module.dmesg_monitor import DmesgMonitor
 from module.redis_listener import RedisListener
-from module.gpio_input import ComponentInitializer, SmartButton
+from module.gpio_input import ComponentInitializer
 from module.battery_monitor import BatteryMonitor
 from module.app import create_app
-from module.adafruit_i2c_quad_rotary_encoder import QuadRotaryEncoder
 
 def get_raspberry_pi_model():
     try:
@@ -62,17 +60,14 @@ def load_settings(filename):
     with open(filename, 'r') as file:
         original_settings = json.load(file)
 
-        # Initialize an empty settings dictionary
         settings = {}
 
-        # Dynamically load settings based on what's available in the JSON file
         if 'gpio_output' in original_settings:
             settings['gpio_output'] = original_settings['gpio_output']
 
         if 'arrays' in original_settings:
             arrays_settings = original_settings['arrays']
             fps_steps = arrays_settings.get('fps_steps', list(range(1, 51)))
-            # Ensure fps_steps is a list if it's null in the JSON
             fps_steps = fps_steps if fps_steps is not None else list(range(1, 51))
 
             settings['arrays'] = {
@@ -95,6 +90,13 @@ def load_settings(filename):
 
         if 'combined_actions' in original_settings:
             settings['combined_actions'] = original_settings['combined_actions']
+            
+        settings['quad_rotary_encoders'] =  {
+        0: {'setting_name': 'iso', 'gpio_pin': 4},
+        1: {'setting_name': 'shutter_a', 'gpio_pin': 5},
+        2: {'setting_name': 'fps', 'gpio_pin': 4},
+        3: {'setting_name': 'shutter_a', 'gpio_pin': 5},  # Adjust as needed
+    }
 
         return settings
 
@@ -108,7 +110,7 @@ if __name__ == "__main__":
     settings = load_settings('/home/pi/cinemate/src/settings.json')
 
     sensor_detect = SensorDetect()
-    sensor_mode = 0  # Default sensor mode, adjust if necessary
+    sensor_mode = 0
 
     cinepi_app = CinePi(
         '--mode', f"{sensor_detect.get_width(sensor_detect.camera_model, sensor_mode)}:{sensor_detect.get_height(sensor_detect.camera_model, sensor_mode)}:{sensor_mode}:U",
@@ -142,6 +144,8 @@ if __name__ == "__main__":
                                          fps_steps=settings['arrays']['fps_steps'],
                                          )
 
+    gpio_input = ComponentInitializer(cinepi_controller, settings)
+
     usb_monitor.check_initial_devices()
     keyboard = Keyboard(cinepi_controller, usb_monitor)
     command_executor = CommandExecutor(cinepi_controller, cinepi_app)
@@ -151,7 +155,6 @@ if __name__ == "__main__":
     redis_listener = RedisListener(redis_controller)
     battery_monitor = BatteryMonitor()
 
-    # Instantiate SimpleGUI before creating the app, passing None for socketio
     simple_gui = SimpleGUI(pwm_controller, 
                            redis_controller, 
                            cinepi_controller, 
@@ -162,12 +165,11 @@ if __name__ == "__main__":
                            battery_monitor,
                            sensor_detect,
                            redis_listener,
-                           None)  # Pass None for socketio
+                           None)
 
     stream = None
     if check_hotspot_status():
         app, socketio = create_app(redis_controller, cinepi_controller, simple_gui)
-        # Update the socketio reference in SimpleGUI
         simple_gui.socketio = socketio
         
         stream = threading.Thread(target=socketio.run, args=(app,), kwargs={'host': '0.0.0.0', 'port': 5000})
@@ -175,15 +177,6 @@ if __name__ == "__main__":
         logging.info(f"Stream module loaded")
     else:
         logging.error("Didn't find Wi-Fi hotspot. Stream module not loaded")
-
-    settings_mapping = {
-        0: {'setting_name': 'iso', 'gpio_pin': 4},
-        1: {'setting_name': 'shutter_a', 'gpio_pin': 4},
-        2: {'setting_name': 'fps', 'gpio_pin': 4},
-        3: {'setting_name': 'shutter_a', 'gpio_pin': None},  # Adjust as needed
-    }
-
-    QuadRotaryEncoder(cinepi_controller, settings_mapping)
 
     mediator = Mediator(cinepi_app, redis_controller, usb_monitor, ssd_monitor, gpio_output, stream)
     logging.info(f"--- initialization complete")

@@ -63,7 +63,7 @@
       {
         "clk_pin": 9,
         "dt_pin": 11,
-        "button_pin": 10,
+        "button_pin": "None",
         "pull_up": "False",
         "debounce_time": "0.05",
         "button_actions": {

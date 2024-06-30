@@ -131,6 +131,13 @@
       }
     ],
 
+  "quad_rotary_encoders": {
+      "0": { "setting_name": "iso", "gpio_pin": 26 },
+      "1": { "setting_name": "shutter_a", "gpio_pin": 5 },
+      "2": { "setting_name": "fps", "gpio_pin": 17 },
+      "3": { "setting_name": "shutter_b", "gpio_pin": 14 }
+    },
+
   "combined_actions": [
     {
       "hold_button_pin": 10,

@@ -310,6 +310,8 @@ class CinePiController:
 
     def set_fps(self, value):
         
+        value = int(value)
+        
         if not self.fps_lock:
             # Determine max fps from resolution
             max_fps = int(self.redis_controller.get_value('fps_max'))

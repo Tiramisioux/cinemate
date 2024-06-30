@@ -10,7 +10,6 @@
             padding: 0;
             font-family: 'Arial', sans-serif;
             background-color: {{ background_color }};
-            
         }
         .top-bar, .bottom-bar {
             background-color: black;
@@ -38,7 +37,7 @@
             background-color: black;
             position: relative;
             width: 100%;
-            height: 100%;
+            height: 100%%;
             padding-bottom: 46.25%;
             overflow: hidden;
             margin: 0;
@@ -48,10 +47,8 @@
             top: 0;
             left: 0;
             width: 100%;
-            height: 100%;
+            height: 100 %;
             object-fit: contain;
-            background-color: black;
-            
         }
     </style>
 </head>
@@ -83,19 +80,22 @@
         <img id="stream" src="{{ stream_url }}" alt="Stream">
     </div>
     <div class="bottom-bar">
-        <div><span id="disk-space"></span></div>
-        <button id="unmount-btn">Unmount</button>
-        <div>CPU: <span id="cpu-load"></span></div>
-        <div>RAM: <span id="ram-load"></span></div>
-        <div>TEMP: <span id="cpu-temp"></span></div>
-        <div><span id="current-sensor"></span>
+        <div>Disk Space: <span id="disk-space"></span></div>
+        <div>CPU Load: <span id="cpu-load"></span></div>
+        <div>RAM Load: <span id="ram-load"></span></div>
+        <div>Sensor: <span id="current-sensor"></span></div>
+        <div>Resolution:
             <select id="resolution-select">
-                {% for resolution in resolution_values %}
-                    <option value="{{ resolution.mode }}">{{ resolution.width }}x{{ resolution.height }}</option>
-                {% endfor %}
+                <!-- Options will be dynamically populated -->
+            </select>
+        <div>Dropdown 2:
+            <select id="dropdown2">
+                <option value="optionA">Option A</option>
+                <option value="optionB">Option B</option>
+                <option value="optionC">Option C</option>
             </select>
         </div>
-        <button id="fullscreen-btn">Enter Fullscreen</button>
+        #<button id="fullscreen-btn">Enter Fullscreen</button>
     </div>
     <script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
     <script>
@@ -109,7 +109,7 @@
             document.getElementById('disk-space').innerText = data.disk_space;
             document.getElementById('cpu-load').innerText = data.cpu_load;
             document.getElementById('ram-load').innerText = data.ram_load;
-            document.getElementById('cpu-temp').innerText = data.cpu_temp;
+            updateOverlayText();
 
             // Update sensor and resolutions
             document.getElementById('current-sensor').innerText = data.current_sensor;
@@ -121,9 +121,6 @@
                 option.textContent = res.resolution;
                 resolutionSelect.appendChild(option);
             });
-    
-            // Set the selected resolution mode
-            resolutionSelect.value = data.selected_resolution_mode;
         });
 
         socket.on('parameter_change', data => {
@@ -136,34 +133,23 @@
             if (data.fps !== undefined) {
                 document.getElementById('fps-select').value = data.fps;
             }
-        });
-
-        socket.on('gui_data_change', data => {
-            if (data.disk_space !== undefined) {
-                document.getElementById('disk-space').innerText = data.disk_space;
-            }
-            if (data.cpu_load !== undefined) {
-                document.getElementById('cpu-load').innerText = data.cpu_load;
-            }
-            if (data.ram_load !== undefined) {
-                document.getElementById('ram-load').innerText = data.ram_load;
-            }
-            if (data.cpu_temp !== undefined) {
-                document.getElementById('cpu-temp').innerText = data.cpu_temp;
-            }
+            updateOverlayText();
         });
 
         socket.on('background_color_change', data => {
             updateBackgroundColor(data.background_color);
         });
 
+        function updateOverlayText() {
+            const iso = document.getElementById('iso-select').value;
+            const shutterAngle = document.getElementById('shutter-speed-select').value;
+            const fps = document.getElementById('fps-select').value;
+            document.getElementById('overlay').innerText = ISO: ${iso} | Shutter Angle: ${shutterAngle} | FPS: ${fps};
+        }
+
         function updateBackgroundColor(color) {
-            // Change only the background color of the body and non-button elements
             document.body.style.backgroundColor = color;
-            
-            // Select and change background color of non-button elements (excluding buttons)
-            const elementsToChange = document.querySelectorAll('*:not(button)');
-            elementsToChange.forEach(element => {
+            document.querySelectorAll('*').forEach(element => {
                 element.style.backgroundColor = color;
             });
         }
@@ -184,49 +170,16 @@
         });
 
         document.getElementById('resolution-select').addEventListener('change', function() {
-            const resolutionMode = this.value;
-            socket.emit('change_resolution', { mode: resolutionMode });
-        });
-
-        document.getElementById('unmount-btn').addEventListener('click', function() {
-            socket.emit('unmount');
-        });
-
-        document.getElementById('stream-container').addEventListener('click', function() {
-            socket.emit('container_tap');
-        });
-
-        socket.on('reload_stream', () => {
-            reloadStream();
-        });
-
-        function reloadStream() {
-            const streamElement = document.getElementById('stream');
-            const currentSrc = streamElement.src;
-            streamElement.src = '';
-            setTimeout(() => {
-                streamElement.src = currentSrc;
-            }, 2000); // 2-second delay before reloading the stream
-        }
-
-        socket.on('reload_browser', () => {
-            window.location.reload();  // Refresh the browser
+            const mode = this.value;
+            socket.emit('change_resolution', { mode });
         });
 
         function toggleFullScreen() {
             const elem = document.documentElement;
-            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                if (elem.requestFullscreen) {
-                    elem.requestFullscreen();
-                } else if (elem.webkitRequestFullscreen) { // Safari
-                    elem.webkitRequestFullscreen();
-                }
+            if (!document.fullscreenElement) {
+                elem.requestFullscreen().catch(err => console.error('Error attempting to enable full-screen mode:', err.message));
             } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) { // Safari
-                    document.webkitExitFullscreen();
-                }
+                document.exitFullscreen().catch(err => console.error('Error attempting to exit full-screen mode:', err.message));
             }
         }
 
@@ -235,8 +188,41 @@
             updateFullscreenButton();
         });
 
+        document.getElementById('stream-container').addEventListener('click', function() {
+            socket.emit('container_tap');
+        });
+
+        socket.on('parameter_change', data => {
+            if (data.iso !== undefined) {
+                document.getElementById('iso-select').value = data.iso;
+            }
+            if (data.shutter_a !== undefined) {
+                document.getElementById('shutter-speed-select').value = data.shutter_a;
+            }
+            if (data.fps !== undefined) {
+                document.getElementById('fps-select').value = data.fps;
+            }
+            updateOverlayText();
+        });
+
+        socket.on('background_color_change', data => {
+            updateBackgroundColor(data.background_color);
+        });
+
+        socket.on('gui_data_change', data => {
+            if (data.disk_space !== undefined) {
+                document.getElementById('disk-space').innerText = data.disk_space;
+            }
+            if (data.cpu_load !== undefined) {
+                document.getElementById('cpu-load').innerText = data.cpu_load;
+            }
+            if (data.ram_load !== undefined) {
+                document.getElementById('ram-load').innerText = data.ram_load;
+            }
+        });
+
         function updateFullscreenButton() {
-            const isInFullScreen = document.fullscreenElement !== null || document.webkitFullscreenElement !== null;
+            const isInFullScreen = document.fullscreenElement !== null;
             document.getElementById('fullscreen-btn').textContent = isInFullScreen ? 'Exit Fullscreen' : 'Enter Fullscreen';
         }
 

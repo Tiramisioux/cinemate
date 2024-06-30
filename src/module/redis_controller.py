@@ -69,13 +69,16 @@ class RedisController:
 
     def set_value(self, key, value):
         with self.lock:
+            
+            # if key == "fps":
+            #     new_frame_duration = int((1/value)*1000000)
+            #     self.redis_client.set('frame_duration', new_frame_duration)
+            #     self.redis_client.publish('cp_controls', 'frame_duration')
+            # else:
             self.redis_client.set(key, value)
             # Notify about the key change via the cp_controls channel
             self.redis_client.publish('cp_controls', key)
-            
-            # # Restart camera on fps change
-            # if key == "fps":
-            #     self.redis_client.publish('cp_controls', 'cam_init')
+
             # Update cache immediately
             self.cache[key] = value
 

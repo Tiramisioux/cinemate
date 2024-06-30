@@ -112,8 +112,10 @@ if __name__ == "__main__":
     logger, log_queue = configure_logging(MODULES_OUTPUT_TO_SERIAL, logging_level)
     settings = load_settings('/home/pi/cinemate/src/settings.json')
 
+    redis_controller = RedisController()
+
     sensor_detect = SensorDetect()
-    sensor_mode = 0
+    sensor_mode = int(redis_controller.get_value('sensor_mode'))
 
     cinepi_app = CinePi(
         '--mode', f"{sensor_detect.get_width(sensor_detect.camera_model, sensor_mode)}:{sensor_detect.get_height(sensor_detect.camera_model, sensor_mode)}:{sensor_mode}:U",
@@ -123,10 +125,8 @@ if __name__ == "__main__":
         '--lores-height', str(sensor_detect.get_lores_height(sensor_detect.camera_model, sensor_mode)),
         '-p', '0,30,1920,1020',
         '--post-process-file', 'home/pi/post-processing.json',
-        # '--tuning-file', '~/libcamera/src/ipa/rpi/pisp/data/imx477.json'
     )
 
-    redis_controller = RedisController()
     ssd_monitor = SSDMonitor()
     usb_monitor = USBMonitor(ssd_monitor)
     usb_drive_monitor = USBDriveMonitor(ssd_monitor=ssd_monitor)
@@ -149,9 +149,7 @@ if __name__ == "__main__":
 
     gpio_input = ComponentInitializer(cinepi_controller, settings)
     
-    cinepi_controller.set_resolution(0)
-
-
+    cinepi_controller.set_resolution(int(redis_controller.get_value('sensor_mode')))
 
     usb_monitor.check_initial_devices()
     keyboard = Keyboard(cinepi_controller, usb_monitor)
@@ -174,8 +172,9 @@ if __name__ == "__main__":
                            redis_listener,
                            None)
     stream = None
+    
     if check_hotspot_status():
-        app, socketio = create_app(redis_controller, cinepi_controller, simple_gui)
+        app, socketio = create_app(redis_controller, cinepi_controller, simple_gui, sensor_detect)
         simple_gui.socketio = socketio
         
         stream = threading.Thread(target=socketio.run, args=(app,), kwargs={'host': '0.0.0.0', 'port': 5000})
@@ -200,6 +199,8 @@ if __name__ == "__main__":
     finally:
         redis_controller.set_value('is_recording', 0)
         redis_controller.set_value('is_writing', 0)
+        current_shutter_angle = redis_controller.get_value('shutter_a')
+        redis_controller.set_value('shutter_a_nom', int(current_shutter_angle))
         dmesg_monitor.join()
         serial_handler.join()
         command_executor.join()

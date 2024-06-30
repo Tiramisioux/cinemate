@@ -246,18 +246,22 @@ class SimpleGUI(threading.Thread):
         if self.background_color_changed:
             self.emit_background_color_change()  # Emit event if the background color changes
 
-        # Compare current values with previous values to detect changes
+        current_values = values
+
         if hasattr(self, 'previous_values'):
             changed_data = {}
-            for key in values.keys():
-                if values[key] != self.previous_values[key]:
-                    changed_data[key] = values[key]
+            for key, value in current_values.items():
+                if value != self.previous_values.get(key):
+                    changed_data[key] = value
 
             if changed_data:
                 self.emit_gui_data_change(changed_data)
+
+                # Log the changed data after emitting changes
+                #logging.info(f"Changed data: {changed_data}")
         
-        # Update previous_values with current values
-        self.previous_values = values.copy()
+        # Update previous_values with the current values for the next comparison
+        self.previous_values = current_values.copy()
 
         if not self.fb:
             return

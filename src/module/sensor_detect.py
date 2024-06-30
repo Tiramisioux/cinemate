@@ -107,3 +107,10 @@ class SensorDetect:
     def get_lores_height(self, camera_name, sensor_mode):
         # Placeholder method, replace with actual implementation
         return 720
+    
+    def get_available_resolutions(self):
+        resolutions = []
+        for mode, info in self.res_modes.items():
+            resolution = f"{info['width']} : {info['height']} : {info['bit_depth']}b"
+            resolutions.append({'mode': mode, 'resolution': resolution})
+        return resolutions

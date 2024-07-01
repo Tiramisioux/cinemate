@@ -110,6 +110,7 @@
             document.getElementById('cpu-load').innerText = data.cpu_load;
             document.getElementById('ram-load').innerText = data.ram_load;
             document.getElementById('cpu-temp').innerText = data.cpu_temp;
+            //document.getElementById('last-dng-added').innerText = data.last_dng_added;
 
             // Update sensor and resolutions
             document.getElementById('current-sensor').innerText = data.current_sensor;
@@ -148,9 +149,9 @@
             if (data.ram_load !== undefined) {
                 document.getElementById('ram-load').innerText = data.ram_load;
             }
-            if (data.cpu_temp !== undefined) {
-                document.getElementById('cpu-temp').innerText = data.cpu_temp;
-            }
+            //if (data.cpu_temp !== undefined) {
+            //    document.getElementById('cpu-temp').innerText = data.cpu_temp;
+            //}
         });
 
         socket.on('background_color_change', data => {

@@ -32,4 +32,4 @@ def index():
 
 def calculate_disk_space():
     # Replace with actual logic to calculate remaining disk space in minutes
-    return 1234  # Example value; replace with your implementation
+    return 1234  # Example value; replace with your implementation  

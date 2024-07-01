@@ -178,7 +178,7 @@ class SimpleGUI(threading.Thread):
             values["shutter_a_sync"] = f"SYNC   /  {self.cinepi_controller.shutter_a_nom}"
         else:
             values["shutter_a_sync"] = ""
-
+    
         if self.cinepi_controller.parameters_lock:
             values["lock"] = "LOCK"
         else:

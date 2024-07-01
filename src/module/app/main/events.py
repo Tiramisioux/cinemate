@@ -26,6 +26,9 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
         value = data['value']
         if key in ['iso', 'shutter_a', 'fps']:
             socketio.emit('parameter_change', {key: value})
+        if key in ['sensor_mode']:
+            time.sleep(1)  # Add a 2-second pause
+            socketio.emit('reload_browser')  # Emit event to reload the browser
 
     redis_controller.redis_parameter_changed.subscribe(redis_change_handler)
 
@@ -55,11 +58,12 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
         fps = data.get('fps')
         if fps:
             cinepi_controller.set_fps(int(fps))
-            redis_controller.set_value('fps', fps)
+            redis_controller.set_value('fps', fps)  
             socketio.emit('parameter_change', {'fps': fps})
 
     @socketio.on('change_resolution')
     def handle_change_resolution(data):
+        print('test')
         sensor_mode = data.get('mode')
         if sensor_mode is not None:
             cinepi_controller.set_resolution(int(sensor_mode))

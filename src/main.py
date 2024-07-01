@@ -93,7 +93,7 @@ def load_settings(filename):
 
         # if 'quad_rotary_encoders' in original_settings:
         #     settings['quad_rotary_encoders'] = original_settings['quad_rotary_encoders']
-            
+
         settings['quad_rotary_encoders'] =  {
         0: {'setting_name': 'iso', 'gpio_pin': 26},
         1: {'setting_name': 'shutter_a', 'gpio_pin': 5},
@@ -125,6 +125,7 @@ if __name__ == "__main__":
         '--lores-height', str(sensor_detect.get_lores_height(sensor_detect.camera_model, sensor_mode)),
         '-p', '0,30,1920,1020',
         '--post-process-file', 'home/pi/post-processing.json',
+        '--tuning-file', 'home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json'
     )
 
     ssd_monitor = SSDMonitor()

@@ -33,7 +33,7 @@ class CinePiController:
         self.shutter_a_steps = shutter_a_steps
         self.fps_steps = fps_steps
         
-        self.shutter_a_steps_trunc = [45, 135, 172.5, 180, 225, 270, 315, 360]
+        self.shutter_a_steps_trunc = [45, 90, 135, 172.8, 180, 225, 270, 315, 360]
         self.fps_steps_trunc = [12, 18, 24, 25, 30, 33, 40, 50]
         
         self.parameters_lock = False
@@ -207,17 +207,20 @@ class CinePiController:
                 
                 logging.info(f"Resolution set to mode {value}, height: {height_value}, width: {width_value}, gui_layout: {gui_layout_value}")
 
+                
+
+
                 # Restart the CinePi instance with new resolution settings
                 new_args = [
                     '--mode', f'{width_value}:{height_value}:{bit_depth_value}:U',
                     '--width', str(width_value),
                     '--height', str(height_value),
-                    '--lores-width', str(self.sensor_detect.get_lores_width(self.current_sensor, value)),
-                    '--lores-height', str(self.sensor_detect.get_lores_height(self.current_sensor, value)),
+                    '--lores-width', str(self.sensor_detect.get_lores_width(self.sensor_detect.camera_model, value)),
+                    '--lores-height', str(self.sensor_detect.get_lores_height(self.sensor_detect.camera_model, value)),
                     '-p', '0,30,1920,1020',
-                    '--post-process-file', '/home/pi/post-processing.json',
+                    '--post-process-file', '/home/pi/post-processing.json',                    
                 ]
-                
+                logging.info(f"Restarting CinePi with args: {new_args}")
                 self.cinepi_app.restart(*new_args)
                 
                 self.set_fps(int(self.redis_controller.get_value('fps')))
@@ -609,6 +612,5 @@ class CinePiController:
             return exposure_fraction_text
         else:
             return 0
-
 
 

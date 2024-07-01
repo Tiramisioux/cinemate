@@ -30,6 +30,8 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
             time.sleep(1)  # Add a 2-second pause
             socketio.emit('reload_browser')  # Emit event to reload the browser
 
+
+
     redis_controller.redis_parameter_changed.subscribe(redis_change_handler)
 
     @socketio.on('update_background_color')
@@ -58,8 +60,11 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
         fps = data.get('fps')
         if fps:
             cinepi_controller.set_fps(int(fps))
-            redis_controller.set_value('fps', fps)  
-            socketio.emit('parameter_change', {'fps': fps})
+            redis_controller.set_value('fps', fps)
+            # Emit the updated shutter_a_steps array and the current shutter speed
+            shutter_a_steps = cinepi_controller.calculate_dynamic_shutter_angles(int(fps))
+            current_shutter_a = redis_controller.get_value('shutter_a')
+            socketio.emit('shutter_a_update', {'shutter_a_steps': shutter_a_steps, 'current_shutter_a': current_shutter_a})
 
     @socketio.on('change_resolution')
     def handle_change_resolution(data):

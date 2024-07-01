@@ -139,6 +139,20 @@
             }
         });
 
+        socket.on('shutter_a_update', data => {
+            const shutterSpeedSelect = document.getElementById('shutter-speed-select');
+            shutterSpeedSelect.innerHTML = '';
+            data.shutter_a_steps.forEach(angle => {
+                const option = document.createElement('option');
+                option.value = angle;
+                option.textContent = angle;
+                shutterSpeedSelect.appendChild(option);
+            });
+
+            // Set the current shutter speed as selected
+            shutterSpeedSelect.value = data.current_shutter_a;
+        });
+
         socket.on('gui_data_change', data => {
             if (data.disk_space !== undefined) {
                 document.getElementById('disk-space').innerText = data.disk_space;

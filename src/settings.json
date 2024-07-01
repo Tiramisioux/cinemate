@@ -6,8 +6,12 @@
 
   "arrays": {
     "iso_steps": [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200],
-    "additional_shutter_a_steps": [172.8, 346.6],
-    "fps_steps": null
+    "shutter_a_steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360],
+    "fps_steps": [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50]
+  },
+
+  "settings": {
+    "light_hz": 50 
   },
 
   "analog_controls": {
@@ -150,5 +154,12 @@
       "action_type": "press",
       "action": {"method": "set_fps_double"}
     }
-  ]
+  ],
+
+  "quad_rotary_encoders": {
+    "0": { "setting_name": "iso", "gpio_pin": 26 },
+    "1": { "setting_name": "shutter_a", "gpio_pin": 4 },
+    "2": { "setting_name": "fps", "gpio_pin": 4 },
+    "3": { "setting_name": "shutter_a", "gpio_pin": 4 }
+}
 }

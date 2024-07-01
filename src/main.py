@@ -72,7 +72,7 @@ def load_settings(filename):
 
             settings['arrays'] = {
                 'iso_steps': arrays_settings.get('iso_steps', []),
-                'shutter_a_steps': sorted(set(range(1, 361)).union(arrays_settings.get('additional_shutter_a_steps', []))),
+                'shutter_a_steps': arrays_settings.get('shutter_a_steps', []),
                 'fps_steps': fps_steps
             }
 
@@ -91,15 +91,13 @@ def load_settings(filename):
         if 'combined_actions' in original_settings:
             settings['combined_actions'] = original_settings['combined_actions']
 
-        # if 'quad_rotary_encoders' in original_settings:
-        #     settings['quad_rotary_encoders'] = original_settings['quad_rotary_encoders']
-
-        settings['quad_rotary_encoders'] =  {
-        0: {'setting_name': 'iso', 'gpio_pin': 26},
-        1: {'setting_name': 'shutter_a', 'gpio_pin': 5},
-        2: {'setting_name': 'fps', 'gpio_pin': 4},
-        3: {'setting_name': 'shutter_a', 'gpio_pin': 5},  # Adjust as needed
-    }
+        if 'quad_rotary_encoders' in original_settings:
+            settings['quad_rotary_encoders'] = original_settings['quad_rotary_encoders']
+            
+        if 'settings' in original_settings:
+            settings['settings'] = original_settings['settings']
+        else:
+            settings['settings'] = {"light_hz": 50}  # Default value if not found
 
         return settings
 
@@ -113,6 +111,8 @@ if __name__ == "__main__":
     settings = load_settings('/home/pi/cinemate/src/settings.json')
 
     redis_controller = RedisController()
+    
+    redis_controller.set_value('awb', 0)
 
     sensor_detect = SensorDetect()
     sensor_mode = int(redis_controller.get_value('sensor_mode'))
@@ -146,6 +146,7 @@ if __name__ == "__main__":
                                          iso_steps=settings['arrays']['iso_steps'],
                                          shutter_a_steps=settings['arrays']['shutter_a_steps'],
                                          fps_steps=settings['arrays']['fps_steps'],
+                                         light_hz=settings['settings']['light_hz'],
                                          )
 
     gpio_input = ComponentInitializer(cinepi_controller, settings)
@@ -189,6 +190,10 @@ if __name__ == "__main__":
     
     fps_current = redis_controller.get_value('fps')
     cinepi_controller.set_fps(fps_current)
+    
+    shutter_a_current = redis_controller.get_value('shutter_a')
+    cinepi_controller.set_shutter_a(shutter_a_current)  
+        
         
     logging.info(f"--- initialization complete")
 

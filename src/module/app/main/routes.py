@@ -11,7 +11,7 @@ def index():
 
     iso_value = redis_controller.get_value("iso")
     shutter_a_value = redis_controller.get_value("shutter_a")
-    fps_value = redis_controller.get_value("fps")
+    fps_value = redis_controller.get_value("fps_actual")
     background_color_value = simple_gui.get_background_color()
     
     dynamic_data = simple_gui.populate_values()
@@ -26,10 +26,6 @@ def index():
     return render_template('template.html', stream_url="http://cinepi.local:8000/stream", 
                            dynamic_data=dynamic_data,
                            iso_values=cinepi_controller.iso_steps, 
-                           shutter_speed_values=cinepi_controller.shutter_a_steps_trunc,
-                           fps_values=cinepi_controller.fps_steps_trunc, 
+                           shutter_speed_values=cinepi_controller.shutter_a_steps_dynamic,
+                           fps_values=cinepi_controller.fps_steps_dynamic, 
                            background_color=background_color_value)
-
-def calculate_disk_space():
-    # Replace with actual logic to calculate remaining disk space in minutes
-    return 1234  # Example value; replace with your implementation  

@@ -7,30 +7,35 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
         initial_values = {
             'iso': redis_controller.get_value('iso'),
             'shutter_a': redis_controller.get_value('shutter_a'),
-            'fps': redis_controller.get_value('fps'),
-            'background_color': simple_gui.get_background_color()
+            'fps': redis_controller.get_value('fps_actual'),
+            'background_color': simple_gui.get_background_color(),
         }
-        
-        # Include other dynamic values
+
         initial_values.update(simple_gui.populate_values())
-        
-        # Add sensor resolutions and current sensor model
+
         initial_values['sensor_resolutions'] = sensor_detect.get_available_resolutions()
         initial_values['current_sensor'] = sensor_detect.camera_model
         initial_values['selected_resolution_mode'] = redis_controller.get_value('sensor_mode')
-        
+
         emit('initial_values', initial_values)
+
 
     def redis_change_handler(data):
         key = data['key']
         value = data['value']
-        if key in ['iso', 'shutter_a', 'fps']:
+        if key in ['iso', 'shutter_a', 'fps_actual']:
             socketio.emit('parameter_change', {key: value})
+            
+        if key in ['fps_actual']:
+            # Emit the updated shutter_a_steps array and the current shutter speed
+            shutter_a_steps = cinepi_controller.calculate_dynamic_shutter_angles(int(float((redis_controller.get_value('fps_actual')))))
+            current_shutter_a = redis_controller.get_value('shutter_a')
+            socketio.emit('shutter_a_update', {'shutter_a_steps': shutter_a_steps, 'current_shutter_a': current_shutter_a})
+            
+            
         if key in ['sensor_mode']:
             time.sleep(1)  # Add a 2-second pause
             socketio.emit('reload_browser')  # Emit event to reload the browser
-
-
 
     redis_controller.redis_parameter_changed.subscribe(redis_change_handler)
 
@@ -44,7 +49,7 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
         iso = data.get('iso')
         if iso:
             cinepi_controller.set_iso(int(iso))
-            redis_controller.set_value('iso', iso)
+            #redis_controller.set_value('iso', iso)
             socketio.emit('parameter_change', {'iso': iso})
 
     @socketio.on('change_shutter_a')
@@ -52,7 +57,7 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
         shutter_a = data.get('shutter_a')
         if shutter_a:
             cinepi_controller.set_shutter_a(float(shutter_a))
-            redis_controller.set_value('shutter_a', shutter_a)
+            #redis_controller.set_value('shutter_a', shutter_a)
             socketio.emit('parameter_change', {'shutter_a': shutter_a})
 
     @socketio.on('change_fps')
@@ -60,7 +65,7 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
         fps = data.get('fps')
         if fps:
             cinepi_controller.set_fps(int(fps))
-            redis_controller.set_value('fps', fps)
+            #redis_controller.set_value('fps', fps)
             # Emit the updated shutter_a_steps array and the current shutter speed
             shutter_a_steps = cinepi_controller.calculate_dynamic_shutter_angles(int(fps))
             current_shutter_a = redis_controller.get_value('shutter_a')
@@ -72,8 +77,12 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
         sensor_mode = data.get('mode')
         if sensor_mode is not None:
             cinepi_controller.set_resolution(int(sensor_mode))
-            redis_controller.set_value('sensor_mode', sensor_mode)
+            #redis_controller.set_value('sensor_mode', sensor_mode)
             socketio.emit('resolution_change', {'sensor_mode': sensor_mode})
+            shutter_a_steps = cinepi_controller.calculate_dynamic_shutter_angles(int(float((redis_controller.get_value('fps_actual')))))
+            current_shutter_a = redis_controller.get_value('shutter_a')
+            socketio.emit('shutter_a_update', {'shutter_a_steps': shutter_a_steps, 'current_shutter_a': current_shutter_a})
+
             time.sleep(2)  # Add a 2-second pause
             socketio.emit('reload_browser')  # Emit event to reload the browser
 

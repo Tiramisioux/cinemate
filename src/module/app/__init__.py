@@ -1,9 +1,15 @@
 import os
 from flask import Flask
 from flask_socketio import SocketIO
+import logging
 
 def create_app(redis_controller, cinepi_controller, simple_gui, sensor_detect):
     app = Flask(__name__)
+    
+    # Adjust the logging level for the internal Flask logger
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)  # Set to ERROR to mute INFO messages
+
     socketio = SocketIO(app)
 
     app.config['REDIS_CONTROLLER'] = redis_controller

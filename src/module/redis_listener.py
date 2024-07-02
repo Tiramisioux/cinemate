@@ -1,3 +1,5 @@
+# redis_listener.py
+
 import redis
 import logging
 import threading
@@ -7,7 +9,7 @@ import datetime
 import json
 
 class RedisListener:
-    def __init__(self, redis_controller, host='localhost', port=6379, db=0):
+    def __init__(self, redis_controller, framerate_callback=None, host='localhost', port=6379, db=0):
         self.redis_client = redis.StrictRedis(host=host, port=port, db=db)
         
         self.pubsub_stats = self.redis_client.pubsub()
@@ -24,6 +26,7 @@ class RedisListener:
         self.recording_end_time = None
         
         self.redis_controller = redis_controller
+        self.framerate_callback = framerate_callback  # Callback function for framerate changes
         
         self.framerate = float(self.redis_controller.get_value('fps_actual'))
         
@@ -31,7 +34,6 @@ class RedisListener:
         self.colorTemp = 0
         self.focus = 0
         self.frameCount = 0
-        self.framerate = 0
         
         self.start_listeners()
 
@@ -62,6 +64,10 @@ class RedisListener:
                         self.frameCount = stats_data.get('frameCount', None)  
                         self.framerate = stats_data.get('framerate', None) 
                         
+                        # If framerate changes, call the callback function
+                        if self.framerate is not None and self.framerate_callback:
+                            self.framerate_callback(self.framerate)
+                        
                         # Update frame count and framerate
                         new_frame_count = stats_data.get('frameCount', None)
                         if new_frame_count is not None:
@@ -81,18 +87,10 @@ class RedisListener:
                         if current_framerate is not None:
                             self.framerate_values.append(current_framerate)
 
-                        # Optionally, log or use these variables as needed
-                        # logging.info(f"bufferSize: {self.bufferSize}, colorTemp: {self.colorTemp}, focus: {self.focus}, frameCount: {self.frameCount}, framerate: {self.framerate}")
-
-                        # You can update other parts of your application with these values
-                        # For example, you might want to store these values or trigger events
-                        # based on specific conditions.
-
                     except json.JSONDecodeError as e:
                         logging.error(f"Failed to parse JSON data: {e}")
                 else:
                     logging.warning(f"Received unexpected data format: {message_data}")
-
 
     def listen_controls(self):
         for message in self.pubsub_controls.listen():

@@ -110,7 +110,7 @@ class ComponentInitializer:
             self,
             self.smart_buttons_list  # Pass the list of smart buttons
         )
-        logging.info("Quad Rotary Encoder instantiated")
+
 
     def get_smart_button_by_pin(self, pin):
         for button in self.smart_buttons_list:
@@ -309,8 +309,10 @@ class SmartButton:
 
             # Attempt to retrieve the hold and action button states
             try:
-                hold_button_state = SmartButton.buttons[str(ca['hold_button_pin'])].get_button_state()
-                action_button_state = SmartButton.buttons[str(ca['action_button_pin'])].get_button_state()
+                hold_button = SmartButton.buttons[str(ca['hold_button_pin'])]
+                action_button = SmartButton.buttons[str(ca['action_button_pin'])]
+                hold_button_state = hold_button.get_button_state()
+                action_button_state = action_button.get_button_state()
             except KeyError as e:
                 self.logger.error(f"KeyError accessing button states: {e}")
                 continue  # Skip this combined action if there's a KeyError
@@ -347,6 +349,8 @@ class SmartButton:
                     self.logger.error(f"Method {method_name} not found in cinepi_controller.")
             else:
                 self.logger.debug(f"Combined action conditions not met or hold button not held for action: {ca}")
+
+
 
 
     def parse_action(self, action_str):

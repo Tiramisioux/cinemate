@@ -188,7 +188,7 @@ if __name__ == "__main__":
     mediator = Mediator(cinepi_app, redis_controller, usb_monitor, ssd_monitor, gpio_output, stream)
     time.sleep(1)
     
-    fps_current = redis_controller.get_value('fps')
+    fps_current = redis_controller.get_value('fps_actual')
     cinepi_controller.set_fps(fps_current)
     
     shutter_a_current = redis_controller.get_value('shutter_a')
@@ -205,8 +205,8 @@ if __name__ == "__main__":
     finally:
         redis_controller.set_value('is_recording', 0)
         redis_controller.set_value('is_writing', 0)
-        current_shutter_angle = redis_controller.get_value('shutter_a')
-        redis_controller.set_value('shutter_a_nom', int(current_shutter_angle))
+        # current_shutter_angle = redis_controller.get_value('shutter_a')
+        # redis_controller.set_value('shutter_a_nom', int(current_shutter_angle))
         dmesg_monitor.join()
         serial_handler.join()
         command_executor.join()

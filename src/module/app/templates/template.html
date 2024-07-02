@@ -100,19 +100,27 @@
     <script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
     <script>
         const socket = io();
-
+    
         socket.on('initial_values', data => {
             document.getElementById('iso-select').value = data.iso;
-            document.getElementById('shutter-speed-select').value = data.shutter_a;
-            document.getElementById('fps-select').value = data.fps;
+            document.getElementById('shutter-speed-select').innerHTML = '';
+            const shutterAngleOption = document.createElement('option');
+            shutterAngleOption.value = data.shutter_a;
+            shutterAngleOption.textContent = data.shutter_a;
+            document.getElementById('shutter-speed-select').appendChild(shutterAngleOption);
+    
+            document.getElementById('fps-select').innerHTML = '';
+            const fpsOption = document.createElement('option');
+            fpsOption.value = data.fps;
+            fpsOption.textContent = data.fps;
+            document.getElementById('fps-select').appendChild(fpsOption);
+    
             document.body.style.backgroundColor = data.background_color;
             document.getElementById('disk-space').innerText = data.disk_space;
             document.getElementById('cpu-load').innerText = data.cpu_load;
             document.getElementById('ram-load').innerText = data.ram_load;
             document.getElementById('cpu-temp').innerText = data.cpu_temp;
-            //document.getElementById('last-dng-added').innerText = data.last_dng_added;
-
-            // Update sensor and resolutions
+    
             document.getElementById('current-sensor').innerText = data.current_sensor;
             const resolutionSelect = document.getElementById('resolution-select');
             resolutionSelect.innerHTML = '';
@@ -122,11 +130,9 @@
                 option.textContent = res.resolution;
                 resolutionSelect.appendChild(option);
             });
-    
-            // Set the selected resolution mode
             resolutionSelect.value = data.selected_resolution_mode;
         });
-
+    
         socket.on('parameter_change', data => {
             if (data.iso !== undefined) {
                 document.getElementById('iso-select').value = data.iso;
@@ -134,11 +140,11 @@
             if (data.shutter_a !== undefined) {
                 document.getElementById('shutter-speed-select').value = data.shutter_a;
             }
-            if (data.fps !== undefined) {
-                document.getElementById('fps-select').value = data.fps;
+            if (data.fps_actual !== undefined) {
+                document.getElementById('fps-select').value = data.fps_actual;
             }
         });
-
+    
         socket.on('shutter_a_update', data => {
             const shutterSpeedSelect = document.getElementById('shutter-speed-select');
             shutterSpeedSelect.innerHTML = '';
@@ -148,11 +154,9 @@
                 option.textContent = angle;
                 shutterSpeedSelect.appendChild(option);
             });
-
-            // Set the current shutter speed as selected
             shutterSpeedSelect.value = data.current_shutter_a;
         });
-
+    
         socket.on('gui_data_change', data => {
             if (data.disk_space !== undefined) {
                 document.getElementById('disk-space').innerText = data.disk_space;
@@ -163,103 +167,98 @@
             if (data.ram_load !== undefined) {
                 document.getElementById('ram-load').innerText = data.ram_load;
             }
-            //if (data.cpu_temp !== undefined) {
-            //    document.getElementById('cpu-temp').innerText = data.cpu_temp;
-            //}
         });
-
+    
         socket.on('background_color_change', data => {
             updateBackgroundColor(data.background_color);
         });
-
+    
         function updateBackgroundColor(color) {
-            // Change only the background color of the body and non-button elements
             document.body.style.backgroundColor = color;
-            
-            // Select and change background color of non-button elements (excluding buttons)
             const elementsToChange = document.querySelectorAll('*:not(button)');
             elementsToChange.forEach(element => {
                 element.style.backgroundColor = color;
             });
         }
-
+    
         document.getElementById('iso-select').addEventListener('change', function() {
             const iso = this.value;
             socket.emit('change_iso', { iso });
         });
-
+    
         document.getElementById('shutter-speed-select').addEventListener('change', function() {
             const shutterAngle = this.value;
             socket.emit('change_shutter_a', { shutter_a: shutterAngle });
         });
-
+    
         document.getElementById('fps-select').addEventListener('change', function() {
             const fps = this.value;
             socket.emit('change_fps', { fps });
         });
-
+    
         document.getElementById('resolution-select').addEventListener('change', function() {
             const resolutionMode = this.value;
             socket.emit('change_resolution', { mode: resolutionMode });
         });
-
+    
         document.getElementById('unmount-btn').addEventListener('click', function() {
             socket.emit('unmount');
         });
-
+    
         document.getElementById('stream-container').addEventListener('click', function() {
             socket.emit('container_tap');
         });
-
+    
         socket.on('reload_stream', () => {
             reloadStream();
         });
-
+    
         function reloadStream() {
             const streamElement = document.getElementById('stream');
             const currentSrc = streamElement.src;
             streamElement.src = '';
             setTimeout(() => {
                 streamElement.src = currentSrc;
-            }, 2000); // 2-second delay before reloading the stream
+            }, 2000);
         }
-
+    
         socket.on('reload_browser', () => {
-            window.location.reload();  // Refresh the browser
+            window.location.reload();
         });
-
+    
         function toggleFullScreen() {
             const elem = document.documentElement;
             if (!document.fullscreenElement && !document.webkitFullscreenElement) {
                 if (elem.requestFullscreen) {
                     elem.requestFullscreen();
-                } else if (elem.webkitRequestFullscreen) { // Safari
+                } else if (elem.webkitRequestFullscreen) {
                     elem.webkitRequestFullscreen();
                 }
             } else {
                 if (document.exitFullscreen) {
                     document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) { // Safari
+                } else if (document.webkitExitFullscreen) {
                     document.webkitExitFullscreen();
                 }
             }
         }
-
+    
         document.getElementById('fullscreen-btn').addEventListener('click', function() {
             toggleFullScreen();
             updateFullscreenButton();
         });
-
+    
         function updateFullscreenButton() {
             const isInFullScreen = document.fullscreenElement !== null || document.webkitFullscreenElement !== null;
             document.getElementById('fullscreen-btn').textContent = isInFullScreen ? 'Exit Fullscreen' : 'Enter Fullscreen';
         }
-
+    
         document.getElementById('fullscreen-btn').addEventListener('touchstart', function(event) {
             event.preventDefault();
             toggleFullScreen();
             updateFullscreenButton();
         });
     </script>
+    
 </body>
 </html>

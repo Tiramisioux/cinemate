@@ -49,7 +49,15 @@
       "pin": 12,
       "pull_up": "False",
       "debounce_time": "0.1",
-      "press_action": {"method": "set_fps_double"}
+      "press_action": "None",
+      "single_click_action": {"method": "set_fps_double"}
+    },
+    {
+      "pin": 24,
+      "pull_up": "False",
+      "debounce_time": "0.1",
+      "press_action": {"method": "None"},
+      "single_click_action": {"method": "set_fps_double"}
     },
     {
       "pin": 26,
@@ -118,11 +126,7 @@
     ],
 
   "two_way_switches": [
-    {
-        "pin": 24,
-        "state_on_action": {"method": "set_shu_fps_lock", "args": [false]},
-        "state_off_action": {"method": "set_shu_fps_lock", "args": [true]}
-    },
+
     {
       "pin": 16,
       "state_on_action": {"method": "set_shutter_a_sync", "args": [false]},
@@ -137,13 +141,7 @@
 
   "combined_actions": [
     {
-      "hold_button_pin": 10,
-      "action_button_pin": 26,
-      "action_type": "press",
-      "action": {"method": "set_pwm_mode"}
-    },
-    {
-      "hold_button_pin": 13,
+      "hold_button_pin": 24,
       "action_button_pin": 26,
       "action_type": "press",
       "action": {"method": "set_shutter_a_sync"}
@@ -158,8 +156,8 @@
 
   "quad_rotary_encoders": {
     "0": { "setting_name": "iso", "gpio_pin": 26 },
-    "1": { "setting_name": "shutter_a", "gpio_pin": 4 },
-    "2": { "setting_name": "fps", "gpio_pin": 4 },
-    "3": { "setting_name": "shutter_a", "gpio_pin": 4 }
+    "1": { "setting_name": "shutter_a", "gpio_pin": 24 },
+    "2": { "setting_name": "shutter_a", "gpio_pin": 24 },
+    "3": { "setting_name": "fps", "gpio_pin": 16 }
 }
 }

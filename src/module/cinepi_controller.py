@@ -93,6 +93,20 @@ class CinePiController:
         self.redis_controller.set_value('awb', 0)
         time.sleep(1)
         self.redis_controller.set_value('awb', 0)
+        
+        # Set startup flag
+        self.startup = True
+
+        # Set a timer to clear the startup flag after a short period
+        threading.Timer(5.0, self.clear_startup_flag).start()
+
+        # Communicate the initial fps_actual to the web app
+        self.redis_controller.set_value('fps_actual', self.fps_actual)
+
+    def clear_startup_flag(self):
+        self.startup = False
+        # Communicate the current fps_actual to the web app after the startup phase
+        self.redis_controller.set_value('fps_actual', self.fps_actual)
 
     def initialize_fps_steps(self, fps_steps):
         self.fps_max = int(self.redis_controller.get_value('fps_max'))
@@ -117,12 +131,22 @@ class CinePiController:
             logging.error(f"Received invalid fps_actual value: {new_framerate_rounded}, fps_actual remains unchanged.")
             return
 
-        if new_framerate_rounded != round(self.fps_actual):
+        # Ignore updates during startup phase
+        if self.startup:
+            #logging.info(f"Ignoring fps_actual update to {new_framerate_rounded} during startup phase.")
+            return
+
+        # Allow setting fps_actual to 29 manually and check for redundancy
+        if new_framerate_rounded != round(self.fps_actual) or new_framerate_rounded == 29:
+            if new_framerate_rounded == round(self.fps_actual) and self.redis_controller.get_value('fps_actual') == str(new_framerate_rounded):
+                # Skip redundant updates
+                return
+            
             self.fps_actual = new_framerate_rounded
             logging.info(f"Updated fps_actual to {new_framerate_rounded}")
             self.redis_controller.set_value('fps_actual', new_framerate_rounded)
+            self.redis_controller.publish('fps_actual_update', new_framerate_rounded)  # Publish update to Redis
             self.update_shutter_angle_for_fps()
-
 
     def update_shutter_angle_for_fps(self):
         if self.fps_actual <= 0:
@@ -140,10 +164,14 @@ class CinePiController:
 
     def set_fps(self, value):
         value = int(value)
-        
+        logging.info(f"Received set_fps call with value: {value}")
+
         if not self.fps_lock:
             max_fps = int(self.redis_controller.get_value('fps_max'))
+            logging.info(f"Retrieved max_fps from Redis: {max_fps}")
+            
             safe_value = max(1, min(value, max_fps))
+            logging.info(f"Calculated safe_value: {safe_value}")
 
             if not self.parameters_lock or self.lock_override:
                 if self.pwm_mode == False and self.shutter_a_sync == False:
@@ -179,9 +207,11 @@ class CinePiController:
 
                 self.exposure_time_s = (float(self.redis_controller.get_value('shutter_a')) / 360) / self.fps_actual
                 self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_s)
-                self.redis_controller.set_value('fps_actual', self.fps_actual)
+                logging.info(f"Updating fps_actual to: {safe_value}")
+                self.redis_controller.set_value('fps_actual', safe_value)
                 
-                self.update_fps_and_shutter_angles(self.fps_actual)
+                self.update_fps_and_shutter_angles(safe_value)
+
 
     def set_iso_lock(self, value=None):
         if value is not None:
@@ -259,6 +289,7 @@ class CinePiController:
     def set_resolution(self, value=None):
         if value is not None:
             try:
+                self.redis_controller.set_value('fps_last', self.redis_controller.get_value('fps_actual'))
                 if value not in self.sensor_detect.res_modes:
                     logging.info(f"Couldn't find sensor mode {value}. Trying with sensor_mode 0.")
                     value = 0
@@ -288,6 +319,8 @@ class CinePiController:
                 
                 logging.info(f"Resolution set to mode {value}, height: {height_value}, width: {width_value}, gui_layout: {gui_layout_value}")
 
+                fps_current = int(float(self.redis_controller.get_value('fps_last')))
+
                 # Restart the CinePi instance with new resolution settings
                 new_args = [
                     '--mode', f'{width_value}:{height_value}:{bit_depth_value}:U',
@@ -296,7 +329,8 @@ class CinePiController:
                     '--lores-width', str(self.sensor_detect.get_lores_width(self.sensor_detect.camera_model, value)),
                     '--lores-height', str(self.sensor_detect.get_lores_height(self.sensor_detect.camera_model, value)),
                     '-p', '0,30,1920,1020',
-                    '--post-process-file', '/home/pi/post-processing.json',                 
+                    '--post-process-file', '/home/pi/post-processing.json',
+                    '--framerate', f"{fps_current}",                
                 ]
                 logging.info(f"Restarting CinePi with args: {new_args}")
                 

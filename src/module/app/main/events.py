@@ -9,6 +9,8 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
             'shutter_a': redis_controller.get_value('shutter_a'),
             'fps': redis_controller.get_value('fps_actual'),
             'background_color': simple_gui.get_background_color(),
+            'shutter_a_steps': cinepi_controller.shutter_a_steps_dynamic,
+            'fps_steps': cinepi_controller.fps_steps_dynamic,
         }
 
         initial_values.update(simple_gui.populate_values())
@@ -34,7 +36,7 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
             
             
         if key in ['sensor_mode']:
-            time.sleep(1)  # Add a 2-second pause
+            time.sleep(1)  # Add a 1-second pause
             socketio.emit('reload_browser')  # Emit event to reload the browser
 
     redis_controller.redis_parameter_changed.subscribe(redis_change_handler)
@@ -49,7 +51,6 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
         iso = data.get('iso')
         if iso:
             cinepi_controller.set_iso(int(iso))
-            #redis_controller.set_value('iso', iso)
             socketio.emit('parameter_change', {'iso': iso})
 
     @socketio.on('change_shutter_a')
@@ -57,15 +58,17 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
         shutter_a = data.get('shutter_a')
         if shutter_a:
             cinepi_controller.set_shutter_a(float(shutter_a))
-            #redis_controller.set_value('shutter_a', shutter_a)
             socketio.emit('parameter_change', {'shutter_a': shutter_a})
+            # Emit the updated shutter_a_steps array and the current shutter speed
+            shutter_a_steps = cinepi_controller.calculate_dynamic_shutter_angles(int(float(redis_controller.get_value('fps_actual'))))
+            socketio.emit('shutter_a_update', {'shutter_a_steps': shutter_a_steps, 'current_shutter_a': shutter_a})
 
     @socketio.on('change_fps')
     def handle_change_fps(data):
         fps = data.get('fps')
         if fps:
             cinepi_controller.set_fps(int(fps))
-            #redis_controller.set_value('fps', fps)
+            socketio.emit('parameter_change', {'fps': fps})
             # Emit the updated shutter_a_steps array and the current shutter speed
             shutter_a_steps = cinepi_controller.calculate_dynamic_shutter_angles(int(fps))
             current_shutter_a = redis_controller.get_value('shutter_a')
@@ -73,15 +76,22 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
 
     @socketio.on('change_resolution')
     def handle_change_resolution(data):
-        print('test')
         sensor_mode = data.get('mode')
         if sensor_mode is not None:
             cinepi_controller.set_resolution(int(sensor_mode))
-            #redis_controller.set_value('sensor_mode', sensor_mode)
             socketio.emit('resolution_change', {'sensor_mode': sensor_mode})
-            shutter_a_steps = cinepi_controller.calculate_dynamic_shutter_angles(int(float((redis_controller.get_value('fps_actual')))))
+            # Emit the current values and steps immediately before reloading
+            shutter_a_steps = cinepi_controller.calculate_dynamic_shutter_angles(int(float(redis_controller.get_value('fps_actual'))))
             current_shutter_a = redis_controller.get_value('shutter_a')
-            socketio.emit('shutter_a_update', {'shutter_a_steps': shutter_a_steps, 'current_shutter_a': current_shutter_a})
+            current_fps = redis_controller.get_value('fps_actual')
+            socketio.emit('shutter_a_update', {
+                'shutter_a_steps': shutter_a_steps,
+                'current_shutter_a': current_shutter_a
+            })
+            socketio.emit('fps_update', {
+                'fps_steps': cinepi_controller.fps_steps_dynamic,
+                'current_fps': current_fps
+            })
 
             time.sleep(2)  # Add a 2-second pause
             socketio.emit('reload_browser')  # Emit event to reload the browser

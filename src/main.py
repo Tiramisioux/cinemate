@@ -194,7 +194,6 @@ if __name__ == "__main__":
     shutter_a_current = redis_controller.get_value('shutter_a')
     cinepi_controller.set_shutter_a(shutter_a_current)  
         
-        
     logging.info(f"--- initialization complete")
 
     try:    
@@ -205,8 +204,8 @@ if __name__ == "__main__":
     finally:
         redis_controller.set_value('is_recording', 0)
         redis_controller.set_value('is_writing', 0)
-        # current_shutter_angle = redis_controller.get_value('shutter_a')
-        # redis_controller.set_value('shutter_a_nom', int(current_shutter_angle))
+        current_shutter_angle = redis_controller.get_value('shutter_a')
+        redis_controller.set_value('shutter_a_nom', int(current_shutter_angle))
         dmesg_monitor.join()
         serial_handler.join()
         command_executor.join()

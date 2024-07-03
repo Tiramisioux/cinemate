@@ -528,7 +528,7 @@ class QuadRotaryEncoder:
         self.switches = []
         self.pixels = None
         self.colors = [0, 0, 0, 0]
-        self.last_positions = [-1, -1, -1, -1]
+        self.last_positions = [0, 0, 0, 0]  # Initialized to zero for relative changes
         self.settings = {settings_mapping[key]['setting_name']: 100 for key in settings_mapping}
         self.debounced_time = 0.1  # Example debounce time in seconds
         self.button_states = [False] * len(settings_mapping)
@@ -564,26 +564,25 @@ class QuadRotaryEncoder:
                 continue
 
             if rotary_pos != self.last_positions[n]:
-                if self.switches[n].value:
-                    setting_name = self.settings_mapping[str(n)].get('setting_name')
-                    if setting_name is not None:
-                        if self.last_positions[n] != -1:
-                            if rotary_pos > self.last_positions[n]:
-                                self.settings[setting_name] += 1
-                            else:
-                                self.settings[setting_name] -= 1
-                            self.settings[setting_name] = max(0, self.settings[setting_name])
-                            self.update_setting(n)
-                            logging.info(f"Quad Rotary #{n}: {rotary_pos}")
+                change = rotary_pos - self.last_positions[n]
+                self.last_positions[n] = rotary_pos
+
+                setting_name = self.settings_mapping[str(n)].get('setting_name')
+                if setting_name is not None:
+                    if change > 0:
+                        self.settings[setting_name] += change
                     else:
-                        logging.info(f"No setting mapped for encoder index {n}")
+                        self.settings[setting_name] += change
+                    self.settings[setting_name] = max(0, self.settings[setting_name])
+                    self.update_setting(n, change)
+                    logging.info(f"Quad Rotary #{n}: {rotary_pos}")
+                else:
+                    logging.info(f"No setting mapped for encoder index {n}")
 
                 if not self.switches[n].value:
                     self.pixels[n] = 0xFFFFFF
                 else:
                     self.pixels[n] = self.colorwheel(self.colors[n])
-
-                self.last_positions[n] = rotary_pos
 
             # Handle button press and hold
             if not self.switches[n].value:  # Button pressed
@@ -617,7 +616,7 @@ class QuadRotaryEncoder:
         else:
             logging.error(f"No button pin mapped for encoder index {encoder_index}")
 
-    def update_setting(self, encoder_index):
+    def update_setting(self, encoder_index, change):
         setting_name = self.settings_mapping[str(encoder_index)].get('setting_name')
         if setting_name is not None:
             try:
@@ -625,18 +624,12 @@ class QuadRotaryEncoder:
                 dec_func_name = f"dec_{setting_name}"
 
                 if hasattr(self.cinepi_controller, inc_func_name) and hasattr(self.cinepi_controller, dec_func_name):
-                    current_position = self.encoders[encoder_index].position
-                    last_position = self.last_positions[encoder_index]
-
-                    if current_position > last_position:
+                    if change > 0:
                         getattr(self.cinepi_controller, inc_func_name)()
                         self.colors[encoder_index] = (self.colors[encoder_index] + 8) % 256
-                    elif current_position < last_position:
+                    elif change < 0:
                         getattr(self.cinepi_controller, dec_func_name)()
                         self.colors[encoder_index] = (self.colors[encoder_index] - 8) % 256
-
-                    self.last_positions[encoder_index] = current_position
-
                 else:
                     raise AttributeError(f"{self.cinepi_controller.__class__.__name__} module does not have functions for {setting_name}.")
             except KeyError:
@@ -663,5 +656,6 @@ class QuadRotaryEncoder:
     def clone_smart_button_behavior(self, existing_button):
         logging.info(f"Cloning behavior of SmartButton {existing_button} for Quad Rotary Encoder.")
         existing_button.on_press()  # Or trigger the required behavior
+
 
 

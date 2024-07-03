@@ -319,23 +319,10 @@ class CinePiController:
                 logging.info(f"Resolution set to mode {value}, height: {height_value}, width: {width_value}, gui_layout: {gui_layout_value}")
 
                 fps_current = int(float(self.redis_controller.get_value('fps_last')))
-
-                # Restart the CinePi instance with new resolution settings
-                new_args = [
-                    '--mode', f'{width_value}:{height_value}:{bit_depth_value}:U',
-                    '--width', str(width_value),
-                    '--height', str(height_value),
-                    '--lores-width', str(self.sensor_detect.get_lores_width(self.sensor_detect.camera_model, value)),
-                    '--lores-height', str(self.sensor_detect.get_lores_height(self.sensor_detect.camera_model, value)),
-                    '-p', '0,30,1920,1020',
-                    '--post-process-file', '/home/pi/post-processing.json',
-                    '--framerate', f"{fps_current}",          
-                ]
-                logging.info(f"Restarting CinePi with args: {new_args}")
                 
                 self.redis_controller.set_value('awb', 0)
                 
-                self.cinepi_app.restart(*new_args)
+                self.cinepi_app.restart()
                 
                 self.set_fps(int(self.redis_controller.get_value('fps')))
                 

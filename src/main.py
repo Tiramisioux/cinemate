@@ -117,16 +117,7 @@ if __name__ == "__main__":
     sensor_detect = SensorDetect()
     sensor_mode = int(redis_controller.get_value('sensor_mode'))
 
-    cinepi_app = CinePi(
-        '--mode', f"{sensor_detect.get_width(sensor_detect.camera_model, sensor_mode)}:{sensor_detect.get_height(sensor_detect.camera_model, sensor_mode)}:{sensor_mode}:U",
-        '--width', str(sensor_detect.get_width(sensor_detect.camera_model, sensor_mode)),
-        '--height', str(sensor_detect.get_height(sensor_detect.camera_model, sensor_mode)),
-        '--lores-width', str(sensor_detect.get_lores_width(sensor_detect.camera_model, sensor_mode)),
-        '--lores-height', str(sensor_detect.get_lores_height(sensor_detect.camera_model, sensor_mode)),
-        '-p', '0,30,1920,1020',
-        '--post-process-file', 'home/pi/post-processing.json',
-        '--tuning-file', 'home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json'
-    )
+    cinepi_app = CinePi(redis_controller, sensor_detect)
 
     ssd_monitor = SSDMonitor()
     usb_monitor = USBMonitor(ssd_monitor)

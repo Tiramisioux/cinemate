@@ -145,7 +145,6 @@ class CinePiController:
             self.fps_actual = new_framerate_rounded
             logging.info(f"Updated fps_actual to {new_framerate_rounded}")
             self.redis_controller.set_value('fps_actual', new_framerate_rounded)
-            self.redis_controller.publish('fps_actual_update', new_framerate_rounded)  # Publish update to Redis
             self.update_shutter_angle_for_fps()
 
     def update_shutter_angle_for_fps(self):
@@ -330,7 +329,7 @@ class CinePiController:
                     '--lores-height', str(self.sensor_detect.get_lores_height(self.sensor_detect.camera_model, value)),
                     '-p', '0,30,1920,1020',
                     '--post-process-file', '/home/pi/post-processing.json',
-                    '--framerate', f"{fps_current}",                
+                    '--framerate', f"{fps_current}",          
                 ]
                 logging.info(f"Restarting CinePi with args: {new_args}")
                 

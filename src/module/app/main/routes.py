@@ -27,5 +27,8 @@ def index():
                            dynamic_data=dynamic_data,
                            iso_values=cinepi_controller.iso_steps, 
                            shutter_speed_values=cinepi_controller.shutter_a_steps_dynamic,
-                           fps_values=cinepi_controller.fps_steps_dynamic, 
+                           fps_values=cinepi_controller.fps_steps_dynamic,
+                           current_iso=iso_value,
+                           current_shutter_a=shutter_a_value,
+                           current_fps=fps_value,
                            background_color=background_color_value)

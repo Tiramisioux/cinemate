@@ -59,7 +59,6 @@ fps_steps = None
 def load_settings(filename):
     with open(filename, 'r') as file:
         original_settings = json.load(file)
-
         settings = {}
 
         if 'gpio_output' in original_settings:
@@ -73,7 +72,8 @@ def load_settings(filename):
             settings['arrays'] = {
                 'iso_steps': arrays_settings.get('iso_steps', []),
                 'shutter_a_steps': arrays_settings.get('shutter_a_steps', []),
-                'fps_steps': fps_steps
+                'fps_steps': fps_steps,
+                'awb_steps': arrays_settings.get('awb_steps', list(range(0, 8)))
             }
 
         if 'analog_controls' in original_settings:
@@ -93,13 +93,41 @@ def load_settings(filename):
 
         if 'quad_rotary_encoders' in original_settings:
             settings['quad_rotary_encoders'] = original_settings['quad_rotary_encoders']
-            
+
         if 'settings' in original_settings:
             settings['settings'] = original_settings['settings']
         else:
             settings['settings'] = {"light_hz": 50}  # Default value if not found
 
         return settings
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run the CinePi application.")
+    parser.add_argument("-debug", action="store_true", help="Enable debug logging level.")
+    args = parser.parse_args()
+    logging_level = logging.DEBUG if args.debug else logging.INFO
+
+    logger, log_queue = configure_logging(MODULES_OUTPUT_TO_SERIAL, logging_level)
+    settings = load_settings('/home/pi/cinemate/src/settings.json')
+
+    redis_controller = RedisController()
+
+    redis_controller.set_value('awb', 0)
+
+    sensor_detect = SensorDetect()
+    sensor_mode = int(redis_controller.get_value('sensor_mode'))
+
+    cinepi_app = CinePi(redis_controller, sensor_detect)
+
+    ssd_monitor = SSDMonitor()
+    usb_monitor = USBMonitor(ssd_monitor)
+    usb_drive_monitor = USBDriveMonitor(ssd_monitor=ssd_monitor)
+    threading.Thread(target=usb_drive_monitor.start_monitoring, daemon=True).start()
+    gpio_output = GPIOOutput(rec_out_pins=settings['gpio_output']['rec_out_pin'])
+    pwm_controller = PWMController(sensor_detect, PWM_pin=settings['gpio_output']['pwm_pin'])
+    dmesg_monitor = DmesgMonitor()
+   
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the CinePi application.")
@@ -137,6 +165,7 @@ if __name__ == "__main__":
                                          iso_steps=settings['arrays']['iso_steps'],
                                          shutter_a_steps=settings['arrays']['shutter_a_steps'],
                                          fps_steps=settings['arrays']['fps_steps'],
+                                         awb_steps=settings['arrays']['awb_steps'],
                                          light_hz=settings['settings']['light_hz'],
                                          )
 

@@ -21,10 +21,9 @@ class CinePiController:
                  iso_steps,
                  shutter_a_steps,
                  fps_steps,
+                 awb_steps,
                  light_hz,
                  ):
-
-        # Initialization code...
         self.parameters_lock_obj = threading.Lock()
         self.cinepi_app = cinepi_app
         self.pwm_controller = pwm_controller
@@ -36,66 +35,49 @@ class CinePiController:
         self.iso_steps = iso_steps
         self.shutter_a_steps = shutter_a_steps
         self.fps_steps = fps_steps
-        self.light_hz = int(light_hz)
+        self.awb_steps = awb_steps
+        self.light_hz = light_hz
         
-        # Initialize RedisListener with a callback to update fps_actual
         self.redis_listener = RedisListener(redis_controller, self.update_fps_actual)
         self.fps_actual = self.redis_listener.framerate if self.redis_listener.framerate else 1
         
-        self.parameters_lock = False
+        # Set startup flag
+        self.startup = True
         
+        self.parameters_lock = False
         self.iso_lock = False
         self.shutter_a_nom_lock = False
         self.fps_lock = False
-        
         self.all_lock = False
-        
         self.lock_override = False
-        
         self.exposure_time_seconds = None
         self.exposure_time_fractions = None
-        
         self.fps_multiplier = 1
         self.pwm_mode = False
-        
         self.fps_saved = float(self.redis_controller.get_value('fps_actual'))
         self.fps_double = False
-        
         self.ramp_up_speed = 0.2
         self.ramp_down_speed = 0.2
-        
         self.fps_button_state = False
-        
         self.fps_temp = 24
         self.fps_temp_old = 24
-        
         self.shutter_a_sync = False
         self.shutter_a_nom = 180
-        
         self.exposure_time_saved = 1/24
-        
         self.current_sensor = self.sensor_detect.camera_model
         self.sensor_mode = int(self.redis_controller.get_value('sensor_mode'))
         self.fps_max = int(self.sensor_detect.get_fps_max(self.current_sensor, self.sensor_mode))
         self.redis_controller.set_value('fps_max', self.fps_max)
         self.gui_layout = self.sensor_detect.get_gui_layout(self.current_sensor, self.sensor_mode)
-        
         self.exposure_time_s = float(self.redis_controller.get_value('shutter_a')) / 360 * 1 / self.fps_actual
         self.exposure_time_saved = self.exposure_time_s
-        
         self.file_size = self.sensor_detect.get_file_size(self.current_sensor, self.sensor_mode)
         
-        # Initialize fps_steps and shutter_a_steps based on the provided lists and capped values
         self.initialize_fps_steps(self.fps_steps)
         self.initialize_shutter_a_steps(self.shutter_a_steps)
-        
         self.set_resolution(int(self.redis_controller.get_value('sensor_mode')))
-        self.redis_controller.set_value('awb', 0)
-        time.sleep(1)
-        self.redis_controller.set_value('awb', 0)
         
-        # Set startup flag
-        self.startup = True
+
 
         # Set a timer to clear the startup flag after a short period
         threading.Timer(5.0, self.clear_startup_flag).start()
@@ -320,11 +302,10 @@ class CinePiController:
 
                 fps_current = int(float(self.redis_controller.get_value('fps_last')))
                 
-                self.redis_controller.set_value('awb', 0)
-                
                 self.cinepi_app.restart()
                 
-                self.set_fps(int(self.redis_controller.get_value('fps')))
+                time.sleep(2)
+                self.set_fps(int(self.redis_controller.get_value('fps_last')))
                 
                 self.file_size = file_size_value
                 
@@ -459,33 +440,50 @@ class CinePiController:
         self.ssd_monitor.unmount_drive()
     
     def calculate_dynamic_shutter_angles(self, fps):
-        fps = int(fps)  # Ensure fps is an integer
-        base_angles = [45, 90, 135, 180, 225, 270, 315, 360]
-        dynamic_angles = base_angles[:]
+        dynamic_steps = self.shutter_a_steps.copy()  # Start with normal shutter angle values
+        for hz in self.light_hz:
+            flicker_free_angles = self.calculate_flicker_free_shutter_angles(fps, hz)
+            dynamic_steps.extend(flicker_free_angles)
+        dynamic_steps = sorted(set(dynamic_steps))  # Remove duplicates and sort
+        return dynamic_steps
 
-        for angle in base_angles:
-            adjusted_angle = angle * (self.light_hz / fps)
-            if adjusted_angle <= 360 and adjusted_angle not in dynamic_angles:
-                dynamic_angles.append(round(adjusted_angle, 1))
-
-        if fps == 24 and self.light_hz == 50:
-            dynamic_angles.append(172.8)
-
-        dynamic_angles = sorted(set(dynamic_angles))
-        return dynamic_angles
+    def calculate_flicker_free_shutter_angles(self, fps, hz):
+        flicker_free_angles = []
+        for multiple in range(1, int(hz/fps) + 1):
+            angle = 360 * multiple * fps / hz
+            if angle <= 360:  # Ensure the angle is valid
+                flicker_free_angles.append(angle)
+        return flicker_free_angles
 
     def update_fps_and_shutter_angles(self, fps):
         self.fps_actual = int(fps)
         self.shutter_a_steps_dynamic = self.calculate_dynamic_shutter_angles(fps)
 
+    def set_awb(self, value):
+        value = int(value)
+        if 0 <= value <= 7:
+            self.redis_controller.set_value('awb', value)
+            logging.info(f"Setting AWB to {value}")
+            self.cinepi_app.restart()
+            time.sleep(2)
+            self.set_fps(int(self.redis_controller.get_value('fps_last')))
+        else:
+            logging.error("Invalid AWB value. It should be between 0 and 7.")
+
+    def inc_awb(self):
+        current_value = int(self.redis_controller.get_value('awb'))
+        new_value = (current_value + 1) % 8
+        self.set_awb(new_value)
+
+    def dec_awb(self):
+        current_value = int(self.redis_controller.get_value('awb'))
+        new_value = (current_value - 1) % 8
+        self.set_awb(new_value)
+
     def increment_setting(self, setting_name, steps, fps=None):
-        if self.pwm_mode == False:
-            current_value = float(self.get_setting(setting_name))
-            if setting_name == 'shutter_a':
-                dynamic_steps = self.calculate_dynamic_shutter_angles(self.fps_actual)
-                self.shutter_a_steps_dynamic = dynamic_steps
-            else:
-                dynamic_steps = steps
+        if setting_name == 'awb':
+            current_value = int(self.get_setting(setting_name))
+            dynamic_steps = self.awb_steps  # AWB steps from settings
             if current_value in dynamic_steps:
                 idx = dynamic_steps.index(current_value)
                 idx = min(idx + 1, len(dynamic_steps) - 1)
@@ -493,17 +491,28 @@ class CinePiController:
                 idx = 0
             getattr(self, f"set_{setting_name}")(dynamic_steps[idx])
             logging.info(f"Increasing {setting_name} to {self.get_setting(setting_name)}")
-        elif self.pwm_mode == True and setting_name == 'fps':
-            self.set_fps(int(self.fps_actual) + 1)
+        else:
+            if self.pwm_mode == False:
+                current_value = float(self.get_setting(setting_name))
+                if setting_name == 'shutter_a':
+                    dynamic_steps = self.calculate_dynamic_shutter_angles(self.fps_actual)
+                    self.shutter_a_steps_dynamic = dynamic_steps
+                else:
+                    dynamic_steps = steps
+                if current_value in dynamic_steps:
+                    idx = dynamic_steps.index(current_value)
+                    idx = min(idx + 1, len(dynamic_steps) - 1)
+                else:
+                    idx = 0
+                getattr(self, f"set_{setting_name}")(dynamic_steps[idx])
+                logging.info(f"Increasing {setting_name} to {self.get_setting(setting_name)}")
+            elif self.pwm_mode == True and setting_name == 'fps':
+                self.set_fps(int(self.fps_actual) + 1)
 
     def decrement_setting(self, setting_name, steps, fps=None):
-        if self.pwm_mode == False:
-            current_value = float(self.get_setting(setting_name))
-            if setting_name == 'shutter_a':
-                dynamic_steps = self.calculate_dynamic_shutter_angles(self.fps_actual)
-                self.shutter_a_steps_dynamic = dynamic_steps
-            else:
-                dynamic_steps = steps
+        if setting_name == 'awb':
+            current_value = int(self.get_setting(setting_name))
+            dynamic_steps = self.awb_steps  # AWB steps from settings
             if current_value in dynamic_steps:
                 idx = dynamic_steps.index(current_value)
                 idx = max(idx - 1, 0)
@@ -511,9 +520,23 @@ class CinePiController:
                 idx = 0
             getattr(self, f"set_{setting_name}")(dynamic_steps[idx])
             logging.info(f"Decreasing {setting_name} to {self.get_setting(setting_name)}")
-        elif self.pwm_mode == True and setting_name == 'fps':
-            self.set_fps(int(self.fps_actual) - 1)
-
+        else:
+            if self.pwm_mode == False:
+                current_value = float(self.get_setting(setting_name))
+                if setting_name == 'shutter_a':
+                    dynamic_steps = self.calculate_dynamic_shutter_angles(self.fps_actual)
+                    self.shutter_a_steps_dynamic = dynamic_steps
+                else:
+                    dynamic_steps = steps
+                if current_value in dynamic_steps:
+                    idx = dynamic_steps.index(current_value)
+                    idx = max(idx - 1, 0)
+                else:
+                    idx = 0
+                getattr(self, f"set_{setting_name}")(dynamic_steps[idx])
+                logging.info(f"Decreasing {setting_name} to {self.get_setting(setting_name)}")
+            elif self.pwm_mode == True and setting_name == 'fps':
+                self.set_fps(int(self.fps_actual) - 1)
     def inc_shutter_a(self):
         self.increment_setting('shutter_a', self.shutter_a_steps, fps=self.fps_actual)
 

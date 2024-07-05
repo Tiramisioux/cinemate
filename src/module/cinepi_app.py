@@ -43,6 +43,7 @@ class CinePi:
         sensor_mode = int(self.redis_controller.get_value('sensor_mode'))
         sensor_model = sensor_detect.camera_model
         tuning_file_path = f'/home/pi/libcamera/src/ipa/rpi/pisp/data/{sensor_model}.json'
+        frame_rate = int(self.redis_controller.get_value('fps_last'))
         
         return [
             '--mode', f"{sensor_detect.get_width(sensor_model, sensor_mode)}:{sensor_detect.get_height(sensor_model, sensor_mode)}:{sensor_mode}:U",
@@ -50,7 +51,7 @@ class CinePi:
             '--height', str(sensor_detect.get_height(sensor_model, sensor_mode)),
             '--lores-width', str(sensor_detect.get_lores_width(sensor_model, sensor_mode)),
             '--lores-height', str(sensor_detect.get_lores_height(sensor_model, sensor_mode)),
-            '--hdr', 'sensor',
+            '--framerate', f"{frame_rate}",
             '-p', '0,30,1920,1020',
             '--post-process-file', '/home/pi/post-processing.json',
             '--tuning-file', tuning_file_path
@@ -80,6 +81,8 @@ class CinePi:
     def shutdown(self):
         """Shut down the CinePi instance."""
         if self.process is not None:
+            fps_last = self.redis_controller.get_value('fps')
+            self.redis_controller.set_value('fps_last', fps_last)
             logging.info('Shutting down CinePi instance.')
             self.process.terminate()
             self.process.wait()
@@ -88,6 +91,8 @@ class CinePi:
     def restart(self):
         """Restart the CinePi instance."""
         logging.info('Restarting CinePi instance.')
+        fps_last = self.redis_controller.get_value('fps')
+        self.redis_controller.set_value('fps_last', fps_last)
         self.shutdown()
         # Restart the process with default arguments
         self.start_cinepi_process()

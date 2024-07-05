@@ -76,6 +76,13 @@
                 {% endfor %}
             </select>
         </div>
+        <div>WB:
+            <select id="awb-select">
+                {% for awb_value in awb_values %}
+                    <option value="{{ awb_value.value }}" {% if awb_value.value == current_awb %}selected{% endif %}>{{ awb_value.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
     </div>
     <div id="stream-container">
         <img id="stream" src="{{ stream_url }}" alt="Stream">
@@ -127,10 +134,25 @@
             });
         }
 
+        function updateAwbOptions(awb_steps, current_awb) {
+            const awbSelect = document.getElementById('awb-select');
+            awbSelect.innerHTML = '';
+            awb_steps.forEach(awb => {
+                const option = document.createElement('option');
+                option.value = awb.value;
+                option.textContent = awb.name;
+                if (awb.value == current_awb) {
+                    option.selected = true;
+                }
+                awbSelect.appendChild(option);
+            });
+        }
+
         socket.on('initial_values', data => {
             document.getElementById('iso-select').value = data.iso;
             updateShutterSpeedOptions(data.shutter_a_steps, data.shutter_a);
             updateFpsOptions(data.fps_steps, data.fps);
+            updateAwbOptions(data.awb_steps, data.awb);
 
             document.body.style.backgroundColor = data.background_color;
             document.getElementById('disk-space').innerText = data.disk_space;
@@ -155,10 +177,18 @@
                 document.getElementById('iso-select').value = data.iso;
             }
             if (data.shutter_a !== undefined) {
-                document.getElementById('shutter-speed-select').value = data.shutter_a;
+                const currentShutter = data.shutter_a;
+                document.getElementById('shutter-speed-select').value = currentShutter;
+                // Fetch and update shutter angles if necessary
+                socket.emit('request_shutter_a_steps', {}, (response) => {
+                    updateShutterSpeedOptions(response.shutter_a_steps, currentShutter);
+                });
             }
             if (data.fps_actual !== undefined) {
                 document.getElementById('fps-select').value = data.fps_actual;
+            }
+            if (data.awb !== undefined) {
+                document.getElementById('awb-select').value = data.awb;
             }
         });
 
@@ -207,6 +237,11 @@
         document.getElementById('fps-select').addEventListener('change', function() {
             const fps = this.value;
             socket.emit('change_fps', { fps });
+        });
+
+        document.getElementById('awb-select').addEventListener('change', function() {
+            const awb = this.value;
+            socket.emit('change_awb', { awb });
         });
 
         document.getElementById('resolution-select').addEventListener('change', function() {

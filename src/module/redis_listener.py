@@ -105,7 +105,7 @@ class RedisListener:
                             self.is_recording = True
                             self.recording_start_time = datetime.datetime.now()
                             logging.info(f"Recording started at: {self.recording_start_time}")
-                            self.framerate = float(self.redis_controller.get_value('fps_actual'))
+                            self.framerate = float(self.redis_controller.get_value('fps'))
                         elif value_str == '0':
                             self.is_recording = False
                             if self.recording_start_time:

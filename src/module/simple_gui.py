@@ -175,7 +175,8 @@ class SimpleGUI(threading.Thread):
             self.colors["fps"]["normal"] = "white"
 
         if self.cinepi_controller.shutter_a_sync:
-            values["shutter_a_sync"] = f"SYNC   /  {self.cinepi_controller.shutter_a_nom}"
+            shutter = self.redis_controller.get_value('shutter_a')
+            values["shutter_a_sync"] = f"SYNC   /  {shutter}"
         else:
             values["shutter_a_sync"] = ""
     
@@ -306,7 +307,9 @@ class SimpleGUI(threading.Thread):
 
     def draw_rounded_box(self, draw, text, position, font_size, padding, text_color, fill_color, image):
         font = ImageFont.truetype(os.path.realpath(self.font_path), font_size)
-        text_width, text_height = draw.textsize(text, font=font)
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
         upper_left = (position[0] - padding, position[1] - padding)
         bottom_right = (upper_left[0] + text_width + 2 * padding, upper_left[1] + text_height + 2 * padding)
         radius = 10

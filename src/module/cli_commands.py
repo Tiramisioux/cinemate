@@ -34,7 +34,11 @@ class CommandExecutor(threading.Thread):
             'inc_fps': (cinepi_controller.inc_fps, None),  
             'dec_shutter_fps': (cinepi_controller.dec_fps, None), 
             
-            'set_resolution': (cinepi_controller.set_resolution, [int, None]), 
+            'set_awb': (cinepi_controller.set_awb, int),
+            'inc_awb': (cinepi_controller.inc_awb, None),
+            'dec_awb': (cinepi_controller.dec_awb, None),
+            
+            'set_resolution': (cinepi_controller.set_resolution, [int, None]),
              
             'unmount': (cinepi_controller.unmount, None),  
             'time': (self.display_time, None),  

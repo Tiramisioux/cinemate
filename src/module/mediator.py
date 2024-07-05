@@ -5,20 +5,14 @@ import json
 import RPi
 
 class Mediator:
-    def __init__(self, cinepi_app, redis_controller, usb_monitor, ssd_monitor, gpio_output, stream):
+    def __init__(self, cinepi_app, redis_controller, ssd_monitor, gpio_output, stream):
         self.cinepi_app = cinepi_app
         self.redis_controller = redis_controller
-        self.usb_monitor = usb_monitor
         self.ssd_monitor = ssd_monitor
         self.gpio_output = gpio_output
         self.stream = stream
         
-        # # Load recognized SSD models from the settings file
-        # self.recognized_ssds = self.load_ssd_settings("/home/pi/cinemate/src/module/ssd_settings.json")
-        
         self.cinepi_app.message.subscribe(self.handle_cinepi_message)
-        # self.usb_monitor.usb_event.subscribe(self.handle_usb_event)
-        self.ssd_monitor.write_status_changed_event.subscribe(self.handle_write_status_change)
 
         # Subscribe to the "is_recording" key changes
         self.redis_controller.redis_parameter_changed.subscribe(self.handle_redis_event)
@@ -28,11 +22,6 @@ class Mediator:
         
          # Subscribe to the "fps_actual" key changes
         self.redis_controller.redis_parameter_changed.subscribe(self.handle_fps_actual_change)
-        
-         # Subscribe to SSD unmount events
-        self.ssd_monitor.unmount_event.subscribe(self.handle_ssd_unmount)
-        
-        self.ssd_monitor.ssd_event.subscribe(self.handle_ssd_event)
         
         logging.info("Mediator instantiated")
         
@@ -49,18 +38,6 @@ class Mediator:
     def handle_cinepi_message(self, message):
         # Handle CinePi app messages (currently not logging)
         pass  
-    
-    # def handle_usb_event(self, action, device, device_model, device_serial):
-    #     """Handle USB events with SSD recognition based on the settings file."""
-    #     model_upper = device_model.upper()
-    #     if any(ssd_model.upper() in model_upper for ssd_model in self.recognized_ssds):
-    #         # The device is recognized as an SSD from the settings file
-    #         logging.info(f"Recognized SSD connected: {device_model}")
-    #         logging.info(f"SSD device serial: {device_serial}")
-    #         self.ssd_monitor.update(action, device_model, device_serial)
-    #         self.ssd_monitor.usb_hd_serial = device_serial  # Set the serial number
-
-    #     # Add else condition if needed to handle non-SSD USB events
 
     def handle_ssd_event(self, action, message):
         # Handle SSD events
@@ -108,7 +85,6 @@ class Mediator:
                 logging.info("Recording stopped!")
                 self.redis_controller.set_value('is_writing', 0)
                 self.gpio_output.set_recording(0)
-
         
         # Handle "is_writing" key changes        
         elif data['key'] == 'is_writing':

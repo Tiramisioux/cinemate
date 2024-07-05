@@ -177,7 +177,7 @@ class SimpleGUI(threading.Thread):
 
         self.colors["battery_level"]["normal"] = "lightgreen" if self.battery_monitor.charging else "white"
 
-        if self.ssd_monitor.space_left and self.ssd_monitor.disk_mounted:
+        if self.ssd_monitor.space_left and self.ssd_monitor.is_mounted:
             min_left = round(int((self.ssd_monitor.space_left * 1000) / (self.cinepi_controller.file_size * float(self.cinepi_controller.fps_actual) * 60)), 0)
             values["disk_space"] = f"{min_left} MIN"
         else:

@@ -190,8 +190,12 @@ if __name__ == "__main__":
     finally:
         redis_controller.set_value('is_recording', 0)
         redis_controller.set_value('is_writing', 0)
+        
         current_shutter_angle = redis_controller.get_value('shutter_a')
         redis_controller.set_value('shutter_a_nom', int(current_shutter_angle))
+        fps_last = int(float(redis_controller.get_value('fps')))
+        redis_controller.set_value('fps_last', fps_last )
+        
         dmesg_monitor.join()
         command_executor.join()
         RPi.GPIO.cleanup()

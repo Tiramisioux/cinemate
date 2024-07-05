@@ -12,7 +12,7 @@ from module.redis_listener import RedisListener
 
 class CinePiController:
     def __init__(self,
-                 cinepi_app,
+                 cinepi,
                  pwm_controller, 
                  redis_controller,
                  ssd_monitor,
@@ -23,8 +23,9 @@ class CinePiController:
                  awb_steps,
                  light_hz,
                  ):
+        
         self.parameters_lock_obj = threading.Lock()
-        self.cinepi_app = cinepi_app
+        self.cinepi = cinepi
         self.pwm_controller = pwm_controller
         self.redis_controller = redis_controller
         self.ssd_monitor = ssd_monitor
@@ -73,9 +74,6 @@ class CinePiController:
         
         self.initialize_fps_steps(self.fps_steps)
         self.initialize_shutter_a_steps(self.shutter_a_steps)
-        self.set_resolution(int(self.redis_controller.get_value('sensor_mode')))
-        
-
 
         # Set a timer to clear the startup flag after a short period
         threading.Timer(5.0, self.clear_startup_flag).start()
@@ -192,6 +190,7 @@ class CinePiController:
                 self.update_fps_and_shutter_angles(safe_value)
 
 
+
     def set_iso_lock(self, value=None):
         if value is not None:
             if value in (0, False):
@@ -236,7 +235,7 @@ class CinePiController:
             self.stop_recording()
             
     def start_recording(self):
-        if self.ssd_monitor.is_mounted == True and self.ssd_monitor.last_space_left:
+        if self.ssd_monitor.is_mounted == True and self.ssd_monitor.get_space_left:
             self.redis_controller.set_value('is_recording', 1)
             logging.info(f"Started recording")
         else:
@@ -300,7 +299,7 @@ class CinePiController:
 
                 fps_current = int(float(self.redis_controller.get_value('fps_last')))
                 
-                self.cinepi_app.restart()
+                self.cinepi.restart()
                 
                 time.sleep(2)
                 self.set_fps(int(self.redis_controller.get_value('fps_last')))
@@ -462,7 +461,7 @@ class CinePiController:
         if 0 <= value <= 7:
             self.redis_controller.set_value('awb', value)
             logging.info(f"Setting AWB to {value}")
-            self.cinepi_app.restart()
+            self.cinepi.restart()
             time.sleep(2)
             self.set_fps(int(self.redis_controller.get_value('fps_last')))
         else:
@@ -582,8 +581,8 @@ class CinePiController:
                 self.redis_controller.set_value('fps', 50)
                 self.pwm_controller.start_pwm(int(self.fps_saved), shutter_a_current, 2)
 
-            time.sleep(1)
-            self.redis_controller.set_value('cam_init', 1)
+            time.sleep(2)
+            self.cinepi.restart()
             logging.info(f"Restarting camera")
         
     def set_shutter_a_sync(self, value=None):

@@ -1,32 +1,59 @@
 import { defineConfig } from 'vitepress'
 
-export default defineConfig({
-  title: "Cinemate",
-  description: "Your project description here.",
+export default {
+  title: 'CineMate Documentation',
+  description: 'Documentation for CineMate and its integration with CinePi raw',
   themeConfig: {
-    logo: '/path/to/logo.png',
-    nav: [
-      { text: 'Home', link: '/' },
-      { text: 'Documentation', link: '/documentation' },
-      { text: 'Team', link: '/team' },
-    ],
     sidebar: [
       {
         text: 'Introduction',
         items: [
-          { text: 'What is Cinemate?', link: '/what-is-cinemate' },
+          { text: 'Overview', link: '/overview' },
+          { text: 'What is CineMate?', link: '/what-is-cinemate' },
         ],
       },
       {
         text: 'Getting Started',
         items: [
-          { text: 'Installation', link: '/installation' },
-          { text: 'Usage', link: '/usage' },
+          { text: 'Hardware Requirements', link: '/hardware-requirements' },
+          { text: 'Getting Started', link: '/getting-started' },
+        ],
+      },
+      {
+        text: 'Configuration',
+        items: [
+          { text: 'GPIO Setup', link: '/gpio-setup' },
+          { text: 'Rotary Encoders', link: '/rotary-encoders' },
+          { text: 'GUI', link: '/simple-gui' },
+          { text: 'SSH', link: '/ssh' },
+          { text: 'CLI', link: '/cli' },
+          { text: 'Customizing Camera Functions and GPIO Settings', link: '/customizing' },
+        ],
+      },
+      {
+        text: 'Additional hardware',
+        items: [
+          { text: 'Grove Base HAT', link: '/grove-base-hat' },
+          { text: 'Adafruit Quad Rotary Encoder', link: '/updating' },
+        ],
+      },
+      {
+        text: 'Advanced Features',
+        items: [
+          { text: 'PWM Mode', link: '/pwm-mode' },
+          { text: 'Updating CineMate', link: '/updating' },
+          { text: 'Audio Sync', link: '/audio-sync' },
+          { text: 'RTC', link: '/rtc' },
+          { text: 'Backing Up the SD Card', link: '/backup' },
+        ],
+      },
+      {
+        text: 'Examples',
+        items: [
+          { text: 'Builds', link: '/builds' },
+          { text: 'Image Examples', link: '/images' },
         ],
       },
     ],
-    socialLinks: [
-      { icon: 'github', link: 'https://github.com/Tiramisioux/cinemate' },
-    ],
   },
-})
+};

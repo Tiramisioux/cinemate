@@ -13,7 +13,6 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "vitepress": "^1.0.0",
-    "vitepress-theme-demoblock": "^3.0.7"
+    "vitepress": "^1.0.0"
   }
 }

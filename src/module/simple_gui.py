@@ -11,7 +11,7 @@ from sugarpie import pisugar
 from flask_socketio import SocketIO
 
 class SimpleGUI(threading.Thread):
-    def __init__(self, pwm_controller, redis_controller, cinepi_controller, usb_monitor, ssd_monitor, serial_handler, dmesg_monitor, battery_monitor, sensor_detect, redis_listener, socketio: SocketIO):
+    def __init__(self, pwm_controller, redis_controller, cinepi_controller, ssd_monitor, dmesg_monitor, battery_monitor, sensor_detect, redis_listener, socketio: SocketIO):
         threading.Thread.__init__(self)
         self.setup_resources()
         self.check_display()
@@ -21,9 +21,7 @@ class SimpleGUI(threading.Thread):
         self.pwm_controller = pwm_controller
         self.redis_controller = redis_controller
         self.cinepi_controller = cinepi_controller
-        self.usb_monitor = usb_monitor
         self.ssd_monitor = ssd_monitor
-        self.serial_handler = serial_handler
         self.dmesg_monitor = dmesg_monitor
         self.battery_monitor = battery_monitor
         self.sensor_detect = sensor_detect
@@ -91,27 +89,7 @@ class SimpleGUI(threading.Thread):
                 "cpu_load": {"position": (1780, -2), "font_size": 26},
                 "cpu_temp": {"position": (1860, -2), "font_size": 26},
                 "disk_space": {"position": (10, 1044), "font_size": 34},
-                "mic": {"position": (160, 1050), "font_size": 26},
-                "key": {"position": (250, 1050), "font_size": 26},
-                "serial": {"position": (345, 1050), "font_size": 26},
-                "last_dng_added": {"position": (610, 1044), "font_size": 34},
-                "battery_level": {"position": (1830, 1044), "font_size": 34},
-            },
-            1: {  # Layout 1
-                "iso": {"position": (0, -7), "font_size": 51},
-                "shutter_speed": {"position": (10, 80), "font_size": 51},
-                "fps": {"position": (10, 167), "font_size": 51},
-                "exposure_time": {"position": (10, 340), "font_size": 34},
-                "pwm_mode": {"position": (10, 427), "font_size": 34},
-                "shutter_a_sync": {"position": (10, 495), "font_size": 34},
-                "lock": {"position": (10, 619), "font_size": 34},
-                "low_voltage": {"position": (10, 680), "font_size": 34},
-                "cpu_load": {"position": (1780, -2), "font_size": 26},
-                "cpu_temp": {"position": (1860, -2), "font_size": 26},
-                "disk_space": {"position": (10, 1044), "font_size": 34},
-                "mic": {"position": (10, 880), "font_size": 26},
-                "key": {"position": (10, 928), "font_size": 26},
-                "serial": {"position": (10, 976), "font_size": 26},
+                #"last_dng_added": {"position": (610, 1044), "font_size": 34},
                 "battery_level": {"position": (1830, 1044), "font_size": 34},
             }
         }
@@ -134,10 +112,7 @@ class SimpleGUI(threading.Thread):
             "cpu_load": {"normal": "white", "inverse": "black"},
             "cpu_temp": {"normal": "white", "inverse": "black"},
             "disk_space": {"normal": "white", "inverse": "black"},
-            "mic": {"normal": "white", "inverse": "black"},
-            "key": {"normal": "white", "inverse": "black"},
-            "serial": {"normal": "white", "inverse": "black"},
-            "last_dng_added": {"normal": "white", "inverse": "black"},
+           # "last_dng_added": {"normal": "white", "inverse": "black"},
             "battery_level": {"normal": "white", "inverse": "black"},
         }
 
@@ -190,14 +165,10 @@ class SimpleGUI(threading.Thread):
         else:
             values["low_voltage"] = ""
 
-        values["mic"] = "MIC" if self.usb_monitor.usb_mic else ""
-        values["key"] = "KEY" if self.usb_monitor.usb_keyboard else ""
-        values["serial"] = "SER" if '/dev/ttyACM0' in self.serial_handler.current_ports else ""
-
-        if self.ssd_monitor and self.ssd_monitor.directory_watcher and self.ssd_monitor.directory_watcher.last_dng_file_added:
-            values["last_dng_added"] = str(self.ssd_monitor.directory_watcher.last_dng_file_added)[41:80]
-        else:
-            values["last_dng_added"] = ""
+        # if self.ssd_monitor and self.ssd_monitor.directory_watcher and self.ssd_monitor.directory_watcher.last_dng_file_added:
+        #     values["last_dng_added"] = str(self.ssd_monitor.directory_watcher.last_dng_file_added)[41:80]
+        # else:
+        #     values["last_dng_added"] = ""
 
         if self.battery_monitor.battery_level is not None:
             values["battery_level"] = str(self.battery_monitor.battery_level) + '%'
@@ -206,8 +177,8 @@ class SimpleGUI(threading.Thread):
 
         self.colors["battery_level"]["normal"] = "lightgreen" if self.battery_monitor.charging else "white"
 
-        if self.ssd_monitor.last_space_left and self.ssd_monitor.disk_mounted:
-            min_left = round(int((self.ssd_monitor.last_space_left * 1000) / (self.cinepi_controller.file_size * float(self.cinepi_controller.fps_actual) * 60)), 0)
+        if self.ssd_monitor.space_left and self.ssd_monitor.disk_mounted:
+            min_left = round(int((self.ssd_monitor.space_left * 1000) / (self.cinepi_controller.file_size * float(self.cinepi_controller.fps_actual) * 60)), 0)
             values["disk_space"] = f"{min_left} MIN"
         else:
             values["disk_space"] = "NO DISK"

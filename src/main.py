@@ -14,7 +14,6 @@ RPi.GPIO.setmode(RPi.GPIO.BCM)
 
 from module.redis_controller import RedisController
 from module.cinepi_app import CinePi
-from module.usb_monitor import USBMonitor, USBDriveMonitor
 from module.ssd_monitor import SSDMonitor
 from module.gpio_output import GPIOOutput
 from module.cinepi_controller import CinePiController
@@ -112,54 +111,27 @@ if __name__ == "__main__":
 
     redis_controller = RedisController()
 
-    redis_controller.set_value('awb', 0)
-
     sensor_detect = SensorDetect()
     sensor_mode = int(redis_controller.get_value('sensor_mode'))
 
-    cinepi_app = CinePi(redis_controller, sensor_detect)
-
-    ssd_monitor = SSDMonitor()
-    usb_monitor = USBMonitor(ssd_monitor)
-    usb_drive_monitor = USBDriveMonitor(ssd_monitor=ssd_monitor)
-    threading.Thread(target=usb_drive_monitor.start_monitoring, daemon=True).start()
-    gpio_output = GPIOOutput(rec_out_pins=settings['gpio_output']['rec_out_pin'])
-    pwm_controller = PWMController(sensor_detect, PWM_pin=settings['gpio_output']['pwm_pin'])
-    dmesg_monitor = DmesgMonitor()
-   
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run the CinePi application.")
-    parser.add_argument("-debug", action="store_true", help="Enable debug logging level.")
-    args = parser.parse_args()
-    logging_level = logging.DEBUG if args.debug else logging.INFO
-
-    logger, log_queue = configure_logging(MODULES_OUTPUT_TO_SERIAL, logging_level)
-    settings = load_settings('/home/pi/cinemate/src/settings.json')
-
-    redis_controller = RedisController()
+    cinepi = CinePi(redis_controller, sensor_detect)
     
-    redis_controller.set_value('awb', 0)
-
-    sensor_detect = SensorDetect()
-    sensor_mode = int(redis_controller.get_value('sensor_mode'))
-
-    cinepi_app = CinePi(redis_controller, sensor_detect)
+    # Set log level (optional)
+    cinepi.set_log_level('INFO')
+    
+    # Set active filters (optional)
+    cinepi.set_active_filters([])
 
     ssd_monitor = SSDMonitor()
-    usb_monitor = USBMonitor(ssd_monitor)
-    usb_drive_monitor = USBDriveMonitor(ssd_monitor=ssd_monitor)
-    threading.Thread(target=usb_drive_monitor.start_monitoring, daemon=True).start()
+    
     gpio_output = GPIOOutput(rec_out_pins=settings['gpio_output']['rec_out_pin'])
     pwm_controller = PWMController(sensor_detect, PWM_pin=settings['gpio_output']['pwm_pin'])
     dmesg_monitor = DmesgMonitor()
     dmesg_monitor.start()
 
-    cinepi_controller = CinePiController(cinepi_app,
+    cinepi_controller = CinePiController(cinepi,
                                          pwm_controller,
                                          redis_controller,
-                                         usb_monitor, 
                                          ssd_monitor,
                                          sensor_detect,
                                          iso_steps=settings['arrays']['iso_steps'],
@@ -173,21 +145,15 @@ if __name__ == "__main__":
     
     cinepi_controller.set_resolution(int(redis_controller.get_value('sensor_mode')))
 
-    usb_monitor.check_initial_devices()
-    keyboard = Keyboard(cinepi_controller, usb_monitor)
-    command_executor = CommandExecutor(cinepi_controller, cinepi_app)
+    command_executor = CommandExecutor(cinepi_controller, cinepi)
     command_executor.start()
-    serial_handler = SerialHandler(command_executor.handle_received_data, 9600, log_queue=log_queue)
-    serial_handler.start()
     redis_listener = RedisListener(redis_controller)
     battery_monitor = BatteryMonitor()
 
     simple_gui = SimpleGUI(pwm_controller, 
                            redis_controller, 
-                           cinepi_controller, 
-                           usb_monitor, 
+                           cinepi_controller,  
                            ssd_monitor, 
-                           serial_handler,
                            dmesg_monitor,
                            battery_monitor,
                            sensor_detect,
@@ -205,7 +171,7 @@ if __name__ == "__main__":
     else:
         logging.error("Didn't find Wi-Fi hotspot. Stream module not loaded")
 
-    mediator = Mediator(cinepi_app, redis_controller, usb_monitor, ssd_monitor, gpio_output, stream)
+    mediator = Mediator(cinepi, redis_controller, ssd_monitor, gpio_output, stream)
     time.sleep(1)
     
     fps_current = redis_controller.get_value('fps_actual')
@@ -227,6 +193,5 @@ if __name__ == "__main__":
         current_shutter_angle = redis_controller.get_value('shutter_a')
         redis_controller.set_value('shutter_a_nom', int(current_shutter_angle))
         dmesg_monitor.join()
-        serial_handler.join()
         command_executor.join()
         RPi.GPIO.cleanup()

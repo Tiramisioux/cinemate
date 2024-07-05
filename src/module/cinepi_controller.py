@@ -15,7 +15,6 @@ class CinePiController:
                  cinepi_app,
                  pwm_controller, 
                  redis_controller,
-                 usb_monitor,
                  ssd_monitor,
                  sensor_detect,
                  iso_steps,
@@ -29,7 +28,6 @@ class CinePiController:
         self.pwm_controller = pwm_controller
         self.redis_controller = redis_controller
         self.ssd_monitor = ssd_monitor
-        self.usb_monitor = usb_monitor
         self.sensor_detect = sensor_detect
         
         self.iso_steps = iso_steps
@@ -238,7 +236,7 @@ class CinePiController:
             self.stop_recording()
             
     def start_recording(self):
-        if self.ssd_monitor.disk_mounted == True and self.ssd_monitor.last_space_left:
+        if self.ssd_monitor.is_mounted == True and self.ssd_monitor.last_space_left:
             self.redis_controller.set_value('is_recording', 1)
             logging.info(f"Started recording")
         else:

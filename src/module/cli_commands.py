@@ -43,7 +43,7 @@ class CommandExecutor(threading.Thread):
             'unmount': (cinepi_controller.unmount, None),  
             'time': (self.display_time, None),  
             'set_rtc_time': (self.set_rtc_time, None),  
-            'space': (cinepi_controller.ssd_monitor.output_ssd_space_left, None),  
+            'space': (cinepi_controller.ssd_monitor.space_left, None),  
             'get': (cinepi_controller.print_settings, None),
             
             'set_pwm_mode': (cinepi_controller.set_pwm_mode, [int, None]),  

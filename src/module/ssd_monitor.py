@@ -30,6 +30,9 @@ class SSDMonitor:
         self.unmount_event = Event()
         self.space_update_event = Event()
 
+        # Start monitoring upon initialization
+        self.start()
+
     def start(self):
         """Start the SSD monitoring."""
         if self._monitor_thread is None or not self._monitor_thread.is_alive():
@@ -110,7 +113,6 @@ if __name__ == "__main__":
     monitor.space_update_event.subscribe(on_space_update)
 
     try:
-        monitor.start()
         while True:
             time.sleep(1)
     except KeyboardInterrupt:

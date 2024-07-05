@@ -53,7 +53,7 @@ class CinePi:
             }
             self.active_filters = set(['frame', 'agc', 'ccm'])  # Default active filters
             
-            self.start_cinepi_process()
+            #self.start_cinepi_process()
             self.initialized = True
             logging.info('CinePi instantiated')
 
@@ -61,7 +61,7 @@ class CinePi:
         sensor_mode = int(self.redis_controller.get_value('sensor_mode'))
         sensor_model = sensor_detect.camera_model
         tuning_file_path = f'/home/pi/libcamera/src/ipa/rpi/pisp/data/{sensor_model}.json'
-        frame_rate = int(self.redis_controller.get_value('fps_last'))
+        frame_rate = int(float(self.redis_controller.get_value('fps_last')))
         
         return [
             '--mode', f"{sensor_detect.get_width(sensor_model, sensor_mode)}:{sensor_detect.get_height(sensor_model, sensor_mode)}:{sensor_mode}:U",

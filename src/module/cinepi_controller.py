@@ -435,6 +435,9 @@ class CinePiController:
         self.ssd_monitor.unmount_drive()
     
     def calculate_dynamic_shutter_angles(self, fps):
+        if fps <= 0:
+            raise ValueError("FPS must be greater than zero.")
+
         dynamic_steps = self.shutter_a_steps.copy()  # Start with normal shutter angle values
         for hz in self.light_hz:
             flicker_free_angles = self.calculate_flicker_free_shutter_angles(fps, hz)
@@ -443,11 +446,13 @@ class CinePiController:
         return dynamic_steps
 
     def calculate_flicker_free_shutter_angles(self, fps, hz):
+        if fps <= 0:
+            raise ValueError("FPS must be greater than zero.")
+        
         flicker_free_angles = []
-        for multiple in range(1, int(hz/fps) + 1):
-            angle = 360 * multiple * fps / hz
-            if angle <= 360:  # Ensure the angle is valid
-                flicker_free_angles.append(angle)
+        for multiple in range(1, int(hz / fps) + 1):
+            angle = 360 / multiple
+            flicker_free_angles.append(angle)
         return flicker_free_angles
 
     def update_fps_and_shutter_angles(self, fps):

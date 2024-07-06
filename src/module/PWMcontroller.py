@@ -58,7 +58,7 @@ class pi5RC:
             self.file_duty.write("{}".format(onTime_us))
             self.file_duty.flush()
 
-# # Example usage:
+# Example usage:
 # pwm = pi5RC(19)
 # pwm.set_frequency(24)  # Set frequency to 24 Hz
 # pwm.set(500000)        # Set duty cycle to 50%
@@ -133,15 +133,21 @@ class PWMController:
         self.update_pwm()
 
     def set_duty_cycle(self, shutter_angle):
-        self.shutter_angle = max(min(shutter_angle, 360), 1)  # Ensure shutter angle is within 1-360
-        frame_interval = 1.0 / self.fps  # Frame interval in seconds
-        shutter_time = (float(self.shutter_angle) / 360.0) * frame_interval  # Shutter open time in seconds
-        shutter_time_microseconds = shutter_time * 1_000_000  # Convert shutter time to microseconds
-        frame_length_microseconds = frame_interval * 1_000_000  # Convert frame interval to microseconds
-        duty_cycle = int((1 - ((shutter_time_microseconds - 14) / frame_length_microseconds)) * 65535)
-        duty_cycle = max(min(duty_cycle, 65535), 0)  # Ensure duty cycle is within 0-65535
-        self.duty_cycle = duty_cycle
-        self.exposure_time = shutter_time_microseconds  # Update the exposure time
+        try:
+            # Convert shutter_angle to a float
+            shutter_angle = float(shutter_angle)
+            
+            self.shutter_angle = max(min(shutter_angle, 360.0), 1.0)  # Ensure shutter angle is within 1-360
+            frame_interval = 1.0 / self.fps  # Frame interval in seconds
+            shutter_time = (self.shutter_angle / 360.0) * frame_interval  # Shutter open time in seconds
+            shutter_time_microseconds = shutter_time * 1_000_000  # Convert shutter time to microseconds
+            frame_length_microseconds = frame_interval * 1_000_000  # Convert frame interval to microseconds
+            duty_cycle = int((1 - ((shutter_time_microseconds - 14) / frame_length_microseconds)) * 65535)
+            duty_cycle = max(min(duty_cycle, 65535), 0)  # Ensure duty cycle is within 0-65535
+            self.duty_cycle = duty_cycle
+            self.exposure_time = shutter_time_microseconds  # Update the exposure time
+        except ValueError:
+            logging.error("Invalid value for shutter_angle. It must be a float.")
 
     def set_freq(self, new_freq):
         safe_value = max(min(new_freq, 50), 1)
@@ -150,7 +156,11 @@ class PWMController:
         self.freq = safe_value
         self.period = 1.0 / self.freq  # Update the period
         self.pwm.set_frequency(self.freq)  # Update the frequency on the PWM controller
+        logging.info(f"Frequency set to {self.freq} Hz")
         
+    def get_frequency(self):
+        return self.freq
+
     def update_pwm(self, cycles=1):
         frame_interval = 1.0 / self.fps
         remaining_time = cycles * frame_interval - (time.time() % frame_interval)

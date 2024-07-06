@@ -1,5 +1,8 @@
 import os
 import time
+from signal import pause
+import subprocess
+import logging
 
 class pi5RC:
 
@@ -55,19 +58,13 @@ class pi5RC:
             self.file_duty.write("{}".format(onTime_us))
             self.file_duty.flush()
 
-# Example usage:
+# # Example usage:
 # pwm = pi5RC(19)
 # pwm.set_frequency(24)  # Set frequency to 24 Hz
 # pwm.set(500000)        # Set duty cycle to 50%
 # pwm.enable(True)       # Enable PWM
 
-import time
-import subprocess
-import logging
-
-import time
-import subprocess
-import logging
+# pause()
 
 class PWMController:
     def __init__(self, sensor_detect, PWM_pin=None, PWM_inv_pin=None, start_freq=24, shutter_angle=180, trigger_mode=0):
@@ -87,9 +84,6 @@ class PWMController:
         self.period = 1.0 / self.freq
         self.duty_cycle = 500_000  # 50% duty cycle
         self.exposure_time = 50000 - (self.duty_cycle * self.period)
-        
-        self.set_freq(start_freq)
-        self.set_duty_cycle(shutter_angle)
         
         if PWM_pin in [18, 19]:
             self.pwm = pi5RC(PWM_pin, start_freq)
@@ -144,8 +138,8 @@ class PWMController:
         shutter_time = (float(self.shutter_angle) / 360.0) * frame_interval  # Shutter open time in seconds
         shutter_time_microseconds = shutter_time * 1_000_000  # Convert shutter time to microseconds
         frame_length_microseconds = frame_interval * 1_000_000  # Convert frame interval to microseconds
-        duty_cycle = int((shutter_time_microseconds / frame_length_microseconds) * 1_000_000)
-        duty_cycle = max(min(duty_cycle, 1_000_000), 0)  # Ensure duty cycle is within 0-1M
+        duty_cycle = int((1 - ((shutter_time_microseconds - 14) / frame_length_microseconds)) * 65535)
+        duty_cycle = max(min(duty_cycle, 65535), 0)  # Ensure duty cycle is within 0-65535
         self.duty_cycle = duty_cycle
         self.exposure_time = shutter_time_microseconds  # Update the exposure time
 
@@ -164,14 +158,14 @@ class PWMController:
             time.sleep(remaining_time)  # Wait for the current cycle to complete
         self.pwm.set(self.duty_cycle)
         if self.pwm_inv is not None:
-            self.pwm_inv.set(1_000_000 - self.duty_cycle)
+            self.pwm_inv.set(65535 - self.duty_cycle)
         
         frame_length_microseconds = 1_000_000 / self.freq
-        shutter_time_microseconds = (self.duty_cycle / 1_000_000) * frame_length_microseconds
+        shutter_time_microseconds = (self.duty_cycle / 65535) * frame_length_microseconds
         shutter_angle = (shutter_time_microseconds / frame_length_microseconds) * 360
 
-        duty_cycle_percentage = (self.duty_cycle / 1_000_000) * 100
-        exposure_time = (self.duty_cycle / 1_000_000) * (1 / self.freq)
+        duty_cycle_percentage = (self.duty_cycle / 65535) * 100
+        exposure_time = (self.duty_cycle / 65535) * (1 / self.freq)
         logging.info(f"Updated PWM with frequency {self.freq}, duty cycle {duty_cycle_percentage:.2f}%, shutter angle {shutter_angle:.1f}, exposure time {exposure_time:.6f}")
 
     
@@ -183,7 +177,6 @@ class PWMController:
         else:
             self.set_trigger_mode(0)
             self.stop_pwm()
-
             
     def stop(self):
         self.set_trigger_mode(0)
@@ -191,5 +184,3 @@ class PWMController:
         if self.pwm_inv is not None:
             self.pwm_inv.enable(False)  # Stop the inverted PWM
         logging.info("PWM stopped")
-
-

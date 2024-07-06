@@ -135,8 +135,8 @@
     },
     {
       "pin": 22,
-      "state_on_action": {"method": "set_pwm_mode", "args": [false]},
-      "state_off_action": {"method": "set_pwm_mode", "args": [true]}
+      "state_on_action": {"method": "None", "args": [false]},
+      "state_off_action": {"method": "None", "args": [true]}
     }
   ],
 

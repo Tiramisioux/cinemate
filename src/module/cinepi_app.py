@@ -53,7 +53,7 @@ class CinePi:
             }
             self.active_filters = set(['frame', 'agc', 'ccm'])  # Default active filters
             
-            #self.start_cinepi_process()
+            self.start_cinepi_process()
             self.initialized = True
             logging.info('CinePi instantiated')
 
@@ -72,7 +72,7 @@ class CinePi:
             '--framerate', f"{frame_rate}",
             '-p', '0,30,1920,1020',
             '--post-process-file', '/home/pi/post-processing.json',
-            '--tuning-file', tuning_file_path
+            #'--tuning-file', tuning_file_path
         ]
 
     def start_cinepi_process(self, cinepi_args=None):

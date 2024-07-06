@@ -32,6 +32,7 @@ from module.redis_listener import RedisListener
 from module.gpio_input import ComponentInitializer
 from module.battery_monitor import BatteryMonitor
 from module.app import create_app
+from module.timekeeper import TimeKeeper
 
 def get_raspberry_pi_model():
     try:
@@ -145,6 +146,9 @@ if __name__ == "__main__":
     cinepi_controller.set_pwm_mode(1)
 
     gpio_input = ComponentInitializer(cinepi_controller, settings)
+    
+    timekeeper = TimeKeeper(redis_controller, pwm_controller, window_size=1, kp=0.13200, ki=0.01800, kd=0.06)
+
 
     command_executor = CommandExecutor(cinepi_controller, cinepi)
     command_executor.start()
@@ -191,7 +195,7 @@ if __name__ == "__main__":
     finally:
         redis_controller.set_value('is_recording', 0)
         redis_controller.set_value('is_writing', 0)
-        
+        timekeeper.stop()
         current_shutter_angle = redis_controller.get_value('shutter_a')
         redis_controller.set_value('shutter_a_nom', int(current_shutter_angle))
         fps_last = int(float(redis_controller.get_value('fps')))

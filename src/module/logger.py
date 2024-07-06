@@ -74,9 +74,15 @@ def configure_logging(allowed_modules, level=logging.INFO):
     logger = logging.getLogger()
     logger.setLevel(level)
 
-    handler = logging.StreamHandler()
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    # File handler
+    file_handler = logging.FileHandler('/home/pi/cinemate/src/logs/system.log')
+    file_handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))
+    logger.addHandler(file_handler)
 
     # Create a thread-safe queue to hold log messages
     log_queue = queue.Queue()

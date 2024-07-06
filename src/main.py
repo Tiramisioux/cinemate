@@ -113,6 +113,8 @@ if __name__ == "__main__":
 
     sensor_detect = SensorDetect()
     sensor_mode = int(redis_controller.get_value('sensor_mode'))
+    
+    pwm_controller = PWMController(sensor_detect, PWM_pin=settings['gpio_output']['pwm_pin'])
 
     cinepi = CinePi(redis_controller, sensor_detect)
     
@@ -120,12 +122,11 @@ if __name__ == "__main__":
     cinepi.set_log_level('INFO')
     
     # Set active filters (optional)
-    cinepi.set_active_filters([])
+    cinepi.set_active_filters(['frame', 'agc', 'ccm'])
 
     ssd_monitor = SSDMonitor()
     
     gpio_output = GPIOOutput(rec_out_pins=settings['gpio_output']['rec_out_pin'])
-    pwm_controller = PWMController(sensor_detect, PWM_pin=settings['gpio_output']['pwm_pin'])
     dmesg_monitor = DmesgMonitor()
     dmesg_monitor.start()
 
@@ -141,9 +142,9 @@ if __name__ == "__main__":
                                          light_hz=settings['settings']['light_hz'],
                                          )
 
+    cinepi_controller.set_pwm_mode(1)
+
     gpio_input = ComponentInitializer(cinepi_controller, settings)
-    
-    cinepi_controller.set_resolution(int(redis_controller.get_value('sensor_mode')))
 
     command_executor = CommandExecutor(cinepi_controller, cinepi)
     command_executor.start()

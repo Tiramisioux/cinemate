@@ -189,8 +189,6 @@ class CinePiController:
                 
                 self.update_fps_and_shutter_angles(safe_value)
 
-
-
     def set_iso_lock(self, value=None):
         if value is not None:
             if value in (0, False):
@@ -581,7 +579,7 @@ class CinePiController:
                 self.redis_controller.set_value('fps', 50)
                 self.pwm_controller.start_pwm(int(self.fps_saved), shutter_a_current, 2)
 
-            time.sleep(2)
+            time.sleep(1)
             self.cinepi.restart()
             logging.info(f"Restarting camera")
         

@@ -135,15 +135,15 @@ class RedisListener:
             variance_framerate = statistics.variance(self.framerate_values) if len(self.framerate_values) > 1 else 0
             cv_framerate = stdev_framerate / average_framerate if average_framerate != 0 else 0
             
-            logging.info(f"Total number of frames registered: {num_frames}")
-            logging.info(f"Total number of frames expected: {expected_frames}")
+        #     logging.info(f"Total number of frames registered: {num_frames}")
+        #     logging.info(f"Total number of frames expected: {expected_frames}")
             
-            logging.info(f"Average framerate value: {average_framerate}")
-            logging.info(f"Minimum framerate value: {min_framerate}")
-            logging.info(f"Maximum framerate value: {max_framerate}")
-            logging.info(f"Median framerate value: {median_framerate}")
-            logging.info(f"Standard deviation of framerate values: {stdev_framerate}")
-            logging.info(f"Variance of framerate values: {variance_framerate}")
-            logging.info(f"Coefficient of variation of framerate values: {cv_framerate}")
-        else:
+        #     logging.info(f"Average framerate value: {average_framerate}")
+        #     logging.info(f"Minimum framerate value: {min_framerate}")
+        #     logging.info(f"Maximum framerate value: {max_framerate}")
+        #     logging.info(f"Median framerate value: {median_framerate}")
+        #     logging.info(f"Standard deviation of framerate values: {stdev_framerate}")
+        #     logging.info(f"Variance of framerate values: {variance_framerate}")
+        #     logging.info(f"Coefficient of variation of framerate values: {cv_framerate}")
+        # else:
             logging.warning("No framerate values recorded.")

@@ -8,6 +8,7 @@ import json
 import argparse
 import subprocess
 import time
+import signal
 
 RPi.GPIO.setwarnings(False)
 RPi.GPIO.setmode(RPi.GPIO.BCM)
@@ -34,6 +35,8 @@ from module.battery_monitor import BatteryMonitor
 from module.app import create_app
 from module.timekeeper import TimeKeeper
 
+MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
+
 def get_raspberry_pi_model():
     try:
         with open('/proc/device-tree/model', 'r') as f:
@@ -50,11 +53,6 @@ def get_raspberry_pi_model():
 def check_hotspot_status():
     result = subprocess.run(['nmcli', 'con', 'show', '--active'], capture_output=True, text=True)
     return any('wifi' in line and 'Hotspot' in line for line in result.stdout.split('\n'))
-
-
-MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
-
-fps_steps = None
 
 def load_settings(filename):
     with open(filename, 'r') as file:
@@ -101,6 +99,15 @@ def load_settings(filename):
 
         return settings
 
+def handle_exit(signal, frame):
+    logging.info("Graceful shutdown initiated.")
+    pwm_controller.stop_pwm()
+    sys.exit(0)
+
+# Register signal handlers
+signal.signal(signal.SIGINT, handle_exit)
+signal.signal(signal.SIGTERM, handle_exit)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the CinePi application.")
     parser.add_argument("-debug", action="store_true", help="Enable debug logging level.")
@@ -118,6 +125,7 @@ if __name__ == "__main__":
     pwm_controller = PWMController(sensor_detect, PWM_pin=settings['gpio_output']['pwm_pin'])
 
     cinepi = CinePi(redis_controller, sensor_detect)
+    cinepi.start_cinepi_process()
     
     # Set log level (optional)
     cinepi.set_log_level('INFO')
@@ -143,8 +151,6 @@ if __name__ == "__main__":
                                          light_hz=settings['settings']['light_hz'],
                                          )
 
-    cinepi_controller.set_pwm_mode(0)
-
     gpio_input = ComponentInitializer(cinepi_controller, settings)
     
     timekeeper = TimeKeeper(redis_controller, pwm_controller, window_size=1, kp=0.13200, ki=0.01800, kd=0.06)
@@ -162,7 +168,7 @@ if __name__ == "__main__":
                            battery_monitor,
                            sensor_detect,
                            redis_listener,
-                           timekeeper,
+                           #timekeeper,
                            None)
     stream = None
     
@@ -185,8 +191,7 @@ if __name__ == "__main__":
     shutter_a_current = redis_controller.get_value('shutter_a')
     cinepi_controller.set_shutter_a(shutter_a_current)
     
-    cinepi_controller.set_pwm_mode(0)
-    cinepi.restart()
+    cinepi_controller.set_pwm_mode(1)
         
     logging.info(f"--- initialization complete")
 
@@ -198,7 +203,7 @@ if __name__ == "__main__":
     finally:
         redis_controller.set_value('is_recording', 0)
         redis_controller.set_value('is_writing', 0)
-        timekeeper.stop()
+        # timekeeper.stop()
         current_shutter_angle = redis_controller.get_value('shutter_a')
         redis_controller.set_value('shutter_a_nom', int(current_shutter_angle))
         fps_last = int(float(redis_controller.get_value('fps')))

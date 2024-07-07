@@ -4,6 +4,8 @@ import time
 from collections import deque
 import json
 import os
+import re
+import math
 
 from .analyze_logs import analyze_logs  # Use relative import
 
@@ -107,14 +109,14 @@ class TimeKeeper:
                         with self.lock:
                             self.current_framerate = float(framerate)
                             self.framerate_history.append(self.current_framerate)
-                            logging.info(f"Received framerate: {framerate}")
+                        if framecount is not None:
+                            with self.lock:
+                                self.frame_count = int(framecount)
+                            print(f"Received framecount: {framecount}, framerate: {framerate:.5f}", end='\r')
+                        else:
+                            logging.info(f"Received framerate: {framerate:.5f}", end='\r')
                     else:
                         logging.warning(f"Received invalid framerate: {framerate}")
-
-                    if framecount is not None:
-                        with self.lock:
-                            self.frame_count = int(framecount)
-                            logging.info(f"Received framecount: {framecount}")
 
                 except json.JSONDecodeError as e:
                     logging.error(f"Failed to parse JSON data: {e}")
@@ -125,10 +127,16 @@ class TimeKeeper:
                 return self.target_framerate  # Fallback to target framerate if no valid data
             return sum(self.framerate_history) / len(self.framerate_history)
 
+    def get_framerate_change_rate(self):
+        with self.lock:
+            if len(self.framerate_history) < 2:
+                return 0.0  # Not enough data to calculate change rate
+            return (self.framerate_history[-1] - self.framerate_history[0]) / len(self.framerate_history)
+
     def adjust_pwm_continuously(self):
         while self.is_running:
             smoothed_framerate = self.get_smoothed_framerate()
-            logging.info(f"Smoothed framerate: {smoothed_framerate:.5f}")
+            logging.info(f"Smoothed framerate: {smoothed_framerate:.10f}")
 
             if smoothed_framerate > 0:
                 # Compute the new frequency using the PID controller
@@ -145,7 +153,7 @@ class TimeKeeper:
         previous_state = '0'
         while self.is_running:
             current_state = self.redis_controller.get_value('is_recording')
-            if current_state == '1' and previous_state == '0':
+            if (current_state is not None and current_state == '1') and previous_state == '0':
                 # Recording started
                 with open('/home/pi/cinemate/src/logs/system.log', 'w') as f:
                     f.truncate()
@@ -153,7 +161,7 @@ class TimeKeeper:
                 self.start_time = time.time()
                 self.frame_count = 0
 
-            elif current_state == '0' and previous_state == '1':
+            elif (current_state is not None and current_state == '0') and previous_state == '1':
                 # Recording stopped
                 self.stop_time = time.time()
                 expected_frames = (self.stop_time - self.start_time) * self.target_framerate
@@ -178,3 +186,18 @@ class TimeKeeper:
         self.listener_thread.join()
         self.adjustment_thread.join()
         self.recording_thread.join()
+
+        
+    def get_effort_level(self):
+        with self.lock:
+            # Calculate the deviation from the target framerate
+            deviation = abs(self.target_framerate - self.current_framerate)
+            
+            # Logarithmic scaling to a 0-99 range
+            if deviation < 0.001:
+                effort_level = 0
+            else:
+                # Scale the logarithm of the deviation
+                effort_level = min(int(10 * math.log10(deviation * 1000)), 99)
+            
+            return effort_level

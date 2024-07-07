@@ -57,6 +57,7 @@ def analyze_logs(logfile):
         print(f"Min Error: {min_error:.5f}")
     else:
         print("No PID errors found in the log.")
+        avg_error = None
 
     if integrals:
         avg_integral = sum(integrals) / len(integrals)
@@ -67,6 +68,7 @@ def analyze_logs(logfile):
         print(f"Min Integral: {min_integral:.5f}")
     else:
         print("No PID integrals found in the log.")
+        avg_integral = None
 
     if derivatives:
         avg_derivative = sum(derivatives) / len(derivatives)
@@ -75,6 +77,9 @@ def analyze_logs(logfile):
         print(f"Average Derivative: {avg_derivative:.5f}")
         print(f"Max Derivative: {max_derivative:.5f}")
         print(f"Min Derivative: {min_derivative:.5f}")
+    else:
+        print("No PID derivatives found in the log.")
+        avg_derivative = None
 
     if frame_counts and expected_frames_list:
         total_frames_recorded = sum(frame_counts)
@@ -87,21 +92,23 @@ def analyze_logs(logfile):
 
     kp, ki, kd = 0.12, 0.02, 0.06  # Current PID values
 
-    if avg_error > 0:
-        kp *= 1.1  # Increase kp by 10%
-        recommendations.append(f"Increase kp to {kp:.5f} to reduce the positive average error.")
-    elif avg_error < 0:
-        kp *= 0.9  # Decrease kp by 10%
-        recommendations.append(f"Decrease kp to {kp:.5f} to reduce the negative average error.")
+    if avg_error is not None:
+        if avg_error > 0:
+            kp *= 1.1  # Increase kp by 10%
+            recommendations.append(f"Increase kp to {kp:.5f} to reduce the positive average error.")
+        elif avg_error < 0:
+            kp *= 0.9  # Decrease kp by 10%
+            recommendations.append(f"Decrease kp to {kp:.5f} to reduce the negative average error.")
 
-    if avg_integral < 0:
-        ki *= 0.9  # Decrease ki by 10%
-        recommendations.append(f"Slightly decrease ki to {ki:.5f} to reduce the overcompensation effect of the accumulated error.")
-    elif avg_integral > 0:
-        ki *= 1.1  # Increase ki by 10%
-        recommendations.append(f"Slightly increase ki to {ki:.5f} to improve compensation for accumulated error.")
+    if avg_integral is not None:
+        if avg_integral < 0:
+            ki *= 0.9  # Decrease ki by 10%
+            recommendations.append(f"Slightly decrease ki to {ki:.5f} to reduce the overcompensation effect of the accumulated error.")
+        elif avg_integral > 0:
+            ki *= 1.1  # Increase ki by 10%
+            recommendations.append(f"Slightly increase ki to {ki:.5f} to improve compensation for accumulated error.")
 
-    if max_derivative > 0.02:  # Arbitrary threshold for spike detection
+    if avg_derivative is not None and avg_derivative > 0.02:  # Arbitrary threshold for spike detection
         kd *= 1.1  # Increase kd by 10%
         recommendations.append(f"Increase kd to {kd:.5f} to dampen rapid changes in error.")
 

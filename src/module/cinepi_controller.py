@@ -140,7 +140,7 @@ class CinePiController:
         self.set_shutter_a(closest_shutter_angle)
 
     def set_fps(self, value):
-        value = int(value)
+        value = int(float(value))
         logging.info(f"Received set_fps call with value: {value}")
 
         if not self.fps_lock:
@@ -179,7 +179,7 @@ class CinePiController:
 
                 elif self.pwm_mode == True and self.shutter_a_sync == False:
                     new_shutter_angle = float(self.get_setting('shutter_a'))
-                    self.pwm_controller.set_pwm(fps=int(safe_value), shutter_angle=new_shutter_angle)
+                    self.pwm_controller.set_pwm(fps=float(safe_value), shutter_angle=new_shutter_angle)
                     logging.info(f"Setting fps to {safe_value}")
 
                 self.exposure_time_s = (float(self.redis_controller.get_value('shutter_a')) / 360) / self.fps_actual
@@ -579,7 +579,7 @@ class CinePiController:
                 self.pwm_controller.stop_pwm()
                 self.set_fps(self.fps_saved)
             elif value == True:
-                self.fps_saved = float(self.get_setting('fps_actual'))
+                self.fps_saved = float(self.get_setting('fps'))
                 shutter_a_current = float(self.get_setting('shutter_a_nom'))
                 self.redis_controller.set_value('fps', 50)
                 self.pwm_controller.start_pwm(int(self.fps_saved), shutter_a_current, 2)

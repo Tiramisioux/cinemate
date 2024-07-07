@@ -11,7 +11,7 @@ from sugarpie import pisugar
 from flask_socketio import SocketIO
 
 class SimpleGUI(threading.Thread):
-    def __init__(self, pwm_controller, redis_controller, cinepi_controller, ssd_monitor, dmesg_monitor, battery_monitor, sensor_detect, redis_listener, socketio: SocketIO):
+    def __init__(self, pwm_controller, redis_controller, cinepi_controller, ssd_monitor, dmesg_monitor, battery_monitor, sensor_detect, redis_listener, timekeeper, socketio: SocketIO):
         threading.Thread.__init__(self)
         self.setup_resources()
         self.check_display()
@@ -26,6 +26,8 @@ class SimpleGUI(threading.Thread):
         self.battery_monitor = battery_monitor
         self.sensor_detect = sensor_detect
         self.redis_listener = redis_listener
+        
+        self.timekeeper = timekeeper
 
         self.socketio = socketio  # Add socketio reference
 
@@ -75,6 +77,7 @@ class SimpleGUI(threading.Thread):
                 "iso": {"position": (10, -7), "font_size": 34},
                 "shutter_speed": {"position": (110, -7), "font_size": 34},
                 "fps": {"position": (205, -7), "font_size": 34},
+                "sync_effort_level": {"position": (305, -7), "font_size": 34},
                 "sensor": {"position": (505, -7), "font_size": 34},
                 "width": {"position": (630, -7), "font_size": 34},
                 "height": {"position": (730, -7), "font_size": 34},
@@ -98,6 +101,7 @@ class SimpleGUI(threading.Thread):
             "iso": {"normal": "white", "inverse": "black"},
             "shutter_speed": {"normal": "white", "inverse": "black"},
             "fps": {"normal": "white", "inverse": "black"},
+            "sync_effort_level": {"normal": "yellow", "inverse": "black"},
             "exposure_time": {"normal": "white", "inverse": "black"},
             "sensor": {"normal": "grey", "inverse": "black"},
             "height": {"normal": "white", "inverse": "black"},
@@ -125,6 +129,7 @@ class SimpleGUI(threading.Thread):
             "iso": self.redis_controller.get_value("iso"),
             "shutter_speed": str(self.redis_controller.get_value('shutter_a')).replace('.0', ''),
             "fps": int(self.cinepi_controller.fps_actual),
+            "sync_effort_level": self.timekeeper.get_effort_level(),
             "exposure_time": str(self.cinepi_controller.exposure_time_fractions),
             "sensor": str.upper(self.redis_controller.get_value("sensor")),
             "width": str(self.redis_controller.get_value("width") + " : "),

@@ -42,7 +42,7 @@ class PIDController:
         self._last_time = current_time
 
         # Log detailed PID information
-        #logging.info(f"PID Controller: error={error:.4f}, integral={self._integral:.4f}, derivative={derivative:.4f}, output={output:.4f}")
+        logging.info(f"PID Controller: error={error:.4f}, integral={self._integral:.4f}, derivative={derivative:.4f}, output={output:.4f}")
 
         return output
 
@@ -55,7 +55,7 @@ class TimeKeeper:
         self.check_interval = check_interval
 
         self.target_framerate = 24.0  # Hardcoded user-selected frame rate for testing
-        self.current_framerate = 0.0  # Initialize current_framerate
+        self.current_framerate = 24.0  # Initialize current_framerate
 
         # Initialize deque for moving average
         self.framerate_history = deque(maxlen=window_size)
@@ -136,7 +136,7 @@ class TimeKeeper:
     def adjust_pwm_continuously(self):
         while self.is_running:
             smoothed_framerate = self.get_smoothed_framerate()
-            #logging.info(f"Smoothed framerate: {smoothed_framerate:.10f}")
+            logging.info(f"Smoothed framerate: {smoothed_framerate:.10f}")
 
             if smoothed_framerate > 0:
                 # Compute the new frequency using the PID controller
@@ -144,8 +144,8 @@ class TimeKeeper:
                 new_frequency = self.pwm_controller.get_frequency() + adjustment
                 new_frequency = max(1, min(50, new_frequency))  # Clamp frequency within limits
                 self.pwm_controller.set_freq(new_frequency)
-                #logging.info(f"Adjusted PWM frequency to: {new_frequency:.5f} Hz to match target framerate: {self.target_framerate} Hz")
-                #logging.info(f"PID Adjustment: {adjustment:.5f}, New Frequency: {new_frequency:.5f}")
+                logging.info(f"Adjusted PWM frequency to: {new_frequency:.5f} Hz to match target framerate: {self.target_framerate} Hz")
+                logging.info(f"PID Adjustment: {adjustment:.5f}, New Frequency: {new_frequency:.5f}")
 
             time.sleep(self.check_interval)
 

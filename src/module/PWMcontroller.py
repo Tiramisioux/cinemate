@@ -156,7 +156,7 @@ class PWMController:
         self.freq = safe_value
         self.period = 1.0 / self.freq  # Update the period
         self.pwm.set_frequency(self.freq)  # Update the frequency on the PWM controller
-        logging.info(f"Frequency set to {self.freq} Hz")
+        #logging.info(f"Frequency set to {self.freq} Hz")
         
     def get_frequency(self):
         return self.freq

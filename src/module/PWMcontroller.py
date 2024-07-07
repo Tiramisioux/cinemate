@@ -54,7 +54,7 @@ class HardwarePWMController:
         self.stop()
 
 class PWMController:
-    def __init__(self, sensor_detect, PWM_pin=None, PWM_inv_pin=None, start_freq=10.5203, shutter_angle=180, trigger_mode=0):
+    def __init__(self, sensor_detect, PWM_pin=None, PWM_inv_pin=None, start_freq=24, shutter_angle=180, trigger_mode=0):
         self.sensor_detect = sensor_detect
         
         self.PWM_pin = PWM_pin
@@ -137,7 +137,7 @@ class PWMController:
             logging.error("Invalid value for shutter_angle. It must be a float.")
     
     def set_freq(self, new_freq):
-        print(f"Setting frequency to {new_freq}")
+        #logging.info(f"Setting frequency to {new_freq}")
         safe_value = max(min(new_freq, 50), 1)
         if self.freq == safe_value:
             return
@@ -150,7 +150,7 @@ class PWMController:
         return self.freq
     
     def update_pwm(self, cycles=1):
-        print(f"Updating PWM with cycles={cycles}")
+        logging.info(f"Updating PWM with cycles={cycles}")
         frame_interval = 1.0 / self.fps
         remaining_time = cycles * frame_interval - (time.time() % frame_interval)
         if remaining_time > 0:
@@ -168,7 +168,7 @@ class PWMController:
         #logging.info(f"Updated PWM with frequency {self.freq}, duty cycle {duty_cycle_percentage:.2f}%, shutter angle {shutter_angle:.1f}, exposure time {exposure_time:.6f}")
     
     def ramp_mode(self, ramp_mode):
-        print(f"Setting ramp mode to {ramp_mode}")
+        logging.info(f"Setting ramp mode to {ramp_mode}")
         if ramp_mode not in [0, 2, 3]:
             raise ValueError("Invalid argument: must be 0, 2 or 3")
         if ramp_mode in [2, 3]:
@@ -178,7 +178,7 @@ class PWMController:
             self.stop_pwm()
     
     def stop(self):
-        print("Stopping PWM")
+        logging.info("Stopping PWM")
         self.set_trigger_mode(0)
         if self.pwm is not None:
             self.pwm.stop()

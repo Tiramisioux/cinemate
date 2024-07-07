@@ -125,13 +125,13 @@ if __name__ == "__main__":
     pwm_controller = PWMController(sensor_detect, PWM_pin=settings['gpio_output']['pwm_pin'])
 
     cinepi = CinePi(redis_controller, sensor_detect)
-    cinepi.start_cinepi_process()
+
     
     # Set log level (optional)
     cinepi.set_log_level('INFO')
     
     # Set active filters (optional)
-    cinepi.set_active_filters([])
+    cinepi.set_active_filters(['frame', 'agc', 'ccm'])
 
     ssd_monitor = SSDMonitor()
     
@@ -151,6 +151,9 @@ if __name__ == "__main__":
                                          light_hz=settings['settings']['light_hz'],
                                          )
 
+    cinepi_controller.set_pwm_mode(1)
+    time.sleep(2)
+    cinepi.start_cinepi_process()
     gpio_input = ComponentInitializer(cinepi_controller, settings)
     
     timekeeper = TimeKeeper(redis_controller, pwm_controller, window_size=1, kp=0.13200, ki=0.01800, kd=0.06)
@@ -191,7 +194,7 @@ if __name__ == "__main__":
     shutter_a_current = redis_controller.get_value('shutter_a')
     cinepi_controller.set_shutter_a(shutter_a_current)
     
-    cinepi_controller.set_pwm_mode(1)
+    cinepi.restart()
         
     logging.info(f"--- initialization complete")
 

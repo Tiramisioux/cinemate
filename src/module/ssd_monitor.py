@@ -75,7 +75,7 @@ class SSDMonitor:
             new_space_left = (stat.f_bavail * stat.f_frsize) / (1024 ** 3)  # Convert to GB
             if new_space_left != self.space_left:
                 self.space_left = new_space_left
-                #logging.info(f"Updated space left on SSD: {self.space_left:.2f} GB")
+                logging.info(f"Updated space left on SSD: {self.space_left:.2f} GB")
                 self.space_update_event.emit(self.space_left)
         except OSError as e:
             if self.is_mounted:  # This means the drive was just disconnected

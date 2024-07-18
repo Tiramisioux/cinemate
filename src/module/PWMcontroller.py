@@ -82,10 +82,10 @@ class PWMController:
         self.update_pwm()  # Start the PWM
     
     def start_pwm(self, freq, shutter_angle, trigger_mode):
-        logging.info(f"Starting PWM with freq={freq}, shutter_angle={shutter_angle}, trigger_mode={trigger_mode}")
-        self.set_freq(freq)
+        logging.info(f"Starting PWM with freq={freq}, shutter_angle={shutter_angle}, trigger_mode={trigger_mode}")  
+        self.set_freq(50)
         self.set_duty_cycle(shutter_angle)
-        self.set_trigger_mode(trigger_mode)
+        #self.set_trigger_mode(trigger_mode)
         self.update_pwm()
         logging.info("PWM started")
     
@@ -114,7 +114,7 @@ class PWMController:
     def set_pwm(self, fps=None, shutter_angle=None):
         #logging.info(f"Setting PWM with fps={fps}, shutter_angle={shutter_angle}")
         if fps is not None:
-            self.fps = fps
+            self.fps = 50
             self.set_freq(fps)
         if shutter_angle is not None:
             self.shutter_angle = shutter_angle

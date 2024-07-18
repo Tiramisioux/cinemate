@@ -581,7 +581,7 @@ class CinePiController:
             elif value == True:
                 self.fps_saved = float(self.get_setting('fps'))
                 shutter_a_current = float(self.get_setting('shutter_a_nom'))
-                self.redis_controller.set_value('fps', 50)
+                #self.redis_controller.set_value('fps', 50)
                 self.pwm_controller.start_pwm(int(self.fps_saved), shutter_a_current, 2)
 
             time.sleep(1)

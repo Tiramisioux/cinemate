@@ -34,6 +34,7 @@ from module.gpio_input import ComponentInitializer
 from module.battery_monitor import BatteryMonitor
 from module.app import create_app
 from module.timekeeper import TimeKeeper
+from module.analog_controls import AnalogControls
 
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
 
@@ -126,7 +127,6 @@ if __name__ == "__main__":
 
     cinepi = CinePi(redis_controller, sensor_detect)
 
-    
     # Set log level (optional)
     cinepi.set_log_level('INFO')
     
@@ -155,17 +155,15 @@ if __name__ == "__main__":
                                          light_hz=settings['settings']['light_hz'],
                                          )
 
-    redis_controller.set_value('frame_duration', 40000)
+    # #redis_controller.set_value('frame_duration', 40000)
     redis_controller.set_value('fps', 25)
-    redis_controller.set_value('fps_actual', 25)
-    redis_controller.set_value('fps_target', 25)
-    redis_controller.set_value('fps_last', 25)
+    # redis_controller.set_value('fps_actual', 24)
+    # redis_controller.set_value('fps_target', 24)
+    # redis_controller.set_value('fps_last', 24)
 
     gpio_input = ComponentInitializer(cinepi_controller, settings)
     
     cinepi.restart()
-    
-    timekeeper = TimeKeeper(redis_controller)
 
     command_executor = CommandExecutor(cinepi_controller, cinepi)
     command_executor.start()
@@ -202,6 +200,18 @@ if __name__ == "__main__":
     
     shutter_a_current = redis_controller.get_value('shutter_a')
     cinepi_controller.set_shutter_a(shutter_a_current)
+    
+    cinepi_controller.set_pwm_mode(1)
+    #timekeeper = TimeKeeper(redis_controller)
+    
+    # analog_controls = AnalogControls(
+    #     cinepi_controller=cinepi_controller,
+    #     redis_controller=redis_controller,
+    #     iso_pot=None,  # Example analog input for ISO
+    #     shutter_a_pot=None,  # Example analog input for Shutter Angle
+    #     fps_pot=0  # Example analog input for FPS
+    #     )
+        
         
     logging.info(f"--- initialization complete")
 
@@ -218,7 +228,7 @@ if __name__ == "__main__":
         redis_controller.set_value('shutter_a_nom', int(current_shutter_angle))
         fps_last = int(float(redis_controller.get_value('fps')))
         redis_controller.set_value('fps_last', fps_last )
-        
+        cinepi_controller.set_pwm_mode(0)
         dmesg_monitor.join()
         command_executor.join()
         RPi.GPIO.cleanup()

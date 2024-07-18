@@ -30,7 +30,7 @@ class CommandExecutor(threading.Thread):
             'inc_shutter_a_nom': (cinepi_controller.inc_shutter_a_nom, None),  
             'dec_shutter_a_nom': (cinepi_controller.dec_shutter_a_nom, None), 
                                    
-            'set_fps': (cinepi_controller.set_fps, int),  
+            'set_fps': (cinepi_controller.set_fps, float),  
             'inc_fps': (cinepi_controller.inc_fps, None),  
             'dec_shutter_fps': (cinepi_controller.dec_fps, None), 
             

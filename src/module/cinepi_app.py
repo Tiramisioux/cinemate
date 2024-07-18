@@ -66,11 +66,13 @@ class CinePi:
             '--mode', f"{sensor_detect.get_width(sensor_model, sensor_mode)}:{sensor_detect.get_height(sensor_model, sensor_mode)}:{sensor_mode}:U",
             '--width', str(sensor_detect.get_width(sensor_model, sensor_mode)),
             '--height', str(sensor_detect.get_height(sensor_model, sensor_mode)),
-            '--lores-width', '1280', ##str(sensor_detect.get_lores_width(sensor_model, sensor_mode)),
-            '--lores-height', '720', ##str(sensor_detect.get_lores_height(sensor_model, sensor_mode)),
+            '--lores-width', str(sensor_detect.get_lores_width(sensor_model, sensor_mode)),
+            '--lores-height', str(sensor_detect.get_lores_height(sensor_model, sensor_mode)),
             '-p', '0,30,1920,1020',
             '--post-process-file', '/home/pi/post-processing.json',
-            #'--tuning-file', tuning_file_path
+            '--tuning-file', tuning_file_path,
+            '--shutter', '20000',
+            '--awbgains', '1,1',
         ]
 
     def start_cinepi_process(self, cinepi_args=None):

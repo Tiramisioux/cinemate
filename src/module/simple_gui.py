@@ -84,8 +84,8 @@ class SimpleGUI(threading.Thread):
         # Define two layouts
         self.layouts = {
             0: {  # Layout 0
-                "iso": {"position": (10, -7), "font_size": 34},
-                "shutter_speed": {"position": (110, -7), "font_size": 34},
+                "iso": {"position": (1000, -7), "font_size": 34},
+                "shutter_speed": {"position": (1100, -7), "font_size": 34},
                 "fps": {"position": (205, -7), "font_size": 34},
                 #"sync_effort_level": {"position": (305, -7), "font_size": 34},
                 "sensor": {"position": (505, -7), "font_size": 34},
@@ -138,7 +138,7 @@ class SimpleGUI(threading.Thread):
         values = {
             "iso": self.redis_controller.get_value("iso"),
             "shutter_speed": str(self.redis_controller.get_value('shutter_a')).replace('.0', ''),
-            "fps": int(self.cinepi_controller.fps_actual),
+            "fps": float(self.redis_controller.get_value('fps')),
             #"sync_effort_level": self.timekeeper.get_effort_level(),
             "exposure_time": str(self.cinepi_controller.exposure_time_fractions),
             "sensor": str.upper(self.redis_controller.get_value("sensor")),

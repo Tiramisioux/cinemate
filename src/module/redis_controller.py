@@ -66,6 +66,10 @@ class RedisController:
     def get_value(self, key, default=None):
         with self.lock:
             return self.cache.get(key, default)
+        
+    def get_int_value(self, key):
+        value = self.redis_client.get(key)
+        return int(value) if value else 0
 
     def set_value(self, key, value):
         with self.lock:

@@ -24,7 +24,7 @@ class RedisController:
         self.redis_client.set(key, value)
 
 class TimeKeeper:
-    def __init__(self, redis_controller, check_interval=0.01, error_threshold=0.1, offset=0.05):
+    def __init__(self, redis_controller, check_interval=0.01, error_threshold=0.0001, offset=0.0):
         self.redis_controller = redis_controller
         self.lock = threading.Lock()
         self.is_running = True
@@ -32,12 +32,11 @@ class TimeKeeper:
         self.error_threshold = error_threshold
         self.offset = offset  # Offset to fine-tune the frame rate
 
-        self.target_framerate = 25.0000
+        self.target_framerate = 25.0001
         self.current_framerate = self.initialize_fps()
         self.frame_durations = deque(maxlen=50)  # Use the last 50 frames for average calculation
-        self.long_term_frame_durations = deque(maxlen=100)  # Use the last 100 frames for long-term average calculation
 
-        self.base_frame_duration_values = [40000, 40010]
+        self.base_frame_duration_values = [40010, 40020]
         self.frame_duration_values = list(self.base_frame_duration_values)
         self.frame_duration_index = 0
         self.frame_duration = self.frame_duration_values[self.frame_duration_index]
@@ -79,23 +78,14 @@ class TimeKeeper:
                             with self.lock:
                                 self.current_framerate = float(framerate)
                                 self.frame_durations.append(self.current_framerate)
-                                self.long_term_frame_durations.append(self.current_framerate)
                                 
                                 if len(self.frame_durations) == 50:
                                     avg_framerate = sum(self.frame_durations) / len(self.frame_durations)
                                     sys.stdout.write(f"\rCurrent frame rate: {self.current_framerate:.10f} fps | Average frame rate (last 50 frames): {avg_framerate:.10f} fps")
                                     sys.stdout.flush()
                                     
-                                    with open('/home/pi/timekeeper/logs/timekeeper.log', 'a') as log_file:
+                                    with open('/home/pi/timekeeper/logs/timekeeper.log', 'w') as log_file:
                                         log_file.write(f"Current frame rate: {self.current_framerate:.10f} fps | Average frame rate (last 50 frames): {avg_framerate:.10f} fps\n")
-                                
-                                if len(self.long_term_frame_durations) == 100:
-                                    long_term_avg_framerate = sum(self.long_term_frame_durations) / len(self.long_term_frame_durations)
-                                    sys.stdout.write(f"\rLong-term average frame rate (last 100 frames): {long_term_avg_framerate:.10f} fps")
-                                    sys.stdout.flush()
-                                    
-                                    with open('/home/pi/timekeeper/logs/timekeeper.log', 'a') as log_file:
-                                        log_file.write(f"Long-term average frame rate (last 100 frames): {long_term_avg_framerate:.10f} fps\n")
 
                     except json.JSONDecodeError as e:
                         logger.error(f"Failed to parse JSON data: {e}")
@@ -104,7 +94,7 @@ class TimeKeeper:
         while self.is_running:
             try:
                 with self.lock:
-                    if len(self.frame_durations) == 25:
+                    if len(self.frame_durations) == 50:
                         avg_framerate = sum(self.frame_durations) / len(self.frame_durations)
                     else:
                         avg_framerate = self.current_framerate
@@ -114,15 +104,17 @@ class TimeKeeper:
                     self.accumulated_error += error
 
                     # Read analog values from Grove Base Hat for fine-tuning
-                    coarse_adjustment = self.adc.read(0)  # Read from A0 for coarse adjustment
-                    fine_adjustment = self.adc.read(2)  # Read from A2 for fine adjustment
+                    lower_adjustment = self.adc.read(0)  # Read from A0
+                    higher_adjustment = self.adc.read(2)  # Read from A1
 
-                    # Map the analog values to appropriate adjustment ranges
-                    coarse_adjustment = (coarse_adjustment / 1023.0) * 0.1 - 0.5  # Map to +/- 50
-                    fine_adjustment = (fine_adjustment / 1023.0) * 0.01 - 0.05  # Map to +/- 5
+                    # Map the analog values to +/- 1 ns adjustment range
+                    lower_adjustment = (lower_adjustment / 1023.0) * 200 - 100
+                    higher_adjustment = (higher_adjustment / 1023.0) * 200 - 100
 
-                    # Adjust the offset based on analog inputs
-                    self.offset = coarse_adjustment + fine_adjustment
+
+                    # Update frame duration values based on analog inputs
+                    self.frame_duration_values[0] = self.base_frame_duration_values[0] + lower_adjustment
+                    self.frame_duration_values[1] = self.base_frame_duration_values[1] + higher_adjustment
 
                     # Flip the frame duration based on the error
                     if abs(error) < self.error_threshold:
@@ -137,10 +129,10 @@ class TimeKeeper:
 
                     # Print the current and average frame rate to the CLI
                     sys.stdout.write(f"\rCurrent frame rate: {self.current_framerate:.10f} fps | Average frame rate (last 50 frames): {avg_framerate:.10f} fps")
-                    sys.stdout.write(f"\rLower frame duration: {self.frame_duration_values[0]:.3f} | Higher frame duration: {self.frame_duration_values[1]:.3f} | Offset: {self.offset:.5f}")
+                    sys.stdout.write(f"\rLower frame duration: {self.frame_duration_values[0]:.3f} | Higher frame duration: {self.frame_duration_values[1]:.3f}")
                     sys.stdout.flush()
 
-                    logger.info(f"Switched frame duration to {self.frame_duration} based on error {error:.10f} with offset {self.offset:.5f}")
+                    logger.info(f"Switched frame duration to {self.frame_duration} based on error {error:.10f}")
 
                 time.sleep(self.check_interval)
             except Exception as e:
@@ -154,7 +146,7 @@ class TimeKeeper:
 
 def main():
     redis_controller = RedisController()
-    timekeeper = TimeKeeper(redis_controller, offset=-0.53)  # Adjust the offset value as needed
+    timekeeper = TimeKeeper(redis_controller, offset=0.0)  # Adjust the offset value as needed
 
     try:
         while True:

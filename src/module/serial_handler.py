@@ -15,7 +15,7 @@ class SerialHandler(threading.Thread):
         
         self.log_queue = log_queue
         
-        self.portlist = ['/dev/ttyACM0']#, '/dev/serial0', '/dev/ttyS0']
+        self.portlist = ['/dev/ttyACM0', '/dev/serial0', '/dev/ttyS0']
          
         self.current_ports = []
 
@@ -45,8 +45,6 @@ class SerialHandler(threading.Thread):
                 logging.error(f"Could not write to port {ser.port}: {str(e)}")
                 self.serials.remove(ser)
                 ser.close()
-
-
 
     def read_from_ports(self):
 

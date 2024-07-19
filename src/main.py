@@ -15,6 +15,7 @@ RPi.GPIO.setmode(RPi.GPIO.BCM)
 
 from module.redis_controller import RedisController
 from module.cinepi_app import CinePi
+from module.usb_monitor import USBMonitor, USBDriveMonitor
 from module.ssd_monitor import SSDMonitor
 from module.gpio_output import GPIOOutput
 from module.cinepi_controller import CinePiController
@@ -25,7 +26,6 @@ from module.keyboard import Keyboard
 from module.cli_commands import CommandExecutor
 from module.serial_handler import SerialHandler
 from module.logger import configure_logging
-from module.PWMcontroller import PWMController
 from module.sensor_detect import SensorDetect
 from module.mediator import Mediator
 from module.dmesg_monitor import DmesgMonitor
@@ -33,7 +33,6 @@ from module.redis_listener import RedisListener
 from module.gpio_input import ComponentInitializer
 from module.battery_monitor import BatteryMonitor
 from module.app import create_app
-from module.timekeeper import TimeKeeper
 from module.analog_controls import AnalogControls
 
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
@@ -102,7 +101,6 @@ def load_settings(filename):
 
 def handle_exit(signal, frame):
     logging.info("Graceful shutdown initiated.")
-    pwm_controller.stop_pwm()
     sys.exit(0)
 
 # Register signal handlers
@@ -122,8 +120,6 @@ if __name__ == "__main__":
 
     sensor_detect = SensorDetect()
     sensor_mode = int(redis_controller.get_value('sensor_mode'))
-    
-    pwm_controller = PWMController(sensor_detect, PWM_pin=settings['gpio_output']['pwm_pin'])
 
     cinepi = CinePi(redis_controller, sensor_detect)
 
@@ -138,13 +134,13 @@ if __name__ == "__main__":
                                 ])
 
     ssd_monitor = SSDMonitor()
-    
+    usb_monitor = USBMonitor(ssd_monitor)    
     gpio_output = GPIOOutput(rec_out_pins=settings['gpio_output']['rec_out_pin'])
+
     dmesg_monitor = DmesgMonitor()
     dmesg_monitor.start()
 
     cinepi_controller = CinePiController(cinepi,
-                                         pwm_controller,
                                          redis_controller,
                                          ssd_monitor,
                                          sensor_detect,
@@ -155,12 +151,6 @@ if __name__ == "__main__":
                                          light_hz=settings['settings']['light_hz'],
                                          )
 
-    # #redis_controller.set_value('frame_duration', 40000)
-    redis_controller.set_value('fps', 25)
-    # redis_controller.set_value('fps_actual', 24)
-    # redis_controller.set_value('fps_target', 24)
-    # redis_controller.set_value('fps_last', 24)
-
     gpio_input = ComponentInitializer(cinepi_controller, settings)
     
     cinepi.restart()
@@ -169,16 +159,16 @@ if __name__ == "__main__":
     command_executor.start()
     redis_listener = RedisListener(redis_controller)
     battery_monitor = BatteryMonitor()
+    serial_handler = SerialHandler(command_executor.handle_received_data, 9600, log_queue=log_queue)
+    serial_handler.start()
 
-    simple_gui = SimpleGUI(pwm_controller, 
-                           redis_controller, 
+    simple_gui = SimpleGUI(redis_controller, 
                            cinepi_controller,  
                            ssd_monitor, 
                            dmesg_monitor,
                            battery_monitor,
                            sensor_detect,
                            redis_listener,
-                           #timekeeper,
                            None)
     stream = None
     
@@ -195,14 +185,8 @@ if __name__ == "__main__":
     mediator = Mediator(cinepi, redis_controller, ssd_monitor, gpio_output, stream)
     time.sleep(1)
     
-    fps_current = redis_controller.get_value('fps_actual')
-    cinepi_controller.set_fps(fps_current)
-    
-    shutter_a_current = redis_controller.get_value('shutter_a')
-    cinepi_controller.set_shutter_a(shutter_a_current)
-    
-    cinepi_controller.set_pwm_mode(1)
-    #timekeeper = TimeKeeper(redis_controller)
+    cinepi_controller.set_trigger_mode(2)
+    usb_monitor.check_initial_devices()
     
     # analog_controls = AnalogControls(
     #     cinepi_controller=cinepi_controller,
@@ -223,8 +207,7 @@ if __name__ == "__main__":
     finally:
         redis_controller.set_value('is_recording', 0)
         redis_controller.set_value('is_writing', 0)
-        # timekeeper.stop()
-        current_shutter_angle = redis_controller.get_value('shutter_a')
+        current_shutter_angle = float(redis_controller.get_value('shutter_a'))
         redis_controller.set_value('shutter_a_nom', int(current_shutter_angle))
         fps_last = int(float(redis_controller.get_value('fps')))
         redis_controller.set_value('fps_last', fps_last )
@@ -232,3 +215,4 @@ if __name__ == "__main__":
         dmesg_monitor.join()
         command_executor.join()
         RPi.GPIO.cleanup()
+

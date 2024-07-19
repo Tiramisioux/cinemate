@@ -12,7 +12,6 @@ from flask_socketio import SocketIO
 
 class SimpleGUI(threading.Thread):
     def __init__(self, 
-                 pwm_controller, 
                  redis_controller, 
                  cinepi_controller, 
                  ssd_monitor, 
@@ -28,7 +27,6 @@ class SimpleGUI(threading.Thread):
         self.hide_cursor()  # Hide the cursor when initializing the GUI
         self.color_mode = "normal"  # Can be changed to "inverse" as needed
 
-        self.pwm_controller = pwm_controller
         self.redis_controller = redis_controller
         self.cinepi_controller = cinepi_controller
         self.ssd_monitor = ssd_monitor
@@ -84,10 +82,9 @@ class SimpleGUI(threading.Thread):
         # Define two layouts
         self.layouts = {
             0: {  # Layout 0
-                "iso": {"position": (1000, -7), "font_size": 34},
-                "shutter_speed": {"position": (1100, -7), "font_size": 34},
+                "iso": {"position": (10, -7), "font_size": 34},
+                "shutter_speed": {"position": (110, -7), "font_size": 34},
                 "fps": {"position": (205, -7), "font_size": 34},
-                #"sync_effort_level": {"position": (305, -7), "font_size": 34},
                 "sensor": {"position": (505, -7), "font_size": 34},
                 "width": {"position": (630, -7), "font_size": 34},
                 "height": {"position": (730, -7), "font_size": 34},
@@ -111,7 +108,6 @@ class SimpleGUI(threading.Thread):
             "iso": {"normal": "white", "inverse": "black"},
             "shutter_speed": {"normal": "white", "inverse": "black"},
             "fps": {"normal": "white", "inverse": "black"},
-            #"sync_effort_level": {"normal": "yellow", "inverse": "black"},
             "exposure_time": {"normal": "white", "inverse": "black"},
             "sensor": {"normal": "grey", "inverse": "black"},
             "height": {"normal": "white", "inverse": "black"},
@@ -156,7 +152,7 @@ class SimpleGUI(threading.Thread):
         else:
             self.colors["fps"]["normal"] = "white"
 
-        if self.cinepi_controller.pwm_mode:
+        if self.cinepi_controller.trigger_mode != 0:
             values["pwm_mode"] = "PWM"
             self.colors["shutter_speed"]["normal"] = "lightgreen"
             self.colors["fps"]["normal"] = "lightgreen"

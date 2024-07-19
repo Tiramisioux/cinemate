@@ -136,13 +136,13 @@ class RedisListener:
                 # Calculate the current framerate in FPS with higher precision
                 self.current_framerate_ms = 1.000 / average_time_diff if average_time_diff != 0 else 0
                 self.current_framerate = self.current_framerate_ms * 1000
-                print(f"Calculated current framerate: {self.current_framerate:.6f} FPS")
+                logging.debug(f"Calculated current framerate: {self.current_framerate:.6f} FPS")
             else:
                 logging.warning("Time differences calculation resulted in an empty list.")
                 self.current_framerate = None
         else:
             self.current_framerate = None
-            logging.warning("Not enough sensor timestamps to calculate framerate.")
+            #logging.warning("Not enough sensor timestamps to calculate framerate.")
 
 
     def analyze_frames(self):

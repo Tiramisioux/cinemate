@@ -13,7 +13,6 @@ from module.redis_listener import RedisListener
 class CinePiController:
     def __init__(self,
                  cinepi,
-                 pwm_controller, 
                  redis_controller,
                  ssd_monitor,
                  sensor_detect,
@@ -26,7 +25,6 @@ class CinePiController:
         
         self.parameters_lock_obj = threading.Lock()
         self.cinepi = cinepi
-        self.pwm_controller = pwm_controller
         self.redis_controller = redis_controller
         self.ssd_monitor = ssd_monitor
         self.sensor_detect = sensor_detect
@@ -53,6 +51,7 @@ class CinePiController:
         self.exposure_time_fractions = None
         self.fps_multiplier = 1
         self.pwm_mode = False
+        self.trigger_mode = 0
         self.fps_saved = float(self.redis_controller.get_value('fps_actual'))
         self.fps_double = False
         self.ramp_up_speed = 0.2
@@ -174,12 +173,10 @@ class CinePiController:
                     if isinstance(new_shutter_angle, float) and new_shutter_angle.is_integer():
                         new_shutter_angle = int(new_shutter_angle)
                     self.set_shutter_a(new_shutter_angle)
-                    self.pwm_controller.set_pwm(fps=int(safe_value), shutter_angle=new_shutter_angle)
                     logging.info(f"Setting fps to {safe_value} and shutter angle to {new_shutter_angle}")
 
                 elif self.pwm_mode == True and self.shutter_a_sync == False:
                     new_shutter_angle = float(self.get_setting('shutter_a'))
-                    self.pwm_controller.set_pwm(fps=float(safe_value), shutter_angle=new_shutter_angle)
                     logging.info(f"Setting fps to {safe_value}")
 
                 self.exposure_time_s = (float(self.redis_controller.get_value('shutter_a')) / 360) / self.fps_actual
@@ -343,8 +340,6 @@ class CinePiController:
             self.exposure_time_seconds = (float(self.redis_controller.get_value('shutter_a'))/360) / 1/self.fps_actual
             self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_seconds)
             logging.info(f"Setting shutter_a to {value}")
-            if self.pwm_mode:
-                self.pwm_controller.set_pwm(shutter_angle=value)
                 
         self.exposure_time_s = float(self.redis_controller.get_value('shutter_a'))/360 * 1/self.fps_actual
 
@@ -576,17 +571,31 @@ class CinePiController:
             logging.info(f"Setting pwm mode mode to {value}")
 
             if value== False:
-                self.pwm_controller.stop_pwm()
+
                 self.set_fps(self.fps_saved)
             elif value == True:
                 self.fps_saved = float(self.get_setting('fps'))
                 shutter_a_current = float(self.get_setting('shutter_a_nom'))
-                #self.redis_controller.set_value('fps', 50)
-                self.pwm_controller.start_pwm(int(self.fps_saved), shutter_a_current, 2)
-
+                self.set_trigger_mode(2)
             time.sleep(1)
             self.cinepi.restart()
             logging.info(f"Restarting camera")
+            
+    def set_trigger_mode(self, value):
+        if value not in [0, 2]:
+            raise ValueError("Invalid argument: must be 0 or 2")
+        
+        if self.sensor_detect.camera_model == 'imx477':
+            command = f'echo {value} > /sys/module/imx477/parameters/trigger_mode'
+        elif self.sensor_detect.camera_model == 'imx296':
+            if value == 2: value = 1
+            command = f'echo {value} > /sys/module/imx296/parameters/trigger_mode'
+        
+        full_command = ['sudo', 'su', '-c', command]
+        subprocess.run(full_command, check=True)
+        logging.info(f"Trigger mode set to {value}")
+        
+        self.trigger_mode = value
         
     def set_shutter_a_sync(self, value=None):
         if value is None:
@@ -662,8 +671,6 @@ class CinePiController:
         print(f"{'Shutter sync':<20}{str(self.shutter_a_sync):<20}")
         print()
         print(f"{'PWM mode':<20}{str(self.pwm_mode):<20}")
-        print(f"{'PWM freq':<20}{str(self.pwm_controller.freq):<20}")
-        print(f"{'PWM shutter angle':<20}{str(self.pwm_controller.shutter_angle):<20}")
         print()
         print(f"{'GUI layout':<20}{str(self.gui_layout):<20}")
         

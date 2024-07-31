@@ -55,7 +55,10 @@ class SimpleGUI(threading.Thread):
         return self.current_background_color
 
     def emit_background_color_change(self):
-        self.socketio.emit('background_color_change', {'background_color': self.current_background_color})
+        if self.socketio is not None:
+            self.socketio.emit('background_color_change', {'background_color': self.current_background_color})
+        else:
+            logging.error("SocketIO is not initialized. Cannot emit background color change.")
 
     def emit_gui_data_change(self, data):
         self.socketio.emit('gui_data_change', data)

@@ -228,9 +228,9 @@ class SmartButton:
 
             logging.info(f"Button {self.identifier} pressed")
 
-            # # Start a second timer to track long presses (0.5 sec)
-            # self.click_timer2 = threading.Timer(0.5, self.evaluate_long_press)
-            # self.click_timer2.start()
+            # Start a second timer to track long presses (0.5 sec)
+            self.click_timer2 = threading.Timer(0.5, self.evaluate_long_press)
+            self.click_timer2.start()
 
             self.is_held = True
             self.last_state = 'pressed'
@@ -350,9 +350,6 @@ class SmartButton:
             else:
                 self.logger.debug(f"Combined action conditions not met or hold button not held for action: {ca}")
 
-
-
-
     def parse_action(self, action_str):
         """Parse an action string into a method name and its arguments."""
         if action_str == "none":
@@ -362,7 +359,7 @@ class SmartButton:
         return action
 
     def evaluate_clicks(self):
-        logging.info('Evaluating clicks ...')
+        #logging.info('Evaluating clicks')
         with self.lock:
             action_dict = None
             # Determine the correct action based on click count
@@ -656,6 +653,5 @@ class QuadRotaryEncoder:
     def clone_smart_button_behavior(self, existing_button):
         logging.info(f"Cloning behavior of SmartButton {existing_button} for Quad Rotary Encoder.")
         existing_button.on_press()  # Or trigger the required behavior
-
 
 

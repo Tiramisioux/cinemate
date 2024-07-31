@@ -19,7 +19,7 @@ class RedisListener:
         self.lock = threading.Lock()
         self.is_recording = False
         self.framerate_values = []  # Initialize the framerate_values attribute
-        self.sensor_timestamps = deque(maxlen=10)  # Store the last N sensor timestamps
+        self.sensor_timestamps = deque(maxlen=100)  # Store the last 100 sensor timestamps
         
         self.recording_start_time = None
         self.recording_end_time = None
@@ -66,7 +66,7 @@ class RedisListener:
                         # Update sensor timestamps
                         if self.sensorTimestamp is not None:
                             self.sensor_timestamps.append(int(self.sensorTimestamp))
-                            self.calculate_current_framerate()
+                            self.calculate_average_framerate_last_100_frames()
                         
                         # If framerate changes, call the callback function
                         if self.framerate is not None and self.framerate_callback:
@@ -119,6 +119,7 @@ class RedisListener:
                                 self.framerate_values = []
                             else:
                                 logging.warning("Recording stopped, but no recording start time was registered.")
+            
 
     def calculate_current_framerate(self):
         if len(self.sensor_timestamps) > 1:
@@ -134,45 +135,39 @@ class RedisListener:
                 logging.debug(f"Average time difference: {average_time_diff}")
                 
                 # Calculate the current framerate in FPS with higher precision
-                self.current_framerate_ms = 1.000 / average_time_diff if average_time_diff != 0 else 0
-                self.current_framerate = self.current_framerate_ms * 1000
+                self.current_framerate = 1.0 / average_time_diff if average_time_diff != 0 else 0
                 logging.debug(f"Calculated current framerate: {self.current_framerate:.6f} FPS")
             else:
                 logging.warning("Time differences calculation resulted in an empty list.")
                 self.current_framerate = None
         else:
             self.current_framerate = None
-            #logging.warning("Not enough sensor timestamps to calculate framerate.")
-
+            logging.warning("Not enough sensor timestamps to calculate framerate.")
 
     def analyze_frames(self):
         if self.recording_start_time and self.recording_end_time:
             time_diff_seconds = (self.recording_end_time - self.recording_start_time).total_seconds()
-            expected_frames = int(25 * time_diff_seconds)#int(self.framerate * time_diff_seconds)
+            expected_frames = int(24 * time_diff_seconds)#int(self.framerate * time_diff_seconds)
         else:
             logging.warning("Cannot calculate expected frames: Recording start or end time not registered.")
         
         num_frames = self.frameCount  # Use the frame count received from listen_stats
-        
-        # if num_frames > 0:
-        #     average_framerate = num_frames / time_diff_seconds
-        #     self.framerate_values.append(average_framerate)
-        #     min_framerate = min(self.framerate_values)
-        #     max_framerate = max(self.framerate_values)
-        #     median_framerate = statistics.median(self.framerate_values)
-        #     stdev_framerate = statistics.stdev(self.framerate_values) if len(self.framerate_values) > 1 else 0
-        #     variance_framerate = statistics.variance(self.framerate_values) if len(self.framerate_values) > 1 else 0
-        #     cv_framerate = stdev_framerate / average_framerate if average_framerate != 0 else 0
-            
-        #     logging.info(f"Total number of frames registered: {num_frames}")
         logging.info(f"Total number of frames expected: {expected_frames}")
+        logging.info(f"Total number of frames registered: {num_frames}")
+
+    def calculate_average_framerate_last_100_frames(self):
+        if len(self.sensor_timestamps) > 1:
+            # Convert timestamps from microseconds to seconds
+            timestamps_in_seconds = [ts / 1_000_000 for ts in self.sensor_timestamps]
+            # Calculate time differences between consecutive sensor timestamps
+            time_diffs = [t2 - t1 for t1, t2 in zip(timestamps_in_seconds, timestamps_in_seconds[1:])]
             
-        #     logging.info(f"Average framerate value: {average_framerate:.2f} FPS")
-        #     logging.info(f"Minimum framerate value: {min_framerate:.2f} FPS")
-        #     logging.info(f"Maximum framerate value: {max_framerate:.2f} FPS")
-        #     logging.info(f"Median framerate value: {median_framerate:.2f} FPS")
-        #     logging.info(f"Standard deviation of framerate values: {stdev_framerate:.2f} FPS")
-        #     logging.info(f"Variance of framerate values: {variance_framerate:.2f} FPS")
-        #     logging.info(f"Coefficient of variation of framerate values: {cv_framerate:.2f}")
-        # else:
-        #     logging.warning("No framerate values recorded.")
+            if time_diffs:
+                # Calculate the average time difference in seconds
+                average_time_diff = sum(time_diffs) / len(time_diffs)
+                average_fps = (1.0 / average_time_diff)*1000 if average_time_diff != 0 else 0
+                #logging.info(f"Average framerate of the last 100 frames: {average_fps:.6f} FPS")
+            else:
+                logging.warning("Time differences calculation resulted in an empty list.")
+        else:
+            logging.warning("Not enough sensor timestamps to calculate average framerate.")

@@ -58,7 +58,10 @@ class CinePi:
             logging.info('CinePi instantiated')
 
     def get_default_args(self, sensor_detect):
-        sensor_mode = int(self.redis_controller.get_value('sensor_mode'))
+        sensor_mode = self.redis_controller.get_value('sensor_mode')
+        if sensor_mode is None:
+            # Default to 0 if no value is retrieved
+            sensor_mode = '0'
         sensor_model = sensor_detect.camera_model
         tuning_file_path = f'/home/pi/libcamera/src/ipa/rpi/pisp/data/{sensor_model}.json'
         

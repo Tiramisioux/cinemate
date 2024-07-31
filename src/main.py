@@ -24,7 +24,7 @@ from module.analog_controls import AnalogControls
 from module.grove_base_hat_adc import ADC
 from module.keyboard import Keyboard
 from module.cli_commands import CommandExecutor
-from module.serial_handler import SerialHandler
+# from module.serial_handler import SerialHandler
 from module.logger import configure_logging
 from module.sensor_detect import SensorDetect
 from module.mediator import Mediator
@@ -119,7 +119,9 @@ if __name__ == "__main__":
     redis_controller = RedisController()
 
     sensor_detect = SensorDetect()
-    sensor_mode = int(redis_controller.get_value('sensor_mode'))
+    # Update the retrieval of sensor_mode
+    sensor_mode_value = redis_controller.get_value('sensor_mode')
+    sensor_mode = int(sensor_mode_value) if sensor_mode_value is not None else 0
 
     cinepi = CinePi(redis_controller, sensor_detect)
 
@@ -159,8 +161,8 @@ if __name__ == "__main__":
     command_executor.start()
     redis_listener = RedisListener(redis_controller)
     battery_monitor = BatteryMonitor()
-    serial_handler = SerialHandler(command_executor.handle_received_data, 9600, log_queue=log_queue)
-    serial_handler.start()
+    # serial_handler = SerialHandler(command_executor.handle_received_data, 9600, log_queue=log_queue)
+    # serial_handler.start()
 
     simple_gui = SimpleGUI(redis_controller, 
                            cinepi_controller,  
@@ -185,7 +187,7 @@ if __name__ == "__main__":
     mediator = Mediator(cinepi, redis_controller, ssd_monitor, gpio_output, stream)
     time.sleep(1)
     
-    cinepi_controller.set_trigger_mode(2)
+    # cinepi_controller.set_trigger_mode(2)
     usb_monitor.check_initial_devices()
     
     # analog_controls = AnalogControls(

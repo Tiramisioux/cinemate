@@ -23,7 +23,7 @@ class ColoredFormatter(logging.Formatter):
         'cinepi_controller': {'color': 'light_green', 'attrs': []},
         'analog_controls': {'color': 'yellow', 'attrs': []},
         'PWMcontroller': {'color': 'light_grey', 'attrs': []},
-        'ssd_monitor': {'color': 'blue', 'attrs': ['bold']},
+        'ssd_monitor': {'color': 'cyan', 'attrs': ['bold']},
         'gpio_output': {'color': 'light_red', 'attrs': []},
         'system_button': {'color': 'white', 'attrs': []},
         'rotary_encoder': {'color': 'yellow', 'attrs': []},

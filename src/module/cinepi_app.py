@@ -67,10 +67,10 @@ class CinePi:
         
         return [
             '--mode', f"{sensor_detect.get_width(sensor_model, sensor_mode)}:{sensor_detect.get_height(sensor_model, sensor_mode)}:{sensor_mode}:U",
-            '--width', str(sensor_detect.get_width(sensor_model, sensor_mode)),
-            '--height', str(sensor_detect.get_height(sensor_model, sensor_mode)),
-            '--lores-width', str(sensor_detect.get_lores_width(sensor_model, sensor_mode)),
-            '--lores-height', str(sensor_detect.get_lores_height(sensor_model, sensor_mode)),
+            '--width', '1920',
+            '--height', '1080',
+            '--lores-width', '1280',
+            '--lores-height', '720',
             '-p', '0,30,1920,1020',
             '--post-process-file', '/home/pi/post-processing.json',
             '--tuning-file', tuning_file_path,

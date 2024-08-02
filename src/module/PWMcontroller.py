@@ -95,28 +95,12 @@ class PWMController:
         self.set_frequency(freq)
         if shutter_angle is not None:
             self.set_duty_cycle(shutter_angle)
-        self.set_trigger_mode(trigger_mode)
         self.update_pwm()
         logging.info("PWM started")
 
     def stop_pwm(self):
-        self.set_trigger_mode(0)
         self.stop()
         logging.info("PWM stopped")
-
-    def set_trigger_mode(self, value):
-        if value not in [0, 2]:
-            raise ValueError("Invalid argument: must be 0 or 2")
-
-        if self.sensor_detect.camera_model == 'imx477':
-            command = f'echo {value} > /sys/module/imx477/parameters/trigger_mode'
-        elif self.sensor_detect.camera_model == 'imx296':
-            if value == 2: value = 1
-            command = f'echo {value} > /sys/module/imx296/parameters/trigger_mode'
-
-        full_command = ['sudo', 'su', '-c', command]
-        subprocess.run(full_command, check=True)
-        logging.info(f"Trigger mode set to {value}")
 
     def set_duty_cycle(self, shutter_angle):
         try:

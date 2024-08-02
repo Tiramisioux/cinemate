@@ -1,6 +1,7 @@
 import logging
 import threading
 import json
+import time
 
 import RPi
 
@@ -25,6 +26,8 @@ class Mediator:
         self.redis_controller.redis_parameter_changed.subscribe(self.handle_fps_change)
         
         self.redis_controller.redis_parameter_changed.subscribe(self.handle_shutter_a_change)
+        
+        # self.redis_controller.redis_parameter_changed.subscribe(self.handle_cinepi_running_change)
         
         logging.info("Mediator instantiated")
         
@@ -123,3 +126,4 @@ class Mediator:
             print('changing pwm')
             shutter_a_new = self.redis_controller.get_value('shutter_a')
             self.pwm_controller.set_pwm(None, shutter_a_new)
+            

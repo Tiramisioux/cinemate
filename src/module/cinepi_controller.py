@@ -281,25 +281,28 @@ class CinePiController:
                 if height_new is None or width_new is None or gui_layout_new is None:
                     raise ValueError("Invalid height, width, or gui_layout value.")
                 
-                self.redis_controller.set_value('sensor', str(self.sensor_detect.camera_model))
+
                 self.redis_controller.set_value('height', str(height_new))
                 self.redis_controller.set_value('width', str(width_new))
                 self.redis_controller.set_value('bit_depth', str(bit_depth_new))
                 self.redis_controller.set_value('fps_max', str(fps_max_new))
                 self.redis_controller.set_value('gui_layout', str(gui_layout_new))
                 self.redis_controller.set_value('file_size', str(file_size_new))
+
+                #self.redis_controller.set_value('sensor', str(self.sensor_detect.camera_model))
                 self.redis_controller.set_value('sensor_mode', str(value))
+
                 self.redis_controller.set_value('cam_init', 1)
                 
                 self.gui_layout = gui_layout_new
                 
                 logging.info(f"Resolution set to mode {value}, height: {height_new}, width: {width_new}, gui_layout: {gui_layout_new}")
-
+                
                 fps_current = int(float(self.redis_controller.get_value('fps_last')))
+                time.sleep(2)
                 
                 self.cinepi.restart()
                 
-                time.sleep(2)
                 self.set_fps(int(self.redis_controller.get_value('fps_last')))
                 
                 self.file_size = file_size_new
@@ -434,7 +437,7 @@ class CinePiController:
     
     def calculate_dynamic_shutter_angles(self, fps):
         if fps <= 0:
-            fps = 1
+            fps = 1 
             #raise ValueError("FPS must be greater than zero.")
 
         dynamic_steps = self.shutter_a_steps.copy()  # Start with normal shutter angle values
@@ -584,10 +587,6 @@ class CinePiController:
             elif value == True:
                 self.fps_saved = float(self.get_setting('fps'))
                 shutter_a_current = float(self.get_setting('shutter_a_nom'))
-                self.set_trigger_mode(2)
-            time.sleep(1)
-            self.cinepi.restart()
-            logging.info(f"Restarting camera")
             
     def set_trigger_mode(self, value):
         if value not in [0, 2]:
@@ -604,6 +603,8 @@ class CinePiController:
         logging.info(f"Trigger mode set to {value}")
         
         self.trigger_mode = value
+        
+        self.cinepi.restart()
         
     def set_shutter_a_sync(self, value=None):
         if value is None:

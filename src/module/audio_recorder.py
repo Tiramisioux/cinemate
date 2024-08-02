@@ -1,87 +1,49 @@
-# Raspberry Pi code (Python)
 import RPi.GPIO as GPIO
-import pyaudio
-import wave
+import subprocess
 import time
-import os
 
-# Set up GPIO to read the clock signal from the Pico
+# GPIO pin for PWM signal
+PWM_PIN = 18
+
+# Setup GPIO
 GPIO.setmode(GPIO.BCM)
-clock_pin = 18
-GPIO.setup(clock_pin, GPIO.IN)
+GPIO.setup(PWM_PIN, GPIO.IN)
 
-# Callback function to handle the clock signal
-def clock_callback(channel):
-    global recording
-    if recording:
-        # This is where you handle the timing for audio recording
-        # For demonstration, we will print a message
-        print("Clock signal received")
+# Sample rate for recording (2x the PWM frequency)
+SAMPLE_RATE = 16000
 
-# Set up interrupt to detect clock signal
-GPIO.add_event_detect(clock_pin, GPIO.RISING, callback=clock_callback)
+# Duration for recording in seconds
+RECORD_DURATION = 10
 
-# Set up audio recording
-FORMAT = pyaudio.paInt16
-CHANNELS = 1
-RATE = 48000
-CHUNK = 1024
-RECORD_SECONDS = 10
-SAVE_DIRECTORY = "/media/RAW"
-WAVE_OUTPUT_FILENAME = "output.wav"
+# File to save the recorded audio
+AUDIO_FILE = 'synced_audio.wav'
 
-audio = pyaudio.PyAudio()
+def record_audio():
+    """Record audio using arecord at the specified sample rate."""
+    command = [
+        'arecord',
+        '-D', 'plughw:2,0',
+        '-f', 'cd',
+        '-r', str(SAMPLE_RATE),
+        '-d', str(RECORD_DURATION),
+        AUDIO_FILE
+    ]
+    subprocess.run(command)
 
-# List all available audio devices
-info = audio.get_host_api_info_by_index(0)
-numdevices = info.get('deviceCount')
-print("Available audio devices:")
-for i in range(0, numdevices):
-    if (audio.get_device_info_by_host_api_device_index(0, i).get('maxInputChannels')) > 0:
-        print(f"Input Device id {i} - {audio.get_device_info_by_host_api_device_index(0, i).get('name')}")
+def sync_recording():
+    """Wait for the PWM signal to sync and start recording."""
+    try:
+        print("Waiting for PWM signal to sync...")
+        # Wait for a rising edge on the PWM pin
+        GPIO.wait_for_edge(PWM_PIN, GPIO.RISING)
+        print("PWM signal detected. Starting recording...")
+        # Start recording audio
+        record_audio()
+    except KeyboardInterrupt:
+        print("Recording interrupted.")
+    finally:
+        GPIO.cleanup()
 
-# Set the device index of your USB microphone here
-device_index = 1  # Change this to the correct index
-
-# Start recording
-stream = audio.open(format=FORMAT, channels=CHANNELS,
-                    rate=RATE, input=True, input_device_index=device_index,
-                    frames_per_buffer=CHUNK)
-
-print("Recording...")
-
-frames = []
-
-recording = True
-start_time = time.time()
-
-try:
-    while time.time() - start_time < RECORD_SECONDS:
-        data = stream.read(CHUNK)
-        frames.append(data)
-except KeyboardInterrupt:
-    pass
-
-print("Finished recording")
-
-# Stop recording
-recording = False
-stream.stop_stream()
-stream.close()
-audio.terminate()
-
-# Save the recorded data to a file if the directory exists
-if os.path.exists(SAVE_DIRECTORY):
-    file_path = os.path.join(SAVE_DIRECTORY, WAVE_OUTPUT_FILENAME)
-    wf = wave.open(file_path, 'wb')
-    wf.setnchannels(CHANNELS)
-    wf.setsampwidth(audio.get_sample_size(FORMAT))
-    wf.setframerate(RATE)
-    wf.writeframes(b''.join(frames))
-    wf.close()
-    print(f"File saved to {file_path}")
-else:
-    print(f"Directory {SAVE_DIRECTORY} does not exist. File not saved.")
-
-# Clean up GPIO
-GPIO.cleanup()
+if __name__ == "__main__":
+    sync_recording()
+    print(f"Recording saved to {AUDIO_FILE}")

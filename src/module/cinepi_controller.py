@@ -14,6 +14,7 @@ class CinePiController:
     def __init__(self,
                  cinepi,
                  redis_controller,
+                 pwm_controller,
                  ssd_monitor,
                  sensor_detect,
                  iso_steps,
@@ -25,6 +26,7 @@ class CinePiController:
         
         self.parameters_lock_obj = threading.Lock()
         self.cinepi = cinepi
+        self.pwm_controller = pwm_controller
         self.redis_controller = redis_controller
         self.ssd_monitor = ssd_monitor
         self.sensor_detect = sensor_detect
@@ -35,7 +37,7 @@ class CinePiController:
         self.awb_steps = awb_steps
         self.light_hz = light_hz
         
-        self.redis_listener = RedisListener(redis_controller, self.update_fps_actual)
+        self.redis_listener = RedisListener(redis_controller)
         self.fps_actual = self.redis_listener.framerate if self.redis_listener.framerate else 1
         
         # Set startup flag
@@ -90,7 +92,7 @@ class CinePiController:
         
         self.redis_controller.set_value('fps_max', self.fps_max)
         
-        print(self.fps_max)
+
         """Initialize fps_steps based on the provided list and capped by fps_max."""
         self.fps_steps_dynamic = [fps for fps in self.fps_steps if fps <= self.fps_max]
         logging.info(f"Initialized fps_steps: {self.fps_steps_dynamic}")
@@ -102,27 +104,27 @@ class CinePiController:
             self.shutter_a_steps_dynamic = [45, 90, 135, 172.8, 180, 225, 270, 315, 360]
         logging.info(f"Initialized shutter_a_steps: {self.shutter_a_steps_dynamic}")
 
-    def update_fps_actual(self, new_framerate):
-        new_framerate_rounded = round(new_framerate)
-        if new_framerate_rounded == 0:
-            logging.error(f"Received invalid fps_actual value: {new_framerate_rounded}, fps_actual remains unchanged.")
-            return
+    # def update_fps_actual(self, new_framerate):
+    #     new_framerate_rounded = round(new_framerate)
+    #     if new_framerate_rounded == 0:
+    #         logging.error(f"Received invalid fps_actual value: {new_framerate_rounded}, fps_actual remains unchanged.")
+    #         return
 
-        # Ignore updates during startup phase
-        if self.startup:
-            #logging.info(f"Ignoring fps_actual update to {new_framerate_rounded} during startup phase.")
-            return
+    #     # Ignore updates during startup phase
+    #     if self.startup:
+    #         #logging.info(f"Ignoring fps_actual update to {new_framerate_rounded} during startup phase.")
+    #         return
 
-        # Allow setting fps_actual to 29 manually and check for redundancy
-        if new_framerate_rounded != round(self.fps_actual) or new_framerate_rounded == 29:
-            if new_framerate_rounded == round(self.fps_actual) and self.redis_controller.get_value('fps_actual') == str(new_framerate_rounded):
-                # Skip redundant updates
-                return
+        # # Allow setting fps_actual to 29 manually and check for redundancy
+        # if new_framerate_rounded != round(self.fps_actual) or new_framerate_rounded == 29:
+        #     if new_framerate_rounded == round(self.fps_actual) and self.redis_controller.get_value('fps_actual') == str(new_framerate_rounded):
+        #         # Skip redundant updates
+        #         return
             
-            self.fps_actual = new_framerate_rounded
-            logging.info(f"Updated fps_actual to {new_framerate_rounded}")
-            self.redis_controller.set_value('fps_actual', new_framerate_rounded)
-            self.update_shutter_angle_for_fps()
+        #     self.fps_actual = new_framerate_rounded
+        #     logging.info(f"Updated fps_actual to {new_framerate_rounded}")
+        #     self.redis_controller.set_value('fps_actual', new_framerate_rounded)
+        #     self.update_shutter_angle_for_fps()
 
     def update_shutter_angle_for_fps(self):
         if self.fps_actual <= 0:
@@ -166,6 +168,7 @@ class CinePiController:
                     logging.info(f"Setting fps to {safe_value}")
 
                 elif self.pwm_mode == True and self.shutter_a_sync == True:
+                    self.redis_controller.set_value('fps', safe_value)
                     nominal_shutter_angle = float(self.get_setting('shutter_a_nom'))
                     new_shutter_angle = self.exposure_time_saved / (1 / safe_value) * 360
                     new_shutter_angle = max(min(new_shutter_angle, 360), 1)
@@ -176,13 +179,12 @@ class CinePiController:
                     logging.info(f"Setting fps to {safe_value} and shutter angle to {new_shutter_angle}")
 
                 elif self.pwm_mode == True and self.shutter_a_sync == False:
+                    self.redis_controller.set_value('fps', safe_value)
                     new_shutter_angle = float(self.get_setting('shutter_a'))
                     logging.info(f"Setting fps to {safe_value}")
 
                 self.exposure_time_s = (float(self.redis_controller.get_value('shutter_a')) / 360) / self.fps_actual
                 self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_s)
-                logging.info(f"Updating fps_actual to: {safe_value}")
-                self.redis_controller.set_value('fps_actual', safe_value)
                 
                 self.update_fps_and_shutter_angles(safe_value)
 
@@ -268,29 +270,30 @@ class CinePiController:
                     value = 0
                 
                 resolution_info = self.sensor_detect.res_modes[value]
-                height_value = resolution_info.get('height', None)
-                width_value = resolution_info.get('width', None)
-                bit_depth_value = resolution_info.get('bit_depth', None)
-                fps_max_value = resolution_info.get('fps_max', None)
-                gui_layout_value = resolution_info.get('gui_layout', None)
-                file_size_value = resolution_info.get('file_size', None)
+                height_new = resolution_info.get('height', None)
+                width_new = resolution_info.get('width', None)
+                bit_depth_new = resolution_info.get('bit_depth', None)
+                fps_max_new = resolution_info.get('fps_max', None)
+                gui_layout_new = resolution_info.get('gui_layout', None)
+                file_size_new = resolution_info.get('file_size', None)
                 
-                if height_value is None or width_value is None or gui_layout_value is None:
+                
+                if height_new is None or width_new is None or gui_layout_new is None:
                     raise ValueError("Invalid height, width, or gui_layout value.")
                 
                 self.redis_controller.set_value('sensor', str(self.sensor_detect.camera_model))
-                self.redis_controller.set_value('height', str(height_value))
-                self.redis_controller.set_value('width', str(width_value))
-                self.redis_controller.set_value('bit_depth', str(bit_depth_value))
-                self.redis_controller.set_value('fps_max', str(fps_max_value))
-                self.redis_controller.set_value('gui_layout', str(gui_layout_value))
-                self.redis_controller.set_value('file_size', str(file_size_value))
+                self.redis_controller.set_value('height', str(height_new))
+                self.redis_controller.set_value('width', str(width_new))
+                self.redis_controller.set_value('bit_depth', str(bit_depth_new))
+                self.redis_controller.set_value('fps_max', str(fps_max_new))
+                self.redis_controller.set_value('gui_layout', str(gui_layout_new))
+                self.redis_controller.set_value('file_size', str(file_size_new))
                 self.redis_controller.set_value('sensor_mode', str(value))
                 self.redis_controller.set_value('cam_init', 1)
                 
-                self.gui_layout = gui_layout_value
+                self.gui_layout = gui_layout_new
                 
-                logging.info(f"Resolution set to mode {value}, height: {height_value}, width: {width_value}, gui_layout: {gui_layout_value}")
+                logging.info(f"Resolution set to mode {value}, height: {height_new}, width: {width_new}, gui_layout: {gui_layout_new}")
 
                 fps_current = int(float(self.redis_controller.get_value('fps_last')))
                 
@@ -299,7 +302,7 @@ class CinePiController:
                 time.sleep(2)
                 self.set_fps(int(self.redis_controller.get_value('fps_last')))
                 
-                self.file_size = file_size_value
+                self.file_size = file_size_new
                 
                 # Initialize fps_steps based on the provided list and capped by fps_max
                 self.initialize_fps_steps(self.fps_steps)
@@ -431,7 +434,8 @@ class CinePiController:
     
     def calculate_dynamic_shutter_angles(self, fps):
         if fps <= 0:
-            raise ValueError("FPS must be greater than zero.")
+            fps = 1
+            #raise ValueError("FPS must be greater than zero.")
 
         dynamic_steps = self.shutter_a_steps.copy()  # Start with normal shutter angle values
         for hz in self.light_hz:
@@ -451,6 +455,10 @@ class CinePiController:
         return flicker_free_angles
 
     def update_fps_and_shutter_angles(self, fps):
+        if fps <= 0:
+            logging.error("FPS must be greater than zero.")
+            return
+
         self.fps_actual = int(fps)
         self.shutter_a_steps_dynamic = self.calculate_dynamic_shutter_angles(fps)
 

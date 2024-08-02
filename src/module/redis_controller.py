@@ -60,7 +60,8 @@ class RedisController:
                     value_str = value.decode('utf-8')
                     # Update cache with new value
                     self.cache[changed_key] = value_str
-                #logging.info(f"Changed value: {changed_key} = {value_str}")
+                if changed_key != "fps_actual":
+                    logging.info(f"Changed value: {changed_key} = {value_str}")
                 self.redis_parameter_changed.emit({'key': changed_key, 'value': value_str})
 
     def get_value(self, key, default=None):
@@ -73,13 +74,22 @@ class RedisController:
 
     def set_value(self, key, value):
         with self.lock:
+
             self.redis_client.set(key, value)
             # Notify about the key change via the cp_controls channel
             self.redis_client.publish('cp_controls', key)
 
-            # if key == 'fps':
-            #     self.redis_client.set('cam_init', '1')
-            #     self.redis_client.publish('cp_controls', 'cam_init')
+            if key == 'fps':
+                fps_new = float(value)
+                frame_duration_new = int((1/fps_new) * 1000000)
+                self.redis_client.set('frame_duration', frame_duration_new)
+                self.redis_client.publish('cp_controls', 'frame_duration')
+                
+                self.redis_client.set('fps_user', value)
+                self.redis_client.publish('cp_controls', 'fps_user')
+                
+                # self.redis_client.set('cam_init', '1')
+                # self.redis_client.publish('cp_controls', 'cam_init')
 
             # Update cache immediately
             self.cache[key] = value

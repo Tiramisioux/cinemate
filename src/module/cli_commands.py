@@ -46,7 +46,8 @@ class CommandExecutor(threading.Thread):
             'space': (cinepi_controller.ssd_monitor.space_left, None),  
             'get': (cinepi_controller.print_settings, None),
             
-            'set_pwm_mode': (cinepi_controller.set_pwm_mode, [int, None]),  
+            'set_pwm_mode': (cinepi_controller.set_pwm_mode, [int, None]),
+            'set_trigger_mode': (cinepi_controller.set_trigger_mode, [int, None]), 
             'set_shutter_a_sync': (cinepi_controller.set_shutter_a_sync, [int, None]),  
             
             'set_iso_lock': (cinepi_controller.set_iso_lock, [int, None]),

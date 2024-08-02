@@ -34,6 +34,7 @@ from module.gpio_input import ComponentInitializer
 from module.battery_monitor import BatteryMonitor
 from module.app import create_app
 from module.analog_controls import AnalogControls
+from module.PWMcontroller import PWMController
 
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
 
@@ -117,11 +118,14 @@ if __name__ == "__main__":
     settings = load_settings('/home/pi/cinemate/src/settings.json')
 
     redis_controller = RedisController()
+    
 
     sensor_detect = SensorDetect()
     # Update the retrieval of sensor_mode
     sensor_mode_value = redis_controller.get_value('sensor_mode')
     sensor_mode = int(sensor_mode_value) if sensor_mode_value is not None else 0
+
+    pwm_controller = PWMController(sensor_detect, PWM_pin=19)
 
     cinepi = CinePi(redis_controller, sensor_detect)
 
@@ -144,6 +148,7 @@ if __name__ == "__main__":
 
     cinepi_controller = CinePiController(cinepi,
                                          redis_controller,
+                                         pwm_controller,
                                          ssd_monitor,
                                          sensor_detect,
                                          iso_steps=settings['arrays']['iso_steps'],
@@ -184,10 +189,10 @@ if __name__ == "__main__":
     else:
         logging.error("Didn't find Wi-Fi hotspot. Stream module not loaded")
 
-    mediator = Mediator(cinepi, redis_controller, ssd_monitor, gpio_output, stream)
+    mediator = Mediator(cinepi, pwm_controller, redis_controller, ssd_monitor, gpio_output, stream)
     time.sleep(1)
     
-    # cinepi_controller.set_trigger_mode(2)
+
     usb_monitor.check_initial_devices()
     
     # analog_controls = AnalogControls(
@@ -197,8 +202,9 @@ if __name__ == "__main__":
     #     shutter_a_pot=None,  # Example analog input for Shutter Angle
     #     fps_pot=0  # Example analog input for FPS
     #     )
-        
-        
+    
+    #   cinepi_controller.set_pwm_mode(1)
+
     logging.info(f"--- initialization complete")
 
     try:    

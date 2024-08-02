@@ -3,6 +3,7 @@ import logging
 from queue import Queue
 from threading import Thread
 import re
+import time
 
 class Event:
     def __init__(self):
@@ -63,19 +64,19 @@ class CinePi:
             # Default to 0 if no value is retrieved
             sensor_mode = '0'
         sensor_model = sensor_detect.camera_model
-        tuning_file_path = f'/home/pi/libcamera/src/ipa/rpi/pisp/data/{sensor_model}.json'
+        tuning_file_path = f'/home/pi/libcamera/src/ipa/rpi/pisp/data/{sensor_model}.json' #
         
         return [
             '--mode', f"{sensor_detect.get_width(sensor_model, sensor_mode)}:{sensor_detect.get_height(sensor_model, sensor_mode)}:{sensor_mode}:U",
-            '--width', '1920',
-            '--height', '1080',
+            '--width', '1280', #str(sensor_detect.get_width(sensor_model, sensor_mode)),
+            '--height', '720', #str(sensor_detect.get_height(sensor_model, sensor_mode)),
             '--lores-width', '1280',
             '--lores-height', '720',
             '-p', '0,30,1920,1020',
             '--post-process-file', '/home/pi/post-processing.json',
             '--tuning-file', tuning_file_path,
             '--shutter', '20000',
-            '--awbgains', '1,1',
+            #'--awb', 'tungsten',
         ]
 
     def start_cinepi_process(self, cinepi_args=None):
@@ -143,5 +144,6 @@ class CinePi:
         self.redis_controller.set_value('fps_last', fps_last)
         self.shutdown()
         # Restart the process with default arguments
+        
         self.start_cinepi_process()
         logging.info('CinePi instance restarted.')

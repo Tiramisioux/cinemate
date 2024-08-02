@@ -24,7 +24,7 @@ GPIO.add_event_detect(clock_pin, GPIO.RISING, callback=clock_callback)
 # Set up audio recording
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
-RATE = 44100
+RATE = 48000
 CHUNK = 1024
 RECORD_SECONDS = 10
 SAVE_DIRECTORY = "/media/RAW"

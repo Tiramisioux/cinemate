@@ -24,6 +24,13 @@ class SensorDetect:
                 #4: {'aspect': 1.52, 'width': 5568, 'height': 3664, 'bit_depth': 12, 'fps_max': 17, 'gui_layout': 0, 'file_size': 31},
                 #5: {'aspect': 1.80, 'width': 5568, 'height': 3094, 'bit_depth': 10, 'fps_max': 21, 'gui_layout': 0, 'file_size': 2},                                        
             },
+            'imx585': {             
+                0: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 12, 'fps_max': 87, 'gui_layout': 0, 'file_size': 4}, # ok
+                1: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 12, 'fps_max': 34, 'gui_layout': 0, 'file_size': 13}, # ok
+                2: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 16, 'fps_max': 30, 'gui_layout': 0, 'file_size': 13},
+
+                #3: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 16, 'fps_max': 21, 'gui_layout': 0, 'file_size': 8},                                      
+            },
         }
         
         self.detect_camera_model()
@@ -49,8 +56,9 @@ class SensorDetect:
                 logging.warning("No output from cinepi-raw")
 
             if result.returncode != 0:
-                logging.error(f"cinepi-raw command failed with stderr: {result.stderr}")
-
+                #logging.error(f"cinepi-raw command failed with stderr: {result.stderr}")
+                pass
+            
         except subprocess.CalledProcessError as e:
             #logging.error(f"Error running cinepi-raw: {e}")
             #logging.error(f"Standard output: {e.stdout}")

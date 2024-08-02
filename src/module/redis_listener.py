@@ -67,10 +67,14 @@ class RedisListener:
                         if self.sensorTimestamp is not None:
                             self.sensor_timestamps.append(int(self.sensorTimestamp))
                             self.calculate_average_framerate_last_100_frames()
+                            
+                        if len(self.sensor_timestamps) > 1:    
+                            self.calculate_current_framerate()                         
                         
                         # If framerate changes, call the callback function
                         if self.framerate is not None and self.framerate_callback:
                             self.framerate_callback(self.framerate)
+
                         
                         # Update frame count and framerate
                         new_frame_count = stats_data.get('frameCount', None)
@@ -95,6 +99,7 @@ class RedisListener:
                         logging.error(f"Failed to parse JSON data: {e}")
                 else:
                     logging.warning(f"Received unexpected data format: {message_data}")
+                
 
     def listen_controls(self):
         for message in self.pubsub_controls.listen():
@@ -143,11 +148,12 @@ class RedisListener:
         else:
             self.current_framerate = None
             logging.warning("Not enough sensor timestamps to calculate framerate.")
+        self.redis_controller.set_value('fps_actual', (self.current_framerate*1000))
 
     def analyze_frames(self):
         if self.recording_start_time and self.recording_end_time:
             time_diff_seconds = (self.recording_end_time - self.recording_start_time).total_seconds()
-            expected_frames = int(24 * time_diff_seconds)#int(self.framerate * time_diff_seconds)
+            expected_frames = int(float((self.redis_controller.get_value('fps')) * time_diff_seconds))#int(self.framerate * time_diff_seconds))
         else:
             logging.warning("Cannot calculate expected frames: Recording start or end time not registered.")
         

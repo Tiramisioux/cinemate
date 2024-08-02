@@ -137,7 +137,7 @@ class SimpleGUI(threading.Thread):
         values = {
             "iso": self.redis_controller.get_value("iso"),
             "shutter_speed": str(self.redis_controller.get_value('shutter_a')).replace('.0', ''),
-            "fps": float(self.redis_controller.get_value('fps')),
+            "fps": round(float(self.redis_controller.get_value('fps_user'))),
             #"sync_effort_level": self.timekeeper.get_effort_level(),
             "exposure_time": str(self.cinepi_controller.exposure_time_fractions),
             "sensor": str.upper(self.redis_controller.get_value("sensor")),
@@ -150,17 +150,21 @@ class SimpleGUI(threading.Thread):
             "cpu_temp": ('{}\u00B0C'.format(int(CPUTemperature().temperature))),
         }
 
-        if self.cinepi_controller.fps_double:
-            self.colors["fps"]["normal"] = "lightgreen"
-        else:
-            self.colors["fps"]["normal"] = "white"
-
-        if self.cinepi_controller.trigger_mode != 0:
+        if values["fps"] != int(float(self.redis_controller.get_value('fps_user'))):
+            self.colors["fps"]["normal"] = "yellow"
+        
+        elif self.cinepi_controller.trigger_mode != 0:
             values["pwm_mode"] = "PWM"
             self.colors["shutter_speed"]["normal"] = "lightgreen"
             self.colors["fps"]["normal"] = "lightgreen"
+        
         else:
             self.colors["shutter_speed"]["normal"] = "white"
+            self.colors["fps"]["normal"] = "white"
+
+        if self.cinepi_controller.fps_double:
+            self.colors["fps"]["normal"] = "lightgreen"
+        else:
             self.colors["fps"]["normal"] = "white"
 
         if self.cinepi_controller.shutter_a_sync:

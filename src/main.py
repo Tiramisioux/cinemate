@@ -203,7 +203,7 @@ if __name__ == "__main__":
     #     fps_pot=0  # Example analog input for FPS
     #     )
     
-    #   cinepi_controller.set_pwm_mode(1)
+    cinepi_controller.set_pwm_mode(0)
 
     logging.info(f"--- initialization complete")
 
@@ -220,6 +220,8 @@ if __name__ == "__main__":
         fps_last = int(float(redis_controller.get_value('fps')))
         redis_controller.set_value('fps_last', fps_last )
         cinepi_controller.set_pwm_mode(0)
+        cinepi_controller.set_trigger_mode(0)
+        pwm_controller.stop_pwm()
         dmesg_monitor.join()
         command_executor.join()
         RPi.GPIO.cleanup()

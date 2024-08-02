@@ -34,6 +34,8 @@ class RedisListener:
         self.focus = 0
         self.frameCount = 0
         
+        self.cinepi_running = True
+        
         self.start_listeners()
 
     def start_listeners(self):
@@ -61,7 +63,7 @@ class RedisListener:
                         self.colorTemp = stats_data.get('colorTemp', None)
                         self.focus = stats_data.get('focus', None)        
                         self.frameCount = stats_data.get('frameCount', None)
-                        self.sensorTimestamp = stats_data.get('sensorTimestamp', None) 
+                        self.sensorTimestamp = stats_data.get('sensorTimestamp', None)
                         
                         # Update sensor timestamps
                         if self.sensorTimestamp is not None:
@@ -75,6 +77,11 @@ class RedisListener:
                         if self.framerate is not None and self.framerate_callback:
                             self.framerate_callback(self.framerate)
 
+                        if self.sensorTimestamp:
+                            self.redis_controller.get_value('cinepi_running') == "True"
+
+                        else:
+                            self.redis_controller.get_value('cinepi_running') == "False"
                         
                         # Update frame count and framerate
                         new_frame_count = stats_data.get('frameCount', None)
@@ -99,7 +106,6 @@ class RedisListener:
                         logging.error(f"Failed to parse JSON data: {e}")
                 else:
                     logging.warning(f"Received unexpected data format: {message_data}")
-                
 
     def listen_controls(self):
         for message in self.pubsub_controls.listen():
@@ -153,13 +159,20 @@ class RedisListener:
     def analyze_frames(self):
         if self.recording_start_time and self.recording_end_time:
             time_diff_seconds = (self.recording_end_time - self.recording_start_time).total_seconds()
-            expected_frames = int(float((self.redis_controller.get_value('fps')) * time_diff_seconds))#int(self.framerate * time_diff_seconds))
+            fps_value = self.redis_controller.get_value('fps')
+            try:
+                fps_float = float(fps_value)  # Convert the retrieved value to a float
+                expected_frames = int(fps_float * time_diff_seconds)
+                recorded_frames = self.frameCount  # The number of frames recorded
+                
+                logging.info(f"Total number of recorded frames: {recorded_frames}")
+                logging.info(f"Total number of expected frames: {expected_frames}")
+            except (TypeError, ValueError) as e:
+                logging.error(f"Error converting fps value to float: {e}")
         else:
             logging.warning("Cannot calculate expected frames: Recording start or end time not registered.")
-        
-        num_frames = self.frameCount  # Use the frame count received from listen_stats
-        logging.info(f"Total number of frames expected: {expected_frames}")
-        logging.info(f"Total number of frames registered: {num_frames}")
+
+
 
     def calculate_average_framerate_last_100_frames(self):
         if len(self.sensor_timestamps) > 1:

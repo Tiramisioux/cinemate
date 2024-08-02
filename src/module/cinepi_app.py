@@ -68,8 +68,8 @@ class CinePi:
         
         return [
             '--mode', f"{sensor_detect.get_width(sensor_model, sensor_mode)}:{sensor_detect.get_height(sensor_model, sensor_mode)}:{sensor_mode}:U",
-            '--width', '1280', #str(sensor_detect.get_width(sensor_model, sensor_mode)),
-            '--height', '720', #str(sensor_detect.get_height(sensor_model, sensor_mode)),
+            '--width', f"{sensor_detect.get_width(sensor_model, sensor_mode)}",
+            '--height', f"{sensor_detect.get_height(sensor_model, sensor_mode)}",
             '--lores-width', '1280',
             '--lores-height', '720',
             '-p', '0,30,1920,1020',
@@ -144,6 +144,11 @@ class CinePi:
         self.redis_controller.set_value('fps_last', fps_last)
         self.shutdown()
         # Restart the process with default arguments
-        
         self.start_cinepi_process()
-        logging.info('CinePi instance restarted.')
+        
+        # while self.redis_controller.get_value('cinepi_running') == 'False':
+        #     time.sleep(2)
+        #     self.shutdown()
+        #     # Restart the process with default arguments
+        #     self.start_cinepi_process()
+        #     logging.info('CinePi instance restarted.')

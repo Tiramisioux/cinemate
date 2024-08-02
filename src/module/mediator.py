@@ -5,8 +5,9 @@ import json
 import RPi
 
 class Mediator:
-    def __init__(self, cinepi_app, redis_controller, ssd_monitor, gpio_output, stream):
+    def __init__(self, cinepi_app, pwm_controller, redis_controller, ssd_monitor, gpio_output, stream):
         self.cinepi_app = cinepi_app
+        self.pwm_controller = pwm_controller
         self.redis_controller = redis_controller
         self.ssd_monitor = ssd_monitor
         self.gpio_output = gpio_output
@@ -20,8 +21,10 @@ class Mediator:
         self.stop_recording_timer = None
         self.stop_recording_timeout = 2
         
-         # Subscribe to the "fps_actual" key changes
-        self.redis_controller.redis_parameter_changed.subscribe(self.handle_fps_actual_change)
+         # Subscribe to the "fps" key changes
+        self.redis_controller.redis_parameter_changed.subscribe(self.handle_fps_change)
+        
+        self.redis_controller.redis_parameter_changed.subscribe(self.handle_shutter_a_change)
         
         logging.info("Mediator instantiated")
         
@@ -105,13 +108,18 @@ class Mediator:
         
         logging.info("Stop recording timeout reached. Stopping recording...")
 
-    def handle_fps_actual_change(self, data):
-        # Handle "fps_actual" key changes
-        if data['key'] == 'fps_actual':
-            try:
-                fps_actual = float(data['value'])
-                if fps_actual > 0:
-                    self.stop_recording_timeout = 2
-                    #logging.info(f"fps_actual changed to {fps_actual}. Updated stop_recording_timeout to {self.stop_recording_timeout} seconds.")
-            except ValueError:
-                logging.warning("Invalid value for fps_actual. Could not update stop_recording_timeout.")
+    def handle_fps_change(self, data):
+        # Handle "fps" key changes
+
+        if data['key'] == 'fps':
+            print('changing pwm')
+            fps_new = self.redis_controller.get_value('fps')
+            self.pwm_controller.set_pwm(fps_new)
+            
+    def handle_shutter_a_change(self, data):
+        # Handle "shutter_a" key changes
+
+        if data['key'] == 'shutter_a':
+            print('changing pwm')
+            shutter_a_new = self.redis_controller.get_value('shutter_a')
+            self.pwm_controller.set_pwm(None, shutter_a_new)

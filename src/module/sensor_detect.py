@@ -33,7 +33,7 @@ class SensorDetect:
             },
         }
         
-        self.detect_camera_model()
+        #self.detect_camera_model()
 
     def detect_camera_model(self):
         try:
@@ -113,7 +113,7 @@ class SensorDetect:
         resolution_info = self.get_resolution_info(camera_name, sensor_mode)
         return resolution_info.get('height', None)
     
-    def bit_depth(self, camera_name, sensor_mode):
+    def get_bit_depth(self, camera_name, sensor_mode):
         resolution_info = self.get_resolution_info(camera_name, sensor_mode)
         return resolution_info.get('bit_depth', None)
     

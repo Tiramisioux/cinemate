@@ -153,7 +153,7 @@ class RedisListener:
                 self.current_framerate = None
         else:
             self.current_framerate = None
-            logging.warning("Not enough sensor timestamps to calculate framerate.")
+            #logging.warning("Not enough sensor timestamps to calculate framerate.")
         self.redis_controller.set_value('fps_actual', (self.current_framerate*1000))
 
     def analyze_frames(self):

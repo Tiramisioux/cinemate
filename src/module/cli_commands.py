@@ -3,7 +3,6 @@ import threading
 import time  
 import datetime 
 import os  
-import inspect 
 import logging  
 
 class CommandExecutor(threading.Thread):
@@ -18,46 +17,49 @@ class CommandExecutor(threading.Thread):
             'rec': (cinepi_controller.rec, None),            
             'stop': (cinepi_controller.rec, None), 
                      
-            'set_iso': (cinepi_controller.set_iso, int),     
-            'inc_iso': (cinepi_controller.inc_iso, None),  
-            'dec_iso': (cinepi_controller.dec_iso, None),     
+            'set iso': (cinepi_controller.set_iso, int),     
+            'inc iso': (cinepi_controller.inc_iso, None),  
+            'dec iso': (cinepi_controller.dec_iso, None),     
               
-            'set_shutter_a': (cinepi_controller.set_shutter_a, float), 
-            'inc_shutter_a': (cinepi_controller.inc_shutter_a, None),  
-            'dec_shutter_a': (cinepi_controller.dec_shutter_a, None), 
+            'set shutter a': (cinepi_controller.set_shutter_a, float), 
+            'inc shutter a': (cinepi_controller.inc_shutter_a, None),  
+            'dec shutter a': (cinepi_controller.dec_shutter_a, None), 
              
-            'set_shutter_a_nom': (cinepi_controller.set_shutter_a_nom, float),   
-            'inc_shutter_a_nom': (cinepi_controller.inc_shutter_a_nom, None),  
-            'dec_shutter_a_nom': (cinepi_controller.dec_shutter_a_nom, None), 
+            'set shutter a nom': (cinepi_controller.set_shutter_a_nom, float),   
+            'inc shutter a nom': (cinepi_controller.inc_shutter_a_nom, None),  
+            'dec shutter a nom': (cinepi_controller.dec_shutter_a_nom, None), 
                                    
-            'set_fps': (cinepi_controller.set_fps, float),  
-            'inc_fps': (cinepi_controller.inc_fps, None),  
-            'dec_shutter_fps': (cinepi_controller.dec_fps, None), 
+            'set fps': (cinepi_controller.set_fps, float),  
+            'inc fps': (cinepi_controller.inc_fps, None),  
+            'dec fps': (cinepi_controller.dec_fps, None), 
             
-            'set_awb': (cinepi_controller.set_awb, int),
-            'inc_awb': (cinepi_controller.inc_awb, None),
-            'dec_awb': (cinepi_controller.dec_awb, None),
+            'set awb': (cinepi_controller.set_awb, int),
+            'inc awb': (cinepi_controller.inc_awb, None),
+            'dec awb': (cinepi_controller.dec_awb, None),
             
-            'set_resolution': (cinepi_controller.set_resolution, [int, None]),
+            'set resolution': (cinepi_controller.set_resolution, [int, None]),
              
             'unmount': (cinepi_controller.unmount, None),  
             'time': (self.display_time, None),  
-            'set_rtc_time': (self.set_rtc_time, None),  
+            'set rtc time': (self.set_rtc_time, None),  
             'space': (cinepi_controller.ssd_monitor.space_left, None),  
             'get': (cinepi_controller.print_settings, None),
             
-            'set_pwm_mode': (cinepi_controller.set_pwm_mode, [int, None]),
-            'set_trigger_mode': (cinepi_controller.set_trigger_mode, [int, None]), 
-            'set_shutter_a_sync': (cinepi_controller.set_shutter_a_sync, [int, None]),  
+            'set pwm mode': (cinepi_controller.set_pwm_mode, [int, None]),
+            'set trigger mode': (cinepi_controller.set_trigger_mode, [int, None]), 
+            'set shutter a sync': (cinepi_controller.set_shutter_a_sync, [int, None]),  
             
-            'set_iso_lock': (cinepi_controller.set_iso_lock, [int, None]),
-            'set_shutter_a_nom_lock': (cinepi_controller.set_shutter_a_nom_lock, [int, None]),
-            'set_shutter_a_nom_fps_lock': (cinepi_controller.set_shu_fps_lock, [int, None]),
-            'set_fps_lock': (cinepi_controller.set_fps_lock, [int, None]),
-            'set_all_lock': (cinepi_controller.set_all_lock, [int, None]),
+            'set iso lock': (cinepi_controller.set_iso_lock, [int, None]),
+            'set shutter a nom lock': (cinepi_controller.set_shutter_a_nom_lock, [int, None]),
+            'set shutter a nom fps lock': (cinepi_controller.set_shu_fps_lock, [int, None]),
+            'set fps lock': (cinepi_controller.set_fps_lock, [int, None]),
+            'set all lock': (cinepi_controller.set_all_lock, [int, None]),
             
+            'set wb': (cinepi_controller.set_wb, [int, None]),
+            'inc wb': (cinepi_controller.inc_wb, [None]),
+            'dec wb': (cinepi_controller.dec_wb, [None]),
             
-            'set_fps_double': (cinepi_controller.set_fps_double, [int, None]),
+            'set fps double': (cinepi_controller.set_fps_double, [int, None]),
             
             'reboot': (cinepi_controller.reboot, None),
             'shutdown': (cinepi_controller.safe_shutdown, None),
@@ -91,37 +93,42 @@ class CommandExecutor(threading.Thread):
     
     def handle_received_data(self, data):
         logging.info(f"Received: {data}")  # Log the received data
-        input_command = data.split()  # Split the input into command and possible arguments
+        input_command = data.strip().split()  # Split the input into command and possible arguments
 
-        if len(input_command) == 0:
+        if not input_command:
             return  # If there's no command provided, just return
 
-        command_name, *command_args = input_command  # Extract the command name and any following arguments
+        # If there are multiple parts, determine if the last part is an argument
+        if len(input_command) > 1:
+            # Check if the last part is a valid argument or a part of the command
+            if input_command[-1].isdigit() or self.is_valid_arg(input_command[-1], float):
+                command_name = ' '.join(input_command[:-1])
+                command_args = input_command[-1:]
+            else:
+                command_name = ' '.join(input_command)
+                command_args = []
+        else:
+            # Only one part, it's the command name
+            command_name = input_command[0]
+            command_args = []
 
         if command_name in self.commands:
             func, expected_types = self.commands[command_name]  # Extract function and expected type(s)
             
-            # Adjustments to support commands with optional arguments
-            if isinstance(expected_types, list):  # Check if expected_types is a list to accommodate optional args
-                if not command_args:  # No arguments provided
-                    if None in expected_types:  # If None is an acceptable type, call without args
-                        func()
-                        return
-                    else:
-                        logging.info(f"Command '{command_name}' requires an argument")
-                        return
-                else:  # Argument(s) provided
+            if isinstance(expected_types, list):
+                if command_args:
                     arg = command_args[0]
-                    for expected_type in filter(None, expected_types):  # Ignore None in expected_types
+                    for expected_type in filter(None, expected_types):
                         if self.is_valid_arg(arg, expected_type):
                             func(expected_type(arg))  # Call function with converted argument
                             return
                     logging.info(f"Invalid argument type for command '{command_name}'")
-            else:  # Handling for commands not expected to have optional arguments
-                # Original logic for handling commands requiring a single, specific argument type
+                else:
+                    func()  # Call the function without arguments (toggle behavior)
+            else:
                 if command_args:  # If there are arguments provided
                     arg = command_args[0]
-                    if self.is_valid_arg(arg, expected_types):  # Validate argument
+                    if self.is_valid_arg(arg, expected_types):
                         func(expected_types(arg))  # Call function with converted argument
                         return
                     else:
@@ -135,7 +142,6 @@ class CommandExecutor(threading.Thread):
                         func()  # Call the function without arguments
         else:
             logging.info(f"Command '{command_name}' not found")
-
     
     # Function to display system time and RTC time
     def display_time(self):

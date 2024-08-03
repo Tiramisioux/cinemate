@@ -159,8 +159,6 @@ if __name__ == "__main__":
                                          )
 
     gpio_input = ComponentInitializer(cinepi_controller, settings)
-    
-    cinepi.restart()
 
     command_executor = CommandExecutor(cinepi_controller, cinepi)
     command_executor.start()
@@ -192,8 +190,24 @@ if __name__ == "__main__":
     mediator = Mediator(cinepi, pwm_controller, redis_controller, ssd_monitor, gpio_output, stream)
     time.sleep(1)
     
-
     usb_monitor.check_initial_devices()
+    
+    # Get the wb_user value from Redis
+    wb_user_value = redis_controller.get_value('wb_user')
+
+    if wb_user_value is not None:
+        try:
+            # Convert wb_user_value to an integer
+            kelvin_temperature = int(wb_user_value)
+            
+            # Use the cinepi_controller to set the white balance
+            cinepi_controller.set_wb(kelvin_temperature)
+            
+            #logging.info(f"White balance set using cinepi_controller for {kelvin_temperature}K")
+        except ValueError:
+            logging.error(f"Invalid wb_user value retrieved: {wb_user_value}")
+    else:
+        logging.error("wb_user value is not set in Redis.")
     
     # analog_controls = AnalogControls(
     #     cinepi_controller=cinepi_controller,
@@ -203,7 +217,7 @@ if __name__ == "__main__":
     #     fps_pot=0  # Example analog input for FPS
     #     )
     
-    cinepi_controller.set_pwm_mode(0)
+    cinepi_controller.set_pwm_mode(1)
 
     logging.info(f"--- initialization complete")
 
@@ -219,8 +233,9 @@ if __name__ == "__main__":
         redis_controller.set_value('shutter_a_nom', int(current_shutter_angle))
         fps_last = int(float(redis_controller.get_value('fps')))
         redis_controller.set_value('fps_last', fps_last )
-        cinepi_controller.set_pwm_mode(0)
-        cinepi_controller.set_trigger_mode(0)
+        #cinepi_controller.set_pwm_mode(0)
+        #cinepi_controller.set_trigger_mode(0)
+        redis_controller.set_value('cg_rb', '2.5,2.0')
         pwm_controller.stop_pwm()
         dmesg_monitor.join()
         command_executor.join()

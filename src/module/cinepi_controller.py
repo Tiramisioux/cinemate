@@ -81,6 +81,8 @@ class CinePiController:
 
         # Communicate the initial fps_actual to the web app
         self.redis_controller.set_value('fps_actual', self.fps_actual)
+        
+        self.set_resolution(int(self.redis_controller.get_value('sensor_mode')))
 
     def clear_startup_flag(self):
         self.startup = False
@@ -269,6 +271,8 @@ class CinePiController:
                     logging.info(f"Couldn't find sensor mode {value}. Trying with sensor_mode 0.")
                     value = 0
                 
+                self.redis_controller.set_value('sensor_mode', str(value))
+                
                 resolution_info = self.sensor_detect.res_modes[value]
                 height_new = resolution_info.get('height', None)
                 width_new = resolution_info.get('width', None)
@@ -277,20 +281,15 @@ class CinePiController:
                 gui_layout_new = resolution_info.get('gui_layout', None)
                 file_size_new = resolution_info.get('file_size', None)
                 
-                
                 if height_new is None or width_new is None or gui_layout_new is None:
                     raise ValueError("Invalid height, width, or gui_layout value.")
                 
-
                 self.redis_controller.set_value('height', str(height_new))
                 self.redis_controller.set_value('width', str(width_new))
                 self.redis_controller.set_value('bit_depth', str(bit_depth_new))
                 self.redis_controller.set_value('fps_max', str(fps_max_new))
                 self.redis_controller.set_value('gui_layout', str(gui_layout_new))
                 self.redis_controller.set_value('file_size', str(file_size_new))
-
-                #self.redis_controller.set_value('sensor', str(self.sensor_detect.camera_model))
-                self.redis_controller.set_value('sensor_mode', str(value))
 
                 self.redis_controller.set_value('cam_init', 1)
                 
@@ -299,7 +298,7 @@ class CinePiController:
                 logging.info(f"Resolution set to mode {value}, height: {height_new}, width: {width_new}, gui_layout: {gui_layout_new}")
                 
                 fps_current = int(float(self.redis_controller.get_value('fps_last')))
-                time.sleep(2)
+                time.sleep(0.5)
                 
                 self.cinepi.restart()
                 
@@ -566,6 +565,100 @@ class CinePiController:
 
     def dec_fps(self):
         self.decrement_setting('fps', self.fps_steps)
+        
+    def set_wb(self, kelvin_temperature=None, direction='next'):
+        # Define the cg_rb values for different temperatures and sensors
+        wb_values = {
+            'imx585': {
+                3200: (0.9656, 0.2531),
+                4400: (0.7863, 0.4295),
+                5600: (0.5641, 0.5749),
+            },
+            'imx477': {
+                3200: (0.4030, 0.4895),
+                4400: (0.3206, 0.6274),
+                5600: (0.2843, 0.7565),
+            },
+            'imx296': {
+                3200: (0.4429, 0.3676),
+                4400: (0.3469, 0.5149),
+                5600: (0.3063, 0.5684),
+            },
+            'imx283': {
+                3200: (0.7890, 0.3556),
+                4400: (0.6148, 0.4892),
+                5600: (0.4792, 0.6054),
+            }
+        }
+
+        # Get the current sensor model
+        sensor_model = self.sensor_detect.camera_model
+
+        if sensor_model not in wb_values:
+            logging.error(f"Unsupported sensor model: {sensor_model}")
+            return
+
+        # Extract the list of temperatures and their corresponding cg_rb values
+        temperatures = list(wb_values[sensor_model].keys())
+        cg_rb_values = list(wb_values[sensor_model].values())
+
+        if kelvin_temperature is None:
+            # Toggle based on direction if no kelvin_temperature is provided
+            current_kelvin = self.redis_controller.get_value('wb_user')
+            if current_kelvin:
+                try:
+                    current_kelvin = int(current_kelvin)
+                    logging.info(f"Parsed current wb_user value: {current_kelvin}")
+                except ValueError:
+                    current_kelvin = None
+                    logging.error(f"Error parsing current wb_user value from Redis: {self.redis_controller.get_value('wb_user')}")
+
+            found_index = None
+            if current_kelvin in temperatures:
+                found_index = temperatures.index(current_kelvin)
+
+            if found_index is not None:
+                logging.info(f"Current wb_user index: {found_index}")
+                if direction == 'next':
+                    next_index = (found_index + 1) % len(temperatures)
+                elif direction == 'prev':
+                    next_index = (found_index - 1) % len(temperatures)
+                logging.info(f"Next wb_user index: {next_index}")
+            else:
+                logging.info(f"Current value not found in temperatures.")
+                next_index = 0
+
+            kelvin_temperature = temperatures[next_index]
+        else:
+            # Find the closest valid Kelvin temperature if the provided one is not exact
+            closest_temperature = min(temperatures, key=lambda t: abs(t - kelvin_temperature))
+            kelvin_temperature = closest_temperature
+
+        cg_rb_value = wb_values[sensor_model][kelvin_temperature]
+
+        # Compute the reciprocal of the cg_rb values and round to one decimal place
+        reciprocal_cg_rb_value = (round(1 / cg_rb_value[0], 1), round(1 / cg_rb_value[1], 1))
+
+        # Set the rounded reciprocal cg_rb value in Redis
+        self.redis_controller.set_value('cg_rb', f"{reciprocal_cg_rb_value[0]},{reciprocal_cg_rb_value[1]}")
+        # Store the Kelvin temperature in Redis for future reference
+        self.redis_controller.set_value('wb_user', str(kelvin_temperature))
+        logging.info(f"Set white balance for {kelvin_temperature}K: {reciprocal_cg_rb_value}")
+
+
+    def inc_wb(self):
+        self.set_wb(direction='next')
+
+    def dec_wb(self):
+        self.set_wb(direction='prev')
+
+
+    def inc_wb(self):
+        self.set_wb(direction='next')
+
+    def dec_wb(self):
+        self.set_wb(direction='prev')
+
         
     def set_pwm_mode(self, value=None):
         if self.current_sensor != 'imx477':

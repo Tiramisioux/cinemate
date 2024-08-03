@@ -35,7 +35,7 @@ class CinePi:
             self.message = Event()
             self.redis_controller = redis_controller
             self.sensor_detect = sensor_detect
-            self.default_args = self.get_default_args(sensor_detect)
+            self.default_args = self.get_default_args()
             self.process = None
             
             # Logging control
@@ -58,18 +58,19 @@ class CinePi:
             self.initialized = True
             logging.info('CinePi instantiated')
 
-    def get_default_args(self, sensor_detect):
-        sensor_mode = self.redis_controller.get_value('sensor_mode')
+    def get_default_args(self):
+        sensor_mode = int(self.redis_controller.get_value('sensor_mode'))
         if sensor_mode is None:
             # Default to 0 if no value is retrieved
             sensor_mode = '0'
-        sensor_model = sensor_detect.camera_model
+        self.sensor_detect.detect_camera_model()
+        sensor_model = self.sensor_detect.camera_model
         tuning_file_path = f'/home/pi/libcamera/src/ipa/rpi/pisp/data/{sensor_model}.json' #
         
         return [
-            '--mode', f"{sensor_detect.get_width(sensor_model, sensor_mode)}:{sensor_detect.get_height(sensor_model, sensor_mode)}:{sensor_mode}:U",
-            '--width', f"{sensor_detect.get_width(sensor_model, sensor_mode)}",
-            '--height', f"{sensor_detect.get_height(sensor_model, sensor_mode)}",
+            '--mode', f"{self.sensor_detect.get_width(sensor_model, sensor_mode)}:{self.sensor_detect.get_height(sensor_model, sensor_mode)}:{self.sensor_detect.get_bit_depth(sensor_model, sensor_mode)}:U",
+            '--width', f"{self.sensor_detect.get_width(sensor_model, sensor_mode)}",
+            '--height', f"{self.sensor_detect.get_height(sensor_model, sensor_mode)}",
             '--lores-width', '1280',
             '--lores-height', '720',
             '-p', '0,30,1920,1020',
@@ -81,11 +82,12 @@ class CinePi:
 
     def start_cinepi_process(self, cinepi_args=None):
         if cinepi_args is None:
-            cinepi_args = self.default_args
+            cinepi_args = self.get_default_args()
         else:
             cinepi_args = list(cinepi_args) + self.default_args
 
         command = ['cinepi-raw'] + cinepi_args
+        logging.info(f'Issuing {command}')
         self.process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         self.out_queue = Queue()

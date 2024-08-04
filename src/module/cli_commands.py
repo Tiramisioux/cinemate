@@ -33,9 +33,9 @@ class CommandExecutor(threading.Thread):
             'inc fps': (cinepi_controller.inc_fps, None),  
             'dec fps': (cinepi_controller.dec_fps, None), 
             
-            'set awb': (cinepi_controller.set_awb, int),
-            'inc awb': (cinepi_controller.inc_awb, None),
-            'dec awb': (cinepi_controller.dec_awb, None),
+            'set wb': (cinepi_controller.set_wb, [int, None]),
+            'inc wb': (cinepi_controller.inc_wb, [None]),
+            'dec wb': (cinepi_controller.dec_wb, [None]),
             
             'set resolution': (cinepi_controller.set_resolution, [int, None]),
              
@@ -54,10 +54,6 @@ class CommandExecutor(threading.Thread):
             'set shutter a nom fps lock': (cinepi_controller.set_shu_fps_lock, [int, None]),
             'set fps lock': (cinepi_controller.set_fps_lock, [int, None]),
             'set all lock': (cinepi_controller.set_all_lock, [int, None]),
-            
-            'set wb': (cinepi_controller.set_wb, [int, None]),
-            'inc wb': (cinepi_controller.inc_wb, [None]),
-            'dec wb': (cinepi_controller.dec_wb, [None]),
             
             'set fps double': (cinepi_controller.set_fps_double, [int, None]),
             

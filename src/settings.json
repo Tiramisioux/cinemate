@@ -8,7 +8,7 @@
     "iso_steps": [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200],
     "shutter_a_steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360],
     "fps_steps": [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50],
-    "awb_steps": [0, 1, 2, 3, 4, 5, 6, 7]
+    "wb_steps": [3200, 4400, 5600]
   },
 
   "settings": {
@@ -16,9 +16,10 @@
   },
 
   "analog_controls": {
-    "iso_pot": 0,
-    "shutter_a_pot": 2,
-    "fps_pot": 4
+    "iso_pot": "None",
+    "shutter_a_pot": "None",
+    "fps_pot": "None",
+    "wb_pot": "None"
   },
 
   "buttons": [

@@ -77,7 +77,7 @@ class CinePi:
             '--post-process-file', '/home/pi/post-processing.json',
             '--tuning-file', tuning_file_path,
             '--shutter', '20000',
-            #'--awb', 'tungsten',
+            '--awbgains', self.redis_controller.get_value('cg_rb'),
         ]
 
     def start_cinepi_process(self, cinepi_args=None):

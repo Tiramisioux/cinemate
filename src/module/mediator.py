@@ -6,8 +6,9 @@ import time
 import RPi
 
 class Mediator:
-    def __init__(self, cinepi_app, pwm_controller, redis_controller, ssd_monitor, gpio_output, stream):
+    def __init__(self, cinepi_app, redis_listener, pwm_controller, redis_controller, ssd_monitor, gpio_output, stream):
         self.cinepi_app = cinepi_app
+        self.redis_listener = redis_listener
         self.pwm_controller = pwm_controller
         self.redis_controller = redis_controller
         self.ssd_monitor = ssd_monitor
@@ -83,6 +84,7 @@ class Mediator:
             if is_recording:
                 logging.info("Recording started!")
                 self.gpio_output.set_recording(1)
+                self.redis_listener.reset_framecount()
                 
                 # Cancel the stop_recording_timer if it's running
                 if self.stop_recording_timer is not None and self.stop_recording_timer.is_alive():

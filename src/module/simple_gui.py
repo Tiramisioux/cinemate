@@ -9,6 +9,7 @@ import subprocess
 import logging
 from sugarpie import pisugar
 from flask_socketio import SocketIO
+import re
 
 class SimpleGUI(threading.Thread):
     def __init__(self, 
@@ -102,7 +103,8 @@ class SimpleGUI(threading.Thread):
                 "cpu_load": {"position": (1780, -2), "font_size": 26},
                 "cpu_temp": {"position": (1860, -2), "font_size": 26},
                 "disk_space": {"position": (10, 1044), "font_size": 34},
-                #"last_dng_added": {"position": (610, 1044), "font_size": 34},
+                "frame_count": {"position": (205, 1044), "font_size": 34},
+                    #"last_dng_added": {"position": (610, 1044), "font_size": 34},
                 "battery_level": {"position": (1830, 1044), "font_size": 34},
             }
         }
@@ -125,6 +127,7 @@ class SimpleGUI(threading.Thread):
             "cpu_load": {"normal": "white", "inverse": "black"},
             "cpu_temp": {"normal": "white", "inverse": "black"},
             "disk_space": {"normal": "white", "inverse": "black"},
+            "frame_count": {"normal": "white", "inverse": "black"},
            # "last_dng_added": {"normal": "white", "inverse": "black"},
             "battery_level": {"normal": "white", "inverse": "black"},
         }
@@ -149,6 +152,14 @@ class SimpleGUI(threading.Thread):
             "cpu_load": str(int(psutil.cpu_percent())) + '%',
             "cpu_temp": ('{}\u00B0C'.format(int(CPUTemperature().temperature))),
         }
+        
+        
+        # Construct the frame count string
+        frame_count_string = str(self.redis_controller.get_value("framecount")) + " / " + str(self.redis_controller.get_value("buffer"))
+
+        # Clean the string to only keep digits, blank spaces, and the / sign
+        cleaned_frame_count_string = re.sub(r"[^0-9 /]", "", frame_count_string)
+        values["frame_count"]= frame_count_string
 
         if values["fps"] != int(float(self.redis_controller.get_value('fps_user'))):
             self.colors["fps"]["normal"] = "yellow"
@@ -215,17 +226,17 @@ class SimpleGUI(threading.Thread):
         elif int(self.redis_controller.get_value('is_writing_buf')) == 1:
             self.current_background_color = "red"
             self.color_mode = "inverse"
-        elif self.redis_listener.bufferSize != 0:
+        elif int(self.redis_controller.get_value('is_buffering')) == 1:
             self.current_background_color = "green"
             self.color_mode = "inverse"
         else:
             self.current_background_color = "black"
             self.color_mode = "normal"
 
-        # If conditions for both red and green are met, prioritize red
-        if self.current_background_color == "green" and int(self.redis_controller.get_value('is_writing_buf')) == 1:
-            self.current_background_color = "red"
-            self.color_mode = "inverse"
+            # # If conditions for both red and green are met, prioritize red
+            # if self.current_background_color == "green" and int(self.redis_controller.get_value('framecount_is_increasing')) == 1:
+            #     self.current_background_color = "red"
+            #     self.color_mode = "inverse"
 
         # Check if the background color has changed
         if self.current_background_color != previous_background_color:

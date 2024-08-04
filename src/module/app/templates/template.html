@@ -77,9 +77,9 @@
             </select>
         </div>
         <div>WB:
-            <select id="awb-select">
-                {% for awb_value in awb_values %}
-                    <option value="{{ awb_value.value }}" {% if awb_value.value == current_awb %}selected{% endif %}>{{ awb_value.name }}</option>
+            <select id="wb-select">
+                {% for wb_value in wb_steps %}
+                    <option value="{{ wb_value }}" {% if wb_value == current_wb %}selected{% endif %}>{{ wb_value }}K</option>
                 {% endfor %}
             </select>
         </div>
@@ -100,6 +100,8 @@
                 {% endfor %}
             </select>
         </div>
+        <div>FRAMECOUNT: <span id="framecount"></span></div>
+        <div>BUFFER: <span id="buffer"></span></div>
         <button id="fullscreen-btn">Enter Fullscreen</button>
     </div>
     <script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
@@ -134,17 +136,17 @@
             });
         }
 
-        function updateAwbOptions(awb_steps, current_awb) {
-            const awbSelect = document.getElementById('awb-select');
-            awbSelect.innerHTML = '';
-            awb_steps.forEach(awb => {
+        function updateWBOptions(wb_steps, current_wb) {
+            const wbSelect = document.getElementById('wb-select');
+            wbSelect.innerHTML = '';
+            wb_steps.forEach(wb => {
                 const option = document.createElement('option');
-                option.value = awb.value;
-                option.textContent = awb.name;
-                if (awb.value == current_awb) {
+                option.value = wb;
+                option.textContent = `${wb}K`;
+                if (wb == current_wb) {
                     option.selected = true;
                 }
-                awbSelect.appendChild(option);
+                wbSelect.appendChild(option);
             });
         }
 
@@ -152,13 +154,16 @@
             document.getElementById('iso-select').value = data.iso;
             updateShutterSpeedOptions(data.shutter_a_steps, data.shutter_a);
             updateFpsOptions(data.fps_steps, data.fps);
-            updateAwbOptions(data.awb_steps, data.awb);
+            updateWBOptions(data.wb_steps, data.wb);
 
             document.body.style.backgroundColor = data.background_color;
             document.getElementById('disk-space').innerText = data.disk_space;
             document.getElementById('cpu-load').innerText = data.cpu_load;
             document.getElementById('ram-load').innerText = data.ram_load;
             document.getElementById('cpu-temp').innerText = data.cpu_temp;
+
+            document.getElementById('framecount').innerText = data.framecount;
+            document.getElementById('buffer').innerText = data.buffer;
 
             document.getElementById('current-sensor').innerText = data.current_sensor;
             const resolutionSelect = document.getElementById('resolution-select');
@@ -179,17 +184,19 @@
             if (data.shutter_a !== undefined) {
                 const currentShutter = data.shutter_a;
                 document.getElementById('shutter-speed-select').value = currentShutter;
-                // Fetch and update shutter angles if necessary
                 socket.emit('request_shutter_a_steps', {}, (response) => {
                     updateShutterSpeedOptions(response.shutter_a_steps, currentShutter);
                 });
             }
-            if (data.fps_actual !== undefined) {
-                document.getElementById('fps-select').value = data.fps_actual;
+            if (data.fps !== undefined) {
+                document.getElementById('fps-select').value = data.fps;
             }
-            if (data.awb !== undefined) {
-                document.getElementById('awb-select').value = data.awb;
+            if (data.wb !== undefined) {
+                document.getElementById('wb-select').value = data.wb;
             }
+            if (data.framebuffer !== undefined) {
+                document.getElementById('framebuffer').value = data.framebuffer;
+            }   
         });
 
         socket.on('shutter_a_update', data => {
@@ -239,9 +246,9 @@
             socket.emit('change_fps', { fps });
         });
 
-        document.getElementById('awb-select').addEventListener('change', function() {
-            const awb = this.value;
-            socket.emit('change_awb', { awb });
+        document.getElementById('wb-select').addEventListener('change', function() {
+            const wb = this.value;
+            socket.emit('change_wb', { wb });
         });
 
         document.getElementById('resolution-select').addEventListener('change', function() {

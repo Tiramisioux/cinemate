@@ -2,6 +2,7 @@ import logging
 import threading
 import os
 import time
+import json
 from fractions import Fraction
 import math
 import subprocess
@@ -20,7 +21,7 @@ class CinePiController:
                  iso_steps,
                  shutter_a_steps,
                  fps_steps,
-                 awb_steps,
+                 wb_steps,   # Use this directly
                  light_hz,
                  ):
         
@@ -34,8 +35,10 @@ class CinePiController:
         self.iso_steps = iso_steps
         self.shutter_a_steps = shutter_a_steps
         self.fps_steps = fps_steps
-        self.awb_steps = awb_steps
+        self.wb_steps = wb_steps  # Use the provided wb_steps
         self.light_hz = light_hz
+        
+        self.wb_cg_rb_array = {}  # Initialize as an empty dictionary
         
         self.redis_listener = RedisListener(redis_controller)
         self.fps_actual = self.redis_listener.framerate if self.redis_listener.framerate else 1
@@ -73,8 +76,11 @@ class CinePiController:
         self.exposure_time_saved = self.exposure_time_s
         self.file_size = self.sensor_detect.get_file_size(self.current_sensor, self.sensor_mode)
         
+        self.settings = self.load_settings()  # Load other settings, if needed
+        
         self.initialize_fps_steps(self.fps_steps)
         self.initialize_shutter_a_steps(self.shutter_a_steps)
+        self.initialize_wb_cg_rb_array()  # Initialize the white balance array
 
         # Set a timer to clear the startup flag after a short period
         threading.Timer(5.0, self.clear_startup_flag).start()
@@ -84,10 +90,30 @@ class CinePiController:
         
         self.set_resolution(int(self.redis_controller.get_value('sensor_mode')))
 
+    def load_settings(self):
+        try:
+            with open('/home/pi/cinemate/src/settings.json', 'r') as file:
+                settings = json.load(file)
+                logging.info("Settings loaded successfully.")
+                return settings
+        except Exception as e:
+            logging.error(f"Error loading settings: {e}")
+            return {}
+
+
     def clear_startup_flag(self):
         self.startup = False
         # Communicate the current fps_actual to the web app after the startup phase
         self.redis_controller.set_value('fps_actual', self.fps_actual)
+
+    def load_wb_steps(self):
+        try:
+            wb_steps = self.settings.get('arrays', {}).get('wb_steps', [])
+            logging.info(f"WB steps loaded: {wb_steps}")
+            return wb_steps
+        except Exception as e:
+            logging.error(f"Error loading WB steps: {e}")
+            return []
 
     def initialize_fps_steps(self, fps_steps):
         self.fps_max = int(self.redis_controller.get_value('fps_max'))
@@ -105,28 +131,6 @@ class CinePiController:
         if not self.shutter_a_steps_dynamic:
             self.shutter_a_steps_dynamic = [45, 90, 135, 172.8, 180, 225, 270, 315, 360]
         logging.info(f"Initialized shutter_a_steps: {self.shutter_a_steps_dynamic}")
-
-    # def update_fps_actual(self, new_framerate):
-    #     new_framerate_rounded = round(new_framerate)
-    #     if new_framerate_rounded == 0:
-    #         logging.error(f"Received invalid fps_actual value: {new_framerate_rounded}, fps_actual remains unchanged.")
-    #         return
-
-    #     # Ignore updates during startup phase
-    #     if self.startup:
-    #         #logging.info(f"Ignoring fps_actual update to {new_framerate_rounded} during startup phase.")
-    #         return
-
-        # # Allow setting fps_actual to 29 manually and check for redundancy
-        # if new_framerate_rounded != round(self.fps_actual) or new_framerate_rounded == 29:
-        #     if new_framerate_rounded == round(self.fps_actual) and self.redis_controller.get_value('fps_actual') == str(new_framerate_rounded):
-        #         # Skip redundant updates
-        #         return
-            
-        #     self.fps_actual = new_framerate_rounded
-        #     logging.info(f"Updated fps_actual to {new_framerate_rounded}")
-        #     self.redis_controller.set_value('fps_actual', new_framerate_rounded)
-        #     self.update_shutter_angle_for_fps()
 
     def update_shutter_angle_for_fps(self):
         if self.fps_actual <= 0:
@@ -464,31 +468,14 @@ class CinePiController:
         self.fps_actual = int(fps)
         self.shutter_a_steps_dynamic = self.calculate_dynamic_shutter_angles(fps)
 
-    def set_awb(self, value):
-        value = int(value)
-        if 0 <= value <= 7:
-            self.redis_controller.set_value('awb', value)
-            logging.info(f"Setting AWB to {value}")
-            self.cinepi.restart()
-            time.sleep(2)
-            self.set_fps(int(self.redis_controller.get_value('fps_last')))
-        else:
-            logging.error("Invalid AWB value. It should be between 0 and 7.")
-
-    def inc_awb(self):
-        current_value = int(self.redis_controller.get_value('awb'))
-        new_value = (current_value + 1) % 8
-        self.set_awb(new_value)
-
-    def dec_awb(self):
-        current_value = int(self.redis_controller.get_value('awb'))
-        new_value = (current_value - 1) % 8
-        self.set_awb(new_value)
-
     def increment_setting(self, setting_name, steps, fps=None):
-        if setting_name == 'awb':
-            current_value = int(self.get_setting(setting_name))
-            dynamic_steps = self.awb_steps  # AWB steps from settings
+        if self.pwm_mode == False:
+            current_value = float(self.get_setting(setting_name))
+            if setting_name == 'shutter_a':
+                dynamic_steps = self.calculate_dynamic_shutter_angles(self.fps_actual)
+                self.shutter_a_steps_dynamic = dynamic_steps
+            else:
+                dynamic_steps = steps
             if current_value in dynamic_steps:
                 idx = dynamic_steps.index(current_value)
                 idx = min(idx + 1, len(dynamic_steps) - 1)
@@ -496,28 +483,17 @@ class CinePiController:
                 idx = 0
             getattr(self, f"set_{setting_name}")(dynamic_steps[idx])
             logging.info(f"Increasing {setting_name} to {self.get_setting(setting_name)}")
-        else:
-            if self.pwm_mode == False:
-                current_value = float(self.get_setting(setting_name))
-                if setting_name == 'shutter_a':
-                    dynamic_steps = self.calculate_dynamic_shutter_angles(self.fps_actual)
-                    self.shutter_a_steps_dynamic = dynamic_steps
-                else:
-                    dynamic_steps = steps
-                if current_value in dynamic_steps:
-                    idx = dynamic_steps.index(current_value)
-                    idx = min(idx + 1, len(dynamic_steps) - 1)
-                else:
-                    idx = 0
-                getattr(self, f"set_{setting_name}")(dynamic_steps[idx])
-                logging.info(f"Increasing {setting_name} to {self.get_setting(setting_name)}")
-            elif self.pwm_mode == True and setting_name == 'fps':
-                self.set_fps(int(self.fps_actual) + 1)
+        elif self.pwm_mode == True and setting_name == 'fps':
+            self.set_fps(int(self.fps_actual) + 1)
 
     def decrement_setting(self, setting_name, steps, fps=None):
-        if setting_name == 'awb':
-            current_value = int(self.get_setting(setting_name))
-            dynamic_steps = self.awb_steps  # AWB steps from settings
+        if self.pwm_mode == False:
+            current_value = float(self.get_setting(setting_name))
+            if setting_name == 'shutter_a':
+                dynamic_steps = self.calculate_dynamic_shutter_angles(self.fps_actual)
+                self.shutter_a_steps_dynamic = dynamic_steps
+            else:
+                dynamic_steps = steps
             if current_value in dynamic_steps:
                 idx = dynamic_steps.index(current_value)
                 idx = max(idx - 1, 0)
@@ -525,23 +501,8 @@ class CinePiController:
                 idx = 0
             getattr(self, f"set_{setting_name}")(dynamic_steps[idx])
             logging.info(f"Decreasing {setting_name} to {self.get_setting(setting_name)}")
-        else:
-            if self.pwm_mode == False:
-                current_value = float(self.get_setting(setting_name))
-                if setting_name == 'shutter_a':
-                    dynamic_steps = self.calculate_dynamic_shutter_angles(self.fps_actual)
-                    self.shutter_a_steps_dynamic = dynamic_steps
-                else:
-                    dynamic_steps = steps
-                if current_value in dynamic_steps:
-                    idx = dynamic_steps.index(current_value)
-                    idx = max(idx - 1, 0)
-                else:
-                    idx = 0
-                getattr(self, f"set_{setting_name}")(dynamic_steps[idx])
-                logging.info(f"Decreasing {setting_name} to {self.get_setting(setting_name)}")
-            elif self.pwm_mode == True and setting_name == 'fps':
-                self.set_fps(int(self.fps_actual) - 1)
+        elif self.pwm_mode == True and setting_name == 'fps':
+            self.set_fps(int(self.fps_actual) - 1)
     def inc_shutter_a(self):
         self.increment_setting('shutter_a', self.shutter_a_steps, fps=self.fps_actual)
 
@@ -566,44 +527,105 @@ class CinePiController:
     def dec_fps(self):
         self.decrement_setting('fps', self.fps_steps)
         
+    def initialize_wb_cg_rb_array(self):
+        """Initialize the white balance cg_rb array based on the sensor model."""
+        default_ct_curve = [
+            2000.0, 0.6331025775790707, 0.27424225990946915,
+            2200.0, 0.5696117366212947, 0.3116091368689487,
+            2400.0, 0.5204264653110015, 0.34892179554105873,
+            2600.0, 0.48148675531667223, 0.38565229719076793,
+            2800.0, 0.450085403501908, 0.42145684622485047,
+            3000.0, 0.42436130159169017, 0.45611835670028816,
+            3200.0, 0.40300023695527337, 0.48950766215198593,
+            3400.0, 0.3850520052612984, 0.5215567075837261,
+            3600.0, 0.36981508088230314, 0.5522397906415475,
+            4100.0, 0.333468007836758, 0.5909770465167908,
+            4600.0, 0.31196097364221376, 0.6515706327327178,
+            5100.0, 0.2961860409294588, 0.7068178946570284,
+            5600.0, 0.2842607232745885, 0.7564837749584288,
+            6100.0, 0.2750265787051251, 0.8006183524920533,
+            6600.0, 0.2677057225584924, 0.8398879225373039,
+            7100.0, 0.2617955199757274, 0.8746456080032436,
+            7600.0, 0.25693714288250125, 0.905569559506562,
+            8100.0, 0.25287531441063316, 0.9331696750390895,
+            8600.0, 0.24946601483331993, 0.9576820904825795
+        ]
+
+        self.wb_cg_rb_array = {}  # Ensuring it is initialized as a dictionary
+
+        try:
+            tuning_file_path = f"/home/pi/libcamera/src/ipa/rpi/pisp/data/{self.current_sensor}.json"
+            logging.info(f"Loading tuning file from: {tuning_file_path}")
+
+            with open(tuning_file_path, 'r') as file:
+                data = json.load(file)
+                logging.info("Tuning data loaded successfully.")
+
+            awb_data = next((algo['rpi.awb'] for algo in data['algorithms'] if 'rpi.awb' in algo), None)
+            if not awb_data:
+                logging.warning("'rpi.awb' algorithm data not found, using default ct_curve.")
+                ct_curve = default_ct_curve
+            else:
+                logging.info(f"'rpi.awb' data found: {awb_data}")
+                ct_curve = awb_data.get('ct_curve', None)
+                if not ct_curve:
+                    logging.warning("'ct_curve' not found in 'rpi.awb' data, using default ct_curve.")
+                    ct_curve = default_ct_curve
+                else:
+                    logging.info(f"Retrieved ct_curve: {ct_curve}")
+
+            temperatures = ct_curve[0::3]
+            r_values = ct_curve[1::3]
+            b_values = ct_curve[2::3]
+            logging.info(f"Parsed temperatures: {temperatures}")
+            logging.info(f"Parsed r_values: {r_values}")
+            logging.info(f"Parsed b_values: {b_values}")
+
+            for wb in self.wb_steps:
+                lower_idx = max(i for i, temp in enumerate(temperatures) if temp <= wb)
+                upper_idx = min(i for i, temp in enumerate(temperatures) if temp >= wb)
+
+                logging.info(f"Interpolating for wb step: {wb}K, lower index: {lower_idx}, upper index: {upper_idx}")
+
+                if lower_idx == upper_idx:
+                    r_interp = r_values[lower_idx]
+                    b_interp = b_values[lower_idx]
+                    logging.info(f"Exact match found at index {lower_idx}, r_interp: {r_interp}, b_interp: {b_interp}")
+                else:
+                    r_interp = self.interpolate(temperatures[lower_idx], r_values[lower_idx],
+                                                temperatures[upper_idx], r_values[upper_idx], wb)
+                    b_interp = self.interpolate(temperatures[lower_idx], b_values[lower_idx],
+                                                temperatures[upper_idx], b_values[upper_idx], wb)
+                    logging.info(f"Interpolated values for {wb}K - r_interp: {r_interp}, b_interp: {b_interp}")
+
+                self.wb_cg_rb_array[wb] = (round(1/r_interp, 1), round(1/b_interp, 1))
+                logging.info(f"Calculated reciprocal cg_rb for {wb}K: {self.wb_cg_rb_array[wb]}")
+
+            logging.info(f"Initialized wb_cg_rb_array: {self.wb_cg_rb_array}")
+        except KeyError as e:
+            logging.error(f"Key error in initializing wb_cg_rb_array: {e}")
+            self.wb_cg_rb_array = {}
+        except Exception as e:
+            logging.error(f"Failed to initialize wb_cg_rb_array: {e}")
+            self.wb_cg_rb_array = {}
+
+
+    def interpolate(self, x1, y1, x2, y2, x):
+        """Perform linear interpolation."""
+        logging.debug(f"Interpolating with points ({x1}, {y1}) and ({x2}, {y2}) for x = {x}")
+        result = y1 + (y2 - y1) * (x - x1) / (x2 - x1)
+        logging.debug(f"Interpolated result: {result}")
+        return result
+
     def set_wb(self, kelvin_temperature=None, direction='next'):
-        # Define the cg_rb values for different temperatures and sensors
-        wb_values = {
-            'imx585': {
-                3200: (0.9656, 0.2531),
-                4400: (0.7863, 0.4295),
-                5600: (0.5641, 0.5749),
-            },
-            'imx477': {
-                3200: (0.4030, 0.4895),
-                4400: (0.3206, 0.6274),
-                5600: (0.2843, 0.7565),
-            },
-            'imx296': {
-                3200: (0.4429, 0.3676),
-                4400: (0.3469, 0.5149),
-                5600: (0.3063, 0.5684),
-            },
-            'imx283': {
-                3200: (0.7890, 0.3556),
-                4400: (0.6148, 0.4892),
-                5600: (0.4792, 0.6054),
-            }
-        }
-
-        # Get the current sensor model
-        sensor_model = self.sensor_detect.camera_model
-
-        if sensor_model not in wb_values:
-            logging.error(f"Unsupported sensor model: {sensor_model}")
-            return
-
-        # Extract the list of temperatures and their corresponding cg_rb values
-        temperatures = list(wb_values[sensor_model].keys())
-        cg_rb_values = list(wb_values[sensor_model].values())
-
+        """Set white balance based on the Kelvin temperature or direction."""
+        logging.debug(f"WB steps available: {self.wb_steps}")
+        
+        if not self.wb_steps:
+            logging.error("WB steps are not defined or empty.")
+            return  # Exit if wb_steps is empty to prevent further errors
+        
         if kelvin_temperature is None:
-            # Toggle based on direction if no kelvin_temperature is provided
             current_kelvin = self.redis_controller.get_value('wb_user')
             if current_kelvin:
                 try:
@@ -614,43 +636,31 @@ class CinePiController:
                     logging.error(f"Error parsing current wb_user value from Redis: {self.redis_controller.get_value('wb_user')}")
 
             found_index = None
-            if current_kelvin in temperatures:
-                found_index = temperatures.index(current_kelvin)
+            if current_kelvin in self.wb_steps:
+                found_index = self.wb_steps.index(current_kelvin)
 
             if found_index is not None:
-                logging.info(f"Current wb_user index: {found_index}")
                 if direction == 'next':
-                    next_index = (found_index + 1) % len(temperatures)
+                    next_index = (found_index + 1) % len(self.wb_steps)
                 elif direction == 'prev':
-                    next_index = (found_index - 1) % len(temperatures)
-                logging.info(f"Next wb_user index: {next_index}")
+                    next_index = (found_index - 1) % len(self.wb_steps)
             else:
-                logging.info(f"Current value not found in temperatures.")
                 next_index = 0
 
-            kelvin_temperature = temperatures[next_index]
+            kelvin_temperature = self.wb_steps[next_index]
         else:
-            # Find the closest valid Kelvin temperature if the provided one is not exact
-            closest_temperature = min(temperatures, key=lambda t: abs(t - kelvin_temperature))
+            closest_temperature = min(self.wb_steps, key=lambda t: abs(t - kelvin_temperature))
             kelvin_temperature = closest_temperature
 
-        cg_rb_value = wb_values[sensor_model][kelvin_temperature]
-
-        # Compute the reciprocal of the cg_rb values and round to one decimal place
-        reciprocal_cg_rb_value = (round(1 / cg_rb_value[0], 1), round(1 / cg_rb_value[1], 1))
-
-        # Set the rounded reciprocal cg_rb value in Redis
-        self.redis_controller.set_value('cg_rb', f"{reciprocal_cg_rb_value[0]},{reciprocal_cg_rb_value[1]}")
-        # Store the Kelvin temperature in Redis for future reference
-        self.redis_controller.set_value('wb_user', str(kelvin_temperature))
-        logging.info(f"Set white balance for {kelvin_temperature}K: {reciprocal_cg_rb_value}")
+        cg_rb_value = self.wb_cg_rb_array.get(kelvin_temperature, None)
+        if cg_rb_value:
+            self.redis_controller.set_value('cg_rb', f"{cg_rb_value[0]},{cg_rb_value[1]}")
+            self.redis_controller.set_value('wb_user', str(kelvin_temperature))
+            logging.info(f"Set white balance for {kelvin_temperature}K: {cg_rb_value}")
+        else:
+            logging.error(f"White balance value not found for {kelvin_temperature}K")
 
 
-    def inc_wb(self):
-        self.set_wb(direction='next')
-
-    def dec_wb(self):
-        self.set_wb(direction='prev')
 
 
     def inc_wb(self):
@@ -658,7 +668,6 @@ class CinePiController:
 
     def dec_wb(self):
         self.set_wb(direction='prev')
-
         
     def set_pwm_mode(self, value=None):
         if self.current_sensor != 'imx477':
@@ -681,23 +690,51 @@ class CinePiController:
                 self.fps_saved = float(self.get_setting('fps'))
                 shutter_a_current = float(self.get_setting('shutter_a_nom'))
             
-    def set_trigger_mode(self, value):
-        if value not in [0, 2]:
-            raise ValueError("Invalid argument: must be 0 or 2")
-        
+    def set_trigger_mode(self, value=None):
+        # Define the mapping for string arguments
+        mode_map = {
+            'default': 0,
+            'source': 1 if self.sensor_detect.camera_model == 'imx477' else 2,
+            'sink': 2 if self.sensor_detect.camera_model == 'imx477' else 1,
+        }
+
+        # Retrieve current mode from Redis
+        current_mode = int(self.redis_controller.get_value('trigger_mode', 0))
+
+        if value is None:
+            # Toggle to the next mode
+            value = (current_mode + 1) % 3
+        elif isinstance(value, str):
+            # Convert string arguments to corresponding numeric values
+            if value in mode_map:
+                value = mode_map[value]
+            else:
+                raise ValueError("Invalid string argument. Must be 'default', 'source', or 'sink'.")
+        elif value not in [0, 1, 2]:
+            raise ValueError("Invalid argument: must be 0, 1, 2, 'default', 'source', or 'sink'.")
+
+        # Determine the command based on the value and camera model
         if self.sensor_detect.camera_model == 'imx477':
             command = f'echo {value} > /sys/module/imx477/parameters/trigger_mode'
         elif self.sensor_detect.camera_model == 'imx296':
-            if value == 2: value = 1
+            if value == 2: value = 1  # Adjust for imx296 sensor
+            elif value == 1: value = 2  # Adjust for imx296 sensor
             command = f'echo {value} > /sys/module/imx296/parameters/trigger_mode'
-        
+        else:
+            raise ValueError("Unsupported camera model.")
+
+        # Execute the command to set the trigger mode
         full_command = ['sudo', 'su', '-c', command]
         subprocess.run(full_command, check=True)
         logging.info(f"Trigger mode set to {value}")
-        
+
+        # Update the trigger mode in Redis and instance variable
         self.trigger_mode = value
-        
+        self.redis_controller.set_value('trigger_mode', str(value))
+
+        # Restart the cinepi process to apply the changes
         self.cinepi.restart()
+
         
     def set_shutter_a_sync(self, value=None):
         if value is None:

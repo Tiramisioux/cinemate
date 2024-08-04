@@ -66,13 +66,11 @@ def load_settings(filename):
         if 'arrays' in original_settings:
             arrays_settings = original_settings['arrays']
             fps_steps = arrays_settings.get('fps_steps', list(range(1, 51)))
-            fps_steps = fps_steps if fps_steps is not None else list(range(1, 51))
-
             settings['arrays'] = {
                 'iso_steps': arrays_settings.get('iso_steps', []),
                 'shutter_a_steps': arrays_settings.get('shutter_a_steps', []),
                 'fps_steps': fps_steps,
-                'awb_steps': arrays_settings.get('awb_steps', list(range(0, 8)))
+                'wb_steps': arrays_settings.get('wb_steps', [])  # Correct key usage
             }
 
         if 'analog_controls' in original_settings:
@@ -154,7 +152,7 @@ if __name__ == "__main__":
                                          iso_steps=settings['arrays']['iso_steps'],
                                          shutter_a_steps=settings['arrays']['shutter_a_steps'],
                                          fps_steps=settings['arrays']['fps_steps'],
-                                         awb_steps=settings['arrays']['awb_steps'],
+                                         wb_steps=settings['arrays']['wb_steps'],
                                          light_hz=settings['settings']['light_hz'],
                                          )
 
@@ -187,11 +185,69 @@ if __name__ == "__main__":
     else:
         logging.error("Didn't find Wi-Fi hotspot. Stream module not loaded")
 
-    mediator = Mediator(cinepi, pwm_controller, redis_controller, ssd_monitor, gpio_output, stream)
+    mediator = Mediator(cinepi, redis_listener, pwm_controller, redis_controller, ssd_monitor, gpio_output, stream)
     time.sleep(1)
     
     usb_monitor.check_initial_devices()
     
+        
+    # Extract analog control settings
+    analog_settings = settings.get('analog_controls', {})
+    array_settings = settings.get('arrays', {})
+
+    # Convert "None" string to actual None type
+    def convert_none_string(value):
+        return None if value == "None" else value
+
+    # Retrieve values for each potentiometer
+    iso_pot = convert_none_string(analog_settings.get('iso_pot'))
+    shutter_a_pot = convert_none_string(analog_settings.get('shutter_a_pot'))
+    fps_pot = convert_none_string(analog_settings.get('fps_pot'))
+    wb_pot = convert_none_string(analog_settings.get('wb_pot'))
+
+    # Retrieve step values for debounce mechanism
+    iso_steps = array_settings.get('iso_steps', [])
+    shutter_a_steps = array_settings.get('shutter_a_steps', [])
+    fps_steps = array_settings.get('fps_steps', [])
+    wb_steps = array_settings.get('wb_steps', [])
+    
+    logging.info(f"Loaded WB steps: {wb_steps}")
+
+    analog_controls = AnalogControls(
+        cinepi_controller=cinepi_controller,
+        redis_controller=redis_controller,
+        iso_pot=iso_pot,
+        shutter_a_pot=shutter_a_pot,
+        fps_pot=fps_pot,
+        wb_pot=wb_pot,
+        iso_steps=settings['arrays']['iso_steps'],
+        shutter_a_steps=settings['arrays']['shutter_a_steps'],
+        fps_steps=settings['arrays']['fps_steps'],
+        wb_steps=settings['arrays']['wb_steps']
+    )
+
+
+        
+    # Get the trigger_mode value from Redis
+    trigger_mode_value = redis_controller.get_value('trigger_mode')
+
+    if trigger_mode_value is not None:
+        try:
+            # Convert trigger_mode_value to an integer
+            trigger_mode = int(trigger_mode_value)
+            
+            # Use the cinepi_controller to set the trigger mode
+            cinepi_controller.set_trigger_mode(trigger_mode)
+            
+            logging.info(f"Trigger mode set to {trigger_mode} using cinepi_controller.")
+        except ValueError:
+            logging.error(f"Invalid trigger_mode value retrieved: {trigger_mode_value}")
+    else:
+        logging.error("trigger_mode value is not set in Redis.")
+        
+    # Additional logging to verify the content of wb_steps
+    logging.info(f"Initialized WB steps: {settings['arrays']['wb_steps']}")
+        
     # Get the wb_user value from Redis
     wb_user_value = redis_controller.get_value('wb_user')
 
@@ -209,15 +265,11 @@ if __name__ == "__main__":
     else:
         logging.error("wb_user value is not set in Redis.")
     
-    # analog_controls = AnalogControls(
-    #     cinepi_controller=cinepi_controller,
-    #     redis_controller=redis_controller,
-    #     iso_pot=None,  # Example analog input for ISO
-    #     shutter_a_pot=None,  # Example analog input for Shutter Angle
-    #     fps_pot=0  # Example analog input for FPS
-    #     )
     
-    cinepi_controller.set_pwm_mode(1)
+
+
+    
+    #cinepi_controller.set_pwm_mode(1)
 
     logging.info(f"--- initialization complete")
 
@@ -236,6 +288,7 @@ if __name__ == "__main__":
         #cinepi_controller.set_pwm_mode(0)
         #cinepi_controller.set_trigger_mode(0)
         redis_controller.set_value('cg_rb', '2.5,2.0')
+        redis_listener.reset_framecount()
         pwm_controller.stop_pwm()
         dmesg_monitor.join()
         command_executor.join()

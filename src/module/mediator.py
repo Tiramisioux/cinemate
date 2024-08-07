@@ -3,8 +3,6 @@ import threading
 import json
 import time
 
-import RPi
-
 class Mediator:
     def __init__(self, cinepi_app, redis_listener, pwm_controller, redis_controller, ssd_monitor, gpio_output, stream):
         self.cinepi_app = cinepi_app
@@ -27,8 +25,6 @@ class Mediator:
         self.redis_controller.redis_parameter_changed.subscribe(self.handle_fps_change)
         
         self.redis_controller.redis_parameter_changed.subscribe(self.handle_shutter_a_change)
-        
-        # self.redis_controller.redis_parameter_changed.subscribe(self.handle_cinepi_running_change)
         
         logging.info("Mediator instantiated")
         
@@ -80,7 +76,6 @@ class Mediator:
         if data['key'] == 'is_recording':
             is_recording = int(data['value'])
             self.redis_controller.set_value('is_writing_buf', is_recording)
-            # Perform your action or method here based on the is_recording value
             if is_recording:
                 logging.info("Recording started!")
                 self.gpio_output.set_recording(1)
@@ -100,7 +95,6 @@ class Mediator:
             logging.info("Is writing changed")
             if is_writing == 1:
                 self.stream.toggle_background_color()
-                pass
             else:
                 self.gpio_output.set_recording(0)    
 
@@ -115,7 +109,6 @@ class Mediator:
 
     def handle_fps_change(self, data):
         # Handle "fps" key changes
-
         if data['key'] == 'fps':
             print('changing pwm')
             fps_new = self.redis_controller.get_value('fps')
@@ -123,9 +116,7 @@ class Mediator:
             
     def handle_shutter_a_change(self, data):
         # Handle "shutter_a" key changes
-
         if data['key'] == 'shutter_a':
             print('changing pwm')
             shutter_a_new = self.redis_controller.get_value('shutter_a')
             self.pwm_controller.set_pwm(None, shutter_a_new)
-            

@@ -733,9 +733,11 @@ class CinePiController:
         self.redis_controller.set_value('trigger_mode', str(value))
 
         # Restart the cinepi process to apply the changes
+        self.restart_camera()
+        
+    def restart_camera(self):
         self.cinepi.restart()
 
-        
     def set_shutter_a_sync(self, value=None):
         if value is None:
             self.shutter_a_sync = not self.shutter_a_sync

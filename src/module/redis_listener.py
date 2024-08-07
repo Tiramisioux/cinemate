@@ -1,7 +1,6 @@
 import redis
 import logging
 import threading
-import statistics
 import datetime
 import json
 from collections import deque
@@ -94,34 +93,14 @@ class RedisListener:
                         if len(self.sensor_timestamps) > 1:
                             self.calculate_current_framerate()
 
-                        # Check if frame count is increasing
-                        frame_count_increasing = False
-                        if self.frame_count is not None:
-                            previous_frame_count = self.framecount
-                            if self.framecount is None:
-                                self.framecount = self.frame_count
-                            elif self.frame_count > self.framecount:
-                                self.framecount = self.frame_count
-                                frame_count_increasing = True
-                                # If frame count increases, assume recording has started
-                                if not self.is_recording:
-                                    self.is_recording = True
-                                    self.recording_start_time = datetime.datetime.now()
-                                    logging.info(f"Recording started at: {self.recording_start_time}")
-                                    self.framerate = current_framerate
-                                
-                                # Update Redis with the new frame count if it has increased
-                                if previous_frame_count != self.frame_count:
-                                    logging.debug(f"Updating framecount in Redis to {self.frame_count}")
-                                    self.redis_controller.set_value('framecount', self.frame_count)
-                                    
-                            # if previous_frame_count == self.frame_count:
-                            #     self.frame_count = 0
-                            #     #logging.info('resetting frame_count')
-
+                        # Update framecount in Redis only if it has changed
+                        if self.frame_count is not None and self.frame_count != self.framecount:
+                            self.framecount = self.frame_count
+                            logging.debug(f"Updating framecount in Redis to {self.frame_count}")
+                            self.redis_controller.set_value('framecount', self.frame_count)
 
                         # Check and set buffering status if changed
-                        is_buffering = buffer_size > 0 and not frame_count_increasing if buffer_size is not None else False
+                        is_buffering = buffer_size > 0 if buffer_size is not None else False
                         current_buffering_status = self.redis_controller.get_value('is_buffering')
                         new_buffering_status = 1 if is_buffering else 0
                         if current_buffering_status is None or int(current_buffering_status) != new_buffering_status:
@@ -143,7 +122,7 @@ class RedisListener:
         self.framecount = 0
         self.frame_count = 0
         self.redis_controller.set_value('framecount', 0)
-
+        logging.info("Framecount reset to 0.")
 
     def listen_controls(self):
         for message in self.pubsub_controls.listen():
@@ -156,6 +135,7 @@ class RedisListener:
                     if changed_key == 'is_recording':
                         if value_str == '1':
                             self.is_recording = True
+                            self.reset_framecount()  # Reset framecount when starting a new recording
                             self.recording_start_time = datetime.datetime.now()
                             logging.info(f"Recording started at: {self.recording_start_time}")
                             self.framerate = float(self.redis_controller.get_value('fps'))

@@ -304,32 +304,46 @@ class SimpleGUI(threading.Thread):
                 self.draw_rounded_box(draw, value, position, font_size, 5, "black", "white", image)
 
         self.fb.show(image)
-
-    def draw_rounded_box(self, draw, text, position, font_size, padding, text_color, fill_color, image):
+        
+    def draw_rounded_box(self, draw, text, position, font_size, padding, text_color, fill_color, image, extra_height=-17, reduce_top=12):
         font = ImageFont.truetype(os.path.realpath(self.font_path), font_size)
         bbox = draw.textbbox((0, 0), text, font=font)
         text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
-        upper_left = (position[0] - padding, position[1] - padding)
-        bottom_right = (upper_left[0] + text_width + 2 * padding, upper_left[1] + text_height + 2 * padding)
-        radius = 10
+        text_height = bbox[3] - bbox[1] + extra_height  # Increase height by extra_height
+
+        # Reduce the top padding by reduce_top and increase the bottom by the same amount
+        upper_left = (position[0] - padding, position[1] - (padding - reduce_top))
+        bottom_right = (upper_left[0] + text_width + 2 * padding, upper_left[1] + text_height + 2 * padding + reduce_top)
+        radius = 5
         radius_2x = radius * 2
 
         mask = Image.new('L', (radius_2x, radius_2x), 0)
         mask_draw = ImageDraw.Draw(mask)
         mask_draw.ellipse((0, 0, radius_2x, radius_2x), fill=255)
 
+        # Top-left corner
         image.paste(fill_color, (upper_left[0], upper_left[1]), mask)
+        # Top-right corner
         image.paste(fill_color, (upper_left[0] + text_width + padding * 2 - radius_2x, upper_left[1]), mask)
-        image.paste(fill_color, (upper_left[0], upper_left[1] + text_height + padding * 2 - radius_2x), mask)
-        image.paste(fill_color, (upper_left[0] + text_width + padding * 2 - radius_2x, upper_left[1] + text_height + padding * 2 - radius_2x), mask)
+        # Bottom-left corner
+        image.paste(fill_color, (upper_left[0], upper_left[1] + text_height + padding * 2 - radius_2x + reduce_top), mask)
+        # Bottom-right corner
+        image.paste(fill_color, (upper_left[0] + text_width + padding * 2 - radius_2x, upper_left[1] + text_height + padding * 2 - radius_2x + reduce_top), mask)
 
+        # Top side
         draw.rectangle([upper_left[0] + radius, upper_left[1], upper_left[0] + text_width + padding * 2 - radius, upper_left[1] + radius], fill=fill_color)
-        draw.rectangle([upper_left[0] + radius, upper_left[1] + text_height + padding * 2 - radius, upper_left[0] + text_width + padding * 2 - radius, upper_left[1] + text_height + padding * 2], fill=fill_color)
-        draw.rectangle([upper_left[0], upper_left[1] + radius, upper_left[0] + radius, upper_left[1] + text_height + padding * 2 - radius], fill=fill_color)
-        draw.rectangle([upper_left[0] + text_width + padding * 2 - radius, upper_left[1] + radius, upper_left[0] + text_width + padding * 2, upper_left[1] + text_height + padding * 2 - radius], fill=fill_color)
-        draw.rectangle([upper_left[0] + radius, upper_left[1] + radius, upper_left[0] + text_width + padding * 2 - radius, upper_left[1] + text_height + padding * 2 - radius], fill=fill_color)
+        # Bottom side
+        draw.rectangle([upper_left[0] + radius, upper_left[1] + text_height + padding * 2 - radius + reduce_top, upper_left[0] + text_width + padding * 2 - radius, upper_left[1] + text_height + padding * 2 + reduce_top], fill=fill_color)
+        # Left side
+        draw.rectangle([upper_left[0], upper_left[1] + radius, upper_left[0] + radius, upper_left[1] + text_height + padding * 2 - radius + reduce_top], fill=fill_color)
+        # Right side
+        draw.rectangle([upper_left[0] + text_width + padding * 2 - radius, upper_left[1] + radius, upper_left[0] + text_width + padding * 2, upper_left[1] + text_height + padding * 2 - radius + reduce_top], fill=fill_color)
+        # Center box
+        draw.rectangle([upper_left[0] + radius, upper_left[1] + radius, upper_left[0] + text_width + padding * 2 - radius, upper_left[1] + text_height + padding * 2 - radius + reduce_top], fill=fill_color)
+
         draw.text(position, text, font=font, fill=text_color)
+
+
 
     def run(self):
         try:

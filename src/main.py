@@ -265,10 +265,6 @@ if __name__ == "__main__":
     else:
         logging.error("wb_user value is not set in Redis.")
     
-    
-
-
-    
     #cinepi_controller.set_pwm_mode(1)
 
     logging.info(f"--- initialization complete")

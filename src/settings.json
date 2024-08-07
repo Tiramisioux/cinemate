@@ -116,18 +116,18 @@
     "two_way_switches": [
       {
           "pin": 24,
-          "state_on_action": {"method": "set_shu_fps_lock", "args": [false]},
-          "state_off_action": {"method": "set_shu_fps_lock", "args": [true]}
+          "state_on_action": {"method": "set_shu_fps_lock", "args": [true]},
+          "state_off_action": {"method": "set_shu_fps_lock", "args": [false]}
       },
       {
         "pin": 16,
-        "state_on_action": {"method": "set_shutter_a_sync", "args": [false]},
-        "state_off_action": {"method": "set_shutter_a_sync", "args": [true]}
+        "state_on_action": {"method": "set_shutter_a_sync", "args": [true]},
+        "state_off_action": {"method": "set_shutter_a_sync", "args": [false]}
       },
       {
         "pin": 22,
-        "state_on_action": {"method": "set_pwm_mode", "args": [false]},
-        "state_off_action": {"method": "set_pwm_mode", "args": [true]}
+        "state_on_action": {"method": "set_pwm_mode", "args": [true]},
+        "state_off_action": {"method": "set_pwm_mode", "args": [false]}
       }
     ],
 

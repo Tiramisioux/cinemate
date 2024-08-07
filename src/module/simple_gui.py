@@ -33,6 +33,8 @@ class SimpleGUI(threading.Thread):
             self.fb = Framebuffer(0)
             self.disp_width, self.disp_height = self.fb.size
             logging.info(f"HDMI display found. {self.disp_width, self.disp_height}")
+            self.scaling_width = self.disp_width / 1920
+            self.scaling_height = self.disp_height / 1080
         else:
             logging.info("No HDMI display found")
         
@@ -62,7 +64,7 @@ class SimpleGUI(threading.Thread):
                 "key": {"position": (250, 1050), "font_size": 26},
                 "serial": {"position": (345, 1050), "font_size": 26},
                 
-                "battery_level": {"position": (1830, 1044), "font_size":34},
+                "battery_level": {"position": (1830, 1044), "font_size": 34},
                 # Additional elements as needed for layout 0
             },
             1: {  # Layout 1
@@ -70,11 +72,11 @@ class SimpleGUI(threading.Thread):
                 "shutter_speed": {"position": (10, 80), "font_size": 51},
                 "fps": {"position": (10, 167), "font_size": 51},
                 
-                "exposure_time": {"position": (10, 340), "font_size":34},
+                "exposure_time": {"position": (10, 340), "font_size": 34},
                 "pwm_mode": {"position": (10, 427), "font_size": 34},
                 "shutter_a_sync": {"position": (10, 495), "font_size": 34},
-                "lock": {"position": (10, 619), "font_size": 34},
-                "low_voltage": {"position": (10, 680), "font_size": 34},
+                "lock": {"position": (10, 650), "font_size": 34},
+                "low_voltage": {"position": (10, 710), "font_size": 34},
                 
                 "cpu_load": {"position": (1780, -2), "font_size": 26},
                 "cpu_temp": {"position": (1860, -2), "font_size": 26},
@@ -183,13 +185,16 @@ class SimpleGUI(threading.Thread):
             self.colors["fps"]["normal"] = "white"
             
         if self.cinepi_controller.shutter_a_sync == True:
-            values["shutter_a_sync"] = f"SYNC   /  {self.cinepi_controller.shutter_a_nom}"
-        elif  self.cinepi_controller.shutter_a_sync == False:
+            if self.cinepi_controller.gui_layout == 0:
+                values["shutter_a_sync"] = f"SYNC   /  {self.cinepi_controller.shutter_a_nom}"
+            elif self.cinepi_controller.gui_layout == 1:
+                values["shutter_a_sync"] = f"SYNC/\n{self.cinepi_controller.shutter_a_nom}"
+        elif self.cinepi_controller.shutter_a_sync == False:
             values["shutter_a_sync"] = ""
             
         if self.cinepi_controller.parameters_lock == True:
             values["lock"] = "LOCK"
-        elif  self.cinepi_controller.shutter_a_sync == False:
+        elif self.cinepi_controller.parameters_lock == False:
             values["lock"] = ""
             
         if self.dmesg_monitor.undervoltage_flag == True:
@@ -271,7 +276,8 @@ class SimpleGUI(threading.Thread):
             if values.get(element) is None:  # Skip elements with None value
                 continue
             position = info["position"]
-            font_size = info["font_size"]
+            position = (int(position[0] * self.scaling_width), int(position[1] * self.scaling_height))
+            font_size = int(info["font_size"] * self.scaling_height)
             font = ImageFont.truetype(os.path.realpath(self.font_path), font_size)
             # Ensure value is a string
             value = str(values.get(element, ''))

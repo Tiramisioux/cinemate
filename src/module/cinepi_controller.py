@@ -393,26 +393,26 @@ class CinePiController:
         self.ssd_monitor.unmount_drive()
                 
     def increment_setting(self, setting_name, steps):
-        if self.pwm_mode == False:
+        if self.pwm_mode == True and setting_name == 'fps':
+            # self.fps_temp_old = self.fps_temp
+            self.set_fps(self.fps_actual + 1)
+        else:
             current_value = float(self.get_setting(setting_name))
             idx = steps.index(current_value)
             idx = min(idx + 1, len(steps) - 1)
             getattr(self, f"set_{setting_name}")(steps[idx])
             logging.info(f"Increasing {setting_name} to {self.get_setting(setting_name)}")
-        elif self.pwm_mode == True and setting_name == 'fps':
-            # self.fps_temp_old = self.fps_temp
-            self.set_fps(self.fps_actual + 1)
 
     def decrement_setting(self, setting_name, steps):
-        if self.pwm_mode == False:
+        if self.pwm_mode == True and setting_name == 'fps':
+            # self.fps_temp_old = self.fps_temp
+            self.set_fps(self.fps_actual - 1)
+        else:
             current_value = float(self.get_setting(setting_name))
             idx = steps.index(current_value)
             idx = max(idx - 1, 0)
             getattr(self, f"set_{setting_name}")(steps[idx])
             logging.info(f"Decreasing {setting_name} to {self.get_setting(setting_name)}")
-        elif self.pwm_mode == True and setting_name == 'fps':
-            # self.fps_temp_old = self.fps_temp
-            self.set_fps(self.fps_actual - 1)
     
     def inc_iso(self):
         self.increment_setting('iso', self.iso_steps)

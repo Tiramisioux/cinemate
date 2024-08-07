@@ -1,5 +1,5 @@
-# component_module.py
-from gpiozero import Button, RotaryEncoder
+from gpiozero import Button
+from gpiozero import RotaryEncoder as GPIOZeroRotaryEncoder
 import threading
 import logging
 import shlex  # Add this import
@@ -72,13 +72,6 @@ class ComponentInitializer:
         
         # Initialize Rotary Encoders with Buttons
         for encoder_config in self.settings.get('rotary_encoders', []):
-            button_actions = encoder_config.get('button_actions', {})
-            press_action_method = self.extract_action_method(button_actions.get('press_action'))
-            single_click_action_method = self.extract_action_method(button_actions.get('single_click_action'))
-            double_click_action_method = self.extract_action_method(button_actions.get('double_click_action'))
-            triple_click_action_method = self.extract_action_method(button_actions.get('triple_click_action'))
-            hold_action_method = self.extract_action_method(button_actions.get('hold_action'))
-            
             encoder_actions = encoder_config.get('encoder_actions', {})
             rotate_cw_action_method = self.extract_action_method(encoder_actions.get('rotate_clockwise'))
             rotate_ccw_action_method = self.extract_action_method(encoder_actions.get('rotate_counterclockwise'))
@@ -86,20 +79,12 @@ class ComponentInitializer:
             self.logger.info(f"Rotary Encoder with Button on CLK pin: {encoder_config['clk_pin']}, DT pin: {encoder_config['dt_pin']}")
             if not "None" in str(rotate_cw_action_method): self.logger.info(f"  Rotate Clockwise: {rotate_cw_action_method}")
             if not "None" in str(rotate_ccw_action_method): self.logger.info(f"  Rotate CounterClockwise: {rotate_ccw_action_method}")
-            if not "None" in str(press_action_method): self.logger.info(f"  Press: {press_action_method}")
-            if not "None" in str(single_click_action_method): self.logger.info(f"  Single Click: {single_click_action_method}")
-            if not "None" in str(double_click_action_method): self.logger.info(f"  Double Click: {double_click_action_method}")
-            if not "None" in str(triple_click_action_method): self.logger.info(f"  Triple Click: {triple_click_action_method}")
-            if not "None" in str(hold_action_method): self.logger.info(f"  Hold: {hold_action_method}")
-
-            RotaryEncoderWithButton(cinepi_controller=self.cinepi_controller,
-                                    clk_pin=encoder_config['clk_pin'],
-                                    dt_pin=encoder_config['dt_pin'],
-                                    button_pin=encoder_config['button_pin'],
-                                    pull_up=bool(encoder_config['pull_up']),
-                                    debounce_time=float(encoder_config['debounce_time']),
-                                    actions=encoder_config,
-                                    button_identifier=str(encoder_config['button_pin']))
+            RotaryEncoder(
+                cinepi_controller=self.cinepi_controller,
+                clk_pin=encoder_config['clk_pin'],
+                dt_pin=encoder_config['dt_pin'],
+                actions=encoder_config['encoder_actions']
+            )
         
     def initialize_quad_rotary_encoder(self):
         quad_rotary_settings = self.settings.get('quad_rotary_encoders', {})
@@ -110,7 +95,6 @@ class ComponentInitializer:
             self,
             self.smart_buttons_list  # Pass the list of smart buttons
         )
-
 
     def get_smart_button_by_pin(self, pin):
         for button in self.smart_buttons_list:
@@ -128,7 +112,6 @@ class ComponentInitializer:
         else:
             return None
 
-            
     def _describe_actions(self, config):
         """
         Generate a string description of the actions assigned to a component.
@@ -465,50 +448,44 @@ class SimpleSwitch:
             else:
                 self.logger.error(f"Method {method_name} not found in cinepi_controller.")
 
-class RotaryEncoderWithButton:
-    def __init__(self, cinepi_controller, clk_pin, dt_pin, button_pin, pull_up, debounce_time, actions, button_identifier):
+class RotaryEncoder:
+    def __init__(self, cinepi_controller, clk_pin, dt_pin, actions):
         self.logger = logging.getLogger(f"RotaryEncoder{clk_pin}_{dt_pin}")
-        self.encoder = RotaryEncoder(clk_pin, dt_pin)
-        # Within RotaryEncoderWithButton.__init__ in component_module.py
-        if button_pin != "None":
-            self.button = SmartButton(cinepi_controller=cinepi_controller, 
-                            pin=button_pin, 
-                            pull_up=pull_up,
-                            debounce_time=debounce_time,
-                            actions=actions['button_actions'], 
-                            identifier=button_identifier, 
-                            inverse=False, # Assume default value, adjust as needed
-                            combined_actions=[]) # Adjust as per your logic for combined actions
-
+        
+        # Correct initialization with gpiozero's RotaryEncoder using a and b for pin names
+        self.encoder = GPIOZeroRotaryEncoder(a=clk_pin, b=dt_pin)
+        
         self.actions = actions
         self.cinepi_controller = cinepi_controller
 
+        # Set up event handlers
         self.encoder.when_rotated_clockwise = self.on_rotated_clockwise
         self.encoder.when_rotated_counter_clockwise = self.on_rotated_counter_clockwise
 
     def on_rotated_clockwise(self):
-        action = self.actions['encoder_actions'].get('rotate_clockwise')
+        action = self.actions.get('rotate_clockwise')
         if action:
             method_name = action.get('method')
             args = action.get('args', [])
             method = getattr(self.cinepi_controller, method_name, None)
             if method:
                 method(*args)
-                self.logger.info(f"Rotary encoder {self.encoder} calling method {method_name} {args}.") 
+                self.logger.info(f"Rotary encoder rotated clockwise, calling method {method_name} with args {args}.") 
             else:
                 self.logger.error(f"Method {method_name} not found in cinepi_controller.")
 
     def on_rotated_counter_clockwise(self):
-        action = self.actions['encoder_actions'].get('rotate_counterclockwise')
+        action = self.actions.get('rotate_counterclockwise')
         if action:
             method_name = action.get('method')
             args = action.get('args', [])
             method = getattr(self.cinepi_controller, method_name, None)
             if method:
                 method(*args)
-                self.logger.info(f"Rotary encoder {self.encoder} calling method {method_name} {args}.")
+                self.logger.info(f"Rotary encoder rotated counterclockwise, calling method {method_name} with args {args}.")
             else:
                 self.logger.error(f"Method {method_name} not found in cinepi_controller.")
+
 
 # Suppress specific warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning, module="adafruit_blinka.microcontroller.generic_linux.i2c")
@@ -653,5 +630,3 @@ class QuadRotaryEncoder:
     def clone_smart_button_behavior(self, existing_button):
         logging.info(f"Cloning behavior of SmartButton {existing_button} for Quad Rotary Encoder.")
         existing_button.on_press()  # Or trigger the required behavior
-
-

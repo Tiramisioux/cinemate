@@ -47,7 +47,6 @@ class CommandExecutor(threading.Thread):
             
             'set pwm mode': (cinepi_controller.set_pwm_mode, [int, None]),
             'set trigger mode': (cinepi_controller.set_trigger_mode, [int, None]), 
-            'set shutter a sync': (cinepi_controller.set_shutter_a_sync, [int, None]),  
             
             'set iso lock': (cinepi_controller.set_iso_lock, [int, None]),
             'set shutter a nom lock': (cinepi_controller.set_shutter_a_nom_lock, [int, None]),
@@ -60,7 +59,16 @@ class CommandExecutor(threading.Thread):
             'reboot': (cinepi_controller.reboot, None),
             'shutdown': (cinepi_controller.safe_shutdown, None),
             
-            'restart': (cinepi_app.restart, None)
+            'restart': (cinepi_app.restart, None),
+
+            # New free mode commands
+            'set iso free': (cinepi_controller.set_iso_free, [int, str]),
+            'set shutter a free': (cinepi_controller.set_shutter_a_free, [int, str]),
+            'set fps free': (cinepi_controller.set_fps_free, [int, str]),
+            'set wb free': (cinepi_controller.set_wb_free, [int, str]),
+            
+            # New shutter sync commands
+            'set shutter a sync': (cinepi_controller.set_shutter_a_sync_mode, int),
         }
 
     def is_valid_arg(self, arg, expected_type):

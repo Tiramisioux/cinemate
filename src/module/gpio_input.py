@@ -69,6 +69,21 @@ class ComponentInitializer:
             SimpleSwitch(cinepi_controller=self.cinepi_controller,
                          pin=switch_config['pin'],
                          actions=switch_config)
+            
+        # Initialize three-way switches
+        self.three_way_switches = []
+        for switch_config in self.settings.get('three_way_switches', []):
+            pins = switch_config['pins']
+            self.logger.info(f"Three-way switch on pins {pins}:")
+            for i in range(3):
+                action_method_name = switch_config.get(f"state_{i}_action")
+                if action_method_name:
+                    self.logger.info(f"  State {i} action: {action_method_name}")
+
+            three_way_switch = ThreeWaySwitch(cinepi_controller=self.cinepi_controller,
+                                              pins=pins,
+                                              actions=switch_config)
+            self.three_way_switches.append(three_way_switch)
         
         # Initialize Rotary Encoders with Buttons
         for encoder_config in self.settings.get('rotary_encoders', []):
@@ -447,7 +462,44 @@ class SimpleSwitch:
                 self.logger.info(f"Two-way switch {self.switch} calling method {method_name} {args}.")
             else:
                 self.logger.error(f"Method {method_name} not found in cinepi_controller.")
+                
+class ThreeWaySwitch:
+    def __init__(self, cinepi_controller, pins, actions, debounce_time=0.1):
+        self.logger = logging.getLogger(f"ThreeWaySwitch{pins}")
+        self.pins = pins
+        self.actions = actions
+        self.cinepi_controller = cinepi_controller
+        
+        # Initialize buttons for each pin
+        self.switches = [Button(pin, pull_up=None, active_state=False, bounce_time=debounce_time) for pin in pins]
+        
+        for switch in self.switches:
+            switch.when_pressed = self.on_switch_change
+        
+        # Check initial state of the switch and perform the connected method
+        self.on_switch_change()
 
+    def on_switch_change(self):
+        position = self.get_switch_position()
+        action = self.actions.get(f'state_{position}_action')
+        if action:
+            method_name = action.get('method')
+            args = action.get('args', [])
+            method = getattr(self.cinepi_controller, method_name, None)
+            if method:
+                method(*args)
+                self.logger.info(f"Three-way switch {self.pins} calling method {method_name} with args {args}.")
+            else:
+                self.logger.error(f"Method {method_name} not found in cinepi_controller.")
+        else:
+            self.logger.warning(f"No action defined for position {position}.")
+
+    def get_switch_position(self):
+        for index, switch in enumerate(self.switches):
+            if switch.is_pressed:
+                return index
+        return -1  # Undefined position
+    
 class RotaryEncoder:
     def __init__(self, cinepi_controller, clk_pin, dt_pin, actions):
         self.logger = logging.getLogger(f"RotaryEncoder{clk_pin}_{dt_pin}")

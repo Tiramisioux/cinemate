@@ -62,14 +62,20 @@ class PWMController:
     def set_frequency(self, frequency):
         try:
             self.freq = float(frequency)
+            
+            # Validate frequency value
+            if self.freq < 0.1:
+                raise ValueError(f"Frequency {self.freq}Hz is too low to be set on the RPi. Minimum is 0.1Hz.")
+            
             self.period = 1.0 / self.freq
             if self.pwm is not None:
                 self.pwm.change_frequency(self.freq)
             if self.pwm_inv is not None:
                 self.pwm_inv.change_frequency(self.freq)
             logging.info(f"PWM frequency set to {self.freq}Hz on pins {self.PWM_pin}, {self.PWM_inv_pin}")
-        except ValueError:
-            logging.error(f"Invalid frequency value: {frequency}")
+        except ValueError as e:
+            logging.error(f"Invalid frequency value: {frequency}. Error: {e}")
+
 
     def set(self, duty_cycle):
         if duty_cycle is not None:

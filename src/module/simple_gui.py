@@ -96,7 +96,7 @@ class SimpleGUI(threading.Thread):
                 "color_temp": {"position": (950, -7), "font_size": 34},
                 "exposure_time": {"position": (1110, -7), "font_size": 34},
                 "pwm_mode": {"position": (1243, -2), "font_size": 26},
-                "shutter_a_sync": {"position": (1345, -2), "font_size": 26},
+                # "shutter_a_sync": {"position": (1345, -2), "font_size": 26},
                 "lock": {"position": (1530, -2), "font_size": 26},
                 "low_voltage": {"position": (1620, -2), "font_size": 26},
                 "ram_load": {"position": (1700, -2), "font_size": 26},
@@ -120,7 +120,7 @@ class SimpleGUI(threading.Thread):
             "bit_depth": {"normal": "white", "inverse": "black"},
             "color_temp": {"normal": "white", "inverse": "black"},
             "pwm_mode": {"normal": "lightgreen", "inverse": "black"},
-            "shutter_a_sync": {"normal": "white", "inverse": "black"},
+            # "shutter_a_sync": {"normal": "white", "inverse": "black"},
             "lock": {"normal": (255, 0, 0, 255), "inverse": "black"},
             "low_voltage": {"normal": "yellow", "inverse": "black"},
             "ram_load": {"normal": "white", "inverse": "black"},
@@ -153,7 +153,6 @@ class SimpleGUI(threading.Thread):
             "cpu_temp": ('{}\u00B0C'.format(int(CPUTemperature().temperature))),
         }
         
-        
         # Construct the frame count string
         frame_count_string = str(self.redis_controller.get_value("framecount")) + " / " + str(self.redis_controller.get_value("buffer"))
 
@@ -174,15 +173,15 @@ class SimpleGUI(threading.Thread):
             self.colors["fps"]["normal"] = "white"
 
         if self.cinepi_controller.fps_double:
-            self.colors["fps"]["normal"] = "lightgreen"
+            self.colors["fps"]["normal"] = "yellow"
         else:
             self.colors["fps"]["normal"] = "white"
 
-        if self.cinepi_controller.shutter_a_sync:
-            shutter = self.redis_controller.get_value('shutter_a')
-            values["shutter_a_sync"] = f"SYNC   /  {shutter}"
-        else:
-            values["shutter_a_sync"] = ""
+        # if self.cinepi_controller.shutter_a_sync_mode != 0:
+                
+        #     values["shutter_a_sync"] = f"SHUTTER SYNC"
+        # else:
+        #     values["shutter_a_sync"] = ""
     
         if self.cinepi_controller.parameters_lock:
             values["lock"] = "LOCK"
@@ -207,7 +206,7 @@ class SimpleGUI(threading.Thread):
         self.colors["battery_level"]["normal"] = "lightgreen" if self.battery_monitor.charging else "white"
 
         if self.ssd_monitor.space_left and self.ssd_monitor.is_mounted:
-            min_left = round(int((self.ssd_monitor.space_left * 1000) / (self.cinepi_controller.file_size * float(self.cinepi_controller.fps_actual) * 60)), 0)
+            min_left = round(int((self.ssd_monitor.space_left * 1000) / (self.cinepi_controller.file_size * float(self.cinepi_controller.fps) * 60)), 0)
             values["disk_space"] = f"{min_left} MIN"
         else:
             values["disk_space"] = "NO DISK"
@@ -233,11 +232,6 @@ class SimpleGUI(threading.Thread):
             self.current_background_color = "black"
             self.color_mode = "normal"
 
-            # # If conditions for both red and green are met, prioritize red
-            # if self.current_background_color == "green" and int(self.redis_controller.get_value('framecount_is_increasing')) == 1:
-            #     self.current_background_color = "red"
-            #     self.color_mode = "inverse"
-
         # Check if the background color has changed
         if self.current_background_color != previous_background_color:
             self.background_color_changed = True  # Set flag to indicate background color change
@@ -259,8 +253,8 @@ class SimpleGUI(threading.Thread):
                 self.emit_gui_data_change(changed_data)
 
                 # Log the changed data after emitting changes
-                #logging.info(f"Changed data: {changed_data}")
-        
+                # logging.info(f"Changed data: {changed_data}")
+
         # Update previous_values with the current values for the next comparison
         self.previous_values = current_values.copy()
 
@@ -287,7 +281,7 @@ class SimpleGUI(threading.Thread):
             "exposure_time": "shutter_a_sync"
         }
 
-        # For dynamic boxes around specific elements
+        # Draw the GUI elements
         for element, info in current_layout.items():
             if values.get(element) is None:  # Skip elements with None value
                 continue
@@ -300,10 +294,16 @@ class SimpleGUI(threading.Thread):
 
             draw.text(position, value, font=font, fill=color)
 
+            # Draw rounded box behind locked elements
             if element in lock_mapping and getattr(self.cinepi_controller, lock_mapping[element]):
                 self.draw_rounded_box(draw, value, position, font_size, 5, "black", "white", image)
 
+            # **New Addition: Draw rounded box behind the exposure time if shutter sync is enabled**
+            if element == "exposure_time" and self.cinepi_controller.shutter_a_sync_mode == 1:
+                self.draw_rounded_box(draw, value, position, font_size, 5, "black", "white", image)
+
         self.fb.show(image)
+
         
     def draw_rounded_box(self, draw, text, position, font_size, padding, text_color, fill_color, image, extra_height=-17, reduce_top=12):
         font = ImageFont.truetype(os.path.realpath(self.font_path), font_size)

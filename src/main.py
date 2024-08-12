@@ -90,6 +90,12 @@ def load_settings(filename):
 
         if 'quad_rotary_encoders' in original_settings:
             settings['quad_rotary_encoders'] = original_settings['quad_rotary_encoders']
+            
+        if 'free_mode' in original_settings:
+            settings['free_mode'] = original_settings['free_mode']
+        else:
+            settings['free_mode'] = {"iso_free": False, "shutter_a_free": False, "fps_free": False, "wb_free": False}
+        
 
         if 'settings' in original_settings:
             settings['settings'] = original_settings['settings']
@@ -290,3 +296,12 @@ if __name__ == "__main__":
         command_executor.join()
         RPi.GPIO.cleanup()
 
+#   "three_way_switches": [
+#     {
+#       "setting_name": "shutter_sync_mode",
+#       "pins": [12, 16, 20],
+#       "state_0_action": {"method": "activate_shutter_a_sync_mode", "args": [0]},
+#       "state_1_action": {"method": "activate_shutter_a_sync_mode", "args": [1]},
+#       "state_2_action": {"method": "activate_shutter_a_sync_mode", "args": [2]}
+#     }
+#   ],

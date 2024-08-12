@@ -3,21 +3,32 @@
     "pwm_pin": 19,
     "rec_out_pin": [6, 21]
   },
+  
   "arrays": {
     "iso_steps": [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200],
     "shutter_a_steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360],
     "fps_steps": [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50],
     "wb_steps": [3200, 4400, 5600]
   },
+  
   "settings": {
     "light_hz": [50, 60]
   },
+  
   "analog_controls": {
     "iso_pot": "None",
     "shutter_a_pot": "None",
-    "fps_pot": "None",
+    "fps_pot": "4",
     "wb_pot": "None"
   },
+  
+  "free_mode": {
+    "iso_free": false,
+    "shutter_a_free": false,
+    "fps_free": false,
+    "wb_free": false
+  },
+  
   "buttons": [
     {
       "pin": 4,
@@ -57,7 +68,7 @@
       "pull_up": "False",
       "debounce_time": "0.1",
       "press_action": "None",
-      "single_click_action": {"method": "set_shutter_a_sync"},
+      "single_click_action": {"method": "set_shutter_a_sync_mode"},
       "double_click_action": "None",
       "triple_click_action": "None",
       "hold_action": {"method": "set_trigger_mode"}
@@ -83,6 +94,7 @@
       "hold_action": {"method": "unmount"}
     }
   ],
+  
   "rotary_encoders": [
     {
       "clk_pin": 9,
@@ -117,6 +129,7 @@
       }
     }
   ],
+  
   "two_way_switches": [
     {
       "pin": 7,
@@ -130,6 +143,8 @@
     }
   ],
 
+
+
   "quad_rotary_encoders": {
     "0": {"setting_name": "iso", "gpio_pin": 22},
     "1": {"setting_name": "shutter_a", "gpio_pin": 12},
@@ -137,3 +152,4 @@
     "3": {"setting_name": "wb", "gpio_pin": 13}
   }
 }
+  

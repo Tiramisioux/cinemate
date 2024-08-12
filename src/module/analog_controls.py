@@ -55,9 +55,14 @@ class AnalogControls(threading.Thread):
             logging.error(f"Invalid potentiometer value: {value}")
             return None
 
-    def map_adc_to_wb(self, adc_value, min_adc=0, max_adc=1023, min_wb=3200, max_wb=5600):
-        """Map ADC value to WB temperature range."""
-        return ((adc_value - min_adc) / (max_adc - min_adc)) * (max_wb - min_wb) + min_wb
+    def map_adc_to_steps(self, adc_value, min_adc=0, max_adc=1023, steps=[]):
+        """Map ADC value to the given steps range."""
+        if not steps:
+            return None
+        step_range = len(steps)
+        step_index = int(((adc_value - min_adc) / (max_adc - min_adc)) * (step_range - 1))
+        return steps[min(max(step_index, 0), step_range - 1)]
+
 
     def find_nearest_step(self, value, steps):
         """Find the nearest step to the given value."""
@@ -73,56 +78,37 @@ class AnalogControls(threading.Thread):
         try:
             if self.iso_pot is not None:
                 iso_read = self.adc.read(self.iso_pot)
-                if self.iso_steps:
-                    new_iso = self.find_nearest_step(iso_read, self.iso_steps)
-                    if new_iso != self.last_iso:
-                        logging.info(f"Setting ISO to {new_iso}")
-                        self.cinepi_controller.set_iso(new_iso)
-                        self.last_iso = new_iso
-                else:
-                    logging.warning("ISO steps are not defined or empty.")
+                new_iso = self.map_adc_to_steps(iso_read, steps=self.cinepi_controller.iso_steps)
+                if new_iso != self.last_iso:
+                    logging.info(f"Setting ISO to {new_iso}")
+                    self.cinepi_controller.set_iso(new_iso)
+                    self.last_iso = new_iso
 
             if self.shutter_a_pot is not None:
                 shutter_a_read = self.adc.read(self.shutter_a_pot)
-                if self.shutter_a_steps:
-                    new_shutter_a = self.find_nearest_step(shutter_a_read, self.shutter_a_steps)
-                    if new_shutter_a != self.last_shutter_a:
-                        logging.info(f"Setting Shutter Angle to {new_shutter_a}")
-                        self.cinepi_controller.set_shutter_a_nom(new_shutter_a)
-                        self.last_shutter_a = new_shutter_a
-                else:
-                    logging.warning("Shutter angle steps are not defined or empty.")
+                new_shutter_a = self.map_adc_to_steps(shutter_a_read, steps=self.cinepi_controller.shutter_a_steps)
+                if new_shutter_a != self.last_shutter_a:
+                    logging.info(f"Setting Shutter Angle to {new_shutter_a}")
+                    self.cinepi_controller.set_shutter_a_nom(new_shutter_a)
+                    self.last_shutter_a = new_shutter_a
 
             if self.fps_pot is not None:
                 fps_read = self.adc.read(self.fps_pot)
-                if self.fps_steps:
-                    new_fps = self.find_nearest_step(fps_read, self.fps_steps)
-                    if new_fps != self.last_fps:
-                        logging.info(f"Setting FPS to {new_fps}")
-                        self.redis_controller.set_value('fps', new_fps)
-                        self.last_fps = new_fps
-                else:
-                    logging.warning("FPS steps are not defined or empty.")
+                new_fps = self.map_adc_to_steps(fps_read, steps=self.cinepi_controller.fps_steps)
+                if new_fps != self.last_fps:
+                    logging.info(f"Setting FPS to {new_fps}")
+                    self.cinepi_controller.set_fps(new_fps)
+                    self.last_fps = new_fps
 
             if self.wb_pot is not None:
                 wb_read = self.adc.read(self.wb_pot)
-                logging.debug(f"ADC value for wb_pot: {wb_read}")
-                if self.wb_steps:
-                    #logging.info(f"Available WB steps: {self.wb_steps}, searching for nearest to: {wb_read}")
-                    wb_mapped = self.map_adc_to_wb(wb_read)
-                    #logging.info(f"Mapped WB value: {wb_mapped}")
-                    new_wb = self.find_nearest_step(wb_mapped, self.wb_steps)
-                    if new_wb is not None and new_wb != self.last_wb:
-                        logging.info(f"Setting White Balance to {new_wb}K")
-                        self.redis_controller.set_value('wb_user', new_wb)
-                        self.cinepi_controller.set_wb(new_wb)
-                        self.last_wb = new_wb
-                    else:
-                        #logging.warning(f"No valid WB step found for {wb_mapped}")
-                        pass
-                else:
-                    #logging.warning("WB steps are not defined or empty.")
-                    pass
+                new_wb = self.map_adc_to_steps(wb_read, steps=self.cinepi_controller.wb_steps)
+                if new_wb is not None and new_wb != self.last_wb:
+                    logging.info(f"Setting White Balance to {new_wb}K")
+                    self.redis_controller.set_value('wb_user', new_wb)
+                    self.cinepi_controller.set_wb(new_wb)
+                    self.last_wb = new_wb
+
         except Exception as e:
             logging.error(f"Error occurred while updating parameters: {e}\n{traceback.format_exc()}")
 

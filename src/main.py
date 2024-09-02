@@ -123,7 +123,6 @@ if __name__ == "__main__":
 
     redis_controller = RedisController()
     
-
     sensor_detect = SensorDetect()
     # Update the retrieval of sensor_mode
     sensor_mode_value = redis_controller.get_value('sensor_mode')
@@ -195,7 +194,6 @@ if __name__ == "__main__":
     time.sleep(1)
     
     usb_monitor.check_initial_devices()
-    
         
     # Extract analog control settings
     analog_settings = settings.get('analog_controls', {})
@@ -232,8 +230,6 @@ if __name__ == "__main__":
         wb_steps=settings['arrays']['wb_steps']
     )
 
-
-        
     # Get the trigger_mode value from Redis
     trigger_mode_value = redis_controller.get_value('trigger_mode')
 

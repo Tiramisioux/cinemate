@@ -140,7 +140,7 @@ class SimpleGUI(threading.Thread):
         values = {
             "iso": self.redis_controller.get_value("iso"),
             "shutter_speed": str(self.redis_controller.get_value('shutter_a')).replace('.0', ''),
-            "fps": round(float(self.redis_controller.get_value('fps_user'))),
+            "fps": round(float(self.redis_controller.get_value('fps'))),
             #"sync_effort_level": self.timekeeper.get_effort_level(),
             "exposure_time": str(self.cinepi_controller.exposure_time_fractions),
             "sensor": str.upper(self.redis_controller.get_value("sensor")),

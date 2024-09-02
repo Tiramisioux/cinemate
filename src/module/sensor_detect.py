@@ -8,11 +8,7 @@ class SensorDetect:
         self.res_modes = []
 
         self.sensor_resolutions = {
-            'imx477': {                                                             
-                0: {'aspect': 1.87, 'width': 2028, 'height': 1080, 'bit_depth': 12, 'fps_max': 50, 'gui_layout': 0, 'file_size': 3.2}, 
-                1: {'aspect': 1.33, 'width': 2028, 'height': 1520, 'bit_depth': 12, 'fps_max': 40, 'gui_layout': 0, 'file_size': 4.5},
-                2: {'aspect': 1.34, 'width': 1332, 'height': 990, 'bit_depth': 10, 'fps_max': 120, 'gui_layout': 0, 'file_size': 2.8}, 
-            },
+
             'imx296': {                                                        
                 0: {'aspect': 1.33, 'width': 1456, 'height': 1088, 'bit_depth': 12, 'fps_max': 60, 'gui_layout': 0, 'file_size': 2},
             },
@@ -23,6 +19,17 @@ class SensorDetect:
                 #3: {'aspect': 1.52, 'width': 5568, 'height': 3664, 'bit_depth': 10, 'fps_max': 17, 'gui_layout': 0, 'file_size': 31},
                 #4: {'aspect': 1.52, 'width': 5568, 'height': 3664, 'bit_depth': 12, 'fps_max': 17, 'gui_layout': 0, 'file_size': 31},
                 #5: {'aspect': 1.80, 'width': 5568, 'height': 3094, 'bit_depth': 10, 'fps_max': 21, 'gui_layout': 0, 'file_size': 2},                                        
+            },
+            'imx477': {                                                             
+                0: {'aspect': 1.87, 'width': 2028, 'height': 1080, 'bit_depth': 12, 'fps_max': 50, 'gui_layout': 0, 'file_size': 3.2}, 
+                1: {'aspect': 1.33, 'width': 2028, 'height': 1520, 'bit_depth': 12, 'fps_max': 40, 'gui_layout': 0, 'file_size': 4.5},
+                2: {'aspect': 1.34, 'width': 1332, 'height': 990, 'bit_depth': 10, 'fps_max': 120, 'gui_layout': 0, 'file_size': 2.8}, 
+            },
+            'imx519': {             
+                0: {'aspect': 1.77, 'width': 1280, 'height': 720, 'bit_depth': 10, 'fps_max': 80, 'gui_layout': 0, 'file_size': 7.1}, # ok
+                1: {'aspect': 1.77, 'width': 1920, 'height': 1080, 'bit_depth': 10, 'fps_max': 60, 'gui_layout': 0, 'file_size': 8.2}, # ok
+                2: {'aspect': 1.77, 'width': 2328, 'height': 1748, 'bit_depth': 10, 'fps_max': 30, 'gui_layout': 0, 'file_size': 8.2}, # ok
+                3: {'aspect': 1.77, 'width': 3840, 'height': 2160, 'bit_depth': 10, 'fps_max': 18, 'gui_layout': 0, 'file_size': 31},                                       
             },
             'imx585': {             
                 0: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 12, 'fps_max': 87, 'gui_layout': 0, 'file_size': 4}, # ok

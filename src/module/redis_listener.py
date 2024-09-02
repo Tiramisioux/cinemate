@@ -205,4 +205,4 @@ class RedisListener:
             else:
                 logging.warning("Time differences calculation resulted in an empty list.")
         else:
-            logging.warning("Not enough sensor timestamps to calculate average framerate.")
+            logging.warning("Not enough sensor timestamps to calculate average framerate.") 

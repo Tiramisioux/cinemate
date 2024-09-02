@@ -129,21 +129,6 @@
       }
     }
   ],
-  
-  "two_way_switches": [
-    {
-      "pin": 7,
-      "state_on_action": {"method": "set_all_lock", "args": [false]},
-      "state_off_action": {"method": "set_all_lock", "args": [true]}
-    },
-    {
-      "pin": 26,
-      "state_on_action": {"method": "set_pwm_mode", "args": [false]},
-      "state_off_action": {"method": "set_pwm_mode", "args": [true]}
-    }
-  ],
-
-
 
   "quad_rotary_encoders": {
     "0": {"setting_name": "iso", "gpio_pin": 22},

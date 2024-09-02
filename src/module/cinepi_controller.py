@@ -41,7 +41,7 @@ class CinePiController:
         self.wb_cg_rb_array = {}  # Initialize as an empty dictionary
         
         self.redis_listener = RedisListener(redis_controller)
-        self.fps = self.redis_listener.framerate if self.redis_listener.framerate else 1
+        self.fps = int(float(self.redis_controller.get_value('fps')))
         
         # Set startup flag
         self.startup = True
@@ -50,6 +50,10 @@ class CinePiController:
         self.iso_lock = False
         self.shutter_a_nom_lock = False
         self.fps_lock = False
+        
+        # Dictionary to store calculated values for different fps
+        self.calculated_values = {}
+        
         self.all_lock = False
         self.lock_override = False
         self.exposure_time_seconds = None
@@ -68,11 +72,13 @@ class CinePiController:
         self.shutter_a_nom = 180
         self.exposure_time_saved = 1/24
         self.current_sensor = self.sensor_detect.camera_model
+        self.redis_controller.set_value('sensor', self.sensor_detect.camera_model)
+        
         self.sensor_mode = int(self.redis_controller.get_value('sensor_mode'))
         self.fps_max = int(self.sensor_detect.get_fps_max(self.current_sensor, self.sensor_mode))
         self.redis_controller.set_value('fps_max', self.fps_max)
         self.gui_layout = self.sensor_detect.get_gui_layout(self.current_sensor, self.sensor_mode)
-        self.exposure_time_s = float(self.redis_controller.get_value('shutter_a')) / 360 * 1 / self.fps
+        self.exposure_time_s = float(self.redis_controller.get_value('shutter_a')) / 360 * (1 / self.fps) 
         self.exposure_time_saved = self.exposure_time_s
         self.file_size = self.sensor_detect.get_file_size(self.current_sensor, self.sensor_mode)
         
@@ -417,6 +423,8 @@ class CinePiController:
                     self.fps_steps = list(range(1, self.fps_max + 1))
                 
                 self.update_steps()
+                
+                self.redis_controller.set_value('sensor', self.sensor_detect.camera_model)
 
             except ValueError as error:
                 logging.error(f"Error setting resolution: {error}")

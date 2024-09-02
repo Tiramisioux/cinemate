@@ -67,6 +67,11 @@ class CinePi:
         sensor_model = self.sensor_detect.camera_model
         tuning_file_path = f'/home/pi/libcamera/src/ipa/rpi/pisp/data/{sensor_model}.json' #
         
+        cg_rb = self.redis_controller.get_value('cg_rb')
+        if cg_rb is None:
+            cg_rb = '1,1'  # Replace with a sensible default
+
+        
         return [
             '--mode', f"{self.sensor_detect.get_width(sensor_model, sensor_mode)}:{self.sensor_detect.get_height(sensor_model, sensor_mode)}:{self.sensor_detect.get_bit_depth(sensor_model, sensor_mode)}:U",
             '--width', f"{self.sensor_detect.get_width(sensor_model, sensor_mode)}",
@@ -77,7 +82,7 @@ class CinePi:
             '--post-process-file', '/home/pi/post-processing.json',
             '--tuning-file', tuning_file_path,
             '--shutter', '20000',
-            '--awbgains', self.redis_controller.get_value('cg_rb'),
+            '--awbgains', '1,1',
         ]
 
     def start_cinepi_process(self, cinepi_args=None):
@@ -147,6 +152,7 @@ class CinePi:
         self.shutdown()
         # Restart the process with default arguments
         self.start_cinepi_process()
+        self.redis_controller.set_value('sensor', self.sensor_detect.camera_model)
         
         # while self.redis_controller.get_value('cinepi_running') == 'False':
         #     time.sleep(2)

@@ -405,7 +405,7 @@ class CinePiController:
                 
                 logging.info(f"Resolution set to mode {value}, height: {height_new}, width: {width_new}, gui_layout: {gui_layout_new}")
                 
-                fps_current = int(float(self.redis_controller.get_value('fps_last')))
+                fps_current = int(float(self.redis_controller.get_value('fps')))
                 time.sleep(0.5)
                 
                 self.cinepi.restart()

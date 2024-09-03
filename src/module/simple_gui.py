@@ -21,7 +21,7 @@ class SimpleGUI(threading.Thread):
                  sensor_detect, 
                  redis_listener, 
                  #timekeeper, 
-                 socketio: SocketIO):
+                 socketio: SocketIO = None):
         threading.Thread.__init__(self)
         self.setup_resources()
         self.check_display()
@@ -59,10 +59,13 @@ class SimpleGUI(threading.Thread):
         if self.socketio is not None:
             self.socketio.emit('background_color_change', {'background_color': self.current_background_color})
         else:
-            logging.error("SocketIO is not initialized. Cannot emit background color change.")
+            logging.warning("SocketIO not initialized. Unable to emit background_color_change.")
 
-    def emit_gui_data_change(self, data):
-        self.socketio.emit('gui_data_change', data)
+    def emit_gui_data_change(self, changed_data):
+        if self.socketio is not None:
+            self.socketio.emit('gui_data_change', changed_data)
+        else:
+            logging.warning("SocketIO not initialized. Unable to emit gui_data_change.")
 
     def hide_cursor(self):
         os.system("setterm -cursor off")
@@ -239,7 +242,10 @@ class SimpleGUI(threading.Thread):
             self.background_color_changed = False  # No background color change
 
         if self.background_color_changed:
-            self.emit_background_color_change()  # Emit event if the background color changes
+            try:
+                self.emit_background_color_change()
+            except Exception as e:
+                logging.error(f"Error emitting background color change: {e}")
 
         current_values = values
 
@@ -250,7 +256,11 @@ class SimpleGUI(threading.Thread):
                     changed_data[key] = value
 
             if changed_data:
-                self.emit_gui_data_change(changed_data)
+                try:
+                    self.emit_gui_data_change(changed_data)
+                except Exception as e:
+                    pass
+                    #logging.error(f"Error emitting GUI data change: {e}")
 
                 # Log the changed data after emitting changes
                 # logging.info(f"Changed data: {changed_data}")

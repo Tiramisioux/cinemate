@@ -16,5 +16,8 @@ sudo systemctl daemon-reload
 # Start the service
 sudo systemctl start $SERVICE_FILE
 
+# Enable the service to start at boot
+sudo systemctl enable $SERVICE_NAME
+
 # Check the status of the service
 sudo systemctl status $SERVICE_FILE

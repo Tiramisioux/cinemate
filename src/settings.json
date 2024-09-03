@@ -18,7 +18,7 @@
   "analog_controls": {
     "iso_pot": "None",
     "shutter_a_pot": "None",
-    "fps_pot": "4",
+    "fps_pot": "None",
     "wb_pot": "None"
   },
   

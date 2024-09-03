@@ -1,15 +1,14 @@
 [Unit]
-Description=Cinemate Service
-After=network.target wifi_hotspot.service
+Description=Cinemate Application
+After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3 /home/pi/cinemate/src/main.py
-WorkingDirectory=/home/pi/cinemate
-StandardOutput=syslog
-StandardError=syslog
-SyslogIdentifier=cinemate
-Restart=on-failure  # Change the restart behavior here
-RestartSec=2s     # Adjust the restart delay here
+ExecStart=/home/pi/run_cinemate.sh
+WorkingDirectory=/home/pi/cinemate/src
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+User=root
 
 [Install]
 WantedBy=multi-user.target

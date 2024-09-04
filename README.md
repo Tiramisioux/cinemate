@@ -94,29 +94,29 @@ Start/stop recording:
 
 Adjust the ISO setting. Requires an integer argument.
 
-    > set_iso 800
+    > set iso 800
 
 Set the shutter angle. Requires a float argument for the angle.
 
-    > set_shutter_a 172.8
+    > set shutter a 172.8
 
 Configure the frames per second. Requires an integer argument.
 
-    > set_fps 24
+    > set fps 24
 
 Lock/unlock iso, shutter angle or fps: Toggle locks or set them directly. Providing an argument directly sets the value. Omitting the argument will toggle the control.
 
-    > set_iso_lock
+    > set iso_lock
 
-    > set_shutter_a_nom_lock 1
+    > set shutter a nom lock 1
 
-    > set_fps_lock
+    > set fps lock
 
 Enable or disable doubling the FPS rate. 
 
-    > set_fps_double
+    > set fps_double
     
-    > set_fps_double 1
+    > set fps_double 1
 
 # CineMate autostart on boot
 
@@ -269,8 +269,6 @@ By using the Quad Rotary Encoder, you can have a compact, intuitive interface fo
 
 ## Grove Base HAT
 to be added
-
-![CineMate build using a Grove Base HAT](docs/images/cinemate_26.JPG)
 
 ## Petroblock
 to be added

@@ -7,14 +7,13 @@ echo "ACTION: $1, DEVBASE: $2"
 ACTION=$1
 DEVBASE=$2
 DEVICE="/dev/${DEVBASE}"
+MOUNT_POINT="/media/RAW"
 
-# Check if the device exists
 if [ ! -b "$DEVICE" ]; then
     echo "Device $DEVICE does not exist."
     exit 1
 fi
 
-MOUNT_POINT="/media/RAW"
 LABEL=$(lsblk -no LABEL $DEVICE)
 
 if [[ ${ACTION} == "add" ]]; then
@@ -23,27 +22,28 @@ if [[ ${ACTION} == "add" ]]; then
         exit 0
     fi
 
-    # Check if already mounted
     if findmnt -rno SOURCE,TARGET | grep -q "^$DEVICE $MOUNT_POINT"; then
         echo "$DEVICE is already mounted at $MOUNT_POINT"
         exit 0
     fi
 
-    # Mount the device
+    echo "Creating mount point $MOUNT_POINT"
+    sudo mkdir -p $MOUNT_POINT
+
     echo "Attempting to mount $DEVICE"
-    udisksctl mount -b $DEVICE
-    if [ $? -eq 0 ]; then
-        echo "Successfully mounted $DEVICE"
+    if sudo mount $DEVICE $MOUNT_POINT; then
+        echo "Successfully mounted $DEVICE at $MOUNT_POINT"
     else
         echo "Failed to mount $DEVICE"
+        sudo rmdir $MOUNT_POINT
     fi
 
 elif [[ ${ACTION} == "remove" ]]; then
-    # Unmount the device
     echo "Attempting to unmount $DEVICE"
-    udisksctl unmount -b $DEVICE
-    if [ $? -eq 0 ]; then
+    if sudo umount $MOUNT_POINT; then
         echo "Successfully unmounted $DEVICE"
+        echo "Removing mount point $MOUNT_POINT"
+        sudo rmdir $MOUNT_POINT
     else
         echo "Failed to unmount $DEVICE"
     fi

@@ -105,17 +105,17 @@ class SSDMonitor:
                 if line:
                     logging.debug(f"dmesg output: {line.strip()}")
 
-                    if 'sd' in line:
-                        if 'Attached SCSI disk' in line or 'removable' in line:
-                            logging.info(f"Detected a new SCSI disk event: {line.strip()}")
+                    if 'sd' in line or 'nvme' in line:
+                        if 'Attached SCSI disk' in line or 'Attached scsi generic' in line or 'nvme nvme' in line:
+                            logging.info(f"Detected a new disk event: {line.strip()}")
                             self._check_and_mount_raw_drive(line)
-                        elif 'offline' in line or 'Detached SCSI disk' in line:
+                        elif 'offline' in line or 'Detached' in line:
                             logging.info(f"Detected a disk detach event: {line.strip()}")
                             self._check_detach_raw_drive(line)
                         else:
-                            logging.debug(f"Ignored non-relevant sd event: {line.strip()}")
+                            logging.debug(f"Ignored non-relevant disk event: {line.strip()}")
                     else:
-                        logging.debug(f"Ignored non-sd dmesg line: {line.strip()}")
+                        logging.debug(f"Ignored non-disk dmesg line: {line.strip()}")
         except Exception as e:
             logging.error(f"Error while monitoring dmesg: {e}")
         finally:
@@ -125,6 +125,7 @@ class SSDMonitor:
     def _check_and_mount_raw_drive(self, dmesg_line):
         """Check if a connected drive is named RAW and mount it."""
         if self._intentional_unmount:
+            logging.info("Skipping mount due to intentional unmount flag")
             return  # Skip mounting if the unmount was intentional
 
         device_name = None
@@ -137,39 +138,61 @@ class SSDMonitor:
 
         if device_name:
             device_path = f'/dev/{device_name}'
+            logging.info(f"Detected device: {device_path}")
             try:
                 if self._is_already_mounted(device_path):
-                    logging.debug(f"Device '{device_name}' is already mounted.")
+                    logging.info(f"Device '{device_name}' is already mounted.")
                     self._update_space_left()  # Ensure space_left is updated even if already mounted
                     return
 
                 time.sleep(2)  # Add a small delay to ensure the system is ready
 
-                blkid_output = subprocess.check_output(['blkid', '-o', 'value', '-s', 'LABEL', device_path], text=True).strip()
+                blkid_output = subprocess.check_output(['sudo', 'blkid', '-o', 'value', '-s', 'LABEL', device_path], text=True).strip()
+                logging.info(f"Device label: {blkid_output}")
                 if blkid_output == 'RAW':
-                    fstype = subprocess.check_output(['blkid', '-o', 'value', '-s', 'TYPE', device_path], text=True).strip()
+                    fstype = subprocess.check_output(['sudo', 'blkid', '-o', 'value', '-s', 'TYPE', device_path], text=True).strip()
+                    logging.info(f"Filesystem type: {fstype}")
                     if fstype in ['ntfs', 'ext4']:
                         self.device_name = device_name
                         self._mount_drive(device_name, fstype)
+                    else:
+                        logging.warning(f"Unsupported filesystem type: {fstype}")
+                else:
+                    logging.info(f"Device {device_path} is not labeled RAW. Ignoring.")
             except subprocess.CalledProcessError as e:
                 logging.error(f"Error checking or mounting drive '{device_name}': {e}")
+        else:
+            logging.warning(f"Could not extract device name from dmesg line: {dmesg_line}")
                 
     def _mount_drive(self, device_name, fstype):
         """Mount the drive and start monitoring."""
+        device_path = f'/dev/{device_name}'
         try:
+            logging.info(f"Attempting to mount {device_path} ({fstype}) at {self.mount_path}")
             os.makedirs(self.mount_path, exist_ok=True)
-            if not self._is_already_mounted(f'/dev/{device_name}'):
-                subprocess.run(['mount', '-t', fstype, f'/dev/{device_name}', self.mount_path], check=True)
+            if not self._is_already_mounted(device_path):
+                if fstype == 'ntfs':
+                    # Use ntfs-3g for NTFS drives
+                    command = ['sudo', 'ntfs-3g', device_path, self.mount_path, '-o', 'rw,uid=1000,gid=1000']
+                else:
+                    # For other filesystems (like ext4), use the regular mount command
+                    command = ['sudo', 'mount', '-t', fstype, device_path, self.mount_path]
+                
+                logging.info(f"Executing mount command: {' '.join(command)}")
+                subprocess.run(command, check=True)
+                
                 self.is_mounted = True
-                self._update_space_left()  # Ensure space_left is updated on mount
-                logging.info(f"Drive '{device_name}' mounted at {self.mount_path} with {fstype} filesystem")
+                self._update_space_left()
+                logging.info(f"Drive '{device_name}' successfully mounted at {self.mount_path} with {fstype} filesystem")
                 self.mount_event.emit(self.mount_path)
             else:
-                logging.debug(f"Drive '{device_name}' is already mounted.")
-                self.is_mounted = True  # Ensure the flag is correctly set
-                self._update_space_left()  # Ensure space_left is updated even if already mounted
+                logging.info(f"Drive '{device_name}' is already mounted.")
+                self.is_mounted = True
+                self._update_space_left()
         except subprocess.CalledProcessError as e:
             logging.error(f"Failed to mount drive '{device_name}': {e}")
+        except Exception as e:
+            logging.error(f"Unexpected error while mounting drive '{device_name}': {e}")
 
 
     def _is_already_mounted(self, device_path):

@@ -185,14 +185,15 @@ Default settings are `None`. Map Grove Base HAT ADC channels to iso, shutter ang
 ### Buttons
 Setup buttons with actions for different interactions. Methods are the same as the CineMate CLI commands. Arguments can also be added here
 
-    "buttons": [
     {
-        "pin": 5,
-        "pull_up": "False",
-        "debounce_time": "0.1",
-        "press_action": {"method": "rec"}
-    }
-    ]
+      "pin": 22,
+      "pull_up": "False",
+      "debounce_time": "0.1",
+      "press_action": {"method": "set_all_lock"},
+      "single_click_action": "None",
+      "double_click_action": "None",
+      "hold_action": {"method": "restart_camera"}
+    },
 
 Each button can be configured with a variety of actions based on different interactions:
 

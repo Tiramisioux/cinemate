@@ -35,6 +35,7 @@ from module.battery_monitor import BatteryMonitor
 from module.app import create_app
 from module.analog_controls import AnalogControls
 from module.PWMcontroller import PWMController
+from module.wifi_hotspot import WiFiHotspotManager
 
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
 
@@ -120,7 +121,15 @@ if __name__ == "__main__":
 
     logger, log_queue = configure_logging(MODULES_OUTPUT_TO_SERIAL, logging_level)
     settings = load_settings('/home/pi/cinemate/src/settings.json')
-
+    
+    # Start wifi hotspot
+    wifi_manager = WiFiHotspotManager()
+    try:
+        wifi_manager.create_hotspot('CinePi', '11111111')
+        #logging.info("WiFi hotspot started successfully")
+    except Exception as e:
+        logging.error(f"Failed to start WiFi hotspot: {e}")
+    
     redis_controller = RedisController()
     
     sensor_detect = SensorDetect()

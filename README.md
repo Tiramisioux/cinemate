@@ -1,24 +1,24 @@
 
 
-# Overview
+## Overview
 CineMate scripts is a way for users to implement and customize manual controls for their [cinepi-raw](https://github.com/cinepi/cinepi-raw) build. 
 
 Project aims at offering an easy way to build a custom camera. For basic operation and experimentation, Raspberry Pi, camera board and monitor is needed. For practical use, buttons and switches can easily be added, allowing for a custom build.
 
-A ready made disk image can be found in the release section of this repo.
+A ready made disk image can be found [here](https://github.com/Tiramisioux/cinemate/releases).
 
 Join the CinePi Discord [here](https://discord.gg/Hr4dfhuK).
 
-# Hardware requirements
+## Hardware requirements
 - Rasberry Pi 5
 - Official HQ or GS camera
 - HDMI monitor or device (phone or tablet) 
 
-_For recording, use a high speed NVME drive or CFE card module with CFE card module by Will Whang. Drive needs to be formatted as NTFS and named "RAW"._
+_For recording, use a high speed NVME drive or [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/) by Will Whang. Drive needs to be formatted as NTFS and named "RAW"._
 
-_CineMate Pi 5 is also compatible with OneInchEye (Sony IMX 283) and StarlightEye (Sony IMX 585) by Will Whang._
+_CineMate Pi 5 is also compatible with [OneInchEye](https://www.tindie.com/products/will123321/oneincheye/) (Sony IMX 283) and [StarlightEye](https://www.tindie.com/products/will123321/starlighteye/) (Sony IMX 585) by Will Whang._
 
-# Quickstart guide
+## Quickstart guide
 
 1) Burn image to ssd card
 
@@ -54,16 +54,16 @@ Burn to SD card (> 8 GB) using Raspberry Pi imager or Balena Etcher.
 |-----------------------------------------|
 
 
-# Simple GUI
+## Simple GUI
 
 - Red color means camera is recording. 
 - Green color means camera is writing buffered frames to disk. 
 - Yellow color indicates low voltage warning.
 - Numbers in lower left indicate frame count / frames in buffer. 
 
-CineMate image automatically starts wifi hotspot `Cinepi. Connect to the wifi (password: 11111111) and navigate browser to cinepi.local:5000 for simple web gui.
+CineMate image automatically starts wifi hotspot `Cinepi`, password: `11111111`. Navigate browser to cinepi.local:5000 for simple web gui.
 
-# CineMate CLI
+## CineMate CLI
 
 This table includes all the available commands (method calls) + arguments for the CineMate CLI. GPIO column shows default settings of `cinemate/src/settings.json` and can be fully customized by the user. 
 
@@ -125,7 +125,7 @@ Enable or disable doubling the FPS rate.
     
     > set fps_double 1
 
-# CineMate autostart on boot
+## CineMate autostart on boot
 
 To enable autostart:
 
@@ -148,11 +148,11 @@ To disable autostart:
     make uninstall
 
 
-# Settings file
+## Settings file
 
 The settings file can be found in `cinemate/src/settings.json`. Here the user can define their own buttons, switches and rotary encoders.
 
-### GPIO output
+#### GPIO output
 Default rec LED pins are 6 and 21. Make sure to use a 220 Ohm resistor on this pin!
 
 ```
@@ -162,7 +162,7 @@ Default rec LED pins are 6 and 21. Make sure to use a 220 Ohm resistor on this p
   },
 ```
 
-### Arrays
+#### Arrays
 
 Set desired arrays for ISO, shutter angle values, fps and white balance.
 
@@ -177,7 +177,7 @@ Set desired arrays for ISO, shutter angle values, fps and white balance.
 
 CineMate interpolates redis cg_rb settings used by libcamera based on the selected white balance value in the above array and the tuning file for the sensor being used.
 
-### Settings
+#### Settings
 ```
   "settings": {
     "light_hz": [50, 60]
@@ -186,7 +186,7 @@ CineMate interpolates redis cg_rb settings used by libcamera based on the select
 
 CineMate dynamically adjusts the shutter_a_steps array on fps change, adding the flicker free angles given the current frame rate and the hz values defined by the user.
 
-### Analog Controls
+#### Analog Controls
 Default settings are `None`. Map Grove Base HAT ADC channels to iso, shutter angle, fps and white balance controls. 
 
 ```
@@ -198,7 +198,7 @@ Default settings are `None`. Map Grove Base HAT ADC channels to iso, shutter ang
   }
 ```
 
-### Buttons
+#### Buttons
 Setup buttons with actions for different interactions. Methods are the same as the CineMate CLI commands. Arguments can also be added here
 
 ```
@@ -225,7 +225,7 @@ Each action can specify a method that corresponds to a function within the appli
 
 Note that if you have both a Press Action and a Single-Click action on a pin, the pin will first execute the Press Action and when released, execute the Single-Click Action. Combining Press Action and Click actions on the same pin is therefore not recommended.
 
-### Two-way switches
+#### Two-way switches
 Two-way switches are configured in the two_way_switches section and have actions for both states:
 
 **State On Action** and **State Off Action**: Define what actions to take when the switch is turned on or off, respectively. Similar to button actions, these can specify a method and args.
@@ -238,7 +238,7 @@ Two-way switches are configured in the two_way_switches section and have actions
 }
 ```
 
-### Rotary Encoders
+#### Rotary Encoders
 Configure rotary encoders for settings adjustments and optional button presses:
 
 ```
@@ -255,7 +255,7 @@ Configure rotary encoders for settings adjustments and optional button presses:
 
 Note that if rotary encoders with buttons are used, these are connected and defined as normal push buttons in the Button-section of the settings file.
 
-### Adafruit Neopixel Quad Rotary Encoder
+#### Adafruit Neopixel Quad Rotary Encoder
 
 ```
 {
@@ -279,7 +279,7 @@ For example, based on default settings above:
 - The FPS encoder's push button clones GPIO 1 (toggle `set fps double`).
 - The White Balance encoder's push button GPIO 13 (toggle through resolution modes using `set resolution` without argument).
 
-# Resolution modes  
+## Resolution modes  
 
 | Sensor | Mode | Resolution   | Aspect Ratio | Bit Depth | Max FPS | File Size (MB) |
 |--------|------|--------------|--------------|-----------|---------|----------------|
@@ -297,15 +297,17 @@ For example, based on default settings above:
 |        | 1    | 3856 x 2180  | 1.77         | 12        | 34      | 13             |
 |        | 2    | 1928 x 1090  | 1.77         | 16        | 30      | 13             |
 
-# Additional hardware
+## Additional hardware
 
 CineMate image file comes pre-installed with:
-
-- Grove Base HAT
-- Petroblock
+- [OneInchEye](https://www.tindie.com/products/will123321/oneincheye/)
+- [StarlightEye](https://www.tindie.com/products/will123321/starlighteye/)
+- [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/)
+- [Grove Base HAT](https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/)
+- Petroblock Powerblock
 - Pisugar 
 
-# PWM mode (experimental)
+## PWM mode (experimental)
 Trigger mode 2 sets the Raspberry Pi HQ/GS sensors in sink mode, as explained here: https://github.com/Tiramisioux/libcamera-imx477-speed-ramping
 
 This makes it possible to feed the sensor XVS input with hardware PWM signal from the pi (CineMate uses pin 19 as default, but pin 18 also supports hardware PWM), allowing for hardware control of fps and shutter angle during recording, without restarting the camera. 
@@ -317,7 +319,7 @@ This function is an experiment inspired by my old Nizo 8mm camera which has a bu
 
 From my tests I have noticed that changing fps works fine, but sometimes camera has to be reset a couple of times to work properly (toggling the PWM mode button). Changing shutter angle in PWM mode (or having shutter angle sync engaged) also doesn't seem to work properly.
 
-# Backing up the SD card
+## Backing up the SD card
 
 To make a compressed image backup of the SD card onto the SSD:
 
@@ -327,13 +329,13 @@ echo "Start time: $(date)"; sudo dd if=/dev/mmcblk0 bs=1M status=progress | xz -
 
 Backing up an 8 GB CineMate image takes about 2 hours.
 
-# Known issues
+## Known issues
 
 - Frame drops when using NTFS formatted SSD drives
 - Recording stops after a couple of seconds when using ext4 formatted SSD drives
 - 16 bit mode on StarlightEye not working properly
 
-# Todo
+## Todo
 
 - [ ] optimize reciording to allow for the use of 300 MB/s SSD drive
 - [ ] optimize operating system for faster boot and smaller image file

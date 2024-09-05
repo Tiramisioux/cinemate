@@ -53,8 +53,6 @@ Burn to SD card (> 8 GB) using Raspberry Pi imager or Balena Etcher.
 | :exclamation:  When connecting an LED to the GPIOs, be sure to use a resistor   |
 |-----------------------------------------|
 
-|:point_up:  Connect GPIO 26 to GPIO 03 using a jumper wire, and the system button attached to GPIO 26 will also wake up the Pi, after being shutdown.   |
-|-----------------------------------------|
 
 # Simple GUI
 
@@ -152,18 +150,17 @@ To disable autostart:
 
 # Settings file
 
-The settings file can be found in `cinemate/src/settings.json`. Here the user can define their own buttons, switches, rotary encoders and combined actions, modifying the table above.
+The settings file can be found in `cinemate/src/settings.json`. Here the user can define their own buttons, switches and rotary encoders.
 
 ### GPIO output
-Default rec LED pin is 21. Make sure to use a 220 Ohm resistor on this pin!
+Default rec LED pins are 6 and 21. Make sure to use a 220 Ohm resistor on this pin!
 
-    {
+```
+  "gpio_output": {
     "pwm_pin": 19,
-    "rec_out_pin": [6, 21],
-    "iso_steps": [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200],
-    "additional_shutter_a_steps": [172.8, 346.6],
-    "fps_steps": null
-    }
+    "rec_out_pin": [6, 21]
+  },
+```
 
 ### Arrays
 
@@ -274,15 +271,13 @@ Note that if rotary encoders with buttons are used, these are connected and defi
 - Encoder 2 (FPS): Push button on GPIO 1
 - Encoder 3 (White Balance): Push button on GPIO 13
 
-These push buttons can be programmed to perform various functions like toggling locks, changing modes, or triggering specific actions, just like regular GPIO buttons.
+These push buttons can be programmed to perform various functions like toggling locks, changing modes, or triggering specific actions, just like regular GPIO buttons. The `gpio_pin` setting clones the behaviour of pins defined in the Buttons section of the settings file.
 
-For example, based on default setting settings:
-- The ISO encoder's push button (GPIO 22) is set to lock all controls when pressed.
-- The Shutter Angle encoder's push button (GPIO 12) is set to toggle the shutter angle sync mode on a single click.
-- The FPS encoder's push button (GPIO 1) is set to toggle FPS doubling on a single click.
-- The White Balance encoder's push button (GPIO 13) is set to change resolution on a single click.
-
-By using the Quad Rotary Encoder, you can have a compact, intuitive interface for adjusting camera settings while still maintaining the flexibility of programmable push button actions.
+For example, based on default settings above:
+- The ISO encoder's push button clones GPIO 22 (toggle `set_all_lock`).
+- The Shutter Angle encoder's push button clones GPIO 12 (toggle `set shutter a sync mode`).
+- The FPS encoder's push button clones GPIO 1 (toggle `set fps double`).
+- The White Balance encoder's push button GPIO 13 (toggle through resolution modes using `set resolution` without argument).
 
 # Resolution modes  
 
@@ -327,7 +322,7 @@ From my tests I have noticed that changing fps works fine, but sometimes camera 
 To make a compressed image backup of the SD card onto the SSD:
 
 ```
-sudo dd if=/dev/mmcblk0 bs=1M status=progress | sudo pishrink.sh - - | xz -c > /media/RAW/cinepi-sdk-002_cinemate-pi5_bookworm_image_$(date +%Y-%m-%d_%H-%M-%S).img.xz
+echo "Start time: $(date)"; sudo dd if=/dev/mmcblk0 bs=1M status=progress | xz -9 -c > /media/RAW/cinepi-sdk-002_cinemate-pi5_bookworm_image_$(date +%Y-%m-%d_%H-%M-%S).img.xz; echo "End time: $(date)"
 ```
 
 Backing up an 8 GB CineMate image takes about 2 hours.
@@ -336,6 +331,7 @@ Backing up an 8 GB CineMate image takes about 2 hours.
 
 - Frame drops when using NTFS formatted SSD drives
 - Recording stops after a couple of seconds when using ext4 formatted SSD drives
+- 16 bit mode on StarlightEye not working properly
 
 # Todo
 

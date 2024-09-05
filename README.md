@@ -14,7 +14,7 @@ Join the CinePi Discord [here](https://discord.gg/Hr4dfhuK).
 - Official HQ or GS camera
 - HDMI monitor or device (phone or tablet) 
 
-_For recording, use a high speed NVME drive or CFE card module with CFE card module by Will Whang. SSD needs to be formatted as NTFS and named "RAW"._
+_For recording, use a high speed NVME drive or CFE card module with CFE card module by Will Whang. Drive needs to be formatted as NTFS and named "RAW"._
 
 _CineMate Pi 5 is also compatible with OneInchEye (Sony IMX 283) and StarlightEye (Sony IMX 585) by Will Whang._
 
@@ -56,6 +56,15 @@ Burn to SD card (> 8 GB) using Raspberry Pi imager or Balena Etcher.
 |:point_up:  Connect GPIO 26 to GPIO 03 using a jumper wire, and the system button attached to GPIO 26 will also wake up the Pi, after being shutdown.   |
 |-----------------------------------------|
 
+# Simple GUI
+
+- Red color means camera is recording. 
+- Green color means camera is writing buffered frames to disk. 
+- Yellow color indicates low voltage warning.
+- Numbers in lower left indicate frame count / frames in buffer. 
+
+CineMate image automatically starts wifi hotspot `Cinepi. Connect to the wifi (password: 11111111) and navigate browser to cinepi.local:5000 for simple web gui.
+
 # CineMate CLI
 
 This table includes all the available commands (method calls) + arguments for the CineMate CLI. GPIO column shows default settings of `cinemate/src/settings.json` and can be fully customized by the user. 
@@ -65,19 +74,19 @@ Commands are also possible to send to the Pi via USB serial.
 | CineMate CLI | Camera function           | arguments                     | GPIO button         | GPIO rotary encoder       |
 | ------------------------------- | ------------------------- | ----------------------------- | ------------------- | ------------------------- |
 | `rec`                           | start/stop recording      | None                          | 4, 5                |                           |
-| `set iso`                       | set iso                   | integer                       |                     | clk 9, dt 11              |
+| `set iso`                       | set iso                   | integer                       |                     |                           |
 | `inc iso`                       | iso increase              | None                          | 27                  | clk 9, dt 11 (clockwise)  |
 | `dec iso`                       | iso decrease              | None                          | 10                  | clk 9, dt 11 (counter-clockwise) |
-| `set shutter a nom`             | set nominal shutter angle | float                         |                     | clk 24, dt 25             |
+| `set shutter a nom`             | set nominal shutter angle | float                         |                     |                           |
 | `inc shutter a nom`             | nominal shutter angle increase | None                     |                     | clk 24, dt 25 (clockwise) |
 | `dec shutter a nom`             | nominal shutter angle decrease | None                     |                     | clk 24, dt 25 (counter-clockwise) |
-| `set fps`                       | set fps                   | float                         |                     | clk 0, dt 8               |
+| `set fps`                       | set fps                   | float                         |                     |                           |
 | `inc fps`                       | fps increase              | None                          |                     | clk 0, dt 8 (clockwise)   |
 | `dec fps`                       | fps decrease              | None                          |                     | clk 0, dt 8 (counter-clockwise) |
-| `set wb`                        | set white balance         | integer                       |                     | clk 16, dt 20             |
+| `set wb`                        | set white balance         | integer                       |                     |                           |
 | `inc wb`                        | white balance increase    | None                          |                     | clk 16, dt 20 (clockwise) |
 | `dec wb`                        | white balance decrease    | None                          |                     | clk 16, dt 20 (counter-clockwise) |
-| `set resolution`                | change resolution         | None                          | 13 (single click)   |                           |
+| `set resolution`                | change resolution         | integer or None (toggles res  | 13 (single click)   |                           |
 | `unmount`                       | unmount drive             | None                          | 13 (hold)           |                           |
 | `set all lock`                  | lock all controls         | None                          | 22 (press)          |                           |
 | `set fps double`                | double fps                | None                          | 1 (single click)    |                           |
@@ -169,8 +178,19 @@ Set desired arrays for ISO, shutter angle values, fps and white balance.
   },
 ```
 
+CineMate interpolates redis cg_rb settings used by libcamera based on the selected white balance value in the above array and the tuning file for the sensor being used.
+
+### Settings
+```
+  "settings": {
+    "light_hz": [50, 60]
+  }
+```
+
+CineMate dynamically adjusts the shutter_a_steps array on fps change, adding the flicker free angles given the current frame rate and the hz values defined by the user.
+
 ### Analog Controls
-Default settings are `None`. Map Grove Base HAT ADC channels to iso, shutter angle and fps controls. 
+Default settings are `None`. Map Grove Base HAT ADC channels to iso, shutter angle, fps and white balance controls. 
 
 ```
   "analog_controls": {
@@ -178,22 +198,23 @@ Default settings are `None`. Map Grove Base HAT ADC channels to iso, shutter ang
     "shutter_a_pot": "A2",
     "fps_pot": "A4",
     "wb_pot": "A6"
-  },
-````
-
+  }
+```
 
 ### Buttons
 Setup buttons with actions for different interactions. Methods are the same as the CineMate CLI commands. Arguments can also be added here
 
-    {
-      "pin": 22,
-      "pull_up": "False",
-      "debounce_time": "0.1",
-      "press_action": {"method": "set_all_lock"},
-      "single_click_action": "None",
-      "double_click_action": "None",
-      "hold_action": {"method": "restart_camera"}
-    },
+```
+{
+    "pin": 22,
+    "pull_up": "False",
+    "debounce_time": "0.1",
+    "press_action": {"method": "set_all_lock"},
+    "single_click_action": "None",
+    "double_click_action": "None",
+    "hold_action": {"method": "restart_camera"}
+}
+```
 
 Each button can be configured with a variety of actions based on different interactions:
 
@@ -212,28 +233,25 @@ Two-way switches are configured in the two_way_switches section and have actions
 
 **State On Action** and **State Off Action**: Define what actions to take when the switch is turned on or off, respectively. Similar to button actions, these can specify a method and args.
 
-    "two_way_switches": [
-    {
-        "pin": 16,
-        "state_on_action": {"method": "set_shutter_a_sync", "args": [false]},
-        "state_off_action": {"method": "set_shutter_a_sync", "args": [true]}
-      },
-    }
-    ]
+```
+{
+    "pin": 16,
+    "state_on_action": {"method": "set_shutter_a_sync", "args": [false]},
+    "state_off_action": {"method": "set_shutter_a_sync", "args": [true]}
+}
+```
 
 ### Rotary Encoders
 Configure rotary encoders for settings adjustments and optional button presses:
 
 ```
-  "rotary_encoders": [
-    {
-      "clk_pin": 9,
-      "dt_pin": 11,
-      "encoder_actions": {
-        "rotate_clockwise": {"method": "inc_iso", "args": []},
-        "rotate_counterclockwise": {"method": "dec_iso", "args": []}
-      }
-    },
+{
+    "clk_pin": 9,
+    "dt_pin": 11,
+    "encoder_actions": {
+    "rotate_clockwise": {"method": "inc_iso", "args": []},
+    "rotate_counterclockwise": {"method": "dec_iso", "args": []}
+}
 ```
 
 **Clockwise and Counterclockwise Actions**: Specify methods to execute when the encoder is rotated in either direction.
@@ -243,12 +261,12 @@ Note that if rotary encoders with buttons are used, these are connected and defi
 ### Adafruit Neopixel Quad Rotary Encoder
 
 ```
-  "quad_rotary_encoders": {
+{
     "0": {"setting_name": "iso", "gpio_pin": 22},
     "1": {"setting_name": "shutter_a", "gpio_pin": 12},
     "2": {"setting_name": "fps", "gpio_pin": 1},
     "3": {"setting_name": "wb", "gpio_pin": 13}
-  }
+    }
 ```
 
 - Encoder 0 (ISO): Push button on GPIO 22
@@ -266,19 +284,34 @@ For example, based on default setting settings:
 
 By using the Quad Rotary Encoder, you can have a compact, intuitive interface for adjusting camera settings while still maintaining the flexibility of programmable push button actions.
 
+# Resolution modes  
+
+| Sensor | Mode | Resolution   | Aspect Ratio | Bit Depth | Max FPS | File Size (MB) |
+|--------|------|--------------|--------------|-----------|---------|----------------|
+| IMX296 | 0    | 1456 x 1088  | 1.33         | 12        | 60      | 2              |
+| IMX283 | 0    | 2736 x 1538  | 1.80         | 12        | 40      | 7.1            |
+|        | 1    | 2736 x 1824  | 1.53         | 12        | 34      | 8.2            |
+| IMX477 | 0    | 2028 x 1080  | 1.87         | 12        | 50      | 3.2            |
+|        | 1    | 2028 x 1520  | 1.33         | 12        | 40      | 4.5            |
+|        | 2    | 1332 x 990   | 1.34         | 10        | 120     | 2.8            |
+| IMX519 | 0    | 1280 x 720   | 1.77         | 10        | 80      | 7.1            |
+|        | 1    | 1920 x 1080  | 1.77         | 10        | 60      | 8.2            |
+|        | 2    | 2328 x 1748  | 1.77         | 10        | 30      | 8.2            |
+|        | 3    | 3840 x 2160  | 1.77         | 10        | 18      | 31             |
+| IMX585 | 0    | 1928 x 1090  | 1.77         | 12        | 87      | 4              |
+|        | 1    | 3856 x 2180  | 1.77         | 12        | 34      | 13             |
+|        | 2    | 1928 x 1090  | 1.77         | 16        | 30      | 13             |
+
 # Additional hardware
 
-## Grove Base HAT
-to be added
+CineMate image file comes pre-installed with:
 
-## Petroblock
-to be added
+- Grove Base HAT
+- Petroblock
+- Pisugar 
 
-## Pisugar
-to be added
-
-## PWM mode (experimental)
-PWM mode sets the Raspberry Pi HQ/GS sensors in sink mode, as explained here: https://github.com/Tiramisioux/libcamera-imx477-speed-ramping
+# PWM mode (experimental)
+Trigger mode 2 sets the Raspberry Pi HQ/GS sensors in sink mode, as explained here: https://github.com/Tiramisioux/libcamera-imx477-speed-ramping
 
 This makes it possible to feed the sensor XVS input with hardware PWM signal from the pi (CineMate uses pin 19 as default, but pin 18 also supports hardware PWM), allowing for hardware control of fps and shutter angle during recording, without restarting the camera. 
 
@@ -293,6 +326,24 @@ From my tests I have noticed that changing fps works fine, but sometimes camera 
 
 To make a compressed image backup of the SD card onto the SSD:
 
-    sudo dd if=/dev/mmcblk0 bs=1M status=progress | xz -c > /media/RAW/cinepi_cinemate_raspbian_image_$(date +%Y-%m-%d_%H-%M-%S).img.xz
+```
+sudo dd if=/dev/mmcblk0 bs=1M status=progress | sudo pishrink.sh - - | xz -c > /media/RAW/cinepi-sdk-002_cinemate-pi5_bookworm_image_$(date +%Y-%m-%d_%H-%M-%S).img.xz
+```
 
 Backing up an 8 GB CineMate image takes about 2 hours.
+
+# Known issues
+
+- Frame drops when using NTFS formatted SSD drives
+- Recording stops after a couple of seconds when using ext4 formatted SSD drives
+
+# Todo
+
+- [ ] optimize reciording to allow for the use of 300 MB/s SSD drive
+- [ ] optimize operating system for faster boot and smaller image file
+- [ ] change rec light logic to be based on framecount from redis
+- [ ] fix shutter angle values array calculation
+- [ ] fix web gui for proper display of framcount and frame buffer
+- [ ] implement control of StarlightEye mechanical filter
+- [ ] make RPi4 compatible image file for cinepi-V2 + cinemate
+

@@ -84,14 +84,15 @@ Commands are also possible to send to the Pi via USB serial.
 | `set wb`                        | set white balance         | integer                       |                     |                           |
 | `inc wb`                        | white balance increase    | None                          |                     | clk 16, dt 20 (clockwise) |
 | `dec wb`                        | white balance decrease    | None                          |                     | clk 16, dt 20 (counter-clockwise) |
+| `set fps double`                | double fps                | None                          | 1 (single click)    |                           |
+| `set trigger mode`              | set trigger mode          | None                          | 1 (double click) |                   |
 | `set resolution`                | change resolution         | integer or None (toggles res  | 13 (single click)   |                           |
+| `restart camera`                | restart camera            | None                          | 13 (double click) |                   |
+| `reboot`                        | reboot                    | None                          | 13 (triple click) |                   |
 | `unmount`                       | unmount drive             | None                          | 13 (hold)           |                           |
 | `set all lock`                  | lock all controls         | None                          | 22 (press)          |                           |
 | `set shutter a sync mode`       | set shutter angle sync mode | None                        | 12 (single click)   |                           |
-| `set fps double`                | double fps                | None                          | 1 (single click)    |                           |
-| `set trigger mode`              | set trigger mode          | None                          | 12 (hold) |                   |
-| `restart camera`                | restart camera            | None                          | 22 (hold) |                   |
-| `reboot`                        | reboot                    | None                          | 13 (triple click) |                   |
+
 
 ## Example CLI commands
 

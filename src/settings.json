@@ -61,7 +61,7 @@
       "press_action": {"method": "set_all_lock"},
       "single_click_action": "None",
       "double_click_action": "None",
-      "hold_action": {"method": "restart_camera"}
+      "hold_action": "None"
     },
     {
       "pin": 12,
@@ -71,7 +71,7 @@
       "single_click_action": {"method": "set_shutter_a_sync_mode"},
       "double_click_action": "None",
       "triple_click_action": "None",
-      "hold_action": {"method": "set_trigger_mode"}
+      "hold_action": "None"
     },
     {
       "pin": 1,

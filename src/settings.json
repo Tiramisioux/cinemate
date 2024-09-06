@@ -81,7 +81,7 @@
       "single_click_action": {"method": "set_fps_double"},
       "double_click_action": {"method": "set_trigger_mode"},
       "triple_click_action": "None",
-      "hold_action": {"method": "reboot"}
+      "hold_action": "None"
     },
     {
       "pin": 13,

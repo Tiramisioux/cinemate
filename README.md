@@ -3,7 +3,7 @@
 ## Overview
 CineMate scripts is a way for users to implement and customize manual controls for their [cinepi-raw](https://github.com/cinepi/cinepi-raw) build. 
 
-Project aims at offering an easy way to build a custom camera. For basic operation and experimentation, Raspberry Pi, camera board and monitor is needed. For practical use, buttons and switches can easily be added, allowing for a custom build.
+Project aims at offering an easy way to build a custom camera. For basic operation and experimentation, Raspberry Pi, camera board and monitor is needed. For practical use, buttons and switches can easily be added.
 
 A ready made disk image can be found [here](https://github.com/Tiramisioux/cinemate/releases).
 
@@ -14,7 +14,7 @@ Join the CinePi Discord [here](https://discord.gg/Hr4dfhuK).
 - Official HQ or GS camera
 - HDMI monitor or device (phone or tablet) 
 
-_For recording, use a high speed NVME drive or [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/) by Will Whang. Drive needs to be formatted as NTFS and named "RAW"._
+_For recording, use a high speed NVME drive or [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/) by Will Whang. Drive needs to be formatted as ext4 and named "RAW"._
 
 _CineMate Pi 5 is also compatible with [OneInchEye](https://www.tindie.com/products/will123321/oneincheye/) (Sony IMX 283) and [StarlightEye](https://www.tindie.com/products/will123321/starlighteye/) (Sony IMX 585) by Will Whang._
 
@@ -87,11 +87,11 @@ Commands are also possible to send to the Pi via USB serial.
 | `set resolution`                | change resolution         | integer or None (toggles res  | 13 (single click)   |                           |
 | `unmount`                       | unmount drive             | None                          | 13 (hold)           |                           |
 | `set all lock`                  | lock all controls         | None                          | 22 (press)          |                           |
-| `set fps double`                | double fps                | None                          | 1 (single click)    |                           |
-| `set trigger mode`              | set trigger mode          | None                          | 12 (hold), 1 (double click) |                   |
 | `set shutter a sync mode`       | set shutter angle sync mode | None                        | 12 (single click)   |                           |
-| `reboot`                        | reboot                    | None                          | 1 (hold), 13 (triple click) |                   |
-| `restart camera`                | restart camera            | None                          | 22 (hold), 13 (double click) |                   |
+| `set fps double`                | double fps                | None                          | 1 (single click)    |                           |
+| `set trigger mode`              | set trigger mode          | None                          | 12 (hold) |                   |
+| `restart camera`                | restart camera            | None                          | 22 (hold) |                   |
+| `reboot`                        | reboot                    | None                          | 13 (triple click) |                   |
 
 ## Example CLI commands
 

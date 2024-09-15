@@ -80,7 +80,7 @@ class CinePi:
             '--lores-height', '720',
             '-p', '0,30,1920,1020',
             '--post-process-file', '/home/pi/post-processing.json',
-            '--tuning-file', tuning_file_path,
+            #'--tuning-file', tuning_file_path,
             '--shutter', '20000',
             '--awbgains', '1,1',
         ]

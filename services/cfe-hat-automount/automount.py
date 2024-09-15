@@ -6,12 +6,9 @@ import psutil
 import subprocess
 import re
 
-
-
 i2c_ch = 1
 i2c_address = 0x34
 bus = smbus.SMBus(i2c_ch)
-
 
 mounted = 0
 lastReadCount = 0

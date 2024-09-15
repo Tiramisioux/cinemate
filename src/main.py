@@ -121,6 +121,7 @@ if __name__ == "__main__":
 
     logger, log_queue = configure_logging(MODULES_OUTPUT_TO_SERIAL, logging_level)
     settings = load_settings('/home/pi/cinemate/src/settings.json')
+
     
     # Start wifi hotspot
     wifi_manager = WiFiHotspotManager()

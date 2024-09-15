@@ -3,7 +3,7 @@ Description=WiFi Hotspot Service
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3 /home/pi/cinemate/services/wifi-hotspot/wifi_hotspot_service.py
+ExecStart=/home/pi/.cinemate-env/bin/python3 /home/pi/cinemate/services/wifi-hotspot/wifi-hotspot-service.py
 Restart=always
 User=root
 

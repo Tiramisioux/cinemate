@@ -1,0 +1,17 @@
+[Unit]
+Description=SSD Automount Service
+After=network.target
+
+[Service]
+ExecStart=/home/pi/.cinemate-env/bin/python3 /home/pi/cinemate/services/ssd-automount/ssd-automount.py
+WorkingDirectory=/home/pi/cinemate/services/ssd-automount
+User=pi
+Group=pi
+Restart=always
+RestartSec=5
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=ssd-automount
+
+[Install]
+WantedBy=multi-user.target

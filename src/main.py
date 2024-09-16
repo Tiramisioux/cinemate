@@ -9,6 +9,7 @@ import argparse
 import subprocess
 import time
 import signal
+import os
 
 RPi.GPIO.setwarnings(False)
 RPi.GPIO.setmode(RPi.GPIO.BCM)
@@ -104,6 +105,19 @@ def load_settings(filename):
             settings['settings'] = {"light_hz": 50}  # Default value if not found
 
         return settings
+    
+def erase_log_file():
+    log_file_path = '/home/pi/cinemate/src/logs/system.log'
+    if os.path.exists(log_file_path):
+        try:
+            with open(log_file_path, 'w') as f:
+                f.truncate(0)
+            logging.info(f"Contents of {log_file_path} have been erased.")
+        except Exception as e:
+            logging.error(f"Failed to erase {log_file_path}: {str(e)}")
+    else:
+        logging.info(f"{log_file_path} does not exist. No action taken.")
+
 
 def handle_exit(signal, frame):
     logging.info("Graceful shutdown initiated.")
@@ -122,6 +136,8 @@ if __name__ == "__main__":
     logger, log_queue = configure_logging(MODULES_OUTPUT_TO_SERIAL, logging_level)
     settings = load_settings('/home/pi/cinemate/src/settings.json')
 
+    # Erase the contents of the log file before configuring logging
+    erase_log_file()
     
     # Start wifi hotspot
     wifi_manager = WiFiHotspotManager()

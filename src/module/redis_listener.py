@@ -41,6 +41,9 @@ class RedisListener:
         self.framecount = 0
         self.redis_controller.set_value('framecount', 0)
         
+        self.drop_frame = False
+        self.drop_frame_timer = None
+        
         self.cinepi_running = True
         
         self.start_listeners()
@@ -110,6 +113,21 @@ class RedisListener:
                         # Add current framerate value to the list
                         if current_framerate is not None:
                             self.framerate_values.append(current_framerate)
+                            
+                        # Check for framerate deviation
+                        expected_fps = float(self.redis_controller.get_value('fps'))
+                        if current_framerate is not None:
+                            fps_difference = abs(current_framerate - expected_fps)
+                            if fps_difference > 1 and not self.drop_frame:
+                                self.drop_frame = True
+                                logging.info("Drop frame detected")
+                                
+                                # Set a timer to reset the drop_frame flag after 0.5 seconds
+                                if self.drop_frame_timer:
+                                    self.drop_frame_timer.cancel()
+                                self.drop_frame_timer = threading.Timer(0.5, self.reset_drop_frame)
+                                self.drop_frame_timer.start()
+
 
                     except json.JSONDecodeError as e:
                         logging.error(f"Failed to parse JSON data: {e}")
@@ -117,7 +135,11 @@ class RedisListener:
                         logging.error(f"Type error in stats data: {e}")
                 else:
                     logging.warning(f"Received unexpected data format: {message_data}")
-
+                    
+    def reset_drop_frame(self):
+        self.drop_frame = False
+        logging.info("Drop frame flag reset")
+        
     def reset_framecount(self):
         self.framecount = 0
         self.frame_count = 0
@@ -201,7 +223,7 @@ class RedisListener:
             if time_diffs:
                 average_time_diff = sum(time_diffs) / len(time_diffs)
                 average_fps = (1.0 / average_time_diff)*1000 if average_time_diff != 0 else 0
-                #logging.info(f"Average framerate of the last 100 frames: {average_fps:.6f} FPS")
+                logging.info(f"Average framerate of the last 100 frames: {average_fps:.6f} FPS")
             else:
                 logging.warning("Time differences calculation resulted in an empty list.")
         else:

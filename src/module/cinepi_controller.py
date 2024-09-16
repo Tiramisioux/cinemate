@@ -248,7 +248,7 @@ class CinePiController:
         self.set_shutter_a(closest_shutter_angle)
 
     def set_fps(self, value):
-        value = int(float(value))
+        value = float(value)
         logging.info(f"Received set_fps call with value: {value}")
 
         if not self.fps_lock:

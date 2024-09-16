@@ -220,7 +220,11 @@ class SimpleGUI(threading.Thread):
         previous_background_color = self.current_background_color  # Store the previous background color
 
         # Determine background color based on conditions, prioritizing red over green
-        if int(values["ram_load"].rstrip('%')) > 95:
+        if self.redis_listener.drop_frame == 1:
+            self.current_background_color = "purple"
+            self.color_mode = "inverse"
+        
+        elif int(values["ram_load"].rstrip('%')) > 95:
             self.current_background_color = "yellow"
             self.color_mode = "inverse"
             self.cinepi_controller.rec()

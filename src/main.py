@@ -106,17 +106,24 @@ def load_settings(filename):
 
         return settings
     
-def erase_log_file():
-    log_file_path = '/home/pi/cinemate/src/logs/system.log'
-    if os.path.exists(log_file_path):
-        try:
-            with open(log_file_path, 'w') as f:
-                f.truncate(0)
-            logging.info(f"Contents of {log_file_path} have been erased.")
-        except Exception as e:
-            logging.error(f"Failed to erase {log_file_path}: {str(e)}")
-    else:
-        logging.info(f"{log_file_path} does not exist. No action taken.")
+def erase_log_files():
+    log_files = [
+        '/home/pi/cinemate/src/logs/system.log',
+        '/home/pi/cinemate/logs/cinemate-service.log',
+        '/home/pi/cinemate/logs/cinemate-service-error.log'
+    ]
+
+    for log_file_path in log_files:
+        if os.path.exists(log_file_path):
+            try:
+                with open(log_file_path, 'w') as f:
+                    f.truncate(0)
+                logging.info(f"Contents of {log_file_path} have been erased.")
+            except Exception as e:
+                logging.error(f"Failed to erase {log_file_path}: {str(e)}")
+        else:
+            logging.info(f"{log_file_path} does not exist. No action taken.")
+
 
 
 def handle_exit(signal, frame):
@@ -137,7 +144,7 @@ if __name__ == "__main__":
     settings = load_settings('/home/pi/cinemate/src/settings.json')
 
     # Erase the contents of the log file before configuring logging
-    erase_log_file()
+    erase_log_files()
     
     # Start wifi hotspot
     wifi_manager = WiFiHotspotManager()
@@ -210,7 +217,11 @@ if __name__ == "__main__":
         app, socketio = create_app(redis_controller, cinepi_controller, simple_gui, sensor_detect)
         simple_gui.socketio = socketio
         
-        stream = threading.Thread(target=socketio.run, args=(app,), kwargs={'host': '0.0.0.0', 'port': 5000})
+        stream = threading.Thread(
+            target=socketio.run, 
+            args=(app,), 
+            kwargs={'host': '0.0.0.0', 'port': 5000, 'allow_unsafe_werkzeug': True}
+        )
         stream.start()
         logging.info(f"Stream module loaded")
     else:

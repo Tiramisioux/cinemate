@@ -73,26 +73,22 @@ class Mediator:
 
     def handle_redis_event(self, data):
         # Handle "is_recording" key changes
-        if data['key'] == 'is_recording':
+        if data['key'] == 'rec':
             is_recording = int(data['value'])
-            self.redis_controller.set_value('is_writing_buf', is_recording)
             if is_recording:
                 logging.info("Recording started!")
                 self.gpio_output.set_recording(1)
-                self.redis_listener.reset_framecount()
                 
                 # Cancel the stop_recording_timer if it's running
                 if self.stop_recording_timer is not None and self.stop_recording_timer.is_alive():
                     self.stop_recording_timer.cancel()
             else:
                 logging.info("Recording stopped!")
-                self.redis_controller.set_value('is_writing', 0)
                 self.gpio_output.set_recording(0)
         
         # Handle "is_writing" key changes        
-        elif data['key'] == 'is_writing':
-            is_writing = int(data['value'])
-            logging.info("Is writing changed")
+        elif data['key'] == 'rec':
+            is_writing = bool(data['value'])
             if is_writing == 1:
                 self.stream.toggle_background_color()
             else:

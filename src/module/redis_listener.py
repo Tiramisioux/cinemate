@@ -46,6 +46,15 @@ class RedisListener:
         
         self.cinepi_running = True
         
+        self.framecount_changing = False
+        self.last_framecount = 0
+        self.last_framecount_check_time = datetime.datetime.now()
+        self.framecount_check_interval = 1.0  # Default to 1 second, will be updated based on FPS
+        
+        self.redis_controller.set_value('rec', "0")
+
+
+        
         self.start_listeners()
 
     def start_listeners(self):
@@ -128,6 +137,16 @@ class RedisListener:
                                 self.drop_frame_timer = threading.Timer(0.5, self.reset_drop_frame)
                                 self.drop_frame_timer.start()
 
+                            # Update framecount check interval based on current FPS
+                            if current_framerate == 0 or None:
+                                framecount_fps = 1
+                            else:
+                                framecount_fps = current_framerate 
+                            self.framecount_check_interval = max(0.5, 2 / framecount_fps)
+
+                        # Check if framecount is changing
+                        self.check_framecount_changing()
+
 
                     except json.JSONDecodeError as e:
                         logging.error(f"Failed to parse JSON data: {e}")
@@ -139,6 +158,25 @@ class RedisListener:
     def reset_drop_frame(self):
         self.drop_frame = False
         logging.info("Drop frame flag reset")
+
+    def check_framecount_changing(self):
+        current_time = datetime.datetime.now()
+        time_elapsed = (current_time - self.last_framecount_check_time).total_seconds()
+
+        if time_elapsed >= self.framecount_check_interval:
+            if self.frame_count != self.last_framecount:
+                if not self.framecount_changing:
+                    self.framecount_changing = True
+                    self.redis_controller.set_value('rec', "1")
+                    logging.info("Framecount is changing")
+            else:
+                if self.framecount_changing:
+                    self.framecount_changing = False
+                    self.redis_controller.set_value('rec', "0")
+                    logging.info("Framecount is stable")
+
+            self.last_framecount = self.frame_count
+            self.last_framecount_check_time = current_time
         
     def reset_framecount(self):
         self.framecount = 0
@@ -223,7 +261,7 @@ class RedisListener:
             if time_diffs:
                 average_time_diff = sum(time_diffs) / len(time_diffs)
                 average_fps = (1.0 / average_time_diff)*1000 if average_time_diff != 0 else 0
-                logging.info(f"Average framerate of the last 100 frames: {average_fps:.6f} FPS")
+                #logging.info(f"Average framerate of the last 100 frames: {average_fps:.6f} FPS")
             else:
                 logging.warning("Time differences calculation resulted in an empty list.")
         else:

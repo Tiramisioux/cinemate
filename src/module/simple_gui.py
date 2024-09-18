@@ -229,7 +229,7 @@ class SimpleGUI(threading.Thread):
             self.color_mode = "inverse"
             self.cinepi_controller.rec()
             logging.info("RAM full")
-        elif int(self.redis_controller.get_value('is_writing_buf')) == 1:
+        elif int(self.redis_controller.get_value('rec')) == 1:
             self.current_background_color = "red"
             self.color_mode = "inverse"
         elif int(self.redis_controller.get_value('is_buffering')) == 1:

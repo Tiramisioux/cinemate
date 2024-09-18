@@ -109,8 +109,8 @@ def load_settings(filename):
 def erase_log_files():
     log_files = [
         '/home/pi/cinemate/src/logs/system.log',
-        '/home/pi/cinemate/logs/cinemate-service.log',
-        '/home/pi/cinemate/logs/cinemate-service-error.log'
+        '/home/pi/cinemate/src/logs/cinemate-service.log',
+        '/home/pi/cinemate/src/logs/cinemate-service-error.log'
     ]
 
     for log_file_path in log_files:

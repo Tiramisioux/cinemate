@@ -1,0 +1,24 @@
+[Unit]
+Description=Cinemate Auto Start Service
+After=network.target network-online.target systemd-user-sessions.service
+Wants=network-online.target
+
+[Service]
+ExecStart=/home/pi/.cinemate-env/bin/python3 /home/pi/cinemate/src/main.py
+WorkingDirectory=/home/pi/cinemate/src
+Environment="FLASK_APP=/home/pi/cinemate/src/module/app"
+Environment="PYTHONPATH=/home/pi/cinemate/src"
+User=pi
+Group=pi
+
+StandardOutput=append:/home/pi/cinemate/src/logs/cinemate-service.log
+StandardError=append:/home/pi/cinemate/src/logs/cinemate-service-error.log
+
+SyslogIdentifier=cinemate-autostart
+
+# Graceful shutdown
+ExecStop=/bin/kill -s SIGTERM $MAINPID
+TimeoutStopSec=1
+
+[Install]
+WantedBy=multi-user.target

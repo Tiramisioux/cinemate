@@ -312,6 +312,7 @@ if __name__ == "__main__":
         #cinepi_controller.set_pwm_mode(0)
         #cinepi_controller.set_trigger_mode(0)
         redis_controller.set_value('cg_rb', '2.5,2.0')
+        redis_controller.set_value('rec', '0')
         redis_listener.reset_framecount()
         pwm_controller.stop_pwm()
         dmesg_monitor.join()

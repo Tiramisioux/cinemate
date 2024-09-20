@@ -28,7 +28,6 @@ _CineMate Pi 5 is also compatible with [OneInchEye](https://www.tindie.com/produ
 3) Boot up the Pi. Cinemate should autostart.
 
 
-
 ### Connecting to Pi with SSH:
 
 ```
@@ -38,7 +37,7 @@ password: 1
 
 ### Starting Cinemate manually
 
-Type `cinemate` anywhere in the cli.
+Type `cinemate` anywhere in the cli. [See also](https://github.com/Tiramisioux/cinemate/blob/dev-pi5/README.md#cinemate-autostart-on-boot)
 
 
 ### Adjust config.txt for different sensors:

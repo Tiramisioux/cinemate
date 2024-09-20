@@ -48,11 +48,11 @@ sudo nano /boot/firmware/config.txt
 
 Uncomment the section for the sensor being used, and make sure to comment out the others.
 
-Cinemate is compatible with Raspberry Pi HQ camera (imx477), Global Shutter camera (imx296), OneInchEye (imx283), StarlightEye (imx585) and Arducam imx519
+Cinemate is compatible with Raspberry Pi HQ camera (imx477), Global Shutter camera (imx296), OneInchEye (imx283), StarlightEye (imx585) and Arducam imx519.
 
 ### External monitoring
 
-To view on phone or other device, connect the phone to wifi Cinepi, password 11111111. In phones browser, navigate to cinepi.local:5000. A clean feed is available at cinepi.local:8000
+To view on phone or other device, connect the phone to wifi Cinepi, password 11111111. In phones browser, navigate to cinepi.local:5000. A clean feed is available at cinepi.local:8000.
 
 ### Recording
 
@@ -61,19 +61,18 @@ External drive should be formatted as ntfs or ext4 and be labeled "RAW".
 For starting/stopping recording: 
 - from phone, tap the preview screen
 - from CLI (running Cinemate manually), type `rec`
-- via GPIO, attach a momentary switch (or simply short circuit) GPIO 04 or 05
+- via GPIO, attach a momentary switch (or simply short circuit) to GPIO 04 or 05
 
-Note that cinemate v3 is based on the sdk so it also has [this issue](https://discord.com/channels/1070517330083315802/1070835904169648128/1269459402491166750)⁠, affecting write speed to drive. CFE Hat works great but fps in most cases is max 50 at the moment.
-
-### Backup
-
-Burn to SD card (> 8 GB) using Raspberry Pi imager or Balena Etcher. 
+A rec LED light can be connected to GPIO 21.
 
 | :exclamation:  When connecting an LED to the GPIOs, be sure to use a resistor   |
 |-----------------------------------------|
 
+Note that cinemate v3 is based on the sdk so it also has [this issue](https://discord.com/channels/1070517330083315802/1070835904169648128/1269459402491166750)⁠, affecting write speed to drive. CFE Hat works great but fps in most cases is max 50 at the moment.
 
 ## Simple GUI
+
+Simpla GUI is available via browser and/or attached HDMI monitor.
 
 - Red color means camera is recording.
 - Purple color means camera detected a drop frame 
@@ -85,9 +84,7 @@ CineMate image automatically starts wifi hotspot `Cinepi`, password: `11111111`.
 
 ## CineMate CLI
 
-This table includes all the available commands (method calls) + arguments for the CineMate CLI. GPIO column shows default settings of `cinemate/src/settings.json` and can be fully customized by the user. 
-
-Commands are also possible to send to the Pi via USB serial.
+When manually running Cinemate from the CLI you can type simple commands. The table below includes all the available commands (method calls) + arguments for the CineMate CLI. GPIO column shows default settings of `cinemate/src/settings.json` and can be fully customized by the user. Cinemate also listens for commands sent to the Pi via USB serial.
 
 | CineMate CLI | Camera function           | arguments                     | GPIO button         | GPIO rotary encoder       |
 | ------------------------------- | ------------------------- | ----------------------------- | ------------------- | ------------------------- |

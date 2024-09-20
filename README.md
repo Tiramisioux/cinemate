@@ -38,7 +38,7 @@ password: 1
 
 ### Starting Cinemate manually
 
-Typing "cinemate" anywhere in the cli
+Type `cinemate` anywhere in the cli.
 
 
 ### Adjust config.txt for different sensors:

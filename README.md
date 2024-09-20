@@ -69,7 +69,8 @@ Burn to SD card (> 8 GB) using Raspberry Pi imager or Balena Etcher.
 
 ## Simple GUI
 
-- Red color means camera is recording. 
+- Red color means camera is recording.
+- Purple color means camera detected a drop frame 
 - Green color means camera is writing buffered frames to disk. 
 - Yellow color indicates low voltage warning.
 - Numbers in lower left indicate frame count / frames in buffer. 

@@ -1,5 +1,3 @@
-
-
 ## Overview
 CineMate scripts is a way for users to implement and customize manual controls for their [cinepi-raw](https://github.com/cinepi/cinepi-raw) build. 
 
@@ -27,16 +25,23 @@ _CineMate Pi 5 is also compatible with [OneInchEye](https://www.tindie.com/produ
 | :exclamation:  When connecting the camera module to the Pi, make sure it is the Pi is not powered. It is not advised to hot-swap the camera cable.   |
 |-----------------------------------------|
 
-3) Connect to Pi with SSH:
+3) Boot up the Pi. Cinemate should autostart.
+
+
+
+### Connecting to Pi with SSH:
 
 ```
 user: pi
 password: 1
 ```
 
-4) Start cinemate by typing "cinemate" anywhere in the cli
+### Starting Cinemate manually
 
-5) To adjust installation for different sensors:
+Typing "cinemate" anywhere in the cli
+
+
+### Adjust config.txt for different sensors:
 
 ```
 sudo nano /boot/firmware/config.txt
@@ -44,9 +49,17 @@ sudo nano /boot/firmware/config.txt
 
 Cinemate is compatible with Raspberry Pi HQ camera, Global Shutter camera, OneInchEye and StarlightEye
 
-To view on phone or other device, connect the phone to wifi Cinepi, password 11111111. In phones browser, navigate to cinepi.local:5000
+### External monitoring
 
-For starting/stopping recording from phone, tap the preview screen
+To view on phone or other device, connect the phone to wifi Cinepi, password 11111111. In phones browser, navigate to cinepi.local:5000. A clean feed is available at cinepi.local:8000
+
+### Recording
+
+External drive should be formatted as ntfs or ext4 and be labeled "RAW". For starting/stopping recording from phone, tap the preview screen, use CLI commands or GPIO physical button. 
+
+Note that cinemate v3 is based on the sdk so it also has [this issue](https://discord.com/channels/1070517330083315802/1070835904169648128/1269459402491166750)⁠, affecting write speed to drive. CFE Hat works great but fps in most cases is max 50 at the moment.
+
+### Backup
 
 Burn to SD card (> 8 GB) using Raspberry Pi imager or Balena Etcher. 
 

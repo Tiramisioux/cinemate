@@ -56,7 +56,12 @@ To view on phone or other device, connect the phone to wifi Cinepi, password 111
 
 ### Recording
 
-External drive should be formatted as ntfs or ext4 and be labeled "RAW". For starting/stopping recording from phone, tap the preview screen, use CLI commands or GPIO physical button. 
+External drive should be formatted as ntfs or ext4 and be labeled "RAW". 
+
+For starting/stopping recording: 
+- from phone, tap the preview screen
+- from CLI (running Cinemate manually), type `rec`
+- via GPIO, attach a momentary switch (or simply short circuit) GPIO 04 or 05
 
 Note that cinemate v3 is based on the sdk so it also has [this issue](https://discord.com/channels/1070517330083315802/1070835904169648128/1269459402491166750)⁠, affecting write speed to drive. CFE Hat works great but fps in most cases is max 50 at the moment.
 

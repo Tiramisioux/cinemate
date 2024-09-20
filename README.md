@@ -111,7 +111,7 @@ When manually running Cinemate from the CLI you can type simple commands. The ta
 | `set shutter a sync mode`       | set shutter angle sync mode | None                        | 12 (single click)   |                           |
 
 
-## Example CLI commands
+### Example CLI commands
 
 Start/stop recording:
 

@@ -46,7 +46,9 @@ Type `cinemate` anywhere in the cli. [See also](https://github.com/Tiramisioux/c
 sudo nano /boot/firmware/config.txt
 ```
 
-Cinemate is compatible with Raspberry Pi HQ camera, Global Shutter camera, OneInchEye and StarlightEye
+Uncomment the section for the sensor being used, and make sure to comment out the others.
+
+Cinemate is compatible with Raspberry Pi HQ camera (imx477), Global Shutter camera (imx296), OneInchEye (imx283), StarlightEye (imx585) and Arducam imx519
 
 ### External monitoring
 

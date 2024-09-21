@@ -355,11 +355,10 @@ Backing up an 8 GB CineMate image takes about 2 hours.
 
 ## Todo
 
-- [ ] optimize recording to allow for the use of 300 MB/s SSD drive
-- [ ] optimize operating system for faster boot and smaller image file
-- [x] change rec light logic to be based on framecount from redis
 - [ ] fix shutter angle values array calculation
-- [ ] fix web gui for proper display of framcount and frame buffer
 - [ ] implement control of StarlightEye mechanical filter
 - [ ] make RPi4 compatible image file for cinepi-V2 + cinemate
+- [ ] optimize recording to allow for the use of 300 MB/s SSD drive
+- [ ] optimize operating system for faster boot and smaller image file
+
 

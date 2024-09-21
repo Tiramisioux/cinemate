@@ -65,6 +65,7 @@ class SensorDetect:
             if result.returncode != 0:
                 #logging.error(f"cinepi-raw command failed with stderr: {result.stderr}")
                 pass
+        
             
         except subprocess.CalledProcessError as e:
             #logging.error(f"Error running cinepi-raw: {e}")
@@ -76,6 +77,36 @@ class SensorDetect:
             #logging.error(f"Unexpected error: {e}")
             self.camera_model = None
             self.res_modes = []
+    
+    def check_camera(self):
+        try:
+            #logging.info("Running cinepi-raw to detect cameras")
+            result = subprocess.run('cinepi-raw --list-cameras', shell=True, capture_output=True, text=True)
+            #logging.info(f"cinepi-raw output: {result.stdout}")
+
+            # Process the standard output even if the command fails
+            if result.stdout:
+                match = re.search(r'\d+\s*:\s*(\w+)\s*\[', result.stdout)
+                if match:
+                    self.camera_model = match.group(1)
+                    logging.info(f"Detected camera model: {self.camera_model}")
+                    self.load_sensor_resolutions()
+                else:
+                    logging.warning("No camera model detected")
+                    self.camera_model = None
+                    self.res_modes = []
+            else:
+                logging.warning("No output from cinepi-raw")
+
+            if result.returncode != 0:
+                #logging.error(f"cinepi-raw command failed with stderr: {result.stderr}")
+                pass
+        
+        except Exception as e:
+            #logging.error(f"Unexpected error: {e}")
+            self.camera_model = None
+            
+        return self.camera_model
 
     def load_sensor_resolutions(self):
         if self.camera_model in self.sensor_resolutions:

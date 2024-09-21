@@ -163,17 +163,23 @@ if __name__ == "__main__":
 
     pwm_controller = PWMController(sensor_detect, PWM_pin=19)
 
-    cinepi = CinePi(redis_controller, sensor_detect)
-
-    # Set log level (optional)
-    cinepi.set_log_level('INFO')
+    camera_model = sensor_detect.check_camera() 
     
-    # Set active filters (optional)
-    cinepi.set_active_filters([
-                              #  'frame', 
-                              #  'agc', 
-                              #  'ccm'
-                                ])
+    if camera_model is not None:
+        cinepi = CinePi(redis_controller, sensor_detect)
+
+        # Set log level (optional)
+        cinepi.set_log_level('INFO')
+        
+        # Set active filters (optional)
+        cinepi.set_active_filters([
+                                #  'frame', 
+                                #  'agc', 
+                                #  'ccm'
+                                    ])
+    else:
+        logging.error("Failed to detect camera model. Exiting.")
+        sys.exit(1)
 
     ssd_monitor = SSDMonitor()
     usb_monitor = USBMonitor(ssd_monitor)    

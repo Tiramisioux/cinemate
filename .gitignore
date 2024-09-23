@@ -197,4 +197,4 @@ tests/
 *.pyo
 *.egg-info/
 *.egg
-*.log
+#*.log

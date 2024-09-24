@@ -50,6 +50,7 @@ def get_raspberry_pi_model():
                 return 'pi4'
             else:
                 return 'other'
+            
     except FileNotFoundError:
         return 'unknown'
     
@@ -124,8 +125,6 @@ def erase_log_files():
         else:
             logging.info(f"{log_file_path} does not exist. No action taken.")
 
-
-
 def handle_exit(signal, frame):
     logging.info("Graceful shutdown initiated.")
     sys.exit(0)
@@ -135,6 +134,7 @@ signal.signal(signal.SIGINT, handle_exit)
 signal.signal(signal.SIGTERM, handle_exit)
 
 if __name__ == "__main__":
+    
     parser = argparse.ArgumentParser(description="Run the CinePi application.")
     parser.add_argument("-debug", action="store_true", help="Enable debug logging level.")
     args = parser.parse_args()
@@ -142,6 +142,10 @@ if __name__ == "__main__":
 
     logger, log_queue = configure_logging(MODULES_OUTPUT_TO_SERIAL, logging_level)
     settings = load_settings('/home/pi/cinemate/src/settings.json')
+    
+    pi_model = get_raspberry_pi_model()
+    logging.info(f"Detected Raspberry Pi model: {pi_model}")
+    
 
     # Erase the contents of the log file before configuring logging
     erase_log_files()
@@ -155,6 +159,8 @@ if __name__ == "__main__":
         logging.error(f"Failed to start WiFi hotspot: {e}")
     
     redis_controller = RedisController()
+    
+    redis_controller.set_value('pi_model', pi_model)
     
     sensor_detect = SensorDetect()
     # Update the retrieval of sensor_mode

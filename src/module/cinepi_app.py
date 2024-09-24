@@ -65,13 +65,12 @@ class CinePi:
             sensor_mode = '0'
         self.sensor_detect.detect_camera_model()
         sensor_model = self.sensor_detect.camera_model
-        tuning_file_path = f'/home/pi/libcamera/src/ipa/rpi/pisp/data/{sensor_model}.json' #
+        tuning_file_path = f'/home/pi/cinemate/resources/tuning_files/{sensor_model}.json' #
         
         cg_rb = self.redis_controller.get_value('cg_rb')
         if cg_rb is None:
-            cg_rb = '1,1'  # Replace with a sensible default
+            cg_rb = '2.5,2.2'  # imx477 default for 3200K
 
-        
         return [
             '--mode', f"{self.sensor_detect.get_width(sensor_model, sensor_mode)}:{self.sensor_detect.get_height(sensor_model, sensor_mode)}:{self.sensor_detect.get_bit_depth(sensor_model, sensor_mode)}:U",
             '--width', f"{self.sensor_detect.get_width(sensor_model, sensor_mode)}",
@@ -80,9 +79,9 @@ class CinePi:
             '--lores-height', '720',
             '-p', '0,30,1920,1020',
             '--post-process-file', '/home/pi/post-processing.json',
-            #'--tuning-file', tuning_file_path,
+            '--tuning-file', tuning_file_path,
             '--shutter', '20000',
-            '--awbgains', '1,1',
+            '--awbgains', cg_rb,
         ]
 
     def start_cinepi_process(self, cinepi_args=None):

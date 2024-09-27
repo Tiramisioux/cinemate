@@ -1,4 +1,4 @@
-import RPi
+from module.rpi_gpio_wrapper import RPi
 import logging
 
 class GPIOOutput:

@@ -2,7 +2,7 @@ import logging
 import sys
 import traceback
 import threading
-import RPi.GPIO
+# import RPi.GPIO
 from signal import pause
 import json
 import argparse
@@ -10,6 +10,8 @@ import subprocess
 import time
 import signal
 import os
+
+from module.rpi_gpio_wrapper import RPi
 
 RPi.GPIO.setwarnings(False)
 RPi.GPIO.setmode(RPi.GPIO.BCM)
@@ -37,6 +39,7 @@ from module.app import create_app
 from module.analog_controls import AnalogControls
 from module.PWMcontroller import PWMController
 from module.wifi_hotspot import WiFiHotspotManager
+
 
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
 

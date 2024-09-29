@@ -322,7 +322,7 @@ For example, based on default settings above:
 |        | 1    | 3856 x 2180  | 1.77         | 12        | 34      | 13             |
 |        | 2    | 1928 x 1090  | 1.77         | 16        | 30      | 13             |
 
-* Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames. You can cap Cinemates max fps values by editing the file `cinemate/src/module/sensor_detect.py`
+* Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames. You can cap Cinemates max fps values for your specific build by editing the file `cinemate/src/module/sensor_detect.py`
 
 ## Additional hardware
 

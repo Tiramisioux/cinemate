@@ -42,19 +42,24 @@ Cinemate autostarts by default. For stopping and starting Cinemate, and enabling
 For running Cinemate manually from the cli type `cinemate`. This will also display extensive logging which can be useful when configuring and testing buttons and switches.
 
 
-### Adjust config.txt for different sensors:
+### Adjusting config.txt for different sensors:
 
 ```
 sudo nano /boot/firmware/config.txt
 ```
 
-Uncomment the section for the sensor being used, and make sure to comment out the others.
+Uncomment the section for the sensor being used, and make sure to comment out the others. Reboot the Pi for changes to take effect.
 
 Cinemate is compatible with Raspberry Pi HQ camera (imx477), Global Shutter camera (imx296), OneInchEye (imx283), StarlightEye (imx585) and Arducam imx519.
 
 ### External monitoring
 
-To view on phone or other device, connect the phone to wifi Cinepi, password 11111111. In phones browser, navigate to cinepi.local:5000. A clean feed is available at cinepi.local:8000.
+To view on phone or other device, connect the phone to: 
+
+Wifi `CinePi` 
+password `11111111`.
+
+In web browser, navigate to `cinepi.local:5000`. A clean feed (without GUI) is available at `cinepi.local:8000/stream`.
 
 ### Recording
 
@@ -74,7 +79,7 @@ Note that cinemate v3 is based on the sdk so it also has [this issue](https://di
 
 ## Simple GUI
 
-Simpla GUI is available via browser and/or attached HDMI monitor.
+Simple GUI is available via browser and/or attached HDMI monitor.
 
 - Red color means camera is recording.
 - Purple color means camera detected a drop frame 
@@ -301,11 +306,11 @@ For example, based on default settings above:
 
 ## Resolution modes  
 
-| Sensor | Mode | Resolution   | Aspect Ratio | Bit Depth | Max FPS | File Size (MB) |
+| Sensor | Mode | Resolution   | Aspect Ratio | Bit Depth | Max FPS* | File Size (MB) |
 |--------|------|--------------|--------------|-----------|---------|----------------|
-| IMX296 | 0    | 1456 x 1088  | 1.33         | 12        | 60      | 2              |
 | IMX283 | 0    | 2736 x 1538  | 1.80         | 12        | 40      | 7.1            |
 |        | 1    | 2736 x 1824  | 1.53         | 12        | 34      | 8.2            |
+| IMX296 | 0    | 1456 x 1088  | 1.33         | 12        | 60      | 2              |
 | IMX477 | 0    | 2028 x 1080  | 1.87         | 12        | 50      | 3.2            |
 |        | 1    | 2028 x 1520  | 1.33         | 12        | 40      | 4.5            |
 |        | 2    | 1332 x 990   | 1.34         | 10        | 120     | 2.8            |
@@ -316,6 +321,8 @@ For example, based on default settings above:
 | IMX585 | 0    | 1928 x 1090  | 1.77         | 12        | 87      | 4              |
 |        | 1    | 3856 x 2180  | 1.77         | 12        | 34      | 13             |
 |        | 2    | 1928 x 1090  | 1.77         | 16        | 30      | 13             |
+
+* Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames. You can cap Cinemates max fps values by editing the file `cinemate/src/module/sensor_detect.py`
 
 ## Additional hardware
 
@@ -339,13 +346,13 @@ From my tests I have noticed that changing fps works fine, but sometimes camera 
 
 ## Backing up the SD card
 
-To make a compressed image backup of the SD card onto the SSD:
+To make a compressed image backup of the SD card onto the attached drive:
 
 ```
-echo "Start time: $(date)"; sudo dd if=/dev/mmcblk0 bs=1M status=progress | xz -9 -c > /media/RAW/cinepi-sdk-002_cinemate-pi5_bookworm_image_$(date +%Y-%m-%d_%H-%M-%S).img.xz; echo "End time: $(date)"
+sudo dd if=/dev/mmcblk0 bs=1M status=progress | xz -9 -c > /media/RAW/cinepi-sdk-002_cinemate-pi+4_bookworm_image_$(date +%Y-%m-%d_%H-%M-%S).img.xz
 ```
 
-Backing up an 8 GB CineMate image takes about 2 hours.
+Backing up Cinemate image takes about 30 min.
 
 ## Known issues
 

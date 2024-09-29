@@ -358,6 +358,10 @@ Backing up Cinemate image takes about 30 min.
 - Recording stops after a couple of seconds when using ext4 formatted SSD drives
 - 16 bit mode on StarlightEye not working properly
 
+## Notes when using Pi 4
+
+On Raspberry Pi 4 the tuning file currently fails to load properly for libcamera so no tuning file is applied to the actual image. The tuning file is used though for CineMate calculation of WB values.
+
 ## Todo
 
 - [ ] fix shutter angle values array calculation

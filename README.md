@@ -20,7 +20,7 @@ _CineMate is also compatible with [OneInchEye](https://www.tindie.com/products/w
 
 1) Burn image to ssd card
 
-2) Connect RPi 5 and camera sensor board
+2) Connect Pi and camera sensor board
 
 | :exclamation:  When connecting the camera module to the Pi, make sure it is the Pi is not powered. It is not advised to hot-swap the camera cable.   |
 |-----------------------------------------|

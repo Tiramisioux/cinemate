@@ -66,9 +66,9 @@ In web browser, navigate to `cinepi.local:5000`. A clean feed (without GUI) is a
 External drive should be formatted as ntfs or ext4 and be labeled "RAW". 
 
 For starting/stopping recording: 
-- fin web browser, tap (or click) the preview screen
-- from CLI (running Cinemate manually), type `rec`
-- via GPIO, attach a momentary switch (or simply short circuit) to GPIO 04 or 05
+- in web browser: tap (or click) the preview screen
+- from CLI (running Cinemate manually): type `rec`
+- via GPIO: attach a momentary switch (or simply short circuit) to GPIO 04 or 05 (can be changed in `home/pi/cinemate/src/settings.json`)
 
 A rec LED light can be connected to GPIO 21.
 
@@ -175,7 +175,7 @@ To disable autostart:
 
 ## Settings file
 
-The settings file can be found in `cinemate/src/settings.json`. Here the user can define their own buttons, switches and rotary encoders.
+The settings file can be found in `/home/pi/cinemate/src/settings.json`. Here the user can define their own buttons, switches and rotary encoders.
 
 #### GPIO output
 Default rec LED pins are 6 and 21. Make sure to use a 220 Ohm resistor on this pin!

@@ -116,6 +116,7 @@ When manually running Cinemate from the CLI you can type simple commands. The ta
 | `unmount`                       | unmount drive             | None                          | 13 (hold)           |                           |
 | `set all lock`                  | lock all controls         | None                          | 22 (press)          |                           |
 | `set shutter a sync mode`       | set shutter angle sync mode | None                        | 12 (single click)   |                           |
+| `set filter`                    | set mechanical IR filter for StarlightEye | integer (0 or 1)                        |    |                           |
 
 
 ### Example CLI commands
@@ -152,25 +153,25 @@ Enable or disable doubling the FPS rate.
 
 ## CineMate autostart on boot
 
-To enable autostart:
+Go to cinemate folder:
 
     cd cinemate
+
+To enable autostart:
+
     make install
     make enable
 
 To stop the autostarted instance:
 
-    cd cinemate
     make stop
 
 To start again:
 
-    cd cinemate
     make start
 
 To disable autostart:
 
-    cd cinemate
     make disable
 
 
@@ -323,7 +324,7 @@ For example, based on default settings above:
 |        | 1    | 3856 x 2180  | 1.77         | 12        | 34      | 13             |
 |        | 2    | 1928 x 1090  | 1.77         | 16        | 30      | 13             |
 
-* Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames. You can cap Cinemates max fps values for your specific build by editing the file `cinemate/src/module/sensor_detect.py`
+'*' Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames. You can cap Cinemates max fps values for your specific build by editing the file `cinemate/src/module/sensor_detect.py`
 
 ## Additional hardware
 
@@ -366,7 +367,6 @@ On Raspberry Pi 4 the tuning file currently fails to load properly for libcamera
 ## Todo
 
 - [ ] fix shutter angle values array calculation
-- [ ] implement control of StarlightEye mechanical filter
 - [ ] optimize recording to allow for the use of 300 MB/s SSD drive
 - [ ] optimize operating system for faster boot and smaller image file
 

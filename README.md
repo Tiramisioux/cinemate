@@ -75,7 +75,7 @@ A rec LED light can be connected to GPIO 21.
 | :exclamation:  When connecting an LED to the GPIOs, be sure to use a resistor   |
 |-----------------------------------------|
 
-Note that cinemate v3 is based on the sdk so it also has [this issue](https://discord.com/channels/1070517330083315802/1070835904169648128/1269459402491166750)⁠, affecting write speed to drive. CFE Hat works great but fps in most cases is max 50 at the moment.
+Note that cinemate v3 is based on cinei-sdk-002 so it also has [this issue](https://discord.com/channels/1070517330083315802/1070835904169648128/1269459402491166750)⁠, affecting write speed to drive. CFE Hat works great but fps in most cases is max 50 at the moment.
 
 ## Simple GUI
 

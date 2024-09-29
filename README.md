@@ -66,7 +66,7 @@ In web browser, navigate to `cinepi.local:5000`. A clean feed (without GUI) is a
 External drive should be formatted as ntfs or ext4 and be labeled "RAW". 
 
 For starting/stopping recording: 
-- from phone, tap the preview screen
+- fin web browser, tap (or click) the preview screen
 - from CLI (running Cinemate manually), type `rec`
 - via GPIO, attach a momentary switch (or simply short circuit) to GPIO 04 or 05
 

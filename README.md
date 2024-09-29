@@ -110,7 +110,7 @@ When manually running Cinemate from the CLI you can type simple commands. The ta
 | `dec wb`                        | white balance decrease    | None                          |                     | clk 16, dt 20 (counter-clockwise) |
 | `set fps double`                | double fps                | None                          | 1 (single click)    |                           |
 | `set trigger mode`              | set trigger mode          | None                          | 1 (double click) |                   |
-| `set resolution`                | change resolution         | integer or None (toggles res  | 13 (single click)   |                           |
+| `set resolution`                | change resolution         | integer or None (toggles resolution)  | 13 (single click)   |                           |
 | `restart`                       | restart camera            | None                          | 13 (double click) |                   |
 | `reboot`                        | reboot                    | None                          | 13 (triple click) |                   |
 | `unmount`                       | unmount drive             | None                          | 13 (hold)           |                           |

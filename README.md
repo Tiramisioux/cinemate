@@ -335,12 +335,10 @@ CineMate image file comes pre-installed with:
 ## PWM mode (experimental)
 Trigger mode 2 sets the Raspberry Pi HQ/GS sensors in sink mode, as explained here: https://github.com/Tiramisioux/libcamera-imx477-speed-ramping
 
-This makes it possible to feed the sensor XVS input with hardware PWM signal from the pi (CineMate uses pin 19 as default, but pin 18 also supports hardware PWM), allowing for hardware control of fps and shutter angle during recording, without restarting the camera. 
+This makes it possible to feed the sensor XVS input with hardware PWM signal from the pi (CineMate uses pin 19 as default, but pin 18 also supports hardware PWM), allowing for hardware control of fps and shutter angle during recording. By using a precise clock source this could potentially fix the fluctuating fps of image sensors, allowing for precise audio syncing.
 
 | :exclamation:  Note! Be sure to use a voltage divider so PWM signal is converted to 1.65V.   |
 |-----------------------------------------|
-
-This function is an experiment inspired by my old Nizo 8mm camera which has a button for doubling the motor speed, achieving in-camera speed ramping. 
 
 From my tests I have noticed that changing fps works fine, but sometimes camera has to be reset a couple of times to work properly (toggling the PWM mode button). Changing shutter angle in PWM mode (or having shutter angle sync engaged) also doesn't seem to work properly.
 

@@ -37,7 +37,9 @@ password: 1
 
 ### Starting Cinemate manually
 
-Type `cinemate` anywhere in the cli. [See also](https://github.com/Tiramisioux/cinemate/blob/dev-pi5/README.md#cinemate-autostart-on-boot)
+Cinemate autostarts by default. For stopping and starting Cinemate, and enabling and disabling autostart [see this section](https://github.com/Tiramisioux/cinemate/blob/dev-pi5/README.md#cinemate-autostart-on-boot). 
+
+For running Cinemate manually from the cli type `cinemate`. This will also display extensive logging which can be useful when configuring and testing buttons and switches.
 
 
 ### Adjust config.txt for different sensors:

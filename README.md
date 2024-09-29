@@ -156,13 +156,14 @@ To enable autostart:
 
     cd cinemate
     make install
+    make enable
 
 To stop the autostarted instance:
 
     cd cinemate
     make stop
 
-To enable (and start) again:
+To start again:
 
     cd cinemate
     make start
@@ -170,7 +171,7 @@ To enable (and start) again:
 To disable autostart:
 
     cd cinemate
-    make uninstall
+    make disable
 
 
 ## Settings file

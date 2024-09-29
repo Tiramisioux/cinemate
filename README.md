@@ -354,20 +354,18 @@ sudo dd if=/dev/mmcblk0 bs=1M status=progress | xz -9 -c > /media/RAW/cinepi-sdk
 
 Backing up Cinemate image takes about 30 min.
 
+## Notes when using Pi 4
+
+On Raspberry Pi 4 the tuning file currently fails to load properly for libcamera so no tuning file is applied to the actual image. The tuning file is used though for CineMate calculation of WB values.
+
 ## Known issues
 
 - Frame drops when using NTFS formatted SSD drives
 - Recording stops after a couple of seconds when using ext4 formatted SSD drives
 - 16 bit mode on StarlightEye not working properly
 
-## Notes when using Pi 4
-
-On Raspberry Pi 4 the tuning file currently fails to load properly for libcamera so no tuning file is applied to the actual image. The tuning file is used though for CineMate calculation of WB values.
-
 ## Todo
 
 - [ ] fix shutter angle values array calculation
 - [ ] optimize recording to allow for the use of 300 MB/s SSD drive
 - [ ] optimize operating system for faster boot and smaller image file
-
-

@@ -929,3 +929,18 @@ class CinePiController:
             return exposure_fraction_text
         else:
             return 0
+    
+    def set_filter(self, value=None):
+        if 'imx585' in self.current_sensor:
+            if value == 1:
+                logging.info("Enabling IR Filter")
+                result = os.system("IRFilter --enable")
+                self.redis_controller.set_value('ir_filter', 1)
+            elif value == 0:
+                logging.info("Disabling IR Filter")
+                result = os.system("IRFilter --disable")
+                self.redis_controller.set_value('ir_filter', 0)
+            else:
+                return "Invalid value provided."
+        else:
+            return "IR Filter is not supported for this sensor."

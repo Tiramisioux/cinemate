@@ -69,6 +69,8 @@ class CommandExecutor(threading.Thread):
             
             # New shutter sync commands
             'set shutter a sync': (cinepi_controller.set_shutter_a_sync_mode, int),
+            
+            'set filter': (cinepi_controller.set_filter, [int]),
         }
 
     def is_valid_arg(self, arg, expected_type):

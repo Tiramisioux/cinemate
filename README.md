@@ -8,7 +8,7 @@ A ready made disk image can be found [here](https://github.com/Tiramisioux/cinem
 Join the CinePi Discord [here](https://discord.gg/Hr4dfhuK).
 
 ## Hardware requirements
-- Rasberry Pi 5 or 4
+- Rasberry Pi 4 or 5
 - Official HQ or GS camera
 - HDMI monitor or device (phone or tablet) for monitoring
 

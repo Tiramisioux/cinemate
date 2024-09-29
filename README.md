@@ -8,9 +8,9 @@ A ready made disk image can be found [here](https://github.com/Tiramisioux/cinem
 Join the CinePi Discord [here](https://discord.gg/Hr4dfhuK).
 
 ## Hardware requirements
-- Rasberry Pi 5
+- Rasberry Pi 5 or 4
 - Official HQ or GS camera
-- HDMI monitor or device (phone or tablet) 
+- HDMI monitor or device (phone or tablet) for monitoring
 
 _For recording, use a high speed NVME drive or [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/) by Will Whang. Drive needs to be formatted as ext4 and named "RAW"._
 

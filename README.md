@@ -111,7 +111,7 @@ When manually running Cinemate from the CLI you can type simple commands. The ta
 | `set fps double`                | double fps                | None                          | 1 (single click)    |                           |
 | `set trigger mode`              | set trigger mode          | None                          | 1 (double click) |                   |
 | `set resolution`                | change resolution         | integer or None (toggles res  | 13 (single click)   |                           |
-| `restart camera`                | restart camera            | None                          | 13 (double click) |                   |
+| `restart`                       | restart camera            | None                          | 13 (double click) |                   |
 | `reboot`                        | reboot                    | None                          | 13 (triple click) |                   |
 | `unmount`                       | unmount drive             | None                          | 13 (hold)           |                           |
 | `set all lock`                  | lock all controls         | None                          | 22 (press)          |                           |

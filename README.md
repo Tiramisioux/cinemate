@@ -8,13 +8,13 @@ A ready made disk image can be found [here](https://github.com/Tiramisioux/cinem
 Join the CinePi Discord [here](https://discord.gg/Hr4dfhuK).
 
 ## Hardware requirements
-- Rasberry Pi 4/5
+- Rasberry Pi 4/5 or CM4 module
 - Official HQ or GS camera
 - HDMI monitor or device (phone or tablet) for monitoring
 
 _For recording, use a high speed NVME drive or [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/) by Will Whang. Drive needs to be formatted as ext4 and named "RAW"._
 
-_CineMate Pi 5 is also compatible with [OneInchEye](https://www.tindie.com/products/will123321/oneincheye/) (Sony IMX 283) and [StarlightEye](https://www.tindie.com/products/will123321/starlighteye/) (Sony IMX 585) by Will Whang._
+_CineMate is also compatible with [OneInchEye](https://www.tindie.com/products/will123321/oneincheye/) (Sony IMX 283) and [StarlightEye](https://www.tindie.com/products/will123321/starlighteye/) (Sony IMX 585) by Will Whang. Works with CM4 module and Pi 5B._
 
 ## Quickstart guide
 

@@ -82,7 +82,7 @@ Simpla GUI is available via browser and/or attached HDMI monitor.
 
 CineMate image automatically starts wifi hotspot `Cinepi`, password: `11111111`. Navigate browser to cinepi.local:5000 for simple web gui.
 
-## CineMate CLI
+## CineMate CLI commands
 
 When manually running Cinemate from the CLI you can type simple commands. The table below includes all the available commands (method calls) + arguments for the CineMate CLI. GPIO column shows default settings of `cinemate/src/settings.json` and can be fully customized by the user. Cinemate also listens for commands sent to the Pi via USB serial.
 
@@ -322,8 +322,6 @@ CineMate image file comes pre-installed with:
 - [StarlightEye](https://www.tindie.com/products/will123321/starlighteye/)
 - [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/)
 - [Grove Base HAT](https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/)
-- Petroblock Powerblock
-- Pisugar 
 
 ## PWM mode (experimental)
 Trigger mode 2 sets the Raspberry Pi HQ/GS sensors in sink mode, as explained here: https://github.com/Tiramisioux/libcamera-imx477-speed-ramping
@@ -357,7 +355,6 @@ Backing up an 8 GB CineMate image takes about 2 hours.
 
 - [ ] fix shutter angle values array calculation
 - [ ] implement control of StarlightEye mechanical filter
-- [ ] make RPi4 compatible image file for cinepi-V2 + cinemate
 - [ ] optimize recording to allow for the use of 300 MB/s SSD drive
 - [ ] optimize operating system for faster boot and smaller image file
 

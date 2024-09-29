@@ -138,7 +138,7 @@ Configure the frames per second. Requires an integer argument.
 
 Lock/unlock iso, shutter angle or fps: Toggle locks or set them directly. Providing an argument directly sets the value. Omitting the argument will toggle the control.
 
-    > set iso_lock
+    > set iso lock
 
     > set shutter a nom lock 1
 

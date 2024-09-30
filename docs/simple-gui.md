@@ -1,6 +1,7 @@
 ### Simple GUI
 
-![Cinemate Web App](../images/cinemate-webb-app.png)
+
+
 
 The Simple GUI of CineMate provides an intuitive interface on the HDMI display, allowing users to control and monitor various camera settings in real-time. The interface is designed to be user-friendly, offering quick access to essential functions and real-time feedback on camera performance.
 
@@ -51,7 +52,7 @@ The Web App in CineMate extends the functionality of the Simple GUI by providing
 
 Below is an example screenshot of the CineMate Web App interface, showing the various controls and real-time feedback features:
 
-![Cinemate Web App](../images/cinemate-webb-app.png)
+
 
 This image illustrates the user-friendly layout of the web app, which includes controls for ISO, shutter angle, FPS, and white balance, as well as real-time system metrics and live camera feed.
 

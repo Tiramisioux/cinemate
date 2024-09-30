@@ -3,7 +3,14 @@ import { defineConfig } from 'vitepress'
 export default {
   title: 'CineMate Documentation',
   description: 'Documentation for CineMate and its integration with CinePi raw',
+  
+  // Add the assetsInclude option to handle JPG files
+  vite: {
+    assetsInclude: ['**/*.JPG', '**/*.jpg', '**/*.png']
+  },
+  
   themeConfig: {
+    // Your sidebar and other theme config
     sidebar: [
       {
         text: 'Introduction',

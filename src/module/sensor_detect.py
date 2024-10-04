@@ -38,21 +38,31 @@ class SensorDetect:
 
                 #3: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 16, 'fps_max': 21, 'gui_layout': 0, 'file_size': 8},                                      
             },
+            'imx585_mono': {             
+                0: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 12, 'fps_max': 50, 'gui_layout': 0, 'file_size': 3.1}, # driver fps max 87
+                1: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 12, 'fps_max': 21, 'gui_layout': 0, 'file_size': 13}, # driver fps max 34
+                2: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 16, 'fps_max': 30, 'gui_layout': 0, 'file_size': 13}, # driver fps max 30
+
+                #3: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 16, 'fps_max': 21, 'gui_layout': 0, 'file_size': 8},                                      
+            },
         }
         
         #self.detect_camera_model()
 
+
     def detect_camera_model(self):
         try:
-            #logging.info("Running cinepi-raw to detect cameras")
             result = subprocess.run('cinepi-raw --list-cameras', shell=True, capture_output=True, text=True)
             logging.info(f"cinepi-raw output: {result.stdout}")
 
-            # Process the standard output even if the command fails
             if result.stdout:
-                match = re.search(r'\d+\s*:\s*(\w+)\s*\[', result.stdout)
+                # Updated regex to capture the entire line
+                match = re.search(r'\d+\s*:\s*(\w+)\s*\[(.*?)\]', result.stdout)
                 if match:
                     self.camera_model = match.group(1)
+                    details = match.group(2)
+                    if 'MONO' in details and self.camera_model == 'imx585':
+                        self.camera_model = 'imx585_mono'
                     logging.info(f"Detected camera model: {self.camera_model}")
                     self.load_sensor_resolutions()
                 else:
@@ -63,32 +73,31 @@ class SensorDetect:
                 logging.warning("No output from cinepi-raw")
 
             if result.returncode != 0:
-                #logging.error(f"cinepi-raw command failed with stderr: {result.stderr}")
-                pass
-        
-            
+                logging.warning(f"cinepi-raw command exited with non-zero status: {result.returncode}")
+                logging.warning(f"stderr: {result.stderr}")
+
         except subprocess.CalledProcessError as e:
-            #logging.error(f"Error running cinepi-raw: {e}")
-            #logging.error(f"Standard output: {e.stdout}")
-            #logging.error(f"Standard error: {e.stderr}")
+            logging.error(f"Error running cinepi-raw: {e}")
             self.camera_model = None
             self.res_modes = []
         except Exception as e:
-            #logging.error(f"Unexpected error: {e}")
+            logging.error(f"Unexpected error: {e}")
             self.camera_model = None
             self.res_modes = []
-    
+
     def check_camera(self):
         try:
-            #logging.info("Running cinepi-raw to detect cameras")
             result = subprocess.run('cinepi-raw --list-cameras', shell=True, capture_output=True, text=True)
-            #logging.info(f"cinepi-raw output: {result.stdout}")
+            logging.info(f"cinepi-raw output: {result.stdout}")
 
-            # Process the standard output even if the command fails
             if result.stdout:
-                match = re.search(r'\d+\s*:\s*(\w+)\s*\[', result.stdout)
+                # Updated regex to capture the entire line
+                match = re.search(r'\d+\s*:\s*(\w+)\s*\[(.*?)\]', result.stdout)
                 if match:
                     self.camera_model = match.group(1)
+                    details = match.group(2)
+                    if 'MONO' in details and self.camera_model == 'imx585':
+                        self.camera_model = 'imx585_mono'
                     logging.info(f"Detected camera model: {self.camera_model}")
                     self.load_sensor_resolutions()
                 else:
@@ -99,13 +108,13 @@ class SensorDetect:
                 logging.warning("No output from cinepi-raw")
 
             if result.returncode != 0:
-                #logging.error(f"cinepi-raw command failed with stderr: {result.stderr}")
-                pass
-        
+                logging.warning(f"cinepi-raw command exited with non-zero status: {result.returncode}")
+                logging.warning(f"stderr: {result.stderr}")
+
         except Exception as e:
-            #logging.error(f"Unexpected error: {e}")
+            logging.error(f"Unexpected error: {e}")
             self.camera_model = None
-            
+
         return self.camera_model
 
     def load_sensor_resolutions(self):

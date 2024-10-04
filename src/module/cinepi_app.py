@@ -84,6 +84,7 @@ class CinePi:
             '--post-process-file', '/home/pi/post-processing.json',
             '--shutter', '20000',
             '--awbgains', cg_rb,
+            '--awb', 'auto',
         ]
 
         if self.redis_controller.get_value('pi_model') == 'pi5':

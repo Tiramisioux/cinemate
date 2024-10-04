@@ -1,180 +1,263 @@
-03.419: INFO: main               Contents of /home/pi/cinemate/src/logs/system.log have been erased.
-03.419: INFO: main               Contents of /home/pi/cinemate/src/logs/cinemate-service.log have been erased.
-03.419: INFO: main               Contents of /home/pi/cinemate/src/logs/cinemate-service-error.log have been erased.
-03.967: INFO: wifi_hotspot       Wi-Fi hotspot 'CinePi' created successfully with password '11111111' on interface 'wlan0'.
-04.023: INFO: redis_controller   Initializing cache with Redis values...
-04.026: INFO: PWMcontroller      Initializing PWM on pin 19 (channel 3) with frequency 24Hz and chip 2
-04.026: INFO: redis_controller   Changed value: pi_model = pi5
-04.029: INFO: PWMcontroller      PWM successfully initialized on pin 19 (channel 3) with frequency 24Hz
-04.029: INFO: PWMcontroller      Updating PWM with cycles=1
-04.041: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
-07.324: INFO: sensor_detect      Detected camera model: imx585
-07.495: INFO: sensor_detect      cinepi-raw output: Available cameras
+34.414: INFO: main               Contents of /home/pi/cinemate/src/logs/system.log have been erased.
+34.414: INFO: main               Contents of /home/pi/cinemate/src/logs/cinemate-service.log have been erased.
+34.414: INFO: main               Contents of /home/pi/cinemate/src/logs/cinemate-service-error.log have been erased.
+34.429: INFO: wifi_hotspot       WiFi hotspot is already active. Skipping creation.
+34.431: INFO: redis_controller   Initializing cache with Redis values...
+34.434: INFO: PWMcontroller      Initializing PWM on pin 19 (channel 3) with frequency 24Hz and chip 2
+34.434: INFO: redis_controller   Changed value: pi_model = pi5
+34.435: INFO: PWMcontroller      PWM successfully initialized on pin 19 (channel 3) with frequency 24Hz
+34.435: INFO: PWMcontroller      Updating PWM with cycles=1
+34.458: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
+34.656: INFO: sensor_detect      cinepi-raw output: Available cameras
 -----------------
 0 : imx585 [3840x2160 16-bit RGGB] (/base/axi/pcie@120000/rp1/i2c@80000/imx585@1A)
-    Modes: 'SRGGB12_CSI2P' : 1928x1090 [87.60 fps - (0, 0)/3840x2160 crop]
-                             3856x2180 [43.80 fps - (0, 0)/3840x2160 crop]
+    Modes: 'SRGGB12_CSI2P' : 1928x1090 [90.17 fps - (0, 0)/3840x2160 crop]
+                             3856x2180 [60.00 fps - (0, 0)/3840x2160 crop]
            'SRGGB16' : 1928x1090 [30.00 fps - (0, 0)/3840x2160 crop]
-                       3856x2180 [21.90 fps - (0, 0)/3840x2160 crop]
+                       3856x2180 [30.00 fps - (0, 0)/3840x2160 crop]
 
 
-07.495: INFO: sensor_detect      Detected camera model: imx585
-07.495: INFO: cinepi_app         CinePi instantiated
-07.495: INFO: cinepi_app         Log level set to INFO
-07.495: INFO: cinepi_app         Active filters set to: 
-07.496: INFO: ssd_monitor        SSD monitoring thread started.
-07.498: INFO: ssd_monitor        RAW drive mounted at /media/RAW
-07.499: INFO: ssd_monitor        Updated space left on SSD: 148.45 GB
-07.535: INFO: gpio_output        REC light instantiated on pin 6
-07.535: INFO: gpio_output        REC light instantiated on pin 21
-07.538: INFO: redis_controller   Changed value: framecount = 0
-07.539: INFO: redis_controller   Changed value: rec = 0
-07.540: INFO: cinepi_controller  Settings loaded successfully.
-07.541: INFO: redis_controller   Changed value: sensor = imx585
-07.541: INFO: cinepi_controller  Initialized fps_steps: [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50]
-07.541: INFO: cinepi_controller  Initialized shutter_a_steps: [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
-07.541: INFO: cinepi_controller  Loading tuning file from: /home/pi/cinemate/resources/tuning_files/imx585.json
-07.541: INFO: redis_controller   Changed value: fps_max = 50
-07.542: INFO: redis_controller   Changed value: fps_max = 50
-07.546: INFO: cinepi_controller  Tuning data loaded successfully.
-07.546: INFO: cinepi_controller  'rpi.awb' data found: {'use_derivatives': 0, 'bayes': 0}
-07.546: WARNING: cinepi_controller  'ct_curve' not found in 'rpi.awb' data, using default ct_curve.
-07.546: INFO: cinepi_controller  Parsed temperatures: [2000.0, 2200.0, 2400.0, 2600.0, 2800.0, 3000.0, 3200.0, 3400.0, 3600.0, 4100.0, 4600.0, 5100.0, 5600.0, 6100.0, 6600.0, 7100.0, 7600.0, 8100.0, 8600.0]
-07.546: INFO: cinepi_controller  Parsed r_values: [0.6331025775790707, 0.5696117366212947, 0.5204264653110015, 0.48148675531667223, 0.450085403501908, 0.42436130159169017, 0.40300023695527337, 0.3850520052612984, 0.36981508088230314, 0.333468007836758, 0.31196097364221376, 0.2961860409294588, 0.2842607232745885, 0.2750265787051251, 0.2677057225584924, 0.2617955199757274, 0.25693714288250125, 0.25287531441063316, 0.24946601483331993]
-07.546: INFO: cinepi_controller  Parsed b_values: [0.27424225990946915, 0.3116091368689487, 0.34892179554105873, 0.38565229719076793, 0.42145684622485047, 0.45611835670028816, 0.48950766215198593, 0.5215567075837261, 0.5522397906415475, 0.5909770465167908, 0.6515706327327178, 0.7068178946570284, 0.7564837749584288, 0.8006183524920533, 0.8398879225373039, 0.8746456080032436, 0.905569559506562, 0.9331696750390895, 0.9576820904825795]
-07.546: INFO: cinepi_controller  Interpolating for wb step: 3200K, lower index: 6, upper index: 6
-07.546: INFO: cinepi_controller  Exact match found at index 6, r_interp: 0.40300023695527337, b_interp: 0.48950766215198593
-07.546: INFO: cinepi_controller  Calculated reciprocal cg_rb for 3200K: (2.5, 2.0)
-07.546: INFO: cinepi_controller  Interpolating for wb step: 4400K, lower index: 9, upper index: 10
-07.546: INFO: cinepi_controller  Interpolated values for 4400K - r_interp: 0.32056378732003143, b_interp: 0.627333198246347
-07.547: INFO: cinepi_controller  Calculated reciprocal cg_rb for 4400K: (3.1, 1.6)
-07.547: INFO: cinepi_controller  Interpolating for wb step: 5600K, lower index: 12, upper index: 12
-07.547: INFO: cinepi_controller  Exact match found at index 12, r_interp: 0.2842607232745885, b_interp: 0.7564837749584288
-07.547: INFO: cinepi_controller  Calculated reciprocal cg_rb for 5600K: (3.5, 1.3)
-07.547: INFO: cinepi_controller  Initialized wb_cg_rb_array: {3200: (2.5, 2.0), 4400: (3.1, 1.6), 5600: (3.5, 1.3)}
-07.547: INFO: cinepi_controller  Settings loaded successfully.
-07.549: INFO: redis_controller   Changed value: frame_duration = 41666
-07.550: INFO: redis_controller   Changed value: fps = 24
-07.551: INFO: redis_controller   Changed value: fps_user = 24
-07.552: INFO: redis_controller   Changed value: fps = 24
-07.552: INFO: cinepi_controller  Resolution set to mode 0, height: 1090, width: 1928, gui_layout: 0
-07.553: INFO: redis_controller   Changed value: fps_last = 24
-07.553: INFO: redis_controller   Changed value: sensor_mode = 0
-07.553: INFO: redis_controller   Changed value: height = 1090
-07.553: INFO: redis_controller   Changed value: width = 1928
-07.553: INFO: redis_controller   Changed value: bit_depth = 12
-07.553: INFO: redis_controller   Changed value: fps_max = 50
-07.554: INFO: redis_controller   Changed value: gui_layout = 0
-07.554: INFO: redis_controller   Changed value: file_size = 3.1
-07.554: INFO: redis_controller   Changed value: cam_init = 1
-08.053: INFO: cinepi_app         Restarting CinePi instance.
-08.054: INFO: redis_controller   Changed value: fps_last = 24
-08.197: INFO: sensor_detect      cinepi-raw output: Available cameras
+34.656: INFO: sensor_detect      Detected camera model: imx585
+34.656: WARNING: sensor_detect      cinepi-raw command exited with non-zero status: 134
+34.656: WARNING: sensor_detect      stderr: terminate called after throwing an instance of 'std::system_error'
+  what():  Invalid argument
+Aborted
+
+34.854: INFO: sensor_detect      cinepi-raw output: Available cameras
 -----------------
 0 : imx585 [3840x2160 16-bit RGGB] (/base/axi/pcie@120000/rp1/i2c@80000/imx585@1A)
-    Modes: 'SRGGB12_CSI2P' : 1928x1090 [87.60 fps - (0, 0)/3840x2160 crop]
-                             3856x2180 [43.80 fps - (0, 0)/3840x2160 crop]
+    Modes: 'SRGGB12_CSI2P' : 1928x1090 [90.17 fps - (0, 0)/3840x2160 crop]
+                             3856x2180 [60.00 fps - (0, 0)/3840x2160 crop]
            'SRGGB16' : 1928x1090 [30.00 fps - (0, 0)/3840x2160 crop]
-                       3856x2180 [21.90 fps - (0, 0)/3840x2160 crop]
+                       3856x2180 [30.00 fps - (0, 0)/3840x2160 crop]
 
 
-08.198: INFO: sensor_detect      Detected camera model: imx585
-08.198: INFO: cinepi_app         Issuing ['cinepi-raw', '--mode', '1928:1090:12:U', '--width', '1928', '--height', '1090', '--lores-width', '1280', '--lores-height', '720', '-p', '0,30,1920,1020', '--post-process-file', '/home/pi/post-processing.json', '--shutter', '20000', '--awbgains', '2.5,2.0', '--tuning-file', '/home/pi/cinemate/resources/tuning_files/imx585.json']
-08.199: INFO: cinepi_controller  Received set_fps call with value: 24.0
-08.200: INFO: cinepi_controller  Retrieved max_fps from Redis: 50
-08.200: INFO: cinepi_controller  Calculated safe_value: 24.0
-08.202: INFO: cinepi_controller  Setting fps to 24.0
-08.203: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
-08.203: INFO: redis_controller   Changed value: sensor = imx585
-08.204: INFO: cinepi_controller  Initialized fps_steps: [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50]
-08.204: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
-08.204: INFO: redis_controller   Changed value: frame_duration = 41666
-08.204: INFO: redis_controller   Changed value: fps = 24.0
-08.205: INFO: redis_controller   Changed value: fps_user = 24.0
-08.205: INFO: gpio_input         Button on pin 4:
-08.205: INFO: gpio_input           Press: rec
-08.206: INFO: redis_controller   Changed value: fps = 24.0
-08.206: INFO: redis_controller   Changed value: fps_max = 50
-08.207: INFO: redis_controller   Changed value: sensor = imx585
-08.214: INFO: gpio_input         Button on pin 5:
-08.214: INFO: gpio_input           Press: rec
-08.215: INFO: gpio_input         Button on pin 27:
-08.215: INFO: gpio_input           Press: inc_iso
-08.216: INFO: gpio_input         Button on pin 10:
-08.216: INFO: gpio_input           Press: dec_iso
-08.218: INFO: gpio_input         Button on pin 22:
-08.218: INFO: gpio_input           Press: set_all_lock
-08.219: INFO: gpio_input         Button on pin 12:
-08.219: INFO: gpio_input           Single Click: set_shutter_a_sync_mode
-08.220: INFO: gpio_input         Button on pin 1:
-08.220: INFO: gpio_input           Single Click: set_fps_double
-08.220: INFO: gpio_input           Double Click: set_trigger_mode
-08.221: INFO: gpio_input         Button on pin 13:
-08.221: INFO: gpio_input           Single Click: set_resolution
-08.221: INFO: gpio_input           Double Click: restart_camera
-08.221: INFO: gpio_input           Triple Click: reboot
-08.221: INFO: gpio_input           Hold: unmount
-08.222: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 9, DT pin: 11
-08.222: INFO: gpio_input           Rotate Clockwise: inc_iso
-08.223: INFO: gpio_input           Rotate CounterClockwise: dec_iso
-08.224: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 24, DT pin: 25
-08.224: INFO: gpio_input           Rotate Clockwise: inc_shutter_a_nom
-08.224: INFO: gpio_input           Rotate CounterClockwise: dec_shutter_a_nom
-08.225: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 0, DT pin: 8
-08.225: INFO: gpio_input           Rotate Clockwise: inc_fps
-08.225: INFO: gpio_input           Rotate CounterClockwise: dec_fps
-08.227: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 16, DT pin: 20
-08.227: INFO: gpio_input           Rotate Clockwise: inc_wb
-08.227: INFO: gpio_input           Rotate CounterClockwise: dec_wb
-08.770: INFO: gpio_input         Quad Rotary Encoder found and initialized
-08.773: INFO: redis_controller   Changed value: framecount = 0
-08.773: INFO: redis_controller   Changed value: rec = 0
-08.775: INFO: simple_gui         HDMI display found. (1920, 1080)
-09.182: INFO: main               Stream module loaded
-09.182: INFO: mediator           Mediator instantiated
-09.735: WARNING: redis_listener     Not enough sensor timestamps to calculate average framerate.
-09.735: WARNING: redis_listener     Not enough sensor timestamps to calculate average framerate.
-09.736: INFO: redis_listener     Drop frame detected
-09.736: INFO: redis_listener     Drop frame detected
-10.214: INFO: main               Loaded WB steps: [3200, 4400, 5600]
-10.215: INFO: analog_controls    Grove Base HAT not found.
-10.216: ERROR: main               Invalid trigger_mode value retrieved: 0
-10.217: INFO: main               Initialized WB steps: [3200, 4400, 5600]
-10.227: INFO: cinepi_controller  Set white balance for 5600K: (3.5, 1.3)
-10.229: INFO: redis_controller   Changed value: cg_rb = 3.5,1.3
-10.231: INFO: main               --- initialization complete
-10.236: INFO: redis_listener     Drop frame flag reset
-10.237: INFO: redis_listener     Drop frame flag reset
-10.239: INFO: redis_controller   Changed value: wb_user = 5600
-12.551: INFO: redis_controller   Changed value: frame_duration = 41666
-12.551: INFO: redis_controller   Changed value: fps = 24
-12.552: INFO: PWMcontroller      Setting PWM with fps=24, shutter_angle=None
-12.552: INFO: PWMcontroller      PWM frequency set to 24.0Hz on pins 19, None
-12.552: INFO: PWMcontroller      Shutter angle is None, keeping existing duty cycle.
-12.552: INFO: PWMcontroller      Updating PWM with cycles=1
-12.583: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
-12.583: INFO: redis_controller   Changed value: fps_user = 24
-12.584: INFO: redis_controller   Changed value: fps = 24
-12.584: INFO: PWMcontroller      Setting PWM with fps=24, shutter_angle=None
-12.584: INFO: PWMcontroller      PWM frequency set to 24.0Hz on pins 19, None
-12.584: INFO: PWMcontroller      Shutter angle is None, keeping existing duty cycle.
-12.584: INFO: PWMcontroller      Updating PWM with cycles=1
-12.625: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
-06.180: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
-06.185: INFO: cinepi_controller  Setting shutter_a to 172.8 degrees
-06.189: INFO: redis_controller   Changed value: shutter_a = 172.8
-06.189: INFO: cinepi_controller  Decreasing shutter_a to 172.8
-06.190: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.8
-06.190: INFO: gpio_input         Quad Rotary #1: -1
-06.191: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-06.191: INFO: PWMcontroller      Updating PWM with cycles=1
-06.208: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-07.323: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
-07.330: INFO: cinepi_controller  Setting shutter_a to 180 degrees
-07.337: INFO: redis_controller   Changed value: shutter_a = 180
-07.339: INFO: cinepi_controller  Increasing shutter_a to 180
-07.341: INFO: gpio_input         Quad Rotary #1: 0
-07.344: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=180
-07.347: INFO: PWMcontroller      PWM duty cycle calculated and set to 32767
-07.348: INFO: PWMcontroller      Updating PWM with cycles=1
-07.375: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
+34.854: INFO: sensor_detect      Detected camera model: imx585
+34.854: WARNING: sensor_detect      cinepi-raw command exited with non-zero status: 134
+34.854: WARNING: sensor_detect      stderr: terminate called after throwing an instance of 'std::system_error'
+  what():  Invalid argument
+Aborted
+
+34.854: INFO: cinepi_app         CinePi instantiated
+34.855: INFO: cinepi_app         Log level set to INFO
+34.855: INFO: cinepi_app         Active filters set to: 
+34.855: INFO: ssd_monitor        SSD monitoring thread started.
+34.860: INFO: ssd_monitor        RAW drive mounted at /media/RAW
+34.860: INFO: ssd_monitor        File system format: ext4
+34.860: INFO: ssd_monitor        Updated space left on SSD: 100.28 GB
+34.860: INFO: gpio_output        REC light instantiated on pin 6
+34.862: INFO: gpio_output        REC light instantiated on pin 21
+34.867: INFO: redis_controller   Changed value: framecount = 0
+34.868: INFO: redis_controller   Changed value: rec = 0
+34.870: INFO: cinepi_controller  Settings loaded successfully.
+34.870: INFO: redis_controller   Changed value: sensor = imx585
+34.871: INFO: cinepi_controller  Initialized fps_steps: [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50]
+34.871: INFO: cinepi_controller  Initialized shutter_a_steps: [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
+34.871: INFO: cinepi_controller  Loading tuning file from: /home/pi/cinemate/resources/tuning_files/imx585.json
+34.871: INFO: redis_controller   Changed value: fps_max = 50
+34.872: INFO: cinepi_controller  Tuning data loaded successfully.
+34.872: INFO: cinepi_controller  'rpi.awb' data found: {'use_derivatives': 0, 'bayes': 0}
+34.873: INFO: redis_controller   Changed value: fps_max = 50
+34.873: WARNING: cinepi_controller  'ct_curve' not found in 'rpi.awb' data, using default ct_curve.
+34.874: INFO: cinepi_controller  Parsed temperatures: [2000.0, 2200.0, 2400.0, 2600.0, 2800.0, 3000.0, 3200.0, 3400.0, 3600.0, 4100.0, 4600.0, 5100.0, 5600.0, 6100.0, 6600.0, 7100.0, 7600.0, 8100.0, 8600.0]
+34.875: INFO: cinepi_controller  Parsed r_values: [0.6331025775790707, 0.5696117366212947, 0.5204264653110015, 0.48148675531667223, 0.450085403501908, 0.42436130159169017, 0.40300023695527337, 0.3850520052612984, 0.36981508088230314, 0.333468007836758, 0.31196097364221376, 0.2961860409294588, 0.2842607232745885, 0.2750265787051251, 0.2677057225584924, 0.2617955199757274, 0.25693714288250125, 0.25287531441063316, 0.24946601483331993]
+34.875: INFO: cinepi_controller  Parsed b_values: [0.27424225990946915, 0.3116091368689487, 0.34892179554105873, 0.38565229719076793, 0.42145684622485047, 0.45611835670028816, 0.48950766215198593, 0.5215567075837261, 0.5522397906415475, 0.5909770465167908, 0.6515706327327178, 0.7068178946570284, 0.7564837749584288, 0.8006183524920533, 0.8398879225373039, 0.8746456080032436, 0.905569559506562, 0.9331696750390895, 0.9576820904825795]
+34.875: INFO: cinepi_controller  Interpolating for wb step: 3200K, lower index: 6, upper index: 6
+34.875: INFO: cinepi_controller  Exact match found at index 6, r_interp: 0.40300023695527337, b_interp: 0.48950766215198593
+34.875: INFO: cinepi_controller  Calculated reciprocal cg_rb for 3200K: (2.5, 2.0)
+34.875: INFO: cinepi_controller  Interpolating for wb step: 4400K, lower index: 9, upper index: 10
+34.875: INFO: cinepi_controller  Interpolated values for 4400K - r_interp: 0.32056378732003143, b_interp: 0.627333198246347
+34.875: INFO: cinepi_controller  Calculated reciprocal cg_rb for 4400K: (3.1, 1.6)
+34.875: INFO: cinepi_controller  Interpolating for wb step: 5600K, lower index: 12, upper index: 12
+34.876: INFO: cinepi_controller  Exact match found at index 12, r_interp: 0.2842607232745885, b_interp: 0.7564837749584288
+34.876: INFO: cinepi_controller  Calculated reciprocal cg_rb for 5600K: (3.5, 1.3)
+34.876: INFO: cinepi_controller  Initialized wb_cg_rb_array: {3200: (2.5, 2.0), 4400: (3.1, 1.6), 5600: (3.5, 1.3)}
+34.876: INFO: cinepi_controller  Settings loaded successfully.
+34.878: INFO: redis_controller   Changed value: frame_duration = 41666
+34.879: INFO: redis_controller   Changed value: fps = 24
+34.879: INFO: redis_controller   Changed value: fps_user = 24
+34.880: INFO: cinepi_controller  Resolution set to mode 0, height: 1090, width: 1928, gui_layout: 0
+34.880: INFO: redis_controller   Changed value: fps = 24
+34.880: INFO: redis_controller   Changed value: fps_last = 24
+34.881: INFO: redis_controller   Changed value: sensor_mode = 0
+34.881: INFO: redis_controller   Changed value: height = 1090
+34.881: INFO: redis_controller   Changed value: width = 1928
+34.881: INFO: redis_controller   Changed value: bit_depth = 12
+34.881: INFO: redis_controller   Changed value: fps_max = 50
+34.882: INFO: redis_controller   Changed value: gui_layout = 0
+34.882: INFO: redis_controller   Changed value: file_size = 3.1
+34.882: INFO: redis_controller   Changed value: cam_init = 1
+35.001: INFO: ssd_monitor        Found latest DNG file: CINEPI_24-10-02_2220_C00000_000000150.dng
+35.030: INFO: ssd_monitor        Started monitoring for DNG files in /media/RAW
+35.381: INFO: cinepi_app         Restarting CinePi instance.
+35.381: INFO: redis_controller   Changed value: fps_last = 24
+35.577: INFO: sensor_detect      cinepi-raw output: Available cameras
+-----------------
+0 : imx585 [3840x2160 16-bit RGGB] (/base/axi/pcie@120000/rp1/i2c@80000/imx585@1A)
+    Modes: 'SRGGB12_CSI2P' : 1928x1090 [90.17 fps - (0, 0)/3840x2160 crop]
+                             3856x2180 [60.00 fps - (0, 0)/3840x2160 crop]
+           'SRGGB16' : 1928x1090 [30.00 fps - (0, 0)/3840x2160 crop]
+                       3856x2180 [30.00 fps - (0, 0)/3840x2160 crop]
+
+
+35.577: INFO: sensor_detect      Detected camera model: imx585
+35.577: WARNING: sensor_detect      cinepi-raw command exited with non-zero status: 134
+35.577: WARNING: sensor_detect      stderr: terminate called after throwing an instance of 'std::system_error'
+  what():  Invalid argument
+Aborted
+
+35.577: INFO: cinepi_app         Issuing ['cinepi-raw', '--mode', '1928:1090:12:U', '--width', '1928', '--height', '1090', '--lores-width', '1280', '--lores-height', '720', '-p', '0,30,1920,1020', '--post-process-file', '/home/pi/post-processing.json', '--shutter', '20000', '--awbgains', '2.5,2.0', '--awb', 'auto', '--tuning-file', '/home/pi/cinemate/resources/tuning_files/imx585.json']
+35.578: INFO: cinepi_controller  Received set_fps call with value: 24.0
+35.579: INFO: redis_controller   Changed value: sensor = imx585
+35.579: INFO: cinepi_controller  Retrieved max_fps from Redis: 50
+35.580: INFO: cinepi_controller  Calculated safe_value: 24.0
+35.581: INFO: cinepi_controller  Setting fps to 24.0
+35.582: INFO: redis_controller   Changed value: frame_duration = 41666
+35.582: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
+35.583: INFO: cinepi_controller  Initialized fps_steps: [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50]
+35.583: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
+35.583: INFO: redis_controller   Changed value: fps = 24.0
+35.584: INFO: gpio_input         Button on pin 4:
+35.584: INFO: gpio_input           Press: rec
+35.585: INFO: redis_controller   Changed value: fps_user = 24.0
+35.585: INFO: redis_controller   Changed value: fps = 24.0
+35.586: INFO: redis_controller   Changed value: fps_max = 50
+35.588: INFO: redis_controller   Changed value: sensor = imx585
+35.590: INFO: gpio_input         Button on pin 5:
+35.590: INFO: gpio_input           Press: rec
+35.592: INFO: gpio_input         Button on pin 27:
+35.592: INFO: gpio_input           Press: inc_iso
+35.593: INFO: gpio_input         Button on pin 10:
+35.593: INFO: gpio_input           Press: dec_iso
+35.594: INFO: gpio_input         Button on pin 22:
+35.594: INFO: gpio_input           Press: set_all_lock
+35.595: INFO: gpio_input         Button on pin 12:
+35.596: INFO: gpio_input           Single Click: set_shutter_a_sync_mode
+35.596: INFO: gpio_input         Button on pin 1:
+35.597: INFO: gpio_input           Single Click: set_fps_double
+35.597: INFO: gpio_input           Double Click: set_trigger_mode
+35.598: INFO: gpio_input         Button on pin 13:
+35.598: INFO: gpio_input           Single Click: set_resolution
+35.598: INFO: gpio_input           Double Click: restart_camera
+35.598: INFO: gpio_input           Triple Click: reboot
+35.598: INFO: gpio_input           Hold: unmount
+35.599: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 9, DT pin: 11
+35.599: INFO: gpio_input           Rotate Clockwise: inc_iso
+35.599: INFO: gpio_input           Rotate CounterClockwise: dec_iso
+35.600: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 24, DT pin: 25
+35.601: INFO: gpio_input           Rotate Clockwise: inc_shutter_a_nom
+35.601: INFO: gpio_input           Rotate CounterClockwise: dec_shutter_a_nom
+35.602: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 0, DT pin: 8
+35.602: INFO: gpio_input           Rotate Clockwise: inc_fps
+35.602: INFO: gpio_input           Rotate CounterClockwise: dec_fps
+35.603: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 16, DT pin: 20
+35.604: INFO: gpio_input           Rotate Clockwise: inc_wb
+35.604: INFO: gpio_input           Rotate CounterClockwise: dec_wb
+35.921: INFO: redis_listener     Framecount is changing
+35.922: INFO: redis_controller   Changed value: rec = 1
+36.138: INFO: gpio_input         Quad Rotary Encoder found and initialized
+36.140: INFO: redis_controller   Changed value: framecount = 0
+36.141: INFO: redis_controller   Changed value: rec = 0
+36.143: INFO: simple_gui         HDMI display found. (1920, 1080)
+36.277: INFO: main               Stream module loaded
+36.278: INFO: mediator           Mediator instantiated
+37.134: WARNING: redis_listener     Not enough sensor timestamps to calculate average framerate.
+37.135: WARNING: redis_listener     Not enough sensor timestamps to calculate average framerate.
+37.135: INFO: redis_listener     Drop frame detected
+37.135: INFO: redis_listener     Drop frame detected
+37.283: INFO: main               Loaded WB steps: [3200, 4400, 5600]
+37.284: INFO: analog_controls    Grove Base HAT not found.
+37.284: ERROR: main               Invalid trigger_mode value retrieved: 0
+37.284: INFO: main               Initialized WB steps: [3200, 4400, 5600]
+37.284: INFO: cinepi_controller  Set white balance for 5600K: (3.5, 1.3)
+37.285: INFO: redis_controller   Changed value: cg_rb = 3.5,1.3
+37.285: INFO: main               --- initialization complete
+37.285: INFO: redis_controller   Changed value: wb_user = 5600
+37.639: INFO: redis_listener     Drop frame flag reset
+37.641: INFO: redis_listener     Drop frame flag reset
+37.697: INFO: redis_listener     Framecount is stable
+37.698: INFO: redis_controller   Changed value: rec = 0
+37.698: INFO: mediator           Recording stopped!
+37.698: INFO: gpio_output        GPIO 6 set to LOW
+37.698: INFO: gpio_output        GPIO 21 set to LOW
+39.880: INFO: redis_controller   Changed value: frame_duration = 41666
+40.049: INFO: redis_controller   Changed value: fps = 24
+40.050: INFO: PWMcontroller      Setting PWM with fps=24, shutter_angle=None
+40.051: INFO: PWMcontroller      PWM frequency set to 24.0Hz on pins 19, None
+40.057: INFO: PWMcontroller      Shutter angle is None, keeping existing duty cycle.
+40.057: INFO: PWMcontroller      Updating PWM with cycles=1
+40.083: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
+40.083: INFO: redis_controller   Changed value: fps_user = 24
+40.084: INFO: redis_controller   Changed value: fps = 24
+40.084: INFO: PWMcontroller      Setting PWM with fps=24, shutter_angle=None
+40.084: INFO: PWMcontroller      PWM frequency set to 24.0Hz on pins 19, None
+40.084: INFO: PWMcontroller      Shutter angle is None, keeping existing duty cycle.
+40.084: INFO: PWMcontroller      Updating PWM with cycles=1
+40.125: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
+21.075: INFO: cli_commands       Received: rec
+21.077: INFO: cinepi_controller  rec button pushed
+21.083: INFO: cinepi_controller  Started recording
+21.090: INFO: redis_controller   Changed value: is_recording = 1
+21.093: INFO: redis_listener     Framecount reset to 0.
+21.096: INFO: redis_listener     Framecount reset to 0.
+21.102: INFO: redis_listener     Recording started at: 2024-10-02 22:54:21.102118
+21.099: INFO: redis_controller   Changed value: framecount = 0
+21.103: INFO: redis_listener     Recording started at: 2024-10-02 22:54:21.103713
+21.108: INFO: redis_controller   Changed value: framecount = 0
+28.364: INFO: cli_commands       Received: rec
+28.364: INFO: cinepi_controller  rec button pushed
+28.365: INFO: cinepi_controller  Stopped recording
+28.366: INFO: redis_listener     Recording stopped at: 2024-10-02 22:54:28.366754
+28.366: INFO: redis_controller   Changed value: is_recording = 0
+28.367: INFO: redis_listener     Recording stopped at: 2024-10-02 22:54:28.366990
+28.367: INFO: redis_listener     Recording duration in seconds: 7.263041
+28.367: INFO: redis_listener     Recording duration in seconds: 7.264872
+28.367: INFO: redis_listener     Expected framerate retrieved from Redis: 24.0 FPS
+28.368: INFO: redis_listener     Expected framerate retrieved from Redis: 24.0 FPS
+28.368: INFO: redis_listener     Calculated expected number of frames: 174
+28.368: INFO: redis_listener     Calculated expected number of frames: 174
+28.368: INFO: redis_listener     Actual number of recorded frames: 0
+28.368: INFO: redis_listener     Actual number of recorded frames: 0
+28.368: WARNING: redis_listener     Discrepancy detected: 174 frames difference between expected and recorded counts.
+28.368: WARNING: redis_listener     Discrepancy detected: 174 frames difference between expected and recorded counts.
+51.075: INFO: cli_commands       Received: unmount
+51.103: ERROR: ssd_monitor        Failed to unmount SSD: Command '['sudo', 'umount', '/media/RAW']' returned non-zero exit status 32.
+52.084: INFO: redis_listener     Drop frame detected
+52.087: INFO: redis_listener     Drop frame detected
+52.139: INFO: ssd_monitor        Updated space left on SSD: 100.28 GB
+52.587: INFO: redis_listener     Drop frame flag reset
+52.589: INFO: redis_listener     Drop frame flag reset
+08.011: INFO: cli_commands       Received: unmount
+08.019: INFO: ssd_monitor        SSD unmounted from /media/RAW
+35.441: INFO: dmesg_monitor      Disk attached.
+40.194: INFO: ssd_monitor        RAW drive mounted at /media/RAW
+40.196: INFO: ssd_monitor        File system format: fuseblk
+40.198: INFO: ssd_monitor        Updated space left on SSD: 461.24 GB
+40.518: INFO: ssd_monitor        Found latest DNG file: CINEPI_24-09-27_2210_C00000_000000034.dng
+57.979: INFO: main               Graceful shutdown initiated.
+57.981: INFO: redis_listener     Recording stopped at: 2024-10-02 22:55:57.981906
+57.982: INFO: redis_listener     Recording duration in seconds: 96.879788
+57.982: INFO: redis_controller   Changed value: is_recording = 0
+57.982: INFO: redis_listener     Recording stopped at: 2024-10-02 22:55:57.982533
+57.983: INFO: redis_listener     Recording duration in seconds: 96.87882
+57.983: INFO: redis_controller   Changed value: is_writing = 0
+57.983: INFO: redis_listener     Expected framerate retrieved from Redis: 24.0 FPS
+57.983: INFO: redis_listener     Expected framerate retrieved from Redis: 24.0 FPS
+57.984: INFO: redis_listener     Calculated expected number of frames: 2325
+57.984: INFO: redis_listener     Framecount reset to 0.
+57.984: INFO: redis_listener     Calculated expected number of frames: 2325
+57.984: INFO: redis_controller   Changed value: shutter_a_nom = 180
+57.984: INFO: redis_listener     Actual number of recorded frames: 0
+57.984: INFO: redis_listener     Actual number of recorded frames: 0
+57.985: INFO: PWMcontroller      PWM stopped
+57.985: WARNING: redis_listener     Discrepancy detected: 2325 frames difference between expected and recorded counts.
+57.985: INFO: redis_controller   Changed value: cg_rb = 2.5,2.0
+57.985: WARNING: redis_listener     Discrepancy detected: 2325 frames difference between expected and recorded counts.
+57.985: INFO: PWMcontroller      PWM stopped
+57.985: INFO: redis_controller   Changed value: rec = 0
+57.986: INFO: mediator           Recording stopped!
+57.986: INFO: gpio_output        GPIO 6 set to LOW
+57.986: INFO: gpio_output        GPIO 21 set to LOW
+57.987: INFO: redis_controller   Changed value: framecount = 0
+58.354: INFO: main               Graceful shutdown initiated.
+58.743: INFO: main               Graceful shutdown initiated.

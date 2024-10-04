@@ -89,49 +89,69 @@ class SimpleGUI(threading.Thread):
         # Define two layouts
         self.layouts = {
             0: {  # Layout 0
-                "iso": {"position": (10, -7), "font_size": 34},
-                "shutter_speed": {"position": (110, -7), "font_size": 34},
-                "fps": {"position": (205, -7), "font_size": 34},
-                "sensor": {"position": (505, -7), "font_size": 34},
-                "width": {"position": (630, -7), "font_size": 34},
-                "height": {"position": (730, -7), "font_size": 34},
-                "bit_depth": {"position": (822, -7), "font_size": 34},
-                "color_temp": {"position": (950, -7), "font_size": 34},
-                "exposure_time": {"position": (1110, -7), "font_size": 34},
-                "pwm_mode": {"position": (1243, -2), "font_size": 26},
+                "iso_label": {"position": (10, -1), "font_size": 18},
+                "iso": {"position": (45, -7), "font_size": 34},
+                "shutter_label": {"position": (140, -1), "font_size": 18},
+                "shutter_speed": {"position": (185, -7), "font_size": 34},
+                "fps_label": {"position": (295, -1), "font_size": 18},
+                "fps": {"position": (335, -7), "font_size": 34},
+                "sensor": {"position": (435, -1), "font_size": 18, "align": "right", "width": 175},
+                "width": {"position": (620, -7), "font_size": 34},
+                "height": {"position": (720, -7), "font_size": 34},
+                "bit_depth": {"position": (812, -7), "font_size": 34},
+                "wb_label": {"position": (950, -1), "font_size": 18},
+                "color_temp": {"position": (983, -7), "font_size": 34},
+                "color_temp_libcamera": {"position": (1083, -7), "font_size": 34},                
+                "exposure_label": {"position": (1280, -1), "font_size": 18},
+                "exposure_time": {"position": (1320, -7), "font_size": 34},
+                "pwm_mode": {"position": (1273, -2), "font_size": 26},
                 # "shutter_a_sync": {"position": (1345, -2), "font_size": 26},
                 "lock": {"position": (1530, -2), "font_size": 26},
-                "low_voltage": {"position": (1620, -2), "font_size": 26},
-                "ram_load": {"position": (1700, -2), "font_size": 26},
-                "cpu_load": {"position": (1780, -2), "font_size": 26},
+                "low_voltage": {"position": (1550, -2), "font_size": 26},
+                "ram_label": {"position": (1600, 0), "font_size": 18},
+                "ram_load": {"position": (1645, -2), "font_size": 26},
+                "cpu_label": {"position": (1710, 0), "font_size": 18},
+                "cpu_load": {"position": (1750, -2), "font_size": 26},
+                "cpu_temp_label": {"position": (1810, 0), "font_size": 18},
                 "cpu_temp": {"position": (1860, -2), "font_size": 26},
-                "disk_space": {"position": (10, 1044), "font_size": 34},
-                "frame_count": {"position": (205, 1044), "font_size": 34},
-                    #"last_dng_added": {"position": (610, 1044), "font_size": 34},
+                "disk_label": {"position": (10, 1051), "font_size": 18},
+                "disk_space": {"position": (65, 1044), "font_size": 34},
+                "frame_count": {"position": (335, 1044), "font_size": 34},
+                "last_dng_added": {"position": (600, 1044), "font_size": 34},
                 "battery_level": {"position": (1830, 1044), "font_size": 34},
             }
         }
 
         self.colors = {
+            "iso_label": {"normal": "grey", "inverse": "black"},
             "iso": {"normal": "white", "inverse": "black"},
+            "shutter_label": {"normal": "grey", "inverse": "black"},
             "shutter_speed": {"normal": "white", "inverse": "black"},
+            "fps_label": {"normal": "grey", "inverse": "black"},
             "fps": {"normal": "white", "inverse": "black"},
+            "exposure_label": {"normal": "grey", "inverse": "black"},
             "exposure_time": {"normal": "white", "inverse": "black"},
             "sensor": {"normal": "grey", "inverse": "black"},
             "height": {"normal": "white", "inverse": "black"},
             "width": {"normal": "white", "inverse": "black"},
             "bit_depth": {"normal": "white", "inverse": "black"},
+            "wb_label": {"normal": "grey", "inverse": "black"},
             "color_temp": {"normal": "white", "inverse": "black"},
+            "color_temp_libcamera": {"normal": "grey", "inverse": "black"},
             "pwm_mode": {"normal": "lightgreen", "inverse": "black"},
             # "shutter_a_sync": {"normal": "white", "inverse": "black"},
             "lock": {"normal": (255, 0, 0, 255), "inverse": "black"},
             "low_voltage": {"normal": "yellow", "inverse": "black"},
+            "ram_label": {"normal": "grey", "inverse": "black"},
             "ram_load": {"normal": "white", "inverse": "black"},
+            "cpu_label": {"normal": "grey", "inverse": "black"},
             "cpu_load": {"normal": "white", "inverse": "black"},
+            "cpu_temp_label": {"normal": "grey", "inverse": "black"},
             "cpu_temp": {"normal": "white", "inverse": "black"},
+            "disk_label": {"normal": "grey", "inverse": "black"},
             "disk_space": {"normal": "white", "inverse": "black"},
             "frame_count": {"normal": "white", "inverse": "black"},
-           # "last_dng_added": {"normal": "white", "inverse": "black"},
+            "last_dng_added": {"normal": "white", "inverse": "black"},
             "battery_level": {"normal": "white", "inverse": "black"},
         }
 
@@ -141,21 +161,31 @@ class SimpleGUI(threading.Thread):
 
     def populate_values(self):
         values = {
+            "iso_label": "ISO",
             "iso": self.redis_controller.get_value("iso"),
+            "shutter_label": "SHU",
             "shutter_speed": str(self.redis_controller.get_value('shutter_a')).replace('.0', ''),
+            "fps_label": "FPS",
             "fps": round(float(self.redis_controller.get_value('fps'))),
             #"sync_effort_level": self.timekeeper.get_effort_level(),
+            "exposure_label": "EXP",
             "exposure_time": str(self.cinepi_controller.exposure_time_fractions),
             "sensor": str.upper(self.redis_controller.get_value("sensor")),
             "width": str(self.redis_controller.get_value("width") + " : "),
             "height": str(self.redis_controller.get_value("height") + " : "),
             "bit_depth": str(self.redis_controller.get_value("bit_depth") + "b"),
-            "color_temp": (str(self.redis_listener.colorTemp) + "K"),
+            "wb_label": "WB",
+            "color_temp": (str(self.redis_controller.get_value('wb_user')) + "K"),
+            "color_temp_libcamera": ("/ " + str(self.redis_listener.colorTemp) + "K"),
+            "ram_label": 'RAM',
             "ram_load": f"{100 - psutil.virtual_memory().available / psutil.virtual_memory().total * 100:.0f}%",
+            "cpu_label": 'CPU',
             "cpu_load": str(int(psutil.cpu_percent())) + '%',
+            "cpu_temp_label": 'TEMP',
             "cpu_temp": ('{}\u00B0C'.format(int(CPUTemperature().temperature))),
+            "disk_label": str(self.ssd_monitor.device_name).upper()[:4] if self.ssd_monitor.device_name else "", #str(self.ssd_monitor.file_system_format).upper() if self.ssd_monitor.file_system_format else "",
         }
-        
+
         # Construct the frame count string
         frame_count_string = str(self.redis_controller.get_value("framecount")) + " / " + str(self.redis_controller.get_value("buffer"))
 
@@ -176,9 +206,9 @@ class SimpleGUI(threading.Thread):
             self.colors["fps"]["normal"] = "white"
 
         if self.cinepi_controller.fps_double:
-            self.colors["fps"]["normal"] = "yellow"
+            self.colors["fps"]["normal"] = "lightgreen"
         else:
-            self.colors["fps"]["normal"] = "white"
+            self.colors["fps"]["normal"] = "white"  
 
         # if self.cinepi_controller.shutter_a_sync_mode != 0:
                 
@@ -196,10 +226,10 @@ class SimpleGUI(threading.Thread):
         else:
             values["low_voltage"] = ""
 
-        # if self.ssd_monitor and self.ssd_monitor.directory_watcher and self.ssd_monitor.directory_watcher.last_dng_file_added:
-        #     values["last_dng_added"] = str(self.ssd_monitor.directory_watcher.last_dng_file_added)[41:80]
-        # else:
-        #     values["last_dng_added"] = ""
+        if self.ssd_monitor.last_dng_file:
+            values["last_dng_added"] = str(self.ssd_monitor.last_dng_file).upper()
+        else:
+             values["last_dng_added"] = ""
 
         if self.battery_monitor.battery_level is not None:
             values["battery_level"] = str(self.battery_monitor.battery_level) + '%'
@@ -220,7 +250,7 @@ class SimpleGUI(threading.Thread):
         previous_background_color = self.current_background_color  # Store the previous background color
 
         # Determine background color based on conditions, prioritizing red over green
-        if self.redis_listener.drop_frame == 1:
+        if self.redis_listener.drop_frame == 1 and int(self.redis_controller.get_value('rec')) == 1:
             self.current_background_color = "purple"
             self.color_mode = "inverse"
         
@@ -306,6 +336,13 @@ class SimpleGUI(threading.Thread):
             color_mode = self.color_mode
             color = self.colors.get(element, {}).get(color_mode, "white")
 
+            # Handle right alignment for sensor
+            if element == "sensor" and info.get("align") == "right":
+                text_bbox = draw.textbbox((0, 0), value, font=font)
+                text_width = text_bbox[2] - text_bbox[0]
+                x = position[0] + info["width"] - text_width
+                position = (x, position[1])
+
             draw.text(position, value, font=font, fill=color)
 
             # Draw rounded box behind locked elements
@@ -356,8 +393,6 @@ class SimpleGUI(threading.Thread):
         draw.rectangle([upper_left[0] + radius, upper_left[1] + radius, upper_left[0] + text_width + padding * 2 - radius, upper_left[1] + text_height + padding * 2 - radius + reduce_top], fill=fill_color)
 
         draw.text(position, text, font=font, fill=text_color)
-
-
 
     def run(self):
         try:

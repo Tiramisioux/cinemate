@@ -74,14 +74,10 @@ class CommandExecutor(threading.Thread):
         }
 
     def is_valid_arg(self, arg, expected_type):
-        if expected_type == int:
-            return arg.isdigit()
-        elif expected_type == float:
+        if expected_type == float:
             try:
                 float(arg)
-                parts = arg.split(".")
-                # Check if it has only one decimal point or none and at most one digit after the decimal point
-                return len(parts) <= 2 and (len(parts) == 1 or len(parts[1]) <= 1)
+                return True  # Accept any valid float
             except ValueError:
                 return False
         elif expected_type == str:

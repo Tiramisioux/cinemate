@@ -68,7 +68,7 @@ class CinePi:
             
         self.sensor_detect.detect_camera_model()
         sensor_model = self.sensor_detect.camera_model
-        tuning_file_path = f'/home/pi/cinemate/resources/tuning_files/{sensor_model}.json'
+        tuning_file_path = f'/home/pi/libcamera/src/ipa/rpi/pisp/data/{sensor_model}.json'
         
         cg_rb = self.redis_controller.get_value('cg_rb')
         if cg_rb is None:

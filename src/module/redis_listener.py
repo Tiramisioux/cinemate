@@ -52,6 +52,11 @@ class RedisListener:
         self.framecount_check_interval = 1.0  # Default to 1 second, will be updated based on FPS
         
         self.redis_controller.set_value('rec', "0")
+        
+        self.max_fps_adjustment = 0.0001  # Maximum adjustment per iteration
+        self.min_fps_adjustment = 0.00001  # Minimum adjustment increment
+        self.fps_adjustment_interval = 1.0  # Adjust every 1 second
+        self.last_fps_adjustment_time = datetime.datetime.now()
 
 
         
@@ -146,6 +151,15 @@ class RedisListener:
 
                         # Check if framecount is changing
                         self.check_framecount_changing()
+                        
+                        # # Calculate average framerate of last 100 frames
+                        # avg_framerate = self.calculate_average_framerate_last_100_frames()
+
+                        # # Adjust FPS if necessary
+                        # current_time = datetime.datetime.now()
+                        # if (current_time - self.last_fps_adjustment_time).total_seconds() >= self.fps_adjustment_interval:
+                        #     self.adjust_fps(avg_framerate)
+                        #     self.last_fps_adjustment_time = current_time
 
 
                     except json.JSONDecodeError as e:
@@ -260,9 +274,43 @@ class RedisListener:
             
             if time_diffs:
                 average_time_diff = sum(time_diffs) / len(time_diffs)
-                average_fps = (1.0 / average_time_diff)*1000 if average_time_diff != 0 else 0
+                average_fps = (1.0 / average_time_diff) * 1000 if average_time_diff != 0 else 0
                 #logging.info(f"Average framerate of the last 100 frames: {average_fps:.6f} FPS")
+                return average_fps
             else:
                 logging.warning("Time differences calculation resulted in an empty list.")
         else:
-            logging.warning("Not enough sensor timestamps to calculate average framerate.") 
+            logging.warning("Not enough sensor timestamps to calculate average framerate.")
+        return None
+    
+    def adjust_fps(self, avg_framerate):
+        if avg_framerate is None:
+            return
+
+        desired_fps = float(self.redis_controller.get_value('fps_user'))
+        current_fps = float(self.redis_controller.get_value('fps'))
+        
+        fps_difference = desired_fps - avg_framerate
+        
+        # Calculate adaptive step size
+        step_size = min(
+            self.max_fps_adjustment,
+            max(self.min_fps_adjustment, abs(fps_difference) / 10)
+        )
+        
+        if abs(fps_difference) > self.min_fps_adjustment:
+            if fps_difference > 0:
+                new_fps = current_fps + step_size
+            else:
+                new_fps = current_fps - step_size
+            
+            # Ensure new FPS is not negative and doesn't overshoot the target
+            new_fps = max(0, min(new_fps, desired_fps * 1.00001))  # Allow up to 1% overshoot
+            
+            # Round to 5 decimal places to avoid floating point precision issues
+            new_fps = round(new_fps, 5)
+            
+            self.redis_controller.set_value('fps', new_fps)
+            logging.info(f"Adjusted FPS from {current_fps} to {new_fps} (step size: {step_size:.5f})")
+        else:
+            logging.info(f"FPS is within acceptable range. Current: {current_fps}, Avg: {avg_framerate}, Desired: {desired_fps}")

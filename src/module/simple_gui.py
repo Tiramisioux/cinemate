@@ -226,10 +226,10 @@ class SimpleGUI(threading.Thread):
         else:
             values["low_voltage"] = ""
 
-        if self.ssd_monitor.last_dng_file:
-            values["last_dng_added"] = str(self.ssd_monitor.last_dng_file).upper()
-        else:
-             values["last_dng_added"] = ""
+        # if self.ssd_monitor.last_dng_file:
+        #     values["last_dng_added"] = str(self.ssd_monitor.last_dng_file).upper()
+        # else:
+        #      values["last_dng_added"] = ""
 
         if self.battery_monitor.battery_level is not None:
             values["battery_level"] = str(self.battery_monitor.battery_level) + '%'

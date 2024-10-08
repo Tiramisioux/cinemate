@@ -84,8 +84,8 @@ class RedisController:
                     self.redis_client.set('fps', value)
                     self.redis_client.publish('cp_controls', 'fps')
                     
-                    self.redis_client.set('fps_user', value)
-                    self.redis_client.publish('cp_controls', 'fps_user')
+                    # self.redis_client.set('fps_user', value)
+                    # self.redis_client.publish('cp_controls', 'fps_user')
                     
                     # self.redis_client.set('cam_init', '1')
                     # self.redis_client.publish('cp_controls', 'cam_init')

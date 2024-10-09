@@ -39,7 +39,7 @@ class SensorDetect:
                 #3: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 16, 'fps_max': 21, 'gui_layout': 0, 'file_size': 8},                                      
             },
             'imx585_mono': {             
-                0: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 12, 'fps_max': 50, 'gui_layout': 0, 'file_size': 3.1}, # driver fps max 87
+                0: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 12, 'fps_max': 51, 'gui_layout': 0, 'file_size': 3.1}, # driver fps max 87
                 1: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 12, 'fps_max': 21, 'gui_layout': 0, 'file_size': 13}, # driver fps max 34
                 2: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 16, 'fps_max': 30, 'gui_layout': 0, 'file_size': 13}, # driver fps max 30
 

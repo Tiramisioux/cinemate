@@ -322,6 +322,8 @@ if __name__ == "__main__":
     #cinepi_controller.set_pwm_mode(1)
 
     logging.info(f"--- initialization complete")
+    
+    redis_controller.set_value('fps', float(redis_controller.get_value('fps_last')))
 
     try:    
         pause()

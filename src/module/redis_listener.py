@@ -53,8 +53,8 @@ class RedisListener:
         
         self.redis_controller.set_value('rec', "0")
         
-        self.max_fps_adjustment = 0.0001  # Maximum adjustment per iteration
-        self.min_fps_adjustment = 0.00001  # Minimum adjustment increment
+        self.max_fps_adjustment = 0.1  # Maximum adjustment per iteration
+        self.min_fps_adjustment = 0.0001  # Minimum adjustment increment
         self.fps_adjustment_interval = 1.0  # Adjust every 1 second
         self.last_fps_adjustment_time = datetime.datetime.now()
 
@@ -275,7 +275,8 @@ class RedisListener:
             if time_diffs:
                 average_time_diff = sum(time_diffs) / len(time_diffs)
                 average_fps = (1.0 / average_time_diff) * 1000 if average_time_diff != 0 else 0
-                #logging.info(f"Average framerate of the last 100 frames: {average_fps:.6f} FPS")
+                #logging.info(f"Average framerate of the last 100 frames: {average_fps:.6f} FPS : fps: {self.redis_controller.get_value('fps')}")
+                
                 return average_fps
             else:
                 logging.warning("Time differences calculation resulted in an empty list.")
@@ -287,7 +288,7 @@ class RedisListener:
         if avg_framerate is None:
             return
 
-        desired_fps = float(self.redis_controller.get_value('fps_user'))
+        desired_fps = round(float(self.redis_controller.get_value('fps_user')))
         current_fps = float(self.redis_controller.get_value('fps'))
         
         fps_difference = desired_fps - avg_framerate
@@ -307,8 +308,8 @@ class RedisListener:
             # Ensure new FPS is not negative and doesn't overshoot the target
             new_fps = max(0, min(new_fps, desired_fps * 1.00001))  # Allow up to 1% overshoot
             
-            # Round to 5 decimal places to avoid floating point precision issues
-            new_fps = round(new_fps, 5)
+            # Round to 7 decimal places to avoid floating point precision issues
+            new_fps = round(new_fps, 7)
             
             self.redis_controller.set_value('fps', new_fps)
             logging.info(f"Adjusted FPS from {current_fps} to {new_fps} (step size: {step_size:.5f})")

@@ -77,9 +77,9 @@ class RedisController:
             if key == 'fps':
                 if value >= 1:
                     fps_new = float(value)
-                    frame_duration_new = int((1/fps_new) * 1000000)
-                    self.redis_client.set('frame_duration', frame_duration_new)
-                    self.redis_client.publish('cp_controls', 'frame_duration')
+                    # frame_duration_new = int((1/fps_new) * 1000000)
+                    # self.redis_client.set('frame_duration', frame_duration_new)
+                    # self.redis_client.publish('cp_controls', 'frame_duration')
                     
                     self.redis_client.set('fps', value)
                     self.redis_client.publish('cp_controls', 'fps')
@@ -89,9 +89,9 @@ class RedisController:
                     
                     # self.redis_client.set('cam_init', '1')
                     # self.redis_client.publish('cp_controls', 'cam_init')
-                    self.redis_client.set(key, value)
+                    # self.redis_client.set(key, value)
                     # Notify about the key change via the cp_controls channel
-                    self.redis_client.publish('cp_controls', key)
+                    # self.redis_client.publish('cp_controls', key)
             else:
                 self.redis_client.set(key, value)
                 # Notify about the key change via the cp_controls channel

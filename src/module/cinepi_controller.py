@@ -41,7 +41,7 @@ class CinePiController:
         self.wb_cg_rb_array = {}  # Initialize as an empty dictionary
         
         self.redis_listener = RedisListener(redis_controller)
-        self.fps = int(float(self.redis_controller.get_value('fps')))
+        self.fps = int(round(float(self.redis_controller.get_value('fps_last'))))
         
         # Set startup flag
         self.startup = True
@@ -61,6 +61,7 @@ class CinePiController:
         self.fps_multiplier = 1
         self.pwm_mode = False
         self.trigger_mode = 0
+        self.fps_correction_factor = 1 # 0.9980 for imx585 mono
         self.fps_saved = float(self.redis_controller.get_value('fps'))
         self.fps_double = False
         self.ramp_up_speed = 0.2
@@ -106,7 +107,8 @@ class CinePiController:
         threading.Timer(5.0, self.clear_startup_flag).start()
 
         # Communicate the initial fps to the web app
-        self.redis_controller.set_value('fps', self.fps)
+        self.set_fps(self.fps)
+        logging.info(f"Initialized fps: {self.fps}")
         
         self.set_resolution(int(self.redis_controller.get_value('sensor_mode')))
         
@@ -206,7 +208,7 @@ class CinePiController:
     def clear_startup_flag(self):
         self.startup = False
         # Communicate the current fps to the web app after the startup phase
-        self.redis_controller.set_value('fps', self.fps)
+        #self.redis_controller.set_value('fps', self.fps)
 
     def load_wb_steps(self):
         try:
@@ -248,8 +250,10 @@ class CinePiController:
         self.set_shutter_a(closest_shutter_angle)
 
     def set_fps(self, value):
-        value = float(value)
+        value = float(value) * self.fps_correction_factor #0.9980
         logging.info(f"Received set_fps call with value: {value}")
+        
+        
 
         if not self.fps_lock:
             max_fps = int(self.redis_controller.get_value('fps_max'))
@@ -591,6 +595,8 @@ class CinePiController:
                 self.shutter_a_steps_dynamic = dynamic_steps
             else:
                 dynamic_steps = steps
+            if setting_name == 'fps':
+                current_value = int(round(float(self.get_setting(setting_name))))
             if current_value in dynamic_steps:
                 idx = dynamic_steps.index(current_value)
                 idx = min(idx + 1, len(dynamic_steps) - 1)
@@ -609,6 +615,8 @@ class CinePiController:
                 self.shutter_a_steps_dynamic = dynamic_steps
             else:
                 dynamic_steps = steps
+            if setting_name == 'fps':
+                current_value = int(round(float(self.get_setting(setting_name))))
             if current_value in dynamic_steps:
                 idx = dynamic_steps.index(current_value)
                 idx = max(idx - 1, 0)

@@ -1,207 +1,2578 @@
-37.120: INFO: main               Contents of /home/pi/cinemate/src/logs/system.log have been erased.
-37.121: INFO: main               Contents of /home/pi/cinemate/src/logs/cinemate-service.log have been erased.
-37.121: INFO: main               Contents of /home/pi/cinemate/src/logs/cinemate-service-error.log have been erased.
-37.135: INFO: wifi_hotspot       WiFi hotspot is already active. Skipping creation.
-37.137: INFO: redis_controller   Initializing cache with Redis values...
-37.140: INFO: PWMcontroller      Initializing PWM on pin 19 (channel 3) with frequency 24Hz and chip 2
-37.141: INFO: PWMcontroller      PWM successfully initialized on pin 19 (channel 3) with frequency 24Hz
-37.141: INFO: PWMcontroller      Updating PWM with cycles=1
-37.141: INFO: redis_controller   Changed value: pi_model = pi5
-37.166: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
-37.316: INFO: sensor_detect      cinepi-raw output: Available cameras
+55.463: INFO: main               Contents of /home/pi/cinemate/src/logs/system.log have been erased.
+55.463: INFO: main               Contents of /home/pi/cinemate/src/logs/cinemate-service.log have been erased.
+55.464: INFO: main               Contents of /home/pi/cinemate/src/logs/cinemate-service-error.log have been erased.
+55.478: INFO: wifi_hotspot       WiFi hotspot is already active. Skipping creation.
+55.480: INFO: redis_controller   Initializing cache with Redis values...
+55.485: INFO: PWMcontroller      Initializing PWM on pin 19 (channel 3) with frequency 24Hz and chip 2
+55.485: INFO: redis_controller   Changed value: pi_model = pi5
+55.485: INFO: PWMcontroller      PWM successfully initialized on pin 19 (channel 3) with frequency 24Hz
+55.485: INFO: PWMcontroller      Updating PWM with cycles=1
+55.500: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
+55.649: INFO: sensor_detect      cinepi-raw output: Available cameras
 -----------------
-0 : imx585 [3840x2160 MONO] (/base/axi/pcie@120000/rp1/i2c@80000/imx585@1A)
-    Modes: 'R12_CSI2P' : 1928x1090 [87.60 fps - (0, 0)/3840x2160 crop]
-                         3856x2180 [43.80 fps - (0, 0)/3840x2160 crop]
-           'R16' : 1928x1090 [30.00 fps - (0, 0)/3840x2160 crop]
-                   3856x2180 [21.90 fps - (0, 0)/3840x2160 crop]
+0 : imx283 [5472x3648 12-bit RGGB] (/base/axi/pcie@120000/rp1/i2c@80000/imx283@1a)
+    Modes: 'SRGGB10_CSI2P' : 3936x2176 [43.88 fps - (196, -108)/3840x2160 crop]
+                             5568x3094 [21.31 fps - (0, 285)/5472x3078 crop]
+                             5568x3664 [17.99 fps - (0, 0)/5472x3648 crop]
+           'SRGGB12_CSI2P' : 2784x1548 [41.36 fps - (0, 285)/5472x3078 crop]
+                             2784x1828 [35.55 fps - (0, 0)/5472x3648 crop]
+                             5568x3664 [17.99 fps - (0, 0)/5472x3648 crop]
 
 
-37.317: INFO: sensor_detect      Detected camera model: imx585_mono
-37.317: WARNING: sensor_detect      cinepi-raw command exited with non-zero status: 134
-37.317: WARNING: sensor_detect      stderr: terminate called after throwing an instance of 'std::system_error'
+55.649: INFO: sensor_detect      Detected camera model: imx283
+55.650: WARNING: sensor_detect      cinepi-raw command exited with non-zero status: 134
+55.650: WARNING: sensor_detect      stderr: terminate called after throwing an instance of 'std::system_error'
   what():  Invalid argument
 Aborted
 
-37.467: INFO: sensor_detect      cinepi-raw output: Available cameras
+55.802: INFO: sensor_detect      cinepi-raw output: Available cameras
 -----------------
-0 : imx585 [3840x2160 MONO] (/base/axi/pcie@120000/rp1/i2c@80000/imx585@1A)
-    Modes: 'R12_CSI2P' : 1928x1090 [87.60 fps - (0, 0)/3840x2160 crop]
-                         3856x2180 [43.80 fps - (0, 0)/3840x2160 crop]
-           'R16' : 1928x1090 [30.00 fps - (0, 0)/3840x2160 crop]
-                   3856x2180 [21.90 fps - (0, 0)/3840x2160 crop]
+0 : imx283 [5472x3648 12-bit RGGB] (/base/axi/pcie@120000/rp1/i2c@80000/imx283@1a)
+    Modes: 'SRGGB10_CSI2P' : 3936x2176 [43.88 fps - (196, -108)/3840x2160 crop]
+                             5568x3094 [21.31 fps - (0, 285)/5472x3078 crop]
+                             5568x3664 [17.99 fps - (0, 0)/5472x3648 crop]
+           'SRGGB12_CSI2P' : 2784x1548 [41.36 fps - (0, 285)/5472x3078 crop]
+                             2784x1828 [35.55 fps - (0, 0)/5472x3648 crop]
+                             5568x3664 [17.99 fps - (0, 0)/5472x3648 crop]
 
 
-37.468: INFO: sensor_detect      Detected camera model: imx585_mono
-37.468: WARNING: sensor_detect      cinepi-raw command exited with non-zero status: 134
-37.468: WARNING: sensor_detect      stderr: terminate called after throwing an instance of 'std::system_error'
+55.802: INFO: sensor_detect      Detected camera model: imx283
+55.803: WARNING: sensor_detect      cinepi-raw command exited with non-zero status: 134
+55.803: WARNING: sensor_detect      stderr: terminate called after throwing an instance of 'std::system_error'
   what():  Invalid argument
 Aborted
 
-37.468: INFO: cinepi_app         CinePi instantiated
-37.468: INFO: cinepi_app         Log level set to INFO
-37.468: INFO: cinepi_app         Active filters set to: 
-37.468: INFO: ssd_monitor        SSD monitoring thread started.
-37.471: INFO: gpio_output        REC light instantiated on pin 6
-37.471: INFO: gpio_output        REC light instantiated on pin 21
-37.473: INFO: redis_controller   Changed value: framecount = 0
-37.474: INFO: redis_controller   Changed value: rec = 0
-37.476: INFO: redis_controller   Changed value: sensor = imx585_mono
-37.477: INFO: redis_controller   Changed value: fps_max = 51
-37.478: INFO: cinepi_controller  Settings loaded successfully.
-37.478: INFO: cinepi_controller  Initialized fps_steps: [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50]
-37.478: INFO: redis_controller   Changed value: fps_max = 51
-37.478: INFO: cinepi_controller  Initialized shutter_a_steps: [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
-37.479: INFO: cinepi_controller  Loading tuning file from: /home/pi/cinemate/resources/tuning_files/imx585_mono.json
-37.479: INFO: cinepi_controller  Tuning data loaded successfully.
-37.479: WARNING: cinepi_controller  'rpi.awb' algorithm data not found, using default ct_curve.
-37.479: INFO: cinepi_controller  Parsed temperatures: [2000.0, 2200.0, 2400.0, 2600.0, 2800.0, 3000.0, 3200.0, 3400.0, 3600.0, 4100.0, 4600.0, 5100.0, 5600.0, 6100.0, 6600.0, 7100.0, 7600.0, 8100.0, 8600.0]
-37.480: INFO: cinepi_controller  Parsed r_values: [0.6331025775790707, 0.5696117366212947, 0.5204264653110015, 0.48148675531667223, 0.450085403501908, 0.42436130159169017, 0.40300023695527337, 0.3850520052612984, 0.36981508088230314, 0.333468007836758, 0.31196097364221376, 0.2961860409294588, 0.2842607232745885, 0.2750265787051251, 0.2677057225584924, 0.2617955199757274, 0.25693714288250125, 0.25287531441063316, 0.24946601483331993]
-37.480: INFO: cinepi_controller  Parsed b_values: [0.27424225990946915, 0.3116091368689487, 0.34892179554105873, 0.38565229719076793, 0.42145684622485047, 0.45611835670028816, 0.48950766215198593, 0.5215567075837261, 0.5522397906415475, 0.5909770465167908, 0.6515706327327178, 0.7068178946570284, 0.7564837749584288, 0.8006183524920533, 0.8398879225373039, 0.8746456080032436, 0.905569559506562, 0.9331696750390895, 0.9576820904825795]
-37.480: INFO: cinepi_controller  Interpolating for wb step: 3200K, lower index: 6, upper index: 6
-37.480: INFO: cinepi_controller  Exact match found at index 6, r_interp: 0.40300023695527337, b_interp: 0.48950766215198593
-37.480: INFO: cinepi_controller  Calculated reciprocal cg_rb for 3200K: (2.5, 2.0)
-37.480: INFO: cinepi_controller  Interpolating for wb step: 4400K, lower index: 9, upper index: 10
-37.480: INFO: cinepi_controller  Interpolated values for 4400K - r_interp: 0.32056378732003143, b_interp: 0.627333198246347
-37.480: INFO: cinepi_controller  Calculated reciprocal cg_rb for 4400K: (3.1, 1.6)
-37.480: INFO: cinepi_controller  Interpolating for wb step: 5600K, lower index: 12, upper index: 12
-37.480: INFO: cinepi_controller  Exact match found at index 12, r_interp: 0.2842607232745885, b_interp: 0.7564837749584288
-37.480: INFO: cinepi_controller  Calculated reciprocal cg_rb for 5600K: (3.5, 1.3)
-37.480: INFO: cinepi_controller  Initialized wb_cg_rb_array: {3200: (2.5, 2.0), 4400: (3.1, 1.6), 5600: (3.5, 1.3)}
-37.481: INFO: cinepi_controller  Settings loaded successfully.
-37.481: INFO: cinepi_controller  Received set_fps call with value: 23.951999999999998
-37.481: INFO: cinepi_controller  Retrieved max_fps from Redis: 51
-37.481: INFO: cinepi_controller  Calculated safe_value: 23.951999999999998
-37.483: INFO: dmesg_monitor      Disk detached.
-37.483: INFO: cinepi_controller  Setting fps to 23.951999999999998
-37.484: INFO: redis_controller   Changed value: fps = 23.951999999999998
-37.484: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
-37.484: INFO: cinepi_controller  Initialized fps: 23
-37.484: INFO: redis_controller   Changed value: fps_last = 23.951999999999998
-37.485: INFO: redis_controller   Changed value: sensor_mode = 0
-37.485: INFO: redis_controller   Changed value: height = 1090
-37.486: INFO: redis_controller   Changed value: width = 1928
-37.487: INFO: redis_controller   Changed value: bit_depth = 12
-37.487: INFO: cinepi_controller  Resolution set to mode 0, height: 1090, width: 1928, gui_layout: 0
-37.487: INFO: redis_controller   Changed value: fps_max = 51
-37.488: INFO: redis_controller   Changed value: gui_layout = 0
-37.488: INFO: redis_controller   Changed value: file_size = 3.1
-37.488: INFO: redis_controller   Changed value: cam_init = 1
-37.988: INFO: cinepi_app         Restarting CinePi instance.
-38.489: INFO: redis_controller   Changed value: fps_last = 23.951999999999998
-38.637: INFO: sensor_detect      cinepi-raw output: Available cameras
+55.803: INFO: cinepi_app         CinePi instantiated
+55.803: INFO: cinepi_app         Log level set to INFO
+55.803: INFO: cinepi_app         Active filters set to: 
+55.804: INFO: ssd_monitor        SSD monitoring thread started.
+55.806: INFO: ssd_monitor        RAW drive mounted at /media/RAW
+55.807: INFO: ssd_monitor        Updated space left on SSD: 191.04 GB
+55.807: INFO: gpio_output        REC light instantiated on pin 6
+55.807: INFO: gpio_output        REC light instantiated on pin 21
+55.810: INFO: redis_controller   Changed value: framecount = 0
+55.811: INFO: redis_controller   Changed value: rec = 0
+55.812: INFO: redis_controller   Changed value: sensor = imx283
+55.813: INFO: cinepi_controller  Settings loaded successfully.
+55.813: INFO: redis_controller   Changed value: fps_max = 40
+55.814: INFO: cinepi_controller  Initialized fps_steps: [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40]
+55.814: INFO: cinepi_controller  Initialized shutter_a_steps: [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
+55.814: INFO: redis_controller   Changed value: fps_max = 40
+55.814: INFO: cinepi_controller  Loading tuning file from: /home/pi/cinemate/resources/tuning_files/imx283.json
+55.814: INFO: cinepi_controller  Tuning data loaded successfully.
+55.815: INFO: cinepi_controller  'rpi.awb' data found: {'use_derivatives': 0, 'bayes': 0}
+55.815: WARNING: cinepi_controller  'ct_curve' not found in 'rpi.awb' data, using default ct_curve.
+55.815: INFO: cinepi_controller  Parsed temperatures: [2213.0, 2255.0, 2259.0, 5313.0, 6237.0]
+55.815: INFO: cinepi_controller  Parsed r_values: [0.9607, 0.9309, 0.9257, 0.4822, 0.4726]
+55.815: INFO: cinepi_controller  Parsed b_values: [0.2593, 0.2521, 0.2508, 0.5909, 0.6376]
+55.815: INFO: cinepi_controller  Interpolating for wb step: 3200K, lower index: 2, upper index: 3
+55.815: INFO: cinepi_controller  Interpolated values for 3200K - r_interp: 0.7890485592665357, b_interp: 0.355591781270465
+55.815: INFO: cinepi_controller  Calculated reciprocal cg_rb for 3200K: (1.3, 2.8)
+55.815: INFO: cinepi_controller  Interpolating for wb step: 4400K, lower index: 2, upper index: 3
+55.815: INFO: cinepi_controller  Interpolated values for 4400K - r_interp: 0.6147852979698756, b_interp: 0.4892263588736083
+55.815: INFO: cinepi_controller  Calculated reciprocal cg_rb for 4400K: (1.6, 2.0)
+55.815: INFO: cinepi_controller  Interpolating for wb step: 5600K, lower index: 3, upper index: 4
+55.816: INFO: cinepi_controller  Interpolated values for 5600K - r_interp: 0.4792181818181818, b_interp: 0.605405303030303
+55.816: INFO: cinepi_controller  Calculated reciprocal cg_rb for 5600K: (2.1, 1.7)
+55.816: INFO: cinepi_controller  Initialized wb_cg_rb_array: {3200: (1.3, 2.8), 4400: (1.6, 2.0), 5600: (2.1, 1.7)}
+55.816: INFO: cinepi_controller  Settings loaded successfully.
+55.817: INFO: cinepi_controller  Received set_fps call with value: 18.0
+55.817: INFO: cinepi_controller  Retrieved max_fps from Redis: 40
+55.817: INFO: cinepi_controller  Calculated safe_value: 18.0
+55.817: INFO: cinepi_controller  Setting fps to 18.0
+55.817: INFO: redis_controller   Changed value: fps = 18.0
+55.818: INFO: cinepi_controller  [1, 45, 90, 120.0, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
+55.818: INFO: cinepi_controller  Initialized fps: 18
+55.820: INFO: redis_controller   Changed value: fps_last = 18.0
+55.821: INFO: cinepi_controller  Resolution set to mode 0, height: 1538, width: 2736, gui_layout: 0
+55.821: INFO: redis_controller   Changed value: sensor_mode = 0
+55.821: INFO: redis_controller   Changed value: height = 1538
+55.822: INFO: redis_controller   Changed value: width = 2736
+55.822: INFO: redis_controller   Changed value: bit_depth = 12
+55.822: INFO: redis_controller   Changed value: fps_max = 40
+55.822: INFO: redis_controller   Changed value: gui_layout = 0
+55.823: INFO: redis_controller   Changed value: file_size = 7.1
+55.823: INFO: redis_controller   Changed value: cam_init = 1
+56.321: INFO: cinepi_app         Restarting CinePi instance.
+56.322: INFO: redis_controller   Changed value: fps_last = 18.0
+56.472: INFO: sensor_detect      cinepi-raw output: Available cameras
 -----------------
-0 : imx585 [3840x2160 MONO] (/base/axi/pcie@120000/rp1/i2c@80000/imx585@1A)
-    Modes: 'R12_CSI2P' : 1928x1090 [87.60 fps - (0, 0)/3840x2160 crop]
-                         3856x2180 [43.80 fps - (0, 0)/3840x2160 crop]
-           'R16' : 1928x1090 [30.00 fps - (0, 0)/3840x2160 crop]
-                   3856x2180 [21.90 fps - (0, 0)/3840x2160 crop]
+0 : imx283 [5472x3648 12-bit RGGB] (/base/axi/pcie@120000/rp1/i2c@80000/imx283@1a)
+    Modes: 'SRGGB10_CSI2P' : 3936x2176 [43.88 fps - (196, -108)/3840x2160 crop]
+                             5568x3094 [21.31 fps - (0, 285)/5472x3078 crop]
+                             5568x3664 [17.99 fps - (0, 0)/5472x3648 crop]
+           'SRGGB12_CSI2P' : 2784x1548 [41.36 fps - (0, 285)/5472x3078 crop]
+                             2784x1828 [35.55 fps - (0, 0)/5472x3648 crop]
+                             5568x3664 [17.99 fps - (0, 0)/5472x3648 crop]
 
 
-38.637: INFO: sensor_detect      Detected camera model: imx585_mono
-38.637: WARNING: sensor_detect      cinepi-raw command exited with non-zero status: 134
-38.637: WARNING: sensor_detect      stderr: terminate called after throwing an instance of 'std::system_error'
+56.472: INFO: sensor_detect      Detected camera model: imx283
+56.472: WARNING: sensor_detect      cinepi-raw command exited with non-zero status: 134
+56.472: WARNING: sensor_detect      stderr: terminate called after throwing an instance of 'std::system_error'
   what():  Invalid argument
 Aborted
 
-38.637: INFO: cinepi_app         Issuing ['cinepi-raw', '--mode', '1928:1090:12:U', '--width', '1928', '--height', '1090', '--lores-width', '1280', '--lores-height', '720', '-p', '0,30,1920,1020', '--post-process-file', '/home/pi/post-processing.json', '--shutter', '20000', '--awbgains', '2.5,2.0', '--awb', 'auto', '--tuning-file', '/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585_mono.json']
-38.639: INFO: redis_controller   Changed value: sensor = imx585_mono
-38.639: ERROR: cinepi_controller  Error setting resolution: invalid literal for int() with base 10: '23.951999999999998'
-38.640: INFO: gpio_input         Button on pin 4:
-38.640: INFO: gpio_input           Press: rec
-38.646: INFO: gpio_input         Button on pin 5:
-38.646: INFO: gpio_input           Press: rec
-38.647: INFO: gpio_input         Button on pin 27:
-38.648: INFO: gpio_input           Press: inc_iso
-38.649: INFO: gpio_input         Button on pin 10:
-38.649: INFO: gpio_input           Press: dec_iso
-38.651: INFO: gpio_input         Button on pin 22:
-38.651: INFO: gpio_input           Press: set_all_lock
-38.652: INFO: gpio_input         Button on pin 12:
-38.652: INFO: gpio_input           Single Click: set_shutter_a_sync_mode
-38.653: INFO: gpio_input         Button on pin 1:
-38.653: INFO: gpio_input           Single Click: set_fps_double
-38.653: INFO: gpio_input           Double Click: set_trigger_mode
-38.655: INFO: gpio_input         Button on pin 13:
-38.655: INFO: gpio_input           Single Click: set_resolution
-38.655: INFO: gpio_input           Double Click: restart_camera
-38.655: INFO: gpio_input           Triple Click: reboot
-38.655: INFO: gpio_input           Hold: unmount
-38.656: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 9, DT pin: 11
-38.656: INFO: gpio_input           Rotate Clockwise: inc_iso
-38.656: INFO: gpio_input           Rotate CounterClockwise: dec_iso
-38.658: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 24, DT pin: 25
-38.658: INFO: gpio_input           Rotate Clockwise: inc_shutter_a_nom
-38.658: INFO: gpio_input           Rotate CounterClockwise: dec_shutter_a_nom
-38.660: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 0, DT pin: 8
-38.660: INFO: gpio_input           Rotate Clockwise: inc_fps
-38.660: INFO: gpio_input           Rotate CounterClockwise: dec_fps
-38.661: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 16, DT pin: 20
-38.661: INFO: gpio_input           Rotate Clockwise: inc_wb
-38.661: INFO: gpio_input           Rotate CounterClockwise: dec_wb
-38.959: INFO: redis_listener     Framecount is changing
-38.960: INFO: redis_controller   Changed value: rec = 1
-39.196: INFO: gpio_input         Quad Rotary Encoder found and initialized
-39.199: INFO: redis_controller   Changed value: framecount = 0
-39.200: INFO: redis_controller   Changed value: rec = 0
-39.201: INFO: simple_gui         HDMI display found. (1920, 1080)
-39.323: INFO: main               Stream module loaded
-39.324: INFO: mediator           Mediator instantiated
-40.186: WARNING: redis_listener     Not enough sensor timestamps to calculate average framerate.
-40.186: INFO: redis_listener     Drop frame detected
-40.186: WARNING: redis_listener     Not enough sensor timestamps to calculate average framerate.
-40.193: INFO: redis_listener     Drop frame detected
-40.327: INFO: main               Loaded WB steps: [3200, 4400, 5600]
-40.328: INFO: analog_controls    Grove Base HAT not found.
-40.328: ERROR: main               Invalid trigger_mode value retrieved: 0
-40.328: INFO: main               Initialized WB steps: [3200, 4400, 5600]
-40.329: INFO: cinepi_controller  Set white balance for 5600K: (3.5, 1.3)
-40.329: INFO: main               --- initialization complete
-40.329: INFO: redis_controller   Changed value: cg_rb = 3.5,1.3
-40.330: INFO: redis_controller   Changed value: wb_user = 5600
-40.330: INFO: redis_controller   Changed value: fps = 23.951999999999998
-40.330: INFO: PWMcontroller      Setting PWM with fps=23.951999999999998, shutter_angle=None
-40.330: INFO: PWMcontroller      PWM frequency set to 23.951999999999998Hz on pins 19, None
-40.330: INFO: PWMcontroller      Shutter angle is None, keeping existing duty cycle.
-40.330: INFO: PWMcontroller      Updating PWM with cycles=1
-40.333: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
-40.692: INFO: redis_listener     Drop frame flag reset
-40.695: INFO: redis_listener     Drop frame flag reset
-40.788: INFO: redis_listener     Framecount is stable
-40.797: INFO: redis_controller   Changed value: rec = 0
-40.797: INFO: mediator           Recording stopped!
-40.797: INFO: gpio_output        GPIO 6 set to LOW
-40.797: INFO: gpio_output        GPIO 21 set to LOW
-14.971: INFO: cli_commands       Received: set fps 48
-14.971: INFO: cinepi_controller  Received set_fps call with value: 47.903999999999996
-14.971: INFO: cinepi_controller  Retrieved max_fps from Redis: 51
-14.971: INFO: cinepi_controller  Calculated safe_value: 47.903999999999996
-14.972: INFO: cinepi_controller  Setting fps to 47.903999999999996
-14.972: INFO: redis_controller   Changed value: fps = 47.903999999999996
-14.972: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
-14.980: INFO: PWMcontroller      Setting PWM with fps=47.903999999999996, shutter_angle=None
-14.981: INFO: PWMcontroller      PWM frequency set to 47.903999999999996Hz on pins 19, None
-14.981: INFO: PWMcontroller      Shutter angle is None, keeping existing duty cycle.
-14.981: INFO: PWMcontroller      Updating PWM with cycles=1
-14.994: INFO: redis_listener     Drop frame detected
-14.995: INFO: redis_listener     Drop frame detected
-15.000: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
-15.495: INFO: redis_listener     Drop frame flag reset
-15.496: INFO: redis_listener     Drop frame flag reset
-39.527: INFO: main               Graceful shutdown initiated.
-39.529: WARNING: redis_listener     Recording stopped, but no recording start time was registered.
-39.530: WARNING: redis_listener     Recording stopped, but no recording start time was registered.
-39.531: INFO: redis_controller   Changed value: is_recording = 0
-39.532: INFO: redis_listener     Framecount reset to 0.
-39.533: INFO: PWMcontroller      PWM stopped
-39.533: INFO: redis_controller   Changed value: is_writing = 0
-39.533: INFO: PWMcontroller      PWM stopped
-39.533: INFO: redis_controller   Changed value: shutter_a_nom = 180
-39.533: INFO: redis_controller   Changed value: cg_rb = 2.5,2.0
-39.534: INFO: redis_controller   Changed value: rec = 0
-39.540: INFO: mediator           Recording stopped!
-39.541: INFO: gpio_output        GPIO 6 set to LOW
-39.541: INFO: gpio_output        GPIO 21 set to LOW
-39.541: INFO: redis_controller   Changed value: framecount = 0
-39.663: INFO: main               Graceful shutdown initiated.
-39.842: INFO: main               Graceful shutdown initiated.
+56.472: INFO: cinepi_app         Issuing ['cinepi-raw', '--mode', '2736:1538:12:U', '--width', '2736', '--height', '1538', '--lores-width', '1920', '--lores-height', '1080', '-p', '0,30,1920,1020', '--post-process-file', '/home/pi/post-processing.json', '--shutter', '20000', '--awbgains', '2.5,2.0', '--awb', 'auto', '--tuning-file', '/home/pi/libcamera/src/ipa/rpi/pisp/data/imx283.json']
+56.474: ERROR: cinepi_controller  Error setting resolution: invalid literal for int() with base 10: '18.0'
+56.474: INFO: gpio_input         Button on pin 4:
+56.475: INFO: gpio_input           Press: rec
+56.477: INFO: redis_controller   Changed value: sensor = imx283
+56.481: INFO: gpio_input         Button on pin 5:
+56.481: INFO: gpio_input           Press: rec
+56.483: INFO: gpio_input         Button on pin 27:
+56.483: INFO: gpio_input           Press: inc_iso
+56.485: INFO: gpio_input         Button on pin 10:
+56.485: INFO: gpio_input           Press: dec_iso
+56.486: INFO: gpio_input         Button on pin 22:
+56.486: INFO: gpio_input           Press: set_all_lock
+56.488: INFO: gpio_input         Button on pin 12:
+56.488: INFO: gpio_input           Single Click: set_shutter_a_sync_mode
+56.489: INFO: gpio_input         Button on pin 1:
+56.489: INFO: gpio_input           Single Click: set_fps_double
+56.489: INFO: gpio_input           Double Click: set_trigger_mode
+56.490: INFO: gpio_input         Button on pin 13:
+56.490: INFO: gpio_input           Single Click: set_resolution
+56.491: INFO: gpio_input           Double Click: restart_camera
+56.491: INFO: gpio_input           Triple Click: reboot
+56.491: INFO: gpio_input           Hold: unmount
+56.492: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 9, DT pin: 11
+56.492: INFO: gpio_input           Rotate Clockwise: inc_iso
+56.492: INFO: gpio_input           Rotate CounterClockwise: dec_iso
+56.493: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 24, DT pin: 25
+56.494: INFO: gpio_input           Rotate Clockwise: inc_shutter_a_nom
+56.494: INFO: gpio_input           Rotate CounterClockwise: dec_shutter_a_nom
+56.495: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 0, DT pin: 8
+56.495: INFO: gpio_input           Rotate Clockwise: inc_fps
+56.495: INFO: gpio_input           Rotate CounterClockwise: dec_fps
+56.497: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 16, DT pin: 20
+56.497: INFO: gpio_input           Rotate Clockwise: inc_wb
+56.497: INFO: gpio_input           Rotate CounterClockwise: dec_wb
+56.816: INFO: redis_listener     Framecount is changing
+56.817: INFO: redis_controller   Changed value: rec = 1
+57.031: INFO: gpio_input         Quad Rotary Encoder found and initialized
+57.034: INFO: redis_controller   Changed value: framecount = 0
+57.035: INFO: redis_controller   Changed value: rec = 0
+57.036: INFO: simple_gui         HDMI display found. (1920, 1080)
+57.165: INFO: main               Stream module loaded
+57.165: INFO: mediator           Mediator instantiated
+57.377: WARNING: redis_listener     Not enough sensor timestamps to calculate average framerate.
+57.377: WARNING: redis_listener     Not enough sensor timestamps to calculate average framerate.
+57.378: INFO: redis_listener     Drop frame detected
+57.378: INFO: redis_listener     Drop frame detected
+57.878: INFO: redis_listener     Drop frame flag reset
+57.878: INFO: redis_listener     Drop frame flag reset
+57.902: INFO: redis_listener     Drop frame detected
+57.911: INFO: redis_listener     Drop frame detected
+58.198: INFO: main               Loaded WB steps: [3200, 4400, 5600]
+58.200: INFO: analog_controls    Grove Base HAT not found.
+58.200: ERROR: main               Invalid trigger_mode value retrieved: 0
+58.200: INFO: main               Initialized WB steps: [3200, 4400, 5600]
+58.202: INFO: cinepi_controller  Set white balance for 4400K: (1.6, 2.0)
+58.202: INFO: redis_controller   Changed value: cg_rb = 1.6,2.0
+58.203: INFO: main               --- initialization complete
+58.203: INFO: redis_controller   Changed value: wb_user = 4400
+58.204: INFO: redis_controller   Changed value: fps = 18.0
+58.204: INFO: PWMcontroller      Setting PWM with fps=18.0, shutter_angle=None
+58.204: INFO: PWMcontroller      PWM frequency set to 18.0Hz on pins 19, None
+58.205: INFO: PWMcontroller      Shutter angle is None, keeping existing duty cycle.
+58.205: INFO: PWMcontroller      Updating PWM with cycles=1
+58.208: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
+58.407: INFO: redis_listener     Drop frame flag reset
+58.410: INFO: redis_listener     Drop frame detected
+58.413: INFO: redis_listener     Drop frame flag reset
+58.430: INFO: redis_listener     Drop frame detected
+58.911: INFO: redis_listener     Drop frame flag reset
+58.932: INFO: redis_listener     Drop frame flag reset
+58.967: INFO: redis_listener     Drop frame detected
+58.967: INFO: redis_listener     Drop frame detected
+59.477: INFO: redis_listener     Drop frame flag reset
+59.479: INFO: redis_listener     Drop frame flag reset
+59.504: INFO: redis_listener     Drop frame detected
+59.506: INFO: redis_listener     Drop frame detected
+00.006: INFO: redis_listener     Drop frame flag reset
+00.010: INFO: redis_listener     Drop frame flag reset
+00.012: INFO: redis_listener     Drop frame detected
+00.018: INFO: redis_listener     Drop frame detected
+00.522: INFO: redis_listener     Drop frame flag reset
+00.522: INFO: redis_listener     Drop frame flag reset
+00.559: INFO: redis_listener     Drop frame detected
+00.560: INFO: redis_listener     Drop frame detected
+01.060: INFO: redis_listener     Drop frame flag reset
+01.062: INFO: redis_listener     Drop frame flag reset
+01.065: INFO: redis_listener     Drop frame detected
+01.075: INFO: redis_listener     Drop frame detected
+01.567: INFO: redis_listener     Drop frame flag reset
+01.585: INFO: redis_listener     Drop frame flag reset
+01.614: INFO: redis_listener     Drop frame detected
+01.615: INFO: redis_listener     Drop frame detected
+02.115: INFO: redis_listener     Drop frame flag reset
+02.116: INFO: redis_listener     Drop frame flag reset
+02.146: INFO: redis_listener     Drop frame detected
+02.150: INFO: redis_listener     Drop frame detected
+02.649: INFO: redis_listener     Drop frame flag reset
+02.651: INFO: redis_listener     Drop frame flag reset
+02.680: INFO: redis_listener     Drop frame detected
+02.680: INFO: redis_listener     Drop frame detected
+03.187: INFO: redis_listener     Drop frame flag reset
+03.187: INFO: redis_listener     Drop frame flag reset
+03.193: INFO: redis_listener     Drop frame detected
+03.195: INFO: redis_listener     Drop frame detected
+03.695: INFO: redis_listener     Drop frame flag reset
+03.696: INFO: redis_listener     Drop frame flag reset
+03.731: INFO: redis_listener     Drop frame detected
+03.733: INFO: redis_listener     Drop frame detected
+04.237: INFO: redis_listener     Drop frame flag reset
+04.239: INFO: redis_listener     Drop frame flag reset
+04.277: INFO: redis_listener     Drop frame detected
+04.279: INFO: redis_listener     Drop frame detected
+04.779: INFO: redis_listener     Drop frame flag reset
+04.780: INFO: redis_listener     Drop frame flag reset
+04.786: INFO: redis_listener     Drop frame detected
+04.797: INFO: redis_listener     Drop frame detected
+05.291: INFO: redis_listener     Drop frame flag reset
+05.299: INFO: redis_listener     Drop frame flag reset
+05.332: INFO: redis_listener     Drop frame detected
+05.333: INFO: redis_listener     Drop frame detected
+05.833: INFO: redis_listener     Drop frame flag reset
+05.835: INFO: redis_listener     Drop frame flag reset
+05.869: INFO: redis_listener     Drop frame detected
+05.872: INFO: redis_listener     Drop frame detected
+06.371: INFO: redis_listener     Drop frame flag reset
+06.372: INFO: redis_listener     Drop frame flag reset
+06.400: INFO: redis_listener     Drop frame detected
+06.400: INFO: redis_listener     Drop frame detected
+06.906: INFO: redis_listener     Drop frame flag reset
+06.906: INFO: redis_listener     Drop frame flag reset
+06.912: INFO: redis_listener     Drop frame detected
+06.913: INFO: redis_listener     Drop frame detected
+07.413: INFO: redis_listener     Drop frame flag reset
+07.414: INFO: redis_listener     Drop frame flag reset
+07.445: INFO: redis_listener     Drop frame detected
+07.453: INFO: redis_listener     Drop frame detected
+07.949: INFO: redis_listener     Drop frame flag reset
+07.955: INFO: redis_listener     Drop frame flag reset
+07.996: INFO: redis_listener     Drop frame detected
+07.997: INFO: redis_listener     Drop frame detected
+08.497: INFO: redis_listener     Drop frame flag reset
+08.499: INFO: redis_listener     Drop frame flag reset
+08.504: INFO: redis_listener     Drop frame detected
+08.512: INFO: redis_listener     Drop frame detected
+09.007: INFO: redis_listener     Drop frame flag reset
+09.018: INFO: redis_listener     Drop frame flag reset
+09.050: INFO: redis_listener     Drop frame detected
+09.052: INFO: redis_listener     Drop frame detected
+09.551: INFO: redis_listener     Drop frame flag reset
+09.553: INFO: redis_listener     Drop frame flag reset
+09.580: INFO: redis_listener     Drop frame detected
+09.582: INFO: redis_listener     Drop frame detected
+10.081: INFO: redis_listener     Drop frame flag reset
+10.082: INFO: redis_listener     Drop frame flag reset
+10.124: INFO: redis_listener     Drop frame detected
+10.128: INFO: redis_listener     Drop frame detected
+10.626: INFO: redis_listener     Drop frame flag reset
+10.632: INFO: redis_listener     Drop frame detected
+10.638: INFO: redis_listener     Drop frame flag reset
+10.659: INFO: redis_listener     Drop frame detected
+11.133: INFO: redis_listener     Drop frame flag reset
+11.161: INFO: redis_listener     Drop frame flag reset
+11.169: INFO: redis_listener     Drop frame detected
+11.169: INFO: redis_listener     Drop frame detected
+11.673: INFO: redis_listener     Drop frame flag reset
+11.675: INFO: redis_listener     Drop frame flag reset
+11.714: INFO: redis_listener     Drop frame detected
+11.715: INFO: redis_listener     Drop frame detected
+12.219: INFO: redis_listener     Drop frame flag reset
+12.221: INFO: redis_listener     Drop frame detected
+12.219: INFO: redis_listener     Drop frame flag reset
+12.228: INFO: redis_listener     Drop frame detected
+12.727: INFO: redis_listener     Drop frame flag reset
+12.732: INFO: redis_listener     Drop frame flag reset
+12.770: INFO: redis_listener     Drop frame detected
+12.771: INFO: redis_listener     Drop frame detected
+13.271: INFO: redis_listener     Drop frame flag reset
+13.271: INFO: redis_listener     Drop frame flag reset
+13.293: INFO: redis_listener     Drop frame detected
+13.306: INFO: redis_listener     Drop frame detected
+13.798: INFO: redis_listener     Drop frame flag reset
+13.816: INFO: redis_listener     Drop frame flag reset
+13.836: INFO: redis_listener     Drop frame detected
+13.839: INFO: redis_listener     Drop frame detected
+14.338: INFO: redis_listener     Drop frame flag reset
+14.342: INFO: redis_listener     Drop frame flag reset
+14.352: INFO: redis_listener     Drop frame detected
+14.353: INFO: redis_listener     Drop frame detected
+14.853: INFO: redis_listener     Drop frame flag reset
+14.854: INFO: redis_listener     Drop frame flag reset
+14.887: INFO: redis_listener     Drop frame detected
+14.893: INFO: redis_listener     Drop frame detected
+15.388: INFO: redis_listener     Drop frame flag reset
+15.393: INFO: redis_listener     Drop frame detected
+15.397: INFO: redis_listener     Drop frame flag reset
+15.433: INFO: redis_listener     Drop frame detected
+15.894: INFO: redis_listener     Drop frame flag reset
+15.935: INFO: redis_listener     Drop frame flag reset
+15.939: INFO: redis_listener     Drop frame detected
+15.942: INFO: redis_listener     Drop frame detected
+16.442: INFO: redis_listener     Drop frame flag reset
+16.443: INFO: redis_listener     Drop frame flag reset
+16.446: INFO: redis_listener     Drop frame detected
+16.448: INFO: redis_listener     Drop frame detected
+16.948: INFO: redis_listener     Drop frame flag reset
+16.948: INFO: redis_listener     Drop frame flag reset
+17.002: INFO: redis_listener     Drop frame detected
+17.004: INFO: redis_listener     Drop frame detected
+17.506: INFO: redis_listener     Drop frame flag reset
+17.507: INFO: redis_listener     Drop frame flag reset
+17.541: INFO: redis_listener     Drop frame detected
+17.542: INFO: redis_listener     Drop frame detected
+18.042: INFO: redis_listener     Drop frame flag reset
+18.043: INFO: redis_listener     Drop frame flag reset
+18.048: INFO: redis_listener     Drop frame detected
+18.056: INFO: redis_listener     Drop frame detected
+18.554: INFO: redis_listener     Drop frame flag reset
+18.560: INFO: redis_listener     Drop frame flag reset
+18.596: INFO: redis_listener     Drop frame detected
+18.596: INFO: redis_listener     Drop frame detected
+19.097: INFO: redis_listener     Drop frame flag reset
+19.097: INFO: redis_listener     Drop frame flag reset
+19.125: INFO: redis_listener     Drop frame detected
+19.127: INFO: redis_listener     Drop frame detected
+19.627: INFO: redis_listener     Drop frame flag reset
+19.628: INFO: redis_listener     Drop frame flag reset
+19.657: INFO: redis_listener     Drop frame detected
+19.663: INFO: redis_listener     Drop frame detected
+20.160: INFO: redis_listener     Drop frame flag reset
+20.165: INFO: redis_listener     Drop frame flag reset
+20.171: INFO: redis_listener     Drop frame detected
+20.173: INFO: redis_listener     Drop frame detected
+20.673: INFO: redis_listener     Drop frame flag reset
+20.675: INFO: redis_listener     Drop frame flag reset
+20.709: INFO: redis_listener     Drop frame detected
+20.711: INFO: redis_listener     Drop frame detected
+21.212: INFO: redis_listener     Drop frame flag reset
+21.213: INFO: redis_listener     Drop frame flag reset
+21.217: INFO: redis_listener     Drop frame detected
+21.219: INFO: redis_listener     Drop frame detected
+21.719: INFO: redis_listener     Drop frame flag reset
+21.721: INFO: redis_listener     Drop frame flag reset
+21.761: INFO: redis_listener     Drop frame detected
+21.769: INFO: redis_listener     Drop frame detected
+22.262: INFO: redis_listener     Drop frame flag reset
+22.276: INFO: redis_listener     Drop frame flag reset
+22.313: INFO: redis_listener     Drop frame detected
+22.314: INFO: redis_listener     Drop frame detected
+22.819: INFO: redis_listener     Drop frame flag reset
+22.822: INFO: redis_listener     Drop frame flag reset
+22.829: INFO: redis_listener     Drop frame detected
+22.830: INFO: redis_listener     Drop frame detected
+23.332: INFO: redis_listener     Drop frame flag reset
+23.336: INFO: redis_listener     Drop frame flag reset
+23.369: INFO: redis_listener     Drop frame detected
+23.370: INFO: redis_listener     Drop frame detected
+23.870: INFO: redis_listener     Drop frame flag reset
+23.871: INFO: redis_listener     Drop frame flag reset
+23.898: INFO: redis_listener     Drop frame detected
+23.901: INFO: redis_listener     Drop frame detected
+24.400: INFO: redis_listener     Drop frame flag reset
+24.402: INFO: redis_listener     Drop frame flag reset
+24.433: INFO: redis_listener     Drop frame detected
+24.435: INFO: redis_listener     Drop frame detected
+24.943: INFO: redis_listener     Drop frame flag reset
+24.944: INFO: redis_listener     Drop frame flag reset
+24.945: INFO: redis_listener     Drop frame detected
+24.977: INFO: redis_listener     Drop frame detected
+25.446: INFO: redis_listener     Drop frame flag reset
+25.480: INFO: redis_listener     Drop frame flag reset
+25.484: INFO: redis_listener     Drop frame detected
+25.489: INFO: redis_listener     Drop frame detected
+25.985: INFO: redis_listener     Drop frame flag reset
+25.985: INFO: redis_listener     Drop frame detected
+25.990: INFO: redis_listener     Drop frame flag reset
+26.032: INFO: redis_listener     Drop frame detected
+26.488: INFO: redis_listener     Drop frame flag reset
+26.535: INFO: redis_listener     Drop frame flag reset
+26.541: INFO: redis_listener     Drop frame detected
+26.546: INFO: redis_listener     Drop frame detected
+27.043: INFO: redis_listener     Drop frame flag reset
+27.049: INFO: redis_listener     Drop frame flag reset
+27.087: INFO: redis_listener     Drop frame detected
+27.087: INFO: redis_listener     Drop frame detected
+27.588: INFO: redis_listener     Drop frame flag reset
+27.588: INFO: redis_listener     Drop frame flag reset
+27.597: INFO: redis_listener     Drop frame detected
+27.606: INFO: redis_listener     Drop frame detected
+28.101: INFO: redis_listener     Drop frame flag reset
+28.108: INFO: redis_listener     Drop frame flag reset
+28.145: INFO: redis_listener     Drop frame detected
+28.151: INFO: redis_listener     Drop frame detected
+28.649: INFO: redis_listener     Drop frame flag reset
+28.654: INFO: redis_listener     Drop frame flag reset
+28.668: INFO: redis_listener     Drop frame detected
+28.670: INFO: redis_listener     Drop frame detected
+29.170: INFO: redis_listener     Drop frame flag reset
+29.171: INFO: redis_listener     Drop frame flag reset
+29.207: INFO: redis_listener     Drop frame detected
+29.216: INFO: redis_listener     Drop frame detected
+29.714: INFO: redis_listener     Drop frame flag reset
+29.715: INFO: redis_listener     Drop frame detected
+29.719: INFO: redis_listener     Drop frame flag reset
+29.750: INFO: redis_listener     Drop frame detected
+30.215: INFO: redis_listener     Drop frame flag reset
+30.252: INFO: redis_listener     Drop frame flag reset
+30.253: INFO: redis_listener     Drop frame detected
+30.263: INFO: redis_listener     Drop frame detected
+30.756: INFO: redis_listener     Drop frame flag reset
+30.765: INFO: redis_listener     Drop frame flag reset
+30.804: INFO: redis_listener     Drop frame detected
+30.805: INFO: redis_listener     Drop frame detected
+31.306: INFO: redis_listener     Drop frame flag reset
+31.307: INFO: redis_listener     Drop frame flag reset
+31.307: INFO: redis_listener     Drop frame detected
+31.312: INFO: redis_listener     Drop frame detected
+31.810: INFO: redis_listener     Drop frame flag reset
+31.813: INFO: redis_listener     Drop frame flag reset
+31.815: INFO: redis_listener     Drop frame detected
+31.815: INFO: redis_listener     Drop frame detected
+32.315: INFO: redis_listener     Drop frame flag reset
+32.316: INFO: redis_listener     Drop frame flag reset
+32.377: INFO: redis_listener     Drop frame detected
+32.378: INFO: redis_listener     Drop frame detected
+32.878: INFO: redis_listener     Drop frame flag reset
+32.879: INFO: redis_listener     Drop frame flag reset
+32.914: INFO: redis_listener     Drop frame detected
+32.914: INFO: redis_listener     Drop frame detected
+33.414: INFO: redis_listener     Drop frame flag reset
+33.416: INFO: redis_listener     Drop frame flag reset
+33.420: INFO: redis_listener     Drop frame detected
+33.428: INFO: redis_listener     Drop frame detected
+33.454: INFO: gpio_input         Button 13 pressed
+33.455: ERROR: gpio_input         Method None not found in cinepi_controller.
+33.649: INFO: gpio_input         Button 13 released
+33.925: INFO: redis_listener     Drop frame flag reset
+33.930: INFO: redis_listener     Drop frame flag reset
+33.968: INFO: redis_listener     Drop frame detected
+33.969: INFO: redis_listener     Drop frame detected
+34.152: INFO: gpio_input         Single click detected.
+34.153: INFO: redis_controller   Changed value: fps_last = 18.0
+34.156: INFO: cinepi_controller  Resolution set to mode 1, height: 1824, width: 2736, gui_layout: 0
+34.156: INFO: redis_controller   Changed value: sensor_mode = 1
+34.469: INFO: redis_listener     Drop frame flag reset
+34.470: INFO: redis_listener     Drop frame flag reset
+34.657: INFO: cinepi_app         Restarting CinePi instance.
+34.663: INFO: cinepi_app         Shutting down CinePi instance.
+34.664: INFO: cinepi_app         CinePi instance shut down.
+34.847: INFO: sensor_detect      cinepi-raw output: Available cameras
+-----------------
+0 : imx283 [5472x3648 12-bit RGGB] (/base/axi/pcie@120000/rp1/i2c@80000/imx283@1a)
+    Modes: 'SRGGB10_CSI2P' : 3936x2176 [43.88 fps - (196, -108)/3840x2160 crop]
+                             5568x3094 [21.31 fps - (0, 285)/5472x3078 crop]
+                             5568x3664 [17.99 fps - (0, 0)/5472x3648 crop]
+           'SRGGB12_CSI2P' : 2784x1548 [41.36 fps - (0, 285)/5472x3078 crop]
+                             2784x1828 [35.55 fps - (0, 0)/5472x3648 crop]
+                             5568x3664 [17.99 fps - (0, 0)/5472x3648 crop]
+
+
+34.849: INFO: sensor_detect      Detected camera model: imx283
+34.850: WARNING: sensor_detect      cinepi-raw command exited with non-zero status: 134
+34.850: WARNING: sensor_detect      stderr: terminate called after throwing an instance of 'std::system_error'
+  what():  Invalid argument
+Aborted
+
+34.851: INFO: cinepi_app         Issuing ['cinepi-raw', '--mode', '2736:1824:12:U', '--width', '2736', '--height', '1824', '--lores-width', '1920', '--lores-height', '1080', '-p', '0,30,1920,1020', '--post-process-file', '/home/pi/post-processing.json', '--shutter', '20000', '--awbgains', '1.6,2.0', '--awb', 'auto', '--tuning-file', '/home/pi/libcamera/src/ipa/rpi/pisp/data/imx283.json']
+34.861: ERROR: cinepi_controller  Error setting resolution: invalid literal for int() with base 10: '18.0'
+35.218: INFO: redis_listener     Drop frame detected
+35.223: INFO: redis_listener     Drop frame detected
+35.721: INFO: redis_listener     Drop frame flag reset
+35.737: INFO: redis_listener     Drop frame flag reset
+35.795: INFO: redis_listener     Drop frame detected
+35.795: INFO: redis_listener     Drop frame detected
+36.157: INFO: redis_controller   Changed value: height = 1828
+36.157: INFO: redis_controller   Changed value: width = 2784
+36.158: INFO: redis_controller   Changed value: bit_depth = 12
+36.158: INFO: redis_controller   Changed value: fps_max = 34
+36.159: INFO: redis_controller   Changed value: gui_layout = 0
+36.159: INFO: redis_controller   Changed value: file_size = 8.2
+36.159: INFO: redis_controller   Changed value: cam_init = 1
+36.160: INFO: redis_controller   Changed value: fps_last = 18.0
+36.161: INFO: redis_controller   Changed value: fps_last = 18.0
+36.161: INFO: redis_controller   Changed value: sensor = imx283
+36.305: INFO: redis_listener     Drop frame flag reset
+36.307: INFO: redis_listener     Drop frame flag reset
+36.336: INFO: redis_listener     Drop frame detected
+36.337: INFO: redis_listener     Drop frame detected
+36.837: INFO: redis_listener     Drop frame flag reset
+36.837: INFO: redis_listener     Drop frame flag reset
+36.877: INFO: redis_listener     Drop frame detected
+36.885: INFO: redis_listener     Drop frame detected
+37.379: INFO: redis_listener     Drop frame flag reset
+37.383: INFO: redis_listener     Drop frame detected
+37.389: INFO: redis_listener     Drop frame flag reset
+37.402: INFO: redis_listener     Drop frame detected
+37.884: INFO: redis_listener     Drop frame flag reset
+37.903: INFO: redis_listener     Drop frame flag reset
+37.931: INFO: redis_listener     Drop frame detected
+37.932: INFO: redis_listener     Drop frame detected
+38.437: INFO: redis_listener     Drop frame flag reset
+38.437: INFO: redis_listener     Drop frame flag reset
+38.458: INFO: redis_listener     Drop frame detected
+38.460: INFO: redis_listener     Drop frame detected
+38.959: INFO: redis_listener     Drop frame flag reset
+38.960: INFO: redis_listener     Drop frame flag reset
+39.006: INFO: redis_listener     Drop frame detected
+39.009: INFO: redis_listener     Drop frame detected
+39.508: INFO: redis_listener     Drop frame flag reset
+39.512: INFO: redis_listener     Drop frame detected
+39.513: INFO: redis_listener     Drop frame flag reset
+39.513: INFO: redis_listener     Drop frame detected
+40.013: INFO: redis_listener     Drop frame flag reset
+40.014: INFO: redis_listener     Drop frame flag reset
+40.056: INFO: redis_listener     Drop frame detected
+40.059: INFO: redis_listener     Drop frame detected
+40.560: INFO: redis_listener     Drop frame flag reset
+40.560: INFO: redis_listener     Drop frame flag reset
+40.587: INFO: redis_listener     Drop frame detected
+40.587: INFO: redis_listener     Drop frame detected
+41.087: INFO: redis_listener     Drop frame flag reset
+41.088: INFO: redis_listener     Drop frame flag reset
+41.137: INFO: redis_listener     Drop frame detected
+41.137: INFO: redis_listener     Drop frame detected
+41.638: INFO: redis_listener     Drop frame flag reset
+41.640: INFO: redis_listener     Drop frame flag reset
+41.648: INFO: redis_listener     Drop frame detected
+41.650: INFO: redis_listener     Drop frame detected
+42.149: INFO: redis_listener     Drop frame flag reset
+42.151: INFO: redis_listener     Drop frame flag reset
+42.181: INFO: redis_listener     Drop frame detected
+42.184: INFO: redis_listener     Drop frame detected
+42.684: INFO: redis_listener     Drop frame flag reset
+42.694: INFO: redis_listener     Drop frame flag reset
+42.708: INFO: redis_listener     Drop frame detected
+42.710: INFO: redis_listener     Drop frame detected
+43.209: INFO: redis_listener     Drop frame flag reset
+43.212: INFO: redis_listener     Drop frame flag reset
+43.218: INFO: redis_listener     Drop frame detected
+43.223: INFO: redis_listener     Drop frame detected
+43.721: INFO: redis_listener     Drop frame flag reset
+43.726: INFO: redis_listener     Drop frame flag reset
+43.762: INFO: redis_listener     Drop frame detected
+43.765: INFO: redis_listener     Drop frame detected
+44.263: INFO: redis_listener     Drop frame flag reset
+44.265: INFO: redis_listener     Drop frame flag reset
+44.311: INFO: redis_listener     Drop frame detected
+44.311: INFO: redis_listener     Drop frame detected
+44.816: INFO: redis_listener     Drop frame flag reset
+44.817: INFO: redis_listener     Drop frame flag reset
+44.830: INFO: redis_listener     Drop frame detected
+44.831: INFO: redis_listener     Drop frame detected
+45.331: INFO: redis_listener     Drop frame flag reset
+45.331: INFO: redis_listener     Drop frame flag reset
+45.344: INFO: redis_listener     Drop frame detected
+45.350: INFO: redis_listener     Drop frame detected
+45.847: INFO: redis_listener     Drop frame flag reset
+45.851: INFO: redis_listener     Drop frame flag reset
+45.890: INFO: redis_listener     Drop frame detected
+45.891: INFO: redis_listener     Drop frame detected
+46.391: INFO: redis_listener     Drop frame flag reset
+46.392: INFO: redis_listener     Drop frame flag reset
+46.441: INFO: redis_listener     Drop frame detected
+46.441: INFO: redis_listener     Drop frame detected
+46.661: INFO: cinepi_controller  Received set_fps call with value: 24.0
+46.662: INFO: cinepi_controller  Retrieved max_fps from Redis: 34
+46.662: INFO: cinepi_controller  Calculated safe_value: 24.0
+46.671: INFO: cinepi_controller  Setting fps to 24.0
+46.678: INFO: redis_controller   Changed value: fps = 24.0
+46.679: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
+46.680: INFO: PWMcontroller      Setting PWM with fps=24.0, shutter_angle=None
+46.681: INFO: cinepi_controller  Increasing fps to 24.0
+46.682: INFO: gpio_input         Quad Rotary #2: 2
+46.686: INFO: PWMcontroller      PWM frequency set to 24.0Hz on pins 19, None
+46.688: INFO: PWMcontroller      Shutter angle is None, keeping existing duty cycle.
+46.689: INFO: PWMcontroller      Updating PWM with cycles=1
+46.708: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
+46.946: INFO: redis_listener     Drop frame flag reset
+46.946: INFO: redis_listener     Drop frame flag reset
+46.963: INFO: redis_listener     Drop frame detected
+46.964: INFO: redis_listener     Drop frame detected
+47.464: INFO: redis_listener     Drop frame flag reset
+47.465: INFO: redis_listener     Drop frame flag reset
+47.499: INFO: redis_listener     Drop frame detected
+47.512: INFO: redis_listener     Drop frame detected
+48.001: INFO: redis_listener     Drop frame flag reset
+48.016: INFO: redis_listener     Drop frame flag reset
+48.027: INFO: redis_listener     Drop frame detected
+48.028: INFO: redis_listener     Drop frame detected
+48.528: INFO: redis_listener     Drop frame flag reset
+48.529: INFO: redis_listener     Drop frame flag reset
+48.530: INFO: redis_listener     Drop frame detected
+48.531: INFO: redis_listener     Drop frame detected
+49.031: INFO: redis_listener     Drop frame flag reset
+49.032: INFO: redis_listener     Drop frame flag reset
+49.044: INFO: redis_listener     Drop frame detected
+49.047: INFO: redis_listener     Drop frame detected
+49.560: INFO: redis_listener     Drop frame flag reset
+49.560: INFO: redis_listener     Drop frame flag reset
+49.570: INFO: redis_listener     Drop frame detected
+49.572: INFO: redis_listener     Drop frame detected
+50.073: INFO: redis_listener     Drop frame flag reset
+50.073: INFO: redis_listener     Drop frame flag reset
+50.079: INFO: redis_listener     Drop frame detected
+50.080: INFO: redis_listener     Drop frame detected
+50.580: INFO: redis_listener     Drop frame flag reset
+50.594: INFO: redis_listener     Drop frame flag reset
+50.596: INFO: redis_listener     Drop frame detected
+50.597: INFO: redis_listener     Drop frame detected
+51.097: INFO: redis_listener     Drop frame flag reset
+51.098: INFO: redis_listener     Drop frame flag reset
+51.118: INFO: redis_listener     Drop frame detected
+51.121: INFO: redis_listener     Drop frame detected
+51.619: INFO: redis_listener     Drop frame flag reset
+51.624: INFO: redis_listener     Drop frame flag reset
+51.626: INFO: redis_listener     Drop frame detected
+51.683: INFO: redis_listener     Drop frame detected
+52.130: INFO: redis_listener     Drop frame flag reset
+52.152: INFO: redis_listener     Drop frame detected
+52.184: INFO: redis_listener     Drop frame flag reset
+52.197: INFO: redis_listener     Drop frame detected
+52.653: INFO: redis_listener     Drop frame flag reset
+52.658: INFO: redis_listener     Drop frame detected
+52.698: INFO: redis_listener     Drop frame flag reset
+52.729: INFO: redis_listener     Drop frame detected
+53.161: INFO: redis_listener     Drop frame flag reset
+53.168: INFO: redis_listener     Drop frame detected
+53.231: INFO: redis_listener     Drop frame flag reset
+53.234: INFO: redis_listener     Drop frame detected
+53.668: INFO: redis_listener     Drop frame flag reset
+53.706: INFO: redis_listener     Drop frame detected
+53.735: INFO: redis_listener     Drop frame flag reset
+53.749: INFO: redis_listener     Drop frame detected
+54.216: INFO: redis_listener     Drop frame flag reset
+54.226: INFO: redis_listener     Drop frame detected
+54.253: INFO: redis_listener     Drop frame flag reset
+54.274: INFO: redis_listener     Drop frame detected
+54.727: INFO: redis_listener     Drop frame flag reset
+54.733: INFO: redis_listener     Drop frame detected
+54.777: INFO: redis_listener     Drop frame flag reset
+54.779: INFO: redis_listener     Drop frame detected
+55.235: INFO: redis_listener     Drop frame flag reset
+55.249: INFO: redis_listener     Drop frame detected
+55.282: INFO: redis_listener     Drop frame flag reset
+55.295: INFO: redis_listener     Drop frame detected
+55.757: INFO: redis_listener     Drop frame flag reset
+55.773: INFO: redis_listener     Drop frame detected
+55.796: INFO: redis_listener     Drop frame flag reset
+55.823: INFO: redis_listener     Drop frame detected
+56.274: INFO: redis_listener     Drop frame flag reset
+56.276: INFO: redis_listener     Drop frame detected
+56.324: INFO: redis_listener     Drop frame flag reset
+56.354: INFO: redis_listener     Drop frame detected
+56.777: INFO: redis_listener     Drop frame flag reset
+56.802: INFO: redis_listener     Drop frame detected
+56.855: INFO: redis_listener     Drop frame flag reset
+56.857: INFO: redis_listener     Drop frame detected
+57.303: INFO: redis_listener     Drop frame flag reset
+57.319: INFO: redis_listener     Drop frame detected
+57.359: INFO: redis_listener     Drop frame flag reset
+57.367: INFO: redis_listener     Drop frame detected
+57.822: INFO: redis_listener     Drop frame flag reset
+57.852: INFO: redis_listener     Drop frame detected
+57.876: INFO: redis_listener     Drop frame flag reset
+57.896: INFO: redis_listener     Drop frame detected
+58.353: INFO: redis_listener     Drop frame flag reset
+58.356: INFO: redis_listener     Drop frame detected
+58.398: INFO: redis_listener     Drop frame flag reset
+58.411: INFO: redis_listener     Drop frame detected
+58.858: INFO: redis_listener     Drop frame flag reset
+58.862: INFO: redis_listener     Drop frame detected
+58.916: INFO: redis_listener     Drop frame flag reset
+58.929: INFO: redis_listener     Drop frame detected
+59.369: INFO: redis_listener     Drop frame flag reset
+59.395: INFO: redis_listener     Drop frame detected
+59.430: INFO: redis_listener     Drop frame flag reset
+59.436: INFO: redis_listener     Drop frame detected
+59.899: INFO: redis_listener     Drop frame flag reset
+59.907: INFO: redis_listener     Drop frame detected
+59.937: INFO: redis_listener     Drop frame flag reset
+59.951: INFO: redis_listener     Drop frame detected
+00.447: INFO: redis_listener     Drop frame flag reset
+00.458: INFO: redis_listener     Drop frame flag reset
+00.477: INFO: redis_listener     Drop frame detected
+00.479: INFO: redis_listener     Drop frame detected
+00.980: INFO: redis_listener     Drop frame flag reset
+00.980: INFO: redis_listener     Drop frame flag reset
+00.980: INFO: redis_listener     Drop frame detected
+01.058: INFO: redis_listener     Drop frame detected
+01.482: INFO: redis_listener     Drop frame flag reset
+01.505: INFO: redis_listener     Drop frame detected
+01.559: INFO: redis_listener     Drop frame flag reset
+01.566: INFO: redis_listener     Drop frame detected
+02.008: INFO: redis_listener     Drop frame flag reset
+02.016: INFO: redis_listener     Drop frame detected
+02.067: INFO: redis_listener     Drop frame flag reset
+02.075: INFO: redis_listener     Drop frame detected
+02.519: INFO: redis_listener     Drop frame flag reset
+02.526: INFO: redis_listener     Drop frame detected
+02.578: INFO: redis_listener     Drop frame flag reset
+02.585: INFO: redis_listener     Drop frame detected
+03.028: INFO: redis_listener     Drop frame flag reset
+03.058: INFO: redis_listener     Drop frame detected
+03.093: INFO: redis_listener     Drop frame flag reset
+03.115: INFO: redis_listener     Drop frame detected
+03.559: INFO: redis_listener     Drop frame flag reset
+03.564: INFO: redis_listener     Drop frame detected
+03.620: INFO: redis_listener     Drop frame flag reset
+03.636: INFO: redis_listener     Drop frame detected
+04.070: INFO: redis_listener     Drop frame flag reset
+04.079: INFO: redis_listener     Drop frame detected
+04.137: INFO: redis_listener     Drop frame flag reset
+04.141: INFO: redis_listener     Drop frame detected
+04.579: INFO: redis_listener     Drop frame flag reset
+04.608: INFO: redis_listener     Drop frame detected
+04.643: INFO: redis_listener     Drop frame flag reset
+04.647: INFO: redis_listener     Drop frame detected
+05.110: INFO: redis_listener     Drop frame flag reset
+05.133: INFO: redis_listener     Drop frame detected
+05.154: INFO: redis_listener     Drop frame flag reset
+05.181: INFO: redis_listener     Drop frame detected
+05.646: INFO: redis_listener     Drop frame flag reset
+05.680: INFO: redis_listener     Drop frame detected
+05.681: INFO: redis_listener     Drop frame flag reset
+05.681: INFO: redis_listener     Drop frame detected
+06.184: INFO: redis_listener     Drop frame flag reset
+06.186: INFO: redis_listener     Drop frame flag reset
+06.203: INFO: redis_listener     Drop frame detected
+06.205: INFO: redis_listener     Drop frame detected
+06.704: INFO: redis_listener     Drop frame flag reset
+06.705: INFO: redis_listener     Drop frame flag reset
+06.724: INFO: redis_listener     Drop frame detected
+06.728: INFO: redis_listener     Drop frame detected
+07.228: INFO: redis_listener     Drop frame flag reset
+07.235: INFO: redis_listener     Drop frame flag reset
+07.259: INFO: redis_listener     Drop frame detected
+07.260: INFO: redis_listener     Drop frame detected
+07.760: INFO: redis_listener     Drop frame flag reset
+07.762: INFO: redis_listener     Drop frame flag reset
+07.762: INFO: redis_listener     Drop frame detected
+07.763: INFO: redis_listener     Drop frame detected
+08.266: INFO: redis_listener     Drop frame flag reset
+08.266: INFO: redis_listener     Drop frame flag reset
+08.271: INFO: redis_listener     Drop frame detected
+08.284: INFO: redis_listener     Drop frame detected
+08.778: INFO: redis_listener     Drop frame flag reset
+08.797: INFO: redis_listener     Drop frame flag reset
+08.803: INFO: redis_listener     Drop frame detected
+08.803: INFO: redis_listener     Drop frame detected
+09.304: INFO: redis_listener     Drop frame flag reset
+09.304: INFO: redis_listener     Drop frame flag reset
+09.309: INFO: redis_listener     Drop frame detected
+09.314: INFO: redis_listener     Drop frame detected
+09.810: INFO: redis_listener     Drop frame flag reset
+09.830: INFO: redis_listener     Drop frame flag reset
+09.832: INFO: redis_listener     Drop frame detected
+09.834: INFO: redis_listener     Drop frame detected
+10.334: INFO: redis_listener     Drop frame flag reset
+10.335: INFO: redis_listener     Drop frame flag reset
+10.346: INFO: redis_listener     Drop frame detected
+10.350: INFO: redis_listener     Drop frame detected
+10.848: INFO: redis_listener     Drop frame flag reset
+10.852: INFO: redis_listener     Drop frame flag reset
+10.863: INFO: redis_listener     Drop frame detected
+10.866: INFO: redis_listener     Drop frame detected
+11.365: INFO: redis_listener     Drop frame flag reset
+11.369: INFO: redis_listener     Drop frame flag reset
+11.383: INFO: redis_listener     Drop frame detected
+11.384: INFO: redis_listener     Drop frame detected
+11.884: INFO: redis_listener     Drop frame flag reset
+11.886: INFO: redis_listener     Drop frame flag reset
+11.897: INFO: redis_listener     Drop frame detected
+11.900: INFO: redis_listener     Drop frame detected
+12.400: INFO: redis_listener     Drop frame flag reset
+12.404: INFO: redis_listener     Drop frame flag reset
+12.414: INFO: redis_listener     Drop frame detected
+12.415: INFO: redis_listener     Drop frame detected
+12.915: INFO: redis_listener     Drop frame flag reset
+12.916: INFO: redis_listener     Drop frame flag reset
+12.937: INFO: redis_listener     Drop frame detected
+12.939: INFO: redis_listener     Drop frame detected
+13.450: INFO: redis_listener     Drop frame flag reset
+13.456: INFO: redis_listener     Drop frame flag reset
+13.460: INFO: redis_listener     Drop frame detected
+13.461: INFO: redis_listener     Drop frame detected
+13.961: INFO: redis_listener     Drop frame flag reset
+13.962: INFO: redis_listener     Drop frame flag reset
+13.965: INFO: redis_listener     Drop frame detected
+13.965: INFO: redis_listener     Drop frame detected
+14.466: INFO: redis_listener     Drop frame flag reset
+14.467: INFO: redis_listener     Drop frame flag reset
+14.471: INFO: redis_listener     Drop frame detected
+14.476: INFO: redis_listener     Drop frame detected
+14.973: INFO: redis_listener     Drop frame flag reset
+14.978: INFO: redis_listener     Drop frame flag reset
+15.004: INFO: redis_listener     Drop frame detected
+15.005: INFO: redis_listener     Drop frame detected
+15.505: INFO: redis_listener     Drop frame flag reset
+15.507: INFO: redis_listener     Drop frame flag reset
+15.516: INFO: redis_listener     Drop frame detected
+15.518: INFO: redis_listener     Drop frame detected
+16.021: INFO: redis_listener     Drop frame flag reset
+16.027: INFO: redis_listener     Drop frame flag reset
+16.033: INFO: redis_listener     Drop frame detected
+16.035: INFO: redis_listener     Drop frame detected
+16.534: INFO: redis_listener     Drop frame flag reset
+16.536: INFO: redis_listener     Drop frame flag reset
+16.549: INFO: redis_listener     Drop frame detected
+16.557: INFO: redis_listener     Drop frame detected
+17.055: INFO: redis_listener     Drop frame flag reset
+17.059: INFO: redis_listener     Drop frame flag reset
+17.060: INFO: redis_listener     Drop frame detected
+17.109: INFO: redis_listener     Drop frame detected
+17.571: INFO: redis_listener     Drop frame flag reset
+17.587: INFO: redis_listener     Drop frame detected
+17.611: INFO: redis_listener     Drop frame flag reset
+17.646: INFO: redis_listener     Drop frame detected
+18.089: INFO: redis_listener     Drop frame flag reset
+18.100: INFO: redis_listener     Drop frame detected
+18.150: INFO: redis_listener     Drop frame flag reset
+18.159: INFO: redis_listener     Drop frame detected
+18.606: INFO: redis_listener     Drop frame flag reset
+18.626: INFO: redis_listener     Drop frame detected
+18.660: INFO: redis_listener     Drop frame flag reset
+18.667: INFO: redis_listener     Drop frame detected
+19.128: INFO: redis_listener     Drop frame flag reset
+19.136: INFO: redis_listener     Drop frame detected
+19.169: INFO: redis_listener     Drop frame flag reset
+19.181: INFO: redis_listener     Drop frame detected
+19.637: INFO: redis_listener     Drop frame flag reset
+19.657: INFO: redis_listener     Drop frame detected
+19.689: INFO: redis_listener     Drop frame flag reset
+19.709: INFO: redis_listener     Drop frame detected
+20.158: INFO: redis_listener     Drop frame flag reset
+20.173: INFO: redis_listener     Drop frame detected
+20.211: INFO: redis_listener     Drop frame flag reset
+20.224: INFO: redis_listener     Drop frame detected
+20.674: INFO: redis_listener     Drop frame flag reset
+20.701: INFO: redis_listener     Drop frame detected
+20.727: INFO: redis_listener     Drop frame flag reset
+20.749: INFO: redis_listener     Drop frame detected
+21.204: INFO: redis_listener     Drop frame flag reset
+21.207: INFO: redis_listener     Drop frame detected
+21.250: INFO: redis_listener     Drop frame flag reset
+21.255: INFO: redis_listener     Drop frame detected
+21.712: INFO: redis_listener     Drop frame flag reset
+21.727: INFO: redis_listener     Drop frame detected
+21.756: INFO: redis_listener     Drop frame flag reset
+21.782: INFO: redis_listener     Drop frame detected
+22.237: INFO: redis_listener     Drop frame flag reset
+22.249: INFO: redis_listener     Drop frame detected
+22.283: INFO: redis_listener     Drop frame flag reset
+22.288: INFO: redis_listener     Drop frame detected
+22.752: INFO: redis_listener     Drop frame flag reset
+22.754: INFO: redis_listener     Drop frame detected
+22.790: INFO: redis_listener     Drop frame flag reset
+22.799: INFO: redis_listener     Drop frame detected
+23.255: INFO: redis_listener     Drop frame flag reset
+23.286: INFO: redis_listener     Drop frame detected
+23.302: INFO: redis_listener     Drop frame flag reset
+23.329: INFO: redis_listener     Drop frame detected
+23.787: INFO: redis_listener     Drop frame flag reset
+23.788: INFO: redis_listener     Drop frame detected
+23.831: INFO: redis_listener     Drop frame flag reset
+23.848: INFO: redis_listener     Drop frame detected
+24.293: INFO: redis_listener     Drop frame flag reset
+24.299: INFO: redis_listener     Drop frame detected
+24.357: INFO: redis_listener     Drop frame flag reset
+24.360: INFO: redis_listener     Drop frame detected
+24.803: INFO: redis_listener     Drop frame flag reset
+24.828: INFO: redis_listener     Drop frame detected
+24.860: INFO: redis_listener     Drop frame flag reset
+24.871: INFO: redis_listener     Drop frame detected
+25.330: INFO: redis_listener     Drop frame flag reset
+25.341: INFO: redis_listener     Drop frame detected
+25.372: INFO: redis_listener     Drop frame flag reset
+25.377: INFO: redis_listener     Drop frame detected
+25.842: INFO: redis_listener     Drop frame flag reset
+25.860: INFO: redis_listener     Drop frame detected
+25.884: INFO: redis_listener     Drop frame flag reset
+25.911: INFO: redis_listener     Drop frame detected
+26.362: INFO: redis_listener     Drop frame flag reset
+26.373: INFO: redis_listener     Drop frame detected
+26.415: INFO: redis_listener     Drop frame flag reset
+26.486: INFO: redis_listener     Drop frame detected
+26.535: INFO: gpio_input         Button 1 pressed
+26.536: ERROR: gpio_input         Method None not found in cinepi_controller.
+26.711: INFO: gpio_input         Button 1 released
+26.874: INFO: redis_listener     Drop frame flag reset
+26.909: INFO: redis_listener     Drop frame detected
+26.987: INFO: redis_listener     Drop frame flag reset
+26.993: INFO: redis_listener     Drop frame detected
+27.211: INFO: gpio_input         Single click detected.
+27.211: INFO: cinepi_controller  Received set_fps call with value: 40.0
+27.212: INFO: cinepi_controller  Retrieved max_fps from Redis: 34
+27.212: INFO: cinepi_controller  Calculated safe_value: 34
+27.212: INFO: cinepi_controller  Setting fps to 34
+27.212: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
+27.213: INFO: redis_controller   Changed value: fps = 34
+27.219: INFO: cinepi_controller  FPS double mode is enabled, Current FPS: 34
+27.220: INFO: PWMcontroller      Setting PWM with fps=34, shutter_angle=None
+27.222: INFO: PWMcontroller      PWM frequency set to 34.0Hz on pins 19, None
+27.228: INFO: PWMcontroller      Shutter angle is None, keeping existing duty cycle.
+27.231: INFO: PWMcontroller      Updating PWM with cycles=1
+27.250: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
+27.410: INFO: redis_listener     Drop frame flag reset
+27.465: INFO: redis_listener     Drop frame detected
+27.496: INFO: redis_listener     Drop frame flag reset
+27.504: INFO: redis_listener     Drop frame detected
+27.968: INFO: redis_listener     Drop frame flag reset
+28.006: INFO: redis_listener     Drop frame detected
+28.009: INFO: redis_listener     Drop frame flag reset
+28.022: INFO: redis_listener     Drop frame detected
+28.507: INFO: redis_listener     Drop frame flag reset
+28.520: INFO: redis_listener     Drop frame detected
+28.523: INFO: redis_listener     Drop frame flag reset
+28.564: INFO: redis_listener     Drop frame detected
+29.022: INFO: redis_listener     Drop frame flag reset
+29.032: INFO: redis_listener     Drop frame detected
+29.069: INFO: redis_listener     Drop frame flag reset
+29.115: INFO: redis_listener     Drop frame detected
+29.536: INFO: redis_listener     Drop frame flag reset
+29.558: INFO: redis_listener     Drop frame detected
+29.616: INFO: redis_listener     Drop frame flag reset
+29.636: INFO: redis_listener     Drop frame detected
+30.059: INFO: redis_listener     Drop frame flag reset
+30.077: INFO: redis_listener     Drop frame detected
+30.161: INFO: redis_listener     Drop frame flag reset
+30.181: INFO: redis_listener     Drop frame detected
+30.578: INFO: redis_listener     Drop frame flag reset
+30.581: INFO: redis_listener     Drop frame detected
+30.656: INFO: gpio_input         Button 13 pressed
+30.658: ERROR: gpio_input         Method None not found in cinepi_controller.
+30.684: INFO: redis_listener     Drop frame flag reset
+30.691: INFO: redis_listener     Drop frame detected
+30.859: INFO: gpio_input         Button 13 released
+31.082: INFO: redis_listener     Drop frame flag reset
+31.099: INFO: redis_listener     Drop frame detected
+31.192: INFO: redis_listener     Drop frame flag reset
+31.194: INFO: redis_listener     Drop frame detected
+31.360: INFO: gpio_input         Single click detected.
+31.365: INFO: redis_controller   Changed value: fps_last = 34
+31.366: INFO: cinepi_controller  Resolution set to mode 2, height: 2160, width: 3840, gui_layout: 0
+31.366: INFO: redis_controller   Changed value: sensor_mode = 2
+31.601: INFO: redis_listener     Drop frame flag reset
+31.695: INFO: redis_listener     Drop frame flag reset
+31.867: INFO: cinepi_app         Restarting CinePi instance.
+31.872: INFO: cinepi_app         Shutting down CinePi instance.
+31.873: INFO: cinepi_app         CinePi instance shut down.
+32.075: INFO: sensor_detect      cinepi-raw output: Available cameras
+-----------------
+0 : imx283 [5472x3648 12-bit RGGB] (/base/axi/pcie@120000/rp1/i2c@80000/imx283@1a)
+    Modes: 'SRGGB10_CSI2P' : 3936x2176 [43.88 fps - (196, -108)/3840x2160 crop]
+                             5568x3094 [21.31 fps - (0, 285)/5472x3078 crop]
+                             5568x3664 [17.99 fps - (0, 0)/5472x3648 crop]
+           'SRGGB12_CSI2P' : 2784x1548 [41.36 fps - (0, 285)/5472x3078 crop]
+                             2784x1828 [35.55 fps - (0, 0)/5472x3648 crop]
+                             5568x3664 [17.99 fps - (0, 0)/5472x3648 crop]
+
+
+32.077: INFO: sensor_detect      Detected camera model: imx283
+32.079: WARNING: sensor_detect      cinepi-raw command exited with non-zero status: 134
+32.079: WARNING: sensor_detect      stderr: terminate called after throwing an instance of 'std::system_error'
+  what():  Invalid argument
+Aborted
+
+32.080: INFO: cinepi_app         Issuing ['cinepi-raw', '--mode', '3840:2160:10:U', '--width', '3840', '--height', '2160', '--lores-width', '1920', '--lores-height', '1080', '-p', '0,30,1920,1020', '--post-process-file', '/home/pi/post-processing.json', '--shutter', '20000', '--awbgains', '1.6,2.0', '--awb', 'auto', '--tuning-file', '/home/pi/libcamera/src/ipa/rpi/pisp/data/imx283.json']
+32.087: INFO: cinepi_controller  Received set_fps call with value: 34.0
+32.091: INFO: cinepi_controller  Retrieved max_fps from Redis: 60
+32.094: INFO: cinepi_controller  Calculated safe_value: 34.0
+32.099: INFO: cinepi_controller  Setting fps to 34.0
+32.101: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
+32.111: INFO: cinepi_controller  Initialized fps_steps: [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50]
+32.114: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
+32.481: INFO: redis_listener     Drop frame detected
+32.483: INFO: redis_listener     Drop frame detected
+32.983: INFO: redis_listener     Drop frame flag reset
+32.986: INFO: redis_listener     Drop frame flag reset
+33.046: INFO: redis_listener     Drop frame detected
+33.049: INFO: redis_listener     Drop frame detected
+33.370: INFO: redis_controller   Changed value: height = 2176
+33.374: INFO: redis_controller   Changed value: width = 3936
+33.376: INFO: redis_controller   Changed value: bit_depth = 10
+33.378: INFO: redis_controller   Changed value: fps_max = 60
+33.379: INFO: redis_controller   Changed value: gui_layout = 0
+33.383: INFO: redis_controller   Changed value: file_size = 8.2
+33.387: INFO: redis_controller   Changed value: cam_init = 1
+33.395: INFO: redis_controller   Changed value: fps_last = 34
+33.396: INFO: redis_controller   Changed value: fps_last = 34
+33.396: INFO: redis_controller   Changed value: sensor = imx283
+33.397: INFO: redis_controller   Changed value: fps = 34.0
+33.397: INFO: PWMcontroller      Setting PWM with fps=34.0, shutter_angle=None
+33.397: INFO: PWMcontroller      PWM frequency set to 34.0Hz on pins 19, None
+33.398: INFO: PWMcontroller      Shutter angle is None, keeping existing duty cycle.
+33.398: INFO: PWMcontroller      Updating PWM with cycles=1
+33.416: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
+33.417: INFO: redis_controller   Changed value: fps_max = 60
+33.417: INFO: redis_controller   Changed value: sensor = imx283
+33.549: INFO: redis_listener     Drop frame flag reset
+33.549: INFO: redis_listener     Drop frame flag reset
+33.578: INFO: redis_listener     Drop frame detected
+33.585: INFO: redis_listener     Drop frame detected
+34.079: INFO: redis_listener     Drop frame flag reset
+34.087: INFO: redis_listener     Drop frame flag reset
+34.094: INFO: redis_listener     Drop frame detected
+34.097: INFO: redis_listener     Drop frame detected
+34.596: INFO: redis_listener     Drop frame flag reset
+34.598: INFO: redis_listener     Drop frame flag reset
+34.619: INFO: redis_listener     Drop frame detected
+34.637: INFO: redis_listener     Drop frame detected
+34.704: INFO: gpio_input         Button 1 pressed
+34.709: ERROR: gpio_input         Method None not found in cinepi_controller.
+34.908: INFO: gpio_input         Button 1 released
+35.122: INFO: redis_listener     Drop frame flag reset
+35.141: INFO: redis_listener     Drop frame flag reset
+35.156: INFO: redis_listener     Drop frame detected
+35.160: INFO: redis_listener     Drop frame detected
+35.413: INFO: gpio_input         Single click detected.
+35.414: INFO: cinepi_controller  Received set_fps call with value: 24.0
+35.414: INFO: cinepi_controller  Retrieved max_fps from Redis: 60
+35.414: INFO: cinepi_controller  Calculated safe_value: 24.0
+35.415: INFO: cinepi_controller  Setting fps to 24.0
+35.415: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
+35.415: INFO: cinepi_controller  FPS double mode is disabled, Current FPS: 24
+35.416: INFO: redis_controller   Changed value: fps = 24.0
+35.416: INFO: PWMcontroller      Setting PWM with fps=24.0, shutter_angle=None
+35.417: INFO: PWMcontroller      PWM frequency set to 24.0Hz on pins 19, None
+35.417: INFO: PWMcontroller      Shutter angle is None, keeping existing duty cycle.
+35.417: INFO: PWMcontroller      Updating PWM with cycles=1
+35.458: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
+35.660: INFO: redis_listener     Drop frame flag reset
+35.662: INFO: redis_listener     Drop frame detected
+35.662: INFO: redis_listener     Drop frame flag reset
+35.664: INFO: redis_listener     Drop frame detected
+36.163: INFO: redis_listener     Drop frame flag reset
+36.164: INFO: redis_listener     Drop frame flag reset
+36.202: INFO: redis_listener     Drop frame detected
+36.213: INFO: redis_listener     Drop frame detected
+36.704: INFO: redis_listener     Drop frame flag reset
+36.727: INFO: redis_listener     Drop frame flag reset
+36.728: INFO: redis_listener     Drop frame detected
+36.733: INFO: redis_listener     Drop frame detected
+37.270: INFO: redis_listener     Drop frame flag reset
+37.271: INFO: redis_listener     Drop frame flag reset
+37.277: INFO: redis_listener     Drop frame detected
+37.277: INFO: redis_listener     Drop frame detected
+37.778: INFO: redis_listener     Drop frame flag reset
+37.779: INFO: redis_listener     Drop frame flag reset
+37.786: INFO: redis_listener     Drop frame detected
+37.803: INFO: redis_listener     Drop frame detected
+38.291: INFO: redis_listener     Drop frame flag reset
+38.304: INFO: redis_listener     Drop frame detected
+38.307: INFO: redis_listener     Drop frame flag reset
+38.308: INFO: redis_listener     Drop frame detected
+38.809: INFO: redis_listener     Drop frame flag reset
+38.810: INFO: redis_listener     Drop frame flag reset
+38.818: INFO: redis_listener     Drop frame detected
+38.820: INFO: redis_listener     Drop frame detected
+39.322: INFO: redis_listener     Drop frame flag reset
+39.323: INFO: redis_listener     Drop frame flag reset
+39.331: INFO: redis_listener     Drop frame detected
+39.331: INFO: redis_listener     Drop frame detected
+39.841: INFO: redis_listener     Drop frame flag reset
+39.850: INFO: redis_listener     Drop frame flag reset
+39.905: INFO: redis_listener     Drop frame detected
+39.908: INFO: redis_listener     Drop frame detected
+40.407: INFO: redis_listener     Drop frame flag reset
+40.408: INFO: redis_listener     Drop frame flag reset
+40.454: INFO: redis_listener     Drop frame detected
+40.458: INFO: redis_listener     Drop frame detected
+40.693: INFO: cli_commands       Received: rec
+40.694: INFO: cinepi_controller  rec button pushed
+40.705: INFO: cinepi_controller  Started recording
+40.708: INFO: redis_listener     Framecount reset to 0.
+40.709: INFO: redis_listener     Recording started at: 2024-10-10 21:30:40.708988
+40.709: INFO: redis_listener     Framecount reset to 0.
+40.711: INFO: redis_controller   Changed value: is_recording = 1
+40.712: INFO: redis_listener     Recording started at: 2024-10-10 21:30:40.711992
+40.714: INFO: redis_controller   Changed value: framecount = 0
+40.717: INFO: redis_controller   Changed value: framecount = 0
+40.913: INFO: ssd_monitor        Updated space left on SSD: 191.01 GB
+40.920: INFO: redis_controller   Changed value: framecount = 1
+40.929: INFO: redis_controller   Changed value: framecount = 1
+40.960: INFO: redis_listener     Drop frame flag reset
+40.961: INFO: redis_listener     Drop frame flag reset
+40.966: INFO: redis_listener     Drop frame detected
+40.969: INFO: redis_listener     Drop frame detected
+40.973: INFO: redis_controller   Changed value: framecount = 2
+40.974: INFO: redis_controller   Changed value: framecount = 2
+41.021: INFO: redis_controller   Changed value: framecount = 3
+41.033: INFO: redis_controller   Changed value: framecount = 3
+41.079: INFO: redis_controller   Changed value: framecount = 4
+41.080: INFO: redis_controller   Changed value: framecount = 4
+41.177: INFO: redis_controller   Changed value: framecount = 5
+41.280: INFO: redis_controller   Changed value: framecount = 7
+41.321: INFO: redis_controller   Changed value: framecount = 7
+41.402: INFO: redis_controller   Changed value: framecount = 8
+41.433: INFO: redis_controller   Changed value: framecount = 9
+41.477: INFO: redis_listener     Drop frame flag reset
+41.478: INFO: redis_listener     Drop frame flag reset
+41.485: INFO: redis_controller   Changed value: framecount = 10
+41.486: INFO: redis_listener     Drop frame detected
+41.512: INFO: redis_controller   Changed value: framecount = 11
+41.515: INFO: redis_listener     Drop frame detected
+41.530: INFO: redis_controller   Changed value: framecount = 12
+41.542: INFO: redis_controller   Changed value: framecount = 13
+41.552: INFO: redis_controller   Changed value: framecount = 13
+41.554: INFO: redis_controller   Changed value: framecount = 14
+41.555: INFO: redis_controller   Changed value: framecount = 14
+41.556: INFO: redis_controller   Changed value: framecount = 14
+41.556: INFO: redis_controller   Changed value: framecount = 14
+41.612: INFO: redis_controller   Changed value: framecount = 16
+41.614: INFO: redis_controller   Changed value: framecount = 16
+41.618: INFO: redis_controller   Changed value: framecount = 16
+41.621: INFO: redis_controller   Changed value: framecount = 16
+41.623: INFO: redis_controller   Changed value: framecount = 16
+41.624: INFO: redis_controller   Changed value: framecount = 16
+41.625: INFO: redis_controller   Changed value: framecount = 16
+41.627: INFO: redis_controller   Changed value: framecount = 16
+41.658: INFO: redis_controller   Changed value: framecount = 17
+41.675: INFO: redis_controller   Changed value: framecount = 17
+41.716: INFO: redis_controller   Changed value: framecount = 18
+41.734: INFO: redis_controller   Changed value: framecount = 18
+41.807: INFO: redis_controller   Changed value: framecount = 19
+41.827: INFO: redis_controller   Changed value: framecount = 19
+41.875: INFO: redis_controller   Changed value: framecount = 21
+41.944: INFO: ssd_monitor        Updated space left on SSD: 190.74 GB
+41.971: INFO: redis_controller   Changed value: framecount = 21
+41.984: INFO: redis_controller   Changed value: framecount = 22
+41.999: INFO: redis_listener     Drop frame flag reset
+42.002: INFO: redis_listener     Drop frame detected
+42.007: INFO: redis_controller   Changed value: framecount = 23
+42.026: INFO: redis_listener     Drop frame flag reset
+42.036: INFO: redis_controller   Changed value: framecount = 22
+42.039: INFO: redis_listener     Drop frame detected
+42.072: INFO: redis_controller   Changed value: framecount = 24
+42.114: INFO: redis_controller   Changed value: framecount = 23
+42.142: INFO: redis_controller   Changed value: framecount = 25
+42.145: INFO: redis_controller   Changed value: framecount = 26
+42.153: INFO: redis_controller   Changed value: framecount = 27
+42.164: INFO: redis_controller   Changed value: framecount = 27
+42.176: INFO: redis_controller   Changed value: framecount = 28
+42.179: INFO: redis_controller   Changed value: framecount = 28
+42.181: INFO: redis_controller   Changed value: framecount = 28
+42.188: INFO: redis_controller   Changed value: framecount = 28
+42.191: INFO: redis_controller   Changed value: framecount = 28
+42.199: INFO: redis_controller   Changed value: framecount = 28
+42.219: INFO: redis_controller   Changed value: framecount = 29
+42.220: INFO: redis_controller   Changed value: framecount = 29
+42.220: INFO: redis_controller   Changed value: framecount = 29
+42.223: INFO: redis_controller   Changed value: framecount = 29
+42.234: INFO: redis_controller   Changed value: framecount = 29
+42.260: INFO: redis_controller   Changed value: framecount = 30
+42.289: INFO: redis_controller   Changed value: framecount = 31
+42.338: INFO: redis_controller   Changed value: framecount = 32
+42.349: INFO: redis_controller   Changed value: framecount = 32
+42.353: INFO: redis_controller   Changed value: framecount = 32
+42.382: INFO: redis_controller   Changed value: framecount = 32
+42.482: INFO: redis_controller   Changed value: framecount = 34
+42.507: INFO: redis_listener     Drop frame flag reset
+42.527: INFO: redis_listener     Drop frame detected
+42.540: INFO: redis_controller   Changed value: framecount = 35
+42.548: INFO: redis_listener     Drop frame flag reset
+42.566: INFO: redis_controller   Changed value: framecount = 34
+42.568: INFO: redis_listener     Drop frame detected
+42.601: INFO: redis_controller   Changed value: framecount = 34
+42.686: INFO: redis_controller   Changed value: framecount = 35
+42.744: INFO: redis_controller   Changed value: buffer = 1
+42.807: INFO: redis_controller   Changed value: buffer = 1
+42.825: INFO: redis_controller   Changed value: framecount = 37
+42.836: INFO: redis_controller   Changed value: is_buffering = 0
+42.847: INFO: redis_controller   Changed value: framecount = 39
+42.850: INFO: redis_controller   Changed value: is_buffering = 0
+42.852: INFO: redis_controller   Changed value: buffer = 0
+42.856: INFO: redis_controller   Changed value: framecount = 40
+42.870: INFO: redis_controller   Changed value: is_buffering = 0
+42.886: INFO: redis_controller   Changed value: framecount = 42
+42.921: INFO: redis_controller   Changed value: is_buffering = 0
+42.937: INFO: redis_controller   Changed value: buffer = 0
+42.950: INFO: ssd_monitor        Updated space left on SSD: 190.47 GB
+42.977: INFO: redis_controller   Changed value: framecount = 45
+42.984: INFO: redis_controller   Changed value: framecount = 45
+42.991: INFO: redis_controller   Changed value: framecount = 46
+43.009: INFO: redis_controller   Changed value: framecount = 46
+43.020: INFO: redis_controller   Changed value: framecount = 47
+43.024: INFO: redis_controller   Changed value: framecount = 47
+43.043: INFO: redis_listener     Drop frame flag reset
+43.065: INFO: redis_listener     Drop frame detected
+43.078: INFO: redis_listener     Drop frame flag reset
+43.097: INFO: redis_listener     Drop frame detected
+43.113: INFO: redis_controller   Changed value: framecount = 48
+43.174: INFO: redis_controller   Changed value: framecount = 48
+43.289: INFO: redis_controller   Changed value: framecount = 49
+43.395: INFO: redis_controller   Changed value: framecount = 50
+43.427: INFO: redis_controller   Changed value: framecount = 51
+43.492: INFO: redis_controller   Changed value: framecount = 53
+43.518: INFO: redis_controller   Changed value: framecount = 52
+43.524: INFO: redis_controller   Changed value: framecount = 54
+43.532: INFO: redis_controller   Changed value: framecount = 54
+43.546: INFO: redis_controller   Changed value: framecount = 55
+43.567: INFO: redis_listener     Drop frame flag reset
+43.569: INFO: redis_listener     Drop frame detected
+43.571: INFO: redis_controller   Changed value: framecount = 55
+43.623: INFO: redis_controller   Changed value: framecount = 56
+43.625: INFO: redis_listener     Drop frame flag reset
+43.627: INFO: redis_controller   Changed value: framecount = 57
+43.652: INFO: redis_listener     Drop frame detected
+43.656: INFO: redis_controller   Changed value: framecount = 59
+43.691: INFO: redis_controller   Changed value: framecount = 60
+43.774: INFO: redis_controller   Changed value: framecount = 60
+43.804: INFO: redis_controller   Changed value: framecount = 61
+43.872: INFO: redis_controller   Changed value: framecount = 62
+43.923: INFO: redis_controller   Changed value: framecount = 63
+43.942: INFO: redis_controller   Changed value: framecount = 64
+43.961: INFO: ssd_monitor        Updated space left on SSD: 190.21 GB
+44.002: INFO: redis_controller   Changed value: framecount = 65
+44.012: INFO: redis_controller   Changed value: framecount = 65
+44.048: INFO: redis_controller   Changed value: framecount = 66
+44.069: INFO: redis_controller   Changed value: framecount = 67
+44.074: INFO: redis_controller   Changed value: framecount = 69
+44.088: INFO: redis_listener     Drop frame flag reset
+44.095: INFO: redis_controller   Changed value: framecount = 71
+44.102: INFO: redis_controller   Changed value: framecount = 70
+44.116: INFO: redis_controller   Changed value: framecount = 71
+44.118: INFO: redis_controller   Changed value: framecount = 71
+44.120: INFO: redis_controller   Changed value: framecount = 71
+44.121: INFO: redis_controller   Changed value: framecount = 71
+44.121: INFO: redis_controller   Changed value: framecount = 71
+44.123: INFO: redis_controller   Changed value: framecount = 71
+44.123: INFO: redis_controller   Changed value: framecount = 71
+44.124: INFO: redis_controller   Changed value: framecount = 71
+44.125: INFO: redis_controller   Changed value: framecount = 71
+44.127: INFO: redis_controller   Changed value: framecount = 71
+44.129: INFO: redis_controller   Changed value: framecount = 71
+44.150: INFO: redis_controller   Changed value: framecount = 72
+44.158: INFO: redis_listener     Drop frame detected
+44.176: INFO: redis_listener     Drop frame flag reset
+44.181: INFO: redis_listener     Drop frame detected
+44.187: INFO: redis_controller   Changed value: framecount = 73
+44.187: INFO: redis_controller   Changed value: framecount = 73
+44.188: INFO: redis_controller   Changed value: framecount = 73
+44.189: INFO: redis_controller   Changed value: framecount = 73
+44.195: INFO: redis_controller   Changed value: framecount = 73
+44.198: INFO: redis_controller   Changed value: framecount = 73
+44.228: INFO: redis_controller   Changed value: framecount = 73
+44.308: INFO: redis_controller   Changed value: framecount = 74
+44.407: INFO: redis_controller   Changed value: framecount = 75
+44.435: INFO: redis_controller   Changed value: framecount = 77
+44.479: INFO: redis_controller   Changed value: framecount = 76
+44.538: INFO: redis_controller   Changed value: framecount = 79
+44.566: INFO: redis_controller   Changed value: framecount = 77
+44.605: INFO: redis_controller   Changed value: framecount = 78
+44.614: INFO: redis_controller   Changed value: framecount = 79
+44.624: INFO: redis_controller   Changed value: framecount = 82
+44.648: INFO: redis_controller   Changed value: framecount = 83
+44.654: INFO: redis_controller   Changed value: framecount = 83
+44.655: INFO: redis_controller   Changed value: framecount = 83
+44.656: INFO: redis_controller   Changed value: framecount = 83
+44.657: INFO: redis_controller   Changed value: framecount = 83
+44.657: INFO: redis_controller   Changed value: framecount = 83
+44.658: INFO: redis_controller   Changed value: framecount = 83
+44.659: INFO: redis_controller   Changed value: framecount = 83
+44.659: INFO: redis_controller   Changed value: framecount = 83
+44.660: INFO: redis_controller   Changed value: framecount = 83
+44.660: INFO: redis_controller   Changed value: framecount = 83
+44.664: INFO: redis_controller   Changed value: framecount = 83
+44.665: INFO: redis_controller   Changed value: framecount = 83
+44.665: INFO: redis_controller   Changed value: framecount = 83
+44.666: INFO: redis_controller   Changed value: framecount = 83
+44.666: INFO: redis_controller   Changed value: framecount = 83
+44.667: INFO: redis_controller   Changed value: framecount = 83
+44.669: INFO: redis_controller   Changed value: framecount = 83
+44.670: INFO: redis_controller   Changed value: framecount = 83
+44.680: INFO: redis_listener     Drop frame flag reset
+44.685: INFO: redis_listener     Drop frame flag reset
+44.689: INFO: redis_listener     Drop frame detected
+44.710: INFO: redis_listener     Drop frame detected
+44.715: INFO: redis_controller   Changed value: framecount = 84
+44.755: INFO: redis_controller   Changed value: framecount = 85
+44.781: INFO: redis_controller   Changed value: framecount = 86
+44.787: INFO: redis_controller   Changed value: framecount = 86
+44.792: INFO: redis_controller   Changed value: framecount = 86
+44.802: INFO: redis_controller   Changed value: framecount = 86
+44.914: INFO: redis_controller   Changed value: framecount = 87
+44.937: INFO: redis_controller   Changed value: framecount = 88
+44.970: INFO: ssd_monitor        Updated space left on SSD: 189.94 GB
+44.999: INFO: redis_controller   Changed value: framecount = 89
+45.049: INFO: redis_controller   Changed value: framecount = 90
+45.106: INFO: redis_controller   Changed value: framecount = 91
+45.143: INFO: redis_controller   Changed value: framecount = 93
+45.183: INFO: redis_controller   Changed value: framecount = 94
+45.197: INFO: redis_controller   Changed value: framecount = 94
+45.197: INFO: redis_listener     Drop frame flag reset
+45.211: INFO: redis_listener     Drop frame flag reset
+45.216: INFO: redis_controller   Changed value: framecount = 95
+45.217: INFO: redis_listener     Drop frame detected
+45.217: INFO: redis_listener     Drop frame detected
+45.219: INFO: redis_controller   Changed value: framecount = 95
+45.220: INFO: redis_controller   Changed value: framecount = 95
+45.220: INFO: redis_controller   Changed value: framecount = 95
+45.221: INFO: redis_controller   Changed value: framecount = 95
+45.221: INFO: redis_controller   Changed value: framecount = 95
+45.223: INFO: redis_controller   Changed value: framecount = 95
+45.223: INFO: redis_controller   Changed value: framecount = 95
+45.224: INFO: redis_controller   Changed value: framecount = 95
+45.225: INFO: redis_controller   Changed value: framecount = 95
+45.226: INFO: redis_controller   Changed value: framecount = 95
+45.226: INFO: redis_controller   Changed value: framecount = 95
+45.227: INFO: redis_controller   Changed value: framecount = 95
+45.231: INFO: redis_controller   Changed value: framecount = 95
+45.251: INFO: redis_controller   Changed value: framecount = 96
+45.277: INFO: redis_controller   Changed value: framecount = 97
+45.351: INFO: redis_controller   Changed value: framecount = 98
+45.390: INFO: redis_controller   Changed value: framecount = 99
+45.450: INFO: redis_controller   Changed value: framecount = 99
+45.523: INFO: redis_controller   Changed value: framecount = 100
+45.557: INFO: redis_controller   Changed value: framecount = 103
+45.616: INFO: redis_controller   Changed value: framecount = 101
+45.660: INFO: redis_controller   Changed value: framecount = 104
+45.718: INFO: redis_listener     Drop frame flag reset
+45.726: INFO: redis_listener     Drop frame flag reset
+45.736: INFO: redis_controller   Changed value: framecount = 106
+45.753: INFO: redis_listener     Drop frame detected
+45.758: INFO: redis_controller   Changed value: framecount = 104
+45.759: INFO: redis_listener     Drop frame detected
+45.780: INFO: redis_controller   Changed value: framecount = 107
+45.831: INFO: redis_controller   Changed value: framecount = 105
+45.833: INFO: redis_controller   Changed value: framecount = 105
+45.837: INFO: redis_controller   Changed value: framecount = 106
+45.845: INFO: redis_controller   Changed value: framecount = 109
+45.846: INFO: redis_controller   Changed value: framecount = 109
+45.847: INFO: redis_controller   Changed value: framecount = 109
+45.848: INFO: redis_controller   Changed value: framecount = 109
+45.865: INFO: redis_controller   Changed value: framecount = 110
+45.872: INFO: redis_controller   Changed value: framecount = 110
+45.875: INFO: redis_controller   Changed value: framecount = 110
+45.877: INFO: redis_controller   Changed value: framecount = 110
+45.878: INFO: redis_controller   Changed value: framecount = 110
+45.878: INFO: redis_controller   Changed value: framecount = 110
+45.879: INFO: redis_controller   Changed value: framecount = 110
+45.879: INFO: redis_controller   Changed value: framecount = 110
+45.880: INFO: redis_controller   Changed value: framecount = 110
+45.880: INFO: redis_controller   Changed value: framecount = 110
+45.880: INFO: redis_controller   Changed value: framecount = 110
+45.881: INFO: redis_controller   Changed value: framecount = 110
+45.881: INFO: redis_controller   Changed value: framecount = 110
+45.882: INFO: redis_controller   Changed value: framecount = 110
+45.882: INFO: redis_controller   Changed value: framecount = 110
+45.883: INFO: redis_controller   Changed value: framecount = 110
+45.883: INFO: redis_controller   Changed value: framecount = 110
+45.883: INFO: redis_controller   Changed value: framecount = 110
+45.884: INFO: redis_controller   Changed value: framecount = 110
+45.884: INFO: redis_controller   Changed value: framecount = 110
+45.909: INFO: redis_controller   Changed value: framecount = 111
+45.914: INFO: redis_controller   Changed value: framecount = 111
+45.959: INFO: redis_controller   Changed value: framecount = 112
+45.981: INFO: ssd_monitor        Updated space left on SSD: 189.69 GB
+46.014: INFO: redis_controller   Changed value: framecount = 113
+46.049: INFO: redis_controller   Changed value: framecount = 114
+46.089: INFO: redis_controller   Changed value: framecount = 115
+46.096: INFO: redis_controller   Changed value: framecount = 115
+46.134: INFO: redis_controller   Changed value: framecount = 116
+46.137: INFO: redis_controller   Changed value: framecount = 116
+46.165: INFO: redis_controller   Changed value: framecount = 116
+46.221: INFO: redis_controller   Changed value: framecount = 117
+46.262: INFO: redis_listener     Drop frame flag reset
+46.266: INFO: redis_listener     Drop frame detected
+46.272: INFO: redis_listener     Drop frame flag reset
+46.275: INFO: redis_controller   Changed value: framecount = 118
+46.280: INFO: redis_listener     Drop frame detected
+46.292: INFO: redis_controller   Changed value: framecount = 119
+46.357: INFO: redis_controller   Changed value: framecount = 120
+46.393: INFO: redis_controller   Changed value: framecount = 120
+46.407: INFO: redis_controller   Changed value: framecount = 121
+46.408: INFO: redis_controller   Changed value: framecount = 121
+46.409: INFO: redis_controller   Changed value: framecount = 121
+46.409: INFO: redis_controller   Changed value: framecount = 121
+46.410: INFO: redis_controller   Changed value: framecount = 121
+46.410: INFO: redis_controller   Changed value: framecount = 121
+46.411: INFO: redis_controller   Changed value: framecount = 121
+46.435: INFO: redis_controller   Changed value: framecount = 122
+46.450: INFO: redis_controller   Changed value: framecount = 122
+46.476: INFO: redis_controller   Changed value: framecount = 123
+46.492: INFO: redis_controller   Changed value: framecount = 123
+46.503: INFO: redis_controller   Changed value: framecount = 124
+46.505: INFO: redis_controller   Changed value: framecount = 124
+46.589: INFO: redis_controller   Changed value: framecount = 125
+46.608: INFO: redis_controller   Changed value: framecount = 126
+46.630: INFO: redis_controller   Changed value: framecount = 126
+46.651: INFO: redis_controller   Changed value: framecount = 126
+46.719: INFO: redis_controller   Changed value: framecount = 128
+46.758: INFO: redis_controller   Changed value: framecount = 128
+46.777: INFO: redis_listener     Drop frame flag reset
+46.784: INFO: redis_listener     Drop frame flag reset
+46.809: INFO: redis_controller   Changed value: framecount = 128
+46.811: INFO: redis_listener     Drop frame detected
+46.831: INFO: redis_controller   Changed value: framecount = 129
+46.832: INFO: redis_listener     Drop frame detected
+46.849: INFO: redis_controller   Changed value: framecount = 130
+46.876: INFO: redis_controller   Changed value: framecount = 131
+46.892: INFO: redis_controller   Changed value: framecount = 131
+46.927: INFO: redis_controller   Changed value: framecount = 132
+46.944: INFO: redis_controller   Changed value: framecount = 132
+46.954: INFO: redis_controller   Changed value: framecount = 133
+46.972: INFO: redis_controller   Changed value: framecount = 133
+46.986: INFO: redis_controller   Changed value: framecount = 134
+46.989: INFO: redis_controller   Changed value: framecount = 134
+46.992: INFO: redis_controller   Changed value: framecount = 134
+46.993: INFO: redis_controller   Changed value: framecount = 134
+46.994: INFO: redis_controller   Changed value: framecount = 134
+47.019: INFO: ssd_monitor        Updated space left on SSD: 189.41 GB
+47.028: INFO: redis_controller   Changed value: framecount = 135
+47.033: INFO: redis_controller   Changed value: framecount = 135
+47.090: INFO: redis_controller   Changed value: framecount = 137
+47.177: INFO: redis_controller   Changed value: framecount = 138
+47.262: INFO: redis_controller   Changed value: framecount = 139
+47.293: INFO: redis_controller   Changed value: framecount = 140
+47.308: INFO: redis_controller   Changed value: framecount = 140
+47.340: INFO: redis_listener     Drop frame flag reset
+47.342: INFO: redis_controller   Changed value: framecount = 141
+47.342: INFO: redis_listener     Drop frame flag reset
+47.348: INFO: redis_listener     Drop frame detected
+47.393: INFO: redis_listener     Drop frame detected
+47.463: INFO: redis_controller   Changed value: framecount = 142
+47.479: INFO: redis_controller   Changed value: framecount = 144
+47.525: INFO: redis_controller   Changed value: framecount = 144
+47.531: INFO: redis_controller   Changed value: framecount = 145
+47.534: INFO: redis_controller   Changed value: framecount = 146
+47.535: INFO: redis_controller   Changed value: framecount = 146
+47.536: INFO: redis_controller   Changed value: framecount = 146
+47.537: INFO: redis_controller   Changed value: framecount = 146
+47.538: INFO: redis_controller   Changed value: framecount = 146
+47.539: INFO: redis_controller   Changed value: framecount = 146
+47.541: INFO: redis_controller   Changed value: framecount = 146
+47.542: INFO: redis_controller   Changed value: framecount = 146
+47.544: INFO: redis_controller   Changed value: framecount = 146
+47.546: INFO: redis_controller   Changed value: framecount = 146
+47.547: INFO: redis_controller   Changed value: framecount = 146
+47.549: INFO: redis_controller   Changed value: framecount = 146
+47.593: INFO: redis_controller   Changed value: framecount = 147
+47.610: INFO: redis_controller   Changed value: framecount = 148
+47.612: INFO: redis_controller   Changed value: framecount = 148
+47.645: INFO: redis_controller   Changed value: framecount = 149
+47.697: INFO: redis_controller   Changed value: framecount = 150
+47.709: INFO: redis_controller   Changed value: framecount = 150
+47.730: INFO: redis_controller   Changed value: framecount = 151
+47.739: INFO: redis_controller   Changed value: framecount = 151
+47.745: INFO: redis_controller   Changed value: buffer = 1
+47.750: INFO: redis_controller   Changed value: framecount = 151
+47.756: INFO: redis_controller   Changed value: framecount = 151
+47.760: INFO: redis_controller   Changed value: is_buffering = 1
+47.846: INFO: redis_controller   Changed value: is_buffering = 0
+47.861: INFO: redis_controller   Changed value: buffer = 0
+47.874: INFO: redis_controller   Changed value: framecount = 154
+47.874: INFO: redis_listener     Drop frame flag reset
+47.891: INFO: redis_controller   Changed value: is_buffering = 0
+47.893: INFO: redis_listener     Drop frame detected
+47.901: INFO: redis_listener     Drop frame flag reset
+47.914: INFO: redis_listener     Drop frame detected
+47.967: INFO: redis_controller   Changed value: framecount = 155
+48.000: INFO: redis_controller   Changed value: framecount = 154
+48.035: INFO: ssd_monitor        Updated space left on SSD: 189.15 GB
+48.040: INFO: redis_controller   Changed value: framecount = 154
+48.066: INFO: redis_controller   Changed value: framecount = 156
+48.096: INFO: redis_controller   Changed value: framecount = 156
+48.105: INFO: redis_controller   Changed value: framecount = 156
+48.126: INFO: redis_controller   Changed value: framecount = 158
+48.129: INFO: redis_controller   Changed value: framecount = 159
+48.130: INFO: redis_controller   Changed value: framecount = 159
+48.130: INFO: redis_controller   Changed value: framecount = 159
+48.131: INFO: redis_controller   Changed value: framecount = 159
+48.132: INFO: redis_controller   Changed value: framecount = 159
+48.132: INFO: redis_controller   Changed value: framecount = 159
+48.133: INFO: redis_controller   Changed value: framecount = 159
+48.133: INFO: redis_controller   Changed value: framecount = 159
+48.142: INFO: redis_controller   Changed value: framecount = 160
+48.145: INFO: redis_controller   Changed value: framecount = 160
+48.186: INFO: redis_controller   Changed value: framecount = 161
+48.199: INFO: redis_controller   Changed value: framecount = 161
+48.269: INFO: redis_controller   Changed value: framecount = 162
+48.296: INFO: redis_controller   Changed value: framecount = 163
+48.319: INFO: redis_controller   Changed value: framecount = 164
+48.351: INFO: redis_controller   Changed value: framecount = 164
+48.365: INFO: redis_controller   Changed value: framecount = 164
+48.381: INFO: redis_controller   Changed value: framecount = 165
+48.407: INFO: redis_listener     Drop frame flag reset
+48.422: INFO: redis_listener     Drop frame flag reset
+48.445: INFO: redis_listener     Drop frame detected
+48.463: INFO: redis_listener     Drop frame detected
+48.464: INFO: redis_controller   Changed value: framecount = 166
+48.486: INFO: redis_controller   Changed value: framecount = 167
+48.500: INFO: redis_controller   Changed value: framecount = 167
+48.523: INFO: redis_controller   Changed value: framecount = 168
+48.529: INFO: redis_controller   Changed value: framecount = 168
+48.540: INFO: redis_controller   Changed value: framecount = 168
+48.548: INFO: redis_controller   Changed value: framecount = 168
+48.550: INFO: redis_controller   Changed value: framecount = 168
+48.605: INFO: redis_controller   Changed value: framecount = 169
+48.613: INFO: redis_controller   Changed value: framecount = 169
+48.687: INFO: redis_controller   Changed value: framecount = 171
+48.705: INFO: redis_controller   Changed value: framecount = 171
+48.722: INFO: redis_controller   Changed value: framecount = 172
+48.758: INFO: redis_controller   Changed value: framecount = 172
+48.766: INFO: redis_controller   Changed value: buffer = 0
+48.775: INFO: redis_controller   Changed value: framecount = 173
+48.801: INFO: redis_controller   Changed value: is_buffering = 0
+48.839: INFO: redis_controller   Changed value: framecount = 175
+48.843: INFO: redis_controller   Changed value: buffer = 0
+48.906: INFO: redis_controller   Changed value: framecount = 176
+48.935: INFO: redis_controller   Changed value: is_buffering = 0
+48.951: INFO: redis_controller   Changed value: framecount = 177
+48.973: INFO: redis_listener     Drop frame flag reset
+48.977: INFO: redis_listener     Drop frame flag reset
+48.979: INFO: redis_controller   Changed value: framecount = 177
+49.023: INFO: redis_listener     Drop frame detected
+49.031: INFO: redis_listener     Drop frame detected
+49.045: INFO: redis_controller   Changed value: framecount = 178
+49.052: INFO: ssd_monitor        Updated space left on SSD: 188.88 GB
+49.065: INFO: redis_controller   Changed value: framecount = 179
+49.068: INFO: redis_controller   Changed value: framecount = 179
+49.069: INFO: redis_controller   Changed value: framecount = 179
+49.070: INFO: redis_controller   Changed value: framecount = 179
+49.071: INFO: redis_controller   Changed value: framecount = 179
+49.073: INFO: redis_controller   Changed value: framecount = 179
+49.073: INFO: redis_controller   Changed value: framecount = 179
+49.074: INFO: redis_controller   Changed value: framecount = 179
+49.074: INFO: redis_controller   Changed value: framecount = 179
+49.075: INFO: redis_controller   Changed value: framecount = 179
+49.110: INFO: redis_controller   Changed value: framecount = 180
+49.114: INFO: redis_controller   Changed value: framecount = 180
+49.137: INFO: redis_controller   Changed value: framecount = 181
+49.143: INFO: redis_controller   Changed value: framecount = 181
+49.202: INFO: redis_controller   Changed value: framecount = 182
+49.252: INFO: redis_controller   Changed value: framecount = 183
+49.277: INFO: redis_controller   Changed value: framecount = 184
+49.289: INFO: redis_controller   Changed value: framecount = 184
+49.374: INFO: redis_controller   Changed value: framecount = 185
+49.376: INFO: redis_controller   Changed value: framecount = 185
+49.410: INFO: redis_controller   Changed value: framecount = 185
+49.445: INFO: redis_controller   Changed value: framecount = 186
+49.532: INFO: redis_listener     Drop frame flag reset
+49.536: INFO: redis_listener     Drop frame flag reset
+49.540: INFO: redis_listener     Drop frame detected
+49.547: INFO: redis_controller   Changed value: framecount = 189
+49.567: INFO: redis_listener     Drop frame detected
+49.590: INFO: redis_controller   Changed value: framecount = 187
+49.598: INFO: redis_controller   Changed value: framecount = 190
+49.608: INFO: redis_controller   Changed value: framecount = 188
+49.654: INFO: redis_controller   Changed value: framecount = 192
+49.668: INFO: redis_controller   Changed value: framecount = 193
+49.680: INFO: redis_controller   Changed value: framecount = 193
+49.684: INFO: redis_controller   Changed value: framecount = 193
+49.685: INFO: redis_controller   Changed value: framecount = 193
+49.688: INFO: redis_controller   Changed value: framecount = 193
+49.692: INFO: redis_controller   Changed value: framecount = 193
+49.695: INFO: redis_controller   Changed value: framecount = 193
+49.696: INFO: redis_controller   Changed value: framecount = 193
+49.697: INFO: redis_controller   Changed value: framecount = 193
+49.698: INFO: redis_controller   Changed value: framecount = 193
+49.698: INFO: redis_controller   Changed value: framecount = 193
+49.751: INFO: redis_controller   Changed value: framecount = 194
+49.757: INFO: redis_controller   Changed value: framecount = 194
+49.765: INFO: redis_controller   Changed value: framecount = 195
+49.768: INFO: redis_controller   Changed value: framecount = 195
+49.871: INFO: redis_controller   Changed value: framecount = 196
+49.927: INFO: redis_controller   Changed value: framecount = 197
+50.013: INFO: redis_controller   Changed value: framecount = 199
+50.027: INFO: redis_controller   Changed value: framecount = 199
+50.060: INFO: redis_controller   Changed value: framecount = 200
+50.063: INFO: ssd_monitor        Updated space left on SSD: 188.61 GB
+50.075: INFO: redis_listener     Drop frame flag reset
+50.084: INFO: redis_controller   Changed value: framecount = 199
+50.085: INFO: redis_listener     Drop frame flag reset
+50.112: INFO: redis_listener     Drop frame detected
+50.128: INFO: redis_controller   Changed value: framecount = 201
+50.133: INFO: redis_listener     Drop frame detected
+50.170: INFO: redis_controller   Changed value: framecount = 203
+50.183: INFO: redis_controller   Changed value: framecount = 204
+50.195: INFO: redis_controller   Changed value: framecount = 204
+50.202: INFO: redis_controller   Changed value: framecount = 201
+50.207: INFO: redis_controller   Changed value: framecount = 202
+50.224: INFO: redis_controller   Changed value: framecount = 203
+50.236: INFO: redis_controller   Changed value: framecount = 204
+50.247: INFO: redis_controller   Changed value: framecount = 205
+50.248: INFO: redis_controller   Changed value: framecount = 205
+50.249: INFO: redis_controller   Changed value: framecount = 205
+50.249: INFO: redis_controller   Changed value: framecount = 205
+50.250: INFO: redis_controller   Changed value: framecount = 205
+50.251: INFO: redis_controller   Changed value: framecount = 205
+50.272: INFO: redis_controller   Changed value: framecount = 206
+50.273: INFO: redis_controller   Changed value: framecount = 206
+50.286: INFO: redis_controller   Changed value: framecount = 207
+50.296: INFO: redis_controller   Changed value: framecount = 207
+50.395: INFO: redis_controller   Changed value: framecount = 208
+50.423: INFO: redis_controller   Changed value: framecount = 208
+50.484: INFO: redis_controller   Changed value: framecount = 210
+50.486: INFO: redis_controller   Changed value: framecount = 210
+50.549: INFO: redis_controller   Changed value: framecount = 210
+50.566: INFO: redis_controller   Changed value: framecount = 211
+50.627: INFO: redis_listener     Drop frame flag reset
+50.650: INFO: redis_controller   Changed value: framecount = 212
+50.683: INFO: redis_listener     Drop frame flag reset
+50.700: INFO: redis_controller   Changed value: framecount = 213
+50.711: INFO: redis_controller   Changed value: framecount = 213
+50.713: INFO: redis_listener     Drop frame detected
+50.734: INFO: redis_controller   Changed value: framecount = 214
+50.736: INFO: redis_listener     Drop frame detected
+50.744: INFO: redis_controller   Changed value: framecount = 214
+50.773: INFO: redis_controller   Changed value: framecount = 216
+50.783: INFO: redis_controller   Changed value: framecount = 217
+50.785: INFO: redis_controller   Changed value: framecount = 217
+50.793: INFO: redis_controller   Changed value: framecount = 217
+50.830: INFO: redis_controller   Changed value: framecount = 218
+50.856: INFO: redis_controller   Changed value: framecount = 218
+50.889: INFO: redis_controller   Changed value: framecount = 218
+50.899: INFO: redis_controller   Changed value: framecount = 219
+50.933: INFO: redis_controller   Changed value: framecount = 220
+50.946: INFO: redis_controller   Changed value: framecount = 221
+50.949: INFO: redis_controller   Changed value: framecount = 221
+50.990: INFO: redis_controller   Changed value: framecount = 221
+51.018: INFO: redis_controller   Changed value: framecount = 222
+51.061: INFO: redis_controller   Changed value: framecount = 222
+51.070: INFO: ssd_monitor        Updated space left on SSD: 188.33 GB
+51.109: INFO: redis_controller   Changed value: framecount = 223
+51.140: INFO: redis_controller   Changed value: framecount = 223
+51.143: INFO: redis_controller   Changed value: framecount = 223
+51.221: INFO: redis_listener     Drop frame flag reset
+51.245: INFO: redis_listener     Drop frame flag reset
+51.277: INFO: redis_listener     Drop frame detected
+51.292: INFO: redis_listener     Drop frame detected
+51.310: INFO: redis_controller   Changed value: framecount = 225
+51.315: INFO: redis_controller   Changed value: framecount = 225
+51.324: INFO: redis_controller   Changed value: framecount = 225
+51.332: INFO: redis_controller   Changed value: framecount = 226
+51.361: INFO: redis_controller   Changed value: framecount = 227
+51.393: INFO: redis_controller   Changed value: framecount = 228
+51.421: INFO: redis_controller   Changed value: framecount = 228
+51.443: INFO: redis_controller   Changed value: framecount = 229
+51.450: INFO: redis_controller   Changed value: framecount = 230
+51.455: INFO: redis_controller   Changed value: framecount = 231
+51.464: INFO: redis_controller   Changed value: framecount = 232
+51.496: INFO: redis_controller   Changed value: framecount = 232
+51.555: INFO: redis_controller   Changed value: framecount = 234
+51.563: INFO: redis_controller   Changed value: framecount = 235
+51.575: INFO: redis_controller   Changed value: framecount = 235
+51.577: INFO: redis_controller   Changed value: framecount = 235
+51.580: INFO: redis_controller   Changed value: framecount = 235
+51.580: INFO: redis_controller   Changed value: framecount = 235
+51.581: INFO: redis_controller   Changed value: framecount = 235
+51.614: INFO: cli_commands       Received: rec
+51.632: INFO: cinepi_controller  rec button pushed
+51.690: INFO: redis_controller   Changed value: framecount = 236
+51.725: INFO: redis_controller   Changed value: framecount = 237
+51.758: INFO: redis_listener     Recording stopped at: 2024-10-10 21:30:51.758134
+51.761: INFO: cinepi_controller  Stopped recording
+51.765: INFO: redis_controller   Changed value: framecount = 237
+51.765: INFO: redis_listener     Recording duration in seconds: 11.046142
+51.766: INFO: redis_listener     Recording stopped at: 2024-10-10 21:30:51.766449
+51.776: INFO: redis_listener     Recording duration in seconds: 11.057461
+51.779: INFO: redis_listener     Expected framerate retrieved from Redis: 24.0 FPS
+51.780: INFO: redis_listener     Calculated expected number of frames: 265
+51.780: INFO: redis_listener     Actual number of recorded frames: 238
+51.780: WARNING: redis_listener     Discrepancy detected: 27 frames difference between expected and recorded counts.
+51.786: INFO: redis_listener     Drop frame flag reset
+51.788: INFO: redis_listener     Expected framerate retrieved from Redis: 24.0 FPS
+51.790: INFO: redis_listener     Calculated expected number of frames: 265
+51.792: INFO: redis_listener     Actual number of recorded frames: 238
+51.797: WARNING: redis_listener     Discrepancy detected: 27 frames difference between expected and recorded counts.
+51.797: INFO: redis_controller   Changed value: framecount = 239
+51.805: INFO: redis_listener     Drop frame flag reset
+51.817: INFO: redis_listener     Drop frame detected
+51.825: INFO: redis_controller   Changed value: framecount = 239
+51.832: INFO: redis_listener     Drop frame detected
+51.847: INFO: redis_controller   Changed value: framecount = 240
+51.867: INFO: redis_controller   Changed value: framecount = 241
+51.875: INFO: redis_controller   Changed value: framecount = 241
+51.878: INFO: redis_controller   Changed value: framecount = 241
+51.880: INFO: redis_controller   Changed value: framecount = 241
+51.880: INFO: redis_controller   Changed value: framecount = 241
+51.881: INFO: redis_controller   Changed value: framecount = 241
+51.881: INFO: redis_controller   Changed value: framecount = 241
+51.882: INFO: redis_controller   Changed value: is_recording = 0
+51.882: INFO: redis_controller   Changed value: framecount = 241
+51.882: INFO: redis_controller   Changed value: framecount = 241
+51.884: INFO: redis_controller   Changed value: framecount = 241
+51.885: INFO: redis_controller   Changed value: framecount = 241
+51.885: INFO: redis_controller   Changed value: framecount = 241
+51.886: INFO: redis_controller   Changed value: framecount = 241
+51.886: INFO: redis_controller   Changed value: framecount = 241
+51.887: INFO: redis_controller   Changed value: framecount = 241
+52.082: INFO: ssd_monitor        Updated space left on SSD: 188.14 GB
+52.320: INFO: redis_listener     Drop frame flag reset
+52.340: INFO: redis_listener     Drop frame flag reset
+52.349: INFO: redis_listener     Drop frame detected
+52.350: INFO: redis_listener     Drop frame detected
+52.850: INFO: redis_listener     Drop frame flag reset
+52.851: INFO: redis_listener     Drop frame flag reset
+52.891: INFO: redis_listener     Drop frame detected
+52.899: INFO: redis_listener     Drop frame detected
+53.393: INFO: redis_listener     Drop frame flag reset
+53.401: INFO: redis_listener     Drop frame detected
+53.407: INFO: redis_listener     Drop frame flag reset
+53.464: INFO: redis_listener     Drop frame detected
+53.911: INFO: redis_listener     Drop frame flag reset
+53.915: INFO: redis_listener     Drop frame detected
+53.967: INFO: redis_listener     Drop frame flag reset
+54.023: INFO: redis_listener     Drop frame detected
+54.417: INFO: redis_listener     Drop frame flag reset
+54.424: INFO: redis_listener     Drop frame detected
+54.529: INFO: redis_listener     Drop frame flag reset
+54.532: INFO: redis_listener     Drop frame detected
+54.925: INFO: redis_listener     Drop frame flag reset
+54.943: INFO: redis_listener     Drop frame detected
+55.035: INFO: redis_listener     Drop frame flag reset
+55.038: INFO: redis_listener     Drop frame detected
+55.449: INFO: redis_listener     Drop frame flag reset
+55.474: INFO: redis_listener     Drop frame detected
+55.539: INFO: redis_listener     Drop frame flag reset
+55.562: INFO: redis_listener     Drop frame detected
+55.975: INFO: redis_listener     Drop frame flag reset
+56.014: INFO: redis_listener     Drop frame detected
+56.065: INFO: redis_listener     Drop frame flag reset
+56.137: INFO: redis_listener     Drop frame detected
+56.523: INFO: redis_listener     Drop frame flag reset
+56.595: INFO: redis_listener     Drop frame detected
+56.640: INFO: redis_listener     Drop frame flag reset
+56.680: INFO: redis_listener     Drop frame detected
+57.096: INFO: redis_listener     Drop frame flag reset
+57.139: INFO: redis_listener     Drop frame detected
+57.183: INFO: redis_listener     Drop frame flag reset
+57.260: INFO: redis_listener     Drop frame detected
+57.650: INFO: redis_listener     Drop frame flag reset
+57.715: INFO: redis_listener     Drop frame detected
+57.761: INFO: redis_listener     Drop frame flag reset
+57.810: INFO: redis_listener     Drop frame detected
+58.184: INFO: cli_commands       Received: rec
+58.185: INFO: cinepi_controller  rec button pushed
+58.185: INFO: cinepi_controller  Started recording
+58.186: INFO: redis_controller   Changed value: is_recording = 1
+58.187: INFO: redis_listener     Framecount reset to 0.
+58.187: INFO: redis_listener     Framecount reset to 0.
+58.188: INFO: redis_listener     Recording started at: 2024-10-10 21:30:58.188040
+58.188: INFO: redis_controller   Changed value: framecount = 0
+58.188: INFO: redis_listener     Recording started at: 2024-10-10 21:30:58.188365
+58.189: INFO: redis_controller   Changed value: framecount = 0
+58.217: INFO: redis_listener     Drop frame flag reset
+58.230: INFO: redis_listener     Drop frame detected
+58.231: INFO: redis_controller   Changed value: framecount = 241
+58.253: INFO: redis_controller   Changed value: framecount = 241
+58.315: INFO: redis_listener     Drop frame flag reset
+58.371: INFO: redis_controller   Changed value: framecount = 1
+58.381: INFO: redis_listener     Drop frame detected
+58.385: INFO: redis_controller   Changed value: framecount = 0
+58.392: INFO: redis_controller   Changed value: framecount = 1
+58.450: INFO: redis_controller   Changed value: framecount = 2
+58.494: INFO: redis_controller   Changed value: framecount = 3
+58.499: INFO: redis_controller   Changed value: framecount = 3
+58.516: INFO: redis_controller   Changed value: framecount = 4
+58.523: INFO: redis_controller   Changed value: framecount = 4
+58.529: INFO: redis_controller   Changed value: framecount = 4
+58.533: INFO: redis_controller   Changed value: framecount = 4
+58.563: INFO: redis_controller   Changed value: framecount = 5
+58.577: INFO: redis_controller   Changed value: framecount = 5
+58.604: INFO: redis_controller   Changed value: framecount = 6
+58.611: INFO: redis_controller   Changed value: framecount = 6
+58.745: INFO: redis_listener     Drop frame flag reset
+58.745: INFO: redis_controller   Changed value: framecount = 7
+58.755: INFO: redis_listener     Drop frame detected
+58.765: INFO: redis_controller   Changed value: framecount = 8
+58.841: INFO: redis_controller   Changed value: framecount = 9
+58.883: INFO: redis_listener     Drop frame flag reset
+58.927: INFO: redis_controller   Changed value: framecount = 11
+58.928: INFO: redis_listener     Drop frame detected
+58.962: INFO: redis_controller   Changed value: framecount = 12
+59.059: INFO: redis_controller   Changed value: framecount = 14
+59.069: INFO: redis_controller   Changed value: framecount = 14
+59.072: INFO: redis_controller   Changed value: framecount = 15
+59.076: INFO: redis_controller   Changed value: framecount = 13
+59.093: INFO: ssd_monitor        Updated space left on SSD: 187.93 GB
+59.100: INFO: redis_controller   Changed value: framecount = 14
+59.103: INFO: redis_controller   Changed value: framecount = 14
+59.114: INFO: redis_controller   Changed value: framecount = 17
+59.115: INFO: redis_controller   Changed value: framecount = 17
+59.115: INFO: redis_controller   Changed value: framecount = 17
+59.116: INFO: redis_controller   Changed value: framecount = 17
+59.116: INFO: redis_controller   Changed value: framecount = 17
+59.116: INFO: redis_controller   Changed value: framecount = 17
+59.117: INFO: redis_controller   Changed value: framecount = 17
+59.117: INFO: redis_controller   Changed value: framecount = 17
+59.118: INFO: redis_controller   Changed value: framecount = 17
+59.118: INFO: redis_controller   Changed value: framecount = 17
+59.118: INFO: redis_controller   Changed value: framecount = 17
+59.132: INFO: redis_controller   Changed value: framecount = 18
+59.138: INFO: redis_controller   Changed value: framecount = 18
+59.172: INFO: redis_controller   Changed value: framecount = 19
+59.225: INFO: redis_controller   Changed value: framecount = 20
+59.231: INFO: redis_controller   Changed value: framecount = 20
+59.258: INFO: redis_controller   Changed value: framecount = 20
+59.270: INFO: redis_listener     Drop frame flag reset
+59.290: INFO: redis_listener     Drop frame detected
+59.307: INFO: redis_controller   Changed value: framecount = 21
+59.361: INFO: redis_controller   Changed value: framecount = 22
+59.419: INFO: redis_controller   Changed value: framecount = 22
+59.445: INFO: redis_listener     Drop frame flag reset
+59.450: INFO: redis_listener     Drop frame detected
+59.459: INFO: redis_controller   Changed value: framecount = 24
+59.489: INFO: redis_controller   Changed value: framecount = 24
+59.512: INFO: redis_controller   Changed value: framecount = 25
+59.592: INFO: redis_controller   Changed value: framecount = 25
+59.606: INFO: redis_controller   Changed value: framecount = 25
+59.653: INFO: redis_controller   Changed value: framecount = 28
+59.683: INFO: redis_controller   Changed value: framecount = 28
+59.718: INFO: redis_controller   Changed value: framecount = 28
+59.735: INFO: redis_controller   Changed value: framecount = 30
+59.757: INFO: redis_controller   Changed value: framecount = 31
+59.767: INFO: redis_controller   Changed value: framecount = 32
+59.768: INFO: redis_controller   Changed value: framecount = 32
+59.778: INFO: redis_controller   Changed value: framecount = 32
+59.782: INFO: redis_controller   Changed value: framecount = 32
+59.808: INFO: redis_listener     Drop frame flag reset
+59.828: INFO: redis_controller   Changed value: framecount = 33
+59.829: INFO: redis_listener     Drop frame detected
+59.838: INFO: redis_controller   Changed value: framecount = 34
+59.863: INFO: redis_controller   Changed value: framecount = 34
+59.887: INFO: redis_controller   Changed value: framecount = 35
+59.895: INFO: redis_controller   Changed value: framecount = 35
+59.905: INFO: redis_controller   Changed value: framecount = 35
+59.907: INFO: redis_controller   Changed value: framecount = 35
+59.925: INFO: redis_controller   Changed value: framecount = 35
+59.948: INFO: redis_controller   Changed value: framecount = 36
+59.958: INFO: redis_listener     Drop frame flag reset
+59.981: INFO: redis_controller   Changed value: framecount = 36
+59.990: INFO: redis_controller   Changed value: framecount = 36
+00.003: INFO: redis_listener     Drop frame detected
+00.015: INFO: redis_controller   Changed value: framecount = 37
+00.051: INFO: redis_controller   Changed value: framecount = 37
+00.102: INFO: ssd_monitor        Updated space left on SSD: 187.65 GB
+00.118: INFO: redis_controller   Changed value: framecount = 38
+00.149: INFO: redis_controller   Changed value: framecount = 39
+00.190: INFO: redis_controller   Changed value: framecount = 40
+00.216: INFO: redis_controller   Changed value: framecount = 41
+00.245: INFO: redis_controller   Changed value: framecount = 42
+00.250: INFO: redis_controller   Changed value: framecount = 42
+00.256: INFO: redis_controller   Changed value: framecount = 42
+00.258: INFO: redis_controller   Changed value: framecount = 42
+00.259: INFO: redis_controller   Changed value: framecount = 42
+00.260: INFO: redis_controller   Changed value: framecount = 42
+00.260: INFO: redis_controller   Changed value: framecount = 42
+00.261: INFO: redis_controller   Changed value: framecount = 42
+00.262: INFO: redis_controller   Changed value: framecount = 42
+00.281: INFO: redis_controller   Changed value: framecount = 43
+00.295: INFO: redis_controller   Changed value: framecount = 43
+00.320: INFO: redis_controller   Changed value: framecount = 44
+00.321: INFO: redis_controller   Changed value: framecount = 44
+00.322: INFO: redis_controller   Changed value: framecount = 44
+00.336: INFO: redis_listener     Drop frame flag reset
+00.447: INFO: redis_listener     Drop frame detected
+00.450: INFO: redis_controller   Changed value: framecount = 45
+00.464: INFO: redis_controller   Changed value: framecount = 46
+00.501: INFO: redis_controller   Changed value: framecount = 46
+00.515: INFO: redis_listener     Drop frame flag reset
+00.612: INFO: redis_listener     Drop frame detected
+00.614: INFO: redis_controller   Changed value: framecount = 48
+00.637: INFO: redis_controller   Changed value: framecount = 49
+00.652: INFO: redis_controller   Changed value: framecount = 49
+00.710: INFO: redis_controller   Changed value: framecount = 50
+00.725: INFO: redis_controller   Changed value: framecount = 51
+00.728: INFO: redis_controller   Changed value: framecount = 52
+00.736: INFO: redis_controller   Changed value: framecount = 52
+00.737: INFO: redis_controller   Changed value: framecount = 52
+00.738: INFO: redis_controller   Changed value: framecount = 52
+00.738: INFO: redis_controller   Changed value: framecount = 52
+00.739: INFO: redis_controller   Changed value: framecount = 52
+00.739: INFO: redis_controller   Changed value: framecount = 52
+00.740: INFO: redis_controller   Changed value: framecount = 52
+00.784: INFO: redis_controller   Changed value: framecount = 53
+00.822: INFO: redis_controller   Changed value: framecount = 54
+00.849: INFO: redis_controller   Changed value: framecount = 55
+00.866: INFO: redis_controller   Changed value: framecount = 55
+00.889: INFO: redis_controller   Changed value: framecount = 56
+00.897: INFO: redis_controller   Changed value: framecount = 56
+00.900: INFO: redis_controller   Changed value: framecount = 56
+00.902: INFO: redis_controller   Changed value: framecount = 56
+00.956: INFO: redis_listener     Drop frame flag reset
+01.045: INFO: redis_controller   Changed value: framecount = 57
+01.083: INFO: redis_listener     Drop frame detected
+01.098: INFO: redis_controller   Changed value: framecount = 58
+01.120: INFO: ssd_monitor        Updated space left on SSD: 187.39 GB
+01.149: INFO: redis_listener     Drop frame flag reset
+01.180: INFO: redis_controller   Changed value: framecount = 59
+01.185: INFO: redis_listener     Drop frame detected
+01.200: INFO: redis_controller   Changed value: framecount = 60
+01.264: INFO: redis_controller   Changed value: framecount = 61
+01.299: INFO: redis_controller   Changed value: framecount = 62
+01.342: INFO: redis_controller   Changed value: framecount = 63
+01.356: INFO: redis_controller   Changed value: framecount = 63
+01.392: INFO: redis_controller   Changed value: framecount = 64
+01.403: INFO: redis_controller   Changed value: framecount = 65
+01.408: INFO: redis_controller   Changed value: framecount = 66
+01.601: INFO: redis_listener     Drop frame flag reset
+01.637: INFO: redis_listener     Drop frame detected
+01.676: INFO: redis_controller   Changed value: framecount = 73
+01.687: INFO: redis_listener     Drop frame flag reset
+01.698: INFO: redis_listener     Drop frame detected
+01.706: INFO: redis_controller   Changed value: framecount = 74
+01.791: INFO: redis_controller   Changed value: framecount = 74
+01.815: INFO: redis_controller   Changed value: framecount = 74
+01.872: INFO: redis_controller   Changed value: framecount = 76
+01.885: INFO: redis_controller   Changed value: framecount = 76
+01.890: INFO: redis_controller   Changed value: framecount = 77
+01.896: INFO: redis_controller   Changed value: framecount = 77
+01.899: INFO: redis_controller   Changed value: framecount = 77
+01.900: INFO: redis_controller   Changed value: framecount = 77
+01.902: INFO: redis_controller   Changed value: framecount = 78
+01.902: INFO: redis_controller   Changed value: framecount = 78
+01.903: INFO: redis_controller   Changed value: framecount = 78
+01.904: INFO: redis_controller   Changed value: framecount = 78
+01.905: INFO: redis_controller   Changed value: framecount = 78
+01.905: INFO: redis_controller   Changed value: framecount = 78
+01.906: INFO: redis_controller   Changed value: framecount = 78
+01.924: INFO: redis_controller   Changed value: framecount = 78
+01.937: INFO: redis_controller   Changed value: framecount = 79
+01.944: INFO: redis_controller   Changed value: framecount = 79
+01.945: INFO: redis_controller   Changed value: framecount = 79
+01.945: INFO: redis_controller   Changed value: framecount = 79
+01.946: INFO: redis_controller   Changed value: framecount = 79
+01.946: INFO: redis_controller   Changed value: framecount = 79
+01.966: INFO: redis_controller   Changed value: framecount = 79
+02.144: INFO: redis_listener     Drop frame flag reset
+02.151: INFO: ssd_monitor        Updated space left on SSD: 187.11 GB
+02.184: INFO: redis_listener     Drop frame detected
+02.212: INFO: redis_listener     Drop frame flag reset
+02.254: INFO: redis_controller   Changed value: framecount = 86
+02.262: INFO: redis_listener     Drop frame detected
+02.317: INFO: redis_controller   Changed value: framecount = 85
+02.342: INFO: redis_controller   Changed value: framecount = 88
+02.401: INFO: redis_controller   Changed value: framecount = 86
+02.430: INFO: redis_controller   Changed value: framecount = 87
+02.464: INFO: redis_controller   Changed value: framecount = 91
+02.466: INFO: redis_controller   Changed value: framecount = 91
+02.474: INFO: redis_controller   Changed value: framecount = 89
+02.477: INFO: redis_controller   Changed value: framecount = 90
+02.479: INFO: redis_controller   Changed value: framecount = 90
+02.481: INFO: redis_controller   Changed value: framecount = 91
+02.481: INFO: redis_controller   Changed value: framecount = 91
+02.481: INFO: redis_controller   Changed value: framecount = 91
+02.482: INFO: redis_controller   Changed value: framecount = 91
+02.482: INFO: redis_controller   Changed value: framecount = 91
+02.483: INFO: redis_controller   Changed value: framecount = 91
+02.483: INFO: redis_controller   Changed value: framecount = 91
+02.483: INFO: redis_controller   Changed value: framecount = 91
+02.484: INFO: redis_controller   Changed value: framecount = 91
+02.484: INFO: redis_controller   Changed value: framecount = 91
+02.485: INFO: redis_controller   Changed value: framecount = 91
+02.485: INFO: redis_controller   Changed value: framecount = 91
+02.485: INFO: redis_controller   Changed value: framecount = 91
+02.486: INFO: redis_controller   Changed value: framecount = 91
+02.486: INFO: redis_controller   Changed value: framecount = 91
+02.487: INFO: redis_controller   Changed value: framecount = 91
+02.487: INFO: redis_controller   Changed value: framecount = 91
+02.487: INFO: redis_controller   Changed value: framecount = 91
+02.488: INFO: redis_controller   Changed value: framecount = 91
+02.488: INFO: redis_controller   Changed value: framecount = 91
+02.489: INFO: redis_controller   Changed value: framecount = 91
+02.489: INFO: redis_controller   Changed value: framecount = 91
+02.489: INFO: redis_controller   Changed value: framecount = 91
+02.490: INFO: redis_controller   Changed value: framecount = 91
+02.510: INFO: redis_controller   Changed value: framecount = 92
+02.514: INFO: redis_controller   Changed value: framecount = 92
+02.555: INFO: redis_controller   Changed value: framecount = 93
+02.588: INFO: redis_controller   Changed value: framecount = 94
+02.597: INFO: redis_controller   Changed value: framecount = 94
+02.668: INFO: redis_controller   Changed value: framecount = 94
+02.709: INFO: redis_controller   Changed value: framecount = 95
+02.756: INFO: redis_controller   Changed value: framecount = 96
+02.760: INFO: redis_listener     Drop frame flag reset
+02.788: INFO: redis_listener     Drop frame flag reset
+02.789: INFO: redis_listener     Drop frame detected
+02.800: INFO: redis_listener     Drop frame detected
+02.826: INFO: redis_controller   Changed value: framecount = 97
+02.848: INFO: redis_controller   Changed value: framecount = 97
+02.897: INFO: redis_controller   Changed value: framecount = 97
+02.918: INFO: redis_controller   Changed value: framecount = 98
+02.978: INFO: redis_controller   Changed value: framecount = 99
+02.998: INFO: redis_controller   Changed value: framecount = 101
+03.074: INFO: redis_controller   Changed value: framecount = 102
+03.095: INFO: redis_controller   Changed value: framecount = 102
+03.110: INFO: redis_controller   Changed value: framecount = 104
+03.137: INFO: redis_controller   Changed value: framecount = 105
+03.138: INFO: redis_controller   Changed value: framecount = 105
+03.144: INFO: redis_controller   Changed value: framecount = 106
+03.149: INFO: redis_controller   Changed value: framecount = 106
+03.151: INFO: redis_controller   Changed value: framecount = 106
+03.162: INFO: redis_controller   Changed value: framecount = 106
+03.198: INFO: redis_controller   Changed value: framecount = 107
+03.233: INFO: redis_controller   Changed value: framecount = 108
+03.259: INFO: ssd_monitor        Updated space left on SSD: 186.83 GB
+03.259: INFO: redis_controller   Changed value: framecount = 108
+03.265: INFO: redis_controller   Changed value: framecount = 109
+03.268: INFO: redis_controller   Changed value: framecount = 109
+03.278: INFO: redis_controller   Changed value: framecount = 109
+03.332: INFO: redis_listener     Drop frame flag reset
+03.337: INFO: redis_listener     Drop frame flag reset
+03.333: INFO: redis_controller   Changed value: framecount = 110
+03.368: INFO: redis_listener     Drop frame detected
+03.381: INFO: redis_controller   Changed value: framecount = 110
+03.383: INFO: redis_listener     Drop frame detected
+03.420: INFO: redis_controller   Changed value: framecount = 110
+03.453: INFO: redis_controller   Changed value: framecount = 111
+03.475: INFO: redis_controller   Changed value: framecount = 112
+03.512: INFO: redis_controller   Changed value: framecount = 114
+03.627: INFO: redis_controller   Changed value: framecount = 115
+03.648: INFO: redis_controller   Changed value: framecount = 114
+03.672: INFO: redis_controller   Changed value: framecount = 115
+03.692: INFO: redis_controller   Changed value: framecount = 116
+03.717: INFO: redis_controller   Changed value: framecount = 117
+03.731: INFO: redis_controller   Changed value: framecount = 119
+03.758: INFO: redis_controller   Changed value: framecount = 118
+03.761: INFO: redis_controller   Changed value: framecount = 120
+03.763: INFO: redis_controller   Changed value: framecount = 119
+03.764: INFO: redis_controller   Changed value: framecount = 119
+03.765: INFO: redis_controller   Changed value: framecount = 119
+03.767: INFO: redis_controller   Changed value: framecount = 119
+03.768: INFO: redis_controller   Changed value: framecount = 119
+03.768: INFO: redis_controller   Changed value: framecount = 119
+03.772: INFO: redis_controller   Changed value: framecount = 120
+03.773: INFO: redis_controller   Changed value: framecount = 120
+03.774: INFO: redis_controller   Changed value: framecount = 120
+03.775: INFO: redis_controller   Changed value: framecount = 120
+03.776: INFO: redis_controller   Changed value: framecount = 120
+03.777: INFO: redis_controller   Changed value: framecount = 120
+03.779: INFO: redis_controller   Changed value: framecount = 120
+03.797: INFO: redis_controller   Changed value: framecount = 121
+03.798: INFO: redis_controller   Changed value: framecount = 121
+03.799: INFO: redis_controller   Changed value: framecount = 121
+03.800: INFO: redis_controller   Changed value: framecount = 121
+03.836: INFO: redis_controller   Changed value: framecount = 122
+03.842: INFO: redis_controller   Changed value: framecount = 122
+03.875: INFO: redis_listener     Drop frame flag reset
+03.904: INFO: redis_listener     Drop frame flag reset
+03.916: INFO: redis_listener     Drop frame detected
+03.922: INFO: redis_listener     Drop frame detected
+03.922: INFO: redis_controller   Changed value: framecount = 123
+03.955: INFO: redis_controller   Changed value: framecount = 124
+04.017: INFO: redis_controller   Changed value: framecount = 125
+04.048: INFO: redis_controller   Changed value: framecount = 125
+04.082: INFO: redis_controller   Changed value: framecount = 126
+04.113: INFO: redis_controller   Changed value: framecount = 126
+04.198: INFO: redis_controller   Changed value: framecount = 128
+04.230: INFO: redis_controller   Changed value: framecount = 128
+04.264: INFO: ssd_monitor        Updated space left on SSD: 186.55 GB
+04.265: INFO: redis_controller   Changed value: framecount = 129
+04.294: INFO: redis_controller   Changed value: framecount = 129
+04.299: INFO: redis_controller   Changed value: framecount = 129
+04.307: INFO: redis_controller   Changed value: framecount = 131
+04.311: INFO: redis_controller   Changed value: framecount = 132
+04.314: INFO: redis_controller   Changed value: framecount = 130
+04.316: INFO: redis_controller   Changed value: framecount = 131
+04.319: INFO: redis_controller   Changed value: framecount = 132
+04.319: INFO: redis_controller   Changed value: framecount = 132
+04.320: INFO: redis_controller   Changed value: framecount = 132
+04.320: INFO: redis_controller   Changed value: framecount = 132
+04.321: INFO: redis_controller   Changed value: framecount = 132
+04.344: INFO: redis_controller   Changed value: framecount = 133
+04.347: INFO: redis_controller   Changed value: framecount = 133
+04.377: INFO: redis_controller   Changed value: framecount = 134
+04.389: INFO: redis_controller   Changed value: framecount = 134
+04.424: INFO: redis_listener     Drop frame flag reset
+04.426: INFO: redis_listener     Drop frame flag reset
+04.449: INFO: redis_listener     Drop frame detected
+04.479: INFO: redis_listener     Drop frame detected
+04.489: INFO: redis_controller   Changed value: framecount = 135
+04.547: INFO: redis_controller   Changed value: framecount = 136
+04.645: INFO: redis_controller   Changed value: framecount = 137
+04.670: INFO: redis_controller   Changed value: framecount = 137
+04.706: INFO: redis_controller   Changed value: framecount = 137
+04.807: INFO: redis_controller   Changed value: framecount = 139
+04.826: INFO: redis_controller   Changed value: framecount = 140
+04.874: INFO: redis_controller   Changed value: framecount = 141
+04.875: INFO: redis_controller   Changed value: framecount = 141
+04.912: INFO: redis_controller   Changed value: framecount = 143
+04.967: INFO: redis_listener     Drop frame flag reset
+04.972: INFO: redis_controller   Changed value: framecount = 144
+04.981: INFO: redis_controller   Changed value: framecount = 144
+04.981: INFO: redis_listener     Drop frame detected
+04.997: INFO: redis_listener     Drop frame flag reset
+04.998: INFO: redis_listener     Drop frame detected
+05.001: INFO: redis_controller   Changed value: framecount = 145
+05.012: INFO: redis_controller   Changed value: framecount = 145
+05.021: INFO: redis_controller   Changed value: framecount = 145
+05.024: INFO: redis_controller   Changed value: framecount = 146
+05.026: INFO: redis_controller   Changed value: framecount = 146
+05.031: INFO: redis_controller   Changed value: framecount = 147
+05.033: INFO: redis_controller   Changed value: framecount = 148
+05.034: INFO: redis_controller   Changed value: framecount = 148
+05.040: INFO: redis_controller   Changed value: framecount = 148
+05.060: INFO: redis_controller   Changed value: framecount = 149
+05.146: INFO: redis_controller   Changed value: framecount = 151
+05.182: INFO: redis_controller   Changed value: framecount = 151
+05.235: INFO: redis_controller   Changed value: framecount = 152
+05.295: INFO: ssd_monitor        Updated space left on SSD: 186.27 GB
+05.323: INFO: redis_controller   Changed value: framecount = 152
+05.409: INFO: redis_controller   Changed value: framecount = 154
+05.434: INFO: redis_controller   Changed value: framecount = 155
+05.486: INFO: redis_controller   Changed value: framecount = 156
+05.505: INFO: redis_listener     Drop frame flag reset
+05.513: INFO: redis_listener     Drop frame detected
+05.512: INFO: redis_listener     Drop frame flag reset
+05.534: INFO: redis_listener     Drop frame detected
+05.538: INFO: redis_controller   Changed value: framecount = 156
+05.577: INFO: redis_controller   Changed value: framecount = 159
+05.645: INFO: redis_controller   Changed value: framecount = 161
+05.681: INFO: redis_controller   Changed value: framecount = 159
+05.688: INFO: redis_controller   Changed value: framecount = 163
+05.695: INFO: redis_controller   Changed value: framecount = 163
+05.696: INFO: redis_controller   Changed value: framecount = 163
+05.697: INFO: redis_controller   Changed value: framecount = 163
+05.703: INFO: redis_controller   Changed value: framecount = 164
+05.711: INFO: redis_controller   Changed value: framecount = 164
+05.716: INFO: redis_controller   Changed value: framecount = 164
+05.723: INFO: redis_controller   Changed value: framecount = 164
+05.738: INFO: redis_controller   Changed value: framecount = 164
+05.783: INFO: redis_controller   Changed value: framecount = 165
+05.807: INFO: redis_controller   Changed value: framecount = 165
+05.905: INFO: redis_controller   Changed value: framecount = 167
+05.919: INFO: redis_controller   Changed value: framecount = 168
+05.990: INFO: redis_controller   Changed value: framecount = 169
+06.031: INFO: redis_listener     Drop frame flag reset
+06.039: INFO: redis_listener     Drop frame detected
+06.044: INFO: redis_listener     Drop frame flag reset
+06.050: INFO: redis_listener     Drop frame detected
+06.060: INFO: redis_controller   Changed value: framecount = 170
+06.084: INFO: redis_controller   Changed value: framecount = 169
+06.124: INFO: redis_controller   Changed value: framecount = 171
+06.127: INFO: redis_controller   Changed value: framecount = 172
+06.128: INFO: redis_controller   Changed value: framecount = 172
+06.129: INFO: redis_controller   Changed value: framecount = 172
+06.129: INFO: redis_controller   Changed value: framecount = 172
+06.130: INFO: redis_controller   Changed value: framecount = 172
+06.131: INFO: redis_controller   Changed value: framecount = 172
+06.132: INFO: redis_controller   Changed value: framecount = 172
+06.134: INFO: redis_controller   Changed value: framecount = 172
+06.149: INFO: redis_controller   Changed value: framecount = 173
+06.149: INFO: redis_controller   Changed value: framecount = 173
+06.150: INFO: redis_controller   Changed value: framecount = 173
+06.151: INFO: redis_controller   Changed value: framecount = 173
+06.151: INFO: redis_controller   Changed value: framecount = 173
+06.152: INFO: redis_controller   Changed value: framecount = 173
+06.156: INFO: redis_controller   Changed value: framecount = 173
+06.158: INFO: redis_controller   Changed value: framecount = 173
+06.158: INFO: redis_controller   Changed value: framecount = 173
+06.159: INFO: redis_controller   Changed value: framecount = 173
+06.162: INFO: redis_controller   Changed value: framecount = 173
+06.163: INFO: redis_controller   Changed value: framecount = 173
+06.165: INFO: redis_controller   Changed value: framecount = 173
+06.167: INFO: redis_controller   Changed value: framecount = 173
+06.168: INFO: redis_controller   Changed value: framecount = 173
+06.172: INFO: redis_controller   Changed value: framecount = 173
+06.175: INFO: redis_controller   Changed value: framecount = 173
+06.177: INFO: redis_controller   Changed value: framecount = 173
+06.201: INFO: redis_controller   Changed value: framecount = 174
+06.224: INFO: redis_controller   Changed value: framecount = 174
+06.285: INFO: redis_controller   Changed value: framecount = 175
+06.308: INFO: ssd_monitor        Updated space left on SSD: 186.02 GB
+06.330: INFO: redis_controller   Changed value: framecount = 176
+06.352: INFO: redis_controller   Changed value: framecount = 175
+06.500: INFO: redis_controller   Changed value: framecount = 176
+06.525: INFO: redis_controller   Changed value: framecount = 176
+06.550: INFO: redis_listener     Drop frame flag reset
+06.557: INFO: redis_controller   Changed value: buffer = 0
+06.561: INFO: redis_listener     Drop frame detected
+06.569: INFO: redis_controller   Changed value: buffer = 0
+06.563: INFO: redis_listener     Drop frame flag reset
+06.605: INFO: redis_listener     Drop frame detected
+06.623: INFO: redis_controller   Changed value: framecount = 178
+06.645: INFO: redis_controller   Changed value: framecount = 179
+06.668: INFO: redis_controller   Changed value: buffer = 0
+06.689: INFO: redis_controller   Changed value: is_buffering = 0
+06.691: INFO: redis_controller   Changed value: buffer = 0
+06.693: INFO: redis_controller   Changed value: framecount = 181
+06.701: INFO: redis_controller   Changed value: framecount = 183
+06.720: INFO: redis_controller   Changed value: is_buffering = 0
+06.769: INFO: redis_controller   Changed value: framecount = 184
+06.794: INFO: redis_controller   Changed value: framecount = 185
+06.809: INFO: redis_controller   Changed value: framecount = 184
+06.951: INFO: redis_controller   Changed value: framecount = 186
+07.024: INFO: redis_controller   Changed value: framecount = 187
+07.081: INFO: redis_listener     Drop frame flag reset
+07.113: INFO: redis_listener     Drop frame flag reset
+07.117: INFO: redis_controller   Changed value: framecount = 189
+07.147: INFO: redis_listener     Drop frame detected
+07.156: INFO: redis_controller   Changed value: framecount = 190
+07.169: INFO: redis_listener     Drop frame detected
+07.178: INFO: redis_controller   Changed value: framecount = 189
+07.209: INFO: redis_controller   Changed value: framecount = 190
+07.236: INFO: redis_controller   Changed value: framecount = 192
+07.286: INFO: redis_controller   Changed value: framecount = 193
+07.293: INFO: redis_controller   Changed value: framecount = 195
+07.295: INFO: redis_controller   Changed value: framecount = 195
+07.317: INFO: redis_controller   Changed value: framecount = 197
+07.321: INFO: redis_controller   Changed value: framecount = 196
+07.322: INFO: ssd_monitor        Updated space left on SSD: 185.76 GB
+07.341: INFO: redis_controller   Changed value: framecount = 198
+07.360: INFO: redis_controller   Changed value: framecount = 199
+07.364: INFO: redis_controller   Changed value: framecount = 198
+07.367: INFO: redis_controller   Changed value: framecount = 198
+07.376: INFO: redis_controller   Changed value: framecount = 199
+07.398: INFO: redis_controller   Changed value: framecount = 200
+07.414: INFO: redis_controller   Changed value: framecount = 200
+07.484: INFO: redis_controller   Changed value: framecount = 202
+07.528: INFO: redis_controller   Changed value: framecount = 203
+07.561: INFO: redis_controller   Changed value: framecount = 203
+07.597: INFO: redis_controller   Changed value: framecount = 204
+07.638: INFO: redis_controller   Changed value: framecount = 205
+07.659: INFO: redis_listener     Drop frame flag reset
+07.682: INFO: redis_listener     Drop frame flag reset
+07.686: INFO: redis_listener     Drop frame detected
+07.687: INFO: redis_listener     Drop frame detected
+07.697: INFO: redis_controller   Changed value: framecount = 204
+07.756: INFO: redis_controller   Changed value: framecount = 205
+07.763: INFO: redis_controller   Changed value: framecount = 207
+07.764: INFO: redis_controller   Changed value: framecount = 206
+07.780: INFO: redis_controller   Changed value: framecount = 207
+07.790: INFO: redis_controller   Changed value: framecount = 208
+07.791: INFO: redis_controller   Changed value: framecount = 208
+07.797: INFO: redis_controller   Changed value: framecount = 208
+07.798: INFO: redis_controller   Changed value: framecount = 208
+07.799: INFO: redis_controller   Changed value: framecount = 208
+07.800: INFO: redis_controller   Changed value: framecount = 208
+07.805: INFO: redis_controller   Changed value: framecount = 208
+07.806: INFO: redis_controller   Changed value: framecount = 208
+07.806: INFO: redis_controller   Changed value: framecount = 208
+07.806: INFO: redis_controller   Changed value: framecount = 208
+07.807: INFO: redis_controller   Changed value: framecount = 208
+07.807: INFO: redis_controller   Changed value: framecount = 208
+07.808: INFO: redis_controller   Changed value: framecount = 208
+07.809: INFO: redis_controller   Changed value: framecount = 208
+07.809: INFO: redis_controller   Changed value: framecount = 208
+07.810: INFO: redis_controller   Changed value: framecount = 208
+07.830: INFO: redis_controller   Changed value: framecount = 209
+07.845: INFO: redis_controller   Changed value: framecount = 209
+07.879: INFO: redis_controller   Changed value: framecount = 210
+07.895: INFO: redis_controller   Changed value: framecount = 211
+07.942: INFO: redis_controller   Changed value: framecount = 212
+07.956: INFO: redis_controller   Changed value: framecount = 212
+07.960: INFO: redis_controller   Changed value: framecount = 212
+07.968: INFO: redis_controller   Changed value: framecount = 212
+07.971: INFO: redis_controller   Changed value: framecount = 212
+07.997: INFO: redis_controller   Changed value: framecount = 212
+08.051: INFO: redis_controller   Changed value: framecount = 213
+08.081: INFO: redis_controller   Changed value: framecount = 215
+08.088: INFO: redis_controller   Changed value: framecount = 215
+08.093: INFO: redis_controller   Changed value: framecount = 215
+08.098: INFO: redis_controller   Changed value: framecount = 215
+08.108: INFO: redis_controller   Changed value: framecount = 215
+08.202: INFO: redis_controller   Changed value: framecount = 216
+08.203: INFO: redis_listener     Drop frame flag reset
+08.213: INFO: redis_listener     Drop frame flag reset
+08.214: INFO: redis_listener     Drop frame detected
+08.235: INFO: redis_listener     Drop frame detected
+08.250: INFO: redis_controller   Changed value: framecount = 217
+08.256: INFO: redis_controller   Changed value: framecount = 217
+08.267: INFO: redis_controller   Changed value: framecount = 218
+08.276: INFO: redis_controller   Changed value: framecount = 218
+08.314: INFO: redis_controller   Changed value: framecount = 219
+08.332: INFO: redis_controller   Changed value: framecount = 220
+08.333: INFO: ssd_monitor        Updated space left on SSD: 185.51 GB
+08.344: INFO: redis_controller   Changed value: framecount = 220
+08.347: INFO: redis_controller   Changed value: framecount = 220
+08.354: INFO: redis_controller   Changed value: framecount = 220
+08.356: INFO: redis_controller   Changed value: framecount = 220
+08.357: INFO: redis_controller   Changed value: framecount = 220
+08.357: INFO: redis_controller   Changed value: framecount = 220
+08.358: INFO: redis_controller   Changed value: framecount = 220
+08.358: INFO: redis_controller   Changed value: framecount = 220
+08.359: INFO: redis_controller   Changed value: framecount = 220
+08.359: INFO: redis_controller   Changed value: framecount = 220
+08.360: INFO: redis_controller   Changed value: framecount = 220
+08.361: INFO: redis_controller   Changed value: framecount = 220
+08.361: INFO: redis_controller   Changed value: framecount = 220
+08.361: INFO: redis_controller   Changed value: framecount = 220
+08.382: INFO: redis_controller   Changed value: framecount = 221
+08.389: INFO: redis_controller   Changed value: framecount = 221
+08.430: INFO: redis_controller   Changed value: framecount = 222
+08.508: INFO: redis_controller   Changed value: framecount = 223
+08.554: INFO: redis_controller   Changed value: framecount = 223
+08.589: INFO: redis_controller   Changed value: framecount = 224
+08.640: INFO: redis_controller   Changed value: framecount = 224
+08.676: INFO: redis_controller   Changed value: framecount = 225
+08.713: INFO: redis_controller   Changed value: framecount = 225
+08.740: INFO: redis_listener     Drop frame flag reset
+08.753: INFO: redis_listener     Drop frame flag reset
+08.800: INFO: redis_listener     Drop frame detected
+08.825: INFO: redis_controller   Changed value: framecount = 226
+08.863: INFO: redis_listener     Drop frame detected
+08.873: INFO: redis_controller   Changed value: framecount = 227
+08.902: INFO: redis_controller   Changed value: framecount = 227
+08.927: INFO: redis_controller   Changed value: framecount = 228
+08.950: INFO: redis_controller   Changed value: framecount = 230
+08.974: INFO: redis_controller   Changed value: framecount = 232
+08.977: INFO: redis_controller   Changed value: framecount = 232
+08.981: INFO: redis_controller   Changed value: framecount = 233
+08.982: INFO: redis_controller   Changed value: framecount = 233
+08.987: INFO: redis_controller   Changed value: framecount = 234
+08.988: INFO: redis_controller   Changed value: framecount = 234
+08.989: INFO: redis_controller   Changed value: framecount = 234
+08.990: INFO: redis_controller   Changed value: framecount = 234
+08.991: INFO: redis_controller   Changed value: framecount = 234
+08.992: INFO: redis_controller   Changed value: framecount = 234
+08.994: INFO: redis_controller   Changed value: framecount = 234
+08.994: INFO: redis_controller   Changed value: framecount = 234
+09.001: INFO: redis_controller   Changed value: framecount = 234
+09.001: INFO: redis_controller   Changed value: framecount = 234
+09.015: INFO: redis_controller   Changed value: framecount = 235
+09.018: INFO: redis_controller   Changed value: framecount = 235
+09.085: INFO: redis_controller   Changed value: framecount = 236
+09.113: INFO: redis_controller   Changed value: framecount = 237
+09.145: INFO: redis_controller   Changed value: framecount = 237
+09.197: INFO: redis_controller   Changed value: framecount = 238
+09.253: INFO: redis_controller   Changed value: framecount = 239
+09.283: INFO: redis_controller   Changed value: framecount = 240
+09.320: INFO: redis_listener     Drop frame flag reset
+09.363: INFO: ssd_monitor        Updated space left on SSD: 185.22 GB
+09.363: INFO: cli_commands       Received: rec
+09.365: INFO: redis_listener     Drop frame detected
+09.366: INFO: cinepi_controller  rec button pushed
+09.366: INFO: redis_controller   Changed value: framecount = 241
+09.373: INFO: redis_listener     Drop frame flag reset
+09.407: INFO: redis_listener     Drop frame detected
+09.421: INFO: cinepi_controller  Stopped recording
+09.424: INFO: redis_listener     Recording stopped at: 2024-10-10 21:31:09.424632
+09.425: INFO: redis_controller   Changed value: framecount = 242
+09.441: INFO: redis_listener     Recording stopped at: 2024-10-10 21:31:09.441169
+09.442: INFO: redis_listener     Recording duration in seconds: 11.236267
+09.467: INFO: redis_listener     Recording duration in seconds: 11.253129
+09.468: INFO: redis_controller   Changed value: framecount = 245
+09.469: INFO: redis_listener     Expected framerate retrieved from Redis: 24.0 FPS
+09.469: INFO: redis_listener     Expected framerate retrieved from Redis: 24.0 FPS
+09.470: INFO: redis_listener     Calculated expected number of frames: 270
+09.470: INFO: redis_listener     Calculated expected number of frames: 269
+09.471: INFO: redis_listener     Actual number of recorded frames: 245
+09.471: INFO: redis_listener     Actual number of recorded frames: 245
+09.472: WARNING: redis_listener     Discrepancy detected: 25 frames difference between expected and recorded counts.
+09.473: INFO: redis_controller   Changed value: framecount = 245
+09.475: WARNING: redis_listener     Discrepancy detected: 24 frames difference between expected and recorded counts.
+09.487: INFO: redis_controller   Changed value: framecount = 245
+09.489: INFO: redis_controller   Changed value: framecount = 245
+09.490: INFO: redis_controller   Changed value: framecount = 245
+09.490: INFO: redis_controller   Changed value: framecount = 245
+09.491: INFO: redis_controller   Changed value: is_recording = 0
+09.491: INFO: redis_controller   Changed value: framecount = 245
+09.491: INFO: redis_controller   Changed value: framecount = 245
+09.492: INFO: redis_controller   Changed value: framecount = 245
+09.492: INFO: redis_controller   Changed value: framecount = 245
+09.492: INFO: redis_controller   Changed value: framecount = 245
+09.493: INFO: redis_controller   Changed value: framecount = 245
+09.880: INFO: redis_listener     Drop frame flag reset
+09.912: INFO: redis_listener     Drop frame flag reset
+09.956: INFO: redis_listener     Drop frame detected
+09.958: INFO: redis_listener     Drop frame detected
+10.365: INFO: ssd_monitor        Updated space left on SSD: 185.20 GB
+10.458: INFO: redis_listener     Drop frame flag reset
+10.459: INFO: redis_listener     Drop frame flag reset
+10.499: INFO: redis_listener     Drop frame detected
+10.507: INFO: redis_listener     Drop frame detected
+11.001: INFO: redis_listener     Drop frame flag reset
+11.004: INFO: redis_listener     Drop frame detected
+11.011: INFO: redis_listener     Drop frame flag reset
+11.075: INFO: redis_listener     Drop frame detected
+11.507: INFO: redis_listener     Drop frame flag reset
+11.525: INFO: redis_listener     Drop frame detected
+11.576: INFO: redis_listener     Drop frame flag reset
+11.622: INFO: redis_listener     Drop frame detected
+12.026: INFO: redis_listener     Drop frame flag reset
+12.027: INFO: redis_listener     Drop frame detected
+12.128: INFO: redis_listener     Drop frame flag reset
+12.197: INFO: redis_listener     Drop frame detected
+12.528: INFO: redis_listener     Drop frame flag reset
+12.539: INFO: redis_listener     Drop frame detected
+12.698: INFO: redis_listener     Drop frame flag reset
+12.755: INFO: redis_listener     Drop frame detected
+13.053: INFO: redis_listener     Drop frame flag reset
+13.062: INFO: redis_listener     Drop frame detected
+13.259: INFO: redis_listener     Drop frame flag reset
+13.314: INFO: redis_listener     Drop frame detected
+13.563: INFO: redis_listener     Drop frame flag reset
+13.570: INFO: redis_listener     Drop frame detected
+13.814: INFO: redis_listener     Drop frame flag reset
+13.816: INFO: redis_listener     Drop frame detected
+14.071: INFO: redis_listener     Drop frame flag reset
+14.081: INFO: redis_listener     Drop frame detected
+14.322: INFO: redis_listener     Drop frame flag reset
+14.330: INFO: redis_listener     Drop frame detected
+14.587: INFO: redis_listener     Drop frame flag reset
+14.593: INFO: redis_listener     Drop frame detected
+14.834: INFO: redis_listener     Drop frame flag reset
+14.861: INFO: redis_listener     Drop frame detected
+15.099: INFO: redis_listener     Drop frame flag reset
+15.107: INFO: redis_listener     Drop frame detected
+15.365: INFO: redis_listener     Drop frame flag reset
+15.423: INFO: redis_listener     Drop frame detected
+15.609: INFO: redis_listener     Drop frame flag reset
+15.613: INFO: redis_listener     Drop frame detected
+15.927: INFO: redis_listener     Drop frame flag reset
+15.980: INFO: redis_listener     Drop frame detected
+16.115: INFO: redis_listener     Drop frame flag reset
+16.118: INFO: redis_listener     Drop frame detected
+16.481: INFO: redis_listener     Drop frame flag reset
+16.527: INFO: redis_listener     Drop frame detected
+16.623: INFO: redis_listener     Drop frame flag reset
+16.651: INFO: redis_listener     Drop frame detected
+17.031: INFO: redis_listener     Drop frame flag reset
+17.049: INFO: redis_listener     Drop frame detected
+17.151: INFO: redis_listener     Drop frame flag reset
+17.209: INFO: redis_listener     Drop frame detected
+17.556: INFO: redis_listener     Drop frame flag reset
+17.563: INFO: redis_listener     Drop frame detected
+17.713: INFO: redis_listener     Drop frame flag reset
+17.764: INFO: redis_listener     Drop frame detected
+18.066: INFO: redis_listener     Drop frame flag reset
+18.066: INFO: redis_listener     Drop frame detected
+18.264: INFO: redis_listener     Drop frame flag reset
+18.271: INFO: redis_listener     Drop frame detected
+18.576: INFO: redis_listener     Drop frame flag reset
+18.647: INFO: redis_listener     Drop frame detected
+18.772: INFO: redis_listener     Drop frame flag reset
+18.843: INFO: redis_listener     Drop frame detected
+19.149: INFO: redis_listener     Drop frame flag reset
+19.191: INFO: redis_listener     Drop frame detected
+19.343: INFO: redis_listener     Drop frame flag reset
+19.355: INFO: redis_listener     Drop frame detected
+19.694: INFO: redis_listener     Drop frame flag reset
+19.711: INFO: redis_listener     Drop frame detected
+19.857: INFO: redis_listener     Drop frame flag reset
+19.870: INFO: redis_listener     Drop frame detected
+20.217: INFO: redis_listener     Drop frame flag reset
+20.219: INFO: redis_listener     Drop frame detected
+20.377: INFO: redis_listener     Drop frame flag reset
+20.436: INFO: redis_listener     Drop frame detected
+20.721: INFO: redis_listener     Drop frame flag reset
+20.725: INFO: redis_listener     Drop frame detected
+20.937: INFO: redis_listener     Drop frame flag reset
+20.980: INFO: redis_listener     Drop frame detected
+21.226: INFO: redis_listener     Drop frame flag reset
+21.251: INFO: redis_listener     Drop frame detected
+21.497: INFO: redis_listener     Drop frame flag reset
+21.561: INFO: redis_listener     Drop frame detected
+21.755: INFO: redis_listener     Drop frame flag reset
+21.798: INFO: redis_listener     Drop frame detected
+22.062: INFO: redis_listener     Drop frame flag reset
+22.109: INFO: redis_listener     Drop frame detected
+22.299: INFO: redis_listener     Drop frame flag reset
+22.316: INFO: redis_listener     Drop frame detected
+22.613: INFO: redis_listener     Drop frame flag reset
+22.617: INFO: redis_listener     Drop frame detected
+22.820: INFO: redis_listener     Drop frame flag reset
+22.892: INFO: redis_listener     Drop frame detected
+23.120: INFO: redis_listener     Drop frame flag reset
+23.134: INFO: redis_listener     Drop frame detected
+23.393: INFO: redis_listener     Drop frame flag reset
+23.435: INFO: redis_listener     Drop frame detected
+23.635: INFO: redis_listener     Drop frame flag reset
+23.639: INFO: redis_listener     Drop frame detected
+23.938: INFO: redis_listener     Drop frame flag reset
+24.019: INFO: redis_listener     Drop frame detected
+24.141: INFO: redis_listener     Drop frame flag reset
+24.144: INFO: redis_listener     Drop frame detected
+24.520: INFO: redis_listener     Drop frame flag reset
+24.575: INFO: redis_listener     Drop frame detected
+24.653: INFO: redis_listener     Drop frame flag reset
+24.678: INFO: redis_listener     Drop frame detected
+25.078: INFO: redis_listener     Drop frame flag reset
+25.142: INFO: redis_listener     Drop frame detected
+25.179: INFO: redis_listener     Drop frame flag reset
+25.183: INFO: redis_listener     Drop frame detected
+25.644: INFO: redis_listener     Drop frame flag reset
+25.687: INFO: redis_listener     Drop frame flag reset
+25.688: INFO: redis_listener     Drop frame detected
+25.691: INFO: redis_listener     Drop frame detected
+26.189: INFO: redis_listener     Drop frame flag reset
+26.193: INFO: redis_listener     Drop frame flag reset
+26.199: INFO: redis_listener     Drop frame detected
+26.201: INFO: redis_listener     Drop frame detected
+26.702: INFO: redis_listener     Drop frame flag reset
+26.704: INFO: redis_listener     Drop frame flag reset
+26.720: INFO: redis_listener     Drop frame detected
+26.721: INFO: redis_listener     Drop frame detected
+27.225: INFO: redis_listener     Drop frame flag reset
+27.225: INFO: redis_listener     Drop frame detected
+27.225: INFO: redis_listener     Drop frame flag reset
+27.238: INFO: redis_listener     Drop frame detected
+27.731: INFO: redis_listener     Drop frame flag reset
+27.741: INFO: redis_listener     Drop frame flag reset
+27.806: INFO: redis_listener     Drop frame detected
+27.808: INFO: redis_listener     Drop frame detected
+28.308: INFO: redis_listener     Drop frame flag reset
+28.309: INFO: redis_listener     Drop frame flag reset
+28.345: INFO: redis_listener     Drop frame detected
+28.355: INFO: redis_listener     Drop frame detected
+28.848: INFO: redis_listener     Drop frame flag reset
+28.857: INFO: redis_listener     Drop frame detected
+28.858: INFO: redis_listener     Drop frame flag reset
+28.864: INFO: redis_listener     Drop frame detected
+29.363: INFO: redis_listener     Drop frame flag reset
+29.364: INFO: redis_listener     Drop frame detected
+29.366: INFO: redis_listener     Drop frame flag reset
+29.366: INFO: redis_listener     Drop frame detected
+29.865: INFO: redis_listener     Drop frame flag reset
+29.867: INFO: redis_listener     Drop frame flag reset
+29.888: INFO: redis_listener     Drop frame detected
+29.895: INFO: redis_listener     Drop frame detected
+30.402: INFO: redis_listener     Drop frame flag reset
+30.402: INFO: redis_listener     Drop frame flag reset
+30.471: INFO: redis_listener     Drop frame detected
+30.473: INFO: redis_listener     Drop frame detected
+30.973: INFO: redis_listener     Drop frame flag reset
+30.974: INFO: redis_listener     Drop frame flag reset
+31.017: INFO: redis_listener     Drop frame detected
+31.018: INFO: redis_listener     Drop frame detected
+31.525: INFO: redis_listener     Drop frame flag reset
+31.525: INFO: redis_listener     Drop frame flag reset
+31.538: INFO: redis_listener     Drop frame detected
+31.542: INFO: redis_listener     Drop frame detected
+32.138: INFO: redis_listener     Drop frame flag reset
+32.138: INFO: redis_listener     Drop frame flag reset
+32.139: INFO: redis_listener     Drop frame detected
+32.142: INFO: redis_listener     Drop frame detected
+32.643: INFO: redis_listener     Drop frame flag reset
+32.643: INFO: redis_listener     Drop frame flag reset
+32.649: INFO: redis_listener     Drop frame detected
+32.714: INFO: redis_listener     Drop frame detected
+33.153: INFO: redis_listener     Drop frame flag reset
+33.167: INFO: redis_listener     Drop frame detected
+33.215: INFO: redis_listener     Drop frame flag reset
+33.257: INFO: redis_listener     Drop frame detected
+33.482: INFO: main               Graceful shutdown initiated.
+33.489: INFO: redis_listener     Recording stopped at: 2024-10-10 21:31:33.489556
+33.489: INFO: redis_listener     Recording stopped at: 2024-10-10 21:31:33.489767
+33.491: INFO: redis_listener     Recording duration in seconds: 35.301516
+33.493: INFO: redis_listener     Recording duration in seconds: 35.301402
+33.501: INFO: redis_controller   Changed value: is_recording = 0
+33.501: INFO: redis_listener     Expected framerate retrieved from Redis: 24.0 FPS
+33.505: INFO: redis_listener     Calculated expected number of frames: 847
+33.506: INFO: redis_listener     Actual number of recorded frames: 245
+33.507: WARNING: redis_listener     Discrepancy detected: 602 frames difference between expected and recorded counts.
+33.510: INFO: redis_listener     Framecount reset to 0.
+33.511: INFO: redis_listener     Expected framerate retrieved from Redis: 24.0 FPS
+33.513: INFO: redis_controller   Changed value: is_writing = 0
+33.513: INFO: redis_listener     Calculated expected number of frames: 847
+33.513: INFO: redis_listener     Actual number of recorded frames: 245
+33.515: INFO: redis_controller   Changed value: shutter_a_nom = 180
+33.515: INFO: PWMcontroller      PWM stopped
+33.515: WARNING: redis_listener     Discrepancy detected: 602 frames difference between expected and recorded counts.
+33.517: INFO: redis_controller   Changed value: cg_rb = 2.5,2.0
+33.518: INFO: PWMcontroller      PWM stopped
+33.529: INFO: redis_controller   Changed value: rec = 0
+33.531: INFO: mediator           Recording stopped!
+33.532: INFO: gpio_output        GPIO 6 set to LOW
+33.534: INFO: gpio_output        GPIO 21 set to LOW
+33.538: INFO: redis_controller   Changed value: framecount = 0
+33.668: INFO: redis_listener     Drop frame flag reset
+33.762: INFO: redis_listener     Drop frame flag reset
+33.780: INFO: main               Graceful shutdown initiated.
+34.050: INFO: main               Graceful shutdown initiated.

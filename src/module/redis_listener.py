@@ -58,7 +58,7 @@ class RedisListener:
         self.fps_adjustment_interval = 1.0  # Adjust every 1 second
         self.last_fps_adjustment_time = datetime.datetime.now()
 
-
+        self.current_framerate = None
         
         self.start_listeners()
 
@@ -92,7 +92,7 @@ class RedisListener:
                         self.frame_count = stats_data.get('frameCount', None)
                         color_temp = stats_data.get('colorTemp', None)
                         sensor_timestamp = stats_data.get('sensorTimestamp', None)
-                        current_framerate = stats_data.get('framerate', None)
+                        self.current_framerate = stats_data.get('framerate', None)
                         
                         if color_temp:
                             self.colorTemp = color_temp
@@ -125,13 +125,13 @@ class RedisListener:
                             self.redis_controller.set_value('is_buffering', new_buffering_status)
 
                         # Add current framerate value to the list
-                        if current_framerate is not None:
-                            self.framerate_values.append(current_framerate)
+                        if self.current_framerate is not None:
+                            self.framerate_values.append(self.current_framerate)
                             
                         # Check for framerate deviation
                         expected_fps = float(self.redis_controller.get_value('fps'))
-                        if current_framerate is not None:
-                            fps_difference = abs(current_framerate - expected_fps)
+                        if self.current_framerate is not None:
+                            fps_difference = abs(self.current_framerate - expected_fps)
                             if fps_difference > 1 and not self.drop_frame:
                                 self.drop_frame = True
                                 logging.info("Drop frame detected")
@@ -143,10 +143,10 @@ class RedisListener:
                                 self.drop_frame_timer.start()
 
                             # Update framecount check interval based on current FPS
-                            if current_framerate == 0 or None:
+                            if self.current_framerate == 0 or None:
                                 framecount_fps = 1
                             else:
-                                framecount_fps = current_framerate 
+                                framecount_fps = self.current_framerate 
                             self.framecount_check_interval = max(0.5, 2 / framecount_fps)
 
                         # Check if framecount is changing

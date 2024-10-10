@@ -95,6 +95,7 @@ class SimpleGUI(threading.Thread):
                 "shutter_speed": {"position": (185, -7), "font_size": 34},
                 "fps_label": {"position": (295, -1), "font_size": 18},
                 "fps": {"position": (335, -7), "font_size": 34},
+                "fps_actual": {"position": (375, -7), "font_size": 34},
                 "sensor": {"position": (435, -1), "font_size": 18, "align": "right", "width": 175},
                 "width": {"position": (620, -7), "font_size": 34},
                 "height": {"position": (720, -7), "font_size": 34},
@@ -129,6 +130,7 @@ class SimpleGUI(threading.Thread):
             "shutter_speed": {"normal": "white", "inverse": "black"},
             "fps_label": {"normal": "grey", "inverse": "black"},
             "fps": {"normal": "white", "inverse": "black"},
+            "fps_actual": {"normal": "grey", "inverse": "black"},
             "exposure_label": {"normal": "grey", "inverse": "black"},
             "exposure_time": {"normal": "white", "inverse": "black"},
             "sensor": {"normal": "grey", "inverse": "black"},
@@ -167,6 +169,7 @@ class SimpleGUI(threading.Thread):
             "shutter_speed": str(self.redis_controller.get_value('shutter_a')).replace('.0', ''),
             "fps_label": "FPS",
             "fps": round(float(self.redis_controller.get_value('fps'))),
+            "fps_actual": ("/ " + str(round(float(self.redis_listener.current_framerate)*1000, 3))) if self.redis_listener.current_framerate is not None else "/ N/A",
             #"sync_effort_level": self.timekeeper.get_effort_level(),
             "exposure_label": "EXP",
             "exposure_time": str(self.cinepi_controller.exposure_time_fractions),
@@ -250,7 +253,7 @@ class SimpleGUI(threading.Thread):
         previous_background_color = self.current_background_color  # Store the previous background color
 
         # Determine background color based on conditions, prioritizing red over green
-        if self.redis_listener.drop_frame == 1 and int(self.redis_controller.get_value('rec')) == 1:
+        if self.redis_listener.drop_frame == 1: # and int(self.redis_controller.get_value('rec')) == 1:
             self.current_background_color = "purple"
             self.color_mode = "inverse"
         

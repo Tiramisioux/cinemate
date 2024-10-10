@@ -15,11 +15,12 @@ class SensorDetect:
             'imx283': {             
                 0: {'aspect': 1.80, 'width': 2736, 'height': 1538, 'bit_depth': 12, 'fps_max': 40, 'gui_layout': 0, 'file_size': 7.1}, # driver fps max 40
                 1: {'aspect': 1.53, 'width': 2736, 'height': 1824, 'bit_depth': 12, 'fps_max': 34, 'gui_layout': 0, 'file_size': 8.2}, # driver fps max 34
-
-                2: {'aspect': 1.52, 'width': 5568, 'height': 3664, 'bit_depth': 10, 'fps_max': 17, 'gui_layout': 0, 'file_size': 31}, # driver fps max 17
-                3: {'aspect': 1.52, 'width': 5568, 'height': 3664, 'bit_depth': 12, 'fps_max': 17, 'gui_layout': 0, 'file_size': 31}, # driver fps max 17
-                4: {'aspect': 1.80, 'width': 5568, 'height': 3094, 'bit_depth': 10, 'fps_max': 21, 'gui_layout': 0, 'file_size': 2}, # driver fps max 21                                      
+                2: {'aspect': 1.77, 'width': 3840, 'height': 2160, 'bit_depth': 10, 'fps_max': 60, 'gui_layout': 0, 'file_size': 8.2}, # driver fps max 21
+                3: {'aspect': 1.52, 'width': 5568, 'height': 3664, 'bit_depth': 10, 'fps_max': 17, 'gui_layout': 0, 'file_size': 31}, # driver fps max 17
+                4: {'aspect': 1.52, 'width': 5568, 'height': 3664, 'bit_depth': 12, 'fps_max': 17, 'gui_layout': 0, 'file_size': 31}, # driver fps max 17
+                5: {'aspect': 1.80, 'width': 5568, 'height': 3094, 'bit_depth': 10, 'fps_max': 21, 'gui_layout': 0, 'file_size': 2}, # driver fps max 21                                      
             },
+
             'imx477': {                                                             
                 0: {'aspect': 1.87, 'width': 2028, 'height': 1080, 'bit_depth': 12, 'fps_max': 50, 'gui_layout': 0, 'file_size': 3.2}, # driver fps max 50
                 1: {'aspect': 1.33, 'width': 2028, 'height': 1520, 'bit_depth': 12, 'fps_max': 40, 'gui_layout': 0, 'file_size': 4.5}, # driver fps max 40

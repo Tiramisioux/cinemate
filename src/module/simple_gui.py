@@ -253,7 +253,7 @@ class SimpleGUI(threading.Thread):
         previous_background_color = self.current_background_color  # Store the previous background color
 
         # Determine background color based on conditions, prioritizing red over green
-        if self.redis_listener.drop_frame == 1: # and int(self.redis_controller.get_value('rec')) == 1:
+        if self.redis_listener.drop_frame == 1 and int(self.redis_controller.get_value('rec')) == 1:
             self.current_background_color = "purple"
             self.color_mode = "inverse"
         

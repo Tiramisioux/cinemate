@@ -148,7 +148,7 @@ class RedisListener:
                             if self.current_framerate == 0 or None:
                                 framecount_fps = 1
                             else:
-                                framecount_fps = self.current_framerate 
+                                framecount_fps = self.current_framerate*1000 
                             self.framecount_check_interval = max(0.5, 2 / framecount_fps)
 
                         # Check if framecount is changing

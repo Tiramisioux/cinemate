@@ -22,7 +22,7 @@ class SensorDetect:
             },
 
             'imx477': {                                                             
-                0: {'aspect': 1.87, 'width': 2028, 'height': 1080, 'bit_depth': 12, 'fps_max': 50, 'gui_layoutset fps 24': 0, 'file_size': 3.2}, # driver fps max 50
+                0: {'aspect': 1.87, 'width': 2028, 'height': 1080, 'bit_depth': 12, 'fps_max': 50, 'gui_layout': 0, 'file_size': 3.2}, # driver fps max 50
                 1: {'aspect': 1.33, 'width': 2028, 'height': 1520, 'bit_depth': 12, 'fps_max': 40, 'gui_layout': 0, 'file_size': 4.5}, # driver fps max 40
                 2: {'aspect': 1.34, 'width': 1332, 'height': 990, 'bit_depth': 10, 'fps_max': 120, 'gui_layout': 0, 'file_size': 2.8}, # driver fps max 120 
             },
@@ -40,8 +40,8 @@ class SensorDetect:
                 #3: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 16, 'fps_max': 21, 'gui_layout': 0, 'file_size': 8},                                      
             },
             'imx585_mono': {             
-                0: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 12, 'fps_max': 51, 'gui_layout': 0, 'file_size': 3.1}, # driver fps max 87
-                1: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 12, 'fps_max': 21, 'gui_layout': 0, 'file_size': 13}, # driver fps max 34
+                0: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 12, 'fps_max': 50, 'gui_layout': 0, 'file_size': 3.1}, # driver fps max 87
+                1: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 12, 'fps_max': 24, 'gui_layout': 0, 'file_size': 13}, # driver fps max 34
                 2: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 16, 'fps_max': 30, 'gui_layout': 0, 'file_size': 13}, # driver fps max 30
 
                 #3: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 16, 'fps_max': 21, 'gui_layout': 0, 'file_size': 8},                                      

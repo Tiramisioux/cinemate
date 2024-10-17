@@ -301,6 +301,8 @@ class CinePiController:
             self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_s)
             
             self.update_fps_and_shutter_angles(safe_value)
+            
+            self.redis_controller.set_value('fps_last', safe_value)
 
     def set_iso_lock(self, value=None):
         if value is not None:

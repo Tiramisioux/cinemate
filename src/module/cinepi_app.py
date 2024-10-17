@@ -75,11 +75,11 @@ class CinePi:
             cg_rb = '2.5,2.2'  # imx477 default for 3200K
 
         args = [
-            '--mode', f"{self.sensor_detect.get_width(sensor_model, sensor_mode)}:{self.sensor_detect.get_height(sensor_model, sensor_mode)}:{self.sensor_detect.get_bit_depth(sensor_model, sensor_mode)}",
+            '--mode', f"{self.sensor_detect.get_width(sensor_model, sensor_mode)}:{self.sensor_detect.get_height(sensor_model, sensor_mode)}:{self.sensor_detect.get_bit_depth(sensor_model, sensor_mode)}:{self.sensor_detect.get_packing(sensor_model, sensor_mode)}",
             '--width', f"{self.sensor_detect.get_width(sensor_model, sensor_mode)}",
             '--height', f"{self.sensor_detect.get_height(sensor_model, sensor_mode)}",
-            '--lores-width', '1920',
-            '--lores-height', '1080',
+            '--lores-width', '1280',
+            '--lores-height', '720',
             '-p', '0,30,1920,1020',
             '--post-process-file', '/home/pi/post-processing.json',
             '--shutter', '20000',

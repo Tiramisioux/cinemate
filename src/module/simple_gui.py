@@ -89,6 +89,7 @@ class SimpleGUI(threading.Thread):
         # Define two layouts
         self.layouts = {
             0: {  # Layout 0
+                # upper row
                 "iso_label": {"position": (10, -1), "font_size": 18},
                 "iso": {"position": (45, -7), "font_size": 34},
                 "shutter_label": {"position": (140, -1), "font_size": 18},
@@ -115,7 +116,9 @@ class SimpleGUI(threading.Thread):
                 "cpu_load": {"position": (1750, -2), "font_size": 26},
                 "cpu_temp_label": {"position": (1810, 0), "font_size": 18},
                 "cpu_temp": {"position": (1860, -2), "font_size": 26},
-                "disk_label": {"position": (10, 1051), "font_size": 18},
+                
+                # lower row
+                "disk_label": {"position": (10, 1059), "font_size": 18},
                 "disk_space": {"position": (65, 1044), "font_size": 34},
                 "frame_count": {"position": (335, 1044), "font_size": 34},
                 "last_dng_added": {"position": (600, 1044), "font_size": 34},

@@ -416,7 +416,7 @@ class CinePiController:
                 
                 self.cinepi.restart()
                 
-                self.set_fps(int(self.redis_controller.get_value('fps_last')))
+                self.set_fps(float(self.redis_controller.get_value('fps_last')))
                 
                 self.file_size = file_size_new
                 
@@ -655,12 +655,20 @@ class CinePiController:
     def initialize_wb_cg_rb_array(self):
         """Initialize the white balance cg_rb array based on the sensor model."""
         if self.current_sensor == 'imx283':
-            default_ct_curve =  [
+            default_ct_curve = [
                     2213.0, 0.9607, 0.2593,
                     2255.0, 0.9309, 0.2521,
                     2259.0, 0.9257, 0.2508,
                     5313.0, 0.4822, 0.5909,
                     6237.0, 0.4726, 0.6376
+                ]
+        if self.current_sensor == 'imx585':
+            default_ct_curve = [
+                    2187.0, 1.1114, 0.1026,
+                    2258.0, 1.1063, 0.1147,
+                    5225.0, 0.6631, 0.5507,
+                    5289.0, 0.5769, 0.5731,
+                    6532.0, 0.5259, 0.5801
                 ]
         else:                
             default_ct_curve = [

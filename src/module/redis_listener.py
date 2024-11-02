@@ -131,7 +131,7 @@ class RedisListener:
                         # Check for framerate deviation
                         expected_fps = float(self.redis_controller.get_value('fps'))
                         if self.current_framerate is not None:
-                            fps_difference = abs((self.current_framerate*1000) - expected_fps)
+                            fps_difference = abs((self.current_framerate) - expected_fps)
                             # print(f"Expected FPS: {expected_fps}, Actual FPS: {self.current_framerate*1000}")
                             # print(f"FPS difference: {fps_difference}")
                             if fps_difference > 1 and not self.drop_frame:
@@ -148,7 +148,7 @@ class RedisListener:
                             if self.current_framerate == 0 or None:
                                 framecount_fps = 1
                             else:
-                                framecount_fps = self.current_framerate*1000 
+                                framecount_fps = self.current_framerate
                             self.framecount_check_interval = max(0.5, 2 / framecount_fps)
 
                         # Check if framecount is changing

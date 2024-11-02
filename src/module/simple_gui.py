@@ -172,7 +172,7 @@ class SimpleGUI(threading.Thread):
             "shutter_speed": str(self.redis_controller.get_value('shutter_a')).replace('.0', ''),
             "fps_label": "FPS",
             "fps": round(float(self.redis_controller.get_value('fps'))),
-            "fps_actual": ("/ " + str(round(float(self.redis_listener.current_framerate)*1000, 3))) if self.redis_listener.current_framerate is not None else "/ N/A",
+            "fps_actual": ("/ " + str(round(float(self.redis_listener.current_framerate), 3))) if self.redis_listener.current_framerate is not None else "/ N/A",
             #"sync_effort_level": self.timekeeper.get_effort_level(),
             "exposure_label": "EXP",
             "exposure_time": str(self.cinepi_controller.exposure_time_fractions),

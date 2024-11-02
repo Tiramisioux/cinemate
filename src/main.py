@@ -323,6 +323,7 @@ if __name__ == "__main__":
 
     logging.info(f"--- initialization complete")
     
+    time.sleep(1)
     redis_controller.set_value('fps', float(redis_controller.get_value('fps_last')))
     
     try:    

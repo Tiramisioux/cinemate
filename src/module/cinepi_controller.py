@@ -431,6 +431,8 @@ class CinePiController:
                 self.update_steps()
                 
                 self.redis_controller.set_value('sensor', self.sensor_detect.camera_model)
+                time.sleep(1)
+                self.redis_controller.set_value('fps', float(self.redis_controller.get_value('fps_last')))
 
             except ValueError as error:
                 logging.error(f"Error setting resolution: {error}")

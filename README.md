@@ -18,7 +18,7 @@ _CineMate is also compatible with [OneInchEye](https://www.tindie.com/products/w
 
 ## Quickstart guide
 
-1) Burn image to ssd card
+1) Burn image to ssd card. 16 GB or larger.
 
 2) Connect Pi and camera sensor board
 

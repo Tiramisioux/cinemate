@@ -38,7 +38,7 @@
     },
     {
       "pin": 5,
-      "pull_up": false,
+      "pull_up": true,
       "debounce_time": 0.1,
       "press_action": {"method": "rec"}
     },

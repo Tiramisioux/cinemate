@@ -28,4 +28,53 @@ pot_fps = Part('Device', 'R_Potentiometer', footprint='Potentiometer', value="10
 switches = {
     "shutter_lock": Part('Device', 'SW_SPST', footprint='Switch'),
     "shutter_sync": Part('Device', 'SW_SPST', footprint='Switch'),
-    "pwm_toggle": Part('Device', 'SW_SPST
+    "pwm_toggle": Part('Device', 'SW_SPST', footprint='Switch')
+}
+
+# Define LED and Resistor
+led_rec = Part('Device', 'LED', footprint='LED')
+resistor = Part('Device', 'R', value='220', footprint='Resistor')
+
+# Connect Buttons to GPIOs
+rpi[4] += buttons["rec"][1]
+buttons["rec"][2] += rpi[39]
+
+rpi[17] += buttons["iso_inc"][1]
+buttons["iso_inc"][2] += rpi[39]
+
+rpi[14] += buttons["iso_dec"][1]
+buttons["iso_dec"][2] += rpi[39]
+
+rpi[12] += buttons["fps_toggle"][1]
+buttons["fps_toggle"][2] += rpi[39]
+
+rpi[26] += buttons["system"][1]
+buttons["system"][2] += rpi[39]
+
+# Connect Rotary Encoders
+rpi[9] += encoders["iso"][1]
+rpi[11] += encoders["iso"][2]
+
+rpi[23] += encoders["shutter"][1]
+rpi[25] += encoders["shutter"][2]
+
+rpi[7] += encoders["fps"][1]
+rpi[8] += encoders["fps"][2]
+
+# Connect Potentiometers for Analog Control
+rpi[1] += pot_iso[1]
+rpi[2] += pot_shutter[1]
+rpi[3] += pot_fps[1]
+
+# Connect Switches
+rpi[24] += switches["shutter_lock"][1]
+rpi[16] += switches["shutter_sync"][1]
+rpi[22] += switches["pwm_toggle"][1]
+
+# Connect Rec Light LED
+rpi[6] += led_rec[1]
+led_rec[2] += resistor[1]
+resistor[2] += rpi[39]
+
+# Generate netlist
+generate_netlist()

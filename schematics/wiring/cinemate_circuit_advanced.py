@@ -1,12 +1,10 @@
 from skidl import *
 
-# Define KiCad Symbol Library Paths Manually (if missing)
-import os
-os.environ["KICAD_SYMBOL_DIR"] = "/usr/share/kicad/symbols"
+# Define a Custom 40-Pin Header Instead of Relying on KiCad Libraries
+rpi = Part('Device', 'J', value="RaspberryPi_40Pin", footprint='Connector_Generic:Conn_02x20')
 
-# Define Raspberry Pi as a generic 40-pin connector
-rpi = Part('Connector_Generic', 'Conn_02x20_Odd_Even', footprint='Connector_Generic:Conn_02x20_Odd_Even')
-
+# Manually Define 40 GPIO Pins for Raspberry Pi
+rpi.pins = [Pin(num=i, name=f"GPIO{i}", func=Pin.BIDIR) for i in range(1, 41)]
 
 # Define Buttons
 buttons = {

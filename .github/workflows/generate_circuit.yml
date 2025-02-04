@@ -13,9 +13,13 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Install Python & SKiDL
+      - name: Install System Dependencies (cairo)
         run: |
           sudo apt update
+          sudo apt install -y libcairo2-dev
+
+      - name: Install Python & SKiDL
+        run: |
           sudo apt install -y python3-pip
           pip3 install skidl pycairo
 

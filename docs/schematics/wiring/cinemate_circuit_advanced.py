@@ -1,11 +1,20 @@
 from skidl import *
-import skidl.libs.default  # Load the default SKiDL library
+
+# Load default KiCad libraries manually
+load_sch_lib("device")  # This tells SKiDL to load its built-in components
 
 # Define a 40-pin Raspberry Pi header manually
-rpi = Part("default", "J", value="RaspberryPi_40Pin", footprint="Connector_Generic:Conn_02x20")
+rpi = Part("device", "J", value="RaspberryPi_40Pin", footprint="Connector_Generic:Conn_02x20")
 
 # Manually define 40 GPIO Pins
 rpi.pins = [Pin(num=i, name=f"GPIO{i}", func=Pin.BIDIR) for i in range(1, 41)]
+
+# Example component connection
+button_rec = Part("device", "SW_Push")
+rpi.pins[4] += button_rec[1]  # Connect button to GPIO4
+button_rec[2] += rpi.pins[39]  # Connect to Ground
+
+# Generate netlist
 
 
 # Define Buttons

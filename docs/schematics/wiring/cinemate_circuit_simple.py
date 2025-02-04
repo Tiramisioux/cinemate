@@ -1,4 +1,4 @@
-from skidl import *
+from skidl import Part, Net, generate_netlist
 
 # Define Components
 rpi = Part('RaspberryPi', 'Raspberry_Pi_4B', footprint='RaspberryPi_40Pin')

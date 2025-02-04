@@ -17,27 +17,18 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y python3-pip
-          pip3 install skidl
-
-      - name: Install KiCad & Libraries
-        run: |
-          sudo apt install -y kicad kicad-symbols kicad-libraries kicad-footprints
-          echo "KICAD_SYMBOL_DIR=/usr/share/kicad/symbols" >> $GITHUB_ENV
+          pip3 install skidl pycairo
 
       - name: Run SKiDL Scripts to Generate Netlists
         run: |
           python3 docs/schematics/wiring/cinemate_circuit_simple.py
           python3 docs/schematics/wiring/cinemate_circuit_advanced.py
 
-
-      - name: Install KiCad CLI (for PNG export)
-        run: |
-          sudo apt install -y kicad
-
       - name: Convert Netlists to PNG
         run: |
-          eeschema-cli --export png docs/schematics/wiring/cinemate_circuit_simple.net -o docs/schematics/wiring/cinemate_circuit_simple.png
-          eeschema-cli --export png docs/schematics/wiring/cinemate_circuit_advanced.net -o docs/schematics/wiring/cinemate_circuit_advanced.png
+          pip3 install netlistsvg
+          netlistsvg docs/schematics/wiring/cinemate_circuit_simple.net -o docs/schematics/wiring/cinemate_circuit_simple.png
+          netlistsvg docs/schematics/wiring/cinemate_circuit_advanced.net -o docs/schematics/wiring/cinemate_circuit_advanced.png
 
       - name: Commit Generated PNGs
         run: |

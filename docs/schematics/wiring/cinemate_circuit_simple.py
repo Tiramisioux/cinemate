@@ -1,7 +1,11 @@
 from skidl import *
 
-# Define Raspberry Pi as a generic 40-pin connector
-rpi = Part('Connector', 'Conn_02x20_Odd_Even', footprint='Connector_Generic:Conn_02x20_Odd_Even')
+class RaspberryPi40Pin(SubCircuit):
+    def __init__(self):
+        super().__init__("RaspberryPi_40Pin")
+        self.pins = [Pin(num=i, name=f"GPIO{i}", func=Pin.BIDIR) for i in range(1, 41)]
+
+rpi = RaspberryPi40Pin()
 
 # Define Buttons
 button_rec = Part('Device', 'SW_Push', footprint='Button')  # Start/Stop Recording

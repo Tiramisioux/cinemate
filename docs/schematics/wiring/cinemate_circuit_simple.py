@@ -2,7 +2,7 @@ from skidl import *
 import os
 
 # Ensure SKiDL can find symbol libraries
-lib_search_paths.append(os.getcwd())
+set_default_path([os.getcwd()])
 
 # Manually define Raspberry Pi 40-pin connector
 rpi = Part("device", "J", value="RaspberryPi_40Pin", footprint="Connector_Generic:Conn_02x20", dest=TEMPLATE)

@@ -1,0 +1,40 @@
+name: Generate Circuit Diagram
+
+on:
+  push:
+    paths:
+      - "cinemate_circuit_simple.py"  # Runs only if this file is modified
+  workflow_dispatch:  # Allows manual execution
+
+jobs:
+  generate-circuit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Install Python & SKiDL
+        run: |
+          sudo apt update
+          sudo apt install -y python3-pip
+          pip3 install skidl
+
+      - name: Run SKiDL Script to Generate Netlist
+        run: |
+          python3 cinemate_circuit_simple.py
+
+      - name: Install KiCad CLI (for PNG export)
+        run: |
+          sudo apt install -y kicad
+          
+      - name: Convert Netlist to PNG
+        run: |
+          eeschema-cli --export png cinemate_circuit_simple.net -o docs/circuit_diagram_simple.png
+
+      - name: Commit Generated PNG
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add docs/circuit_diagram_simple.png
+          git commit -m "Auto-generated circuit diagram simple"
+          git push

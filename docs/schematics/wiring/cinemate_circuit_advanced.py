@@ -1,11 +1,10 @@
 from skidl import *
 
-# Define a 40-pin Raspberry Pi header as a subcircuit
-@SubCircuit
-def RaspberryPi40Pin():
-    return [Pin(num=i, name=f"GPIO{i}", func=Pin.BIDIR) for i in range(1, 41)]
+# Define a 40-pin header manually as a Part, not SubCircuit
+rpi = Part("Device", "J", value="RaspberryPi_40Pin", footprint="Connector_Generic:Conn_02x20")
 
-rpi_pins = RaspberryPi40Pin()
+# Manually add 40 GPIO pins
+rpi.pins = [Pin(num=i, name=f"GPIO{i}", func=Pin.BIDIR) for i in range(1, 41)]
 
 
 # Define Raspberry Pi as a 40-pin connector

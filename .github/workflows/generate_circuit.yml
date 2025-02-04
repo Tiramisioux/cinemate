@@ -1,3 +1,4 @@
+# .github/workflows/generate_circuit.yml
 name: Generate Circuit Diagram
 
 on:

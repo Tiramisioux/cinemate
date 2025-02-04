@@ -5,13 +5,13 @@ import os
 load_backup_lib()  
 
 # Manually define Raspberry Pi 40-pin connector
-rpi = Part("device", "J", value="RaspberryPi_40Pin", footprint="Connector_Generic:Conn_02x20", dest=TEMPLATE)
+rpi = Part("backup", "J", value="RaspberryPi_40Pin", footprint="Connector_Generic:Conn_02x20", dest=TEMPLATE)
 
 # Manually define 40 GPIO Pins
 rpi.pins = [Pin(num=i, name=f"GPIO{i}", func=Pin.BIDIR) for i in range(1, 41)]
                                                                      
 # Example component connection
-button_rec = Part("device", "SW_Push")
+button_rec = Part("backup", "SW_Push")
 rpi.pins[4] += button_rec[1]  # Connect button to GPIO4
 button_rec[2] += rpi.pins[39]  # Connect to Ground
 
@@ -20,35 +20,35 @@ button_rec[2] += rpi.pins[39]  # Connect to Ground
 
 # Define Buttons
 buttons = {
-    "rec": Part('Device', 'SW_Push', footprint='Button'),
-    "iso_inc": Part('Device', 'SW_Push', footprint='Button'),
-    "iso_dec": Part('Device', 'SW_Push', footprint='Button'),
-    "fps_toggle": Part('Device', 'SW_Push', footprint='Button'),
-    "system": Part('Device', 'SW_Push', footprint='Button')
+    "rec": Part('backup', 'SW_Push', footprint='Button'),
+    "iso_inc": Part('backup', 'SW_Push', footprint='Button'),
+    "iso_dec": Part('backup', 'SW_Push', footprint='Button'),
+    "fps_toggle": Part('backup', 'SW_Push', footprint='Button'),
+    "system": Part('backup', 'SW_Push', footprint='Button')
 }
 
 # Define Rotary Encoders
 encoders = {
-    "iso": Part('Device', 'RotaryEncoder', footprint='RotaryEncoder'),
-    "shutter": Part('Device', 'RotaryEncoder', footprint='RotaryEncoder'),
-    "fps": Part('Device', 'RotaryEncoder', footprint='RotaryEncoder')
+    "iso": Part('backup', 'RotaryEncoder', footprint='RotaryEncoder'),
+    "shutter": Part('backup', 'RotaryEncoder', footprint='RotaryEncoder'),
+    "fps": Part('backup', 'RotaryEncoder', footprint='RotaryEncoder')
 }
 
 # Define Potentiometers (Analog Controls)
-pot_iso = Part('Device', 'R_Potentiometer', footprint='Potentiometer', value="10k")
-pot_shutter = Part('Device', 'R_Potentiometer', footprint='Potentiometer', value="10k")
-pot_fps = Part('Device', 'R_Potentiometer', footprint='Potentiometer', value="10k")
+pot_iso = Part('backup', 'R_Potentiometer', footprint='Potentiometer', value="10k")
+pot_shutter = Part('backup', 'R_Potentiometer', footprint='Potentiometer', value="10k")
+pot_fps = Part('backup', 'R_Potentiometer', footprint='Potentiometer', value="10k")
 
 # Define Switches
 switches = {
-    "shutter_lock": Part('Device', 'SW_SPST', footprint='Switch'),
-    "shutter_sync": Part('Device', 'SW_SPST', footprint='Switch'),
-    "pwm_toggle": Part('Device', 'SW_SPST', footprint='Switch')
+    "shutter_lock": Part('backup', 'SW_SPST', footprint='Switch'),
+    "shutter_sync": Part('backup', 'SW_SPST', footprint='Switch'),
+    "pwm_toggle": Part('backup', 'SW_SPST', footprint='Switch')
 }
 
 # Define LED and Resistor
-led_rec = Part('Device', 'LED', footprint='LED')
-resistor = Part('Device', 'R', value='220', footprint='Resistor')
+led_rec = Part('backup', 'LED', footprint='LED')
+resistor = Part('backup', 'R', value='220', footprint='Resistor')
 
 # Connect Buttons to GPIOs
 rpi[4] += buttons["rec"][1]

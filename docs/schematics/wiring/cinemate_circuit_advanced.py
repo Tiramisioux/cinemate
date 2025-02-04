@@ -1,8 +1,8 @@
 from skidl import *
 import os
 
-# Ensure SKiDL can find symbol libraries
-set_default_tool([os.getcwd()])
+# Set SKiDL to use the "SKIDL" tool instead of KiCad
+set_default_tool("SKIDL")
 
 # Manually define Raspberry Pi 40-pin connector
 rpi = Part("device", "J", value="RaspberryPi_40Pin", footprint="Connector_Generic:Conn_02x20", dest=TEMPLATE)

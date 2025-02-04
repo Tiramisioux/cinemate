@@ -19,10 +19,16 @@ jobs:
           sudo apt install -y python3-pip
           pip3 install skidl
 
+      - name: Install KiCad & Libraries
+        run: |
+          sudo apt install -y kicad kicad-symbols kicad-libraries kicad-footprints
+          echo "KICAD_SYMBOL_DIR=/usr/share/kicad/symbols" >> $GITHUB_ENV
+
       - name: Run SKiDL Scripts to Generate Netlists
         run: |
           python3 docs/schematics/wiring/cinemate_circuit_simple.py
           python3 docs/schematics/wiring/cinemate_circuit_advanced.py
+
 
       - name: Install KiCad CLI (for PNG export)
         run: |

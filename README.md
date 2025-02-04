@@ -27,6 +27,9 @@ _CineMate is also compatible with [OneInchEye](https://www.tindie.com/products/w
 
 3) Boot up the Pi. Cinemate should autostart.
 
+![Circuit Diagram](docs/schematics/wiring/circuit_diagram_simple.png)
+
+
 
 ### Connecting to Pi with SSH:
 

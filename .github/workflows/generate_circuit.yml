@@ -22,8 +22,8 @@ jobs:
 
     - name: Install KiCad and Libraries
       run: |
-        sudo add-apt-repository --yes ppa:kicad/kicad-7.0-releases
         sudo apt update
+        sudo apt upgrade -y
         sudo apt install -y kicad kicad-libraries
 
     - name: Set KiCad Environment Variables

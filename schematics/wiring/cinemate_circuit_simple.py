@@ -1,7 +1,12 @@
 from skidl import *
 
+# Define KiCad Symbol Library Paths Manually (if missing)
+import os
+os.environ["KICAD_SYMBOL_DIR"] = "/usr/share/kicad/symbols"
+
 # Define Raspberry Pi as a generic 40-pin connector
-rpi = Part('Connector', 'Conn_02x20_Odd_Even', footprint='Connector_Generic:Conn_02x20_Odd_Even')
+rpi = Part('Connector_Generic', 'Conn_02x20_Odd_Even', footprint='Connector_Generic:Conn_02x20_Odd_Even')
+
 
 # Define Buttons
 button_rec = Part('Device', 'SW_Push', footprint='Button')  # Start/Stop Recording

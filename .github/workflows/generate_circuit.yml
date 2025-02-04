@@ -13,31 +13,29 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Install Python & SKiDL
+      - name: Install Python
         run: |
           sudo apt update
           sudo apt install -y python3-pip
-          pip3 install skidl
+          pip3 install xmltodict
 
-      - name: Install netlistsvg
+      - name: Generate Fritzing Files
         run: |
-          sudo apt install -y npm
-          npm install -g netlistsvg
+          python3 docs/schematics/wiring/generate_fritzing.py
 
-      - name: Run SKiDL Scripts to Generate Netlists
+      - name: Install Fritzing CLI
         run: |
-          python3 docs/schematics/wiring/cinemate_circuit_simple.py
-          python3 docs/schematics/wiring/cinemate_circuit_advanced.py
+          sudo apt install -y fritzing fritzing-parts
 
-      - name: Convert Netlists to SVG
+      - name: Convert Fritzing Files to PNG
         run: |
-          netlistsvg docs/schematics/wiring/cinemate_circuit_simple.net -o docs/schematics/wiring/cinemate_circuit_simple.svg
-          netlistsvg docs/schematics/wiring/cinemate_circuit_advanced.net -o docs/schematics/wiring/cinemate_circuit_advanced.svg
+          fritzing --export png docs/schematics/wiring/cinemate_circuit_simple.fzz --output docs/schematics/wiring/cinemate_circuit_simple.png
+          fritzing --export png docs/schematics/wiring/cinemate_circuit_advanced.fzz --output docs/schematics/wiring/cinemate_circuit_advanced.png
 
-      - name: Commit Generated SVGs
+      - name: Commit Generated Files
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
-          git add docs/schematics/wiring/*.svg
-          git commit -m "Auto-generated circuit schematics using SKiDL and netlistsvg"
+          git add docs/schematics/wiring/*.fzz docs/schematics/wiring/*.png
+          git commit -m "Auto-generated Fritzing files and circuit diagrams"
           git push

@@ -1,7 +1,7 @@
 from skidl import Part, Net, generate_netlist
 
 # Define Components
-rpi = Part('RaspberryPi', 'Raspberry_Pi_4B', footprint='RaspberryPi_40Pin')
+rpi = Part('Raspberry_Pi_4B', footprint='RaspberryPi_40Pin')
 button_rec = Part('Device', 'SW_Push', footprint='Button')
 button_iso_inc = Part('Device', 'SW_Push', footprint='Button')
 button_iso_dec = Part('Device', 'SW_Push', footprint='Button')

@@ -28,6 +28,9 @@ jobs:
 
     - name: Set KiCad Environment Variables
       run: |
+        echo "KICAD8_SYMBOL_DIR=/usr/share/kicad/library" >> $GITHUB_ENV
+        echo "KICAD7_SYMBOL_DIR=/usr/share/kicad/library" >> $GITHUB_ENV
+        echo "KICAD6_SYMBOL_DIR=/usr/share/kicad/library" >> $GITHUB_ENV
         echo "KICAD_SYMBOL_DIR=/usr/share/kicad/library" >> $GITHUB_ENV
 
     - name: Run SKiDL Script to Generate Netlist

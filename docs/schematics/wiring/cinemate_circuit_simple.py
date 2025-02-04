@@ -1,27 +1,25 @@
 from skidl import *
+from custom_lib import rpi_header
 
-# Load backup library (prevents missing component errors)
+# Load backup library
 load_backup_lib()
 
 # Define power and ground
 vcc, gnd = Net("VCC"), Net("GND")
 
-# Create a Raspberry Pi 40-pin header
-rpi = Part("SKiDL", "J", footprint="Connector_Generic:Conn_02x20")
-rpi.ref = "RaspberryPi"
+# Use the custom-defined Raspberry Pi header
+rpi = rpi_header()
 
 # Define a push button
-button = Part("Device", "SW_Push")
-button.ref = "BTN1"
+button = Part("SKiDL", "SW_Push")
 
-# Connect button to Raspberry Pi GPIO4 and GND
-gpio4 = rpi[4]  # Pin 4 is GPIO4
-gpio4 += button[1]
+# Connect button to GPIO4 and GND
+rpi[4] += button[1]
 button[2] += gnd
 
 # Connect power and ground
 rpi[2] += vcc  # Pin 2 is 5V
 rpi[6] += gnd  # Pin 6 is GND
 
-# Generate netlist for netlistsvg
+# Generate netlist
 generate_netlist(file_="docs/schematics/wiring/cinemate_circuit_simple.net")

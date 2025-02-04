@@ -9,32 +9,41 @@ on:
 jobs:
   generate-circuit:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+    - name: Checkout Repository
+      uses: actions/checkout@v3
 
-      - name: Install Python & SKiDL
-        run: |
-          sudo apt update
-          sudo apt install -y python3-pip
-          pip3 install skidl
+    - name: Install Python & SKiDL
+      run: |
+        sudo apt update
+        sudo apt install -y python3-pip
+        pip3 install skidl
 
-      - name: Run SKiDL Script to Generate Netlist
-        run: |
-          python3 docs/schematics/wiring/cinemate_circuit_simple.py
+    - name: Set KiCad Environment Variables
+      run: |
+        echo "KICAD8_SYMBOL_DIR=/path/to/kicad8/symbols" >> $GITHUB_ENV
+        echo "KICAD7_SYMBOL_DIR=/path/to/kicad7/symbols" >> $GITHUB_ENV
+        echo "KICAD6_SYMBOL_DIR=/path/to/kicad6/symbols" >> $GITHUB_ENV
+        echo "KICAD_SYMBOL_DIR=/path/to/kicad/symbols" >> $GITHUB_ENV
+        echo "KICAD_LIBRARY_DIR=/path/to/kicad/library" >> $GITHUB_ENV
 
-      - name: Install KiCad CLI (for PNG export)
-        run: |
-          sudo apt install -y kicad
-          
-      - name: Convert Netlist to PNG
-        run: |
-          eeschema-cli --export png cinemate_circuit_simple.net -o docs/schematics/wiring/circuit_diagram_simple.png
+    - name: Run SKiDL Script to Generate Netlist
+      run: |
+        python3 docs/schematics/wiring/cinemate_circuit_simple.py
 
-      - name: Commit Generated PNG
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-          git add docs/schematics/wiring/circuit_diagram_simple.png
-          git commit -m "Auto-generated circuit diagram simple"
-          git push
+    - name: Install KiCad CLI (for PNG export)
+      run: |
+        sudo apt install -y kicad
+
+    - name: Convert Netlist to PNG
+      run: |
+        eeschema-cli --export png cinemate_circuit_simple.net -o docs/schematics/wiring/circuit_diagram_simple.png
+
+    - name: Commit Generated PNG
+      run: |
+        git config --global user.name "github-actions"
+        git config --global user.email "actions@github.com"
+        git add docs/schematics/wiring/circuit_diagram_simple.png
+        git commit -m "Auto-generated circuit diagram simple"
+        git push

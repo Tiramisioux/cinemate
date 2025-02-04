@@ -1,10 +1,11 @@
 from skidl import *
+import skidl.libs.default  # Load the default SKiDL library
 
-# Define a 40-pin header manually as a Part, not SubCircuit
-rpi = Part("Device", "J", value="RaspberryPi_40Pin", footprint="Connector_Generic:Conn_02x20")
+# Define a 40-pin Raspberry Pi header manually
+rpi = Part("default", "J", value="RaspberryPi_40Pin", footprint="Connector_Generic:Conn_02x20")
 
-# Manually add 40 GPIO pins
-rpi.pins = [Pin(num=i, name=f"GPIO{i}", func=Pin.BIDIR) for i in range(1, 41)]
+# Manually define 40 GPIO Pins
+rpi.pins = [Pin(num=i, name=f"GPIO{i}", func=Pin.BIDIR) for i in range(1, 41
 
 
 

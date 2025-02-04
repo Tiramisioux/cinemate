@@ -1,11 +1,13 @@
 from skidl import *
 
-class RaspberryPi40Pin(SubCircuit):
-    def __init__(self):
-        super().__init__("RaspberryPi_40Pin")
-        self.pins = [Pin(num=i, name=f"GPIO{i}", func=Pin.BIDIR) for i in range(1, 41)]
+# Define a 40-pin Raspberry Pi header as a subcircuit
+@SubCircuit
+def RaspberryPi40Pin():
+    return [Pin(num=i, name=f"GPIO{i}", func=Pin.BIDIR) for i in range(1, 41)]
 
-rpi = RaspberryPi40Pin()
+rpi_pins = RaspberryPi40Pin()
+
+
 
 # Define Buttons
 button_rec = Part('Device', 'SW_Push', footprint='Button')  # Start/Stop Recording

@@ -21,7 +21,7 @@ jobs:
 
       - name: Run SKiDL Script to Generate Netlist
         run: |
-          python3 cinemate_circuit_simple.py
+          python3 docs/schematics/wiring/cinemate_circuit_simple.py
 
       - name: Install KiCad CLI (for PNG export)
         run: |

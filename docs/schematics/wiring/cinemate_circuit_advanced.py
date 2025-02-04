@@ -7,7 +7,7 @@ load_backup_lib()
 vcc, gnd = Net("VCC"), Net("GND")
 
 # Create a Raspberry Pi 40-pin header
-rpi = Part("Device", "J", footprint="Connector_Generic:Conn_02x20")
+rpi = Part("SKiDL", "J", footprint="Connector_Generic:Conn_02x20")
 rpi.ref = "RaspberryPi"
 
 # Define a push button

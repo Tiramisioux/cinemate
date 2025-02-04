@@ -5,7 +5,7 @@ import skidl.libs.default  # Load the default SKiDL library
 rpi = Part("default", "J", value="RaspberryPi_40Pin", footprint="Connector_Generic:Conn_02x20")
 
 # Manually define 40 GPIO Pins
-rpi.pins = [Pin(num=i, name=f"GPIO{i}", func=Pin.BIDIR) for i in range(1, 41
+rpi.pins = [Pin(num=i, name=f"GPIO{i}", func=Pin.BIDIR) for i in range(1, 41)]
 
 
 # Define Buttons

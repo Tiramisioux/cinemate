@@ -12,40 +12,32 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0  # Forces GitHub to pull the latest commit
-
-      - name: Install System Dependencies (cairo)
-        run: |
-          sudo apt update
-          sudo apt install -y libcairo2-dev
 
       - name: Install Python & SKiDL
         run: |
+          sudo apt update
           sudo apt install -y python3-pip
-          pip3 install skidl pycairo
+          pip3 install skidl
 
-      - name: Set KiCad Library Path
-        run: echo "KICAD_SYMBOL_DIR=/usr/share/kicad/symbols" >> $GITHUB_ENV
+      - name: Install netlistsvg
+        run: |
+          sudo apt install -y npm
+          npm install -g netlistsvg
 
       - name: Run SKiDL Scripts to Generate Netlists
         run: |
           python3 docs/schematics/wiring/cinemate_circuit_simple.py
           python3 docs/schematics/wiring/cinemate_circuit_advanced.py
 
-
-        
-
-      - name: Convert Netlists to PNG
+      - name: Convert Netlists to SVG
         run: |
-          pip3 install netlistsvg
-          netlistsvg docs/schematics/wiring/cinemate_circuit_simple.net -o docs/schematics/wiring/cinemate_circuit_simple.png
-          netlistsvg docs/schematics/wiring/cinemate_circuit_advanced.net -o docs/schematics/wiring/cinemate_circuit_advanced.png
+          netlistsvg docs/schematics/wiring/cinemate_circuit_simple.net -o docs/schematics/wiring/cinemate_circuit_simple.svg
+          netlistsvg docs/schematics/wiring/cinemate_circuit_advanced.net -o docs/schematics/wiring/cinemate_circuit_advanced.svg
 
-      - name: Commit Generated PNGs
+      - name: Commit Generated SVGs
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
-          git add docs/schematics/wiring/*.png
-          git commit -m "Auto-generated circuit diagrams"
+          git add docs/schematics/wiring/*.svg
+          git commit -m "Auto-generated circuit schematics using SKiDL and netlistsvg"
           git push

@@ -1,14 +1,15 @@
 from skidl import *
+import os
 
-# Load a backup library if KiCad libraries are missing
-load_backup_lib()
+# Ensure SKiDL can find symbol libraries
+lib_search_path.append(os.getcwd())
 
-# Define a 40-pin Raspberry Pi header manually
-rpi = Part("device", "J", value="RaspberryPi_40Pin", footprint="Connector_Generic:Conn_02x20")
+# Manually define Raspberry Pi 40-pin connector
+rpi = Part("device", "J", value="RaspberryPi_40Pin", footprint="Connector_Generic:Conn_02x20", dest=TEMPLATE)
 
 # Manually define 40 GPIO Pins
 rpi.pins = [Pin(num=i, name=f"GPIO{i}", func=Pin.BIDIR) for i in range(1, 41)]
-
+                                                                     
 # Example component connection
 button_rec = Part("device", "SW_Push")
 rpi.pins[4] += button_rec[1]  # Connect button to GPIO4

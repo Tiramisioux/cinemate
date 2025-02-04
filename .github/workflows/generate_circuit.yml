@@ -25,10 +25,16 @@ jobs:
           sudo apt install -y python3-pip
           pip3 install skidl pycairo
 
+      - name: Set KiCad Library Path
+        run: echo "KICAD_SYMBOL_DIR=/usr/share/kicad/symbols" >> $GITHUB_ENV
+
       - name: Run SKiDL Scripts to Generate Netlists
         run: |
           python3 docs/schematics/wiring/cinemate_circuit_simple.py
           python3 docs/schematics/wiring/cinemate_circuit_advanced.py
+
+
+        
 
       - name: Convert Netlists to PNG
         run: |

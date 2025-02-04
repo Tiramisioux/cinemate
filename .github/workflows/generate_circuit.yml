@@ -1,4 +1,3 @@
-# .github/workflows/generate_circuit.yml
 name: Generate Circuit Diagram
 
 on:
@@ -21,13 +20,15 @@ jobs:
         sudo apt install -y python3-pip
         pip3 install skidl
 
+    - name: Install KiCad and Libraries
+      run: |
+        sudo add-apt-repository --yes ppa:kicad/kicad-6.0-releases
+        sudo apt update
+        sudo apt install -y kicad kicad-libraries
+
     - name: Set KiCad Environment Variables
       run: |
-        echo "KICAD8_SYMBOL_DIR=/path/to/kicad8/symbols" >> $GITHUB_ENV
-        echo "KICAD7_SYMBOL_DIR=/path/to/kicad7/symbols" >> $GITHUB_ENV
-        echo "KICAD6_SYMBOL_DIR=/path/to/kicad6/symbols" >> $GITHUB_ENV
-        echo "KICAD_SYMBOL_DIR=/path/to/kicad/symbols" >> $GITHUB_ENV
-        echo "KICAD_LIBRARY_DIR=/path/to/kicad/library" >> $GITHUB_ENV
+        echo "KICAD_SYMBOL_DIR=/usr/share/kicad/library" >> $GITHUB_ENV
 
     - name: Run SKiDL Script to Generate Netlist
       run: |

@@ -7,9 +7,6 @@ rpi = Part("Device", "J", value="RaspberryPi_40Pin", footprint="Connector_Generi
 rpi.pins = [Pin(num=i, name=f"GPIO{i}", func=Pin.BIDIR) for i in range(1, 41)]
 
 
-# Define Raspberry Pi as a 40-pin connector
-rpi = Part('Connector', 'Conn_02x20_Odd_Even', footprint='Connector_Generic:Conn_02x20_Odd_Even')
-
 # Define Buttons
 buttons = {
     "rec": Part('Device', 'SW_Push', footprint='Button'),

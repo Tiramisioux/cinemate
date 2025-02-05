@@ -25,10 +25,7 @@ _CineMate is also compatible with [OneInchEye](https://www.tindie.com/products/w
 | :exclamation:  When connecting the camera module to the Pi, make sure it is the Pi is not powered. It is not advised to hot-swap the camera cable.   |
 |-----------------------------------------|
 
-3) Boot up the Pi. Cinemate should autostart.
-
-![Circuit Diagram](docs/schematics/wiring/circuit_diagram_simple.png)
-
+3) Boot up the Pi. CineMate should autostart.
 
 
 ### Connecting to Pi with SSH:
@@ -38,11 +35,21 @@ user: pi
 password: 1
 ```
 
-### Starting Cinemate manually
+### Starting CineMate manually
 
-Cinemate autostarts by default. For stopping and starting Cinemate, and enabling and disabling autostart [see this section](https://github.com/Tiramisioux/cinemate/blob/dev-pi5/README.md#cinemate-autostart-on-boot). 
+CineMate autostarts by default. 
 
-For running Cinemate manually from the cli type `cinemate`. This will also display extensive logging which can be useful when configuring and testing buttons and switches.
+To stop an autostarted CineMate instance:
+
+```
+systemctl stop cinemate-autostart
+```
+
+For enabling and disabling autostart [see this section](https://github.com/Tiramisioux/cinemate/blob/dev-pi5/README.md#cinemate-autostart-on-boot).
+
+For running CineMate manually from the cli type `cinemate`. This will also display extensive logging which can be useful when configuring and testing buttons and switches.
+
+
 
 
 ### Adjusting config.txt for different sensors:
@@ -53,7 +60,7 @@ sudo nano /boot/firmware/config.txt
 
 Uncomment the section for the sensor being used, and make sure to comment out the others. Reboot the Pi for changes to take effect.
 
-Cinemate is compatible with Raspberry Pi HQ camera (imx477), Global Shutter camera (imx296), OneInchEye (imx283), StarlightEye (imx585) and Arducam imx519.
+CineMate is compatible with Raspberry Pi HQ camera (imx477), Global Shutter camera (imx296), OneInchEye (imx283), StarlightEye (imx585) and Arducam imx519.
 
 ### External monitoring
 
@@ -70,7 +77,7 @@ External drive should be formatted as ntfs or ext4 and be labeled "RAW".
 
 For starting/stopping recording: 
 - in web browser: tap (or click) the preview screen
-- from CLI (running Cinemate manually): type `rec`
+- from CLI (running CineMate manually): type `rec`
 - via GPIO: attach a momentary switch (or simply short circuit) to GPIO 04 or 05 (can be changed in `home/pi/cinemate/src/settings.json`)
 
 A rec LED light can be connected to GPIO 21.
@@ -94,7 +101,7 @@ CineMate image automatically starts wifi hotspot `Cinepi`, password: `11111111`.
 
 ## CineMate CLI commands
 
-When manually running Cinemate from the CLI you can type simple commands. The table below includes all the available commands (method calls) + arguments for the CineMate CLI. GPIO column shows default settings of `cinemate/src/settings.json` and can be fully customized by the user. Cinemate also listens for commands sent to the Pi via USB serial.
+When manually running CineMate from the CLI you can type simple commands. The table below includes all the available commands (method calls) + arguments for the CineMate CLI. GPIO column shows default settings of `cinemate/src/settings.json` and can be fully customized by the user. CineMate also listens for commands sent to the Pi via USB serial.
 
 | CineMate CLI | Camera function           | arguments                     | GPIO button         | GPIO rotary encoder       |
 | ------------------------------- | ------------------------- | ----------------------------- | ------------------- | ------------------------- |
@@ -327,7 +334,7 @@ For example, based on default settings above:
 |        | 1    | 3856 x 2180  | 1.77         | 12        | 34      | 13             |
 |        | 2    | 1928 x 1090  | 1.77         | 16        | 30      | 13             |
 
-'*' Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames. You can cap Cinemates max fps values for your specific build by editing the file `cinemate/src/module/sensor_detect.py`
+'*' Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames. You can cap CineMates max fps values for your specific build by editing the file `cinemate/src/module/sensor_detect.py`
 
 ## Additional hardware
 
@@ -352,10 +359,10 @@ From my tests I have noticed that changing fps works fine, but sometimes camera 
 To make a compressed image backup of the SD card onto the attached drive:
 
 ```
-sudo dd if=/dev/mmcblk0 bs=1M status=progress | xz -9 -c > /media/RAW/cinepi-sdk-002_cinemate-pi+4_bookworm_image_$(date +%Y-%m-%d_%H-%M-%S).img.xz
+sudo dd if=/dev/mmcblk0 bs=1M status=progress | xz -9 -c > /media/RAW/cinepi-sdk-002_cinemate-pi_4+5_bookworm_image_$(date +%Y-%m-%d_%H-%M-%S).img.xz
 ```
 
-Backing up Cinemate image takes about 30 min.
+Backing up CineMate image takes about 30 min.
 
 ## Notes when using Pi 4
 

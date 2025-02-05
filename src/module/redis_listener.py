@@ -94,6 +94,8 @@ class RedisListener:
                         sensor_timestamp = stats_data.get('sensorTimestamp', None)
                         self.current_framerate = stats_data.get('framerate', None)
                         
+                        self.current_framerate = self.current_framerate * 1000
+                        
                         if color_temp:
                             self.colorTemp = color_temp
 
@@ -235,7 +237,7 @@ class RedisListener:
                 logging.debug(f"Time differences between consecutive frames: {time_diffs}")
                 logging.debug(f"Average time difference: {average_time_diff}")
                 
-                self.current_framerate = 1.0 / average_time_diff if average_time_diff != 0 else 0
+                self.current_framerate = ((1.0 / average_time_diff) * 1000) if average_time_diff != 0 else 0
                 logging.debug(f"Calculated current framerate: {self.current_framerate:.6f} FPS")
             else:
                 logging.warning("Time differences calculation resulted in an empty list.")

@@ -31,12 +31,6 @@
   
   "buttons": [
     {
-      "pin": 4,
-      "pull_up": false,
-      "debounce_time": 0.1,
-      "press_action": {"method": "rec"}
-    },
-    {
       "pin": 5,
       "pull_up": true,
       "debounce_time": 0.1,
@@ -64,26 +58,6 @@
       "hold_action": "None"
     },
     {
-      "pin": 12,
-      "pull_up": "False",
-      "debounce_time": "0.1",
-      "press_action": "None",
-      "single_click_action": {"method": "set_shutter_a_sync_mode"},
-      "double_click_action": "None",
-      "triple_click_action": "None",
-      "hold_action": "None"
-    },
-    {
-      "pin": 1,
-      "pull_up": "False",
-      "debounce_time": "0.1",
-      "press_action": "None",
-      "single_click_action": {"method": "set_fps_double"},
-      "double_click_action": {"method": "set_trigger_mode"},
-      "triple_click_action": "None",
-      "hold_action": "None"
-    },
-    {
       "pin": 13,
       "pull_up": "False",
       "debounce_time": "0.1",
@@ -105,7 +79,7 @@
       }
     },
     {
-      "clk_pin": 24,
+      "clk_pin": 23,
       "dt_pin": 25,
       "encoder_actions": {
         "rotate_clockwise": {"method": "inc_shutter_a_nom", "args": []},
@@ -113,15 +87,15 @@
       }
     },
     {
-      "clk_pin": 0,
-      "dt_pin": 8,
+      "clk_pin": 8,
+      "dt_pin": 7,
       "encoder_actions": {
         "rotate_clockwise": {"method": "inc_fps", "args": []},
         "rotate_counterclockwise": {"method": "dec_fps", "args": []}
       }
     },
     {
-      "clk_pin": 16,
+      "clk_pin": 12,
       "dt_pin": 20,
       "encoder_actions": {
         "rotate_clockwise": {"method": "inc_wb", "args": []},

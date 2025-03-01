@@ -105,27 +105,27 @@ When manually running CineMate from the CLI you can type simple commands. The ta
 
 | CineMate CLI | Camera function           | arguments                     | GPIO button         | GPIO rotary encoder       |
 | ------------------------------- | ------------------------- | ----------------------------- | ------------------- | ------------------------- |
-| `rec`                           | start/stop recording      | None                          | 4, 5                |                           |
+| `rec`                           | start/stop recording      | None                          |  5                |                           |
 | `set iso`                       | set iso                   | integer                       |                     |                           |
 | `inc iso`                       | iso increase              | None                          | 27                  | clk 9, dt 11 (clockwise)  |
 | `dec iso`                       | iso decrease              | None                          | 10                  | clk 9, dt 11 (counter-clockwise) |
 | `set shutter a nom`             | set nominal shutter angle | float                         |                     |                           |
-| `inc shutter a nom`             | nominal shutter angle increase | None                     |                     | clk 24, dt 25 (clockwise) |
-| `dec shutter a nom`             | nominal shutter angle decrease | None                     |                     | clk 24, dt 25 (counter-clockwise) |
+| `inc shutter a nom`             | nominal shutter angle increase | None                     |                     | clk 23, dt 24 (clockwise) |
+| `dec shutter a nom`             | nominal shutter angle decrease | None                     |                     | clk 23, dt 24 (counter-clockwise) |
 | `set fps`                       | set fps                   | float                         |                     |                           |
-| `inc fps`                       | fps increase              | None                          |                     | clk 0, dt 8 (clockwise)   |
-| `dec fps`                       | fps decrease              | None                          |                     | clk 0, dt 8 (counter-clockwise) |
+| `inc fps`                       | fps increase              | None                          |                     | clk 8, dt 7 (clockwise)   |
+| `dec fps`                       | fps decrease              | None                          |                     | clk 8, dt 7 (counter-clockwise) |
 | `set wb`                        | set white balance         | integer                       |                     |                           |
-| `inc wb`                        | white balance increase    | None                          |                     | clk 16, dt 20 (clockwise) |
-| `dec wb`                        | white balance decrease    | None                          |                     | clk 16, dt 20 (counter-clockwise) |
-| `set fps double`                | double fps                | None                          | 1 (single click)    |                           |
-| `set trigger mode`              | set trigger mode          | None                          | 1 (double click) |                   |
+| `inc wb`                        | white balance increase    | None                          |                     | clk 12, dt 20 (clockwise) |
+| `dec wb`                        | white balance decrease    | None                          |                     | clk 12, dt 20 (counter-clockwise) |
+| `set fps double`                | double fps                | None                          | |                           |
+| `set trigger mode`              | set trigger mode          | integer or None (toggles trigger mode                          | 24 |                   |
 | `set resolution`                | change resolution         | integer or None (toggles resolution)  | 13 (single click)   |                           |
 | `restart`                       | restart camera            | None                          | 13 (double click) |                   |
 | `reboot`                        | reboot                    | None                          | 13 (triple click) |                   |
 | `unmount`                       | unmount drive             | None                          | 13 (hold)           |                           |
-| `set all lock`                  | lock all controls         | None                          | 22 (press)          |                           |
-| `set shutter a sync mode`       | set shutter angle sync mode | None                        | 12 (single click)   |                           |
+| `set all lock`                  | lock all controls         | None                          | 22           |                           |
+| `set shutter a sync mode`       | set shutter angle sync mode | None                        | |                           |
 | `set filter`                    | set mechanical IR filter for StarlightEye | integer (0 or 1)                        |    |                           |
 
 

@@ -38,6 +38,12 @@ class CinePi:
             self.default_args = self.get_default_args()
             self.process = None
             
+            # Get sensor resolution
+            self.width = int(self.redis_controller.get_value("width"))
+            logging.info(f'redis width: {self.width}')
+            self.height = int(self.redis_controller.get_value("height"))
+            logging.info(f'redis height: {self.height}')
+            
             # Logging control
             self.log_levels = {
                 'DEBUG': logging.DEBUG,
@@ -61,36 +67,93 @@ class CinePi:
     def get_default_args(self):
         sensor_mode = self.redis_controller.get_value('sensor_mode')
         if sensor_mode is None:
-            # Default to 0 if no value is retrieved
             sensor_mode = '0'
         else:
             sensor_mode = int(sensor_mode)
-            
+        
         self.sensor_detect.detect_camera_model()
         sensor_model = self.sensor_detect.camera_model
         tuning_file_path = f'/home/pi/libcamera/src/ipa/rpi/pisp/data/{sensor_model}.json'
         
         cg_rb = self.redis_controller.get_value('cg_rb')
         if cg_rb is None:
-            cg_rb = '2.5,2.2'  # imx477 default for 3200K
+            cg_rb = '2.5,2.2'  # Default for IMX477 at 3200K
 
+        # Get sensor resolution
+        self.width = int(self.redis_controller.get_value("width"))
+        self.height = int(self.redis_controller.get_value("height"))
+        
+        self.aspect_ratio = self.width / self.height
+        
+        # Calculate lores resolution maintaining aspect ratio
+        lores_height = 720
+        lores_width = int(lores_height * self.aspect_ratio)
+        
+        # Define frame dimensions (user-modifiable)
+        frame_width = 1920  # User can modify this
+        frame_height = 1080  # User can modify this
+        
+        # Define padding values
+        padding_x = 94  # Padding on left and right
+        padding_y = 50  # Padding on top and bottom
+        
+        # Calculate preview window to fit within the frame with padding
+        preview_x, preview_y, preview_w, preview_h = self.calculate_preview_window(self.width, self.height, padding_x, padding_y, frame_width, frame_height)
+        
         args = [
-            '--mode', f"{self.sensor_detect.get_width(sensor_model, sensor_mode)}:{self.sensor_detect.get_height(sensor_model, sensor_mode)}:{self.sensor_detect.get_bit_depth(sensor_model, sensor_mode)}:{self.sensor_detect.get_packing(sensor_model, sensor_mode)}",
-            '--width', f"{self.sensor_detect.get_width(sensor_model, sensor_mode)}",
-            '--height', f"{self.sensor_detect.get_height(sensor_model, sensor_mode)}",
-            '--lores-width', '1280',
-            '--lores-height', '720',
-            '-p', '0,30,1920,1020',
+            '--mode', f"{self.width}:{self.height}:{self.sensor_detect.get_bit_depth(sensor_model, sensor_mode)}:{self.sensor_detect.get_packing(sensor_model, sensor_mode)}",
+            '--width', f"{self.width}",
+            '--height', f"{self.height}",
+            '--lores-width', f"{lores_width}",
+            '--lores-height', f"{lores_height}",
+            '-p', f'{preview_x},{preview_y},{preview_w},{preview_h}',
             '--post-process-file', '/home/pi/post-processing.json',
             '--shutter', '20000',
             '--awbgains', cg_rb,
             '--awb', 'auto',
         ]
-
-        if self.redis_controller.get_value('pi_model') == 'pi5':
-            args.extend(['--tuning-file', tuning_file_path])
-
+        
         return args
+
+
+    def calculate_preview_window(self, width, height, padding_x, padding_y, output_width, output_height):
+        """
+        Calculate the preview window while maintaining the correct aspect ratio.
+
+        - The preview will be centered within the output frame.
+        - The aspect ratio will be preserved.
+        - It ensures the preview is as large as possible within the available area.
+        """
+        # Calculate available space after padding
+        max_width = output_width - (2 * padding_x)
+        max_height = output_height - (2 * padding_y)
+
+        # Calculate aspect ratio
+        aspect_ratio = width / height
+
+        # Scale based on available space while preserving aspect ratio
+        if (max_width / max_height) > aspect_ratio:
+            # Height is the limiting factor
+            preview_h = max_height
+            preview_w = int(preview_h * aspect_ratio)
+        else:
+            # Width is the limiting factor
+            preview_w = max_width
+            preview_h = int(preview_w / aspect_ratio)
+
+        # Ensure preview is centered
+        preview_x = (output_width - preview_w) // 2
+        preview_y = (output_height - preview_h) // 2
+
+        logging.info(f"Corrected Preview Window -> x={preview_x}, y={preview_y}, width={preview_w}, height={preview_h}, aspect_ratio={preview_w / preview_h:.2f}")
+
+        return preview_x, preview_y, preview_w, preview_h
+
+
+
+
+
+
 
     def start_cinepi_process(self, cinepi_args=None):
         if cinepi_args is None:

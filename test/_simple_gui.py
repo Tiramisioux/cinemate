@@ -25,7 +25,7 @@ class SimpleGUI(threading.Thread):
         threading.Thread.__init__(self)
         self.setup_resources()
         self.check_display()
-
+        self.hide_cursor()  # Hide the cursor when initializing the GUI
         self.color_mode = "normal"  # Can be changed to "inverse" as needed
 
         self.redis_controller = redis_controller
@@ -41,29 +41,11 @@ class SimpleGUI(threading.Thread):
         self.socketio = socketio  # Add socketio reference
 
         self.background_color_changed = False
-        
-        # Load sensor values from Redis upon instantiation
-        self.load_sensor_values_from_redis()
 
         self.start()
 
         # Initialize current background color
         self.current_background_color = "black"  # Default background color
-        
-    def load_sensor_values_from_redis(self):
-        """
-        Load current sensor values (width, height, bit depth) from Redis.
-        """
-        try:
-            self.width = int(self.redis_controller.get_value('width') or 1920)
-            self.height = int(self.redis_controller.get_value('height') or 1080)
-            self.bit_depth = int(self.redis_controller.get_value('bit_depth') or 10)
-            #logging.info(f"Loaded sensor values from Redis: width={self.width}, height={self.height}, bit_depth={self.bit_depth}")
-        except ValueError:
-            logging.error("Failed to load sensor values from Redis, using default values.")
-            self.width = 1920
-            self.height = 1080
-            self.bit_depth = 12
 
     # Method to set the current background color
     def set_background_color(self, color):
@@ -102,143 +84,95 @@ class SimpleGUI(threading.Thread):
 
     def setup_resources(self):
         self.current_directory = os.path.dirname(os.path.abspath(__file__))
-        self.regular_font_path = os.path.join(self.current_directory, '../../resources/fonts/DIN2014-Regular.ttf')
-        self.bold_font_path = os.path.join(self.current_directory, '../../resources/fonts/DIN2014-Bold.ttf')  # Add bold font path
         self.font_path = os.path.join(self.current_directory, '../../resources/fonts/DIN2014-Bold.ttf')
 
         # Define two layouts
         self.layouts = {
             0: {  # Layout 0
                 # upper row
-                "fps_label": {"position": (98, 4), "font_size": 30, "font": "regular"},
-                "fps_actual": {"position": (159, 3), "font_size": 41, "font": "bold"},
-                "shutter_label": {"position": (555, 4), "font_size": 30, "font": "regular"},
-                "shutter_speed": {"position": (690, 3), "font_size": 41, "font": "bold"},
-                "iso_label": {"position": (1194, 3), "font_size": 30, "font": "regular"},
-                "iso": {"position": (1232, 4), "font_size": 41, "font": "bold"},
-                "wb_label": {"position": (1641, 4), "font_size": 30, "font": "regular"},
-                "color_temp": {"position": (1695, 3), "font_size": 41, "font": "bold"},
-                "cam": {"position": (21, 97), "font_size": 26, "font": "regular"},
-                "resolution": {"position": (34, 140), "font_size": 20, "font": "bold"},
-                "aspect": {"position": (26, 191), "font_size": 20, "font": "bold", "align": "center"},
-                "raw": {"position": (25, 240), "font_size": 20, "font": "bold"},
-                #"fps": {"position": (375, -7), "font_size": 34},
-                #"sensor": {"position": (435, -1), "font_size": 18, "align": "right", "width": 175},
-                #"width": {"position": (620, -7), "font_size": 34},
-                #"height": {"position": (720, -7), "font_size": 34},
-                #"bit_depth": {"position": (812, -7), "font_size": 34},
-                #"color_temp_libcamera": {"position": (1083, -7), "font_size": 34},                
-                #"exposure_label": {"position": (1280, -1), "font_size": 18},
-                #"exposure_time": {"position": (1320, -7), "font_size": 34},
-                #"pwm_mode": {"position": (1273, -2), "font_size": 26},
-                # NEJ "shutter_a_sync": {"position": (1345, -2), "font_size": 26},
-                # "lock": {"position": (1530, -2), "font_size": 26},
-                # "low_voltage": {"position": (1550, -2), "font_size": 26},
+                "iso_label": {"position": (10, -1), "font_size": 18},
+                "iso": {"position": (45, -2), "font_size": 34},
+                "shutter_label": {"position": (140, -1), "font_size": 18},
+                "shutter_speed": {"position": (185, -7), "font_size": 34},
+                "fps_label": {"position": (295, -1), "font_size": 18},
+                "fps": {"position": (335, -7), "font_size": 34},
+                "fps_actual": {"position": (375, -7), "font_size": 34},
+                "sensor": {"position": (435, -1), "font_size": 18, "align": "right", "width": 175},
+                "width": {"position": (620, -7), "font_size": 34},
+                "height": {"position": (720, -7), "font_size": 34},
+                "bit_depth": {"position": (812, -7), "font_size": 34},
+                "wb_label": {"position": (950, -1), "font_size": 18},
+                "color_temp": {"position": (983, -7), "font_size": 34},
+                "color_temp_libcamera": {"position": (1083, -7), "font_size": 34},                
+                "exposure_label": {"position": (1280, -1), "font_size": 18},
+                "exposure_time": {"position": (1320, -7), "font_size": 34},
+                "pwm_mode": {"position": (1273, -2), "font_size": 26},
+                # "shutter_a_sync": {"position": (1345, -2), "font_size": 26},
+                "lock": {"position": (1530, -2), "font_size": 26},
+                "low_voltage": {"position": (1550, -2), "font_size": 26},
+                "ram_label": {"position": (1600, 0), "font_size": 18},
+                "ram_load": {"position": (1645, -2), "font_size": 26},
+                "cpu_label": {"position": (1710, 0), "font_size": 18},
+                "cpu_load": {"position": (1750, -2), "font_size": 26},
+                "cpu_temp_label": {"position": (1810, 0), "font_size": 18},
+                "cpu_temp": {"position": (1860, -2), "font_size": 26},
                 
                 # lower row
-                "media_label": {"position": (98, 1050), "font_size": 30, "font": "regular"},
-                "disk_space": {"position": (192, 1041), "font_size": 41, "font": "bold"},
-                #"frame_count": {"position": (335, 1044), "font_size": 34},
-                #"last_dng_added": {"position": (600, 1044), "font_size": 34},
-                "battery_level": {"position": (600, 1041), "font_size": 41, "font": "bold"},
-                "cpu_label": {"position": (1260, 1050), "font_size": 30, "font": "regular"},
-                "cpu_load": {"position": (1330, 1041), "font_size": 41, "font": "bold"},
-                "cpu_temp_label": {"position": (1458, 1050), "font_size": 31, "font": "regular"},
-                "cpu_temp": {"position": (1542, 1041), "font_size": 41, "font": "bold"},
-                "ram_label": {"position": (1673, 1050), "font_size": 30, "font": "regular"},
-                "ram_load": {"position": (1741, 1041), "font_size": 41, "font": "bold"},
+                "disk_label": {"position": (10, 1059), "font_size": 18},
+                "disk_space": {"position": (65, 1044), "font_size": 34},
+                "frame_count": {"position": (335, 1044), "font_size": 34},
+                "last_dng_added": {"position": (600, 1044), "font_size": 34},
+                "battery_level": {"position": (1830, 1044), "font_size": 34},
             }
         }
 
         self.colors = {
-            "iso_label": {"normal": (136,136,136), "inverse": "black"},
-            "iso": {"normal": (249,249,249), "inverse": "black"},
-            "shutter_label": {"normal": (136,136,136), "inverse": "black"},
-            "shutter_speed": {"normal": (249,249,249), "inverse": "black"},
-            "fps_label": {"normal": (136,136,136), "inverse": "black"},
-            "fps": {"normal": (249,249,249), "inverse": "black"},
-            "fps_actual": {"normal": (249,249,249), "inverse": "black"},
-            "exposure_label": {"normal": (136,136,136), "inverse": "black"},
-            "exposure_time": {"normal": (249,249,249), "inverse": "black"},
-            "sensor": {"normal": (136,136,136), "inverse": "black"},
-            "height": {"normal": (249,249,249), "inverse": "black"},
-            "width": {"normal": (249,249,249), "inverse": "black"},
-            "bit_depth": {"normal": (249,249,249), "inverse": "black"},
-            "wb_label": {"normal": (136,136,136), "inverse": "black"},
-            "color_temp": {"normal": (249,249,249), "inverse": "black"},
-            "cam": {"normal": (249,249,249), "inverse": "black"},
-            "resolution": {"normal": "black"},
-            "aspect": {"normal": "black"},
-            "raw": {"normal": "black"},
-            "color_temp_libcamera": {"normal": (136,136,136), "inverse": "black"},
-            "pwm_mode": {"normal": (97,171,49), "inverse": "black"},
+            "iso_label": {"normal": "grey", "inverse": "black"},
+            "iso": {"normal": "white", "inverse": "black"},
+            "shutter_label": {"normal": "grey", "inverse": "black"},
+            "shutter_speed": {"normal": "white", "inverse": "black"},
+            "fps_label": {"normal": "grey", "inverse": "black"},
+            "fps": {"normal": "white", "inverse": "black"},
+            "fps_actual": {"normal": "grey", "inverse": "black"},
+            "exposure_label": {"normal": "grey", "inverse": "black"},
+            "exposure_time": {"normal": "white", "inverse": "black"},
+            "sensor": {"normal": "grey", "inverse": "black"},
+            "height": {"normal": "white", "inverse": "black"},
+            "width": {"normal": "white", "inverse": "black"},
+            "bit_depth": {"normal": "white", "inverse": "black"},
+            "wb_label": {"normal": "grey", "inverse": "black"},
+            "color_temp": {"normal": "white", "inverse": "black"},
+            "color_temp_libcamera": {"normal": "grey", "inverse": "black"},
+            "pwm_mode": {"normal": "lightgreen", "inverse": "black"},
             # "shutter_a_sync": {"normal": "white", "inverse": "black"},
             "lock": {"normal": (255, 0, 0, 255), "inverse": "black"},
-            "low_voltage": {"normal": (218,149,77), "inverse": "black"},
-            "ram_label": {"normal": (136,136,136), "inverse": "black"},
-            "ram_load": {"normal": (249,249,249), "inverse": "black"},
-            "cpu_label": {"normal": (136,136,136), "inverse": "black"},
-            "cpu_load": {"normal": (249,249,249), "inverse": "black"},
-            "cpu_temp_label": {"normal": (136,136,136), "inverse": "black"},
-            "cpu_temp": {"normal": (249,249,249), "inverse": "black"},
-            "media_label": {"normal": (136,136,136), "inverse": "black"},            
-            "disk_label": {"normal": (136,136,136), "inverse": "black"},
-            "disk_space": {"normal": (249,249,249), "inverse": "black"},
-            "frame_count": {"normal": (136,136,136), "inverse": "black"},
-            "last_dng_added": {"normal": (249,249,249), "inverse": "black"},
-            "battery_level": {"normal": (249,249,249), "inverse": "black"},
+            "low_voltage": {"normal": "yellow", "inverse": "black"},
+            "ram_label": {"normal": "grey", "inverse": "black"},
+            "ram_load": {"normal": "white", "inverse": "black"},
+            "cpu_label": {"normal": "grey", "inverse": "black"},
+            "cpu_load": {"normal": "white", "inverse": "black"},
+            "cpu_temp_label": {"normal": "grey", "inverse": "black"},
+            "cpu_temp": {"normal": "white", "inverse": "black"},
+            "disk_label": {"normal": "grey", "inverse": "black"},
+            "disk_space": {"normal": "white", "inverse": "black"},
+            "frame_count": {"normal": "white", "inverse": "black"},
+            "last_dng_added": {"normal": "white", "inverse": "black"},
+            "battery_level": {"normal": "white", "inverse": "black"},
         }
 
         self.fb = None
         self.disp_width = self.disp_height = 0
         self.current_layout = 0  # Default layout; can be changed dynamically
 
-    def estimate_resolution_in_k(self):
-        """
-        Estimate the current resolution in K.
-        """
-        try:
-            if self.width >= 3840:
-                resolution_value = "4K"
-            elif self.width >= 2560:
-                resolution_value = "2.5K"
-            elif self.width >= 1920:
-                resolution_value = "2K"
-            elif self.width >= 1280:
-                resolution_value = "1.3K"
-            else:
-                resolution_value = "1K"
-        except (TypeError, ValueError):
-            resolution_value = "N/A"
-        return resolution_value
-
     def populate_values(self):
-
-        width = self.redis_controller.get_value("width")
-
-        self.load_sensor_values_from_redis()
-        resolution_value = self.estimate_resolution_in_k()
-
-        width = self.redis_controller.get_value("width")
-        height = self.redis_controller.get_value("height")
-
-        # Ensure width and height are valid numbers before calculation
-        try:
-            width = int(width)
-            height = int(height)
-            aspect_ratio = round(width / height, 2) if height != 0 else "N/A"
-        except (TypeError, ValueError):
-            aspect_ratio = "N/A"
-        
         values = {
-            "resolution": resolution_value,
-            "iso_label": "EI",
+            "iso_label": "ISO",
             "iso": self.redis_controller.get_value("iso"),
-            "shutter_label": "SHUTTER",
-            "shutter_speed": str(self.redis_controller.get_value('shutter_a')),
+            "shutter_label": "SHU",
+            "shutter_speed": str(self.redis_controller.get_value('shutter_a')).replace('.0', ''),
             "fps_label": "FPS",
             "fps": round(float(self.redis_controller.get_value('fps'))),
-            "fps_actual": (str(round(float(self.redis_listener.current_framerate), 3))) if self.redis_listener.current_framerate is not None else "/ N/A",
+            "fps_actual": ("/ " + str(round(float(self.redis_listener.current_framerate), 3))) if self.redis_listener.current_framerate is not None else "/ N/A",
             #"sync_effort_level": self.timekeeper.get_effort_level(),
             "exposure_label": "EXP",
             "exposure_time": str(self.cinepi_controller.exposure_time_fractions),
@@ -247,18 +181,14 @@ class SimpleGUI(threading.Thread):
             "height": str(self.redis_controller.get_value("height") + " : "),
             "bit_depth": str(self.redis_controller.get_value("bit_depth") + "b"),
             "wb_label": "WB",
-            "color_temp": (str(self.redis_controller.get_value('wb_user')) + " K"),
+            "color_temp": (str(self.redis_controller.get_value('wb_user')) + "K"),
             "color_temp_libcamera": ("/ " + str(self.redis_listener.colorTemp) + "K"),
-            "cam": 'CAM',
-            "aspect": str(aspect_ratio),  # Use computed aspect ratio
-            "raw": 'RAW',
             "ram_label": 'RAM',
             "ram_load": f"{100 - psutil.virtual_memory().available / psutil.virtual_memory().total * 100:.0f}%",
             "cpu_label": 'CPU',
             "cpu_load": str(int(psutil.cpu_percent())) + '%',
             "cpu_temp_label": 'TEMP',
             "cpu_temp": ('{}\u00B0C'.format(int(CPUTemperature().temperature))),
-             "media_label": "MEDIA",
             "disk_label": str(self.ssd_monitor.device_name).upper()[:4] if self.ssd_monitor.device_name else "", #str(self.ssd_monitor.file_system_format).upper() if self.ssd_monitor.file_system_format else "",
         }
 
@@ -375,8 +305,6 @@ class SimpleGUI(threading.Thread):
                 # Log the changed data after emitting changes
                 # logging.info(f"Changed data: {changed_data}")
 
-
-
         # Update previous_values with the current values for the next comparison
         self.previous_values = current_values.copy()
 
@@ -386,72 +314,6 @@ class SimpleGUI(threading.Thread):
         image = Image.new("RGBA", self.fb.size)
         draw = ImageDraw.Draw(image)
         draw.rectangle(((0, 0), self.fb.size), fill=self.current_background_color)
-
-        # Define colors
-        gray_color = (136, 136, 136)
-        black_color = (0, 0, 0)
-        white_color = (249, 249, 249)
-
-        #Resolution box
-        # Draw rectangle (60x40)
-        draw.rectangle([15, 128, 75, 168], fill=gray_color)
-
-        #Aspect ratio box
-        # Outer rectangle (60x40) at position (10,10)
-        draw.rectangle([15, 178, 75, 218], fill=gray_color)
-
-        # Inner rectangle (56x36) inside with a 2px black border
-        draw.rectangle([17, 180, 73, 216], fill=gray_color, outline=black_color, width=2)
-
-        #Raw box
-        # Draw rectangle (60x40)
-        draw.rectangle([15, 228, 75, 268], fill=gray_color)
-        
-        # Get sensor resolution
-        self.width = int(self.redis_controller.get_value("width"))
-        self.height = int(self.redis_controller.get_value("height"))
-        self.aspect_ratio = self.width / self.height
-
-        # Define the HD frame dimensions
-        frame_width = 1920
-        frame_height = 1080
-
-        # Padding values
-        padding_x = 92  # Horizontal padding
-        padding_y = 46  # Vertical padding
-
-        # Calculate the maximum available drawing area within the HD frame
-        max_draw_width = frame_width - (2 * padding_x)
-        max_draw_height = frame_height - (2 * padding_y)
-
-        # Calculate the preview size while maintaining the aspect ratio
-        if self.aspect_ratio >= 1:  # Landscape or square sensor
-            preview_w = max_draw_width
-            preview_h = int(preview_w / self.aspect_ratio)
-            if preview_h > max_draw_height:
-                preview_h = max_draw_height
-                preview_w = int(preview_h * self.aspect_ratio)
-        else:  # Portrait sensor
-            preview_h = max_draw_height
-            preview_w = int(preview_h * self.aspect_ratio)
-            if preview_w > max_draw_width:
-                preview_w = max_draw_width
-                preview_h = int(preview_w / self.aspect_ratio)
-
-        # Center the preview within the HD frame considering padding
-        preview_x = (frame_width - preview_w) // 2
-        preview_y = (frame_height - preview_h) // 2
-
-        if int(self.redis_controller.get_value('rec')) == 1:
-            line_color = (255, 0, 0)  # Red outline
-        else:
-            line_color = (255, 255, 255) # White outline
-
-        draw.rectangle(
-            [preview_x, preview_y, preview_x + preview_w, preview_y + preview_h], 
-            outline=line_color, 
-            width=2
-        )
 
         # Determine the current layout
         gui_layout_key = self.cinepi_controller.gui_layout
@@ -475,13 +337,7 @@ class SimpleGUI(threading.Thread):
                 continue
             position = info["position"]
             font_size = info["font_size"]
-
-            # Select font based on the layout setting (bold or regular)
-            if info["font"] == "bold":
-                font = ImageFont.truetype(os.path.realpath(self.bold_font_path), font_size)
-            else:
-                font = ImageFont.truetype(os.path.realpath(self.regular_font_path), font_size)
-
+            font = ImageFont.truetype(os.path.realpath(self.font_path), font_size)
             value = str(values.get(element, ''))  # Ensure value is a string
             color_mode = self.color_mode
             color = self.colors.get(element, {}).get(color_mode, "white")
@@ -503,10 +359,7 @@ class SimpleGUI(threading.Thread):
             if element == "exposure_time" and self.cinepi_controller.shutter_a_sync_mode == 1:
                 self.draw_rounded_box(draw, value, position, font_size, 5, "black", "white", image)
 
-
-
         self.fb.show(image)
-        
 
         
     def draw_rounded_box(self, draw, text, position, font_size, padding, text_color, fill_color, image, extra_height=-17, reduce_top=12):
@@ -516,7 +369,7 @@ class SimpleGUI(threading.Thread):
         text_height = bbox[3] - bbox[1] + extra_height  # Increase height by extra_height
 
         # Reduce the top padding by reduce_top and increase the bottom by the same amount
-        upper_left = ((position[0] - padding), position[1] - (padding - reduce_top)-6) 
+        upper_left = (position[0] - padding, position[1] - (padding - reduce_top))
         bottom_right = (upper_left[0] + text_width + 2 * padding, upper_left[1] + text_height + 2 * padding + reduce_top)
         radius = 5
         radius_2x = radius * 2
@@ -548,7 +401,6 @@ class SimpleGUI(threading.Thread):
         draw.text(position, text, font=font, fill=text_color)
 
     def run(self):
-        self.hide_cursor()  # Hide the cursor when initializing the GUI
         try:
             while True:
                 values = self.populate_values()

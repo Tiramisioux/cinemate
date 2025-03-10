@@ -887,8 +887,7 @@ class CinePiController:
             self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_seconds)
             logging.info(f"Setting shutter_a to {safe_value} degrees")
             if self.shutter_a_sync_mode:
-                self.adjust_shutter_a_sync(shutter_a=safe_value)
-
+                self.adjust_shutter_a_sync(shutter_a_nom=safe_value)  # Ensure only correct argument is passed
 
     def set_fps_double(self, value=None):
         target_double_state = not self.fps_double if value is None else value in (1, True)

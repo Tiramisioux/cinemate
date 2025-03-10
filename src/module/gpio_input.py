@@ -421,47 +421,87 @@ class SmartButton:
             logging.info(f"Button {self.identifier} individual action ignored. Button {SmartButton._currently_held} is currently held.")
 
 class SimpleSwitch:
-    def __init__(self, cinepi_controller, pin, actions, debounce_time=0.1):
-        self.logger = logging.getLogger(f"SimpleSwitch{pin}")
-        # For an external pull-up resistor and active-low configuration
-        self.switch = Button(pin, pull_up=None, active_state=False, bounce_time=debounce_time)
+    def __init__(self, cinepi_controller, pin, actions, pull_up=True, debounce_time=0.1):
+        """
+        A reliable two-way switch handler with proper startup state detection.
+
+        :param cinepi_controller: The main controller handling actions.
+        :param pin: GPIO pin number for the switch.
+        :param actions: Dictionary containing 'state_on_action' and 'state_off_action'.
+        :param pull_up: Whether to use an internal pull-up resistor (default: True).
+        :param debounce_time: Debounce time in seconds (default: 0.1).
+        """
+        self.logger = logging.getLogger(f"SimpleSwitch[{pin}]")
+        self.cinepi_controller = cinepi_controller
         self.pin = pin
         self.actions = actions
+        self.debounce_time = debounce_time
+        self.state = None  # Track switch state
+        self.lock = threading.Lock()
+
+        # Initialize the switch with gpiozero
+        self.switch = Button(pin, pull_up=pull_up, bounce_time=debounce_time)
+
+        # Delay startup to allow GPIO state stabilization
+        time.sleep(0.5)
+
+        # Detect and apply initial state
+        self.detect_and_apply_initial_state()
+
+        # Attach event handlers **after** detecting the initial state
         self.switch.when_pressed = self.on_switch_on
         self.switch.when_released = self.on_switch_off
-        
-        self.cinepi_controller = cinepi_controller
-        
-        # Check initial state of the switch and perform the connected method
-        if self.switch.is_pressed:
-            self.on_switch_on()
-        else:
-            self.on_switch_off()
 
-    # Assuming action_name is actually a dictionary like {"method": "methodName", "args": ["arg1", "arg2"]}
-    def on_switch_on(self):
-        action = self.actions.get('state_on_action')
+        self.logger.info(f"Initialized SimpleSwitch on pin {pin} (pull_up={pull_up}, debounce={debounce_time}s)")
+
+    def detect_and_apply_initial_state(self):
+        """Detects the switch state at startup and applies the corresponding action."""
+        initial_state = "on" if self.switch.is_pressed else "off"
+
+        self.logger.info(f"Detected initial state: {initial_state} for switch on pin {self.pin}")
+
+        # Only execute the action if the detected state is different from the default (None)
+        if self.state is None or self.state != initial_state:
+            self.state = initial_state
+            if initial_state == "on":
+                self.execute_action(self.actions.get('state_on_action'))
+            else:
+                self.execute_action(self.actions.get('state_off_action'))
+
+    def execute_action(self, action):
+        """Executes the assigned method from cinepi_controller."""
         if action:
             method_name = action.get('method')
             args = action.get('args', [])
-            method = getattr(self.cinepi_controller, method_name, None)
-            if method:
-                method(*args)
-                self.logger.info(f"Two-way switch {self.pin} calling method {method_name}.")
+
+            if method_name:
+                method = getattr(self.cinepi_controller, method_name, None)
+                if method:
+                    try:
+                        method(*args)
+                        self.logger.info(f"Executed action {method_name}({', '.join(map(str, args))})")
+                    except Exception as e:
+                        self.logger.error(f"Error executing {method_name}: {e}")
+                else:
+                    self.logger.error(f"Method {method_name} not found in cinepi_controller.")
             else:
-                self.logger.error(f"Method {method_name} not found in cinepi_controller.")
+                self.logger.warning(f"No method name specified in action {action}")
+
+    def on_switch_on(self):
+        """Handles the event when the switch is turned ON."""
+        with self.lock:
+            if self.state != "on":  # Avoid redundant actions
+                self.state = "on"
+                self.logger.info(f"Switch {self.pin} turned ON")
+                self.execute_action(self.actions.get('state_on_action'))
 
     def on_switch_off(self):
-        action = self.actions.get('state_off_action')
-        if action:
-            method_name = action.get('method')
-            args = action.get('args', [])
-            method = getattr(self.cinepi_controller, method_name, None)
-            if method:
-                method(*args)
-                self.logger.info(f"Two-way switch {self.switch} calling method {method_name} {args}.")
-            else:
-                self.logger.error(f"Method {method_name} not found in cinepi_controller.")
+        """Handles the event when the switch is turned OFF."""
+        with self.lock:
+            if self.state != "off":  # Avoid redundant actions
+                self.state = "off"
+                self.logger.info(f"Switch {self.pin} turned OFF")
+                self.execute_action(self.actions.get('state_off_action'))
                 
 class ThreeWaySwitch:
     def __init__(self, cinepi_controller, pins, actions, debounce_time=0.1):

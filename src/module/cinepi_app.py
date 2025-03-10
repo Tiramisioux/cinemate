@@ -82,24 +82,42 @@ class CinePi:
         # Get sensor resolution
         self.width = int(self.redis_controller.get_value("width"))
         self.height = int(self.redis_controller.get_value("height"))
-        
+
         self.aspect_ratio = self.width / self.height
+
+        self.anamorphic_factor = 1  # 2x anamorphic lens
         
-        # Calculate lores resolution maintaining aspect ratio
-        lores_height = 720
-        lores_width = int(lores_height * self.aspect_ratio)
-        
+        self.redis_controller.set_value('anamorphic_factor', self.anamorphic_factor)
+
         # Define frame dimensions (user-modifiable)
         frame_width = 1920  # User can modify this
         frame_height = 1080  # User can modify this
-        
+
         # Define padding values
         padding_x = 94  # Padding on left and right
         padding_y = 50  # Padding on top and bottom
-        
+
+        # Calculate available space within the preview window
+        available_width = frame_width - (2 * padding_x)
+        available_height = frame_height - (2 * padding_y)
+
+        # Adjust lores resolution with anamorphic factor while maintaining aspect ratio
+        lores_height = min(720, available_height)  # Ensure lores fits within available space
+        lores_width = int((lores_height * self.aspect_ratio) * self.anamorphic_factor)
+
+        # Ensure lores width fits within available space
+        if lores_width > available_width:
+            lores_width = available_width
+            lores_height = int(lores_width / (self.aspect_ratio * self.anamorphic_factor))
+
+        self.redis_controller.set_value('lores_width', lores_width)
+        self.redis_controller.set_value('lores_height', lores_height)
+
         # Calculate preview window to fit within the frame with padding
-        preview_x, preview_y, preview_w, preview_h = self.calculate_preview_window(self.width, self.height, padding_x, padding_y, frame_width, frame_height)
-        
+        preview_x, preview_y, preview_w, preview_h = self.calculate_preview_window(
+            lores_width, lores_height, padding_x, padding_y, frame_width, frame_height
+        )
+
         args = [
             '--mode', f"{self.width}:{self.height}:{self.sensor_detect.get_bit_depth(sensor_model, sensor_mode)}:{self.sensor_detect.get_packing(sensor_model, sensor_mode)}",
             '--width', f"{self.width}",
@@ -112,8 +130,9 @@ class CinePi:
             '--awbgains', cg_rb,
             '--awb', 'auto',
         ]
-        
+
         return args
+
 
 
     def calculate_preview_window(self, width, height, padding_x, padding_y, output_width, output_height):

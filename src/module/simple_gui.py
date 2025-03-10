@@ -129,7 +129,7 @@ class SimpleGUI(threading.Thread):
                 #"bit_depth": {"position": (812, -7), "font_size": 34},
                 #"color_temp_libcamera": {"position": (1083, -7), "font_size": 34},                
                 #"exposure_label": {"position": (1280, -1), "font_size": 18},
-                #"exposure_time": {"position": (1320, -7), "font_size": 34},
+                "exposure_time": {"position": (1852, 140), "font_size": 20, "font": "bold"},
                 #"pwm_mode": {"position": (1273, -2), "font_size": 26},
                 # NEJ "shutter_a_sync": {"position": (1345, -2), "font_size": 26},
                 # "lock": {"position": (1530, -2), "font_size": 26},
@@ -159,7 +159,7 @@ class SimpleGUI(threading.Thread):
             "fps": {"normal": (249,249,249), "inverse": "black"},
             "fps_actual": {"normal": (249,249,249), "inverse": "black"},
             "exposure_label": {"normal": (136,136,136), "inverse": "black"},
-            "exposure_time": {"normal": (249,249,249), "inverse": "black"},
+            "exposure_time": {"normal": "black", "inverse": (249,249,249)},
             "sensor": {"normal": (136,136,136), "inverse": "black"},
             "height": {"normal": (249,249,249), "inverse": "black"},
             "width": {"normal": (249,249,249), "inverse": "black"},
@@ -238,8 +238,7 @@ class SimpleGUI(threading.Thread):
             "shutter_speed": str(self.redis_controller.get_value('shutter_a')),
             "fps_label": "FPS",
             "fps": round(float(self.redis_controller.get_value('fps'))),
-            "fps_actual": (str(round(float(self.redis_listener.current_framerate), 3))) if self.redis_listener.current_framerate is not None else "/ N/A",
-            #"sync_effort_level": self.timekeeper.get_effort_level(),
+            "fps_actual": f"{float(self.redis_listener.current_framerate):.3f}" if self.redis_listener.current_framerate is not None else "/ N/A",
             "exposure_label": "EXP",
             "exposure_time": str(self.cinepi_controller.exposure_time_fractions),
             "sensor": str.upper(self.redis_controller.get_value("sensor")),
@@ -392,6 +391,8 @@ class SimpleGUI(threading.Thread):
         black_color = (0, 0, 0)
         white_color = (249, 249, 249)
 
+
+
         #Resolution box
         # Draw rectangle (60x40)
         draw.rectangle([15, 128, 75, 168], fill=gray_color)
@@ -407,10 +408,36 @@ class SimpleGUI(threading.Thread):
         # Draw rectangle (60x40)
         draw.rectangle([15, 228, 75, 268], fill=gray_color)
         
+        #Right side boxes
+        
+        
+        #Shutter sync box
+        # Draw rectangle (60x40)
+        if self.cinepi_controller.shutter_a_sync_mode == 1:
+            draw.rectangle([1845, 128, 1905, 168], fill=white_color)
+        else:
+            draw.rectangle([1845, 128, 1905, 168], fill=gray_color)
+            
+        # #Shutter speed box
+        # # Draw rectangle (60x40)
+        # draw.rectangle([1845, 178, 1905, 218], fill=gray_color)
+        
+        # #Low voltage box
+        # # Draw rectangle (60x40)
+        # draw.rectangle([1845, 228, 1905, 268], fill=gray_color)
+        
+        
         # Get sensor resolution
         self.width = int(self.redis_controller.get_value("width"))
         self.height = int(self.redis_controller.get_value("height"))
         self.aspect_ratio = self.width / self.height
+
+        # Get anamorphic factor from Redis
+        self.anamorphic_factor = float(self.redis_controller.get_value('anamorphic_factor'))
+
+        # Get lores resolution from Redis
+        lores_width = int(self.redis_controller.get_value("lores_width"))
+        lores_height = int(self.redis_controller.get_value("lores_height"))
 
         # Define the HD frame dimensions
         frame_width = 1920
@@ -424,34 +451,43 @@ class SimpleGUI(threading.Thread):
         max_draw_width = frame_width - (2 * padding_x)
         max_draw_height = frame_height - (2 * padding_y)
 
-        # Calculate the preview size while maintaining the aspect ratio
-        if self.aspect_ratio >= 1:  # Landscape or square sensor
+        # **Fix: Adjust height instead of shrinking it**
+        adjusted_lores_width = lores_width * self.anamorphic_factor  # Stretched width
+        adjusted_lores_height = lores_height * self.anamorphic_factor  # Stretched height
+        adjusted_aspect_ratio = adjusted_lores_width / adjusted_lores_height  # Corrected aspect ratio
+
+
+        # Calculate the preview size while maintaining the adjusted aspect ratio
+        if adjusted_aspect_ratio >= 1:  # Landscape or square sensor
             preview_w = max_draw_width
-            preview_h = int(preview_w / self.aspect_ratio)
+            preview_h = int(preview_w / adjusted_aspect_ratio)
             if preview_h > max_draw_height:
                 preview_h = max_draw_height
-                preview_w = int(preview_h * self.aspect_ratio)
+                preview_w = int(preview_h * adjusted_aspect_ratio)
         else:  # Portrait sensor
             preview_h = max_draw_height
-            preview_w = int(preview_h * self.aspect_ratio)
+            preview_w = int(preview_h * adjusted_aspect_ratio)
             if preview_w > max_draw_width:
                 preview_w = max_draw_width
-                preview_h = int(preview_w / self.aspect_ratio)
+                preview_h = int(preview_w / adjusted_aspect_ratio)
 
         # Center the preview within the HD frame considering padding
         preview_x = (frame_width - preview_w) // 2
         preview_y = (frame_height - preview_h) // 2
 
+        # Determine outline color based on recording state
         if int(self.redis_controller.get_value('rec')) == 1:
-            line_color = (255, 0, 0)  # Red outline
+            line_color = (255, 0, 0)  # Red outline (Recording)
         else:
-            line_color = (255, 255, 255) # White outline
+            line_color = (249, 249, 249)  # White outline (Idle)
 
+        # Draw the preview outline
         draw.rectangle(
             [preview_x, preview_y, preview_x + preview_w, preview_y + preview_h], 
             outline=line_color, 
             width=2
         )
+
 
         # Determine the current layout
         gui_layout_key = self.cinepi_controller.gui_layout
@@ -465,7 +501,7 @@ class SimpleGUI(threading.Thread):
         lock_mapping = {
             "iso": "iso_lock",
             "shutter_speed": "shutter_a_nom_lock",
-            "fps": "fps_lock",
+            "fps_actual": "fps_lock",
             "exposure_time": "shutter_a_sync"
         }
 

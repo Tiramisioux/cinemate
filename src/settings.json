@@ -16,10 +16,10 @@
   },
   
   "analog_controls": {
-    "iso_pot": "None",
-    "shutter_a_pot": "None",
-    "fps_pot": "None",
-    "wb_pot": "None"
+    "iso_pot": 0,
+    "shutter_a_pot": 2,
+    "fps_pot": 4,
+    "wb_pot": 6
   },
   
   "free_mode": {
@@ -29,7 +29,7 @@
     "wb_free": false
   },
   
-  "buttons": [
+"buttons": [
     {
       "pin": 5,
       "pull_up": true,
@@ -37,7 +37,7 @@
       "press_action": {"method": "rec"}
     },
     {
-      "pin": 27,
+      "pin": 13,
       "pull_up": false,
       "debounce_time": 0.1,
       "press_action": {"method": "inc_iso"}
@@ -49,16 +49,16 @@
       "press_action": {"method": "dec_iso"}
     },
     {
-      "pin": 22,
+      "pin": 16,
       "pull_up": "False",
       "debounce_time": "0.1",
-      "press_action": {"method": "set_all_lock"},
+      "press_action": {"method": "set_fps_double"},
       "single_click_action": "None",
       "double_click_action": "None",
       "hold_action": "None"
     },
     {
-      "pin": 13,
+      "pin": 26,
       "pull_up": "False",
       "debounce_time": "0.1",
       "press_action": "None",
@@ -66,6 +66,19 @@
       "double_click_action": {"method": "restart_camera"},
       "triple_click_action": {"method": "reboot"},
       "hold_action": {"method": "unmount"}
+    }
+  ],
+
+  "two_way_switches": [
+    {
+      "pin": 27,
+      "state_on_action": {"method": "set_all_lock", "args": [0]},
+      "state_off_action": {"method": "set_all_lock", "args": [1]}
+    },
+    {
+      "pin": 22,
+      "state_on_action": {"method": "set_shutter_a_sync_mode", "args": [0]},
+      "state_off_action": {"method": "set_shutter_a_sync_mode", "args": [1]}
     }
   ],
   
@@ -111,4 +124,3 @@
     "3": {"setting_name": "wb", "gpio_pin": 13}
   }
 }
-  

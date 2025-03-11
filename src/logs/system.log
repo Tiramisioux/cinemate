@@ -1,782 +1,283 @@
-31.328: INFO: main               Contents of /home/pi/cinemate/src/logs/system.log have been erased.
-31.328: INFO: main               Contents of /home/pi/cinemate/src/logs/cinemate-service.log have been erased.
-31.328: INFO: main               Contents of /home/pi/cinemate/src/logs/cinemate-service-error.log have been erased.
-31.343: INFO: wifi_hotspot       WiFi hotspot is already active. Skipping creation.
-31.351: INFO: redis_controller   Initializing cache with Redis values...
-31.354: INFO: PWMcontroller      Initializing PWM on pin 19 (channel 3) with frequency 24Hz and chip 2
-31.354: INFO: redis_controller   Changed value: pi_model = pi5
-31.354: INFO: PWMcontroller      PWM successfully initialized on pin 19 (channel 3) with frequency 24Hz
-31.354: INFO: PWMcontroller      Updating PWM with cycles=1
-31.375: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
-31.635: INFO: sensor_detect      cinepi-raw output: Available cameras
+15.594: INFO: main               Contents of /home/pi/cinemate/src/logs/system.log have been erased.
+15.594: INFO: main               Contents of /home/pi/cinemate/src/logs/cinemate-service.log have been erased.
+15.594: INFO: main               Contents of /home/pi/cinemate/src/logs/cinemate-service-error.log have been erased.
+16.079: INFO: wifi_hotspot       Wi-Fi hotspot 'CinePi' created successfully with password '11111111' on interface 'wlan0'.
+16.108: INFO: redis_controller   Initializing cache with Redis values...
+16.110: INFO: PWMcontroller      Initializing PWM on pin 19 (channel 3) with frequency 24Hz and chip 2
+16.110: INFO: redis_controller   Changed value: pi_model = pi5
+16.113: INFO: PWMcontroller      PWM successfully initialized on pin 19 (channel 3) with frequency 24Hz
+16.114: INFO: PWMcontroller      Updating PWM with cycles=1
+16.125: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
+38.153: INFO: sensor_detect      cinepi-raw output: Available cameras
 -----------------
-0 : imx585 [3840x2160 MONO] (/base/axi/pcie@120000/rp1/i2c@80000/imx585@1A)
-    Modes: 'R12_CSI2P' : 1928x1090 [90.17 fps - (0, 0)/3840x2160 crop]
-                         3856x2180 [60.00 fps - (0, 0)/3840x2160 crop]
-           'R16' : 1928x1090 [30.00 fps - (0, 0)/3840x2160 crop]
-                   3856x2180 [30.00 fps - (0, 0)/3840x2160 crop]
+0 : imx477 [4056x3040 12-bit RGGB] (/base/axi/pcie@120000/rp1/i2c@80000/imx477@1a)
+    Modes: 'SRGGB10_CSI2P' : 1332x990 [120.05 fps - (696, 528)/2664x1980 crop]
+           'SRGGB12_CSI2P' : 2028x1080 [50.03 fps - (0, 440)/4056x2160 crop]
+                             2028x1520 [40.01 fps - (0, 0)/4056x3040 crop]
+                             4056x3040 [10.00 fps - (0, 0)/4056x3040 crop]
 
 
-31.635: INFO: sensor_detect      Detected camera model: imx585_mono
-31.636: WARNING: sensor_detect      cinepi-raw command exited with non-zero status: 134
-31.636: WARNING: sensor_detect      stderr: terminate called after throwing an instance of 'std::system_error'
+38.153: INFO: sensor_detect      Detected camera model: imx477
+38.154: WARNING: sensor_detect      cinepi-raw command exited with non-zero status: 134
+38.154: WARNING: sensor_detect      stderr: terminate called after throwing an instance of 'std::system_error'
   what():  Invalid argument
 Aborted
 
-31.895: INFO: sensor_detect      cinepi-raw output: Available cameras
+38.419: INFO: sensor_detect      cinepi-raw output: Available cameras
 -----------------
-0 : imx585 [3840x2160 MONO] (/base/axi/pcie@120000/rp1/i2c@80000/imx585@1A)
-    Modes: 'R12_CSI2P' : 1928x1090 [90.17 fps - (0, 0)/3840x2160 crop]
-                         3856x2180 [60.00 fps - (0, 0)/3840x2160 crop]
-           'R16' : 1928x1090 [30.00 fps - (0, 0)/3840x2160 crop]
-                   3856x2180 [30.00 fps - (0, 0)/3840x2160 crop]
+0 : imx477 [4056x3040 12-bit RGGB] (/base/axi/pcie@120000/rp1/i2c@80000/imx477@1a)
+    Modes: 'SRGGB10_CSI2P' : 1332x990 [120.05 fps - (696, 528)/2664x1980 crop]
+           'SRGGB12_CSI2P' : 2028x1080 [50.03 fps - (0, 440)/4056x2160 crop]
+                             2028x1520 [40.01 fps - (0, 0)/4056x3040 crop]
+                             4056x3040 [10.00 fps - (0, 0)/4056x3040 crop]
 
 
-31.895: INFO: sensor_detect      Detected camera model: imx585_mono
-31.895: WARNING: sensor_detect      cinepi-raw command exited with non-zero status: 134
-31.895: WARNING: sensor_detect      stderr: terminate called after throwing an instance of 'std::system_error'
+38.419: INFO: sensor_detect      Detected camera model: imx477
+38.419: WARNING: sensor_detect      cinepi-raw command exited with non-zero status: 134
+38.419: WARNING: sensor_detect      stderr: terminate called after throwing an instance of 'std::system_error'
   what():  Invalid argument
 Aborted
 
-31.896: INFO: cinepi_app         Corrected Preview Window -> x=94, y=50, width=1732, height=979, aspect_ratio=1.77
-31.896: INFO: cinepi_app         redis width: 1928
-31.896: INFO: redis_controller   Changed value: anamorphic_factor = 1
-31.897: INFO: cinepi_app         redis height: 1090
-31.897: INFO: cinepi_app         CinePi instantiated
-31.897: INFO: redis_controller   Changed value: lores_width = 1273
-31.897: INFO: cinepi_app         Log level set to INFO
-31.898: INFO: cinepi_app         Active filters set to: 
-31.898: INFO: redis_controller   Changed value: lores_height = 720
-31.898: INFO: ssd_monitor        SSD monitoring thread started.
-31.901: INFO: ssd_monitor        RAW drive mounted at /media/RAW
-31.901: INFO: ssd_monitor        Updated space left on SSD: 107.65 GB
-31.902: INFO: gpio_output        REC light instantiated on pin 6
-31.902: INFO: gpio_output        REC light instantiated on pin 21
-31.905: INFO: redis_controller   Changed value: framecount = 0
-31.905: INFO: redis_controller   Changed value: rec = 0
-31.907: INFO: redis_controller   Changed value: sensor = imx585_mono
-31.908: INFO: cinepi_controller  Settings loaded successfully.
-31.908: INFO: redis_controller   Changed value: fps_max = 50
-31.908: INFO: cinepi_controller  Initialized fps_steps: [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50]
-31.909: INFO: cinepi_controller  Initialized shutter_a_steps: [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
-31.909: INFO: cinepi_controller  Loading tuning file from: /home/pi/cinemate/resources/tuning_files/imx585_mono.json
-31.909: INFO: redis_controller   Changed value: fps_max = 50
-31.910: INFO: cinepi_controller  Tuning data loaded successfully.
-31.910: WARNING: cinepi_controller  'rpi.awb' algorithm data not found, using default ct_curve.
-31.910: INFO: cinepi_controller  Parsed temperatures: [2000.0, 2200.0, 2400.0, 2600.0, 2800.0, 3000.0, 3200.0, 3400.0, 3600.0, 4100.0, 4600.0, 5100.0, 5600.0, 6100.0, 6600.0, 7100.0, 7600.0, 8100.0, 8600.0]
-31.910: INFO: cinepi_controller  Parsed r_values: [0.6331025775790707, 0.5696117366212947, 0.5204264653110015, 0.48148675531667223, 0.450085403501908, 0.42436130159169017, 0.40300023695527337, 0.3850520052612984, 0.36981508088230314, 0.333468007836758, 0.31196097364221376, 0.2961860409294588, 0.2842607232745885, 0.2750265787051251, 0.2677057225584924, 0.2617955199757274, 0.25693714288250125, 0.25287531441063316, 0.24946601483331993]
-31.910: INFO: cinepi_controller  Parsed b_values: [0.27424225990946915, 0.3116091368689487, 0.34892179554105873, 0.38565229719076793, 0.42145684622485047, 0.45611835670028816, 0.48950766215198593, 0.5215567075837261, 0.5522397906415475, 0.5909770465167908, 0.6515706327327178, 0.7068178946570284, 0.7564837749584288, 0.8006183524920533, 0.8398879225373039, 0.8746456080032436, 0.905569559506562, 0.9331696750390895, 0.9576820904825795]
-31.910: INFO: cinepi_controller  Interpolating for wb step: 3200K, lower index: 6, upper index: 6
-31.910: INFO: cinepi_controller  Exact match found at index 6, r_interp: 0.40300023695527337, b_interp: 0.48950766215198593
-31.910: INFO: cinepi_controller  Calculated reciprocal cg_rb for 3200K: (2.5, 2.0)
-31.911: INFO: cinepi_controller  Interpolating for wb step: 4400K, lower index: 9, upper index: 10
-31.911: INFO: cinepi_controller  Interpolated values for 4400K - r_interp: 0.32056378732003143, b_interp: 0.627333198246347
-31.911: INFO: cinepi_controller  Calculated reciprocal cg_rb for 4400K: (3.1, 1.6)
-31.911: INFO: cinepi_controller  Interpolating for wb step: 5600K, lower index: 12, upper index: 12
-31.911: INFO: cinepi_controller  Exact match found at index 12, r_interp: 0.2842607232745885, b_interp: 0.7564837749584288
-31.911: INFO: cinepi_controller  Calculated reciprocal cg_rb for 5600K: (3.5, 1.3)
-31.911: INFO: cinepi_controller  Initialized wb_cg_rb_array: {3200: (2.5, 2.0), 4400: (3.1, 1.6), 5600: (3.5, 1.3)}
-31.911: INFO: cinepi_controller  Settings loaded successfully.
-31.912: INFO: cinepi_controller  Received set_fps call with value: 33.0
-31.912: INFO: cinepi_controller  Retrieved max_fps from Redis: 50
-31.912: INFO: cinepi_controller  Calculated safe_value: 33.0
-31.912: INFO: cinepi_controller  Setting fps to 33.0
-31.913: INFO: redis_controller   Changed value: fps = 33.0
-31.914: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
-31.914: INFO: cinepi_controller  Initialized fps: 33
-31.915: INFO: redis_controller   Changed value: fps_last = 33.0
-31.915: INFO: redis_controller   Changed value: fps_last = 33.0
-31.916: INFO: redis_controller   Changed value: sensor_mode = 0
-31.917: INFO: cinepi_controller  Resolution set to mode 0, height: 1090, width: 1928, gui_layout: 0
-31.917: INFO: redis_controller   Changed value: height = 1090
-31.917: INFO: redis_controller   Changed value: width = 1928
-31.917: INFO: redis_controller   Changed value: bit_depth = 12
-31.918: INFO: redis_controller   Changed value: fps_max = 50
-31.918: INFO: redis_controller   Changed value: gui_layout = 0
-31.918: INFO: redis_controller   Changed value: file_size = 3.1
-31.918: INFO: redis_controller   Changed value: cam_init = 1
-32.417: INFO: cinepi_app         Restarting CinePi instance.
-32.418: INFO: redis_controller   Changed value: fps_last = 33.0
-32.700: INFO: sensor_detect      cinepi-raw output: Available cameras
+38.420: INFO: cinepi_app         Corrected Preview Window -> x=94, y=79, width=1732, height=922, aspect_ratio=1.88
+38.420: INFO: redis_controller   Changed value: anamorphic_factor = 1
+38.420: INFO: cinepi_app         redis width: 2028
+38.420: INFO: cinepi_app         redis height: 1080
+38.421: INFO: cinepi_app         CinePi instantiated
+38.421: INFO: cinepi_app         Log level set to INFO
+38.421: INFO: redis_controller   Changed value: lores_width = 1352
+38.421: INFO: cinepi_app         Active filters set to: 
+38.421: INFO: redis_controller   Changed value: lores_height = 720
+38.421: INFO: ssd_monitor        SSD monitoring thread started.
+38.424: INFO: ssd_monitor        RAW drive mounted at /media/RAW
+38.424: INFO: ssd_monitor        Updated space left on SSD: 107.45 GB
+38.449: INFO: gpio_output        REC light instantiated on pin 6
+38.449: INFO: gpio_output        REC light instantiated on pin 21
+38.452: INFO: redis_controller   Changed value: framecount = 0
+38.452: INFO: redis_controller   Changed value: rec = 0
+38.454: INFO: redis_controller   Changed value: sensor = imx477
+38.454: INFO: redis_controller   Changed value: fps_max = 50
+38.455: INFO: cinepi_controller  Settings loaded successfully.
+38.455: INFO: cinepi_controller  Initialized fps_steps: [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50]
+38.455: INFO: cinepi_controller  Initialized shutter_a_steps: [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
+38.455: INFO: redis_controller   Changed value: fps_max = 50
+38.455: INFO: cinepi_controller  Loading tuning file from: /home/pi/cinemate/resources/tuning_files/imx477.json
+38.461: INFO: cinepi_controller  Tuning data loaded successfully.
+38.462: INFO: cinepi_controller  'rpi.awb' data found: {'priors': [{'lux': 0, 'prior': [2000, 1.0, 3000, 0.0, 13000, 0.0]}, {'lux': 800, 'prior': [2000, 0.0, 6000, 2.0, 13000, 2.0]}, {'lux': 1500, 'prior': [2000, 0.0, 4000, 1.0, 6000, 6.0, 6500, 7.0, 7000, 1.0, 13000, 1.0]}], 'modes': {'auto': {'lo': 2500, 'hi': 7700}, 'incandescent': {'lo': 2500, 'hi': 3000}, 'tungsten': {'lo': 3000, 'hi': 3500}, 'fluorescent': {'lo': 4000, 'hi': 4700}, 'indoor': {'lo': 3000, 'hi': 5000}, 'daylight': {'lo': 5500, 'hi': 6500}, 'cloudy': {'lo': 7000, 'hi': 8000}}, 'bayes': 1, 'ct_curve': [2850.0, 0.4307, 0.3957, 2960.0, 0.4159, 0.4313, 3580.0, 0.3771, 0.5176, 4559.0, 0.3031, 0.6573, 5881.0, 0.2809, 0.6942, 7600.0, 0.2263, 0.7762], 'sensitivity_r': 1.0, 'sensitivity_b': 1.0, 'transverse_pos': 0.02634, 'transverse_neg': 0.02255}
+38.462: INFO: cinepi_controller  Retrieved ct_curve: [2850.0, 0.4307, 0.3957, 2960.0, 0.4159, 0.4313, 3580.0, 0.3771, 0.5176, 4559.0, 0.3031, 0.6573, 5881.0, 0.2809, 0.6942, 7600.0, 0.2263, 0.7762]
+38.462: INFO: cinepi_controller  Parsed temperatures: [2850.0, 2960.0, 3580.0, 4559.0, 5881.0, 7600.0]
+38.462: INFO: cinepi_controller  Parsed r_values: [0.4307, 0.4159, 0.3771, 0.3031, 0.2809, 0.2263]
+38.462: INFO: cinepi_controller  Parsed b_values: [0.3957, 0.4313, 0.5176, 0.6573, 0.6942, 0.7762]
+38.462: INFO: cinepi_controller  Interpolating for wb step: 3200K, lower index: 1, upper index: 2
+38.462: INFO: cinepi_controller  Interpolated values for 3200K - r_interp: 0.4008806451612903, b_interp: 0.4647064516129032
+38.462: INFO: cinepi_controller  Calculated reciprocal cg_rb for 3200K: (2.5, 2.2)
+38.462: INFO: cinepi_controller  Interpolating for wb step: 4400K, lower index: 2, upper index: 3
+38.462: INFO: cinepi_controller  Interpolated values for 4400K - r_interp: 0.31511838610827375, b_interp: 0.6346112359550562
+38.462: INFO: cinepi_controller  Calculated reciprocal cg_rb for 4400K: (3.2, 1.6)
+38.462: INFO: cinepi_controller  Interpolating for wb step: 5600K, lower index: 3, upper index: 4
+38.462: INFO: cinepi_controller  Interpolated values for 5600K - r_interp: 0.28561875945537063, b_interp: 0.686356656580938
+38.462: INFO: cinepi_controller  Calculated reciprocal cg_rb for 5600K: (3.5, 1.5)
+38.463: INFO: cinepi_controller  Initialized wb_cg_rb_array: {3200: (2.5, 2.2), 4400: (3.2, 1.6), 5600: (3.5, 1.5)}
+38.463: INFO: cinepi_controller  Settings loaded successfully.
+38.463: INFO: cinepi_controller  Received set_fps call with value: 33.0
+38.463: INFO: cinepi_controller  Retrieved max_fps from Redis: 50
+38.463: INFO: cinepi_controller  Calculated safe_value: 33.0
+38.464: INFO: cinepi_controller  Setting fps to 33.0
+38.464: INFO: redis_controller   Changed value: fps = 33.0
+38.464: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
+38.465: INFO: cinepi_controller  Initialized fps: 33
+38.465: INFO: redis_controller   Changed value: fps_last = 33.0
+38.465: INFO: redis_controller   Changed value: fps_last = 33.0
+38.466: INFO: redis_controller   Changed value: sensor_mode = 0
+38.466: INFO: redis_controller   Changed value: height = 1080
+38.467: INFO: redis_controller   Changed value: width = 2028
+38.467: INFO: redis_controller   Changed value: bit_depth = 12
+38.468: INFO: cinepi_controller  Resolution set to mode 0, height: 1080, width: 2028, gui_layout: 0
+38.468: INFO: redis_controller   Changed value: fps_max = 50
+38.468: INFO: redis_controller   Changed value: gui_layout = 0
+38.468: INFO: redis_controller   Changed value: file_size = 3.2
+38.468: INFO: redis_controller   Changed value: cam_init = 1
+38.968: INFO: cinepi_app         Restarting CinePi instance.
+38.969: INFO: redis_controller   Changed value: fps_last = 33.0
+39.227: INFO: sensor_detect      cinepi-raw output: Available cameras
 -----------------
-0 : imx585 [3840x2160 MONO] (/base/axi/pcie@120000/rp1/i2c@80000/imx585@1A)
-    Modes: 'R12_CSI2P' : 1928x1090 [90.17 fps - (0, 0)/3840x2160 crop]
-                         3856x2180 [60.00 fps - (0, 0)/3840x2160 crop]
-           'R16' : 1928x1090 [30.00 fps - (0, 0)/3840x2160 crop]
-                   3856x2180 [30.00 fps - (0, 0)/3840x2160 crop]
+0 : imx477 [4056x3040 12-bit RGGB] (/base/axi/pcie@120000/rp1/i2c@80000/imx477@1a)
+    Modes: 'SRGGB10_CSI2P' : 1332x990 [120.05 fps - (696, 528)/2664x1980 crop]
+           'SRGGB12_CSI2P' : 2028x1080 [50.03 fps - (0, 440)/4056x2160 crop]
+                             2028x1520 [40.01 fps - (0, 0)/4056x3040 crop]
+                             4056x3040 [10.00 fps - (0, 0)/4056x3040 crop]
 
 
-32.700: INFO: sensor_detect      Detected camera model: imx585_mono
-32.700: WARNING: sensor_detect      cinepi-raw command exited with non-zero status: 134
-32.701: WARNING: sensor_detect      stderr: terminate called after throwing an instance of 'std::system_error'
+39.227: INFO: sensor_detect      Detected camera model: imx477
+39.228: WARNING: sensor_detect      cinepi-raw command exited with non-zero status: 134
+39.228: WARNING: sensor_detect      stderr: terminate called after throwing an instance of 'std::system_error'
   what():  Invalid argument
 Aborted
 
-32.701: INFO: cinepi_app         Corrected Preview Window -> x=94, y=50, width=1732, height=979, aspect_ratio=1.77
-32.702: INFO: cinepi_app         Issuing ['cinepi-raw', '--mode', '1928:1090:12:U', '--width', '1928', '--height', '1090', '--lores-width', '1273', '--lores-height', '720', '-p', '94,50,1732,979', '--post-process-file', '/home/pi/post-processing.json', '--shutter', '20000', '--awbgains', '2.5,2.0', '--awb', 'auto']
-32.702: INFO: redis_controller   Changed value: anamorphic_factor = 1
-32.702: INFO: redis_controller   Changed value: lores_width = 1273
-32.703: INFO: redis_controller   Changed value: lores_height = 720
-32.704: INFO: cinepi_controller  Received set_fps call with value: 33.0
-32.705: INFO: redis_controller   Changed value: sensor = imx585_mono
-32.705: INFO: cinepi_controller  Retrieved max_fps from Redis: 50
-32.705: INFO: cinepi_controller  Calculated safe_value: 33.0
-32.705: INFO: cinepi_controller  Setting fps to 33.0
-32.706: INFO: redis_controller   Changed value: fps = 33.0
-32.706: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
-32.707: INFO: cinepi_controller  Initialized fps_steps: [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50]
-32.707: INFO: redis_controller   Changed value: fps_last = 33.0
-32.708: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
-32.708: INFO: redis_controller   Changed value: fps_max = 50
-32.709: INFO: redis_controller   Changed value: sensor = imx585_mono
-33.131: INFO: redis_listener     Framecount is changing
-33.133: INFO: redis_controller   Changed value: rec = 1
-33.709: INFO: gpio_input         Button on pin 5:
-33.710: INFO: gpio_input           Press: rec
-33.710: INFO: redis_controller   Changed value: fps = 33.0
-33.714: INFO: gpio_input         Button on pin 13:
-33.714: INFO: gpio_input           Press: inc_iso
-33.715: INFO: gpio_input         Button on pin 10:
-33.715: INFO: gpio_input           Press: dec_iso
-33.716: INFO: gpio_input         Button on pin 16:
-33.716: INFO: gpio_input           Press: set_fps_double
-33.717: INFO: gpio_input         Button on pin 26:
-33.717: INFO: gpio_input           Single Click: set_resolution
-33.717: INFO: gpio_input           Double Click: restart_camera
-33.717: INFO: gpio_input           Triple Click: reboot
-33.717: INFO: gpio_input           Hold: unmount
-33.718: INFO: gpio_input         Two-way switch on pin 27:
-33.718: INFO: gpio_input           State ON action: set_all_lock
-33.718: INFO: gpio_input           State OFF action: set_all_lock
-34.219: INFO: gpio_input         Detected initial state: on for switch on pin 27
-34.219: INFO: cinepi_controller  ISO lock False
-34.219: INFO: cinepi_controller  Shutter angle lock False
-34.219: INFO: cinepi_controller  FPS lock False
-34.219: INFO: gpio_input         Executed action set_all_lock(0)
-34.220: INFO: gpio_input         Initialized SimpleSwitch on pin 27 (pull_up=True, debounce=0.1s)
-34.220: INFO: gpio_input         Two-way switch on pin 22:
-34.220: INFO: gpio_input           State ON action: set_shutter_a_sync_mode
-34.220: INFO: gpio_input           State OFF action: set_shutter_a_sync_mode
-34.330: INFO: redis_listener     Drop frame detected
-34.721: INFO: gpio_input         Detected initial state: off for switch on pin 22
-34.831: INFO: redis_listener     Drop frame flag reset
-34.875: INFO: redis_listener     Framecount is stable
-34.876: INFO: redis_controller   Changed value: rec = 0
-36.113: INFO: cinepi_controller  Exposure constant mode activated with initial exposure: 0.014545454545454547 seconds
-36.116: INFO: cinepi_controller  Setting shutter_a_nom to 172.0
-36.117: INFO: redis_controller   Changed value: shutter_a_nom = 172.0
-36.118: INFO: cinepi_controller  Setting shutter_a to 172.0 degrees
-36.118: INFO: redis_controller   Changed value: shutter_a = 172.0
-36.119: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.014478114478114479 seconds based on new shutter_a_nom 172.0
-36.119: INFO: redis_controller   Changed value: shutter_a = 172.0
-36.120: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.014478114478114479 seconds based on new shutter_a_nom 172.0
-36.120: INFO: cinepi_controller  Shutter sync enabled
-36.120: INFO: gpio_input         Executed action set_shutter_a_sync_mode(1)
-36.121: INFO: gpio_input         Initialized SimpleSwitch on pin 22 (pull_up=True, debounce=0.1s)
-36.121: INFO: redis_controller   Changed value: shutter_a = 172.0
-36.121: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 9, DT pin: 11
-36.121: INFO: gpio_input           Rotate Clockwise: inc_iso
-36.121: INFO: gpio_input           Rotate CounterClockwise: dec_iso
-36.123: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 23, DT pin: 25
-36.123: INFO: gpio_input           Rotate Clockwise: inc_shutter_a_nom
-36.123: INFO: gpio_input           Rotate CounterClockwise: dec_shutter_a_nom
-36.124: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 8, DT pin: 7
-36.124: INFO: gpio_input           Rotate Clockwise: inc_fps
-36.125: INFO: gpio_input           Rotate CounterClockwise: dec_fps
-36.126: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 12, DT pin: 20
-36.126: INFO: gpio_input           Rotate Clockwise: inc_wb
-36.126: INFO: gpio_input           Rotate CounterClockwise: dec_wb
-36.129: WARNING: gpio_input         No I2C device found at address: 0x49. Quad Rotary Encoder not initialized.
-36.130: INFO: redis_controller   Changed value: framecount = 0
-36.131: INFO: redis_controller   Changed value: rec = 0
-36.132: INFO: simple_gui         HDMI display found. (1920, 1080)
-36.284: INFO: main               Stream module loaded
-36.285: INFO: mediator           Mediator instantiated
-37.308: INFO: main               Loaded WB steps: [3200, 4400, 5600]
-37.309: INFO: analog_controls    Grove Base HAT found!
-37.310: ERROR: main               Invalid trigger_mode value retrieved: 0
-37.310: INFO: main               Initialized WB steps: [3200, 4400, 5600]
-37.311: INFO: cinepi_controller  Set white balance for 4400K: (3.1, 1.6)
-37.311: INFO: analog_controls    Setting ISO to 1600
-37.311: INFO: redis_controller   Changed value: cg_rb = 3.1,1.6
-37.311: INFO: main               --- initialization complete
-37.313: INFO: cinepi_controller  Setting iso to 1600
-37.313: INFO: redis_controller   Changed value: wb_user = 4400
-37.313: INFO: redis_controller   Changed value: iso = 1600
-37.314: INFO: analog_controls    Setting Shutter Angle to 172.8
-37.314: INFO: cinepi_controller  Setting shutter_a_nom to 172.8
-37.315: INFO: redis_controller   Changed value: shutter_a_nom = 172.8
-37.315: INFO: cinepi_controller  Setting shutter_a to 172.8 degrees
-37.316: INFO: redis_controller   Changed value: shutter_a = 172.8
-37.316: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.014545454545454547 seconds based on new shutter_a_nom 172.8
-37.316: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.8
-37.317: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-37.317: INFO: PWMcontroller      Updating PWM with cycles=1
-37.317: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.014545454545454547 seconds based on new shutter_a_nom 172.8
-37.318: INFO: analog_controls    Setting FPS to 33
-37.318: INFO: cinepi_controller  Received set_fps call with value: 33.0
-37.318: INFO: cinepi_controller  Retrieved max_fps from Redis: 50
-37.319: INFO: cinepi_controller  Calculated safe_value: 33.0
-37.319: INFO: cinepi_controller  Exposure constant: Adjusting shutter_a_nom to 172.80000000000004 degrees due to fps change to 33.0
-37.320: INFO: cinepi_controller  Setting fps to 33.0
-37.320: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
-37.322: INFO: analog_controls    Setting White Balance to 4400K
-37.323: INFO: cinepi_controller  Set white balance for 4400K: (3.1, 1.6)
-37.333: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-37.333: INFO: redis_controller   Changed value: shutter_a = 172.80000000000004
-37.334: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.80000000000004
-37.334: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-37.334: INFO: PWMcontroller      Updating PWM with cycles=1
-37.375: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-37.375: INFO: redis_controller   Changed value: shutter_a = 172.80000000000004
-37.375: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.80000000000004
-37.375: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-37.375: INFO: PWMcontroller      Updating PWM with cycles=1
-37.418: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-37.424: INFO: redis_controller   Changed value: shutter_a_nom = 172.80000000000004
-37.427: INFO: redis_controller   Changed value: shutter_a = 172.80000000000004
-37.430: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.80000000000004
-37.431: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-37.432: INFO: PWMcontroller      Updating PWM with cycles=1
-37.458: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-37.464: INFO: redis_controller   Changed value: fps = 33.0
-37.466: INFO: PWMcontroller      Setting PWM with fps=33.0, shutter_angle=None
-37.471: INFO: PWMcontroller      PWM frequency set to 33.0Hz on pins 19, None
-37.472: INFO: PWMcontroller      Shutter angle is None, keeping existing duty cycle.
-37.473: INFO: PWMcontroller      Updating PWM with cycles=1
-37.500: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-37.504: INFO: redis_controller   Changed value: fps_last = 33.0
-37.506: INFO: redis_controller   Changed value: wb_user = 4400
-37.509: INFO: redis_controller   Changed value: cg_rb = 3.1,1.6
-37.514: INFO: redis_controller   Changed value: wb_user = 4400
-38.320: INFO: redis_controller   Changed value: fps = 33.0
-38.323: INFO: PWMcontroller      Setting PWM with fps=33.0, shutter_angle=None
-38.327: INFO: PWMcontroller      PWM frequency set to 33.0Hz on pins 19, None
-38.330: INFO: PWMcontroller      Shutter angle is None, keeping existing duty cycle.
-38.334: INFO: PWMcontroller      Updating PWM with cycles=1
-38.375: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-48.412: INFO: analog_controls    Setting Shutter Angle to 180
-51.173: INFO: cinepi_controller  Setting shutter_a_nom to 180
-51.182: INFO: redis_controller   Changed value: shutter_a_nom = 180
-51.201: INFO: cinepi_controller  Setting shutter_a to 180 degrees
-51.206: INFO: redis_controller   Changed value: shutter_a = 180
-51.221: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.015151515151515152 seconds based on new shutter_a_nom 180
-51.224: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=180
-51.225: INFO: PWMcontroller      PWM duty cycle calculated and set to 32767
-51.226: INFO: PWMcontroller      Updating PWM with cycles=1
-51.228: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.015151515151515152 seconds based on new shutter_a_nom 180
-51.250: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
-51.250: INFO: redis_controller   Changed value: shutter_a = 180
-51.250: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=180
-51.250: INFO: PWMcontroller      PWM duty cycle calculated and set to 32767
-51.250: INFO: PWMcontroller      Updating PWM with cycles=1
-51.291: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
-51.292: INFO: redis_controller   Changed value: shutter_a = 180
-51.292: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=180
-51.292: INFO: PWMcontroller      PWM duty cycle calculated and set to 32767
-51.292: INFO: PWMcontroller      Updating PWM with cycles=1
-51.334: INFO: analog_controls    Setting Shutter Angle to 1
-51.337: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
-51.338: INFO: cinepi_controller  Setting shutter_a_nom to 1
-51.339: INFO: redis_controller   Changed value: shutter_a_nom = 1
-51.341: INFO: cinepi_controller  Setting shutter_a to 1 degrees
-51.344: INFO: redis_controller   Changed value: shutter_a = 1
-51.346: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 8.417508417508418e-05 seconds based on new shutter_a_nom 1
-51.348: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=1
-51.349: INFO: PWMcontroller      PWM duty cycle calculated and set to 182
-51.350: INFO: PWMcontroller      Updating PWM with cycles=1
-51.351: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 8.417508417508418e-05 seconds based on new shutter_a_nom 1
-51.375: INFO: PWMcontroller      PWM duty cycle set to 0.2777141985198749% on pins 19, None
-51.380: INFO: redis_controller   Changed value: shutter_a = 1
-51.381: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=1
-51.382: INFO: PWMcontroller      PWM duty cycle calculated and set to 182
-51.383: INFO: PWMcontroller      Updating PWM with cycles=1
-51.417: INFO: PWMcontroller      PWM duty cycle set to 0.2777141985198749% on pins 19, None
-51.423: INFO: redis_controller   Changed value: shutter_a = 1
-51.425: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=1
-51.426: INFO: PWMcontroller      PWM duty cycle calculated and set to 182
-51.427: INFO: PWMcontroller      Updating PWM with cycles=1
-51.457: INFO: analog_controls    Setting Shutter Angle to 45
-51.458: INFO: cinepi_controller  Setting shutter_a_nom to 45
-51.458: INFO: PWMcontroller      PWM duty cycle set to 0.2777141985198749% on pins 19, None
-51.459: INFO: cinepi_controller  Setting shutter_a to 45 degrees
-51.459: INFO: redis_controller   Changed value: shutter_a_nom = 45
-51.459: INFO: redis_controller   Changed value: shutter_a = 45
-51.460: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.003787878787878788 seconds based on new shutter_a_nom 45
-51.460: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=45
-51.460: INFO: PWMcontroller      PWM duty cycle calculated and set to 8191
-51.460: INFO: PWMcontroller      Updating PWM with cycles=1
-51.461: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.003787878787878788 seconds based on new shutter_a_nom 45
-51.500: INFO: PWMcontroller      PWM duty cycle set to 12.498664835584039% on pins 19, None
-51.500: INFO: redis_controller   Changed value: shutter_a = 45
-51.500: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=45
-51.500: INFO: PWMcontroller      PWM duty cycle calculated and set to 8191
-51.500: INFO: PWMcontroller      Updating PWM with cycles=1
-51.541: INFO: PWMcontroller      PWM duty cycle set to 12.498664835584039% on pins 19, None
-51.542: INFO: redis_controller   Changed value: shutter_a = 45
-51.542: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=45
-51.542: INFO: PWMcontroller      PWM duty cycle calculated and set to 8191
-51.542: INFO: PWMcontroller      Updating PWM with cycles=1
-51.566: INFO: analog_controls    Setting Shutter Angle to 90
-51.567: INFO: cinepi_controller  Setting shutter_a_nom to 90
-51.571: INFO: cinepi_controller  Setting shutter_a to 90 degrees
-51.574: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.007575757575757576 seconds based on new shutter_a_nom 90
-51.579: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.007575757575757576 seconds based on new shutter_a_nom 90
-51.586: INFO: PWMcontroller      PWM duty cycle set to 12.498664835584039% on pins 19, None
-51.588: INFO: redis_controller   Changed value: shutter_a_nom = 90
-51.593: INFO: redis_controller   Changed value: shutter_a = 90
-51.595: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=90
-51.596: INFO: PWMcontroller      PWM duty cycle calculated and set to 16383
-51.597: INFO: PWMcontroller      Updating PWM with cycles=1
-51.627: INFO: PWMcontroller      PWM duty cycle set to 24.998855573357748% on pins 19, None
-51.633: INFO: redis_controller   Changed value: shutter_a = 90
-51.635: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=90
-51.637: INFO: PWMcontroller      PWM duty cycle calculated and set to 16383
-51.638: INFO: PWMcontroller      Updating PWM with cycles=1
-51.666: INFO: PWMcontroller      PWM duty cycle set to 24.998855573357748% on pins 19, None
-51.667: INFO: redis_controller   Changed value: shutter_a = 90
-51.667: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=90
-51.667: INFO: PWMcontroller      PWM duty cycle calculated and set to 16383
-51.667: INFO: PWMcontroller      Updating PWM with cycles=1
-51.693: INFO: analog_controls    Setting Shutter Angle to 172.8
-51.693: INFO: cinepi_controller  Setting shutter_a_nom to 172.8
-51.694: INFO: cinepi_controller  Setting shutter_a to 172.8 degrees
-51.695: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.014545454545454547 seconds based on new shutter_a_nom 172.8
-51.695: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.014545454545454547 seconds based on new shutter_a_nom 172.8
-51.708: INFO: PWMcontroller      PWM duty cycle set to 24.998855573357748% on pins 19, None
-51.708: INFO: redis_controller   Changed value: shutter_a_nom = 172.8
-51.709: INFO: redis_controller   Changed value: shutter_a = 172.8
-51.709: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.8
-51.709: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-51.709: INFO: PWMcontroller      Updating PWM with cycles=1
-51.750: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-51.751: INFO: redis_controller   Changed value: shutter_a = 172.8
-51.751: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.8
-51.751: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-51.751: INFO: PWMcontroller      Updating PWM with cycles=1
-51.792: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-51.804: INFO: redis_controller   Changed value: shutter_a = 172.8
-51.805: INFO: analog_controls    Setting Shutter Angle to 180
-51.807: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.8
-51.809: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-51.811: INFO: PWMcontroller      Updating PWM with cycles=1
-51.814: INFO: cinepi_controller  Setting shutter_a_nom to 180
-51.823: INFO: cinepi_controller  Setting shutter_a to 180 degrees
-51.827: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.015151515151515152 seconds based on new shutter_a_nom 180
-51.834: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-51.838: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.015151515151515152 seconds based on new shutter_a_nom 180
-51.849: INFO: redis_controller   Changed value: shutter_a_nom = 180
-51.853: INFO: redis_controller   Changed value: shutter_a = 180
-51.856: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=180
-51.857: INFO: PWMcontroller      PWM duty cycle calculated and set to 32767
-51.857: INFO: PWMcontroller      Updating PWM with cycles=1
-51.875: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
-51.881: INFO: redis_controller   Changed value: shutter_a = 180
-51.882: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=180
-51.883: INFO: PWMcontroller      PWM duty cycle calculated and set to 32767
-51.884: INFO: PWMcontroller      Updating PWM with cycles=1
-51.916: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
-51.917: INFO: redis_controller   Changed value: shutter_a = 180
-51.917: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=180
-51.917: INFO: PWMcontroller      PWM duty cycle calculated and set to 32767
-51.917: INFO: PWMcontroller      Updating PWM with cycles=1
-51.959: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
-52.163: INFO: analog_controls    Setting Shutter Angle to 172.8
-52.164: INFO: cinepi_controller  Setting shutter_a_nom to 172.8
-52.164: INFO: redis_controller   Changed value: shutter_a_nom = 172.8
-52.165: INFO: cinepi_controller  Setting shutter_a to 172.8 degrees
-52.165: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.014545454545454547 seconds based on new shutter_a_nom 172.8
-52.166: INFO: redis_controller   Changed value: shutter_a = 172.8
-52.166: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.014545454545454547 seconds based on new shutter_a_nom 172.8
-52.166: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.8
-52.167: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-52.167: INFO: PWMcontroller      Updating PWM with cycles=1
-52.208: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-52.213: INFO: redis_controller   Changed value: shutter_a = 172.8
-52.213: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.8
-52.214: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-52.215: INFO: PWMcontroller      Updating PWM with cycles=1
-52.250: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-52.254: INFO: redis_controller   Changed value: shutter_a = 172.8
-52.256: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.8
-52.259: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-52.261: INFO: PWMcontroller      Updating PWM with cycles=1
-52.292: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-52.375: INFO: analog_controls    Setting Shutter Angle to 135
-52.376: INFO: cinepi_controller  Setting shutter_a_nom to 135
-52.377: INFO: redis_controller   Changed value: shutter_a_nom = 135
-52.377: INFO: cinepi_controller  Setting shutter_a to 135 degrees
-52.378: INFO: redis_controller   Changed value: shutter_a = 135
-52.378: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.011363636363636364 seconds based on new shutter_a_nom 135
-52.378: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=135
-52.378: INFO: PWMcontroller      PWM duty cycle calculated and set to 24575
-52.379: INFO: PWMcontroller      Updating PWM with cycles=1
-52.379: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.011363636363636364 seconds based on new shutter_a_nom 135
-52.417: INFO: PWMcontroller      PWM duty cycle set to 37.49904631113146% on pins 19, None
-52.422: INFO: redis_controller   Changed value: shutter_a = 135
-52.424: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=135
-52.425: INFO: PWMcontroller      PWM duty cycle calculated and set to 24575
-52.425: INFO: PWMcontroller      Updating PWM with cycles=1
-52.458: INFO: PWMcontroller      PWM duty cycle set to 37.49904631113146% on pins 19, None
-52.463: INFO: redis_controller   Changed value: shutter_a = 135
-52.464: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=135
-52.466: INFO: PWMcontroller      PWM duty cycle calculated and set to 24575
-52.467: INFO: PWMcontroller      Updating PWM with cycles=1
-52.484: INFO: analog_controls    Setting Shutter Angle to 90
-52.489: INFO: cinepi_controller  Setting shutter_a_nom to 90
-52.494: INFO: cinepi_controller  Setting shutter_a to 90 degrees
-52.500: INFO: PWMcontroller      PWM duty cycle set to 37.49904631113146% on pins 19, None
-52.508: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.007575757575757576 seconds based on new shutter_a_nom 90
-52.513: INFO: redis_controller   Changed value: shutter_a_nom = 90
-52.517: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.007575757575757576 seconds based on new shutter_a_nom 90
-52.522: INFO: redis_controller   Changed value: shutter_a = 90
-52.523: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=90
-52.523: INFO: PWMcontroller      PWM duty cycle calculated and set to 16383
-52.524: INFO: PWMcontroller      Updating PWM with cycles=1
-52.541: INFO: PWMcontroller      PWM duty cycle set to 24.998855573357748% on pins 19, None
-52.542: INFO: redis_controller   Changed value: shutter_a = 90
-52.542: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=90
-52.542: INFO: PWMcontroller      PWM duty cycle calculated and set to 16383
-52.542: INFO: PWMcontroller      Updating PWM with cycles=1
-52.583: INFO: PWMcontroller      PWM duty cycle set to 24.998855573357748% on pins 19, None
-52.583: INFO: redis_controller   Changed value: shutter_a = 90
-52.584: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=90
-52.584: INFO: PWMcontroller      PWM duty cycle calculated and set to 16383
-52.584: INFO: PWMcontroller      Updating PWM with cycles=1
-52.625: INFO: PWMcontroller      PWM duty cycle set to 24.998855573357748% on pins 19, None
-52.627: INFO: analog_controls    Setting Shutter Angle to 45
-52.636: INFO: cinepi_controller  Setting shutter_a_nom to 45
-52.637: INFO: cinepi_controller  Setting shutter_a to 45 degrees
-52.638: INFO: redis_controller   Changed value: shutter_a_nom = 45
-52.640: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.003787878787878788 seconds based on new shutter_a_nom 45
-52.640: INFO: redis_controller   Changed value: shutter_a = 45
-52.641: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=45
-52.641: INFO: PWMcontroller      PWM duty cycle calculated and set to 8191
-52.641: INFO: PWMcontroller      Updating PWM with cycles=1
-52.642: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.003787878787878788 seconds based on new shutter_a_nom 45
-52.670: INFO: PWMcontroller      PWM duty cycle set to 12.498664835584039% on pins 19, None
-52.674: INFO: redis_controller   Changed value: shutter_a = 45
-52.676: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=45
-52.677: INFO: PWMcontroller      PWM duty cycle calculated and set to 8191
-52.677: INFO: PWMcontroller      Updating PWM with cycles=1
-52.708: INFO: PWMcontroller      PWM duty cycle set to 12.498664835584039% on pins 19, None
-52.713: INFO: redis_controller   Changed value: shutter_a = 45
-52.715: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=45
-52.715: INFO: PWMcontroller      PWM duty cycle calculated and set to 8191
-52.716: INFO: PWMcontroller      Updating PWM with cycles=1
-52.748: INFO: analog_controls    Setting Shutter Angle to 1
-52.749: INFO: cinepi_controller  Setting shutter_a_nom to 1
-52.750: INFO: PWMcontroller      PWM duty cycle set to 12.498664835584039% on pins 19, None
-52.751: INFO: cinepi_controller  Setting shutter_a to 1 degrees
-52.751: INFO: redis_controller   Changed value: shutter_a_nom = 1
-52.752: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 8.417508417508418e-05 seconds based on new shutter_a_nom 1
-52.753: INFO: redis_controller   Changed value: shutter_a = 1
-52.753: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 8.417508417508418e-05 seconds based on new shutter_a_nom 1
-52.753: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=1
-52.754: INFO: PWMcontroller      PWM duty cycle calculated and set to 182
-52.754: INFO: PWMcontroller      Updating PWM with cycles=1
-52.791: INFO: PWMcontroller      PWM duty cycle set to 0.2777141985198749% on pins 19, None
-52.792: INFO: redis_controller   Changed value: shutter_a = 1
-52.792: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=1
-52.792: INFO: PWMcontroller      PWM duty cycle calculated and set to 182
-52.792: INFO: PWMcontroller      Updating PWM with cycles=1
-52.833: INFO: PWMcontroller      PWM duty cycle set to 0.2777141985198749% on pins 19, None
-52.833: INFO: redis_controller   Changed value: shutter_a = 1
-52.834: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=1
-52.834: INFO: PWMcontroller      PWM duty cycle calculated and set to 182
-52.834: INFO: PWMcontroller      Updating PWM with cycles=1
-52.879: INFO: PWMcontroller      PWM duty cycle set to 0.2777141985198749% on pins 19, None
-53.491: INFO: analog_controls    Setting Shutter Angle to 45
-53.494: INFO: cinepi_controller  Setting shutter_a_nom to 45
-53.496: INFO: redis_controller   Changed value: shutter_a_nom = 45
-53.497: INFO: cinepi_controller  Setting shutter_a to 45 degrees
-53.499: INFO: redis_controller   Changed value: shutter_a = 45
-53.503: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.003787878787878788 seconds based on new shutter_a_nom 45
-53.503: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=45
-53.520: INFO: PWMcontroller      PWM duty cycle calculated and set to 8191
-53.522: INFO: PWMcontroller      Updating PWM with cycles=1
-53.527: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.003787878787878788 seconds based on new shutter_a_nom 45
-53.541: INFO: PWMcontroller      PWM duty cycle set to 12.498664835584039% on pins 19, None
-53.545: INFO: redis_controller   Changed value: shutter_a = 45
-53.548: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=45
-53.551: INFO: PWMcontroller      PWM duty cycle calculated and set to 8191
-53.553: INFO: PWMcontroller      Updating PWM with cycles=1
-53.583: INFO: PWMcontroller      PWM duty cycle set to 12.498664835584039% on pins 19, None
-53.587: INFO: redis_controller   Changed value: shutter_a = 45
-53.591: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=45
-53.592: INFO: PWMcontroller      PWM duty cycle calculated and set to 8191
-53.592: INFO: PWMcontroller      Updating PWM with cycles=1
-53.625: INFO: PWMcontroller      PWM duty cycle set to 12.498664835584039% on pins 19, None
-53.641: INFO: analog_controls    Setting Shutter Angle to 135
-53.643: INFO: cinepi_controller  Setting shutter_a_nom to 135
-53.643: INFO: redis_controller   Changed value: shutter_a_nom = 135
-53.644: INFO: cinepi_controller  Setting shutter_a to 135 degrees
-53.645: INFO: redis_controller   Changed value: shutter_a = 135
-53.645: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.011363636363636364 seconds based on new shutter_a_nom 135
-53.645: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=135
-53.646: INFO: PWMcontroller      PWM duty cycle calculated and set to 24575
-53.646: INFO: PWMcontroller      Updating PWM with cycles=1
-53.646: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.011363636363636364 seconds based on new shutter_a_nom 135
-53.666: INFO: PWMcontroller      PWM duty cycle set to 37.49904631113146% on pins 19, None
-53.668: INFO: redis_controller   Changed value: shutter_a = 135
-53.668: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=135
-53.668: INFO: PWMcontroller      PWM duty cycle calculated and set to 24575
-53.668: INFO: PWMcontroller      Updating PWM with cycles=1
-53.708: INFO: PWMcontroller      PWM duty cycle set to 37.49904631113146% on pins 19, None
-53.710: INFO: redis_controller   Changed value: shutter_a = 135
-53.712: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=135
-53.712: INFO: PWMcontroller      PWM duty cycle calculated and set to 24575
-53.712: INFO: PWMcontroller      Updating PWM with cycles=1
-53.750: INFO: PWMcontroller      PWM duty cycle set to 37.49904631113146% on pins 19, None
-53.751: INFO: analog_controls    Setting Shutter Angle to 172.8
-53.757: INFO: cinepi_controller  Setting shutter_a_nom to 172.8
-53.767: INFO: redis_controller   Changed value: shutter_a_nom = 172.8
-53.775: INFO: cinepi_controller  Setting shutter_a to 172.8 degrees
-53.783: INFO: redis_controller   Changed value: shutter_a = 172.8
-53.787: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.014545454545454547 seconds based on new shutter_a_nom 172.8
-53.792: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.8
-53.802: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-53.805: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.014545454545454547 seconds based on new shutter_a_nom 172.8
-53.807: INFO: PWMcontroller      Updating PWM with cycles=1
-53.833: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-53.834: INFO: redis_controller   Changed value: shutter_a = 172.8
-53.834: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.8
-53.834: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-53.834: INFO: PWMcontroller      Updating PWM with cycles=1
-53.875: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-53.875: INFO: redis_controller   Changed value: shutter_a = 172.8
-53.875: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.8
-53.875: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-53.875: INFO: PWMcontroller      Updating PWM with cycles=1
-53.917: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-53.919: INFO: analog_controls    Setting Shutter Angle to 180
-53.928: INFO: cinepi_controller  Setting shutter_a_nom to 180
-53.931: INFO: redis_controller   Changed value: shutter_a_nom = 180
-53.934: INFO: cinepi_controller  Setting shutter_a to 180 degrees
-53.937: INFO: redis_controller   Changed value: shutter_a = 180
-53.948: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.015151515151515152 seconds based on new shutter_a_nom 180
-53.948: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=180
-53.948: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.015151515151515152 seconds based on new shutter_a_nom 180
-53.949: INFO: PWMcontroller      PWM duty cycle calculated and set to 32767
-53.951: INFO: PWMcontroller      Updating PWM with cycles=1
-53.962: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
-53.970: INFO: redis_controller   Changed value: shutter_a = 180
-53.972: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=180
-53.974: INFO: PWMcontroller      PWM duty cycle calculated and set to 32767
-53.975: INFO: PWMcontroller      Updating PWM with cycles=1
-54.000: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
-54.007: INFO: redis_controller   Changed value: shutter_a = 180
-54.009: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=180
-54.010: INFO: PWMcontroller      PWM duty cycle calculated and set to 32767
-54.011: INFO: PWMcontroller      Updating PWM with cycles=1
-54.041: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
-54.161: INFO: analog_controls    Setting Shutter Angle to 225
-54.164: INFO: cinepi_controller  Setting shutter_a_nom to 225
-54.167: INFO: redis_controller   Changed value: shutter_a_nom = 225
-54.169: INFO: cinepi_controller  Setting shutter_a to 225 degrees
-54.169: INFO: redis_controller   Changed value: shutter_a = 225
-54.170: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.01893939393939394 seconds based on new shutter_a_nom 225
-54.170: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=225
-54.172: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.01893939393939394 seconds based on new shutter_a_nom 225
-54.172: INFO: PWMcontroller      PWM duty cycle calculated and set to 40959
-54.175: INFO: PWMcontroller      Updating PWM with cycles=1
-54.208: INFO: PWMcontroller      PWM duty cycle set to 62.49942778667887% on pins 19, None
-54.215: INFO: redis_controller   Changed value: shutter_a = 225
-54.217: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=225
-54.219: INFO: PWMcontroller      PWM duty cycle calculated and set to 40959
-54.220: INFO: PWMcontroller      Updating PWM with cycles=1
-54.250: INFO: PWMcontroller      PWM duty cycle set to 62.49942778667887% on pins 19, None
-54.257: INFO: redis_controller   Changed value: shutter_a = 225
-54.257: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=225
-54.257: INFO: PWMcontroller      PWM duty cycle calculated and set to 40959
-54.258: INFO: PWMcontroller      Updating PWM with cycles=1
-54.291: INFO: PWMcontroller      PWM duty cycle set to 62.49942778667887% on pins 19, None
-54.494: INFO: analog_controls    Setting Shutter Angle to 270
-54.495: INFO: cinepi_controller  Setting shutter_a_nom to 270
-54.497: INFO: redis_controller   Changed value: shutter_a_nom = 270
-54.498: INFO: cinepi_controller  Setting shutter_a to 270 degrees
-54.498: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.022727272727272728 seconds based on new shutter_a_nom 270
-54.499: INFO: redis_controller   Changed value: shutter_a = 270
-54.500: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.022727272727272728 seconds based on new shutter_a_nom 270
-54.500: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=270
-54.500: INFO: PWMcontroller      PWM duty cycle calculated and set to 49151
-54.500: INFO: PWMcontroller      Updating PWM with cycles=1
-54.541: INFO: PWMcontroller      PWM duty cycle set to 74.99961852445259% on pins 19, None
-54.542: INFO: redis_controller   Changed value: shutter_a = 270
-54.542: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=270
-54.542: INFO: PWMcontroller      PWM duty cycle calculated and set to 49151
-54.543: INFO: PWMcontroller      Updating PWM with cycles=1
-54.583: INFO: PWMcontroller      PWM duty cycle set to 74.99961852445259% on pins 19, None
-54.586: INFO: redis_controller   Changed value: shutter_a = 270
-54.587: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=270
-54.588: INFO: PWMcontroller      PWM duty cycle calculated and set to 49151
-54.589: INFO: PWMcontroller      Updating PWM with cycles=1
-54.625: INFO: PWMcontroller      PWM duty cycle set to 74.99961852445259% on pins 19, None
-55.232: INFO: analog_controls    Setting Shutter Angle to 315
-55.241: INFO: cinepi_controller  Setting shutter_a_nom to 315
-55.245: INFO: redis_controller   Changed value: shutter_a_nom = 315
-55.248: INFO: cinepi_controller  Setting shutter_a to 315 degrees
-55.258: INFO: redis_controller   Changed value: shutter_a = 315
-55.269: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.026515151515151516 seconds based on new shutter_a_nom 315
-55.274: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=315
-55.280: INFO: PWMcontroller      PWM duty cycle calculated and set to 57343
-55.283: INFO: PWMcontroller      Updating PWM with cycles=1
-55.287: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.026515151515151516 seconds based on new shutter_a_nom 315
-55.292: INFO: PWMcontroller      PWM duty cycle set to 87.4998092622263% on pins 19, None
-55.294: INFO: redis_controller   Changed value: shutter_a = 315
-55.295: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=315
-55.296: INFO: PWMcontroller      PWM duty cycle calculated and set to 57343
-55.297: INFO: PWMcontroller      Updating PWM with cycles=1
-55.333: INFO: PWMcontroller      PWM duty cycle set to 87.4998092622263% on pins 19, None
-55.333: INFO: redis_controller   Changed value: shutter_a = 315
-55.334: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=315
-55.334: INFO: PWMcontroller      PWM duty cycle calculated and set to 57343
-55.334: INFO: PWMcontroller      Updating PWM with cycles=1
-55.375: INFO: PWMcontroller      PWM duty cycle set to 87.4998092622263% on pins 19, None
-55.709: INFO: analog_controls    Setting Shutter Angle to 270
-55.719: INFO: cinepi_controller  Setting shutter_a_nom to 270
-55.731: INFO: redis_controller   Changed value: shutter_a_nom = 270
-55.733: INFO: cinepi_controller  Setting shutter_a to 270 degrees
-55.741: INFO: redis_controller   Changed value: shutter_a = 270
-55.741: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.022727272727272728 seconds based on new shutter_a_nom 270
-55.741: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=270
-55.742: INFO: PWMcontroller      PWM duty cycle calculated and set to 49151
-55.742: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.022727272727272728 seconds based on new shutter_a_nom 270
-55.743: INFO: PWMcontroller      Updating PWM with cycles=1
-55.750: INFO: PWMcontroller      PWM duty cycle set to 74.99961852445259% on pins 19, None
-55.763: INFO: redis_controller   Changed value: shutter_a = 270
-55.763: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=270
-55.763: INFO: PWMcontroller      PWM duty cycle calculated and set to 49151
-55.763: INFO: PWMcontroller      Updating PWM with cycles=1
-55.791: INFO: PWMcontroller      PWM duty cycle set to 74.99961852445259% on pins 19, None
-55.792: INFO: redis_controller   Changed value: shutter_a = 270
-55.792: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=270
-55.792: INFO: PWMcontroller      PWM duty cycle calculated and set to 49151
-55.792: INFO: PWMcontroller      Updating PWM with cycles=1
-55.833: INFO: PWMcontroller      PWM duty cycle set to 74.99961852445259% on pins 19, None
-55.850: INFO: analog_controls    Setting Shutter Angle to 225
-55.853: INFO: cinepi_controller  Setting shutter_a_nom to 225
-55.855: INFO: cinepi_controller  Setting shutter_a to 225 degrees
-55.856: INFO: redis_controller   Changed value: shutter_a_nom = 225
-55.859: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.01893939393939394 seconds based on new shutter_a_nom 225
-55.861: INFO: redis_controller   Changed value: shutter_a = 225
-55.864: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.01893939393939394 seconds based on new shutter_a_nom 225
-55.865: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=225
-55.883: INFO: PWMcontroller      PWM duty cycle calculated and set to 40959
-55.888: INFO: PWMcontroller      Updating PWM with cycles=1
-55.917: INFO: PWMcontroller      PWM duty cycle set to 62.49942778667887% on pins 19, None
-55.922: INFO: redis_controller   Changed value: shutter_a = 225
-55.923: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=225
-55.925: INFO: PWMcontroller      PWM duty cycle calculated and set to 40959
-55.926: INFO: PWMcontroller      Updating PWM with cycles=1
-55.958: INFO: PWMcontroller      PWM duty cycle set to 62.49942778667887% on pins 19, None
-55.959: INFO: redis_controller   Changed value: shutter_a = 225
-55.959: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=225
-55.959: INFO: PWMcontroller      PWM duty cycle calculated and set to 40959
-55.959: INFO: PWMcontroller      Updating PWM with cycles=1
-55.970: INFO: analog_controls    Setting Shutter Angle to 180
-55.971: INFO: cinepi_controller  Setting shutter_a_nom to 180
-55.973: INFO: cinepi_controller  Setting shutter_a to 180 degrees
-55.973: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.015151515151515152 seconds based on new shutter_a_nom 180
-55.974: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.015151515151515152 seconds based on new shutter_a_nom 180
-56.000: INFO: PWMcontroller      PWM duty cycle set to 62.49942778667887% on pins 19, None
-56.000: INFO: redis_controller   Changed value: shutter_a_nom = 180
-56.000: INFO: redis_controller   Changed value: shutter_a = 180
-56.001: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=180
-56.001: INFO: PWMcontroller      PWM duty cycle calculated and set to 32767
-56.001: INFO: PWMcontroller      Updating PWM with cycles=1
-56.041: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
-56.042: INFO: redis_controller   Changed value: shutter_a = 180
-56.042: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=180
-56.042: INFO: PWMcontroller      PWM duty cycle calculated and set to 32767
-56.042: INFO: PWMcontroller      Updating PWM with cycles=1
-56.079: INFO: analog_controls    Setting Shutter Angle to 172.8
-56.085: INFO: PWMcontroller      PWM duty cycle set to 49.999237048905165% on pins 19, None
-56.088: INFO: cinepi_controller  Setting shutter_a_nom to 172.8
-56.096: INFO: redis_controller   Changed value: shutter_a = 180
-56.101: INFO: cinepi_controller  Setting shutter_a to 172.8 degrees
-56.113: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.8
-56.114: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-56.115: INFO: PWMcontroller      Updating PWM with cycles=1
-56.119: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.014545454545454547 seconds based on new shutter_a_nom 172.8
-56.125: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-56.132: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.014545454545454547 seconds based on new shutter_a_nom 172.8
-56.140: INFO: redis_controller   Changed value: shutter_a_nom = 172.8
-56.145: INFO: redis_controller   Changed value: shutter_a = 172.8
-56.146: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.8
-56.148: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-56.150: INFO: PWMcontroller      Updating PWM with cycles=1
-56.169: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-56.173: INFO: redis_controller   Changed value: shutter_a = 172.8
-56.173: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.8
-56.173: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-56.173: INFO: PWMcontroller      Updating PWM with cycles=1
-56.208: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-56.208: INFO: redis_controller   Changed value: shutter_a = 172.8
-56.209: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.8
-56.209: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-56.209: INFO: PWMcontroller      Updating PWM with cycles=1
-56.250: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-56.355: INFO: analog_controls    Setting Shutter Angle to 135
-56.358: INFO: cinepi_controller  Setting shutter_a_nom to 135
-56.367: INFO: redis_controller   Changed value: shutter_a_nom = 135
-56.372: INFO: cinepi_controller  Setting shutter_a to 135 degrees
-56.374: INFO: redis_controller   Changed value: shutter_a = 135
-56.383: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.011363636363636364 seconds based on new shutter_a_nom 135
-56.383: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=135
-56.384: INFO: PWMcontroller      PWM duty cycle calculated and set to 24575
-56.384: INFO: PWMcontroller      Updating PWM with cycles=1
-56.384: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.011363636363636364 seconds based on new shutter_a_nom 135
-56.416: INFO: PWMcontroller      PWM duty cycle set to 37.49904631113146% on pins 19, None
-56.417: INFO: redis_controller   Changed value: shutter_a = 135
-56.418: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=135
-56.418: INFO: PWMcontroller      PWM duty cycle calculated and set to 24575
-56.418: INFO: PWMcontroller      Updating PWM with cycles=1
-56.458: INFO: PWMcontroller      PWM duty cycle set to 37.49904631113146% on pins 19, None
-56.458: INFO: redis_controller   Changed value: shutter_a = 135
-56.459: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=135
-56.459: INFO: PWMcontroller      PWM duty cycle calculated and set to 24575
-56.459: INFO: PWMcontroller      Updating PWM with cycles=1
-56.500: INFO: PWMcontroller      PWM duty cycle set to 37.49904631113146% on pins 19, None
-56.913: INFO: analog_controls    Setting Shutter Angle to 172.8
-56.918: INFO: cinepi_controller  Setting shutter_a_nom to 172.8
-56.920: INFO: redis_controller   Changed value: shutter_a_nom = 172.8
-56.922: INFO: cinepi_controller  Setting shutter_a to 172.8 degrees
-56.922: INFO: redis_controller   Changed value: shutter_a = 172.8
-56.933: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.014545454545454547 seconds based on new shutter_a_nom 172.8
-56.934: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.8
-56.937: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-56.941: INFO: PWMcontroller      Updating PWM with cycles=1
-56.946: INFO: cinepi_controller  Exposure constant: Updated stored exposure to 0.014545454545454547 seconds based on new shutter_a_nom 172.8
-56.958: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-56.971: INFO: redis_controller   Changed value: shutter_a = 172.8
-56.976: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.8
-56.983: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-56.984: INFO: PWMcontroller      Updating PWM with cycles=1
-57.000: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-57.007: INFO: redis_controller   Changed value: shutter_a = 172.8
-57.009: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.8
-57.010: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
-57.013: INFO: PWMcontroller      Updating PWM with cycles=1
-57.041: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
-59.444: INFO: gpio_input         Switch 22 turned ON
-59.445: INFO: cinepi_controller  Shutter Sync Mode deactivated
-59.446: INFO: cinepi_controller  Shutter sync disabled
-59.447: INFO: gpio_input         Executed action set_shutter_a_sync_mode(0)
-17.749: INFO: main               Graceful shutdown initiated.
-27.210: WARNING: redis_listener     Recording stopped, but no recording start time was registered.
-27.210: WARNING: redis_listener     Recording stopped, but no recording start time was registered.
-27.210: INFO: redis_controller   Changed value: is_recording = 0
-27.212: INFO: redis_controller   Changed value: is_writing = 0
-27.212: INFO: redis_listener     Framecount reset to 0.
-27.212: INFO: redis_controller   Changed value: shutter_a_nom = 172
-27.213: INFO: PWMcontroller      PWM stopped
-27.213: INFO: redis_controller   Changed value: cg_rb = 2.5,2.0
-27.213: INFO: PWMcontroller      PWM stopped
-27.213: INFO: redis_controller   Changed value: rec = 0
-27.213: INFO: mediator           Recording stopped!
-27.213: INFO: gpio_output        GPIO 6 set to LOW
-27.213: INFO: gpio_output        GPIO 21 set to LOW
-27.214: INFO: redis_controller   Changed value: framecount = 0
-29.118: INFO: main               Graceful shutdown initiated.
-29.325: INFO: main               Graceful shutdown initiated.
+39.229: INFO: redis_controller   Changed value: anamorphic_factor = 1
+39.229: INFO: cinepi_app         Corrected Preview Window -> x=94, y=79, width=1732, height=922, aspect_ratio=1.88
+39.229: INFO: redis_controller   Changed value: lores_width = 1352
+39.229: INFO: cinepi_app         Issuing ['cinepi-raw', '--mode', '2028:1080:12:U', '--width', '2028', '--height', '1080', '--lores-width', '1352', '--lores-height', '720', '-p', '94,79,1732,922', '--post-process-file', '/home/pi/post-processing.json', '--shutter', '20000', '--awbgains', '3.2,1.6', '--awb', 'auto']
+39.230: INFO: redis_controller   Changed value: lores_height = 720
+39.231: INFO: redis_controller   Changed value: sensor = imx477
+39.231: INFO: cinepi_controller  Received set_fps call with value: 33.0
+39.231: INFO: cinepi_controller  Retrieved max_fps from Redis: 50
+39.231: INFO: cinepi_controller  Calculated safe_value: 33.0
+39.232: INFO: cinepi_controller  Setting fps to 33.0
+39.232: INFO: redis_controller   Changed value: fps = 33.0
+39.232: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
+39.233: INFO: cinepi_controller  Initialized fps_steps: [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50]
+39.233: INFO: redis_controller   Changed value: fps_last = 33.0
+39.234: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
+39.234: INFO: redis_controller   Changed value: fps_max = 50
+39.235: INFO: redis_controller   Changed value: sensor = imx477
+39.658: INFO: redis_listener     Framecount is changing
+39.659: INFO: redis_controller   Changed value: rec = 1
+40.213: INFO: redis_listener     Drop frame detected
+40.235: INFO: gpio_input         Button on pin 5:
+40.235: INFO: redis_controller   Changed value: fps = 33.0
+41.213: INFO: gpio_input           Press: rec
+41.244: INFO: gpio_input         Button on pin 13:
+41.244: INFO: gpio_input           Press: inc_iso
+41.245: INFO: gpio_input         Button on pin 10:
+41.245: INFO: gpio_input           Press: dec_iso
+41.246: INFO: gpio_input         Button on pin 16:
+41.246: INFO: gpio_input           Press: set_fps_double
+41.247: INFO: gpio_input         Button on pin 26:
+41.247: INFO: gpio_input           Single Click: set_resolution
+41.247: INFO: gpio_input           Double Click: restart_camera
+41.247: INFO: gpio_input           Triple Click: reboot
+41.247: INFO: gpio_input           Hold: unmount
+41.248: INFO: gpio_input         Two-way switch on pin 27:
+41.248: INFO: gpio_input           State ON action: set_all_lock
+41.248: INFO: gpio_input           State OFF action: set_all_lock
+41.713: INFO: redis_listener     Drop frame flag reset
+41.731: INFO: redis_listener     Framecount is stable
+41.733: INFO: redis_controller   Changed value: rec = 0
+41.749: INFO: gpio_input         Detected initial state: on for switch on pin 27
+41.749: INFO: cinepi_controller  ISO lock False
+41.749: INFO: cinepi_controller  Shutter angle lock False
+41.749: INFO: cinepi_controller  FPS lock False
+41.749: INFO: gpio_input         Executed action set_all_lock(0)
+41.749: INFO: gpio_input         Initialized SimpleSwitch on pin 27 (pull_up=True, debounce=0.1s)
+41.749: INFO: gpio_input         Two-way switch on pin 22:
+41.749: INFO: gpio_input           State ON action: set_shutter_a_sync_mode
+41.749: INFO: gpio_input           State OFF action: set_shutter_a_sync_mode
+42.250: INFO: gpio_input         Detected initial state: on for switch on pin 22
+42.250: INFO: cinepi_controller  Shutter Sync Mode deactivated
+42.250: INFO: cinepi_controller  Shutter sync disabled
+42.251: INFO: gpio_input         Executed action set_shutter_a_sync_mode(0)
+42.251: INFO: gpio_input         Initialized SimpleSwitch on pin 22 (pull_up=True, debounce=0.1s)
+42.251: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 9, DT pin: 11
+42.251: INFO: gpio_input           Rotate Clockwise: inc_iso
+42.251: INFO: gpio_input           Rotate CounterClockwise: dec_iso
+42.252: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 23, DT pin: 25
+42.252: INFO: gpio_input           Rotate Clockwise: inc_shutter_a_nom
+42.252: INFO: gpio_input           Rotate CounterClockwise: dec_shutter_a_nom
+42.253: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 8, DT pin: 7
+42.253: INFO: gpio_input           Rotate Clockwise: inc_fps
+42.254: INFO: gpio_input           Rotate CounterClockwise: dec_fps
+42.255: INFO: gpio_input         Rotary Encoder with Button on CLK pin: 12, DT pin: 20
+42.255: INFO: gpio_input           Rotate Clockwise: inc_wb
+42.255: INFO: gpio_input           Rotate CounterClockwise: dec_wb
+43.405: WARNING: gpio_input         No I2C device found at address: 0x49. Quad Rotary Encoder not initialized.
+43.408: INFO: redis_controller   Changed value: framecount = 0
+43.408: INFO: redis_controller   Changed value: rec = 0
+43.409: INFO: simple_gui         HDMI display found. (1920, 1080)
+43.684: INFO: main               Stream module loaded
+43.684: INFO: mediator           Mediator instantiated
+44.688: INFO: main               Loaded WB steps: [3200, 4400, 5600]
+44.689: INFO: analog_controls    Grove Base HAT found!
+44.690: INFO: analog_controls    Setting ISO to 2500
+44.691: INFO: cinepi_controller  Setting iso to 2500
+44.694: INFO: redis_controller   Changed value: iso = 2500
+44.694: INFO: analog_controls    Setting Shutter Angle to 172.8
+44.696: INFO: cinepi_controller  Setting shutter_a_nom to 172.8
+44.697: INFO: redis_controller   Changed value: shutter_a_nom = 172.8
+44.711: INFO: cinepi_controller  Setting shutter_a to 172.8 degrees
+44.712: INFO: redis_controller   Changed value: shutter_a = 172.8
+44.712: INFO: PWMcontroller      Setting PWM with fps=None, shutter_angle=172.8
+44.712: INFO: PWMcontroller      PWM duty cycle calculated and set to 31456
+44.712: INFO: PWMcontroller      Updating PWM with cycles=1
+44.712: INFO: analog_controls    Setting FPS to 33
+44.713: INFO: cinepi_controller  Received set_fps call with value: 33.0
+44.713: INFO: cinepi_controller  Retrieved max_fps from Redis: 50
+44.713: INFO: cinepi_controller  Calculated safe_value: 33.0
+44.713: INFO: cinepi_controller  Setting fps to 33.0
+44.714: INFO: cinepi_controller  [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360]
+44.715: INFO: analog_controls    Setting White Balance to 4400K
+44.716: INFO: cinepi_controller  Set white balance for 4400K: (3.2, 1.6)
+44.750: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
+44.751: INFO: redis_controller   Changed value: fps = 33.0
+44.751: INFO: PWMcontroller      Setting PWM with fps=33.0, shutter_angle=None
+44.751: INFO: PWMcontroller      PWM frequency set to 33.0Hz on pins 19, None
+44.751: INFO: PWMcontroller      Shutter angle is None, keeping existing duty cycle.
+44.751: INFO: PWMcontroller      Updating PWM with cycles=1
+44.793: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
+44.798: INFO: redis_controller   Changed value: fps_last = 33.0
+44.801: INFO: redis_controller   Changed value: wb_user = 4400
+44.804: INFO: redis_controller   Changed value: cg_rb = 3.2,1.6
+44.804: INFO: redis_controller   Changed value: wb_user = 4400
+45.043: INFO: cinepi_controller  Trigger mode set to 0
+45.047: INFO: cinepi_app         Restarting CinePi instance.
+45.048: INFO: redis_controller   Changed value: trigger_mode = 0
+45.052: INFO: cinepi_app         Shutting down CinePi instance.
+45.053: INFO: redis_controller   Changed value: fps_last = 33.0
+45.072: INFO: redis_controller   Changed value: fps_last = 33.0
+45.125: INFO: cinepi_app         CinePi instance shut down.
+45.478: INFO: sensor_detect      cinepi-raw output: Available cameras
+-----------------
+0 : imx477 [4056x3040 12-bit RGGB] (/base/axi/pcie@120000/rp1/i2c@80000/imx477@1a)
+    Modes: 'SRGGB10_CSI2P' : 1332x990 [120.05 fps - (696, 528)/2664x1980 crop]
+           'SRGGB12_CSI2P' : 2028x1080 [50.03 fps - (0, 440)/4056x2160 crop]
+                             2028x1520 [40.01 fps - (0, 0)/4056x3040 crop]
+                             4056x3040 [10.00 fps - (0, 0)/4056x3040 crop]
+
+
+45.480: INFO: sensor_detect      Detected camera model: imx477
+45.480: WARNING: sensor_detect      cinepi-raw command exited with non-zero status: 134
+45.480: WARNING: sensor_detect      stderr: terminate called after throwing an instance of 'std::system_error'
+  what():  Invalid argument
+Aborted
+
+45.488: INFO: cinepi_app         Corrected Preview Window -> x=94, y=79, width=1732, height=922, aspect_ratio=1.88
+45.491: INFO: cinepi_app         Issuing ['cinepi-raw', '--mode', '2028:1080:12:U', '--width', '2028', '--height', '1080', '--lores-width', '1352', '--lores-height', '720', '-p', '94,79,1732,922', '--post-process-file', '/home/pi/post-processing.json', '--shutter', '20000', '--awbgains', '3.2,1.6', '--awb', 'auto']
+45.493: INFO: redis_controller   Changed value: anamorphic_factor = 1
+45.496: INFO: redis_controller   Changed value: lores_width = 1352
+45.499: INFO: redis_controller   Changed value: lores_height = 720
+45.503: INFO: main               Trigger mode set to 0 using cinepi_controller.
+45.508: INFO: main               Initialized WB steps: [3200, 4400, 5600]
+45.506: INFO: redis_controller   Changed value: sensor = imx477
+45.521: INFO: cinepi_controller  Set white balance for 4400K: (3.2, 1.6)
+45.522: INFO: redis_controller   Changed value: cg_rb = 3.2,1.6
+45.523: INFO: main               --- initialization complete
+45.524: INFO: redis_controller   Changed value: wb_user = 4400
+46.018: INFO: redis_listener     Framecount is changing
+46.018: INFO: redis_controller   Changed value: rec = 1
+46.018: INFO: mediator           Recording started!
+46.020: INFO: gpio_output        GPIO 6 set to HIGH
+46.020: INFO: redis_listener     Framecount is changing
+46.020: INFO: gpio_output        GPIO 21 set to HIGH
+46.022: INFO: redis_controller   Changed value: rec = 1
+46.035: INFO: mediator           Recording started!
+46.036: INFO: gpio_output        GPIO 6 set to HIGH
+46.036: INFO: gpio_output        GPIO 21 set to HIGH
+46.526: INFO: redis_controller   Changed value: fps = 33.0
+46.527: INFO: PWMcontroller      Setting PWM with fps=33.0, shutter_angle=None
+46.527: INFO: PWMcontroller      PWM frequency set to 33.0Hz on pins 19, None
+46.527: INFO: PWMcontroller      Shutter angle is None, keeping existing duty cycle.
+46.527: INFO: PWMcontroller      Updating PWM with cycles=1
+46.542: INFO: PWMcontroller      PWM duty cycle set to 47.998779278248264% on pins 19, None
+46.554: INFO: redis_listener     Drop frame detected
+46.554: INFO: redis_listener     Drop frame detected
+47.069: INFO: redis_listener     Drop frame flag reset
+47.075: INFO: redis_listener     Drop frame flag reset
+47.135: INFO: redis_listener     Framecount is stable
+47.140: INFO: redis_listener     Framecount is stable
+47.141: INFO: redis_controller   Changed value: rec = 0
+47.148: INFO: mediator           Recording stopped!
+47.149: INFO: gpio_output        GPIO 6 set to LOW
+47.149: INFO: gpio_output        GPIO 21 set to LOW
+47.149: INFO: redis_controller   Changed value: rec = 0
+47.149: INFO: mediator           Recording stopped!
+47.149: INFO: gpio_output        GPIO 6 set to LOW
+47.150: INFO: gpio_output        GPIO 21 set to LOW

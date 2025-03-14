@@ -118,6 +118,8 @@ class SimpleGUI(threading.Thread):
                 "iso": {"position": (1232, 4), "font_size": 41, "font": "bold"},
                 "wb_label": {"position": (1641, 4), "font_size": 30, "font": "regular"},
                 "color_temp": {"position": (1695, 3), "font_size": 41, "font": "bold"},
+                
+                #left side
                 "cam": {"position": (21, 97), "font_size": 26, "font": "regular"},
                 "resolution": {"position": (34, 140), "font_size": 20, "font": "bold"},
                 "aspect": {"position": (26, 191), "font_size": 20, "font": "bold", "align": "center"},
@@ -129,7 +131,7 @@ class SimpleGUI(threading.Thread):
                 #"bit_depth": {"position": (812, -7), "font_size": 34},
                 #"color_temp_libcamera": {"position": (1083, -7), "font_size": 34},                
                 #"exposure_label": {"position": (1280, -1), "font_size": 18},
-                "exposure_time": {"position": (1852, 140), "font_size": 20, "font": "bold"},
+                "exposure_time": {"position": (25, 291), "font_size": 20, "font": "bold"},
                 #"pwm_mode": {"position": (1273, -2), "font_size": 26},
                 # NEJ "shutter_a_sync": {"position": (1345, -2), "font_size": 26},
                 # "lock": {"position": (1530, -2), "font_size": 26},
@@ -408,15 +410,12 @@ class SimpleGUI(threading.Thread):
         # Draw rectangle (60x40)
         draw.rectangle([15, 228, 75, 268], fill=gray_color)
         
-        #Right side boxes
-        
-        
         #Shutter sync box
         # Draw rectangle (60x40)
         if self.cinepi_controller.shutter_a_sync_mode == 1:
-            draw.rectangle([1845, 128, 1905, 168], fill=white_color)
+            draw.rectangle([15, 280, 75, 320], fill=white_color)
         else:
-            draw.rectangle([1845, 128, 1905, 168], fill=gray_color)
+            draw.rectangle([15, 280, 75, 320], fill=gray_color)
             
         # #Shutter speed box
         # # Draw rectangle (60x40)

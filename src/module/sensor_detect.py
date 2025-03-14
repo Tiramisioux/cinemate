@@ -6,7 +6,6 @@ class SensorDetect:
     def __init__(self):
         self.camera_model = None
         self.res_modes = []
-
         self.sensor_resolutions = {
 
             'imx296': {                                                        
@@ -50,7 +49,6 @@ class SensorDetect:
         
         #self.detect_camera_model()
 
-
     def detect_camera_model(self):
         try:
             result = subprocess.run('cinepi-raw --list-cameras', shell=True, capture_output=True, text=True)
@@ -73,9 +71,9 @@ class SensorDetect:
             else:
                 logging.warning("No output from cinepi-raw")
 
-            if result.returncode != 0:
-                logging.warning(f"cinepi-raw command exited with non-zero status: {result.returncode}")
-                logging.warning(f"stderr: {result.stderr}")
+            # if result.returncode != 0:
+            #     logging.warning(f"cinepi-raw command exited with non-zero status: {result.returncode}")
+            #     logging.warning(f"stderr: {result.stderr}")
 
         except subprocess.CalledProcessError as e:
             logging.error(f"Error running cinepi-raw: {e}")

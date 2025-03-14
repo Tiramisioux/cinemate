@@ -86,7 +86,8 @@ class AnalogControls(threading.Thread):
 
             if self.shutter_a_pot is not None:
                 shutter_a_read = self.adc.read(self.shutter_a_pot)
-                new_shutter_a = self.map_adc_to_steps(shutter_a_read, steps=self.cinepi_controller.shutter_a_steps)
+                # ✅ Use dynamically updated shutter angles
+                new_shutter_a = self.map_adc_to_steps(shutter_a_read, steps=self.cinepi_controller.shutter_a_steps_dynamic)
                 if new_shutter_a != self.last_shutter_a:
                     logging.info(f"Setting Shutter Angle to {new_shutter_a}")
                     self.cinepi_controller.set_shutter_a_nom(new_shutter_a)
@@ -111,6 +112,7 @@ class AnalogControls(threading.Thread):
 
         except Exception as e:
             logging.error(f"Error occurred while updating parameters: {e}\n{traceback.format_exc()}")
+
 
     def run(self):
         try:

@@ -296,11 +296,16 @@ class CinePiController:
                     self.redis_controller.set_value('fps', safe_value)
                     new_shutter_angle = float(self.get_setting('shutter_a'))
                     logging.info(f"Setting fps to {safe_value}")
+            
+            # 🚀 Force recalculating shutter angles after FPS is updated
+            self.update_fps_and_shutter_angles(safe_value)
+            self.shutter_a_steps_dynamic = self.calculate_dynamic_shutter_angles(safe_value)
+
 
             self.exposure_time_s = (float(self.redis_controller.get_value('shutter_a')) / 360) / float(self.redis_controller.get_value('fps'))
             self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_s)
             
-            self.update_fps_and_shutter_angles(safe_value)
+            #self.update_fps_and_shutter_angles(safe_value)
             
             self.redis_controller.set_value('fps_last', safe_value)
 
@@ -465,36 +470,55 @@ class CinePiController:
 
     def set_shutter_a(self, value):
         with self.parameters_lock_obj:
-            safe_value = max(1, min(value, 360))  # Ensure the value is between 1 and 360 degrees
+            # Ensure the value is within the dynamically computed flicker-free + user-defined shutter angles
+            if value in self.shutter_a_steps_dynamic:
+                safe_value = value
+            else:
+                # Select the closest valid shutter angle from the dynamic list
+                safe_value = min(self.shutter_a_steps_dynamic, key=lambda x: abs(x - value))
+
             self.redis_controller.set_value('shutter_a', safe_value)
             self.exposure_time_seconds = (safe_value / 360.0) / self.fps
             self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_seconds)
-            logging.info(f"Setting shutter_a to {safe_value} degrees")
+            logging.info(f"Setting shutter_a to {safe_value} degrees (closest match from dynamic list)")
+
             if self.shutter_a_sync_mode:
-                self.adjust_shutter_a_sync(shutter_a_nom=safe_value)  # Ensure only correct argument is passed
+                self.adjust_shutter_a_sync(shutter_a_nom=safe_value)
+
+
 
     def set_shutter_a_nom(self, value):
         if not self.shutter_a_nom_lock:
             with self.parameters_lock_obj:
-                safe_value = max(1, min(value, 360))
+                # Ensure value is within the dynamically computed shutter angles
+                if value in self.shutter_a_steps_dynamic:
+                    safe_value = value
+                else:
+                    # Pick the closest valid shutter angle
+                    safe_value = min(self.shutter_a_steps_dynamic, key=lambda x: abs(x - value))
+
                 self.redis_controller.set_value('shutter_a_nom', safe_value)
                 self.exposure_time_seconds = (safe_value / 360.0) / self.fps
                 self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_seconds)
-                logging.info(f"Setting shutter_a_nom to {value}")
-                
+                logging.info(f"Setting shutter_a_nom to {safe_value} (closest match from dynamic list)")
+
             if self.shutter_a_sync:
                 nominal_shutter_angle = float(self.redis_controller.get_value('shutter_a_nom'))
                 exposure_time_desired = (nominal_shutter_angle / 360) * (1 / self.fps)
                 synced_shutter_angle = (exposure_time_desired / (1 / self.fps)) * 360
                 synced_shutter_angle = round(synced_shutter_angle, 1)
+
                 if isinstance(synced_shutter_angle, float) and synced_shutter_angle.is_integer():
                     synced_shutter_angle = int(synced_shutter_angle)
+
                 self.set_shutter_a(synced_shutter_angle)
             else:
                 self.set_shutter_a(safe_value)
-                
+
             if self.shutter_a_sync_mode:
-                self.adjust_shutter_a_sync(shutter_a_nom=value)
+                self.adjust_shutter_a_sync(shutter_a_nom=safe_value)
+
+
 
     def set_shu_fps_lock(self, value=None):
         if value is not None:
@@ -562,26 +586,38 @@ class CinePiController:
     
     def calculate_dynamic_shutter_angles(self, fps):
         if fps <= 0:
-            fps = 1 
-            #raise ValueError("FPS must be greater than zero.")
+            fps = 1  # Prevent division by zero
 
-        dynamic_steps = self.shutter_a_steps.copy()  # Start with normal shutter angle values
+        dynamic_steps = set(self.shutter_a_steps)  # Start with user-defined shutter angles
+
+        # Add flicker-free shutter angles for each frequency in light_hz
         for hz in self.light_hz:
             flicker_free_angles = self.calculate_flicker_free_shutter_angles(fps, hz)
-            dynamic_steps.extend(flicker_free_angles)
-        dynamic_steps = sorted(set(dynamic_steps))  # Remove duplicates and sort
-        logging.info(dynamic_steps)
-        return dynamic_steps
+            dynamic_steps.update(flicker_free_angles)  # Add unique flicker-free values
+
+        self.shutter_a_steps_dynamic = sorted(dynamic_steps)
+        logging.info(f"Updated shutter angles (user-defined + flicker-free): {self.shutter_a_steps_dynamic}")
+
+        return self.shutter_a_steps_dynamic
+
+
 
     def calculate_flicker_free_shutter_angles(self, fps, hz):
         if fps <= 0:
             raise ValueError("FPS must be greater than zero.")
-        
+
         flicker_free_angles = []
-        for multiple in range(1, int(hz / fps) + 1):
-            angle = 360 / multiple
-            flicker_free_angles.append(angle)
+        
+        for multiple in range(1, 10):  # Generate up to 10 harmonics
+            angle = (hz / (fps * multiple)) * 360  # Calculate flicker-free shutter angle
+            if 1 <= angle <= 360:  # Ensure the angle is valid
+                flicker_free_angles.append(round(angle, 1))
+
+        logging.info(f"Generated flicker-free shutter angles for fps={fps}, hz={hz}: {flicker_free_angles}")
+        
         return flicker_free_angles
+
+
 
     def update_fps_and_shutter_angles(self, fps):
         if fps <= 0:

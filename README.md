@@ -387,7 +387,7 @@ On Raspberry Pi 4 the tuning file currently fails to load properly for libcamera
 - [ ] simple_gui.py adaptive layout for non 1920x1080 screens
 - [ ] fix frame rate / shutter angle sync for constant exposure during fps change
 - [ ] mounting mechanism should be improved. Drives seem to not mount when detatched and then reconnected
-- [ ] anamorphic factor to be moved to settings file.
+- [x] anamorphic factor to be moved to settings file.
 - [ ] 16 bit modes for imx585
 - [ ] optimize recording to allow for the use of 300 MB/s SSD drive
 - [ ] optimize operating system for faster boot and smaller image file

@@ -23,6 +23,8 @@ class CinePiController:
                  fps_steps,
                  wb_steps,   # Use this directly
                  light_hz,
+                 anamorphic_steps,
+                 default_anamorphic_factor
                  ):
         
         self.parameters_lock_obj = threading.Lock()
@@ -37,6 +39,9 @@ class CinePiController:
         self.fps_steps = fps_steps
         self.wb_steps = wb_steps  # Use the provided wb_steps
         self.light_hz = light_hz
+        
+        self.anamorphic_steps = anamorphic_steps
+        self.default_anamorphic_factor = default_anamorphic_factor
         
         self.wb_cg_rb_array = {}  # Initialize as an empty dictionary
         
@@ -100,7 +105,7 @@ class CinePiController:
         self.initial_exposure = None
         self.initial_motion_blur = None
         self.initial_shutter_a = None
-        
+
         self.update_steps()
 
         # Set a timer to clear the startup flag after a short period
@@ -111,6 +116,38 @@ class CinePiController:
         logging.info(f"Initialized fps: {self.fps}")
         
         self.set_resolution(int(self.redis_controller.get_value('sensor_mode')))
+        
+    def set_anamorphic_factor(self, value=None):
+        """
+        Set or toggle the anamorphic factor.
+        - If `value` is provided, set it directly in Redis if valid.
+        - If `value` is None, toggle to the next value in the anamorphic_steps array.
+        """
+        if value is not None:
+            # Validate the incoming value
+            if value in self.anamorphic_steps:
+                self.redis_controller.set_value('anamorphic_factor', value)
+                logging.info(f"Anamorphic factor set to: {value}")
+            else:
+                logging.error(f"Invalid anamorphic factor: {value}. Valid options are: {self.anamorphic_steps}")
+        else:
+            # Get the current anamorphic factor from Redis
+            current_value = float(self.redis_controller.get_value('anamorphic_factor'))
+            if current_value not in self.anamorphic_steps:
+                logging.error(f"Current anamorphic factor {current_value} is not in the valid steps: {self.anamorphic_steps}")
+                return
+
+            # Find the next value in the array
+            current_index = self.anamorphic_steps.index(current_value)
+            next_index = (current_index + 1) % len(self.anamorphic_steps)
+            next_value = self.anamorphic_steps[next_index]
+
+            # Set the next value in Redis
+            self.redis_controller.set_value('anamorphic_factor', next_value)
+            logging.info(f"Anamorphic factor toggled to: {next_value}")
+        
+        self.cinepi.restart()
+                
         
     def set_shutter_a_sync_mode(self, mode=None):
         if mode is None:

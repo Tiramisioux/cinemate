@@ -106,6 +106,9 @@ def main():
     
     # Store Pi model in Redis
     redis_controller.set_value('pi_model', pi_model)
+    
+    # Set redis anamorphic factor to default value
+    redis_controller.set_value('anamorphic_factor', settings["anamorphic_preview"]["default_anamorphic_factor"])
 
     # Initialize CinePi application
     cinepi = CinePi(redis_controller, sensor_detect)
@@ -117,7 +120,9 @@ def main():
         shutter_a_steps=settings["arrays"]["shutter_a_steps"],
         fps_steps=settings["arrays"]["fps_steps"],
         wb_steps=settings["arrays"]["wb_steps"],
-        light_hz=settings["settings"]["light_hz"]
+        light_hz=settings["settings"]["light_hz"],
+        anamorphic_steps=settings["anamorphic_preview"]["anamorphic_steps"],
+        default_anamorphic_factor=settings["anamorphic_preview"]["default_anamorphic_factor"]
     )
 
     gpio_input = ComponentInitializer(cinepi_controller, settings)

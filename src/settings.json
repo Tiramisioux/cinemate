@@ -28,6 +28,11 @@
     "fps_free": false,
     "wb_free": false
   },
+
+  "anamorphic_preview": {
+    "anamorphic_steps": [1, 1.33, 2.0],
+    "default_anamorphic_factor": 1
+  },
   
 "buttons": [
     {

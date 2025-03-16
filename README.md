@@ -118,23 +118,11 @@ When manually running CineMate from the CLI you can type simple commands. The ta
 | `set wb`                                      | set white balance to a value (chooses the closest value in the array defined in settings.json)                                                                                                                                              | integer                       |                         |                      |              |              |
 | `inc wb`                                      | increase white balance                                                                                                                                                                                                                     | -                             |                         | clk 12, dt 20, bu 21  |              |              |
 | `dec wb`                                      | decrease white balance                                                                                                                                                                                                                     | -                             |                         | clk 25, dt 8, bu 7    |              |              |
-| `set iso lock`                                | lock iso                                                                                                                                                                                                                                   | 0, 1 or None (toggle control) |                         | 10 (single click)     |              |              |
-| `set shutter a nom lock`                      | locks shutter angle                                                                                                                                                                                                                        | 0, 1 or None (toggle control) |                         | 23 (single click)     |              |              |
-| `set fps lock`                                | locks fps                                                                                                                                                                                                                                  | 0, 1 or None (toggle control) |                         | 7 (single click)      |              |              |
-| `set wb lock`                                 | locks wb                                                                                                                                                                                                                                   | 0, 1 or None (toggle control) |                         | 21 (single click)     |              |              |
-| `set all lock`                                | locks all values                                                                                                                                                                                                                           | 0, 1 or None (toggle control) |                         |                      | 27         |              |
-| `set shutter a nom fps lock`                  | lock shutter angle + fps                                                                                                                                                                                                                   | 0, 1 or None (toggle control) |                         |                      |              |              |
-| `set shutter a sync`                          | sync shutter angle and fps                                                                                                                                                                                                                 | 0, 1 or None (toggle control) |                         |                      | 22         |              |
-| `set fps double`                              | Instant slow motion mode, Press once to double fps and press a second time to revert to original fps. If in PWM mode, camera will speed ramp up and down.                                           | 0, 1 or None (toggle control) | 16                      |                      |              |              |
-| `set trigger mode`                            | Switches camera software to PWM mode. | 0, 1 or None (toggle control) |                         |                      | 24         |              |
-| `set resolution`                              | select the next available resolution option                                                                                                                                                                                               | 0, 1 or None (toggle control) | 13, 26 (single click)   |                      |              |           |
+| `set resolution`                              | select the next available resolution option                                                                                                                                                                                               | 0, 1 or None (toggle control) | 13, 26 (single click)   |                      |              |              |
+| `set anamorphic factor`                       | set or toggle the anamorphic factor (explicit value or toggle through anamorphic_steps)                                                                                                                                                     | float or None (toggle control)|                         |                      |              |              |
 | `reboot`                                      | reboot the pi                                                                                                                                                                                                                             | -                             | 13, 26 (double click)   |                      |              |              |
 | `shutdown`                                    | shutdown the pi                                                                                                                                                                                                                           | -                             | 13, 26 (triple click)   |                      |              |              |
 | `unmount`                                     | unmount CFE card/SSD                                                                                                                                                                                                                      | -                             | 13, 26 (hold for 3 sec) |                      |              |              |
-| `set filter`                    | set mechanical IR filter for StarlightEye | integer (0 or 1)                        |    |                           |
-| PWM pin (be sure to use a voltage divider!) | Controls shutter angle and fps with hardware PWM signal from the PI (3V) through a voltage divider to the camera XVS trigger pin (wants 1.65V). Also connect the camera ground pin to Pi ground. Now shutter angle and fps can be changed even while in recording mode, without restarting the sensor. |                               |                         |                     |              |19              |
-| rec light (be sure to use a resistor!)      |                                                                                                                                                                                                                                            |                               |                         |                      |              |            6  |
-
 
 
 ### Example CLI commands
@@ -231,15 +219,26 @@ CineMate interpolates redis cg_rb settings used by libcamera based on the select
 
 CineMate dynamically adjusts the shutter_a_steps array on fps change, adding the flicker free angles given the current frame rate and the hz values defined by the user.
 
+#### Anamorphic preview
+```
+    "anamorphic_preview": {
+      "anamorphic_steps": [1, 1.33, 2.0],
+      "default_anamorphic_factor": 1
+    }
+```
+
+The anamorphic_preview section allows users to define an array of selectable anamorphic factors (anamorphic_steps) and set a default value (default_anamorphic_factor). The anamorphic factor is used to adjust the aspect ratio of the preview.
+
+
 #### Analog Controls
 Default settings are `None`. Map Grove Base HAT ADC channels to iso, shutter angle, fps and white balance controls. 
 
 ```
   "analog_controls": {
-    "iso_pot": "A0",
-    "shutter_a_pot": "A2",
-    "fps_pot": "A4",
-    "wb_pot": "A6"
+    "iso_pot": 0,
+    "shutter_a_pot": 2,
+    "fps_pot": 4,
+    "wb_pot": 6
   }
 ```
 

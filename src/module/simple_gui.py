@@ -124,6 +124,12 @@ class SimpleGUI(threading.Thread):
                 "resolution": {"position": (34, 140), "font_size": 20, "font": "bold"},
                 "aspect": {"position": (26, 191), "font_size": 20, "font": "bold", "align": "center"},
                 "raw": {"position": (25, 240), "font_size": 20, "font": "bold"},
+                "exposure_time": {"position": (25, 291), "font_size": 20, "font": "bold"},
+                
+                "mon": {"position": (21, 362), "font_size": 26, "font": "regular"},
+                "anamorphic_factor": {"position": (25, 405), "font_size": 20, "font": "bold"},
+                
+                
                 #"fps": {"position": (375, -7), "font_size": 34},
                 #"sensor": {"position": (435, -1), "font_size": 18, "align": "right", "width": 175},
                 #"width": {"position": (620, -7), "font_size": 34},
@@ -131,7 +137,7 @@ class SimpleGUI(threading.Thread):
                 #"bit_depth": {"position": (812, -7), "font_size": 34},
                 #"color_temp_libcamera": {"position": (1083, -7), "font_size": 34},                
                 #"exposure_label": {"position": (1280, -1), "font_size": 18},
-                "exposure_time": {"position": (25, 291), "font_size": 20, "font": "bold"},
+                
                 #"pwm_mode": {"position": (1273, -2), "font_size": 26},
                 # NEJ "shutter_a_sync": {"position": (1345, -2), "font_size": 26},
                 # "lock": {"position": (1530, -2), "font_size": 26},
@@ -162,6 +168,7 @@ class SimpleGUI(threading.Thread):
             "fps_actual": {"normal": (249,249,249), "inverse": "black"},
             "exposure_label": {"normal": (136,136,136), "inverse": "black"},
             "exposure_time": {"normal": "black", "inverse": (249,249,249)},
+            "anamorphic_factor": {"normal": "black", "inverse": (249,249,249)},
             "sensor": {"normal": (136,136,136), "inverse": "black"},
             "height": {"normal": (249,249,249), "inverse": "black"},
             "width": {"normal": (249,249,249), "inverse": "black"},
@@ -243,6 +250,7 @@ class SimpleGUI(threading.Thread):
             "fps_actual": f"{float(self.redis_listener.current_framerate):.3f}" if self.redis_listener.current_framerate is not None else "/ N/A",
             "exposure_label": "EXP",
             "exposure_time": str(self.cinepi_controller.exposure_time_fractions),
+            
             "sensor": str.upper(self.redis_controller.get_value("sensor")),
             "width": str(self.redis_controller.get_value("width") + " : "),
             "height": str(self.redis_controller.get_value("height") + " : "),
@@ -254,6 +262,8 @@ class SimpleGUI(threading.Thread):
             "aspect": str(aspect_ratio),  # Use computed aspect ratio
             "raw": 'RAW',
             "ram_label": 'RAM',
+            "mon": 'MON',
+            "anamorphic_factor": (str(self.redis_controller.get_value('anamorphic_factor')) + "X"),
             "ram_load": f"{100 - psutil.virtual_memory().available / psutil.virtual_memory().total * 100:.0f}%",
             "cpu_label": 'CPU',
             "cpu_load": str(int(psutil.cpu_percent())) + '%',
@@ -330,7 +340,6 @@ class SimpleGUI(threading.Thread):
         if self.redis_listener.drop_frame == 1 and int(self.redis_controller.get_value('rec')) == 1:
             self.current_background_color = "purple"
             self.color_mode = "inverse"
-        
         elif int(values["ram_load"].rstrip('%')) > 95:
             self.current_background_color = "yellow"
             self.color_mode = "inverse"
@@ -371,12 +380,6 @@ class SimpleGUI(threading.Thread):
                     self.emit_gui_data_change(changed_data)
                 except Exception as e:
                     pass
-                    #logging.error(f"Error emitting GUI data change: {e}")
-
-                # Log the changed data after emitting changes
-                # logging.info(f"Changed data: {changed_data}")
-
-
 
         # Update previous_values with the current values for the next comparison
         self.previous_values = current_values.copy()
@@ -393,39 +396,26 @@ class SimpleGUI(threading.Thread):
         black_color = (0, 0, 0)
         white_color = (249, 249, 249)
 
-
-
-        #Resolution box
-        # Draw rectangle (60x40)
+        # Resolution box
         draw.rectangle([15, 128, 75, 168], fill=gray_color)
 
-        #Aspect ratio box
-        # Outer rectangle (60x40) at position (10,10)
+        # Aspect ratio box
         draw.rectangle([15, 178, 75, 218], fill=gray_color)
 
-        # Inner rectangle (56x36) inside with a 2px black border
-        draw.rectangle([17, 180, 73, 216], fill=gray_color, outline=black_color, width=2)
-
-        #Raw box
-        # Draw rectangle (60x40)
+        # Raw box
         draw.rectangle([15, 228, 75, 268], fill=gray_color)
-        
-        #Shutter sync box
-        # Draw rectangle (60x40)
+
+        # Shutter sync box
         if self.cinepi_controller.shutter_a_sync_mode == 1:
             draw.rectangle([15, 280, 75, 320], fill=white_color)
         else:
             draw.rectangle([15, 280, 75, 320], fill=gray_color)
-            
-        # #Shutter speed box
-        # # Draw rectangle (60x40)
-        # draw.rectangle([1845, 178, 1905, 218], fill=gray_color)
-        
-        # #Low voltage box
-        # # Draw rectangle (60x40)
-        # draw.rectangle([1845, 228, 1905, 268], fill=gray_color)
-        
-        
+
+        # Anamorphic factor box
+        mon_heading_y = 362  # Y-position of the "MON" heading
+        mon_box_start_y = mon_heading_y + (128 - 97)  # Match the distance between "CAM" and the resolution box
+        draw.rectangle([15, mon_box_start_y, 75, mon_box_start_y + 40], fill=gray_color)
+
         # Get sensor resolution
         self.width = int(self.redis_controller.get_value("width"))
         self.height = int(self.redis_controller.get_value("height"))

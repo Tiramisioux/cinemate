@@ -120,9 +120,9 @@ When manually running CineMate from the CLI you can type simple commands. The ta
 | `dec wb`                                      | decrease white balance                                                                                                                                                                                                                     | -                             |                         | clk 25, dt 8, bu 7    |              |              |
 | `set resolution`                              | select the next available resolution option                                                                                                                                                                                               | 0, 1 or None (toggle control) | 13, 26 (single click)   |                      |              |              |
 | `set anamorphic factor`                       | set or toggle the anamorphic factor (explicit value or toggle through anamorphic_steps)                                                                                                                                                     | float or None (toggle control)|                         |                      |              |              |
-| `reboot`                                      | reboot the pi                                                                                                                                                                                                                             | -                             | 13, 26 (double click)   |                      |              |              |
-| `shutdown`                                    | shutdown the pi                                                                                                                                                                                                                           | -                             | 13, 26 (triple click)   |                      |              |              |
-| `unmount`                                     | unmount CFE card/SSD                                                                                                                                                                                                                      | -                             | 13, 26 (hold for 3 sec) |                      |              |              |
+| `reboot`                                      | reboot the pi                                                                                                                                                                                                                             | -                             | 26 (double click)   |                      |              |              |
+| `shutdown`                                    | shutdown the pi                                                                                                                                                                                                                           | -                             | 26 (triple click)   |                      |              |              |
+| `unmount`                                     | unmount CFE card/SSD                                                                                                                                                                                                                      | -                             | 26 (hold for 3 sec) |                      |              |              |
 
 
 ### Example CLI commands
@@ -302,26 +302,22 @@ Note that if rotary encoders with buttons are used, these are connected and defi
 #### Adafruit Neopixel Quad Rotary Encoder
 
 ```
-{
-    "0": {"setting_name": "iso", "gpio_pin": 22},
-    "1": {"setting_name": "shutter_a", "gpio_pin": 12},
-    "2": {"setting_name": "fps", "gpio_pin": 1},
-    "3": {"setting_name": "wb", "gpio_pin": 13}
-    }
+  "quad_rotary_encoders": {
+    "0": {"setting_name": "iso", "gpio_pin": 5},
+    "1": {"setting_name": "shutter_a", "gpio_pin": 16},
+    "2": {"setting_name": "fps", "gpio_pin": 26},
+    "3": {"setting_name": "wb", "gpio_pin": 5}
+  }
 ```
 
-- Encoder 0 (ISO): Push button on GPIO 22
-- Encoder 1 (Shutter Angle): Push button on GPIO 12
-- Encoder 2 (FPS): Push button on GPIO 1
-- Encoder 3 (White Balance): Push button on GPIO 13
+##### Defaults encoder push buttons settings
+
+- Encoder 0 (ISO): Encoder push button clones behaviour of rec button on GPIO 5
+- Encoder 1 (Shutter Angle): Encoder push button clones behaviour of fps double button in GPIO 16
+- Encoder 2 (FPS): Encoder push button clones behaviour of system push button on GPIO 26
+- Encoder 3 (White Balance): Encoder push button clones behaviour of rec button on GPIO 5
 
 These push buttons can be programmed to perform various functions like toggling locks, changing modes, or triggering specific actions, just like regular GPIO buttons. The `gpio_pin` setting clones the behaviour of pins defined in the Buttons section of the settings file.
-
-For example, based on default settings above:
-- The ISO encoder's push button clones GPIO 22 (toggle `set_all_lock`).
-- The Shutter Angle encoder's push button clones GPIO 12 (toggle `set shutter a sync mode`).
-- The FPS encoder's push button clones GPIO 1 (toggle `set fps double`).
-- The White Balance encoder's push button GPIO 13 (toggle through resolution modes using `set resolution` without argument).
 
 ## Resolution modes  
 
@@ -338,8 +334,7 @@ For example, based on default settings above:
 |        | 2    | 2328 x 1748  | 1.77         | 10        | 30      | 8.2            |
 |        | 3    | 3840 x 2160  | 1.77         | 10        | 18      | 31             |
 | IMX585 | 0    | 1928 x 1090  | 1.77         | 12        | 87      | 4              |
-|        | 1    | 3856 x 2180  | 1.77         | 12        | 34      | 13             |
-|        | 2    | 1928 x 1090  | 1.77         | 16        | 30      | 13             |
+
 
 '*' Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames. You can cap CineMates max fps values for your specific build by editing the file `cinemate/src/module/sensor_detect.py`
 
@@ -388,7 +383,8 @@ On Raspberry Pi 4 the tuning file currently fails to load properly for libcamera
 - [ ] fix frame rate / shutter angle sync for constant exposure during fps change
 - [ ] mounting mechanism should be improved. Drives seem to not mount when detatched and then reconnected
 - [x] anamorphic factor to be moved to settings file.
-- [ ] 16 bit modes for imx585
+- [ ] 4K and 16 bit modes for imx585
+- [ ] support for imx294
 - [ ] optimize recording to allow for the use of 300 MB/s SSD drive
 - [ ] optimize operating system for faster boot and smaller image file
 - [ ] overclocking of ISP

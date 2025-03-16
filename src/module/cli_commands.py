@@ -31,6 +31,7 @@ class CommandExecutor(threading.Thread):
             'inc wb': (cinepi_controller.inc_wb, None),
             'dec wb': (cinepi_controller.dec_wb, None),
             'set resolution': (cinepi_controller.set_resolution, [int, None]),
+            'set anamorphic factor': (cinepi_controller.set_anamorphic_factor, [float, None]),
             'unmount': (cinepi_controller.unmount, None),
             'time': (self.display_time, None),  # Fixed placement issue
             'set rtc time': (self.set_rtc_time, None),  # Fixed placement issue

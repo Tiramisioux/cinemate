@@ -85,9 +85,11 @@ class CinePi:
 
         self.aspect_ratio = self.width / self.height
 
-        self.anamorphic_factor = 1  # 2x anamorphic lens
-        
-        self.redis_controller.set_value('anamorphic_factor', self.anamorphic_factor)
+        self.anamorphic_factor = self.redis_controller.get_value('anamorphic_factor')
+        if self.anamorphic_factor is None:
+            self.anamorphic_factor = 1.0  # Default value
+        else:
+            self.anamorphic_factor = float(self.anamorphic_factor)  # Convert to float
 
         # Define frame dimensions (user-modifiable)
         frame_width = 1920  # User can modify this
@@ -106,9 +108,9 @@ class CinePi:
         lores_width = int((lores_height * self.aspect_ratio) * self.anamorphic_factor)
 
         # Ensure lores width fits within available space
-        if lores_width > available_width:
+        if lores_width > available_width:   
             lores_width = available_width
-            lores_height = int(lores_width / (self.aspect_ratio * self.anamorphic_factor))
+            lores_height = int(round((lores_width / (self.aspect_ratio * float(self.anamorphic_factor)))))
 
         self.redis_controller.set_value('lores_width', lores_width)
         self.redis_controller.set_value('lores_height', lores_height)

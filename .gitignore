@@ -191,3 +191,4 @@ $RECYCLE.BIN/
 # Directories
 __pycache__/
 tests/
+src/logs/*.log

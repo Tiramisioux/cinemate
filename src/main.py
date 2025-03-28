@@ -6,6 +6,7 @@ import signal
 import atexit
 import subprocess
 import traceback
+import os
 
 from module.config_loader import load_settings
 from module.logger import configure_logging
@@ -59,7 +60,13 @@ def check_hotspot_status():
 
 def setup_logging(debug_mode):
     logging_level = logging.DEBUG if debug_mode else logging.INFO
+
+    # Ensure logs directory exists
+    log_dir = '/home/pi/cinemate/src/logs'
+    os.makedirs(log_dir, exist_ok=True)
+
     return configure_logging(MODULES_OUTPUT_TO_SERIAL, logging_level)
+
 
 def start_hotspot():
     wifi_manager = WiFiHotspotManager()

@@ -111,7 +111,8 @@ class SimpleGUI(threading.Thread):
             0: {  # Layout 0
                 # upper row
                 "fps_label": {"position": (98, 4), "font_size": 30, "font": "regular"},
-                "fps_actual": {"position": (159, 3), "font_size": 41, "font": "bold"},
+                "fps": {"position": (159, 3), "font_size": 41},
+                "fps_actual": {"position": (220, 3), "font_size": 41, "font": "bold"},
                 "shutter_label": {"position": (555, 4), "font_size": 30, "font": "regular"},
                 "shutter_speed": {"position": (690, 3), "font_size": 41, "font": "bold"},
                 "iso_label": {"position": (1194, 3), "font_size": 30, "font": "regular"},
@@ -128,9 +129,7 @@ class SimpleGUI(threading.Thread):
                 
                 "mon": {"position": (21, 362), "font_size": 26, "font": "regular"},
                 "anamorphic_factor": {"position": (25, 405), "font_size": 20, "font": "bold"},
-                
-                
-                #"fps": {"position": (375, -7), "font_size": 34},
+
                 #"sensor": {"position": (435, -1), "font_size": 18, "align": "right", "width": 175},
                 #"width": {"position": (620, -7), "font_size": 34},
                 #"height": {"position": (720, -7), "font_size": 34},
@@ -165,20 +164,23 @@ class SimpleGUI(threading.Thread):
             "shutter_speed": {"normal": (249,249,249), "inverse": "black"},
             "fps_label": {"normal": (136,136,136), "inverse": "black"},
             "fps": {"normal": (249,249,249), "inverse": "black"},
-            "fps_actual": {"normal": (249,249,249), "inverse": "black"},
-            "exposure_label": {"normal": (136,136,136), "inverse": "black"},
-            "exposure_time": {"normal": "black", "inverse": (249,249,249)},
-            "anamorphic_factor": {"normal": "black", "inverse": (249,249,249)},
+            "fps_actual": {"normal": (136,136,136), "inverse": "black"} ,
+            
+            "exposure_label": {"normal": "black", "inverse": "black"},
+            "exposure_time": {"normal": "black", "inverse": "black"},
+            "anamorphic_factor": {"normal": "black", "inverse": "black"},
             "sensor": {"normal": (136,136,136), "inverse": "black"},
             "height": {"normal": (249,249,249), "inverse": "black"},
             "width": {"normal": (249,249,249), "inverse": "black"},
             "bit_depth": {"normal": (249,249,249), "inverse": "black"},
+            
             "wb_label": {"normal": (136,136,136), "inverse": "black"},
             "color_temp": {"normal": (249,249,249), "inverse": "black"},
             "cam": {"normal": (249,249,249), "inverse": "black"},
-            "resolution": {"normal": "black"},
-            "aspect": {"normal": "black"},
-            "raw": {"normal": "black"},
+            "resolution": {"normal": "black", "inverse": "black"},
+            "aspect": {"normal": "black", "inverse": "black"},
+            "raw": {"normal": "black", "inverse": "black"},
+            "mon": {"normal": (249,249,249), "inverse": "black"},
             "color_temp_libcamera": {"normal": (136,136,136), "inverse": "black"},
             "pwm_mode": {"normal": (97,171,49), "inverse": "black"},
             # "shutter_a_sync": {"normal": "white", "inverse": "black"},
@@ -247,10 +249,9 @@ class SimpleGUI(threading.Thread):
             "shutter_speed": str(self.redis_controller.get_value('shutter_a')),
             "fps_label": "FPS",
             "fps": round(float(self.redis_controller.get_value('fps'))),
-            "fps_actual": f"{float(self.redis_listener.current_framerate):.3f}" if self.redis_listener.current_framerate is not None else "/ N/A",
+            #"fps_actual": f"/ {float(self.redis_listener.current_framerate):.3f}" if self.redis_listener.current_framerate is not None else "/ N/A",
             "exposure_label": "EXP",
             "exposure_time": str(self.cinepi_controller.exposure_time_fractions),
-            
             "sensor": str.upper(self.redis_controller.get_value("sensor")),
             "width": str(self.redis_controller.get_value("width") + " : "),
             "height": str(self.redis_controller.get_value("height") + " : "),
@@ -445,7 +446,6 @@ class SimpleGUI(threading.Thread):
         adjusted_lores_height = lores_height * self.anamorphic_factor  # Stretched height
         adjusted_aspect_ratio = adjusted_lores_width / adjusted_lores_height  # Corrected aspect ratio
 
-
         # Calculate the preview size while maintaining the adjusted aspect ratio
         if adjusted_aspect_ratio >= 1:  # Landscape or square sensor
             preview_w = max_draw_width
@@ -477,7 +477,6 @@ class SimpleGUI(threading.Thread):
             width=2
         )
 
-
         # Determine the current layout
         gui_layout_key = self.cinepi_controller.gui_layout
         if gui_layout_key not in self.layouts:
@@ -490,7 +489,7 @@ class SimpleGUI(threading.Thread):
         lock_mapping = {
             "iso": "iso_lock",
             "shutter_speed": "shutter_a_nom_lock",
-            "fps_actual": "fps_lock",
+            "fps": "fps_lock",
             "exposure_time": "shutter_a_sync"
         }
 
@@ -502,7 +501,7 @@ class SimpleGUI(threading.Thread):
             font_size = info["font_size"]
 
             # Select font based on the layout setting (bold or regular)
-            if info["font"] == "bold":
+            if info.get("font", "bold") == "bold":
                 font = ImageFont.truetype(os.path.realpath(self.bold_font_path), font_size)
             else:
                 font = ImageFont.truetype(os.path.realpath(self.regular_font_path), font_size)
@@ -527,12 +526,8 @@ class SimpleGUI(threading.Thread):
             # **New Addition: Draw rounded box behind the exposure time if shutter sync is enabled**
             if element == "exposure_time" and self.cinepi_controller.shutter_a_sync_mode == 1:
                 self.draw_rounded_box(draw, value, position, font_size, 5, "black", "white", image)
-
-
-
+                
         self.fb.show(image)
-        
-
         
     def draw_rounded_box(self, draw, text, position, font_size, padding, text_color, fill_color, image, extra_height=-17, reduce_top=12):
         font = ImageFont.truetype(os.path.realpath(self.font_path), font_size)

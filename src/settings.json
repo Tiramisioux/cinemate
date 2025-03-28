@@ -28,6 +28,11 @@
     "fps_free": false,
     "wb_free": false
   },
+
+  "anamorphic_preview": {
+    "anamorphic_steps": [1, 1.33, 2.0],
+    "default_anamorphic_factor": 1
+  },
   
 "buttons": [
     {
@@ -76,6 +81,11 @@
       "state_off_action": {"method": "set_all_lock", "args": [1]}
     },
     {
+      "pin": 24,
+      "state_on_action": {"method": "set_trigger_mode", "args": [0]},
+      "state_off_action": {"method": "set_trigger_mode", "args": [1]}
+    },
+    {
       "pin": 22,
       "state_on_action": {"method": "set_shutter_a_sync_mode", "args": [0]},
       "state_off_action": {"method": "set_shutter_a_sync_mode", "args": [1]}
@@ -118,9 +128,9 @@
   ],
 
   "quad_rotary_encoders": {
-    "0": {"setting_name": "iso", "gpio_pin": 22},
-    "1": {"setting_name": "shutter_a", "gpio_pin": 12},
-    "2": {"setting_name": "fps", "gpio_pin": 1},
-    "3": {"setting_name": "wb", "gpio_pin": 13}
+    "0": {"setting_name": "iso", "gpio_pin": 5},
+    "1": {"setting_name": "shutter_a", "gpio_pin": 16},
+    "2": {"setting_name": "fps", "gpio_pin": 26},
+    "3": {"setting_name": "wb", "gpio_pin": 5}
   }
 }

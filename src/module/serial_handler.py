@@ -140,5 +140,3 @@ class SerialHandler(threading.Thread):
             #     print("Queue is Empty!")  # Debugging print
 
             time.sleep(0.01)
-
-

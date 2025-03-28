@@ -23,6 +23,8 @@ class CinePiController:
                  fps_steps,
                  wb_steps,   # Use this directly
                  light_hz,
+                 anamorphic_steps,
+                 default_anamorphic_factor
                  ):
         
         self.parameters_lock_obj = threading.Lock()
@@ -37,6 +39,9 @@ class CinePiController:
         self.fps_steps = fps_steps
         self.wb_steps = wb_steps  # Use the provided wb_steps
         self.light_hz = light_hz
+        
+        self.anamorphic_steps = anamorphic_steps
+        self.default_anamorphic_factor = default_anamorphic_factor
         
         self.wb_cg_rb_array = {}  # Initialize as an empty dictionary
         
@@ -100,7 +105,7 @@ class CinePiController:
         self.initial_exposure = None
         self.initial_motion_blur = None
         self.initial_shutter_a = None
-        
+
         self.update_steps()
 
         # Set a timer to clear the startup flag after a short period
@@ -111,6 +116,38 @@ class CinePiController:
         logging.info(f"Initialized fps: {self.fps}")
         
         self.set_resolution(int(self.redis_controller.get_value('sensor_mode')))
+        
+    def set_anamorphic_factor(self, value=None):
+        """
+        Set or toggle the anamorphic factor.
+        - If `value` is provided, set it directly in Redis if valid.
+        - If `value` is None, toggle to the next value in the anamorphic_steps array.
+        """
+        if value is not None:
+            # Validate the incoming value
+            if value in self.anamorphic_steps:
+                self.redis_controller.set_value('anamorphic_factor', value)
+                logging.info(f"Anamorphic factor set to: {value}")
+            else:
+                logging.error(f"Invalid anamorphic factor: {value}. Valid options are: {self.anamorphic_steps}")
+        else:
+            # Get the current anamorphic factor from Redis
+            current_value = float(self.redis_controller.get_value('anamorphic_factor'))
+            if current_value not in self.anamorphic_steps:
+                logging.error(f"Current anamorphic factor {current_value} is not in the valid steps: {self.anamorphic_steps}")
+                return
+
+            # Find the next value in the array
+            current_index = self.anamorphic_steps.index(current_value)
+            next_index = (current_index + 1) % len(self.anamorphic_steps)
+            next_value = self.anamorphic_steps[next_index]
+
+            # Set the next value in Redis
+            self.redis_controller.set_value('anamorphic_factor', next_value)
+            logging.info(f"Anamorphic factor toggled to: {next_value}")
+        
+        self.cinepi.restart()
+                
         
     def set_shutter_a_sync_mode(self, mode=None):
         if mode is None:
@@ -296,11 +333,16 @@ class CinePiController:
                     self.redis_controller.set_value('fps', safe_value)
                     new_shutter_angle = float(self.get_setting('shutter_a'))
                     logging.info(f"Setting fps to {safe_value}")
+            
+            # 🚀 Force recalculating shutter angles after FPS is updated
+            self.update_fps_and_shutter_angles(safe_value)
+            self.shutter_a_steps_dynamic = self.calculate_dynamic_shutter_angles(safe_value)
+
 
             self.exposure_time_s = (float(self.redis_controller.get_value('shutter_a')) / 360) / float(self.redis_controller.get_value('fps'))
             self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_s)
             
-            self.update_fps_and_shutter_angles(safe_value)
+            #self.update_fps_and_shutter_angles(safe_value)
             
             self.redis_controller.set_value('fps_last', safe_value)
 
@@ -465,36 +507,55 @@ class CinePiController:
 
     def set_shutter_a(self, value):
         with self.parameters_lock_obj:
-            safe_value = max(1, min(value, 360))  # Ensure the value is between 1 and 360 degrees
+            # Ensure the value is within the dynamically computed flicker-free + user-defined shutter angles
+            if value in self.shutter_a_steps_dynamic:
+                safe_value = value
+            else:
+                # Select the closest valid shutter angle from the dynamic list
+                safe_value = min(self.shutter_a_steps_dynamic, key=lambda x: abs(x - value))
+
             self.redis_controller.set_value('shutter_a', safe_value)
             self.exposure_time_seconds = (safe_value / 360.0) / self.fps
             self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_seconds)
-            logging.info(f"Setting shutter_a to {safe_value} degrees")
+            logging.info(f"Setting shutter_a to {safe_value} degrees (closest match from dynamic list)")
+
             if self.shutter_a_sync_mode:
-                self.adjust_shutter_a_sync(shutter_a_nom=safe_value)  # Ensure only correct argument is passed
+                self.adjust_shutter_a_sync(shutter_a_nom=safe_value)
+
+
 
     def set_shutter_a_nom(self, value):
         if not self.shutter_a_nom_lock:
             with self.parameters_lock_obj:
-                safe_value = max(1, min(value, 360))
+                # Ensure value is within the dynamically computed shutter angles
+                if value in self.shutter_a_steps_dynamic:
+                    safe_value = value
+                else:
+                    # Pick the closest valid shutter angle
+                    safe_value = min(self.shutter_a_steps_dynamic, key=lambda x: abs(x - value))
+
                 self.redis_controller.set_value('shutter_a_nom', safe_value)
                 self.exposure_time_seconds = (safe_value / 360.0) / self.fps
                 self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_seconds)
-                logging.info(f"Setting shutter_a_nom to {value}")
-                
+                logging.info(f"Setting shutter_a_nom to {safe_value} (closest match from dynamic list)")
+
             if self.shutter_a_sync:
                 nominal_shutter_angle = float(self.redis_controller.get_value('shutter_a_nom'))
                 exposure_time_desired = (nominal_shutter_angle / 360) * (1 / self.fps)
                 synced_shutter_angle = (exposure_time_desired / (1 / self.fps)) * 360
                 synced_shutter_angle = round(synced_shutter_angle, 1)
+
                 if isinstance(synced_shutter_angle, float) and synced_shutter_angle.is_integer():
                     synced_shutter_angle = int(synced_shutter_angle)
+
                 self.set_shutter_a(synced_shutter_angle)
             else:
                 self.set_shutter_a(safe_value)
-                
+
             if self.shutter_a_sync_mode:
-                self.adjust_shutter_a_sync(shutter_a_nom=value)
+                self.adjust_shutter_a_sync(shutter_a_nom=safe_value)
+
+
 
     def set_shu_fps_lock(self, value=None):
         if value is not None:
@@ -562,26 +623,38 @@ class CinePiController:
     
     def calculate_dynamic_shutter_angles(self, fps):
         if fps <= 0:
-            fps = 1 
-            #raise ValueError("FPS must be greater than zero.")
+            fps = 1  # Prevent division by zero
 
-        dynamic_steps = self.shutter_a_steps.copy()  # Start with normal shutter angle values
+        dynamic_steps = set(self.shutter_a_steps)  # Start with user-defined shutter angles
+
+        # Add flicker-free shutter angles for each frequency in light_hz
         for hz in self.light_hz:
             flicker_free_angles = self.calculate_flicker_free_shutter_angles(fps, hz)
-            dynamic_steps.extend(flicker_free_angles)
-        dynamic_steps = sorted(set(dynamic_steps))  # Remove duplicates and sort
-        logging.info(dynamic_steps)
-        return dynamic_steps
+            dynamic_steps.update(flicker_free_angles)  # Add unique flicker-free values
+
+        self.shutter_a_steps_dynamic = sorted(dynamic_steps)
+        logging.info(f"Updated shutter angles (user-defined + flicker-free): {self.shutter_a_steps_dynamic}")
+
+        return self.shutter_a_steps_dynamic
+
+
 
     def calculate_flicker_free_shutter_angles(self, fps, hz):
         if fps <= 0:
             raise ValueError("FPS must be greater than zero.")
-        
+
         flicker_free_angles = []
-        for multiple in range(1, int(hz / fps) + 1):
-            angle = 360 / multiple
-            flicker_free_angles.append(angle)
+        
+        for multiple in range(1, 10):  # Generate up to 10 harmonics
+            angle = (hz / (fps * multiple)) * 360  # Calculate flicker-free shutter angle
+            if 1 <= angle <= 360:  # Ensure the angle is valid
+                flicker_free_angles.append(round(angle, 1))
+
+        logging.info(f"Generated flicker-free shutter angles for fps={fps}, hz={hz}: {flicker_free_angles}")
+        
         return flicker_free_angles
+
+
 
     def update_fps_and_shutter_angles(self, fps):
         if fps <= 0:

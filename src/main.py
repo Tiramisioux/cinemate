@@ -28,6 +28,8 @@ from module.dmesg_monitor import DmesgMonitor
 from module.app import create_app
 from module.analog_controls import AnalogControls
 from module.mediator import Mediator
+from module.serial_handler import SerialHandler
+
 
 # Constants
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
@@ -133,12 +135,27 @@ def main():
     )
 
     gpio_input = ComponentInitializer(cinepi_controller, settings)
+    
+    # Create CommandExecutor (for both CLI and Serial)
     command_executor = CommandExecutor(cinepi_controller, cinepi)
-    command_executor.start()
+    command_executor.start()  # CLI thread
+
+    # SerialHandler to receive serial commands and treat them as CLI
+    serial_handler = SerialHandler(
+        callback=command_executor.handle_received_data,
+        baudrate=9600,
+        timeout=1,
+        log_queue=log_queue  # Optional: for future serial logging
+    )
+    serial_handler.start()
+
+
     redis_listener = RedisListener(redis_controller)
     battery_monitor = BatteryMonitor()
 
-    simple_gui = SimpleGUI(redis_controller, cinepi_controller, ssd_monitor, dmesg_monitor, battery_monitor, sensor_detect, redis_listener, None)
+    simple_gui = SimpleGUI(redis_controller, cinepi_controller, ssd_monitor, dmesg_monitor,
+                       battery_monitor, sensor_detect, redis_listener, None, usb_monitor=usb_monitor, serial_handler=serial_handler)
+
 
     # Start Streaming if hotspot is available
     stream = None
@@ -179,6 +196,9 @@ def main():
         pwm_controller.stop_pwm()
         dmesg_monitor.join()
         command_executor.join()
+        serial_handler.running = False
+        serial_handler.join()
+
     
     atexit.register(cleanup)
 

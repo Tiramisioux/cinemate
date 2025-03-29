@@ -21,8 +21,11 @@ class SimpleGUI(threading.Thread):
                  sensor_detect, 
                  redis_listener, 
                  #timekeeper, 
-                 socketio: SocketIO = None):
+                 socketio: SocketIO = None,
+                 usb_monitor=None,
+                 serial_handler=None):
         threading.Thread.__init__(self)
+        
         self.setup_resources()
         self.check_display()
 
@@ -36,9 +39,15 @@ class SimpleGUI(threading.Thread):
         self.sensor_detect = sensor_detect
         self.redis_listener = redis_listener
         
+        
         #self.timekeeper = timekeeper
 
         self.socketio = socketio  # Add socketio reference
+        
+        self.usb_monitor = usb_monitor
+        
+        self.serial_handler = serial_handler
+
 
         self.background_color_changed = False
         
@@ -63,7 +72,7 @@ class SimpleGUI(threading.Thread):
             logging.error("Failed to load sensor values from Redis, using default values.")
             self.width = 1920
             self.height = 1080
-            self.bit_depth = 12
+        self.bit_depth = 12
 
     # Method to set the current background color
     def set_background_color(self, color):
@@ -92,6 +101,7 @@ class SimpleGUI(threading.Thread):
         os.system("setterm -cursor on")
 
     def check_display(self):
+
         fb_path = "/dev/fb0"
         if os.path.exists(fb_path):
             self.fb = Framebuffer(0)
@@ -106,55 +116,28 @@ class SimpleGUI(threading.Thread):
         self.bold_font_path = os.path.join(self.current_directory, '../../resources/fonts/DIN2014-Bold.ttf')  # Add bold font path
         self.font_path = os.path.join(self.current_directory, '../../resources/fonts/DIN2014-Bold.ttf')
 
-        # Define two layouts
-        self.layouts = {
-            0: {  # Layout 0
-                # upper row
-                "fps_label": {"position": (98, 4), "font_size": 30, "font": "regular"},
-                "fps": {"position": (159, 3), "font_size": 41},
-                "fps_actual": {"position": (220, 3), "font_size": 41, "font": "bold"},
-                "shutter_label": {"position": (555, 4), "font_size": 30, "font": "regular"},
-                "shutter_speed": {"position": (690, 3), "font_size": 41, "font": "bold"},
-                "iso_label": {"position": (1194, 3), "font_size": 30, "font": "regular"},
-                "iso": {"position": (1232, 4), "font_size": 41, "font": "bold"},
-                "wb_label": {"position": (1641, 4), "font_size": 30, "font": "regular"},
-                "color_temp": {"position": (1695, 3), "font_size": 41, "font": "bold"},
-                
-                #left side
-                "cam": {"position": (21, 97), "font_size": 26, "font": "regular"},
-                "resolution": {"position": (34, 140), "font_size": 20, "font": "bold"},
-                "aspect": {"position": (26, 191), "font_size": 20, "font": "bold", "align": "center"},
-                "raw": {"position": (25, 240), "font_size": 20, "font": "bold"},
-                "exposure_time": {"position": (25, 291), "font_size": 20, "font": "bold"},
-                
-                "mon": {"position": (21, 362), "font_size": 26, "font": "regular"},
-                "anamorphic_factor": {"position": (25, 405), "font_size": 20, "font": "bold"},
+        # Define layout directly as a dict (not nested in another dict)
+        self.layout = {
+            "fps_label": {"position": (98, 4), "font_size": 30, "font": "regular"},
+            "fps": {"position": (159, 3), "font_size": 41},
+            "fps_actual": {"position": (220, 3), "font_size": 41, "font": "bold"},
+            "shutter_label": {"position": (555, 4), "font_size": 30, "font": "regular"},
+            "shutter_speed": {"position": (690, 3), "font_size": 41, "font": "bold"},
+            "iso_label": {"position": (1194, 3), "font_size": 30, "font": "regular"},
+            "iso": {"position": (1232, 4), "font_size": 41, "font": "bold"},
+            "wb_label": {"position": (1641, 4), "font_size": 30, "font": "regular"},
+            "color_temp": {"position": (1695, 3), "font_size": 41, "font": "bold"},
 
-                #"sensor": {"position": (435, -1), "font_size": 18, "align": "right", "width": 175},
-                #"width": {"position": (620, -7), "font_size": 34},
-                #"height": {"position": (720, -7), "font_size": 34},
-                #"bit_depth": {"position": (812, -7), "font_size": 34},
-                #"color_temp_libcamera": {"position": (1083, -7), "font_size": 34},                
-                #"exposure_label": {"position": (1280, -1), "font_size": 18},
-                
-                #"pwm_mode": {"position": (1273, -2), "font_size": 26},
-                # NEJ "shutter_a_sync": {"position": (1345, -2), "font_size": 26},
-                # "lock": {"position": (1530, -2), "font_size": 26},
-                # "low_voltage": {"position": (1550, -2), "font_size": 26},
-                
-                # lower row
-                "media_label": {"position": (98, 1050), "font_size": 30, "font": "regular"},
-                "disk_space": {"position": (192, 1041), "font_size": 41, "font": "bold"},
-                #"frame_count": {"position": (335, 1044), "font_size": 34},
-                #"last_dng_added": {"position": (600, 1044), "font_size": 34},
-                "battery_level": {"position": (600, 1041), "font_size": 41, "font": "bold"},
-                "cpu_label": {"position": (1260, 1050), "font_size": 30, "font": "regular"},
-                "cpu_load": {"position": (1330, 1041), "font_size": 41, "font": "bold"},
-                "cpu_temp_label": {"position": (1458, 1050), "font_size": 31, "font": "regular"},
-                "cpu_temp": {"position": (1542, 1041), "font_size": 41, "font": "bold"},
-                "ram_label": {"position": (1673, 1050), "font_size": 30, "font": "regular"},
-                "ram_load": {"position": (1741, 1041), "font_size": 41, "font": "bold"},
-            }
+            # Bottom row
+            "media_label": {"position": (98, 1050), "font_size": 30, "font": "regular"},
+            "disk_space": {"position": (192, 1041), "font_size": 41, "font": "bold"},
+            "battery_level": {"position": (600, 1041), "font_size": 41, "font": "bold"},
+            "cpu_label": {"position": (1260, 1050), "font_size": 30, "font": "regular"},
+            "cpu_load": {"position": (1330, 1041), "font_size": 41, "font": "bold"},
+            "cpu_temp_label": {"position": (1458, 1050), "font_size": 31, "font": "regular"},
+            "cpu_temp": {"position": (1542, 1041), "font_size": 41, "font": "bold"},
+            "ram_label": {"position": (1673, 1050), "font_size": 30, "font": "regular"},
+            "ram_load": {"position": (1741, 1041), "font_size": 41, "font": "bold"},
         }
 
         self.colors = {
@@ -176,11 +159,11 @@ class SimpleGUI(threading.Thread):
             
             "wb_label": {"normal": (136,136,136), "inverse": "black"},
             "color_temp": {"normal": (249,249,249), "inverse": "black"},
-            "cam": {"normal": (249,249,249), "inverse": "black"},
+            
+            "label": {"normal": (249, 249, 249), "inverse": "black"},
+            
             "resolution": {"normal": "black", "inverse": "black"},
             "aspect": {"normal": "black", "inverse": "black"},
-            "raw": {"normal": "black", "inverse": "black"},
-            "mon": {"normal": (249,249,249), "inverse": "black"},
             "color_temp_libcamera": {"normal": (136,136,136), "inverse": "black"},
             "pwm_mode": {"normal": (97,171,49), "inverse": "black"},
             # "shutter_a_sync": {"normal": "white", "inverse": "black"},
@@ -203,6 +186,107 @@ class SimpleGUI(threading.Thread):
         self.fb = None
         self.disp_width = self.disp_height = 0
         self.current_layout = 0  # Default layout; can be changed dynamically
+        
+        self.left_section_layout = [
+            {
+                "label": "CAM",
+                "items": [
+                    {"key": "resolution", "text": lambda v: v.get("resolution", "")},
+                    {"key": "aspect", "text": lambda v: v.get("aspect", "")},
+                    {"key": "bit_depth", "text": lambda v: str(v.get("bit_depth", "")).replace("b", "") + "b"},
+                    {"key": "exposure_time", "text": lambda v: v.get("exposure_time", "")},
+                ]
+            },
+            {
+                "label": "MON",
+                "items": [
+                    {"key": "anamorphic_factor", "text": lambda v: v.get("anamorphic_factor", "")}
+                ]
+            }
+        ]
+
+
+    def draw_left_sections(self, draw, values):
+        label_font = ImageFont.truetype(self.regular_font_path, 26)
+        box_font = ImageFont.truetype(self.bold_font_path, 20)
+        box_height = 40
+        box_width = 60
+        box_color = (136, 136, 136)
+        text_color = (0, 0, 0)
+
+        # Positioning parameters
+        label_padding_x = 19   # Left padding for section labels
+        box_padding_x = 15     # Left padding for boxes (can be different from label)
+        initial_y = 97         # Top margin for the first label
+        label_spacing = -4     # Space between label and first box
+        intra_box_spacing = 14 # Space between boxes in a section
+        section_gap = 60       # Space between sections
+
+        current_y = initial_y
+
+        for section in self.left_section_layout:
+            # Draw section header
+            label_color = self.colors["label"][self.color_mode]
+            draw.text((label_padding_x, current_y), section["label"], font=label_font, fill=label_color)
+
+            current_y += box_height + label_spacing
+
+            # Track the highest Y used by the last box in this section
+            for item in section["items"]:
+                value_text = item["text"](values)
+                if not value_text:
+                    continue  # Skip empty values
+
+                # Draw box
+                draw.rectangle(
+                    [box_padding_x, current_y, box_padding_x + box_width, current_y + box_height],
+                    fill=box_color
+                )
+
+                # Center the text horizontally and vertically in the box
+                text_size = draw.textbbox((0, 0), value_text, font=box_font)
+                text_width = text_size[2] - text_size[0]
+                text_height = text_size[3] - text_size[1]
+                text_x = box_padding_x + (box_width - text_width) // 2
+                text_y = current_y + (box_height - text_height) // 2
+
+                draw.text((text_x, text_y), value_text, font=box_font, fill=text_color)
+
+                current_y += box_height + intra_box_spacing
+
+            current_y += section_gap
+
+
+        # ---- Draw SYS section ----
+        sys_label_y = current_y
+        sys_label_padding_x = label_padding_x + 1  # or any offset you prefer
+
+        draw.text((sys_label_padding_x, sys_label_y), "SYS", font=label_font, fill=label_color)
+
+        current_y += box_height + label_spacing  # Move to the top of the first box
+
+        # Draw SYS boxes vertically (like the CAM/MON sections)
+        for key, label in [("usb_connected", "USB"), ("mic_connected", "MIC"), ("keyboard_connected", "KEY")]:
+            if values.get(key):
+                draw.rectangle(
+                    [box_padding_x, current_y, box_padding_x + box_width, current_y + box_height],
+                    fill=box_color
+                )
+
+                label_bbox = draw.textbbox((0, 0), label, font=box_font)
+                text_width = label_bbox[2] - label_bbox[0]
+                text_height = label_bbox[3] - label_bbox[1]
+                text_x = box_padding_x + (box_width - text_width) // 2
+                text_y = current_y + (box_height - text_height) // 2
+
+                draw.text((text_x, text_y), label, font=box_font, fill=text_color)
+
+                current_y += box_height + intra_box_spacing  # Move to next box
+
+        current_y += section_gap  # Final spacing after SYS
+
+
+
 
     def estimate_resolution_in_k(self):
         """
@@ -270,8 +354,12 @@ class SimpleGUI(threading.Thread):
             "cpu_load": str(int(psutil.cpu_percent())) + '%',
             "cpu_temp_label": 'TEMP',
             "cpu_temp": ('{}\u00B0C'.format(int(CPUTemperature().temperature))),
-             "media_label": "MEDIA",
+            "media_label": "MEDIA",
             "disk_label": str(self.ssd_monitor.device_name).upper()[:4] if self.ssd_monitor.device_name else "", #str(self.ssd_monitor.file_system_format).upper() if self.ssd_monitor.file_system_format else "",
+            "usb_connected": bool(self.serial_handler.serial_connected),
+            "mic_connected": self.usb_monitor.usb_mic is not None,
+            "keyboard_connected": bool(self.usb_monitor and self.usb_monitor.usb_keyboard)
+
         }
 
         # Construct the frame count string
@@ -335,9 +423,9 @@ class SimpleGUI(threading.Thread):
         return values
 
     def draw_gui(self, values):
-        previous_background_color = self.current_background_color  # Store the previous background color
+        previous_background_color = self.current_background_color
 
-        # Determine background color based on conditions, prioritizing red over green
+        # Determine background color based on conditions
         if self.redis_listener.drop_frame == 1 and int(self.redis_controller.get_value('rec')) == 1:
             self.current_background_color = "purple"
             self.color_mode = "inverse"
@@ -356,33 +444,26 @@ class SimpleGUI(threading.Thread):
             self.current_background_color = "black"
             self.color_mode = "normal"
 
-        # Check if the background color has changed
         if self.current_background_color != previous_background_color:
-            self.background_color_changed = True  # Set flag to indicate background color change
-        else:
-            self.background_color_changed = False  # No background color change
-
-        if self.background_color_changed:
+            self.background_color_changed = True
             try:
                 self.emit_background_color_change()
             except Exception as e:
                 logging.error(f"Error emitting background color change: {e}")
+        else:
+            self.background_color_changed = False
 
         current_values = values
-
         if hasattr(self, 'previous_values'):
             changed_data = {}
             for key, value in current_values.items():
                 if value != self.previous_values.get(key):
                     changed_data[key] = value
-
             if changed_data:
                 try:
                     self.emit_gui_data_change(changed_data)
-                except Exception as e:
+                except Exception:
                     pass
-
-        # Update previous_values with the current values for the next comparison
         self.previous_values = current_values.copy()
 
         if not self.fb:
@@ -392,100 +473,57 @@ class SimpleGUI(threading.Thread):
         draw = ImageDraw.Draw(image)
         draw.rectangle(((0, 0), self.fb.size), fill=self.current_background_color)
 
-        # Define colors
-        gray_color = (136, 136, 136)
-        black_color = (0, 0, 0)
-        white_color = (249, 249, 249)
-
-        # Resolution box
-        draw.rectangle([15, 128, 75, 168], fill=gray_color)
-
-        # Aspect ratio box
-        draw.rectangle([15, 178, 75, 218], fill=gray_color)
-
-        # Raw box
-        draw.rectangle([15, 228, 75, 268], fill=gray_color)
-
-        # Shutter sync box
-        if self.cinepi_controller.shutter_a_sync_mode == 1:
-            draw.rectangle([15, 280, 75, 320], fill=white_color)
-        else:
-            draw.rectangle([15, 280, 75, 320], fill=gray_color)
-
-        # Anamorphic factor box
-        mon_heading_y = 362  # Y-position of the "MON" heading
-        mon_box_start_y = mon_heading_y + (128 - 97)  # Match the distance between "CAM" and the resolution box
-        draw.rectangle([15, mon_box_start_y, 75, mon_box_start_y + 40], fill=gray_color)
+        # Draw left-hand labels and boxes dynamically
+        self.draw_left_sections(draw, values)
 
         # Get sensor resolution
         self.width = int(self.redis_controller.get_value("width"))
         self.height = int(self.redis_controller.get_value("height"))
         self.aspect_ratio = self.width / self.height
-
-        # Get anamorphic factor from Redis
         self.anamorphic_factor = float(self.redis_controller.get_value('anamorphic_factor'))
-
-        # Get lores resolution from Redis
         lores_width = int(self.redis_controller.get_value("lores_width"))
         lores_height = int(self.redis_controller.get_value("lores_height"))
 
-        # Define the HD frame dimensions
         frame_width = 1920
         frame_height = 1080
-
-        # Padding values
-        padding_x = 92  # Horizontal padding
-        padding_y = 46  # Vertical padding
-
-        # Calculate the maximum available drawing area within the HD frame
+        padding_x = 92
+        padding_y = 46
         max_draw_width = frame_width - (2 * padding_x)
         max_draw_height = frame_height - (2 * padding_y)
 
-        # **Fix: Adjust height instead of shrinking it**
-        adjusted_lores_width = lores_width * self.anamorphic_factor  # Stretched width
-        adjusted_lores_height = lores_height * self.anamorphic_factor  # Stretched height
-        adjusted_aspect_ratio = adjusted_lores_width / adjusted_lores_height  # Corrected aspect ratio
+        adjusted_lores_width = lores_width * self.anamorphic_factor
+        adjusted_lores_height = lores_height * self.anamorphic_factor
+        adjusted_aspect_ratio = adjusted_lores_width / adjusted_lores_height
 
-        # Calculate the preview size while maintaining the adjusted aspect ratio
-        if adjusted_aspect_ratio >= 1:  # Landscape or square sensor
+        if adjusted_aspect_ratio >= 1:
             preview_w = max_draw_width
             preview_h = int(preview_w / adjusted_aspect_ratio)
             if preview_h > max_draw_height:
                 preview_h = max_draw_height
                 preview_w = int(preview_h * adjusted_aspect_ratio)
-        else:  # Portrait sensor
+        else:
             preview_h = max_draw_height
             preview_w = int(preview_h * adjusted_aspect_ratio)
             if preview_w > max_draw_width:
                 preview_w = max_draw_width
                 preview_h = int(preview_w / adjusted_aspect_ratio)
 
-        # Center the preview within the HD frame considering padding
         preview_x = (frame_width - preview_w) // 2
         preview_y = (frame_height - preview_h) // 2
 
-        # Determine outline color based on recording state
         if int(self.redis_controller.get_value('rec')) == 1:
-            line_color = (255, 0, 0)  # Red outline (Recording)
+            line_color = (255, 0, 0)
         else:
-            line_color = (249, 249, 249)  # White outline (Idle)
+            line_color = (249, 249, 249)
 
-        # Draw the preview outline
         draw.rectangle(
-            [preview_x, preview_y, preview_x + preview_w, preview_y + preview_h], 
-            outline=line_color, 
+            [preview_x, preview_y, preview_x + preview_w, preview_y + preview_h],
+            outline=line_color,
             width=2
         )
 
-        # Determine the current layout
-        gui_layout_key = self.cinepi_controller.gui_layout
-        if gui_layout_key not in self.layouts:
-            logging.warning(f"Invalid gui_layout '{gui_layout_key}'")
-            gui_layout_key = 0  # Fallback to a default layout
+        current_layout = self.layout
 
-        current_layout = self.layouts[gui_layout_key]
-
-        # Map elements to their corresponding lock variables in cinepi_controller
         lock_mapping = {
             "iso": "iso_lock",
             "shutter_speed": "shutter_a_nom_lock",
@@ -493,24 +531,19 @@ class SimpleGUI(threading.Thread):
             "exposure_time": "shutter_a_sync"
         }
 
-        # Draw the GUI elements
         for element, info in current_layout.items():
-            if values.get(element) is None:  # Skip elements with None value
+            if values.get(element) is None:
                 continue
             position = info["position"]
             font_size = info["font_size"]
-
-            # Select font based on the layout setting (bold or regular)
-            if info.get("font", "bold") == "bold":
-                font = ImageFont.truetype(os.path.realpath(self.bold_font_path), font_size)
-            else:
-                font = ImageFont.truetype(os.path.realpath(self.regular_font_path), font_size)
-
-            value = str(values.get(element, ''))  # Ensure value is a string
+            font = ImageFont.truetype(
+                os.path.realpath(self.bold_font_path if info.get("font", "bold") == "bold" else self.regular_font_path),
+                font_size
+            )
+            value = str(values.get(element, ''))
             color_mode = self.color_mode
             color = self.colors.get(element, {}).get(color_mode, "white")
 
-            # Handle right alignment for sensor
             if element == "sensor" and info.get("align") == "right":
                 text_bbox = draw.textbbox((0, 0), value, font=font)
                 text_width = text_bbox[2] - text_bbox[0]
@@ -519,15 +552,14 @@ class SimpleGUI(threading.Thread):
 
             draw.text(position, value, font=font, fill=color)
 
-            # Draw rounded box behind locked elements
             if element in lock_mapping and getattr(self.cinepi_controller, lock_mapping[element]):
                 self.draw_rounded_box(draw, value, position, font_size, 5, "black", "white", image)
 
-            # **New Addition: Draw rounded box behind the exposure time if shutter sync is enabled**
             if element == "exposure_time" and self.cinepi_controller.shutter_a_sync_mode == 1:
                 self.draw_rounded_box(draw, value, position, font_size, 5, "black", "white", image)
-                
+
         self.fb.show(image)
+
         
     def draw_rounded_box(self, draw, text, position, font_size, padding, text_color, fill_color, image, extra_height=-17, reduce_top=12):
         font = ImageFont.truetype(os.path.realpath(self.font_path), font_size)

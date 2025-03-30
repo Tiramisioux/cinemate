@@ -90,6 +90,20 @@ def initialize_system(settings):
 
     return redis_controller, sensor_detect, pwm_controller, ssd_monitor, usb_monitor, gpio_output, dmesg_monitor
 
+def hide_cursor():
+    try:
+        with open('/dev/tty1', 'w') as tty:
+            tty.write('\033[?25l')
+    except Exception as e:
+        logging.warning(f"Could not hide cursor: {e}")
+
+def show_cursor():
+    try:
+        with open('/dev/tty1', 'w') as tty:
+            tty.write('\033[?25h')
+    except Exception as e:
+        logging.warning(f"Could not show cursor: {e}")
+
 def main():
     import argparse
 
@@ -102,6 +116,10 @@ def main():
 
     # Setup logging
     logger, log_queue = setup_logging(args.debug)
+    
+    # Hide cursor
+    
+    hide_cursor()
 
     # Detect Raspberry Pi model
     pi_model = get_raspberry_pi_model()
@@ -198,6 +216,13 @@ def main():
         command_executor.join()
         serial_handler.running = False
         serial_handler.join()
+        if simple_gui and hasattr(simple_gui, 'clear_framebuffer'):
+            simple_gui.clear_framebuffer()
+
+        
+        show_cursor()
+        
+
 
     
     atexit.register(cleanup)

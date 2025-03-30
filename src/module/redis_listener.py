@@ -41,6 +41,10 @@ class RedisListener:
         self.framecount = 0
         self.redis_controller.set_value('framecount', 0)
         
+        self.last_is_recording_value = self.redis_controller.get_value('is_recording')
+
+
+        
         self.drop_frame = False
         self.drop_frame_timer = None
         
@@ -202,28 +206,44 @@ class RedisListener:
 
     def listen_controls(self):
         for message in self.pubsub_controls.listen():
-            if message["type"] == "message":
-                changed_key = message["data"].decode('utf-8')
-                with self.lock:
-                    value = self.redis_client.get(changed_key)
-                    value_str = value.decode('utf-8')
+            if message["type"] != "message":
+                continue
 
-                    if changed_key == 'is_recording':
-                        if value_str == '1':
-                            self.is_recording = True
-                            self.reset_framecount()  # Reset framecount when starting a new recording
-                            self.recording_start_time = datetime.datetime.now()
-                            logging.info(f"Recording started at: {self.recording_start_time}")
-                            self.framerate = float(self.redis_controller.get_value('fps'))
-                        elif value_str == '0':
-                            self.is_recording = False
-                            if self.recording_start_time:
-                                self.recording_end_time = datetime.datetime.now()
-                                logging.info(f"Recording stopped at: {self.recording_end_time}")
-                                self.analyze_frames()
-                                self.framerate_values = []
-                            else:
-                                logging.warning("Recording stopped, but no recording start time was registered.")
+            changed_key = message["data"].decode('utf-8')
+            with self.lock:
+                value = self.redis_client.get(changed_key)
+                if value is None:
+                    continue
+                value_str = value.decode('utf-8')
+
+                # ✅ Skip if value hasn't changed
+            if changed_key == 'is_recording':
+                if value_str == self.last_is_recording_value:
+                    continue
+                self.last_is_recording_value = value_str
+
+                if value_str == '1':
+                    self.is_recording = True
+                    self.reset_framecount()
+                    self.recording_start_time = datetime.datetime.now()
+                    logging.info(f"Recording started at: {self.recording_start_time}")
+                    self.framerate = float(self.redis_controller.get_value('fps'))
+
+                elif value_str == '0':
+                    if self.is_recording:
+                        self.is_recording = False
+                        if self.recording_start_time:
+                            self.recording_end_time = datetime.datetime.now()
+                            logging.info(f"Recording stopped at: {self.recording_end_time}")
+                            self.analyze_frames()
+                            self.framerate_values = []
+                        else:
+                            logging.warning("Recording stopped, but no recording start time was registered.")
+
+
+
+
+
 
     def calculate_current_framerate(self):
         if len(self.sensor_timestamps) > 1:

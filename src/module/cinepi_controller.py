@@ -79,14 +79,11 @@ class CinePiController:
         self.current_sensor = self.sensor_detect.camera_model
         self.redis_controller.set_value('sensor', self.sensor_detect.camera_model)
         
-        # Set fps correction factor based on sensor
-        if self.current_sensor == 'imx477':
-            self.fps_correction_factor = 0.9995
-        elif self.current_sensor == 'imx585':
-            self.fps_correction_factor = 0.9980
-        else:
-            self.fps_correction_factor = 1.0
-        
+        self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
+            self.current_sensor,
+            int(self.redis_controller.get_value('sensor_mode'))
+        )
+
         self.sensor_mode = int(self.redis_controller.get_value('sensor_mode'))
         self.fps_max = int(self.sensor_detect.get_fps_max(self.current_sensor, self.sensor_mode))
         self.redis_controller.set_value('fps_max', self.fps_max)
@@ -294,22 +291,31 @@ class CinePiController:
         self.set_shutter_a(closest_shutter_angle)
 
     def set_fps(self, value):
-        value = float(value) * self.fps_correction_factor
-        logging.info(f"Received set_fps call with value: {value}")
+        user_value = float(value)
+        corrected_value = user_value * self.fps_correction_factor
+
+        logging.info(f"User-set FPS: {user_value}")
+        logging.info(f"Correction factor applied: {self.fps_correction_factor}")
+        logging.info(f"Corrected FPS (used internally): {corrected_value:.4f}")
+
+        # if self.fps_correction_factor != 1.0:
+        #     logging.warning(f"⚠️ Correction factor is in effect! Resulting FPS: {corrected_value:.4f}")
+
+        value = corrected_value
 
         if not self.fps_lock:
             max_fps = int(self.redis_controller.get_value('fps_max'))
             logging.info(f"Retrieved max_fps from Redis: {max_fps}")
 
             safe_value = max(1, min(value, max_fps))
-            logging.info(f"Calculated safe_value: {safe_value}")
+            logging.info(f"Clamped FPS value to safe range: {safe_value}")
 
             if self.shutter_a_sync_mode:
                 self.adjust_shutter_a_sync(fps=safe_value)
 
             if not self.parameters_lock or self.lock_override:
                 self.redis_controller.set_value('fps', safe_value)
-                logging.info(f"Setting fps to {safe_value}")
+                logging.info(f"Setting fps in Redis to {safe_value}")
 
                 # 🚀 Force recalculating shutter angles after FPS is updated
                 self.update_fps_and_shutter_angles(safe_value)
@@ -321,6 +327,7 @@ class CinePiController:
             self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_s)
 
             self.redis_controller.set_value('fps_last', round(safe_value))
+
 
 
     def set_iso_lock(self, value=None):
@@ -449,6 +456,11 @@ class CinePiController:
                 
                 self.update_steps()
                 
+                self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
+                    self.current_sensor,
+                    int(self.redis_controller.get_value('sensor_mode'))
+                    )
+
                 self.redis_controller.set_value('sensor', self.sensor_detect.camera_model)
                 time.sleep(1)
                 self.redis_controller.set_value('fps', float(self.redis_controller.get_value('fps_last')))

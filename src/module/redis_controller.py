@@ -26,6 +26,9 @@ class RedisController:
         
         self.redis_parameter_changed = Event()
         
+        self.local_updates = set()
+
+        
         # Cache to store the values
         self.cache = {}
 
@@ -58,11 +61,17 @@ class RedisController:
                 with self.lock:
                     value = self.redis_client.get(changed_key)
                     value_str = value.decode('utf-8')
-                    # Update cache with new value
                     self.cache[changed_key] = value_str
+
+                    # If we just set this key ourselves, skip logging
+                    if changed_key in self.local_updates:
+                        self.local_updates.remove(changed_key)
+                        continue
+
                 if changed_key != "fps_actual":
                     logging.info(f"Changed value: {changed_key} = {value_str}")
                     self.redis_parameter_changed.emit({'key': changed_key, 'value': value_str})
+
 
     def get_value(self, key, default=None):
         with self.lock:
@@ -74,31 +83,20 @@ class RedisController:
 
     def set_value(self, key, value):
         with self.lock:
-            if key == 'fps':
-                if value >= 1:
-                    fps_new = float(value)
-                    # frame_duration_new = int((1/fps_new) * 1000000)
-                    # self.redis_client.set('frame_duration', frame_duration_new)
-                    # self.redis_client.publish('cp_controls', 'frame_duration')
-                    
-                    self.redis_client.set('fps', value)
-                    self.redis_client.publish('cp_controls', 'fps')
-                    
-                    # self.redis_client.set('fps_user', value)
-                    # self.redis_client.publish('cp_controls', 'fps_user')
-                    
-                    # self.redis_client.set('cam_init', '1')
-                    # self.redis_client.publish('cp_controls', 'cam_init')
-                    # self.redis_client.set(key, value)
-                    # Notify about the key change via the cp_controls channel
-                    # self.redis_client.publish('cp_controls', key)
-            else:
-                self.redis_client.set(key, value)
-                # Notify about the key change via the cp_controls channel
-                self.redis_client.publish('cp_controls', key)
-                
-            # Update cache immediately
+            current = self.cache.get(key)
+            if str(current) == str(value):
+                return
+
+            self.redis_client.set(key, value)
+            self.redis_client.publish('cp_controls', key)
             self.cache[key] = value
+
+            self.local_updates.add(key)  # Track locally updated key
+
+            if key != 'fps_actual':
+                logging.info(f"Changed value: {key} = {value}")
+
+
 
     def stop_listener(self):
         with self.lock:

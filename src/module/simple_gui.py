@@ -257,36 +257,40 @@ class SimpleGUI(threading.Thread):
             current_y += section_gap
 
 
-        # ---- Draw SYS section ----
-        sys_label_y = current_y
-        sys_label_padding_x = label_padding_x + 1  # or any offset you prefer
+        # ---- Conditionally Draw SYS section ----
+        show_sys = any([
+            values.get("usb_connected"),
+            values.get("mic_connected"),
+            values.get("keyboard_connected")
+        ])
 
-        draw.text((sys_label_padding_x, sys_label_y), "SYS", font=label_font, fill=label_color)
+        if show_sys:
+            sys_label_y = current_y
+            sys_label_padding_x = label_padding_x + 1  # Adjust if needed
+            label_color = self.colors["label"][self.color_mode]
+            draw.text((sys_label_padding_x, sys_label_y), "SYS", font=label_font, fill=label_color)
 
-        current_y += box_height + label_spacing  # Move to the top of the first box
+            current_y += box_height + label_spacing  # Move to the top of the first box
 
-        # Draw SYS boxes vertically (like the CAM/MON sections)
-        for key, label in [("usb_connected", "USB"), ("mic_connected", "MIC"), ("keyboard_connected", "KEY")]:
-            if values.get(key):
-                draw.rectangle(
-                    [box_padding_x, current_y, box_padding_x + box_width, current_y + box_height],
-                    fill=box_color
-                )
+            # Draw SYS boxes vertically (like CAM/MON)
+            for key, label in [("usb_connected", "USB"), ("mic_connected", "MIC"), ("keyboard_connected", "KEY")]:
+                if values.get(key):
+                    draw.rectangle(
+                        [box_padding_x, current_y, box_padding_x + box_width, current_y + box_height],
+                        fill=box_color
+                    )
 
-                label_bbox = draw.textbbox((0, 0), label, font=box_font)
-                text_width = label_bbox[2] - label_bbox[0]
-                text_height = label_bbox[3] - label_bbox[1]
-                text_x = box_padding_x + (box_width - text_width) // 2
-                text_y = current_y + (box_height - text_height) // 2
+                    label_bbox = draw.textbbox((0, 0), label, font=box_font)
+                    text_width = label_bbox[2] - label_bbox[0]
+                    text_height = label_bbox[3] - label_bbox[1]
+                    text_x = box_padding_x + (box_width - text_width) // 2
+                    text_y = current_y + (box_height - text_height) // 2
 
-                draw.text((text_x, text_y), label, font=box_font, fill=text_color)
+                    draw.text((text_x, text_y), label, font=box_font, fill=text_color)
 
-                current_y += box_height + intra_box_spacing  # Move to next box
+                    current_y += box_height + intra_box_spacing  # Move to next box
 
-        current_y += section_gap  # Final spacing after SYS
-
-
-
+            current_y += section_gap  # Final spacing after SYS
 
     def estimate_resolution_in_k(self):
         """
@@ -598,6 +602,12 @@ class SimpleGUI(threading.Thread):
         draw.rectangle([upper_left[0] + radius, upper_left[1] + radius, upper_left[0] + text_width + padding * 2 - radius, upper_left[1] + text_height + padding * 2 - radius + reduce_top], fill=fill_color)
 
         draw.text(position, text, font=font, fill=text_color)
+
+    def clear_framebuffer(self):
+        if self.fb:
+            blank_image = Image.new("RGBA", self.fb.size, "black")
+            self.fb.show(blank_image)
+
 
     def run(self):
         self.hide_cursor()  # Hide the cursor when initializing the GUI

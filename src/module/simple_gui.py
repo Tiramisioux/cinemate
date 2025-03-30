@@ -208,7 +208,7 @@ class SimpleGUI(threading.Thread):
 
     def draw_left_sections(self, draw, values):
         label_font = ImageFont.truetype(self.regular_font_path, 26)
-        box_font = ImageFont.truetype(self.bold_font_path, 20)
+        box_font = ImageFont.truetype(self.bold_font_path, 24)
         box_height = 40
         box_width = 60
         box_color = (136, 136, 136)
@@ -273,7 +273,7 @@ class SimpleGUI(threading.Thread):
             current_y += box_height + label_spacing  # Move to the top of the first box
 
             # Draw SYS boxes vertically (like CAM/MON)
-            for key, label in [("usb_connected", "USB"), ("mic_connected", "MIC"), ("keyboard_connected", "KEY")]:
+            for key, label in [("usb_connected", "SER"), ("mic_connected", "MIC"), ("keyboard_connected", "KEY")]:
                 if values.get(key):
                     draw.rectangle(
                         [box_padding_x, current_y, box_padding_x + box_width, current_y + box_height],

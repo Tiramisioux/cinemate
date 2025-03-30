@@ -240,11 +240,6 @@ class RedisListener:
                         else:
                             logging.warning("Recording stopped, but no recording start time was registered.")
 
-
-
-
-
-
     def calculate_current_framerate(self):
         if len(self.sensor_timestamps) > 1:
             timestamps_in_seconds = [ts / 1_000_000 for ts in self.sensor_timestamps]

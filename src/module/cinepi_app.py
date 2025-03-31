@@ -58,7 +58,8 @@ class CinePi:
                 'ccm': re.compile(r'WARN RPiCcm'),
                 # Add more patterns as needed
             }
-            self.active_filters = set(['frame', 'agc', 'ccm'])  # Default active filters
+            # self.active_filters = set(['frame', 'agc', 'ccm'])  # Default active filters
+            self.active_filters = set(['agc', 'ccm'])  # Block frame count messages from cinepi-raw
             
             # self.start_cinepi_process()
             self.initialized = True

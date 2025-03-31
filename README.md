@@ -319,9 +319,9 @@ Note that if rotary encoders with buttons are used, these are connected and defi
 
 These push buttons can be programmed to perform various functions like toggling locks, changing modes, or triggering specific actions, just like regular GPIO buttons. The `gpio_pin` setting clones the behaviour of pins defined in the Buttons section of the settings file.
 
-## Resolution modes  
+## Compatible sensors 
 
-| Sensor | Mode | Resolution   | Aspect Ratio | Bit Depth | Max FPS* | File Size (MB) |
+| Sensor | Cinemate sensor mode | Resolution   | Aspect Ratio | Bit Depth | Max FPS* | File Size (MB) |
 |--------|------|--------------|--------------|-----------|---------|----------------|
 | IMX283 | 0    | 2736 x 1538  | 1.80         | 12        | 40      | 7.1            |
 |        | 1    | 2736 x 1824  | 1.53         | 12        | 34      | 8.2            |
@@ -361,7 +361,7 @@ From my tests I have noticed that changing fps works fine, but sometimes camera 
 To make a compressed image backup of the SD card onto the attached drive:
 
 ```
-sudo dd if=/dev/mmcblk0 bs=1M status=progress | xz -9 -c > /media/RAW/cinepi-sdk-002_cinemate-pi_4+5_bookworm_image_$(date +%Y-%m-%d_%H-%M-%S).img.xz
+sudo sh -c 'pv -s $(blockdev --getsize64 /dev/mmcblk0) /dev/mmcblk0 | xz -3 -c > /media/RAW/cinemate_v3-pi_4+5_bookworm_image_$(date +%Y-%m-%d_%H-%M-%S).img.xz'
 ```
 
 Backing up CineMate image takes about 30 min.
@@ -373,8 +373,7 @@ On Raspberry Pi 4 the tuning file currently fails to load properly for libcamera
 ## Known issues
 
 - Frame drops when using NTFS formatted SSD drives
-- Recording stops after a couple of seconds when using ext4 formatted SSD drives
-- 16 bit mode on StarlightEye not working properly
+- Recording stops after a couple of seconds when using ext4 formatted SSD drives    
 
 ## Todo
 

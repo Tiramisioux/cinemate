@@ -235,7 +235,7 @@ class SimpleGUI(threading.Thread):
             for item in section["items"]:
                 value_text = item["text"](values)
                 if not value_text:
-                    continue  # Skip empty values
+                    continue  # Skip empty values   
 
                 # Draw box
                 draw.rectangle(

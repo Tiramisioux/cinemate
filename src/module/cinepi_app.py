@@ -71,16 +71,22 @@ class CinePi:
             sensor_mode = '0'
         else:
             sensor_mode = int(sensor_mode)
-        
+
         self.sensor_detect.detect_camera_model()
         sensor_model = self.sensor_detect.camera_model
+        pi_model = self.redis_controller.get_value("pi_model")
+
+        # If we're on Pi 4 and using imx477, override packing
+        packing_override = None
+        if pi_model == "pi4" and sensor_model == "imx477":
+            packing_override = 'P'
+
         tuning_file_path = f'/home/pi/libcamera/src/ipa/rpi/pisp/data/{sensor_model}.json'
-        
+
         cg_rb = self.redis_controller.get_value('cg_rb')
         if cg_rb is None:
             cg_rb = '2.5,2.2'  # Default for IMX477 at 3200K
 
-        # Get sensor resolution
         self.width = int(self.redis_controller.get_value("width"))
         self.height = int(self.redis_controller.get_value("height"))
 
@@ -88,41 +94,42 @@ class CinePi:
 
         self.anamorphic_factor = self.redis_controller.get_value('anamorphic_factor')
         if self.anamorphic_factor is None:
-            self.anamorphic_factor = 1.0  # Default value
+            self.anamorphic_factor = 1.0
         else:
-            self.anamorphic_factor = float(self.anamorphic_factor)  # Convert to float
+            self.anamorphic_factor = float(self.anamorphic_factor)
 
-        # Define frame dimensions (user-modifiable)
-        frame_width = 1920  # User can modify this
-        frame_height = 1080  # User can modify this
+        frame_width = 1920
+        frame_height = 1080
+        padding_x = 94
+        padding_y = 50
 
-        # Define padding values
-        padding_x = 94  # Padding on left and right
-        padding_y = 50  # Padding on top and bottom
-
-        # Calculate available space within the preview window
         available_width = frame_width - (2 * padding_x)
         available_height = frame_height - (2 * padding_y)
 
-        # Adjust lores resolution with anamorphic factor while maintaining aspect ratio
-        lores_height = min(720, available_height)  # Ensure lores fits within available space
+        lores_height = min(720, available_height)
         lores_width = int((lores_height * self.aspect_ratio) * self.anamorphic_factor)
 
-        # Ensure lores width fits within available space
-        if lores_width > available_width:   
+        if lores_width > available_width:
             lores_width = available_width
-            lores_height = int(round((lores_width / (self.aspect_ratio * float(self.anamorphic_factor)))))
+            lores_height = int(round((lores_width / (self.aspect_ratio * self.anamorphic_factor))))
 
         self.redis_controller.set_value('lores_width', lores_width)
         self.redis_controller.set_value('lores_height', lores_height)
 
-        # Calculate preview window to fit within the frame with padding
         preview_x, preview_y, preview_w, preview_h = self.calculate_preview_window(
             lores_width, lores_height, padding_x, padding_y, frame_width, frame_height
         )
 
+        # Get bit depth and packing (possibly overridden)
+        bit_depth = self.sensor_detect.get_bit_depth(sensor_model, sensor_mode)
+        packing = self.sensor_detect.get_packing(sensor_model, sensor_mode)
+
+        if packing_override is not None:
+            logging.info(f"Overriding packing for {sensor_model} on {pi_model} to {packing_override}")
+            packing = packing_override
+
         args = [
-            '--mode', f"{self.width}:{self.height}:{self.sensor_detect.get_bit_depth(sensor_model, sensor_mode)}:{self.sensor_detect.get_packing(sensor_model, sensor_mode)}",
+            '--mode', f"{self.width}:{self.height}:{bit_depth}:{packing}",
             '--width', f"{self.width}",
             '--height', f"{self.height}",
             '--lores-width', f"{lores_width}",
@@ -135,7 +142,6 @@ class CinePi:
         ]
 
         return args
-
 
 
     def calculate_preview_window(self, width, height, padding_x, padding_y, output_width, output_height):
@@ -170,12 +176,6 @@ class CinePi:
         logging.info(f"Corrected Preview Window -> x={preview_x}, y={preview_y}, width={preview_w}, height={preview_h}, aspect_ratio={preview_w / preview_h:.2f}")
 
         return preview_x, preview_y, preview_w, preview_h
-
-
-
-
-
-
 
     def start_cinepi_process(self, cinepi_args=None):
         if cinepi_args is None:

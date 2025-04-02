@@ -124,6 +124,7 @@ def main():
     # Detect Raspberry Pi model
     pi_model = get_raspberry_pi_model()
     logging.info(f"Detected Raspberry Pi model: {pi_model}")
+    set
 
     # Start WiFi hotspot if available
     start_hotspot()

@@ -94,12 +94,6 @@ class SimpleGUI(threading.Thread):
         else:
             logging.warning("SocketIO not initialized. Unable to emit gui_data_change.")
 
-    def hide_cursor(self):
-        os.system("setterm -cursor off")
-
-    def show_cursor(self):
-        os.system("setterm -cursor on")
-
     def check_display(self):
 
         fb_path = "/dev/fb0"
@@ -610,14 +604,13 @@ class SimpleGUI(threading.Thread):
 
 
     def run(self):
-        self.hide_cursor()  # Hide the cursor when initializing the GUI
         try:
             while True:
                 values = self.populate_values()
                 self.draw_gui(values)
                 time.sleep(0.1)
         finally:
-            self.show_cursor()
+            pass
 
     def emit_gui_data_change(self, changed_data):
         self.socketio.emit('gui_data_change', changed_data)

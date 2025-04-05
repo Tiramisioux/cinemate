@@ -143,7 +143,6 @@ class CinePi:
 
         return args
 
-
     def calculate_preview_window(self, width, height, padding_x, padding_y, output_width, output_height):
         """
         Calculate the preview window while maintaining the correct aspect ratio.

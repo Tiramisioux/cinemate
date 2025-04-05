@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# Mount on add
+ACTION=="add", SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", ENV{ID_FS_LABEL}!="", ENV{ID_FS_TYPE}!="", RUN+="/bin/systemctl start ssd-automount@%k.service"
+
+# Unmount on remove
+ACTION=="remove", SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", ENV{ID_FS_LABEL}!="", RUN+="/bin/systemctl stop ssd-automount@%k.service"

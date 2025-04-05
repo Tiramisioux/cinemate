@@ -1,17 +1,12 @@
 [Unit]
-Description=CFE Hat Automount Service
-After=network.target
+Description=CFE HAT NVMe Automount
+After=multi-user.target
 
 [Service]
-ExecStart=/home/pi/.cinemate-env/bin/python3 /home/pi/cinemate/services/cfe-hat-automount/automount.py
-WorkingDirectory=/home/pi/cinemate/services/cfe-hat-automount
-User=pi
-Group=pi
+ExecStart=/usr/bin/python3 /usr/local/bin/cfe-hat-automount
 Restart=always
-RestartSec=5
-StandardOutput=syslog
-StandardError=syslog
-SyslogIdentifier=cfe-hat-automount
+RestartSec=2
+User=root
 
 [Install]
 WantedBy=multi-user.target

@@ -1,0 +1,54 @@
+#!/bin/bash
+
+set -e
+
+if [[ "$1" == "--unmount" ]]; then
+    DEVICE="$2"
+    LABEL=$(blkid -o value -s LABEL "$DEVICE")
+    MOUNTPOINT="/media/${LABEL}"
+
+    if mountpoint -q "$MOUNTPOINT"; then
+        echo "Unmounting $DEVICE from $MOUNTPOINT"
+        umount -l "$MOUNTPOINT" && rmdir "$MOUNTPOINT"
+    else
+        echo "Nothing mounted at $MOUNTPOINT"
+    fi
+    exit 0
+fi
+
+DEVICE="$1"
+[ -b "$DEVICE" ] || exit 1
+
+LABEL=$(blkid -o value -s LABEL "$DEVICE")
+FSTYPE=$(blkid -o value -s TYPE "$DEVICE")
+MOUNTPOINT="/media/${LABEL}"
+
+if [ -z "$LABEL" ] || [ -z "$FSTYPE" ]; then
+    echo "Missing label or filesystem type on $DEVICE"
+    exit 1
+fi
+
+# Choose mount options
+case "$FSTYPE" in
+    ntfs)  MOUNT_CMD="ntfs-3g"; MOUNT_OPTS="rw,noatime,uid=1000,gid=1000,umask=000" ;;
+    ext4)  MOUNT_CMD="mount";   MOUNT_OPTS="rw,noatime,exec" ;;
+    *)     MOUNT_CMD="mount";   MOUNT_OPTS="rw,noatime" ;;
+esac
+
+mkdir -p "$MOUNTPOINT"
+
+if mountpoint -q "$MOUNTPOINT"; then
+    echo "$MOUNTPOINT is already mounted."
+    exit 0
+fi
+
+if $MOUNT_CMD -o "$MOUNT_OPTS" "$DEVICE" "$MOUNTPOINT"; then
+    echo "Mounted $DEVICE ($FSTYPE) at $MOUNTPOINT"
+    chown -R pi:pi "$MOUNTPOINT"
+    chmod -R 775 "$MOUNTPOINT"
+    exit 0
+else
+    echo "Mount failed."
+    rmdir "$MOUNTPOINT"
+    exit 1
+fi

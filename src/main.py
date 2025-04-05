@@ -35,6 +35,21 @@ from module.serial_handler import SerialHandler
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
 SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
 
+def hide_cursor():
+    try:
+        with open('/dev/tty1', 'w') as tty:
+            tty.write('\033[?25l')
+    except Exception as e:
+        logging.warning(f"Could not hide cursor: {e}")
+
+def show_cursor():
+    try:
+        with open('/dev/tty1', 'w') as tty:
+            tty.write('\033[?25h')
+    except Exception as e:
+        logging.warning(f"Could not show cursor: {e}")
+
+
 # Graceful exit handler
 def handle_exit(signal, frame):
     logging.info("Graceful shutdown initiated.")
@@ -222,8 +237,6 @@ def main():
 
         
         show_cursor()
-        
-
 
     
     atexit.register(cleanup)

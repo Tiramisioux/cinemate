@@ -1,0 +1,2 @@
+ACTION=="add", SUBSYSTEM=="block", KERNEL=="nvme[0-9]n[0-9]*p[0-9]*", ENV{ID_FS_LABEL}!="", RUN+="/bin/systemctl start nvme-automount@%k.service"
+ACTION=="remove", SUBSYSTEM=="block", KERNEL=="nvme[0-9]n[0-9]*p[0-9]*", ENV{ID_FS_LABEL}!="", RUN+="/bin/systemctl stop nvme-automount@%k.service"

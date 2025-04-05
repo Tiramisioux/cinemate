@@ -1,0 +1,13 @@
+[Unit]
+Description=Automount NVMe drive (%i)
+After=dev-%i.device
+Requires=dev-%i.device
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/nvme-automount /dev/%i
+ExecStop=/usr/local/bin/nvme-automount --unmount /dev/%i
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target

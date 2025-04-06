@@ -97,7 +97,7 @@ def initialize_system(settings):
     redis_controller = RedisController()
     sensor_detect = SensorDetect()
     pwm_controller = PWMController(sensor_detect, PWM_pin=settings["gpio_output"]["pwm_pin"])
-    ssd_monitor = SSDMonitor()
+    ssd_monitor = SSDMonitor(redis_controller=redis_controller)
     usb_monitor = USBMonitor(ssd_monitor)
     gpio_output = GPIOOutput(rec_out_pins=settings["gpio_output"]["rec_out_pin"])
     dmesg_monitor = DmesgMonitor()

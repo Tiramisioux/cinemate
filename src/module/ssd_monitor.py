@@ -3,6 +3,7 @@ import logging
 import threading
 import time
 import subprocess
+import smbus
 
 class Event:
     def __init__(self):
@@ -19,23 +20,35 @@ class Event:
                 logging.error(f"Error while invoking listener: {e}")
 
 class SSDMonitor:
-    def __init__(self, mount_path='/media/RAW'):
+    def __init__(self, mount_path='/media/RAW', redis_controller=None):
         self.mount_path = mount_path
         self.is_mounted = False
         self.space_left = None
         self.device_name = None
+        self.device_type = None  # 'USB', 'NVMe', or 'CFE'
         self._monitor_thread = None
         self._stop_event = threading.Event()
+        self.redis_controller = redis_controller
 
         # Define events
         self.mount_event = Event()
         self.unmount_event = Event()
         self.space_update_event = Event()
 
+        self._detect_cfe_hat()
         self.start()
 
+    def _detect_cfe_hat(self):
+        self.cfe_hat_present = False
+        try:
+            bus = smbus.SMBus(1)
+            if bus.read_byte(0x34) in range(0x00, 0xFF):
+                logging.info("CFE HAT detected via I2C on address 0x34")
+                self.cfe_hat_present = True
+        except Exception:
+            logging.info("No CFE HAT detected on I2C")
+
     def start(self):
-        """Start the SSD monitoring."""
         if self._monitor_thread is None or not self._monitor_thread.is_alive():
             self._stop_event.clear()
             self._monitor_thread = threading.Thread(target=self._run)
@@ -43,42 +56,44 @@ class SSDMonitor:
             logging.info("SSD monitoring thread started.")
 
     def stop(self):
-        """Stop the SSD monitoring."""
         self._stop_event.set()
         if self._monitor_thread:
             self._monitor_thread.join()
         logging.info("SSD monitoring stopped.")
 
     def _run(self):
-        """Continuous monitoring of the drive status and space left."""
         while not self._stop_event.is_set():
             self._check_mount_status()
-            time.sleep(1)  # Check every second
+            time.sleep(1)
 
     def _check_mount_status(self):
-        """Check if the RAW drive is mounted and update status accordingly."""
         is_currently_mounted = os.path.ismount(self.mount_path)
 
         if is_currently_mounted and not self.is_mounted:
-            # Drive was just mounted
             self.is_mounted = True
             self.device_name = self._get_device_name()
-            logging.info(f"RAW drive mounted at {self.mount_path}")
+            self.device_type = self._detect_device_type()
+            if self.redis_controller:
+                self.redis_controller.set_value('storage_type', self.device_type.lower())
+                self.redis_controller.set_value('is_mounted', '1')
+            logging.info(f"RAW drive mounted at {self.mount_path} ({self.device_type})")
             self._update_space_left()
-            self.mount_event.emit(self.mount_path)
+            self.mount_event.emit(self.mount_path, self.device_type)
         elif not is_currently_mounted and self.is_mounted:
-            # Drive was just unmounted
             logging.info(f"RAW drive unmounted from {self.mount_path}")
             self.is_mounted = False
             self.space_left = None
             self.device_name = None
+            self.device_type = None
+            if self.redis_controller:
+                self.redis_controller.set_value('storage_type', 'none')
+                self.redis_controller.set_value('is_mounted', '0')
+                self.redis_controller.set_value('space_left', '0')
             self.unmount_event.emit(self.mount_path)
         elif self.is_mounted:
-            # Drive is still mounted, update space left
             self._update_space_left()
 
     def _get_device_name(self):
-        """Get the device name of the mounted drive."""
         try:
             output = subprocess.check_output(['findmnt', '-n', '-o', 'SOURCE', self.mount_path], text=True).strip()
             return os.path.basename(output)
@@ -86,59 +101,93 @@ class SSDMonitor:
             logging.error(f"Failed to get device name for {self.mount_path}")
             return None
 
+    def _detect_device_type(self):
+        if not self.device_name:
+            return 'Unknown'
+
+        try:
+            path = f"/sys/class/block/{self.device_name}/device"
+            real_path = os.path.realpath(path)
+
+            if self.cfe_hat_present and 'platform/axi/1000110000.pcie' in real_path:
+                return 'CFE'
+
+            if '/usb' in real_path:
+                return 'SSD'
+            elif '/nvme' in real_path:
+                return 'NVMe'
+        except Exception as e:
+            logging.error(f"Device type detection failed: {e}")
+
+        return 'Unknown'
+
     def _update_space_left(self):
-        """Update the space left on the SSD."""
         if self.is_mounted:
             try:
                 stat = os.statvfs(self.mount_path)
-                new_space_left = (stat.f_bavail * stat.f_frsize) / (1024 ** 3)  # Convert to GB
+                new_space_left = (stat.f_bavail * stat.f_frsize) / (1024 ** 3)
                 if new_space_left != self.space_left:
                     self.space_left = new_space_left
                     logging.info(f"Updated space left on SSD: {self.space_left:.2f} GB")
+                    if self.redis_controller:
+                        self.redis_controller.set_value('space_left', f"{self.space_left:.2f}")
                     self.space_update_event.emit(self.space_left)
             except OSError as e:
                 logging.error(f"Error updating space left: {e}")
                 self.space_left = None
+                if self.redis_controller:
+                    self.redis_controller.set_value('space_left', '0')
 
     def get_mount_status(self):
-        """Get the current mount status."""
         return self.is_mounted
 
     def get_space_left(self):
-        """Get the current space left on the SSD."""
         return self.space_left
 
+    def get_device_type(self):
+        return self.device_type
+
     def unmount_drive(self):
-        """Unmount the SSD."""
         if self.is_mounted:
             try:
-                subprocess.run(["sudo", "umount", self.mount_path], check=True)
+                if self.device_type == 'CFE':
+                    subprocess.run(["sudo", "cfe-hat-automount", "unmount"], check=True)
+                else:
+                    subprocess.run(["sudo", "umount", self.mount_path], check=True)
                 logging.info(f"SSD unmounted from {self.mount_path}")
                 self.is_mounted = False
                 self.space_left = None
                 self.device_name = None
+                self.device_type = None
+                if self.redis_controller:
+                    self.redis_controller.set_value('storage_type', 'none')
+                    self.redis_controller.set_value('is_mounted', '0')
+                    self.redis_controller.set_value('space_left', '0')
                 self.unmount_event.emit(self.mount_path)
             except subprocess.CalledProcessError as e:
                 logging.error(f"Failed to unmount SSD: {e}")
 
+    def mount_cfe(self):
+        try:
+            subprocess.run(["sudo", "cfe-hat-automount", "mount"], check=True)
+            logging.info("CFE mount triggered via CLI")
+        except subprocess.CalledProcessError as e:
+            logging.error(f"Failed to mount CFE drive: {e}")
+
     def report_current_mounts(self):
-        """Check and report all currently mounted drives named RAW under /media."""
         logging.info("Checking currently mounted drives named 'RAW'...")
-        found_raw = False
         raw_mounts = []
 
         if os.path.ismount(self.mount_path):
-            found_raw = True
             try:
                 stat = os.statvfs(self.mount_path)
-                space_left = (stat.f_bavail * stat.f_frsize) / (1024 ** 3)  # Convert to GB
+                space_left = (stat.f_bavail * stat.f_frsize) / (1024 ** 3)
                 message = f"Drive 'RAW' mounted at {self.mount_path} with {space_left:.2f} GB free"
                 logging.info(message)
-                raw_mounts.append(('RAW', space_left))
+                raw_mounts.append(('RAW', space_left, self.device_type))
             except OSError as e:
                 logging.error(f"Error checking space on {self.mount_path}: {e}")
-        
-        if not found_raw:
+        else:
             logging.info("No drives named 'RAW' found.")
-        
+
         return raw_mounts

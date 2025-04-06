@@ -199,93 +199,6 @@ class SimpleGUI(threading.Thread):
             }
         ]
 
-
-    def draw_left_sections(self, draw, values):
-        label_font = ImageFont.truetype(self.regular_font_path, 26)
-        box_font = ImageFont.truetype(self.bold_font_path, 24)
-        box_height = 40
-        box_width = 60
-        box_color = (136, 136, 136)
-        text_color = (0, 0, 0)
-
-        # Positioning parameters
-        label_padding_x = 19   # Left padding for section labels
-        box_padding_x = 15     # Left padding for boxes (can be different from label)
-        initial_y = 97         # Top margin for the first label
-        label_spacing = -4     # Space between label and first box
-        intra_box_spacing = 14 # Space between boxes in a section
-        section_gap = 60       # Space between sections
-
-        current_y = initial_y
-
-        for section in self.left_section_layout:
-            # Draw section header
-            label_color = self.colors["label"][self.color_mode]
-            draw.text((label_padding_x, current_y), section["label"], font=label_font, fill=label_color)
-
-            current_y += box_height + label_spacing
-
-            # Track the highest Y used by the last box in this section
-            for item in section["items"]:
-                value_text = item["text"](values)
-                if not value_text:
-                    continue  # Skip empty values   
-
-                # Draw box
-                draw.rectangle(
-                    [box_padding_x, current_y, box_padding_x + box_width, current_y + box_height],
-                    fill=box_color
-                )
-
-                # Center the text horizontally and vertically in the box
-                text_size = draw.textbbox((0, 0), value_text, font=box_font)
-                text_width = text_size[2] - text_size[0]
-                text_height = text_size[3] - text_size[1]
-                text_x = box_padding_x + (box_width - text_width) // 2
-                text_y = current_y + (box_height - text_height) // 2
-
-                draw.text((text_x, text_y), value_text, font=box_font, fill=text_color)
-
-                current_y += box_height + intra_box_spacing
-
-            current_y += section_gap
-
-
-        # ---- Conditionally Draw SYS section ----
-        show_sys = any([
-            values.get("usb_connected"),
-            values.get("mic_connected"),
-            values.get("keyboard_connected")
-        ])
-
-        if show_sys:
-            sys_label_y = current_y
-            sys_label_padding_x = label_padding_x + 1  # Adjust if needed
-            label_color = self.colors["label"][self.color_mode]
-            draw.text((sys_label_padding_x, sys_label_y), "SYS", font=label_font, fill=label_color)
-
-            current_y += box_height + label_spacing  # Move to the top of the first box
-
-            # Draw SYS boxes vertically (like CAM/MON)
-            for key, label in [("usb_connected", "SER"), ("mic_connected", "MIC"), ("keyboard_connected", "KEY")]:
-                if values.get(key):
-                    draw.rectangle(
-                        [box_padding_x, current_y, box_padding_x + box_width, current_y + box_height],
-                        fill=box_color
-                    )
-
-                    label_bbox = draw.textbbox((0, 0), label, font=box_font)
-                    text_width = label_bbox[2] - label_bbox[0]
-                    text_height = label_bbox[3] - label_bbox[1]
-                    text_x = box_padding_x + (box_width - text_width) // 2
-                    text_y = current_y + (box_height - text_height) // 2
-
-                    draw.text((text_x, text_y), label, font=box_font, fill=text_color)
-
-                    current_y += box_height + intra_box_spacing  # Move to next box
-
-            current_y += section_gap  # Final spacing after SYS
-
     def estimate_resolution_in_k(self):
         """
         Estimate the current resolution in K.
@@ -356,7 +269,9 @@ class SimpleGUI(threading.Thread):
             "disk_label": str(self.ssd_monitor.device_name).upper()[:4] if self.ssd_monitor.device_name else "", #str(self.ssd_monitor.file_system_format).upper() if self.ssd_monitor.file_system_format else "",
             "usb_connected": bool(self.serial_handler.serial_connected),
             "mic_connected": self.usb_monitor.usb_mic is not None,
-            "keyboard_connected": bool(self.usb_monitor and self.usb_monitor.usb_keyboard)
+            "keyboard_connected": bool(self.usb_monitor and self.usb_monitor.usb_keyboard),
+            "storage_type": self.redis_controller.get_value("storage_type")
+
 
         }
 
@@ -419,6 +334,104 @@ class SimpleGUI(threading.Thread):
             values["disk_space"] = "NO DISK"
 
         return values
+
+    def draw_left_sections(self, draw, values):
+        label_font = ImageFont.truetype(self.regular_font_path, 26)
+        box_font = ImageFont.truetype(self.bold_font_path, 24)
+        box_height = 40
+        box_width = 60
+        box_color = (136, 136, 136)
+        text_color = (0, 0, 0)
+
+        # Positioning parameters
+        label_padding_x = 19   # Left padding for section labels
+        box_padding_x = 15     # Left padding for boxes (can be different from label)
+        initial_y = 97         # Top margin for the first label
+        label_spacing = -4     # Space between label and first box
+        intra_box_spacing = 14 # Space between boxes in a section
+        section_gap = 60       # Space between sections
+
+        current_y = initial_y
+
+        for section in self.left_section_layout:
+            # Draw section header
+            label_color = self.colors["label"][self.color_mode]
+            draw.text((label_padding_x, current_y), section["label"], font=label_font, fill=label_color)
+
+            current_y += box_height + label_spacing
+
+            # Track the highest Y used by the last box in this section
+            for item in section["items"]:
+                value_text = item["text"](values)
+                if not value_text:
+                    continue  # Skip empty values   
+
+                # Draw box
+                draw.rectangle(
+                    [box_padding_x, current_y, box_padding_x + box_width, current_y + box_height],
+                    fill=box_color
+                )
+
+                # Center the text horizontally and vertically in the box
+                text_size = draw.textbbox((0, 0), value_text, font=box_font)
+                text_width = text_size[2] - text_size[0]
+                text_height = text_size[3] - text_size[1]
+                text_x = box_padding_x + (box_width - text_width) // 2
+                text_y = current_y + (box_height - text_height) // 2
+
+                draw.text((text_x, text_y), value_text, font=box_font, fill=text_color)
+
+                current_y += box_height + intra_box_spacing
+
+            current_y += section_gap
+
+
+        # ---- Conditionally Draw SYS section ----
+        show_sys = any([
+            values.get("usb_connected"),
+            values.get("mic_connected"),
+            values.get("keyboard_connected")
+        ])
+
+        if show_sys:
+            sys_label_y = current_y
+            sys_label_padding_x = label_padding_x + 1  # Adjust if needed
+            label_color = self.colors["label"][self.color_mode]
+            draw.text((sys_label_padding_x, sys_label_y), "SYS", font=label_font, fill=label_color)
+
+            current_y += box_height + label_spacing  # Move to the top of the first box
+
+        # Draw SYS boxes vertically (like CAM/MON)
+        for key, label in [
+            ("usb_connected", "SER"),
+            ("mic_connected", "MIC"),
+            ("keyboard_connected", "KEY"),
+            ("storage_type", values.get("storage_type", "").upper())
+        ]:
+            if key == "storage_type":
+                if values.get(key) and values.get(key).lower() != "none":
+                    label = values.get(key, "").upper()
+                else:
+                    continue
+            elif not values.get(key):
+                continue
+
+            draw.rectangle(
+                [box_padding_x, current_y, box_padding_x + box_width, current_y + box_height],
+                fill=box_color
+            )
+
+            text_bbox = draw.textbbox((0, 0), label, font=box_font)
+            text_width = text_bbox[2] - text_bbox[0]
+            text_height = text_bbox[3] - text_bbox[1]
+            text_x = box_padding_x + (box_width - text_width) // 2
+            text_y = current_y + (box_height - text_height) // 2
+
+            draw.text((text_x, text_y), label, font=box_font, fill=text_color)
+            current_y += box_height + intra_box_spacing  # Move to next box
+
+        current_y += section_gap  # Final spacing after SYS
+
 
     def draw_gui(self, values):
         previous_background_color = self.current_background_color

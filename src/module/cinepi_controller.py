@@ -602,9 +602,20 @@ class CinePiController:
             self.stop_recording()
         logging.info("Initiating safe system shutdown.")
         os.system("sudo shutdown -h now")
-        
+    
+    def mount_cfe(self):
+        self.ssd_monitor.mount_cfe()
+    
     def unmount(self):
-        self.ssd_monitor.unmount_drive()
+        if self.ssd_monitor.is_mounted:
+            self.ssd_monitor.unmount_drive()
+        else:
+            if self.ssd_monitor.cfe_hat_present:
+                logging.info("No drive currently mounted. CFE HAT detected — attempting to mount CFE...")
+                self.ssd_monitor.mount_cfe()
+            else:
+                logging.info("No drive currently mounted and no CFE HAT present. Nothing to do.")
+
     
     def calculate_dynamic_shutter_angles(self, fps):
         if fps <= 0:

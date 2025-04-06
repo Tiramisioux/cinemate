@@ -71,16 +71,24 @@ def unmountPCIe():
     global device_node
     print("Unmounting PCIe device")
 
-    try:
-        os.system("sudo umount /media/RAW")
-    except Exception as e:
-        print(f"[WARN] Unmount failed: {e}")
+    if os.path.ismount("/media/RAW"):
+        try:
+            subprocess.run(["umount", "/media/RAW"], check=True)
+            print("[INFO] Successfully unmounted /media/RAW")
+        except subprocess.CalledProcessError as e:
+            print(f"[WARN] Failed to unmount /media/RAW: {e}")
+    else:
+        print("[INFO] /media/RAW is not currently mounted.")
 
     print("Trying to unbind PCIe controller...")
     try:
-        os.system("sudo bash -c 'echo 1000110000.pcie > /sys/bus/platform/drivers/brcm-pcie/unbind'")
+        subprocess.run(
+            ["bash", "-c", "echo 1000110000.pcie > /sys/bus/platform/drivers/brcm-pcie/unbind"],
+            check=True
+        )
         time.sleep(0.5)
-    except Exception as e:
+        print("[INFO] PCIe controller unbound")
+    except subprocess.CalledProcessError as e:
         print(f"[ERROR] Failed to unbind PCIe controller: {e}")
 
     still_present = any(x.startswith("nvme") for x in os.listdir("/dev"))
@@ -93,6 +101,7 @@ def unmountPCIe():
     mounted = 0
     device_node = None
 
+
 def mountPCIe():
     global mounted, device_node
     print("Mounting...")
@@ -102,11 +111,21 @@ def mountPCIe():
     else:
         os.system("echo 1000110000.pcie > /sys/bus/platform/drivers/brcm-pcie/bind")
     time.sleep(0.5)
+    # Ensure /media/RAW is unmounted before proceeding
+    if os.path.ismount("/media/RAW"):
+        print("[INFO] /media/RAW already mounted. Attempting to unmount first...")
+        try:
+            subprocess.run(["umount", "/media/RAW"], check=True)
+            print("[INFO] Previous mount at /media/RAW unmounted.")
+        except subprocess.CalledProcessError:
+            print("[WARN] Failed to unmount existing /media/RAW. Continuing...")
+
     device_node = check_for_device("Non-Volatile memory controller")
     if device_node:
         mount_last_partition(device_node)
         writeLED(True)
         mounted = 1
+
 
 def main_loop():
     global last_insert, last_eject

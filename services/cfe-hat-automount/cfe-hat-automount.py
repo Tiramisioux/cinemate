@@ -101,7 +101,6 @@ def unmountPCIe():
     mounted = 0
     device_node = None
 
-
 def mountPCIe():
     global mounted, device_node
     print("Mounting...")

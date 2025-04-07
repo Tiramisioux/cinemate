@@ -39,6 +39,11 @@ class SimpleGUI(threading.Thread):
         self.sensor_detect = sensor_detect
         self.redis_listener = redis_listener
         
+        self.vu_left_smoothed = 0
+        self.vu_right_smoothed = 0
+        self.vu_smoothing_alpha = 0.4  # Rise factor (0.0–1.0, higher = faster)
+        self.vu_decay_factor = 0.1     # Fall factor (0.0–1.0, lower = slower)
+
         
         #self.timekeeper = timekeeper
 
@@ -334,6 +339,32 @@ class SimpleGUI(threading.Thread):
             values["disk_space"] = "NO DISK"
 
         return values
+    
+    def update_smoothed_vu_levels(self):
+            if not self.usb_monitor or not hasattr(self.usb_monitor, "audio_monitor"):
+                return
+
+            monitor = self.usb_monitor.audio_monitor
+            raw_left = monitor.level_left
+            raw_right = monitor.level_right
+
+            # Left channel decay only
+            if raw_left < self.vu_left_smoothed:
+                self.vu_left_smoothed = (1 - self.vu_decay_factor) * self.vu_left_smoothed
+            else:
+                self.vu_left_smoothed = raw_left
+
+            # Right channel decay only
+            if raw_right < self.vu_right_smoothed:
+                self.vu_right_smoothed = (1 - self.vu_decay_factor) * self.vu_right_smoothed
+            else:
+                self.vu_right_smoothed = raw_right
+
+            # Peak hold logic
+            self.vu_left_peak = max(self.vu_left_peak * 0.98, self.vu_left_smoothed)
+            self.vu_right_peak = max(self.vu_right_peak * 0.98, self.vu_right_smoothed)
+
+
 
     def draw_left_sections(self, draw, values):
         label_font = ImageFont.truetype(self.regular_font_path, 26)
@@ -431,6 +462,41 @@ class SimpleGUI(threading.Thread):
             current_y += box_height + intra_box_spacing  # Move to next box
 
         current_y += section_gap  # Final spacing after SYS
+
+    def draw_right_vu_meter(self, draw):
+        if not self.usb_monitor or not hasattr(self.usb_monitor, "audio_monitor"):
+            return
+
+        bar_width = 10
+        bar_height = 200
+        spacing = 8
+        margin_right = 32
+        margin_bottom = 80
+
+        base_x = self.disp_width - margin_right - (2 * bar_width + spacing)
+        base_y = self.disp_height - margin_bottom - bar_height
+
+        def level_to_height(level):
+            import math
+            scaled = math.log10(1 + 9 * (level / 100))  # log10(1) to log10(10)
+            return int(scaled * bar_height)
+
+        def draw_bar(x, level, peak):
+            h = level_to_height(level)
+            peak_h = level_to_height(peak)
+
+            # Background
+            draw.rectangle([x, base_y, x + bar_width, base_y + bar_height], fill=(50, 50, 50))
+
+            # Main VU bar
+            color = (0, 255, 0) if level < 60 else (255, 255, 0) if level < 85 else (255, 0, 0)
+            draw.rectangle([x, base_y + bar_height - h, x + bar_width, base_y + bar_height], fill=color)
+
+            # Peak dot
+            draw.rectangle([x, base_y + bar_height - peak_h - 2, x + bar_width, base_y + bar_height - peak_h], fill=(255, 255, 255))
+
+        draw_bar(base_x, self.vu_left_smoothed, self.vu_left_peak)
+        draw_bar(base_x + bar_width + spacing, self.vu_right_smoothed, self.vu_right_peak)
 
 
     def draw_gui(self, values):
@@ -568,6 +634,11 @@ class SimpleGUI(threading.Thread):
 
             if element == "exposure_time" and self.cinepi_controller.shutter_a_sync_mode == 1:
                 self.draw_rounded_box(draw, value, position, font_size, 5, "black", "white", image)
+                
+        self.update_smoothed_vu_levels()
+        self.draw_right_vu_meter(draw)
+
+        #logging.info(f"Mic level: L={self.usb_monitor.audio_monitor.level_left}% R={self.usb_monitor.audio_monitor.level_right}%")
 
         self.fb.show(image)
 
@@ -615,13 +686,19 @@ class SimpleGUI(threading.Thread):
             blank_image = Image.new("RGBA", self.fb.size, "black")
             self.fb.show(blank_image)
 
-
     def run(self):
         try:
+            self.vu_left_peak = 0
+            self.vu_right_peak = 0
+            self.vu_left_smoothed = 0
+            self.vu_right_smoothed = 0
+            self.vu_decay_factor = 0.2
+
             while True:
                 values = self.populate_values()
+                self.update_smoothed_vu_levels()
                 self.draw_gui(values)
-                time.sleep(0.1)
+                time.sleep(0.2)
         finally:
             pass
 

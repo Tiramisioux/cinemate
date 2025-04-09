@@ -7,6 +7,14 @@ import re
 import subprocess
 import time
 
+from collections import deque
+
+class AudioMonitor:
+    def __init__(self):
+        ...
+        self.vu_history = deque(maxlen=5)  # ~0.2s if updates ~25ms apart
+
+
 class Event:
     def __init__(self):
         self._listeners = []
@@ -94,7 +102,8 @@ class AudioMonitor:
     def __init__(self):
         self.format = None
         self.channels = None
-        self.rate = None
+        self.sample_rate = None
+        self.bit_depth = None
         self.device_name = None
         self.card = None
         self.device = None
@@ -104,6 +113,8 @@ class AudioMonitor:
         self.vu_levels = []
         self.running = False
         self.thread = None
+        self.vu_history = deque(maxlen=5)  # ~0.2s if updates ~25ms apart
+
 
     def set_model_info(self, model, serial):
         self.model = model.strip().lower() if model else "unknown"
@@ -122,16 +133,24 @@ class AudioMonitor:
                     self.device_alias = "mic_24bit"
                     self.format = "S24_3LE"
                     self.channels = 2
-                    self.rate = 48000
+                    self.sample_rate = 48000
                     logging.info("Hardcoded config for RØDE VideoMic NTG → mic_24bit")
                     return True
                 elif "pnp" in model_lc or "c-media" in model_lc:
                     self.device_alias = "mic_16bit"
                     self.format = "S16_LE"
                     self.channels = 1
-                    self.rate = 48000
+                    self.sample_rate = 48000
                     logging.info("Hardcoded config for USB PnP mic → mic_16bit")
                     return True
+
+                # Derive bit depth from format
+                if self.format == "S24_3LE":
+                    self.bit_depth = 24
+                elif self.format == "S16_LE":
+                    self.bit_depth = 16
+                else:
+                    self.bit_depth = None
 
                 logging.warning("No hardcoded match for model '%s', skipping detection.", self.model)
                 return False
@@ -154,11 +173,13 @@ class AudioMonitor:
     def vu_monitor_loop(self):
         cmd = [
             'arecord', '-D', f'{self.device_alias}',
-            '-f', self.format, '-c', str(self.channels), '-r', str(self.rate),
+            '--format', self.format, '--channels', str(self.channels), '--rate', str(self.sample_rate),
             '-vvv', '/dev/null'
         ]
 
         self.vu_levels = []
+        logging.info(f"Starting VU monitor: arecord -D {self.device_alias} -f {self.format} -c {self.channels} -r {self.sample_rate} -vvv /dev/null")
+
         process = subprocess.Popen(cmd, stderr=subprocess.PIPE, universal_newlines=True)
 
         try:
@@ -166,12 +187,19 @@ class AudioMonitor:
                 if not self.running:
                     break
 
+                logging.debug(f"[VU MONITOR] stderr: {line.strip()}")
                 matches = re.findall(r'(\d+)%', line)
                 if matches:
                     self.vu_levels = list(map(int, matches[:6]))
                     if len(self.vu_levels) == 1:
-                        self.vu_levels *= 2  # duplicate for mono
-                    logging.debug(f"VU Levels: {self.vu_levels}")
+                        self.vu_levels *= 2
+                    self.vu_history.append(self.vu_levels.copy())
+
+                    logging.info(f"VU Levels: {self.vu_levels}")
+                    
+                else:
+                    logging.debug("No VU matches in this line.")
+
         finally:
             process.terminate()
 
@@ -190,20 +218,11 @@ class AudioMonitor:
         self.running = False
         if self.thread:
             self.thread.join()
+            self.vu_levels = []
             logging.info("AudioMonitor stopped.")
 
     def get_vu_levels(self):
         return self.vu_levels[0], self.vu_levels[1] if len(self.vu_levels) >= 2 else 0
-
-
-
-
-
-
-
-
-
-
 
 class USBMonitor():
     def __init__(self, ssd_monitor):
@@ -246,7 +265,8 @@ class USBMonitor():
                     return s_dev
         return None
 
-    def process_sound_devices(self):
+    def process_sound_devices(self, trigger_event=True):
+
         if not self.temp_sound_devices:
             self.sound_timer = None
             return
@@ -262,6 +282,8 @@ class USBMonitor():
         raw_model = chosen_device.get('ID_MODEL', '') or "Unknown"
         serial = chosen_device.get('ID_SERIAL', '') or "Unknown"
         model = raw_model.replace('_', ' ').strip() or "Unknown"
+        
+        threading.Timer(3.0, lambda: (self.audio_monitor.set_model_info(model, serial), self.audio_monitor.start())).start()
 
         # Always initialize to prevent UnboundLocalError
         card_name = "Unknown"
@@ -283,14 +305,16 @@ class USBMonitor():
             self.audio_monitor = AudioMonitor()
             self.audio_monitor.set_model_info(model, serial)
 
-            started = self.audio_monitor.start()
+            # started = self.audio_monitor.start()
 
-            if started:
-                logging.info("Audio monitor restarted for new mic.")
-            else:
-                logging.error("Audio monitor failed to restart for new mic.")
+            # if started:
+            #     logging.info("Audio monitor restarted for new mic.")
+            # else:
+            #     logging.error("Audio monitor failed to restart for new mic.")
 
-            self.usb_event.emit('mic_changed', chosen_device, model, serial, card_name)
+            # if trigger_event:
+            #     self.usb_event.emit('mic_changed', chosen_device, model, serial, card_name)
+            
             self.current_mic_id = mic_id
 
         logging.info(f'USB Microphone connected: Model={model}, Serial={serial}, Name={card_name}')
@@ -298,7 +322,6 @@ class USBMonitor():
 
         self.temp_sound_devices.clear()
         self.sound_timer = None
-
 
 
     def reset_mic_processed_flag(self):
@@ -359,9 +382,8 @@ class USBMonitor():
                 self.usb_mic = None
                 self.usb_mic_path = None
                 self.current_mic_id = None
-                self.usb_event.emit(action, device, model, serial)
-                
-                # Stop audio monitor when mic disconnected
+                self.usb_event.emit('mic_removed', device, model, serial)  # <-- Added this line
+                self.audio_monitor.stop()
                 self.audio_monitor.stop()
 
 
@@ -410,12 +432,16 @@ class USBMonitor():
 
             self.usb_mic = device
             self.usb_mic_path = device.device_path
-            logging.info(f'USB Microphone connected at init: Model={model}, Serial={serial}')
+            # logging.info(f'USB Microphone connected at init: Model={model}, Serial={serial}')
             self.usb_event.emit('add', device, model, serial)
 
-            # ✅ Start audio monitor for already-connected mic
-            self.audio_monitor.set_model_info(model, serial)
-            self.audio_monitor.start()
+            self.temp_sound_devices.append(device)
+
+        if self.temp_sound_devices:
+            logging.info("Processing pre-connected sound devices...")
+            self.process_sound_devices(trigger_event=False)
+
+
 
     def get_card_name_from_arecord(self, card_num):
         try:

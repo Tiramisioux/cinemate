@@ -218,7 +218,7 @@ def main():
     else:
         logging.error("Didn't find Wi-Fi hotspot. Stream module not loaded")
 
-    mediator = Mediator(cinepi, redis_listener, pwm_controller, redis_controller, ssd_monitor, gpio_output, stream, usb_monitor)
+    mediator = Mediator(cinepi, cinepi_controller, redis_listener, pwm_controller, redis_controller, ssd_monitor, gpio_output, stream, usb_monitor)
     
     # Initialize USB monitoring
     usb_monitor.check_initial_devices()

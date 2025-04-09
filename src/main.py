@@ -7,6 +7,7 @@ import atexit
 import subprocess
 import traceback
 import os
+import json
 
 from module.config_loader import load_settings
 from module.logger import configure_logging
@@ -105,6 +106,19 @@ def initialize_system(settings):
 
     return redis_controller, sensor_detect, pwm_controller, ssd_monitor, usb_monitor, gpio_output, dmesg_monitor
 
+def handle_vu_output(line):
+    if "[VU]" in line:
+        try:
+            vu_str = line.replace("[VU]", "").strip()
+            vu_values = [int(val) for val in vu_str.split(",")]
+            print("VU levels:", vu_values)  # <-- You can replace this with logging or Redis
+
+            # # Example: push to Redis
+            # self.redis_controller.set_value("vu_meter", json.dumps(vu_values))
+
+        except Exception as e:
+            logging.warning(f"Failed to parse VU line: {line} ({e})")
+
 def hide_cursor():
     try:
         with open('/dev/tty1', 'w') as tty:
@@ -155,7 +169,9 @@ def main():
 
     # Initialize CinePi application
     cinepi = CinePi(redis_controller, sensor_detect)
+
     cinepi.set_log_level('INFO')
+    cinepi.message.subscribe(handle_vu_output)
 
     cinepi_controller = CinePiController(
         cinepi, redis_controller, pwm_controller, ssd_monitor, sensor_detect,
@@ -202,7 +218,7 @@ def main():
     else:
         logging.error("Didn't find Wi-Fi hotspot. Stream module not loaded")
 
-    mediator = Mediator(cinepi, redis_listener, pwm_controller, redis_controller, ssd_monitor, gpio_output, stream)
+    mediator = Mediator(cinepi, redis_listener, pwm_controller, redis_controller, ssd_monitor, gpio_output, stream, usb_monitor)
     
     # Initialize USB monitoring
     usb_monitor.check_initial_devices()

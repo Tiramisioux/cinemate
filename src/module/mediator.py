@@ -4,7 +4,7 @@ import json
 import time
 
 class Mediator:
-    def __init__(self, cinepi_app, redis_listener, pwm_controller, redis_controller, ssd_monitor, gpio_output, stream):
+    def __init__(self, cinepi_app, redis_listener, pwm_controller, redis_controller, ssd_monitor, gpio_output, stream, usb_monitor):
         self.cinepi_app = cinepi_app
         self.redis_listener = redis_listener
         self.pwm_controller = pwm_controller
@@ -12,20 +12,20 @@ class Mediator:
         self.ssd_monitor = ssd_monitor
         self.gpio_output = gpio_output
         self.stream = stream
-        
-        self.cinepi_app.message.subscribe(self.handle_cinepi_message)
+        self.usb_monitor = usb_monitor
 
-        # Subscribe to the "is_recording" key changes
+        # Subscribe to USB mic change events
+        self.usb_monitor.usb_event.subscribe(self.handle_usb_event)
+
+        # Other event subscriptions
+        self.cinepi_app.message.subscribe(self.handle_cinepi_message)
         self.redis_controller.redis_parameter_changed.subscribe(self.handle_redis_event)
-        
+        self.redis_controller.redis_parameter_changed.subscribe(self.handle_fps_change)
+        self.redis_controller.redis_parameter_changed.subscribe(self.handle_shutter_a_change)
+
         self.stop_recording_timer = None
         self.stop_recording_timeout = 2
-        
-         # Subscribe to the "fps" key changes
-        self.redis_controller.redis_parameter_changed.subscribe(self.handle_fps_change)
-        
-        self.redis_controller.redis_parameter_changed.subscribe(self.handle_shutter_a_change)
-        
+
         logging.info("Mediator instantiated")
         
     def load_ssd_settings(self, settings_file):
@@ -41,6 +41,12 @@ class Mediator:
     def handle_cinepi_message(self, message):
         # Handle CinePi app messages (currently not logging)
         pass  
+    
+    def handle_usb_event(self, event_type, device, model, serial, card_name=None):
+        if event_type == "mic_changed":
+            logging.info(f"[Mediator] Microphone changed to: {model} ({serial}), card: {card_name}")
+            self.on_mic_changed(model, serial, card_name)
+
 
     def handle_ssd_event(self, action, message):
         # Handle SSD events
@@ -116,3 +122,12 @@ class Mediator:
             print('changing pwm')
             shutter_a_new = self.redis_controller.get_value('shutter_a')
             self.pwm_controller.set_pwm(None, shutter_a_new)
+    
+    
+    def on_mic_changed(self, model, serial, card_name):
+        """
+        Override this method or attach additional logic here.
+        Example: update GUI, log to Redis, change settings, etc.
+        """
+        logging.info(f"[Mediator] on_mic_changed triggered: {model} ({serial}) [{card_name}]")
+

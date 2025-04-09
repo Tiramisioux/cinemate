@@ -3,7 +3,7 @@ import logging
 import traceback
 import threading
 import re
-import json
+
 import subprocess
 import time
 
@@ -33,9 +33,7 @@ class USBDriveMonitor:
         self.processed_devices = {}  # Tracks devices and their last processed time
         
         self.usb_mic_level = 0
-        self.vu_thread = None
-        self.vu_process = None
-
+    
 
         self.check_mounted_devices_on_startup()  # Check for already mounted devices
 
@@ -92,133 +90,120 @@ class USBDriveMonitor:
                 self.ssd_monitor.update_on_remove("Detected USB disconnection.")
                 self.ssd_monitor.on_ssd_removed()
 
-import subprocess
-import threading
-import re
-import time
-import logging
-
 class AudioMonitor:
     def __init__(self):
-        self.level_left = 0
-        self.level_right = 0
-        self.proc = None
-        self.thread = None
+        self.format = None
+        self.channels = None
+        self.rate = None
+        self.device_name = None
+        self.card = None
+        self.device = None
+        self.device_alias = None
+        self.model = None
+        self.serial = None
+        self.vu_levels = []
         self.running = False
+        self.thread = None
+
+    def set_model_info(self, model, serial):
+        self.model = model.strip().lower() if model else "unknown"
+        self.serial = serial
 
     def detect_device(self):
         try:
-            output = subprocess.check_output(['arecord', '-l']).decode()
-            match = re.search(r'card (\d+):\s+[^\[]+\[([^\]]+)\].*?device (\d+):', output, re.DOTALL)
+            output = subprocess.check_output("arecord -l", shell=True).decode()
+            match = re.search(r'card (\d+):.*?device (\d+):.*?\[(.*?)\]', output, re.DOTALL)
             if match:
-                card = match.group(1)
-                name = match.group(2)
-                device = match.group(3)
-                logging.info(f"Found device: card {card}, device {device} — {name}")
-                return card, device, name
-        except Exception as e:
-            logging.error(f"Failed to detect audio device: {e}")
-        return None, None, None  # <— this ensures 3 values are always returned
+                self.card, self.device, self.device_name = match.groups()
 
-    def try_format(self, card, device, fmt, channels, rate):
+                # Hardcoded handling for known models
+                model_lc = self.model.lower()
+                if "videomic" in model_lc or "rode" in model_lc:
+                    self.device_alias = "mic_24bit"
+                    self.format = "S24_3LE"
+                    self.channels = 2
+                    self.rate = 48000
+                    logging.info("Hardcoded config for RØDE VideoMic NTG → mic_24bit")
+                    return True
+                elif "pnp" in model_lc or "c-media" in model_lc:
+                    self.device_alias = "mic_16bit"
+                    self.format = "S16_LE"
+                    self.channels = 1
+                    self.rate = 48000
+                    logging.info("Hardcoded config for USB PnP mic → mic_16bit")
+                    return True
+
+                logging.warning("No hardcoded match for model '%s', skipping detection.", self.model)
+                return False
+        except subprocess.CalledProcessError:
+            logging.exception("arecord failed during detection.")
+            return False
+
+    def try_audio_config(self, fmt, channels, rate):
+        cmd = [
+            'arecord', '-D', f'{self.device_alias}',
+            '--format', fmt, '--channels', str(channels), '--rate', str(rate),
+            '-d', '1', '-t', 'raw', '/dev/null'
+        ]
         try:
-            subprocess.check_output([
-                'arecord', '-D', f'hw:{card},{device}',
-                '--format', fmt,
-                '--channels', str(channels),
-                '--rate', str(rate),
-                '-d', '1', '-f', fmt, '-t', 'raw'
-            ], stderr=subprocess.DEVNULL)
+            subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
             return True
         except subprocess.CalledProcessError:
             return False
 
-    def find_working_config(self, card, device):
-        test_configs = [
-            ("S24_3LE", 2, 48000),
-            ("S16_LE", 2, 48000),
-            ("S16_LE", 1, 48000),
-            ("S16_LE", 1, 44100),
+    def vu_monitor_loop(self):
+        cmd = [
+            'arecord', '-D', f'{self.device_alias}',
+            '-f', self.format, '-c', str(self.channels), '-r', str(self.rate),
+            '-vvv', '/dev/null'
         ]
-        for fmt, ch, rate in test_configs:
-            if self.try_format(card, device, fmt, ch, rate):
-                logging.info(f"✔ Found working config: format={fmt}, channels={ch}, rate={rate}")
-                return fmt, ch, rate
-        return None, None, None
+
+        self.vu_levels = []
+        process = subprocess.Popen(cmd, stderr=subprocess.PIPE, universal_newlines=True)
+
+        try:
+            for line in process.stderr:
+                if not self.running:
+                    break
+
+                matches = re.findall(r'(\d+)%', line)
+                if matches:
+                    self.vu_levels = list(map(int, matches[:6]))
+                    if len(self.vu_levels) == 1:
+                        self.vu_levels *= 2  # duplicate for mono
+                    logging.debug(f"VU Levels: {self.vu_levels}")
+        finally:
+            process.terminate()
 
     def start(self):
         if self.running:
-            return
-
-        card, device, name = self.detect_device()
-        if not card:
-            logging.warning("No audio device found.")
-            return
-
-        fmt, channels, rate = self.find_working_config(card, device)
-        if not fmt:
-            logging.error("No compatible audio format found.")
-            return
-
-        logging.info(f"Starting VU monitor for mic '{name}' using format {fmt}, {channels} channel(s) at {rate} Hz")
-
-        cmd = [
-            'arecord',
-            '-D', f'hw:{card},{device}',
-            '--format', fmt,
-            '--channels', str(channels),
-            '--rate', str(rate),
-            '-V', 'stereo',
-            '-f', fmt,
-            '-t', 'raw'
-        ]
-        logging.info(f"Running: {' '.join(cmd)}")
-
+            return False
+        if not self.detect_device():
+            return False
         self.running = True
-
-        def vu_loop():
-            try:
-                self.proc = subprocess.Popen(
-                    cmd,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    bufsize=1
-                )
-                for line in self.proc.stderr:
-                    if not self.running:
-                        break
-                    line = line.strip()
-                    vu = re.findall(r'(\d+)%', line)
-                    if vu:
-                        self.level_left = int(vu[0])
-                        self.level_right = int(vu[1]) if len(vu) > 1 else self.level_left
-                        #logging.info(f"Mic VU: L={self.level_left}% R={self.level_right}%")
-                    if self.proc.poll() is not None:
-                        break
-                    time.sleep(0.05)
-            except Exception as e:
-                logging.error(f"Audio VU monitor error: {e}")
-            finally:
-                self.proc = None
-                self.level_left = 0
-                self.level_right = 0
-                self.running = False
-
-        self.thread = threading.Thread(target=vu_loop, daemon=True)
+        self.thread = threading.Thread(target=self.vu_monitor_loop, daemon=True)
         self.thread.start()
+        logging.info("AudioMonitor started.")
+        return True
 
     def stop(self):
         self.running = False
-        if self.proc:
-            try:
-                self.proc.terminate()
-                self.proc.wait(timeout=1)
-            except Exception as e:
-                logging.warning(f"Failed to stop audio monitor: {e}")
-        self.proc = None
-        self.level_left = 0
-        self.level_right = 0
+        if self.thread:
+            self.thread.join()
+            logging.info("AudioMonitor stopped.")
+
+    def get_vu_levels(self):
+        return self.vu_levels[0], self.vu_levels[1] if len(self.vu_levels) >= 2 else 0
+
+
+
+
+
+
+
+
+
+
 
 class USBMonitor():
     def __init__(self, ssd_monitor):
@@ -245,8 +230,10 @@ class USBMonitor():
         self.connected_devices = []
         self.recently_processed = []
         
+        self.current_mic_id = None
+        
         self.audio_monitor = AudioMonitor()
-
+        
         self.monitor.filter_by(subsystem='usb_storage')
         self.monitor_devices()
 
@@ -264,46 +251,55 @@ class USBMonitor():
             self.sound_timer = None
             return
 
-        if self.usb_mic and 'card' in self.usb_mic.device_path:
-            self.temp_sound_devices.clear()
-            return
-
-        card_device = next((device for device in self.temp_sound_devices if 'card' in device.device_path), None)
-        chosen_device = card_device if card_device else self.temp_sound_devices[0]
+        chosen_device = next(
+            (device for device in self.temp_sound_devices if 'card' in device.device_path),
+            self.temp_sound_devices[0]
+        )
 
         self.usb_mic = chosen_device
         self.usb_mic_path = chosen_device.device_path
 
-        raw_model = chosen_device.get('ID_MODEL', '')
-        serial = chosen_device.get('ID_SERIAL', 'Unknown')
+        raw_model = chosen_device.get('ID_MODEL', '') or "Unknown"
+        serial = chosen_device.get('ID_SERIAL', '') or "Unknown"
+        model = raw_model.replace('_', ' ').strip() or "Unknown"
 
-        # Normalize model (replace _ with space)
-        model = raw_model.replace('_', ' ').strip()
-
-        # Get card name and start audio monitor
+        # Always initialize to prevent UnboundLocalError
+        card_name = "Unknown"
         card_match = re.search(r'card(\d+)', chosen_device.device_path)
         if card_match:
             card_num = card_match.group(1)
             card_name = self.get_card_name_from_arecord(card_num).strip()
-            self.audio_monitor.start()
-        else:
-            card_name = model if model else "Unknown"
-            logging.warning("Could not determine card number, audio monitor not started.")
-            device_string = None
 
-        # Prefer the card_name if it looks more descriptive
-        if card_name and card_name != "Unknown" and (not model or card_name.lower() not in model.lower()):
+        # Optional fallback: use card_name if model is empty/unknown
+        if not model or model == "Unknown":
             model = card_name
 
-        # Save fallback info
-        self.last_mic_model = model
-        self.last_mic_serial = serial
+        mic_id = f"{model}:{serial}"
+        mic_has_changed = not self.current_mic_id or mic_id != self.current_mic_id
+
+        if mic_has_changed:
+            logging.info(f"Microphone changed from {self.current_mic_id} → {mic_id}")
+            self.audio_monitor.stop()
+            self.audio_monitor = AudioMonitor()
+            self.audio_monitor.set_model_info(model, serial)
+
+            started = self.audio_monitor.start()
+
+            if started:
+                logging.info("Audio monitor restarted for new mic.")
+            else:
+                logging.error("Audio monitor failed to restart for new mic.")
+
+            self.usb_event.emit('mic_changed', chosen_device, model, serial, card_name)
+            self.current_mic_id = mic_id
 
         logging.info(f'USB Microphone connected: Model={model}, Serial={serial}, Name={card_name}')
         self.usb_event.emit('add', chosen_device, model, serial, card_name)
 
         self.temp_sound_devices.clear()
         self.sound_timer = None
+
+
 
     def reset_mic_processed_flag(self):
         self.mic_processed = False
@@ -362,8 +358,10 @@ class USBMonitor():
                 logging.info(f'USB Microphone disconnected: Model={model}, Serial={serial}')
                 self.usb_mic = None
                 self.usb_mic_path = None
-                self.card_device_found = False
+                self.current_mic_id = None
                 self.usb_event.emit(action, device, model, serial)
+                
+                # Stop audio monitor when mic disconnected
                 self.audio_monitor.stop()
 
 
@@ -374,7 +372,6 @@ class USBMonitor():
 
     def check_initial_devices(self):
         usb_detected_mics = set()
-        
 
         for device in self.context.list_devices(subsystem='usb'):
             model = device.get('ID_MODEL', '')
@@ -417,6 +414,7 @@ class USBMonitor():
             self.usb_event.emit('add', device, model, serial)
 
             # ✅ Start audio monitor for already-connected mic
+            self.audio_monitor.set_model_info(model, serial)
             self.audio_monitor.start()
 
     def get_card_name_from_arecord(self, card_num):
@@ -429,57 +427,6 @@ class USBMonitor():
         except Exception as e:
             logging.error(f"Failed to get card name from arecord: {e}")
         return "Unknown"
-
-    def start_vu_monitor(self, device_string="hw:0,0"):
-        def monitor():
-            try:
-                cmd = [
-                    "arecord",
-                    "-D", device_string,
-                    "--format=S24_3LE",
-                    "--channels=2",
-                    "--rate=48000",
-                    "-V", "mono",
-                    "-t", "raw",
-                    "-f", "S24_3LE"
-                ]
-                self.vu_process = subprocess.Popen(
-                    cmd,
-                    stderr=subprocess.PIPE,
-                    stdout=subprocess.DEVNULL,
-                    text=True,
-                    bufsize=1,
-                    universal_newlines=True
-                )
-
-                for line in self.vu_process.stderr:
-                    match = re.search(r"\[(\d+)%\]", line)
-                    if match:
-                        self.usb_mic_level = int(match.group(1))
-                    if self.vu_process.poll() is not None:
-                        break
-                    time.sleep(0.05)
-            except Exception as e:
-                logging.error(f"VU monitor error: {e}")
-            finally:
-                self.usb_mic_level = 0
-                self.vu_process = None
-
-        self.vu_thread = threading.Thread(target=monitor, daemon=True)
-        self.vu_thread.start()
-
-    def stop_vu_monitor(self):
-        if self.vu_process:
-            try:
-                self.vu_process.terminate()
-                self.vu_process.wait(timeout=1)
-            except Exception as e:
-                logging.warning(f"Error stopping VU process: {e}")
-        self.vu_process = None
-        self.vu_thread = None
-        self.usb_mic_level = 0
-
-
 
     def monitor_devices(self):
         observer = pyudev.MonitorObserver(self.monitor, self.device_event)

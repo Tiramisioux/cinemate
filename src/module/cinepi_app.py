@@ -56,10 +56,11 @@ class CinePi:
                 'frame': re.compile(r'\[event_loop\] \[info\] Frame Number: \d+'),
                 'agc': re.compile(r'WARN RPiAgc'),
                 'ccm': re.compile(r'WARN RPiCcm'),
+                'vu': re.compile(r'\[VU\] \d+'),
                 # Add more patterns as needed
             }
             # self.active_filters = set(['frame', 'agc', 'ccm'])  # Default active filters
-            self.active_filters = set(['agc', 'ccm'])  # Block frame count messages from cinepi-raw
+            self.active_filters = set(['frame', 'agc', 'ccm', 'vu'])  # Block frame count messages from cinepi-raw
             
             # self.start_cinepi_process()
             self.initialized = True

@@ -10,6 +10,7 @@ import logging
 from sugarpie import pisugar
 from flask_socketio import SocketIO
 import re
+from statistics import mean
 
 class SimpleGUI(threading.Thread):
     def __init__(self, 
@@ -341,26 +342,36 @@ class SimpleGUI(threading.Thread):
 
         return values
     
+
+
     def update_smoothed_vu_levels(self):
         if not self.usb_monitor or not hasattr(self.usb_monitor, "audio_monitor"):
             return
 
-        vu_levels = getattr(self.usb_monitor.audio_monitor, "vu_levels", [])
+        audio_monitor = self.usb_monitor.audio_monitor
+        vu_history = getattr(audio_monitor, "vu_history", None)
+        if not vu_history:
+            return
 
-        # Initialize smoothed and peak lists on first run
-        if len(vu_levels) != len(self.vu_smoothed):
-            self.vu_smoothed = [0.0] * len(vu_levels)
-            self.vu_peaks = [0.0] * len(vu_levels)
+        # Transpose history to group per-channel values: [(L1, L2, ...), (R1, R2, ...)]
+        vu_transposed = list(zip(*vu_history))
 
-        for i, raw in enumerate(vu_levels):
-            # Decay smoothing
-            if raw < self.vu_smoothed[i]:
+        # Initialize smoothed and peak lists if needed
+        if len(vu_transposed) != len(self.vu_smoothed):
+            self.vu_smoothed = [0.0] * len(vu_transposed)
+            self.vu_peaks = [0.0] * len(vu_transposed)
+
+        for i, channel_history in enumerate(vu_transposed):
+            max_level = max(channel_history)
+            # Decay smoothing: keep some inertia when values drop
+            if max_level < self.vu_smoothed[i]:
                 self.vu_smoothed[i] *= (1 - self.vu_decay_factor)
             else:
-                self.vu_smoothed[i] = raw
+                self.vu_smoothed[i] = max_level
 
             # Peak hold
             self.vu_peaks[i] = max(self.vu_peaks[i] * 0.98, self.vu_smoothed[i])
+
 
 
 

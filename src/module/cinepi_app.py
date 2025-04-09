@@ -200,7 +200,8 @@ class CinePi:
 
     def process_output(self, out, queue):
         for line in iter(out.readline, b''):
-            decoded_line = line.decode('utf-8').strip()
+            decoded_line = line.decode('utf-8', errors='replace').strip()
+
             queue.put(decoded_line)
             self.message.emit(decoded_line)
             self.log_message(decoded_line)

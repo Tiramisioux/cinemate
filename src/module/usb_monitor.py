@@ -195,7 +195,7 @@ class AudioMonitor:
                         self.vu_levels *= 2
                     self.vu_history.append(self.vu_levels.copy())
 
-                    logging.info(f"VU Levels: {self.vu_levels}")
+                    logging.debug(f"VU Levels: {self.vu_levels}")
                     
                 else:
                     logging.debug("No VU matches in this line.")

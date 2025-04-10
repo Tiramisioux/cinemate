@@ -45,6 +45,7 @@ class SSDMonitor:
             if bus.read_byte(0x34) in range(0x00, 0xFF):
                 logging.info("CFE HAT detected via I2C on address 0x34")
                 self.cfe_hat_present = True
+                self.mount_cfe()
         except Exception:
             logging.info("No CFE HAT detected on I2C")
 

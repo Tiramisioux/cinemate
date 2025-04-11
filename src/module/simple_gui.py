@@ -481,7 +481,7 @@ class SimpleGUI(threading.Thread):
         current_y += section_gap  # Final spacing after SYS
 
 
-    def draw_right_vu_meter(self, draw):
+    def draw_right_vu_meter(self, draw, amplification_factor=4):
         if not self.usb_monitor or not hasattr(self.usb_monitor, "audio_monitor"):
             return
 
@@ -505,7 +505,11 @@ class SimpleGUI(threading.Thread):
 
         def level_to_height(level):
             import math
-            scaled = math.log10(1 + 9 * (level / 100))  # log10(1) to log10(10)
+            # Apply the amplification factor to the level
+            amplified_level = level * amplification_factor
+            # Ensure we don't amplify beyond 100%
+            amplified_level = min(amplified_level, 100)
+            scaled = math.log10(1 + 9 * (amplified_level / 100))  # log10(1) to log10(10)
             return int(scaled * bar_height)
 
         def draw_bar(x, width, level, peak):
@@ -533,6 +537,8 @@ class SimpleGUI(threading.Thread):
             base_x = self.disp_width - margin_right - (2 * bar_width + spacing)
             draw_bar(base_x, bar_width, vu_levels[0], vu_peaks[0])
             draw_bar(base_x + bar_width + spacing, bar_width, vu_levels[1], vu_peaks[1])
+
+
 
 
     def draw_gui(self, values):

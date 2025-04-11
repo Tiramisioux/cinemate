@@ -341,8 +341,6 @@ class SimpleGUI(threading.Thread):
             values["disk_space"] = "NO DISK"
 
         return values
-    
-
 
     def update_smoothed_vu_levels(self):
         if not self.usb_monitor or not hasattr(self.usb_monitor, "audio_monitor"):
@@ -371,10 +369,6 @@ class SimpleGUI(threading.Thread):
 
             # Peak hold
             self.vu_peaks[i] = max(self.vu_peaks[i] * 0.98, self.vu_smoothed[i])
-
-
-
-
 
     def draw_left_sections(self, draw, values):
         label_font = ImageFont.truetype(self.regular_font_path, 26)
@@ -431,7 +425,9 @@ class SimpleGUI(threading.Thread):
         show_sys = any([
             values.get("usb_connected"),
             values.get("mic_connected"),
-            values.get("keyboard_connected")
+            values.get("keyboard_connected"),
+
+            values.get("storage_type") not in [None, "", "none"]  # Show if storage is connected
         ])
 
         if show_sys:
@@ -442,19 +438,13 @@ class SimpleGUI(threading.Thread):
 
             current_y += box_height + label_spacing  # Move to the top of the first box
 
-        # Draw SYS boxes vertically (like CAM/MON)
+        # Draw USB, Mic, and Keyboard connection status
         for key, label in [
             ("usb_connected", "SER"),
             ("mic_connected", "MIC"),
             ("keyboard_connected", "KEY"),
-            ("storage_type", values.get("storage_type", "").upper())
         ]:
-            if key == "storage_type":
-                if values.get(key) and values.get(key).lower() != "none":
-                    label = values.get(key, "").upper()
-                else:
-                    continue
-            elif not values.get(key):
+            if not values.get(key):
                 continue
 
             draw.rectangle(
@@ -469,9 +459,27 @@ class SimpleGUI(threading.Thread):
             text_y = current_y + (box_height - text_height) // 2
 
             draw.text((text_x, text_y), label, font=box_font, fill=text_color)
-            current_y += box_height + intra_box_spacing  # Move to next box
+            current_y += box_height + intra_box_spacing
+
+        # Draw storage type (SSD, NVME, USB, etc.)
+        storage_label = str(values.get("storage_type", "")).upper()
+        if storage_label and storage_label != "NONE":
+            draw.rectangle(
+                [box_padding_x, current_y, box_padding_x + box_width, current_y + box_height],
+                fill=box_color
+            )
+
+            text_bbox = draw.textbbox((0, 0), storage_label, font=box_font)
+            text_width = text_bbox[2] - text_bbox[0]
+            text_height = text_bbox[3] - text_bbox[1]
+            text_x = box_padding_x + (box_width - text_width) // 2
+            text_y = current_y + (box_height - text_height) // 2
+
+            draw.text((text_x, text_y), storage_label, font=box_font, fill=text_color)
+            current_y += box_height + intra_box_spacing
 
         current_y += section_gap  # Final spacing after SYS
+
 
     def draw_right_vu_meter(self, draw):
         if not self.usb_monitor or not hasattr(self.usb_monitor, "audio_monitor"):
@@ -481,6 +489,9 @@ class SimpleGUI(threading.Thread):
         vu_levels = self.vu_smoothed
         vu_peaks = self.vu_peaks
 
+        # Check if audio monitor is running, if not, skip drawing VU meters
+        if not self.usb_monitor.audio_monitor.running:
+            return
 
         if not vu_levels:
             return

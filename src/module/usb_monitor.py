@@ -9,11 +9,6 @@ import time
 
 from collections import deque
 
-class AudioMonitor:
-    def __init__(self):
-        ...
-        self.vu_history = deque(maxlen=5)  # ~0.2s if updates ~25ms apart
-
 
 class Event:
     def __init__(self):
@@ -113,8 +108,7 @@ class AudioMonitor:
         self.vu_levels = []
         self.running = False
         self.thread = None
-        self.vu_history = deque(maxlen=5)  # ~0.2s if updates ~25ms apart
-
+        self.vu_history = deque(maxlen=10)  
 
     def set_model_info(self, model, serial):
         self.model = model.strip().lower() if model else "unknown"

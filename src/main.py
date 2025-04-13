@@ -85,7 +85,6 @@ def setup_logging(debug_mode):
 
     return configure_logging(MODULES_OUTPUT_TO_SERIAL, logging_level)
 
-
 def start_hotspot():
     wifi_manager = WiFiHotspotManager()
     try:

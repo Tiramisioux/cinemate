@@ -278,8 +278,6 @@ class SimpleGUI(threading.Thread):
             "mic_connected": self.usb_monitor.usb_mic is not None,
             "keyboard_connected": bool(self.usb_monitor and self.usb_monitor.usb_keyboard),
             "storage_type": self.redis_controller.get_value("storage_type")
-
-
         }
 
         # Construct the frame count string
@@ -401,11 +399,33 @@ class SimpleGUI(threading.Thread):
                 if not value_text:
                     continue  # Skip empty values   
 
-                # Draw box
+                # Outer box
+                outer_left = box_padding_x
+                outer_top = current_y
+                outer_right = box_padding_x + box_width
+                outer_bottom = current_y + box_height
+
                 draw.rectangle(
-                    [box_padding_x, current_y, box_padding_x + box_width, current_y + box_height],
+                    [outer_left, outer_top, outer_right, outer_bottom],
                     fill=box_color
                 )
+                
+                # Draw inner box ONLY for "aspect"
+                if item["key"] == "aspect":
+                    border_width = 2
+                    margin = 2  # To make inner box 4px smaller in both directions
+
+                    inner_left = outer_left + margin
+                    inner_top = outer_top + margin
+                    inner_right = outer_right - margin
+                    inner_bottom = outer_bottom - margin
+
+                    # Draw border (no fill)
+                    draw.rectangle(
+                        [inner_left, inner_top, inner_right, inner_bottom],
+                        outline=(0, 0, 0),
+                        width=border_width
+                    )
 
                 # Center the text horizontally and vertically in the box
                 text_size = draw.textbbox((0, 0), value_text, font=box_font)
@@ -419,7 +439,6 @@ class SimpleGUI(threading.Thread):
                 current_y += box_height + intra_box_spacing
 
             current_y += section_gap
-
 
         # ---- Conditionally Draw SYS section ----
         show_sys = any([
@@ -480,7 +499,6 @@ class SimpleGUI(threading.Thread):
 
         current_y += section_gap  # Final spacing after SYS
 
-
     def draw_right_vu_meter(self, draw, amplification_factor=4):
         if not self.usb_monitor or not hasattr(self.usb_monitor, "audio_monitor"):
             return
@@ -537,9 +555,6 @@ class SimpleGUI(threading.Thread):
             base_x = self.disp_width - margin_right - (2 * bar_width + spacing)
             draw_bar(base_x, bar_width, vu_levels[0], vu_peaks[0])
             draw_bar(base_x + bar_width + spacing, bar_width, vu_levels[1], vu_peaks[1])
-
-
-
 
     def draw_gui(self, values):
         previous_background_color = self.current_background_color
@@ -683,7 +698,6 @@ class SimpleGUI(threading.Thread):
         #logging.info(f"Mic level: L={self.usb_monitor.audio_monitor.level_left}% R={self.usb_monitor.audio_monitor.level_right}%")
 
         self.fb.show(image)
-
         
     def draw_rounded_box(self, draw, text, position, font_size, padding, text_color, fill_color, image, extra_height=-17, reduce_top=12):
         font = ImageFont.truetype(os.path.realpath(self.font_path), font_size)

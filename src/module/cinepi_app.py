@@ -140,6 +140,8 @@ class CinePi:
             '--shutter', '20000',
             '--awbgains', cg_rb,
             '--awb', 'auto',
+            #'--camera', '1',
+            #'--roi', '0.25,0.25,0.5,0.5',
         ]
 
         return args

@@ -32,15 +32,15 @@ class SensorDetect:
                 3: {'aspect': 1.77, 'width': 3840, 'height': 2160, 'bit_depth': 10, 'packing': 'P', 'fps_max': 18, 'gui_layout': 0, 'file_size': 31}, # driver fps max 18                   
             },
             'imx585': {             
-                0: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 12, 'packing': 'U', 'fps_max': 50, 'gui_layout': 0, 'file_size': 3.1}, # driver fps max 87
-                1: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 12, 'packing': 'U', 'fps_max': 28, 'gui_layout': 0, 'file_size': 13}, # driver fps max 34
+                0: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 12, 'packing': 'U', 'fps_max': 100, 'gui_layout': 0, 'file_size': 3.1}, # driver fps max 87
+                1: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 12, 'packing': 'U', 'fps_max': 50, 'gui_layout': 0, 'file_size': 13}, # driver fps max 34
                 2: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 16, 'packing': 'U', 'fps_max': 30, 'gui_layout': 0, 'file_size': 13}, # driver fps max 30
 
                 #3: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 16, 'packing': 'U', 'fps_max': 21, 'gui_layout': 0, 'file_size': 8},                                      
             },
             'imx585_mono': {             
-                0: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 12, 'packing': 'U', 'fps_max': 50, 'gui_layout': 0, 'file_size': 3.1, 'fps_correction_factor': 0.9980},  # driver fps max 87
-                1: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 12, 'packing': 'U', 'fps_max': 28, 'gui_layout': 0, 'file_size': 13, 'fps_correction_factor': 0.9980}, # driver fps max 34
+                0: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 12, 'packing': 'U', 'fps_max': 100, 'gui_layout': 0, 'file_size': 3.1, 'fps_correction_factor': 0.9980},  # driver fps max 87
+                1: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 12, 'packing': 'U', 'fps_max': 50, 'gui_layout': 0, 'file_size': 13, 'fps_correction_factor': 0.9980}, # driver fps max 34
                 2: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 16, 'packing': 'U', 'fps_max': 30, 'gui_layout': 0, 'file_size': 13, 'fps_correction_factor': 0.9980}, # driver fps max 30
 
                 #3: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 16, 'packing': 'U', 'fps_max': 21, 'gui_layout': 0, 'file_size': 8},                                      

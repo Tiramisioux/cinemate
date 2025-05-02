@@ -30,6 +30,8 @@ from module.app import create_app
 from module.analog_controls import AnalogControls
 from module.mediator import Mediator
 from module.serial_handler import SerialHandler
+from module.cinepi_multi import CinePiManager as CinePi
+
 
 
 # Constants
@@ -168,15 +170,18 @@ def main():
 
     # Initialize CinePi application
     cinepi = CinePi(redis_controller, sensor_detect)
+    
+    cinepi = CinePi(redis_controller, sensor_detect)
+    cinepi.start_all()
 
-    cinepi.set_log_level('INFO')
-    cinepi.message.subscribe(handle_vu_output)
+    # cinepi.set_log_level('INFO')
+    # cinepi.message.subscribe(handle_vu_output)
 
     cinepi_controller = CinePiController(
         cinepi, redis_controller, pwm_controller, ssd_monitor, sensor_detect,
         iso_steps=settings["arrays"]["iso_steps"],
         shutter_a_steps=settings["arrays"]["shutter_a_steps"],
-        fps_steps=settings["arrays"]["fps_steps"],
+        fps_steps=settings["arrays"]["fps_steps"],  
         wb_steps=settings["arrays"]["wb_steps"],
         light_hz=settings["settings"]["light_hz"],
         anamorphic_steps=settings["anamorphic_preview"]["anamorphic_steps"],

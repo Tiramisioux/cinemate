@@ -1,4 +1,26 @@
 {
+  "geometry": {
+    "cam0": {
+      "rotate_180": false,
+      "horizontal_flip": false,
+      "vertical_flip": true
+    },
+    "cam1": {
+      "rotate_180": true,
+      "horizontal_flip": false,
+      "vertical_flip":false
+    }
+  },
+
+  "output": {
+    "cam0": {
+      "hdmi_port": 1
+    },
+    "cam1": {
+      "hdmi_port": 0
+    }
+  },
+
   "gpio_output": {
     "pwm_pin": 19,
     "rec_out_pin": [6, 21]

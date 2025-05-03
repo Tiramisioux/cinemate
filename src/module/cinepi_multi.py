@@ -7,6 +7,13 @@ from queue import Queue
 from threading import Thread
 from typing import List, Optional
 
+from module.config_loader import load_settings
+
+# Path to settings file
+SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
+# Load global settings
+_SETTINGS = load_settings(SETTINGS_FILE)
+
 # ───────────────────────── Event ─────────────────────────
 class Event:
     def __init__(self):
@@ -28,7 +35,12 @@ class CameraInfo:
 
     @property
     def port(self):
-        return 'cam0' if 'i2c@80000' in self.path else 'cam1'
+        
+        # map physical camera ports: i2c@88000 => cam0, i2c@80000 => cam1
+        if 'i2c@88000' in self.path:
+            return 'cam0'
+        else:
+            return 'cam1'
 
     def as_dict(self):
         return {
@@ -44,7 +56,6 @@ class CameraInfo:
 
 
 def discover_cameras(timeout: float = 10.0, interval: float = 1.0) -> List[CameraInfo]:
-    """Run `cinepi-raw --list-cameras` repeatedly until at least one sensor is found or the timeout expires."""
     rx = re.compile(r'^\s*(\d+)\s*:\s*(\w+)\s*\[([^]]+)\]\s*\(([^)]+)\)')
     end = time.monotonic() + timeout
     attempt = 0
@@ -67,9 +78,14 @@ def discover_cameras(timeout: float = 10.0, interval: float = 1.0) -> List[Camer
 
 # ────────────────── cinepi‑raw subprocess wrapper ─────────
 class CinePiProcess(Thread):
-    """Wrap one cinepi‑raw process bound to a single sensor."""
-
-    def __init__(self, redis, sensor_detect, cam: CameraInfo, primary: bool, multi: bool):
+    def __init__(
+        self,
+        redis,
+        sensor_detect,
+        cam: CameraInfo,
+        primary: bool,
+        multi: bool,
+    ):
         super().__init__(daemon=True)
         self.redis = redis
         self.sensor_detect = sensor_detect
@@ -86,8 +102,15 @@ class CinePiProcess(Thread):
             'vu': re.compile(r'\[VU\]'),
         }
         self.active_filters = set(self.log_filters)
+        
+        # load per-camera geometry from settings
+        geo = _SETTINGS.get('geometry', {})
+        self.geometry = geo.get(self.cam.port, {})
+        
+        # load per-camera output settings (e.g., HDMI port)
+        out_cfg = _SETTINGS.get('output', {})
+        self.output = out_cfg.get(self.cam.port, {})
 
-    # ---------------------------------------------------------------- Thread
     def run(self):
         cmd = ['cinepi-raw'] + self._build_args()
         logging.info('[%s] Launch: %s', self.cam, cmd)
@@ -97,7 +120,6 @@ class CinePiProcess(Thread):
         self.proc.wait()
         logging.info('[%s] exited %s', self.cam, self.proc.returncode)
 
-    # ------------------------------------------------------ log/queue helpers
     def _pump(self, pipe, q):
         for raw in iter(pipe.readline, b''):
             line = raw.decode('utf-8', 'replace').rstrip()
@@ -109,12 +131,11 @@ class CinePiProcess(Thread):
     def _log(self, text):
         for name, rx in self.log_filters.items():
             if name in self.active_filters and rx.search(text):
-                logging.info('[%s] %s', self.cam, text)
+                pass #logging.info('[%s] %s', self.cam, text)
                 break
 
-    # ------------------------------------------------------ argument builder
     def _build_args(self):
-        # ---- base resolution info (from redis + SensorDetect)
+        # base resolution
         sensor_mode = int(self.redis.get_value('sensor_mode') or 0)
         model_key = self.cam.name + ('_mono' if self.cam.is_mono else '')
         res = self.sensor_detect.get_resolution_info(model_key, sensor_mode)
@@ -122,69 +143,69 @@ class CinePiProcess(Thread):
         height = res.get('height', 1080)
         bit_depth = res.get('bit_depth', 12)
         packing = res.get('packing', 'U')
-
-        # Force packed data for mono sensors or special Pi‑4/imx477 override
+        
+        # packing override
         pi_model = self.redis.get_value('pi_model') or ''
-        if self.cam.is_mono:
+        if self.cam.is_mono or (pi_model == 'pi4' and model_key == 'imx477'):
             packing = 'P'
-        if pi_model == 'pi4' and model_key == 'imx477':
-            packing = 'P'
-
-        # ---- lores / preview geometry (mirrors original get_default_args)
-        aspect_ratio = width / height
-        anamorphic = float(self.redis.get_value('anamorphic_factor') or 1.0)
-        frame_w, frame_h = 1920, 1080
-        pad_x, pad_y = 94, 50
-        avail_w, avail_h = frame_w - 2 * pad_x, frame_h - 2 * pad_y
-
-        lores_h = min(720, avail_h)
-        lores_w = int(lores_h * aspect_ratio * anamorphic)
-        if lores_w > avail_w:
-            lores_w = avail_w
-            lores_h = int(round(lores_w / (aspect_ratio * anamorphic)))
-
-        self.redis.set_value('lores_width', lores_w)
-        self.redis.set_value('lores_height', lores_h)
-
-        prev_w, prev_h = lores_w, lores_h  # same heuristic as original
-        if (avail_w / avail_h) > aspect_ratio:
-            prev_h = avail_h
-            prev_w = int(prev_h * aspect_ratio)
+        
+        # lores & preview
+        aspect = width / height
+        anam = float(self.redis.get_value('anamorphic_factor') or 1.0)
+        fw, fh = 1920, 1080
+        px, py = 94, 50
+        aw, ah = fw - 2*px, fh - 2*py
+        lh = min(720, ah)
+        lw = int(lh * aspect * anam)
+        if lw > aw:
+            lw, lh = aw, int(round(aw / (aspect * anam)))
+        self.redis.set_value('lores_width', lw)
+        self.redis.set_value('lores_height', lh)
+        if (aw/ah) > aspect:
+            ph = ah; pw = int(ph * aspect)
         else:
-            prev_w = avail_w
-            prev_h = int(prev_w / aspect_ratio)
-        prev_x = (frame_w - prev_w) // 2
-        prev_y = (frame_h - prev_h) // 2
-
-        # ---- colour gains / shutter etc.
+            pw = aw; ph = int(pw / aspect)
+        ox, oy = (fw-pw)//2, (fh-ph)//2
+        
+        # gains, shutter
         cg_rb = self.redis.get_value('cg_rb') or '2.5,2.2'
-
-        # ---- HDMI port mapping
-        hdmi_port = '0' if self.cam.port == 'cam0' else '1'
-
-        # ---- Build final arg list
+        
+        # file paths\
+        tune = f'/home/pi/libcamera/src/ipa/rpi/pisp/data/{model_key}.json'
+        post = f'/home/pi/post-processing{self.cam.index}.json'
+        
+        # geometry flags
+        rot = 180 if self.geometry.get('rotate_180', False) else 0
+        hf = 1 if self.geometry.get('horizontal_flip', False) else 0
+        vf = 1 if self.geometry.get('vertical_flip', False) else 0
+        
+        # determine HDMI port: override from settings if provided
+        default_hd = '0' if self.cam.port == 'cam0' else '1'
+        hd = str(self.output.get('hdmi_port', default_hd))
         args = [
             '--camera', str(self.cam.index),
             '--mode', f'{width}:{height}:{bit_depth}:{packing}',
-            '--width', str(width), '--height', str(height),
-            '--lores-width', str(lores_w), '--lores-height', str(lores_h),
-            '--hdmi-port', hdmi_port,
-            '--awb', 'auto', '--awbgains', cg_rb,
-            '--post-process-file', '/home/pi/post-processing.json',
+            '--width', str(width),
+            '--height', str(height),
+            '--lores-width', str(lw),
+            '--lores-height', str(lh),
+            '--hdmi-port', hd,
+            '--rotation', str(rot),
+            '--hflip', str(hf),
+            '--vflip', str(vf),
+            '--tuning-file', tune,
+            '--post-process-file', post,
             '--shutter', '20000',
+            '--awb', 'auto',
+            '--awbgains', cg_rb,
         ]
-
-        args += ['-p', f'{prev_x},{prev_y},{prev_w},{prev_h}']
-
+        
         # if not (self.multi and not self.primary):
-        #     args += ['-p', f'{prev_x},{prev_y},{prev_w},{prev_h}']
+        #     args += ['-p', f'{ox},{oy},{pw},{ph}']
         # else:
-        #     pass
-        #     # args += ['--nopreview']
-
+        #     args += ['--nopreview']
         return args
 
-    # ------------------------------------------------------ stop helper
     def stop(self):
         if self.proc and self.proc.poll() is None:
             self.proc.terminate()
@@ -201,46 +222,43 @@ class CinePiManager:
         self.processes: List[CinePiProcess] = []
         self.message = Event()
 
-    # ------------------------------------------------ start/stop helpers
     def start_all(self):
         self.stop_all()
         cams = discover_cameras()
-        cams.sort(key=lambda c: c.port)  # cam0 first, then cam1
+        cams.sort(key=lambda c: c.port)
         self.redis.set_value('cameras', json.dumps([c.as_dict() for c in cams]))
         if not cams:
             logging.error('No cameras – abort')
             return
-
-        primary_key = cams[0].name + ('_mono' if cams[0].is_mono else '')
-        self.sensor_detect.camera_model = primary_key
+        sensor_mode = int(self.redis.get_value('sensor_mode') or 0)
+        pk = cams[0].name + ('_mono' if cams[0].is_mono else '')
+        self.sensor_detect.camera_model = pk
         self.sensor_detect.load_sensor_resolutions()
-        self.redis.set_value('sensor', primary_key)
+        self.redis.set_value('sensor', pk)
+        res = self.sensor_detect.get_resolution_info(pk, sensor_mode)
 
-        multi = len(cams) > 1
+        for k in ('width','height','bit_depth','fps_max','gui_layout'):
+            self.redis.set_value(k, res.get(k))
+        multi = len(cams)>1
+
         for i, cam in enumerate(cams):
-            proc = CinePiProcess(self.redis, self.sensor_detect, cam, primary=(i == 0), multi=multi)
+            proc = CinePiProcess(self.redis, self.sensor_detect, cam, primary=(i==0), multi=multi)
             proc.message.subscribe(self.message.emit)
             proc.start()
-            # short stagger before launching next camera
             time.sleep(0.5)
             self.processes.append(proc)
 
     def stop_all(self):
-        for p in self.processes:
-            p.stop()
-        for p in self.processes:
-            p.join()
+        for p in self.processes: p.stop()
+        for p in self.processes: p.join()
         self.processes.clear()
-
-    # legacy API compatibility
+    
     start_cinepi_process = start_all
     restart = lambda self: (self.stop_all(), self.start_all())
     shutdown = stop_all
-
-    # ------------------------------------------------ misc helpers
+    
     def set_log_level(self, lvl: str):
         logging.getLogger().setLevel(getattr(logging, lvl.upper(), logging.INFO))
-
+    
     def set_active_filters(self, filters):
-        for p in self.processes:
-            p.active_filters = set(filters)
+        for p in self.processes: p.active_filters = set(filters)

@@ -74,7 +74,7 @@ In web browser, navigate to `cinepi.local:5000`. A clean feed (without GUI) is a
 ### Recording
 
 External drive should be formatted as ntfs or ext4 and be labeled "RAW". 
-
+  
 For starting/stopping recording: 
 - in web browser: tap (or click) the preview screen
 - from CLI (running CineMate manually): type `rec`
@@ -183,7 +183,42 @@ To disable autostart:
 
 ## Settings file
 
+### Geometry and Output Configuration
+CineMate supports multiple cameras with per‑port customization in your `settings.json`. Two key sections control this behavior:
+
+```json
+{
+  "geometry": {
+    "cam0": {
+      "rotate_180": false,
+      "horizontal_flip": false,
+      "vertical_flip": true
+    },
+    "cam1": {
+      "rotate_180": true,
+      "horizontal_flip": false,
+      "vertical_flip": false
+    }
+  },
+  "output": {
+    "cam0": { "hdmi_port": 1 },
+    "cam1": { "hdmi_port": 0 }
+  }
+}
+```
+
+- **geometry.cam0/cam1**: Defines image orientation for each physical camera port:
+  - `rotate_180`: flip image upside‑down when `true`.
+  - `horizontal_flip`: mirror image left‑to‑right when `true`.
+  - `vertical_flip`: mirror image top‑to‑bottom when `true`.
+
+- **output.cam0/cam1**: Maps each camera to an HDMI output port. By default, `cam0`→HDMI 0 and `cam1`→HDMI 1, but you can remap as needed.
+
+Continue with your existing settings configuration below.
+
 The settings file can be found in `/home/pi/cinemate/src/settings.json`. Here the user can define their own buttons, switches and rotary encoders.
+
+
 
 #### GPIO output
 Default rec LED pins are 6 and 21. Make sure to use a 220 Ohm resistor on this pin!
@@ -338,6 +373,16 @@ These push buttons can be programmed to perform various functions like toggling 
 
 '*' Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames. You can cap CineMates max fps values for your specific build by editing the file `cinemate/src/module/sensor_detect.py`
 
+## Multi camera support
+
+CineMate automatically detects each camera connected to the Raspberry Pi and spawns a separate `cinepi-raw` process per sensor. By default:
+
+- **Primary camera** (first detected) displays its preview on HDMI port 0.
+- **Secondary cameras** run with `--nopreview` and map to subsequent HDMI outputs (cam1→HDMI 1, cam2→HDMI 2, etc.).
+- Preview windows are centered and sized according to your `geometry` settings.
+
+You can override default HDMI mappings in `settings.json` under the `output` section:
+
 ## Additional hardware
 
 CineMate image file comes pre-installed with:
@@ -382,11 +427,11 @@ On Raspberry Pi 4 the tuning file currently fails to load properly for libcamera
 - [ ] fix frame rate / shutter angle sync for constant exposure during fps change
 - [ ] mounting mechanism should be improved. Drives seem to not mount when detatched and then reconnected
 - [x] anamorphic factor to be moved to settings file.
-- [ ] 4K and 16 bit modes for imx585
+- [ ] 16 bit modes for imx585
 - [ ] support for imx294
 - [ ] optimize recording to allow for the use of 300 MB/s SSD drive
 - [ ] optimize operating system for faster boot and smaller image file
-- [ ] overclocking of ISP
+- [x] overclocking of ISP
 - [ ] optional auto-exposure
 - [ ] hardware sync of sensor frame capture, perhaps via a pico
 - [ ] rendering mode, for creating proxy files in camera (using https://github.com/mrjulesfletcher/dng_to_video)

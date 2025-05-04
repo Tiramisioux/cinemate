@@ -80,14 +80,14 @@ def discover_cameras(timeout: float = 10.0, interval: float = 1.0) -> List[Camer
 class CinePiProcess(Thread):
     def __init__(
         self,
-        redis,
+        redis_controller,
         sensor_detect,
         cam: CameraInfo,
         primary: bool,
         multi: bool,
     ):
         super().__init__(daemon=True)
-        self.redis = redis
+        self.redis_controller = redis_controller
         self.sensor_detect = sensor_detect
         self.cam = cam
         self.primary = primary
@@ -136,7 +136,7 @@ class CinePiProcess(Thread):
 
     def _build_args(self):
         # base resolution
-        sensor_mode = int(self.redis.get_value('sensor_mode') or 0)
+        sensor_mode = int(self.redis_controller.get_value('sensor_mode') or 0)
         model_key = self.cam.name + ('_mono' if self.cam.is_mono else '')
         res = self.sensor_detect.get_resolution_info(model_key, sensor_mode)
         width = res.get('width', 1920)
@@ -145,13 +145,13 @@ class CinePiProcess(Thread):
         packing = res.get('packing', 'U')
         
         # packing override
-        pi_model = self.redis.get_value('pi_model') or ''
+        pi_model = self.redis_controller.get_value('pi_model') or ''
         if self.cam.is_mono or (pi_model == 'pi4' and model_key == 'imx477'):
             packing = 'P'
         
         # lores & preview
         aspect = width / height
-        anam = float(self.redis.get_value('anamorphic_factor') or 1.0)
+        anam = float(self.redis_controller.get_value('anamorphic_factor') or 1.0)
         fw, fh = 1920, 1080
         px, py = 94, 50
         aw, ah = fw - 2*px, fh - 2*py
@@ -159,16 +159,16 @@ class CinePiProcess(Thread):
         lw = int(lh * aspect * anam)
         if lw > aw:
             lw, lh = aw, int(round(aw / (aspect * anam)))
-        self.redis.set_value('lores_width', lw)
-        self.redis.set_value('lores_height', lh)
+        self.redis_controller.set_value('lores_width', lw)
+        self.redis_controller.set_value('lores_height', lh)
         if (aw/ah) > aspect:
             ph = ah; pw = int(ph * aspect)
         else:
             pw = aw; ph = int(pw / aspect)
-        ox, oy = (fw-pw)//2, (fh-ph)//2
+            ox, oy = (fw-pw)//2, (fh-ph)//2
         
         # gains, shutter
-        cg_rb = self.redis.get_value('cg_rb') or '2.5,2.2'
+        cg_rb = self.redis_controller.get_value('cg_rb') or '2.5,2.2'
         
         # file paths\
         tune = f'/home/pi/libcamera/src/ipa/rpi/pisp/data/{model_key}.json'
@@ -178,6 +178,13 @@ class CinePiProcess(Thread):
         rot = 180 if self.geometry.get('rotate_180', False) else 0
         hf = 1 if self.geometry.get('horizontal_flip', False) else 0
         vf = 1 if self.geometry.get('vertical_flip', False) else 0
+        
+        # anamorphic factor
+        self.anamorphic_factor = self.redis_controller.get_value('anamorphic_factor')
+        if self.anamorphic_factor is None:
+            self.anamorphic_factor = 1.0
+        else:
+            self.anamorphic_factor = float(self.anamorphic_factor)
         
         # determine HDMI port: override from settings if provided
         default_hd = '0' if self.cam.port == 'cam0' else '1'
@@ -190,6 +197,7 @@ class CinePiProcess(Thread):
             '--lores-width', str(lw),
             '--lores-height', str(lh),
             '--hdmi-port', hd,
+            '-p', f'{ox},{oy},{pw},{ph}'
             '--rotation', str(rot),
             '--hflip', str(hf),
             '--vflip', str(vf),
@@ -216,8 +224,8 @@ class CinePiProcess(Thread):
 
 # ───────────────────────── Manager ───────────────────────
 class CinePiManager:
-    def __init__(self, redis, sensor_detect):
-        self.redis = redis
+    def __init__(self, redis_controller, sensor_detect):
+        self.redis_controller = redis_controller
         self.sensor_detect = sensor_detect
         self.processes: List[CinePiProcess] = []
         self.message = Event()
@@ -226,23 +234,23 @@ class CinePiManager:
         self.stop_all()
         cams = discover_cameras()
         cams.sort(key=lambda c: c.port)
-        self.redis.set_value('cameras', json.dumps([c.as_dict() for c in cams]))
+        self.redis_controller.set_value('cameras', json.dumps([c.as_dict() for c in cams]))
         if not cams:
             logging.error('No cameras – abort')
             return
-        sensor_mode = int(self.redis.get_value('sensor_mode') or 0)
+        sensor_mode = int(self.redis_controller.get_value('sensor_mode') or 0)
         pk = cams[0].name + ('_mono' if cams[0].is_mono else '')
         self.sensor_detect.camera_model = pk
         self.sensor_detect.load_sensor_resolutions()
-        self.redis.set_value('sensor', pk)
+        self.redis_controller.set_value('sensor', pk)
         res = self.sensor_detect.get_resolution_info(pk, sensor_mode)
 
         for k in ('width','height','bit_depth','fps_max','gui_layout'):
-            self.redis.set_value(k, res.get(k))
+            self.redis_controller.set_value(k, res.get(k))
         multi = len(cams)>1
 
         for i, cam in enumerate(cams):
-            proc = CinePiProcess(self.redis, self.sensor_detect, cam, primary=(i==0), multi=multi)
+            proc = CinePiProcess(self.redis_controller, self.sensor_detect, cam, primary=(i==0), multi=multi)
             proc.message.subscribe(self.message.emit)
             proc.start()
             time.sleep(0.5)

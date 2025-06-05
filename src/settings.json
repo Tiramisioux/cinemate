@@ -1,4 +1,5 @@
 {
+  "$schema": "./settings.schema.json",
   "geometry": {
     "cam0": {
       "rotate_180": false,
@@ -99,8 +100,8 @@
   "two_way_switches": [
     {
       "pin": 27,
-      "state_on_action": {"method": "set_all_lock", "args": [0]},
-      "state_off_action": {"method": "set_all_lock", "args": [1]}
+      "state_on_action": {"method": "set_all_lock", "args": [1]},
+      "state_off_action": {"method": "set_all_lock", "args": [0]}
     },
     {
       "pin": 24,
@@ -154,5 +155,19 @@
     "1": {"setting_name": "shutter_a", "gpio_pin": 16},
     "2": {"setting_name": "fps", "gpio_pin": 26},
     "3": {"setting_name": "wb", "gpio_pin": 5}
+  },
+  "i2c_oled": {
+    "enabled": true,
+    "width": 128,
+    "height": 64,
+    "font_size": 10,
+    "values": [
+      "iso",
+      "fps",
+      "shutter_a",
+      "resolution",
+      "is_recording",
+      "cpu_temp"
+    ]
   }
 }

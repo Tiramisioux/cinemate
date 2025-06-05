@@ -31,7 +31,7 @@ from module.analog_controls import AnalogControls
 from module.mediator import Mediator
 from module.serial_handler import SerialHandler
 from module.cinepi_multi import CinePiManager as CinePi
-
+from module.i2c_oled import I2cOled
 
 
 # Constants
@@ -210,6 +210,9 @@ def main():
     simple_gui = SimpleGUI(redis_controller, cinepi_controller, ssd_monitor, dmesg_monitor,
                        battery_monitor, sensor_detect, redis_listener, None, usb_monitor=usb_monitor, serial_handler=serial_handler)
 
+    if settings.get("i2c_oled", {}).get("enabled", False):
+        i2c_oled = I2cOled(settings, redis_controller)
+        i2c_oled.start()
 
     # Start Streaming if hotspot is available
     stream = None
@@ -252,6 +255,8 @@ def main():
         command_executor.join()
         serial_handler.running = False
         serial_handler.join()
+        if i2c_oled:
+            i2c_oled.join()
         if simple_gui and hasattr(simple_gui, 'clear_framebuffer'):
             simple_gui.clear_framebuffer()
 

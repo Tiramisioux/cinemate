@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Settings",
+  "type": "object",
+  "properties": {
+    "i2c_oled": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "width": {
+          "type": "integer",
+          "default": 128
+        },
+        "height": {
+          "type": "integer",
+          "default": 64
+        },
+        "font_size": {
+          "type": "integer",
+          "default": 10
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "iso",
+                  "shutter_a",
+                  "fps",
+                  "wb_user",
+                  "is_recording",
+                  "resolution",
+                  "cpu_load",
+                  "cpu_temp",
+                  "memory_usage",
+                  "space_left"
+                ]
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "additionalProperties": true
+  }
+}

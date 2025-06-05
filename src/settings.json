@@ -156,11 +156,12 @@
     "2": {"setting_name": "fps", "gpio_pin": 26},
     "3": {"setting_name": "wb", "gpio_pin": 5}
   },
+
   "i2c_oled": {
     "enabled": true,
-    "width": 128,
-    "height": 64,
-    "font_size": 10,
+    "width": 64,
+    "height": 48,
+    "font_size": 7,
     "values": [
       "iso",
       "fps",

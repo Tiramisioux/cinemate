@@ -144,10 +144,10 @@ class CinePiProcess(Thread):
         bit_depth = res.get('bit_depth', 12)
         packing = res.get('packing', 'U')
         
-        # packing override
-        pi_model = self.redis_controller.get_value('pi_model') or ''
-        if self.cam.is_mono or (pi_model == 'pi4' and model_key == 'imx477'):
-            packing = 'P'
+        # # packing override
+        # pi_model = self.redis_controller.get_value('pi_model') or ''
+        # if self.cam.is_mono or (pi_model == 'pi4' and model_key == 'imx477'):
+        #     packing = 'P'
         
         # lores & preview
         aspect = width / height

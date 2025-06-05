@@ -90,7 +90,7 @@ class SimpleGUI(threading.Thread):
 
     def emit_background_color_change(self):
         if self.socketio is not None:
-            self.socketio.emit('background_color_change', {'background_color': self.current_background_color})
+            self.socketio.emit('background_color_change', {'background_color': self.get_background_color})
         else:
             logging.warning("SocketIO not initialized. Unable to emit background_color_change.")
 
@@ -506,57 +506,50 @@ class SimpleGUI(threading.Thread):
         vu_levels = self.vu_smoothed
         vu_peaks = self.vu_peaks
 
-        # Check if audio monitor is running, if not, skip drawing VU meters
-        if not self.usb_monitor.audio_monitor.running:
+        if not monitor.running or not vu_levels:
             return
 
-        if not vu_levels:
-            return
-
-        bar_height = 200
+        n_channels = len(vu_levels)
+        bar_width = 10
         spacing = 8
         margin_right = 32
+        bar_height = 200
         margin_bottom = 80
 
         base_y = self.disp_height - margin_bottom - bar_height
+        total_width = n_channels * bar_width + (n_channels - 1) * spacing
+        base_x = self.disp_width - margin_right - total_width
 
         def level_to_height(level):
             import math
-            # Apply the amplification factor to the level
-            amplified_level = level * amplification_factor
-            # Ensure we don't amplify beyond 100%
-            amplified_level = min(amplified_level, 100)
-            scaled = math.log10(1 + 9 * (amplified_level / 100))  # log10(1) to log10(10)
+            amplified_level = min(level * amplification_factor, 100)
+            scaled = math.log10(1 + 9 * (amplified_level / 100))
             return int(scaled * bar_height)
 
         def draw_bar(x, width, level, peak):
             h = level_to_height(level)
             peak_h = level_to_height(peak)
-
-            # Background
             draw.rectangle([x, base_y, x + width, base_y + bar_height], fill=(50, 50, 50))
-
-            # Main VU bar
             color = (0, 255, 0) if level < 60 else (255, 255, 0) if level < 85 else (255, 0, 0)
             draw.rectangle([x, base_y + bar_height - h, x + width, base_y + bar_height], fill=color)
-
-            # Peak dot
             draw.rectangle([x, base_y + bar_height - peak_h - 2, x + width, base_y + bar_height - peak_h], fill=(255, 255, 255))
 
-        if len(vu_levels) == 1:
-            # One mono bar, double width
-            bar_width = 2 * 10 + 8  # simulate two bars width + spacing
-            base_x = self.disp_width - margin_right - bar_width
-            draw_bar(base_x, bar_width, vu_levels[0], vu_peaks[0])
-        else:
-            # Two channels: standard width and spacing
-            bar_width = 10
-            base_x = self.disp_width - margin_right - (2 * bar_width + spacing)
-            draw_bar(base_x, bar_width, vu_levels[0], vu_peaks[0])
-            draw_bar(base_x + bar_width + spacing, bar_width, vu_levels[1], vu_peaks[1])
+        for i in range(n_channels):
+            x = base_x + i * (bar_width + spacing)
+            draw_bar(x, bar_width, vu_levels[i], vu_peaks[i])
+
+        # Optional: Draw channel labels
+        label_font = ImageFont.truetype(self.regular_font_path, 16)
+        labels = ["L", "R"] if n_channels == 2 else [str(i+1) for i in range(n_channels)]
+        for i, label in enumerate(labels):
+            text_bbox = draw.textbbox((0, 0), label, font=label_font)
+            text_x = base_x + i * (bar_width + spacing) + (bar_width - (text_bbox[2] - text_bbox[0])) // 2
+            text_y = base_y + bar_height + 5
+            draw.text((text_x, text_y), label, font=label_font, fill=(249,249,249))
+
 
     def draw_gui(self, values):
-        previous_background_color = self.current_background_color
+        previous_background_color = self.get_background_color
 
         # Determine background color based on conditions
         if self.redis_listener.drop_frame == 1 and int(self.redis_controller.get_value('rec')) == 1:
@@ -694,7 +687,14 @@ class SimpleGUI(threading.Thread):
         self.update_smoothed_vu_levels()
         self.draw_right_vu_meter(draw)
 
-        #logging.info(f"Mic level: L={self.usb_monitor.audio_monitor.level_left}% R={self.usb_monitor.audio_monitor.level_right}%")
+        vu = self.vu_smoothed  # Or .usb_monitor.audio_monitor.vu_levels if you want raw
+        if vu:
+            levels = " | ".join([f"Ch{i+1}={v:.1f}%" for i, v in enumerate(vu)])
+            logging.info(f"Mic levels: {levels}")
+        else:
+            logging.info("Mic level: No VU data available.")
+
+
 
         self.fb.show(image)
         

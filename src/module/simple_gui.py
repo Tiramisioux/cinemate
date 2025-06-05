@@ -2,8 +2,6 @@ import os
 import threading
 import time
 from PIL import Image, ImageDraw, ImageFont
-import psutil
-from gpiozero import CPUTemperature
 from module.framebuffer import Framebuffer  # Assuming this is a custom module
 import subprocess
 import logging
@@ -11,6 +9,7 @@ from sugarpie import pisugar
 from flask_socketio import SocketIO
 import re
 from statistics import mean
+from module.utils import Utils
 
 class SimpleGUI(threading.Thread):
     def __init__(self, 
@@ -267,11 +266,11 @@ class SimpleGUI(threading.Thread):
             "ram_label": 'RAM',
             "mon": 'MON',
             "anamorphic_factor": (str(self.redis_controller.get_value('anamorphic_factor')) + "X"),
-            "ram_load": f"{100 - psutil.virtual_memory().available / psutil.virtual_memory().total * 100:.0f}%",
+            "ram_load": Utils.memory_usage(),
             "cpu_label": 'CPU',
-            "cpu_load": str(int(psutil.cpu_percent())) + '%',
+            "cpu_load": Utils.cpu_load(),
             "cpu_temp_label": 'TEMP',
-            "cpu_temp": ('{}\u00B0C'.format(int(CPUTemperature().temperature))),
+            "cpu_temp": Utils.cpu_temp(),
             "media_label": "MEDIA",
             "disk_label": str(self.ssd_monitor.device_name).upper()[:4] if self.ssd_monitor.device_name else "", #str(self.ssd_monitor.file_system_format).upper() if self.ssd_monitor.file_system_format else "",
             "usb_connected": bool(self.serial_handler.serial_connected),

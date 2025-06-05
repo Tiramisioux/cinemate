@@ -99,8 +99,8 @@
   "two_way_switches": [
     {
       "pin": 27,
-      "state_on_action": {"method": "set_all_lock", "args": [0]},
-      "state_off_action": {"method": "set_all_lock", "args": [1]}
+      "state_on_action": {"method": "set_all_lock", "args": [1]},
+      "state_off_action": {"method": "set_all_lock", "args": [0]}
     },
     {
       "pin": 24,

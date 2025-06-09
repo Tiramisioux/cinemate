@@ -1,4 +1,5 @@
 from flask import Blueprint, current_app, jsonify, request, render_template
+from module.redis_controller import ParameterKey
 
 main_routes = Blueprint('main', __name__)
 
@@ -9,9 +10,9 @@ def index():
     simple_gui = current_app.config['SIMPLE_GUI']
     sensor_detect = current_app.config['SENSOR_DETECT']
 
-    iso_value = redis_controller.get_value("iso")
-    shutter_a_value = redis_controller.get_value("shutter_a")
-    fps_value = redis_controller.get_value("fps_actual")
+    iso_value = redis_controller.get_value(ParameterKey.ISO.value)
+    shutter_a_value = redis_controller.get_value(ParameterKey.SHUTTER_A.value)
+    fps_value = redis_controller.get_value(ParameterKey.FPS_ACTUAL.value)
     background_color_value = simple_gui.get_background_color()
     
     dynamic_data = simple_gui.populate_values()

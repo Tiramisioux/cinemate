@@ -10,6 +10,7 @@ from threading import Thread
 
 # Import RedisListener
 from module.redis_listener import RedisListener
+from module.redis_controller import ParameterKey
 
 class CinePiController:
     def __init__(self,
@@ -46,7 +47,7 @@ class CinePiController:
         self.wb_cg_rb_array = {}  # Initialize as an empty dictionary
         
         self.redis_listener = RedisListener(redis_controller)
-        self.fps = int(round(float(self.redis_controller.get_value('fps_last'))))
+        self.fps = int(round(float(self.redis_controller.get_value(ParameterKey.FPS_LAST.value))))
         
         # Set startup flag
         self.startup = True
@@ -66,7 +67,7 @@ class CinePiController:
         self.fps_multiplier = 1
         self.pwm_mode = False
         self.trigger_mode = 0
-        self.fps_saved = float(self.redis_controller.get_value('fps'))
+        self.fps_saved = float(self.redis_controller.get_value(ParameterKey.FPS.value))
         self.fps_double = False
         self.ramp_up_speed = 0.2
         self.ramp_down_speed = 0.2
@@ -77,18 +78,18 @@ class CinePiController:
         self.shutter_a_nom = 180
         self.exposure_time_saved = 1/24
         self.current_sensor = self.sensor_detect.camera_model
-        self.redis_controller.set_value('sensor', self.sensor_detect.camera_model)
+        self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)
         
         self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
             self.current_sensor,
-            int(self.redis_controller.get_value('sensor_mode'))
+            int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
         )
 
-        self.sensor_mode = int(self.redis_controller.get_value('sensor_mode'))
+        self.sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
         self.fps_max = int(self.sensor_detect.get_fps_max(self.current_sensor, self.sensor_mode))
-        self.redis_controller.set_value('fps_max', self.fps_max)
+        self.redis_controller.set_value(ParameterKey.FPS_MAX.value, self.fps_max)
         self.gui_layout = self.sensor_detect.get_gui_layout(self.current_sensor, self.sensor_mode)
-        self.exposure_time_s = float(self.redis_controller.get_value('shutter_a')) / 360 * (1 / self.fps) 
+        self.exposure_time_s = float(self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)) / 360 * (1 / self.fps) 
         self.exposure_time_saved = self.exposure_time_s
         self.file_size = self.sensor_detect.get_file_size(self.current_sensor, self.sensor_mode)
         
@@ -119,7 +120,7 @@ class CinePiController:
         self.set_fps(self.fps)
         logging.info(f"Initialized fps: {self.fps}")
         
-        self.set_resolution(int(self.redis_controller.get_value('sensor_mode')))
+        self.set_resolution(int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value)))
         
     def set_anamorphic_factor(self, value=None):
         """
@@ -130,13 +131,13 @@ class CinePiController:
         if value is not None:
             # Validate the incoming value
             if value in self.anamorphic_steps:
-                self.redis_controller.set_value('anamorphic_factor', value)
+                self.redis_controller.set_value(ParameterKey.ANAMORPHIC_FACTOR.value, value)
                 logging.info(f"Anamorphic factor set to: {value}")
             else:
                 logging.error(f"Invalid anamorphic factor: {value}. Valid options are: {self.anamorphic_steps}")
         else:
             # Get the current anamorphic factor from Redis
-            current_value = float(self.redis_controller.get_value('anamorphic_factor'))
+            current_value = float(self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value))
             if current_value not in self.anamorphic_steps:
                 logging.error(f"Current anamorphic factor {current_value} is not in the valid steps: {self.anamorphic_steps}")
                 return
@@ -147,7 +148,7 @@ class CinePiController:
             next_value = self.anamorphic_steps[next_index]
 
             # Set the next value in Redis
-            self.redis_controller.set_value('anamorphic_factor', next_value)
+            self.redis_controller.set_value(ParameterKey.ANAMORPHIC_FACTOR.value, next_value)
             logging.info(f"Anamorphic factor toggled to: {next_value}")
         
         self.cinepi.restart()
@@ -169,15 +170,15 @@ class CinePiController:
         elif mode == 1:
             # Activate exposure constant mode
             self.initial_exposure = self.calculate_exposure()
-            self.initial_shutter_a = self.redis_controller.get_value('shutter_a_nom')
+            self.initial_shutter_a = self.redis_controller.get_value(ParameterKey.SHUTTER_A_NOM.value)
             logging.info(f"Exposure constant mode activated with initial exposure: {self.initial_exposure} seconds")
-            self.set_shutter_a_nom(float(self.redis_controller.get_value('shutter_a_nom')))
+            self.set_shutter_a_nom(float(self.redis_controller.get_value(ParameterKey.SHUTTER_A_NOM.value)))
 
         logging.info(f"Shutter sync {'enabled' if self.shutter_a_sync_mode else 'disabled'}")
 
     def calculate_exposure(self):
-        fps = self.redis_controller.get_value('fps')
-        shutter_a_nom = self.redis_controller.get_value('shutter_a')
+        fps = self.redis_controller.get_value(ParameterKey.FPS.value)
+        shutter_a_nom = self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)
         return float(shutter_a_nom) / 360.0 / float(fps)
 
     def adjust_shutter_a_sync(self, fps=None, shutter_a_nom=None):
@@ -186,12 +187,12 @@ class CinePiController:
                 # Calculate new shutter angle to maintain the constant exposure
                 new_shutter_a_nom = self.initial_exposure * 360.0 * float(fps)
                 new_shutter_a_nom = max(min(new_shutter_a_nom, 360), 1)  # Ensure within 1-360 degrees
-                self.redis_controller.set_value('shutter_a_nom', new_shutter_a_nom)
-                self.redis_controller.set_value('shutter_a', new_shutter_a_nom)
+                self.redis_controller.set_value(ParameterKey.SHUTTER_A_NOM.value, new_shutter_a_nom)
+                self.redis_controller.set_value(ParameterKey.SHUTTER_A.value, new_shutter_a_nom)
                 logging.info(f"Exposure constant: Adjusting shutter_a_nom to {new_shutter_a_nom} degrees due to fps change to {fps}")
             elif shutter_a_nom:
-                self.initial_exposure = float(shutter_a_nom) / 360.0 / float(self.redis_controller.get_value('fps'))
-                self.redis_controller.set_value('shutter_a', shutter_a_nom)
+                self.initial_exposure = float(shutter_a_nom) / 360.0 / float(self.redis_controller.get_value(ParameterKey.FPS.value))
+                self.redis_controller.set_value(ParameterKey.SHUTTER_A.value, shutter_a_nom)
                 logging.info(f"Exposure constant: Updated stored exposure to {self.initial_exposure} seconds based on new shutter_a_nom {shutter_a_nom}")
 
     def update_steps(self):
@@ -249,7 +250,7 @@ class CinePiController:
     def clear_startup_flag(self):
         self.startup = False
         # Communicate the current fps to the web app after the startup phase
-        #self.redis_controller.set_value('fps', self.fps)
+        #self.redis_controller.set_value(ParameterKey.FPS.value, self.fps)
 
     def load_wb_steps(self):
         try:
@@ -261,9 +262,9 @@ class CinePiController:
             return []
 
     def initialize_fps_steps(self, fps_steps):
-        self.fps_max = int(self.redis_controller.get_value('fps_max'))
+        self.fps_max = int(self.redis_controller.get_value(ParameterKey.FPS_MAX.value))
         
-        self.redis_controller.set_value('fps_max', self.fps_max)
+        self.redis_controller.set_value(ParameterKey.FPS_MAX.value, self.fps_max)
 
         """Initialize fps_steps based on the provided list and capped by fps_max."""
         self.fps_steps_dynamic = [fps for fps in self.fps_steps if fps <= self.fps_max]
@@ -282,7 +283,7 @@ class CinePiController:
             return
 
         # Calculate the closest legal shutter angle for the new fps
-        current_shutter_angle = float(self.redis_controller.get_value('shutter_a'))
+        current_shutter_angle = float(self.redis_controller.get_value(ParameterKey.SHUTTER_A.value))
         self.shutter_a_steps_dynamic = self.calculate_dynamic_shutter_angles(self.fps)
         
         closest_shutter_angle = min(self.shutter_a_steps_dynamic, key=lambda x: abs(x - current_shutter_angle))
@@ -304,7 +305,7 @@ class CinePiController:
         value = corrected_value
 
         if not self.fps_lock:
-            max_fps = int(self.redis_controller.get_value('fps_max'))
+            max_fps = int(self.redis_controller.get_value(ParameterKey.FPS_MAX.value))
             logging.info(f"Retrieved max_fps from Redis: {max_fps}")
 
             safe_value = max(1, min(value, max_fps))
@@ -314,7 +315,7 @@ class CinePiController:
                 self.adjust_shutter_a_sync(fps=safe_value)
 
             if not self.parameters_lock or self.lock_override:
-                self.redis_controller.set_value('fps', safe_value)
+                self.redis_controller.set_value(ParameterKey.FPS.value, safe_value)
                 logging.info(f"Setting fps in Redis to {safe_value}")
 
                 # 🚀 Force recalculating shutter angles after FPS is updated
@@ -323,10 +324,10 @@ class CinePiController:
 
                 logging.info(f"Updated shutter angles after FPS change: {self.shutter_a_steps_dynamic}")
 
-            self.exposure_time_s = (float(self.redis_controller.get_value('shutter_a')) / 360) / safe_value
+            self.exposure_time_s = (float(self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)) / 360) / safe_value
             self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_s)
 
-            self.redis_controller.set_value('fps_last', round(safe_value))
+            self.redis_controller.get_value(ParameterKey.FPS_LAST.value, round(safe_value))
 
 
 
@@ -368,25 +369,25 @@ class CinePiController:
  
     def rec(self):
         logging.info(f"rec button pushed")
-        if self.redis_controller.get_value('is_recording') == "0":
+        if self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "0":
             self.start_recording()
-        elif self.redis_controller.get_value('is_recording') == "1":
+        elif self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "1":
             self.stop_recording()
             
     def start_recording(self):
         if self.ssd_monitor.is_mounted == True and self.ssd_monitor.get_space_left:
-            self.redis_controller.set_value('is_recording', 1)
+            self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 1)
             logging.info(f"Started recording")
         else:
             logging.info(f"No disk.")
             
     def stop_recording(self):
-        self.redis_controller.set_value('is_recording', 0)
+        self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         logging.info(f"Stopped recording")
 
     def switch_resolution(self):
         try:
-            current_sensor_mode = int(self.redis_controller.get_value('sensor_mode'))
+            current_sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
             sensor_modes = list(self.sensor_detect.res_modes.keys())
             num_sensor_modes = len(sensor_modes)
 
@@ -406,13 +407,13 @@ class CinePiController:
     def set_resolution(self, value=None):
         if value is not None:
             try:
-                self.redis_controller.set_value('fps_last', self.redis_controller.get_value('fps'))
+                self.redis_controller.get_value(ParameterKey.FPS_LAST.value, self.redis_controller.get_value(ParameterKey.FPS.value))
                 if value not in self.sensor_detect.res_modes:
                     logging.info(f"Couldn't find sensor mode {value}. Trying with sensor_mode 0.")
                     value = 0
-                
-                self.redis_controller.set_value('sensor_mode', str(value))
-                
+
+                self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, str(value))
+
                 resolution_info = self.sensor_detect.res_modes[value]
                 height_new = resolution_info.get('height', None)
                 width_new = resolution_info.get('width', None)
@@ -423,26 +424,26 @@ class CinePiController:
                 
                 if height_new is None or width_new is None or gui_layout_new is None:
                     raise ValueError("Invalid height, width, or gui_layout value.")
-                
-                self.redis_controller.set_value('height', str(height_new))
-                self.redis_controller.set_value('width', str(width_new))
-                self.redis_controller.set_value('bit_depth', str(bit_depth_new))
-                self.redis_controller.set_value('fps_max', str(fps_max_new))
-                self.redis_controller.set_value('gui_layout', str(gui_layout_new))
-                self.redis_controller.set_value('file_size', str(file_size_new))
 
-                self.redis_controller.set_value('cam_init', 1)
-                
+                self.redis_controller.set_value(ParameterKey.HEIGHT.value, str(height_new))
+                self.redis_controller.set_value(ParameterKey.WIDTH.value, str(width_new))
+                self.redis_controller.set_value(ParameterKey.BIT_DEPTH.value, str(bit_depth_new))
+                self.redis_controller.set_value(ParameterKey.FPS_MAX.value, str(fps_max_new))
+                self.redis_controller.set_value(ParameterKey.GUI_LAYOUT.value, str(gui_layout_new))
+                self.redis_controller.set_value(ParameterKey.FILE_SIZE.value, str(file_size_new))
+
+                self.redis_controller.set_value(ParameterKey.CAM_INIT.value, 1)
+
                 self.gui_layout = gui_layout_new
                 
                 logging.info(f"Resolution set to mode {value}, height: {height_new}, width: {width_new}, gui_layout: {gui_layout_new}")
                 
-                fps_current = int(float(self.redis_controller.get_value('fps')))
+                fps_current = int(float(self.redis_controller.get_value(ParameterKey.FPS.value)))
                 time.sleep(0.5)
                 
                 self.cinepi.restart()
                 
-                self.set_fps(float(self.redis_controller.get_value('fps_last')))
+                self.set_fps(float(self.redis_controller.get_value(ParameterKey.FPS_LAST.value)))
                 
                 self.file_size = file_size_new
                 
@@ -450,7 +451,7 @@ class CinePiController:
                 self.initialize_fps_steps(self.fps_steps)
                 self.shutter_a_steps_dynamic = self.calculate_dynamic_shutter_angles(self.fps)
                 
-                self.fps_max = int(self.redis_controller.get_value('fps_max'))
+                self.fps_max = int(self.redis_controller.get_value(ParameterKey.FPS_MAX.value))
                 if self.fps_free:
                     self.fps_steps = list(range(1, self.fps_max + 1))
                 
@@ -458,12 +459,12 @@ class CinePiController:
                 
                 self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
                     self.current_sensor,
-                    int(self.redis_controller.get_value('sensor_mode'))
+                    int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
                     )
 
-                self.redis_controller.set_value('sensor', self.sensor_detect.camera_model)
+                self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)
                 time.sleep(1)
-                self.redis_controller.set_value('fps', float(self.redis_controller.get_value('fps_last')))
+                self.redis_controller.set_value(ParameterKey.FPS.value, float(self.redis_controller.get_value(ParameterKey.FPS_LAST.value)))
 
             except ValueError as error:
                 logging.error(f"Error setting resolution: {error}")
@@ -472,16 +473,16 @@ class CinePiController:
             self.switch_resolution()
         
     def get_current_sensor_mode(self):
-        current_height = int(self.redis_controller.get_value('height'))
+        current_height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value))
 
         for mode, height_dict in self.sensor_detect.res_modes.items():
             if height_dict.get('height') == current_height:
                 # Update fps_max based on the current sensor mode
                 fps_max_value = height_dict.get('fps_max', None)
-                self.redis_controller.set_value('fps_max', fps_max_value)
+                self.redis_controller.set_value(ParameterKey.FPS_MAX.value, fps_max_value)
 
                 # Update sensor_mode in Redis
-                self.redis_controller.set_value('sensor_mode', mode)
+                self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, mode)
 
                 return mode
 
@@ -491,7 +492,7 @@ class CinePiController:
         if not self.iso_lock:
             with self.parameters_lock_obj:
                 safe_value = max(min(value, max(self.iso_steps)), min(self.iso_steps))
-                self.redis_controller.set_value('iso', safe_value)
+                self.redis_controller.set_value(ParameterKey.ISO.value, safe_value)
                 logging.info(f"Setting iso to {safe_value}")
 
     def set_shutter_a(self, value):
@@ -503,7 +504,7 @@ class CinePiController:
                 # Select the closest valid shutter angle from the dynamic list
                 safe_value = min(self.shutter_a_steps_dynamic, key=lambda x: abs(x - value))
 
-            self.redis_controller.set_value('shutter_a', safe_value)
+            self.redis_controller.set_value(ParameterKey.SHUTTER_A.value, safe_value)
             self.exposure_time_seconds = (safe_value / 360.0) / self.fps
             self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_seconds)
             logging.info(f"Setting shutter_a to {safe_value} degrees (closest match from dynamic list)")
@@ -521,13 +522,13 @@ class CinePiController:
                     # Pick the closest valid shutter angle
                     safe_value = min(self.shutter_a_steps_dynamic, key=lambda x: abs(x - value))
 
-                self.redis_controller.set_value('shutter_a_nom', safe_value)
+                self.redis_controller.set_value(ParameterKey.SHUTTER_A_NOM.value, safe_value)
                 self.exposure_time_seconds = (safe_value / 360.0) / self.fps
                 self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_seconds)
                 logging.info(f"Setting shutter_a_nom to {safe_value} (closest match from dynamic list)")
 
             if self.shutter_a_sync:
-                nominal_shutter_angle = float(self.redis_controller.get_value('shutter_a_nom'))
+                nominal_shutter_angle = float(self.redis_controller.get_value(ParameterKey.SHUTTER_A_NOM.value))
                 exposure_time_desired = (nominal_shutter_angle / 360) * (1 / self.fps)
                 synced_shutter_angle = (exposure_time_desired / (1 / self.fps)) * 360
                 synced_shutter_angle = round(synced_shutter_angle, 1)
@@ -592,13 +593,13 @@ class CinePiController:
         return value
     
     def reboot(self):
-        if self.redis_controller.get_value('is_recording') == "1":
+        if self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "1":
             self.stop_recording()
         logging.info("Initiating safe system shutdown.")
         os.system("sudo reboot")
         
     def safe_shutdown(self):
-        if self.redis_controller.get_value('is_recording') == "1":
+        if self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "1":
             self.stop_recording()
         logging.info("Initiating safe system shutdown.")
         os.system("sudo shutdown -h now")
@@ -835,14 +836,14 @@ class CinePiController:
             return  # Exit if wb_steps is empty to prevent further errors
         
         if kelvin_temperature is None:
-            current_kelvin = self.redis_controller.get_value('wb_user')
+            current_kelvin = self.redis_controller.get_value(ParameterKey.WB_USER.value)
             if current_kelvin:
                 try:
                     current_kelvin = int(current_kelvin)
                     logging.info(f"Parsed current wb_user value: {current_kelvin}")
                 except ValueError:
                     current_kelvin = None
-                    logging.error(f"Error parsing current wb_user value from Redis: {self.redis_controller.get_value('wb_user')}")
+                    logging.error(f"Error parsing current wb_user value from Redis: {self.redis_controller.get_value(ParameterKey.WB_USER.value)}")
 
             found_index = None
             if current_kelvin in self.wb_steps:
@@ -863,8 +864,8 @@ class CinePiController:
 
         cg_rb_value = self.wb_cg_rb_array.get(kelvin_temperature, None)
         if cg_rb_value:
-            self.redis_controller.set_value('cg_rb', f"{cg_rb_value[0]},{cg_rb_value[1]}")
-            self.redis_controller.set_value('wb_user', str(kelvin_temperature))
+            self.redis_controller.set_value(ParameterKey.CG_RB.value, f"{cg_rb_value[0]},{cg_rb_value[1]}")
+            self.redis_controller.set_value(ParameterKey.WB_USER.value, str(kelvin_temperature))
             logging.info(f"Set white balance for {kelvin_temperature}K: {cg_rb_value}")
         else:
             logging.error(f"White balance value not found for {kelvin_temperature}K")
@@ -905,7 +906,7 @@ class CinePiController:
         }
 
         # Retrieve current mode from Redis
-        current_mode = int(self.redis_controller.get_value('trigger_mode', 0))
+        current_mode = int(self.redis_controller.get_value(ParameterKey.TRIGGER_MODE.value, 0))
 
         if value is None:
             # Toggle to the next mode
@@ -936,7 +937,7 @@ class CinePiController:
 
         # Update the trigger mode in Redis and instance variable
         self.trigger_mode = value
-        self.redis_controller.set_value('trigger_mode', str(value))
+        self.redis_controller.set_value(ParameterKey.TRIGGER_MODE.value, str(value))
 
         # Restart the cinepi process to apply the changes
         self.restart_camera()
@@ -947,7 +948,7 @@ class CinePiController:
     def set_shutter_a(self, value):
         with self.parameters_lock_obj:
             safe_value = max(1, min(value, 360))  # Ensure the value is between 1 and 360 degrees
-            self.redis_controller.set_value('shutter_a', safe_value)
+            self.redis_controller.set_value(ParameterKey.SHUTTER_A.value, safe_value)
             self.exposure_time_seconds = (safe_value / 360.0) / self.fps
             self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_seconds)
             logging.info(f"Setting shutter_a to {safe_value} degrees")
@@ -1028,11 +1029,11 @@ class CinePiController:
             if value == 1:
                 logging.info("Enabling IR Filter")
                 result = os.system("IRFilter --enable")
-                self.redis_controller.set_value('ir_filter', 1)
+                self.redis_controller.set_value(ParameterKey.IR_FILTER.value, 1)
             elif value == 0:
                 logging.info("Disabling IR Filter")
                 result = os.system("IRFilter --disable")
-                self.redis_controller.set_value('ir_filter', 0)
+                self.redis_controller.set_value(ParameterKey.IR_FILTER.value, 0)
             else:
                 return "Invalid value provided."
         else:

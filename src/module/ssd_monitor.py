@@ -5,6 +5,8 @@ import time
 import subprocess
 import smbus
 
+from module.redis_controller import ParameterKey
+
 class Event:
     def __init__(self):
         self._listeners = []
@@ -75,8 +77,8 @@ class SSDMonitor:
             self.device_name = self._get_device_name()
             self.device_type = self._detect_device_type()
             if self.redis_controller:
-                self.redis_controller.set_value('storage_type', self.device_type.lower())
-                self.redis_controller.set_value('is_mounted', '1')
+                self.redis_controller.set_value(ParameterKey.STORAGE_TYPE.value, self.device_type.lower())
+                self.redis_controller.set_value(ParameterKey.IS_MOUNTED.value, '1')
             logging.info(f"RAW drive mounted at {self.mount_path} ({self.device_type})")
             self._update_space_left()
             self.mount_event.emit(self.mount_path, self.device_type)
@@ -87,9 +89,9 @@ class SSDMonitor:
             self.device_name = None
             self.device_type = None
             if self.redis_controller:
-                self.redis_controller.set_value('storage_type', 'none')
-                self.redis_controller.set_value('is_mounted', '0')
-                self.redis_controller.set_value('space_left', '0')
+                self.redis_controller.set_value(ParameterKey.STORAGE_TYPE.value, 'none')
+                self.redis_controller.set_value(ParameterKey.IS_MOUNTED.value, '0')
+                self.redis_controller.set_value(ParameterKey.SPACE_LEFT.value, '0')
             self.unmount_event.emit(self.mount_path)
         elif self.is_mounted:
             self._update_space_left()
@@ -131,13 +133,13 @@ class SSDMonitor:
                     self.space_left = new_space_left
                     logging.info(f"Updated space left on SSD: {self.space_left:.2f} GB")
                     if self.redis_controller:
-                        self.redis_controller.set_value('space_left', f"{self.space_left:.2f}")
+                        self.redis_controller.set_value(ParameterKey.SPACE_LEFT.value, f"{self.space_left:.2f}")
                     self.space_update_event.emit(self.space_left)
             except OSError as e:
                 logging.error(f"Error updating space left: {e}")
                 self.space_left = None
                 if self.redis_controller:
-                    self.redis_controller.set_value('space_left', '0')
+                    self.redis_controller.set_value(ParameterKey.SPACE_LEFT.value, '0')
 
     def get_mount_status(self):
         return self.is_mounted
@@ -161,9 +163,9 @@ class SSDMonitor:
                 self.device_name = None
                 self.device_type = None
                 if self.redis_controller:
-                    self.redis_controller.set_value('storage_type', 'none')
-                    self.redis_controller.set_value('is_mounted', '0')
-                    self.redis_controller.set_value('space_left', '0')
+                    self.redis_controller.set_value(ParameterKey.STORAGE_TYPE.value, 'none')
+                    self.redis_controller.set_value(ParameterKey.IS_MOUNTED.value, '0')
+                    self.redis_controller.set_value(ParameterKey.SPACE_LEFT.value, '0')
                 self.unmount_event.emit(self.mount_path)
             except subprocess.CalledProcessError as e:
                 logging.error(f"Failed to unmount SSD: {e}")

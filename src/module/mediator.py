@@ -2,6 +2,7 @@ import logging
 import threading
 import json
 import time
+from module.redis_controller import ParameterKey
 
 class Mediator:
     def __init__(self, cinepi_app, cinepi_controller, redis_listener, pwm_controller, redis_controller, ssd_monitor, gpio_output, stream, usb_monitor):
@@ -52,13 +53,13 @@ class Mediator:
         self.recording_stop()
 
     def recording_stop(self):
-        self.redis_controller.set_value('is_recording', 0)
-        self.redis_controller.set_value('is_writing', 0)
+        self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
+        self.redis_controller.set_value(ParameterKey.IS_WRITING.value, 0)
         self.gpio_output.set_recording(0)        
 
     def handle_write_status_change(self, status):
-        self.redis_controller.set_value('is_writing', status)
-        
+        self.redis_controller.set_value(ParameterKey.IS_WRITING.value, status)
+
         # Start or reset the timer when recording stops (status = 0)        
         if status == 0:
             if self.stop_recording_timer is None or not self.stop_recording_timer.is_alive():
@@ -71,7 +72,7 @@ class Mediator:
 
     def handle_redis_event(self, data):
         # Handle "is_recording" key changes
-        if data['key'] == 'rec':
+        if data['key'] == ParameterKey.REC.value:
             is_recording = int(data['value'])
             if is_recording:
                 logging.info("Recording started!")
@@ -85,7 +86,7 @@ class Mediator:
                 self.gpio_output.set_recording(0)
         
         # Handle "is_writing" key changes        
-        elif data['key'] == 'rec':
+        elif data['key'] == ParameterKey.IS_WRITING.value:
             is_writing = bool(data['value'])
             if is_writing == 1:
                 self.stream.toggle_background_color()
@@ -94,23 +95,23 @@ class Mediator:
 
     def handle_stop_recording_timeout(self):
         """Handle the timeout event when recording should be stopped."""
-        self.redis_controller.set_value('is_writing_buf', 0)
-        self.redis_controller.set_value('is_recording', 0)
-        self.redis_controller.set_value('is_writing', 0)
+        self.redis_controller.set_value(ParameterKey.IS_WRITING_BUF.value, 0)
+        self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
+        self.redis_controller.set_value(ParameterKey.IS_WRITING.value, 0)
         self.gpio_output.set_recording(0) 
         
         logging.info("Stop recording timeout reached. Stopping recording...")
 
     def handle_fps_change(self, data):
         # Handle "fps" key changes
-        if data['key'] == 'fps':
+        if data['key'] == ParameterKey.FPS.value:
             print('changing pwm')
-            fps_new = self.redis_controller.get_value('fps')
+            fps_new = self.redis_controller.get_value(ParameterKey.FPS.value)
             self.pwm_controller.set_pwm(fps_new)
             
     def handle_shutter_a_change(self, data):
         # Handle "shutter_a" key changes
-        if data['key'] == 'shutter_a':
+        if data['key'] == ParameterKey.SHUTTER_A.value:
             print('changing pwm')
-            shutter_a_new = self.redis_controller.get_value('shutter_a')
+            shutter_a_new = self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)
             self.pwm_controller.set_pwm(None, shutter_a_new)

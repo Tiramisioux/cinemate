@@ -8,6 +8,7 @@ from threading import Thread
 from typing import List, Optional
 
 from module.config_loader import load_settings
+from module.redis_controller import ParameterKey
 
 # Path to settings file
 SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
@@ -136,7 +137,7 @@ class CinePiProcess(Thread):
 
     def _build_args(self):
         # base resolution
-        sensor_mode = int(self.redis_controller.get_value('sensor_mode') or 0)
+        sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value) or 0)
         model_key = self.cam.name + ('_mono' if self.cam.is_mono else '')
         res = self.sensor_detect.get_resolution_info(model_key, sensor_mode)
         width = res.get('width', 1920)
@@ -151,7 +152,7 @@ class CinePiProcess(Thread):
         
         # lores & preview
         aspect = width / height
-        anam = float(self.redis_controller.get_value('anamorphic_factor') or 1.0)
+        anam = float(self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value) or 1.0)
         fw, fh = 1920, 1080
         px, py = 94, 50
         aw, ah = fw - 2*px, fh - 2*py
@@ -159,8 +160,8 @@ class CinePiProcess(Thread):
         lw = int(lh * aspect * anam)
         if lw > aw:
             lw, lh = aw, int(round(aw / (aspect * anam)))
-        self.redis_controller.set_value('lores_width', lw)
-        self.redis_controller.set_value('lores_height', lh)
+        self.redis_controller.set_value(ParameterKey.LORES_WIDTH.value, lw)
+        self.redis_controller.set_value(ParameterKey.LORES_HEIGHT.value, lh)
         if (aw/ah) > aspect:
             ph = ah; pw = int(ph * aspect)
         else:
@@ -168,7 +169,7 @@ class CinePiProcess(Thread):
             ox, oy = (fw-pw)//2, (fh-ph)//2
         
         # gains, shutter
-        cg_rb = self.redis_controller.get_value('cg_rb') or '2.5,2.2'
+        cg_rb = self.redis_controller.get_value(ParameterKey.CG_RB.value) or '2.5,2.2'
         
         # file paths\
         tune = f'/home/pi/libcamera/src/ipa/rpi/pisp/data/{model_key}.json'
@@ -180,7 +181,7 @@ class CinePiProcess(Thread):
         vf = 1 if self.geometry.get('vertical_flip', False) else 0
         
         # anamorphic factor
-        self.anamorphic_factor = self.redis_controller.get_value('anamorphic_factor')
+        self.anamorphic_factor = self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value)
         if self.anamorphic_factor is None:
             self.anamorphic_factor = 1.0
         else:
@@ -234,18 +235,18 @@ class CinePiManager:
         self.stop_all()
         cams = discover_cameras()
         cams.sort(key=lambda c: c.port)
-        self.redis_controller.set_value('cameras', json.dumps([c.as_dict() for c in cams]))
+        self.redis_controller.set_value(ParameterKey.CAMERAS.value, json.dumps([c.as_dict() for c in cams]))
         if not cams:
-            logging.error('No cameras – abort')
+            logging.error('No cameras - abort')
             return
-        sensor_mode = int(self.redis_controller.get_value('sensor_mode') or 0)
+        sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value) or 0)
         pk = cams[0].name + ('_mono' if cams[0].is_mono else '')
         self.sensor_detect.camera_model = pk
         self.sensor_detect.load_sensor_resolutions()
-        self.redis_controller.set_value('sensor', pk)
+        self.redis_controller.set_value(ParameterKey.SENSOR.value, pk)
         res = self.sensor_detect.get_resolution_info(pk, sensor_mode)
 
-        for k in ('width','height','bit_depth','fps_max','gui_layout'):
+        for k in (ParameterKey.WIDTH.value, ParameterKey.HEIGHT.value, ParameterKey.BIT_DEPTH.value, ParameterKey.FPS_MAX.value, ParameterKey.GUI_LAYOUT.value):
             self.redis_controller.set_value(k, res.get(k))
         multi = len(cams)>1
 

@@ -4,6 +4,7 @@ from queue import Queue
 from threading import Thread
 import re
 import time
+from module.redis_controller import ParameterKey
 
 class Event:
     def __init__(self):
@@ -39,9 +40,9 @@ class CinePi:
             self.process = None
             
             # Get sensor resolution
-            self.width = int(self.redis_controller.get_value("width"))
+            self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value))
             logging.info(f'redis width: {self.width}')
-            self.height = int(self.redis_controller.get_value("height"))
+            self.height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value))
             logging.info(f'redis height: {self.height}')
             
             # Logging control
@@ -67,7 +68,7 @@ class CinePi:
             logging.info('CinePi instantiated')
 
     def get_default_args(self):
-        sensor_mode = self.redis_controller.get_value('sensor_mode')
+        sensor_mode = self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value)
         if sensor_mode is None:
             sensor_mode = '0'
         else:
@@ -75,7 +76,7 @@ class CinePi:
 
         self.sensor_detect.detect_camera_model()
         sensor_model = self.sensor_detect.camera_model
-        pi_model = self.redis_controller.get_value("pi_model")
+        pi_model = self.redis_controller.get_value(ParameterKey.PI_MODEL.value)
 
         # If we're on Pi 4 and using imx477, override packing
         packing_override = None
@@ -84,16 +85,16 @@ class CinePi:
 
         tuning_file_path = f'/home/pi/libcamera/src/ipa/rpi/pisp/data/{sensor_model}.json'
 
-        cg_rb = self.redis_controller.get_value('cg_rb')
+        cg_rb = self.redis_controller.get_value(ParameterKey.CG_RB.value)
         if cg_rb is None:
             cg_rb = '2.5,2.2'  # Default for IMX477 at 3200K
 
-        self.width = int(self.redis_controller.get_value("width"))
-        self.height = int(self.redis_controller.get_value("height"))
+        self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value))
+        self.height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value))
 
         self.aspect_ratio = self.width / self.height
 
-        self.anamorphic_factor = self.redis_controller.get_value('anamorphic_factor')
+        self.anamorphic_factor = self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value)
         if self.anamorphic_factor is None:
             self.anamorphic_factor = 1.0
         else:
@@ -114,8 +115,8 @@ class CinePi:
             lores_width = available_width
             lores_height = int(round((lores_width / (self.aspect_ratio * self.anamorphic_factor))))
 
-        self.redis_controller.set_value('lores_width', lores_width)
-        self.redis_controller.set_value('lores_height', lores_height)
+        self.redis_controller.set_value(ParameterKey.LORES_WIDTH.value, lores_width)
+        self.redis_controller.set_value(ParameterKey.LORES_HEIGHT.value, lores_height)
 
         preview_x, preview_y, preview_w, preview_h = self.calculate_preview_window(
             lores_width, lores_height, padding_x, padding_y, frame_width, frame_height
@@ -232,8 +233,8 @@ class CinePi:
     def shutdown(self):
         """Shut down the CinePi instance."""
         if self.process is not None:
-            fps_last = self.redis_controller.get_value('fps')
-            self.redis_controller.set_value('fps_last', fps_last)
+            fps_last = self.redis_controller.get_value(ParameterKey.FPS.value)
+            self.redis_controller.set_value(ParameterKey.FPS_LAST.value, fps_last)
             logging.info('Shutting down CinePi instance.')
             self.process.terminate()
             self.process.wait()
@@ -242,13 +243,13 @@ class CinePi:
     def restart(self):
         """Restart the CinePi instance."""
         logging.info('Restarting CinePi instance.')
-        fps_last = self.redis_controller.get_value('fps')
-        self.redis_controller.set_value('fps_last', fps_last)
+        fps_last = self.redis_controller.get_value(ParameterKey.FPS.value)
+        self.redis_controller.set_value(ParameterKey.FPS_LAST.value, fps_last)
         self.shutdown()
         # Restart the process with default arguments
         self.start_cinepi_process()
-        self.redis_controller.set_value('sensor', self.sensor_detect.camera_model)
-        
+        self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)
+
         # while self.redis_controller.get_value('cinepi_running') == 'False':
         #     time.sleep(2)
         #     self.shutdown()

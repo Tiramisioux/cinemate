@@ -6,6 +6,8 @@ import logging
 import traceback
 from collections import deque
 
+from module.redis_controller import ParameterKey
+
 class AnalogControls(threading.Thread):
     def __init__(self, cinepi_controller, redis_controller, iso_pot=None, shutter_a_pot=None, fps_pot=None, wb_pot=None, iso_steps=None, shutter_a_steps=None, fps_steps=None, wb_steps=None):
         threading.Thread.__init__(self)
@@ -137,7 +139,7 @@ class AnalogControls(threading.Thread):
 
                 if new_wb is not None and new_wb != self.last_wb:
                     logging.info(f"Setting White Balance to {new_wb}K")
-                    self.redis_controller.set_value('wb_user', new_wb)
+                    self.redis_controller.set_value(ParameterKey.WB_USER.value, new_wb)
                     self.cinepi_controller.set_wb(new_wb)
                     self.last_wb = new_wb
 

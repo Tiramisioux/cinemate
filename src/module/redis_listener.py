@@ -5,6 +5,8 @@ import datetime
 import json
 from collections import deque
 
+from module.redis_controller import ParameterKey
+
 class RedisListener:
     def __init__(self, redis_controller, framerate_callback=None, host='localhost', port=6379, db=0):
         self.redis_client = redis.StrictRedis(host=host, port=port, db=db)
@@ -25,8 +27,8 @@ class RedisListener:
         
         self.redis_controller = redis_controller
         self.framerate_callback = framerate_callback
-        
-        self.framerate = float(self.redis_controller.get_value('fps_actual', 0))
+
+        self.framerate = float(self.redis_controller.get_value(ParameterKey.FPS_ACTUAL.value, 0))
         self.framecount_last_update_time = datetime.datetime.now()
         self.framecount = 0
         self.frame_count = 0
@@ -39,9 +41,9 @@ class RedisListener:
         self.colorTemp = 0
         self.focus = 0
         self.framecount = 0
-        self.redis_controller.set_value('framecount', 0)
-        
-        self.last_is_recording_value = self.redis_controller.get_value('is_recording')
+        self.redis_controller.set_value(ParameterKey.FRAMECOUNT.value, 0)
+
+        self.last_is_recording_value = self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)
 
 
         
@@ -55,7 +57,7 @@ class RedisListener:
         self.last_framecount_check_time = datetime.datetime.now()
         self.framecount_check_interval = 1.0  # Default to 1 second, will be updated based on FPS
         
-        self.redis_controller.set_value('rec', "0")
+        self.redis_controller.set_value(ParameterKey.REC.value, "0")
         
         self.max_fps_adjustment = 0.1  # Maximum adjustment per iteration
         self.min_fps_adjustment = 0.0001  # Minimum adjustment increment
@@ -102,9 +104,9 @@ class RedisListener:
                             self.colorTemp = color_temp
 
                         # Update Redis key for current buffer size if changed
-                        current_buffer = self.redis_controller.get_value('buffer')
+                        current_buffer = self.redis_controller.get_value(ParameterKey.BUFFER.value)
                         if buffer_size is not None and (current_buffer is None or int(current_buffer) != buffer_size):
-                            self.redis_controller.set_value('buffer', buffer_size)
+                            self.redis_controller.set_value(ParameterKey.BUFFER.value, buffer_size)
 
                         # Update sensor timestamps
                         if sensor_timestamp is not None:
@@ -118,22 +120,22 @@ class RedisListener:
                         if self.frame_count is not None and self.frame_count != self.framecount:
                             self.framecount = self.frame_count
                             logging.debug(f"Updating framecount in Redis to {self.frame_count}")
-                            self.redis_controller.set_value('framecount', self.frame_count)
+                            self.redis_controller.set_value(ParameterKey.FRAMECOUNT.value, self.frame_count)
 
                         # Check and set buffering status if changed
                         is_buffering = buffer_size > 0 if buffer_size is not None else False
-                        current_buffering_status = self.redis_controller.get_value('is_buffering')
+                        current_buffering_status = self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value)
                         new_buffering_status = 1 if is_buffering else 0
                         if current_buffering_status is None or int(current_buffering_status) != new_buffering_status:
                             logging.debug(f"Updating is_buffering to {new_buffering_status}")
-                            self.redis_controller.set_value('is_buffering', new_buffering_status)
+                            self.redis_controller.set_value(ParameterKey.IS_BUFFERING.value, new_buffering_status)
 
                         # Add current framerate value to the list
                         if self.current_framerate is not None:
                             self.framerate_values.append(self.current_framerate)
                             
                         # Check for framerate deviation
-                        expected_fps = float(self.redis_controller.get_value('fps'))
+                        expected_fps = float(self.redis_controller.get_value(ParameterKey.FPS.value))
                         if self.current_framerate is not None:
                             fps_difference = abs((self.current_framerate) - expected_fps)
                             # print(f"Expected FPS: {expected_fps}, Actual FPS: {self.current_framerate*1000}")
@@ -187,12 +189,12 @@ class RedisListener:
             if self.frame_count != self.last_framecount:
                 if not self.framecount_changing:
                     self.framecount_changing = True
-                    self.redis_controller.set_value('rec', "1")
+                    self.redis_controller.set_value(ParameterKey.REC.value, "1")
                     logging.info("Framecount is changing")
             else:
                 if self.framecount_changing:
                     self.framecount_changing = False
-                    self.redis_controller.set_value('rec', "0")
+                    self.redis_controller.set_value(ParameterKey.REC.value, "0")
                     logging.info("Framecount is stable")
 
             self.last_framecount = self.frame_count
@@ -201,7 +203,7 @@ class RedisListener:
     def reset_framecount(self):
         self.framecount = 0
         self.frame_count = 0
-        self.redis_controller.set_value('framecount', 0)
+        self.redis_controller.set_value(ParameterKey.FRAMECOUNT.value, 0)
         logging.info("Framecount reset to 0.")
 
     def listen_controls(self):
@@ -217,7 +219,7 @@ class RedisListener:
                 value_str = value.decode('utf-8')
 
                 # ✅ Skip if value hasn't changed
-            if changed_key == 'is_recording':
+            if changed_key == ParameterKey.IS_RECORDING.value:
                 if value_str == self.last_is_recording_value:
                     continue
                 self.last_is_recording_value = value_str
@@ -227,7 +229,7 @@ class RedisListener:
                     self.reset_framecount()
                     self.recording_start_time = datetime.datetime.now()
                     logging.info(f"Recording started at: {self.recording_start_time}")
-                    self.framerate = float(self.redis_controller.get_value('fps'))
+                    self.framerate = float(self.redis_controller.get_value(ParameterKey.FPS.value))
 
                 elif value_str == '0':
                     if self.is_recording:
@@ -257,14 +259,14 @@ class RedisListener:
                 self.current_framerate = None
         else:
             self.current_framerate = None
-        self.redis_controller.set_value('fps_actual', self.current_framerate)
+        self.redis_controller.set_value(ParameterKey.FPS_ACTUAL.value, self.current_framerate)
 
     def analyze_frames(self):
         if self.recording_start_time and self.recording_end_time:
             time_diff_seconds = (self.recording_end_time - self.recording_start_time).total_seconds()
             logging.info(f"Recording duration in seconds: {time_diff_seconds}")
 
-            fps_value = self.redis_controller.get_value('fps')
+            fps_value = self.redis_controller.get_value(ParameterKey.FPS.value)
             try:
                 fps_float = float(fps_value)
                 logging.info(f"Expected framerate retrieved from Redis: {fps_float} FPS")
@@ -292,7 +294,7 @@ class RedisListener:
             if time_diffs:
                 average_time_diff = sum(time_diffs) / len(time_diffs)
                 average_fps = (1.0 / average_time_diff) * 1000 if average_time_diff != 0 else 0
-                #logging.info(f"Average framerate of the last 100 frames: {average_fps:.6f} FPS : fps: {self.redis_controller.get_value('fps')}")
+                #logging.info(f"Average framerate of the last 100 frames: {average_fps:.6f} FPS : fps: {self.redis_controller.get_value(ParameterKey.FPS.value)}")
                 
                 return average_fps
             else:
@@ -305,8 +307,8 @@ class RedisListener:
         if avg_framerate is None:
             return
 
-        desired_fps = round(float(self.redis_controller.get_value('fps_user')))
-        current_fps = float(self.redis_controller.get_value('fps'))
+        desired_fps = round(float(self.redis_controller.get_value(ParameterKey.FPS_USER.value)))
+        current_fps = float(self.redis_controller.get_value(ParameterKey.FPS.value))
         
         fps_difference = desired_fps - avg_framerate
         
@@ -327,8 +329,8 @@ class RedisListener:
             
             # Round to 7 decimal places to avoid floating point precision issues
             new_fps = round(new_fps, 7)
-            
-            self.redis_controller.set_value('fps', new_fps)
+
+            self.redis_controller.set_value(ParameterKey.FPS.value, new_fps)
             logging.info(f"Adjusted FPS from {current_fps} to {new_fps} (step size: {step_size:.5f})")
         else:
             logging.info(f"FPS is within acceptable range. Current: {current_fps}, Avg: {avg_framerate}, Desired: {desired_fps}")

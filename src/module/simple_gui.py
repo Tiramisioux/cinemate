@@ -606,8 +606,8 @@ class SimpleGUI(threading.Thread):
         self.height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value))
         self.aspect_ratio = self.width / self.height
         self.anamorphic_factor = float(self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value))
-        lores_width = int(self.redis_controller.get_value(ParameterKey.LOWRES_WIDTH.value))
-        lores_height = int(self.redis_controller.get_value(ParameterKey.LOWRES_HEIGHT.value))
+        lores_width = int(self.redis_controller.get_value(ParameterKey.LORES_WIDTH.value))
+        lores_height = int(self.redis_controller.get_value(ParameterKey.LORES_HEIGHT.value))
 
         frame_width = 1920
         frame_height = 1080

@@ -11,7 +11,7 @@ import json
 
 from module.config_loader import load_settings
 from module.logger import configure_logging
-from module.redis_controller import RedisController
+from module.redis_controller import RedisController, ParameterKey
 from module.cinepi_app import CinePi
 from module.ssd_monitor import SSDMonitor
 from module.usb_monitor import USBMonitor
@@ -163,10 +163,10 @@ def main():
     redis_controller, sensor_detect, pwm_controller, ssd_monitor, usb_monitor, gpio_output, dmesg_monitor = initialize_system(settings)
     
     # Store Pi model in Redis
-    redis_controller.set_value('pi_model', pi_model)
-    
+    redis_controller.set_value(ParameterKey.PI_MODEL.value, pi_model)
+
     # Set redis anamorphic factor to default value
-    redis_controller.set_value('anamorphic_factor', settings["anamorphic_preview"]["default_anamorphic_factor"])
+    redis_controller.set_value(ParameterKey.ANAMORPHIC_FACTOR.value, settings["anamorphic_preview"]["default_anamorphic_factor"])
 
     # Initialize CinePi application
     cinepi = CinePi(redis_controller, sensor_detect)
@@ -248,8 +248,8 @@ def main():
     # Ensure system cleanup on exit
     def cleanup():
         logging.info("Shutting down components...")
-        redis_controller.set_value('is_recording', 0)
-        redis_controller.set_value('is_writing', 0)
+        redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
+        redis_controller.set_value(ParameterKey.IS_WRITING.value, 0)
         pwm_controller.stop_pwm()
         dmesg_monitor.join()
         command_executor.join()

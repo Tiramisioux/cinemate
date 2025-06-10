@@ -10,6 +10,7 @@ from flask_socketio import SocketIO
 import re
 from statistics import mean
 from module.utils import Utils
+from module.redis_controller import ParameterKey
 
 class SimpleGUI(threading.Thread):
     def __init__(self, 
@@ -70,9 +71,9 @@ class SimpleGUI(threading.Thread):
         Load current sensor values (width, height, bit depth) from Redis.
         """
         try:
-            self.width = int(self.redis_controller.get_value('width') or 1920)
-            self.height = int(self.redis_controller.get_value('height') or 1080)
-            self.bit_depth = int(self.redis_controller.get_value('bit_depth') or 10)
+            self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value) or 1920)
+            self.height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value) or 1080)
+            self.bit_depth = int(self.redis_controller.get_value(ParameterKey.BIT_DEPTH.value) or 10)
             #logging.info(f"Loaded sensor values from Redis: width={self.width}, height={self.height}, bit_depth={self.bit_depth}")
         except ValueError:
             logging.error("Failed to load sensor values from Redis, using default values.")
@@ -226,13 +227,11 @@ class SimpleGUI(threading.Thread):
 
     def populate_values(self):
 
-        width = self.redis_controller.get_value("width")
-
         self.load_sensor_values_from_redis()
         resolution_value = self.estimate_resolution_in_k()
 
-        width = self.redis_controller.get_value("width")
-        height = self.redis_controller.get_value("height")
+        width = self.redis_controller.get_value(ParameterKey.WIDTH.value)
+        height = self.redis_controller.get_value(ParameterKey.HEIGHT.value)
 
         # Ensure width and height are valid numbers before calculation
         try:
@@ -245,27 +244,27 @@ class SimpleGUI(threading.Thread):
         values = {
             "resolution": resolution_value,
             "iso_label": "EI",
-            "iso": self.redis_controller.get_value("iso"),
+            "iso": self.redis_controller.get_value(ParameterKey.ISO.value),
             "shutter_label": "SHUTTER",
-            "shutter_speed": str(self.redis_controller.get_value('shutter_a')),
+            "shutter_speed": str(self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)),
             "fps_label": "FPS",
-            "fps": round(float(self.redis_controller.get_value('fps'))),
+            "fps": round(float(self.redis_controller.get_value(ParameterKey.FPS.value))),
             #"fps_actual": f"/ {float(self.redis_listener.current_framerate):.3f}" if self.redis_listener.current_framerate is not None else "/ N/A",
             "exposure_label": "EXP",
             "exposure_time": str(self.cinepi_controller.exposure_time_fractions),
-            "sensor": str.upper(self.redis_controller.get_value("sensor")),
-            "width": str(self.redis_controller.get_value("width") + " : "),
-            "height": str(self.redis_controller.get_value("height") + " : "),
-            "bit_depth": str(self.redis_controller.get_value("bit_depth") + "b"),
+            "sensor": str.upper(self.redis_controller.get_value(ParameterKey.SENSOR.value)),
+            "width": str(self.redis_controller.get_value(ParameterKey.WIDTH.value) + " : "),
+            "height": str(self.redis_controller.get_value(ParameterKey.HEIGHT.value) + " : "),
+            "bit_depth": str(self.redis_controller.get_value(ParameterKey.BIT_DEPTH.value) + "b"),
             "wb_label": "WB",
-            "color_temp": (str(self.redis_controller.get_value('wb_user')) + " K"),
+            "color_temp": (str(self.redis_controller.get_value(ParameterKey.WB_USER.value)) + " K"),
             "color_temp_libcamera": ("/ " + str(self.redis_listener.colorTemp) + "K"),
             "cam": 'CAM',
             "aspect": str(aspect_ratio),  # Use computed aspect ratio
             "raw": 'RAW',
             "ram_label": 'RAM',
             "mon": 'MON',
-            "anamorphic_factor": (str(self.redis_controller.get_value('anamorphic_factor')) + "X"),
+            "anamorphic_factor": (str(self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value)) + "X"),
             "ram_load": Utils.memory_usage(),
             "cpu_label": 'CPU',
             "cpu_load": Utils.cpu_load(),
@@ -276,17 +275,17 @@ class SimpleGUI(threading.Thread):
             "usb_connected": bool(self.serial_handler.serial_connected),
             "mic_connected": self.usb_monitor.usb_mic is not None,
             "keyboard_connected": bool(self.usb_monitor and self.usb_monitor.usb_keyboard),
-            "storage_type": self.redis_controller.get_value("storage_type")
+            "storage_type": self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value)
         }
 
         # Construct the frame count string
-        frame_count_string = str(self.redis_controller.get_value("framecount")) + " / " + str(self.redis_controller.get_value("buffer"))
+        frame_count_string = str(self.redis_controller.get_value(ParameterKey.FRAMECOUNT.value)) + " / " + str(self.redis_controller.get_value(ParameterKey.BUFFER.value))
 
         # Clean the string to only keep digits, blank spaces, and the / sign
         cleaned_frame_count_string = re.sub(r"[^0-9 /]", "", frame_count_string)
         values["frame_count"]= frame_count_string
 
-        if values["fps"] != int(float(self.redis_controller.get_value('fps_user'))):
+        if values["fps"] != int(float(self.redis_controller.get_value(ParameterKey.FPS_USER.value))):
             self.colors["fps"]["normal"] = "yellow"
         
         elif self.cinepi_controller.trigger_mode != 0:
@@ -552,7 +551,7 @@ class SimpleGUI(threading.Thread):
         previous_background_color = self.get_background_color
 
         # Determine background color based on conditions
-        if self.redis_listener.drop_frame == 1 and int(self.redis_controller.get_value('rec')) == 1:
+        if self.redis_listener.drop_frame == 1 and int(self.redis_controller.get_value(ParameterKey.REC.value)) == 1:
             self.current_background_color = "purple"
             self.color_mode = "inverse"
         elif int(values["ram_load"].rstrip('%')) > 95:
@@ -560,10 +559,10 @@ class SimpleGUI(threading.Thread):
             self.color_mode = "inverse"
             self.cinepi_controller.rec()
             logging.info("RAM full")
-        elif int(self.redis_controller.get_value('rec')) == 1:
+        elif int(self.redis_controller.get_value(ParameterKey.REC.value)) == 1:
             self.current_background_color = "red"
             self.color_mode = "inverse"
-        elif int(self.redis_controller.get_value('is_buffering')) == 1:
+        elif int(self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value)) == 1:
             self.current_background_color = "green"
             self.color_mode = "inverse"
         else:
@@ -603,12 +602,12 @@ class SimpleGUI(threading.Thread):
         self.draw_left_sections(draw, values)
 
         # Get sensor resolution
-        self.width = int(self.redis_controller.get_value("width"))
-        self.height = int(self.redis_controller.get_value("height"))
+        self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value))
+        self.height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value))
         self.aspect_ratio = self.width / self.height
-        self.anamorphic_factor = float(self.redis_controller.get_value('anamorphic_factor'))
-        lores_width = int(self.redis_controller.get_value("lores_width"))
-        lores_height = int(self.redis_controller.get_value("lores_height"))
+        self.anamorphic_factor = float(self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value))
+        lores_width = int(self.redis_controller.get_value(ParameterKey.LOWRES_WIDTH.value))
+        lores_height = int(self.redis_controller.get_value(ParameterKey.LOWRES_HEIGHT.value))
 
         frame_width = 1920
         frame_height = 1080
@@ -637,7 +636,7 @@ class SimpleGUI(threading.Thread):
         preview_x = (frame_width - preview_w) // 2
         preview_y = (frame_height - preview_h) // 2
 
-        if int(self.redis_controller.get_value('rec')) == 1:
+        if int(self.redis_controller.get_value(ParameterKey.REC.value)) == 1:
             line_color = (255, 0, 0)
         else:
             line_color = (249, 249, 249)

@@ -1,7 +1,47 @@
+from enum import Enum
 import redis
 import logging
 import threading
 import RPi.GPIO as GPIO
+
+class ParameterKey(Enum):
+    ANAMORPHIC_FACTOR = "anamorphic_factor"
+    BIT_DEPTH = "bit_depth"
+    BUFFER = "buffer"
+    CAM_INIT = "cam_init"
+    CAMERAS = "cameras"
+    CG_RB = "cg_rb"
+    FILE_SIZE = "file_size"
+    FPS = "fps"
+    FPS_ACTUAL = "fps_actual"
+    FPS_LAST = "fps_last"
+    FPS_MAX = "fps_max"
+    FPS_USER = "fps_user"
+    FRAMECOUNT = "framecount"
+    GUI_LAYOUT = "gui_layout"
+    HEIGHT = "height"
+    IR_FILTER = "ir_filter"
+    IS_BUFFERING = "is_buffering"
+    IS_MOUNTED = "is_mounted"
+    IS_RECORDING = "is_recording"
+    IS_WRITING = "is_writing"
+    IS_WRITING_BUF = "is_writing_buf"
+    ISO = "iso"
+    LORES_HEIGHT = "lores_height"
+    LORES_WIDTH = "lores_width"
+    PI_MODEL = "pi_model"
+    REC = "rec"
+    SENSOR = "sensor"
+    SENSOR_MODE = "sensor_mode"
+    SHUTTER_A = "shutter_a"
+    SHUTTER_A_NOM = "shutter_a_nom"
+    SPACE_LEFT = "space_left"
+    STORAGE_TYPE = "storage_type"
+    TRIGGER_MODE = "trigger_mode"
+    WB = "wb"
+    WB_USER = "wb_user"
+    WIDTH = "width"
+    # Add more as needed
 
 class Event:
     def __init__(self):
@@ -68,7 +108,7 @@ class RedisController:
                         self.local_updates.remove(changed_key)
                         continue
 
-                if changed_key != "fps_actual":
+                if changed_key != ParameterKey.FPS_ACTUAL.value:
                     logging.info(f"Changed value: {changed_key} = {value_str}")
                     self.redis_parameter_changed.emit({'key': changed_key, 'value': value_str})
 
@@ -93,7 +133,7 @@ class RedisController:
 
             self.local_updates.add(key)  # Track locally updated key
 
-            if key != 'fps_actual':
+            if key != ParameterKey.FPS_ACTUAL.value:
                 logging.info(f"Changed value: {key} = {value}")
 
 

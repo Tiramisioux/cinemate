@@ -91,7 +91,7 @@ class SimpleGUI(threading.Thread):
 
     def emit_background_color_change(self):
         if self.socketio is not None:
-            self.socketio.emit('background_color_change', {'background_color': self.get_background_color})
+            self.socketio.emit('background_color_change', {'background_color': self.current_background_color})
         else:
             logging.warning("SocketIO not initialized. Unable to emit background_color_change.")
 
@@ -687,11 +687,11 @@ class SimpleGUI(threading.Thread):
         self.draw_right_vu_meter(draw)
 
         vu = self.vu_smoothed  # Or .usb_monitor.audio_monitor.vu_levels if you want raw
-        if vu:
-            levels = " | ".join([f"Ch{i+1}={v:.1f}%" for i, v in enumerate(vu)])
-            logging.info(f"Mic levels: {levels}")
-        else:
-            logging.info("Mic level: No VU data available.")
+        # if vu:
+        #     levels = " | ".join([f"Ch{i+1}={v:.1f}%" for i, v in enumerate(vu)])
+        #     logging.info(f"Mic levels: {levels}")
+        # else:
+        #     logging.info("Mic level: No VU data available.")
 
 
 

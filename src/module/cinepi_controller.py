@@ -27,7 +27,7 @@ class CinePiController:
                  anamorphic_steps,
                  default_anamorphic_factor
                  ):
-        
+
         self.parameters_lock_obj = threading.Lock()
         self.cinepi = cinepi
         self.pwm_controller = pwm_controller
@@ -328,8 +328,6 @@ class CinePiController:
             self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_s)
 
             self.redis_controller.get_value(ParameterKey.FPS_LAST.value, round(safe_value))
-
-
 
     def set_iso_lock(self, value=None):
         if value is not None:
@@ -764,7 +762,10 @@ class CinePiController:
         self.wb_cg_rb_array = {}  # Ensuring it is initialized as a dictionary
 
         try:
-            tuning_file_path = f"/home/pi/cinemate/resources/tuning_files/{self.current_sensor}.json"
+            tuning_file_path = (
+                f"/home/pi/libcamera/src/ipa/rpi/pisp/data/"
+                f"{self.current_sensor.replace('_mono', '')}.json"
+            )
             logging.info(f"Loading tuning file from: {tuning_file_path}")
 
             with open(tuning_file_path, 'r') as file:

@@ -198,7 +198,7 @@ class CinePiProcess(Thread):
             '--lores-width', str(lw),
             '--lores-height', str(lh),
             '--hdmi-port', hd,
-            '-p', f'{ox},{oy},{pw},{ph}'
+            '-p', f'{ox},{oy},{pw},{ph}',
             '--rotation', str(rot),
             '--hflip', str(hf),
             '--vflip', str(vf),

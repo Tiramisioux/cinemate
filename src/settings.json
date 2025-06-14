@@ -158,7 +158,7 @@
   },
 
   "i2c_oled": {
-    "enabled": true,
+    "enabled": false,
     "width": 64,
     "height": 48,
     "font_size": 7,

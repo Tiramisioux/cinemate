@@ -7,77 +7,88 @@ from collections import deque
 
 from module.redis_controller import ParameterKey
 
+
 class RedisListener:
-    def __init__(self, redis_controller, framerate_callback=None, host='localhost', port=6379, db=0):
+    """
+    Drop-in replacement that makes FRAMECOUNT monotonic ─ eliminates the
+    259 ↔ 260 ping-pong you see when two sensors post different counts.
+    """
+
+    # ───────────────────────── INITIALISATION ──────────────────────────
+    def __init__(
+        self,
+        redis_controller,
+        framerate_callback=None,
+        host="localhost",
+        port=6379,
+        db=0,
+    ):
+        # Redis connections ------------------------------------------------
         self.redis_client = redis.StrictRedis(host=host, port=port, db=db)
-        
         self.pubsub_stats = self.redis_client.pubsub()
         self.pubsub_controls = self.redis_client.pubsub()
         self.channel_name_stats = "cp_stats"
         self.channel_name_controls = "cp_controls"
 
-        self.stdev_threshold = 2.0
-        self.lock = threading.Lock()
-        self.is_recording = False
-        self.framerate_values = []
-        self.sensor_timestamps = deque(maxlen=100)
-        
-        self.recording_start_time = None
-        self.recording_end_time = None
-        
+        # External handles -------------------------------------------------
         self.redis_controller = redis_controller
         self.framerate_callback = framerate_callback
 
-        self.framerate = float(self.redis_controller.get_value(ParameterKey.FPS_ACTUAL.value, 0))
-        self.framecount_last_update_time = datetime.datetime.now()
-        self.framecount = 0
-        self.frame_count = 0
-        self.consecutive_non_increasing_counts = 0
-        self.non_increasing_count_threshold = 3  # Allow 3 non-increasing counts before declaring frame count not increasing
-
-        self.set_frame_count_increase_tolerance()
-        
+        # Runtime state ----------------------------------------------------
+        self.lock = threading.Lock()
         self.bufferSize = 0
         self.colorTemp = 0
         self.focus = 0
-        self.framecount = 0
+
+        #   Frame-related
+        self.frame_count = 0          # last raw value received
+        self.framecount = 0           # value actually written to Redis
         self.redis_controller.set_value(ParameterKey.FRAMECOUNT.value, 0)
 
-        self.last_is_recording_value = self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)
+        #   Monotonic guard  (★ new ★)
+        self.latest_framecount = 0    # highest value seen in this take
+        self.decrease_slack = 2       # tolerate  ≤2 frame back-steps
 
+        #   Recording bookkeeping
+        self.is_recording = False
+        self.last_is_recording_value = self.redis_controller.get_value(
+            ParameterKey.IS_RECORDING.value
+        )
+        self.recording_start_time = None
+        self.recording_end_time = None
 
-        
-        self.drop_frame = False
-        self.drop_frame_timer = None
-        
-        self.cinepi_running = True
-        
+        #   FPS / timing
+        self.framerate = float(
+            self.redis_controller.get_value(ParameterKey.FPS_ACTUAL.value, 0)
+        )
+        self.current_framerate = None
+        self.sensor_timestamps = deque(maxlen=100)
+        self.set_frame_count_increase_tolerance()
         self.framecount_changing = False
         self.last_framecount = 0
         self.last_framecount_check_time = datetime.datetime.now()
-        self.framecount_check_interval = 1.0  # Default to 1 second, will be updated based on FPS
-        
-        self.redis_controller.set_value(ParameterKey.REC.value, "0")
-        
-        self.max_fps_adjustment = 0.1  # Maximum adjustment per iteration
-        self.min_fps_adjustment = 0.0001  # Minimum adjustment increment
-        self.fps_adjustment_interval = 1.0  # Adjust every 1 second
-        self.last_fps_adjustment_time = datetime.datetime.now()
+        self.framecount_check_interval = 1.0
 
-        self.current_framerate = None
-        
+        #   Misc flags
+        self.drop_frame = False
+        self.drop_frame_timer = None
+
+        # Start threads ----------------------------------------------------
         self.start_listeners()
 
+    # ─────────────────────── HELPERS & SETUP ────────────────────────────
     def start_listeners(self):
         self.pubsub_stats.subscribe(self.channel_name_stats)
         self.pubsub_controls.subscribe(self.channel_name_controls)
 
-        self.listener_thread_stats = threading.Thread(target=self.listen_stats)
-        self.listener_thread_stats.daemon = True
+        self.listener_thread_stats = threading.Thread(
+            target=self.listen_stats, daemon=True
+        )
         self.listener_thread_stats.start()
 
-        self.listener_thread_controls = threading.Thread(target=self.listen_controls)
-        self.listener_thread_controls.daemon = True
+        self.listener_thread_controls = threading.Thread(
+            target=self.listen_controls, daemon=True
+        )
         self.listener_thread_controls.start()
 
     def set_frame_count_increase_tolerance(self):
@@ -87,124 +98,159 @@ class RedisListener:
         else:
             self.frame_count_increase_tolerance = 0.5
 
+    # ──────────────────────── MONOTONIC FILTER ──────────────────────────
+    def _update_global_framecount(self, new_value: int) -> None:
+        """
+        Accepts only forward progress in frame numbers.
+        Tiny decreases due to the second sensor are ignored.
+        """
+        # Ignore a value that is well behind what we already published
+        if new_value + self.decrease_slack < self.latest_framecount:
+            return
+
+        # Publish genuine forward progress
+        if new_value > self.latest_framecount:
+            self.latest_framecount = new_value
+            self.redis_controller.set_value(
+                ParameterKey.FRAMECOUNT.value, new_value
+            )
+
+    # ─────────────────────────── STAT LISTENER ──────────────────────────
     def listen_stats(self):
         for message in self.pubsub_stats.listen():
-            if message['type'] == 'message':
-                message_data = message['data'].decode('utf-8').strip()
-                if message_data.startswith("{") and message_data.endswith("}"):
-                    try:
-                        stats_data = json.loads(message_data)
-                        buffer_size = stats_data.get('bufferSize', None)
-                        self.frame_count = stats_data.get('frameCount', None)
-                        color_temp = stats_data.get('colorTemp', None)
-                        sensor_timestamp = stats_data.get('sensorTimestamp', None)
-                        self.current_framerate = stats_data.get('framerate', None)
-                        
-                        if color_temp:
-                            self.colorTemp = color_temp
+            if message["type"] != "message":
+                continue
 
-                        # Update Redis key for current buffer size if changed
-                        current_buffer = self.redis_controller.get_value(ParameterKey.BUFFER.value)
-                        if buffer_size is not None and (current_buffer is None or int(current_buffer) != buffer_size):
-                            self.redis_controller.set_value(ParameterKey.BUFFER.value, buffer_size)
+            data = message["data"].decode("utf-8").strip()
+            if not (data.startswith("{") and data.endswith("}")):
+                logging.warning(f"Unexpected stats payload: {data}")
+                continue
 
-                        # Update sensor timestamps
-                        if sensor_timestamp is not None:
-                            self.sensor_timestamps.append(int(sensor_timestamp))
-                            self.calculate_average_framerate_last_100_frames()
-                        
-                        if len(self.sensor_timestamps) > 1:
-                            self.calculate_current_framerate()
+            try:
+                stats = json.loads(data)
+            except json.JSONDecodeError as e:
+                logging.error(f"Stats JSON error: {e}")
+                continue
 
-                        # Update framecount in Redis only if it has changed
-                        if self.frame_count is not None and self.frame_count != self.framecount:
-                            self.framecount = self.frame_count
-                            logging.debug(f"Updating framecount in Redis to {self.frame_count}")
-                            self.redis_controller.set_value(ParameterKey.FRAMECOUNT.value, self.frame_count)
+            # ---------- Extract values ----------
+            buffer_size = stats.get("bufferSize")
+            self.frame_count = stats.get("frameCount")
+            color_temp = stats.get("colorTemp")
+            sensor_ts = stats.get("sensorTimestamp")
+            self.current_framerate = stats.get("framerate")
 
-                        # Check and set buffering status if changed
-                        is_buffering = buffer_size > 0 if buffer_size is not None else False
-                        current_buffering_status = self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value)
-                        new_buffering_status = 1 if is_buffering else 0
-                        if current_buffering_status is None or int(current_buffering_status) != new_buffering_status:
-                            logging.debug(f"Updating is_buffering to {new_buffering_status}")
-                            self.redis_controller.set_value(ParameterKey.IS_BUFFERING.value, new_buffering_status)
+            if color_temp is not None:
+                self.colorTemp = color_temp
 
-                        # Add current framerate value to the list
-                        if self.current_framerate is not None:
-                            self.framerate_values.append(self.current_framerate)
-                            
-                        # Check for framerate deviation
-                        expected_fps = float(self.redis_controller.get_value(ParameterKey.FPS.value))
-                        if self.current_framerate is not None:
-                            fps_difference = abs((self.current_framerate) - expected_fps)
-                            # print(f"Expected FPS: {expected_fps}, Actual FPS: {self.current_framerate*1000}")
-                            # print(f"FPS difference: {fps_difference}")
-                            if fps_difference > 1 and not self.drop_frame:
-                                self.drop_frame = True
-                                logging.info("Drop frame detected")
-                                
-                                # Set a timer to reset the drop_frame flag after 0.5 seconds
-                                if self.drop_frame_timer:
-                                    self.drop_frame_timer.cancel()
-                                self.drop_frame_timer = threading.Timer(0.5, self.reset_drop_frame)
-                                self.drop_frame_timer.start()
+            # ---------- Buffer size ----------
+            current_buffer = self.redis_controller.get_value(
+                ParameterKey.BUFFER.value
+            )
+            if (
+                buffer_size is not None
+                and (current_buffer is None or int(current_buffer) != buffer_size)
+            ):
+                self.redis_controller.set_value(
+                    ParameterKey.BUFFER.value, buffer_size
+                )
 
-                            # Update framecount check interval based on current FPS
-                            if self.current_framerate == 0 or None:
-                                framecount_fps = 1
-                            else:
-                                framecount_fps = self.current_framerate
-                            self.framecount_check_interval = max(0.5, 2 / framecount_fps)
+            # ---------- Sensor timestamps / instant FPS ----------
+            if sensor_ts is not None:
+                self.sensor_timestamps.append(int(sensor_ts))
+                self.calculate_current_framerate()
 
-                        # Check if framecount is changing
-                        self.check_framecount_changing()
-                        
-                        # # Calculate average framerate of last 100 frames
-                        # avg_framerate = self.calculate_average_framerate_last_100_frames()
+            # ---------- Frame-count (★ monotonic logic ★) ----------
+            if self.frame_count is not None:
+                self._update_global_framecount(int(self.frame_count))
 
-                        # # Adjust FPS if necessary
-                        # current_time = datetime.datetime.now()
-                        # if (current_time - self.last_fps_adjustment_time).total_seconds() >= self.fps_adjustment_interval:
-                        #     self.adjust_fps(avg_framerate)
-                        #     self.last_fps_adjustment_time = current_time
+            # ---------- Buffering flag ----------
+            is_buffering = bool(buffer_size) if buffer_size is not None else False
+            new_flag = 1 if is_buffering else 0
+            old_flag = self.redis_controller.get_value(
+                ParameterKey.IS_BUFFERING.value
+            )
+            if old_flag is None or int(old_flag) != new_flag:
+                self.redis_controller.set_value(
+                    ParameterKey.IS_BUFFERING.value, new_flag
+                )
 
+            # ---------- More housekeeping ----------
+            if self.current_framerate:
+                self.framecount_check_interval = max(
+                    0.5, 2 / self.current_framerate
+                )
+            self.check_framecount_changing()
 
-                    except json.JSONDecodeError as e:
-                        logging.error(f"Failed to parse JSON data: {e}")
-                    except TypeError as e:
-                        logging.error(f"Type error in stats data: {e}")
-                else:
-                    logging.warning(f"Received unexpected data format: {message_data}")
-                    
-    def reset_drop_frame(self):
-        self.drop_frame = False
-        logging.info("Drop frame flag reset")
+    # ───────────────────────── CONTROL LISTENER ─────────────────────────
+    def listen_controls(self):
+        for message in self.pubsub_controls.listen():
+            if message["type"] != "message":
+                continue
+
+            key = message["data"].decode("utf-8")
+            value_bytes = self.redis_client.get(key)
+            if value_bytes is None:
+                continue
+            value_str = value_bytes.decode("utf-8")
+
+            # Only act on a real change
+            if key == ParameterKey.IS_RECORDING.value:
+                if value_str == self.last_is_recording_value:
+                    continue
+                self.last_is_recording_value = value_str
+
+                if value_str == "1":          # ── Recording started
+                    self.is_recording = True
+                    self.reset_framecount()
+                    self.recording_start_time = datetime.datetime.now()
+                    logging.info(
+                        f"Recording started: {self.recording_start_time}"
+                    )
+
+                elif value_str == "0":        # ── Recording stopped
+                    if self.is_recording:
+                        self.is_recording = False
+                        self.recording_end_time = datetime.datetime.now()
+                        logging.info(
+                            f"Recording stopped: {self.recording_end_time}"
+                        )
+                        self.analyze_frames()
+
+    # ────────────────────────── SMALL UTILITIES ────────────────────────
+    def calculate_current_framerate(self):
+        if len(self.sensor_timestamps) < 2:
+            return
+
+        secs = [ts / 1_000_000 for ts in self.sensor_timestamps]
+        diffs = [b - a for a, b in zip(secs, secs[1:])]
+        if not diffs:
+            return
+
+        avg_dt = sum(diffs) / len(diffs)
+        fps = 1.0 / avg_dt if avg_dt else 0
+        self.current_framerate = fps
+        self.redis_controller.set_value(ParameterKey.FPS_ACTUAL.value, fps)
 
     def check_framecount_changing(self):
-        current_time = datetime.datetime.now()
-        time_elapsed = (current_time - self.last_framecount_check_time).total_seconds()
+        now = datetime.datetime.now()
+        if (now - self.last_framecount_check_time).total_seconds() < self.framecount_check_interval:
+            return
 
-        if time_elapsed >= self.framecount_check_interval:
-            if self.frame_count != self.last_framecount:
-                if not self.framecount_changing:
-                    self.framecount_changing = True
-                    self.redis_controller.set_value(ParameterKey.REC.value, "1")
-                    logging.info("Framecount is changing")
-            else:
-                if self.framecount_changing:
-                    self.framecount_changing = False
-                    self.redis_controller.set_value(ParameterKey.REC.value, "0")
-                    logging.info("Framecount is stable")
+        changing = self.frame_count != self.last_framecount
+        flag = "1" if changing else "0"
+        self.redis_controller.set_value(ParameterKey.REC.value, flag)
 
-            self.last_framecount = self.frame_count
-            self.last_framecount_check_time = current_time
-        
+        self.framecount_changing = changing
+        self.last_framecount = self.frame_count
+        self.last_framecount_check_time = now
+
     def reset_framecount(self):
         self.framecount = 0
         self.frame_count = 0
+        self.latest_framecount = 0          # ← clear monotonic guard
         self.redis_controller.set_value(ParameterKey.FRAMECOUNT.value, 0)
         logging.info("Framecount reset to 0.")
+
 
     def listen_controls(self):
         for message in self.pubsub_controls.listen():

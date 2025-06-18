@@ -166,7 +166,8 @@ class CinePiProcess(Thread):
             ph = ah; pw = int(ph * aspect)
         else:
             pw = aw; ph = int(pw / aspect)
-            ox, oy = (fw-pw)//2, (fh-ph)//2
+        
+        ox, oy = (fw-pw)//2, (fh-ph)//2
         
         # gains, shutter
         cg_rb = self.redis_controller.get_value(ParameterKey.CG_RB.value) or '2.5,2.2'

@@ -104,6 +104,10 @@ class CinePiProcess(Thread):
         }
         self.active_filters = set(self.log_filters)
         
+        # ── NEW: detect the “DNG written:” line that dng_encoder now prints
+        self.dng_rx = re.compile(r'DNG written:\s*(\S+\.dng)')
+        self.redis_channel = 'cinepi.last_dng'          # publish JSON here
+        
         # load per-camera geometry from settings
         geo = _SETTINGS.get('geometry', {})
         self.geometry = geo.get(self.cam.port, {})
@@ -120,14 +124,51 @@ class CinePiProcess(Thread):
         Thread(target=self._pump, args=(self.proc.stderr, self.err_q)).start()
         self.proc.wait()
         logging.info('[%s] exited %s', self.cam, self.proc.returncode)
-
+        
+    # ─────────────────────────────────────────────────────────────
+    #  Stream one pipe from cinepi-raw, relay lines, intercept the
+    #  “DNG written:” message, and update a per-camera Redis key.
+    # ─────────────────────────────────────────────────────────────
     def _pump(self, pipe, q):
+        dng_rx    = re.compile(r'DNG written:\s*(\S+\.dng)')
+        redis_key = f'last_dng_{self.cam.port}'   # cam0 → last_dng_cam0 …
+
         for raw in iter(pipe.readline, b''):
+            # 1. canonicalise ---------------------------------------------------
             line = raw.decode('utf-8', 'replace').rstrip()
+
+            # 2. forward raw text exactly as before ----------------------------
             q.put(line)
             self.message.emit(line)
             self._log(line)
+
+            # 3. special-case the new encoder message --------------------------
+            m = dng_rx.search(line)
+            if m:
+                fname   = m.group(1)
+                payload = {
+                    'type': 'dng',
+                    'cam' : self.cam.index,
+                    'file': fname,
+                    'time': time.time(),
+                }
+
+                # 3a. supervisor log (human readable)
+                #logging.info('[%s] Last DNG written → %s', self.cam, fname)
+
+                # 3b. structured in-process event
+                self.message.emit(payload)
+
+                # 3c. store per-camera key in Redis
+                try:
+                    self.redis_controller.set_value(redis_key, fname)
+                except Exception as e:
+                    logging.warning('[%s] Redis set_value failed: %s',
+                                    self.cam, e)
+
         pipe.close()
+
+
 
     def _log(self, text):
         for name, rx in self.log_filters.items():

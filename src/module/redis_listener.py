@@ -4,6 +4,7 @@ import threading
 import datetime
 import json
 from collections import deque
+from collections import defaultdict
 
 from module.redis_controller import ParameterKey
 
@@ -33,6 +34,8 @@ class RedisListener:
         # External handles -------------------------------------------------
         self.redis_controller = redis_controller
         self.framerate_callback = framerate_callback
+        
+        self._callbacks = defaultdict(list)
 
         # Runtime state ----------------------------------------------------
         self.lock = threading.Lock()
@@ -97,6 +100,19 @@ class RedisListener:
             self.frame_count_increase_tolerance = 3 * frame_interval
         else:
             self.frame_count_increase_tolerance = 0.5
+            
+    def on(self, event_name: str, fn):
+        print('on')
+        """Register a callback that will be invoked as  on(event_name)."""
+        self._callbacks[event_name].append(fn)
+
+    def _fire(self, event_name: str, *args, **kw):
+        print('fire')
+        for fn in self._callbacks[event_name]:
+            try:
+                fn(*args, **kw)
+            except Exception:                # never let a bad handler kill the loop
+                logging.exception("RedisListener callback failed")
 
     # ──────────────────────── MONOTONIC FILTER ──────────────────────────
     def _update_global_framecount(self, new_value: int) -> None:
@@ -201,6 +217,7 @@ class RedisListener:
 
                 if value_str == "1":          # ── Recording started
                     self.is_recording = True
+                    self._fire("recording_started")
                     self.reset_framecount()
                     self.recording_start_time = datetime.datetime.now()
                     logging.info(
@@ -208,6 +225,7 @@ class RedisListener:
                     )
 
                 elif value_str == "0":        # ── Recording stopped
+                    self._fire("recording_stopped")
                     if self.is_recording:
                         self.is_recording = False
                         self.recording_end_time = datetime.datetime.now()
@@ -250,43 +268,6 @@ class RedisListener:
         self.latest_framecount = 0          # ← clear monotonic guard
         self.redis_controller.set_value(ParameterKey.FRAMECOUNT.value, 0)
         logging.info("Framecount reset to 0.")
-
-
-    def listen_controls(self):
-        for message in self.pubsub_controls.listen():
-            if message["type"] != "message":
-                continue
-
-            changed_key = message["data"].decode('utf-8')
-            with self.lock:
-                value = self.redis_client.get(changed_key)
-                if value is None:
-                    continue
-                value_str = value.decode('utf-8')
-
-                # ✅ Skip if value hasn't changed
-            if changed_key == ParameterKey.IS_RECORDING.value:
-                if value_str == self.last_is_recording_value:
-                    continue
-                self.last_is_recording_value = value_str
-
-                if value_str == '1':
-                    self.is_recording = True
-                    self.reset_framecount()
-                    self.recording_start_time = datetime.datetime.now()
-                    logging.info(f"Recording started at: {self.recording_start_time}")
-                    self.framerate = float(self.redis_controller.get_value(ParameterKey.FPS.value))
-
-                elif value_str == '0':
-                    if self.is_recording:
-                        self.is_recording = False
-                        if self.recording_start_time:
-                            self.recording_end_time = datetime.datetime.now()
-                            logging.info(f"Recording stopped at: {self.recording_end_time}")
-                            self.analyze_frames()
-                            self.framerate_values = []
-                        else:
-                            logging.warning("Recording stopped, but no recording start time was registered.")
 
     def calculate_current_framerate(self):
         if len(self.sensor_timestamps) > 1:

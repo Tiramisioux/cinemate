@@ -41,6 +41,7 @@ class ParameterKey(Enum):
     WB = "wb"
     WB_USER = "wb_user"
     WIDTH = "width"
+    MEMORY_ALERT   = "memory_alert"
     # Add more as needed
 
 class Event:

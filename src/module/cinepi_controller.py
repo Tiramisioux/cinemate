@@ -7,6 +7,7 @@ from fractions import Fraction
 import math
 import subprocess
 from threading import Thread
+import psutil
 
 # Import RedisListener
 from module.redis_listener import RedisListener
@@ -48,6 +49,9 @@ class CinePiController:
         
         self.redis_listener = RedisListener(redis_controller)
         self.fps = int(round(float(self.redis_controller.get_value(ParameterKey.FPS_LAST.value))))
+        
+        self._rec_thread        = None
+        self._rec_thread_stop   = threading.Event()
         
         # Set startup flag
         self.startup = True
@@ -110,6 +114,8 @@ class CinePiController:
         self.initial_exposure = None
         self.initial_motion_blur = None
         self.initial_shutter_a = None
+        
+        self.RAM_LIMIT_PERCENT = 10
 
         self.update_steps()
 
@@ -373,6 +379,7 @@ class CinePiController:
             self.stop_recording()
             
     def start_recording(self):
+        self.redis_controller.set_value(ParameterKey.MEMORY_ALERT.value, 0)
         if self.ssd_monitor.is_mounted == True and self.ssd_monitor.get_space_left:
             self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 1)
             logging.info(f"Started recording")
@@ -1039,3 +1046,44 @@ class CinePiController:
                 return "Invalid value provided."
         else:
             return "IR Filter is not supported for this sensor."
+
+# ────────────────────────── recording helper thread ────────────────────
+    def _recording_worker(self):
+        logging.info("CinePiController worker thread started")
+        try:
+            while not self._rec_thread_stop.is_set():
+                # safety-belt – quit if some other part already stopped recording
+                if self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "0":
+                    break
+
+                # ─── Watch RAM ───────────────────────────────────────────────
+                ram_pct = psutil.virtual_memory().percent
+                if ram_pct >= self.RAM_LIMIT_PERCENT:
+                    logging.warning(f"RAM {ram_pct:.1f}% ≥ {self.RAM_LIMIT_PERCENT}%! "
+                                    "Stopping recording.")
+                    # tell the UI / mediator
+                    self.redis_controller.set_value(ParameterKey.MEMORY_ALERT.value,
+                                                    int(ram_pct))
+                    # flip the master flag – everything else reacts automatically
+                    self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
+                    break
+
+                # …your other per-frame / per-second work here …
+
+                time.sleep(0.25)   # 4 Hz polling is plenty
+        finally:
+            logging.info("CinePiController worker thread exiting")
+
+    def start_recording_worker(self):
+        if self._rec_thread and self._rec_thread.is_alive():
+            return                                          # already running
+        self._rec_thread_stop.clear()
+        self._rec_thread = threading.Thread(
+            target=self._recording_worker, daemon=True)
+        self._rec_thread.start()
+
+    def stop_recording_worker(self):
+        self._rec_thread_stop.set()
+        if self._rec_thread:
+            self._rec_thread.join(timeout=2)                # be gentle
+            self._rec_thread = None

@@ -21,6 +21,9 @@ class Mediator:
         self.redis_controller.redis_parameter_changed.subscribe(self.handle_redis_event)
         self.redis_controller.redis_parameter_changed.subscribe(self.handle_fps_change)
         self.redis_controller.redis_parameter_changed.subscribe(self.handle_shutter_a_change)
+        
+        self.redis_listener.on("recording_started", self._on_rec_start)
+        self.redis_listener.on("recording_stopped",  self._on_rec_stop)
 
         self.stop_recording_timer = None
         self.stop_recording_timeout = 2
@@ -92,6 +95,14 @@ class Mediator:
                 self.stream.toggle_background_color()
             else:
                 self.gpio_output.set_recording(0)    
+                
+        elif data['key'] == ParameterKey.MEMORY_ALERT.value:
+            pct = data['value']
+            logging.warning(f"Memory alert: {pct}%")
+            # examples – pick whichever UX element you prefer
+            self.cinepi_app.message.publish(f"⚠️  RAM usage {pct}% – recording stopped")
+            self.stream.flash_message(f"RAM {pct}% – REC aborted")
+
 
     def handle_stop_recording_timeout(self):
         """Handle the timeout event when recording should be stopped."""
@@ -115,3 +126,14 @@ class Mediator:
             print('changing pwm')
             shutter_a_new = self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)
             self.pwm_controller.set_pwm(None, shutter_a_new)
+            
+    def _on_rec_start(self):
+        logging.info("Mediator event → recording_started")
+        # whatever the mediator must do immediately
+        # e.g. light an LED, reset timers …
+        self.cinepi_controller.start_recording_worker()
+
+    def _on_rec_stop(self):
+        logging.info("Mediator event → recording_stopped")
+        self.cinepi_controller.stop_recording_worker()
+

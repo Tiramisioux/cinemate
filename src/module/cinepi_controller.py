@@ -115,7 +115,7 @@ class CinePiController:
         self.initial_motion_blur = None
         self.initial_shutter_a = None
         
-        self.RAM_LIMIT_PERCENT = 10
+        self.RAM_LIMIT_PERCENT = 80
 
         self.update_steps()
 
@@ -158,8 +158,7 @@ class CinePiController:
             logging.info(f"Anamorphic factor toggled to: {next_value}")
         
         self.cinepi.restart()
-                
-        
+                      
     def set_shutter_a_sync_mode(self, mode=None):
         if mode is None:
             # Toggle the mode if no argument is provided

@@ -88,13 +88,14 @@ class Mediator:
                 logging.info("Recording stopped!")
                 self.gpio_output.set_recording(0)
         
-        # Handle "is_writing" key changes        
         elif data['key'] == ParameterKey.IS_WRITING.value:
             is_writing = bool(data['value'])
-            if is_writing == 1:
-                self.stream.toggle_background_color()
-            else:
-                self.gpio_output.set_recording(0)    
+            if is_writing:
+                if hasattr(self.stream, "toggle_background_color"):
+                    self.stream.toggle_background_color()
+                else:
+                    logging.warning("stream object lacks toggle_background_color()")
+
                 
         elif data['key'] == ParameterKey.MEMORY_ALERT.value:
             pct = data['value']
@@ -127,13 +128,12 @@ class Mediator:
             shutter_a_new = self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)
             self.pwm_controller.set_pwm(None, shutter_a_new)
             
-    def _on_rec_start(self):
-        logging.info("Mediator event → recording_started")
-        # whatever the mediator must do immediately
-        # e.g. light an LED, reset timers …
+    def _on_rec_start(self, *, cam=None, **_):
+        """Callback from RedisListener when any camera starts recording."""
+        logging.info(f"Mediator event → recording_started (cam={cam})")
         self.cinepi_controller.start_recording_worker()
 
-    def _on_rec_stop(self):
-        logging.info("Mediator event → recording_stopped")
+    def _on_rec_stop(self, *, cam=None, **_):
+        """Callback from RedisListener when a camera stops recording."""
+        logging.info(f"Mediator event → recording_stopped (cam={cam})")
         self.cinepi_controller.stop_recording_worker()
-

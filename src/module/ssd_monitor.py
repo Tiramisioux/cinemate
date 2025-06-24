@@ -82,7 +82,7 @@ class SSDMonitor:
             logging.info(f"RAW drive mounted at {self.mount_path} ({self.device_type})")
             self._update_space_left()
             self.mount_event.emit(self.mount_path, self.device_type)
-        elif not is_currently_mounted and self.is_mounted:
+        elif not is_currently_mounted and not self.is_mounted:
             logging.info(f"RAW drive unmounted from {self.mount_path}")
             self.is_mounted = False
             self.space_left = None

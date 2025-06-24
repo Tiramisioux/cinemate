@@ -11,6 +11,8 @@ import re
 from statistics import mean
 from module.utils import Utils
 from module.redis_controller import ParameterKey
+import json
+import re  
 
 class SimpleGUI(threading.Thread):
     def __init__(self, 
@@ -66,6 +68,7 @@ class SimpleGUI(threading.Thread):
         # Initialize current background color
         self.current_background_color = "black"  # Default background color
         
+        
     def load_sensor_values_from_redis(self):
         """
         Load current sensor values (width, height, bit depth) from Redis.
@@ -119,26 +122,37 @@ class SimpleGUI(threading.Thread):
 
         # Define layout directly as a dict (not nested in another dict)
         self.layout = {
-            "fps_label": {"position": (98, 4), "font_size": 30, "font": "regular"},
-            "fps": {"position": (159, 3), "font_size": 41},
-            "fps_actual": {"position": (220, 3), "font_size": 41, "font": "bold"},
-            "shutter_label": {"position": (555, 4), "font_size": 30, "font": "regular"},
-            "shutter_speed": {"position": (690, 3), "font_size": 41, "font": "bold"},
-            "iso_label": {"position": (1194, 3), "font_size": 30, "font": "regular"},
-            "iso": {"position": (1232, 4), "font_size": 41, "font": "bold"},
-            "wb_label": {"position": (1641, 4), "font_size": 30, "font": "regular"},
-            "color_temp": {"position": (1695, 3), "font_size": 41, "font": "bold"},
+                # column 0
+                "fps_label":      {"pos": (  85,   4), "size": 30, "font": "regular"},
+                "fps":            {"pos": ( 150,   3), "size": 41, "font": "bold"},
+
+                # column 1
+                "shutter_label":  {"pos": ( 400,   4), "size": 30, "font": "regular"},
+                "shutter_speed":  {"pos": ( 540,   3), "size": 41, "font": "bold"},
+
+                # column 2
+                "iso_label":      {"pos": ( 840,   4), "size": 30, "font": "regular"},
+                "iso":            {"pos": ( 880,   3), "size": 41, "font": "bold"},
+
+                # column 3
+                "wb_label":       {"pos": (1150,   4), "size": 30, "font": "regular"},
+                "color_temp":     {"pos": (1210,   3), "size": 41, "font": "bold"},
+
+                # column 4 
+                "res_label":    {"pos": (1473,   4), "size": 30, "font": "regular"},
+                "res":            {"pos": (1540,   3), "size": 41, "font": "bold"},
+
 
             # Bottom row
-            "media_label": {"position": (98, 1050), "font_size": 30, "font": "regular"},
-            "disk_space": {"position": (192, 1041), "font_size": 41, "font": "bold"},
-            "battery_level": {"position": (600, 1041), "font_size": 41, "font": "bold"},
-            "cpu_label": {"position": (1260, 1050), "font_size": 30, "font": "regular"},
-            "cpu_load": {"position": (1330, 1041), "font_size": 41, "font": "bold"},
-            "cpu_temp_label": {"position": (1458, 1050), "font_size": 31, "font": "regular"},
-            "cpu_temp": {"position": (1542, 1041), "font_size": 41, "font": "bold"},
-            "ram_label": {"position": (1673, 1050), "font_size": 30, "font": "regular"},
-            "ram_load": {"position": (1741, 1041), "font_size": 41, "font": "bold"},
+            "media_label": {"pos": (98, 1050), "size": 30, "font": "regular"},
+            "disk_space": {"pos": (192, 1041), "size": 41, "font": "bold"},
+            "battery_level": {"pos": (600, 1041), "size": 41, "font": "bold"},
+            "cpu_label": {"pos": (1260, 1050), "size": 30, "font": "regular"},
+            "cpu_load": {"pos": (1330, 1041), "size": 41, "font": "bold"},
+            "cpu_temp_label": {"pos": (1458, 1050), "size": 31, "font": "regular"},
+            "cpu_temp": {"pos": (1542, 1041), "size": 41, "font": "bold"},
+            "ram_label": {"pos": (1673, 1050), "size": 30, "font": "regular"},
+            "ram_load": {"pos": (1741, 1041), "size": 41, "font": "bold"},
         }
 
         self.colors = {
@@ -161,7 +175,16 @@ class SimpleGUI(threading.Thread):
             "wb_label": {"normal": (136,136,136), "inverse": "black"},
             "color_temp": {"normal": (249,249,249), "inverse": "black"},
             
+            "res_label": {"normal": (136,136,136), "inverse": "black"},
+            "res": {"normal": (249, 249, 249), "inverse": "black"},
+            
             "label": {"normal": (249, 249, 249), "inverse": "black"},
+            
+            "sensor_cam1":     {"normal": (136,136,136), "inverse": "black"},
+            "resolution_cam1": {"normal": (249,249,249), "inverse": "black"},
+            "aspect_cam1":     {"normal": (249,249,249), "inverse": "black"},
+            "bit_depth_cam1":  {"normal": (249,249,249), "inverse": "black"},
+
             
             "resolution": {"normal": "black", "inverse": "black"},
             "aspect": {"normal": "black", "inverse": "black"},
@@ -192,9 +215,10 @@ class SimpleGUI(threading.Thread):
             {
                 "label": "CAM",
                 "items": [
-                    {"key": "resolution", "text": lambda v: v.get("resolution", "")},
+                    {"key": "sensor", "text": lambda v: v.get("sensor", "").upper()},
+                    # {"key": "resolution", "text": lambda v: v.get("resolution", "")},
                     {"key": "aspect", "text": lambda v: v.get("aspect", "")},
-                    {"key": "bit_depth", "text": lambda v: str(v.get("bit_depth", "")).replace("b", "") + "b"},
+                    # {"key": "bit_depth", "text": lambda v: str(v.get("bit_depth", "")).replace("b", "") + "b"},
                     {"key": "exposure_time", "text": lambda v: v.get("exposure_time", "")},
                 ]
             },
@@ -205,6 +229,21 @@ class SimpleGUI(threading.Thread):
                 ]
             }
         ]
+        
+        # ───────────── right side column (mirrors left) ──────────────
+        self.right_section_layout = [
+            {   # this label will be replaced by _update_cam_section_labels()
+                "label": "CAM1",
+                "items": [
+                    {"key": "sensor_cam1",     "text": lambda v: v.get("sensor_cam1", "").upper()},
+                    # {"key": "resolution_cam1", "text": lambda v: v.get("resolution_cam1", "")},
+                    {"key": "aspect_cam1",     "text": lambda v: v.get("aspect_cam1", "")},
+                    # {"key": "bit_depth_cam1",  "text": lambda v: str(v.get("bit_depth_cam1", "")).replace("b", "") + "b"},
+                    {"key": "exposure_time",   "text": lambda v: v.get("exposure_time", "")},   # same shutter sync box
+                ]
+            },
+        ]
+
 
     def estimate_resolution_in_k(self):
         """
@@ -224,119 +263,175 @@ class SimpleGUI(threading.Thread):
         except (TypeError, ValueError):
             resolution_value = "N/A"
         return resolution_value
+    
+    def _update_cam_section_labels(self):
+        """
+        Look at the CAMERAS json stored by CinePiManager and set the
+        column headers (CAM0 / CAM1 / MON) and which layouts to draw.
+        """
+        cams_json = self.redis_controller.get_value(ParameterKey.CAMERAS.value) or '[]'
+        try:
+            cams = json.loads(cams_json)
+        except (ValueError, TypeError):
+            cams = []
+
+        # defaults (no camera data yet)
+        l_lbl, r_lbl = "CAM", "MON"
+        self.draw_right_col = False
+
+        if cams:
+            cams.sort(key=lambda c: c.get('port', ''))
+            l_lbl = cams[0]['port'].upper()        # "CAM0"
+            if len(cams) >= 2:
+                r_lbl           = cams[1]['port'].upper()   # "CAM1"
+                self.draw_right_col = True                  # we have a second column
+
+        # write labels back
+        self.left_section_layout[0]["label"]  = l_lbl
+        self.right_section_layout[0]["label"] = r_lbl
+
 
     def populate_values(self):
-
+        # update section headers first
+        self._update_cam_section_labels()
         self.load_sensor_values_from_redis()
         resolution_value = self.estimate_resolution_in_k()
 
-        width = self.redis_controller.get_value(ParameterKey.WIDTH.value)
-        height = self.redis_controller.get_value(ParameterKey.HEIGHT.value)
-
-        # Ensure width and height are valid numbers before calculation
+        # ── read CAMERAS json ─────────────────────────────────────
+        cams_json = self.redis_controller.get_value(ParameterKey.CAMERAS.value) or "[]"
         try:
-            width = int(width)
-            height = int(height)
-            aspect_ratio = round(width / height, 2) if height != 0 else "N/A"
+            cam_list = json.loads(cams_json)
+        except (ValueError, TypeError):
+            cam_list = []
+
+        sensor_left  = ""
+        sensor_right = ""
+        cam1         = None
+
+        if cam_list:
+            cam_list.sort(key=lambda c: c.get("port", ""))
+            cam0 = cam_list[0]
+            sensor_left = self._format_sensor_name(cam0["model"], cam0["mono"])
+            if len(cam_list) > 1:
+                cam1 = cam_list[1]
+                sensor_right = self._format_sensor_name(cam1["model"], cam1["mono"])
+
+        # ── generic numbers ───────────────────────────────────────
+        width  = self.redis_controller.get_value(ParameterKey.WIDTH.value)
+        height = self.redis_controller.get_value(ParameterKey.HEIGHT.value)
+        try:
+            w_int, h_int = int(width), int(height)
+            aspect_ratio = round(w_int / h_int, 2) if h_int else "N/A"
         except (TypeError, ValueError):
             aspect_ratio = "N/A"
-        
+
         values = {
-            "resolution": resolution_value,
-            "iso_label": "EI",
-            "iso": self.redis_controller.get_value(ParameterKey.ISO.value),
-            "shutter_label": "SHUTTER",
-            "shutter_speed": str(self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)),
-            "fps_label": "FPS",
-            "fps": round(float(self.redis_controller.get_value(ParameterKey.FPS.value))),
-            #"fps_actual": f"/ {float(self.redis_listener.current_framerate):.3f}" if self.redis_listener.current_framerate is not None else "/ N/A",
+            # top-row stuff
+            "resolution":     resolution_value,
+            "iso_label":      "EI",
+            "iso":            self.redis_controller.get_value(ParameterKey.ISO.value),
+            "shutter_label":  "SHUTTER",
+            "shutter_speed":  str(self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)),
+            "fps_label":      "FPS",
+            "fps":            round(float(self.redis_controller.get_value(ParameterKey.FPS.value))),
+            "wb_label":       "WB",
+            "color_temp":     f"{self.redis_controller.get_value(ParameterKey.WB_USER.value)} K",
+            "color_temp_libcamera": f"/ {self.redis_listener.colorTemp}K",
+            "res_label":      "RES",
+            "res":            f"{self.width}×{self.height} :{self.bit_depth}b",
+
+            # left column (CAM0)
+            "sensor":         sensor_left,
+            "aspect":         str(aspect_ratio),
             "exposure_label": "EXP",
-            "exposure_time": str(self.cinepi_controller.exposure_time_fractions),
-            "sensor": str.upper(self.redis_controller.get_value(ParameterKey.SENSOR.value)),
-            "width": str(self.redis_controller.get_value(ParameterKey.WIDTH.value) + " : "),
-            "height": str(self.redis_controller.get_value(ParameterKey.HEIGHT.value) + " : "),
-            "bit_depth": str(self.redis_controller.get_value(ParameterKey.BIT_DEPTH.value) + "b"),
-            "wb_label": "WB",
-            "color_temp": (str(self.redis_controller.get_value(ParameterKey.WB_USER.value)) + " K"),
-            "color_temp_libcamera": ("/ " + str(self.redis_listener.colorTemp) + "K"),
-            "cam": 'CAM',
-            "aspect": str(aspect_ratio),  # Use computed aspect ratio
-            "raw": 'RAW',
-            "ram_label": 'RAM',
-            "mon": 'MON',
-            "anamorphic_factor": (str(self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value)) + "X"),
-            "ram_load": Utils.memory_usage(),
-            "cpu_label": 'CPU',
-            "cpu_load": Utils.cpu_load(),
-            "cpu_temp_label": 'TEMP',
-            "cpu_temp": Utils.cpu_temp(),
-            "media_label": "MEDIA",
-            "disk_label": str(self.ssd_monitor.device_name).upper()[:4] if self.ssd_monitor.device_name else "", #str(self.ssd_monitor.file_system_format).upper() if self.ssd_monitor.file_system_format else "",
-            "usb_connected": bool(self.serial_handler.serial_connected),
-            "mic_connected": self.usb_monitor.usb_mic is not None,
+            "exposure_time":  str(self.cinepi_controller.exposure_time_fractions),
+
+            # misc labels / live data
+            "anamorphic_factor": f"{self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value)}X",
+            "ram_load":       Utils.memory_usage(),
+            "cpu_load":       Utils.cpu_load(),
+            "cpu_temp":       Utils.cpu_temp(),
+            "disk_label":     (self.ssd_monitor.device_name or "").upper()[:4],
+            "usb_connected":  bool(self.serial_handler.serial_connected),
+            "mic_connected":  self.usb_monitor.usb_mic is not None,
             "keyboard_connected": bool(self.usb_monitor and self.usb_monitor.usb_keyboard),
-            "storage_type": self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value)
+            "storage_type":   self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value),
+
+            # static captions
+            "cam": "CAM", "raw": "RAW", "ram_label": "RAM",
+            "cpu_label": "CPU", "cpu_temp_label": "TEMP",
+            "media_label": "MEDIA", "mon": "MON",
         }
 
-        # Construct the frame count string
-        frame_count_string = str(self.redis_controller.get_value(ParameterKey.FRAMECOUNT.value)) + " / " + str(self.redis_controller.get_value(ParameterKey.BUFFER.value))
+        # ── add right-column data when CAM1 exists ────────────────
+        if sensor_right and cam1:
+            sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value) or 0)
+            pk   = cam1["model"] + ("_mono" if cam1["mono"] else "")
+            res1 = self.sensor_detect.get_resolution_info(pk, sensor_mode)
+            w1   = res1.get("width", 1920)
+            h1   = res1.get("height", 1080)
+            bd1  = res1.get("bit_depth", 12)
 
-        # Clean the string to only keep digits, blank spaces, and the / sign
-        cleaned_frame_count_string = re.sub(r"[^0-9 /]", "", frame_count_string)
-        values["frame_count"]= frame_count_string
+            values.update({
+                "sensor_cam1":     sensor_right,
+                "resolution_cam1": self.estimate_resolution_in_k(),
+                "aspect_cam1":     round(w1 / h1, 2),
+                "bit_depth_cam1":  f"{bd1}b",
+            })
 
-        if values["fps"] != int(float(self.redis_controller.get_value(ParameterKey.FPS_USER.value))):
-            self.colors["fps"]["normal"] = "yellow"
-        
-        elif self.cinepi_controller.trigger_mode != 0:
+        # ── housekeeping tweaks (unchanged) ───────────────────────
+        frame_count = f"{self.redis_controller.get_value(ParameterKey.FRAMECOUNT.value)} / " \
+                    f"{self.redis_controller.get_value(ParameterKey.BUFFER.value)}"
+        values["frame_count"] = re.sub(r"[^0-9 /]", "", frame_count)
+
+        # if values["fps"] != int(float(self.redis_controller.get_value(ParameterKey.FPS_USER.value))):
+        #     self.colors["fps"]["normal"] = "yellow"
+        if self.cinepi_controller.shutter_a_sync_mode == 1:
+            self.colors["shutter_speed"]["normal"] = "lightgreen"
+            self.colors["fps"]["normal"] = "lightgreen"
+            
+        if self.cinepi_controller.trigger_mode != 0:
             values["pwm_mode"] = "PWM"
             self.colors["shutter_speed"]["normal"] = "lightgreen"
             self.colors["fps"]["normal"] = "lightgreen"
-        
-        else:
-            self.colors["shutter_speed"]["normal"] = "white"
-            self.colors["fps"]["normal"] = "white"
-
-        if self.cinepi_controller.fps_double:
+        elif self.cinepi_controller.fps_double:
             self.colors["fps"]["normal"] = "lightgreen"
         else:
-            self.colors["fps"]["normal"] = "white"  
+            self.colors["fps"]["normal"] = self.colors["shutter_speed"]["normal"] = "white"
 
-        # if self.cinepi_controller.shutter_a_sync_mode != 0:
-                
-        #     values["shutter_a_sync"] = f"SHUTTER SYNC"
-        # else:
-        #     values["shutter_a_sync"] = ""
-    
-        if self.cinepi_controller.parameters_lock:
-            values["lock"] = "LOCK"
-        else:
-            values["lock"] = ""
-
-        if self.dmesg_monitor.undervoltage_flag:
-            values["low_voltage"] = "VOLTAGE"
-        else:
-            values["low_voltage"] = ""
-
-        # if self.ssd_monitor.last_dng_file:
-        #     values["last_dng_added"] = str(self.ssd_monitor.last_dng_file).upper()
-        # else:
-        #      values["last_dng_added"] = ""
+        values["lock"]        = "LOCK"    if self.cinepi_controller.parameters_lock else ""
+        values["low_voltage"] = "VOLTAGE" if self.dmesg_monitor.undervoltage_flag  else ""
 
         if self.battery_monitor.battery_level is not None:
-            values["battery_level"] = str(self.battery_monitor.battery_level) + '%'
-        else:
-            values["battery_level"] = ''
-
+            values["battery_level"] = f"{self.battery_monitor.battery_level}%"
         self.colors["battery_level"]["normal"] = "lightgreen" if self.battery_monitor.charging else "white"
 
         if self.ssd_monitor.space_left and self.ssd_monitor.is_mounted:
-            min_left = round(int((self.ssd_monitor.space_left * 1000) / (self.cinepi_controller.file_size * float(self.cinepi_controller.fps) * 60)), 0)
-            values["disk_space"] = f"{min_left} MIN"
+            mins = (self.ssd_monitor.space_left * 1000) / (self.cinepi_controller.file_size *
+                                                        float(self.cinepi_controller.fps) * 60)
+            values["disk_space"] = f"{round(mins)} MIN"
         else:
             values["disk_space"] = "NO DISK"
 
         return values
+
+    # ─────────────────────────────────────────────────────────────
+    def _format_sensor_name(self, name: str, is_mono: bool) -> str:
+        """
+        Turn 'imx585' or 'IMX585_MONO' into:
+            '585'            (colour)
+            '585\\nMONO'     (mono)
+        """
+        if not name:
+            return ""
+
+        # upper-case and trim the usual prefixes/suffixes
+        n = name.upper()
+        if n.startswith("IMX"):
+            n = n[3:]
+        n = n.replace("_MONO", "").replace("-MONO", "")
+
+        return f"{n}\nMONO" if is_mono else n
 
     def update_smoothed_vu_levels(self):
         if not self.usb_monitor or not hasattr(self.usb_monitor, "audio_monitor"):
@@ -368,7 +463,7 @@ class SimpleGUI(threading.Thread):
 
     def draw_left_sections(self, draw, values):
         label_font = ImageFont.truetype(self.regular_font_path, 26)
-        box_font = ImageFont.truetype(self.bold_font_path, 24)
+        box_font = ImageFont.truetype(self.bold_font_path, 26)
         box_height = 40
         box_width = 60
         box_color = (136, 136, 136)
@@ -496,6 +591,51 @@ class SimpleGUI(threading.Thread):
             current_y += box_height + intra_box_spacing
 
         current_y += section_gap  # Final spacing after SYS
+        
+    def draw_right_sections(self, draw, values):
+        """
+        Mirror of draw_left_sections(), anchored to the right edge.
+        Makes use of self.right_section_layout.
+        """
+        label_font = ImageFont.truetype(self.regular_font_path, 26)
+        box_font   = ImageFont.truetype(self.bold_font_path,     24)
+        box_h, box_w = 40, 60
+        box_color  = (136, 136, 136)
+        text_color = (0, 0, 0)
+
+        # geometry on the right
+        label_padding_x = self.disp_width - 19 - box_w   # label flush right
+        box_padding_x   = self.disp_width - 15 - box_w   # boxes flush right
+        initial_y       = 97
+        label_spacing   = -4
+        intra_box_spacing = 14
+        section_gap     = 60
+        cur_y = initial_y
+
+        for section in self.right_section_layout:
+            # label
+            lbl_col = self.colors["label"][self.color_mode]
+            lbl_w   = draw.textbbox((0,0), section["label"], font=label_font)[2]
+            draw.text((label_padding_x + box_w - lbl_w, cur_y), section["label"], font=label_font, fill=lbl_col)
+            cur_y += box_h + label_spacing
+
+            for item in section["items"]:
+                txt = item["text"](values)
+                if not txt:
+                    continue
+                # outer rectangle
+                left = box_padding_x
+                draw.rectangle([left, cur_y, left+box_w, cur_y+box_h], fill=box_color)
+
+                # centre text
+                tw, th = draw.textbbox((0,0), txt, font=box_font)[2:]
+                tx = left + (box_w - tw)//2
+                ty = cur_y + (box_h - th)//2
+                draw.text((tx, ty), txt, font=box_font, fill=text_color)
+
+                cur_y += box_h + intra_box_spacing
+            cur_y += section_gap
+
 
     def draw_right_vu_meter(self, draw, amplification_factor=4):
         if not self.usb_monitor or not hasattr(self.usb_monitor, "audio_monitor"):
@@ -550,33 +690,34 @@ class SimpleGUI(threading.Thread):
     def draw_gui(self, values):
         previous_background_color = self.get_background_color
 
-        # Determine background color based on conditions
-        if self.redis_listener.drop_frame == 1 and int(self.redis_controller.get_value(ParameterKey.REC.value)) == 1:
-            self.current_background_color = "purple"
-            self.color_mode = "inverse"
-        elif int(values["ram_load"].rstrip('%')) > 95:
-            self.current_background_color = "yellow"
-            self.color_mode = "inverse"
-            self.cinepi_controller.rec()
-            logging.info("RAM full")
-        elif int(self.redis_controller.get_value(ParameterKey.REC.value)) == 1:
+        # ─── choose background colour & colour-mode ────────────────────
+        prev_bg = self.get_background_color()      # ← fixed () call
+
+        if int(self.redis_controller.get_value(ParameterKey.REC.value) or 0):
+            # at least one camera is actively recording
             self.current_background_color = "red"
             self.color_mode = "inverse"
-        elif int(self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value)) == 1:
+
+        elif int(self.redis_controller.get_value(ParameterKey.IS_WRITING_BUF.value) or 0):
+            # recording has stopped but buffer still flushing to disk
             self.current_background_color = "green"
             self.color_mode = "inverse"
+
+        elif int(self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value) or 0):
+            # cameras are building up the RAM buffer
+            self.current_background_color = "green"
+            self.color_mode = "inverse"
+
+        elif int(values["ram_load"].rstrip('%')) > 95:
+            # safety: RAM nearly full – warn & auto-stop
+            self.current_background_color = "yellow"
+            self.color_mode = "inverse"
+            self.cinepi_controller.rec()        # stop recording
+
         else:
+            # idle
             self.current_background_color = "black"
             self.color_mode = "normal"
-
-        if self.current_background_color != previous_background_color:
-            self.background_color_changed = True
-            try:
-                self.emit_background_color_change()
-            except Exception as e:
-                logging.error(f"Error emitting background color change: {e}")
-        else:
-            self.background_color_changed = False
 
         current_values = values
         if hasattr(self, 'previous_values'):
@@ -636,10 +777,7 @@ class SimpleGUI(threading.Thread):
         preview_x = (frame_width - preview_w) // 2
         preview_y = (frame_height - preview_h) // 2
 
-        if int(self.redis_controller.get_value(ParameterKey.REC.value)) == 1:
-            line_color = (255, 0, 0)
-        else:
-            line_color = (249, 249, 249)
+        line_color = (249, 249, 249)
 
         draw.rectangle(
             [preview_x, preview_y, preview_x + preview_w, preview_y + preview_h],
@@ -659,8 +797,8 @@ class SimpleGUI(threading.Thread):
         for element, info in current_layout.items():
             if values.get(element) is None:
                 continue
-            position = info["position"]
-            font_size = info["font_size"]
+            position = info["pos"]
+            font_size = info.get("size", 12)  # 12 is the default font size
             font = ImageFont.truetype(
                 os.path.realpath(self.bold_font_path if info.get("font", "bold") == "bold" else self.regular_font_path),
                 font_size
@@ -693,6 +831,8 @@ class SimpleGUI(threading.Thread):
         # else:
         #     logging.info("Mic level: No VU data available.")
 
+        if self.draw_right_col:
+            self.draw_right_sections(draw, values)
 
 
         self.fb.show(image)

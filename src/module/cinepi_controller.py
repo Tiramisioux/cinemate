@@ -9,8 +9,6 @@ import subprocess
 from threading import Thread
 import psutil
 
-# Import RedisListener
-from module.redis_listener import RedisListener
 from module.redis_controller import ParameterKey
 
 class CinePiController:
@@ -47,7 +45,6 @@ class CinePiController:
         
         self.wb_cg_rb_array = {}  # Initialize as an empty dictionary
         
-        self.redis_listener = RedisListener(redis_controller)
         self.fps = int(round(float(self.redis_controller.get_value(ParameterKey.FPS_LAST.value))))
         
         self._rec_thread        = None

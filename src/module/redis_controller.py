@@ -122,10 +122,9 @@ class RedisController:
 
         # ─── enhanced logging ───────────────────────────────────────
         if key_name.startswith("last_dng_cam"):
-            buf = self.cache.get(ParameterKey.BUFFER.value, "?")
             ram = psutil.virtual_memory().percent
             logging.info(
-                f"Changed value: {key_name} = {value} ┃BUFFER: {buf} ┃RAM: {ram:.0f}%"
+                f"Changed value: {key_name} = {value} ┃RAM: {ram:.0f}%"
             )
         elif key_name not in (ParameterKey.FPS_ACTUAL.value, ParameterKey.BUFFER.value):
             # skip standalone BUFFER & FPS_ACTUAL noise

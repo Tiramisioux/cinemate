@@ -204,7 +204,7 @@ def main():
     serial_handler.start()
 
 
-    redis_listener = RedisListener(redis_controller)
+    redis_listener = RedisListener(redis_controller, ssd_monitor)
     battery_monitor = BatteryMonitor()
 
     simple_gui = SimpleGUI(redis_controller, cinepi_controller, ssd_monitor, dmesg_monitor,

@@ -4,6 +4,8 @@ import threading
 import time
 import subprocess
 import smbus
+from pathlib import Path
+import errno
 
 from module.redis_controller import ParameterKey
 
@@ -194,3 +196,59 @@ class SSDMonitor:
             logging.info("No drives named 'RAW' found.")
 
         return raw_mounts
+
+    # ------------------------------------------------------------------
+    # Multi-sensor helper: returns every folder whose mtime is within
+    # *window_seconds* of the newest one.
+    # ------------------------------------------------------------------
+    def get_latest_recording_infos(self, window_seconds: int = 1):
+        """
+        Returns list of (folder_name, n_dng, n_wav) tuples or []
+        if the drive is not mounted or cannot be read.
+        """
+        # Fast exit when we *know* we are unmounted
+        if not self.is_mounted:
+            logging.debug("RAW drive not mounted — skipping folder scan.")
+            return []
+
+        root = Path(self.mount_path)
+
+        # --- SAFETY WRAPPER ------------------------------------------
+        try:
+            subdirs = [p for p in root.iterdir() if p.is_dir()]
+        except OSError as e:
+            # Any problem accessing /media/RAW (device gone, permissions, etc.)
+            logging.warning(f"Unable to scan {self.mount_path}: {e}")
+            return []
+
+        if not subdirs:        # empty drive
+            return []
+
+        latest_mtime = max(p.stat().st_mtime for p in subdirs)
+        cutoff       = latest_mtime - window_seconds
+
+        candidate_dirs = [p for p in subdirs if p.stat().st_mtime >= cutoff]
+        candidate_dirs.sort(key=lambda p: p.stat().st_mtime)   # oldest → newest
+
+        infos = []
+        for d in candidate_dirs:
+            dng_count = wav_count = 0
+            for f in d.rglob('*'):
+                if not f.is_file():
+                    continue
+                s = f.suffix.lower()
+                if s == '.dng':
+                    dng_count += 1
+                elif s == '.wav':
+                    wav_count += 1
+            logging.info(f"Latest recording: “{d.name}”: {dng_count} DNG | {wav_count} WAV")
+            infos.append((d.name, dng_count, wav_count))
+
+        return infos
+
+    # ---------------------------------------------------------------
+    # Backwards-compat single-folder helper
+    # ---------------------------------------------------------------
+    def get_latest_recording_info(self):
+        multi = self.get_latest_recording_infos()
+        return multi[-1] if multi else (None, 0, 0)

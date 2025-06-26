@@ -21,9 +21,6 @@ class Mediator:
         self.redis_controller.redis_parameter_changed.subscribe(self.handle_redis_event)
         self.redis_controller.redis_parameter_changed.subscribe(self.handle_fps_change)
         self.redis_controller.redis_parameter_changed.subscribe(self.handle_shutter_a_change)
-        
-        self.redis_listener.on("recording_started", self._on_rec_start)
-        self.redis_listener.on("recording_stopped",  self._on_rec_stop)
 
         self.stop_recording_timer = None
         self.stop_recording_timeout = 2
@@ -88,22 +85,13 @@ class Mediator:
                 logging.info("Recording stopped!")
                 self.gpio_output.set_recording(0)
         
+        # Handle "is_writing" key changes        
         elif data['key'] == ParameterKey.IS_WRITING.value:
             is_writing = bool(data['value'])
-            if is_writing:
-                if hasattr(self.stream, "toggle_background_color"):
-                    self.stream.toggle_background_color()
-                else:
-                    logging.warning("stream object lacks toggle_background_color()")
-
-                
-        elif data['key'] == ParameterKey.MEMORY_ALERT.value:
-            pct = data['value']
-            logging.warning(f"Memory alert: {pct}%")
-            # examples – pick whichever UX element you prefer
-            self.cinepi_app.message.publish(f"⚠️  RAM usage {pct}% – recording stopped")
-            self.stream.flash_message(f"RAM {pct}% – REC aborted")
-
+            if is_writing == 1:
+                self.stream.toggle_background_color()
+            else:
+                self.gpio_output.set_recording(0)    
 
     def handle_stop_recording_timeout(self):
         """Handle the timeout event when recording should be stopped."""
@@ -127,13 +115,3 @@ class Mediator:
             print('changing pwm')
             shutter_a_new = self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)
             self.pwm_controller.set_pwm(None, shutter_a_new)
-            
-    def _on_rec_start(self, *, cam=None, **_):
-        """Callback from RedisListener when any camera starts recording."""
-        logging.info(f"Mediator event → recording_started (cam={cam})")
-        self.cinepi_controller.start_recording_worker()
-
-    def _on_rec_stop(self, *, cam=None, **_):
-        """Callback from RedisListener when a camera stops recording."""
-        logging.info(f"Mediator event → recording_stopped (cam={cam})")
-        self.cinepi_controller.stop_recording_worker()

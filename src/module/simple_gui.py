@@ -898,3 +898,11 @@ class SimpleGUI(threading.Thread):
 
     def emit_gui_data_change(self, changed_data):
         self.socketio.emit('gui_data_change', changed_data)
+        
+#         fsck = redis.get_value("FSCK_STATUS", "")
+# if fsck.startswith("FAIL"):
+#     show_red_icon(fsck)
+# elif fsck.startswith("OK"):
+#     show_green_icon(fsck)
+# else:
+#     show_gray_icon("no data")

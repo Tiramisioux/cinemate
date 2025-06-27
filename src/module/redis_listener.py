@@ -173,7 +173,7 @@ class RedisListener:
                         if len(self.sensor_timestamps) > 1:
                             self.calculate_current_framerate()
 
-                        # Update framecount in Redis (only if it has changed, and dowsnt report a lower number than before, except 0
+                        # Update framecount in Redis (only if it has changed, and doesnt report a lower number than before, except 0
                         self._maybe_publish_framecount(self.frame_count)
 
                         # Check and set buffering status if changed

@@ -6,6 +6,8 @@ import time
 from queue import Queue
 from threading import Thread
 from typing import List, Optional
+from threading import Event as ThreadEvent
+from typing import List
 
 from module.config_loader import load_settings
 from module.redis_controller import ParameterKey
@@ -14,6 +16,9 @@ from module.redis_controller import ParameterKey
 SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
 # Load global settings
 _SETTINGS = load_settings(SETTINGS_FILE)
+
+_READY_RX   = re.compile(r"Encoder configured")      # line printed by DngEncoder
+_READY_WAIT = 10.0                                   # seconds to wait for all cams
 
 # ───────────────────────── Event ─────────────────────────
 class Event:
@@ -171,10 +176,12 @@ class CinePiProcess(Thread):
 
 
     def _log(self, text):
-        for name, rx in self.log_filters.items():
-            if name in self.active_filters and rx.search(text):
-                pass #logging.info('[%s] %s', self.cam, text)
-                break
+        # for name, rx in self.log_filters.items():
+        #     if name in self.active_filters and rx.search(text):
+        #         pass #logging.info('[%s] %s', self.cam, text)
+        #         break
+        #logging.info('[%s] %s', self.cam.port, text)   # DEBUG → all lines
+        pass
 
     def _build_args(self):
         # base resolution
@@ -245,10 +252,13 @@ class CinePiProcess(Thread):
             '--hflip', str(hf),
             '--vflip', str(vf),
             '--tuning-file', tune,
-            #'--post-process-file', post,
+            # '--post-process-file', post,
             '--shutter', '20000',
             '--awb', 'auto',
             '--awbgains', cg_rb,
+
+            # NEW  ★   (ensures RawOptions.camPort is populated)
+            '--cam-port', self.cam.port,
         ]
         
         # if not (self.multi and not self.primary):
@@ -267,49 +277,104 @@ class CinePiProcess(Thread):
 
 # ───────────────────────── Manager ───────────────────────
 class CinePiManager:
+    """
+    Spin up one ``cinepi-raw`` process per detected sensor and return only
+    when **all** encoders report “Encoder configured”.  This guarantees that
+    the very first REC edge is seen by every camera.
+    """
+
     def __init__(self, redis_controller, sensor_detect):
         self.redis_controller = redis_controller
-        self.sensor_detect = sensor_detect
+        self.sensor_detect    = sensor_detect
         self.processes: List[CinePiProcess] = []
-        self.message = Event()
+        self.message = Event()                        # fan-out for log relay
 
-    def start_all(self):
-        self.stop_all()
-        cams = discover_cameras()
-        cams.sort(key=lambda c: c.port)
-        self.redis_controller.set_value(ParameterKey.CAMERAS.value, json.dumps([c.as_dict() for c in cams]))
+    # ───────────────────────── public api ──────────────────────────
+    start_cinepi_process = lambda self: self.start_all()
+    restart              = lambda self: (self.stop_all(), self.start_all())
+    shutdown             = lambda self: self.stop_all()
+
+    def start_all(self) -> None:
+        """Discover sensors, launch one *cinepi-raw* each, wait for readiness."""
+        self.stop_all()                              # clean previous run
+
+        # ── 1. discovery ───────────────────────────────────────────
+        cams = discover_cameras()                    # helper unchanged
+        cams.sort(key=lambda c: c.port)              # cam0, cam1, …
+        self.redis_controller.set_value(
+            ParameterKey.CAMERAS.value,
+            json.dumps([c.as_dict() for c in cams])
+        )
         if not cams:
-            logging.error('No cameras - abort')
+            logging.error("No cameras found – aborting start_all()")
             return
-        sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value) or 0)
-        pk = cams[0].name + ('_mono' if cams[0].is_mono else '')
+
+        # ── 2. per-model resolution info ──────────────────────────
+        sensor_mode = int(self.redis_controller.get_value(
+            ParameterKey.SENSOR_MODE.value) or 0)
+        pk = cams[0].name + ("_mono" if cams[0].is_mono else "")
         self.sensor_detect.camera_model = pk
         self.sensor_detect.load_sensor_resolutions()
         self.redis_controller.set_value(ParameterKey.SENSOR.value, pk)
+
         res = self.sensor_detect.get_resolution_info(pk, sensor_mode)
-
-        for k in (ParameterKey.WIDTH.value, ParameterKey.HEIGHT.value, ParameterKey.BIT_DEPTH.value, ParameterKey.FPS_MAX.value, ParameterKey.GUI_LAYOUT.value):
+        for k in (
+            ParameterKey.WIDTH.value,
+            ParameterKey.HEIGHT.value,
+            ParameterKey.BIT_DEPTH.value,
+            ParameterKey.FPS_MAX.value,
+            ParameterKey.GUI_LAYOUT.value,
+        ):
             self.redis_controller.set_value(k, res.get(k))
-        multi = len(cams)>1
 
+        # ── 3. launch all cinepi-raw instances ───────────────────────────
+        multi = len(cams) > 1
         for i, cam in enumerate(cams):
-            proc = CinePiProcess(self.redis_controller, self.sensor_detect, cam, primary=(i==0), multi=multi)
+            proc = CinePiProcess(
+                self.redis_controller,
+                self.sensor_detect,
+                cam,
+                primary=(i == 0),
+                multi=multi,
+            )
             proc.message.subscribe(self.message.emit)
             proc.start()
-            time.sleep(0.5)
             self.processes.append(proc)
+            time.sleep(0.5)                       # stagger start
 
-    def stop_all(self):
-        for p in self.processes: p.stop()
-        for p in self.processes: p.join()
+        # ── 4. wait until *all* cameras announced “ready” via Redis ──────
+        want = {f"cinepi_ready_{c.port}" for c in cams}
+        deadline = time.monotonic() + _READY_WAIT          # e.g. 10 s total
+
+        while time.monotonic() < deadline:
+            # raw Redis handle (adjust if your wrapper exposes it differently)
+            have = {k.decode() for k in self.redis_controller.r.keys("cinepi_ready_*")}
+            if want.issubset(have):
+                logging.info("All cinepi-raw encoders ready — starting supervisor.")
+                break
+            time.sleep(0.05)
+        else:
+            missing = ", ".join(sorted(want - have)) or "<??>"
+            logging.warning("start_all(): timeout waiting for %s", missing)
+
+
+    # ───────────────────────── teardown ────────────────────────────
+    def stop_all(self) -> None:
+        for p in self.processes:
+            p.stop()
+        for p in self.processes:
+            p.join()
         self.processes.clear()
-    
-    start_cinepi_process = start_all
-    restart = lambda self: (self.stop_all(), self.start_all())
-    shutdown = stop_all
-    
-    def set_log_level(self, lvl: str):
+        
+        # ── tidy up “ready” flags ──────────────────────────────────
+        raw_keys = self.redis_controller.r.keys("cinepi_ready_*")   # list[bytes]
+        if raw_keys:                                               # only if any
+            self.redis_controller.r.delete(*raw_keys)
+
+    # ────────────────────── logging helpers ────────────────────────
+    def set_log_level(self, lvl: str) -> None:
         logging.getLogger().setLevel(getattr(logging, lvl.upper(), logging.INFO))
-    
-    def set_active_filters(self, filters):
-        for p in self.processes: p.active_filters = set(filters)
+
+    def set_active_filters(self, filters) -> None:
+        for p in self.processes:
+            p.active_filters = set(filters)

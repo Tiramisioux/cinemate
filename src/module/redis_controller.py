@@ -127,7 +127,7 @@ class RedisController:
                 f"Changed value: {key_name} = {value} ┃RAM: {ram:.0f}%"
             )
         elif key_name not in (ParameterKey.FPS_ACTUAL.value, ParameterKey.BUFFER.value):
-            # skip standalone BUFFER & FPS_ACTUAL noise
+            # skip standalone BUFFER, & FPS_ACTUAL noise
             logging.info(f"Changed value: {key_name} = {value}")
 
         # immediate local notification

@@ -461,181 +461,135 @@ class SimpleGUI(threading.Thread):
             # Peak hold
             self.vu_peaks[i] = max(self.vu_peaks[i] * 0.98, self.vu_smoothed[i])
 
+    # ─────────────────────────────────────────────────────────────
+    # LEFT-HAND COLUMN  (CAM / MON / SYS …)
+    # ─────────────────────────────────────────────────────────────
     def draw_left_sections(self, draw, values):
         label_font = ImageFont.truetype(self.regular_font_path, 26)
-        box_font = ImageFont.truetype(self.bold_font_path, 26)
-        box_height = 40
-        box_width = 60
-        box_color = (136, 136, 136)
-        text_color = (0, 0, 0)
+        box_font   = ImageFont.truetype(self.bold_font_path,     26)
 
-        # Positioning parameters
-        label_padding_x = 19   # Left padding for section labels
-        box_padding_x = 15     # Left padding for boxes (can be different from label)
-        initial_y = 97         # Top margin for the first label
-        label_spacing = -4     # Space between label and first box
-        intra_box_spacing = 14 # Space between boxes in a section
-        section_gap = 60       # Space between sections
+        BOX_H, BOX_W  = 40, 60
+        BOX_COLOR     = (136, 136, 136)
+        TEXT_COLOR    = (0,   0,   0)
 
-        current_y = initial_y
+        label_x       = 19
+        box_x         = 15
+        y             = 97
+        LABEL_SPACING = -4
+        BOX_GAP       = 14
+        SECTION_GAP   = 60
 
+        # ── CAM / MON sections ───────────────────────────────────
         for section in self.left_section_layout:
-            # Draw section header
-            label_color = self.colors["label"][self.color_mode]
-            draw.text((label_padding_x, current_y), section["label"], font=label_font, fill=label_color)
+            # centre the label over the column
+            lbl_w  = draw.textbbox((0,0), section["label"], font=label_font)[2]
+            lbl_x  = box_x + (BOX_W - lbl_w)//2
+            draw.text((lbl_x, y), section["label"],
+                      font=label_font,
+                      fill=self.colors["label"][self.color_mode])
+            y += BOX_H + LABEL_SPACING
 
-            current_y += box_height + label_spacing
-
-            # Track the highest Y used by the last box in this section
             for item in section["items"]:
-                value_text = item["text"](values)
-                if not value_text:
-                    continue  # Skip empty values   
+                val = item["text"](values)
+                if not val:
+                    continue
 
-                # Outer box
-                outer_left = box_padding_x
-                outer_top = current_y
-                outer_right = box_padding_x + box_width
-                outer_bottom = current_y + box_height
+                for part in str(val).split('\n'):
+                    draw.rectangle([box_x, y, box_x + BOX_W, y + BOX_H],
+                                   fill=BOX_COLOR)
 
-                draw.rectangle(
-                    [outer_left, outer_top, outer_right, outer_bottom],
-                    fill=box_color
-                )
-                
-                # Draw inner box ONLY for "aspect"
-                if item["key"] == "aspect":
-                    border_width = 2
-                    margin = 2  # To make inner box 4px smaller in both directions
+                    if item["key"] == "aspect":
+                        m = 2
+                        inner = [box_x + m, y + m,
+                                 box_x + BOX_W - m, y + BOX_H - m]
+                        draw.rectangle(inner, outline=(0, 0, 0), width=2)
 
-                    inner_left = outer_left + margin
-                    inner_top = outer_top + margin
-                    inner_right = outer_right - margin
-                    inner_bottom = outer_bottom - margin
+                    tw, th = draw.textbbox((0,0), part, font=box_font)[2:]
+                    tx = box_x + (BOX_W - tw)//2
+                    ty = y     + (BOX_H - th)//2
+                    draw.text((tx, ty), part, font=box_font, fill=TEXT_COLOR)
 
-                    # Draw border (no fill)
-                    draw.rectangle(
-                        [inner_left, inner_top, inner_right, inner_bottom],
-                        outline=(0, 0, 0),
-                        width=border_width
-                    )
+                    y += BOX_H + BOX_GAP
 
-                # Center the text horizontally and vertically in the box
-                text_size = draw.textbbox((0, 0), value_text, font=box_font)
-                text_width = text_size[2] - text_size[0]
-                text_height = text_size[3] - text_size[1]
-                text_x = box_padding_x + (box_width - text_width) // 2
-                text_y = current_y + (box_height - text_height) // 2
+            y += SECTION_GAP
 
-                draw.text((text_x, text_y), value_text, font=box_font, fill=text_color)
-
-                current_y += box_height + intra_box_spacing
-
-            current_y += section_gap
-
-        # ---- Conditionally Draw SYS section ----
+        # ── SYS section (USB / MIC / KEY / storage) ──────────────
         show_sys = any([
             values.get("usb_connected"),
             values.get("mic_connected"),
             values.get("keyboard_connected"),
-
-            values.get("storage_type") not in [None, "", "none"]  # Show if storage is connected
+            values.get("storage_type") not in [None, "", "none"]
         ])
 
         if show_sys:
-            sys_label_y = current_y
-            sys_label_padding_x = label_padding_x + 1  # Adjust if needed
-            label_color = self.colors["label"][self.color_mode]
-            draw.text((sys_label_padding_x, sys_label_y), "SYS", font=label_font, fill=label_color)
+            draw.text((label_x + 1, y), "SYS",
+                      font=label_font,
+                      fill=self.colors["label"][self.color_mode])
+            y += BOX_H + LABEL_SPACING
 
-            current_y += box_height + label_spacing  # Move to the top of the first box
+            for key, lbl in [("usb_connected", "SER"),
+                             ("mic_connected", "MIC"),
+                             ("keyboard_connected", "KEY")]:
+                if not values.get(key):
+                    continue
+                draw.rectangle([box_x, y, box_x + BOX_W, y + BOX_H],
+                               fill=BOX_COLOR)
+                tw, th = draw.textbbox((0, 0), lbl, font=box_font)[2:]
+                tx = box_x + (BOX_W - tw) // 2
+                ty = y      + (BOX_H - th) // 2
+                draw.text((tx, ty), lbl, font=box_font, fill=TEXT_COLOR)
+                y += BOX_H + BOX_GAP
 
-        # Draw USB, Mic, and Keyboard connection status
-        for key, label in [
-            ("usb_connected", "SER"),
-            ("mic_connected", "MIC"),
-            ("keyboard_connected", "KEY"),
-        ]:
-            if not values.get(key):
-                continue
+            storage = str(values.get("storage_type", "")).upper()
+            if storage and storage != "NONE":
+                draw.rectangle([box_x, y, box_x + BOX_W, y + BOX_H],
+                               fill=BOX_COLOR)
+                tw, th = draw.textbbox((0, 0), storage, font=box_font)[2:]
+                tx = box_x + (BOX_W - tw) // 2
+                ty = y      + (BOX_H - th) // 2
+                draw.text((tx, ty), storage, font=box_font, fill=TEXT_COLOR)
+                y += BOX_H + BOX_GAP
 
-            draw.rectangle(
-                [box_padding_x, current_y, box_padding_x + box_width, current_y + box_height],
-                fill=box_color
-            )
 
-            text_bbox = draw.textbbox((0, 0), label, font=box_font)
-            text_width = text_bbox[2] - text_bbox[0]
-            text_height = text_bbox[3] - text_bbox[1]
-            text_x = box_padding_x + (box_width - text_width) // 2
-            text_y = current_y + (box_height - text_height) // 2
-
-            draw.text((text_x, text_y), label, font=box_font, fill=text_color)
-            current_y += box_height + intra_box_spacing
-
-        # Draw storage type (SSD, NVME, USB, etc.)
-        storage_label = str(values.get("storage_type", "")).upper()
-        if storage_label and storage_label != "NONE":
-            draw.rectangle(
-                [box_padding_x, current_y, box_padding_x + box_width, current_y + box_height],
-                fill=box_color
-            )
-
-            text_bbox = draw.textbbox((0, 0), storage_label, font=box_font)
-            text_width = text_bbox[2] - text_bbox[0]
-            text_height = text_bbox[3] - text_bbox[1]
-            text_x = box_padding_x + (box_width - text_width) // 2
-            text_y = current_y + (box_height - text_height) // 2
-
-            draw.text((text_x, text_y), storage_label, font=box_font, fill=text_color)
-            current_y += box_height + intra_box_spacing
-
-        current_y += section_gap  # Final spacing after SYS
-        
+    # ─────────────────────────────────────────────────────────────
+    # RIGHT-HAND MIRROR COLUMN
+    # ─────────────────────────────────────────────────────────────
     def draw_right_sections(self, draw, values):
-        """
-        Mirror of draw_left_sections(), anchored to the right edge.
-        Makes use of self.right_section_layout.
-        """
         label_font = ImageFont.truetype(self.regular_font_path, 26)
         box_font   = ImageFont.truetype(self.bold_font_path,     24)
-        box_h, box_w = 40, 60
-        box_color  = (136, 136, 136)
-        text_color = (0, 0, 0)
 
-        # geometry on the right
-        label_padding_x = self.disp_width - 19 - box_w   # label flush right
-        box_padding_x   = self.disp_width - 15 - box_w   # boxes flush right
-        initial_y       = 97
-        label_spacing   = -4
-        intra_box_spacing = 14
-        section_gap     = 60
-        cur_y = initial_y
+        BOX_H, BOX_W  = 40, 60
+        BOX_COLOR     = (136, 136, 136)
+        TEXT_COLOR    = (0,   0,   0)
+
+        box_pad_x     = self.disp_width - 15 - BOX_W
+        y             = 97
+        LABEL_SPACING = -4
+        BOX_GAP       = 14
+        SECTION_GAP   = 60
 
         for section in self.right_section_layout:
-            # label
-            lbl_col = self.colors["label"][self.color_mode]
-            lbl_w   = draw.textbbox((0,0), section["label"], font=label_font)[2]
-            draw.text((label_padding_x + box_w - lbl_w, cur_y), section["label"], font=label_font, fill=lbl_col)
-            cur_y += box_h + label_spacing
+            lbl_w = draw.textbbox((0,0), section["label"], font=label_font)[2]
+            lbl_x = box_pad_x + (BOX_W - lbl_w)//2      # centred
+            draw.text((lbl_x, y), section["label"],
+                      font=label_font,
+                      fill=self.colors["label"][self.color_mode])
+            y += BOX_H + LABEL_SPACING
 
             for item in section["items"]:
-                txt = item["text"](values)
-                if not txt:
+                val = item["text"](values)
+                if not val:
                     continue
-                # outer rectangle
-                left = box_padding_x
-                draw.rectangle([left, cur_y, left+box_w, cur_y+box_h], fill=box_color)
-
-                # centre text
-                tw, th = draw.textbbox((0,0), txt, font=box_font)[2:]
-                tx = left + (box_w - tw)//2
-                ty = cur_y + (box_h - th)//2
-                draw.text((tx, ty), txt, font=box_font, fill=text_color)
-
-                cur_y += box_h + intra_box_spacing
-            cur_y += section_gap
-
+                for part in str(val).split('\n'):
+                    draw.rectangle([box_pad_x, y,
+                                    box_pad_x + BOX_W, y + BOX_H],
+                                   fill=BOX_COLOR)
+                    tw, th = draw.textbbox((0,0), part, font=box_font)[2:]
+                    tx = box_pad_x + (BOX_W - tw)//2
+                    ty = y         + (BOX_H - th)//2
+                    draw.text((tx, ty), part, font=box_font, fill=TEXT_COLOR)
+                    y += BOX_H + BOX_GAP
+            y += SECTION_GAP
 
     def draw_right_vu_meter(self, draw, amplification_factor=4):
         if not self.usb_monitor or not hasattr(self.usb_monitor, "audio_monitor"):

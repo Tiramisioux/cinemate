@@ -105,7 +105,6 @@ class SimpleGUI(threading.Thread):
             logging.warning("SocketIO not initialized. Unable to emit gui_data_change.")
 
     def check_display(self):
-
         fb_path = "/dev/fb0"
         if os.path.exists(fb_path):
             self.fb = Framebuffer(0)
@@ -244,7 +243,6 @@ class SimpleGUI(threading.Thread):
             },
         ]
 
-
     def estimate_resolution_in_k(self):
         """
         Estimate the current resolution in K.
@@ -289,7 +287,6 @@ class SimpleGUI(threading.Thread):
         # write labels back
         self.left_section_layout[0]["label"]  = l_lbl
         self.right_section_layout[0]["label"] = r_lbl
-
 
     def populate_values(self):
         # update section headers first
@@ -640,14 +637,18 @@ class SimpleGUI(threading.Thread):
             text_y = base_y + bar_height + 5
             draw.text((text_x, text_y), label, font=label_font, fill=(249,249,249))
 
-
     def draw_gui(self, values):
         previous_background_color = self.get_background_color
 
         # ─── choose background colour & colour-mode ────────────────────
         prev_bg = self.get_background_color()      # ← fixed () call
+        
+        if int(self.redis_controller.get_value(ParameterKey.REC.value)) and self.redis_listener.drop_frame == 1:
+            # at least one camera is actively recording
+            self.current_background_color = "purple"
+            self.color_mode = "inverse"
 
-        if int(self.redis_controller.get_value(ParameterKey.REC.value) or 0):
+        elif int(self.redis_controller.get_value(ParameterKey.REC.value)) == 1:
             # at least one camera is actively recording
             self.current_background_color = "red"
             self.color_mode = "inverse"
@@ -672,6 +673,15 @@ class SimpleGUI(threading.Thread):
             # idle
             self.current_background_color = "black"
             self.color_mode = "normal"
+            
+        if self.current_background_color != previous_background_color:
+            self.background_color_changed = True
+            try:
+                self.emit_background_color_change()
+            except Exception as e:
+                logging.error(f"Error emitting background color change: {e}")
+        else:
+            self.background_color_changed = False
 
         current_values = values
         if hasattr(self, 'previous_values'):

@@ -252,7 +252,7 @@ class CinePiProcess(Thread):
             '--hflip', str(hf),
             '--vflip', str(vf),
             '--tuning-file', tune,
-            # '--post-process-file', post,
+            '--post-process-file', post,
             '--shutter', '20000',
             '--awb', 'auto',
             '--awbgains', cg_rb,

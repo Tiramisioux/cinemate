@@ -43,6 +43,11 @@ class RedisListener:
         self.redis_controller.set_value('framecount', 0)
         
         self.last_is_recording_value = self.redis_controller.get_value('is_recording')
+        
+        self.allow_initial_zero = False
+        
+        self.sensor_counts = {}          # { 'CAM0': 0, 'CAM1': 0, … }
+        self.all_sensors_ready = False       # True if all sensors are ready, False otherwise
 
 
         
@@ -85,6 +90,54 @@ class RedisListener:
             self.frame_count_increase_tolerance = 3 * frame_interval
         else:
             self.frame_count_increase_tolerance = 0.5
+            
+    def _maybe_publish_framecount(self, new_count: int | None):
+
+        if new_count is None:
+            return
+
+        # ── 0)  *Not* recording → freeze counter  ─────────────────
+        if not self.is_recording:
+            if new_count == 0 and self.framecount != 0:
+                # single clean reset
+                self.framecount = 0
+                self.redis_controller.set_value("framecount", 0)
+            return                           # ignore all other updates
+        # ──────────────────────────────────────────────────────────
+
+        # --- accept *one* initial zero at the very start of a take -----
+        if new_count == 0 and self.allow_initial_zero:
+            self.framecount = 0
+            self.consecutive_non_increasing_counts = 0
+            self.redis_controller.set_value("framecount", 0)
+            self.allow_initial_zero = False          # zero consumed
+            return
+        # ----------------------------------------------------------------
+
+        # ① strictly higher → accept
+        if new_count > self.framecount:
+            self.framecount = new_count
+            self.consecutive_non_increasing_counts = 0
+            self.redis_controller.set_value("framecount", new_count)
+            return
+
+        # ② equal → nothing to do
+        if new_count == self.framecount:
+            return
+
+        # ③ lower (but not zero) → strike
+        self.consecutive_non_increasing_counts += 1
+        if self.consecutive_non_increasing_counts >= self.non_increasing_count_threshold:
+            logging.warning(
+                f"Framecount dropped from {self.framecount} to {new_count} "
+                f"{self.consecutive_non_increasing_counts}× in a row – "
+                "assuming new baseline."
+            )
+            self.framecount = new_count
+            self.redis_controller.set_value("framecount", new_count)
+            self.consecutive_non_increasing_counts = 0
+
+
 
     def listen_stats(self):
         for message in self.pubsub_stats.listen():
@@ -120,11 +173,8 @@ class RedisListener:
                         if len(self.sensor_timestamps) > 1:
                             self.calculate_current_framerate()
 
-                        # Update framecount in Redis only if it has changed
-                        if self.frame_count is not None and self.frame_count != self.framecount:
-                            self.framecount = self.frame_count
-                            logging.debug(f"Updating framecount in Redis to {self.frame_count}")
-                            self.redis_controller.set_value('framecount', self.frame_count)
+                        # Update framecount in Redis (only if it has changed, and dowsnt report a lower number than before, except 0
+                        self._maybe_publish_framecount(self.frame_count)
 
                         # Check and set buffering status if changed
                         is_buffering = buffer_size > 0 if buffer_size is not None else False
@@ -233,7 +283,9 @@ class RedisListener:
                     self.reset_framecount()
                     self.recording_start_time = datetime.datetime.now()
                     logging.info(f"Recording started at: {self.recording_start_time}")
+                    
                     self.framerate = float(self.redis_controller.get_value('fps'))
+                    self.allow_initial_zero = True
 
                 elif value_str == '0':
                     if self.is_recording:
@@ -245,6 +297,7 @@ class RedisListener:
                             self.framerate_values = []
                         else:
                             logging.warning("Recording stopped, but no recording start time was registered.")
+                    self.allow_initial_zero = True
 
     def calculate_current_framerate(self):
         if len(self.sensor_timestamps) > 1:

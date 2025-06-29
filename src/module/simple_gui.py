@@ -383,7 +383,7 @@ class SimpleGUI(threading.Thread):
 
         # if values["fps"] != int(float(self.redis_controller.get_value(ParameterKey.FPS_USER.value))):
         #     self.colors["fps"]["normal"] = "yellow"
-        if self.cinepi_controller.shutter_a_sync_mode == 1:
+        if self.cinepi_controller.shutter_a_sync_mode != 0:
             self.colors["shutter_speed"]["normal"] = "lightgreen"
             self.colors["fps"]["normal"] = "lightgreen"
             
@@ -393,8 +393,6 @@ class SimpleGUI(threading.Thread):
             self.colors["fps"]["normal"] = "lightgreen"
         elif self.cinepi_controller.fps_double:
             self.colors["fps"]["normal"] = "lightgreen"
-        else:
-            self.colors["fps"]["normal"] = self.colors["shutter_speed"]["normal"] = "white"
 
         values["lock"]        = "LOCK"    if self.cinepi_controller.parameters_lock else ""
         values["low_voltage"] = "VOLTAGE" if self.dmesg_monitor.undervoltage_flag  else ""

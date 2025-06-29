@@ -261,6 +261,13 @@ class CinePiProcess(Thread):
             '--cam-port', self.cam.port,
         ]
         
+        # ── if running in multi-camera mode, pass --sync server/client ──
+        if self.multi:
+            if self.primary:
+                args += ['--sync', 'server']
+            else:
+                args += ['--sync', 'client']
+        
         # if not (self.multi and not self.primary):
         #     args += ['-p', f'{ox},{oy},{pw},{ph}']
         # else:
@@ -308,6 +315,11 @@ class CinePiManager:
         if not cams:
             logging.error("No cameras found – aborting start_all()")
             return
+        
+        self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)  # reset recording flag
+        
+        if self.redis_controller.get_value(ParameterKey.FPS) is not None:
+            self.redis_controller.set_value(ParameterKey.FPS.value, self.redis_controller.get_value(ParameterKey.FPS))          # reset FPS
 
         # ── 2. per-model resolution info ──────────────────────────
         sensor_mode = int(self.redis_controller.get_value(

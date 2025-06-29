@@ -250,6 +250,10 @@ def main():
         logging.info("Shutting down components...")
         redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         redis_controller.set_value(ParameterKey.IS_WRITING.value, 0)
+        
+        # Remember the last FPS value before stopping
+        redis_controller.set_value(ParameterKey.FPS_LAST.value, redis_controller.get_value(ParameterKey.FPS.value))
+        
         pwm_controller.stop_pwm()
         dmesg_monitor.join()
         command_executor.join()

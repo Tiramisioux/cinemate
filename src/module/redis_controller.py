@@ -53,10 +53,12 @@ class ParameterKey(Enum):
     WIDTH             = "width"
     MEMORY_ALERT      = "memory_alert"
     SHUTTER_A_SYNC_MODE = 'shutter_a_sync_mode'
-    SHUTTER_A_NOM = 'shutter_angle_nom'
-    SHUTTER_A_ACTUAL = 'shutter_angle_actual'
+    SHUTTER_A_NOM       = 'shutter_angle_nom'
+    SHUTTER_A_ACTUAL    = 'shutter_angle_actual'
     SHUTTER_A_TRANSIENT = 'shutter_angle_transient'
-    EXPOSURE_TIME = 'exposure_time'
+    EXPOSURE_TIME       = 'exposure_time'
+    LAST_DNG_CAM1       = "last_dng_cam1"
+    LAST_DNG_CAM0       = "last_dng_cam0"
 
 
 # ────────────────────────── tiny pub‑sub helper ──────────────────────

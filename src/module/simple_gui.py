@@ -121,25 +121,29 @@ class SimpleGUI(threading.Thread):
 
         # Define layout directly as a dict (not nested in another dict)
         self.layout = {
-                # column 0
-                "fps_label":      {"pos": (  85,   4), "size": 30, "font": "regular"},
-                "fps":            {"pos": ( 150,   3), "size": 41, "font": "bold"},
+            # column 0
+            "fps_label":      {"pos": (  85,   4), "size": 30, "font": "regular"},
+            "fps":            {"pos": ( 150,   3), "size": 41, "font": "bold"},
 
-                # column 1
-                "shutter_label":  {"pos": ( 400,   4), "size": 30, "font": "regular"},
-                "shutter_speed":  {"pos": ( 540,   3), "size": 41, "font": "bold"},
+            # column 1
+            "shutter_label":  {"pos": ( 280,   4), "size": 30, "font": "regular"},
+            "shutter_speed":  {"pos": ( 420,   3), "size": 41, "font": "bold"},
 
-                # column 2
-                "iso_label":      {"pos": ( 840,   4), "size": 30, "font": "regular"},
-                "iso":            {"pos": ( 880,   3), "size": 41, "font": "bold"},
+            # NEW COLUMN for EXP
+            "exposure_label": {"pos": ( 615,   4), "size": 30, "font": "regular"},
+            "exposure_time":  {"pos": ( 677,   3), "size": 41, "font": "bold"},
 
-                # column 3
-                "wb_label":       {"pos": (1150,   4), "size": 30, "font": "regular"},
-                "color_temp":     {"pos": (1210,   3), "size": 41, "font": "bold"},
+            # column 3
+            "iso_label":      {"pos": (850,   4), "size": 30, "font": "regular"},
+            "iso":            {"pos": (890,   3), "size": 41, "font": "bold"},
 
-                # column 4 
-                "res_label":    {"pos": (1473,   4), "size": 30, "font": "regular"},
-                "res":            {"pos": (1540,   3), "size": 41, "font": "bold"},
+            # column 4
+            "wb_label":       {"pos": (1040,   4), "size": 30, "font": "regular"},
+            "color_temp":     {"pos": (1100,   3), "size": 41, "font": "bold"},
+
+            # column 5
+            "res_label":      {"pos": (1473,   4), "size": 30, "font": "regular"},
+            "res":            {"pos": (1540,   3), "size": 41, "font": "bold"},
 
 
             # Bottom row
@@ -163,8 +167,8 @@ class SimpleGUI(threading.Thread):
             "fps": {"normal": (249,249,249), "inverse": "black"},
             "fps_actual": {"normal": (136,136,136), "inverse": "black"} ,
             
-            "exposure_label": {"normal": "black", "inverse": "black"},
-            "exposure_time": {"normal": "black", "inverse": "black"},
+            "exposure_label": {"normal": (136, 136, 136), "inverse": "black"},
+            "exposure_time":  {"normal": (249, 249, 249), "inverse": "black"},
             "anamorphic_factor": {"normal": "black", "inverse": "black"},
             "sensor": {"normal": (136,136,136), "inverse": "black"},
             "height": {"normal": (249,249,249), "inverse": "black"},
@@ -189,7 +193,7 @@ class SimpleGUI(threading.Thread):
             "aspect": {"normal": "black", "inverse": "black"},
             "color_temp_libcamera": {"normal": (136,136,136), "inverse": "black"},
             "pwm_mode": {"normal": (97,171,49), "inverse": "black"},
-            # "shutter_a_sync": {"normal": "white", "inverse": "black"},
+            # "shutter_a_sync_mode": {"normal": "white", "inverse": "black"},
             "lock": {"normal": (255, 0, 0, 255), "inverse": "black"},
             "low_voltage": {"normal": (218,149,77), "inverse": "black"},
             "ram_label": {"normal": (136,136,136), "inverse": "black"},
@@ -218,7 +222,7 @@ class SimpleGUI(threading.Thread):
                     # {"key": "resolution", "text": lambda v: v.get("resolution", "")},
                     {"key": "aspect", "text": lambda v: v.get("aspect", "")},
                     # {"key": "bit_depth", "text": lambda v: str(v.get("bit_depth", "")).replace("b", "") + "b"},
-                    {"key": "exposure_time", "text": lambda v: v.get("exposure_time", "")},
+                    # {"key": "exposure_time", "text": lambda v: v.get("exposure_time", "")},
                 ]
             },
             {
@@ -322,13 +326,45 @@ class SimpleGUI(threading.Thread):
         except (TypeError, ValueError):
             aspect_ratio = "N/A"
 
+        # ───────────── build shutter_speed display value ─────────────
+        actual_angle = self.redis_controller.get_value(ParameterKey.SHUTTER_A_ACTUAL.value)
+        try:
+            actual_angle_f = float(actual_angle)
+            actual_str = f"{actual_angle_f:.1f}°"
+        except (TypeError, ValueError):
+            actual_str = str(actual_angle)
+
+        shutter_speed = actual_str
+
+        # if self.cinepi_controller.shutter_a_sync_mode == 1:
+        #     extras = []
+
+            # # Nominal angle
+            # nom_angle = self.cinepi_controller.shutter_angle_nom
+            # if nom_angle is not None:
+            #     try:
+            #         nom_angle_f = float(nom_angle)
+            #         nom_str = f"/ {nom_angle_f:.1f}°"
+            #     except (TypeError, ValueError):
+            #         nom_str = f"/ {nom_angle}"
+            #     extras.append(nom_str)
+
+            # Exposure fraction
+            # exposure_fraction = getattr(self.cinepi_controller, "exposure_time_fractions", None)
+            # if exposure_fraction:
+            #     extras.append(f" / {exposure_fraction}")
+
+            # if extras:
+            #     shutter_speed += " (" + ", ".join(extras) + ")"
+
+
         values = {
             # top-row stuff
             "resolution":     resolution_value,
             "iso_label":      "EI",
             "iso":            self.redis_controller.get_value(ParameterKey.ISO.value),
             "shutter_label":  "SHUTTER",
-            "shutter_speed":  str(self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)),
+            "shutter_speed":  shutter_speed,
             "fps_label":      "FPS",
             "fps":            round(float(self.redis_controller.get_value(ParameterKey.FPS.value))),
             "wb_label":       "WB",
@@ -360,6 +396,7 @@ class SimpleGUI(threading.Thread):
             "media_label": "MEDIA", "mon": "MON",
         }
 
+
         # ── add right-column data when CAM1 exists ────────────────
         if sensor_right and cam1:
             sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value) or 0)
@@ -386,6 +423,9 @@ class SimpleGUI(threading.Thread):
         if self.cinepi_controller.shutter_a_sync_mode != 0:
             self.colors["shutter_speed"]["normal"] = "lightgreen"
             self.colors["fps"]["normal"] = "lightgreen"
+        else:
+            self.colors["shutter_speed"]["normal"] = (249,249,249)
+            self.colors["fps"]["normal"] = (249,249,249)
             
         if self.cinepi_controller.trigger_mode != 0:
             values["pwm_mode"] = "PWM"
@@ -753,7 +793,8 @@ class SimpleGUI(threading.Thread):
             "iso": "iso_lock",
             "shutter_speed": "shutter_a_nom_lock",
             "fps": "fps_lock",
-            "exposure_time": "shutter_a_sync"
+            "exposure_time": "shutter_a_nom_lock",
+
         }
 
         for element, info in current_layout.items():
@@ -775,13 +816,11 @@ class SimpleGUI(threading.Thread):
                 x = position[0] + info["width"] - text_width
                 position = (x, position[1])
 
-            draw.text(position, value, font=font, fill=color)
-
             if element in lock_mapping and getattr(self.cinepi_controller, lock_mapping[element]):
+                # Only draw inside the box
                 self.draw_rounded_box(draw, value, position, font_size, 5, "black", "white", image)
-
-            if element == "exposure_time" and self.cinepi_controller.shutter_a_sync_mode == 1:
-                self.draw_rounded_box(draw, value, position, font_size, 5, "black", "white", image)
+            else:
+                draw.text(position, value, font=font, fill=color)
                 
         self.update_smoothed_vu_levels()
         self.draw_right_vu_meter(draw)

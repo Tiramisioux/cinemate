@@ -44,7 +44,7 @@ class ParameterKey(Enum):
     SENSOR            = "sensor"
     SENSOR_MODE       = "sensor_mode"
     SHUTTER_A         = "shutter_a"
-    SHUTTER_A_NOM     = "shutter_a_nom"
+
     SPACE_LEFT        = "space_left"
     STORAGE_TYPE      = "storage_type"
     TRIGGER_MODE      = "trigger_mode"
@@ -52,6 +52,12 @@ class ParameterKey(Enum):
     WB_USER           = "wb_user"
     WIDTH             = "width"
     MEMORY_ALERT      = "memory_alert"
+    SHUTTER_A_SYNC_MODE = 'shutter_a_sync_mode'
+    SHUTTER_A_NOM = 'shutter_angle_nom'
+    SHUTTER_A_ACTUAL = 'shutter_angle_actual'
+    SHUTTER_A_TRANSIENT = 'shutter_angle_transient'
+    EXPOSURE_TIME = 'exposure_time'
+
 
 # ────────────────────────── tiny pub‑sub helper ──────────────────────
 class Event:

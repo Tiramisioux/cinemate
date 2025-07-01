@@ -4,10 +4,10 @@
     "cam0": {
       "rotate_180": false,
       "horizontal_flip": false,
-      "vertical_flip": true
+      "vertical_flip": false
     },
     "cam1": {
-      "rotate_180": true,
+      "rotate_180": false,
       "horizontal_flip": false,
       "vertical_flip":false
     }
@@ -48,7 +48,7 @@
   "free_mode": {
     "iso_free": false,
     "shutter_a_free": false,
-    "fps_free": false,
+    "fps_free": true,
     "wb_free": false
   },
 

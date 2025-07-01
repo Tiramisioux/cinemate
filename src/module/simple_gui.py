@@ -122,24 +122,24 @@ class SimpleGUI(threading.Thread):
         # Define layout directly as a dict (not nested in another dict)
         self.layout = {
             # column 0
-            "fps_label":      {"pos": (  85,   4), "size": 30, "font": "regular"},
-            "fps":            {"pos": ( 150,   3), "size": 41, "font": "bold"},
+            "fps_label":      {"pos": (  90,   4), "size": 30, "font": "regular"},
+            "fps":            {"pos": ( 155,   3), "size": 41, "font": "bold"},
 
             # column 1
-            "shutter_label":  {"pos": ( 280,   4), "size": 30, "font": "regular"},
-            "shutter_speed":  {"pos": ( 420,   3), "size": 41, "font": "bold"},
+            "shutter_label":  {"pos": ( 313,   4), "size": 30, "font": "regular"},
+            "shutter_speed":  {"pos": ( 448,   3), "size": 41, "font": "bold"},
 
             # NEW COLUMN for EXP
-            "exposure_label": {"pos": ( 615,   4), "size": 30, "font": "regular"},
-            "exposure_time":  {"pos": ( 677,   3), "size": 41, "font": "bold"},
+            "exposure_label": {"pos": ( 678,   4), "size": 30, "font": "regular"},
+            "exposure_time":  {"pos": ( 740,   3), "size": 41, "font": "bold"},
 
             # column 3
-            "iso_label":      {"pos": (850,   4), "size": 30, "font": "regular"},
-            "iso":            {"pos": (890,   3), "size": 41, "font": "bold"},
+            "iso_label":      {"pos": (944,   4), "size": 30, "font": "regular"},
+            "iso":            {"pos": (983,   3), "size": 41, "font": "bold"},
 
             # column 4
-            "wb_label":       {"pos": (1040,   4), "size": 30, "font": "regular"},
-            "color_temp":     {"pos": (1100,   3), "size": 41, "font": "bold"},
+            "wb_label":       {"pos": (1173,   4), "size": 30, "font": "regular"},
+            "color_temp":     {"pos": (1233,   3), "size": 41, "font": "bold"},
 
             # column 5
             "res_label":      {"pos": (1473,   4), "size": 30, "font": "regular"},
@@ -149,6 +149,12 @@ class SimpleGUI(threading.Thread):
             # Bottom row
             "media_label": {"pos": (98, 1050), "size": 30, "font": "regular"},
             "disk_space": {"pos": (192, 1041), "size": 41, "font": "bold"},
+            
+            "clip_label": {"pos": (400, 1050), "size": 30, "font": "regular"},
+            "clip_name": {"pos": (480, 1041), "size": 41, "font": "bold"},
+            "clip_name_cam1": {"pos": (480, 998), "size": 41, "font": "bold"},
+
+            
             "battery_level": {"pos": (600, 1041), "size": 41, "font": "bold"},
             "cpu_label": {"pos": (1260, 1050), "size": 30, "font": "regular"},
             "cpu_load": {"pos": (1330, 1041), "size": 41, "font": "bold"},
@@ -196,6 +202,7 @@ class SimpleGUI(threading.Thread):
             # "shutter_a_sync_mode": {"normal": "white", "inverse": "black"},
             "lock": {"normal": (255, 0, 0, 255), "inverse": "black"},
             "low_voltage": {"normal": (218,149,77), "inverse": "black"},
+        
             "ram_label": {"normal": (136,136,136), "inverse": "black"},
             "ram_load": {"normal": (249,249,249), "inverse": "black"},
             "cpu_label": {"normal": (136,136,136), "inverse": "black"},
@@ -206,9 +213,15 @@ class SimpleGUI(threading.Thread):
             "disk_label": {"normal": (136,136,136), "inverse": "black"},
             "disk_space": {"normal": (249,249,249), "inverse": "black"},
             "frame_count": {"normal": (136,136,136), "inverse": "black"},
-            "last_dng_added": {"normal": (249,249,249), "inverse": "black"},
+            
+            "clip_label": {"normal": (136,136,136), "inverse": "black"},
+            "clip_name": {"normal": (249,249,249), "inverse": "black"},
+            
             "battery_level": {"normal": (249,249,249), "inverse": "black"},
         }
+
+        self.colors["clip_name_cam1"] = self.colors["clip_name"]
+
 
         self.fb = None
         self.disp_width = self.disp_height = 0
@@ -358,6 +371,7 @@ class SimpleGUI(threading.Thread):
             #     shutter_speed += " (" + ", ".join(extras) + ")"
 
 
+
         values = {
             # top-row stuff
             "resolution":     resolution_value,
@@ -390,12 +404,31 @@ class SimpleGUI(threading.Thread):
             "keyboard_connected": bool(self.usb_monitor and self.usb_monitor.usb_keyboard),
             "storage_type":   self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value),
 
+            "clip_label": "CLIP",
+            "clip_name":    self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value) or "N/A",
+
             # static captions
             "cam": "CAM", "raw": "RAW", "ram_label": "RAM",
             "cpu_label": "CPU", "cpu_temp_label": "TEMP",
             "media_label": "MEDIA", "mon": "MON",
+            
         }
 
+        # ───────────────── CLIP / LAST-DNG display ───────────────
+        last_cam1_full = self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value)
+        last_cam0_full = self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM0.value)
+
+        clip_cam1 = self._format_last_dng(last_cam1_full)
+        clip_cam0 = self._format_last_dng(last_cam0_full)
+
+        if clip_cam0 and clip_cam1:
+            # two cameras – show CAM1 on the upper line, CAM0 on the baseline
+            values["clip_name_cam1"] = clip_cam1
+            values["clip_name"]      = clip_cam0
+        else:
+            # only one camera – keep it on the baseline row
+            values["clip_name"] = clip_cam0 or clip_cam1 or "N/A"
+            
 
         # ── add right-column data when CAM1 exists ────────────────
         if sensor_right and cam1:
@@ -450,7 +483,6 @@ class SimpleGUI(threading.Thread):
 
         return values
 
-    # ─────────────────────────────────────────────────────────────
     def _format_sensor_name(self, name: str, is_mono: bool) -> str:
         """
         Turn 'imx585' or 'IMX585_MONO' into:
@@ -467,6 +499,38 @@ class SimpleGUI(threading.Thread):
         n = n.replace("_MONO", "").replace("-MONO", "")
 
         return f"{n}\nMONO" if is_mono else n
+    
+    def _format_last_dng(self, path: str):
+        """
+        Turn a full DNG path stored in Redis into the short clip name used
+        in the GUI.
+
+        Example
+        -------
+        /media/RAW/CINEPI_25-07-01_220547_F10_C00000_cam1/
+        CINEPI_25-07-01_220547_F10_C00000_000000009.dng
+                 ───────────────────────────────┬─────────────────
+                 becomes:   CINEPI_25-07-01_220547_F10_C00000
+
+        • Removes the trailing frame counter (“_000000009”)
+        • Removes the camera suffix (“_cam0” / “_cam1”)
+        • Returns **None** if the input is falsy _or_ literally contains
+          the string “None”.
+        """
+        if not path or "None" in str(path):
+            return None
+
+        import os, re
+
+        stem = os.path.splitext(os.path.basename(path))[0]  # filename w/out .dng
+
+        # Strip “…_000000009”
+        stem = re.sub(r'_\d+$', '', stem)
+
+        # Strip camera suffix “…_cam0 / …_cam1”
+        stem = re.sub(r'_cam[01]$', '', stem, flags=re.IGNORECASE)
+
+        return stem
 
     def update_smoothed_vu_levels(self):
         if not self.usb_monitor or not hasattr(self.usb_monitor, "audio_monitor"):

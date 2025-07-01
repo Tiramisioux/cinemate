@@ -98,47 +98,59 @@ class AnalogControls(threading.Thread):
 
     def update_parameters(self):
         try:
+            # ISO
             if self.iso_pot is not None:
                 iso_read = self.adc.read(self.iso_pot)
                 self.iso_buffer.append(iso_read)
                 smoothed_iso = self.moving_average(self.iso_buffer)
-                new_iso = self.map_adc_to_steps(smoothed_iso, steps=self.cinepi_controller.iso_steps)
+                new_iso = self.map_adc_to_steps(smoothed_iso, steps=self.iso_steps)
 
                 if new_iso is not None and new_iso != self.last_iso:
-                    logging.info(f"Setting ISO to {new_iso}")
+                    logging.info(
+                        f"ISO changed → ADC raw={iso_read}, smoothed={smoothed_iso}, mapped={new_iso}"
+                    )
                     self.cinepi_controller.set_iso(new_iso)
                     self.last_iso = new_iso
 
+            # SHUTTER ANGLE
             if self.shutter_a_pot is not None:
                 shutter_a_read = self.adc.read(self.shutter_a_pot)
                 self.shutter_a_buffer.append(shutter_a_read)
                 smoothed_shutter_a = self.moving_average(self.shutter_a_buffer)
-                new_shutter_a = self.map_adc_to_steps(smoothed_shutter_a, steps=self.cinepi_controller.shutter_a_steps_dynamic)
+                new_shutter_a = self.map_adc_to_steps(smoothed_shutter_a, steps=self.shutter_a_steps)
 
                 if new_shutter_a is not None and new_shutter_a != self.last_shutter_a:
-                    logging.info(f"Setting Shutter Angle to {new_shutter_a}")
+                    logging.info(
+                        f"Shutter Angle changed → ADC raw={shutter_a_read}, smoothed={smoothed_shutter_a}, mapped={new_shutter_a}"
+                    )
                     self.cinepi_controller.set_shutter_a_nom(new_shutter_a)
                     self.last_shutter_a = new_shutter_a
 
+            # FPS
             if self.fps_pot is not None:
                 fps_read = self.adc.read(self.fps_pot)
                 self.fps_buffer.append(fps_read)
                 smoothed_fps = self.moving_average(self.fps_buffer)
-                new_fps = self.map_adc_to_steps(smoothed_fps, steps=self.cinepi_controller.fps_steps)
+                new_fps = self.map_adc_to_steps(smoothed_fps, steps=self.fps_steps)
 
                 if new_fps is not None and new_fps != self.last_fps:
-                    logging.info(f"Setting FPS to {new_fps}")
+                    logging.info(
+                        f"FPS changed → ADC raw={fps_read}, smoothed={smoothed_fps}, mapped={new_fps}"
+                    )
                     self.cinepi_controller.set_fps(new_fps)
                     self.last_fps = new_fps
 
+            # WHITE BALANCE
             if self.wb_pot is not None:
                 wb_read = self.adc.read(self.wb_pot)
                 self.wb_buffer.append(wb_read)
                 smoothed_wb = self.moving_average(self.wb_buffer)
-                new_wb = self.map_adc_to_steps(smoothed_wb, steps=self.cinepi_controller.wb_steps)
+                new_wb = self.map_adc_to_steps(smoothed_wb, steps=self.wb_steps)
 
                 if new_wb is not None and new_wb != self.last_wb:
-                    logging.info(f"Setting White Balance to {new_wb}K")
+                    logging.info(
+                        f"White Balance changed → ADC raw={wb_read}, smoothed={smoothed_wb}, mapped={new_wb}K"
+                    )
                     self.redis_controller.set_value(ParameterKey.WB_USER.value, new_wb)
                     self.cinepi_controller.set_wb(new_wb)
                     self.last_wb = new_wb
@@ -146,11 +158,15 @@ class AnalogControls(threading.Thread):
         except Exception as e:
             logging.error(f"Error occurred while updating parameters: {e}\n{traceback.format_exc()}")
 
+
+
+
     def run(self):
         try:
             while True:
                 if self.grove_base_hat_connected:
                     self.update_parameters()
+                    
                 time.sleep(0.1)  # Adjust delay as needed
         except Exception as e:
             logging.error(f"Error occurred in AnalogControls run loop: {e}\n{traceback.format_exc()}")

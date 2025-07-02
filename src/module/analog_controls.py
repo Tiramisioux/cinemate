@@ -96,6 +96,36 @@ class AnalogControls(threading.Thread):
         else:
             return steps[step_index]
 
+    # ───── helper ──────────────────────────────────────────────────────────
+    def _get_steps(self, kind: str):
+        """
+        Return the *current* legal step table for iso / shutter / fps / wb.
+
+        • honours the free-mode flags that the controller may toggle later  
+        • honours shutter-sync rules for fps and shutter_a  
+        • always uses the controller’s *live* tables – never the cached copies
+        """
+        c = self.cinepi_controller   # shorthand
+
+        if kind == 'iso':
+            return c.iso_steps                      # already rebuilt by update_steps()
+
+        if kind == 'shutter_a':
+            if c.shutter_a_free or c.shutter_a_sync_mode == 1:
+                return [round(i * 0.1, 1) for i in range(10, 3601)]
+            return c.shutter_a_steps_dynamic        # includes flicker-free angles
+
+        if kind == 'fps':
+            if c.fps_free or c.shutter_a_sync_mode == 1:
+                return list(range(1, c.fps_max + 1))
+            return c.fps_steps                      # snapped list
+
+        if kind == 'wb':
+            return c.wb_steps                       # free-mode handled in controller
+
+        return []      # fallback – should never happen
+
+
     def update_parameters(self):
         try:
             # ISO
@@ -103,7 +133,8 @@ class AnalogControls(threading.Thread):
                 iso_read = self.adc.read(self.iso_pot)
                 self.iso_buffer.append(iso_read)
                 smoothed_iso = self.moving_average(self.iso_buffer)
-                new_iso = self.map_adc_to_steps(smoothed_iso, steps=self.iso_steps)
+                new_iso = self.map_adc_to_steps(smoothed_iso, 
+                                                steps=self._get_steps('iso'))
 
                 if new_iso is not None and new_iso != self.last_iso:
                     logging.info(
@@ -117,7 +148,9 @@ class AnalogControls(threading.Thread):
                 shutter_a_read = self.adc.read(self.shutter_a_pot)
                 self.shutter_a_buffer.append(shutter_a_read)
                 smoothed_shutter_a = self.moving_average(self.shutter_a_buffer)
-                new_shutter_a = self.map_adc_to_steps(smoothed_shutter_a, steps=self.shutter_a_steps)
+                new_shutter_a = self.map_adc_to_steps(smoothed_shutter_a,
+                                      steps=self._get_steps('shutter_a'))
+
 
                 if new_shutter_a is not None and new_shutter_a != self.last_shutter_a:
                     logging.info(
@@ -131,7 +164,9 @@ class AnalogControls(threading.Thread):
                 fps_read = self.adc.read(self.fps_pot)
                 self.fps_buffer.append(fps_read)
                 smoothed_fps = self.moving_average(self.fps_buffer)
-                new_fps = self.map_adc_to_steps(smoothed_fps, steps=self.fps_steps)
+                new_fps = self.map_adc_to_steps(smoothed_fps,
+                                steps=self._get_steps('fps'))
+
 
                 if new_fps is not None and new_fps != self.last_fps:
                     logging.info(
@@ -145,7 +180,9 @@ class AnalogControls(threading.Thread):
                 wb_read = self.adc.read(self.wb_pot)
                 self.wb_buffer.append(wb_read)
                 smoothed_wb = self.moving_average(self.wb_buffer)
-                new_wb = self.map_adc_to_steps(smoothed_wb, steps=self.wb_steps)
+                new_wb = self.map_adc_to_steps(smoothed_wb,
+                               steps=self._get_steps('wb'))
+
 
                 if new_wb is not None and new_wb != self.last_wb:
                     logging.info(
@@ -157,9 +194,6 @@ class AnalogControls(threading.Thread):
 
         except Exception as e:
             logging.error(f"Error occurred while updating parameters: {e}\n{traceback.format_exc()}")
-
-
-
 
     def run(self):
         try:

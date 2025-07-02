@@ -32,14 +32,15 @@ class CommandExecutor(threading.Thread):
             'dec wb': (cinepi_controller.dec_wb, None),
             'set resolution': (cinepi_controller.set_resolution, [int, None]),
             'set anamorphic factor': (cinepi_controller.set_anamorphic_factor, [float, None]),
-            'mount cfe': (cinepi_controller.mount_cfe, None),
+            'mount': (cinepi_controller.mount, None),
             'unmount': (cinepi_controller.unmount, None),
-            'time': (self.display_time, None),  # Fixed placement issue
-            'set rtc time': (self.set_rtc_time, None),  # Fixed placement issue
+            'toggle mount': (cinepi_controller.toggle_mount, None),
+            'time': (self.display_time, None), 
+            'set rtc time': (self.set_rtc_time, None),  
             'space': (cinepi_controller.ssd_monitor.space_left, None),
             'get': (cinepi_controller.print_settings, None),
             'set pwm mode': (cinepi_controller.set_pwm_mode, [int, None]),
-            'set trigger mode': (cinepi_controller.set_trigger_mode, [int, None]),  # Flexible arguments
+            'set trigger mode': (cinepi_controller.set_trigger_mode, [int, None]),  
             'set shutter a sync': (cinepi_controller.set_shutter_a_sync_mode, [int, None]),
             'set iso lock': (cinepi_controller.set_iso_lock, [int, None]),
             'set shutter a nom lock': (cinepi_controller.set_shutter_a_nom_lock, [int, None]),

@@ -9,6 +9,13 @@ from typing import Optional, Tuple, List
 import datetime
 
 try:
+    from systemd import journal            # python3-systemd package
+    _HAVE_JOURNAL = True
+except ImportError:
+    _HAVE_JOURNAL = False    # fallback will use `journalctl -f`
+
+
+try:
     import pyudev           # Hot-plug backend (falls back to polling)
     _HAVE_PYUDEV = True
 except ImportError:
@@ -76,7 +83,6 @@ class SSDMonitor:
         self._space_delta = space_delta_gb
 
         self._is_mounted  = False
-        self._suppress_auto_mount = False 
         self._device_name = None        # "sda1" | "nvme0n1p1" | …
         self._device_type = None        # "SSD" | "NVMe" | "CFE" | "Unknown"
         self._space_left  = None        # float (GB)
@@ -99,6 +105,14 @@ class SSDMonitor:
             target=self._run, daemon=True, name="SSDMonitor"
         )
 
+        # --- watch storage-automount logs -----------------------------------
+        self._jthread = threading.Thread(
+            target=self._journal_loop, daemon=True, name="SSDJournal"
+        )
+        self._jthread.start()
+        logging.info("SSDMonitor journal listener started.")
+
+
         self._cfe_hat_present = self._detect_cfe_hat()
         self._init_redis_defaults()
         self._thread.start()
@@ -107,6 +121,7 @@ class SSDMonitor:
     def stop(self) -> None:
         self._stop_evt.set()
         self._thread.join()
+        self._jthread.join()
         logging.info("SSD monitoring stopped.")
 
     # ------------------------------------------------------------------
@@ -219,14 +234,12 @@ class SSDMonitor:
             # In either case we resync; if an event arrived, dev is not None.
             self._check_mount_status()
             self._maybe_run_fsck()
-            self._maybe_auto_mount_cfe()
 
     # ---------- polling backend ---------------------------------------
     def _poll_loop(self) -> None:
         while not self._stop_evt.wait(self._poll_int):
             self._check_mount_status()
             self._maybe_run_fsck()
-            self._maybe_auto_mount_cfe()
 
     # ------------------------------------------------------------------
     # state changes
@@ -253,12 +266,6 @@ class SSDMonitor:
             ParameterKey.SPACE_LEFT.value:    f"{self._space_left:.2f}",
         })
 
-        # If the NVMe device is still present, the user probably did a
-        # plain "umount /media/RAW".  Suppress auto-mount until the
-        # device disappears (i.e. they eject the card).
-        if any(p.startswith("nvme") for p in os.listdir("/dev")):
-            self._suppress_auto_mount = True        # ← NEW
-
         logging.info("RAW drive mounted at %s (%s)",
                      self._mount_path, self._device_type)
         self.mount_event.emit(self._mount_path, self._device_type)
@@ -284,7 +291,6 @@ class SSDMonitor:
             ParameterKey.IS_MOUNTED.value:   "0",
             ParameterKey.SPACE_LEFT.value:   "0",
         })
-
 
         logging.info("RAW drive unmounted from %s", self._mount_path)
         self._is_mounted = False
@@ -432,108 +438,106 @@ class SSDMonitor:
     # ------------------------------------------------------------------
     # Public helpers
     # ------------------------------------------------------------------
-    def mount_cfe(self, retries: int = 3, wait: float = 2.0) -> bool:
-            """
-            Trigger `cfe-hat-automount mount`.
-
-            Returns True **only if /media/RAW is actually mounted** within
-            `wait` seconds (default 2 s).  Otherwise returns False so the
-            auto-mount loop will retry later.
-            """
-            if not self._cfe_hat_present:
-                return False
-
-            for attempt in range(retries):
-                try:
-                    subprocess.run(
-                        ["sudo", "cfe-hat-automount", "mount"],
-                        check=True, capture_output=True, text=True
-                    )
-                except subprocess.CalledProcessError as exc:
-                    logging.debug("CFE mount helper failed: %s", exc.stderr)
-                    continue  # try again (up to *retries*)
-
-                # helper exited OK → give the kernel a moment to create /dev/*
-                t_end = time.time() + wait
-                while time.time() < t_end:
-                    if os.path.ismount(self._mount_path):
-                        return True          # SUCCESS: card is mounted
-                    time.sleep(0.1)
-
-            return False                      # still not mounted
-    
-    def _maybe_auto_mount_cfe(self) -> None:
+                     # still not mounted
+    def toggle_mount_drive(self) -> None:  
         """
-        Auto-mount the CF-Express card when appropriate.
-
-        ▸ Preconditions
-            • Hat detected
-            • /media/RAW not currently mounted
-            • auto-mount not suppressed by a manual umount
-
-        ▸ Suppression
-            • When the user manually umounts the card while the NVMe
-              device is still present, _handle_unmount() sets
-              self._suppress_auto_mount = True.
-            • Suppression is lifted automatically once the NVMe device
-              node disappears (card removed or controller unbound).
+        Single-toggle helper for a push-button or CLI call:
+            – If /media/RAW is mounted → unmount.
+            – Otherwise               → mount the first RAW partition.
         """
-        # lift suppression if the only remaining block nodes are loop/mmcblk
-        if self._suppress_auto_mount:
-            live_disks = [p for p in os.listdir('/dev') if p[:2] in ('sd', 'nv', 'hd')]
-            if not live_disks:                      # all real disks gone
-                self._suppress_auto_mount = False
-                logging.debug("Suppression cleared (all disks removed)")
-
-
-        # ── lift suppression when the card has really gone ────────────
-        if self._suppress_auto_mount and not any(
-                p.startswith("nvme") for p in os.listdir("/dev")):
-            self._suppress_auto_mount = False
-            logging.debug("Auto-mount suppression cleared (card removed)")
-
-        # ── exit early if we must not / need not mount ────────────────
-        if self._suppress_auto_mount or not self._cfe_hat_present or self._is_mounted:
-            return
-
-        # ── back-off: max one attempt every 5 s ───────────────────────
-        now = time.time()
-        if now - self._last_cfe_mount_try < 5:
-            return
-        self._last_cfe_mount_try = now
-
-        # ── try the helper once ───────────────────────────────────────
-        if not self.mount_cfe(retries=1):
-            logging.debug("Auto-mount attempt failed; will retry")
-            return
-
-        logging.info("Auto-mounted CF-Express card via helper")
-
-        # ── commit the mount immediately (no polling delay) ───────────
-        self._device_name = self._get_device_name()
-        if not self._device_name:           # kernel still busy? → one retry
-            time.sleep(0.2)
-            self._device_name = self._get_device_name()
-
-        if self._device_name and not self._is_mounted:
-            self._handle_mount()
-
-
+        if self._is_mounted:
+            logging.info("toggle_mount(): RAW is mounted — unmounting")
+            self.unmount_drive()
+        else:
+            logging.info("toggle_mount(): RAW not mounted — trying to mount")
+            if not self.mount_drive():
+                logging.warning("toggle_mount(): mount attempt failed")
 
     def unmount_drive(self) -> None:
         if not self._is_mounted:
             return
-        self._suppress_auto_mount = True          # <- NEW
+
         cmd = ["sudo", "umount", str(self._mount_path)]
-        if self._device_type == "CFE":
-            cmd = ["sudo", "cfe-hat-automount", "unmount"]
+
         try:
             subprocess.run(cmd, check=True)
         except subprocess.CalledProcessError as exc:
             logging.error("Failed to unmount: %s", exc)
-            self._suppress_auto_mount = False     # rollback on error
             return
-        self._handle_unmount()
+        
+    def mount_drive(self) -> bool:
+        """
+        Mount the first partition whose LABEL is 'RAW'.
+        Returns True if the mount succeeds or if it is already mounted.
+        """
+        if self._is_mounted:
+            logging.info("mount_drive(): already mounted")
+            return True
+
+        # 1 — build a list of candidate device nodes, prioritised
+        def _blkid_lines():
+            try:
+                out = subprocess.check_output(["blkid", "-s", "LABEL", "-o", "device"], text=True)
+                return [ln.strip() for ln in out.splitlines()]
+            except subprocess.CalledProcessError:
+                return []
+
+        candidates = [d for d in _blkid_lines() if Path(d).exists()]
+        nvme = [d for d in candidates if "/nvme" in d]
+        sdas = [d for d in candidates if "/sd" in d]
+        others = [d for d in candidates if d not in nvme + sdas]
+        ordered = nvme + sdas + others
+
+        raw_dev = None
+        for dev in ordered:
+            try:
+                label = subprocess.check_output(["blkid", "-s", "LABEL", "-o", "value", dev], text=True).strip()
+                if label == "RAW":
+                    raw_dev = dev
+                    break
+            except subprocess.CalledProcessError:
+                continue
+
+        if not raw_dev:
+            logging.warning("mount_drive(): no partition labelled RAW found")
+            return False
+
+        # 2 — discover filesystem type
+        try:
+            fstype = subprocess.check_output(["blkid", "-s", "TYPE", "-o", "value", raw_dev], text=True).strip()
+        except subprocess.CalledProcessError:
+            logging.error("mount_drive(): blkid failed for %s", raw_dev)
+            return False
+
+        # 3 — create mountpoint and mount
+        mount_path = self._mount_path
+        try:
+            mount_path.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            logging.error("mount_drive(): cannot create %s (%s)", mount_path, exc)
+            return False
+
+        opts = {
+            "ext4":  "rw,noatime",
+            "ntfs":  f"uid=1000,gid=1000,rw,noatime,umask=000",
+            "exfat": f"uid=1000,gid=1000,rw,noatime",
+        }.get(fstype, "rw,noatime")
+
+        cmd = ["sudo", "mount", "-t", fstype, "-o", opts, raw_dev, str(mount_path)]
+        res = subprocess.call(cmd)
+        if res != 0:
+            logging.error("mount_drive(): mount failed, exit=%d", res)
+            return False
+
+        # 4 — ownership fix
+        subprocess.call(["sudo", "chown", "pi:pi", str(mount_path)])
+
+        logging.info("mount_drive(): mounted %s (%s) at %s", raw_dev, fstype, mount_path)
+
+        # 5 — sync SSDMonitor state & emit events
+        self._handle_mount()
+        return True
+
 
     # ------------------------------------------------------------------
     # recording-finder helpers (unchanged)
@@ -584,3 +588,44 @@ class SSDMonitor:
     def get_mount_status(self) -> bool:   # just in case other code uses it
         """Old API – true if /media/RAW is currently mounted."""
         return self._is_mounted
+
+    # ---------- journal subscriber --------------------------------------
+    def _journal_loop(self) -> None:
+        """
+        Listen to storage-automount.service log lines and translate them
+        into SSDMonitor events.  Works with python-systemd if available,
+        otherwise falls back to running `journalctl -fu`.
+        """
+        def _process_line(line: str) -> None:
+            line = line.strip()
+            if "Device connected:" in line:
+                logging.info("SSDMonitor: %s", line)
+            elif "Mounted /dev" in line and "OK" in line:
+                self._handle_mount()          # refresh state & emit event
+            elif "Unmounted /dev" in line:
+                self._handle_unmount()
+            elif "repair successful" in line:
+                logging.info("SSDMonitor: %s", line)
+            elif "repair failed" in line:
+                logging.warning("SSDMonitor: %s", line)
+
+        if _HAVE_JOURNAL:
+            j = journal.Reader()
+            j.add_match(_SYSTEMD_UNIT="storage-automount.service")
+            j.seek_tail()
+            j.get_previous()                  # position at last entry
+            j.seek_tail()
+            while not self._stop_evt.is_set():
+                if j.wait(1000) == journal.APPEND:
+                    for entry in j:
+                        _process_line(entry["MESSAGE"])
+        else:
+            # Portable fallback using journalctl -fu …
+            cmd = ["journalctl", "-fu", "storage-automount", "-n", "0", "-o", "cat"]
+            with subprocess.Popen(cmd, stdout=subprocess.PIPE, text=True) as proc:
+                while not self._stop_evt.is_set():
+                    line = proc.stdout.readline()
+                    if not line:              # EOF (service stopped)
+                        time.sleep(0.5)
+                        continue
+                    _process_line(line)

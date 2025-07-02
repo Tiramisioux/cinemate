@@ -1,65 +1,77 @@
-SERVICE_NAME := cinemate-autostart
-SERVICE_FILE_PATH := /etc/systemd/system/$(SERVICE_NAME).service
-LOCAL_SERVICE_FILE := ./services/$(SERVICE_NAME)/$(SERVICE_NAME).service
+# -------------------------------------------------------------------
+# Systemd service – cinemate-autostart
+# -------------------------------------------------------------------
+SERVICE_NAME        := cinemate-autostart
 
-.PHONY: all install enable disable start stop restart status clean
+# where systemd expects it
+SYSTEMD_DIR         := /etc/systemd/system
+SERVICE_FILE_PATH   := $(SYSTEMD_DIR)/$(SERVICE_NAME).service
 
+# where the service file lives inside the repo
+SERVICE_DIR         := services/$(SERVICE_NAME)
+LOCAL_SERVICE_FILE  := $(SERVICE_DIR)/$(SERVICE_NAME).service
+
+.PHONY: all install enable disable start stop restart status clean help
+
+# -------------------------------------------------------------------
 # Default target
+# -------------------------------------------------------------------
 all: help
 
-# Install the service file to systemd directory
+# -------------------------------------------------------------------
+# Install / update the service file
+# -------------------------------------------------------------------
 install:
-	sudo cp $(LOCAL_SERVICE_FILE) $(SERVICE_FILE_PATH)
+	sudo install -m 644 $(LOCAL_SERVICE_FILE) $(SERVICE_FILE_PATH)
 	sudo systemctl daemon-reload
-	@echo "Service installed to $(SERVICE_FILE_PATH)"
+	@echo "Installed $(SERVICE_FILE_PATH)"
 
-# Enable the service to start on boot
-enable:
-	sudo systemctl enable $(SERVICE_NAME)
-	@echo "Service $(SERVICE_NAME) enabled"
+# -------------------------------------------------------------------
+# Enable / disable (boot autostart)
+# -------------------------------------------------------------------
+enable: install
+	sudo systemctl enable  $(SERVICE_NAME)
+	@echo "Enabled  $(SERVICE_NAME)"
 
-# Disable the service
 disable:
 	sudo systemctl disable $(SERVICE_NAME)
-	@echo "Service $(SERVICE_NAME) disabled"
+	@echo "Disabled $(SERVICE_NAME)"
 
-# Start the service
+# -------------------------------------------------------------------
+# Runtime control
+# -------------------------------------------------------------------
 start:
 	sudo systemctl start $(SERVICE_NAME)
-	@echo "Service $(SERVICE_NAME) started"
 
-# Stop the service
 stop:
 	sudo systemctl stop $(SERVICE_NAME)
-	@echo "Service $(SERVICE_NAME) stopped"
 
-# Restart the service
 restart:
 	sudo systemctl restart $(SERVICE_NAME)
-	@echo "Service $(SERVICE_NAME) restarted"
 
-# Check the status of the service
 status:
 	sudo systemctl status $(SERVICE_NAME)
 
-# Clean up: remove the service file from the systemd directory
+# -------------------------------------------------------------------
+# Remove everything
+# -------------------------------------------------------------------
 clean:
-	sudo systemctl stop $(SERVICE_NAME) || true
-	sudo systemctl disable $(SERVICE_NAME) || true
-	sudo rm -f $(SERVICE_FILE_PATH)
-	sudo systemctl daemon-reload
-	@echo "Service $(SERVICE_NAME) removed"
+	- sudo systemctl stop    $(SERVICE_NAME)
+	- sudo systemctl disable $(SERVICE_NAME)
+	- sudo rm -f             $(SERVICE_FILE_PATH)
+	 sudo systemctl daemon-reload
+	@echo "Removed $(SERVICE_NAME)"
 
-# Display help message
+# -------------------------------------------------------------------
+# Quick help
+# -------------------------------------------------------------------
 help:
-	@echo "Makefile for managing the $(SERVICE_NAME) service"
-	@echo ""
-	@echo "Usage:"
-	@echo "  make install    - Copy the service file to systemd directory"
-	@echo "  make enable     - Enable the service to start on boot"
-	@echo "  make disable    - Disable the service"
-	@echo "  make start      - Start the service"
-	@echo "  make stop       - Stop the service"
-	@echo "  make restart    - Restart the service"
-	@echo "  make status     - Show the status of the service"
-	@echo "  make clean      - Stop, disable, and remove the service file"
+	@echo "cinemate-autostart Make targets:"
+	@echo "  make install   – copy/update the service file"
+	@echo "  make enable    – enable and (re)install"
+	@echo "  make disable   – disable autostart"
+	@echo "  make start     – start service now"
+	@echo "  make stop      – stop service"
+	@echo "  make restart   – restart service"
+	@echo "  make status    – show status"
+	@echo "  make clean     – stop, disable and remove service file"

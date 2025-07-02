@@ -757,8 +757,8 @@ class CinePiController:
         logging.info("Initiating safe system shutdown.")
         os.system("sudo shutdown -h now")
     
-    def mount_cfe(self):
-        self.ssd_monitor.mount_cfe()
+    def mount(self):
+        self.ssd_monitor.mount_drive()
     
     def unmount(self):
         if self.ssd_monitor.is_mounted:
@@ -770,6 +770,8 @@ class CinePiController:
             else:
                 logging.info("No drive currently mounted and no CFE HAT present. Nothing to do.")
 
+    def toggle_mount(self):
+        self.ssd_monitor.toggle_mount_drive()
     
     def calculate_dynamic_shutter_angles(self, fps):
         if fps <= 0:

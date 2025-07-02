@@ -145,16 +145,28 @@ class AnalogControls(threading.Thread):
 
             # SHUTTER ANGLE
             if self.shutter_a_pot is not None:
-                shutter_a_read = self.adc.read(self.shutter_a_pot)
+                shutter_a_read   = self.adc.read(self.shutter_a_pot)
                 self.shutter_a_buffer.append(shutter_a_read)
-                smoothed_shutter_a = self.moving_average(self.shutter_a_buffer)
-                new_shutter_a = self.map_adc_to_steps(smoothed_shutter_a,
-                                      steps=self._get_steps('shutter_a'))
+                smoothed_shutter = self.moving_average(self.shutter_a_buffer)
 
+                new_shutter_a = self.map_adc_to_steps(
+                    smoothed_shutter,
+                    steps=self._get_steps('shutter_a')
+                )
 
-                if new_shutter_a is not None and new_shutter_a != self.last_shutter_a:
+                # ── debounce: ignore sub-degree jitter, but only in sync / free mode
+                MIN_DEG_DELTA = (1.0 if self.cinepi_controller.shutter_a_sync_mode == 1
+                                    or self.cinepi_controller.shutter_a_free
+                                else 0.1)
+
+                if (new_shutter_a is not None and
+                        (self.last_shutter_a is None or
+                        abs(new_shutter_a - self.last_shutter_a) >= MIN_DEG_DELTA)):
+
                     logging.info(
-                        f"Shutter Angle changed → ADC raw={shutter_a_read}, smoothed={smoothed_shutter_a}, mapped={new_shutter_a}"
+                        f"Shutter Angle changed → "
+                        f"ADC raw={shutter_a_read}, smoothed={smoothed_shutter}, "
+                        f"mapped={new_shutter_a}"
                     )
                     self.cinepi_controller.set_shutter_a_nom(new_shutter_a)
                     self.last_shutter_a = new_shutter_a

@@ -138,7 +138,7 @@ class CinePiController:
         self.set_fps(self.fps)
         logging.info(f"Initialized fps: {self.fps}")
         
-        self.set_resolution(int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value)))
+        #self.set_resolution(int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value)))
         
     # ─── step-table helpers ────────────────────────────────────────────────
     def _rebuild_iso_steps(self):

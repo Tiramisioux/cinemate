@@ -171,7 +171,6 @@ def main():
     # Initialize CinePi application
     cinepi = CinePi(redis_controller, sensor_detect)
     
-    cinepi = CinePi(redis_controller, sensor_detect)
     cinepi.start_all()
 
     # cinepi.set_log_level('INFO')

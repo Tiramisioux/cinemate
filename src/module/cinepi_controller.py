@@ -76,8 +76,6 @@ class CinePiController:
         self.shutter_a_nom_lock = False
         self.fps_lock = False
         
-
-        
         # Dictionary to store calculated values for different fps
         self.calculated_values = {}
         
@@ -1136,7 +1134,8 @@ class CinePiController:
         self.redis_controller.set_value(ParameterKey.TRIGGER_MODE.value, str(value))
 
         # Restart the cinepi process to apply the changes
-        self.restart_camera()
+        if not self.startup:          # <-- only restart after boot
+            self.restart_camera()
         
     def restart_camera(self):
         self.cinepi.restart()

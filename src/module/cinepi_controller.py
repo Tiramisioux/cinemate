@@ -140,9 +140,46 @@ class CinePiController:
         
         self.set_resolution(int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value)))
         
+    # ─── step-table helpers ────────────────────────────────────────────────
+    def _rebuild_iso_steps(self):
+        self.iso_steps = (list(range(100, 3201, 50))
+                        if self.iso_free
+                        else list(self.settings['arrays']['iso_steps']))
 
+    def _rebuild_shutter_steps(self):
+        self.shutter_a_steps = ([round(i * 0.1, 1) for i in range(10, 3601)]
+                                if self.shutter_a_free
+                                else list(self.settings['arrays']['shutter_a_steps']))
+        # keep the flicker-free additions in sync
+        self.shutter_a_steps_dynamic = self.calculate_dynamic_shutter_angles(
+            self.current_fps)
 
-        
+    def _rebuild_fps_steps(self):
+        if self.fps_free:
+            self.fps_steps = list(range(1, self.fps_max + 1))
+        else:
+            self.fps_steps = list(self.settings['arrays']['fps_steps'])
+        # dynamic list is always the legal subset ≤ fps_max
+        self.fps_steps_dynamic = [v for v in self.fps_steps if v <= self.fps_max]
+
+    def _rebuild_wb_steps(self):
+        self.wb_steps = (list(range(1000, 10001, 50))
+                        if self.wb_free
+                        else list(self.settings['arrays']['wb_steps']))
+    
+    # ─── main public call ──────────────────────────────────────────────────
+    def update_steps(self):
+        """Re-calculate all step tables after a ‘*_free’ flag or fps_max changes."""
+        self._rebuild_iso_steps()
+        self._rebuild_shutter_steps()
+        self._rebuild_fps_steps()
+        self._rebuild_wb_steps()
+        logging.info(f"Step tables rebuilt "
+                    f"(iso {len(self.iso_steps)}, "
+                    f"shutter {len(self.shutter_a_steps_dynamic)}, "
+                    f"fps {len(self.fps_steps_dynamic)}, "
+                    f"wb {len(self.wb_steps)})")
+    
     def set_anamorphic_factor(self, value=None):
         """
         Set or toggle the anamorphic factor.
@@ -206,8 +243,6 @@ class CinePiController:
             self.initialize_shutter_angle_steps()
 
         self.redis_controller.set_value(ParameterKey.SHUTTER_A_SYNC_MODE.value, mode)
-
-
 
     def calculate_exposure(self):
         fps = self.redis_controller.get_value(ParameterKey.FPS.value)
@@ -349,68 +384,65 @@ class CinePiController:
             self.update_fps(round(adjusted_fps, 1))
 
     def set_fps(self, value):
+        """
+        Apply a new FPS, observing:
+            • hardware limit (fps_max)
+            • fps_free flag
+            • shutter-sync flag
+            • correction factor for fractional clocking
+            • optional locks
+        """
         self.user_fps = float(value)
         self.redis_controller.set_value(ParameterKey.FPS_USER.value, self.user_fps)
 
-        corrected_value = self.user_fps * self.fps_correction_factor
+        corrected = self.user_fps * self.fps_correction_factor
+        fps_max   = int(self.redis_controller.get_value(ParameterKey.FPS_MAX.value))
 
-        logging.info(f"User-set FPS: {self.user_fps}")
-        logging.info(f"Correction factor applied: {self.fps_correction_factor}")
-        logging.info(f"Corrected FPS (used internally): {corrected_value:.4f}")
-
-        fps_max = int(self.redis_controller.get_value(ParameterKey.FPS_MAX.value))
-
-        if self.shutter_a_sync_mode == 1:
-            # In sync mode, allow any FPS freely within hardware limits
-            safe_value = max(1, min(fps_max, corrected_value))
-            logging.info(f"Sync mode: FPS allowed freely. Using value: {safe_value}")
+        # ── choose the final fps value ──────────────────────────────────────
+        if self.shutter_a_sync_mode == 1 or self.fps_free:
+            safe_value = max(1, min(fps_max, corrected))           # “free”
         else:
-            # Clamp to array steps outside sync mode
-            available_steps = self.fps_steps_dynamic
-            safe_value = min(
-                available_steps,
-                key=lambda x: abs(x - corrected_value)
-            )
-            logging.info(f"Non-sync mode: snapped FPS to {safe_value} from steps {available_steps}")
+            # make sure the table is current (free-mode may be toggled at run-time)
+            self._rebuild_fps_steps()
+            safe_value = min(self.fps_steps_dynamic,
+                            key=lambda x: abs(x - corrected))     # “snapped”
 
-        logging.info(f"Clamped FPS value to safe range: {safe_value}")
-
-        if self.fps_lock:
-            logging.info("FPS change ignored due to fps_lock being enabled.")
+        if self.fps_lock and not self.lock_override:
+            logging.debug("FPS locked – request ignored")
             return
 
-        if not self.parameters_lock or self.lock_override:
-            self.redis_controller.set_value(ParameterKey.FPS.value, safe_value)
-            self.current_fps = safe_value
-            logging.info(f"FPS set in Redis: {self.current_fps}")
+        self.current_fps = safe_value
+        self.redis_controller.set_value(ParameterKey.FPS.value, safe_value)
 
-            if self.shutter_a_sync_mode == 0:
-                self.initialize_shutter_angle_steps()
-                logging.info(f"Shutter angles rebuilt for fps={self.current_fps}: {self.shutter_angle_steps}")
+        # ── shutter angle handling ─────────────────────────────────────────
+        if self.shutter_a_sync_mode == 0:
+            # keep motion-blur constant
+            self.initialize_shutter_angle_steps()
+            self.shutter_angle_actual = min(
+                self.shutter_a_steps_dynamic,
+                key=lambda x: abs(x - self.shutter_angle_actual))
+        else:
+            # keep exposure-time constant
+            self.shutter_angle_actual = round(
+                self.exposure_time_nominal * self.current_fps * 360, 1)
+            self.shutter_angle_actual = min(360.0,
+                                            max(1.0, self.shutter_angle_actual))
 
-                # Snap nominal angle to nearest legal value
-                snapped_angle = min(
-                    self.shutter_a_steps_dynamic,
-                    key=lambda x: abs(x - self.shutter_angle_nom)
-                )
-                self.shutter_angle_actual = snapped_angle
-                self.redis_controller.set_value(ParameterKey.SHUTTER_A_ACTUAL.value, snapped_angle)
-                logging.info(f"Snapped shutter angle to {snapped_angle}° for FPS={self.current_fps}")
+        self.redis_controller.set_value(ParameterKey.SHUTTER_A_ACTUAL.value,
+                                        self.shutter_angle_actual)
 
-            else:
-                self.shutter_angle_actual = min(
-                    360.0,
-                    max(1.0, round(self.exposure_time_nominal * self.user_fps * 360, 1))
-                )
-                logging.info(f"Sync mode: Adjusted shutter angle to {self.shutter_angle_actual}°")
+        # update exposure display
+        self.exposure_time_s = (self.shutter_angle_actual / 360.0) / self.current_fps
+        self.exposure_time_fractions = self.seconds_to_fraction_text(
+            self.exposure_time_s)
+        self.redis_controller.set_value(ParameterKey.EXPOSURE_TIME.value,
+                                        self.exposure_time_s)
 
-            self.redis_controller.set_value(ParameterKey.SHUTTER_A_ACTUAL.value, self.shutter_angle_actual)
+        self.fps = int(round(self.current_fps))
+        logging.info(f"FPS set to {self.current_fps} "
+                    f"(user {self.user_fps}, free={self.fps_free}, "
+                    f"sync={self.shutter_a_sync_mode})")
 
-        self.exposure_time_s = (self.shutter_angle_actual / 360.0) / self.user_fps
-        self.exposure_time_fractions = self.seconds_to_fraction_text(self.exposure_time_s)
-        self.redis_controller.set_value(ParameterKey.EXPOSURE_TIME.value, self.exposure_time_s)
-
-        self.fps = int(self.current_fps)
 
     def set_iso_lock(self, value=None):
         if value is not None:
@@ -665,8 +697,6 @@ class CinePiController:
                     logging.info(
                         f"Normal mode: shutter angle actual set to {safe_value}°"
                 )
-
-
 
     def set_shu_fps_lock(self, value=None):
         if value is not None:

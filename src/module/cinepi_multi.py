@@ -173,14 +173,12 @@ class CinePiProcess(Thread):
 
         pipe.close()
 
-
-
     def _log(self, text):
-        # for name, rx in self.log_filters.items():
-        #     if name in self.active_filters and rx.search(text):
-        #         pass #logging.info('[%s] %s', self.cam, text)
-        #         break
-        #logging.info('[%s] %s', self.cam.port, text)   # DEBUG → all lines
+        for name, rx in self.log_filters.items():
+            if name in self.active_filters and rx.search(text):
+                pass #logging.info('[%s] %s', self.cam, text)
+                break
+        logging.info('[%s] %s', self.cam.port, text)   # DEBUG → all lines
         pass
 
     def _build_args(self):
@@ -240,14 +238,14 @@ class CinePiProcess(Thread):
         default_hd = '0' if self.cam.port == 'cam0' else '1'
         hd = str(self.output.get('hdmi_port', default_hd))
         args = [
-            '--camera', str(self.cam.index),
+            # '--camera', str(self.cam.index),
             '--mode', f'{width}:{height}:{bit_depth}:{packing}',
             '--width', str(width),
             '--height', str(height),
             '--lores-width', str(lw),
             '--lores-height', str(lh),
             '--hdmi-port', hd,
-            '-p', f'{ox},{oy},{pw},{ph}',
+            # '-p', f'{ox},{oy},{pw},{ph}',
             '--rotation', str(rot),
             '--hflip', str(hf),
             '--vflip', str(vf),
@@ -258,7 +256,7 @@ class CinePiProcess(Thread):
             '--awbgains', cg_rb,
 
             # NEW  ★   (ensures RawOptions.camPort is populated)
-            '--cam-port', self.cam.port,
+            # '--cam-port', self.cam.port,
         ]
         
         # ── if running in multi-camera mode, pass --sync server/client ──
@@ -268,10 +266,10 @@ class CinePiProcess(Thread):
             else:
                 args += ['--sync', 'client']
         
-        # if not (self.multi and not self.primary):
-        #     args += ['-p', f'{ox},{oy},{pw},{ph}']
-        # else:
-        #     args += ['--nopreview']
+        if not (self.multi and not self.primary):
+            args += ['-p', f'{ox},{oy},{pw},{ph}']
+        else:
+            args += ['--nopreview']
         return args
 
     def stop(self):

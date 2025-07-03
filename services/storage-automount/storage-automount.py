@@ -240,9 +240,8 @@ def _udev_worker():
 
 
 # ---------------------------------------------------------------------------
-# CFE-HAT thread (optional)
+# CFE-HAT worker (edge-triggered buttons)
 # ---------------------------------------------------------------------------
-
 def _cfe_hat_worker():
     if smbus is None:
         log.debug("No smbus module, CFE-HAT thread disabled")
@@ -252,14 +251,15 @@ def _cfe_hat_worker():
     I2C_ADDR = 0x34
     try:
         bus = smbus.SMBus(I2C_CH)
-        # Probe once – if the HAT is absent, bail out quietly
-        bus.read_byte(I2C_ADDR)
+        bus.read_byte(I2C_ADDR)          # probe once
     except OSError:
-        log.info("CFE-HAT not detected on I²C, skipping HAT thread")
+        log.info("CFE-HAT not detected on I²C, skipping thread")
         return
 
-    led_on         = False
-    consecutive_err = 0        # to rate-limit error spam
+    led_on          = False
+    consecutive_err = 0
+    last_insert     = 0
+    last_eject      = 0
 
     def _set_led(state: bool):
         nonlocal led_on
@@ -288,33 +288,35 @@ def _cfe_hat_worker():
     while True:
         try:
             data = bus.read_byte(I2C_ADDR)
-            consecutive_err = 0                 # reset error counter
+            consecutive_err = 0
         except OSError as e:
-            # Log only the first error every 30 s to avoid flooding
             if consecutive_err == 0:
-                log.warning("CFE-HAT I²C read failed (%s) – will retry", e)
-            consecutive_err += 1
-            if consecutive_err > 300:           # ~30 s with 0.1 s sleep
-                consecutive_err = 0
+                log.warning("CFE-HAT I²C read failed (%s) – retrying", e)
+            consecutive_err = (consecutive_err + 1) % 300
             time.sleep(0.1)
             continue
 
-        insert_pressed = data & 0x01
-        eject_pressed  = data & 0x02
+        insert = 1 if (data & 0x01) else 0
+        eject  = 1 if (data & 0x02) else 0
 
-        if insert_pressed and not led_on:
-            log.info("CFE-HAT: insert button")
+        # -------- insert button released (edge 1→0) -----------------
+        if last_insert == 1 and insert == 0 and not led_on:
+            log.info("CFE-HAT: insert button released → mount")
             _pcie_bind(True)
-            _set_led(True)
-        elif eject_pressed and led_on:
-            log.info("CFE-HAT: eject button")
+            _set_led(True)     # turns on immediately; unmount switches off
+
+        # -------- eject button released (edge 1→0) ------------------
+        if last_eject == 1 and eject == 0 and led_on:
+            log.info("CFE-HAT: eject button released → unmount")
             for dev, mp in list(_mounts.items()):
                 if mp.name == "RAW":
                     _unmount(dev)
             _pcie_bind(False)
             _set_led(False)
 
+        last_insert, last_eject = insert, eject
         time.sleep(0.1)
+
 
 
 # ---------------------------------------------------------------------------

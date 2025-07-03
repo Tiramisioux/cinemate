@@ -90,7 +90,8 @@ def setup_logging(debug_mode):
 def start_hotspot():
     wifi_manager = WiFiHotspotManager()
     try:
-        wifi_manager.create_hotspot('CinePi', '11111111')
+        wifi_mgr = WiFiHotspotManager()
+        wifi_mgr.create_hotspot() 
     except Exception as e:
         logging.error(f"Failed to start WiFi hotspot: {e}")
 

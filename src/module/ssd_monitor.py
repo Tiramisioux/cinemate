@@ -7,6 +7,7 @@ import smbus
 from pathlib import Path
 from typing import Optional, Tuple, List
 import datetime
+import re
 
 try:
     from systemd import journal            # python3-systemd package
@@ -31,6 +32,7 @@ from module.redis_controller import ParameterKey
 # ----------------------------------------------------------------------
 REDIS_KEY_IS_RECORDING = "IS_RECORDING"     # "1" while cinepi-raw is running
 REDIS_KEY_FSCK_STATUS  = "FSCK_STATUS"      # "OK …"  |  "FAIL …"
+
 
 # ----------------------------------------------------------------------
 # Event helper
@@ -66,7 +68,7 @@ class SSDMonitor:
         • Daily read-only fsck (and once right after mount)
         • Ownership fix-up (chown -R pi:pi) on every mount
     """
-
+    
     # ------------------------------------------------------------------
     # ctor / dtor
     # ------------------------------------------------------------------
@@ -177,14 +179,14 @@ class SSDMonitor:
     # internals
     # ------------------------------------------------------------------
     def _detect_cfe_hat(self) -> bool:
-        """Detect CFE Hat either via I²C (addr 0x34) or PCIe node."""
-        # ---- I²C probe ------------------------------------------------
+        """Detect CFE-Hat via I²C (0x34) or PCIe node."""
         try:
-            with smbus.SMBus(1) as bus:
-                _ = bus.read_byte(0x34)       # any value is fine (often 0x69)
-            logging.info("CFE HAT detected via I²C @0x34")
+            bus = smbus.SMBus(1)
+            bus.read_byte(0x34)        # any reply ≠ exception means “present”
+            bus.close()
+            logging.info("CFE-HAT detected via I²C @0x34")
             return True
-        except Exception:
+        except OSError:
             pass
 
         # ---- PCIe bridge present? ------------------------------------
@@ -286,18 +288,32 @@ class SSDMonitor:
         self._next_fsck_ts = 0
 
     def _handle_unmount(self) -> None:
+        # … Redis clean-up stays unchanged …
         self._redis_set_many({
             ParameterKey.STORAGE_TYPE.value: "none",
             ParameterKey.IS_MOUNTED.value:   "0",
             ParameterKey.SPACE_LEFT.value:   "0",
         })
 
+        # ─── switch off CFE-Hat LED (if we still have the I²C bus) ───
+        if self._device_type == "CFE":
+            try:
+                bus = smbus.SMBus(1)
+                bus.write_byte(0x34, 0x00)     # LED off
+                bus.close()                    # <-- explicit close
+            except OSError:
+                # HAT already gone → ignore
+                pass
+            except Exception as exc:
+                logging.debug("CFE-HAT LED off failed: %s", exc)
+
         logging.info("RAW drive unmounted from %s", self._mount_path)
-        self._is_mounted = False
-        self._space_left = None
-        self._device_name = None
-        self._device_type = None
+        self._is_mounted   = False
+        self._space_left   = None
+        self._device_name  = None
+        self._device_type  = None
         self.unmount_event.emit(self._mount_path)
+
 
     # ------------------------------------------------------------------
     # helpers
@@ -313,92 +329,128 @@ class SSDMonitor:
             logging.warning("findmnt failed for %s", self._mount_path)
             return None
 
-    # ------------------------------------------------------------------
-    # device-type classification
+   # ------------------------------------------------------------------
+    # device-type classification  (SSD / CFE / NVMe / Unknown)
     # ------------------------------------------------------------------
     def _detect_device_type(self) -> str:
         """
-        Return one of  'SSD' | 'CFE' | 'NVMe' | 'Unknown'
+        Robustly classify the mounted /dev node.
 
-        Robust against:
-            • USB bridges that omit uevent fields
-            • NVMe devices whose uevent is still empty right after hot-plug
-            • Root-device parsing (nvme0n1p3  vs  sda2  vs  mmcblk1p1)
+        Returns one of  'SSD' | 'CFE' | 'NVMe' | 'Unknown'
         """
-        if not self._device_name:                     # shouldn’t happen
+        if not self._device_name:                # shouldn’t happen
             return "Unknown"
 
-        # ── derive root block device for sysfs lookup ─────────────────
-        root = self._device_name                      # e.g. nvme0n1p3
-
+        # ── derive root block device for sysfs lookup ────────────────
+        root = self._device_name                 # e.g. nvme0n1p3
         if root.startswith("nvme"):
-            # keep nvme0n1, strip only trailing 'p\d+'
-            if "p" in root:
+            if "p" in root:                      # keep nvme0n1, strip pN
                 root = root.rsplit("p", 1)[0]
         else:
-            # sda3 → sda   |  mmcblk1p2 → mmcblk1
             root = root.rstrip("0123456789")
             if root.endswith("p"):
                 root = root[:-1]
 
-        # ── read uevent (may be empty <1 s after plug-in) ─────────────
         uevent_path = Path(f"/sys/block/{root}/device/uevent")
         try:
             txt = uevent_path.read_text().lower()
         except Exception:
-            txt = ""                                   # path not ready yet
+            txt = ""                             # path not ready yet
 
-        # ── helper: real sysfs path (USB bridges show /usb/…) ─────────
+        # real sysfs path (USB shows “…/usb/…”, CFE Hat has “…/1000110000.pcie/…”)
         dev_real = os.path.realpath(f"/sys/block/{root}/device")
 
-        # ── USB mass-storage of any flavour ───────────────────────────
-        if ("driver=usb-storage" in txt
-                or "driver=uas" in txt
-                or "/usb/" in dev_real):
+        # ───────────────── classification rules ──────────────────────
+        if ("/usb/" in dev_real
+                or "driver=usb-storage" in txt
+                or "driver=uas" in txt):
             return "SSD"
 
-        # ── NVMe & CF-Express (driver string sometimes missing) ───────
-        if ("driver=nvme" in txt
-                or "pci_driver=nvme" in txt
-                or "nvme" in txt):                 # fall-back keyword
+        # CF-Express Hat: PCIe endpoint appears under 1000110000.pcie
+        if "1000110000.pcie" in dev_real:
+            return "CFE"
+
+        # Generic NVMe controller on PCIe
+        if ("driver=nvme"      in txt or
+            "pci_driver=nvme"  in txt or
+            "nvme"             in txt):
             return "CFE" if self._cfe_hat_present else "NVMe"
 
-        # ── SATA / AHCI on PCIe bridges (rare on Pi) ──────────────────
+        # Rare SATA / AHCI bridges
         if ("driver=ahci" in txt
                 or "sata" in txt
                 or "class=0x0106" in txt):
             return "SSD"
 
-        # ── last-chance: decide from the device name itself ───────────
+        # Last-chance heuristic from the name itself
         if self._device_name.startswith("nvme"):
             return "CFE" if self._cfe_hat_present else "NVMe"
         if self._device_name.startswith(("sd", "usb")):
             return "SSD"
 
-        # ── still unknown: log once for diagnostics  ──────────────────
         logging.debug("Unclassified block device %s → %s\n%s",
                       root, dev_real, txt.strip())
         return "Unknown"
 
+    # ------------------------------------------------------------------
+    # static helper: robust lazy-unmount (used from multiple methods)
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _force_lazy_unmount(path: Path | str, retries: int = 20) -> bool:
+        """
+        Repeatedly issue “umount -l <path>” until the kernel releases the
+        mount-point, or `retries` attempts are exhausted.
+
+        Returns **True** when the directory is no longer a mount-point.
+        """
+        for _ in range(retries):
+            if not os.path.ismount(path):
+                return True
+            subprocess.call(["sudo", "umount", "-l", str(path)],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL)
+            time.sleep(0.2)
+        return False
+
     # ---------- free-space tracking -----------------------------------
-    def _update_space_left(self, *, force=False) -> None:
+    def _update_space_left(self, *, force: bool = False) -> None:
+        """
+        Refresh the cached free-space value and emit GUI / Redis updates.
+
+        If `statvfs` fails with EIO (card yanked) or ENOENT (mount-point
+        disappeared) we trigger a forced lazy-unmount and clean up our
+        internal state.
+        """
         now = time.time()
         if not force and (now - self._last_space_ts) < self._space_int:
             return
+
         try:
             st = os.statvfs(self._mount_path)
-            gb = (st.f_bavail * st.f_frsize) / (1024**3)
+            gb = (st.f_bavail * st.f_frsize) / (1024 ** 3)
+
         except OSError as exc:
             logging.error("statvfs failed: %s", exc)
+
+            if exc.errno in (errno.EIO, errno.ENOENT):
+                # EIO = I/O error (card yanked)
+                # ENOENT = path vanished while we were looking
+                logging.warning("Lost storage – forcing lazy unmount")
+                self._force_lazy_unmount(self._mount_path)
+                self._handle_unmount()            # update state & GUI
             return
+
+        # ── normal path: update cached value & emit event ────────────
         if force or abs(gb - self._last_space) >= self._space_delta:
-            self._space_left   = gb
-            self._last_space   = gb
+            self._space_left    = gb
+            self._last_space    = gb
             self._last_space_ts = now
             logging.info("Free space: %.2f GB", gb)
             if self._redis:
-                self._redis.set_value(ParameterKey.SPACE_LEFT.value, f"{gb:.2f}")
+                self._redis.set_value(ParameterKey.SPACE_LEFT.value,
+                                      f"{gb:.2f}")
             self.space_event.emit(gb)
+
 
     # ---------- fsck (read-only) --------------------------------------
     def _maybe_run_fsck(self) -> None:
@@ -597,17 +649,48 @@ class SSDMonitor:
         otherwise falls back to running `journalctl -fu`.
         """
         def _process_line(line: str) -> None:
-            line = line.strip()
-            if "Device connected:" in line:
-                logging.info("SSDMonitor: %s", line)
-            elif "Mounted /dev" in line and "OK" in line:
-                self._handle_mount()          # refresh state & emit event
-            elif "Unmounted /dev" in line:
+            """
+            Parse one message coming from the `storage-automount.service`
+            and update our state – while forwarding every message verbatim.
+            """
+            msg = line.strip()
+
+            # ── state-changing lines we care about ───────────────────────────
+            if   "Mounted /dev"             in msg and "OK" in msg:
+                self._handle_mount()
+
+            elif "Unmounted /dev"           in msg:
                 self._handle_unmount()
-            elif "repair successful" in line:
-                logging.info("SSDMonitor: %s", line)
-            elif "repair failed" in line:
-                logging.warning("SSDMonitor: %s", line)
+
+            elif "Insert: mount succeeded"  in msg:
+                self._handle_mount()
+
+            elif "Eject: unmount succeeded" in msg:
+                self._handle_unmount()
+
+            elif "NVMe controller" in msg and "state=dead" in msg:
+                # service already tried to lazy-unmount – reflect that instantly
+                self._handle_unmount()
+
+            # ── forward *every* message so it appears in the SSDMonitor log ──
+            #    (makes debugging easier – you see everything in one place)
+            level = "INFO"                  # sensible default
+            m = re.search(r"\] (\w+):", msg)  # ] DEBUG:, ] WARNING:, …
+            if m:
+                level = m.group(1).upper()
+
+            if level == "DEBUG":
+                logging.info("%s", msg)
+            elif level == "INFO":
+                logging.info ("%s", msg)
+            elif level == "WARNING":
+                logging.warning("%s", msg)
+            else:                            # ERROR, CRITICAL, …
+                logging.error("%s", msg)
+
+            # small optimisation: keep our cached state in sync right now
+            self._check_mount_status()
+
 
         if _HAVE_JOURNAL:
             j = journal.Reader()

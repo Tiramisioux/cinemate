@@ -238,7 +238,7 @@ class CinePiProcess(Thread):
         default_hd = '0' if self.cam.port == 'cam0' else '1'
         hd = str(self.output.get('hdmi_port', default_hd))
         args = [
-            # '--camera', str(self.cam.index),
+            '--camera', str(self.cam.index),
             '--mode', f'{width}:{height}:{bit_depth}:{packing}',
             '--width', str(width),
             '--height', str(height),

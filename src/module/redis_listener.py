@@ -42,6 +42,9 @@ class RedisListener:
         self.framecount = 0
         self.redis_controller.set_value('framecount', 0)
         
+        self.last_non_increasing_time = None
+        self.stable_hold_seconds = 0.1 
+        
         self.last_is_recording_value = self.redis_controller.get_value('is_recording')
         
         self.allow_initial_zero = False
@@ -49,6 +52,8 @@ class RedisListener:
         self.sensor_counts = {}          # { 'CAM0': 0, 'CAM1': 0, … }
         self.all_sensors_ready = False       # True if all sensors are ready, False otherwise
 
+        self.last_rise_time = None          # when frameCount last increased
+        self.rec_hold_seconds = 0.3         # how long frameCount must stay flat before rec=0
 
         
         self.drop_frame = False
@@ -90,54 +95,46 @@ class RedisListener:
             self.frame_count_increase_tolerance = 3 * frame_interval
         else:
             self.frame_count_increase_tolerance = 0.5
-            
+
     def _maybe_publish_framecount(self, new_count: int | None):
+            """
+            Update the Redis key 'framecount' – but *never* lower it back down
+            unless the encoder reports 0.  This eliminates flicker when two
+            sensors finish a take a frame apart.
+            """
+            if new_count is None:
+                return
 
-        if new_count is None:
-            return
+            # ── not recording → freeze counter ───────────────────────────────────
+            if not self.is_recording:
+                if new_count == 0 and self.framecount != 0:
+                    self.framecount = 0
+                    self.redis_controller.set_value("framecount", 0)
+                return
+            # ─────────────────────────────────────────────────────────────────────
 
-        # ── 0)  *Not* recording → freeze counter  ─────────────────
-        if not self.is_recording:
-            if new_count == 0 and self.framecount != 0:
-                # single clean reset
+            # one allowed 0 right after Record (CinePi resets its counter once)
+            if new_count == 0 and self.allow_initial_zero:
                 self.framecount = 0
                 self.redis_controller.set_value("framecount", 0)
-            return                           # ignore all other updates
-        # ──────────────────────────────────────────────────────────
+                self.allow_initial_zero = False
+                return
 
-        # --- accept *one* initial zero at the very start of a take -----
-        if new_count == 0 and self.allow_initial_zero:
-            self.framecount = 0
-            self.consecutive_non_increasing_counts = 0
-            self.redis_controller.set_value("framecount", 0)
-            self.allow_initial_zero = False          # zero consumed
-            return
-        # ----------------------------------------------------------------
+            # ── 1) strictly higher → accept & publish ───────────────────────────
+            if new_count > self.framecount:
+                self.framecount = new_count
+                self.redis_controller.set_value("framecount", new_count)
+                return
 
-        # ① strictly higher → accept
-        if new_count > self.framecount:
-            self.framecount = new_count
-            self.consecutive_non_increasing_counts = 0
-            self.redis_controller.set_value("framecount", new_count)
-            return
+            # ── 2) equal → nothing to do ────────────────────────────────────────
+            if new_count == self.framecount:
+                return
 
-        # ② equal → nothing to do
-        if new_count == self.framecount:
-            return
-
-        # ③ lower (but not zero) → strike
-        self.consecutive_non_increasing_counts += 1
-        if self.consecutive_non_increasing_counts >= self.non_increasing_count_threshold:
-            logging.warning(
-                f"Framecount dropped from {self.framecount} to {new_count} "
-                f"{self.consecutive_non_increasing_counts}× in a row – "
-                "assuming new baseline."
-            )
-            self.framecount = new_count
-            self.redis_controller.set_value("framecount", new_count)
-            self.consecutive_non_increasing_counts = 0
-
-
+            # ── 3) lower but *non-zero*  → IGNORE  (mitigates flicker) ──────────
+            #     Only a real zero (encoder reset) is considered significant.
+            if new_count < self.framecount and new_count != 0:
+                # keep the higher value; do not publish
+                return
 
     def listen_stats(self):
         for message in self.pubsub_stats.listen():
@@ -234,25 +231,54 @@ class RedisListener:
     def reset_drop_frame(self):
         self.drop_frame = False
         logging.info("Drop frame flag reset")
-
+        
     def check_framecount_changing(self):
-        current_time = datetime.datetime.now()
-        time_elapsed = (current_time - self.last_framecount_check_time).total_seconds()
+        """
+        Toggle Redis key 'rec':
+            • rec=1  as soon as frameCount rises
+            • rec=0  only after <rec_hold_seconds> of no rise, OR when frameCount hits 0
+        Any lower-but-non-zero values are ignored entirely.
+        """
+        now = datetime.datetime.now()
+        new = self.frame_count
+        old = self.last_framecount               # last *accepted* count
 
-        if time_elapsed >= self.framecount_check_interval:
-            if self.frame_count != self.last_framecount:
-                if not self.framecount_changing:
-                    self.framecount_changing = True
-                    self.redis_controller.set_value('rec', "1")
-                    logging.info("Framecount is changing")
-            else:
-                if self.framecount_changing:
+        # ----------------------------------------------------------- 1) reset to 0
+        if new == 0:
+            if self.framecount_changing:
+                self.framecount_changing = False
+                self.redis_controller.set_value("rec", "0")
+                logging.info("Framecount reset to 0 → rec=0")
+            self.last_rise_time = None
+            self.last_framecount = 0
+            return
+
+        # ----------------------------------------------------------- 2) higher →
+        if new > old:
+            if not self.framecount_changing:
+                self.framecount_changing = True
+                self.redis_controller.set_value("rec", "1")
+                logging.info("Framecount rising → rec=1")
+
+            self.last_rise_time = now             # remember when we last rose
+            self.last_framecount = new
+            return
+
+        # ----------------------------------------------------------- 3) equal →
+        if new == old:
+            if self.framecount_changing and self.last_rise_time:
+                if (now - self.last_rise_time).total_seconds() >= self.rec_hold_seconds:
                     self.framecount_changing = False
-                    self.redis_controller.set_value('rec', "0")
-                    logging.info("Framecount is stable")
+                    self.redis_controller.set_value("rec", "0")
+                    logging.info(f"Framecount flat for {self.rec_hold_seconds}s → rec=0")
+            return
 
-            self.last_framecount = self.frame_count
-            self.last_framecount_check_time = current_time
+        # ----------------------------------------------------------- 4) lower-but-non-zero  → ignore
+        # (do NOT update self.last_framecount – keep the higher baseline)
+        logging.debug(
+            f"Framecount dipped from {old} to {new} – ignored to avoid flicker."
+        )
+
         
     def reset_framecount(self):
         self.framecount = 0

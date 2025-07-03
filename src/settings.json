@@ -1,5 +1,13 @@
 {
   "$schema": "./settings.schema.json",
+
+  "system": {
+    "wifi_hotspot": {
+      "name": "CinePi",
+      "password": "11111111"
+    }
+  },  
+
   "geometry": {
     "cam0": {
       "rotate_180": false,

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional, Tuple, List
 import datetime
 import re
+import errno
 
 try:
     from systemd import journal            # python3-systemd package

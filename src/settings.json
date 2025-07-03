@@ -15,10 +15,10 @@
 
   "output": {
     "cam0": {
-      "hdmi_port": 1
+      "hdmi_port": 0
     },
     "cam1": {
-      "hdmi_port": 0
+      "hdmi_port": 1
     }
   },
 

@@ -368,7 +368,7 @@ class CinePiManager:
             logging.warning("start_all(): timeout waiting for %s", missing)
 
         self.redis_controller.set_value(ParameterKey.LAST_DNG_CAM0.value, "None")
-        self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value) or "None",     
+        self.redis_controller.set_value(ParameterKey.LAST_DNG_CAM1.value, "None"),     
 
     # ───────────────────────── teardown ────────────────────────────
     def stop_all(self) -> None:

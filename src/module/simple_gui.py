@@ -67,8 +67,29 @@ class SimpleGUI(threading.Thread):
 
         # Initialize current background color
         self.current_background_color = "black"  # Default background color
-        
-        
+
+    # ───────────────── helper: do we have two non-empty clip names? ────────────────
+    def _has_two_clips(self, values) -> bool:
+        return bool(values.get("clip_name") and values.get("clip_name_cam1"))
+
+    # ───────────────── helper: tweak GUI layout for clip lines ────────────────────
+    def _adjust_clip_layout(self, two_clips: bool):
+        """Shrink/enlarge the font & Y-positions of the clip-name fields."""
+        if two_clips:
+            new_size = 24               # ↓ from 41 → 24 px
+            y_base   = 1053
+            self.layout["clip_name"]["size"]        = new_size
+            self.layout["clip_name_cam1"]["size"]   = new_size
+            self.layout["clip_name"]["pos"]         = (480, y_base)       # lower line
+            self.layout["clip_name_cam1"]["pos"]    = (480, y_base-19)    # 19 px up
+        else:
+            # Fall back to the original settings
+            self.layout["clip_name"]["size"]        = 41
+            self.layout["clip_name_cam1"]["size"]   = 41
+            self.layout["clip_name"]["pos"]         = (480, 1041)
+            self.layout["clip_name_cam1"]["pos"]    = (480, 998)
+
+
     def load_sensor_values_from_redis(self):
         """
         Load current sensor values (width, height, bit depth) from Redis.
@@ -427,7 +448,7 @@ class SimpleGUI(threading.Thread):
             values["clip_name"]      = clip_cam0
         else:
             # only one camera – keep it on the baseline row
-            values["clip_name"] = clip_cam0 or clip_cam1 or "N/A"
+            values["clip_name"] = clip_cam0 or clip_cam1 or ""
             
 
         # ── add right-column data when CAM1 exists ────────────────
@@ -740,6 +761,10 @@ class SimpleGUI(threading.Thread):
             draw.text((text_x, text_y), label, font=label_font, fill=(249,249,249))
 
     def draw_gui(self, values):
+        
+        # ── shrink clip-name text when two cameras are active ─────────────────────────
+        self._adjust_clip_layout(self._has_two_clips(values))
+
         previous_background_color = self.get_background_color
 
         # ─── choose background colour & colour-mode ────────────────────

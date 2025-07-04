@@ -29,6 +29,9 @@ class SimpleGUI(threading.Thread):
                 serial_handler=None):
         threading.Thread.__init__(self)
         
+        self.daemon = True          # die if the parent dies
+        self._running = True        # quit flag
+        
         self.setup_resources()
         self.check_display()
 
@@ -969,6 +972,13 @@ class SimpleGUI(threading.Thread):
         if self.fb:
             blank_image = Image.new("RGBA", self.fb.size, "black")
             self.fb.show(blank_image)
+            
+    def stop(self):
+        """Ask the GUI thread to exit, wait for it, then blank fb0."""
+        self._running = False
+        self.join()                     # wait for run() to finish
+        self.clear_framebuffer()        # black screen
+
 
     def run(self):
         try:
@@ -978,7 +988,7 @@ class SimpleGUI(threading.Thread):
             self.vu_right_smoothed = 0
             self.vu_decay_factor = 0.2
 
-            while True:
+            while self._running:
                 values = self.populate_values()
                 self.update_smoothed_vu_levels()
                 self.draw_gui(values)

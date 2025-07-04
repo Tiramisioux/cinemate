@@ -17,7 +17,8 @@ from enum import Enum
 class ParameterKey(Enum):
     ANAMORPHIC_FACTOR = "anamorphic_factor"
     BIT_DEPTH         = "bit_depth"
-    BUFFER            = "buffer"
+    BUFFER            = "buffer"      # number of raw frames in RAM
+    BUFFER_SIZE       = "buffer_size"  # RAM pool size for DNG encoder
     CAM_INIT          = "cam_init"
     CAMERAS           = "cameras"
     CG_RB             = "cg_rb"
@@ -36,6 +37,7 @@ class ParameterKey(Enum):
     IS_RECORDING      = "is_recording"
     IS_WRITING        = "is_writing"
     IS_WRITING_BUF    = "is_writing_buf"
+    
     ISO               = "iso"
     LORES_HEIGHT      = "lores_height"
     LORES_WIDTH       = "lores_width"

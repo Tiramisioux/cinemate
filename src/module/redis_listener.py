@@ -72,6 +72,12 @@ class RedisListener:
         self.min_fps_adjustment = 0.0001  # Minimum adjustment increment
         self.fps_adjustment_interval = 1.0  # Adjust every 1 second
         self.last_fps_adjustment_time = datetime.datetime.now()
+        
+        # ──  USER FPS TWEAK  ────────────────────────────────────────────────
+        self.user_changing_fps = False          # True while the UI slider is moving
+        self.last_fps_value     = float(self.redis_controller.get_value("fps") or 0)
+        self.fps_change_timer   = None          # debounce timer
+
 
         self.current_framerate = None
         
@@ -191,7 +197,10 @@ class RedisListener:
                             fps_difference = abs((self.current_framerate) - expected_fps)
                             # print(f"Expected FPS: {expected_fps}, Actual FPS: {self.current_framerate*1000}")
                             # print(f"FPS difference: {fps_difference}")
-                            if fps_difference > 1 and not self.drop_frame:
+                            
+                            # do NOT raise drop-frame while the user is changing fps
+                            if fps_difference > 1 and not self.drop_frame and not self.user_changing_fps:
+
                                 self.drop_frame = True
                                 logging.info("Drop frame detected")
                                 
@@ -231,6 +240,33 @@ class RedisListener:
     def reset_drop_frame(self):
         self.drop_frame = False
         logging.info("Drop frame flag reset")
+        
+    # ───────────────────  FPS-change handling  ──────────────────────────────
+    def _reset_user_changing_fps(self):
+        """Debounce-timer callback – clear the flag once the fps key
+        has been stable for a while."""
+        self.user_changing_fps = False
+        self.redis_controller.set_value("user_changing_fps", 0)
+        logging.debug("user_changing_fps → 0 (fps stable)")
+
+    def _note_fps_change(self, new_fps: float):
+        """Call every time the Redis key ‘fps’ is modified."""
+        if new_fps == self.last_fps_value:
+            return                                        # nothing really changed
+
+        self.last_fps_value = new_fps
+        self.user_changing_fps = True
+        self.redis_controller.set_value("user_changing_fps", 1)
+        logging.debug(f"fps changed to {new_fps} → user_changing_fps = 1")
+
+        # leeway = max(0.5 s, two frame-intervals)
+        leeway = max(0.5, 2 / new_fps) if new_fps else 0.5
+
+        if self.fps_change_timer:
+            self.fps_change_timer.cancel()
+        self.fps_change_timer = threading.Timer(leeway, self._reset_user_changing_fps)
+        self.fps_change_timer.start()
+
         
     def check_framecount_changing(self):
         """
@@ -324,6 +360,14 @@ class RedisListener:
                         else:
                             logging.warning("Recording stopped, but no recording start time was registered.")
                     self.allow_initial_zero = True
+                    
+            elif changed_key == "fps":
+                try:
+                    self._note_fps_change(float(value_str))
+                except ValueError:
+                    logging.warning(f"Ignoring invalid fps value {value_str!r}")
+                continue
+
 
     def calculate_current_framerate(self):
         if len(self.sensor_timestamps) > 1:

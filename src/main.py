@@ -105,7 +105,7 @@ def start_splash():
     t.start()
     return t, stop_event
 
-def graphic_splash(text=""):
+def graphic_splash(text="THIS IS A COOL MACHINE"):
     fb = Framebuffer(0)              # open /dev/fb0
     W, H = fb.size
 

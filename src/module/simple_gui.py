@@ -763,6 +763,76 @@ class SimpleGUI(threading.Thread):
             text_y = base_y + bar_height + 5
             draw.text((text_x, text_y), label, font=label_font, fill=(249,249,249))
 
+    # ─────────────────────────────────────────────────────────────
+    # FRAME-BUFFER “VU”  (queued frames vs. capacity)
+    # ─────────────────────────────────────────────────────────────
+    def draw_framebuffer_vu_meter(self, draw):
+        """
+        Visualises the RAM-buffer usage:
+            • height  = used / total
+            • colour  = green <70 %, yellow <90 %, red ≥90 %
+            • ticks   = 25 / 50 / 75 / 100 %
+            • caption = “used / total”
+        """
+        # ── fetch numbers from Redis ─────────────────────────────
+        try:
+            used  = (int(self.redis_controller.get_value("BUFFER")) or 0) * 20
+            print(f"Buffer used: {used}")
+            total = int(self.redis_controller.get_value(ParameterKey.BUFFER_SIZE.value)     or 1)
+        except (TypeError, ValueError):
+            used, total = 0, 1          # fall-back to sane values
+
+        usage = min(max(used / total, 0.0), 1.0)   # clamp 0–1
+
+        # colour code by utilisation
+        if   usage < 0.70: fill_colour = (  0, 255,   0)   # green
+        elif usage < 0.90: fill_colour = (255, 255,   0)   # yellow
+        else:              fill_colour = (255,   0,   0)   # red
+
+        # ── geometry constants (match existing GUI) ─────────────
+        BAR_H      = 200
+        BAR_W      = 28
+        BASE_X     = 30
+        GAP_BOTTOM = 80
+
+        base_y = self.disp_height - GAP_BOTTOM - BAR_H
+        base_x = BASE_X
+
+        rec         = int(self.redis_controller.get_value(ParameterKey.REC.value) or 0)
+        border_col  = ( 50,  50,  50) if rec else (249, 249, 249)
+        back_col    = (50, 50, 50)
+        tick_col    = (136, 136, 136)
+
+        # ── erase old drawing area ──────────────────────────────
+        draw.rectangle([base_x, base_y,
+                        base_x + BAR_W, base_y + BAR_H],
+                       fill=self.current_background_color)
+
+        # ── pillar background & outline ─────────────────────────
+        draw.rectangle([base_x, base_y,
+                        base_x + BAR_W, base_y + BAR_H],
+                       fill=back_col)
+
+        # ── fill according to usage ────────────────────────────
+        filled_h = int(BAR_H * usage)
+        if filled_h:
+            draw.rectangle([base_x,
+                            base_y + (BAR_H - filled_h),
+                            base_x + BAR_W,
+                            base_y + BAR_H],
+                           fill=fill_colour)
+
+        # ── hatch lines over filled area for texture (optional) ─
+        for dy in range(0, filled_h, 2):
+            y = base_y + BAR_H - 1 - dy
+            draw.line([(base_x, y), (base_x + BAR_W, y)],
+                      fill=border_col)
+
+        # ── tick marks at 25 / 50 / 75 / 100 % ─────────────────
+        for frac in (0.25, 0.50, 0.75, 1.00):
+            y = base_y + BAR_H
+
+
     def draw_gui(self, values):
         
         # ── shrink clip-name text when two cameras are active ─────────────────────────
@@ -916,6 +986,7 @@ class SimpleGUI(threading.Thread):
                 
         self.update_smoothed_vu_levels()
         self.draw_right_vu_meter(draw)
+        self.draw_framebuffer_vu_meter(draw)
 
         vu = self.vu_smoothed  # Or .usb_monitor.audio_monitor.vu_levels if you want raw
         # if vu:

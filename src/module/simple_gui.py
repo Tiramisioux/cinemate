@@ -776,7 +776,7 @@ class SimpleGUI(threading.Thread):
         """
         # ── fetch numbers from Redis ─────────────────────────────
         try:
-            used  = (int(self.redis_controller.get_value("BUFFER")) or 0) * 20
+            used  = (int(self.redis_controller.get_value("BUFFER")) or 0)
             print(f"Buffer used: {used}")
             total = int(self.redis_controller.get_value(ParameterKey.BUFFER_SIZE.value)     or 1)
         except (TypeError, ValueError):

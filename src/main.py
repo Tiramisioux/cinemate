@@ -8,6 +8,8 @@ import subprocess
 import traceback
 import os
 import json
+import shutil
+from PIL import Image, ImageDraw, ImageFont
 
 from module.config_loader import load_settings
 from module.logger import configure_logging
@@ -32,7 +34,7 @@ from module.mediator import Mediator
 from module.serial_handler import SerialHandler
 from module.cinepi_multi import CinePiManager as CinePi
 from module.i2c_oled import I2cOled
-
+from module.framebuffer import Framebuffer   # the same wrapper SimpleGUI uses
 
 # Constants
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
@@ -42,6 +44,7 @@ def hide_cursor():
     try:
         with open('/dev/tty1', 'w') as tty:
             tty.write('\033[?25l')
+            tty.flush()
     except Exception as e:
         logging.warning(f"Could not hide cursor: {e}")
 
@@ -49,9 +52,76 @@ def show_cursor():
     try:
         with open('/dev/tty1', 'w') as tty:
             tty.write('\033[?25h')
+            tty.flush()
     except Exception as e:
         logging.warning(f"Could not show cursor: {e}")
 
+def clear_screen():
+    """Clear tty1 and move the cursor to the top-left corner."""
+    try:
+        with open('/dev/tty1', 'w') as tty:
+            tty.write('\033[2J\033[H')       # CSI 2J = clear; CSI H = home
+            tty.flush()
+    except Exception as e:
+        logging.warning(f"Could not clear screen: {e}")
+
+def start_splash():
+    stop_event = threading.Event()
+
+    big_font = "Lat15-TerminusBold16x32"        # ← choose from your list
+    setfont  = shutil.which("setfont")          # /usr/bin/setfont (None if missing)
+
+    # Backup current font so we can restore it later
+    backup = "/tmp/cinemate.oldfont"
+    if setfont:
+        subprocess.run([setfont, "-O", backup], check=False)
+        subprocess.run([setfont, big_font],      check=False)  # load larger font
+
+    def _animate():
+        frame = 0
+        try:
+            with open("/dev/tty1", "w") as tty:
+                tty.write("\033[2J\033[H")          # clear screen
+                tty.write("\033#6")                 # double-WIDTH for this row
+                tty.write("\033#3")                 # double-HEIGHT top half
+                tty.flush()
+
+                while not stop_event.is_set():
+                    dots = "." * (frame % 4)
+                    tty.write(f"\rStarting CineMate {dots:<3}")
+                    tty.flush()
+                    frame += 1
+                    time.sleep(0.4)
+
+                # back to normal size
+                tty.write("\033#5")                 # single width/height
+                tty.flush()
+        finally:
+            # restore the original console font
+            if setfont and os.path.exists(backup):
+                subprocess.run([setfont, backup], check=False)
+
+    t = threading.Thread(target=_animate, daemon=True)
+    t.start()
+    return t, stop_event
+
+def graphic_splash(text=""):
+    fb = Framebuffer(0)              # open /dev/fb0
+    W, H = fb.size
+
+    # Pick any TTF you like and a big size
+    font = ImageFont.truetype("/home/pi/cinemate/resources/fonts/DIN2014-Regular.ttf",
+                              size=100)
+
+    img  = Image.new("RGB", (W, H), "black")
+    draw = ImageDraw.Draw(img)
+    tw, th = draw.textbbox((0, 0), text, font=font)[2:]
+
+    draw.text(((W - tw)//2, (H - th)//2),
+              text, font=font, fill="white")
+
+    fb.show(img)
+    return fb        # keep it so you can blank later
 
 # Graceful exit handler
 def handle_exit(signal, frame):
@@ -121,20 +191,6 @@ def handle_vu_output(line):
         except Exception as e:
             logging.warning(f"Failed to parse VU line: {line} ({e})")
 
-def hide_cursor():
-    try:
-        with open('/dev/tty1', 'w') as tty:
-            tty.write('\033[?25l')
-    except Exception as e:
-        logging.warning(f"Could not hide cursor: {e}")
-
-def show_cursor():
-    try:
-        with open('/dev/tty1', 'w') as tty:
-            tty.write('\033[?25h')
-    except Exception as e:
-        logging.warning(f"Could not show cursor: {e}")
-
 def main():
     import argparse
 
@@ -148,9 +204,12 @@ def main():
     # Setup logging
     logger, log_queue = setup_logging(args.debug)
     
-    # Hide cursor
+    # # Start animated splash on HDMI
+    # splash_thread, splash_stop = start_splash()
     
+    # Hide cursor
     hide_cursor()
+    fb_splash = graphic_splash()
 
     # Detect Raspberry Pi model
     pi_model = get_raspberry_pi_model()
@@ -244,30 +303,41 @@ def main():
     )
 
     logging.info("--- Initialization Complete ---")
+    
+    # # Stop splash and clear screen so the shell prompt is visible again
+    # splash_stop.set()
+    # splash_thread.join()
+    fb_splash.show(Image.new("RGB", fb_splash.size, "black"))   # blank
+    # fb_splash.close()        # optional
+    clear_screen()
 
     # Ensure system cleanup on exit
     def cleanup():
         logging.info("Shutting down components...")
         redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         redis_controller.set_value(ParameterKey.IS_WRITING.value, 0)
-        
-        # Remember the last FPS value before stopping
-        redis_controller.set_value(ParameterKey.FPS_LAST.value, redis_controller.get_value(ParameterKey.FPS.value))
-        
+        redis_controller.set_value(
+            ParameterKey.FPS_LAST.value,
+            redis_controller.get_value(ParameterKey.FPS.value)
+        )
+
+        # Stop peripherals
         pwm_controller.stop_pwm()
         dmesg_monitor.join()
         command_executor.join()
         serial_handler.running = False
         serial_handler.join()
+
         if i2c_oled:
             i2c_oled.join()
-        if simple_gui and hasattr(simple_gui, 'clear_framebuffer'):
-            simple_gui.clear_framebuffer()
 
-        
+        if simple_gui:
+            simple_gui.stop()              # <— new: quit the thread
+            simple_gui.clear_framebuffer() # <— new: blank fb0
+
+        clear_screen()                     # wipe tty1
         show_cursor()
-
-    
+        
     atexit.register(cleanup)
 
     try:

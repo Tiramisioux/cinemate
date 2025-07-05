@@ -761,14 +761,14 @@ class CinePiController:
         self.ssd_monitor.mount_drive()
     
     def unmount(self):
-        if self.ssd_monitor.is_mounted:
-            self.ssd_monitor.unmount_drive()
-        else:
-            if self.ssd_monitor.cfe_hat_present:
-                logging.info("No drive currently mounted. CFE HAT detected — attempting to mount CFE...")
-                self.ssd_monitor.mount_cfe()
-            else:
-                logging.info("No drive currently mounted and no CFE HAT present. Nothing to do.")
+        # if self.ssd_monitor.is_mounted:
+        self.ssd_monitor.unmount_drive()
+        # else:
+        #     if self.ssd_monitor.cfe_hat_present:
+        #         logging.info("No drive currently mounted. CFE HAT detected — attempting to mount CFE...")
+        #         self.ssd_monitor.mount_cfe()
+        #     else:
+        #         logging.info("No drive currently mounted and no CFE HAT present. Nothing to do.")
 
     def toggle_mount(self):
         self.ssd_monitor.toggle_mount_drive()

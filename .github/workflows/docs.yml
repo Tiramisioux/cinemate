@@ -3,6 +3,7 @@ name: build-and-deploy-docs
 on:
   push:
     branches: [main]        # rebuild on every push to main
+    branches: [main, v3_dev]
   workflow_dispatch:        # manual “Run workflow” button
 
 jobs:
@@ -35,5 +36,6 @@ jobs:
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site
           publish_branch: gh-pages
+          publish_dir: ./site
+

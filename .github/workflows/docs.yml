@@ -2,8 +2,8 @@ name: build-and-deploy-docs
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches: [main]        # rebuild on every push to main
+  workflow_dispatch:        # manual “Run workflow” button
 
 jobs:
   mkdocs:
@@ -17,16 +17,21 @@ jobs:
 
       - name: Install MkDocs toolchain
         run: |
-          pip install mkdocs-material mkdocs-pdf-export-plugin
+          pip install mkdocs-material \
+                      mkdocs-pdf-export-plugin \
+                      mkdocs-git-revision-date-localized-plugin \
+                      mkdocs-macros-plugin
 
       - name: Build site
         run: mkdocs build
 
+      # Save the PDF as an artifact (optional but nice)
       - uses: actions/upload-artifact@v4
         with:
           name: cinemate-docs-pdf
           path: site/pdf/Cinemate-Docs.pdf
 
+      # Publish HTML (and the PDF inside it) to the gh-pages branch
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

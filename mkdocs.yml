@@ -61,8 +61,5 @@ plugins:
       combined: true
       verbose: false
       media_type: print
-      coverpage: docs/coverpage.md
   - git-revision-date-localized:  # shows “Last updated” in footer
       fallback_to_build_date: true
-extra:
-  build_date: !!python/name:datetime.datetime.utcnow

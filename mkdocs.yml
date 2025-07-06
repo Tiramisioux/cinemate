@@ -1,0 +1,65 @@
+# ───────────────────────────
+# Project basics
+# ───────────────────────────
+site_name: Cinemate Docs
+site_description: Documentation for Cinemate 
+site_url: https://tiramisioux.github.io/cinemate/
+repo_url: https://github.com/tiramisioux/cinemate
+repo_name: GitHub
+dev_addr: 0.0.0.0:8000            # live-preview reachable from your laptop
+
+# ───────────────────────────
+# Navigation (edit to match your .md files)
+# ───────────────────────────
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - User guide:
+      - CinePi-RAW CLI: api/cinepi_raw.md
+      - Post-production: workflow/post.md
+  - Contributing: contributing.md
+  - Changelog: changelog.md
+
+# ───────────────────────────
+# Theme
+# ───────────────────────────
+theme:
+  name: material
+  icon:
+    logo: material/movie-open-play
+  language: en
+  features:
+    - navigation.instant
+    - navigation.sections
+    - navigation.top
+    - toc.follow
+    - content.code.copy
+    - content.action.edit       # “Edit this page” link to repo
+  palette:
+    - scheme: default           # WCAG-AA compliant base
+      primary: cyan
+      accent: indigo
+
+# ───────────────────────────
+# Markdown add-ons
+# ───────────────────────────
+markdown_extensions:
+  - admonition
+  - codehilite
+  - toc:
+      permalink: "#"            # tiny link-icon on headings
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.emoji
+
+# ───────────────────────────
+# Plugins
+# ───────────────────────────
+plugins:
+  - search
+  - pdf-export:                 # one click PDF at /pdf/Cinemate-Docs.pdf
+      combined: true
+      verbose: false
+      media_type: print
+  - git-revision-date-localized:  # shows “Last updated” in footer
+      fallback_to_build_date: true

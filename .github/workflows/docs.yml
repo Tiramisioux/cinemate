@@ -1,0 +1,33 @@
+name: build-and-deploy-docs
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  mkdocs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install MkDocs toolchain
+        run: |
+          pip install mkdocs-material mkdocs-pdf-export-plugin
+
+      - name: Build site
+        run: mkdocs build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cinemate-docs-pdf
+          path: site/pdf/Cinemate-Docs.pdf
+
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site

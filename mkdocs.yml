@@ -13,21 +13,25 @@ dev_addr: 0.0.0.0:8000            # live-preview reachable from your laptop
 # ───────────────────────────
 nav:
   - Home: index.md
-  - Getting started: getting-started.md
-  - User guide:
-      - CinePi-RAW CLI: api/cinepi_raw.md
-      - Post-production: workflow/post.md
-  - Contributing: contributing.md
-  - Changelog: changelog.md
+  - Getting started:
+    - Buttons: inverse_buttons.md
+    - Settings.json cheat sheet: settings-json.md
 
 # ───────────────────────────
 # Theme
 # ───────────────────────────
 theme:
   name: material
+  custom_dir: docs/overrides
   icon:
-    logo: material/movie-open-play
+    logo: material/library
+  
+  font:
+    text: Roboto
+    code: Roboto Mono
+
   language: en
+  
   features:
     - navigation.instant
     - navigation.sections
@@ -37,8 +41,10 @@ theme:
     - content.action.edit       # “Edit this page” link to repo
   palette:
     - scheme: default           # WCAG-AA compliant base
-      primary: cyan
-      accent: indigo
+      primary: black
+      accent: black
+  extra_css:
+    - https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown.css
 
 # ───────────────────────────
 # Markdown add-ons

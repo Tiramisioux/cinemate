@@ -1,4 +1,10 @@
-name: build-and-deploy-docs
+name: build-and-deploy-doc
+
+# grant the job permission to push and deploy Pages
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
 on:
   push:

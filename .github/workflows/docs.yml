@@ -23,16 +23,21 @@ jobs:
 
       - name: Install MkDocs toolchain
         run: |
-          pip install mkdocs \
-                      mkdocs-material \
-                      mkdocs-pdf-export-plugin \
-                      mkdocs-git-revision-date-localized-plugin
+          python -m pip install --upgrade pip
+          python -m pip install \
+            mkdocs \
+            mkdocs-material \
+            mkdocs-pdf-export-plugin \
+            mkdocs-git-revision-date-localized-plugin \
+            mkdocs-macros-plugin
 
       - name: Generate cover page
-        run: ./generate_coverpage.sh
+        run: |
+          chmod +x ./generate_coverpage.sh
+          ./generate_coverpage.sh
 
       - name: Build site
-        run: mkdocs build --clean
+        run: python -m mkdocs build --clean
 
       - name: Upload PDF artifact
         if: always()

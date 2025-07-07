@@ -39,8 +39,6 @@ class CommandExecutor(threading.Thread):
             'set rtc time': (self.set_rtc_time, None),  
             'space': (cinepi_controller.ssd_monitor.space_left, None),
             'get': (cinepi_controller.print_settings, None),
-            'set pwm mode': (cinepi_controller.set_pwm_mode, [int, None]),
-            'set trigger mode': (cinepi_controller.set_trigger_mode, [int, None]),  
             'set shutter a sync': (cinepi_controller.set_shutter_a_sync_mode, [int, None]),
             'set iso lock': (cinepi_controller.set_iso_lock, [int, None]),
             'set shutter a nom lock': (cinepi_controller.set_shutter_a_nom_lock, [int, None]),
@@ -55,7 +53,6 @@ class CommandExecutor(threading.Thread):
             'set shutter a free': (cinepi_controller.set_shutter_a_free, [int, str]),
             'set fps free': (cinepi_controller.set_fps_free, [int, str]),
             'set wb free': (cinepi_controller.set_wb_free, [int, str]),
-
             'set filter': (cinepi_controller.set_filter, [int]),
         }
 

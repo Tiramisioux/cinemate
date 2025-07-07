@@ -186,6 +186,7 @@ class SSDMonitor:
             bus.read_byte(0x34)        # any reply ≠ exception means “present”
             bus.close()
             logging.info("CFE-HAT detected via I²C @0x34")
+            self.mount_drive()
             return True
         except OSError:
             pass
@@ -260,13 +261,21 @@ class SSDMonitor:
     def _handle_mount(self) -> None:
         self._is_mounted  = True
         self._device_name = self._get_device_name()
-        self._device_type = self._detect_device_type()
+        # detect and capture a safe device-type string
+        detected = self._detect_device_type()
+        self._device_type = detected if detected is not None else "Unknown"
+
+        # update free-space (may transiently call unmount handlers, but we already captured `detected`)
         self._update_space_left(force=True)
 
+        # always lower-case a non-None string (fallback to "unknown" if needed)
+        dev_type_str = (self._device_type or "Unknown").lower()
+        free_gb     = f"{(self._space_left or 0.0):.2f}"
+
         self._redis_set_many({
-            ParameterKey.STORAGE_TYPE.value: self._device_type.lower(),
-            ParameterKey.IS_MOUNTED.value:    "1",
-            ParameterKey.SPACE_LEFT.value:    f"{self._space_left:.2f}",
+            ParameterKey.STORAGE_TYPE.value: dev_type_str,
+            ParameterKey.IS_MOUNTED.value:   "1",
+            ParameterKey.SPACE_LEFT.value:   free_gb,
         })
 
         logging.info("RAW drive mounted at %s (%s)",

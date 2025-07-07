@@ -14,6 +14,8 @@ dev_addr: 0.0.0.0:8000            # live-preview reachable from your laptop
 nav:
   - Home: index.md
   - Getting started:
+    - Overview: overview.md
+    - Cli commands: cli_commands.md
     - Buttons: inverse_buttons.md
     - Settings.json cheat sheet: settings-json.md
 

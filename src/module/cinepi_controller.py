@@ -15,7 +15,6 @@ class CinePiController:
     def __init__(self,
                  cinepi,
                  redis_controller,
-                 pwm_controller,
                  ssd_monitor,
                  sensor_detect,
                  iso_steps,
@@ -29,7 +28,6 @@ class CinePiController:
 
         self.parameters_lock_obj = threading.Lock()
         self.cinepi = cinepi
-        self.pwm_controller = pwm_controller
         self.redis_controller = redis_controller
         self.ssd_monitor = ssd_monitor
         self.sensor_detect = sensor_detect
@@ -84,8 +82,6 @@ class CinePiController:
         self.exposure_time_seconds = None
         self.exposure_time_fractions = None
         self.fps_multiplier = 1
-        self.pwm_mode = False
-        self.trigger_mode = 0
         self.fps_saved = float(self.redis_controller.get_value(ParameterKey.FPS.value))
         self.fps_double = False
         self.ramp_up_speed = 0.2
@@ -826,68 +822,66 @@ class CinePiController:
 
 
     def increment_setting(self, setting_name, steps, fps=None):
-        if self.pwm_mode == False:
-            current_value = float(self.get_setting(setting_name))
-            
-            if setting_name == 'shutter_a':
-                dynamic_steps = self.calculate_dynamic_shutter_angles(self.current_fps)
-            else:
-                dynamic_steps = steps
-            
-            if setting_name == 'fps':
-                current_value = int(round(float(self.get_setting(setting_name))))
-            
-            if current_value in dynamic_steps:
-                idx = dynamic_steps.index(current_value)
-                idx = min(idx + 1, len(dynamic_steps) - 1)
-            else:
-                idx = 0
+        current_value = float(self.get_setting(setting_name))
+        
+        if setting_name == 'shutter_a':
+            dynamic_steps = self.calculate_dynamic_shutter_angles(self.current_fps)
+        else:
+            dynamic_steps = steps
+        
+        if setting_name == 'fps':
+            current_value = int(round(float(self.get_setting(setting_name))))
+        
+        if current_value in dynamic_steps:
+            idx = dynamic_steps.index(current_value)
+            idx = min(idx + 1, len(dynamic_steps) - 1)
+        else:
+            idx = 0
 
-            new_value = dynamic_steps[idx]
-            
-            # NEW: if we are changing FPS and sync mode is active,
-            # sync shutter angle as well
-            if setting_name == 'fps' and self.shutter_a_sync_mode == 1:
-                self.set_fps(new_value)
-                # this triggers shutter angle updates
-            elif setting_name == 'shutter_a_nom' and self.shutter_a_sync_mode == 1:
-                self.update_shutter_angle_nom(new_value)
-                # this triggers sync logic
-            else:
-                getattr(self, f"set_{setting_name}")(new_value)
+        new_value = dynamic_steps[idx]
+        
+        # NEW: if we are changing FPS and sync mode is active,
+        # sync shutter angle as well
+        if setting_name == 'fps' and self.shutter_a_sync_mode == 1:
+            self.set_fps(new_value)
+            # this triggers shutter angle updates
+        elif setting_name == 'shutter_a_nom' and self.shutter_a_sync_mode == 1:
+            self.update_shutter_angle_nom(new_value)
+            # this triggers sync logic
+        else:
+            getattr(self, f"set_{setting_name}")(new_value)
 
-            logging.info(f"Increasing {setting_name} to {self.get_setting(setting_name)}")
+        logging.info(f"Increasing {setting_name} to {self.get_setting(setting_name)}")
 
 
     def decrement_setting(self, setting_name, steps, fps=None):
-        if self.pwm_mode == False:
-            current_value = float(self.get_setting(setting_name))
+        current_value = float(self.get_setting(setting_name))
 
-            if setting_name == 'shutter_a':
-                dynamic_steps = self.calculate_dynamic_shutter_angles(self.current_fps)
-            else:
-                dynamic_steps = steps
+        if setting_name == 'shutter_a':
+            dynamic_steps = self.calculate_dynamic_shutter_angles(self.current_fps)
+        else:
+            dynamic_steps = steps
 
-            if setting_name == 'fps':
-                current_value = int(round(float(self.get_setting(setting_name))))
+        if setting_name == 'fps':
+            current_value = int(round(float(self.get_setting(setting_name))))
 
-            if current_value in dynamic_steps:
-                idx = dynamic_steps.index(current_value)
-                idx = max(idx - 1, 0)
-            else:
-                idx = 0
+        if current_value in dynamic_steps:
+            idx = dynamic_steps.index(current_value)
+            idx = max(idx - 1, 0)
+        else:
+            idx = 0
 
-            new_value = dynamic_steps[idx]
+        new_value = dynamic_steps[idx]
 
-            # NEW: sync updates if needed
-            if setting_name == 'fps' and self.shutter_a_sync_mode == 1:
-                self.set_fps(new_value)
-            elif setting_name == 'shutter_a_nom' and self.shutter_a_sync_mode == 1:
-                self.update_shutter_angle_nom(new_value)
-            else:
-                getattr(self, f"set_{setting_name}")(new_value)
+        # NEW: sync updates if needed
+        if setting_name == 'fps' and self.shutter_a_sync_mode == 1:
+            self.set_fps(new_value)
+        elif setting_name == 'shutter_a_nom' and self.shutter_a_sync_mode == 1:
+            self.update_shutter_angle_nom(new_value)
+        else:
+            getattr(self, f"set_{setting_name}")(new_value)
 
-            logging.info(f"Decreasing {setting_name} to {self.get_setting(setting_name)}")
+        logging.info(f"Decreasing {setting_name} to {self.get_setting(setting_name)}")
 
     def inc_shutter_a(self):
         self.increment_setting('shutter_a', self.shutter_a_steps, fps=self.fps)
@@ -1072,92 +1066,22 @@ class CinePiController:
     def dec_wb(self):
         self.set_wb(direction='prev')
         
-    def set_pwm_mode(self, value=None):
-        if self.current_sensor != 'imx477':
-            logging.info(f"Current sensor {self.current_sensor}. PWM mode not availabe")
-        else:
-            if self.pwm_mode == False:
-                self.fps_saved = float(self.get_setting('fps'))
-
-            if value is not None:
-                self.pwm_mode = value
-            else:
-                value = not self.pwm_mode
-            
-            logging.info(f"Setting pwm mode to {value}")
-
-            if value== False:
-
-                self.set_fps(self.fps_saved)
-            elif value == True:
-                self.fps_saved = float(self.get_setting('fps'))
-                shutter_a_current = float(self.get_setting('shutter_a_nom'))
-            
-    def set_trigger_mode(self, value=None):
-        # Define the mapping for string arguments
-        mode_map = {
-            'default': 0,
-            'source': 1 if self.sensor_detect.camera_model == 'imx477' else 2,
-            'sink': 2 if self.sensor_detect.camera_model == 'imx477' else 1,
-        }
-
-        # Retrieve current mode from Redis
-        current_mode = int(self.redis_controller.get_value(ParameterKey.TRIGGER_MODE.value, 0))
-
-        if value is None:
-            # Toggle to the next mode
-            value = (current_mode + 1) % 3
-        elif isinstance(value, str):
-            # Convert string arguments to corresponding numeric values
-            if value in mode_map:
-                value = mode_map[value]
-            else:
-                raise ValueError("Invalid string argument. Must be 'default', 'source', or 'sink'.")
-        elif value not in [0, 1, 2]:
-            raise ValueError("Invalid argument: must be 0, 1, 2, 'default', 'source', or 'sink'.")
-
-        # Determine the command based on the value and camera model
-        if self.sensor_detect.camera_model == 'imx477':
-            command = f'echo {value} > /sys/module/imx477/parameters/trigger_mode'
-        elif self.sensor_detect.camera_model == 'imx296':
-            if value == 2: value = 1  # Adjust for imx296 sensor
-            elif value == 1: value = 2  # Adjust for imx296 sensor
-            command = f'echo {value} > /sys/module/imx296/parameters/trigger_mode'
-        else:
-            raise ValueError("Unsupported camera model.")
-
-        # Execute the command to set the trigger mode
-        full_command = ['sudo', 'su', '-c', command]
-        subprocess.run(full_command, check=True)
-        logging.info(f"Trigger mode set to {value}")
-
-        # Update the trigger mode in Redis and instance variable
-        self.trigger_mode = value
-        self.redis_controller.set_value(ParameterKey.TRIGGER_MODE.value, str(value))
-
-        # Restart the cinepi process to apply the changes
-        if not self.startup:          # <-- only restart after boot
-            self.restart_camera()
-        
     def restart_camera(self):
         self.cinepi.restart()
 
     def set_fps_double(self, value=None):
         target_double_state = not self.fps_double if value is None else value in (1, True)
 
-        if self.pwm_mode:
-            self._ramp_fps(target_double_state)
+        if target_double_state:
+            if not self.fps_double:
+                self.fps_saved = self.fps
+                target_fps = min(self.fps * 2, self.fps_max)
+                self.set_fps(target_fps)
         else:
-            if target_double_state:
-                if not self.fps_double:
-                    self.fps_saved = self.fps
-                    target_fps = min(self.fps * 2, self.fps_max)
-                    self.set_fps(target_fps)
-            else:
-                if self.fps_double:
-                    self.set_fps(self.fps_saved)
-            
-            self.fps_double = target_double_state
+            if self.fps_double:
+                self.set_fps(self.fps_saved)
+        
+        self.fps_double = target_double_state
 
         logging.info(f"FPS double mode is {'enabled' if self.fps_double else 'disabled'}, Current FPS: {self.fps}")
 
@@ -1198,8 +1122,6 @@ class CinePiController:
         print(f"{'FPS Multiplier':<20}{str(self.fps_multiplier):<20}")
         print()
         print(f"{'Shutter sync':<20}{str(self.shutter_a_sync_mode):<20}")
-        print()
-        print(f"{'PWM mode':<20}{str(self.pwm_mode):<20}")
         print()
         print(f"{'GUI layout':<20}{str(self.gui_layout):<20}")
         

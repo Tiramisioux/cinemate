@@ -23,7 +23,8 @@ jobs:
 
       - name: Install MkDocs toolchain
         run: |
-          pip install mkdocs-material \
+          pip install mkdocs \
+                      mkdocs-material \
                       mkdocs-pdf-export-plugin \
                       mkdocs-git-revision-date-localized-plugin
 

@@ -2,41 +2,47 @@ name: build-and-deploy-docs
 
 on:
   push:
-    branches: 
+    branches:
       - main
       - v3_dev
-  workflow_dispatch:        # manual “Run workflow” button
+  workflow_dispatch:
 
 jobs:
   mkdocs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          python-version: "3.12"
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
       - name: Install MkDocs toolchain
         run: |
           pip install mkdocs-material \
                       mkdocs-pdf-export-plugin \
-                      mkdocs-git-revision-date-localized-plugin \
-                      mkdocs-macros-plugin
+                      mkdocs-git-revision-date-localized-plugin
+
+      - name: Generate cover page
+        run: ./generate_coverpage.sh
 
       - name: Build site
-        run: mkdocs build
+        run: mkdocs build --clean
 
-      # Save the PDF as an artifact (optional but nice)
-      - uses: actions/upload-artifact@v4
+      - name: Upload PDF artifact
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: cinemate-docs-pdf
-          path: site/pdf/Cinemate-Docs.pdf
+          path: site/pdf/*.pdf
 
-      # Publish HTML (and the PDF inside it) to the gh-pages branch
-      - uses: peaceiris/actions-gh-pages@v4
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
           publish_dir: ./site
-

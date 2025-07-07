@@ -1,0 +1,1828 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation for Cinemate">
+      
+      
+      
+        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/overview/">
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../cli_commands/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.15">
+    
+    
+      
+        <title>Overview - Cinemate Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.342714a4.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="black">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#overview" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Cinemate Docs" class="md-header__button md-logo" aria-label="Cinemate Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Cinemate Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Overview
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="black"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/tiramisioux/cinemate" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Cinemate Docs" class="md-nav__button md-logo" aria-label="Cinemate Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Cinemate Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/tiramisioux/cinemate" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    Getting started
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hardware-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hardware requirements
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quickstart-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      Quickstart guide
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quickstart guide">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-pi-with-ssh" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connecting to Pi with SSH:
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#starting-cinemate-manually" class="md-nav__link">
+    <span class="md-ellipsis">
+      Starting CineMate manually
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adjusting-configtxt-for-different-sensors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Adjusting config.txt for different sensors:
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#external-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      External monitoring
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recording" class="md-nav__link">
+    <span class="md-ellipsis">
+      Recording
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#simple-gui" class="md-nav__link">
+    <span class="md-ellipsis">
+      Simple GUI
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cinemate-cli-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      CineMate CLI commands
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CineMate CLI commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-cli-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example CLI commands
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cinemate-autostart-on-boot" class="md-nav__link">
+    <span class="md-ellipsis">
+      CineMate autostart on boot
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#settings-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      Settings file
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Settings file">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#geometry-and-output-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Geometry and Output Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Geometry and Output Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gpio-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      GPIO output
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#arrays" class="md-nav__link">
+    <span class="md-ellipsis">
+      Arrays
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      Settings
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#anamorphic-preview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Anamorphic preview
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#analog-controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      Analog Controls
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#buttons" class="md-nav__link">
+    <span class="md-ellipsis">
+      Buttons
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#two-way-switches" class="md-nav__link">
+    <span class="md-ellipsis">
+      Two-way switches
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rotary-encoders" class="md-nav__link">
+    <span class="md-ellipsis">
+      Rotary Encoders
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adafruit-neopixel-quad-rotary-encoder" class="md-nav__link">
+    <span class="md-ellipsis">
+      Adafruit Neopixel Quad Rotary Encoder
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Adafruit Neopixel Quad Rotary Encoder">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#defaults-encoder-push-buttons-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      Defaults encoder push buttons settings
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compatible-sensors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Compatible sensors
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multi-camera-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multi camera support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#additional-hardware" class="md-nav__link">
+    <span class="md-ellipsis">
+      Additional hardware
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pwm-mode-experimental" class="md-nav__link">
+    <span class="md-ellipsis">
+      PWM mode (experimental)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backing-up-the-sd-card" class="md-nav__link">
+    <span class="md-ellipsis">
+      Backing up the SD card
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes-when-using-pi-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes when using Pi 4
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#known-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      Known issues
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#todo" class="md-nav__link">
+    <span class="md-ellipsis">
+      Todo
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli_commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Cli commands
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../inverse_buttons/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Buttons
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../settings-json/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Settings.json cheat sheet
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hardware-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hardware requirements
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quickstart-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      Quickstart guide
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quickstart guide">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-pi-with-ssh" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connecting to Pi with SSH:
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#starting-cinemate-manually" class="md-nav__link">
+    <span class="md-ellipsis">
+      Starting CineMate manually
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adjusting-configtxt-for-different-sensors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Adjusting config.txt for different sensors:
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#external-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      External monitoring
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recording" class="md-nav__link">
+    <span class="md-ellipsis">
+      Recording
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#simple-gui" class="md-nav__link">
+    <span class="md-ellipsis">
+      Simple GUI
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cinemate-cli-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      CineMate CLI commands
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CineMate CLI commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-cli-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example CLI commands
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cinemate-autostart-on-boot" class="md-nav__link">
+    <span class="md-ellipsis">
+      CineMate autostart on boot
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#settings-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      Settings file
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Settings file">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#geometry-and-output-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Geometry and Output Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Geometry and Output Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gpio-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      GPIO output
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#arrays" class="md-nav__link">
+    <span class="md-ellipsis">
+      Arrays
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      Settings
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#anamorphic-preview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Anamorphic preview
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#analog-controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      Analog Controls
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#buttons" class="md-nav__link">
+    <span class="md-ellipsis">
+      Buttons
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#two-way-switches" class="md-nav__link">
+    <span class="md-ellipsis">
+      Two-way switches
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rotary-encoders" class="md-nav__link">
+    <span class="md-ellipsis">
+      Rotary Encoders
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adafruit-neopixel-quad-rotary-encoder" class="md-nav__link">
+    <span class="md-ellipsis">
+      Adafruit Neopixel Quad Rotary Encoder
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Adafruit Neopixel Quad Rotary Encoder">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#defaults-encoder-push-buttons-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      Defaults encoder push buttons settings
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compatible-sensors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Compatible sensors
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multi-camera-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multi camera support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#additional-hardware" class="md-nav__link">
+    <span class="md-ellipsis">
+      Additional hardware
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pwm-mode-experimental" class="md-nav__link">
+    <span class="md-ellipsis">
+      PWM mode (experimental)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backing-up-the-sd-card" class="md-nav__link">
+    <span class="md-ellipsis">
+      Backing up the SD card
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes-when-using-pi-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes when using Pi 4
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#known-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      Known issues
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#todo" class="md-nav__link">
+    <span class="md-ellipsis">
+      Todo
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset"><a class="md-content__button md-icon" download href="../pdf/combined.pdf" title="PDF Export"><svg style="height: 1.2rem; width: 1.2rem;" viewBox="0 0 384 512" xmlns="http://www.w3.org/2000/svg"><path d="M224 136V0H24C10.7 0 0 10.7 0 24v464c0 13.3 10.7 24 24 24h336c13.3 0 24-10.7 24-24V160H248c-13.2 0-24-10.8-24-24zm76.45 211.36l-96.42 95.7c-6.65 6.61-17.39 6.61-24.04 0l-96.42-95.7C73.42 337.29 80.54 320 94.82 320H160v-80c0-8.84 7.16-16 16-16h32c8.84 0 16 7.16 16 16v80h65.18c14.28 0 21.4 17.29 11.27 27.36zM377 105L279.1 7c-4.5-4.5-10.6-7-17-7H256v128h128v-6.1c0-6.3-2.5-12.4-7-16.9z"></path></svg></a>
+                
+                  
+
+
+  
+    <a href="https://github.com/tiramisioux/cinemate/edit/master/docs/overview.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+  <h1>Overview</h1>
+
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">#</a></h2>
+<p>CineMate scripts is a way for users to implement and customize manual controls for their <a href="https://github.com/cinepi/cinepi-raw">cinepi-raw</a> build. </p>
+<p>Project aims at offering an easy way to build a custom camera. For basic operation and experimentation, Raspberry Pi, camera board and monitor is needed. For practical use, buttons and switches can easily be added.</p>
+<p>A ready made disk image can be found <a href="https://github.com/Tiramisioux/cinemate/releases">here</a>.</p>
+<p>Join the CinePi Discord <a href="https://discord.gg/Hr4dfhuK">here</a>.</p>
+<h2 id="hardware-requirements">Hardware requirements<a class="headerlink" href="#hardware-requirements" title="Permanent link">#</a></h2>
+<ul>
+<li>Rasberry Pi 4/5 or CM4 module</li>
+<li>Official HQ or GS camera</li>
+<li>HDMI monitor or device (phone or tablet) for monitoring</li>
+</ul>
+<p><em>For recording, use a high speed NVME drive or <a href="https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/">CFE Hat</a> by Will Whang. Drive needs to be formatted as ext4 and named "RAW".</em></p>
+<p><em>CineMate is also compatible with <a href="https://www.tindie.com/products/will123321/oneincheye/">OneInchEye</a> (Sony IMX 283) and <a href="https://www.tindie.com/products/will123321/starlighteye/">StarlightEye</a> (Sony IMX 585) by Will Whang. Works with CM4 module and Pi 5B.</em></p>
+<h2 id="quickstart-guide">Quickstart guide<a class="headerlink" href="#quickstart-guide" title="Permanent link">#</a></h2>
+<p>1) Burn image to ssd card. 16 GB or larger.</p>
+<p>2) Connect Pi and camera sensor board</p>
+<table>
+<thead>
+<tr>
+<th><img alt="❗️" class="emojione" src="https://cdnjs.cloudflare.com/ajax/libs/emojione/2.2.7/assets/png/2757.png" title=":exclamation:" />  When connecting the camera module to the Pi, make sure it is the Pi is not powered. It is not advised to hot-swap the camera cable.</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>3) Boot up the Pi. CineMate should autostart.</p>
+<h3 id="connecting-to-pi-with-ssh">Connecting to Pi with SSH:<a class="headerlink" href="#connecting-to-pi-with-ssh" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>user: pi
+password: 1
+</code></pre></div>
+<h3 id="starting-cinemate-manually">Starting CineMate manually<a class="headerlink" href="#starting-cinemate-manually" title="Permanent link">#</a></h3>
+<p>CineMate autostarts by default. </p>
+<p>To stop an autostarted CineMate instance:</p>
+<div class="highlight"><pre><span></span><code>systemctl stop cinemate-autostart
+</code></pre></div>
+<p>For enabling and disabling autostart <a href="https://github.com/Tiramisioux/cinemate/blob/dev-pi5/README.md#cinemate-autostart-on-boot">see this section</a>.</p>
+<p>For running CineMate manually from the cli type <code>cinemate</code>. This will also display extensive logging which can be useful when configuring and testing buttons and switches.</p>
+<h3 id="adjusting-configtxt-for-different-sensors">Adjusting config.txt for different sensors:<a class="headerlink" href="#adjusting-configtxt-for-different-sensors" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>sudo nano /boot/firmware/config.txt
+</code></pre></div>
+<p>Uncomment the section for the sensor being used, and make sure to comment out the others. Reboot the Pi for changes to take effect.</p>
+<p>CineMate is compatible with Raspberry Pi HQ camera (imx477), Global Shutter camera (imx296), OneInchEye (imx283), StarlightEye (imx585) and Arducam imx519.</p>
+<h3 id="external-monitoring">External monitoring<a class="headerlink" href="#external-monitoring" title="Permanent link">#</a></h3>
+<p>To view on phone or other device, connect the phone to: </p>
+<p>Wifi <code>CinePi</code> 
+password <code>11111111</code>.</p>
+<p>In web browser, navigate to <code>cinepi.local:5000</code>. A clean feed (without GUI) is available at <code>cinepi.local:8000/stream</code>.</p>
+<h3 id="recording">Recording<a class="headerlink" href="#recording" title="Permanent link">#</a></h3>
+<p>External drive should be formatted as ntfs or ext4 and be labeled "RAW". </p>
+<p>For starting/stopping recording: 
+- in web browser: tap (or click) the preview screen
+- from CLI (running CineMate manually): type <code>rec</code>
+- via GPIO: attach a momentary switch (or simply short circuit) to GPIO 04 or 05 (can be changed in <code>home/pi/cinemate/src/settings.json</code>)</p>
+<p>A rec LED light can be connected to GPIO 21.</p>
+<table>
+<thead>
+<tr>
+<th><img alt="❗️" class="emojione" src="https://cdnjs.cloudflare.com/ajax/libs/emojione/2.2.7/assets/png/2757.png" title=":exclamation:" />  When connecting an LED to the GPIOs, be sure to use a resistor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Note that cinemate v3 is based on cinepi-sdk-002 so it also has <a href="https://discord.com/channels/1070517330083315802/1070835904169648128/1269459402491166750">this issue</a>⁠, affecting write speed to drive. CFE Hat works great but fps in most cases is max 50 at the moment.</p>
+<h2 id="simple-gui">Simple GUI<a class="headerlink" href="#simple-gui" title="Permanent link">#</a></h2>
+<p>Simple GUI is available via browser and/or attached HDMI monitor.</p>
+<ul>
+<li>Red color means camera is recording.</li>
+<li>Purple color means camera detected a drop frame </li>
+<li>Green color means camera is writing buffered frames to disk. </li>
+<li>Yellow color indicates low voltage warning.</li>
+<li>Numbers in lower left indicate frame count / frames in buffer. </li>
+</ul>
+<p>CineMate image automatically starts wifi hotspot <code>Cinepi</code>, password: <code>11111111</code>. Navigate browser to cinepi.local:5000 for simple web gui.</p>
+<h2 id="cinemate-cli-commands">CineMate CLI commands<a class="headerlink" href="#cinemate-cli-commands" title="Permanent link">#</a></h2>
+<p>When manually running CineMate from the CLI you can type simple commands. The table below includes all the available commands (method calls) + arguments for the CineMate CLI. GPIO column shows default settings of <code>cinemate/src/settings.json</code> and can be fully customized by the user. CineMate also listens for commands sent to the Pi via USB serial.</p>
+<table>
+<thead>
+<tr>
+<th>cinemate cli/usb serial command</th>
+<th>comment</th>
+<th>arguments</th>
+<th>GPIO button</th>
+<th>GPIO rotary encoder</th>
+<th>GPIO switch</th>
+<th>GPIO output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rec</code></td>
+<td>start and stop recording</td>
+<td>None (toggle control)</td>
+<td>5</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>set iso</code></td>
+<td>set iso to a value (chooses the closest value in the array defined in settings.json)</td>
+<td>integer</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>inc iso</code></td>
+<td>increase iso value one step in the array</td>
+<td>-</td>
+<td>13</td>
+<td>clk 9, dt 11, bu 10</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>dec iso</code></td>
+<td>decrease iso value one step in the array</td>
+<td>-</td>
+<td>10</td>
+<td>clk 9, dt 11, bu 10</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>set shutter a nom</code></td>
+<td>set the nominal shutter angle to a value (chooses the closest value in the array defined in settings.json)</td>
+<td>float</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>inc shutter a nom</code></td>
+<td>increase shutter angle value</td>
+<td>-</td>
+<td></td>
+<td>clk 15, dt 18, bu 23</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>dec shutter a nom</code></td>
+<td>decrease shutter angle value</td>
+<td>-</td>
+<td></td>
+<td>clk 15, dt 18, bu 23</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>set fps</code></td>
+<td>set fps to a value (chooses the closest value in the array defined in settings.json)</td>
+<td>integer</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>inc fps</code></td>
+<td>increase fps value</td>
+<td>-</td>
+<td></td>
+<td>clk 25, dt 8, bu 7</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>dec fps</code></td>
+<td>decrease fps value</td>
+<td>-</td>
+<td></td>
+<td>clk 25, dt 8, bu 7</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>set wb</code></td>
+<td>set white balance to a value (chooses the closest value in the array defined in settings.json)</td>
+<td>integer</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>inc wb</code></td>
+<td>increase white balance</td>
+<td>-</td>
+<td></td>
+<td>clk 12, dt 20, bu 21</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>dec wb</code></td>
+<td>decrease white balance</td>
+<td>-</td>
+<td></td>
+<td>clk 25, dt 8, bu 7</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>set resolution</code></td>
+<td>select the next available resolution option</td>
+<td>0, 1 or None (toggle control)</td>
+<td>13, 26 (single click)</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>set anamorphic factor</code></td>
+<td>set or toggle the anamorphic factor (explicit value or toggle through anamorphic_steps)</td>
+<td>float or None (toggle control)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>reboot</code></td>
+<td>reboot the pi</td>
+<td>-</td>
+<td>26 (double click)</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>shutdown</code></td>
+<td>shutdown the pi</td>
+<td>-</td>
+<td>26 (triple click)</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>unmount</code></td>
+<td>unmount CFE card/SSD</td>
+<td>-</td>
+<td>26 (hold for 3 sec)</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="example-cli-commands">Example CLI commands<a class="headerlink" href="#example-cli-commands" title="Permanent link">#</a></h3>
+<p>Start/stop recording:</p>
+<div class="codehilite"><pre><span></span><code>&gt; rec
+</code></pre></div>
+
+<p>Adjust the ISO setting. Requires an integer argument.</p>
+<div class="codehilite"><pre><span></span><code>&gt; set iso 800
+</code></pre></div>
+
+<p>Set the shutter angle. Requires a float argument for the angle.</p>
+<div class="codehilite"><pre><span></span><code>&gt; set shutter a 172.8
+</code></pre></div>
+
+<p>Configure the frames per second. Requires an integer argument.</p>
+<div class="codehilite"><pre><span></span><code>&gt; set fps 24
+</code></pre></div>
+
+<p>Lock/unlock iso, shutter angle or fps: Toggle locks or set them directly. Providing an argument directly sets the value. Omitting the argument will toggle the control.</p>
+<div class="codehilite"><pre><span></span><code>&gt; set iso lock
+
+&gt; set shutter a nom lock 1
+
+&gt; set fps lock
+</code></pre></div>
+
+<p>Enable or disable doubling the FPS rate. </p>
+<div class="codehilite"><pre><span></span><code><span class="k">&gt; </span><span class="ge">set fps_double</span>
+
+<span class="k">&gt; </span><span class="ge">set fps_double 1</span>
+</code></pre></div>
+
+<h2 id="cinemate-autostart-on-boot">CineMate autostart on boot<a class="headerlink" href="#cinemate-autostart-on-boot" title="Permanent link">#</a></h2>
+<p>Go to cinemate folder:</p>
+<div class="codehilite"><pre><span></span><code>cd cinemate
+</code></pre></div>
+
+<p>To enable autostart:</p>
+<div class="codehilite"><pre><span></span><code>make install
+make enable
+</code></pre></div>
+
+<p>To stop the autostarted instance:</p>
+<div class="codehilite"><pre><span></span><code>make stop
+</code></pre></div>
+
+<p>To start again:</p>
+<div class="codehilite"><pre><span></span><code>make start
+</code></pre></div>
+
+<p>To disable autostart:</p>
+<div class="codehilite"><pre><span></span><code>make disable
+</code></pre></div>
+
+<h2 id="settings-file">Settings file<a class="headerlink" href="#settings-file" title="Permanent link">#</a></h2>
+<h3 id="geometry-and-output-configuration">Geometry and Output Configuration<a class="headerlink" href="#geometry-and-output-configuration" title="Permanent link">#</a></h3>
+<p>CineMate supports multiple cameras with per‑port customization in your <code>settings.json</code>. Two key sections control this behavior:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;geometry&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;cam0&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;rotate_180&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;horizontal_flip&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;vertical_flip&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;cam1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;rotate_180&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;horizontal_flip&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;vertical_flip&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;output&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;cam0&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;hdmi_port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;cam1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;hdmi_port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<ul>
+<li><strong>geometry.cam0/cam1</strong>: Defines image orientation for each physical camera port:</li>
+<li><code>rotate_180</code>: flip image upside‑down when <code>true</code>.</li>
+<li><code>horizontal_flip</code>: mirror image left‑to‑right when <code>true</code>.</li>
+<li>
+<p><code>vertical_flip</code>: mirror image top‑to‑bottom when <code>true</code>.</p>
+</li>
+<li>
+<p><strong>output.cam0/cam1</strong>: Maps each camera to an HDMI output port. By default, <code>cam0</code>→HDMI 0 and <code>cam1</code>→HDMI 1, but you can remap as needed.</p>
+</li>
+</ul>
+<p>Continue with your existing settings configuration below.</p>
+<p>The settings file can be found in <code>/home/pi/cinemate/src/settings.json</code>. Here the user can define their own buttons, switches and rotary encoders.</p>
+<h4 id="gpio-output">GPIO output<a class="headerlink" href="#gpio-output" title="Permanent link">#</a></h4>
+<p>Default rec LED pins are 6 and 21. Make sure to use a 220 Ohm resistor on this pin!</p>
+<div class="highlight"><pre><span></span><code>  &quot;gpio_output&quot;: {
+    &quot;pwm_pin&quot;: 19,
+    &quot;rec_out_pin&quot;: [6, 21]
+  },
+</code></pre></div>
+<h4 id="arrays">Arrays<a class="headerlink" href="#arrays" title="Permanent link">#</a></h4>
+<p>Set desired arrays for ISO, shutter angle values, fps and white balance.</p>
+<div class="highlight"><pre><span></span><code>  &quot;arrays&quot;: {
+    &quot;iso_steps&quot;: [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200],
+    &quot;shutter_a_steps&quot;: [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360],
+    &quot;fps_steps&quot;: [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50],
+    &quot;wb_steps&quot;: [3200, 4400, 5600]
+  },
+</code></pre></div>
+<p>CineMate interpolates redis cg_rb settings used by libcamera based on the selected white balance value in the above array and the tuning file for the sensor being used.</p>
+<h4 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">#</a></h4>
+<div class="highlight"><pre><span></span><code>  &quot;settings&quot;: {
+    &quot;light_hz&quot;: [50, 60]
+  }
+</code></pre></div>
+<p>CineMate dynamically adjusts the shutter_a_steps array on fps change, adding the flicker free angles given the current frame rate and the hz values defined by the user.</p>
+<h4 id="anamorphic-preview">Anamorphic preview<a class="headerlink" href="#anamorphic-preview" title="Permanent link">#</a></h4>
+<div class="highlight"><pre><span></span><code>    &quot;anamorphic_preview&quot;: {
+      &quot;anamorphic_steps&quot;: [1, 1.33, 2.0],
+      &quot;default_anamorphic_factor&quot;: 1
+    }
+</code></pre></div>
+<p>The anamorphic_preview section allows users to define an array of selectable anamorphic factors (anamorphic_steps) and set a default value (default_anamorphic_factor). The anamorphic factor is used to adjust the aspect ratio of the preview.</p>
+<h4 id="analog-controls">Analog Controls<a class="headerlink" href="#analog-controls" title="Permanent link">#</a></h4>
+<p>Default settings are <code>None</code>. Map Grove Base HAT ADC channels to iso, shutter angle, fps and white balance controls. </p>
+<div class="highlight"><pre><span></span><code>  &quot;analog_controls&quot;: {
+    &quot;iso_pot&quot;: 0,
+    &quot;shutter_a_pot&quot;: 2,
+    &quot;fps_pot&quot;: 4,
+    &quot;wb_pot&quot;: 6
+  }
+</code></pre></div>
+<h4 id="buttons">Buttons<a class="headerlink" href="#buttons" title="Permanent link">#</a></h4>
+<p>Setup buttons with actions for different interactions. Methods are the same as the CineMate CLI commands. Arguments can also be added here</p>
+<div class="highlight"><pre><span></span><code>{
+    &quot;pin&quot;: 22,
+    &quot;pull_up&quot;: &quot;False&quot;,
+    &quot;debounce_time&quot;: &quot;0.1&quot;,
+    &quot;press_action&quot;: {&quot;method&quot;: &quot;set_all_lock&quot;},
+    &quot;single_click_action&quot;: &quot;None&quot;,
+    &quot;double_click_action&quot;: &quot;None&quot;,
+    &quot;hold_action&quot;: {&quot;method&quot;: &quot;restart_camera&quot;}
+}
+</code></pre></div>
+<p>Each button can be configured with a variety of actions based on different interactions:</p>
+<p><strong>Press Action:</strong> Triggers a specified method upon a simple press.</p>
+<p><strong>Single, Double, and Triple Click Actions:</strong> Specify methods to execute based on the number of successive clicks.</p>
+<p><strong>Hold Action:</strong> Executes a method when the button is held down for a longer duration.</p>
+<p>Each action can specify a method that corresponds to a function within the application, and args, an array of arguments that the method requires.</p>
+<p>Note that if you have both a Press Action and a Single-Click action on a pin, the pin will first execute the Press Action and when released, execute the Single-Click Action. Combining Press Action and Click actions on the same pin is therefore not recommended.</p>
+<h4 id="two-way-switches">Two-way switches<a class="headerlink" href="#two-way-switches" title="Permanent link">#</a></h4>
+<p>Two-way switches are configured in the two_way_switches section and have actions for both states:</p>
+<p><strong>State On Action</strong> and <strong>State Off Action</strong>: Define what actions to take when the switch is turned on or off, respectively. Similar to button actions, these can specify a method and args.</p>
+<div class="highlight"><pre><span></span><code>{
+    &quot;pin&quot;: 16,
+    &quot;state_on_action&quot;: {&quot;method&quot;: &quot;set_shutter_a_sync&quot;, &quot;args&quot;: [false]},
+    &quot;state_off_action&quot;: {&quot;method&quot;: &quot;set_shutter_a_sync&quot;, &quot;args&quot;: [true]}
+}
+</code></pre></div>
+<h4 id="rotary-encoders">Rotary Encoders<a class="headerlink" href="#rotary-encoders" title="Permanent link">#</a></h4>
+<p>Configure rotary encoders for settings adjustments and optional button presses:</p>
+<div class="highlight"><pre><span></span><code>{
+    &quot;clk_pin&quot;: 9,
+    &quot;dt_pin&quot;: 11,
+    &quot;encoder_actions&quot;: {
+    &quot;rotate_clockwise&quot;: {&quot;method&quot;: &quot;inc_iso&quot;, &quot;args&quot;: []},
+    &quot;rotate_counterclockwise&quot;: {&quot;method&quot;: &quot;dec_iso&quot;, &quot;args&quot;: []}
+}
+</code></pre></div>
+<p><strong>Clockwise and Counterclockwise Actions</strong>: Specify methods to execute when the encoder is rotated in either direction.</p>
+<p>Note that if rotary encoders with buttons are used, these are connected and defined as normal push buttons in the Button-section of the settings file.</p>
+<h4 id="adafruit-neopixel-quad-rotary-encoder">Adafruit Neopixel Quad Rotary Encoder<a class="headerlink" href="#adafruit-neopixel-quad-rotary-encoder" title="Permanent link">#</a></h4>
+<div class="highlight"><pre><span></span><code>  &quot;quad_rotary_encoders&quot;: {
+    &quot;0&quot;: {&quot;setting_name&quot;: &quot;iso&quot;, &quot;gpio_pin&quot;: 5},
+    &quot;1&quot;: {&quot;setting_name&quot;: &quot;shutter_a&quot;, &quot;gpio_pin&quot;: 16},
+    &quot;2&quot;: {&quot;setting_name&quot;: &quot;fps&quot;, &quot;gpio_pin&quot;: 26},
+    &quot;3&quot;: {&quot;setting_name&quot;: &quot;wb&quot;, &quot;gpio_pin&quot;: 5}
+  }
+</code></pre></div>
+<h5 id="defaults-encoder-push-buttons-settings">Defaults encoder push buttons settings<a class="headerlink" href="#defaults-encoder-push-buttons-settings" title="Permanent link">#</a></h5>
+<ul>
+<li>Encoder 0 (ISO): Encoder push button clones behaviour of rec button on GPIO 5</li>
+<li>Encoder 1 (Shutter Angle): Encoder push button clones behaviour of fps double button in GPIO 16</li>
+<li>Encoder 2 (FPS): Encoder push button clones behaviour of system push button on GPIO 26</li>
+<li>Encoder 3 (White Balance): Encoder push button clones behaviour of rec button on GPIO 5</li>
+</ul>
+<p>These push buttons can be programmed to perform various functions like toggling locks, changing modes, or triggering specific actions, just like regular GPIO buttons. The <code>gpio_pin</code> setting clones the behaviour of pins defined in the Buttons section of the settings file.</p>
+<h2 id="compatible-sensors">Compatible sensors<a class="headerlink" href="#compatible-sensors" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Sensor</th>
+<th>Cinemate sensor mode</th>
+<th>Resolution</th>
+<th>Aspect Ratio</th>
+<th>Bit Depth</th>
+<th>Max FPS*</th>
+<th>File Size (MB)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IMX283</td>
+<td>0</td>
+<td>2736 x 1538</td>
+<td>1.80</td>
+<td>12</td>
+<td>40</td>
+<td>7.1</td>
+</tr>
+<tr>
+<td></td>
+<td>1</td>
+<td>2736 x 1824</td>
+<td>1.53</td>
+<td>12</td>
+<td>34</td>
+<td>8.2</td>
+</tr>
+<tr>
+<td>IMX296</td>
+<td>0</td>
+<td>1456 x 1088</td>
+<td>1.33</td>
+<td>12</td>
+<td>60</td>
+<td>2</td>
+</tr>
+<tr>
+<td>IMX477</td>
+<td>0</td>
+<td>2028 x 1080</td>
+<td>1.87</td>
+<td>12</td>
+<td>50</td>
+<td>3.2</td>
+</tr>
+<tr>
+<td></td>
+<td>1</td>
+<td>2028 x 1520</td>
+<td>1.33</td>
+<td>12</td>
+<td>40</td>
+<td>4.5</td>
+</tr>
+<tr>
+<td></td>
+<td>2</td>
+<td>1332 x 990</td>
+<td>1.34</td>
+<td>10</td>
+<td>120</td>
+<td>2.8</td>
+</tr>
+<tr>
+<td>IMX519</td>
+<td>0</td>
+<td>1280 x 720</td>
+<td>1.77</td>
+<td>10</td>
+<td>80</td>
+<td>7.1</td>
+</tr>
+<tr>
+<td></td>
+<td>1</td>
+<td>1920 x 1080</td>
+<td>1.77</td>
+<td>10</td>
+<td>60</td>
+<td>8.2</td>
+</tr>
+<tr>
+<td></td>
+<td>2</td>
+<td>2328 x 1748</td>
+<td>1.77</td>
+<td>10</td>
+<td>30</td>
+<td>8.2</td>
+</tr>
+<tr>
+<td></td>
+<td>3</td>
+<td>3840 x 2160</td>
+<td>1.77</td>
+<td>10</td>
+<td>18</td>
+<td>31</td>
+</tr>
+<tr>
+<td>IMX585</td>
+<td>0</td>
+<td>1928 x 1090</td>
+<td>1.77</td>
+<td>12</td>
+<td>87</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<p>'*' Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames. You can cap CineMates max fps values for your specific build by editing the file <code>cinemate/src/module/sensor_detect.py</code></p>
+<h2 id="multi-camera-support">Multi camera support<a class="headerlink" href="#multi-camera-support" title="Permanent link">#</a></h2>
+<p>CineMate automatically detects each camera connected to the Raspberry Pi and spawns a separate <code>cinepi-raw</code> process per sensor. By default:</p>
+<ul>
+<li><strong>Primary camera</strong> (first detected) displays its preview on HDMI port 0.</li>
+<li><strong>Secondary cameras</strong> run with <code>--nopreview</code> and map to subsequent HDMI outputs (cam1→HDMI 1, cam2→HDMI 2, etc.).</li>
+<li>Preview windows are centered and sized according to your <code>geometry</code> settings.</li>
+</ul>
+<p>You can override default HDMI mappings in <code>settings.json</code> under the <code>output</code> section:</p>
+<h2 id="additional-hardware">Additional hardware<a class="headerlink" href="#additional-hardware" title="Permanent link">#</a></h2>
+<p>CineMate image file comes pre-installed with:
+- <a href="https://www.tindie.com/products/will123321/oneincheye/">OneInchEye</a>
+- <a href="https://www.tindie.com/products/will123321/starlighteye/">StarlightEye</a>
+- <a href="https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/">CFE Hat</a>
+- <a href="https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/">Grove Base HAT</a></p>
+<h2 id="pwm-mode-experimental">PWM mode (experimental)<a class="headerlink" href="#pwm-mode-experimental" title="Permanent link">#</a></h2>
+<p>Trigger mode 2 sets the Raspberry Pi HQ/GS sensors in sink mode, as explained here: https://github.com/Tiramisioux/libcamera-imx477-speed-ramping</p>
+<p>This makes it possible to feed the sensor XVS input with hardware PWM signal from the pi (CineMate uses pin 19 as default, but pin 18 also supports hardware PWM), allowing for hardware control of fps and shutter angle during recording. By using a precise clock source this could potentially fix the fluctuating fps of image sensors, allowing for precise audio syncing.</p>
+<table>
+<thead>
+<tr>
+<th><img alt="❗️" class="emojione" src="https://cdnjs.cloudflare.com/ajax/libs/emojione/2.2.7/assets/png/2757.png" title=":exclamation:" />  Note! Be sure to use a voltage divider so PWM signal is converted to 1.65V.</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>From my tests I have noticed that changing fps works fine, but sometimes camera has to be reset a couple of times to work properly (toggling the PWM mode button). Changing shutter angle in PWM mode (or having shutter angle sync engaged) also doesn't seem to work properly.</p>
+<h2 id="backing-up-the-sd-card">Backing up the SD card<a class="headerlink" href="#backing-up-the-sd-card" title="Permanent link">#</a></h2>
+<p>To make a compressed image backup of the SD card onto the attached drive:</p>
+<div class="highlight"><pre><span></span><code>sudo sh -c &#39;pv -s $(blockdev --getsize64 /dev/mmcblk0) /dev/mmcblk0 | xz -3 -c &gt; /media/RAW/cinemate_v3-pi_4+5_bookworm_image_$(date +%Y-%m-%d_%H-%M-%S).img.xz&#39;
+</code></pre></div>
+<p>Backing up CineMate image takes about 30 min.</p>
+<h2 id="notes-when-using-pi-4">Notes when using Pi 4<a class="headerlink" href="#notes-when-using-pi-4" title="Permanent link">#</a></h2>
+<p>On Raspberry Pi 4 the tuning file currently fails to load properly for libcamera so no tuning file is applied to the actual image. The tuning file is used though for CineMate calculation of WB values.</p>
+<h2 id="known-issues">Known issues<a class="headerlink" href="#known-issues" title="Permanent link">#</a></h2>
+<ul>
+<li>Frame drops when using NTFS formatted SSD drives</li>
+<li>Recording stops after a couple of seconds when using ext4 formatted SSD drives    </li>
+</ul>
+<h2 id="todo">Todo<a class="headerlink" href="#todo" title="Permanent link">#</a></h2>
+<ul>
+<li>[x] fix shutter angle values array calculation</li>
+<li>[ ] simple_gui.py adaptive layout for non 1920x1080 screens</li>
+<li>[x] fix frame rate / shutter angle sync for constant exposure during fps change</li>
+<li>[x] mounting mechanism should be improved. Drives seem to not mount when detatched and then reconnected</li>
+<li>[x] anamorphic factor to be moved to settings file.</li>
+<li>[ ] 16 bit modes for imx585</li>
+<li>[ ] support for imx294</li>
+<li>[x] optimize recording to allow for the use of 300 MB/s SSD drive</li>
+<li>[x] optimize operating system for faster boot and smaller image file</li>
+<li>[ ] overclocking of ISP</li>
+<li>[ ] optional auto-exposure</li>
+<li>[ ] hardware sync of sensor frame capture, perhaps via a pico</li>
+<li>[ ] rendering mode, for creating proxy files in camera (using https://github.com/mrjulesfletcher/dng_to_video)</li>
+<li>[ ] automatic detection of attached sensor and dynamic dtoverlay</li>
+</ul>
+
+
+
+
+
+
+
+  
+    
+  
+  
+
+
+  <aside class="md-source-file">
+    
+      
+  <span class="md-source-file__fact">
+    <span class="md-icon" title="Last update">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
+    </span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 7, 2025 21:10:18 UTC">July 7, 2025</span>
+  </span>
+
+    
+    
+    
+    
+  </aside>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.top", "toc.follow", "content.code.copy", "content.action.edit"], "search": "../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.56ea9cef.min.js"></script>
+      
+    
+  </body>
+</html>

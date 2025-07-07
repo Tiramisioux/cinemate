@@ -222,7 +222,6 @@ class SimpleGUI(threading.Thread):
             "resolution": {"normal": "black", "inverse": "black"},
             "aspect": {"normal": "black", "inverse": "black"},
             "color_temp_libcamera": {"normal": (136,136,136), "inverse": "black"},
-            "pwm_mode": {"normal": (97,171,49), "inverse": "black"},
             # "shutter_a_sync_mode": {"normal": "white", "inverse": "black"},
             "lock": {"normal": (255, 0, 0, 255), "inverse": "black"},
             "low_voltage": {"normal": (218,149,77), "inverse": "black"},
@@ -483,13 +482,6 @@ class SimpleGUI(threading.Thread):
         else:
             self.colors["shutter_speed"]["normal"] = (249,249,249)
             self.colors["fps"]["normal"] = (249,249,249)
-            
-        if self.cinepi_controller.trigger_mode != 0:
-            values["pwm_mode"] = "PWM"
-            self.colors["shutter_speed"]["normal"] = "lightgreen"
-            self.colors["fps"]["normal"] = "lightgreen"
-        elif self.cinepi_controller.fps_double:
-            self.colors["fps"]["normal"] = "lightgreen"
 
         values["lock"]        = "LOCK"    if self.cinepi_controller.parameters_lock else ""
         values["low_voltage"] = "VOLTAGE" if self.dmesg_monitor.undervoltage_flag  else ""

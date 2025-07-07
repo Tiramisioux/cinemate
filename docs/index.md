@@ -1,4 +1,9 @@
-# Cinemate
+---
+# Hide sidebar nav and TOC on the home page
+
+---
+
+# 
 
 Welcome to the **Cinemate** documentation.
 

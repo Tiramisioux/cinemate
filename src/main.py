@@ -24,7 +24,6 @@ from module.sensor_detect import SensorDetect
 from module.redis_listener import RedisListener
 from module.gpio_input import ComponentInitializer
 from module.battery_monitor import BatteryMonitor
-from module.PWMcontroller import PWMController
 from module.wifi_hotspot import WiFiHotspotManager
 from module.cli_commands import CommandExecutor
 from module.dmesg_monitor import DmesgMonitor
@@ -169,14 +168,13 @@ def initialize_system(settings):
     """Initialize core system components."""
     redis_controller = RedisController()
     sensor_detect = SensorDetect()
-    pwm_controller = PWMController(sensor_detect, PWM_pin=settings["gpio_output"]["pwm_pin"])
     ssd_monitor = SSDMonitor(redis_controller=redis_controller)
     usb_monitor = USBMonitor(ssd_monitor)
     gpio_output = GPIOOutput(rec_out_pins=settings["gpio_output"]["rec_out_pin"])
     dmesg_monitor = DmesgMonitor()
     dmesg_monitor.start()
 
-    return redis_controller, sensor_detect, pwm_controller, ssd_monitor, usb_monitor, gpio_output, dmesg_monitor
+    return redis_controller, sensor_detect, ssd_monitor, usb_monitor, gpio_output, dmesg_monitor
 
 def handle_vu_output(line):
     if "[VU]" in line:
@@ -220,7 +218,7 @@ def main():
     start_hotspot()
 
     # Initialize system components
-    redis_controller, sensor_detect, pwm_controller, ssd_monitor, usb_monitor, gpio_output, dmesg_monitor = initialize_system(settings)
+    redis_controller, sensor_detect, ssd_monitor, usb_monitor, gpio_output, dmesg_monitor = initialize_system(settings)
     
     # Store Pi model in Redis
     redis_controller.set_value(ParameterKey.PI_MODEL.value, pi_model)
@@ -237,7 +235,7 @@ def main():
     # cinepi.message.subscribe(handle_vu_output)
 
     cinepi_controller = CinePiController(
-        cinepi, redis_controller, pwm_controller, ssd_monitor, sensor_detect,
+        cinepi, redis_controller, ssd_monitor, sensor_detect,
         iso_steps=settings["arrays"]["iso_steps"],
         shutter_a_steps=settings["arrays"]["shutter_a_steps"],
         fps_steps=settings["arrays"]["fps_steps"],  
@@ -284,7 +282,7 @@ def main():
     else:
         logging.error("Didn't find Wi-Fi hotspot. Stream module not loaded")
 
-    mediator = Mediator(cinepi, cinepi_controller, redis_listener, pwm_controller, redis_controller, ssd_monitor, gpio_output, stream, usb_monitor)
+    mediator = Mediator(cinepi, cinepi_controller, redis_listener, redis_controller, ssd_monitor, gpio_output, stream, usb_monitor)
     
     # Initialize USB monitoring
     usb_monitor.check_initial_devices()
@@ -322,7 +320,6 @@ def main():
         )
 
         # Stop peripherals
-        pwm_controller.stop_pwm()
         dmesg_monitor.join()
         command_executor.join()
         serial_handler.running = False

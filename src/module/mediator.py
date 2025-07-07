@@ -5,11 +5,10 @@ import time
 from module.redis_controller import ParameterKey
 
 class Mediator:
-    def __init__(self, cinepi_app, cinepi_controller, redis_listener, pwm_controller, redis_controller, ssd_monitor, gpio_output, stream, usb_monitor):
+    def __init__(self, cinepi_app, cinepi_controller, redis_listener, redis_controller, ssd_monitor, gpio_output, stream, usb_monitor):
         self.cinepi_app = cinepi_app
         self.cinepi_controller = cinepi_controller
         self.redis_listener = redis_listener
-        self.pwm_controller = pwm_controller
         self.redis_controller = redis_controller
         self.ssd_monitor = ssd_monitor
         self.gpio_output = gpio_output
@@ -104,14 +103,9 @@ class Mediator:
 
     def handle_fps_change(self, data):
         # Handle "fps" key changes
-        if data['key'] == ParameterKey.FPS.value:
-            print('changing pwm')
             fps_new = self.redis_controller.get_value(ParameterKey.FPS.value)
-            self.pwm_controller.set_pwm(fps_new)
             
     def handle_shutter_a_change(self, data):
         # Handle "shutter_a" key changes
         if data['key'] == ParameterKey.SHUTTER_A.value:
-            print('changing pwm')
             shutter_a_new = self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)
-            self.pwm_controller.set_pwm(None, shutter_a_new)

@@ -101,7 +101,7 @@
       "single_click_action": {"method": "set_resolution"},
       "double_click_action": {"method": "restart_camera"},
       "triple_click_action": {"method": "reboot"},
-      "hold_action": {"method": "unmount"}
+      "hold_action": {"method": "toggle_mount"}
     }
   ],
 

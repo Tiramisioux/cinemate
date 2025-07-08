@@ -13,11 +13,14 @@ dev_addr: 0.0.0.0:8000            # live-preview reachable from your laptop
 # ───────────────────────────
 nav:
   - Home: index.md
-  - Getting started:
-    - Overview: overview.md
-    - Cli commands: cli_commands.md
-    - Buttons: inverse_buttons.md
-    - Settings.json cheat sheet: settings-json.md
+  - Getting started: getting-started.md
+  - Overview: overview.md
+  - CLI reference:
+      - Commands: cli_commands.md
+      - Settings.json: settings-json.md
+  - Modules: modules.md
+  - MkDocs installation: mkdocs-install.md
+  - Buttons: inverse_buttons.md
 
 # ───────────────────────────
 # Theme

@@ -8,6 +8,7 @@ import math
 import subprocess
 from threading import Thread
 import psutil
+import math
 
 from module.redis_controller import ParameterKey
 
@@ -102,6 +103,7 @@ class CinePiController:
 
         self.sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
         self.fps_max = int(self.sensor_detect.get_fps_max(self.current_sensor, self.sensor_mode))
+        
         self.redis_controller.set_value(ParameterKey.FPS_MAX.value, self.fps_max)
         self.gui_layout = self.sensor_detect.get_gui_layout(self.current_sensor, self.sensor_mode)
         self.exposure_time_s = float(self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)) / 360 * (1 / self.fps) 

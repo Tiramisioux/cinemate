@@ -96,7 +96,7 @@ class AnalogControls(threading.Thread):
         else:
             return steps[step_index]
 
-    # ───── helper ──────────────────────────────────────────────────────────
+ # ───── helper ──────────────────────────────────────────────────────────
     def _get_steps(self, kind: str):
         """
         Return the *current* legal step table for iso / shutter / fps / wb.
@@ -116,14 +116,18 @@ class AnalogControls(threading.Thread):
             return c.shutter_a_steps_dynamic        # includes flicker-free angles
 
         if kind == 'fps':
+            # NOTE: fps_max is set in CinePiController via int(get_fps_max()),
+            # which truncates the raw sensor capability (e.g. 49.97 Hz) to 49.
+            # Thus, even in free mode, the range is 1..49, not up to 50.
             if c.fps_free or c.shutter_a_sync_mode == 1:
-                return list(range(1, c.fps_max + 1))
+                return list(range(1, c.fps_max + 2))
             return c.fps_steps                      # snapped list
 
         if kind == 'wb':
             return c.wb_steps                       # free-mode handled in controller
 
         return []      # fallback – should never happen
+
 
 
     def update_parameters(self):

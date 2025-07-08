@@ -131,13 +131,14 @@ def _dead_nvme_cleanup():
             state = "dead"
 
         if state == "dead":
-            log.warning(
-                "NVMe controller for %s reported state=dead – "
-                "forcing lazy unmount.  "
-                "This *usually* means a power-dip or cable issue.",
-                dev
-            )
-            _unmount(dev)
+            # log.warning(
+            #     "NVMe controller for %s reported state=dead – "
+            #     "forcing lazy unmount.  "
+            #     "This *usually* means a power-dip or cable issue.",
+            #     dev
+            # )
+            # _unmount(dev)
+            pass
 # ────────────────────────────────────────────────────────────────
 
 # ---------------------------------------------------------------------------
@@ -189,6 +190,15 @@ def _purge_stale_mountpoints() -> None:
 # ---------------------------------------------------------------------------
 
 def _mount(dev: str):
+    # First, clear out any leftover RAW directory from a previous unmount
+    _purge_stale_mountpoints()
+
+    # If we thought this dev was already mounted but the mountpoint is gone,
+    # remove the stale record so we’ll actually retry the mount below.
+    mp_prev = _mounts.get(dev)
+    if mp_prev and not os.path.ismount(mp_prev):
+        log.info("Cleaning up stale mount record for %s", dev)
+        _mounts.pop(dev, None)
     if dev in _mounts:
         log.debug("%s already mounted by this daemon – skipping", dev)
         return
@@ -264,30 +274,6 @@ def _wait_for_raw_mount(timeout: float = 8.0) -> bool:
             return True                 # success
         time.sleep(0.2)
     return False   
-
-# ---------------------------------------------------------------------------
-# helpers – wait for RAW to appear / disappear
-# ---------------------------------------------------------------------------
-def _wait_for_raw_mount(timeout: float = 8.0) -> bool:
-    """Return True as soon as /media/RAW becomes a mount-point (≤ timeout s)."""
-    mp = MOUNT_BASE / "RAW"
-    t0 = time.time()
-    while time.time() - t0 < timeout:
-        if os.path.ismount(mp):
-            return True
-        time.sleep(0.2)
-    return False
-
-
-def _wait_for_raw_unmount(timeout: float = 5.0) -> bool:
-    """Return True once /media/RAW is no longer mounted (≤ timeout s)."""
-    mp = MOUNT_BASE / "RAW"
-    t0 = time.time()
-    while time.time() - t0 < timeout:
-        if not os.path.ismount(mp):
-            return True
-        time.sleep(0.2)
-    return False
 
 
 def _unmount(dev: str):
@@ -382,7 +368,8 @@ def _udev_worker():
             for d, p in list(_mounts.items()):
                 if not Path(d).exists():          # /dev/nvme… gone
                     _unmount(d)
-
+            # now clean up any leftover /media/RAW directory
+            _purge_stale_mountpoints()
 # ---------------------------------------------------------------------------
 # CFE-HAT worker  (robust edge-detector + verbose debug)
 # ---------------------------------------------------------------------------
@@ -434,58 +421,80 @@ def _cfe_hat_worker():
             time.sleep(0.5)
             subprocess.call(["sh", "-c", "echo 1 > /sys/bus/pci/rescan"])
 
-    # main loop --------------------------------------------------------
+    # ─── CFE-HAT main polling loop ─────────────────────────────────────────────
     while True:
         try:
-            state = bus.read_byte(I2C_ADDR)
+            raw = bus.read_byte(I2C_ADDR)
         except OSError as e:
+            # I²C bus read failed – probably transient
             log.debug("I²C read error: %s", e)
             time.sleep(0.1)
             continue
 
-        # bits: 0x01 = insert, 0x02 = eject
-        ins_now, ej_now   = state & 1, (state >> 1) & 1
-        ins_prev, ej_prev = last_state & 1, (last_state >> 1) & 1
-        last_state = state                                          # update
+        # bit0 = insert, bit1 = eject
+        ins_now =  raw       & 1
+        ej_now  = (raw >> 1) & 1
+        ins_prev = last_state       & 1
+        ej_prev  = (last_state >>1) & 1
+        last_state = raw  # remember for next iteration
 
-        # ---------- INSERT -------------------------------------------
-        if ins_prev == 0 and ins_now == 1:          # button down
-            log.debug("Insert pressed")
+        # ── INSERT BUTTON DOWN (or “yank” detection) ─────────────────────────
+        # This fires as soon as the HAT reports an insert-bit rising edge.
+        # We use it to detect a card yank (device node disappears) and clean up.
+        if ins_prev == 0 and ins_now == 1:
+            log.debug("Insert pressed (bit0 went 0→1)")
+            for dev in list(_mounts):
+                # if the /dev node has vanished, force-unmount & purge RAW
+                if not Path(dev).exists():
+                    log.info("  → Detected missing device %s; forcing unmount", dev)
+                    if _force_lazy_unmount(dev):
+                        log.info("     unmounted %s after yank", dev)
+                    else:
+                        log.error("     failed to unmount %s after yank", dev)
+                    _purge_stale_mountpoints()
 
-        if ins_prev == 1 and ins_now == 0:          # button released
-            log.info("Insert released → attempt mount")
-            _pcie_bind(True)                        # power up PCIe
-            _set_led(True)                          # LED immediately on
+        # ── INSERT BUTTON UP (mount flow) ─────────────────────────────────────
+        # Fires on the falling edge of the insert bit.  We power up, mount, then wait.
+        if ins_prev == 1 and ins_now == 0:
+            log.info("Insert released → powering up and waiting for udev mount")
+            _pcie_bind(True)    # power up PCIe slot
+            _set_led(True)      # LED on immediately
 
-            if _wait_for_raw_mount():               # <── NEW
+            # now just wait for the udev‐mounted RAW to appear
+            if _wait_for_raw_mount(timeout=10.0):
                 log.info("Insert: mount succeeded ✓")
             else:
-                log.warning("Insert: mount FAILED (timeout) ✗  – "
-                            "check NVMe, cable, power")
-                _set_led(False)                     # leave LED off if failed
+                log.warning("Insert: mount FAILED (timeout) – check NVMe, cable, power")
+                _set_led(False)
 
-        # ---------- EJECT --------------------------------------------
+        # ── EJECT BUTTON DOWN ───────────────────────────────────────────────────
+        # Just a debug log when you press eject.
         if ej_prev == 0 and ej_now == 1:
-            log.debug("Eject pressed")
+            log.debug("Eject pressed (bit1 went 0→1)")
 
+        # ── EJECT BUTTON UP (unmount flow) ─────────────────────────────────────
+        # Fires on the falling edge of the eject bit.  We unmount everything and power down.
         if ej_prev == 1 and ej_now == 0:
-            log.info("Eject released → unmount request")
-            any_ok = False
-            for dev in list(_mounts):
-                if _force_lazy_unmount(dev):
-                    any_ok = True
+            log.info("Eject released → attempting unmount")
+            any_unmounted = False
+            for d in list(_mounts):
+                if _force_lazy_unmount(d):
+                    any_unmounted = True
 
-            if any_ok:
-                if _wait_for_raw_unmount():         # <── NEW
+            if any_unmounted:
+                if _wait_for_raw_unmount():
                     log.info("Eject: unmount succeeded ✓")
                 else:
                     log.warning("Eject: unmount timed-out (busy) ✗")
-                _pcie_bind(False)
-                _set_led(False)
+                _pcie_bind(False)   # power down PCIe slot
+                _set_led(False)     # turn LED off
             else:
                 log.warning("Eject: no RAW partition was mounted")
 
-        time.sleep(0.05)        # 20 Hz polling is plenty
+        # ── throttle loop to ~20 Hz ────────────────────────────────────────────
+        time.sleep(0.05)
+
+
 
 # ---------------------------------------------------------------------------
 # Initial scan

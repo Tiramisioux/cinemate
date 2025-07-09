@@ -7,11 +7,13 @@ A ready made disk image can be found [here](https://github.com/Tiramisioux/cinem
 
 Join the CinePi Discord [here](https://discord.gg/Hr4dfhuK).
 
-## Relationship to cinepi-raw
-CineMate relies on a custom branch of [cinepi-raw](https://github.com/Tiramisioux/cinepi-raw/tree/rpicam-apps_1.7_custom_encoder), a fork of *rpicam-apps* adapted for libcamera 0.5 and rpicam-apps 1.0.7.  The
-`cinepi_multi.py` module launches one `cinepi-raw` process per detected sensor and communicates with it via Redis. 
+### Relationship to cinepi-raw
 
-The fork adds CinemaDNG recording with manual writing of dng tags, audio support and extra flags like `--cam-port`, `--hdmi-port` that Cinemate uses for multi‑camera setups.
+The original **cinepi-raw** project is a C++/libcamera application that records 12-bit CinemaDNG sequences on Raspberry Pi hardware. It extends Raspberry Pi’s own *rpicam-apps* with a custom DNG encoder and a lightweight Redis‐based API so external tools can change parameters, start/stop takes, etc.  
+
+CineMate** is a pure-Python companion that autostarts on the Pi, shows a simple GUI over HDMI, maps GPIO buttons/encoders, and talks to **cinepi-raw** through Redis commands. Think of it as the “camera body UI” while *cinepi-raw* is the “sensor & recorder”.
+
+CineMate relies on a custom fork of [cinepi-raw](https://github.com/Tiramisioux/cinepi-raw/tree/rpicam-apps_1.7_custom_encoder), adapted for libcamera 0.5 and rpicam-apps 1.0.7. 
 
 ## Getting started
 
@@ -28,16 +30,16 @@ The fork adds CinemaDNG recording with manual writing of dng tags, audio support
 | :exclamation:  When connecting the camera module to the Pi, make sure it is the Pi is not powered. It is not advised to hot-swap the camera cable.   |
 |-----------------------------------------|
 
-3) Boot up the Pi. CineMate should autostart
+3. Boot up the Pi. CineMate should autostart
 
-4) For preview, attach a HDMI monitor or connect phone/tablet to: 
+4. For preview, attach a HDMI monitor or connect phone/tablet to: 
 
 Wifi `CinePi` 
 password `11111111`.
 
 In web browser, navigate to `cinepi.local:5000`. A clean feed (without GUI) is available at `cinepi.local:8000/stream`.
 
-4. For recording, attach an **SSD drive** (Samsung T7 recommended), high speed **NVME drive** or **[CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/)** by Will Whang. Drive needs to be formatted as ext4 and named "RAW". Connect a button to GPI05 and GND or simply short circuit the two using a paper clip. If you are using the phone preview option, you can start/stop recording by tapping the preview.
+5. For recording, attach an **SSD drive** (Samsung T7 recommended), high speed **NVME drive** or **[CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/)** by Will Whang. Drive needs to be formatted as ext4 and named "RAW". Connect a button to GPI05 and GND or simply short circuit the two using a paper clip. If you are using the phone preview option, you can start/stop recording by tapping the preview.
 
 ## Customization
 

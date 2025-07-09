@@ -15,9 +15,9 @@ nav:
   - Home: index.md
   - Getting started:
     - Overview: overview.md
-    - Cli commands: cli_commands.md
-    - Buttons: inverse_buttons.md
-    - Settings.json cheat sheet: settings-json.md
+    # - Cli commands: cli_commands.md
+    # - Buttons: inverse_buttons.md
+    # - Settings.json cheat sheet: settings-json.md
 
 # ───────────────────────────
 # Theme

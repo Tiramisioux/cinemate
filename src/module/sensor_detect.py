@@ -21,9 +21,9 @@ class SensorDetect:
             },
 
             'imx477': {                                                             
-                0: {'aspect': 1.87, 'width': 2028, 'height': 1080, 'bit_depth': 12, 'packing': 'U', 'fps_max': 50, 'gui_layout': 0, 'file_size': 3.2, 'fps_correction_factor': 0.9995}, # driver fps max 50
-                1: {'aspect': 1.33, 'width': 2028, 'height': 1520, 'bit_depth': 12, 'packing': 'U', 'fps_max': 40, 'gui_layout': 0, 'file_size': 4.5, 'fps_correction_factor': 0.9995}, # driver fps max 40
-                2: {'aspect': 1.34, 'width': 1332, 'height': 990, 'bit_depth': 10, 'packing': 'U', 'fps_max': 120, 'gui_layout': 0, 'file_size': 2.8, 'fps_correction_factor': 0.9995}, # driver fps max 120 
+                0: {'aspect': 1.87, 'width': 2028, 'height': 1080, 'bit_depth': 12, 'packing': 'U', 'fps_max': 50, 'gui_layout': 0, 'file_size': 4.3, 'fps_correction_factor': 0.9995}, # driver fps max 50
+                1: {'aspect': 1.33, 'width': 2028, 'height': 1520, 'bit_depth': 12, 'packing': 'U', 'fps_max': 40, 'gui_layout': 0, 'file_size': 5.3, 'fps_correction_factor': 0.9995}, # driver fps max 40
+                2: {'aspect': 1.34, 'width': 1332, 'height': 990, 'bit_depth': 10, 'packing': 'U', 'fps_max': 120, 'gui_layout': 0, 'file_size': 2.7, 'fps_correction_factor': 0.9995}, # driver fps max 120 
             },
             'imx519': {             
                 0: {'aspect': 1.77, 'width': 1280, 'height': 720, 'bit_depth': 10, 'packing': 'P', 'fps_max': 80, 'gui_layout': 0, 'file_size': 7.1}, # driver fps max 80

@@ -7,26 +7,47 @@ A ready made disk image can be found [here](https://github.com/Tiramisioux/cinem
 
 Join the CinePi Discord [here](https://discord.gg/Hr4dfhuK).
 
-## Hardware requirements
+### How CineMate and cinepi-raw fork fit together
+
+The original **cinepi-raw** project by Csaba Nagy is a C++/libcamera application that records 12-bit CinemaDNG sequences on Raspberry Pi hardware. It extends Raspberry Pi’s own *rpicam-apps* with a custom DNG encoder and a lightweight Redis‐based API so external tools can change parameters, start/stop takes, etc.
+
+### CineMate (this repo) – the frontend  
+CineMate is a pure-Python companion that autostarts on the Pi, shows a simple GUI over HDMI, maps GPIO buttons/encoders, and talks to **cinepi-raw** through Redis commands. Think of it as the “camera body UI” while *cinepi-raw* is the “sensor & recorder”.
+
+### TL;DR  
+* **cinepi/cinepi-raw** =  recorder  
+* **cinepi/cinepi-raw cinemate forkk** = recorder + patches CineMate depends on  
+* **CineMate** = user interface that drives the fork over Redis  
+
+Use them together for a turnkey Raspberry Pi cinema camera.
+
+## Getting started
+
+### Hardware requirements
 - Rasberry Pi 5
 - Official HQ or GS camera
 - HDMI monitor or device (phone or tablet) for monitoring
 
-For recording, attach an **SSD drive** (Samsung T7 recommended), high speed **NVME drive** or **[CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/)** by Will Whang. Drive needs to be formatted as ext4 and named "RAW".
+### Installation
+1. Burn image to SD card. 8 GB or larger.
 
-_CineMate is also compatible with [OneInchEye](https://www.tindie.com/products/will123321/oneincheye/) (Sony IMX 283) and [StarlightEye](https://www.tindie.com/products/will123321/starlighteye/) (Sony IMX 585) by Will Whang.
-
-## Quickstart guide
-
-1) Burn image to SD card. 8 GB or larger.
-
-2) Connect Pi and camera sensor board
+2. Connect Pi and camera sensor board.
 
 | :exclamation:  When connecting the camera module to the Pi, make sure it is the Pi is not powered. It is not advised to hot-swap the camera cable.   |
 |-----------------------------------------|
 
-3) Boot up the Pi. CineMate should autostart.
+3) Boot up the Pi. CineMate should autostart
 
+4) For preview, attach a HDMI monitor or connect phone/tablet to: 
+
+Wifi `CinePi` 
+password `11111111`.
+
+In web browser, navigate to `cinepi.local:5000`. A clean feed (without GUI) is available at `cinepi.local:8000/stream`.
+
+4. For recording, attach an **SSD drive** (Samsung T7 recommended), high speed **NVME drive** or **[CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/)** by Will Whang. Drive needs to be formatted as ext4 and named "RAW". Connect a button to GPI05 and GND or simply short circuit the two using a paper clip. If you are using the phone preview option, you can start/stop recording by tapping the preview.
+
+## Customization
 
 ### Connecting to Pi with SSH:
 
@@ -35,20 +56,38 @@ user: pi
 password: 1
 ```
 
-### Starting CineMate manually
+### Starting/stopping CineMate manually
 
 CineMate autostarts by default. 
 
-To stop an autostarted CineMate instance:
-
-```
-systemctl stop cinemate-autostart
-```
-
-For enabling and disabling autostart [see this section](https://github.com/Tiramisioux/cinemate/blob/dev-pi5/README.md#cinemate-autostart-on-boot).
-
 For running CineMate manually from the cli type `cinemate`. This will also display extensive logging which can be useful when configuring and testing buttons and switches.
 
+To stop the autostarted CineMate instance::
+
+```bash
+cd cinemate
+```
+
+To stop the autostarted instance:
+```bash
+make stop
+```
+
+To start again:
+```bash
+make start
+```
+
+To disable autostart:
+```bash
+make disable
+```
+
+To enable autostart:
+```bash
+make install
+make enable
+```
 
 ### Adjusting config.txt for different sensors:
 
@@ -58,35 +97,7 @@ sudo nano /boot/firmware/config.txt
 
 Uncomment the section for the sensor being used, and make sure to comment out the others. Reboot the Pi for changes to take effect.
 
-CineMate is compatible with Raspberry Pi HQ camera (imx477), Global Shutter camera (imx296), OneInchEye (imx283), StarlightEye (imx585) color and monochrome variants.
-
-### External monitoring
-
-To view on phone or other device, connect the phone to: 
-
-Wifi `CinePi` 
-password `11111111`.
-
-In web browser, navigate to `cinepi.local:5000`. A clean feed (without GUI) is available at `cinepi.local:8000/stream`.
-
-### Recording
-
-External drive should be formatted as ntfs or ext4 and be labeled "RAW". 
-  
-For starting/stopping recording: 
-- in web browser: tap (or click) the preview screen
-- from CLI (running CineMate manually): type `rec`
-- via GPIO: attach a momentary switch (or simply short circuit) to GPIO 04 or 05 (can be changed in `home/pi/cinemate/src/settings.json`)
-
-## Simple GUI
-
-Simple GUI is available via browser and/or attached HDMI monitor.
-
-- Red color means camera is recording.
-- Purple color means camera detected a drop frame 
-- Green color means camera is writing buffered frames to disk. 
-- Buffer meter in the lower left indicates number of frames in buffer. Useful when testing storage media.
-
+CineMate is compatible with Raspberry Pi HQ camera (IMX477), Global Shutter camera (IMX296), OneInchEye (IMX283), StarlightEye (IMX585) color and monochrome variants.
 
 ## CineMate CLI commands
 
@@ -129,37 +140,46 @@ When manually running CineMate from the CLI you can type simple commands. The ta
 | `set fps_double 1` (or `0`)                             | Explicitly enable (`1`) or disable (`0`) “FPS double” mode.                                                                                      |
 
 
-## CineMate autostart on boot
+## Simple GUI
 
-Go to cinemate folder:
+Simple GUI is available via browser and/or attached HDMI monitor.
+
+- Red color means camera is recording.
+- Purple color means camera detected a drop frame 
+- Green color means camera is writing buffered frames to disk. You can still start recording at this stage, but any buffered frames from the last recording will be lost.
+
+Buffer meter in the lower left indicates number of frames in buffer. Useful when testing storage media.
+
+When a compatible USB microphone is connected, VU meters appear on the right side of the GUI so you can monitor audio levels.
+
+## Audio recording (experimental) <img src="https://img.shields.io/badge/cinepi--raw%20fork-ff69b4?style=flat" height="14">
+
+CineMate can capture audio alongside the image sequence. Support is currently limited to a few USB microphones with hard coded configurations:
+ - **RØDE VideoMic NTG** – recorded in stereo at 24‑bit/48 kHz.
+ - **USB PnP microphones** – recorded in mono at 16‑bit/48 kHz.
+
+Audio is written as `.wav` files into the same folder as the `.dng` frames. The implementation is still experimental and audio/video synchronization needs further investigation.
+
+## storage-automount service
+`storage-automount` is a systemd service that watches for removable drives and mounts them automatically. The accompanying Python script reacts to udev events and the CFE-HAT eject button so drives can be attached or detached safely.
+
+It understands `ext4`, `ntfs` and `exfat` filesystems. Partitions labelled `RAW` are mounted at `/media/RAW`; any other label is mounted under `/media/<LABEL>` after sanitising the name. This applies to USB SSDs, NVMe drives and the CFE-HAT slot.
+
+The service is already installed on the cinemate image file. To manually install and enable the service with:
 
 ```bash
-cd cinemate
+cd cinemate/services/storage-automount
+sudo make install
+sudo make enable
 ```
 
-To enable autostart:
+You can stop or disable it later with:
 ```bash
-make install
-make enable
-```
-
-To stop the autostarted instance:
-```bash
-make stop
-```
-
-To start again:
-```bash
-make start
-```
-
-To disable autostart:
-```bash
-make disable
+sudo make stop
+sudo make disable
 ```
 
 ## Settings file
-
 The settings file can be found in `/home/pi/cinemate/src/settings.json`. Here the user can define their own buttons, switches and rotary encoders.
 
 ### Geometry and Output Configuration
@@ -347,7 +367,7 @@ These push buttons can be programmed to perform various functions like toggling 
 
 _To be added._
 
-## Multi camera support
+## Multi camera support <img src="https://img.shields.io/badge/cinepi--raw%20fork-ff69b4?style=flat" height="14">
 
 CineMate automatically detects each camera connected to the Raspberry Pi and spawns a separate `cinepi-raw` process per sensor. By default:
 
@@ -356,26 +376,6 @@ CineMate automatically detects each camera connected to the Raspberry Pi and spa
 - Preview windows are centered and sized according to your `geometry` settings.
 
 You can override default HDMI mappings in `settings.json` under the `output` section:
-
-## storage-automount service
-`storage-automount` handles mounting removable storage devices for recording. When a USB SSD, NVMe drive or CF‑Express card (using the CFE Hat by Will Whang) is connected it automatically mounts the filesystem under `/media/<LABEL>` and prioritises any drive named `RAW` at `/media/RAW`. It also removes stale mount points if a drive is yanked without unmounting.
-
-The service is already installed on the cinemate image file. To manually install and enable the service with:
-
-
-
-```bash
-cd cinemate/services/storage-automount
-sudo make install
-sudo make enable
-```
-
-You can stop or disable it later with:
-```bash
-sudo make stop
-sudo make disable
-```
-
 
 ## Additional hardware
 

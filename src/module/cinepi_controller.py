@@ -1068,6 +1068,13 @@ class CinePiController:
     def dec_wb(self):
         self.set_wb(direction='prev')
         
+    def inc_zoom(self):
+        self.set_zoom(direction='next')
+
+    def dec_zoom(self):
+        self.set_zoom(direction='prev')
+
+        
     def restart_camera(self):
         self.cinepi.restart()
 
@@ -1149,6 +1156,39 @@ class CinePiController:
                 return "Invalid value provided."
         else:
             return "IR Filter is not supported for this sensor."
+        
+    # ─── Zoom control ─────────────────────────────────────────────────────────
+    def set_zoom(self, value=None, direction='next'):
+        """
+        Change the live-view digital-zoom factor.
+
+        • Pass an explicit *value* (float) → set that value.  
+        • Omit *value*      → step to the next/previous value in zoom_steps.  
+        Use *direction='prev'* to step backwards.
+        """
+        zoom_steps = self.settings.get('preview', {}).get(
+            'zoom_steps', [0.5, 1.0, 1.5, 2.0])
+
+        if value is None:
+            # read current value from Redis (fallback to default_zoom)
+            current = float(self.redis_controller.get_value(
+                ParameterKey.ZOOM.value) or zoom_steps[0])
+
+            if current in zoom_steps:
+                idx = zoom_steps.index(current)
+                idx = (idx + (1 if direction == 'next' else -1)) % len(zoom_steps)
+            else:
+                idx = 0
+            value = zoom_steps[idx]
+
+        # clamp to a sensible range
+        value = max(0.1, min(zoom_steps[-1], float(value)))
+
+        self.redis_controller.set_value(ParameterKey.ZOOM.value, value)
+        self.redis_controller.r.publish('cp_controls', ParameterKey.ZOOM.value)
+
+        logging.info(f"Zoom factor set to {value:.2f}×")
+
 
 # ────────────────────────── recording helper thread ────────────────────
     def _recording_worker(self):

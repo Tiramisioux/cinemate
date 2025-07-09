@@ -30,6 +30,12 @@
     }
   },
 
+  "preview": {
+    "default_zoom": 2.0,
+    "zoom_steps":   [0.5, 1.0, 1.5, 2.0]
+  },
+
+
   "gpio_output": {
     "pwm_pin": 19,
     "rec_out_pin": [6, 21]

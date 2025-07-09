@@ -11,50 +11,94 @@ class CommandExecutor(threading.Thread):
         self.cinepi_controller = cinepi_controller  # Set controller object reference
         self.cinepi_app = cinepi_app
 
-        # Define dictionary of available commands and their associated functions along with expected argument type.
+        # ---------------------------------------------------------------------------
+        # CLI COMMAND TABLE
+        #
+        #  key            – string the user types (case-insensitive, matched in order)
+        #  value[0]       – function to call
+        #  value[1]       – expected argument type(s)
+        #                   • None          → command takes no argument
+        #                   • int / float   → single argument converted to that type
+        #                   • [A, B, …]     → command may omit the arg OR pass one; each
+        #                                     listed type is accepted in order.
+        #
+        #  Example:
+        #     “set iso 800”    → set_iso(800)
+        #     “inc iso”        → inc_iso()
+        # ---------------------------------------------------------------------------
         self.commands = {
-            'rec': (cinepi_controller.rec, None),
-            'stop': (cinepi_controller.rec, None),
-            'set iso': (cinepi_controller.set_iso, int),
-            'inc iso': (cinepi_controller.inc_iso, None),
-            'dec iso': (cinepi_controller.dec_iso, None),
-            'set shutter a': (cinepi_controller.set_shutter_a, float),
-            'inc shutter a': (cinepi_controller.inc_shutter_a, None),
-            'dec shutter a': (cinepi_controller.dec_shutter_a, None),
-            'set shutter a nom': (cinepi_controller.set_shutter_a_nom, float),
-            'inc shutter a nom': (cinepi_controller.inc_shutter_a_nom, None),
-            'dec shutter a nom': (cinepi_controller.dec_shutter_a_nom, None),
-            'set fps': (cinepi_controller.set_fps, float),
-            'inc fps': (cinepi_controller.inc_fps, None),
-            'dec fps': (cinepi_controller.dec_fps, None),
-            'set wb': (cinepi_controller.set_wb, [int, None]),
-            'inc wb': (cinepi_controller.inc_wb, None),
-            'dec wb': (cinepi_controller.dec_wb, None),
-            'set resolution': (cinepi_controller.set_resolution, [int, None]),
-            'set anamorphic factor': (cinepi_controller.set_anamorphic_factor, [float, None]),
-            'mount': (cinepi_controller.mount, None),
-            'unmount': (cinepi_controller.unmount, None),
-            'toggle mount': (cinepi_controller.toggle_mount, None),
-            'time': (self.display_time, None), 
-            'set rtc time': (self.set_rtc_time, None),  
-            'space': (cinepi_controller.ssd_monitor.space_left, None),
-            'get': (cinepi_controller.print_settings, None),
-            'set shutter a sync': (cinepi_controller.set_shutter_a_sync_mode, [int, None]),
-            'set iso lock': (cinepi_controller.set_iso_lock, [int, None]),
-            'set shutter a nom lock': (cinepi_controller.set_shutter_a_nom_lock, [int, None]),
+            # ── Record control ────────────────────────────────────────────────────
+            'rec'                    : (cinepi_controller.rec,            None),   # toggle via edge
+            'stop'                   : (cinepi_controller.rec,            None),   # same alias
+
+            # ── ISO ───────────────────────────────────────────────────────────────
+            'set iso'                : (cinepi_controller.set_iso,        int),
+            'inc iso'                : (cinepi_controller.inc_iso,        None),
+            'dec iso'                : (cinepi_controller.dec_iso,        None),
+
+            # ── Shutter angle (actual) ────────────────────────────────────────────
+            'set shutter a'          : (cinepi_controller.set_shutter_a,  float),
+            'inc shutter a'          : (cinepi_controller.inc_shutter_a,  None),
+            'dec shutter a'          : (cinepi_controller.dec_shutter_a,  None),
+
+            # ── Shutter angle nominal (motion-blur target) ────────────────────────
+            'set shutter a nom'      : (cinepi_controller.set_shutter_a_nom, float),
+            'inc shutter a nom'      : (cinepi_controller.inc_shutter_a_nom, None),
+            'dec shutter a nom'      : (cinepi_controller.dec_shutter_a_nom, None),
+
+            # ── Frame-rate ────────────────────────────────────────────────────────
+            'set fps'                : (cinepi_controller.set_fps,        float),
+            'inc fps'                : (cinepi_controller.inc_fps,        None),
+            'dec fps'                : (cinepi_controller.dec_fps,        None),
+
+            # ── White balance (Kelvin or step) ────────────────────────────────────
+            'set wb'                 : (cinepi_controller.set_wb,         [int, None]),
+            'inc wb'                 : (cinepi_controller.inc_wb,         None),
+            'dec wb'                 : (cinepi_controller.dec_wb,         None),
+
+            # ── Resolution / anamorphic / storage ────────────────────────────────
+            'set resolution'         : (cinepi_controller.set_resolution, [int, None]),
+            'set anamorphic factor'  : (cinepi_controller.set_anamorphic_factor, [float, None]),
+            'mount'                  : (cinepi_controller.mount,          None),
+            'unmount'                : (cinepi_controller.unmount,        None),
+            'toggle mount'           : (cinepi_controller.toggle_mount,   None),
+
+            # ── Info / diagnostics ────────────────────────────────────────────────
+            'time'                   : (self.display_time,                None),
+            'set rtc time'           : (self.set_rtc_time,                None),
+            'space'                  : (cinepi_controller.ssd_monitor.space_left, None),
+            'get'                    : (cinepi_controller.print_settings, None),
+
+            # ── Locks & sync modes ────────────────────────────────────────────────
+            'set shutter a sync'     : (cinepi_controller.set_shutter_a_sync_mode, [int, None]),
+            'set iso lock'           : (cinepi_controller.set_iso_lock,   [int, None]),
+            'set shutter a nom lock' : (cinepi_controller.set_shutter_a_nom_lock, [int, None]),
             'set shutter a nom fps lock': (cinepi_controller.set_shu_fps_lock, [int, None]),
-            'set fps lock': (cinepi_controller.set_fps_lock, [int, None]),
-            'set all lock': (cinepi_controller.set_all_lock, [int, None]),
-            'set fps double': (cinepi_controller.set_fps_double, [int, None]),
-            'reboot': (cinepi_controller.reboot, None),
-            'shutdown': (cinepi_controller.safe_shutdown, None),
-            'restart': (cinepi_app.restart, None),
-            'set iso free': (cinepi_controller.set_iso_free, [int, str]),
-            'set shutter a free': (cinepi_controller.set_shutter_a_free, [int, str]),
-            'set fps free': (cinepi_controller.set_fps_free, [int, str]),
-            'set wb free': (cinepi_controller.set_wb_free, [int, str]),
-            'set filter': (cinepi_controller.set_filter, [int]),
+            'set fps lock'           : (cinepi_controller.set_fps_lock,   [int, None]),
+            'set all lock'           : (cinepi_controller.set_all_lock,   [int, None]),
+            'set fps double'         : (cinepi_controller.set_fps_double, [int, None]),
+
+            # ── System control ────────────────────────────────────────────────────
+            'reboot'                 : (cinepi_controller.reboot,         None),
+            'shutdown'               : (cinepi_controller.safe_shutdown,  None),
+            'restart'                : (cinepi_app.restart,               None),
+
+            # ── Free-mode toggles ────────────────────────────────────────────────
+            'set iso free'           : (cinepi_controller.set_iso_free,   [int, str]),
+            'set shutter a free'     : (cinepi_controller.set_shutter_a_free, [int, str]),
+            'set fps free'           : (cinepi_controller.set_fps_free,   [int, str]),
+            'set wb free'            : (cinepi_controller.set_wb_free,    [int, str]),
+
+            # ── Sensor-specific ──────────────────────────────────────────────────
+            'set filter'             : (cinepi_controller.set_filter,     [int]),
+
+            # ── Preview ZOOM ─────────────────────────────────────────────────────────
+            'set zoom' : (cinepi_controller.set_zoom, [float, None]),  # toggle when arg omitted
+            'inc zoom' : (cinepi_controller.inc_zoom,  None),
+            'dec zoom' : (cinepi_controller.dec_zoom,  None),
         }
+
+
 
     def display_time(self):
         """Displays the current system and RTC time."""

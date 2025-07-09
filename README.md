@@ -7,19 +7,11 @@ A ready made disk image can be found [here](https://github.com/Tiramisioux/cinem
 
 Join the CinePi Discord [here](https://discord.gg/Hr4dfhuK).
 
-### How CineMate and cinepi-raw fork fit together
+## Relationship to cinepi-raw
+CineMate relies on a custom branch of [cinepi-raw](https://github.com/Tiramisioux/cinepi-raw/tree/rpicam-apps_1.7_custom_encoder), a fork of *rpicam-apps* adapted for libcamera 0.5 and rpicam-apps 1.0.7.  The
+`cinepi_multi.py` module launches one `cinepi-raw` process per detected sensor and communicates with it via Redis. 
 
-The original **cinepi-raw** project by Csaba Nagy is a C++/libcamera application that records 12-bit CinemaDNG sequences on Raspberry Pi hardware. It extends Raspberry Pi’s own *rpicam-apps* with a custom DNG encoder and a lightweight Redis‐based API so external tools can change parameters, start/stop takes, etc.
-
-### CineMate (this repo) – the frontend  
-CineMate is a pure-Python companion that autostarts on the Pi, shows a simple GUI over HDMI, maps GPIO buttons/encoders, and talks to **cinepi-raw** through Redis commands. Think of it as the “camera body UI” while *cinepi-raw* is the “sensor & recorder”.
-
-### TL;DR  
-* **cinepi/cinepi-raw** =  recorder  
-* **cinepi/cinepi-raw cinemate forkk** = recorder + patches CineMate depends on  
-* **CineMate** = user interface that drives the fork over Redis  
-
-Use them together for a turnkey Raspberry Pi cinema camera.
+The fork adds CinemaDNG recording with manual writing of dng tags, audio support and extra flags like `--cam-port`, `--hdmi-port` that Cinemate uses for multi‑camera setups.
 
 ## Getting started
 
@@ -400,15 +392,9 @@ Backing up CineMate image takes about 10 min.
 
 ## Todo
 
-- [x] fix shutter angle values array calculation
 - [ ] simple_gui.py adaptive layout for non 1920x1080 screens
-- [x] fix frame rate / shutter angle sync for constant exposure during fps change
-- [x] mounting mechanism should be improved. Drives seem to not mount when detatched and then reconnected
-- [x] anamorphic factor to be moved to settings file.
 - [ ] 16 bit modes for imx585
 - [ ] support for imx294
-- [x] optimize recording to allow for the use of 300 MB/s SSD drive
-- [x] optimize operating system for faster boot and smaller image file
 - [ ] overclocking of ISP
 - [ ] optional auto-exposure
 - [ ] hardware sync of sensor frame capture, perhaps via a pico

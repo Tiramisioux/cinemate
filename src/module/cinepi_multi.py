@@ -259,6 +259,12 @@ class CinePiProcess(Thread):
             # '--cam-port', self.cam.port,
         ]
         
+        zoom_init = self.redis_controller.get_value(ParameterKey.ZOOM.value)
+        
+        if zoom_init and float(zoom_init) != 1.0:
+            args += ['--zoom', str(zoom_init)]
+
+        
         # ── if running in multi-camera mode, pass --sync server/client ──
         if self.multi:
             if self.primary:

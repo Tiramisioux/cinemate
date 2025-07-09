@@ -61,6 +61,9 @@ class ParameterKey(Enum):
     EXPOSURE_TIME       = 'exposure_time'
     LAST_DNG_CAM1       = "last_dng_cam1"
     LAST_DNG_CAM0       = "last_dng_cam0"
+    
+    ZOOM                = "zoom"  # digital zoom factor for streams 0 & 2
+    
 
 
 # ────────────────────────── tiny pub‑sub helper ──────────────────────

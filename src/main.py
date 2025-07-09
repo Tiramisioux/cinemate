@@ -225,6 +225,13 @@ def main():
 
     # Set redis anamorphic factor to default value
     redis_controller.set_value(ParameterKey.ANAMORPHIC_FACTOR.value, settings["anamorphic_preview"]["default_anamorphic_factor"])
+    
+    # Default zoom factor
+    redis_controller.set_value(
+        ParameterKey.ZOOM.value,
+        settings.get("preview", {}).get("default_zoom", 1.0)
+)
+
 
     # Initialize CinePi application
     cinepi = CinePi(redis_controller, sensor_detect)

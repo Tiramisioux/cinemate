@@ -31,10 +31,14 @@
   },
 
   "preview": {
-    "default_zoom": 1.0,
+    "default_zoom": 2.0,
     "zoom_steps":   [1.0, 1.5, 2.0]
   },
 
+  "anamorphic_preview": {
+      "default_anamorphic_factor": 1,
+    "anamorphic_steps": [1, 1.33, 2.0]
+  },
 
   "gpio_output": {
     "pwm_pin": 19,
@@ -66,10 +70,7 @@
     "wb_free": false
   },
 
-  "anamorphic_preview": {
-    "anamorphic_steps": [1, 1.33, 2.0],
-    "default_anamorphic_factor": 1
-  },
+
   
 "buttons": [
     {

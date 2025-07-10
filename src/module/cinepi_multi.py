@@ -20,6 +20,21 @@ _SETTINGS = load_settings(SETTINGS_FILE)
 _READY_RX   = re.compile(r"Encoder configured")      # line printed by DngEncoder
 _READY_WAIT = 10.0                                   # seconds to wait for all cams
 
+# ───────────────────────── zoom default ──────────────────────────
+def _seed_default_zoom(redis_ctl):
+    """
+    Write preview.default_zoom to Redis once per boot, but
+    only if the key doesn’t exist yet.
+    """
+    preview_cfg  = _SETTINGS.get("preview", {})
+    default_zoom = float(preview_cfg.get("default_zoom", 1.0))
+
+    if redis_ctl.get_value(ParameterKey.ZOOM.value) is None:
+        redis_ctl.set_value(ParameterKey.ZOOM.value, default_zoom)
+        # wake cinepi-raw controller
+        redis_ctl.r.publish("cp_controls", ParameterKey.ZOOM.value)
+        logging.info("[init] preview zoom defaulted to %.1f×", default_zoom)
+        
 # ───────────────────────── Event ─────────────────────────
 class Event:
     def __init__(self):
@@ -61,6 +76,9 @@ class CameraInfo:
         return f'CameraInfo(idx={self.index}, {self.name}, {typ}, {self.port})'
 
 
+    
+
+# ──────────────────────── camera discovery ────────────────────────
 def discover_cameras(timeout: float = 10.0, interval: float = 1.0) -> List[CameraInfo]:
     rx = re.compile(r'^\s*(\d+)\s*:\s*(\w+)\s*\[([^]]+)\]\s*\(([^)]+)\)')
     end = time.monotonic() + timeout
@@ -81,6 +99,8 @@ def discover_cameras(timeout: float = 10.0, interval: float = 1.0) -> List[Camer
         time.sleep(interval)
     logging.error('Camera discovery timed out')
     return []
+
+
 
 # ────────────────── cinepi‑raw subprocess wrapper ─────────
 class CinePiProcess(Thread):
@@ -130,6 +150,14 @@ class CinePiProcess(Thread):
         self.proc.wait()
         logging.info('[%s] exited %s', self.cam, self.proc.returncode)
         
+    def _log(self, text):
+        for name, rx in self.log_filters.items():
+            if name in self.active_filters and rx.search(text):
+                pass #logging.info('[%s] %s', self.cam, text)
+                break
+        logging.info('[%s] %s', self.cam.port, text)   # DEBUG → all lines
+        pass
+        
     # ─────────────────────────────────────────────────────────────
     #  Stream one pipe from cinepi-raw, relay lines, intercept the
     #  “DNG written:” message, and update a per-camera Redis key.
@@ -172,14 +200,6 @@ class CinePiProcess(Thread):
                                     self.cam, e)
 
         pipe.close()
-
-    def _log(self, text):
-        for name, rx in self.log_filters.items():
-            if name in self.active_filters and rx.search(text):
-                pass #logging.info('[%s] %s', self.cam, text)
-                break
-        logging.info('[%s] %s', self.cam.port, text)   # DEBUG → all lines
-        pass
 
     def _build_args(self):
         # base resolution
@@ -304,10 +324,16 @@ class CinePiManager:
     start_cinepi_process = lambda self: self.start_all()
     restart              = lambda self: (self.stop_all(), self.start_all())
     shutdown             = lambda self: self.stop_all()
-
+        
+    # ────────────────────────── start / stop ──────────────────────────
     def start_all(self) -> None:
         """Discover sensors, launch one *cinepi-raw* each, wait for readiness."""
         self.stop_all()                              # clean previous run
+        
+        # ------------------------------------------------------------------
+        # Seed the zoom factor before cinepi-raw processes read it
+        # ------------------------------------------------------------------
+        _seed_default_zoom(self.redis_controller)
 
         # ── 1. discovery ───────────────────────────────────────────
         cams = discover_cameras()                    # helper unchanged
@@ -374,7 +400,40 @@ class CinePiManager:
             logging.warning("start_all(): timeout waiting for %s", missing)
 
         self.redis_controller.set_value(ParameterKey.LAST_DNG_CAM0.value, "None")
-        self.redis_controller.set_value(ParameterKey.LAST_DNG_CAM1.value, "None"),     
+        self.redis_controller.set_value(ParameterKey.LAST_DNG_CAM1.value, "None"),   
+        
+        # ── 4. wait until *all* cameras announced “ready” via Redis ──────
+        want = {f"cinepi_ready_{c.port}" for c in cams}
+        deadline = time.monotonic() + _READY_WAIT          # e.g. 10 s
+
+        while time.monotonic() < deadline:
+            have = {k.decode() for k in
+                    self.redis_controller.r.keys("cinepi_ready_*")}
+            if want.issubset(have):
+                logging.info("All cinepi-raw encoders ready — starting supervisor.")
+                break
+            time.sleep(0.05)
+        else:
+            missing = ", ".join(sorted(want - have)) or "<??>"
+            logging.warning("start_all(): timeout waiting for %s", missing)
+
+        # ────────────────────────────────────────────────────────────────
+        # NEW ✱ 5.  Kick the initial zoom once everything is alive
+        # ────────────────────────────────────────────────────────────────
+        try:
+            z = float(self.redis_controller.get_value(ParameterKey.ZOOM.value) or 1.0)
+        except (TypeError, ValueError):
+            z = 1.0                                  # fallback
+
+        if abs(z - 1.0) > 1e-3:                      # only if not default
+            logging.info("Applying startup preview zoom %.1f×", z)
+            # write the value again (no change) **and** publish the key so the
+            # C++ controller’s handler runs and pushes the ScalerCrop.
+            self.redis_controller.r.publish("cp_controls", ParameterKey.ZOOM.value)
+
+        # record-path housekeeping that was already there
+        self.redis_controller.set_value(ParameterKey.LAST_DNG_CAM0.value, "None")
+        self.redis_controller.set_value(ParameterKey.LAST_DNG_CAM1.value, "None")  
 
     # ───────────────────────── teardown ────────────────────────────
     def stop_all(self) -> None:

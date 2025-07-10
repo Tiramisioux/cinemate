@@ -14,7 +14,6 @@ from PIL import Image, ImageDraw, ImageFont
 from module.config_loader import load_settings
 from module.logger import configure_logging
 from module.redis_controller import RedisController, ParameterKey
-from module.cinepi_app import CinePi
 from module.ssd_monitor import SSDMonitor
 from module.usb_monitor import USBMonitor
 from module.gpio_output import GPIOOutput

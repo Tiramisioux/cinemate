@@ -31,7 +31,7 @@
   },
 
   "preview": {
-    "default_zoom": 2.0,
+    "default_zoom": 1.0,
     "zoom_steps":   [1.0, 1.5, 2.0]
   },
 

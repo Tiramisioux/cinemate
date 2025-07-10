@@ -112,6 +112,12 @@ class CinePiController:
         
         self.settings = self.load_settings()  # Load other settings, if needed
         
+        # ── put default zoom into Redis if nothing stored yet ─────────────
+        if self.redis_controller.get_value(ParameterKey.ZOOM.value) is None:
+            default_zoom = self.settings.get('preview', {}).get('default_zoom', 1.0)
+            self.redis_controller.set_value(ParameterKey.ZOOM.value, default_zoom)
+
+        
         self.initialize_fps_steps(self.fps_steps)
         self.initialize_shutter_angle_steps()
         self.initialize_wb_cg_rb_array()  # Initialize the white balance array
@@ -1158,36 +1164,46 @@ class CinePiController:
             return "IR Filter is not supported for this sensor."
         
     # ─── Zoom control ─────────────────────────────────────────────────────────
-    def set_zoom(self, value=None, direction='next'):
+    def set_zoom(self, value=None, direction="next"):
         """
         Change the live-view digital-zoom factor.
 
-        • Pass an explicit *value* (float) → set that value.  
-        • Omit *value*      → step to the next/previous value in zoom_steps.  
-        Use *direction='prev'* to step backwards.
+        • Pass an explicit *value* (float) → set that value.
+        • Omit *value*                    → step through preview.zoom_steps.
+        Use *direction="prev"* to step backwards.
         """
-        zoom_steps = self.settings.get('preview', {}).get(
-            'zoom_steps', [0.5, 1.0, 1.5, 2.0])
+        preview_cfg  = self.settings.get("preview", {})
+        zoom_steps   = preview_cfg.get("zoom_steps",   [0.5, 1.0, 1.5, 2.0])
+        default_zoom = preview_cfg.get("default_zoom", 1.0)
+
+        # Make sure the default is part of the list *before* we look up indices
+        if default_zoom not in zoom_steps:
+            zoom_steps.append(default_zoom)
+            zoom_steps.sort()
 
         if value is None:
-            # read current value from Redis (fallback to default_zoom)
-            current = float(self.redis_controller.get_value(
-                ParameterKey.ZOOM.value) or zoom_steps[0])
+            # Redis may return None or a bytes/str → coerce to float safely
+            raw = self.redis_controller.get_value(ParameterKey.ZOOM.value)
+            current = float(raw) if raw is not None else default_zoom
 
             if current in zoom_steps:
                 idx = zoom_steps.index(current)
-                idx = (idx + (1 if direction == 'next' else -1)) % len(zoom_steps)
+                step = 1 if direction == "next" else -1
+                idx = (idx + step) % len(zoom_steps)
             else:
-                idx = 0
+                idx = 0                      # unknown value → start from first step
+
             value = zoom_steps[idx]
 
-        # clamp to a sensible range
-        value = max(0.1, min(zoom_steps[-1], float(value)))
+        # Clamp to the configured range
+        value = max(min(float(value), max(zoom_steps)), min(zoom_steps))
 
+        # Persist & notify
         self.redis_controller.set_value(ParameterKey.ZOOM.value, value)
-        self.redis_controller.r.publish('cp_controls', ParameterKey.ZOOM.value)
+        self.redis_controller.r.publish("cp_controls", ParameterKey.ZOOM.value)
 
-        logging.info(f"Zoom factor set to {value:.2f}×")
+        logging.info("Zoom factor set to %.2f×", value)
+
 
 
 # ────────────────────────── recording helper thread ────────────────────

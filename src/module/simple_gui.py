@@ -32,6 +32,9 @@ class SimpleGUI(threading.Thread):
         self.daemon = True          # die if the parent dies
         self._running = True        # quit flag
         
+        self.current_background_color = "black"
+        self.color_mode = "normal"
+        
         self.setup_resources()
         self.check_display()
 
@@ -51,9 +54,6 @@ class SimpleGUI(threading.Thread):
         self.vu_smoothing_alpha = 0.4  # Rise factor (0.0–1.0, higher = faster)
         self.vu_decay_factor = 0.1     # Fall factor (0.0–1.0, lower = slower)
 
-        
-        #self.timekeeper = timekeeper
-
         self.socketio = socketio  # Add socketio reference
         
         self.usb_monitor = usb_monitor
@@ -67,9 +67,6 @@ class SimpleGUI(threading.Thread):
         self.load_sensor_values_from_redis()
 
         self.start()
-
-        # Initialize current background color
-        self.current_background_color = "black"  # Default background color
 
     # ───────────────── helper: do we have two non-empty clip names? ────────────────
     def _has_two_clips(self, values) -> bool:
@@ -199,6 +196,7 @@ class SimpleGUI(threading.Thread):
             
             "exposure_label": {"normal": (136, 136, 136), "inverse": "black"},
             "exposure_time":  {"normal": (249, 249, 249), "inverse": "black"},
+            "zoom_factor":      {"normal": "black", "inverse": "black"},
             "anamorphic_factor": {"normal": "black", "inverse": "black"},
             "sensor": {"normal": (136,136,136), "inverse": "black"},
             "height": {"normal": (249,249,249), "inverse": "black"},
@@ -264,6 +262,8 @@ class SimpleGUI(threading.Thread):
             {
                 "label": "MON",
                 "items": [
+                    # show zoom only when it isn’t 1.0 ×
+                    {"key": "zoom_factor", "text": lambda v: v.get("zoom_factor", "")},
                     {"key": "anamorphic_factor", "text": lambda v: v.get("anamorphic_factor", "")}
                 ]
             }
@@ -417,6 +417,7 @@ class SimpleGUI(threading.Thread):
             "exposure_time":  str(self.cinepi_controller.exposure_time_fractions),
 
             # misc labels / live data
+            "zoom_factor": "",   # will be filled below if ≠ 1.0
             "anamorphic_factor": f"{self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value)}X",
             "ram_load":       Utils.memory_usage(),
             "cpu_load":       Utils.cpu_load(),
@@ -436,6 +437,13 @@ class SimpleGUI(threading.Thread):
             "media_label": "MEDIA", "mon": "MON",
             
         }
+        # ── Zoom factor (preview punch-in) ────────────────────────────────
+        try:
+            z = float(self.redis_controller.get_value(ParameterKey.ZOOM.value) or 1.0)
+        except (TypeError, ValueError):
+            z = 1.0
+        if abs(z - 1.0) > 1e-3:                    # only show when ≠ 1.0
+            values["zoom_factor"] = f"{z:.1f}"
 
         # ───────────────── CLIP / LAST-DNG display ───────────────
         last_cam1_full = self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value)
@@ -610,10 +618,15 @@ class SimpleGUI(threading.Thread):
                     continue
 
                 for part in str(val).split('\n'):
+                    # choose box colour depending on item
+                    if item["key"] == "zoom_factor":
+                        box_fill = (249, 249, 249)   # white box
+                    else:
+                        box_fill = BOX_COLOR         # default grey
                     draw.rectangle([box_x, y, box_x + BOX_W, y + BOX_H],
-                                   fill=BOX_COLOR)
+                                   fill=box_fill)
 
-                    if item["key"] == "aspect":
+                    if item["key"] in ("aspect", "anamorphic_factor"):
                         m = 2
                         inner = [box_x + m, y + m,
                                  box_x + BOX_W - m, y + BOX_H - m]
@@ -830,7 +843,7 @@ class SimpleGUI(threading.Thread):
         # ── shrink clip-name text when two cameras are active ─────────────────────────
         self._adjust_clip_layout(self._has_two_clips(values))
 
-        previous_background_color = self.get_background_color
+        previous_background_color = self.get_background_color()
 
         # ─── choose background colour & colour-mode ────────────────────
         prev_bg = self.get_background_color()      # ← fixed () call

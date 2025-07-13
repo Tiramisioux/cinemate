@@ -276,7 +276,7 @@ class CinePiProcess(Thread):
             '--awbgains', cg_rb,
 
             # NEW  ★   (ensures RawOptions.camPort is populated)
-            # '--cam-port', self.cam.port,
+            '--cam-port', self.cam.port,
         ]
         
         zoom_init = self.redis_controller.get_value(ParameterKey.ZOOM.value)

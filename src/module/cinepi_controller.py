@@ -11,6 +11,7 @@ import psutil
 import math
 
 from module.redis_controller import ParameterKey
+from module.ir_filter import IRFilter
 
 class CinePiController:
     def __init__(self,
@@ -1149,21 +1150,21 @@ class CinePiController:
             return 0
     
     def set_filter(self, value=None):
-        if 'imx585' in self.current_sensor:
-            if value == 1:
-                logging.info("Enabling IR Filter")
-                result = os.system("IRFilter --enable")
-                self.redis_controller.set_value(ParameterKey.IR_FILTER.value, 1)
-            elif value == 0:
-                logging.info("Disabling IR Filter")
-                result = os.system("IRFilter --disable")
-                self.redis_controller.set_value(ParameterKey.IR_FILTER.value, 0)
-            else:
-                return "Invalid value provided."
+        """Toggle the StarlightEye IR filter via the :class:`IRFilter` helper."""
+        if 'imx585' not in str(self.current_sensor):
+             return "IR Filter is not supported for this sensor."
+
+        irf = IRFilter(self.redis_controller)
+        if value == 1:
+            logging.info("Enabling IR Filter")
+            irf.set_state(True)
+        elif value == 0:
+            logging.info("Disabling IR Filter")
+            irf.set_state(False)
         else:
-            return "IR Filter is not supported for this sensor."
-        
-    # ─── Zoom control ─────────────────────────────────────────────────────────
+            return "Invalid value provided."
+         
+     # ─── Zoom control ─────────────────────────────────────────────────────────
     def set_zoom(self, value=None, direction="next"):
         """
         Change the live-view digital-zoom factor.

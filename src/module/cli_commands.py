@@ -90,7 +90,7 @@ class CommandExecutor(threading.Thread):
             'set wb free'            : (cinepi_controller.set_wb_free,    [int, str]),
 
             # ── Sensor-specific ──────────────────────────────────────────────────
-            'set filter'             : (cinepi_controller.set_filter,     [int]),
+            'set filter'             : (cinepi_controller.set_filter,     [int]), #Toggle IR-cut filter on StarlightEye sensors
 
             # ── Preview ZOOM ─────────────────────────────────────────────────────────
             'set zoom' : (cinepi_controller.set_zoom, [float, None]),  # toggle when arg omitted

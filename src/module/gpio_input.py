@@ -102,6 +102,7 @@ class ComponentInitializer:
             )
         
     def initialize_quad_rotary_encoder(self):
+        pass
         quad_rotary_settings = self.settings.get('quad_rotary_encoders', {})
         
         self.quad_rotary_encoder = QuadRotaryEncoder(

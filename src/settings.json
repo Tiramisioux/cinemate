@@ -127,6 +127,11 @@
       "pin": 22,
       "state_on_action": {"method": "set_shutter_a_sync_mode", "args": [1]},
       "state_off_action": {"method": "set_shutter_a_sync_mode", "args": [0]}
+    },
+    {
+      "pin": 18,
+      "state_on_action": {"method": "set_filter", "args": [1]},
+      "state_off_action": {"method": "set_filter", "args": [0]}
     }
   ],
   
@@ -173,17 +178,13 @@
   },
 
   "i2c_oled": {
-    "enabled": false,
-    "width": 64,
-    "height": 48,
+    "enabled": true,
+    "width": 128,
+    "height": 64,
     "font_size": 7,
     "values": [
-      "iso",
-      "fps",
-      "shutter_a",
-      "resolution",
-      "is_recording",
-      "cpu_temp"
+      "write_speed_to_drive"
+
     ]
   }
 }

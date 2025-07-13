@@ -63,7 +63,7 @@ class SSDMonitor:
     Supports
         • USB SSDs
         • NVMe (PCIe) adapters
-        • Core-FPG CFExpress Hat
+        • Will Whang's CFExpress Hat
 
     Added features
         • Daily read-only fsck (and once right after mount)
@@ -77,7 +77,7 @@ class SSDMonitor:
                  mount_path: str  = "/media/RAW",
                  redis_controller=None,
                  poll_interval: float = 1.0,
-                 space_interval: float = 5.0,
+                 space_interval: float = 1.0,
                  space_delta_gb: float = 0.1):
         self._mount_path  = Path(mount_path)
         self._redis       = redis_controller
@@ -91,6 +91,7 @@ class SSDMonitor:
         self._space_left  = None        # float (GB)
         self._last_space  = 0.0
         self._last_space_ts = 0.0
+        self._write_speed   = 0.0       # current write speed in MB/s
         
         self._last_cfe_mount_try = 0.
 
@@ -152,6 +153,10 @@ class SSDMonitor:
         """Returns e.g. 'sda1' or 'nvme0n1p1' (legacy API)."""
         return self._device_name
     
+    @property
+    def write_speed_mb_s(self) -> float:
+        """Current write speed in megabytes per second."""
+        return self._write_speed
     # ------------------------------------------------------------------
     # backward-compat shim (old code expects .cfe_hat_present)
     # ------------------------------------------------------------------
@@ -207,7 +212,9 @@ class SSDMonitor:
         self._redis.set_value(ParameterKey.IS_MOUNTED.value,   "0")
         self._redis.set_value(ParameterKey.SPACE_LEFT.value,   "0")
         self._redis.set_value(REDIS_KEY_FSCK_STATUS,           "unknown")
+        self._redis.set_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value, "0")
 
+ 
     # ------------------------------------------------------------------
     # main loop (udev or polling)
     # ------------------------------------------------------------------
@@ -268,6 +275,8 @@ class SSDMonitor:
             ParameterKey.IS_MOUNTED.value:    "1",
             ParameterKey.SPACE_LEFT.value:    f"{self._space_left:.2f}",
         })
+        if self._redis:
+            self._redis.set_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value, "0")
 
         logging.info("RAW drive mounted at %s (%s)",
                      self._mount_path, self._device_type)
@@ -295,7 +304,9 @@ class SSDMonitor:
             ParameterKey.IS_MOUNTED.value:   "0",
             ParameterKey.SPACE_LEFT.value:   "0",
         })
-
+        if self._redis:
+            self._redis.set_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value, "0")
+            
         # ─── switch off CFE-Hat LED (if we still have the I²C bus) ───
         if self._device_type == "CFE":
             try:
@@ -429,6 +440,26 @@ class SSDMonitor:
         try:
             st = os.statvfs(self._mount_path)
             gb = (st.f_bavail * st.f_frsize) / (1024 ** 3)
+            
+                    # calculate write speed based on change in free space
+            if self._last_space_ts > 0:
+                delta_gb = self._last_space - gb
+                delta_t = now - self._last_space_ts
+                if delta_t > 0 and delta_gb > 0:
+                    self._write_speed = delta_gb * 1024 / delta_t
+                else:
+                    self._write_speed = 0.0
+            else:
+                self._write_speed = 0.0
+
+            if self._redis:
+                self._redis.set_value(
+                    ParameterKey.WRITE_SPEED_TO_DRIVE.value,
+                    f"{self._write_speed:.2f}")
+                
+            prev_left = self._space_left if self._space_left is not None else self._last_space
+            self._last_space = gb
+            self._last_space_ts = now
 
         except OSError as exc:
             logging.error("statvfs failed: %s", exc)
@@ -442,6 +473,8 @@ class SSDMonitor:
             return
 
         # ── normal path: update cached value & emit event ────────────
+        if force or abs(gb - prev_left) >= self._space_delta:
+            self._space_left = gb
         if force or abs(gb - self._last_space) >= self._space_delta:
             self._space_left    = gb
             self._last_space    = gb

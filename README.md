@@ -148,7 +148,7 @@ When a compatible USB microphone is connected, VU meters appear on the right sid
 
 ## Audio recording (experimental) <img src="https://img.shields.io/badge/cinepi--raw%20fork-ff69b4?style=flat" height="14">
 
-CineMate can capture audio alongside the image sequence. Support is currently limited to a few USB microphones with hard coded configurations:
+Audio support is currently limited to a few USB microphones with hard coded configurations:
  - **RØDE VideoMic NTG** – recorded in stereo at 24‑bit/48 kHz.
  - **USB PnP microphones** – recorded in mono at 16‑bit/48 kHz.
 
@@ -157,7 +157,7 @@ Audio is written as `.wav` files into the same folder as the `.dng` frames. The 
 ## storage-automount service
 `storage-automount` is a systemd service that watches for removable drives and mounts them automatically. The accompanying Python script reacts to udev events and the CFE-HAT eject button so drives can be attached or detached safely.
 
-It understands `ext4`, `ntfs` and `exfat` filesystems. Partitions labelled `RAW` are mounted at `/media/RAW`; any other label is mounted under `/media/<LABEL>` after sanitising the name. This applies to USB SSDs, NVMe drives and the CFE-HAT slot.
+Currently works with `ext4` filesystems. This applies to USB SSDs, NVMe drives and the CFE-HAT slot.
 
 The service is already installed on the cinemate image file. To manually install and enable the service with:
 
@@ -365,9 +365,7 @@ _To be added._
 
 CineMate automatically detects each camera connected to the Raspberry Pi and spawns a separate `cinepi-raw` process per sensor. By default:
 
-- **Primary camera** (first detected) displays its preview on HDMI port 0.
-- **Secondary cameras** run with `--nopreview` and map to subsequent HDMI outputs (cam1→HDMI 1, cam2→HDMI 2, etc.).
-- Preview windows are centered and sized according to your `geometry` settings.
+Camera connected to physical port cam0 displays its preview on HDMI port 0. Camera on cam1 → HDMI 1
 
 You can override default HDMI mappings in `settings.json` under the `output` section:
 

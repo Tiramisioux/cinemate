@@ -169,7 +169,15 @@ def initialize_system(settings):
     sensor_detect = SensorDetect()
     ssd_monitor = SSDMonitor(redis_controller=redis_controller)
     usb_monitor = USBMonitor(ssd_monitor)
-    gpio_output = GPIOOutput(rec_out_pins=settings["gpio_output"]["rec_out_pin"])
+    gpio_cfg = settings.get("gpio_output", {})
+    sys_led_configs = gpio_cfg.get("sys_LED", [])
+    sys_led_rgb_configs = gpio_cfg.get("sys_LED_RGB", [])
+    from module.gpio_output import RedisGPIOOutput
+    gpio_output = RedisGPIOOutput(
+        redis_controller,
+        sys_led_configs=sys_led_configs,
+        sys_led_rgb_configs=sys_led_rgb_configs
+    )
     dmesg_monitor = DmesgMonitor()
     dmesg_monitor.start()
 
@@ -338,6 +346,9 @@ def main():
             simple_gui.stop()              # <— new: quit the thread
             simple_gui.clear_framebuffer() # <— new: blank fb0
 
+        # Release GPIO resources
+        gpio_output.cleanup()
+ 
         clear_screen()                     # wipe tty1
         show_cursor()
         

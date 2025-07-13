@@ -74,21 +74,35 @@ class SimpleGUI(threading.Thread):
 
     # ───────────────── helper: tweak GUI layout for clip lines ────────────────────
     def _adjust_clip_layout(self, two_clips: bool):
-        """Shrink/enlarge the font & Y-positions of the clip-name fields."""
-        if two_clips:
-            new_size = 24               # ↓ from 41 → 24 px
-            y_base   = 1053
-            self.layout["clip_name"]["size"]        = new_size
-            self.layout["clip_name_cam1"]["size"]   = new_size
-            self.layout["clip_name"]["pos"]         = (480, y_base)       # lower line
-            self.layout["clip_name_cam1"]["pos"]    = (480, y_base-19)    # 19 px up
+        pass
+        # """Shrink/enlarge the font & Y-positions of the clip-name fields."""
+        # if two_clips:
+        #     new_size = 24               # ↓ from 41 → 24 px
+        #     y_base   = 1053
+        #     self.layout["clip_name"]["size"]        = new_size
+        #     self.layout["clip_name_cam1"]["size"]   = new_size
+        #     self.layout["clip_name"]["pos"]         = (480, y_base)       # lower line
+        #     self.layout["clip_name_cam1"]["pos"]    = (480, y_base-19)    # 19 px up
+        # else:
+        #     # Fall back to the original settings
+        #     self.layout["clip_name"]["size"]        = 41
+        #     self.layout["clip_name_cam1"]["size"]   = 41
+        #     self.layout["clip_name"]["pos"]         = (480, 1041)
+        #     self.layout["clip_name_cam1"]["pos"]    = (480, 998)
+    
+    @staticmethod
+    def _format_timecode(tc):
+        """Format timecode string 'h:mm:ss:ff' as 'mm:ss' or 'hh:mm:ss' if hour > 0."""
+        if not tc:
+            return ""
+        parts = tc.split(":")
+        if len(parts) != 4:
+            return tc  # fallback to raw if unexpected format
+        hours, minutes, seconds, frames = parts
+        if int(hours) > 0:
+            return f"{int(hours):d}:{int(minutes):02d}:{int(seconds):02d}"
         else:
-            # Fall back to the original settings
-            self.layout["clip_name"]["size"]        = 41
-            self.layout["clip_name_cam1"]["size"]   = 41
-            self.layout["clip_name"]["pos"]         = (480, 1041)
-            self.layout["clip_name_cam1"]["pos"]    = (480, 998)
-
+            return f"{int(minutes):02d}:{int(seconds):02d}"
 
     def load_sensor_values_from_redis(self):
         """
@@ -171,7 +185,7 @@ class SimpleGUI(threading.Thread):
             "media_label": {"pos": (98, 1050), "size": 30, "font": "regular"},
             "disk_space": {"pos": (192, 1041), "size": 41, "font": "bold"},
             "write_speed": {"pos": (360, 1041), "size": 41, "font": "bold"},
-            
+            "recording_time": {"pos": (575, 1041), "size": 41, "font": "bold"},
             "clip_label": {"pos": (510, 1050), "size": 30, "font": "regular"},
             "clip_name": {"pos": (540, 1041), "size": 41, "font": "bold"},
             "clip_name_cam1": {"pos": (540, 998), "size": 41, "font": "bold"},
@@ -234,9 +248,9 @@ class SimpleGUI(threading.Thread):
             "media_label": {"normal": (136,136,136), "inverse": "black"},            
             "disk_label": {"normal": (136,136,136), "inverse": "black"},
             "disk_space": {"normal": (249,249,249), "inverse": "black"},
-            "write_speed": {"normal": (249,249,249), "inverse": "black"},
+            "write_speed": {"normal": (136, 136, 136), "inverse": "black"},
             "frame_count": {"normal": (136,136,136), "inverse": "black"},
-            
+            "recording_time": {"normal": (249,249,249), "inverse": "black"},
             "clip_label": {"normal": (136,136,136), "inverse": "black"},
             "clip_name": {"normal": (249,249,249), "inverse": "black"},
             
@@ -303,6 +317,7 @@ class SimpleGUI(threading.Thread):
         except (TypeError, ValueError):
             resolution_value = "N/A"
         return resolution_value
+    
     
     def _update_cam_section_labels(self):
         """
@@ -430,7 +445,7 @@ class SimpleGUI(threading.Thread):
             "keyboard_connected": bool(self.usb_monitor and self.usb_monitor.usb_keyboard),
             "storage_type":   self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value),
             "write_speed":    self.redis_controller.get_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value) or "0 MB/s",
-
+            "recording_time": self._format_timecode(self.redis_controller.get_value(ParameterKey.RECORDING_TIME_ELAPSED.value)),
             # "clip_label": "CLIP",
             # "clip_name":    self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value) or "N/A",
 
@@ -448,37 +463,37 @@ class SimpleGUI(threading.Thread):
         if abs(z - 1.0) > 1e-3:                    # only show when ≠ 1.0
             values["zoom_factor"] = f"{z:.1f}"
 
-        # ───────────────── CLIP / LAST-DNG display ───────────────
-        last_cam1_full = self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value)
-        last_cam0_full = self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM0.value)
+        # # ───────────────── CLIP / LAST-DNG display ───────────────
+        # last_cam1_full = self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value)
+        # last_cam0_full = self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM0.value)
 
-        clip_cam1 = self._format_last_dng(last_cam1_full)
-        clip_cam0 = self._format_last_dng(last_cam0_full)
+        # clip_cam1 = self._format_last_dng(last_cam1_full)
+        # clip_cam0 = self._format_last_dng(last_cam0_full)
 
-        if clip_cam0 and clip_cam1:
-            # two cameras – show CAM1 on the upper line, CAM0 on the baseline
-            values["clip_name_cam1"] = clip_cam1
-            values["clip_name"]      = clip_cam0
-        else:
-            # only one camera – keep it on the baseline row
-            values["clip_name"] = clip_cam0 or clip_cam1 or ""
+        # if clip_cam0 and clip_cam1:
+        #     # two cameras – show CAM1 on the upper line, CAM0 on the baseline
+        #     values["clip_name_cam1"] = clip_cam1
+        #     values["clip_name"]      = clip_cam0
+        # else:
+        #     # only one camera – keep it on the baseline row
+        #     values["clip_name"] = clip_cam0 or clip_cam1 or ""
             
 
-        # ── add right-column data when CAM1 exists ────────────────
-        if sensor_right and cam1:
-            sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value) or 0)
-            pk   = cam1["model"] + ("_mono" if cam1["mono"] else "")
-            res1 = self.sensor_detect.get_resolution_info(pk, sensor_mode)
-            w1   = res1.get("width", 1920)
-            h1   = res1.get("height", 1080)
-            bd1  = res1.get("bit_depth", 12)
+        # # ── add right-column data when CAM1 exists ────────────────
+        # if sensor_right and cam1:
+        #     sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value) or 0)
+        #     pk   = cam1["model"] + ("_mono" if cam1["mono"] else "")
+        #     res1 = self.sensor_detect.get_resolution_info(pk, sensor_mode)
+        #     w1   = res1.get("width", 1920)
+        #     h1   = res1.get("height", 1080)
+        #     bd1  = res1.get("bit_depth", 12)
 
-            values.update({
-                "sensor_cam1":     sensor_right,
-                "resolution_cam1": self.estimate_resolution_in_k(),
-                "aspect_cam1":     round(w1 / h1, 2),
-                "bit_depth_cam1":  f"{bd1}b",
-            })
+        #     values.update({
+        #         "sensor_cam1":     sensor_right,
+        #         "resolution_cam1": self.estimate_resolution_in_k(),
+        #         "aspect_cam1":     round(w1 / h1, 2),
+        #         "bit_depth_cam1":  f"{bd1}b",
+        #     })
 
         # ── housekeeping tweaks (unchanged) ───────────────────────
         frame_count = f"{self.redis_controller.get_value(ParameterKey.FRAMECOUNT.value)} / " \
@@ -855,6 +870,8 @@ class SimpleGUI(threading.Thread):
         for frac in (0.25, 0.50, 0.75, 1.00):
             y = base_y + BAR_H - int(BAR_H * frac)
             draw.line([(base_x, y), (base_x + BAR_W, y)], fill=(136,136,136))
+            
+        
 
 
     def draw_gui(self, values):
@@ -867,8 +884,9 @@ class SimpleGUI(threading.Thread):
         # ─── choose background colour & colour-mode ────────────────────
         prev_bg = self.get_background_color()      # ← fixed () call
         
-        if int(self.redis_controller.get_value(ParameterKey.REC.value)) and self.redis_listener.drop_frame == 1:
-            # at least one camera is actively recording
+        drop = int(self.redis_controller.get_value(ParameterKey.DROP_FRAME_DETECTED.value) or 0)
+        
+        if int(self.redis_controller.get_value(ParameterKey.REC.value)) and drop:            # at least one camera is actively recording
             self.current_background_color = "purple"
             self.color_mode = "inverse"
 

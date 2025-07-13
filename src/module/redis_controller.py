@@ -29,6 +29,7 @@ class ParameterKey(Enum):
     FPS_MAX           = "fps_max"
     FPS_USER          = "fps_user"
     FRAMECOUNT        = "framecount"
+    RECORDING_TIME_ELAPSED = "recording_time_elapsed"
     GUI_LAYOUT        = "gui_layout"
     HEIGHT            = "height"
     IR_FILTER         = "ir_filter"
@@ -37,6 +38,7 @@ class ParameterKey(Enum):
     IS_RECORDING      = "is_recording"
     IS_WRITING        = "is_writing"
     IS_WRITING_BUF    = "is_writing_buf"
+    DROP_FRAME_DETECTED = "drop_frame_detected"
     
     ISO               = "iso"
     LORES_HEIGHT      = "lores_height"

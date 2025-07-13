@@ -214,13 +214,33 @@ CineMate supports multiple cameras with per‑port customization in your `settin
 - **output.cam0/cam1**: Maps each camera to an HDMI output port. By default, `cam0`→HDMI 0 and `cam1`→HDMI 1, but you can remap as needed.
 
 #### GPIO output
-Default rec LED pins are 6 and 21. Make sure to use a 220 Ohm resistor on this pin!
+Status LEDs are configured under `gpio_output`. Two flavours are available:
+`sys_LED` for single‑colour outputs and `sys_LED_RGB` for RGB indicators.  Each
+entry holds an ordered list of rules which map Redis keys to LED behaviour.
+The first rule that matches determines the LED state.
 
 ```json
-  "gpio_output": {
-    "pwm_pin": 19,
-    "rec_out_pin": [6, 21]
-  },
+"gpio_output": {
+  "sys_LED": [
+    {
+      "pin": 19,
+      "rules": [
+        {"key": "drop_frame_detected", "mode": "blink"},
+        {"key": "rec", "value": 1, "mode": "steady"}
+      ]
+    }
+  ],
+  "sys_LED_RGB": [
+    {
+      "pins": [23,24,10],
+      "rules": [
+        {"key": "is_mounted", "value": 1, "mode": "steady", "color": "blue"},
+        {"key": "is_mounted", "value": 0, "mode": "blink_long", "color": "blue"},
+        {"key": "is_writing", "mode": "pulse", "color": "green"}
+      ]
+    }
+  ]
+}
 ```
 
 #### Arrays

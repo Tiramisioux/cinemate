@@ -1,3 +1,5 @@
+# Based on the original code by Will Whang: https://github.com/will127534/StarlightEye/blob/main/software/README.md
+
 import json
 import logging
 import smbus

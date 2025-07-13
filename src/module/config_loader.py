@@ -1,3 +1,4 @@
+import sys
 import json
 import logging
 from pathlib import Path
@@ -21,7 +22,11 @@ def load_settings(filename: str | Path) -> dict:
         settings = {}
 
     # ── top-level placeholders ───────────────────────────────────────────
-    settings.setdefault("gpio_output",     {})
+
+    gpio_cfg = settings.setdefault("gpio_output",     {})
+    gpio_cfg.setdefault("sys_LED", [])
+    gpio_cfg.setdefault("sys_LED_RGB", [])
+
     settings.setdefault("arrays",          {})
     settings.setdefault("settings",        {"light_hz": [50, 60]})
     settings.setdefault("analog_controls", {})
@@ -72,5 +77,76 @@ def load_settings(filename: str | Path) -> dict:
     for k, v in array_defaults.items():
         arrays_cfg.setdefault(k, v)
     settings["arrays"] = arrays_cfg
+
+    # ── Duplicate GPIO pin check ─────────────────────────────────────────
+    used_pins = []
+    pin_sources = {}
+
+    # Helper to add pins and track their source
+    def add_pin(pin, source):
+        if pin is not None:
+            used_pins.append(pin)
+            pin_sources.setdefault(pin, []).append(source)
+
+    # sys_LED
+    for led in gpio_cfg.get("sys_LED", []):
+        add_pin(led.get("pin"), "gpio_output.sys_LED")
+
+    # sys_LED_RGB
+    for led in gpio_cfg.get("sys_LED_RGB", []):
+        for pin in led.get("pins", []):
+            add_pin(pin, "gpio_output.sys_LED_RGB")
+
+    # pwm_pin
+    if "pwm_pin" in gpio_cfg:
+        add_pin(gpio_cfg["pwm_pin"], "gpio_output.pwm_pin")
+
+    # rec_out_pin
+    for pin in gpio_cfg.get("rec_out_pin", []):
+        add_pin(pin, "gpio_output.rec_out_pin")
+
+    # status_led_pin
+    if "status_led_pin" in gpio_cfg:
+        add_pin(gpio_cfg["status_led_pin"], "gpio_output.status_led_pin")
+
+    # drive_led_pins
+    for pin in (gpio_cfg.get("drive_led_pins") or {}).values():
+        add_pin(pin, "gpio_output.drive_led_pins")
+
+    # buttons
+    for btn in settings.get("buttons", []):
+        add_pin(btn.get("pin"), "buttons")
+
+    # two_way_switches
+    for sw in settings.get("two_way_switches", []):
+        add_pin(sw.get("pin"), "two_way_switches")
+
+    # rotary_encoders
+    for enc in settings.get("rotary_encoders", []):
+        add_pin(enc.get("clk_pin"), "rotary_encoders.clk_pin")
+        add_pin(enc.get("dt_pin"), "rotary_encoders.dt_pin")
+
+    # quad_rotary_encoders
+    for enc in settings.get("quad_rotary_encoders", {}).values():
+        add_pin(enc.get("gpio_pin"), "quad_rotary_encoders")
+
+    # Check for duplicates
+    from collections import Counter
+    pin_counts = Counter(used_pins)
+    duplicates = []
+    for pin, count in pin_counts.items():
+        sources = set(pin_sources[pin])
+        # Allow overlap between buttons and quad_rotary_encoders only
+        if count > 1:
+            if sources <= {"buttons", "quad_rotary_encoders"}:
+                continue  # allowed
+            duplicates.append(pin)
+
+    if duplicates:
+        print("\nERROR: Duplicate GPIO pin assignments detected!\n")
+        for pin in duplicates:
+            print(f"  Pin {pin} is used in: {', '.join(pin_sources[pin])}")
+        print("\nPlease resolve these conflicts in your settings.json and restart CineMate.\n")
+        sys.exit(1)
 
     return settings

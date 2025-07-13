@@ -576,7 +576,6 @@ class CinePiController:
                 
                 self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
                     self.current_sensor,
-                    int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
                     )
 
                 self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)

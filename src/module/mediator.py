@@ -86,11 +86,21 @@ class Mediator:
         
         # Handle "is_writing" key changes        
         elif data['key'] == ParameterKey.IS_WRITING.value:
-            is_writing = bool(data['value'])
-            if is_writing == 1:
+            is_writing = bool(int(data['value']))
+            if is_writing:
                 self.stream.toggle_background_color()
+                self.gpio_output.set_drive_color("blue")
             else:
-                self.gpio_output.set_recording(0)    
+                self.gpio_output.set_drive_color(
+                    "green" if self.redis_controller.get_value(ParameterKey.IS_MOUNTED.value) == "1" else "off")
+                self.gpio_output.set_recording(0)
+
+        elif data['key'] == ParameterKey.IS_MOUNTED.value:
+            mounted = bool(int(data['value']))
+            if not mounted:
+                self.gpio_output.set_drive_color("off")
+            else:
+                self.gpio_output.set_drive_color("green")
 
     def handle_stop_recording_timeout(self):
         """Handle the timeout event when recording should be stopped."""

@@ -4,6 +4,7 @@ import threading
 import datetime
 import json
 from collections import deque
+from module.redis_controller import ParameterKey
 
 class RedisListener:
     def __init__(self, redis_controller, ssd_monitor, framerate_callback=None, host='localhost', port=6379, db=0):
@@ -23,6 +24,8 @@ class RedisListener:
         self.recording_start_time = None
         self.recording_end_time = None
         
+        self.recording_time_elapsed = "00:00"
+
         self.redis_controller = redis_controller
         self.ssd_monitor = ssd_monitor
         self.framerate_callback = framerate_callback
@@ -35,6 +38,9 @@ class RedisListener:
         self.non_increasing_count_threshold = 3  # Allow 3 non-increasing counts before declaring frame count not increasing
 
         self.set_frame_count_increase_tolerance()
+        
+        # initialise Redis key for GUI display
+        self.redis_controller.set_value(ParameterKey.RECORDING_TIME_ELAPSED.value, self.recording_time_elapsed)
         
         self.bufferSize = 0
         self.colorTemp = 0
@@ -53,11 +59,14 @@ class RedisListener:
         self.all_sensors_ready = False       # True if all sensors are ready, False otherwise
 
         self.last_rise_time = None          # when frameCount last increased
+        
         self.rec_hold_seconds = 0.3         # how long frameCount must stay flat before rec=0
 
         
         self.drop_frame = False
         self.drop_frame_timer = None
+        
+        self.redis_controller.set_value('drop_frame_detected', 0)
         
         self.cinepi_running = True
         
@@ -203,6 +212,7 @@ class RedisListener:
 
                                 self.drop_frame = True
                                 logging.info("Drop frame detected")
+                                self.redis_controller.set_value('drop_frame_detected', 1)
                                 
                                 # Set a timer to reset the drop_frame flag after 0.5 seconds
                                 if self.drop_frame_timer:
@@ -219,7 +229,8 @@ class RedisListener:
 
                         # Check if framecount is changing
                         self.check_framecount_changing()
-                        
+                        self.update_recording_time_elapsed()
+
                         # # Calculate average framerate of last 100 frames
                         # avg_framerate = self.calculate_average_framerate_last_100_frames()
 
@@ -240,6 +251,7 @@ class RedisListener:
     def reset_drop_frame(self):
         self.drop_frame = False
         logging.info("Drop frame flag reset")
+        self.redis_controller.set_value('drop_frame_detected', 0)
         
     # ───────────────────  FPS-change handling  ──────────────────────────────
     def _reset_user_changing_fps(self):
@@ -320,7 +332,38 @@ class RedisListener:
         self.framecount = 0
         self.frame_count = 0
         self.redis_controller.set_value('framecount', 0)
+        self.redis_controller.set_value('recording_time_elapsed', "00:00:00:00")
         logging.info("Framecount reset to 0.")
+    
+    def update_recording_time_elapsed(self):
+        """Update Redis key with running recording time based on framecount."""
+        try:
+            rec = int(self.redis_controller.get_value(ParameterKey.REC.value) or 0)
+            if not rec:
+                # reset when framecount returns to 0
+                if int(self.redis_controller.get_value(ParameterKey.FRAMECOUNT.value) or 0) == 0:
+                    self.recording_time_elapsed = "00:00:00:00"
+                    self.redis_controller.set_value(ParameterKey.RECORDING_TIME_ELAPSED.value, self.recording_time_elapsed)
+                return
+
+            framecount = int(self.redis_controller.get_value(ParameterKey.FRAMECOUNT.value) or 0)
+            fps_user = float(self.redis_controller.get_value(ParameterKey.FPS_USER.value) or 0)
+            if fps_user <= 0:
+                fps_user = 1
+            total_seconds = int(framecount // fps_user)
+            frames = int(framecount % fps_user)
+
+            hours = int(total_seconds // 3600)
+            minutes = int((total_seconds % 3600) // 60)
+            seconds = int(total_seconds % 60)
+
+            tc = f"{hours:02d}:{minutes:02d}:{seconds:02d}:{frames:02d}"
+
+            if tc != self.recording_time_elapsed:
+                self.recording_time_elapsed = tc
+                self.redis_controller.set_value(ParameterKey.RECORDING_TIME_ELAPSED.value, tc)
+        except Exception as e:
+            logging.error(f"Failed to update recording time: {e}")
 
     def listen_controls(self):
         for message in self.pubsub_controls.listen():
@@ -343,6 +386,8 @@ class RedisListener:
                 if value_str == '1':
                     self.is_recording = True
                     self.reset_framecount()
+                    self.recording_time_elapsed = "00:00:00:00"
+                    self.redis_controller.set_value(ParameterKey.RECORDING_TIME_ELAPSED.value, self.recording_time_elapsed)
                     self.recording_start_time = datetime.datetime.now()
                     logging.info(f"Recording started at: {self.recording_start_time}")
                     

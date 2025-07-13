@@ -37,12 +37,29 @@
 
   "anamorphic_preview": {
       "default_anamorphic_factor": 1,
-    "anamorphic_steps": [1, 1.33, 2.0]
+      "anamorphic_steps": [1, 1.33, 2.0]
   },
 
   "gpio_output": {
-    "pwm_pin": 19,
-    "rec_out_pin": [6, 21]
+    "sys_LED": [
+      {
+        "pin": 4,
+        "rules": [
+          {"key": "drop_frame_detected", "mode": "blink"},
+          {"key": "rec", "value": 1, "mode": "steady"}
+        ]
+      }
+    ],
+    "sys_LED_RGB": [
+      {
+        "pins": [14,15,18],
+        "rules": [
+          {"key": "is_mounted", "value": 1, "mode": "steady", "color": "blue"},
+          {"key": "is_mounted", "value": 0, "mode": "blink_long", "color": "blue"},
+          {"key": "is_writing", "mode": "pulse", "color": "green"}
+        ]
+      }
+    ]
   },
   
   "arrays": {
@@ -70,8 +87,6 @@
     "wb_free": false
   },
 
-
-  
 "buttons": [
     {
       "pin": 5,
@@ -129,7 +144,7 @@
       "state_off_action": {"method": "set_shutter_a_sync_mode", "args": [0]}
     },
     {
-      "pin": 18,
+      "pin": 19,
       "state_on_action": {"method": "set_filter", "args": [1]},
       "state_off_action": {"method": "set_filter", "args": [0]}
     }

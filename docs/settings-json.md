@@ -34,10 +34,15 @@ if self.button.is_pressed:      # high at rest → treat as “inverse”
 
 ## GPIO Outputs
 
-| JSON Path               | Description                                   | Values                   |
-|-------------------------|-----------------------------------------------|--------------------------|
-| `gpio_output.pwm_pin`   | PWM pin for strobe / shutter sync             | BCM pin number (e.g. 19) |
-| `gpio_output.rec_out_pin` | Pin(s) pulled high while recording            | List of BCM pins         |
+| JSON Path                   | Description                            | Values                      |
+|-----------------------------|----------------------------------------|-----------------------------|
+| `gpio_output.sys_LED[]`     | Single-colour status LEDs              | `pin` + ordered `rules`     |
+| `gpio_output.sys_LED_RGB[]` | RGB status LEDs                        | `pins` + ordered `rules`    |
+| `gpio_output.pwm_pin`       | PWM pin for strobe / shutter sync      | BCM pin number              |
+
+Each rule maps a Redis key (and optional value) to a behaviour
+(`steady`, `blink`, `blink_long`, or `pulse`). RGB LEDs also take a
+`color` using one of: red, green, blue, yellow, cyan, magenta, white.
 
 ---
 

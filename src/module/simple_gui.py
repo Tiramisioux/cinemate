@@ -170,17 +170,18 @@ class SimpleGUI(threading.Thread):
             # Bottom row
             "media_label": {"pos": (98, 1050), "size": 30, "font": "regular"},
             "disk_space": {"pos": (192, 1041), "size": 41, "font": "bold"},
+            "write_speed": {"pos": (360, 1041), "size": 41, "font": "bold"},
             
-            "clip_label": {"pos": (400, 1050), "size": 30, "font": "regular"},
-            "clip_name": {"pos": (480, 1041), "size": 41, "font": "bold"},
-            "clip_name_cam1": {"pos": (480, 998), "size": 41, "font": "bold"},
+            "clip_label": {"pos": (510, 1050), "size": 30, "font": "regular"},
+            "clip_name": {"pos": (540, 1041), "size": 41, "font": "bold"},
+            "clip_name_cam1": {"pos": (540, 998), "size": 41, "font": "bold"},
 
             
             "battery_level": {"pos": (600, 1041), "size": 41, "font": "bold"},
-            "cpu_label": {"pos": (1260, 1050), "size": 30, "font": "regular"},
-            "cpu_load": {"pos": (1330, 1041), "size": 41, "font": "bold"},
-            "cpu_temp_label": {"pos": (1458, 1050), "size": 31, "font": "regular"},
-            "cpu_temp": {"pos": (1542, 1041), "size": 41, "font": "bold"},
+            "cpu_label": {"pos": (1285, 1050), "size": 30, "font": "regular"},
+            "cpu_load": {"pos": (1355, 1041), "size": 41, "font": "bold"},
+            "cpu_temp_label": {"pos": (1468, 1050), "size": 31, "font": "regular"},
+            "cpu_temp": {"pos": (1552, 1041), "size": 41, "font": "bold"},
             "ram_label": {"pos": (1673, 1050), "size": 30, "font": "regular"},
             "ram_load": {"pos": (1741, 1041), "size": 41, "font": "bold"},
         }
@@ -233,6 +234,7 @@ class SimpleGUI(threading.Thread):
             "media_label": {"normal": (136,136,136), "inverse": "black"},            
             "disk_label": {"normal": (136,136,136), "inverse": "black"},
             "disk_space": {"normal": (249,249,249), "inverse": "black"},
+            "write_speed": {"normal": (249,249,249), "inverse": "black"},
             "frame_count": {"normal": (136,136,136), "inverse": "black"},
             
             "clip_label": {"normal": (136,136,136), "inverse": "black"},
@@ -427,9 +429,10 @@ class SimpleGUI(threading.Thread):
             "mic_connected":  self.usb_monitor.usb_mic is not None,
             "keyboard_connected": bool(self.usb_monitor and self.usb_monitor.usb_keyboard),
             "storage_type":   self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value),
+            "write_speed":    self.redis_controller.get_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value) or "0 MB/s",
 
-            "clip_label": "CLIP",
-            "clip_name":    self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value) or "N/A",
+            # "clip_label": "CLIP",
+            # "clip_name":    self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value) or "N/A",
 
             # static captions
             "cam": "CAM", "raw": "RAW", "ram_label": "RAM",
@@ -502,9 +505,11 @@ class SimpleGUI(threading.Thread):
             mins = (self.ssd_monitor.space_left * 1000) / (self.cinepi_controller.file_size *
                                                         float(self.cinepi_controller.fps) * 60)
             values["disk_space"] = f"{round(mins)} MIN"
+            values["write_speed"] = f"{self.ssd_monitor.write_speed_mb_s:.0f} MB/s"
         else:
             values["disk_space"] = "NO DISK"
-
+            values["write_speed"] = ""
+        values["write_speed"] = f"{self.ssd_monitor.write_speed_mb_s:.0f} MB/s"
         return values
 
     def _format_sensor_name(self, name: str, is_mono: bool) -> str:
@@ -677,6 +682,17 @@ class SimpleGUI(threading.Thread):
                 ty = y      + (BOX_H - th) // 2
                 draw.text((tx, ty), storage, font=box_font, fill=TEXT_COLOR)
                 y += BOX_H + BOX_GAP
+            
+            # write_speed = values.get("write_speed", "")
+            # if write_speed:
+            #     text = write_speed.split()[0]
+            #     draw.rectangle([box_x, y, box_x + BOX_W, y + BOX_H],
+            #                  fill=BOX_COLOR)
+            #     tw, th = draw.textbbox((0, 0), text, font=box_font)[2:]
+            #     tx = box_x + (BOX_W - tw) // 2
+            #     ty = y      + (BOX_H - th) // 2
+            #     draw.text((tx, ty), text, font=box_font, fill=TEXT_COLOR)
+            #     y += BOX_H + BOX_GAP
 
 
     # ─────────────────────────────────────────────────────────────
@@ -779,22 +795,32 @@ class SimpleGUI(threading.Thread):
             • ticks   = 25 / 50 / 75 / 100 %
             • caption = “used / total”
         """
-        # ── fetch numbers from Redis ─────────────────────────────
+        # ── fetch numbers from Redis safely ─────────────────────────────
         try:
-            used  = (int(self.redis_controller.get_value("BUFFER")) or 0)
-            # print(f"Buffer used: {used}")
-            total = int(self.redis_controller.get_value(ParameterKey.BUFFER_SIZE.value)     or 1)
+            raw_used  = self.redis_controller.get_value(ParameterKey.BUFFER.value)
+            used = int(raw_used) if raw_used is not None else 0
         except (TypeError, ValueError):
-            used, total = 0, 1          # fall-back to sane values
+            used = 0
 
-        usage = min(max(used / total, 0.0), 1.0)   # clamp 0–1
+        try:
+            raw_total = self.redis_controller.get_value(ParameterKey.BUFFER_SIZE.value)
+            total = int(raw_total) if raw_total is not None else 0
+        except (TypeError, ValueError):
+            total = 0
 
-        # colour code by utilisation
-        if   usage < 0.70: fill_colour = (  0, 255,   0)   # green
-        elif usage < 0.90: fill_colour = (255, 255,   0)   # yellow
-        else:              fill_colour = (255,   0,   0)   # red
+        # avoid zero‐division
+        if total <= 0:
+            total = 1
 
-        # ── geometry constants (match existing GUI) ─────────────
+        # clamp between 0.0 and 1.0
+        usage = max(0.0, min(used / total, 1.0))
+
+        # ── colour code by utilisation ────────────────────────────────
+        if   usage < 0.70: fill_colour = (  0, 255,   0)
+        elif usage < 0.90: fill_colour = (255, 255,   0)
+        else:              fill_colour = (255,   0,   0)
+
+        # ── geometry constants (match existing GUI) ───────────────────
         BAR_H      = 200
         BAR_W      = 28
         BASE_X     = 30
@@ -804,38 +830,31 @@ class SimpleGUI(threading.Thread):
         base_x = BASE_X
 
         rec         = int(self.redis_controller.get_value(ParameterKey.REC.value) or 0)
-        border_col  = ( 50,  50,  50) if rec else (249, 249, 249)
+        border_col  = (50, 50, 50) if rec else (249, 249, 249)
         back_col    = (50, 50, 50)
-        tick_col    = (136, 136, 136)
 
-        # ── erase old drawing area ──────────────────────────────
-        draw.rectangle([base_x, base_y,
-                        base_x + BAR_W, base_y + BAR_H],
-                       fill=self.current_background_color)
+        # ── erase & redraw the pillar ────────────────────────────────
+        draw.rectangle([base_x, base_y, base_x + BAR_W, base_y + BAR_H],
+                    fill=self.current_background_color)
+        draw.rectangle([base_x, base_y, base_x + BAR_W, base_y + BAR_H],
+                    fill=back_col)
 
-        # ── pillar background & outline ─────────────────────────
-        draw.rectangle([base_x, base_y,
-                        base_x + BAR_W, base_y + BAR_H],
-                       fill=back_col)
-
-        # ── fill according to usage ────────────────────────────
         filled_h = int(BAR_H * usage)
         if filled_h:
             draw.rectangle([base_x,
                             base_y + (BAR_H - filled_h),
                             base_x + BAR_W,
                             base_y + BAR_H],
-                           fill=fill_colour)
-
-        # ── hatch lines over filled area for texture (optional) ─
+                        fill=fill_colour)
+        # ── optional hatch lines (unchanged) ────────────────────────
         for dy in range(0, filled_h, 2):
             y = base_y + BAR_H - 1 - dy
-            draw.line([(base_x, y), (base_x + BAR_W, y)],
-                      fill=border_col)
+            draw.line([(base_x, y), (base_x + BAR_W, y)], fill=border_col)
 
-        # ── tick marks at 25 / 50 / 75 / 100 % ─────────────────
+        # ── tick marks at 25/50/75/100 % (unchanged) ────────────────
         for frac in (0.25, 0.50, 0.75, 1.00):
-            y = base_y + BAR_H
+            y = base_y + BAR_H - int(BAR_H * frac)
+            draw.line([(base_x, y), (base_x + BAR_W, y)], fill=(136,136,136))
 
 
     def draw_gui(self, values):

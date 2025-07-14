@@ -30,6 +30,10 @@
     }
   },
 
+  "gui": {
+    "recording_indicator": "dot"
+  },
+
   "preview": {
     "default_zoom": 1.0,
     "zoom_steps":   [1.0, 1.5, 2.0]
@@ -51,12 +55,12 @@
       }
     ],
     "sys_LED_RGB": [
-      {
-        "pins": [14,15,18],
-        "rules": [
+    {
+      "pins": [14,18,15],
+      "type": "common_cathode",
+      "rules": [
           {"key": "is_mounted", "value": 1, "mode": "steady", "color": "blue"},
-          {"key": "is_mounted", "value": 0, "mode": "blink_long", "color": "blue"},
-          {"key": "is_writing", "mode": "pulse", "color": "green"}
+          {"key": "is_mounted", "value": 0, "mode": "blink_long", "color": "blue"}
         ]
       }
     ]
@@ -202,4 +206,5 @@
 
     ]
   }
+
 }

@@ -16,4 +16,4 @@ termcolor
 board
 adafruit-blinka
 adafruit-circuitpython-seesaw
-adafruit-circuitpython-ssd1306
+luma.oled

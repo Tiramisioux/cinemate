@@ -48,6 +48,9 @@ class SimpleGUI(threading.Thread):
         self.sensor_detect = sensor_detect
         self.redis_listener = redis_listener
         
+        self.recording_indicator = self.cinepi_controller.settings.get(
+            'gui', {}).get('recording_indicator', 'frame')
+
         self.vu_smoothed = []
         self.vu_peaks = []
 
@@ -886,64 +889,69 @@ class SimpleGUI(threading.Thread):
         
         drop = int(self.redis_controller.get_value(ParameterKey.DROP_FRAME_DETECTED.value) or 0)
         
-        if int(self.redis_controller.get_value(ParameterKey.REC.value)) and drop:            # at least one camera is actively recording
-            self.current_background_color = "purple"
-            self.color_mode = "inverse"
+        if self.recording_indicator == "frame":
+            if int(self.redis_controller.get_value(ParameterKey.REC.value)) and self.redis_listener.drop_frame == 1:
+                self.current_background_color = "purple"
+                self.color_mode = "inverse"
 
-        elif int(self.redis_controller.get_value(ParameterKey.REC.value)) == 1:
-            # at least one camera is actively recording
-            self.current_background_color = "red"
-            self.color_mode = "inverse"
+            elif int(self.redis_controller.get_value(ParameterKey.REC.value)) == 1:
+                self.current_background_color = "red"
+                self.color_mode = "inverse"
 
-        elif int(self.redis_controller.get_value(ParameterKey.IS_WRITING_BUF.value) or 0):
-            # recording has stopped but buffer still flushing to disk
-            self.current_background_color = "green"
-            self.color_mode = "inverse"
+            elif int(self.redis_controller.get_value(ParameterKey.IS_WRITING_BUF.value) or 0):
+                self.current_background_color = "green"
+                self.color_mode = "inverse"
 
-        elif int(self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value) or 0):
-            # cameras are building up the RAM buffer
-            self.current_background_color = "green"
-            self.color_mode = "inverse"
+            elif int(self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value) or 0):
+                self.current_background_color = "green"
+                self.color_mode = "inverse"
 
-        elif int(values["ram_load"].rstrip('%')) > 95:
-            # safety: RAM nearly full – warn & auto-stop
-            self.current_background_color = "yellow"
-            self.color_mode = "inverse"
-            self.cinepi_controller.rec()        # stop recording
+            elif int(values["ram_load"].rstrip('%')) > 95:
+                self.current_background_color = "yellow"
+                self.color_mode = "inverse"
+                self.cinepi_controller.rec()
 
-        else:
-            # idle
-            self.current_background_color = "black"
-            self.color_mode = "normal"
-            
-        if self.current_background_color != previous_background_color:
-            self.background_color_changed = True
+            else:
+                self.current_background_color = "black"
+                self.color_mode = "normal"
+        # Record dot-mode state and parameters, but don’t draw yet
+        dot_params = None
+        if self.recording_indicator == "dot":
+            rec_state   = int(self.redis_controller.get_value(ParameterKey.REC.value) or 0)
+            drop_frame  = int(self.redis_controller.get_value(ParameterKey.DROP_FRAME_DETECTED.value) or 0)
+            circle_pos  = (946, 1044, 974, 1072)
+            text_pos    = (987, 1041)
+            font_size   = 41
             try:
-                self.emit_background_color_change()
-            except Exception as e:
-                logging.error(f"Error emitting background color change: {e}")
-        else:
-            self.background_color_changed = False
+                font = ImageFont.truetype(self.bold_font_path, font_size)
+            except IOError:
+                logging.error(f"Error loading font from {self.bold_font_path}")
+                font = ImageFont.load_default()
 
-        current_values = values
-        if hasattr(self, 'previous_values'):
-            changed_data = {}
-            for key, value in current_values.items():
-                if value != self.previous_values.get(key):
-                    changed_data[key] = value
-            if changed_data:
-                try:
-                    self.emit_gui_data_change(changed_data)
-                except Exception:
-                    pass
-        self.previous_values = current_values.copy()
+            if drop_frame == 1:
+                color = "purple";    text = "FRAME DROP"
+            elif rec_state == 1:
+                color = (234,51,35); text = "REC"
+            else:
+                color = (16,255,0) if (self.ssd_monitor.space_left and self.ssd_monitor.is_mounted) else None
+                text  = "STBY" if color else ""
 
+            if text:
+                dot_params = (circle_pos, text_pos, font, color, text)
+ 
+         # … lots of code in between …
+ 
         if not self.fb:
             return
+        # now create our drawing surface
+        image = Image.new("RGB", (self.disp_width, self.disp_height), self.current_background_color)
+        draw  = ImageDraw.Draw(image)
 
-        image = Image.new("RGBA", self.fb.size)
-        draw = ImageDraw.Draw(image)
-        draw.rectangle(((0, 0), self.fb.size), fill=self.current_background_color)
+        # if dot-mode was active, render the circle + text now
+        if dot_params:
+            circle_pos, text_pos, font, color, text = dot_params
+            draw.ellipse(circle_pos, fill=color, outline=color)
+            draw.text(text_pos, text, font=font, fill=color)
 
         # Draw left-hand labels and boxes dynamically
         self.draw_left_sections(draw, values)
@@ -1083,7 +1091,7 @@ class SimpleGUI(threading.Thread):
 
     def clear_framebuffer(self):
         if self.fb:
-            blank_image = Image.new("RGBA", self.fb.size, "black")
+            blank_image = Image.new("RGBA", (self.disp_width, self.disp_height), "black")
             self.fb.show(blank_image)
             
     def stop(self):

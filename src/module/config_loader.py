@@ -94,6 +94,7 @@ def load_settings(filename: str | Path) -> dict:
 
     # sys_LED_RGB
     for led in gpio_cfg.get("sys_LED_RGB", []):
+        led.setdefault("type", "common_cathode")
         for pin in led.get("pins", []):
             add_pin(pin, "gpio_output.sys_LED_RGB")
 

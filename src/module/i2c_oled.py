@@ -3,9 +3,8 @@ import os
 import threading
 import time
 from typing import TypedDict
-import board
-import busio
-import adafruit_ssd1306
+from luma.core.interface.serial import i2c
+from luma.oled.device import ssd1306
 from PIL import Image, ImageDraw, ImageFont
 from module.utils import Utils
 from module.redis_controller import ParameterKey
@@ -29,8 +28,8 @@ class I2cOled(threading.Thread):
         self.font_size = self.settings.get("font_size", 10)
         self.values = self.settings.get("values", [ParameterKey.ISO.value, ParameterKey.FPS.value, ParameterKey.SHUTTER_A.value, 'resolution', ParameterKey.IS_RECORDING.value])
 
-        self.i2c = busio.I2C(board.SCL, board.SDA)
-        self.oled = adafruit_ssd1306.SSD1306_I2C(self.width, self.height, self.i2c)
+        self.serial = i2c(port=1, address=0x3C)
+        self.oled = ssd1306(self.serial, width=self.width, height=self.height)
         self.update()
 
     def display_text(self, text, x=0, y=0):
@@ -40,8 +39,7 @@ class I2cOled(threading.Thread):
         font_path = os.path.join(current_directory, '../../resources/fonts/Arial.ttf')
         font = ImageFont.truetype(font_path, self.font_size)
         draw.text((x, y), text, font=font, fill=255)
-        self.oled.image(image)
-        self.oled.show()
+        self.oled.display(image)
 
     def update(self):
         texts = {

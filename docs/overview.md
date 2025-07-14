@@ -147,6 +147,7 @@ Simple GUI is available via browser and/or attached HDMI monitor.
 - Red color means camera is recording.
 - Purple color means camera detected a drop frame 
 - Green color means camera is writing buffered frames to disk. You can still start recording at this stage, but any buffered frames from the last recording will be lost.
+- Alternatively a small dot with "REC"/"STBY" can be used. Choose between frame or dot in `gui.recording_indicator` inside `settings.json`.
 
 Buffer meter in the lower left indicates number of frames in buffer. Useful when testing storage media.
 
@@ -218,6 +219,7 @@ Status LEDs are configured under `gpio_output`. Two flavours are available:
 `sys_LED` for single‑colour outputs and `sys_LED_RGB` for RGB indicators.  Each
 entry holds an ordered list of rules which map Redis keys to LED behaviour.
 The first rule that matches determines the LED state.
+RGB LEDs may be wired as `common_cathode` or `common_anode`; specify this with the optional `type` field.
 
 ```json
 "gpio_output": {

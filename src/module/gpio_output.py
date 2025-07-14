@@ -77,14 +77,17 @@ class SystemLED(_LED):
         RPi.GPIO.output(self.pin, RPi.GPIO.HIGH if r else RPi.GPIO.LOW)
 
 class SystemLED_RGB(_LED):
-    def __init__(self, pins):
+    def __init__(self, pins, common_anode=False):
         super().__init__()
         self.pins = pins
+        self.common_anode = common_anode
         for p in pins:
             RPi.GPIO.setup(p, RPi.GPIO.OUT)
 
     def _write(self, r, g, b):
-        for val, pin in zip((r,g,b), self.pins):
+        for val, pin in zip((r, g, b), self.pins):
+            if self.common_anode:
+                val = 0 if val else 1
             RPi.GPIO.output(pin, RPi.GPIO.HIGH if val else RPi.GPIO.LOW)
 
 class GPIOOutput:
@@ -134,7 +137,11 @@ class RedisGPIOOutput:
             led.start()
 
         for cfg in sys_led_rgb_configs or []:
-            led = SystemLED_RGB(cfg.get("pins", []))
+            led_type = cfg.get("type", "common_cathode")
+            led = SystemLED_RGB(
+                cfg.get("pins", []),
+                common_anode=(str(led_type).lower() == "common_anode")
+            )
             self.leds.append((led, cfg.get("rules", [])))
             led.start()
 

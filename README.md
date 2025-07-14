@@ -212,6 +212,7 @@ Status LEDs are configured under `gpio_output`. Two flavours are available:
 `sys_LED` for single‑colour outputs and `sys_LED_RGB` for RGB indicators.  Each
 entry holds an ordered list of rules which map Redis keys to LED behaviour.
 The first rule that matches determines the LED state.
+RGB LEDs can be wired as `common_cathode` (default) or `common_anode` and are set per entry using the `type` field.
 
 ```json
 "gpio_output": {
@@ -227,6 +228,7 @@ The first rule that matches determines the LED state.
   "sys_LED_RGB": [
     {
       "pins": [23,24,10],
+      "type": "common_cathode",
       "rules": [
         {"key": "is_mounted", "value": 1, "mode": "steady", "color": "blue"},
         {"key": "is_mounted", "value": 0, "mode": "blink_long", "color": "blue"},

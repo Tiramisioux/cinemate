@@ -40,9 +40,11 @@ if self.button.is_pressed:      # high at rest → treat as “inverse”
 | `gpio_output.sys_LED_RGB[]` | RGB status LEDs                        | `pins` + ordered `rules`    |
 | `gpio_output.pwm_pin`       | PWM pin for strobe / shutter sync      | BCM pin number              |
 
-Each rule maps a Redis key (and optional value) to a behaviour
-(`steady`, `blink`, `blink_long`, or `pulse`). RGB LEDs also take a
-`color` using one of: red, green, blue, yellow, cyan, magenta, white.
+Each rule maps a Redis key (and optional value) to a behaviour (`steady`, `blink`, `blink_long`, or `pulse`). 
+
+RGB LEDs also take a `color` using one of: red, green, blue, yellow, cyan, magenta, white.
+
+`type` can be `common_cathode` (default) or `common_anode` to match your LED wiring.
 
 ---
 
@@ -128,3 +130,11 @@ When `true`, ignores the fixed arrays and exposes full legal ranges.
 if self.button.is_pressed:      # high at rest → treat as “inverse”
     self.inverse = True
 ```
+
+---
+
+## GUI
+
+| JSON Path                 | Description                                     | Values                 |
+|---------------------------|-------------------------------------------------|------------------------|
+| `gui.recording_indicator` | Recording indicator style (`frame` or `dot`)    | `"frame"` / `"dot"`

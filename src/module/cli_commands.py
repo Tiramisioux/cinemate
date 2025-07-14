@@ -1,15 +1,18 @@
 # Import required modules
-import threading  
-import time  
-import datetime 
-import os  
-import logging  
+import threading
+import time
+import datetime
+import os
+import logging
+import sys
+import select
 
 class CommandExecutor(threading.Thread):
     def __init__(self, cinepi_controller, cinepi_app):
-        threading.Thread.__init__(self)  # Initialize thread
+        threading.Thread.__init__(self, daemon=True)  # Initialize thread
         self.cinepi_controller = cinepi_controller  # Set controller object reference
         self.cinepi_app = cinepi_app
+        self.running = True
 
         # ---------------------------------------------------------------------------
         # CLI COMMAND TABLE
@@ -117,6 +120,10 @@ class CommandExecutor(threading.Thread):
         except:
             logging.info("Unable to set the RTC time.")  # If unable to set RTC time, log error
 
+    def stop(self):
+        """Signal the thread to stop processing input."""
+        self.running = False
+
     def is_valid_arg(self, arg, expected_type):
         """Validate arguments against expected types."""
         try:
@@ -184,10 +191,12 @@ class CommandExecutor(threading.Thread):
                     logging.info(f"Command '{command_name}' requires an argument")
 
     def run(self):
-            """Thread run function to continuously process input commands."""
-            while True:
-                time.sleep(0.1)  # Pause for 100 ms
-                data = input("\n> ")  # Read the input as a single string
-                if data.strip():  # Proceed only if there is some non-whitespace input
-                    self.handle_received_data(data)  # Directly handle the received data
+        """Continuously read CLI input until stopped."""
+        while self.running:
+            # Use select for non-blocking stdin read
+            rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
+            if rlist:
+                data = sys.stdin.readline()
+                if data.strip():
+                    self.handle_received_data(data)
 

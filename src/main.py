@@ -122,12 +122,6 @@ def graphic_splash(text="THIS IS A COOL MACHINE"):
     return fb        # keep it so you can blank later
 
 # Graceful exit handler
-def handle_exit(signal, frame):
-    logging.info("Graceful shutdown initiated.")
-    sys.exit(0)
-
-signal.signal(signal.SIGINT, handle_exit)
-signal.signal(signal.SIGTERM, handle_exit)
 
 def get_raspberry_pi_model():
     try:
@@ -324,7 +318,13 @@ def main():
     clear_screen()
 
     # Ensure system cleanup on exit
+    cleanup_called = False
+
     def cleanup():
+        nonlocal cleanup_called
+        if cleanup_called:
+            return
+        cleanup_called = True
         logging.info("Shutting down components...")
         redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         redis_controller.set_value(ParameterKey.IS_WRITING.value, 0)
@@ -334,10 +334,14 @@ def main():
         )
 
         # Stop peripherals
-        dmesg_monitor.join()
+        if hasattr(command_executor, "stop"):
+            command_executor.stop()
         command_executor.join()
         serial_handler.running = False
         serial_handler.join()
+        if hasattr(dmesg_monitor, "stop"):
+            dmesg_monitor.stop()
+        dmesg_monitor.join()
 
         if i2c_oled:
             i2c_oled.join()
@@ -351,8 +355,16 @@ def main():
  
         clear_screen()                     # wipe tty1
         show_cursor()
-        
+
     atexit.register(cleanup)
+
+    def handle_exit(signal_number, frame):
+        logging.info("Graceful shutdown initiated.")
+        cleanup()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, handle_exit)
+    signal.signal(signal.SIGTERM, handle_exit)
 
     try:
         from signal import pause

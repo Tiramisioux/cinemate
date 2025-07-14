@@ -5,7 +5,7 @@ import time
 
 class DmesgMonitor(threading.Thread):
     def __init__(self):
-        super().__init__()
+        super().__init__(daemon=True)
         self.keywords = {
             "Undervoltage": "Under-voltage detected!",
             "Voltage_normalised": "Voltage normalised",
@@ -16,6 +16,7 @@ class DmesgMonitor(threading.Thread):
         self.undervoltage_timer = None
         self.disk_attached = False
         self.disk_detached_event = threading.Event()
+        self.running = True
 
     def run(self):
         self._start_monitoring()
@@ -54,7 +55,7 @@ class DmesgMonitor(threading.Thread):
 
     def _start_monitoring(self):
         # Main event loop
-        while True:
+        while self.running:
             dmesg_lines = self.read_dmesg_log()
             new_messages = self.parse_dmesg_messages(dmesg_lines)
             new_messages = self.track_last_occurrence(new_messages)
@@ -79,5 +80,9 @@ class DmesgMonitor(threading.Thread):
                                 logging.info("Disk detached.")
                                 self.disk_detached_event.set()
             time.sleep(5)
+
+    def stop(self):
+        """Stop the monitoring loop."""
+        self.running = False
 
 

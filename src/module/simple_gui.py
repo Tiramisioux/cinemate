@@ -234,7 +234,7 @@ class SimpleGUI(threading.Thread):
             "media_label": {"normal": (136,136,136), "inverse": "black"},            
             "disk_label": {"normal": (136,136,136), "inverse": "black"},
             "disk_space": {"normal": (249,249,249), "inverse": "black"},
-            "write_speed": {"normal": (249,249,249), "inverse": "black"},
+            "write_speed": {"normal": (136,136,136), "inverse": "black"},
             "frame_count": {"normal": (136,136,136), "inverse": "black"},
             
             "clip_label": {"normal": (136,136,136), "inverse": "black"},
@@ -509,7 +509,10 @@ class SimpleGUI(threading.Thread):
         else:
             values["disk_space"] = "NO DISK"
             values["write_speed"] = ""
-        values["write_speed"] = f"{self.ssd_monitor.write_speed_mb_s:.0f} MB/s"
+        
+        if self.ssd_monitor.write_speed_mb_s > 0:
+            values["write_speed"] = f"{self.ssd_monitor.write_speed_mb_s:.0f} MB/s"
+        
         return values
 
     def _format_sensor_name(self, name: str, is_mono: bool) -> str:

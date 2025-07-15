@@ -7,9 +7,10 @@ import logging
 
 class CommandExecutor(threading.Thread):
     def __init__(self, cinepi_controller, cinepi_app):
-        threading.Thread.__init__(self)  # Initialize thread
+        threading.Thread.__init__(self, daemon=True)  # Initialize thread
         self.cinepi_controller = cinepi_controller  # Set controller object reference
         self.cinepi_app = cinepi_app
+        self.running = True  # Flag to control the thread's execution
 
         # ---------------------------------------------------------------------------
         # CLI COMMAND TABLE
@@ -183,11 +184,22 @@ class CommandExecutor(threading.Thread):
                 else:
                     logging.info(f"Command '{command_name}' requires an argument")
 
+    def stop(self):
+        
+        """Stops the command executor thread."""
+        logging.info("Stopping CommandExecutor thread.")
+        self.running = False
+
     def run(self):
             """Thread run function to continuously process input commands."""
-            while True:
+            while self.running:
                 time.sleep(0.1)  # Pause for 100 ms
-                data = input("\n> ")  # Read the input as a single string
+                try:
+                    data = input("\n> ")  # Read the input as a single string
+                except (EOFError, KeyboardInterrupt) as e:
+                    logging.info(f"CLI input interrupted: {e}")
+                    continue
+
                 if data.strip():  # Proceed only if there is some non-whitespace input
                     self.handle_received_data(data)  # Directly handle the received data
 

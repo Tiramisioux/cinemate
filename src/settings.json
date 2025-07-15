@@ -181,7 +181,7 @@
     "enabled": true,
     "width": 128,
     "height": 64,
-    "font_size": 7,
+    "font_size": 30,
     "values": [
       "write_speed_to_drive"
 

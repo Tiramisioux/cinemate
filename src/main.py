@@ -314,9 +314,16 @@ def main():
     fb_splash.show(Image.new("RGB", fb_splash.size, "black"))   # blank
     # fb_splash.close()        # optional
     clear_screen()
+    
+    # Ensure system cleanup on exit
+    cleanup_called = False
 
     # Ensure system cleanup on exit
     def cleanup():
+        nonlocal cleanup_called
+        if cleanup_called:
+            return
+        cleanup_called = True
         logging.info("Shutting down components...")
         redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         redis_controller.set_value(ParameterKey.IS_WRITING.value, 0)
@@ -327,7 +334,12 @@ def main():
 
         # Stop peripherals
         dmesg_monitor.join()
+        if hasattr(dmesg_monitor, "stop"):
+            dmesg_monitor.stop() 
+        if hasattr(command_executor, "stop"):
+            command_executor.stop()
         command_executor.join()
+        cinepi_controller.stop()
         serial_handler.running = False
         serial_handler.join()
 
@@ -342,6 +354,18 @@ def main():
         show_cursor()
         
     atexit.register(cleanup)
+    
+    def handle_exit(sig, frame):
+        logging.info("Graceful shutdown initiated.")
+        cleanup()                 # stop your threads, join them if you like
+        # restore default handler and re-raise
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
+        os.kill(os.getpid(), signal.SIGINT)
+
+        
+    signal.signal(signal.SIGINT, handle_exit)
+    signal.signal(signal.SIGTERM, handle_exit)
+
 
     try:
         from signal import pause

@@ -9,6 +9,7 @@ import subprocess
 from threading import Thread
 import psutil
 import math
+import sys
 
 from module.redis_controller import ParameterKey
 from module.ir_filter import IRFilter
@@ -1084,6 +1085,13 @@ class CinePiController:
         
     def restart_camera(self):
         self.cinepi.restart()
+
+    def restart_cinemate(self):
+        """Restart the entire CineMate application."""
+        logging.info("Restarting CineMate application")
+        python = sys.executable
+        os.execl(python, python, *sys.argv)
+        
 
     def set_fps_double(self, value=None):
         target_double_state = not self.fps_double if value is None else value in (1, True)

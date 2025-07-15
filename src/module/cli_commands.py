@@ -82,7 +82,8 @@ class CommandExecutor(threading.Thread):
             # ── System control ────────────────────────────────────────────────────
             'reboot'                 : (cinepi_controller.reboot,         None),
             'shutdown'               : (cinepi_controller.safe_shutdown,  None),
-            'restart'                : (cinepi_app.restart,               None),
+            'restart camera'         : (cinepi_app.restart,        None),
+            'restart cinemate'       : (cinepi_controller.restart_cinemate,        None),
 
             # ── Free-mode toggles ────────────────────────────────────────────────
             'set iso free'           : (cinepi_controller.set_iso_free,   [int, str]),

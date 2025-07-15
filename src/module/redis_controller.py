@@ -10,7 +10,7 @@ What’s new in this revision
 """
 
 from __future__ import annotations
-import logging, threading, redis, psutil
+import logging, threading, redis, psutil, time
 from enum import Enum
 
 # ───────────────────────── parameter keys ────────────────────────────
@@ -38,6 +38,9 @@ class ParameterKey(Enum):
     IS_WRITING        = "is_writing"
     IS_WRITING_BUF    = "is_writing_buf"
     
+    TC_CAM0           = "tc_cam0"
+    TC_CAM1           = "tc_cam1"
+    
     ISO               = "iso"
     LORES_HEIGHT      = "lores_height"
     LORES_WIDTH       = "lores_width"
@@ -63,7 +66,8 @@ class ParameterKey(Enum):
     LAST_DNG_CAM0       = "last_dng_cam0"
     
     ZOOM                = "zoom"  # digital zoom factor for streams 0 & 2
-    WRITE_SPEED_TO_DRIVE = "write_speed_to_drive"    
+    WRITE_SPEED_TO_DRIVE = "write_speed_to_drive"
+    RECORDING_TIME       = "recording_time"
 
 
 # ────────────────────────── tiny pub‑sub helper ──────────────────────
@@ -79,7 +83,7 @@ class Event:
 # ────────────────────────── main controller class ────────────────────
 class RedisController:
 
-    def __init__(self, host="localhost", port=6379, db=0, channel="cp_controls"):
+    def __init__(self, host="localhost", port=6379, db=0, channel="cp_controls", conform_frame_rate: int = 24):
         self.r      = redis.StrictRedis(host=host, port=port, db=db)
         self.ps     = self.r.pubsub(); self.ps.subscribe(channel)
         self.lock   = threading.Lock()
@@ -87,6 +91,11 @@ class RedisController:
         self.local_updates: set[str] = set()
 
         self.redis_parameter_changed = Event()
+
+        self.conform_frame_rate = conform_frame_rate
+        self.recording_start_time: float | None = None
+        self._rec_timer_stop = threading.Event()
+        self._rec_timer_thread: threading.Thread | None = None
 
         self._prime_cache()
         self._thread = threading.Thread(target=self._listen, daemon=True)
@@ -111,6 +120,12 @@ class RedisController:
                     self.local_updates.remove(key)
                 value = (self.r.get(key) or b"").decode()
                 self.cache[key] = value
+
+            if key == ParameterKey.REC.value:
+                if value == "1":
+                    self._start_recording_timer()
+                else:
+                    self._stop_recording_timer()
             # notify subscribers – no log spam here
             if key != ParameterKey.FPS_ACTUAL.value:
                 self.redis_parameter_changed.emit({"key": key, "value": value})
@@ -145,6 +160,40 @@ class RedisController:
 
         # immediate local notification
         self.redis_parameter_changed.emit({"key": key_name, "value": str(value)})
+
+    # ─────────────────────── recording timer helpers ─────────────────────
+    def _format_timecode(self, elapsed: float) -> str:
+        rate = self.conform_frame_rate
+        total_frames = int(elapsed * rate)
+        frames = total_frames % rate
+        total_seconds = total_frames // rate
+        seconds = total_seconds % 60
+        minutes = (total_seconds // 60) % 60
+        hours = total_seconds // 3600
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}:{frames:02d}"
+
+    def _run_recording_timer(self):
+        while not self._rec_timer_stop.is_set():
+            if self.recording_start_time is None:
+                break
+            elapsed = time.time() - self.recording_start_time
+            tc = self._format_timecode(elapsed)
+            self.set_value(ParameterKey.RECORDING_TIME, tc)
+            self._rec_timer_stop.wait(1 / self.conform_frame_rate)
+
+    def _start_recording_timer(self):
+        self._stop_recording_timer()
+        self.recording_start_time = time.time()
+        self.set_value(ParameterKey.RECORDING_TIME, "00:00:00:00")
+        self._rec_timer_stop.clear()
+        self._rec_timer_thread = threading.Thread(target=self._run_recording_timer, daemon=True)
+        self._rec_timer_thread.start()
+
+    def _stop_recording_timer(self):
+        self._rec_timer_stop.set()
+        if self._rec_timer_thread and self._rec_timer_thread.is_alive():
+            self._rec_timer_thread.join(timeout=0.5)
+        self._rec_timer_thread = None
 
     # optional helper -------------------------------------------------
     def stop_listener(self):

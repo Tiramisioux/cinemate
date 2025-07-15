@@ -10,6 +10,7 @@ import os
 import json
 import shutil
 from PIL import Image, ImageDraw, ImageFont
+import glob
 
 from module.config_loader import load_settings
 from module.logger import configure_logging
@@ -121,14 +122,6 @@ def graphic_splash(text="THIS IS A COOL MACHINE"):
     fb.show(img)
     return fb        # keep it so you can blank later
 
-# Graceful exit handler
-def handle_exit(signal, frame):
-    logging.info("Graceful shutdown initiated.")
-    sys.exit(0)
-
-signal.signal(signal.SIGINT, handle_exit)
-signal.signal(signal.SIGTERM, handle_exit)
-
 def get_raspberry_pi_model():
     try:
         with open('/proc/device-tree/model', 'r') as f:
@@ -147,12 +140,32 @@ def check_hotspot_status():
     return any('wifi' in line and 'Hotspot' in line for line in result.stdout.split('\n'))
 
 def setup_logging(debug_mode):
+    """
+    Configure logging:
+    - Clears existing .log files on startup to prevent unbounded growth
+    - Resets any existing root logger handlers to avoid duplicate console output
+    """
     logging_level = logging.DEBUG if debug_mode else logging.INFO
 
     # Ensure logs directory exists
     log_dir = '/home/pi/cinemate/src/logs'
     os.makedirs(log_dir, exist_ok=True)
 
+    # Clear existing log files
+    pattern = os.path.join(log_dir, '*.log')
+    for logfile in glob.glob(pattern):
+        try:
+            os.remove(logfile)
+        except OSError as e:
+            # Removal failures reported to stderr
+            print(f"Warning: Failed to remove log file {logfile}: {e}")
+
+    # Remove all existing handlers from the root logger to prevent duplicate messages
+    root_logger = logging.getLogger()
+    for handler in list(root_logger.handlers):
+        root_logger.removeHandler(handler)
+
+    # Configure new logging handlers (file, serial, etc.)
     return configure_logging(MODULES_OUTPUT_TO_SERIAL, logging_level)
 
 def start_hotspot():
@@ -165,7 +178,8 @@ def start_hotspot():
 
 def initialize_system(settings):
     """Initialize core system components."""
-    redis_controller = RedisController()
+    conf_rate = settings.get("settings", {}).get("conform_frame_rate", 24)
+    redis_controller = RedisController(conform_frame_rate=conf_rate)
     sensor_detect = SensorDetect()
     ssd_monitor = SSDMonitor(redis_controller=redis_controller)
     usb_monitor = USBMonitor(ssd_monitor)
@@ -214,7 +228,7 @@ def main():
     set
 
     # Start WiFi hotspot if available
-    start_hotspot()
+#    start_hotspot()
 
     # Initialize system components
     redis_controller, sensor_detect, ssd_monitor, usb_monitor, gpio_output, dmesg_monitor = initialize_system(settings)
@@ -231,7 +245,9 @@ def main():
         settings.get("preview", {}).get("default_zoom", 1.0)
 )
 
-
+    # Reset recording time
+    redis_controller.set_value(ParameterKey.RECORDING_TIME.value, 0)
+    
     # Initialize CinePi application
     cinepi = CinePi(redis_controller, sensor_detect)
     
@@ -362,7 +378,6 @@ def main():
         signal.signal(signal.SIGINT, signal.SIG_DFL)
         os.kill(os.getpid(), signal.SIGINT)
 
-        
     signal.signal(signal.SIGINT, handle_exit)
     signal.signal(signal.SIGTERM, handle_exit)
 

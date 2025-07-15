@@ -53,7 +53,8 @@
   },
   
   "settings": {
-    "light_hz": [50, 60]
+    "light_hz": [50, 60],
+    "conform_frame_rate": 24
   },
   
   "analog_controls": {
@@ -106,7 +107,7 @@
       "debounce_time": "0.1",
       "press_action": "None",
       "single_click_action": {"method": "set_resolution"},
-      "double_click_action": {"method": "restart_camera"},
+      "double_click_action": {"method": "restart_cinemate"},
       "triple_click_action": {"method": "reboot"},
       "hold_action": {"method": "toggle_mount"}
     }
@@ -119,19 +120,14 @@
         "state_off_action": {"method": "set_all_lock", "args": [0]}
       },
     {
-      "pin": 24,
-      "state_on_action": {"method": "set_trigger_mode", "args": [1]},
-      "state_off_action": {"method": "set_trigger_mode", "args": [0]}
-    },
-    {
       "pin": 22,
       "state_on_action": {"method": "set_shutter_a_sync_mode", "args": [1]},
       "state_off_action": {"method": "set_shutter_a_sync_mode", "args": [0]}
     },
     {
       "pin": 18,
-      "state_on_action": {"method": "set_filter", "args": [1]},
-      "state_off_action": {"method": "set_filter", "args": [0]}
+      "state_on_action": {"method": "set_filter", "args": [0]},
+      "state_off_action": {"method": "set_filter", "args": [1]}
     }
   ],
   

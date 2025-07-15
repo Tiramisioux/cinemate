@@ -171,6 +171,8 @@ class SimpleGUI(threading.Thread):
             "media_label": {"pos": (98, 1050), "size": 30, "font": "regular"},
             "disk_space": {"pos": (192, 1041), "size": 41, "font": "bold"},
             "write_speed": {"pos": (360, 1041), "size": 41, "font": "bold"},
+
+            "recording_time": {"pos": (580, 1041), "size": 41, "font": "bold"},
             
             "clip_label": {"pos": (510, 1050), "size": 30, "font": "regular"},
             "clip_name": {"pos": (540, 1041), "size": 41, "font": "bold"},
@@ -236,6 +238,7 @@ class SimpleGUI(threading.Thread):
             "disk_space": {"normal": (249,249,249), "inverse": "black"},
             "write_speed": {"normal": (136,136,136), "inverse": "black"},
             "frame_count": {"normal": (136,136,136), "inverse": "black"},
+            "recording_time": {"normal": (249,249,249), "inverse": "black"},
             
             "clip_label": {"normal": (136,136,136), "inverse": "black"},
             "clip_name": {"normal": (249,249,249), "inverse": "black"},
@@ -448,6 +451,22 @@ class SimpleGUI(threading.Thread):
         if abs(z - 1.0) > 1e-3:                    # only show when ≠ 1.0
             values["zoom_factor"] = f"{z:.1f}"
 
+        # ─── format recording_time from "HH:MM:SS:ff" → "MM:SS" or "HH:MM:SS" ───
+        raw_rt = self.redis_controller.get_value(ParameterKey.RECORDING_TIME.value)
+        if raw_rt:
+            parts = raw_rt.split(":")
+            # expect at least ["HH","MM","SS",...]
+            if len(parts) >= 3:
+                h, m, s = map(int, parts[:3])
+                if h > 0:
+                    fmt = f"{h:02d}:{m:02d}:{s:02d}"
+                else:
+                    fmt = f"{m:02d}:{s:02d}"
+                if raw_rt != "0":
+                    values["recording_time"] = fmt
+                else:
+                    values["recording_time"] = ""
+
         # ───────────────── CLIP / LAST-DNG display ───────────────
         last_cam1_full = self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value)
         last_cam0_full = self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM0.value)
@@ -460,8 +479,9 @@ class SimpleGUI(threading.Thread):
             values["clip_name_cam1"] = clip_cam1
             values["clip_name"]      = clip_cam0
         else:
+            pass
             # only one camera – keep it on the baseline row
-            values["clip_name"] = clip_cam0 or clip_cam1 or ""
+            #values["clip_name"] = clip_cam0 or clip_cam1 or ""
             
 
         # ── add right-column data when CAM1 exists ────────────────
@@ -1013,7 +1033,7 @@ class SimpleGUI(threading.Thread):
                 
         self.update_smoothed_vu_levels()
         self.draw_right_vu_meter(draw)
-        self.draw_framebuffer_vu_meter(draw)
+        #self.draw_framebuffer_vu_meter(draw)
 
         vu = self.vu_smoothed  # Or .usb_monitor.audio_monitor.vu_levels if you want raw
         # if vu:

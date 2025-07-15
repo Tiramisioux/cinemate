@@ -23,7 +23,7 @@ def load_settings(filename: str | Path) -> dict:
     # ── top-level placeholders ───────────────────────────────────────────
     settings.setdefault("gpio_output",     {})
     settings.setdefault("arrays",          {})
-    settings.setdefault("settings",        {"light_hz": [50, 60]})
+    settings.setdefault("settings",        {"light_hz": [50, 60], "conform_frame_rate": 24})
     settings.setdefault("analog_controls", {})
     settings.setdefault("free_mode",       {
         "iso_free":       False,

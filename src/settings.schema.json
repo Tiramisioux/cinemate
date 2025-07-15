@@ -49,6 +49,14 @@
         }
       }
     },
+    "welcome_message": {
+      "type": "string",
+      "default": "THIS IS A COOL MACHINE"
+    },
+    "welcome_image": {
+      "anyOf": [{"type": "string"}, {"type": "null"}],
+      "default": null
+    },
     "additionalProperties": true
   }
 }

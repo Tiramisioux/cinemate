@@ -182,5 +182,7 @@
       "write_speed_to_drive"
 
     ]
-  }
+  },
+  "welcome_message": "THIS IS A COOL MACHINE",
+  "welcome_image": null
 }

@@ -8,7 +8,6 @@ import busio
 import adafruit_ssd1306
 from PIL import Image, ImageDraw, ImageFont
 from module.utils import Utils
-from module.redis_controller import ParameterKey
 
 class i2cOledSettings(TypedDict):
     width: int
@@ -27,7 +26,7 @@ class I2cOled(threading.Thread):
         self.width = self.settings.get("width", 128)
         self.height = self.settings.get("height", 64)
         self.font_size = self.settings.get("font_size", 10)
-        self.values = self.settings.get("values", [ParameterKey.ISO.value, ParameterKey.FPS.value, ParameterKey.SHUTTER_A.value, 'resolution', ParameterKey.IS_RECORDING.value])
+        self.values = self.settings.get("values", ["iso", "fps", "shutter_a", "resolution", "is_recording"])
 
         self.i2c = busio.I2C(board.SCL, board.SDA)
         self.oled = adafruit_ssd1306.SSD1306_I2C(self.width, self.height, self.i2c)
@@ -45,15 +44,15 @@ class I2cOled(threading.Thread):
 
     def update(self):
         texts = {
-            ParameterKey.SHUTTER_A.value: {
+            "shutter_a": {
                 "label": "SHUTTER",
                 "suffix": "°",
             },
-            ParameterKey.WB_USER.value: {
+            "wb_user": {
                 "label": "WB",
                 "suffix": "K",
             },
-            ParameterKey.SPACE_LEFT.value: {
+            "space_left": {
                 "label": "SPACE",
                 "suffix": "GB",
             },
@@ -63,10 +62,10 @@ class I2cOled(threading.Thread):
         firstLine = []
         for key in self.values:
             match key:
-                case ParameterKey.IS_RECORDING.value:
+                case "is_recording":
                     firstLine.append("●" if bool(int(self.redis_controller.get_value(key, 0))) else " ")
                 case "resolution":
-                    firstLine.append(f"{self.redis_controller.get_value(ParameterKey.WIDTH.value, '')}x{self.redis_controller.get_value(ParameterKey.HEIGHT.value, '')}@{self.redis_controller.get_value(ParameterKey.BIT_DEPTH.value, '')}Bit")
+                    firstLine.append(f"{self.redis_controller.get_value('width', '')}x{self.redis_controller.get_value('height', '')}@{self.redis_controller.get_value('bit_depth', '')}Bit")
                 case "cpu_load":
                     lines.append(f"CPU: {Utils.cpu_load()}")
                 case "cpu_temp":

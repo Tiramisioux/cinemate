@@ -8,6 +8,7 @@ from threading import Thread
 from typing import List, Optional
 from threading import Event as ThreadEvent
 from typing import List
+import os, signal
 
 from module.config_loader import load_settings
 from module.redis_controller import ParameterKey
@@ -144,7 +145,9 @@ class CinePiProcess(Thread):
     def run(self):
         cmd = ['cinepi-raw'] + self._build_args()
         logging.info('[%s] Launch: %s', self.cam, cmd)
-        self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.proc = subprocess.Popen(cmd,
+                                     stdout=subprocess.PIPE, 
+                                     stderr=subprocess.PIPE)
         Thread(target=self._pump, args=(self.proc.stdout, self.out_q)).start()
         Thread(target=self._pump, args=(self.proc.stderr, self.err_q)).start()
         self.proc.wait()

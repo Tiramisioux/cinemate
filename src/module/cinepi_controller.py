@@ -1129,25 +1129,12 @@ class CinePiController:
         self.fps_double = target_double_state
         
     def print_settings(self):
-        iso = self.get_setting('iso')
-        shutter_a = self.get_setting('shutter_a')
-        fps = self.get_setting('fps')
-        height = self.get_setting('height')
-        
+        """Display all Redis keys with their current values."""
         print()
-        print(f"{'iso':<20}{iso:<20}{str(self.iso_steps):<20}")
-        print(f"{'Shutter angle':<20}{shutter_a:<20}{str(self.shutter_a_steps_dynamic):<20}")
-        print(f"{'Shutter angle nom':<20}{self.shutter_a_nom:<20}{str(self.shutter_a_steps):<20}")
-        print(f"{'FPS':<20}{fps:<20}{str(self.fps_steps_dynamic):<20}")
-        print(f"{'Resolution':<20}{height:<20}")
-        print()
-        print(f"{'Parameters Lock':<20}{str(self.parameters_lock):<20}")
-        print()
-        print(f"{'FPS Multiplier':<20}{str(self.fps_multiplier):<20}")
-        print()
-        print(f"{'Shutter sync':<20}{str(self.shutter_a_sync_mode):<20}")
-        print()
-        print(f"{'GUI layout':<20}{str(self.gui_layout):<20}")
+        print(f"{'Parameter':<25}Value")
+        for key in ParameterKey:
+            value = self.redis_controller.get_value(key.value)
+            print(f"{key.value:<25}{value}")
         
     def seconds_to_fraction_text(self, exposure_time_seconds):
         if exposure_time_seconds and exposure_time_seconds > 0:

@@ -68,6 +68,7 @@ class BlacklistFilter(logging.Filter):
 def configure_logging(_blacklist, level=logging.INFO):
     
     BLACKLISTED_MODULES = [
+    #'[storage-automount]'
     'ssd_monitor',
     #'dmesg_monitor',
     #'usb_monitor',

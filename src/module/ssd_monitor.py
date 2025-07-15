@@ -110,11 +110,11 @@ class SSDMonitor:
         )
 
         # --- watch storage-automount logs -----------------------------------
-        self._jthread = threading.Thread(
-            target=self._journal_loop, daemon=True, name="SSDJournal"
-        )
-        self._jthread.start()
-        logging.info("SSDMonitor journal listener started.")
+        # self._jthread = threading.Thread(
+        #     target=self._journal_loop, daemon=True, name="SSDJournal"
+        # )
+        # self._jthread.start()
+        # logging.info("SSDMonitor journal listener started.")
 
 
         self._cfe_hat_present = self._detect_cfe_hat()

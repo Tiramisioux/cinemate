@@ -11,6 +11,8 @@ class QueueHandler(logging.Handler):
         log_entry = self.format(record)
         self.log_queue.put(log_entry)
 
+# Blacklist of modules to filter out from logging  
+      
 class ColoredFormatter(logging.Formatter):
     
     MODULE_COLORS = {
@@ -22,7 +24,6 @@ class ColoredFormatter(logging.Formatter):
         'gpio_input': {'color': 'light_yellow', 'attrs': []},
         'cinepi_controller': {'color': 'light_green', 'attrs': []},
         'analog_controls': {'color': 'yellow', 'attrs': []},
-        'PWMcontroller': {'color': 'light_grey', 'attrs': []},
         'ssd_monitor': {'color': 'cyan', 'attrs': ['bold']},
         'gpio_output': {'color': 'light_red', 'attrs': []},
         'system_button': {'color': 'white', 'attrs': []},
@@ -52,21 +53,38 @@ class ColoredFormatter(logging.Formatter):
         colored_message = colored(colored_message, attrs=module_attrs)  # Apply module-specific attributes
         
         return colored_message
-
-class ModuleFilter(logging.Filter):
-    def __init__(self, allowed_modules):
+    
+class BlacklistFilter(logging.Filter):
+    def __init__(self, blocked_modules):
         super().__init__()
-        self.allowed_modules = allowed_modules
+        self.blocked = set(blocked_modules)
 
     def filter(self, record):
-        module_name = record.module.strip()  # strip whitespaces
-        is_allowed = module_name in self.allowed_modules
-        if not is_allowed:
-            pass #print(f"Filtered out '{module_name}', because it's not in {self.allowed_modules}")
-        return is_allowed
+        # return False to drop the record entirely
+        return record.module.strip() not in self.blocked
+
 
 # Configure the logging
-def configure_logging(allowed_modules, level=logging.INFO):
+def configure_logging(_blacklist, level=logging.INFO):
+    
+    BLACKLISTED_MODULES = [
+    'ssd_monitor',
+    #'dmesg_monitor',
+    #'usb_monitor',
+    #'audio_recorder',
+    #'gpio_input',
+    #'analog_controls',
+    #'gpio_output',
+    #'system_button',
+    #'rotary_encoder',
+    #'simple_gui',
+    #'sensor_detect',
+    #'cinepi_app',
+    #'redis_controller',
+    #'cinepi_controller',
+    #'main',
+]
+    
     log_format = '%(asctime)s.%(msecs)03d: %(levelname)s: %(module)s %(message)s'
     date_format = '%S'
     formatter = ColoredFormatter(log_format, datefmt=date_format)
@@ -90,9 +108,9 @@ def configure_logging(allowed_modules, level=logging.INFO):
     # Instantiate and configure QueueHandler
     queue_handler = QueueHandler(log_queue)
     queue_handler.setFormatter(formatter)
-
-    module_filter = ModuleFilter(allowed_modules)
-    queue_handler.addFilter(module_filter)  # add filter to the handler
+    
+    blacklist = ['ssd_monitor', 'dmesg_monitor']
+    queue_handler.addFilter(BlacklistFilter(BLACKLISTED_MODULES))
 
     logger.addHandler(queue_handler)
 

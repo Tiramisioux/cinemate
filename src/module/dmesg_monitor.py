@@ -5,7 +5,7 @@ import time
 
 class DmesgMonitor(threading.Thread):
     def __init__(self):
-        super().__init__()
+        super().__init__(daemon=True)
         self.keywords = {
             "Undervoltage": "Under-voltage detected!",
             "Voltage_normalised": "Voltage normalised",

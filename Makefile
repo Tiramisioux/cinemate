@@ -22,6 +22,7 @@ all: help
 # Install / update the service file
 # -------------------------------------------------------------------
 install:
+	cd src/module/app && npm ci
 	sudo install -m 644 $(LOCAL_SERVICE_FILE) $(SERVICE_FILE_PATH)
 	sudo systemctl daemon-reload
 	@echo "Installed $(SERVICE_FILE_PATH)"

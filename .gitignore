@@ -192,6 +192,10 @@ $RECYCLE.BIN/
 __pycache__/
 tests/
 src/logs/*.log
+logs/
 
 # Cinemate settings file
 settings.json
+
+# node
+node_modules/

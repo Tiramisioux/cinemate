@@ -1,3 +1,4 @@
+import logging
 from flask_socketio import emit
 import time
 from module.redis_controller import ParameterKey
@@ -8,6 +9,7 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
     def handle_connect():
         initial_values = {
             'iso': redis_controller.get_value(ParameterKey.ISO.value),
+            'iso_steps': cinepi_controller.iso_steps,
             'shutter_a': redis_controller.get_value(ParameterKey.SHUTTER_A.value),
             'fps': redis_controller.get_value(ParameterKey.FPS_ACTUAL.value),
             'background_color': simple_gui.get_background_color(),
@@ -130,3 +132,12 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
     def handle_unmount():
         cinepi_controller.unmount()
         socketio.emit('unmount_complete')
+
+    @socketio.on('reboot')
+    def handle_reboot():
+        logging.info('socket reboot');
+        cinepi_controller.reboot()
+
+    @socketio.on('shutdown')
+    def handle_shutdown():
+        cinepi_controller.safe_shutdown()

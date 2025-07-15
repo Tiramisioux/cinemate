@@ -5,314 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MJPEG Stream with Overlay</title>
     <style>
+        :root {
+            --top-bar-height: 29px;
+            --bottom-bar-height: 29px;
+        }
+        @font-face {
+            font-family: 'Din2014';
+            src: url('../static/fonts/DIN2014-Regular.ttf');
+            font-weight: 400;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'Din2014';
+            src: url('../static/fonts/DIN2014-Bold.ttf');
+            font-weight: 700;
+            font-style: normal;
+        }
         body {
             margin: 0;
             padding: 0;
-            font-family: 'Arial', sans-serif;
-            background-color: {{ background_color }};
-        }
-        .top-bar, .bottom-bar {
-            background-color: black;
+            font-family: 'Din2014', sans-serif;
+            font-weight: 400;
             font-size: 16px;
-            color: #fff;
-            padding: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .top-bar select, .bottom-bar select {
-            margin-left: 10px;
-            padding: 8px;
-            font-size: 16px;
-            border: none;
-            background-color: #111;
-            color: #fff;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .top-bar select:focus, .bottom-bar select:focus {
-            outline: none;
-        }
-        #stream-container {
-            background-color: black;
-            position: relative;
-            width: 100%;
-            height: 100%;
-            padding-bottom: 46.25%;
-            overflow: hidden;
-            margin: 0;
-        }
-        #stream {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            background-color: black;
+            color: rgb(249,249,249);
         }
     </style>
 </head>
 <body>
-    <div class="top-bar">
-        <div>ISO:
-            <select id="iso-select">
-                {% for iso_value in iso_values %}
-                    <option value="{{ iso_value }}" {% if iso_value == current_iso %}selected{% endif %}>{{ iso_value }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div>Shutter Angle:
-            <select id="shutter-speed-select">
-                {% for shutter_speed_value in shutter_speed_values %}
-                    <option value="{{ shutter_speed_value }}" {% if shutter_speed_value == current_shutter_a %}selected{% endif %}>{{ shutter_speed_value }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div>FPS:
-            <select id="fps-select">
-                {% for fps_value in fps_values %}
-                    <option value="{{ fps_value }}" {% if fps_value == current_fps %}selected{% endif %}>{{ fps_value }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div>WB:
-            <select id="wb-select">
-                {% for wb_value in wb_steps %}
-                    <option value="{{ wb_value }}" {% if wb_value == current_wb %}selected{% endif %}>{{ wb_value }}K</option>
-                {% endfor %}
-            </select>
-        </div>
-    </div>
-    <div id="stream-container">
-        <img id="stream" src="{{ stream_url }}" alt="Stream">
-    </div>
+    <cinemate-app></cinemate-app>
+    <!--
     <div class="bottom-bar">
-        <div><span id="disk-space"></span></div>
-        <button id="unmount-btn">Unmount</button>
-        <div>CPU: <span id="cpu-load"></span></div>
-        <div>RAM: <span id="ram-load"></span></div>
-        <div>TEMP: <span id="cpu-temp"></span></div>
-        <div><span id="current-sensor"></span>
-            <select id="resolution-select">
-                {% for resolution in resolution_values %}
-                    <option value="{{ resolution.mode }}">{{ resolution.width }}x{{ resolution.height }}</option>
-                {% endfor %}
-            </select>
-        </div>
         <div><span id="framecount"></span></div>
         <div> <span id="buffer"></span></div>
-        <button id="fullscreen-btn">Enter Fullscreen</button>
-    </div>
-    <script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
-    <script>
-        const socket = io();
+    </div> -->
+    <!-- <script src="{{ url_for('static', filename='dist/index.js') }}" type="module"></script> -->
+    <script src="../static/dist/index.js" type="module"></script>
 
-        function updateShutterSpeedOptions(shutter_a_steps, current_shutter_a) {
-            const shutterSpeedSelect = document.getElementById('shutter-speed-select');
-            shutterSpeedSelect.innerHTML = '';
-            shutter_a_steps.forEach(angle => {
-                const option = document.createElement('option');
-                option.value = angle;
-                option.textContent = angle;
-                if (angle == current_shutter_a) {
-                    option.selected = true;
-                }
-                shutterSpeedSelect.appendChild(option);
-            });
-        }
-
-        function updateFpsOptions(fps_steps, current_fps) {
-            const fpsSelect = document.getElementById('fps-select');
-            fpsSelect.innerHTML = '';
-            fps_steps.forEach(fps => {
-                const option = document.createElement('option');
-                option.value = fps;
-                option.textContent = fps;
-                if (fps == current_fps) {
-                    option.selected = true;
-                }
-                fpsSelect.appendChild(option);
-            });
-        }
-
-        function updateWBOptions(wb_steps, current_wb) {
-            const wbSelect = document.getElementById('wb-select');
-            wbSelect.innerHTML = '';
-            wb_steps.forEach(wb => {
-                const option = document.createElement('option');
-                option.value = wb;
-                option.textContent = `${wb}K`;
-                if (wb == current_wb) {
-                    option.selected = true;
-                }
-                wbSelect.appendChild(option);
-            });
-        }
-
-        socket.on('initial_values', data => {
-            document.getElementById('iso-select').value = data.iso;
-            updateShutterSpeedOptions(data.shutter_a_steps, data.shutter_a);
-            updateFpsOptions(data.fps_steps, data.fps);
-            updateWBOptions(data.wb_steps, data.wb);
-
-            document.body.style.backgroundColor = data.background_color;
-            document.getElementById('disk-space').innerText = data.disk_space;
-            document.getElementById('cpu-load').innerText = data.cpu_load;
-            document.getElementById('ram-load').innerText = data.ram_load;
-            document.getElementById('cpu-temp').innerText = data.cpu_temp;
-
-            document.getElementById('framecount').innerText = data.framecount;
-            document.getElementById('buffer').innerText = data.buffer;
-
-            document.getElementById('current-sensor').innerText = data.current_sensor;
-            const resolutionSelect = document.getElementById('resolution-select');
-            resolutionSelect.innerHTML = '';
-            data.sensor_resolutions.forEach(res => {
-                const option = document.createElement('option');
-                option.value = res.mode;
-                option.textContent = res.resolution;
-                resolutionSelect.appendChild(option);
-            });
-            resolutionSelect.value = data.selected_resolution_mode;
-        });
-
-        socket.on('parameter_change', data => {
-            if (data.iso !== undefined) {
-                document.getElementById('iso-select').value = data.iso;
-            }
-            if (data.shutter_a !== undefined) {
-                const currentShutter = data.shutter_a;
-                document.getElementById('shutter-speed-select').value = currentShutter;
-                socket.emit('request_shutter_a_steps', {}, (response) => {
-                    updateShutterSpeedOptions(response.shutter_a_steps, currentShutter);
-                });
-            }
-            if (data.fps !== undefined) {
-                document.getElementById('fps-select').value = data.fps;
-            }
-            if (data.wb !== undefined) {
-                document.getElementById('wb-select').value = data.wb;
-            }
-            if (data.framebuffer !== undefined) {
-                document.getElementById('framebuffer').value = data.framebuffer;
-            }   
-        });
-
-        socket.on('shutter_a_update', data => {
-            updateShutterSpeedOptions(data.shutter_a_steps, data.current_shutter_a);
-        });
-
-        socket.on('fps_update', data => {
-            updateFpsOptions(data.fps_steps, data.fps_actual);
-        });
-
-        socket.on('gui_data_change', data => {
-            if (data.disk_space !== undefined) {
-                document.getElementById('disk-space').innerText = data.disk_space;
-            }
-            if (data.cpu_load !== undefined) {
-                document.getElementById('cpu-load').innerText = data.cpu_load;
-            }
-            if (data.ram_load !== undefined) {
-                document.getElementById('ram-load').innerText = data.ram_load;
-            }
-        });
-
-        socket.on('background_color_change', data => {
-            updateBackgroundColor(data.background_color);
-        });
-
-        function updateBackgroundColor(color) {
-            document.body.style.backgroundColor = color;
-            const elementsToChange = document.querySelectorAll('*:not(button)');
-            elementsToChange.forEach(element => {
-                element.style.backgroundColor = color;
-            });
-        }
-
-        document.getElementById('iso-select').addEventListener('change', function() {
-            const iso = this.value;
-            socket.emit('change_iso', { iso });
-        });
-
-        document.getElementById('shutter-speed-select').addEventListener('change', function() {
-            const shutterAngle = this.value;
-            socket.emit('change_shutter_a', { shutter_a: shutterAngle });
-        });
-
-        document.getElementById('fps-select').addEventListener('change', function() {
-            const fps = this.value;
-            socket.emit('change_fps', { fps });
-        });
-
-        document.getElementById('wb-select').addEventListener('change', function() {
-            const wb = this.value;
-            socket.emit('change_wb', { wb });
-        });
-
-        document.getElementById('resolution-select').addEventListener('change', function() {
-            const resolutionMode = this.value;
-            socket.emit('change_resolution', { mode: resolutionMode });
-        });
-
-        document.getElementById('unmount-btn').addEventListener('click', function() {
-            socket.emit('unmount');
-        });
-
-        document.getElementById('stream-container').addEventListener('click', function() {
-            socket.emit('container_tap');
-        });
-
-        socket.on('reload_stream', () => {
-            reloadStream();
-        });
-
-        function reloadStream() {
-            const streamElement = document.getElementById('stream');
-            const currentSrc = streamElement.src;
-            streamElement.src = '';
-            setTimeout(() => {
-                streamElement.src = currentSrc;
-            }, 2000);
-        }
-
-        socket.on('reload_browser', () => {
-            window.location.reload();
-        });
-
-        function toggleFullScreen() {
-            const elem = document.documentElement;
-            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                if (elem.requestFullscreen) {
-                    elem.requestFullscreen();
-                } else if (elem.webkitRequestFullscreen) {
-                    elem.webkitRequestFullscreen();
-                }
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
-                }
-            }
-        }
-
-        document.getElementById('fullscreen-btn').addEventListener('click', function() {
-            toggleFullScreen();
-            updateFullscreenButton();
-        });
-
-        function updateFullscreenButton() {
-            const isInFullScreen = document.fullscreenElement !== null || document.webkitFullscreenElement !== null;
-            document.getElementById('fullscreen-btn').textContent = isInFullScreen ? 'Exit Fullscreen' : 'Enter Fullscreen';
-        }
-
-        document.getElementById('fullscreen-btn').addEventListener('touchstart', function(event) {
-            event.preventDefault();
-            toggleFullScreen();
-            updateFullscreenButton();
-        });
-    </script>
 </body>
 </html>

@@ -1,0 +1,23 @@
+{
+  "name": "cinemate-web",
+  "version": "1.0.0",
+  "main": "static/dist/index.js",
+  "type": "module",
+  "scripts": {
+    "postinstall": "npm run build",
+    "build": "tsup",
+    "build:watch": "npm run build -- --watch",
+    "dev": "http-server ./ -p 8080 -c-1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "esbuild": "^0.25.5",
+    "lit": "^3.3.0",
+    "prettier": "^3.5.3",
+    "socket.io-client": "^4.8.1",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3"
+  }
+}

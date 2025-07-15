@@ -35,6 +35,8 @@ def load_settings(filename: str | Path) -> dict:
     settings.setdefault("two_way_switches",     [])
     settings.setdefault("rotary_encoders",      [])
     settings.setdefault("quad_rotary_encoders", {})
+    settings.setdefault("welcome_message", "THIS IS A COOL MACHINE")
+    settings.setdefault("welcome_image", None)
 
     # ── preview / zoom defaults ──────────────────────────────────────────
     preview_defaults = {

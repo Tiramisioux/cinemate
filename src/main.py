@@ -64,7 +64,7 @@ def clear_screen():
     except Exception as e:
         logging.warning(f"Could not clear screen: {e}")
 
-def start_splash():
+def start_splash(text="THIS IS A COOL MACHINE"):
     stop_event = threading.Event()
 
     big_font = "Lat15-TerminusBold16x32"        # ← choose from your list
@@ -83,6 +83,7 @@ def start_splash():
                 tty.write("\033[2J\033[H")          # clear screen
                 tty.write("\033#6")                 # double-WIDTH for this row
                 tty.write("\033#3")                 # double-HEIGHT top half
+                tty.write(text + "\n")
                 tty.flush()
 
                 while not stop_event.is_set():
@@ -104,20 +105,36 @@ def start_splash():
     t.start()
     return t, stop_event
 
-def graphic_splash(text="THIS IS A COOL MACHINE"):
-    fb = Framebuffer(0)              # open /dev/fb0
+def graphic_splash(text="THIS IS A COOL MACHINE", image_path=None):
+    fb_path = "/dev/fb0"
+    if not os.path.exists(fb_path):
+        logging.info("No HDMI framebuffer found. Skipping graphic splash")
+        return None
+
+    fb = Framebuffer(0)
+    if fb.size == (0, 0):
+        logging.info("Framebuffer not ready. Skipping graphic splash")
+        return None
+
     W, H = fb.size
 
-    # Pick any TTF you like and a big size
-    font = ImageFont.truetype("/home/pi/cinemate/resources/fonts/DIN2014-Regular.ttf",
-                              size=100)
+    img = Image.new("RGB", (W, H), "black")
 
-    img  = Image.new("RGB", (W, H), "black")
-    draw = ImageDraw.Draw(img)
-    tw, th = draw.textbbox((0, 0), text, font=font)[2:]
-
-    draw.text(((W - tw)//2, (H - th)//2),
-              text, font=font, fill="white")
+    if image_path and os.path.exists(image_path):
+        try:
+            pic = Image.open(image_path).convert("RGB")
+            pic = pic.resize((W, H))
+            img.paste(pic)
+        except Exception as e:
+            logging.error(f"Failed to load splash image: {e}")
+    else:
+        font = ImageFont.truetype(
+            "/home/pi/cinemate/resources/fonts/DIN2014-Regular.ttf",
+            size=100,
+        )
+        draw = ImageDraw.Draw(img)
+        tw, th = draw.textbbox((0, 0), text, font=font)[2:]
+        draw.text(((W - tw) // 2, (H - th) // 2), text, font=font, fill="white")
 
     fb.show(img)
     return fb        # keep it so you can blank later
@@ -220,7 +237,15 @@ def main():
     
     # Hide cursor
     hide_cursor()
-    fb_splash = graphic_splash()
+
+    splash_thread = splash_stop = None
+
+    welcome_text = settings.get("welcome_message", "THIS IS A COOL MACHINE")
+    welcome_image = settings.get("welcome_image")
+
+    fb_splash = graphic_splash(welcome_text, welcome_image)
+    if fb_splash is None:
+        splash_thread, splash_stop = start_splash(welcome_text)
 
     # Detect Raspberry Pi model
     pi_model = get_raspberry_pi_model()
@@ -324,11 +349,12 @@ def main():
 
     logging.info("--- Initialization Complete ---")
     
-    # # Stop splash and clear screen so the shell prompt is visible again
-    # splash_stop.set()
-    # splash_thread.join()
-    fb_splash.show(Image.new("RGB", fb_splash.size, "black"))   # blank
-    # fb_splash.close()        # optional
+    # Stop splash screen and clear framebuffer/tty
+    if fb_splash:
+        fb_splash.show(Image.new("RGB", fb_splash.size, "black"))
+    elif splash_stop:
+        splash_stop.set()
+        splash_thread.join()
     clear_screen()
     
     # Ensure system cleanup on exit
@@ -365,6 +391,12 @@ def main():
         if simple_gui:
             simple_gui.stop()              # <— new: quit the thread
             simple_gui.clear_framebuffer() # <— new: blank fb0
+
+        if fb_splash:
+            fb_splash.show(Image.new("RGB", fb_splash.size, "black"))
+        elif splash_stop:
+            splash_stop.set()
+            splash_thread.join()
 
         clear_screen()                     # wipe tty1
         show_cursor()

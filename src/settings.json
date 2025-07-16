@@ -4,9 +4,10 @@
   "system": {
     "wifi_hotspot": {
       "name": "CinePi",
-      "password": "11111111"
+      "password": "11111111",
+      "enabled": true
     }
-  },  
+  },
 
   "geometry": {
     "cam0": {

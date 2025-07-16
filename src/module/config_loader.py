@@ -24,6 +24,17 @@ def load_settings(filename: str | Path) -> dict:
     settings.setdefault("gpio_output",     {})
     settings.setdefault("arrays",          {})
     settings.setdefault("settings",        {"light_hz": [50, 60], "conform_frame_rate": 24})
+    system_cfg = settings.setdefault("system", {})
+    wifi_defaults = {
+        "name": "CinePi",
+        "password": "11111111",
+        "enabled": True,
+    }
+    wifi_cfg = system_cfg.setdefault("wifi_hotspot", {})
+    for k, v in wifi_defaults.items():
+        wifi_cfg.setdefault(k, v)
+    system_cfg["wifi_hotspot"] = wifi_cfg
+    settings["system"] = system_cfg
     settings.setdefault("analog_controls", {})
     settings.setdefault("free_mode",       {
         "iso_free":       False,

@@ -1,0 +1,61 @@
+/* ---------- PAGE BOX ---------- */
+@page {
+  size: A4 portrait;
+  margin: 69mm 25mm;      /* inner, outer */
+}
+
+/* ---------- MAIN FLOW ---------- */
+html, body {
+  font-family: "Roboto", sans-serif;
+  font-size: 12pt;
+  line-height: 1.5;
+  color: #222;
+}
+
+/* Constrain main content to 75 % of the printable width */
+main,
+.md-main,          /* Material containers */
+.md-content {
+  width: 75%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Headings – mimic the web theme but stick to safe units */
+h1 { font-size: 22pt; margin: 0 0 12pt; }
+h2 { font-size: 18pt; margin: 24pt 0 8pt; }
+h3 { font-size: 14pt; margin: 20pt 0 6pt; }
+
+/* Images: keep them inside the column */
+img {
+  max-width: 100%;
+  page-break-inside: avoid;
+}
+
+/* Code blocks */
+pre, code {
+  font-family: "Roboto Mono", monospace;
+  font-size: 10pt;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  padding: 2pt 3pt;
+  white-space: pre-wrap;           /* wraps long lines */
+}
+
+@page {
+  size: a4 portrait;
+  margin: 25mm 10mm 25mm 10mm;
+  counter-increment: page;
+  font-family: "Roboto","Helvetica Neue",Helvetica,Arial,sans-serif;
+  white-space: pre;
+  color: grey;
+  @top-left {
+      content: '© 2018 My Company';
+  }
+  @top-center {
+      content: string(chapter);
+  }
+  @top-right {
+      content: 'Page ' counter(page);
+  }
+}

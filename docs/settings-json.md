@@ -1,10 +1,10 @@
-# Cinemate `settings.json` User Guide
+# User settings
 
-This file controls how the camera behaves and how your buttons, switches and displays are mapped. It lives in `~/cinemate/src/settings.json` on the Raspberry Pi. You can edit it with any text editor; the settings take effect the next time you start Cinemate.
+This file controls how the camera behaves and how your buttons, switches and displays are mapped. It lives in `~/cinemate/src/settings.json` on the Raspberry Pi. You can edit it with any text editor; the settings take effect the next time you start CineMate.
 
 The configuration is structured as JSON. Each top‑level key describes a feature area of the system. Below is a tour of every section and what the options do.
 
-## 1. `welcome_message` and `welcome_image`
+## welcome message
 
 Text or image displayed briefly when Cinemate starts.
 
@@ -19,7 +19,7 @@ Example path: `/home/pi/welcome_image.bmp`.
 
 If `welcome image` path is set, this will override the text message.
 
-## 2. `system`
+## system
 
 ```json
 "system": {
@@ -31,13 +31,11 @@ If `welcome image` path is set, this will override the text message.
 }
 ```
 
-**name** – the Wi‑Fi network name (SSID) broadcast by the Pi when hotspot mode is enabled.
+- **name** – the Wi‑Fi network name (SSID) broadcast by the Pi when hotspot mode is enabled.
+- **password** – password for joining the hotspot.
+- **enabled** – set to `true` to start the hotspot automatically on boot. If set to `false`, CineMate will still start its web ui but stream it on whatever network the Pi is connected to.
 
-**password** – password for joining the hotspot.
-
-**enabled** – set to `true` to start the hotspot automatically on boot. If set to `false`, CineMate will still start its web ui but stream it on whatever network the Pi is connected to.
-
-## 3. `geometry`
+## geometry
 
 Controls image orientation for each camera port (`cam0`, `cam1`, etc.). These settings let you mount cameras in any orientation and still get an upright preview and recording. Example:
 
@@ -48,14 +46,12 @@ Controls image orientation for each camera port (`cam0`, `cam1`, etc.). These se
 }
 ```
 
-**rotate_180** – flip the image upside‑down.
-
-**horizontal_flip** – mirror the image left/right.
-
-**vertical_flip** – mirror the image top/bottom.
+- **rotate_180** – flip the image upside‑down.
+- **horizontal_flip** – mirror the image left/right.
+- **vertical_flip** – mirror the image top/bottom.
 
 
-## 4. `output`
+## output
 
 Maps each camera to an HDMI connector. Use `-1` for automatic selection.
 
@@ -66,7 +62,7 @@ Maps each camera to an HDMI connector. Use `-1` for automatic selection.
 }
 ```
 
-## 5. `preview`
+## preview
 
 Adjusts zoom levels for the HDMI/browser preview.
 
@@ -80,7 +76,7 @@ Adjusts zoom levels for the HDMI/browser preview.
 - **default_zoom** – magnification factor used at startup.
 - **zoom_steps** – list of zoom factors you can cycle through with the `set_zoom_step` command.
 
-## 6. `anamorphic_preview`
+## anamorphic_preview
 
 For stretching the preview when using anamorphic lenses.
 
@@ -94,7 +90,7 @@ For stretching the preview when using anamorphic lenses.
 - **default_anamorphic_factor** – factor loaded when Cinemate starts.
 - **anamorphic_steps** – selectable squeeze factors; values above `1.0` widen the image.
 
-## 7. `gpio_output`
+## gpio_output
 
 Defines pins used for visual feedback or sync signals.
 
@@ -109,7 +105,7 @@ Defines pins used for visual feedback or sync signals.
 
 * **rec_out_pin** – list of pins pulled high while recording (useful for tally LEDs).
 
-## 8. `arrays`
+## arrays
 
 Preset lists for exposure and frame‑rate settings. Cinemate will step through these values unless you enable free mode, either in the settings file or during runtime.
 
@@ -122,7 +118,7 @@ Preset lists for exposure and frame‑rate settings. Cinemate will step through 
 }
 ```
 
-## 9. `settings`
+## settings
 
 General options for runtime behaviour.
 
@@ -133,10 +129,10 @@ General options for runtime behaviour.
 }
 ```
 
-* **light_hz** – list of mains frequencies used to calculate flicker‑free shutter angles.
-* **conform_frame_rate** – frame rate used when conforming footage in post. This setting is not really used by CineMate yet but might be practical for future updates.
+* **light_hz** – list of mains frequencies used to calculate flicker‑free shutter angles. These are added to the shutter angle array and also dynamically calculated upon each fps change. This way, there is always a flicker free shutter angle value close by, when toggling through shutter angles, either via the cli or using buttons/pots/rotary encoder.
+* **conform_frame_rate** – frame rate intendend for project conforming in post. This setting is not really used by CineMate except for calculating the recording timecode tracker in redis but might be used in future updates.
 
-## 10. `analog_controls`
+## analog_controls
 
 Maps Grove Base HAT ADC channels to analogue dials (potentiometers). Use `null` to disable a dial.
 
@@ -149,9 +145,9 @@ Maps Grove Base HAT ADC channels to analogue dials (potentiometers). Use `null` 
 }
 ```
 
-_**Note** that even if you are using a Grove Base Hat, it might be useful to disable the dials not connected to pots, since noise from these connectors might trigger false readings._
+>_**Note** that even if you are using a Grove Base Hat, it might be useful to disable the dials not connected to pots, since noise from these connectors might trigger false readings._
 
-## 11. `free_mode`
+## free_mode
 
 When enabled, ignores the preset arrays and exposes the full range supported by the sensor.
 
@@ -164,7 +160,7 @@ When enabled, ignores the preset arrays and exposes the full range supported by 
 }
 ```
 
-## 12. `buttons`
+## buttons
 
 Defines GPIO push buttons. Each entry describes one button and the actions it triggers.
 
@@ -177,14 +173,16 @@ Defines GPIO push buttons. Each entry describes one button and the actions it tr
 }
 ```
 
-Common fields:
-
 * **pin** – BCM pin number the button is connected to.
 * **pull_up** – set `true` if the pin idles high (internal pull‑up). Use `false` for pull‑down wiring.
 * **debounce_time** – ignore additional presses within this time window (seconds).
 * **press_action**, **single_click_action**, **double_click_action**, **triple_click_action**, **hold_action** – actions to perform for each type of interaction. Actions call Cinemate CLI commands with optional `args`.
 
-## 13. `two_way_switches`
+>#### How “inverse” (1-0-1) buttons are auto-detected
+>Some push-buttons are wired closed = logic 1 and open = 0. At start-up, CineMate automatically detects buttons in state `true` and reverses them. This way the user can use any type of push buttons, both 1-0-1 and 0-1-0 types.
+
+
+## two_way_switches
 
 Latching on/off switches. Cinemate triggers an action whenever the state changes.
 
@@ -196,9 +194,9 @@ Latching on/off switches. Cinemate triggers an action whenever the state changes
 }
 ```
 
-## 14. `rotary_encoders`
+## rotary_encoders
 
-Quadrature rotary encoders used for fine adjustment of settings.
+Rotary encoders used for fine adjustment of settings. These can be wired straight to the GPIO pins of the Pi.
 
 ```json
 {
@@ -214,9 +212,9 @@ Quadrature rotary encoders used for fine adjustment of settings.
 * **clk_pin** and **dt_pin** – the two pins of the encoder.
 * **encoder_actions** – commands to run when turning the dial.
 
-## 15. `quad_rotary_encoders`
+## quad_rotary_encoders
 
-Support for the Adafruit Neopixel Quad rotary encoder breakout with four dials. Each entry assigns a dial to a setting and clones the behaviour of a button pin.
+Support for the Adafruit Neopixel Quad I2C rotary encoder breakout with four dials. Each entry assigns a dial to a setting and clones the behaviour of a button pin.
 
 ```json
 "quad_rotary_encoders": {
@@ -227,7 +225,7 @@ Support for the Adafruit Neopixel Quad rotary encoder breakout with four dials. 
 }
 ```
 
-## 16. `i2c_oled`
+## i2c_oled
 
 Configuration for the optional OLED status screen. This can be useful for presenting extra information appart from the HDMI/web display.
 
@@ -246,7 +244,7 @@ Configuration for the optional OLED status screen. This can be useful for presen
 * **font_size** – size of the displayed text.
 * **values** – list of Redis keys or pseudo‑keys to show (for example `cpu_temp`).
 
-Available keys come from `src/module/i2c_oled.py`. Common examples include:
+Available keys come from `src/module/i2c_oled.py`. Here are some examples:
 
 * `iso`, `fps` – basic camera settings.
 * `shutter_a` – shown as **SHUTTER** with a `°` suffix.

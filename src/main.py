@@ -153,8 +153,29 @@ def get_raspberry_pi_model():
         return 'unknown'
 
 def check_hotspot_status():
-    result = subprocess.run(['nmcli', 'con', 'show', '--active'], capture_output=True, text=True)
+    """Return True if a Wi-Fi hotspot connection is active."""
+    result = subprocess.run(
+        ['nmcli', 'con', 'show', '--active'], capture_output=True, text=True
+    )
     return any('wifi' in line and 'Hotspot' in line for line in result.stdout.split('\n'))
+
+def interface_has_ip(iface: str) -> bool:
+    """Return True if *iface* has an IPv4 address assigned."""
+    try:
+        res = subprocess.run(
+            ['ip', '-4', 'addr', 'show', iface],
+            capture_output=True, text=True, check=True
+        )
+        return any(
+            line.strip().startswith('inet ')
+            for line in res.stdout.splitlines()
+        )
+    except subprocess.CalledProcessError:
+        return False
+
+def network_available() -> bool:
+    """Return True if wlan0 or eth0 has an IP address."""
+    return interface_has_ip('wlan0') or interface_has_ip('eth0')
 
 def setup_logging(debug_mode):
     """
@@ -185,11 +206,14 @@ def setup_logging(debug_mode):
     # Configure new logging handlers (file, serial, etc.)
     return configure_logging(MODULES_OUTPUT_TO_SERIAL, logging_level)
 
-def start_hotspot():
-    wifi_manager = WiFiHotspotManager()
+def start_hotspot(settings) -> None:
+    """Start hotspot if enabled in *settings*."""
+    wifi_mgr = WiFiHotspotManager(settings=settings)
+    if not wifi_mgr.enabled:
+        logging.info("Wi-Fi hotspot disabled in settings")
+        return
     try:
-        wifi_mgr = WiFiHotspotManager()
-        wifi_mgr.create_hotspot() 
+        wifi_mgr.create_hotspot()
     except Exception as e:
         logging.error(f"Failed to start WiFi hotspot: {e}")
 
@@ -252,8 +276,8 @@ def main():
     logging.info(f"Detected Raspberry Pi model: {pi_model}")
     set
 
-    # Start WiFi hotspot if available
-#    start_hotspot()
+    # Start WiFi hotspot if configured
+    start_hotspot(settings)
 
     # Initialize system components
     redis_controller, sensor_detect, ssd_monitor, usb_monitor, gpio_output, dmesg_monitor = initialize_system(settings)
@@ -318,16 +342,16 @@ def main():
         i2c_oled = I2cOled(settings, redis_controller)
         i2c_oled.start()
 
-    # Start Streaming if hotspot is available
+    # Start Streaming if a network connection is available
     stream = None
-    if check_hotspot_status():
+    if network_available():
         app, socketio = create_app(redis_controller, cinepi_controller, simple_gui, sensor_detect)
         simple_gui.socketio = socketio
         stream = threading.Thread(target=socketio.run, args=(app,), kwargs={'host': '0.0.0.0', 'port': 5000, 'allow_unsafe_werkzeug': True})
         stream.start()
         logging.info("Stream module loaded")
     else:
-        logging.error("Didn't find Wi-Fi hotspot. Stream module not loaded")
+        logging.error("No network connection found. Stream module not loaded")
 
     mediator = Mediator(cinepi, cinepi_controller, redis_listener, redis_controller, ssd_monitor, gpio_output, stream, usb_monitor)
     

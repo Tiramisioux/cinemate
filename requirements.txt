@@ -17,3 +17,4 @@ board
 adafruit-blinka
 adafruit-circuitpython-seesaw
 adafruit-circuitpython-ssd1306
+mkdocs-with-pdf==0.9.3

@@ -17,21 +17,22 @@ DEFAULT_SSID = "CinePi"
 DEFAULT_PASS = "11111111"  # nmcli minimum
 
 
-def load_credentials(path: Path = SETTINGS_PATH) -> tuple[str, str]:
-    """Return (ssid, password) from *settings.json* with fallbacks."""
+def load_credentials(path: Path = SETTINGS_PATH) -> tuple[str, str, bool]:
+    """Return (ssid, password, enabled) from *settings.json* with fallbacks."""
     try:
         with path.open("r", encoding="utf-8") as fh:
             cfg = json.load(fh)
         wifi_cfg = cfg.get("system", {}).get("wifi_hotspot", {})
         ssid = wifi_cfg.get("name", DEFAULT_SSID) or DEFAULT_SSID
         pw = wifi_cfg.get("password", DEFAULT_PASS) or DEFAULT_PASS
+        enabled = bool(wifi_cfg.get("enabled", True))
         if len(pw) < 8:
             logging.warning("Password in settings <8 chars – using default")
             pw = DEFAULT_PASS
-        return ssid, pw
+        return ssid, pw, enabled
     except Exception as exc:  # pragma: no cover - best effort
         logging.error("Failed to load %s: %s", path, exc)
-        return DEFAULT_SSID, DEFAULT_PASS
+        return DEFAULT_SSID, DEFAULT_PASS, True
 
 
 def is_hotspot_active() -> bool:
@@ -74,8 +75,8 @@ def main() -> None:
     )
 
     while True:
-        ssid, pw = load_credentials()
-        if not is_hotspot_active():
+        ssid, pw, enabled = load_credentials()
+        if enabled and not is_hotspot_active():
             create_hotspot(ssid, pw)
         time.sleep(60)
 

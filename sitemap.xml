@@ -2,26 +2,46 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://tiramisioux.github.io/cinemate/</loc>
-         <lastmod>2025-07-08</lastmod>
+         <lastmod>2025-07-17</lastmod>
+    </url>
+    <url>
+         <loc>https://tiramisioux.github.io/cinemate/cinepi_multi/</loc>
+         <lastmod>2025-07-17</lastmod>
     </url>
     <url>
          <loc>https://tiramisioux.github.io/cinemate/cli_commands/</loc>
-         <lastmod>2025-07-08</lastmod>
+         <lastmod>2025-07-17</lastmod>
+    </url>
+    <url>
+         <loc>https://tiramisioux.github.io/cinemate/cli_user_guide/</loc>
+         <lastmod>2025-07-17</lastmod>
+    </url>
+    <url>
+         <loc>https://tiramisioux.github.io/cinemate/controller_methods/</loc>
+         <lastmod>2025-07-17</lastmod>
     </url>
     <url>
          <loc>https://tiramisioux.github.io/cinemate/coverpage/</loc>
-         <lastmod>2025-07-08</lastmod>
+         <lastmod>2025-07-17</lastmod>
     </url>
     <url>
-         <loc>https://tiramisioux.github.io/cinemate/inverse_buttons/</loc>
-         <lastmod>2025-07-08</lastmod>
+         <loc>https://tiramisioux.github.io/cinemate/install_guide/</loc>
+         <lastmod>2025-07-17</lastmod>
     </url>
     <url>
          <loc>https://tiramisioux.github.io/cinemate/overview/</loc>
-         <lastmod>2025-07-08</lastmod>
+         <lastmod>2025-07-17</lastmod>
+    </url>
+    <url>
+         <loc>https://tiramisioux.github.io/cinemate/redis-guide/</loc>
+         <lastmod>2025-07-17</lastmod>
+    </url>
+    <url>
+         <loc>https://tiramisioux.github.io/cinemate/redis-keys/</loc>
+         <lastmod>2025-07-17</lastmod>
     </url>
     <url>
          <loc>https://tiramisioux.github.io/cinemate/settings-json/</loc>
-         <lastmod>2025-07-08</lastmod>
+         <lastmod>2025-07-17</lastmod>
     </url>
 </urlset>

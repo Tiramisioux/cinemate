@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/overview/">
+        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/redis-guide/">
       
       
-        <link rel="prev" href="..">
+        <link rel="prev" href="../controller_methods/">
       
       
-        <link rel="next" href="../settings-json/">
+        <link rel="next" href="../redis-keys/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -24,7 +24,7 @@
     
     
       
-        <title>Overview - Cinemate Docs</title>
+        <title>Basic API - Cinemate Docs</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#overview" class="md-skip">
+        <a href="#redis-api-quick-start" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Overview
+              Basic API
             
           </span>
         </div>
@@ -263,8 +263,6 @@
       
   
   
-    
-  
   
   
     
@@ -277,11 +275,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
         
           
           <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
@@ -297,7 +295,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             Getting started
@@ -308,30 +306,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    Overview
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
         
   
   
@@ -342,33 +320,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
-    <span class="md-ellipsis">
-      Overview
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -527,8 +478,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -539,11 +492,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
           <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
@@ -559,7 +512,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             Redis
@@ -570,10 +523,32 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../redis-guide/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Basic API
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -584,6 +559,71 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-cinemate-and-cinepi-raw-interact" class="md-nav__link">
+    <span class="md-ellipsis">
+      How CineMate and cinepi-raw interact
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-cp_controls-channel" class="md-nav__link">
+    <span class="md-ellipsis">
+      The cp_controls channel
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-cp_stats-channel" class="md-nav__link">
+    <span class="md-ellipsis">
+      The cp_stats channel
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inspecting-and-changing-values-with-redis-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      Inspecting and changing values with redis-cli
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#controlling-the-camera-from-your-own-script" class="md-nav__link">
+    <span class="md-ellipsis">
+      Controlling the camera from your own script
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -636,6 +676,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -644,9 +686,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#how-cinemate-and-cinepi-raw-interact" class="md-nav__link">
     <span class="md-ellipsis">
-      Overview
+      How CineMate and cinepi-raw interact
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-cp_controls-channel" class="md-nav__link">
+    <span class="md-ellipsis">
+      The cp_controls channel
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-cp_stats-channel" class="md-nav__link">
+    <span class="md-ellipsis">
+      The cp_stats channel
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inspecting-and-changing-values-with-redis-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      Inspecting and changing values with redis-cli
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#controlling-the-camera-from-your-own-script" class="md-nav__link">
+    <span class="md-ellipsis">
+      Controlling the camera from your own script
     </span>
   </a>
   
@@ -668,7 +746,7 @@
 
 
   
-    <a href="https://github.com/tiramisioux/cinemate/edit/master/docs/overview.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/tiramisioux/cinemate/edit/master/docs/redis-guide.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -676,10 +754,65 @@
   
 
 
-  <h1>Overview</h1>
+<h1 id="redis-api-quick-start">Redis API quick start<a class="headerlink" href="#redis-api-quick-start" title="Permanent link">#</a></h1>
+<p>Cinemate talks to the <a href="https://github.com/Tiramisioux/cinepi-raw/tree/rpicam-apps_1.7_custom_encoder">cinepi-raw</a> recorder through a local Redis server. Parameters such as ISO, FPS or the recording state are stored as simple keys. Two pub-sub channels (<code>cp_controls</code> and <code>cp_stats</code>) carry notifications and status updates.</p>
+<p>Here is an overview of how the pieces fit together and how you can experiment with them using <code>redis-cli</code> or your own Python scripts.</p>
+<h2 id="how-cinemate-and-cinepi-raw-interact">How CineMate and cinepi-raw interact<a class="headerlink" href="#how-cinemate-and-cinepi-raw-interact" title="Permanent link">#</a></h2>
+<p>Cinepi-raw exposes an API over Redis. Cinemate acts as the user interface. When you change a value in Cinemate (for example by pressing a button or turning a rotary encoder) it writes the new value to Redis and publishes the key name on the <code>cp_controls</code> channel. <code>cinepi-raw</code> subscribes to this channel and reacts to changes.</p>
+<p>Conversely, cinepi-raw periodically publishes camera statistics on the <code>cp_stats</code> channel. Cinemate listens and updates the on-screen GUI.</p>
+<h2 id="the-cp_controls-channel">The <code>cp_controls</code> channel<a class="headerlink" href="#the-cp_controls-channel" title="Permanent link">#</a></h2>
+<p>CineMate writes values and immediately publishes the key name. The recorder only reacts when it receives that publish event. </p>
+<p>Any key may be sent this way. For example, to adjust the preview zoom:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Set preview zoom level</span>
 
-<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">#</a></h2>
-<p>TBA</p>
+redis-cli<span class="w"> </span>SET<span class="w"> </span>zoom<span class="w"> </span><span class="m">1</span>.5
+redis-cli<span class="w"> </span>PUBLISH<span class="w"> </span>cp_controls<span class="w"> </span>zoom
+</code></pre></div>
+<blockquote>
+<p>Execpt for the recording trigger <strong>is_recording</strong>. Here, the Cinemate cinepi-raw fork <em>immediately</em> starts and stops recording upon edge detection (the variable changes from 0 to 1 or vice versa). The reason  for this exception has to do with how the cinepi-raw fork handles recording with multiple cameras</p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><span class="c1"># Start recording</span>
+redis-cli<span class="w"> </span>SET<span class="w"> </span>is_recording<span class="w"> </span><span class="m">1</span><span class="w">                    </span><span class="c1"># triggers 0 → 1 edge</span>
+
+<span class="c1"># Stop recording</span>
+redis-cli<span class="w"> </span>SET<span class="w"> </span>is_recording<span class="w"> </span><span class="m">0</span><span class="w">                    </span><span class="c1"># triggers 1 → 0 edge</span>
+</code></pre></div>
+<h2 id="the-cp_stats-channel">The <code>cp_stats</code> channel<a class="headerlink" href="#the-cp_stats-channel" title="Permanent link">#</a></h2>
+<p>Every frame, cinepi-raw sends a small JSON object containing live statistics. </p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="n">Json</span><span class="o">::</span><span class="n">Value</span><span class="w"> </span><span class="n">data</span><span class="p">;</span>
+<span class="w">    </span><span class="n">Json</span><span class="o">::</span><span class="n">Value</span><span class="w"> </span><span class="n">histo</span><span class="p">;</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;framerate&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">completed_request</span><span class="o">-&gt;</span><span class="n">framerate</span><span class="p">;</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;colorTemp&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">colorTemp</span><span class="p">;</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;focus&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">focus</span><span class="p">;</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;frameCount&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">app_</span><span class="o">-&gt;</span><span class="n">GetEncoder</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">getFrameCount</span><span class="p">();</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;bufferSize&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">app_</span><span class="o">-&gt;</span><span class="n">GetEncoder</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">bufferSize</span><span class="p">();</span>
+<span class="w">    </span><span class="n">redis_</span><span class="o">-&gt;</span><span class="n">publish</span><span class="p">(</span><span class="n">CHANNEL_STATS</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">toStyledString</span><span class="p">());</span>
+</code></pre></div>
+<p>CineMate’s <code>RedisListener</code> parses these messages and updates Redis keys like <code>framecount</code>, <code>BUFFER</code> and <code>fps_actual</code>.</p>
+<h2 id="inspecting-and-changing-values-with-redis-cli">Inspecting and changing values with <code>redis-cli</code><a class="headerlink" href="#inspecting-and-changing-values-with-redis-cli" title="Permanent link">#</a></h2>
+<p>Because everything is plain Redis you can poke around from the command line. Here are a few handy commands:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># List all keys</span>
+redis-cli<span class="w"> </span>KEYS<span class="w"> </span><span class="s1">&#39;*&#39;</span>
+
+<span class="c1"># Read the current ISO value</span>
+redis-cli<span class="w"> </span>GET<span class="w"> </span>iso
+
+<span class="c1"># Start a recording (same as pressing the Rec button)</span>
+redis-cli<span class="w"> </span>SET<span class="w"> </span>is_recording<span class="w"> </span><span class="m">1</span>
+redis-cli<span class="w"> </span>PUBLISH<span class="w"> </span>cp_controls<span class="w"> </span>is_recording
+</code></pre></div>
+<h2 id="controlling-the-camera-from-your-own-script">Controlling the camera from your own script<a class="headerlink" href="#controlling-the-camera-from-your-own-script" title="Permanent link">#</a></h2>
+<p>You can use any Redis client. Below is a very small example using <code>redis-py</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">redis</span>
+<span class="n">r</span> <span class="o">=</span> <span class="n">redis</span><span class="o">.</span><span class="n">Redis</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">6379</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="c1"># toggle recording</span>
+<span class="n">current</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;is_recording&#39;</span><span class="p">)</span>
+<span class="n">new_value</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;0&#39;</span> <span class="k">if</span> <span class="n">current</span> <span class="o">==</span> <span class="sa">b</span><span class="s1">&#39;1&#39;</span> <span class="k">else</span> <span class="sa">b</span><span class="s1">&#39;1&#39;</span>
+<span class="n">r</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;is_recording&#39;</span><span class="p">,</span> <span class="n">new_value</span><span class="p">)</span>
+<span class="n">r</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s1">&#39;cp_controls&#39;</span><span class="p">,</span> <span class="s1">&#39;is_recording&#39;</span><span class="p">)</span>
+</code></pre></div>
+<p>Note that in this example, the publishing of the is_recording key is not strictly needed for recording to start/stop, but for formality's sake I think we should keep the publish command.</p>
 
 
 

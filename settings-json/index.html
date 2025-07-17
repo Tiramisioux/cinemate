@@ -13,8 +13,10 @@
         <link rel="canonical" href="https://tiramisioux.github.io/cinemate/settings-json/">
       
       
-        <link rel="prev" href="../inverse_buttons/">
+        <link rel="prev" href="../overview/">
       
+      
+        <link rel="next" href="../cinepi_multi/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -22,7 +24,7 @@
     
     
       
-        <title>Settings.json cheat sheet - Cinemate Docs</title>
+        <title>Settings file - Cinemate Docs</title>
       
     
     
@@ -74,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#settingsjson-cheat-sheet" class="md-skip">
+        <a href="#cinemate-settingsjson-user-guide" class="md-skip">
           Skip to content
         </a>
       
@@ -110,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Settings.json cheat sheet
+              Settings file
             
           </span>
         </div>
@@ -332,35 +334,12 @@
   
   
     <li class="md-nav__item">
-      <a href="../cli_commands/" class="md-nav__link">
+      <a href="../install-guide.md" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Cli commands
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../inverse_buttons/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Buttons
+    Installation
     
   </span>
   
@@ -392,7 +371,7 @@
   
   
   <span class="md-ellipsis">
-    Settings.json cheat sheet
+    Settings file
     
   </span>
   
@@ -405,7 +384,7 @@
   
   
   <span class="md-ellipsis">
-    Settings.json cheat sheet
+    Settings file
     
   </span>
   
@@ -428,99 +407,159 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#geometry" class="md-nav__link">
+  <a href="#1-welcome_message-and-welcome_image" class="md-nav__link">
     <span class="md-ellipsis">
-      Geometry
+      1. welcome_message and welcome_image
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#output" class="md-nav__link">
+  <a href="#2-system" class="md-nav__link">
     <span class="md-ellipsis">
-      Output
+      2. system
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#gpio-outputs" class="md-nav__link">
+  <a href="#3-geometry" class="md-nav__link">
     <span class="md-ellipsis">
-      GPIO Outputs
+      3. geometry
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#fixed-palette-arrays" class="md-nav__link">
+  <a href="#4-output" class="md-nav__link">
     <span class="md-ellipsis">
-      Fixed-Palette Arrays
+      4. output
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#flicker-suppression" class="md-nav__link">
+  <a href="#5-preview" class="md-nav__link">
     <span class="md-ellipsis">
-      Flicker Suppression
+      5. preview
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#analog-controls" class="md-nav__link">
+  <a href="#6-anamorphic_preview" class="md-nav__link">
     <span class="md-ellipsis">
-      Analog Controls
+      6. anamorphic_preview
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#free-mode-overrides" class="md-nav__link">
+  <a href="#7-gpio_output" class="md-nav__link">
     <span class="md-ellipsis">
-      Free-Mode Overrides
+      7. gpio_output
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#anamorphic-preview" class="md-nav__link">
+  <a href="#8-arrays" class="md-nav__link">
     <span class="md-ellipsis">
-      Anamorphic Preview
+      8. arrays
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#buttons-switches" class="md-nav__link">
+  <a href="#9-settings" class="md-nav__link">
     <span class="md-ellipsis">
-      Buttons &amp; Switches
+      9. settings
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#encoders" class="md-nav__link">
+  <a href="#10-analog_controls" class="md-nav__link">
     <span class="md-ellipsis">
-      Encoders
+      10. analog_controls
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#oled-status-screen" class="md-nav__link">
+  <a href="#11-free_mode" class="md-nav__link">
     <span class="md-ellipsis">
-      OLED Status Screen
+      11. free_mode
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-buttons" class="md-nav__link">
+    <span class="md-ellipsis">
+      12. buttons
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="12. buttons">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-inverse-1-0-1-buttons-are-auto-detected" class="md-nav__link">
+    <span class="md-ellipsis">
+      How “inverse” (1-0-1) buttons are auto-detected
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-two_way_switches" class="md-nav__link">
+    <span class="md-ellipsis">
+      13. two_way_switches
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-rotary_encoders" class="md-nav__link">
+    <span class="md-ellipsis">
+      14. rotary_encoders
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-quad_rotary_encoders" class="md-nav__link">
+    <span class="md-ellipsis">
+      15. quad_rotary_encoders
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#16-i2c_oled" class="md-nav__link">
+    <span class="md-ellipsis">
+      16. i2c_oled
     </span>
   </a>
   
@@ -530,6 +569,198 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    Usage
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Usage
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cinepi_multi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Cinepi multi
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../controller_methods/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Controller methods
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    Redis
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Redis
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../redis-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Basic API
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../redis-keys/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Key reference
+    
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -569,99 +800,159 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#geometry" class="md-nav__link">
+  <a href="#1-welcome_message-and-welcome_image" class="md-nav__link">
     <span class="md-ellipsis">
-      Geometry
+      1. welcome_message and welcome_image
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#output" class="md-nav__link">
+  <a href="#2-system" class="md-nav__link">
     <span class="md-ellipsis">
-      Output
+      2. system
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#gpio-outputs" class="md-nav__link">
+  <a href="#3-geometry" class="md-nav__link">
     <span class="md-ellipsis">
-      GPIO Outputs
+      3. geometry
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#fixed-palette-arrays" class="md-nav__link">
+  <a href="#4-output" class="md-nav__link">
     <span class="md-ellipsis">
-      Fixed-Palette Arrays
+      4. output
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#flicker-suppression" class="md-nav__link">
+  <a href="#5-preview" class="md-nav__link">
     <span class="md-ellipsis">
-      Flicker Suppression
+      5. preview
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#analog-controls" class="md-nav__link">
+  <a href="#6-anamorphic_preview" class="md-nav__link">
     <span class="md-ellipsis">
-      Analog Controls
+      6. anamorphic_preview
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#free-mode-overrides" class="md-nav__link">
+  <a href="#7-gpio_output" class="md-nav__link">
     <span class="md-ellipsis">
-      Free-Mode Overrides
+      7. gpio_output
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#anamorphic-preview" class="md-nav__link">
+  <a href="#8-arrays" class="md-nav__link">
     <span class="md-ellipsis">
-      Anamorphic Preview
+      8. arrays
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#buttons-switches" class="md-nav__link">
+  <a href="#9-settings" class="md-nav__link">
     <span class="md-ellipsis">
-      Buttons &amp; Switches
+      9. settings
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#encoders" class="md-nav__link">
+  <a href="#10-analog_controls" class="md-nav__link">
     <span class="md-ellipsis">
-      Encoders
+      10. analog_controls
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#oled-status-screen" class="md-nav__link">
+  <a href="#11-free_mode" class="md-nav__link">
     <span class="md-ellipsis">
-      OLED Status Screen
+      11. free_mode
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-buttons" class="md-nav__link">
+    <span class="md-ellipsis">
+      12. buttons
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="12. buttons">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-inverse-1-0-1-buttons-are-auto-detected" class="md-nav__link">
+    <span class="md-ellipsis">
+      How “inverse” (1-0-1) buttons are auto-detected
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-two_way_switches" class="md-nav__link">
+    <span class="md-ellipsis">
+      13. two_way_switches
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-rotary_encoders" class="md-nav__link">
+    <span class="md-ellipsis">
+      14. rotary_encoders
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-quad_rotary_encoders" class="md-nav__link">
+    <span class="md-ellipsis">
+      15. quad_rotary_encoders
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#16-i2c_oled" class="md-nav__link">
+    <span class="md-ellipsis">
+      16. i2c_oled
     </span>
   </a>
   
@@ -691,296 +982,208 @@
   
 
 
-<h1 id="settingsjson-cheat-sheet"><code>settings.json</code> Cheat Sheet<a class="headerlink" href="#settingsjson-cheat-sheet" title="Permanent link">#</a></h1>
-<p>A quick-reference table of every setting in <code>settings.json</code>, what it does, and its allowed values.
-<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">27</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;state_on_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_all_lock&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">]},</span>
-<span class="w">      </span><span class="nt">&quot;state_off_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_all_lock&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">]}</span>
-<span class="w">    </span><span class="p">},</span>
-</code></pre></div></p>
-<div class="highlight"><pre><span></span><code><span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">button</span><span class="o">.</span><span class="n">is_pressed</span><span class="p">:</span>      <span class="c1"># high at rest → treat as “inverse”</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">inverse</span> <span class="o">=</span> <span class="kc">True</span>
+<h1 id="cinemate-settingsjson-user-guide">CineMate <code>settings.json</code> User Guide<a class="headerlink" href="#cinemate-settingsjson-user-guide" title="Permanent link">#</a></h1>
+<p>This file controls how the camera behaves and how your buttons, switches and displays are mapped. It lives in <code>~/cinemate/src/settings.json</code> on the Raspberry Pi. You can edit it with any text editor; the settings take effect the next time you start CineMate.</p>
+<p>The configuration is structured as JSON. Each top‑level key describes a feature area of the system. Below is a tour of every section and what the options do.</p>
+<h2 id="1-welcome_message-and-welcome_image">1. <code>welcome_message</code> and <code>welcome_image</code><a class="headerlink" href="#1-welcome_message-and-welcome_image" title="Permanent link">#</a></h2>
+<p>Text or image displayed briefly when Cinemate starts.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;welcome_image&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<span class="nt">&quot;welcome_message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;THIS IS A COOL MACHINE&quot;</span><span class="p">,</span>
 </code></pre></div>
-<h2 id="geometry">Geometry<a class="headerlink" href="#geometry" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>JSON Path</th>
-<th>Description</th>
-<th>Values</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>geometry.camX.rotate_180</code></td>
-<td>Rotate image 180° on startup</td>
-<td><code>true</code> / <code>false</code></td>
-</tr>
-<tr>
-<td><code>geometry.camX.horizontal_flip</code></td>
-<td>Flip image horizontally on startup</td>
-<td><code>true</code> / <code>false</code></td>
-</tr>
-<tr>
-<td><code>geometry.camX.vertical_flip</code></td>
-<td>Flip image vertically on startup</td>
-<td><code>true</code> / <code>false</code></td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>JSON Path</th>
-<th>Description</th>
-<th>Values</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>output.camX.hdmi_port</code></td>
-<td>Select DRM connector for HDMI output (<code>cinepi-raw --hdmi-port</code>)</td>
-<td><code>0</code>, <code>1</code>, or <code>-1</code> (auto)</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="gpio-outputs">GPIO Outputs<a class="headerlink" href="#gpio-outputs" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>JSON Path</th>
-<th>Description</th>
-<th>Values</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>gpio_output.pwm_pin</code></td>
-<td>PWM pin for strobe / shutter sync</td>
-<td>BCM pin number (e.g. 19)</td>
-</tr>
-<tr>
-<td><code>gpio_output.rec_out_pin</code></td>
-<td>Pin(s) pulled high while recording</td>
-<td>List of BCM pins</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="fixed-palette-arrays">Fixed-Palette Arrays<a class="headerlink" href="#fixed-palette-arrays" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>JSON Path</th>
-<th>Description</th>
-<th>Values</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>arrays.iso_steps</code></td>
-<td>ISO step presets (if <code>iso_free = false</code>)</td>
-<td><code>[100,…,sensor_native]</code></td>
-</tr>
-<tr>
-<td><code>arrays.shutter_a_steps</code></td>
-<td>Shutter angles (if <code>shutter_a_free = false</code>)</td>
-<td><code>[1.0,…,360.0]</code> (degrees)</td>
-</tr>
-<tr>
-<td><code>arrays.fps_steps</code></td>
-<td>Frame-rate presets (if <code>fps_free = false</code>)</td>
-<td>integers ≤ sensor-mode <code>fps_max</code></td>
-</tr>
-<tr>
-<td><code>arrays.wb_steps</code></td>
-<td>White-balance Kelvin presets</td>
-<td><code>[2000,…,9000]</code> (Kelvin)</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="flicker-suppression">Flicker Suppression<a class="headerlink" href="#flicker-suppression" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>JSON Path</th>
-<th>Description</th>
-<th>Values</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>settings.light_hz</code></td>
-<td>Frequencies used to calculate flicker-free shutter angles</td>
-<td><code>[50]</code>, <code>[60]</code>, or <code>[50,60]</code></td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="analog-controls">Analog Controls<a class="headerlink" href="#analog-controls" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>JSON Path</th>
-<th>Description</th>
-<th>Values</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>analog_controls.*_pot</code></td>
-<td>ADC channel for ISO, shutter, FPS, or WB (Grove HAT)</td>
-<td><code>0–7</code> or <code>null</code></td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="free-mode-overrides">Free-Mode Overrides<a class="headerlink" href="#free-mode-overrides" title="Permanent link">#</a></h2>
-<p>When <code>true</code>, ignores the fixed arrays and exposes full legal ranges.</p>
-<table>
-<thead>
-<tr>
-<th>JSON Path</th>
-<th>Description</th>
-<th>Values</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>free_mode.iso_free</code></td>
-<td>Full ISO range</td>
-<td><code>true</code> / <code>false</code></td>
-</tr>
-<tr>
-<td><code>free_mode.shutter_a_free</code></td>
-<td>Full shutter-angle range</td>
-<td><code>true</code> / <code>false</code></td>
-</tr>
-<tr>
-<td><code>free_mode.fps_free</code></td>
-<td>Full frame-rate range</td>
-<td><code>true</code> / <code>false</code></td>
-</tr>
-<tr>
-<td><code>free_mode.wb_free</code></td>
-<td>Full white-balance range</td>
-<td><code>true</code> / <code>false</code></td>
-</tr>
-</tbody>
-</table>
+<p>Set <code>welcome_image</code> to the path of a bitmap file to show a logo instead of text. </p>
+<p>Example path: <code>/home/pi/welcome_image.bmp</code>. </p>
+<p>If <code>welcome image</code> path is set, this will override the text message.</p>
+<h2 id="2-system">2. <code>system</code><a class="headerlink" href="#2-system" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;system&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;wifi_hotspot&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CinePi&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;password&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;11111111&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<ul>
+<li><strong>name</strong> – the Wi‑Fi network name (SSID) broadcast by the Pi when hotspot mode is enabled.</li>
+<li><strong>password</strong> – password for joining the hotspot.</li>
+<li><strong>enabled</strong> – set to <code>true</code> to start the hotspot automatically on boot. If set to <code>false</code>, CineMate will still start its web ui but stream it on whatever network the Pi is connected to.</li>
+</ul>
+<h2 id="3-geometry">3. <code>geometry</code><a class="headerlink" href="#3-geometry" title="Permanent link">#</a></h2>
+<p>Controls image orientation for each camera port (<code>cam0</code>, <code>cam1</code>, etc.). These settings let you mount cameras in any orientation and still get an upright preview and recording. Example:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;geometry&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;cam0&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;rotate_180&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;horizontal_flip&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;vertical_flip&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;cam1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;rotate_180&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;horizontal_flip&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;vertical_flip&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<ul>
+<li><strong>rotate_180</strong> – flip the image upside‑down.</li>
+<li><strong>horizontal_flip</strong> – mirror the image left/right.</li>
+<li><strong>vertical_flip</strong> – mirror the image top/bottom.</li>
+</ul>
+<h2 id="4-output">4. <code>output</code><a class="headerlink" href="#4-output" title="Permanent link">#</a></h2>
+<p>Maps each camera to an HDMI connector. Use <code>-1</code> for automatic selection.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;output&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;cam0&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;hdmi_port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;cam1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;hdmi_port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<h2 id="5-preview">5. <code>preview</code><a class="headerlink" href="#5-preview" title="Permanent link">#</a></h2>
+<p>Adjusts zoom levels for the HDMI/browser preview.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;preview&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;default_zoom&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;zoom_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.5</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<ul>
+<li><strong>default_zoom</strong> – magnification factor used at startup.</li>
+<li><strong>zoom_steps</strong> – list of zoom factors you can cycle through with the <code>set_zoom_step</code> command.</li>
+</ul>
+<h2 id="6-anamorphic_preview">6. <code>anamorphic_preview</code><a class="headerlink" href="#6-anamorphic_preview" title="Permanent link">#</a></h2>
+<p>For stretching the preview when using anamorphic lenses.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;anamorphic_preview&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;default_anamorphic_factor&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;anamorphic_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mf">1.33</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<ul>
+<li><strong>default_anamorphic_factor</strong> – factor loaded when Cinemate starts.</li>
+<li><strong>anamorphic_steps</strong> – selectable squeeze factors; values above <code>1.0</code> widen the image.</li>
+</ul>
+<h2 id="7-gpio_output">7. <code>gpio_output</code><a class="headerlink" href="#7-gpio_output" title="Permanent link">#</a></h2>
+<p>Defines pins used for visual feedback or sync signals.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;gpio_output&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;pwm_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">19</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;rec_out_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="mi">21</span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<ul>
+<li>
+<p><strong>pwm_pin</strong> – outputs a strobe for shutter sync or external devices.</p>
+</li>
+<li>
+<p><strong>rec_out_pin</strong> – list of pins pulled high while recording (useful for tally LEDs).</p>
+</li>
+</ul>
+<h2 id="8-arrays">8. <code>arrays</code><a class="headerlink" href="#8-arrays" title="Permanent link">#</a></h2>
+<p>Preset lists for exposure and frame‑rate settings. Cinemate will step through these values unless you enable free mode, either in the settings file or during runtime.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;arrays&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;iso_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="mi">400</span><span class="p">,</span><span class="w"> </span><span class="mi">640</span><span class="p">,</span><span class="w"> </span><span class="mi">800</span><span class="p">,</span><span class="w"> </span><span class="mi">1200</span><span class="p">,</span><span class="w"> </span><span class="mi">1600</span><span class="p">,</span><span class="w"> </span><span class="mi">2500</span><span class="p">,</span><span class="w"> </span><span class="mi">3200</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;shutter_a_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">45</span><span class="p">,</span><span class="w"> </span><span class="mi">90</span><span class="p">,</span><span class="w"> </span><span class="mi">135</span><span class="p">,</span><span class="w"> </span><span class="mf">172.8</span><span class="p">,</span><span class="w"> </span><span class="mi">180</span><span class="p">,</span><span class="w"> </span><span class="mi">225</span><span class="p">,</span><span class="w"> </span><span class="mi">270</span><span class="p">,</span><span class="w"> </span><span class="mi">315</span><span class="p">,</span><span class="w"> </span><span class="mf">346.6</span><span class="p">,</span><span class="w"> </span><span class="mi">360</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;fps_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="mi">16</span><span class="p">,</span><span class="w"> </span><span class="mi">18</span><span class="p">,</span><span class="w"> </span><span class="mi">24</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="mi">33</span><span class="p">,</span><span class="w"> </span><span class="mi">40</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;wb_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">3200</span><span class="p">,</span><span class="w"> </span><span class="mi">4400</span><span class="p">,</span><span class="w"> </span><span class="mi">5600</span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<h2 id="9-settings">9. <code>settings</code><a class="headerlink" href="#9-settings" title="Permanent link">#</a></h2>
+<p>General options for runtime behaviour.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;settings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;light_hz&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="mi">60</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;conform_frame_rate&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">24</span>
+<span class="p">}</span>
+</code></pre></div>
+<ul>
+<li><strong>light_hz</strong> – list of mains frequencies used to calculate flicker‑free shutter angles. These are added to the shutter angle array and also dynamically calculated upon each fps change. This way, there is always a flicker free shutter angle value close by, when toggling through shutter angles, either via the cli or using buttons/pots/rotary encoder.</li>
+<li><strong>conform_frame_rate</strong> – frame rate intendend for project conforming in post. This setting is not really used by CineMate except for calculating the recording timecode tracker in redis but might be used in future updates.</li>
+</ul>
+<h2 id="10-analog_controls">10. <code>analog_controls</code><a class="headerlink" href="#10-analog_controls" title="Permanent link">#</a></h2>
+<p>Maps Grove Base HAT ADC channels to analogue dials (potentiometers). Use <code>null</code> to disable a dial.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;analog_controls&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;iso_pot&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;shutter_a_pot&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;fps_pot&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;wb_pot&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span>
+<span class="p">}</span>
+</code></pre></div>
 <blockquote>
-<p><strong>Free ranges:</strong> ISO 100–3200, Shutter 1.0°–360.0°, FPS 1–fps_max, WB 1000–10000 K</p>
+<p><em><strong>Note</strong> that even if you are using a Grove Base Hat, it might be useful to disable the dials not connected to pots, since noise from these connectors might trigger false readings.</em></p>
 </blockquote>
-<hr />
-<h2 id="anamorphic-preview">Anamorphic Preview<a class="headerlink" href="#anamorphic-preview" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>JSON Path</th>
-<th>Description</th>
-<th>Values</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>anamorphic_preview.anamorphic_steps</code></td>
-<td>Anamorphic squeeze factors</td>
-<td>list of floats ≥ 1.0</td>
-</tr>
-<tr>
-<td><code>anamorphic_preview.default_anamorphic_factor</code></td>
-<td>Initial factor stored in Redis on power-up</td>
-<td>one of the above</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="buttons-switches">Buttons &amp; Switches<a class="headerlink" href="#buttons-switches" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>JSON Path</th>
-<th>Description</th>
-<th>Values</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>buttons[]</code></td>
-<td>SmartButton entries: <code>press_action</code>, <code>click_action</code>, <code>hold_action</code>, etc.</td>
-<td>List of BCM pins + args</td>
-</tr>
-<tr>
-<td><code>two_way_switches[]</code></td>
-<td>Latching switches: <code>state_on_action</code> / <code>state_off_action</code></td>
-<td><code>pin</code> + optional <code>pull_up</code></td>
-</tr>
-<tr>
-<td><code>three_way_switches[]</code></td>
-<td>3-position switches: <code>state_0/1/2_action</code></td>
-<td><code>pins</code>: [low, mid, high]</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="encoders">Encoders<a class="headerlink" href="#encoders" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>JSON Path</th>
-<th>Description</th>
-<th>Values</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>rotary_encoders[]</code></td>
-<td>GPIO rotary (CLK/DT) + optional button</td>
-<td><code>clk_pin</code>, <code>dt_pin</code> BCM pins</td>
-</tr>
-<tr>
-<td><code>quad_rotary_encoders</code></td>
-<td>I²C RGB Encoder breakout (0x49) with four dials/buttons</td>
-<td>Indices <code>"0"</code>–<code>"3"</code></td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="oled-status-screen">OLED Status Screen<a class="headerlink" href="#oled-status-screen" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>JSON Path</th>
-<th>Description</th>
-<th>Values</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>i2c_oled.width</code></td>
-<td>OLED panel width in pixels</td>
-<td>integer</td>
-</tr>
-<tr>
-<td><code>i2c_oled.height</code></td>
-<td>OLED panel height in pixels</td>
-<td>integer</td>
-</tr>
-<tr>
-<td><code>i2c_oled.values</code></td>
-<td>Redis keys or pseudo-keys to display (e.g. <code>cpu_temp</code>)</td>
-<td>ordered list</td>
-</tr>
-</tbody>
-</table>
-<div class="highlight"><pre><span></span><code><span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">button</span><span class="o">.</span><span class="n">is_pressed</span><span class="p">:</span>      <span class="c1"># high at rest → treat as “inverse”</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">inverse</span> <span class="o">=</span> <span class="kc">True</span>
+<h2 id="11-free_mode">11. <code>free_mode</code><a class="headerlink" href="#11-free_mode" title="Permanent link">#</a></h2>
+<p>When enabled, ignores the preset arrays and exposes the full range supported by the sensor.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;free_mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;iso_free&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;shutter_a_free&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;fps_free&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;wb_free&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<span class="p">}</span>
 </code></pre></div>
+<h2 id="12-buttons">12. <code>buttons</code><a class="headerlink" href="#12-buttons" title="Permanent link">#</a></h2>
+<p>Defines GPIO push buttons. Each entry describes one button and the actions it triggers.</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;pull_up&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;debounce_time&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;press_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rec&quot;</span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<ul>
+<li><strong>pin</strong> – BCM pin number the button is connected to.</li>
+<li><strong>pull_up</strong> – set <code>true</code> if the pin idles high (internal pull‑up). Use <code>false</code> for pull‑down wiring.</li>
+<li><strong>debounce_time</strong> – ignore additional presses within this time window (seconds).</li>
+<li><strong>press_action</strong>, <strong>single_click_action</strong>, <strong>double_click_action</strong>, <strong>triple_click_action</strong>, <strong>hold_action</strong> – actions to perform for each type of interaction. Actions call Cinemate CLI commands with optional <code>args</code>.</li>
+</ul>
+<blockquote>
+<h4 id="how-inverse-1-0-1-buttons-are-auto-detected">How “inverse” (1-0-1) buttons are auto-detected<a class="headerlink" href="#how-inverse-1-0-1-buttons-are-auto-detected" title="Permanent link">#</a></h4>
+<p>Some push-buttons are wired closed = logic 1 and open = 0. At start-up, CineMate automatically detects buttons in state <code>true</code> and reverses them. This way the user can use any type of push buttons, both 1-0-1 and 0-1-0 types.</p>
+</blockquote>
+<h2 id="13-two_way_switches">13. <code>two_way_switches</code><a class="headerlink" href="#13-two_way_switches" title="Permanent link">#</a></h2>
+<p>Latching on/off switches. Cinemate triggers an action whenever the state changes.</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">27</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;state_on_action&quot;</span><span class="p">:</span><span class="w">  </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_all_lock&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">]},</span>
+<span class="w">  </span><span class="nt">&quot;state_off_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_all_lock&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">]}</span>
+<span class="p">}</span>
+</code></pre></div>
+<h2 id="14-rotary_encoders">14. <code>rotary_encoders</code><a class="headerlink" href="#14-rotary_encoders" title="Permanent link">#</a></h2>
+<p>Rotary encoders used for fine adjustment of settings. These can be wired straight to the GPIO pins of the Pi.</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;clk_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;dt_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">11</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;encoder_actions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;rotate_clockwise&quot;</span><span class="p">:</span><span class="w">        </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;inc_iso&quot;</span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;rotate_counterclockwise&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dec_iso&quot;</span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<ul>
+<li><strong>clk_pin</strong> and <strong>dt_pin</strong> – the two pins of the encoder.</li>
+<li><strong>encoder_actions</strong> – commands to run when turning the dial.</li>
+</ul>
+<h2 id="15-quad_rotary_encoders">15. <code>quad_rotary_encoders</code><a class="headerlink" href="#15-quad_rotary_encoders" title="Permanent link">#</a></h2>
+<p>Support for the Adafruit Neopixel Quad I2C rotary encoder breakout with four dials. Each entry assigns a dial to a setting and clones the behaviour of a button pin.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;quad_rotary_encoders&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;0&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;setting_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;iso&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;gpio_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;setting_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;shutter_a&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;gpio_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">16</span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;2&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;setting_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fps&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;gpio_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">26</span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;3&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;setting_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wb&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;gpio_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<h2 id="16-i2c_oled">16. <code>i2c_oled</code><a class="headerlink" href="#16-i2c_oled" title="Permanent link">#</a></h2>
+<p>Configuration for the optional OLED status screen. This can be useful for presenting extra information appart from the HDMI/web display.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;i2c_oled&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">64</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;font_size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;values&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;write_speed_to_drive&quot;</span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<ul>
+<li><strong>enabled</strong> – turn the OLED display on or off.</li>
+<li><strong>width / height</strong> – pixel dimensions of your screen.</li>
+<li><strong>font_size</strong> – size of the displayed text.</li>
+<li><strong>values</strong> – list of Redis keys or pseudo‑keys to show (for example <code>cpu_temp</code>).</li>
+</ul>
+<p>Available keys come from <code>src/module/i2c_oled.py</code>. Here are some examples:</p>
+<ul>
+<li><code>iso</code>, <code>fps</code> – basic camera settings.</li>
+<li><code>shutter_a</code> – shown as <strong>SHUTTER</strong> with a <code>°</code> suffix.</li>
+<li><code>wb_user</code> – shown as <strong>WB</strong> with a trailing <code>K</code>.</li>
+<li><code>space_left</code> – displayed as <strong>SPACE</strong> in gigabytes.</li>
+<li><code>write_speed_to_drive</code> – write speed in MB/s.</li>
+<li><code>resolution</code> – prints <code>width×height@bit_depth</code> on the first line.</li>
+<li><code>is_recording</code> – draws a bullet <code>●</code> when recording.</li>
+<li><code>cpu_load</code>, <code>cpu_temp</code>, <code>memory_usage</code> – Pi system statistics.</li>
+</ul>
+<p>Other keys will display their name in uppercase and the raw value from Redis.</p>
+<hr />
 
 
 
@@ -1001,7 +1204,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 7, 2025 00:40:43 UTC">July 7, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 16, 2025 22:23:36 UTC">July 16, 2025</span>
   </span>
 
     

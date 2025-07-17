@@ -23,7 +23,7 @@ cmake .. && make
 make install-here
 ```
 
-### cinepi-raw <img src="https://img.shields.io/badge/cinemate-fork-gren" height="10" >
+## cinepi-raw <img src="https://img.shields.io/badge/cinemate-fork-gren" height="10" >
 
 Cinemate depends on a custom branch of [cinepi-raw](https://github.com/Tiramisioux/cinepi-raw/tree/rpicam-apps_1.7_custom_encoder, created by Csaba Nagy.
 
@@ -38,7 +38,7 @@ meson install -C build
 ```
 >Join the CinePi Discord [here](https://discord.gg/Hr4dfhuK)!
 
-## Configure the Raspberry Pi
+## Configuring the Raspberry Pi
 
 ### Update & enable I²C and setting hostname
 ```bash

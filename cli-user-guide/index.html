@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/cli_commands/">
+        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/cli-user-guide/">
       
       
       
@@ -20,7 +20,7 @@
     
     
       
-        <title>Cli commands - Cinemate Docs</title>
+        <title>CinePi-raw CLI User Guide - Cinemate Docs</title>
       
     
     
@@ -45,6 +45,8 @@
         <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
       
     
+    
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown.css">
     
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -72,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#73-cinemate-pseudo-cli" class="md-skip">
+        <a href="#cinepi-raw-cli-user-guide" class="md-skip">
           Skip to content
         </a>
       
@@ -108,7 +110,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Cli commands
+              CinePi-raw CLI User Guide
             
           </span>
         </div>
@@ -328,7 +330,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../install-guide.md" class="md-nav__link">
+      <a href="../install-guide/" class="md-nav__link">
         
   
   
@@ -357,6 +359,29 @@
   
   <span class="md-ellipsis">
     Settings file
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Cinemate CLI
     
   </span>
   
@@ -402,7 +427,7 @@
   
   
   <span class="md-ellipsis">
-    Usage
+    Code
     
   </span>
   
@@ -413,7 +438,47 @@
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
-            Usage
+            Code
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1" id="__nav_3_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    modules
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1">
+            <span class="md-nav__icon md-icon"></span>
+            modules
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -424,12 +489,12 @@
   
   
     <li class="md-nav__item">
-      <a href="../cinepi_multi/" class="md-nav__link">
+      <a href="../cinepi-multi/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Cinepi multi
+    cinepi_multi.py
     
   </span>
   
@@ -447,17 +512,25 @@
   
   
     <li class="md-nav__item">
-      <a href="../controller_methods/" class="md-nav__link">
+      <a href="../controller-methods/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Controller methods
+    cinepi_controller.py
     
   </span>
   
 
       </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -583,6 +656,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -591,19 +666,82 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#73-cinemate-pseudo-cli" class="md-nav__link">
+  <a href="#1-checking-available-options" class="md-nav__link">
     <span class="md-ellipsis">
-      7.3 CineMate "Pseudo-CLI"
+      1. Checking available options
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="7.3 CineMate &#34;Pseudo-CLI&#34;">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-camera-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Camera modes
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-lowresolution-lores-stream" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Low‑resolution (lores) stream
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-preview-window" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Preview window
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-postprocessing-and-tuning-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Post‑processing and tuning files
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-cinematespecific-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. Cinemate‑specific flags
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-example-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Example commands
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Example commands">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#available-commands" class="md-nav__link">
+  <a href="#imx477-12bit-full-width" class="md-nav__link">
     <span class="md-ellipsis">
-      Available Commands
+      IMX477 (12‑bit, full width)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#imx585-12bit-unpacked" class="md-nav__link">
+    <span class="md-ellipsis">
+      IMX585 (12‑bit unpacked)
     </span>
   </a>
   
@@ -630,7 +768,7 @@
 
 
   
-    <a href="https://github.com/tiramisioux/cinemate/edit/master/docs/cli_commands.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/cli-user-guide.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -638,245 +776,90 @@
   
 
 
-  <h1>Cli commands</h1>
-
-<h3 id="73-cinemate-pseudo-cli">7.3 CineMate "Pseudo-CLI"<a class="headerlink" href="#73-cinemate-pseudo-cli" title="Permanent link">#</a></h3>
-<p>CineMate doesn’t use a real shell parser. Instead, a background thread
-reads simple text commands from SSH or the serial port and calls the
-corresponding controller methods.</p>
-<h4 id="available-commands">Available Commands<a class="headerlink" href="#available-commands" title="Permanent link">#</a></h4>
+<h1 id="cinepi-raw-cli-user-guide">CinePi-raw CLI User Guide<a class="headerlink" href="#cinepi-raw-cli-user-guide" title="Permanent link">#</a></h1>
+<p>This guide explains how to start <strong>CinePi-raw</strong> from the command line. The tool is a fork of the <code>rpicam-apps</code> project and allows capturing CinemaDNG files using Raspberry Pi cameras. The examples below assume you have installed the software and its dependencies as described in the repository README.</p>
+<h2 id="1-checking-available-options">1. Checking available options<a class="headerlink" href="#1-checking-available-options" title="Permanent link">#</a></h2>
+<p>Before running the program you can view all command‑line flags with:</p>
+<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>-h
+</code></pre></div>
+<p>This prints a long list of options supported by the application. It includes the standard parameters from <code>rpicam-apps</code> (such as resolution and exposure settings) plus additional flags specific to the CinePi project. If you just want to confirm that your build works, you can also display the version number using:</p>
+<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>--version
+</code></pre></div>
+<h2 id="2-camera-modes">2. Camera modes<a class="headerlink" href="#2-camera-modes" title="Permanent link">#</a></h2>
+<p>CinePi-raw uses <strong>Libcamera</strong> to talk to your Raspberry Pi camera module. Each sensor supports one or more <em>modes</em>, which define the resolution and bit depth of the RAW images that the sensor can produce. A mode is written as:</p>
+<div class="highlight"><pre><span></span><code>&lt;width&gt;:&lt;height&gt;:&lt;bit-depth&gt;[:&lt;packing&gt;]
+</code></pre></div>
+<ul>
+<li><code>width</code> and <code>height</code> select the active pixel area of the sensor.</li>
+<li><code>bit-depth</code> is usually 12 or 16 bits per pixel.</li>
+<li><code>packing</code> can be <code>P</code> for packed or <code>U</code> for unpacked data. </li>
+</ul>
+<p>The mode must match the sensor you are using. For example, an IMX477 camera can run at <code>4056:3040:12</code> (full sensor) or at smaller cropped resolutions. When specifying a mode you typically also set the output <code>--width</code> and <code>--height</code> which control the size of the image written to disk. These can be equal to the mode values or smaller when scaling is applied.</p>
+<h2 id="3-lowresolution-lores-stream">3. Low‑resolution (lores) stream<a class="headerlink" href="#3-lowresolution-lores-stream" title="Permanent link">#</a></h2>
+<p>CinePi-raw can produce a secondary low‑resolution stream alongside the full‑resolution RAW frames. This is useful for monitoring or for algorithms that need a lighter image to work with. You enable it using:</p>
+<div class="highlight"><pre><span></span><code>--lores-width &lt;pixels&gt; --lores-height &lt;pixels&gt;
+</code></pre></div>
+<p>Setting either width or height to <code>0</code> disables the lores output.</p>
+<h2 id="4-preview-window">4. Preview window<a class="headerlink" href="#4-preview-window" title="Permanent link">#</a></h2>
+<p>By default the program opens an HDMI preview so you can see what the camera captures. The size and position of this window are controlled with:</p>
+<div class="highlight"><pre><span></span><code>-p x,y,width,height
+</code></pre></div>
+<p>For example <code>-p 0,30,1920,1020</code> positions the preview 30 pixels from the top of the screen with a 1920×1020 window. If you do not want any preview, use <code>--nopreview</code>.</p>
+<p>CineMate (the companion project) uses the preview window for its graphical interface, so you can adjust it to fit your monitor or leave it fullscreen with <code>--fullscreen</code>.</p>
+<h2 id="5-postprocessing-and-tuning-files">5. Post‑processing and tuning files<a class="headerlink" href="#5-postprocessing-and-tuning-files" title="Permanent link">#</a></h2>
+<p>Two JSON files influence how frames are processed:</p>
+<ol>
+<li><strong>Tuning file</strong> – describes the camera’s colour and lens characteristics. Use <code>--tuning-file &lt;path&gt;</code> to point to a file supplied with Libcamera (for example <code>imx477.json</code> for the HQ camera or <code>imx585.json</code> for the Sony IMX585 sensor).</li>
+<li><strong>Post‑process file</strong> – for cinepi-raw, this file defines the port used by cpp-mjpeg-streamer (default :8000)</li>
+</ol>
+<h2 id="6-cinematespecific-flags">6. Cinemate‑specific flags<a class="headerlink" href="#6-cinematespecific-flags" title="Permanent link">#</a></h2>
+<p>The CineMate fork introduces several extra options:</p>
 <table>
 <thead>
 <tr>
-<th>Command</th>
-<th>Input type</th>
-<th>Example</th>
-<th>Discussion</th>
+<th>Flag</th>
+<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>rec</code> / <code>stop</code></td>
-<td>none</td>
-<td><code>rec</code></td>
-<td>Toggle recording on or off</td>
+<td><code>--cam-port &lt;string&gt;</code></td>
+<td>Select the physical CSI port to use (<code>cam0</code> or <code>cam1</code>).</td>
 </tr>
 <tr>
-<td><code>set iso &lt;value&gt;</code></td>
-<td>int</td>
-<td><code>set iso 800</code></td>
-<td>Set ISO to nearest allowed step</td>
+<td><code>--hdmi-port &lt;int&gt;</code></td>
+<td>Choose the HDMI connector for the preview: <code>0</code> = HDMI‑0, <code>1</code> = HDMI‑1, <code>-1</code> = auto.</td>
 </tr>
 <tr>
-<td><code>inc iso</code> / <code>dec iso</code></td>
-<td>none</td>
-<td><code>inc iso</code></td>
-<td>Step ISO up or down</td>
+<td><code>--same-hdmi</code></td>
+<td>Force both capture and controller GUI to share the same HDMI output.</td>
 </tr>
 <tr>
-<td><code>set shutter a &lt;angle&gt;</code></td>
-<td>float</td>
-<td><code>set shutter a 180</code></td>
-<td>Set actual shutter angle (snaps unless free/sync)</td>
-</tr>
-<tr>
-<td><code>inc shutter a</code> / <code>dec shutter a</code></td>
-<td>none</td>
-<td><code>inc shutter a</code></td>
-<td>Cycle through shutter angles</td>
-</tr>
-<tr>
-<td><code>set shutter a nom &lt;angle&gt;</code></td>
-<td>float</td>
-<td><code>set shutter a nom 180</code></td>
-<td>Set nominal shutter angle for motion blur</td>
-</tr>
-<tr>
-<td><code>inc shutter a nom</code> / <code>dec shutter a nom</code></td>
-<td>none</td>
-<td><code>inc shutter a nom</code></td>
-<td>Step the nominal shutter angle</td>
-</tr>
-<tr>
-<td><code>set fps &lt;value&gt;</code></td>
-<td>float</td>
-<td><code>set fps 24</code></td>
-<td>Change frame rate (snaps unless free)</td>
-</tr>
-<tr>
-<td><code>inc fps</code> / <code>dec fps</code></td>
-<td>none</td>
-<td><code>inc fps</code></td>
-<td>Step through FPS list</td>
-</tr>
-<tr>
-<td><code>set wb [&lt;Kelvin&gt;]</code></td>
-<td>int or none</td>
-<td><code>set wb 5600</code></td>
-<td>Set white balance or cycle presets</td>
-</tr>
-<tr>
-<td><code>inc wb</code> / <code>dec wb</code></td>
-<td>none</td>
-<td><code>inc wb</code></td>
-<td>Cycle white balance steps</td>
-</tr>
-<tr>
-<td><code>set resolution [&lt;mode&gt;]</code></td>
-<td>int or none</td>
-<td><code>set resolution 2</code></td>
-<td>Apply or cycle sensor mode</td>
-</tr>
-<tr>
-<td><code>set anamorphic factor [&lt;float&gt;]</code></td>
-<td>float or none</td>
-<td><code>set anamorphic factor 1.33</code></td>
-<td>Set or toggle anamorphic stretch</td>
-</tr>
-<tr>
-<td><code>set zoom [&lt;float&gt;]</code></td>
-<td>float or none</td>
-<td><code>set zoom 2</code></td>
-<td>Change digital zoom; omit to cycle</td>
-</tr>
-<tr>
-<td><code>inc zoom</code> / <code>dec zoom</code></td>
-<td>none</td>
-<td><code>inc zoom</code></td>
-<td>Step preview zoom factor</td>
-</tr>
-<tr>
-<td><code>mount</code> / <code>unmount</code></td>
-<td>none</td>
-<td><code>mount</code></td>
-<td>Mount or unmount external storage</td>
-</tr>
-<tr>
-<td><code>toggle mount</code></td>
-<td>none</td>
-<td><code>toggle mount</code></td>
-<td>Mount if not mounted, otherwise unmount</td>
-</tr>
-<tr>
-<td><code>time</code></td>
-<td>none</td>
-<td><code>time</code></td>
-<td>Show system and RTC time</td>
-</tr>
-<tr>
-<td><code>set rtc time</code></td>
-<td>none</td>
-<td><code>set rtc time</code></td>
-<td>Copy system time to the RTC</td>
-</tr>
-<tr>
-<td><code>space</code></td>
-<td>none</td>
-<td><code>space</code></td>
-<td>Report remaining SSD space</td>
-</tr>
-<tr>
-<td><code>get</code></td>
-<td>none</td>
-<td><code>get</code></td>
-<td>Print all current settings</td>
-</tr>
-<tr>
-<td><code>set shutter a sync [0/1]</code></td>
-<td>0/1 or none</td>
-<td><code>set shutter a sync 1</code></td>
-<td>Enable exposure sync mode</td>
-</tr>
-<tr>
-<td><code>set iso lock [0/1]</code></td>
-<td>0/1 or none</td>
-<td><code>set iso lock</code></td>
-<td>Lock or unlock ISO setting</td>
-</tr>
-<tr>
-<td><code>set shutter a nom lock [0/1]</code></td>
-<td>0/1 or none</td>
-<td><code>set shutter a nom lock</code></td>
-<td>Lock or unlock nominal shutter</td>
-</tr>
-<tr>
-<td><code>set shutter a nom fps lock [0/1]</code></td>
-<td>0/1 or none</td>
-<td><code>set shutter a nom fps lock 1</code></td>
-<td>Lock nominal shutter and FPS together</td>
-</tr>
-<tr>
-<td><code>set fps lock [0/1]</code></td>
-<td>0/1 or none</td>
-<td><code>set fps lock 1</code></td>
-<td>Lock or unlock the frame rate</td>
-</tr>
-<tr>
-<td><code>set all lock [0/1]</code></td>
-<td>0/1 or none</td>
-<td><code>set all lock 0</code></td>
-<td>Toggle all exposure locks at once</td>
-</tr>
-<tr>
-<td><code>set fps double [0/1]</code></td>
-<td>0/1 or none</td>
-<td><code>set fps double</code></td>
-<td>Instant or toggled 2× FPS mode</td>
-</tr>
-<tr>
-<td><code>reboot</code> / <code>shutdown</code></td>
-<td>none</td>
-<td><code>reboot</code></td>
-<td>Safely reboot or halt the Pi</td>
-</tr>
-<tr>
-<td><code>restart camera</code></td>
-<td>none</td>
-<td><code>restart camera</code></td>
-<td>Restart the libcamera pipeline</td>
-</tr>
-<tr>
-<td><code>restart cinemate</code></td>
-<td>none</td>
-<td><code>restart cinemate</code></td>
-<td>Restart the Cinemate process</td>
-</tr>
-<tr>
-<td><code>set iso free [0/1]</code></td>
-<td>0/1 or none</td>
-<td><code>set iso free 1</code></td>
-<td>Allow any ISO instead of presets</td>
-</tr>
-<tr>
-<td><code>set shutter a free [0/1]</code></td>
-<td>0/1 or none</td>
-<td><code>set shutter a free 0</code></td>
-<td>Allow any shutter angle</td>
-</tr>
-<tr>
-<td><code>set fps free [0/1]</code></td>
-<td>0/1 or none</td>
-<td><code>set fps free 1</code></td>
-<td>Allow any FPS</td>
-</tr>
-<tr>
-<td><code>set wb free [0/1]</code></td>
-<td>0/1 or none</td>
-<td><code>set wb free</code></td>
-<td>Allow any white balance</td>
-</tr>
-<tr>
-<td><code>set filter &lt;0/1&gt;</code></td>
-<td>0/1</td>
-<td><code>set filter 1</code></td>
-<td>Toggle IR-cut filter (IMX585)</td>
+<td><code>--keep16</code></td>
+<td>Save full 16‑bit DNGs instead of 12‑bit packed files.</td>
 </tr>
 </tbody>
 </table>
 <blockquote>
-<p>Commands without an explicit argument will toggle the current state when
-possible (e.g. <code>set fps lock</code> flips the lock; <code>set fps lock 1</code> forces it on).</p>
+<p>At this moment though, Cinemate is 12bit only. The flag is for future updates of the IMX585 16bit clear HDR modes.</p>
 </blockquote>
+<h2 id="7-example-commands">7. Example commands<a class="headerlink" href="#7-example-commands" title="Permanent link">#</a></h2>
+<p>Below are sample commands for different sensors and modes. </p>
+<h3 id="imx477-12bit-full-width">IMX477 (12‑bit, full width)<a class="headerlink" href="#imx477-12bit-full-width" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">4056</span>:2160:12<span class="w"> </span>--width<span class="w"> </span><span class="m">4056</span><span class="w"> </span>--height<span class="w"> </span><span class="m">2160</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--lores-width<span class="w"> </span><span class="m">1280</span><span class="w"> </span>--lores-height<span class="w"> </span><span class="m">720</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>-p<span class="w"> </span><span class="m">0</span>,30,1920,1020<span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--post-process-file<span class="w"> </span>/home/pi/post-processing.json<span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--tuning-file<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json<span class="w"> </span><span class="se">\</span>
+</code></pre></div>
+<h3 id="imx585-12bit-unpacked">IMX585 (12‑bit unpacked)<a class="headerlink" href="#imx585-12bit-unpacked" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">1928</span>:1090:12:U<span class="w"> </span>--width<span class="w"> </span><span class="m">1928</span><span class="w"> </span>--height<span class="w"> </span><span class="m">1090</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--lores-width<span class="w"> </span><span class="m">1280</span><span class="w"> </span>--lores-height<span class="w"> </span><span class="m">720</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>-p<span class="w"> </span><span class="m">0</span>,30,1920,1020<span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--post-process-file<span class="w"> </span>/home/pi/post-processing.json<span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--tuning-file<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json<span class="w"> </span><span class="se">\</span>
+</code></pre></div>
+<p>Now, with an SSH shell running redis-cli you should be able to capture RAW footage from the command line!</p>
 
 
 
@@ -897,7 +880,7 @@ possible (e.g. <code>set fps lock</code> flips the lock; <code>set fps lock 1</c
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 16, 2025 22:23:36 UTC">July 16, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 17, 2025 00:39:53 UTC">July 17, 2025</span>
   </span>
 
     

@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/cli_user_guide/">
+        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/cinepi-multi/">
       
       
+        <link rel="prev" href="../cli-commands/">
+      
+      
+        <link rel="next" href="../controller-methods/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +24,7 @@
     
     
       
-        <title>CinePi-raw CLI User Guide - Cinemate Docs</title>
+        <title>cinepi_multi.py - Cinemate Docs</title>
       
     
     
@@ -45,6 +49,8 @@
         <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
       
     
+    
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown.css">
     
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -72,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#cinepi-raw-cli-user-guide" class="md-skip">
+        <a href="#how-cinemate-launches-cinepi-raw" class="md-skip">
           Skip to content
         </a>
       
@@ -108,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              CinePi-raw CLI User Guide
+              cinepi_multi.py
             
           </span>
         </div>
@@ -328,7 +334,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../install-guide.md" class="md-nav__link">
+      <a href="../install-guide/" class="md-nav__link">
         
   
   
@@ -367,6 +373,29 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Cinemate CLI
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -378,8 +407,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -390,11 +421,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -402,7 +433,7 @@
   
   
   <span class="md-ellipsis">
-    Usage
+    Code
     
   </span>
   
@@ -410,10 +441,10 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
-            Usage
+            Code
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -421,20 +452,149 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../cinepi_multi/" class="md-nav__link">
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3_1" id="__nav_3_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    modules
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_1">
+            <span class="md-nav__icon md-icon"></span>
+            modules
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    cinepi_multi.py
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
   <span class="md-ellipsis">
-    Cinepi multi
+    cinepi_multi.py
     
   </span>
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-detecting-cameras" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Detecting Cameras
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-loading-resolution-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Loading Resolution Data
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-building-the-cinepi-raw-command" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Building the cinepi-raw Command
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-waiting-for-cameras-to-become-ready" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Waiting for Cameras to Become Ready
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-customising-behaviour" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Customising Behaviour
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -447,17 +607,25 @@
   
   
     <li class="md-nav__item">
-      <a href="../controller_methods/" class="md-nav__link">
+      <a href="../controller-methods/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Controller methods
+    cinepi_controller.py
     
   </span>
   
 
       </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -593,89 +761,47 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-checking-available-options" class="md-nav__link">
+  <a href="#1-detecting-cameras" class="md-nav__link">
     <span class="md-ellipsis">
-      1. Checking available options
+      1. Detecting Cameras
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-camera-modes" class="md-nav__link">
+  <a href="#2-loading-resolution-data" class="md-nav__link">
     <span class="md-ellipsis">
-      2. Camera modes
+      2. Loading Resolution Data
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-lowresolution-lores-stream" class="md-nav__link">
+  <a href="#3-building-the-cinepi-raw-command" class="md-nav__link">
     <span class="md-ellipsis">
-      3. Low‑resolution (lores) stream
+      3. Building the cinepi-raw Command
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-preview-window" class="md-nav__link">
+  <a href="#4-waiting-for-cameras-to-become-ready" class="md-nav__link">
     <span class="md-ellipsis">
-      4. Preview window
+      4. Waiting for Cameras to Become Ready
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#5-postprocessing-and-tuning-files" class="md-nav__link">
+  <a href="#5-customising-behaviour" class="md-nav__link">
     <span class="md-ellipsis">
-      5. Post‑processing and tuning files
+      5. Customising Behaviour
     </span>
   </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#6-cinematespecific-flags" class="md-nav__link">
-    <span class="md-ellipsis">
-      6. Cinemate‑specific flags
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#7-example-commands" class="md-nav__link">
-    <span class="md-ellipsis">
-      7. Example commands
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="7. Example commands">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#imx477-12bit-full-width" class="md-nav__link">
-    <span class="md-ellipsis">
-      IMX477 (12‑bit, full width)
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#imx585-12bit-unpacked" class="md-nav__link">
-    <span class="md-ellipsis">
-      IMX585 (12‑bit unpacked)
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -689,13 +815,13 @@
           
           
             <div class="md-content" data-md-component="content">
-              <article class="md-content__inner md-typeset">
+              <article class="md-content__inner md-typeset"><a class="md-content__button md-icon" download href="../pdf/combined.pdf" title="PDF Export"><svg style="height: 1.2rem; width: 1.2rem;" viewBox="0 0 384 512" xmlns="http://www.w3.org/2000/svg"><path d="M224 136V0H24C10.7 0 0 10.7 0 24v464c0 13.3 10.7 24 24 24h336c13.3 0 24-10.7 24-24V160H248c-13.2 0-24-10.8-24-24zm76.45 211.36l-96.42 95.7c-6.65 6.61-17.39 6.61-24.04 0l-96.42-95.7C73.42 337.29 80.54 320 94.82 320H160v-80c0-8.84 7.16-16 16-16h32c8.84 0 16 7.16 16 16v80h65.18c14.28 0 21.4 17.29 11.27 27.36zM377 105L279.1 7c-4.5-4.5-10.6-7-17-7H256v128h128v-6.1c0-6.3-2.5-12.4-7-16.9z"></path></svg></a>
                 
                   
 
 
   
-    <a href="https://github.com/tiramisioux/cinemate/edit/master/docs/cli_user_guide.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/cinepi-multi.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -703,90 +829,61 @@
   
 
 
-<h1 id="cinepi-raw-cli-user-guide">CinePi-raw CLI User Guide<a class="headerlink" href="#cinepi-raw-cli-user-guide" title="Permanent link">#</a></h1>
-<p>This guide explains how to start <strong>CinePi-raw</strong> from the command line. The tool is a fork of the <code>rpicam-apps</code> project and allows capturing CinemaDNG files using Raspberry Pi cameras. The examples below assume you have installed the software and its dependencies as described in the repository README.</p>
-<h2 id="1-checking-available-options">1. Checking available options<a class="headerlink" href="#1-checking-available-options" title="Permanent link">#</a></h2>
-<p>Before running the program you can view all command‑line flags with:</p>
-<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>-h
-</code></pre></div>
-<p>This prints a long list of options supported by the application. It includes the standard parameters from <code>rpicam-apps</code> (such as resolution and exposure settings) plus additional flags specific to the CinePi project. If you just want to confirm that your build works, you can also display the version number using:</p>
-<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>--version
-</code></pre></div>
-<h2 id="2-camera-modes">2. Camera modes<a class="headerlink" href="#2-camera-modes" title="Permanent link">#</a></h2>
-<p>CinePi-raw uses <strong>Libcamera</strong> to talk to your Raspberry Pi camera module. Each sensor supports one or more <em>modes</em>, which define the resolution and bit depth of the RAW images that the sensor can produce. A mode is written as:</p>
-<div class="highlight"><pre><span></span><code>&lt;width&gt;:&lt;height&gt;:&lt;bit-depth&gt;[:&lt;packing&gt;]
-</code></pre></div>
+<h1 id="how-cinemate-launches-cinepi-raw">How Cinemate launches cinepi-raw<a class="headerlink" href="#how-cinemate-launches-cinepi-raw" title="Permanent link">#</a></h1>
+<p><code>cinemate/src/module/cinepi_multi.py</code>  starts one <code>cinepi-raw</code> process per connected camera. It takes user settings from <code>sensor_detect.py</code> and <code>settings.json</code> to influence the command-line flags passed to <code>cinepi-raw</code>.</p>
+<p>Here it how it works:</p>
+<h2 id="1-detecting-cameras">1. Detecting Cameras<a class="headerlink" href="#1-detecting-cameras" title="Permanent link">#</a></h2>
+<p>When CineMate starts, <code>CinePiManager</code> runs <code>cinepi-raw --list-cameras</code>. Each line of output describes a connected sensor. The manager parses this output and stores basic information about every camera:</p>
 <ul>
-<li><code>width</code> and <code>height</code> select the active pixel area of the sensor.</li>
-<li><code>bit-depth</code> is usually 12 or 16 bits per pixel.</li>
-<li><code>packing</code> can be <code>P</code> for packed or <code>U</code> for unpacked data. </li>
+<li><strong>index</strong> – numeric index passed to <code>--camera</code></li>
+<li><strong>model</strong> – sensor model name (e.g. <code>imx477</code>)</li>
+<li><strong>mono</strong> – whether the camera is monochrome</li>
 </ul>
-<p>The mode must match the sensor you are using. For example, an IMX477 camera can run at <code>4056:3040:12</code> (full sensor) or at smaller cropped resolutions. When specifying a mode you typically also set the output <code>--width</code> and <code>--height</code> which control the size of the image written to disk. These can be equal to the mode values or smaller when scaling is applied.</p>
-<h2 id="3-lowresolution-lores-stream">3. Low‑resolution (lores) stream<a class="headerlink" href="#3-lowresolution-lores-stream" title="Permanent link">#</a></h2>
-<p>CinePi-raw can produce a secondary low‑resolution stream alongside the full‑resolution RAW frames. This is useful for monitoring or for algorithms that need a lighter image to work with. You enable it using:</p>
-<div class="highlight"><pre><span></span><code>--lores-width &lt;pixels&gt; --lores-height &lt;pixels&gt;
+<p>This information is kept in the <code>CameraInfo</code> class and written to Redis under the <code>cam_info</code> keys so that other modules know which sensors are present.</p>
+<h2 id="2-loading-resolution-data">2. Loading Resolution Data<a class="headerlink" href="#2-loading-resolution-data" title="Permanent link">#</a></h2>
+<p><code>cinepi_multi.py</code> relies on <code>sensor_detect.py</code> to look up valid resolutions and frame rates for each sensor. The mapping lives in <code>src/module/sensor_detect.py</code> and is organised like this:</p>
+<div class="highlight"><pre><span></span><code><span class="n">sensor_resolutions</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;imx477&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="mi">0</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;width&#39;</span><span class="p">:</span> <span class="mi">2028</span><span class="p">,</span> <span class="s1">&#39;height&#39;</span><span class="p">:</span> <span class="mi">1080</span><span class="p">,</span> <span class="s1">&#39;bit_depth&#39;</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span> <span class="s1">&#39;fps_max&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">},</span>
+        <span class="mi">1</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;width&#39;</span><span class="p">:</span> <span class="mi">2028</span><span class="p">,</span> <span class="s1">&#39;height&#39;</span><span class="p">:</span> <span class="mi">1520</span><span class="p">,</span> <span class="s1">&#39;bit_depth&#39;</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span> <span class="s1">&#39;fps_max&#39;</span><span class="p">:</span> <span class="mi">40</span><span class="p">},</span>
+        <span class="c1"># ...</span>
+    <span class="p">},</span>
+    <span class="s1">&#39;imx585_mono&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="mi">0</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;width&#39;</span><span class="p">:</span> <span class="mi">1928</span><span class="p">,</span> <span class="s1">&#39;height&#39;</span><span class="p">:</span> <span class="mi">1090</span><span class="p">,</span> <span class="s1">&#39;bit_depth&#39;</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span> <span class="s1">&#39;fps_max&#39;</span><span class="p">:</span> <span class="mi">87</span><span class="p">},</span>
+    <span class="p">}</span>
+<span class="p">}</span>
 </code></pre></div>
-<p>Setting either width or height to <code>0</code> disables the lores output.</p>
-<h2 id="4-preview-window">4. Preview window<a class="headerlink" href="#4-preview-window" title="Permanent link">#</a></h2>
-<p>By default the program opens an HDMI preview so you can see what the camera captures. The size and position of this window are controlled with:</p>
-<div class="highlight"><pre><span></span><code>-p x,y,width,height
-</code></pre></div>
-<p>For example <code>-p 0,30,1920,1020</code> positions the preview 30 pixels from the top of the screen with a 1920×1020 window. If you do not want any preview, use <code>--nopreview</code>.</p>
-<p>CineMate (the companion project) uses the preview window for its graphical interface, so you can adjust it to fit your monitor or leave it fullscreen with <code>--fullscreen</code>.</p>
-<h2 id="5-postprocessing-and-tuning-files">5. Post‑processing and tuning files<a class="headerlink" href="#5-postprocessing-and-tuning-files" title="Permanent link">#</a></h2>
-<p>Two JSON files influence how frames are processed:</p>
-<ol>
-<li><strong>Tuning file</strong> – describes the camera’s colour and lens characteristics. Use <code>--tuning-file &lt;path&gt;</code> to point to a file supplied with Libcamera (for example <code>imx477.json</code> for the HQ camera or <code>imx585.json</code> for the Sony IMX585 sensor).</li>
-<li><strong>Post‑process file</strong> – for cinepi-raw, this file defines the port used by cpp-mjpeg-streamer (default :8000)</li>
-</ol>
-<h2 id="6-cinematespecific-flags">6. Cinemate‑specific flags<a class="headerlink" href="#6-cinematespecific-flags" title="Permanent link">#</a></h2>
-<p>The CineMate fork introduces several extra options:</p>
-<table>
-<thead>
-<tr>
-<th>Flag</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--cam-port &lt;string&gt;</code></td>
-<td>Select the physical CSI port to use (<code>cam0</code> or <code>cam1</code>).</td>
-</tr>
-<tr>
-<td><code>--hdmi-port &lt;int&gt;</code></td>
-<td>Choose the HDMI connector for the preview: <code>0</code> = HDMI‑0, <code>1</code> = HDMI‑1, <code>-1</code> = auto.</td>
-</tr>
-<tr>
-<td><code>--same-hdmi</code></td>
-<td>Force both capture and controller GUI to share the same HDMI output.</td>
-</tr>
-<tr>
-<td><code>--keep16</code></td>
-<td>Save full 16‑bit DNGs instead of 12‑bit packed files.</td>
-</tr>
-</tbody>
-</table>
+<p>If you add support for a new sensor or want to tweak maximum frame rates, modify this dictionary. <code>cinepi_multi</code> calls <code>get_resolution_info()</code> to fetch the entry for the detected model and sensor mode (stored in Redis as <code>sensor_mode</code>).</p>
 <blockquote>
-<p>At this moment though, Cinemate is 12bit only. The flag is for future updates of the IMX585 16bit clear HDR modes.</p>
+<p>Note that there is a diference between driver sensor modes and Cinemate sensor modes . Driver sensor modes are presented with the terminal command <code>cinepi-raw --list-cameras</code> and then used by the list in <code>src/module/sensor_detect.py</code> to match the Cinemate / user sensor mode with the actual one. This is a bit clumsy so future updates aim at having sensor modes loaded dynamically. What firther complicate things is that libcameras sensor numbering dows not match the physical port numbering, which Cinemate uses for its mapping of preview to HDMI ports. So this need to be sorted out somehow. :)</p>
 </blockquote>
-<h2 id="7-example-commands">7. Example commands<a class="headerlink" href="#7-example-commands" title="Permanent link">#</a></h2>
-<p>Below are sample commands for different sensors and modes. </p>
-<h3 id="imx477-12bit-full-width">IMX477 (12‑bit, full width)<a class="headerlink" href="#imx477-12bit-full-width" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">4056</span>:2160:12<span class="w"> </span>--width<span class="w"> </span><span class="m">4056</span><span class="w"> </span>--height<span class="w"> </span><span class="m">2160</span><span class="w"> </span><span class="se">\</span>
+<h2 id="3-building-the-cinepi-raw-command">3. Building the <code>cinepi-raw</code> Command<a class="headerlink" href="#3-building-the-cinepi-raw-command" title="Permanent link">#</a></h2>
+<p>For each detected camera the manager creates a <code>CinePiProcess</code>. The <code>_build_args()</code> method constructs a list of command-line flags for <code>cinepi-raw</code>:</p>
+<ol>
+<li><strong>Resolution flags</strong> – <code>--mode</code>, <code>--width</code>, <code>--height</code> are taken from <code>sensor_detect</code>.</li>
+<li><strong>Preview size</strong> – low‑resolution dimensions are calculated so that the preview fits inside the HDMI framebuffer. The values are stored in Redis as <code>lores_width</code> and <code>lores_height</code>.</li>
+<li><strong>Geometry</strong> – the <code>geometry</code> section in <code>settings.json</code> allows you to rotate or flip each camera. These settings translate to <code>--rotation</code>, <code>--hflip</code> and <code>--vflip</code> flags.</li>
+<li><strong>Output mapping</strong> – the <code>output</code> section chooses which HDMI connector each camera uses. The primary camera shows a preview window unless <code>--nopreview</code> is specified.</li>
+<li><strong>Synchronization</strong> – if more than one camera is present, the first one is started with <code>--sync server</code> and the rest with <code>--sync client</code> so that frame capture is aligned.</li>
+</ol>
+<p>Here is a simplified example of the resulting command:</p>
+<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>--camera<span class="w"> </span><span class="m">0</span><span class="w"> </span>--mode<span class="w"> </span><span class="m">2028</span>:1080:12:U<span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--width<span class="w"> </span><span class="m">2028</span><span class="w"> </span>--height<span class="w"> </span><span class="m">1080</span><span class="w"> </span><span class="se">\</span>
 <span class="w">           </span>--lores-width<span class="w"> </span><span class="m">1280</span><span class="w"> </span>--lores-height<span class="w"> </span><span class="m">720</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>-p<span class="w"> </span><span class="m">0</span>,30,1920,1020<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--post-process-file<span class="w"> </span>/home/pi/post-processing.json<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--tuning-file<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json<span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--hdmi-port<span class="w"> </span><span class="m">0</span><span class="w"> </span>--rotation<span class="w"> </span><span class="m">0</span><span class="w"> </span>--hflip<span class="w"> </span><span class="m">0</span><span class="w"> </span>--vflip<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--tuning-file<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json
 </code></pre></div>
-<h3 id="imx585-12bit-unpacked">IMX585 (12‑bit unpacked)<a class="headerlink" href="#imx585-12bit-unpacked" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">1928</span>:1090:12:U<span class="w"> </span>--width<span class="w"> </span><span class="m">1928</span><span class="w"> </span>--height<span class="w"> </span><span class="m">1090</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--lores-width<span class="w"> </span><span class="m">1280</span><span class="w"> </span>--lores-height<span class="w"> </span><span class="m">720</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>-p<span class="w"> </span><span class="m">0</span>,30,1920,1020<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--post-process-file<span class="w"> </span>/home/pi/post-processing.json<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--tuning-file<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json<span class="w"> </span><span class="se">\</span>
-</code></pre></div>
-<p>Now, with an SSH shell running redis-cli you should be able to capture RAW footage from the command line!</p>
+<p>Secondary cameras would receive <code>--nopreview</code> and a different <code>--hdmi-port</code> based on your settings.</p>
+<blockquote>
+<p><code>cinepi_multi.py</code> lives in <code>src/module/</code>. If you want to change how arguments are built, look inside the <code>_build_args()</code> method. The rest of the file deals with process management, log forwarding and readiness checks.</p>
+</blockquote>
+<h2 id="4-waiting-for-cameras-to-become-ready">4. Waiting for Cameras to Become Ready<a class="headerlink" href="#4-waiting-for-cameras-to-become-ready" title="Permanent link">#</a></h2>
+<p>Each <code>cinepi-raw</code> instance prints <code>Encoder configured</code> when it has finished initialising. <code>cinepi_multi</code> watches the output and sets a Redis key like <code>cinepi_ready_cam0</code>. The manager waits until every launched camera reports ready before CineMate proceeds. This ensures that the very first REC command is seen by all sensors simultaneously.</p>
+<h2 id="5-customising-behaviour">5. Customising Behaviour<a class="headerlink" href="#5-customising-behaviour" title="Permanent link">#</a></h2>
+<ul>
+<li><strong><code>sensor_detect.py</code></strong> – add new entries or adjust values under <code>sensor_resolutions</code> if you connect a sensor with different modes. The dictionary format mirrors the command-line <code>--mode</code> flag.</li>
+<li><strong><code>settings.json</code></strong> – update the <code>geometry</code> and <code>output</code> sections for per‑camera rotation, flipping and HDMI mapping. These settings are read at startup and directly influence the arguments passed to <code>cinepi-raw</code>.</li>
+</ul>
 
 
 
@@ -807,7 +904,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 16, 2025 22:23:36 UTC">July 16, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 17, 2025 00:39:53 UTC">July 17, 2025</span>
   </span>
 
     

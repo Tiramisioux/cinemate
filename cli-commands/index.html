@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/cinepi_multi/">
+        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/cli-commands/">
       
       
         <link rel="prev" href="../settings-json/">
       
       
-        <link rel="next" href="../controller_methods/">
+        <link rel="next" href="../cinepi-multi/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -24,7 +24,7 @@
     
     
       
-        <title>Cinepi multi - Cinemate Docs</title>
+        <title>Cinemate CLI - Cinemate Docs</title>
       
     
     
@@ -49,6 +49,8 @@
         <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
       
     
+    
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown.css">
     
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -76,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#how-cinemate-launches-cinepi-raw" class="md-skip">
+        <a href="#73-cinemate-pseudo-cli" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Cinepi multi
+              Cinemate CLI
             
           </span>
         </div>
@@ -263,8 +265,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -275,11 +279,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
           <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
@@ -295,7 +299,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             Getting started
@@ -332,7 +336,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../install-guide.md" class="md-nav__link">
+      <a href="../install-guide/" class="md-nav__link">
         
   
   
@@ -371,58 +375,6 @@
 
               
             
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-    
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    Usage
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_3">
-            <span class="md-nav__icon md-icon"></span>
-            Usage
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
               
                 
   
@@ -436,15 +388,13 @@
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
       
-        
-      
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
           
   
   
   <span class="md-ellipsis">
-    Cinepi multi
+    Cinemate CLI
     
   </span>
   
@@ -457,7 +407,7 @@
   
   
   <span class="md-ellipsis">
-    Cinepi multi
+    Cinemate CLI
     
   </span>
   
@@ -470,8 +420,6 @@
   
   
   
-    
-  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -480,47 +428,26 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-detecting-cameras" class="md-nav__link">
+  <a href="#73-cinemate-pseudo-cli" class="md-nav__link">
     <span class="md-ellipsis">
-      1. Detecting Cameras
+      7.3 CineMate "Pseudo-CLI"
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7.3 CineMate &#34;Pseudo-CLI&#34;">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#available-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      Available Commands
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#2-loading-resolution-data" class="md-nav__link">
-    <span class="md-ellipsis">
-      2. Loading Resolution Data
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#3-building-the-cinepi-raw-command" class="md-nav__link">
-    <span class="md-ellipsis">
-      3. Building the cinepi-raw Command
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4-waiting-for-cameras-to-become-ready" class="md-nav__link">
-    <span class="md-ellipsis">
-      4. Waiting for Cameras to Become Ready
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#5-customising-behaviour" class="md-nav__link">
-    <span class="md-ellipsis">
-      5. Customising Behaviour
-    </span>
-  </a>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -533,6 +460,96 @@
 
               
             
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    Code
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Code
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1" id="__nav_3_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    modules
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1">
+            <span class="md-nav__icon md-icon"></span>
+            modules
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
               
                 
   
@@ -540,17 +557,48 @@
   
   
     <li class="md-nav__item">
-      <a href="../controller_methods/" class="md-nav__link">
+      <a href="../cinepi-multi/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Controller methods
+    cinepi_multi.py
     
   </span>
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../controller-methods/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    cinepi_controller.py
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -676,8 +724,6 @@
   
   
   
-    
-  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -686,47 +732,26 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-detecting-cameras" class="md-nav__link">
+  <a href="#73-cinemate-pseudo-cli" class="md-nav__link">
     <span class="md-ellipsis">
-      1. Detecting Cameras
+      7.3 CineMate "Pseudo-CLI"
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7.3 CineMate &#34;Pseudo-CLI&#34;">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#available-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      Available Commands
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#2-loading-resolution-data" class="md-nav__link">
-    <span class="md-ellipsis">
-      2. Loading Resolution Data
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#3-building-the-cinepi-raw-command" class="md-nav__link">
-    <span class="md-ellipsis">
-      3. Building the cinepi-raw Command
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4-waiting-for-cameras-to-become-ready" class="md-nav__link">
-    <span class="md-ellipsis">
-      4. Waiting for Cameras to Become Ready
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#5-customising-behaviour" class="md-nav__link">
-    <span class="md-ellipsis">
-      5. Customising Behaviour
-    </span>
-  </a>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -746,7 +771,7 @@
 
 
   
-    <a href="https://github.com/tiramisioux/cinemate/edit/master/docs/cinepi_multi.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/cli-commands.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -754,61 +779,245 @@
   
 
 
-<h1 id="how-cinemate-launches-cinepi-raw">How Cinemate launches cinepi-raw<a class="headerlink" href="#how-cinemate-launches-cinepi-raw" title="Permanent link">#</a></h1>
-<p><code>cinemate/src/module/cinepi_multi.py</code>  starts one <code>cinepi-raw</code> process per connected camera. It takes user settings from <code>sensor_detect.py</code> and <code>settings.json</code> to influence the command-line flags passed to <code>cinepi-raw</code>.</p>
-<p>Here it how it works:</p>
-<h2 id="1-detecting-cameras">1. Detecting Cameras<a class="headerlink" href="#1-detecting-cameras" title="Permanent link">#</a></h2>
-<p>When CineMate starts, <code>CinePiManager</code> runs <code>cinepi-raw --list-cameras</code>. Each line of output describes a connected sensor. The manager parses this output and stores basic information about every camera:</p>
-<ul>
-<li><strong>index</strong> – numeric index passed to <code>--camera</code></li>
-<li><strong>model</strong> – sensor model name (e.g. <code>imx477</code>)</li>
-<li><strong>mono</strong> – whether the camera is monochrome</li>
-</ul>
-<p>This information is kept in the <code>CameraInfo</code> class and written to Redis under the <code>cam_info</code> keys so that other modules know which sensors are present.</p>
-<h2 id="2-loading-resolution-data">2. Loading Resolution Data<a class="headerlink" href="#2-loading-resolution-data" title="Permanent link">#</a></h2>
-<p><code>cinepi_multi.py</code> relies on <code>sensor_detect.py</code> to look up valid resolutions and frame rates for each sensor. The mapping lives in <code>src/module/sensor_detect.py</code> and is organised like this:</p>
-<div class="highlight"><pre><span></span><code><span class="n">sensor_resolutions</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s1">&#39;imx477&#39;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="mi">0</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;width&#39;</span><span class="p">:</span> <span class="mi">2028</span><span class="p">,</span> <span class="s1">&#39;height&#39;</span><span class="p">:</span> <span class="mi">1080</span><span class="p">,</span> <span class="s1">&#39;bit_depth&#39;</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span> <span class="s1">&#39;fps_max&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">},</span>
-        <span class="mi">1</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;width&#39;</span><span class="p">:</span> <span class="mi">2028</span><span class="p">,</span> <span class="s1">&#39;height&#39;</span><span class="p">:</span> <span class="mi">1520</span><span class="p">,</span> <span class="s1">&#39;bit_depth&#39;</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span> <span class="s1">&#39;fps_max&#39;</span><span class="p">:</span> <span class="mi">40</span><span class="p">},</span>
-        <span class="c1"># ...</span>
-    <span class="p">},</span>
-    <span class="s1">&#39;imx585_mono&#39;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="mi">0</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;width&#39;</span><span class="p">:</span> <span class="mi">1928</span><span class="p">,</span> <span class="s1">&#39;height&#39;</span><span class="p">:</span> <span class="mi">1090</span><span class="p">,</span> <span class="s1">&#39;bit_depth&#39;</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span> <span class="s1">&#39;fps_max&#39;</span><span class="p">:</span> <span class="mi">87</span><span class="p">},</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div>
-<p>If you add support for a new sensor or want to tweak maximum frame rates, modify this dictionary. <code>cinepi_multi</code> calls <code>get_resolution_info()</code> to fetch the entry for the detected model and sensor mode (stored in Redis as <code>sensor_mode</code>).</p>
+  <h1>Cinemate CLI</h1>
+
+<h3 id="73-cinemate-pseudo-cli">7.3 CineMate "Pseudo-CLI"<a class="headerlink" href="#73-cinemate-pseudo-cli" title="Permanent link">#</a></h3>
+<p>CineMate doesn’t use a real shell parser. Instead, a background thread
+reads simple text commands from SSH or the serial port and calls the
+corresponding controller methods.</p>
+<h4 id="available-commands">Available Commands<a class="headerlink" href="#available-commands" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Input type</th>
+<th>Example</th>
+<th>Discussion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rec</code> / <code>stop</code></td>
+<td>none</td>
+<td><code>rec</code></td>
+<td>Toggle recording on or off</td>
+</tr>
+<tr>
+<td><code>set iso &lt;value&gt;</code></td>
+<td>int</td>
+<td><code>set iso 800</code></td>
+<td>Set ISO to nearest allowed step</td>
+</tr>
+<tr>
+<td><code>inc iso</code> / <code>dec iso</code></td>
+<td>none</td>
+<td><code>inc iso</code></td>
+<td>Step ISO up or down</td>
+</tr>
+<tr>
+<td><code>set shutter a &lt;angle&gt;</code></td>
+<td>float</td>
+<td><code>set shutter a 180</code></td>
+<td>Set actual shutter angle (snaps unless free/sync)</td>
+</tr>
+<tr>
+<td><code>inc shutter a</code> / <code>dec shutter a</code></td>
+<td>none</td>
+<td><code>inc shutter a</code></td>
+<td>Cycle through shutter angles</td>
+</tr>
+<tr>
+<td><code>set shutter a nom &lt;angle&gt;</code></td>
+<td>float</td>
+<td><code>set shutter a nom 180</code></td>
+<td>Set nominal shutter angle for motion blur</td>
+</tr>
+<tr>
+<td><code>inc shutter a nom</code> / <code>dec shutter a nom</code></td>
+<td>none</td>
+<td><code>inc shutter a nom</code></td>
+<td>Step the nominal shutter angle</td>
+</tr>
+<tr>
+<td><code>set fps &lt;value&gt;</code></td>
+<td>float</td>
+<td><code>set fps 24</code></td>
+<td>Change frame rate (snaps unless free)</td>
+</tr>
+<tr>
+<td><code>inc fps</code> / <code>dec fps</code></td>
+<td>none</td>
+<td><code>inc fps</code></td>
+<td>Step through FPS list</td>
+</tr>
+<tr>
+<td><code>set wb [&lt;Kelvin&gt;]</code></td>
+<td>int or none</td>
+<td><code>set wb 5600</code></td>
+<td>Set white balance or cycle presets</td>
+</tr>
+<tr>
+<td><code>inc wb</code> / <code>dec wb</code></td>
+<td>none</td>
+<td><code>inc wb</code></td>
+<td>Cycle white balance steps</td>
+</tr>
+<tr>
+<td><code>set resolution [&lt;mode&gt;]</code></td>
+<td>int or none</td>
+<td><code>set resolution 2</code></td>
+<td>Apply or cycle sensor mode</td>
+</tr>
+<tr>
+<td><code>set anamorphic factor [&lt;float&gt;]</code></td>
+<td>float or none</td>
+<td><code>set anamorphic factor 1.33</code></td>
+<td>Set or toggle anamorphic stretch</td>
+</tr>
+<tr>
+<td><code>set zoom [&lt;float&gt;]</code></td>
+<td>float or none</td>
+<td><code>set zoom 2</code></td>
+<td>Change digital zoom; omit to cycle</td>
+</tr>
+<tr>
+<td><code>inc zoom</code> / <code>dec zoom</code></td>
+<td>none</td>
+<td><code>inc zoom</code></td>
+<td>Step preview zoom factor</td>
+</tr>
+<tr>
+<td><code>mount</code> / <code>unmount</code></td>
+<td>none</td>
+<td><code>mount</code></td>
+<td>Mount or unmount external storage</td>
+</tr>
+<tr>
+<td><code>toggle mount</code></td>
+<td>none</td>
+<td><code>toggle mount</code></td>
+<td>Mount if not mounted, otherwise unmount</td>
+</tr>
+<tr>
+<td><code>time</code></td>
+<td>none</td>
+<td><code>time</code></td>
+<td>Show system and RTC time</td>
+</tr>
+<tr>
+<td><code>set rtc time</code></td>
+<td>none</td>
+<td><code>set rtc time</code></td>
+<td>Copy system time to the RTC</td>
+</tr>
+<tr>
+<td><code>space</code></td>
+<td>none</td>
+<td><code>space</code></td>
+<td>Report remaining SSD space</td>
+</tr>
+<tr>
+<td><code>get</code></td>
+<td>none</td>
+<td><code>get</code></td>
+<td>Print all current settings</td>
+</tr>
+<tr>
+<td><code>set shutter a sync [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set shutter a sync 1</code></td>
+<td>Enable exposure sync mode</td>
+</tr>
+<tr>
+<td><code>set iso lock [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set iso lock</code></td>
+<td>Lock or unlock ISO setting</td>
+</tr>
+<tr>
+<td><code>set shutter a nom lock [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set shutter a nom lock</code></td>
+<td>Lock or unlock nominal shutter</td>
+</tr>
+<tr>
+<td><code>set shutter a nom fps lock [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set shutter a nom fps lock 1</code></td>
+<td>Lock nominal shutter and FPS together</td>
+</tr>
+<tr>
+<td><code>set fps lock [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set fps lock 1</code></td>
+<td>Lock or unlock the frame rate</td>
+</tr>
+<tr>
+<td><code>set all lock [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set all lock 0</code></td>
+<td>Toggle all exposure locks at once</td>
+</tr>
+<tr>
+<td><code>set fps double [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set fps double</code></td>
+<td>Instant or toggled 2× FPS mode</td>
+</tr>
+<tr>
+<td><code>reboot</code> / <code>shutdown</code></td>
+<td>none</td>
+<td><code>reboot</code></td>
+<td>Safely reboot or halt the Pi</td>
+</tr>
+<tr>
+<td><code>restart camera</code></td>
+<td>none</td>
+<td><code>restart camera</code></td>
+<td>Restart the libcamera pipeline</td>
+</tr>
+<tr>
+<td><code>restart cinemate</code></td>
+<td>none</td>
+<td><code>restart cinemate</code></td>
+<td>Restart the Cinemate process</td>
+</tr>
+<tr>
+<td><code>set iso free [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set iso free 1</code></td>
+<td>Allow any ISO instead of presets</td>
+</tr>
+<tr>
+<td><code>set shutter a free [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set shutter a free 0</code></td>
+<td>Allow any shutter angle</td>
+</tr>
+<tr>
+<td><code>set fps free [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set fps free 1</code></td>
+<td>Allow any FPS</td>
+</tr>
+<tr>
+<td><code>set wb free [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set wb free</code></td>
+<td>Allow any white balance</td>
+</tr>
+<tr>
+<td><code>set filter &lt;0/1&gt;</code></td>
+<td>0/1</td>
+<td><code>set filter 1</code></td>
+<td>Toggle IR-cut filter (IMX585)</td>
+</tr>
+</tbody>
+</table>
 <blockquote>
-<p>Note that there is a diference between driver sensor modes and Cinemate sensor modes . Driver sensor modes are presented with the terminal command <code>cinepi-raw --list-cameras</code> and then used by the list in <code>src/module/sensor_detect.py</code> to match the Cinemate / user sensor mode with the actual one. This is a bit clumsy so future updates aim at having sensor modes loaded dynamically. What firther complicate things is that libcameras sensor numbering dows not match the physical port numbering, which Cinemate uses for its mapping of preview to HDMI ports. So this need to be sorted out somehow. :)</p>
+<p>Commands without an explicit argument will toggle the current state when
+possible (e.g. <code>set fps lock</code> flips the lock; <code>set fps lock 1</code> forces it on).</p>
 </blockquote>
-<h2 id="3-building-the-cinepi-raw-command">3. Building the <code>cinepi-raw</code> Command<a class="headerlink" href="#3-building-the-cinepi-raw-command" title="Permanent link">#</a></h2>
-<p>For each detected camera the manager creates a <code>CinePiProcess</code>. The <code>_build_args()</code> method constructs a list of command-line flags for <code>cinepi-raw</code>:</p>
-<ol>
-<li><strong>Resolution flags</strong> – <code>--mode</code>, <code>--width</code>, <code>--height</code> are taken from <code>sensor_detect</code>.</li>
-<li><strong>Preview size</strong> – low‑resolution dimensions are calculated so that the preview fits inside the HDMI framebuffer. The values are stored in Redis as <code>lores_width</code> and <code>lores_height</code>.</li>
-<li><strong>Geometry</strong> – the <code>geometry</code> section in <code>settings.json</code> allows you to rotate or flip each camera. These settings translate to <code>--rotation</code>, <code>--hflip</code> and <code>--vflip</code> flags.</li>
-<li><strong>Output mapping</strong> – the <code>output</code> section chooses which HDMI connector each camera uses. The primary camera shows a preview window unless <code>--nopreview</code> is specified.</li>
-<li><strong>Synchronization</strong> – if more than one camera is present, the first one is started with <code>--sync server</code> and the rest with <code>--sync client</code> so that frame capture is aligned.</li>
-</ol>
-<p>Here is a simplified example of the resulting command:</p>
-<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>--camera<span class="w"> </span><span class="m">0</span><span class="w"> </span>--mode<span class="w"> </span><span class="m">2028</span>:1080:12:U<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--width<span class="w"> </span><span class="m">2028</span><span class="w"> </span>--height<span class="w"> </span><span class="m">1080</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--lores-width<span class="w"> </span><span class="m">1280</span><span class="w"> </span>--lores-height<span class="w"> </span><span class="m">720</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--hdmi-port<span class="w"> </span><span class="m">0</span><span class="w"> </span>--rotation<span class="w"> </span><span class="m">0</span><span class="w"> </span>--hflip<span class="w"> </span><span class="m">0</span><span class="w"> </span>--vflip<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--tuning-file<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json
-</code></pre></div>
-<p>Secondary cameras would receive <code>--nopreview</code> and a different <code>--hdmi-port</code> based on your settings.</p>
-<blockquote>
-<p><code>cinepi_multi.py</code> lives in <code>src/module/</code>. If you want to change how arguments are built, look inside the <code>_build_args()</code> method. The rest of the file deals with process management, log forwarding and readiness checks.</p>
-</blockquote>
-<h2 id="4-waiting-for-cameras-to-become-ready">4. Waiting for Cameras to Become Ready<a class="headerlink" href="#4-waiting-for-cameras-to-become-ready" title="Permanent link">#</a></h2>
-<p>Each <code>cinepi-raw</code> instance prints <code>Encoder configured</code> when it has finished initialising. <code>cinepi_multi</code> watches the output and sets a Redis key like <code>cinepi_ready_cam0</code>. The manager waits until every launched camera reports ready before CineMate proceeds. This ensures that the very first REC command is seen by all sensors simultaneously.</p>
-<h2 id="5-customising-behaviour">5. Customising Behaviour<a class="headerlink" href="#5-customising-behaviour" title="Permanent link">#</a></h2>
-<ul>
-<li><strong><code>sensor_detect.py</code></strong> – add new entries or adjust values under <code>sensor_resolutions</code> if you connect a sensor with different modes. The dictionary format mirrors the command-line <code>--mode</code> flag.</li>
-<li><strong><code>settings.json</code></strong> – update the <code>geometry</code> and <code>output</code> sections for per‑camera rotation, flipping and HDMI mapping. These settings are read at startup and directly influence the arguments passed to <code>cinepi-raw</code>.</li>
-</ul>
 
 
 
@@ -829,7 +1038,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 16, 2025 22:23:36 UTC">July 16, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 17, 2025 00:39:53 UTC">July 17, 2025</span>
   </span>
 
     

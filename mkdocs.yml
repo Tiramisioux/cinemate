@@ -13,22 +13,16 @@ dev_addr: 0.0.0.0:8000            # live-preview reachable from your laptop
 # ───────────────────────────
 nav:
   - Home: index.md
-  
   - Getting started:
-    - Overview: Overview.md
-    - Installation: install-guide.md
-    - Settings file: settings-json.md
-
+      - Overview: overview.md
+      - Installation: install-guide.md
+      - Settings file: settings-json.md
   - Usage:
-    - /src/module
       - Cinepi multi: cinepi_multi.md
       - Controller methods: controller_methods.md
-  
   - Redis:
-    - Basic API: redis-guide.md
-    - Key reference: redis-keys.md
-
-  - Building a camera
+      - Basic API: redis-guide.md
+      - Key reference: redis-keys.md
     
 
 # ───────────────────────────

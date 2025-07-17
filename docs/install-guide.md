@@ -2,7 +2,46 @@
 
 This guide walks you through installing the `cinepi-raw` fork and the Cinemate UI on a fresh Bookworm installation. Lite version of Bookworm also works.
 
-## Dependencies
+## Prerequisites
+
+If you run Raspberry Pi OS Lite, begin by installing the following packages:
+
+```bash
+sudo apt install -y python-pip git python3-jinja2
+````
+
+### libcamera
+
+```shell
+git clone https://github.com/raspberrypi/libcamera && \
+sudo find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
+cd libcamera && \
+sudo meson setup build --buildtype=release \
+  -Dpipelines=rpi/vc4,rpi/pisp \
+  -Dipas=rpi/vc4,rpi/pisp \
+  -Dv4l2=true \
+  -Dgstreamer=enabled \
+  -Dtest=false \
+  -Dlc-compliance=disabled \
+  -Dcam=disabled \
+  -Dqcam=disabled \
+  -Ddocumentation=disabled \
+  -Dpycamera=enabled && \
+sudo ninja -C build install && \
+cd
+```
+
+```shell
+cd ~/libcamera/utils && sudo chmod +x *.py *.sh && sudo chmod +x ~/libcamera/src/ipa/ipa-sign.sh && cd ~/libcamera && sudo ninja -C build install
+```
+
+```shell
+sudo apt-get install --reinstall libtiff5-dev && sudo ln -sf $(find /usr/lib -name "libtiff.so" | head -n 1) /usr/lib/aarch64-linux-gnu/libtiff.so.5 && export LD_LIBRARY_PATH=/usr/lib/aarch64-linux-gnu:$LD_LIBRARY_PATH && sudo ldconfig
+```
+
+```shell
+sudo apt install -y python3-pip git python3-jinja2 libboost-dev libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a meson cmake python3-yaml python3-ply libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libavdevice59
+```
 
 ### Node Version Manager
 

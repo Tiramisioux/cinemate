@@ -1,7 +1,7 @@
 /* ---------- PAGE BOX ---------- */
 @page {
   size: A4 portrait;
-  margin: 20mm 25mm;      /* inner, outer */
+  margin: 69mm 25mm;      /* inner, outer */
 }
 
 /* ---------- MAIN FLOW ---------- */
@@ -40,4 +40,22 @@ pre, code {
   border: 1px solid #e0e0e0;
   padding: 2pt 3pt;
   white-space: pre-wrap;           /* wraps long lines */
+}
+
+@page {
+  size: a4 portrait;
+  margin: 25mm 10mm 25mm 10mm;
+  counter-increment: page;
+  font-family: "Roboto","Helvetica Neue",Helvetica,Arial,sans-serif;
+  white-space: pre;
+  color: grey;
+  @top-left {
+      content: '© 2018 My Company';
+  }
+  @top-center {
+      content: string(chapter);
+  }
+  @top-right {
+      content: 'Page ' counter(page);
+  }
 }

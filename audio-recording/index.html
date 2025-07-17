@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/coverpage/">
+        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/audio-recording/">
       
       
+        <link rel="prev" href="../sensors/">
+      
+      
+        <link rel="next" href="../digital-zoom/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +24,7 @@
     
     
       
-        <title>Cinemate Documentation - Cinemate Docs</title>
+        <title>Audio recording - Cinemate Docs</title>
       
     
     
@@ -73,6 +77,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#audio-recording-experimental" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -105,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Cinemate Documentation
+              Audio recording
             
           </span>
         </div>
@@ -404,8 +413,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -416,11 +427,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
@@ -436,7 +447,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             Operating the camera
@@ -516,10 +527,32 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../audio-recording/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Audio recording
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -530,6 +563,35 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#asoundrc-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      .asoundrc Setup
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1076,7 +1138,53 @@
               <article class="md-content__inner md-typeset">
                 
 <div class="markdown-body">
-  <p><strong>Built:</strong> 2025-07-17 21:37 UTC</p>
+  <h1 id="audio-recording-experimental">Audio recording (experimental)<a class="headerlink" href="#audio-recording-experimental" title="Permanent link">#</a></h1>
+<p>Cinemate can capture audio alongside the image sequence. Support is currently limited to a few USB microphones with hard coded configurations:
+ - <strong>RØDE VideoMic NTG</strong> – recorded in stereo at 24‑bit/48 kHz.
+ - <strong>USB PnP microphones</strong> – recorded in mono at 16‑bit/48 kHz.</p>
+<p>Audio is written as <code>.wav</code> files into the same folder as the <code>.dng</code> frames. The implementation is still experimental and audio/video synchronization needs further investigation.</p>
+<h3 id="asoundrc-setup">.asoundrc Setup<a class="headerlink" href="#asoundrc-setup" title="Permanent link">#</a></h3>
+<p>For <code>dsnoop</code> support, create a <code>~/.asoundrc</code> in home directory:</p>
+<div class="highlight"><pre><span></span><code>nano<span class="w"> </span>~/.asoundrc
+</code></pre></div>
+<p>Paste this into the file:</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span>pcm.dsnoop_24bit<span class="w"> </span><span class="o">{</span>
+<span class="w">        </span><span class="nb">type</span><span class="w"> </span>dsnoop
+<span class="w">        </span>ipc_key<span class="w"> </span><span class="m">2048</span>
+<span class="w">        </span>slave<span class="w"> </span><span class="o">{</span>
+<span class="w">            </span>pcm<span class="w"> </span><span class="s2">&quot;hw:Device,0&quot;</span>
+<span class="w">            </span>channels<span class="w"> </span><span class="m">2</span>
+<span class="w">            </span>rate<span class="w"> </span><span class="m">48000</span>
+<span class="w">            </span>format<span class="w"> </span>S24_3LE
+<span class="w">            </span>period_size<span class="w"> </span><span class="m">1024</span>
+<span class="w">            </span>buffer_size<span class="w"> </span><span class="m">4096</span>
+<span class="w">        </span><span class="o">}</span>
+<span class="w">    </span><span class="o">}</span>
+
+<span class="w">    </span>pcm.dsnoop_16bit<span class="w"> </span><span class="o">{</span>
+<span class="w">        </span><span class="nb">type</span><span class="w"> </span>dsnoop
+<span class="w">        </span>ipc_key<span class="w"> </span><span class="m">2049</span>
+<span class="w">        </span>slave<span class="w"> </span><span class="o">{</span>
+<span class="w">            </span>pcm<span class="w"> </span><span class="s2">&quot;hw:Device,0&quot;</span>
+<span class="w">            </span>channels<span class="w"> </span><span class="m">1</span>
+<span class="w">            </span>rate<span class="w"> </span><span class="m">48000</span>
+<span class="w">            </span>format<span class="w"> </span>S16_LE
+<span class="w">            </span>period_size<span class="w"> </span><span class="m">1024</span>
+<span class="w">            </span>buffer_size<span class="w"> </span><span class="m">4096</span>
+<span class="w">        </span><span class="o">}</span>
+<span class="w">    </span><span class="o">}</span>
+
+<span class="w">    </span>pcm.mic_24bit<span class="w"> </span><span class="o">{</span>
+<span class="w">        </span><span class="nb">type</span><span class="w"> </span>plug
+<span class="w">        </span>slave.pcm<span class="w"> </span><span class="s2">&quot;dsnoop_24bit&quot;</span>
+<span class="w">    </span><span class="o">}</span>
+
+<span class="w">    </span>pcm.mic_16bit<span class="w"> </span><span class="o">{</span>
+<span class="w">        </span><span class="nb">type</span><span class="w"> </span>plug
+<span class="w">        </span>slave.pcm<span class="w"> </span><span class="s2">&quot;dsnoop_16bit&quot;</span>
+<span class="w">    </span><span class="o">}</span>
+</code></pre></div>
+<p>Exit nano editor using ctrl+x.</p>
 </div>
 
               </article>

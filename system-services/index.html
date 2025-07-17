@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/coverpage/">
+        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/system-services/">
       
       
+        <link rel="prev" href="../speed-ramping/">
+      
+      
+        <link rel="next" href="../config-txt/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +24,7 @@
     
     
       
-        <title>Cinemate Documentation - Cinemate Docs</title>
+        <title>System services - Cinemate Docs</title>
       
     
     
@@ -73,6 +77,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#system-services" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -105,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Cinemate Documentation
+              System services
             
           </span>
         </div>
@@ -592,8 +601,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -604,11 +615,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
           <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
@@ -624,7 +635,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             System management
@@ -635,10 +646,32 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../system-services/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    System services
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -649,6 +682,53 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#cinemate-autostartservice" class="md-nav__link">
+    <span class="md-ellipsis">
+      cinemate-autostart.service
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-automountservice" class="md-nav__link">
+    <span class="md-ellipsis">
+      storage-automount.service
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wifi-hotspotservice" class="md-nav__link">
+    <span class="md-ellipsis">
+      wifi-hotspot.service
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1076,7 +1156,37 @@
               <article class="md-content__inner md-typeset">
                 
 <div class="markdown-body">
-  <p><strong>Built:</strong> 2025-07-17 21:37 UTC</p>
+  <h1 id="system-services">System services<a class="headerlink" href="#system-services" title="Permanent link">#</a></h1>
+<h2 id="cinemate-autostartservice">cinemate-autostart.service<a class="headerlink" href="#cinemate-autostartservice" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code>make install   # copy service file
+make enable    # start on boot
+make start     # launch now
+make stop      # stop it
+make status    # check status
+make disable   # disable autostart
+make clean     # remove the service
+</code></pre></div>
+<p>Note that in order for the web ui to work properly you have to run <code>make install</code> once in the <code>/home/pi/cinemate</code> folder, even if you are not using the autostart service.</p>
+<h2 id="storage-automountservice">storage-automount.service<a class="headerlink" href="#storage-automountservice" title="Permanent link">#</a></h2>
+<p><code>storage-automount</code> is a systemd service that watches for removable drives and mounts them automatically. The accompanying Python script reacts to udev events and the CFE-HAT eject button so drives can be attached or detached safely.</p>
+<p>It understands <code>ext4</code>, <code>ntfs</code> and <code>exfat</code> filesystems. Partitions labelled <code>RAW</code> are mounted at <code>/media/RAW</code>; any other label is mounted under <code>/media/&lt;LABEL&gt;</code> after sanitising the name. This applies to USB SSDs, NVMe drives and the CFE-HAT slot.</p>
+<p>To manually install and enable the service:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>cinemate/services/storage-automount
+sudo<span class="w"> </span>make<span class="w"> </span>install
+sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable</span>
+</code></pre></div>
+<p>You can stop or disable it later with:
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>make<span class="w"> </span>stop
+sudo<span class="w"> </span>make<span class="w"> </span>disable
+</code></pre></div></p>
+<h2 id="wifi-hotspotservice">wifi-hotspot.service<a class="headerlink" href="#wifi-hotspotservice" title="Permanent link">#</a></h2>
+<p><code>wifi-hotspot</code> keeps a small access point running with the help of NetworkManager so you can always reach the web interface. The SSID and password are read from <code>/home/pi/cinemate/src/settings.json</code> under <code>system.wifi_hotspot</code>.</p>
+<p>Install and enable it with:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>cinemate/services/wifi-hotspot
+sudo<span class="w"> </span>make<span class="w"> </span>install
+sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable</span>
+</code></pre></div>
+<p>As with <code>storage-automount</code>, you can stop or disable the hotspot with <code>make stop</code> and <code>make disable</code>.</p>
 </div>
 
               </article>

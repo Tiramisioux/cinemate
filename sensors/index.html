@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/coverpage/">
+        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/sensors/">
       
       
+        <link rel="prev" href="../simple-gui/">
+      
+      
+        <link rel="next" href="../audio-recording/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +24,7 @@
     
     
       
-        <title>Cinemate Documentation - Cinemate Docs</title>
+        <title>Sensors - Cinemate Docs</title>
       
     
     
@@ -73,6 +77,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#compatible-sensors" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -105,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Cinemate Documentation
+              Sensors
             
           </span>
         </div>
@@ -404,8 +413,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -416,11 +427,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
@@ -436,7 +447,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             Operating the camera
@@ -493,10 +504,19 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../sensors/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -507,6 +527,7 @@
   
 
       </a>
+      
     </li>
   
 
@@ -1076,7 +1097,97 @@
               <article class="md-content__inner md-typeset">
                 
 <div class="markdown-body">
-  <p><strong>Built:</strong> 2025-07-17 21:37 UTC</p>
+  <h1 id="compatible-sensors">Compatible sensors<a class="headerlink" href="#compatible-sensors" title="Permanent link">#</a></h1>
+<table>
+<thead>
+<tr>
+<th>Sensor</th>
+<th>Cinemate sensor mode</th>
+<th>Resolution</th>
+<th>Aspect Ratio</th>
+<th>Bit Depth</th>
+<th>Max FPS*</th>
+<th>File Size (MB)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IMX283</td>
+<td>0</td>
+<td>2736 x 1538</td>
+<td>1.80</td>
+<td>12</td>
+<td>40</td>
+<td>7.1</td>
+</tr>
+<tr>
+<td></td>
+<td>1</td>
+<td>2736 x 1824</td>
+<td>1.53</td>
+<td>12</td>
+<td>34</td>
+<td>8.2</td>
+</tr>
+<tr>
+<td>IMX296</td>
+<td>0</td>
+<td>1456 x 1088</td>
+<td>1.33</td>
+<td>12</td>
+<td>60</td>
+<td>2</td>
+</tr>
+<tr>
+<td>IMX477</td>
+<td>0</td>
+<td>2028 x 1080</td>
+<td>1.87</td>
+<td>12</td>
+<td>50</td>
+<td>4.3</td>
+</tr>
+<tr>
+<td></td>
+<td>1</td>
+<td>2028 x 1520</td>
+<td>1.33</td>
+<td>12</td>
+<td>40</td>
+<td>5.3</td>
+</tr>
+<tr>
+<td></td>
+<td>2</td>
+<td>1332 x 990</td>
+<td>1.34</td>
+<td>10</td>
+<td>120</td>
+<td>2.7</td>
+</tr>
+<tr>
+<td>IMX585</td>
+<td>0</td>
+<td>1928 x 1090</td>
+<td>1.77</td>
+<td>12</td>
+<td>87</td>
+<td>4</td>
+</tr>
+<tr>
+<td></td>
+<td>1</td>
+<td>3840 x 2160</td>
+<td>1.77</td>
+<td>12</td>
+<td>34</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames. You can cap Cinemates max fps values for your specific build by editing the file <code>cinemate/src/module/sensor_detect.py</code></p>
+</blockquote>
 </div>
 
               </article>

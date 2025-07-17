@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/coverpage/">
+        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/multiple-sensors/">
       
       
       
@@ -20,7 +20,7 @@
     
     
       
-        <title>Cinemate Documentation - Cinemate Docs</title>
+        <title>Multi camera support - Cinemate Docs</title>
       
     
     
@@ -73,6 +73,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#multi-camera-support" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -105,7 +110,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Cinemate Documentation
+              Multi camera support
             
           </span>
         </div>
@@ -1076,7 +1081,14 @@
               <article class="md-content__inner md-typeset">
                 
 <div class="markdown-body">
-  <p><strong>Built:</strong> 2025-07-17 21:37 UTC</p>
+  <h1 id="multi-camera-support">Multi camera support <img src="https://img.shields.io/badge/cinepi--raw%20fork-ff69b4?style=flat" height="14"><a class="headerlink" href="#multi-camera-support" title="Permanent link">#</a></h1>
+<p>CineMate automatically detects each camera connected to the Raspberry Pi and spawns a separate <code>cinepi-raw</code> process per sensor. By default:</p>
+<ul>
+<li><strong>Primary camera</strong> (first detected) displays its preview on HDMI port 0.</li>
+<li><strong>Secondary cameras</strong> run with <code>--nopreview</code> and map to subsequent HDMI outputs (cam1→HDMI 1, cam2→HDMI 2, etc.).</li>
+<li>Preview windows are centered and sized according to your <code>geometry</code> settings.</li>
+</ul>
+<p>You can override default HDMI mappings in <code>settings.json</code> under the <code>output</code> section:</p>
 </div>
 
               </article>

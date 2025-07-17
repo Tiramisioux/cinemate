@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/coverpage/">
+        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/compiling-cinepi-raw/">
       
       
+        <link rel="prev" href="../config-txt/">
+      
+      
+        <link rel="next" href="../hotspot-logic/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +24,7 @@
     
     
       
-        <title>Cinemate Documentation - Cinemate Docs</title>
+        <title>Recompiling cinepi-raw - Cinemate Docs</title>
       
     
     
@@ -73,6 +77,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#compiling-cinepi-raw" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -105,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Cinemate Documentation
+              Recompiling cinepi-raw
             
           </span>
         </div>
@@ -592,8 +601,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -604,11 +615,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
           <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
@@ -624,7 +635,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             System management
@@ -681,10 +692,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../compiling-cinepi-raw/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Recompiling cinepi-raw
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -695,6 +726,33 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#compiling-cinepi-raw" class="md-nav__link">
+    <span class="md-ellipsis">
+      Compiling cinepi-raw
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1076,7 +1134,20 @@
               <article class="md-content__inner md-typeset">
                 
 <div class="markdown-body">
-  <p><strong>Built:</strong> 2025-07-17 21:37 UTC</p>
+  <h2 id="compiling-cinepi-raw">Compiling cinepi-raw<a class="headerlink" href="#compiling-cinepi-raw" title="Permanent link">#</a></h2>
+<p>For easy later rebuilding and installation of cinepi-raw you can create the file compile-raw.sh.</p>
+<div class="highlight"><pre><span></span><code>nano<span class="w"> </span>compile-raw.sh
+</code></pre></div>
+<p>Paste this into the file</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>meson<span class="w"> </span>install<span class="w"> </span>-C<span class="w"> </span>build
+</code></pre></div>
+<p>Exit by pressing Ctrl+C</p>
+<p>Make it exectutable:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>compile-raw.sh
+</code></pre></div>
+<p>Now, from the same folder, to build and install cinepi-raw:</p>
+<div class="highlight"><pre><span></span><code>./compile-raw.sh
+</code></pre></div>
 </div>
 
               </article>

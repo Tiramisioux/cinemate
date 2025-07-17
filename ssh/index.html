@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/coverpage/">
+        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/ssh/">
       
       
+        <link rel="prev" href="../installation-steps/">
+      
+      
+        <link rel="next" href="../settings-json/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +24,7 @@
     
     
       
-        <title>Cinemate Documentation - Cinemate Docs</title>
+        <title>Connecting to the camera via SSH - Cinemate Docs</title>
       
     
     
@@ -73,6 +77,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#connecting-to-the-pi-with-ssh" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -105,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Cinemate Documentation
+              Connecting to the camera via SSH
             
           </span>
         </div>
@@ -262,8 +271,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -274,11 +285,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
           <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
@@ -294,7 +305,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             Configuration
@@ -305,10 +316,32 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../ssh/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Connecting to the camera via SSH
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -319,6 +352,62 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#join-the-same-network" class="md-nav__link">
+    <span class="md-ellipsis">
+      Join the same network
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#find-the-pis-address" class="md-nav__link">
+    <span class="md-ellipsis">
+      Find the Pi's address
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connect" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connect
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      Next steps
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1076,7 +1165,33 @@
               <article class="md-content__inner md-typeset">
                 
 <div class="markdown-body">
-  <p><strong>Built:</strong> 2025-07-17 21:37 UTC</p>
+  <h1 id="connecting-to-the-pi-with-ssh">Connecting to the Pi with SSH<a class="headerlink" href="#connecting-to-the-pi-with-ssh" title="Permanent link">#</a></h1>
+<p>This guide shows how to log into the Raspberry Pi that runs Cinemate.</p>
+<h2 id="join-the-same-network">Join the same network<a class="headerlink" href="#join-the-same-network" title="Permanent link">#</a></h2>
+<p>Connect your computer and the Pi to the same network. If you are using the preinstalled image file, the system automatically starts a built-in hotspot: join the <strong>CinePi</strong> Wi‑Fi with password <code>11111111</code>.</p>
+<p>You can change this behaviour later in the settings file.</p>
+<h2 id="find-the-pis-address">Find the Pi's address<a class="headerlink" href="#find-the-pis-address" title="Permanent link">#</a></h2>
+<p>Open a terminal (on Windows you can use PowerShell).</p>
+<p>Try the hostname first:
+   <div class="highlight"><pre><span></span><code>ssh<span class="w"> </span>pi@cinepi.local
+</code></pre></div>
+   If this fails you can list devices on the network:
+   <div class="highlight"><pre><span></span><code>arp<span class="w"> </span>-a
+</code></pre></div>
+   Look for an entry labelled <code>cinepi</code> or note the new IP address that appears.</p>
+<h2 id="connect">Connect<a class="headerlink" href="#connect" title="Permanent link">#</a></h2>
+<p>Use the hostname or IP address with SSH:
+<div class="highlight"><pre><span></span><code>ssh<span class="w"> </span>pi@cinepi.local
+<span class="c1"># or</span>
+ssh<span class="w"> </span>pi@&lt;ip-address&gt;
+</code></pre></div>
+When asked about the host key, type <code>yes</code>. Enter the default password <code>1</code> when prompted.</p>
+<p>You will now see the <code>pi@cinepi</code> prompt, meaning you are logged in.</p>
+<blockquote>
+<p>If you are installing Cinemate manually, the hostname has not yet been set to cinepi. Then you will have to identify which ip address on the network is actually the Raspberry Pi and use that ip address.</p>
+</blockquote>
+<h2 id="next-steps">Next steps<a class="headerlink" href="#next-steps" title="Permanent link">#</a></h2>
+<p>From here you can run <code>cinemate</code> to start the interface or use <code>make</code> commands to manage the service. For security you should change the password with <code>passwd</code> after the first login.</p>
 </div>
 
               </article>

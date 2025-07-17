@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/system-management/">
+        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/getting-started/">
       
       
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../installation-steps/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +24,7 @@
     
     
       
-        <title>System management - Cinemate Docs</title>
+        <title>Getting started - Cinemate Docs</title>
       
     
     
@@ -45,6 +49,8 @@
         <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
       
     
+    
+      <link rel="stylesheet" href="../docs/stylesheets/pdf.css">
     
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -72,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#system-management" class="md-skip">
+        <a href="#getting-started" class="md-skip">
           Skip to content
         </a>
       
@@ -108,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              System management
+              Getting started
             
           </span>
         </div>
@@ -221,27 +227,20 @@
       
   
   
+    
   
   
-    
-    
-    
-    
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
       
         
-        
       
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
-        
+        <label class="md-nav__link md-nav__link--active" for="__toc">
           
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
-            
   
   
   <span class="md-ellipsis">
@@ -250,91 +249,64 @@
   </span>
   
 
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2">
-            <span class="md-nav__icon md-icon"></span>
-            Getting started
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../overview/" class="md-nav__link">
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
   <span class="md-ellipsis">
-    Overview
+    Getting started
     
   </span>
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#hardware-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hardware requirements
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
     
       
       
-  
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    Software
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3">
-            <span class="md-nav__icon md-icon"></span>
-            Software
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
   
   
   
@@ -345,20 +317,12 @@
   
   
   <span class="md-ellipsis">
-    Installation
+    Manual installation
     
   </span>
   
 
       </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
     </li>
   
 
@@ -405,6 +369,29 @@
             Configuration
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ssh/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Connecting to the camera via SSH
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -510,7 +497,7 @@
   
   
   <span class="md-ellipsis">
-    Redis
+    Operating the camera
     
   </span>
   
@@ -520,6 +507,382 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Operating the camera
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../web-gui.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Web GUI
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../simple-gui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    HDMI GUI
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sensors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Sensors
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../audio-recording/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Audio recording
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../digital-zoom/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Digital zoom
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../speed-ramping/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Speed ramping & shutter angle synchronization
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    System management
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            System management
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../system-services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    System services
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../config-txt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Modifying config.txt
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../compiling-cinepi-raw/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Recompiling cinepi-raw
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../hotspot-logic/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Hotspot
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overclocking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overclocking the Pi
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../backing-up-sd-card/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Backing up the SD card
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    Redis
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             Redis
           </label>
@@ -598,10 +961,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
             
   
   
@@ -614,8 +977,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             Hardware
           </label>
@@ -633,129 +996,12 @@
   
   
   <span class="md-ellipsis">
-    Overview
+    Preinstalled hardware
     
   </span>
   
 
       </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    Raspberry Pi
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_2">
-            <span class="md-nav__icon md-icon"></span>
-            Raspberry Pi
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../raspberry-pi-setup.md" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Setup
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../gpio-pins.md" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    GPIO pins
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../gpio-pinout.md" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    GPIO pinout
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
     </li>
   
 
@@ -788,10 +1034,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
         
           
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
             
   
   
@@ -804,12 +1050,35 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_7">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
             <span class="md-nav__icon md-icon"></span>
             Builds
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bare-bones-build/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Bare bones
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -876,77 +1145,33 @@
               <article class="md-content__inner md-typeset">
                 
 <div class="markdown-body">
-  <h1 id="system-management">System management<a class="headerlink" href="#system-management" title="Permanent link">#</a></h1>
-<h2 id="backing-up-the-sd-card">Backing up the SD card<a class="headerlink" href="#backing-up-the-sd-card" title="Permanent link">#</a></h2>
-<p>Create a compressed image:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>dd<span class="w"> </span><span class="k">if</span><span class="o">=</span>/dev/mmcblk0<span class="w"> </span><span class="nv">bs</span><span class="o">=</span>4M<span class="w"> </span><span class="nv">conv</span><span class="o">=</span>sparse,noerror<span class="w"> </span><span class="nv">status</span><span class="o">=</span>progress<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\ </span>gzip<span class="w"> </span>-c<span class="w"> </span>&gt;<span class="w"> </span>/media/RAW/Cinemate_<span class="k">$(</span>date<span class="w"> </span>+<span class="s2">&quot;%Y%m%d_%H%M%S&quot;</span><span class="k">)</span>.img.gz
-</code></pre></div>
-<p>Or use PiShrink for a smaller file:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>bash<span class="w"> </span>-euo<span class="w"> </span>pipefail<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;</span>
-<span class="s1">  ts=$(date +%Y%m%d_%H%M%S)</span>
-<span class="s1">  raw=&quot;/media/RAW/Cinemate_${ts}.img&quot;</span>
-<span class="s1">  final=&quot;/media/RAW/Cinemate_${ts}.img.gz&quot;</span>
-<span class="s1">  dd if=/dev/mmcblk0 of=&quot;$raw&quot; bs=4M conv=sparse,noerror status=progress</span>
-<span class="s1">  pishrink.sh -v -z &quot;$raw&quot; &quot;$final&quot;</span>
-<span class="s1">  rm -f &quot;$raw&quot;</span>
-<span class="s1">&#39;</span>
-</code></pre></div>
-<h2 id="hotspot-logic">Hotspot logic<a class="headerlink" href="#hotspot-logic" title="Permanent link">#</a></h2>
-<p>If <code>wifi_hotspot</code> in <code>settings.json</code> is <code>true</code> and no hotspot is active, Cinemate starts its own hotspot <code>nmcli device wifi hotspot</code> using your chosen SSID and password. If the Pi is already connected to wifi (for example WiFi settings set with <code>sudo raspi-config</code>) this connection will be replaced by Cinemates hotspot. Set <code>enabled: false</code> to keep wlan0 free for regular Wi‑Fi use. </p>
-<blockquote>
-<p>Note that Cinemate still streams its web gui on whatever network the Pi is connected to, with GUI at <ip-address>:5000 and clean preview without GUI on <ip-address>:8000/stream</p>
-</blockquote>
-<h2 id="building-cinepi-raw">Building cinepi-raw<a class="headerlink" href="#building-cinepi-raw" title="Permanent link">#</a></h2>
-<p>For easy later rebuilding and installation of cinepi-raw you can create this file [to be added]</p>
-<h2 id="managing-the-cinemate-autostart-service">Managing the cinemate-autostart service<a class="headerlink" href="#managing-the-cinemate-autostart-service" title="Permanent link">#</a></h2>
-<div class="highlight"><pre><span></span><code><span class="c1"># Here are the available Make commands for managing the service:</span>
-
-make<span class="w"> </span>install<span class="w">   </span><span class="c1"># copy service file</span>
-make<span class="w"> </span><span class="nb">enable</span><span class="w">    </span><span class="c1"># start on boot</span>
-make<span class="w"> </span>start<span class="w">     </span><span class="c1"># launch now</span>
-make<span class="w"> </span>stop<span class="w">      </span><span class="c1"># stop it</span>
-make<span class="w"> </span>status<span class="w">    </span><span class="c1"># check status</span>
-make<span class="w"> </span>disable<span class="w">   </span><span class="c1"># disable autostart</span>
-make<span class="w"> </span>clean<span class="w">     </span><span class="c1"># remove the service</span>
-</code></pre></div>
-<p>Note that in order for the web ui to work properly you have to run <code>make install</code> once in the <code>/home/pi/cinemate</code> folder, even if you are not using the autostart service.</p>
-<h2 id="managing-the-storage-automount-and-wifi-hotspot-services">Managing the storage-automount and wifi-hotspot services<a class="headerlink" href="#managing-the-storage-automount-and-wifi-hotspot-services" title="Permanent link">#</a></h2>
-<p>Cinemate ships with two small helper services under <code>services/</code>:</p>
+  <h1 id="getting-started">Getting started<a class="headerlink" href="#getting-started" title="Permanent link">#</a></h1>
+<h2 id="hardware-requirements">Hardware requirements<a class="headerlink" href="#hardware-requirements" title="Permanent link">#</a></h2>
 <ul>
-<li><strong>storage-automount</strong> – mounts and unmounts removable drives such as SSDs,
-  NVMe enclosures and the CFE HAT. Partitions named <code>RAW</code> are attached at
-  <code>/media/RAW</code>; all others are mounted under <code>/media/&lt;LABEL&gt;</code>.</li>
-<li><strong>wifi-hotspot</strong> – keeps a simple Wi‑Fi hotspot running via NetworkManager so
-  you can reach the web UI even without other networking. The SSID and password
-  come from the <code>system.wifi_hotspot</code> section of <code>settings.json</code>.</li>
+<li>Raspberry Pi 5</li>
+<li>Official HQ or Global Shutter camera</li>
+<li>HDMI monitor or a phone/tablet for monitoring</li>
 </ul>
-<p>Install and enable both services with:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/home/pi/cinemate/services
-sudo<span class="w"> </span>make<span class="w"> </span>install
-sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable</span>
-</code></pre></div>
-<p>You can manage each one individually with <code>make &lt;action&gt;-&lt;service&gt;</code>, for example
-<code>make status-wifi-hotspot</code>.</p>
-<h3 id="storage-automount-service">storage-automount service<a class="headerlink" href="#storage-automount-service" title="Permanent link">#</a></h3>
-<p><code>storage-automount</code> is a systemd service that watches for removable drives and mounts them automatically. The accompanying Python script reacts to udev events and the CFE-HAT eject button so drives can be attached or detached safely.</p>
-<p>It understands <code>ext4</code>, <code>ntfs</code> and <code>exfat</code> filesystems. Partitions labelled <code>RAW</code> are mounted at <code>/media/RAW</code>; any other label is mounted under <code>/media/&lt;LABEL&gt;</code> after sanitising the name. This applies to USB SSDs, NVMe drives and the CFE-HAT slot.</p>
-<p>To manually install and enable the service:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>cinemate/services/storage-automount
-sudo<span class="w"> </span>make<span class="w"> </span>install
-sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable</span>
-</code></pre></div>
-<p>You can stop or disable it later with:
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>make<span class="w"> </span>stop
-sudo<span class="w"> </span>make<span class="w"> </span>disable
-</code></pre></div></p>
-<h3 id="wifi-hotspot-service">wifi-hotspot service<a class="headerlink" href="#wifi-hotspot-service" title="Permanent link">#</a></h3>
-<p><code>wifi-hotspot</code> keeps a small access point running with the help of NetworkManager so you can always reach the web interface. The SSID and password are read from <code>/home/pi/cinemate/src/settings.json</code> under <code>system.wifi_hotspot</code>.</p>
-<p>Install and enable it with:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>cinemate/services/wifi-hotspot
-sudo<span class="w"> </span>make<span class="w"> </span>install
-sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable</span>
-</code></pre></div>
-<p>As with <code>storage-automount</code>, you can stop or disable the hotspot with <code>make stop</code> and <code>make disable</code>.</p>
+<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h2>
+<ol>
+<li><strong>Burn the Cinemate image</strong> to an SD card (8&nbsp;GB or larger).</li>
+<li><strong>Connect the Pi and the camera sensor board.</strong><blockquote>
+<p><strong>Important:</strong> Ensure the Pi is powered off before attaching the camera ribbon cable. Hot-swapping the cable is not advised.</p>
+</blockquote>
+</li>
+<li><strong>Boot the Pi.</strong> CineMate should start automatically.</li>
+<li><strong>Previewing the image</strong></li>
+<li>Plug in an HDMI monitor <strong>or</strong> connect your phone/tablet to the Wi‑Fi network <code>CinePi</code> (password <code>11111111</code>).</li>
+<li>Open a browser and go to <code>cinepi.local:5000</code> to see the interface. A clean video feed without the GUI is available at <code>cinepi.local:8000/stream</code>.</li>
+<li><strong>Recording footage</strong></li>
+<li>Attach a high‑speed drive: an <strong>SSD</strong> (Samsung T7 recommended), an <strong>NVMe drive</strong>, or the <strong><a href="https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/">CFE Hat</a></strong>.</li>
+<li>Format the drive as <code>ext4</code> and give it the label <code>RAW</code>.</li>
+<li>Connect a button between <strong>GPIO5</strong> and <strong>GND</strong> (or briefly short these pins with a paper clip). When using the phone preview, you can also start/stop recording by tapping the preview.</li>
+</ol>
+<p>That's it—your bare‑bones CineMate build is ready. </p>
+<blockquote>
+<p>Remember to power everything down before disconnecting hardware!</p>
+</blockquote>
 </div>
 
               </article>

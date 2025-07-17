@@ -5,6 +5,7 @@ site_name: Cinemate Docs
 site_description: Documentation for Cinemate 
 site_url: https://tiramisioux.github.io/cinemate/
 repo_url: https://github.com/tiramisioux/cinemate
+edit_uri: blob/cinemate-v3.1/docs/
 repo_name: GitHub
 dev_addr: 0.0.0.0:8000            # live-preview reachable from your laptop
 
@@ -17,9 +18,11 @@ nav:
       - Overview: overview.md
       - Installation: install-guide.md
       - Settings file: settings-json.md
-  - Usage:
-      - Cinepi multi: cinepi_multi.md
-      - Controller methods: controller_methods.md
+      - Cinemate CLI: cli-commands.md
+  - Code:
+      - modules:
+        - cinepi_multi.py: cinepi-multi.md
+        - cinepi_controller.py: controller-methods.md
   - Redis:
       - Basic API: redis-guide.md
       - Key reference: redis-keys.md
@@ -51,8 +54,9 @@ theme:
     - scheme: default           # WCAG-AA compliant base
       primary: black
       accent: black
-  extra_css:
-    - https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown.css
+
+extra_css:
+  - https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown.css
 
 # ───────────────────────────
 # Markdown add-ons

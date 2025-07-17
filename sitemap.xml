@@ -25,7 +25,11 @@
          <lastmod>2025-07-17</lastmod>
     </url>
     <url>
-         <loc>https://tiramisioux.github.io/cinemate/install-guide/</loc>
+         <loc>https://tiramisioux.github.io/cinemate/hardware-introduction/</loc>
+         <lastmod>2025-07-17</lastmod>
+    </url>
+    <url>
+         <loc>https://tiramisioux.github.io/cinemate/installation-steps/</loc>
          <lastmod>2025-07-17</lastmod>
     </url>
     <url>
@@ -42,6 +46,10 @@
     </url>
     <url>
          <loc>https://tiramisioux.github.io/cinemate/settings-json/</loc>
+         <lastmod>2025-07-17</lastmod>
+    </url>
+    <url>
+         <loc>https://tiramisioux.github.io/cinemate/system-management/</loc>
          <lastmod>2025-07-17</lastmod>
     </url>
 </urlset>

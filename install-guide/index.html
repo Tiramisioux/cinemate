@@ -413,7 +413,12 @@
   
 </li>
         
-          <li class="md-nav__item">
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#cinepi-raw" class="md-nav__link">
     <span class="md-ellipsis">
       cinepi-raw
@@ -421,20 +426,15 @@
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
-  
-</li>
       
         <li class="md-nav__item">
-  <a href="#configure-the-raspberry-pi" class="md-nav__link">
+  <a href="#configuring-the-raspberry-pi" class="md-nav__link">
     <span class="md-ellipsis">
-      Configure the Raspberry Pi
+      Configuring the Raspberry Pi
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Configure the Raspberry Pi">
+    <nav class="md-nav" aria-label="Configuring the Raspberry Pi">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1039,7 +1039,7 @@ git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiram
 cmake<span class="w"> </span>..<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make
 make<span class="w"> </span>install-here
 </code></pre></div>
-<h3 id="cinepi-raw">cinepi-raw <img src="https://img.shields.io/badge/cinemate-fork-gren" height="10" ><a class="headerlink" href="#cinepi-raw" title="Permanent link">#</a></h3>
+<h2 id="cinepi-raw">cinepi-raw <img src="https://img.shields.io/badge/cinemate-fork-gren" height="10" ><a class="headerlink" href="#cinepi-raw" title="Permanent link">#</a></h2>
 <p>Cinemate depends on a custom branch of [cinepi-raw](https://github.com/Tiramisioux/cinepi-raw/tree/rpicam-apps_1.7_custom_encoder, created by Csaba Nagy.</p>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/cinepi-raw.git<span class="w"> </span>--branch<span class="w"> </span>rpicam-apps_1.7_custom_encoder
 <span class="nb">cd</span><span class="w"> </span>/home/pi/cinepi-raw
@@ -1052,7 +1052,7 @@ meson<span class="w"> </span>install<span class="w"> </span>-C<span class="w"> <
 <blockquote>
 <p>Join the CinePi Discord <a href="https://discord.gg/Hr4dfhuK">here</a>!</p>
 </blockquote>
-<h2 id="configure-the-raspberry-pi">Configure the Raspberry Pi<a class="headerlink" href="#configure-the-raspberry-pi" title="Permanent link">#</a></h2>
+<h2 id="configuring-the-raspberry-pi">Configuring the Raspberry Pi<a class="headerlink" href="#configuring-the-raspberry-pi" title="Permanent link">#</a></h2>
 <h3 id="update-enable-i2c-and-setting-hostname">Update &amp; enable I²C and setting hostname<a class="headerlink" href="#update-enable-i2c-and-setting-hostname" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>apt<span class="w"> </span>upgrade
 sudo<span class="w"> </span>raspi-config<span class="w"> </span>nonint<span class="w"> </span>do_i2c<span class="w"> </span><span class="m">0</span>

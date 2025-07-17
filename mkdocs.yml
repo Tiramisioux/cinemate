@@ -18,7 +18,9 @@ nav:
       - Overview: overview.md
       - Installation: install-guide.md
       - Settings file: settings-json.md
-      - Cinemate CLI: cli-commands.md
+      - Cinemate CLI: 
+        - User guide: cli-user-guide.md
+        - Commands reference: cli-commands.md 
   - Code:
       - modules:
         - cinepi_multi.py: cinepi-multi.md
@@ -47,6 +49,7 @@ theme:
     - navigation.instant
     - navigation.sections
     - navigation.top
+    - toc.integrate 
     - toc.follow
     - content.code.copy
     - content.action.edit       # “Edit this page” link to repo
@@ -55,8 +58,8 @@ theme:
       primary: black
       accent: black
 
-extra_css:
-  - https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown.css
+#extra_css:
+#  - overrides/github-markdown.css
 
 # ───────────────────────────
 # Markdown add-ons

@@ -1,4 +1,5 @@
-## Compiling cinepi-raw
+# Recompiling cinepi-raw
+Compiling cinepi-raw
 
 For easy later rebuilding and installation of cinepi-raw you can create the file compile-raw.sh.
 

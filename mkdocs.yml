@@ -14,17 +14,11 @@ dev_addr: 0.0.0.0:8000            # live-preview reachable from your laptop
 # ───────────────────────────
 nav:
   - Home: index.md
-  - Getting started: getting-started.md
-
-  - Manual installation: installation-steps.md
-
-  - Configuration:
-      - Connecting to the camera via SSH: ssh.md
-      - Settings file: settings-json.md
-      - Using the CLI: cli-user-guide.md
-      - Commands reference: cli-commands.md
-
-  - Operating the camera:
+  - Quick start:
+      - Getting started: getting-started.md
+      - Bare bones build: bare-bones-build.md
+      - Brick build: brick.md
+  - Using the camera:
       - Web GUI: web-gui.md
       - HDMI GUI: simple-gui.md
       - Sensors: sensors.md
@@ -32,37 +26,29 @@ nav:
       - Digital zoom: digital-zoom.md
       - Speed ramping & shutter angle synchronization: speed-ramping.md
       - Dual sensors: dual-sensors.md
-
+  - Customising your build:
+      - Settings file: settings-json.md
+      - Using the CLI: cli-user-guide.md
+      - Commands reference: cli-commands.md
+      - Connecting via SSH: ssh.md
+      - Configuring the Wi-Fi hotspot: hotspot-logic.md
   - System management:
       - System services: system-services.md
       - Modifying config.txt: config-txt.md
       - Recompiling cinepi-raw: compiling-cinepi-raw.md
-      - Hotspot: hotspot-logic.md
       - Overclocking the Pi: overclocking.md
       - Backing up the SD card: backing-up-sd-card.md
-
-  - Redis:
-      - Basic API: redis-guide.md
+  - Reference & troubleshooting:
+      - Redis API: redis-guide.md
       - Key reference: redis-keys.md
-
-  - Hardware:
-      - Preinstalled hardware: hardware-overview.md
-
-  - Builds:
-      - Bare bones: bare-bones-build.md
-      - Brick: brick.md 
-
-  - Troubleshoooting:
+      - Hardware overview: preinstalled-hardware.md
       - Known issues: known-issues.md
       - Troubleshooting: troubleshooting.md
-  
-  - Contributing:
+  - Development & contributing:
+      - Manual installation (from scratch): installation-steps.md
       - Todo: todo.md
       - Contributing guide: contributing.md
-
   - Download PDF: renders/Cinemate-Docs.pdf
-
-# ───────────────────────────
 # Theme
 # ───────────────────────────
 theme:

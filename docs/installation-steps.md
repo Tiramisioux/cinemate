@@ -66,7 +66,6 @@ cd cinepi-raw
 sudo rm -rf build
 sudo meson setup build
 sudo ninja -C build
-cd ..
 sudo meson install -C build
 ```
 

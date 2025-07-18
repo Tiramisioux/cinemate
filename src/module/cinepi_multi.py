@@ -215,6 +215,14 @@ class CinePiProcess(Thread):
 
         pipe.close()
 
+    def _is_pi4(self) -> bool:
+        """Return True on any Raspberry Pi 4/400/CM4‐lite platform."""
+        try:
+            with open("/proc/device-tree/model") as f:
+                return "Raspberry Pi 4" in f.read()
+        except FileNotFoundError:
+            return False
+
     def _build_args(self):
         # base resolution
         sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value) or 0)
@@ -271,34 +279,33 @@ class CinePiProcess(Thread):
         # determine HDMI port: override from settings if provided
         default_hd = '0' if self.cam.port == 'cam0' else '1'
         hd = str(self.output.get('hdmi_port', default_hd))
-        args = [
-            '--camera', str(self.cam.index),
-            '--mode', f'{width}:{height}:{bit_depth}:{packing}',
-            '--width', str(width),
-            '--height', str(height),
-            '--lores-width', str(lw),
-            '--lores-height', str(lh),
-            '--hdmi-port', hd,
-            # '-p', f'{ox},{oy},{pw},{ph}',
-            '--rotation', str(rot),
-            '--hflip', str(hf),
-            '--vflip', str(vf),
-            '--tuning-file', tune,
-            '--post-process-file', post,
-            '--shutter', '20000',
-            '--awb', 'auto',
-            '--awbgains', cg_rb,
 
-            # NEW  ★   (ensures RawOptions.camPort is populated)
-            '--cam-port', self.cam.port,
+        args = [
+            "--camera", str(self.cam.index),
+            "--mode",   f"{width}:{height}:{bit_depth}:{packing}",
+            "--width",  str(width),
+            "--height", str(height),
+            "--lores-width",  str(lw),
+            "--lores-height", str(lh),
+            "--hdmi-port",    hd,
+            "--rotation",     str(rot),
+            "--hflip",        str(hf),
+            "--vflip",        str(vf),
+            "--post-process-file", post,
+            "--shutter", "20000",
+            "--awb", "auto",
+            "--awbgains", cg_rb,
         ]
-        
+
+        # * Skip --tuning-file on Pi 4.  All other models keep it. *
+        if not self._is_pi4():
+            args += ["--tuning-file", tune]
+            
         zoom_init = self.redis_controller.get_value(ParameterKey.ZOOM.value)
         
         if zoom_init and float(zoom_init) != 1.0:
             args += ['--zoom', str(zoom_init)]
 
-        
         # ── if running in multi-camera mode, pass --sync server/client ──
         if self.multi:
             args += ["--cam-port", self.cam.port]
@@ -352,7 +359,7 @@ class CinePiManager:
 
         # ── 1. discovery ───────────────────────────────────────────
         cams = discover_cameras()                    # helper unchanged
-        logging.info("Detected %s on %s (%s)", cam.name, cam.port, cam.path)
+
 
         # ── Pi 4 sanity check ────────────────────────────────────────────
         try:

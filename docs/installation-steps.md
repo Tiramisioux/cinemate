@@ -271,7 +271,7 @@ cinepi-raw --list-cameras
 Try it out with a simple cli command:
 
 ```shell
-cinepi-raw --mode 2028:1080:12:U --width 2028   --height 1080 --lores-width 1280 --lores-height 720
+cinepi-raw --mode 2028:1080:12:U --width 2028 --height 1080 --lores-width 1280 --lores-height 720
 ```
 
 For more details on running CinePi-raw from the command line, see [this section](/cli-user-guide.md). 
@@ -392,7 +392,7 @@ nano ~/.bashrc
 # add to the end of the file
 
 ```shell
-alias cinemate='python3 /home/pi/Cinemate/src/main.py'
+alias cinemate='python3 /home/pi/cinemate/src/main.py'
 ```
 
 Exit with Ctrl+x
@@ -469,7 +469,7 @@ This has only to be done once on your system:
 
 ```shell
 redis-cli MSET \
-anamorphic_factor 0 bit_depth 0 buffer 0 buffer_size 0 cam_init 0 cameras 0 cg_rb 0 \
+anamorphic_factor 0 bit_depth 0 buffer 0 buffer_size 0 cam_init 0 cameras 0 cg_rb 2.5,2.2 \
 file_size 0 fps 1 fps_actual 1 fps_last 1 fps_max 1 fps_user 1 framecount 0 \
 gui_layout 0 height 0 ir_filter 0 is_buffering 0 is_mounted 0 is_recording 0 \
 is_writing 0 is_writing_buf 0 tc_cam0 0 tc_cam1 0 iso 0 lores_height 0 lores_width 0 \
@@ -479,7 +479,6 @@ shutter_a_sync_mode 0 shutter_angle_nom 0 shutter_angle_actual 0 shutter_angle_t
 exposure_time 0 last_dng_cam1 0 last_dng_cam0 0 \
 zoom 0 write_speed_to_drive 0 recording_time 0
 ```
-
 
 Now, back on the Pi, anywhere in the terminal, type:
 

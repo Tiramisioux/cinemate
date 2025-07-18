@@ -17,6 +17,10 @@ sudo apt-get install python3-jinja2 python3-ply python3-yaml
 ### Tools & dependencies
 
 ```
+sudo apt update && sudo apt upgrade
+```
+
+```
 sudo apt install -y cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev && sudo apt-get install libjsoncpp-dev && cd ~ && git clone https://github.com/sewenew/redis-plus-plus.git && cd redis-plus-plus && mkdir build && cd build && cmake .. && make && sudo make install && cd ~
 ```
 
@@ -67,6 +71,14 @@ sudo rm -rf build
 sudo meson setup build
 sudo ninja -C build
 sudo meson install -C build
+cd
+```
+
+```
+redis-cli <<EOF
+SET cg_rb 2.5,2.2
+PUBLISH cp_controls cg_rb
+EOF
 ```
 
 ### imx585 driver <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
@@ -76,12 +88,33 @@ sudo apt install linux-headers dkms git
 ```
 
 ```
-git clone https://github.com/Tiramisioux/imx585-v4l2-driver.git
+git clone https://github.com/will127534/imx585-v4l2-driver.git --branch 6.12.y
 cd imx585-v4l2-driver/
 ./setup.sh
 ```
 
 >The imx585 is written by Will Whang. For original drivers and startup guides, visit https://github.com/will127534/StarlightEye
+
+### Add the IMX585 tuning files (optional)
+
+```bash
+curl -L -o /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json \
+  https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585.json
+sed -i '8s/"black_level": *[0-9]\+/"black_level": 0/' /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json
+cp /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json /usr/local/share/libcamera/ipa/rpi/pisp/
+```
+```
+curl -L -o /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585_mono.json https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585_mono.json && sudo cp /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585_mono.json /usr/local/share/libcamera/ipa/rpi/pisp/
+```
+ 
+### IR filter switch script (optional)
+
+```bash
+sudo wget https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter -O /usr/local/bin/IRFilter
+sudo chmod +x /usr/local/bin/IRFilter
+```
+
+>Cinemate has its own way of handling the IR switch but the installation above can be convenient for use outside of Cinemate
 
 ### imx283 driver <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
@@ -97,10 +130,10 @@ cd imx283-v4l2-driver/
 
 >The imx283 is written by Will Whang. For original drivers and startup guides, visit https://github.com/will127534/imx283-v4l2-driver
 
+
 ### Enabling I²C
 
 ```bash
-sudo apt update && apt upgrade
 sudo raspi-config nonint do_i2c 0
 ```
 >Enabling I2C is needed for using the camera modules.
@@ -124,8 +157,8 @@ Also specify which physical camera port you have connected your sensor to.
 
 ```bash
 # Raspberry Pi HQ camera
-#camera_auto_detect=1
-#dtoverlay=imx477,cam0
+camera_auto_detect=1
+dtoverlay=imx477,cam0
 
 # Raspberry Pi GS camera
 #camera_auto_detect=1
@@ -136,11 +169,11 @@ Also specify which physical camera port you have connected your sensor to.
 #dtoverlay=imx283,cam0
 
 # StarlightEye
-camera_auto_detect=0
-dtoverlay=imx585,cam0
+#camera_auto_detect=0
+#dtoverlay=imx585,cam0
 
 # StarlightEye Mono
-camera_auto_detect=0
+#camera_auto_detect=0
 #dtoverlay=imx585,cam1,mono
 
 # CFE Hat (pi 5 only)
@@ -158,29 +191,10 @@ avoid_warnings=1
 disable_splash=1
 ```
 
-### Add the IMX585 tuning file (optional)
-
-```bash
-curl -L -o /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json \
-  https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585.json
-sed -i '8s/"black_level": *[0-9]\+/"black_level": 0/' /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json
-# cp /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json /usr/local/share/libcamera/ipa/rpi/pisp/
-```
-For the mono sensor use `imx585_mono.json` instead.
- 
-### IR filter switch script (optional)
-
-```bash
-wget https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter -O /usr/local/bin/IRFilter
-sudo chmod +x /usr/local/bin/IRFilter
-```
-
->Cinemate has its own way of handling the IR switch but the installation above can be convenient for use outside of Cinemate
-
 ### Change the console font (optional)
 
 ```bash
-sudi apt update
+sudo apt update
 sudo apt install console-setup kbd
 sudo dpkg-reconfigure console-setup  # choose Terminus / 16x32
 ```
@@ -240,20 +254,34 @@ sudo install -m755 pishrink.sh /usr/local/bin/pishrink
 
 >PiShrink is a great tool for compressing SD image file backups of the SD card. See here for instructions
 
-### Reboot before installing Cinemate:
+### Reboot:
 
 ```bash
-reboot
+sudo reboot
 ```
 
-You should now have a working install of cinepi-raw. To try it out, see [this section](/cli-user-guide.md). 
+### Trying out CinePi from the terminal
+
+You should now have a working install of cinepi-raw. To see if your camera is recognized by the system:
+
+```shell
+cinepi-raw --list-cameras
+```
+
+Try it out with a simple cli command:
+
+```shell
+cinepi-raw --mode 2028:1080:12:U --width 2028   --height 1080 --lores-width 1280 --lores-height 720
+```
+
+For more details on running CinePi-raw from the command line, see [this section](/cli-user-guide.md). 
 
 ## Cinemate
 
 ### Create a Python virtual environment
 
 ```bash
-sudo apt update && apt install -y python3-venv
+sudo apt update && sudo apt install -y python3-venv
 python3 -m venv /home/pi/.cinemate-env
 echo "source /home/pi/.cinemate-env/bin/activate" >> ~/.bashrc
 source /home/pi/.cinemate-env/bin/activate

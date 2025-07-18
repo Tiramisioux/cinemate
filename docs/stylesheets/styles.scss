@@ -1,8 +1,8 @@
 /* -------------------------------------------------------------------
    CINEMATE DOCS – PDF STYLESHEET (styles.scss)
    -------------------------------------------------------------------
-   Place this file in the folder referenced by `custom_template_path`
-   (defaults to `templates/`) so that mkdocs‑with‑pdf can pick it up.
+   Place this file in the folder referenced by custom_template_path
+   (defaults to templates/) so that mkdocs‑with‑pdf can pick it up.
    SCSS syntax is accepted, but this sheet uses plain CSS for clarity.
    ------------------------------------------------------------------- */
 
@@ -54,8 +54,9 @@
   pre,
   pre > code {
     font: 0.92em/1.45 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+    color: #404040;
     background: #8d9eae;
-    border: 1px solid #c7c7c7;
+    border: 1px solid #ebebeb;
     border-radius: 6px;
     padding: 0.85em 1.1em;
     margin: 1.2em 0;
@@ -73,4 +74,3 @@
     border-radius: 4px;
     padding: 0.1em 0.35em;
   }
-  

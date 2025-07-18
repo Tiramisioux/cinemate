@@ -178,8 +178,9 @@ Defines GPIO push buttons. Each entry describes one button and the actions it tr
 * **debounce_time** – ignore additional presses within this time window (seconds).
 * **press_action**, **single_click_action**, **double_click_action**, **triple_click_action**, **hold_action** – actions to perform for each type of interaction. Actions call Cinemate CLI commands with optional `args`.
 
->#### How “inverse” (1-0-1) buttons are auto-detected
->Some push-buttons are wired closed = logic 1 and open = 0. At start-up, CineMate automatically detects buttons in state `true` and reverses them. This way the user can use any type of push buttons, both 1-0-1 and 0-1-0 types.
+!!! info inline end "Automatic detection of inverse push buttons"
+
+    Some push-buttons are wired closed = logic 1 and open = 0. At start-up, CineMate automatically detects buttons in state `true` and reverses them. This way the user can use any type of push buttons, both 1-0-1 and 0-1-0 types.
 
 
 ## two_way_switches

@@ -1,4 +1,4 @@
-# Cinemate terminal commands
+# Commands reference
 
 Cinemate doesn’t use a real shell parser. Instead, a background thread
 reads simple text commands from SSH or the serial port and calls the

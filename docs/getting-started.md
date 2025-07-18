@@ -1,4 +1,4 @@
-# Getting started
+# Quick start
 
 ## Hardware requirements
 - Raspberry Pi 5

@@ -16,7 +16,7 @@ sudo apt install -y python-pip git python3-jinja2
 This installer script combines the below install processes of CinePi-Raw and Cinemate.
 
 ```shell
-wget -O cinemate-installer.sh https://raw.githubusercontent.com/Tiramisioux/cinemate/cinemate-3.1/cinemate-stack-installer.sh
+wget -O cinemate-stack-installer.sh https://raw.githubusercontent.com/Tiramisioux/cinemate/cinemate-3.1/cinemate-stack-installer.sh
 chmod +x cinemate-stack-installer.sh
 sudo bash cinemate-stack-installer.sh
 ```

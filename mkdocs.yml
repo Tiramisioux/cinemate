@@ -15,9 +15,7 @@ dev_addr: 0.0.0.0:8000            # live-preview reachable from your laptop
 nav:
   - Home: index.md
   - Quick start:
-      - Getting started: getting-started.md
-      - Bare bones build: bare-bones-build.md
-      - Brick build: brick.md
+      - Getting started with a minimal build: getting-started.md
   - Using the camera:
       - Web GUI: web-gui.md
       - HDMI GUI: simple-gui.md
@@ -44,6 +42,9 @@ nav:
       - Hardware overview: preinstalled-hardware.md
       - Known issues: known-issues.md
       - Troubleshooting: troubleshooting.md
+  - Cinemate builds:
+      - Bare bones build: bare-bones-build.md
+      - Box build: brick.md
   - Development & contributing:
       - Manual installation (from scratch): installation-steps.md
       - Todo: todo.md
@@ -52,7 +53,7 @@ nav:
 # Theme
 # ───────────────────────────
 theme:
-  name: material
+  name: readthedocs
   custom_dir: docs/overrides
   icon:
     logo: material/library

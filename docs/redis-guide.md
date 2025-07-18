@@ -1,18 +1,8 @@
 # Redis API quick start
 
-You can think of the toolchain like this:
+## cp_controls
 
-camera sensor > libcamera > cinepi-raw <> redis <> cinemate
-
-> It is a bit more complicated than that but in the context of describing redis and Cinemate it is pretty accurate
-
-- Cinemate talks to the [cinepi-raw](https://github.com/Tiramisioux/cinepi-raw/tree/rpicam-apps_1.7_custom_encoder) recorder through a local Redis server. 
-- Parameters such as ISO, FPS or the recording state are stored as simple keys. 
-- Two pub-sub channels (`cp_controls` and `cp_stats`) carry notifications and status updates.
-
-## The `cp_controls` channel
-
-Both cinepi-raw and CineMate writes values and immediately publish the key name. The recorder only reacts when it receives that publish event. 
+Both CinePi-raw and Cinemnate writes values and immediately publish the key name. The recorder only reacts when it receives that publish event. 
 
 Any key may be sent this way. For example, to adjust the preview zoom:
 
@@ -23,7 +13,7 @@ redis-cli SET zoom 1.5
 redis-cli PUBLISH cp_controls zoom
 ```
 
->Execpt for the recording trigger __is_recording__. Here, the Cinemate cinepi-raw fork _immediately_ starts and stops recording upon edge detection (the variable changes from 0 to 1 or vice versa). The reason  for this exception has to do with how the cinepi-raw fork handles recording with multiple cameras
+>Note that for the __is_recording__ key Cinemate stops recording upon edge detection (the variable changes from 0 to 1 or vice versa). The reason for this exception has to do with how the CinePi-raw fork handles recording with multiple cameras
 
 
 ```bash
@@ -34,7 +24,7 @@ redis-cli SET is_recording 1                    # triggers 0 → 1 edge
 redis-cli SET is_recording 0                    # triggers 1 → 0 edge
 ```
 
-## The `cp_stats` channel
+## cp_stats
 
 Every frame, cinepi-raw sends a small JSON object containing live statistics. 
 
@@ -51,7 +41,7 @@ Every frame, cinepi-raw sends a small JSON object containing live statistics.
 
 CineMate’s `RedisListener` parses these messages and updates Redis keys like `framecount`, `BUFFER` and `fps_actual`.
 
-## Inspecting and changing values with `redis-cli`
+## Redis-cli
 
 Because everything is plain Redis you can poke around from the command line. Here are a few handy commands:
 

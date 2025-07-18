@@ -1,6 +1,6 @@
 # Audio recording (experimental)
 
-Cinemate can capture audio alongside the image sequence. Support is currently limited to a few USB microphones with hard coded configurations:
+Cinemate records audio alongside the image sequence. Support is currently limited to a few USB microphones with hard coded configurations:
  - **RØDE VideoMic NTG** – recorded in stereo at 24‑bit/48 kHz.
  - **USB PnP microphones** – recorded in mono at 16‑bit/48 kHz.
 

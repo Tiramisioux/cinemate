@@ -16,7 +16,7 @@
         <link rel="prev" href="../digital-zoom/">
       
       
-        <link rel="next" href="../system-services/">
+        <link rel="next" href="../dual-sensors/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -50,7 +50,7 @@
       
     
     
-      <link rel="stylesheet" href="../docs/stylesheets/pdf.css">
+      <link rel="stylesheet" href="../overrides/github-markdown.css">
     
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -461,7 +461,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../web-gui.md" class="md-nav__link">
+      <a href="../web-gui/" class="md-nav__link">
         
   
   
@@ -647,6 +647,29 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dual-sensors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Dual sensors
+    
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -1089,12 +1112,204 @@
   
   
     <li class="md-nav__item">
-      <a href="../brick.md" class="md-nav__link">
+      <a href="../brick/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     Brick
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    Troubleshoooting
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Troubleshoooting
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../known-issues/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Known issues
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Troubleshooting
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    Contributing
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            Contributing
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../todo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Todo
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Contributing guide
     
   </span>
   
@@ -1153,52 +1368,23 @@
 <p>Cinemate exposes frame rate control through the <code>CinePiController</code> class. The simplest way to change speed on the fly is the CLI command:</p>
 <div class="highlight"><pre><span></span><code><span class="nb">set</span><span class="w"> </span>fps<span class="w"> </span>&lt;value&gt;
 </code></pre></div>
-<p>For quick 2× changes Cinemate also implements <code>set_fps_double</code> which toggles between the current FPS and twice that value:</p>
-<div class="highlight"><pre><span></span><code>    <span class="k">def</span><span class="w"> </span><span class="nf">set_fps_double</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="n">target_double_state</span> <span class="o">=</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">fps_double</span> <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">target_double_state</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">fps_double</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">fps_saved</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fps</span>
-                <span class="n">target_fps</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fps</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fps_max</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">set_fps</span><span class="p">(</span><span class="n">target_fps</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fps_double</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">set_fps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fps_saved</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fps_double</span> <span class="o">=</span> <span class="n">target_double_state</span>
+<p>For quick 2× changes Cinemate also implements <code>set_fps_double</code> which toggles between the current FPS and twice that value. This can be used for designing a slow-motion button. Here is how you would to it in the settings file, button section:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">18</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;pull_up&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;debounce_time&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;press_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_fps_double&quot;</span><span class="p">}</span>
+<span class="p">}</span>
 </code></pre></div>
+<blockquote>
+<p>No argument is needed here. For methods such as <code>set_fps_double</code>, calling the method without an argument will simply toggle the control, in tis caseturning the slow motion on and off. If the user provides an argument, the control will be set explicitly to that value.</p>
+</blockquote>
 <p>The controller contains an experimental <code>_ramp_fps</code> helper that gradually steps the frame rate up or down using <code>ramp_up_speed</code> and <code>ramp_down_speed</code> delays. This can be adapted if smoother transitions are desired.</p>
 <h2 id="shutter-angle-synchronisation">Shutter angle synchronisation<a class="headerlink" href="#shutter-angle-synchronisation" title="Permanent link">#</a></h2>
 <p>When frame rate changes the shutter angle can either remain fixed (preserving motion blur) or adjust to keep the exposure time constant. This behaviour is controlled by <code>shutter_a_sync_mode</code>.</p>
-<div class="highlight"><pre><span></span><code>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shutter_a_sync_mode</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="c1"># keep motion-blur constant</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">initialize_shutter_angle_steps</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">shutter_angle_actual</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">shutter_a_steps_dynamic</span><span class="p">,</span>
-                <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">abs</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">shutter_angle_actual</span><span class="p">))</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># keep exposure-time constant</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">shutter_angle_actual</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">exposure_time_nominal</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_fps</span> <span class="o">*</span> <span class="mi">360</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">shutter_angle_actual</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">360.0</span><span class="p">,</span>
-                                            <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shutter_angle_actual</span><span class="p">))</span>
-</code></pre></div>
-<p>Mode <code>0</code> keeps the motion blur consistent because the physical shutter angle does not change. As the FPS increases the exposure time gets shorter, resulting in a darker image. Mode <code>1</code> stores the current exposure time and recalculates the shutter angle whenever the FPS is adjusted so that brightness stays the same.</p>
-<p>Cinemate updates the nominal exposure time when the user sets a new angle:</p>
-<div class="highlight"><pre><span></span><code>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shutter_a_sync_mode</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">exposure_time_nominal</span> <span class="o">=</span> <span class="p">(</span><span class="n">new_angle</span> <span class="o">/</span> <span class="mi">360</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_fps</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">shutter_angle_actual</span> <span class="o">=</span> <span class="n">new_angle</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">is_shutter_angle_transient</span> <span class="o">=</span> <span class="kc">True</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">redis_controller</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">ParameterKey</span><span class="o">.</span><span class="n">SHUTTER_A_TRANSIENT</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">threading</span><span class="o">.</span><span class="n">Timer</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_shutter_angle_transient</span><span class="p">)</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
-</code></pre></div>
-<p>When the transient period ends, the FPS is recalculated from the stored exposure time:</p>
-<div class="highlight"><pre><span></span><code>    <span class="k">def</span><span class="w"> </span><span class="nf">end_shutter_angle_transient</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">is_shutter_angle_transient</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">redis_controller</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">ParameterKey</span><span class="o">.</span><span class="n">SHUTTER_A_TRANSIENT</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shutter_a_sync_mode</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">adjusted_fps</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shutter_angle_nom</span> <span class="o">/</span> <span class="mi">360</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">exposure_time_nominal</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">update_fps</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">adjusted_fps</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
-</code></pre></div>
+<p>Mode <code>0</code> keeps the <strong>motion blur consistent</strong> because the physical shutter angle does not change. As the FPS increases the exposure time gets shorter, resulting in a darker image. </p>
+<p>Mode <code>1</code> stores the current exposure time and recalculates the shutter angle whenever the FPS is adjusted so that <strong>exposure time</strong> stays the same.</p>
+<p>Cinemate updates the nominal exposure time when the user sets a new angle. FPS is recalculated from the stored exposure time:</p>
 </div>
 
               </article>
@@ -1242,7 +1428,7 @@
     
     
       
-      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.top", "toc.integrate", "content.code.copy", "content.action.edit"], "search": "../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.top", "toc.integrate", "toc.follow", "content.code.copy", "content.action.edit"], "search": "../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
       <script src="../assets/javascripts/bundle.56ea9cef.min.js"></script>

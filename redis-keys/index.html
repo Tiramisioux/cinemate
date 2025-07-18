@@ -50,7 +50,7 @@
       
     
     
-      <link rel="stylesheet" href="../docs/stylesheets/pdf.css">
+      <link rel="stylesheet" href="../overrides/github-markdown.css">
     
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -459,7 +459,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../web-gui.md" class="md-nav__link">
+      <a href="../web-gui/" class="md-nav__link">
         
   
   
@@ -580,6 +580,29 @@
   
   <span class="md-ellipsis">
     Speed ramping & shutter angle synchronization
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dual-sensors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Dual sensors
     
   </span>
   
@@ -1039,12 +1062,204 @@
   
   
     <li class="md-nav__item">
-      <a href="../brick.md" class="md-nav__link">
+      <a href="../brick/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     Brick
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    Troubleshoooting
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Troubleshoooting
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../known-issues/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Known issues
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Troubleshooting
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    Contributing
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            Contributing
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../todo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Todo
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Contributing guide
     
   </span>
   
@@ -1098,7 +1313,7 @@
                 
 <div class="markdown-body">
   <h1 id="redis-key-reference">Redis key reference<a class="headerlink" href="#redis-key-reference" title="Permanent link">#</a></h1>
-<p>This page lists all Redis keys used by Cinemate and cinepi-raw.  Values are simple strings so you can read or write them with <code>redis-cli</code>.</p>
+<p>This page lists all Redis keys used by Cinemate and CinePi-raw.  Values are simple strings so you can read or write them with <code>redis-cli</code>.</p>
 <p>Each entry explains which component normally writes the key and what happens when you change it manually.</p>
 <table>
 <thead>
@@ -1118,13 +1333,13 @@
 </tr>
 <tr>
 <td>iso</td>
-<td>Cinemate → cinepi-raw</td>
+<td>Cinemate → CinePi-raw</td>
 <td>Sensor gain in ISO</td>
 <td>Yes</td>
 </tr>
 <tr>
 <td>shutter_a</td>
-<td>Cinemate → cinepi-raw</td>
+<td>Cinemate → CinePi-raw</td>
 <td>Actual shutter angle in degrees</td>
 <td>Yes</td>
 </tr>
@@ -1142,19 +1357,19 @@
 </tr>
 <tr>
 <td>fps</td>
-<td>Cinemate → cinepi-raw</td>
+<td>Cinemate → CinePi-raw</td>
 <td>Target frames per second</td>
 <td>Yes</td>
 </tr>
 <tr>
 <td>sensor_mode</td>
-<td>Cinemate → cinepi-raw startup</td>
+<td>Cinemate → CinePi-raw startup</td>
 <td>Active sensor resolution/mode</td>
 <td>Yes (causes pipeline restart)</td>
 </tr>
 <tr>
 <td>wb</td>
-<td>Cinemate → cinepi-raw</td>
+<td>Cinemate → CinePi-raw</td>
 <td>White‑balance temperature (Kelvin)</td>
 <td>Yes</td>
 </tr>
@@ -1166,37 +1381,37 @@
 </tr>
 <tr>
 <td>ir_filter</td>
-<td>Cinemate → cinepi-raw</td>
+<td>Cinemate → CinePi-raw</td>
 <td>Toggle IR‑cut filter (IMX585 only)</td>
 <td>Yes</td>
 </tr>
 <tr>
 <td>rec / is_recording</td>
-<td>Cinemate → cinepi-raw</td>
+<td>Cinemate → CinePi-raw</td>
 <td>Start/stop recording when toggled</td>
 <td>Yes (edge‑triggered)</td>
 </tr>
 <tr>
 <td>bit_depth</td>
-<td>Cinemate → cinepi-raw startup</td>
+<td>Cinemate → CinePi-raw startup</td>
 <td>Sensor bit depth (10 or 12)</td>
 <td>No (set at startup)</td>
 </tr>
 <tr>
 <td>height / width</td>
-<td>Cinemate → cinepi-raw startup</td>
+<td>Cinemate → CinePi-raw startup</td>
 <td>Active sensor resolution</td>
 <td>No</td>
 </tr>
 <tr>
 <td>lores_width / lores_height</td>
-<td>cinepi-raw startup</td>
+<td>CinePi-raw startup</td>
 <td>Preview stream resolution</td>
 <td>No</td>
 </tr>
 <tr>
 <td>cg_rb</td>
-<td>Cinemate → cinepi-raw</td>
+<td>Cinemate → CinePi-raw</td>
 <td>White‑balance gain pair "1/R,1/B"</td>
 <td>Yes (advanced)</td>
 </tr>
@@ -1214,37 +1429,37 @@
 </tr>
 <tr>
 <td>fps_actual</td>
-<td>cinepi-raw → Cinemate</td>
+<td>CinePi-raw → Cinemate</td>
 <td>Measured FPS from pipeline</td>
 <td>No</td>
 </tr>
 <tr>
 <td>framecount</td>
-<td>cinepi-raw → Cinemate</td>
+<td>CinePi-raw → Cinemate</td>
 <td>Total frames recorded</td>
 <td>No</td>
 </tr>
 <tr>
 <td>buffer</td>
-<td>cinepi-raw → Cinemate</td>
+<td>CinePi-raw → Cinemate</td>
 <td>Raw frames currently in RAM</td>
 <td>No</td>
 </tr>
 <tr>
 <td>buffer_size</td>
-<td>cinepi-raw  →  Cinemate</td>
+<td>CinePi-raw  →  Cinemate</td>
 <td>Size of RAM buffer in frames</td>
 <td>No</td>
 </tr>
 <tr>
 <td>is_buffering</td>
-<td>cinepi-raw → Cinemate</td>
+<td>CinePi-raw → Cinemate</td>
 <td>1 while buffer pre‑fills</td>
 <td>No</td>
 </tr>
 <tr>
 <td>is_writing</td>
-<td>cinepi-raw → Cinemate</td>
+<td>CinePi-raw → Cinemate</td>
 <td>1 while frames are flushing to disk</td>
 <td>No</td>
 </tr>
@@ -1286,7 +1501,7 @@
 </tr>
 <tr>
 <td>last_dng_cam0/1</td>
-<td>cinepi-raw → Cinemate</td>
+<td>CinePi-raw → Cinemate</td>
 <td>Path to last written DNG frame</td>
 <td>No</td>
 </tr>
@@ -1304,13 +1519,13 @@
 </tr>
 <tr>
 <td>cam_init</td>
-<td>cinepi-raw</td>
+<td>CinePi-raw</td>
 <td>Internal flag during startup</td>
 <td>No</td>
 </tr>
 <tr>
 <td>cameras</td>
-<td>cinepi-raw</td>
+<td>CinePi-raw</td>
 <td>JSON list of detected cameras</td>
 <td>No</td>
 </tr>
@@ -1328,13 +1543,13 @@
 </tr>
 <tr>
 <td>sensor</td>
-<td>cinepi-raw</td>
+<td>CinePi-raw</td>
 <td>Active camera model</td>
 <td>No</td>
 </tr>
 <tr>
 <td>tc_cam0/tc_cam1</td>
-<td>cinepi-raw → Cinemate</td>
+<td>CinePi-raw → Cinemate</td>
 <td>SMPTE time code per camera</td>
 <td>No</td>
 </tr>
@@ -1407,7 +1622,7 @@
     
     
       
-      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.top", "toc.integrate", "content.code.copy", "content.action.edit"], "search": "../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.top", "toc.integrate", "toc.follow", "content.code.copy", "content.action.edit"], "search": "../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
       <script src="../assets/javascripts/bundle.56ea9cef.min.js"></script>

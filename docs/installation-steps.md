@@ -9,7 +9,7 @@ This guide assumes fresh Raspbery Pi Bookworm installation running kernel 6.12.2
 If you run Raspberry Pi OS Lite, begin by installing the following packages:
 
 ```bash
-sudo apt install -y python3-pip git python3-jinja2
+sudo apt-get install python3-jinja2 python3-ply python3-yaml
 ```
 
 ## Manual install
@@ -23,7 +23,15 @@ sudo apt install -y cmake libepoxy-dev libavdevice-dev build-essential cmake lib
 ### libcamera 1.7.0 <img src="https://img.shields.io/badge/raspberry pi-fork-red" height="12" >
 
 ```shell
-git clone https://github.com/raspberrypi/libcamera && \
+sudo apt install -y python3-pip git python3-jinja2 libboost-dev libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a meson cmake python3-yaml python3-ply libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libavdevice59
+```
+
+```shell
+sudo apt-get install --reinstall libtiff5-dev && sudo ln -sf $(find /usr/lib -name "libtiff.so" | head -n 1) /usr/lib/aarch64-linux-gnu/libtiff.so.5 && export LD_LIBRARY_PATH=/usr/lib/aarch64-linux-gnu:$LD_LIBRARY_PATH && sudo ldconfig
+```
+
+```shell
+git clone https://github.com/raspberrypi/libcamera.git && \
 sudo find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
 cd libcamera && \
 sudo meson setup build --buildtype=release \
@@ -37,20 +45,11 @@ sudo meson setup build --buildtype=release \
   -Dqcam=disabled \
   -Ddocumentation=disabled \
   -Dpycamera=enabled && \
-sudo ninja -C build install && \
-cd
+sudo ninja -C build install
 ```
 
 ```shell
 cd ~/libcamera/utils && sudo chmod +x *.py *.sh && sudo chmod +x ~/libcamera/src/ipa/ipa-sign.sh && cd ~/libcamera && sudo ninja -C build install
-```
-
-```shell
-sudo apt-get install --reinstall libtiff5-dev && sudo ln -sf $(find /usr/lib -name "libtiff.so" | head -n 1) /usr/lib/aarch64-linux-gnu/libtiff.so.5 && export LD_LIBRARY_PATH=/usr/lib/aarch64-linux-gnu:$LD_LIBRARY_PATH && sudo ldconfig
-```
-
-```shell
-sudo apt install -y python3-pip git python3-jinja2 libboost-dev libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a meson cmake python3-yaml python3-ply libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libavdevice59
 ```
 
 ### cpp-mjpeg-streamer <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >

@@ -72,6 +72,13 @@ theme:
     - toc.follow
     - content.code.copy
     - content.action.edit       # “Edit this page” link to repo
+
+    # Read the Docs specific
+    - collapse_navigation: True,
+    - sticky_navigation: True,
+    - navigation_depth: 4,
+    - includehidden: True,
+    - titles_only: False
     
   palette:
     - scheme: default           # WCAG-AA compliant base
@@ -80,7 +87,7 @@ theme:
 
 extra_css:  
   - overrides/github-markdown.css
-  #- docs/stylesheets/pdf.css  
+  - docs/stylesheets/pdf.css  
 # ───────────────────────────
 # Markdown add-ons
 # ───────────────────────────

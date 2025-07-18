@@ -12,28 +12,6 @@ If you run Raspberry Pi OS Lite, begin by installing the following packages:
 sudo apt install -y python-pip git python3-jinja2
 ```
 
-## Install script
-
-This installer script combines the below install processes of CinePi-Raw and Cinemate.
-
-```shell
-wget -O cinemate-stack-installer.sh https://raw.githubusercontent.com/Tiramisioux/cinemate/cinemate-3.1/cinemate-stack-installer.sh
-chmod +x cinemate-stack-installer.sh
-sudo bash cinemate-stack-installer.sh
-```
-
-Start the script by type:
-
-```shell
-./cinemate-stack-installer.sh
-```
-
-Watch it work by opening up another ssh window and typing:
-
-```shell
-sudo journalctl -fu cinemate-installer.service
-```
-
 ## Manual install
 
 ### libcamera 1.7.0 <img src="https://img.shields.io/badge/raspberry pi-fork-red" height="12" >

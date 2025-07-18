@@ -68,7 +68,7 @@ make install-here
 
 >Cinemate uses a custom fork of cpp-mjpeg-streamer. If you plan to use only cinepi-raw, you can use the original app found at https://github.com/nadjieb/cpp-mjpeg-streamer
 
-## cinepi-raw
+## CinePi-raw
 
 ### Dependencies
 ```

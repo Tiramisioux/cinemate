@@ -18,6 +18,6 @@
    - Format the drive as `ext4` and give it the label `RAW`.
    - Connect a button between **GPIO5** and **GND** (or briefly short these pins with a paper clip). When using the phone preview, you can also start/stop recording by tapping the preview.
 
-That's it—your bare‑bones CineMate build is ready. 
+That's it—your bare‑bones CineMate build is ready!
 
 >Remember to power everything down before disconnecting hardware!

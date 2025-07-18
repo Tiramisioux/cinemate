@@ -1,234 +1,81 @@
 /* -------------------------------------------------------------------
-   Cinemate PDF – custom styles for mkdocs-with-pdf / WeasyPrint
+   CINEMATE DOCS – PDF STYLESHEET (styles.scss)
    -------------------------------------------------------------------
-   How to use
-   ----------
-   1. Place this file as templates/styles.scss
-   2. Re-build:  mkdocs build  (or let your CI run)
-   3. Adjust the variables below until the PDF feels right.
-   ------------------------------------------------------------------*/
+   Place this file in the folder referenced by `custom_template_path`
+   (defaults to `templates/`) so that mkdocs‑with‑pdf can pick it up.
+   SCSS syntax is accepted, but this sheet uses plain CSS for clarity.
+   ------------------------------------------------------------------- */
 
-/* === 1. Global knobs ================================================= */
-$body-font-size:        11.5pt;     // Main text (Markdown content)
-$toc-font-size:         11.5pt;     // “Table of Contents” entries
-$header-footer-size:     9.0pt;     // Running headers & page numbers
-$line-height-ratio:      1.45;      // Applies to body + TOC
-
-/* === 2. Generic resets / helpers ===================================== */
-html, body {
-  font-size: $body-font-size;
-  line-height: $line-height-ratio;
-}
-
-/* Give images a little breathing room */
-img { margin: 0.6em 0; max-width: 100%; }
-
-/* === 3. Headings hierarchy ========================================== */
-/* WeasyPrint uses physical units; crank up sizes relative to body */
-h1   { font-size: 1.8em; margin-top: 1.2em; }
-h2   { font-size: 1.5em; margin-top: 1.1em; }
-h3   { font-size: 1.3em; margin-top: 1.0em; }
-h4   { font-size: 1.1em; }
-h5,h6{ font-size: 1.0em; }
-
-/* === 4. Table-of-Contents page ======================================= */
-/* mkdocs-with-pdf injects a .pdf-toc wrapper around the auto-generated TOC */
-.pdf-toc,
-.pdf-toc ul,
-.pdf-toc ol {
-  font: Arial, sans-serif;  // use a clean sans-serif font
-  font-size: $toc-font-size;
-  line-height: $line-height-ratio;
-  margin: 0;             // tighten vertical rhythm
-}
-.pdf-toc li { margin-left: 0.5em; }  // indent sub-items a bit
-
-/* === 5. Page setup, headers & footers ================================ */
-@page {
-  /* Tweak margins as needed (top | right | bottom | left) */
-  margin: 18mm 15mm 22mm 15mm;
-
-  /* --- Running header (left, center, right slots available) --- */
-  @top-center {
-    content: element(page-header);
-    font-size: $header-footer-size;
-    color: #6c6c6c;
+/* ──────────────────────────────────────────────────────────────
+   1. Page box & running headers / footers
+   ────────────────────────────────────────────────────────────── */
+   @page {
+    /* Paper size and margins */
+    size: A4 portrait;
+    margin: 25mm 25mm 25mm 25mm;  /* top, right, bottom, left */
+  
+    /* Counters */
+    counter-increment: page;
+  
+    /* Running header (top margin boxes) */
+    @top-left   { content: 'Cinemate Docs'; }
+    @top-center { content: string(chapter); }
+    @top-right  { content: 'Page ' counter(page); }
   }
-
-  /* --- Running footer: show page number ----------------------- */
-  @bottom-center {
-    content: element(page-footer);
-    font-size: $header-footer-size;
-    color: #6c6c6c;
+  
+  /* 2 ─ Add 15 mm visual margin on the right
+         (25 mm physical + 15 mm content margin = 40 mm white space) */
+  .md-typeset {
+    margin-right: 15mm;       /* push all markdown content leftwards */
   }
-
-  /* Optional: add a thin separator line for footers */
-  @bottom-left {
-    content: "";
-    border-top: 0.2pt solid #bfbfbf;
-    margin-top: 3mm;
-    width: 100%;
+  
+  .md-typeset {
+    padding-right: 15mm;
   }
-}
-
-/* Define what appears in the header/footer: -------------------------- */
-header {
-  position: running(page-header);   // makes the element “attach” to every page top
-  text-align: center;
-}
-
-footer {
-  position: running(page-footer);
-  text-align: center;
-  /* Use CSS counters; WeasyPrint sets `counter(page)` automatically */
-  &:after { content: "Page " counter(page); }
-}
-
-/* === 6. Optional: two-column layout triggers (if you turned it on) === */
-/* When you set `two_columns_level: 3` the plugin wraps content in
-   .pdf-two-column – everything inside becomes multicolumn. */
-.pdf-two-column {
-  column-gap: 10mm;
-  column-count: 2;
-  /* Prevent headings from starting at the very bottom of a column */
-  h3, h4, h5, h6 { break-after: avoid; }
-}
-
-/* === 7. GitHub-style code blocks ==================================== */
-/* Tweak these two variables if you want larger or smaller code text */
-$code-font-size:        0.92em;   // relative to body
-$code-line-height:       1.45;
-
-/* Monospaced font stack lifted from GitHub’s CSS                    */
-$code-font-family:
-  'SFMono-Regular', Consolas, 'Liberation Mono',
-  Menlo, Courier, monospace;
-
-/* Style the <pre> wrapper (fenced blocks) --------------------------- */
-pre {
-  font: #{$code-font-size}/#{$code-line-height} $code-font-family;
-  background: #f6f8fa;             // GitHub’s light grey
-  border: 1px solid #d0d7de;       // subtle outline
-  border-radius: 6px;
-  padding: 0.85em 1.1em;
-  margin: 1.2em 0;                 // give it breathing room
-  overflow: auto;                  // keep long lines inside the box
-  /* Prevent code blocks from splitting across pages if possible */
-  break-inside: avoid-page;
-}
-
-/* Remove the extra grey if <code> elements are nested inside <pre> */
-pre code {
-  background: #f6f8fa; 
-  border: 0;
-  padding: 0;
-}
-
-/* Inline code (`backticks`) – still subtle, but lighter ------------- */
-code {
-  font: 0.9em/1.35 $code-font-family;
-  background: #f6f8fa;
-  border: 1px solid #d0d7de;
-  border-radius: 4px;
-  padding: 0.1em 0.35em;
-}
-
-/* =====================================================================
-   8. Spec-style coloured boxes  (Note, Issue, Example, Warning, Test)
-   ---------------------------------------------------------------------
-   How it works
-   -------------
-   Markdown             →  HTML emitted by MkDocs
-   ------------------------------------------------------------------
-   !!! note             →  <div class="admonition note"> … </div>
-   !!! example          →  <div class="admonition example"> … </div>
-   !!! warning          →  <div class="admonition warning"> … </div>
-   !!! danger           →  <div class="admonition danger"> … </div>
-   !!! abstract "Test"  →  <div class="admonition abstract"> … </div>
-   ------------------------------------------------------------------
-   Each block gets a left bar, a pastel fill and a circular initial that
-   echoes the bar colour – just like the spec’s <div class="note"> etc.
-   ====================================================================*/
-
-/* --- 8.1 Colour palette -------------------------------------------- */
-$note-col:       #2b79c2;   // blue
-$issue-col:      #d8453d;   // red
-$example-col:    #2d9d5c;   // green
-$warning-col:    #e5a10b;   // orange
-$test-col:       #6f42c1;   // purple
-
-/* Helper: make a soft background from the same hue */
-@function tint($c) { @return mix(#ffffff, $c, 90%); }
-
-/* --- 8.2 Generic layout ------------------------------------------- */
-.admonition {
-  border-left: 4pt solid currentColor;
-  padding: 0.8em 1.2em 0.9em;
-  margin: 1.4em 0;
-  background: tint(currentColor);
-  font-size: 0.95em;            // fractionally smaller than body
-  line-height: 1.45;
-  break-inside: avoid-page;     // keep the whole box together
-}
-
-/* Title line -------------------------------------------------------- */
-.admonition-title {
-  font-weight: 600;
-  margin: 0 0 0.4em 0;
-  display: flex;
-  align-items: center;
-}
-
-/* Giant coloured initial – the “N” in Note, “I” in Issue … ---------- */
-.admonition-title::before {
-  content: attr(data-type-initial);   /* value injected below */
-  display: inline-block;
-  margin-right: 0.5em;
-  width: 1.45em; height: 1.45em;
-  border-radius: 50%;
-  line-height: 1.45em;
-  text-align: center;
-  font-weight: 700;
-  background: currentColor;
-  color: #ffffff;
-  flex-shrink: 0;
-}
-
-/* --- 8.3 Per-type colours & initials ------------------------------ */
-.admonition.note      { color: $note-col;      }
-.admonition.note      .admonition-title::before      { content: "N"; }
-
-.admonition.issue,
-.admonition.danger    { color: $issue-col;     }   /* MkDocs maps !!! danger → .danger */
-.admonition.issue .admonition-title::before,
-.admonition.danger .admonition-title::before       { content: "I"; }
-
-.admonition.example   { color: $example-col;   }
-.admonition.example   .admonition-title::before    { content: "E"; }
-
-.admonition.warning   { color: $warning-col;   }
-.admonition.warning   .admonition-title::before    { content: "W"; }
-
-.admonition.abstract,
-.admonition.test      { color: $test-col;      }   /* custom alias “test” */
-.admonition.abstract .admonition-title::before,
-.admonition.test .admonition-title::before        { content: "T"; }
-
-/* --- 8.4 Fine-tuning: lists & code inside boxes ------------------- */
-.admonition :last-child { margin-bottom: 0; }  // tidy bottom space
-.admonition pre         { margin: 0.7em 0; }   // reuse grey boxes
-
-/* ===================================================================== */
-
-/*  Usage in Markdown  --------------------------------------------------
-   !!! note
-       This is an ordinary note.
-
-   !!! warning "Mind the gap"
-       Remember to **re-flash** the CPLD after changing the I/O voltage.
-
-   !!! example
-       ```bash
-       cinemate-cli --init --profile=4k60
-       ```
-   ------------------------------------------------------------------  */
+  
+  /* ──────────────────────────────────────────────────────────────
+     2. Document‑wide typography & layout
+     ────────────────────────────────────────────────────────────── */
+  body {
+    font: 11pt/1.45 "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: #000;
+  }
+  
+  img {
+    margin: 0.6em 0;
+    max-width: 100%;
+  }
+  
+  /* Headings */
+  h1 { font-size: 1.8em; margin-top: 1.2em; break-before: page; }
+  h2 { font-size: 1.5em; margin-top: 1.1em; }
+  h3 { font-size: 1.3em; margin-top: 1.0em; }
+  h4 { font-size: 1.1em; }
+  h5,
+  h6 { font-size: 1.0em; }
+  
+  /* Code blocks (pre + inner code) */
+  pre,
+  pre > code {
+    font: 0.92em/1.45 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+    background: #8d9eae;
+    border: 1px solid #c7c7c7;
+    border-radius: 6px;
+    padding: 0.85em 1.1em;
+    margin: 1.2em 0;
+    white-space: pre-wrap;      /* allow wrapping of long lines */
+    word-break: break-word;     /* break long words sensibly      */
+    overflow-wrap: anywhere;    /* break even very long tokens    */
+    box-sizing: border-box;     /* include padding in width calc  */
+    width: 100%;               /* avoid spilling outside margin  */
+  }
+  
+  /* Inline code */
+  code {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+    background: #e5e5e5;
+    border: 1px solid #d0d7de;
+    border-radius: 4px;
+    padding: 0.1em 0.35em;
+  }
+  

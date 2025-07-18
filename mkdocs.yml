@@ -87,7 +87,7 @@ theme:
 
 extra_css:  
   - overrides/github-markdown.css
-  - docs/stylesheets/pdf.css  
+  - templates/styles.scss  
 # ───────────────────────────
 # Markdown add-ons
 # ───────────────────────────
@@ -105,9 +105,9 @@ markdown_extensions:
 # ───────────────────────────
 plugins:
   - search
-plugins: # PDF build (runs only when ENABLE_PDF_EXPORT=1 is set in CI)
   - with-pdf:
-      # ── meta ─────────────────────────────
+      # ── template ─────────────────────────────
+      custom_template_path: docs/stylesheets     # where styles.scss now lives
 
       # ── cover & back cover ───────────────
       cover: true
@@ -118,7 +118,6 @@ plugins: # PDF build (runs only when ENABLE_PDF_EXPORT=1 is set in CI)
 
       # ── build behaviour ─────────────────
       output_path: renders/Cinemate-Docs.pdf  # already using this
-      #custom_template_path: stylesheets         # new – where styles.scss lives
       
       # ── layout ─────────────────
       two_columns_level: 2        # experimental two-column layout

@@ -93,11 +93,11 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal current" href="#">Redis API</a>
 <ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="#redis-cli">Redis-cli</a>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#cp_controls">cp_controls</a>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#cp_stats">cp_stats</a>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#redis-cli">Redis-cli</a>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#controlling-the-camera-from-your-own-script">Controlling the camera from your own script</a>
 </li>
@@ -156,8 +156,23 @@
 <div class="section" itemprop="articleBody">
 <div class="markdown-body">
 <h1 id="redis-api-quick-start">Redis API quick start<a class="headerlink" href="#redis-api-quick-start" title="Permanent link">#</a></h1>
+<h2 id="redis-cli">Redis-cli<a class="headerlink" href="#redis-cli" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1"># List all keys</span>
+redis-cli<span class="w"> </span>KEYS<span class="w"> </span><span class="s1">'*'</span>
+
+<span class="c1"># Read the current ISO value</span>
+redis-cli<span class="w"> </span>GET<span class="w"> </span>iso
+
+<span class="c1"># Start a recording (same as pressing the Rec button)</span>
+redis-cli<span class="w"> </span>SET<span class="w"> </span>is_recording<span class="w"> </span><span class="m">1</span>
+redis-cli<span class="w"> </span>PUBLISH<span class="w"> </span>cp_controls<span class="w"> </span>is_recording
+</code></pre></div>
+<p>You can also type:</p>
+<div class="highlight"><pre><span></span><code>redis-cli
+</code></pre></div>
+<p>This will open the redis cli.</p>
 <h2 id="cp_controls">cp_controls<a class="headerlink" href="#cp_controls" title="Permanent link">#</a></h2>
-<p>Both CinePi-raw and Cinemnate writes values and immediately publish the key name. The recorder only reacts when it receives that publish event. </p>
+<p>Both CinePi-raw and Cinemate writes values and immediately publish the key name. The recorder only reacts when it receives that publish event. </p>
 <p>Any key may be sent this way. For example, to adjust the preview zoom:</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># Set preview zoom level</span>
 
@@ -185,20 +200,8 @@ redis-cli<span class="w"> </span>SET<span class="w"> </span>is_recording<span cl
 <span class="w">    </span><span class="n">redis_</span><span class="o">-&gt;</span><span class="n">publish</span><span class="p">(</span><span class="n">CHANNEL_STATS</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">toStyledString</span><span class="p">());</span>
 </code></pre></div>
 <p>CineMate’s <code>RedisListener</code> parses these messages and updates Redis keys like <code>framecount</code>, <code>BUFFER</code> and <code>fps_actual</code>.</p>
-<h2 id="redis-cli">Redis-cli<a class="headerlink" href="#redis-cli" title="Permanent link">#</a></h2>
-<p>Because everything is plain Redis you can poke around from the command line. Here are a few handy commands:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># List all keys</span>
-redis-cli<span class="w"> </span>KEYS<span class="w"> </span><span class="s1">'*'</span>
-
-<span class="c1"># Read the current ISO value</span>
-redis-cli<span class="w"> </span>GET<span class="w"> </span>iso
-
-<span class="c1"># Start a recording (same as pressing the Rec button)</span>
-redis-cli<span class="w"> </span>SET<span class="w"> </span>is_recording<span class="w"> </span><span class="m">1</span>
-redis-cli<span class="w"> </span>PUBLISH<span class="w"> </span>cp_controls<span class="w"> </span>is_recording
-</code></pre></div>
 <h2 id="controlling-the-camera-from-your-own-script">Controlling the camera from your own script<a class="headerlink" href="#controlling-the-camera-from-your-own-script" title="Permanent link">#</a></h2>
-<p>Below is a very small example using <code>redis-py</code>. This is basically what Cinemate does: it keeps track of variables  being set by cinepi-raw, and also setting the same, or other variable by itself.</p>
+<p>Below is a very small example using <code>redis-py</code>. </p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">redis</span>
 <span class="n">r</span> <span class="o">=</span> <span class="n">redis</span><span class="o">.</span><span class="n">Redis</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s1">'localhost'</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">6379</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
@@ -209,6 +212,10 @@ redis-cli<span class="w"> </span>PUBLISH<span class="w"> </span>cp_controls<span
 <span class="n">r</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s1">'cp_controls'</span><span class="p">,</span> <span class="s1">'is_recording'</span><span class="p">)</span>
 </code></pre></div>
 <p>Note that in this example, the publishing of the is_recording key is not strictly needed for recording to start/stop, but for formality's sake I think we should keep the publish command.</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>This is basically what Cinemate does: it keeps track of variables being set by cinepi-raw, and also sets variables itself.</p>
+</div>
 </div>
 </div>
 </div><footer>

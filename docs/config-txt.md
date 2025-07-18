@@ -1,3 +1,5 @@
+# Modifying config.txt
+
 ## Adjusting config.txt for different sensors:
 
 ```

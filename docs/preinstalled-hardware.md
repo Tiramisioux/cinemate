@@ -1,4 +1,4 @@
-# Additional hardware
+# Hardware overview
 
 CineMate image file comes pre-installed with:
 - [StarlightEye](https://www.tindie.com/products/will123321/starlighteye/)

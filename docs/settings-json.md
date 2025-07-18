@@ -1,4 +1,4 @@
-# User settings
+# Settings file
 
 This file controls how the camera behaves and how your buttons, switches and displays are mapped. It lives in `~/cinemate/src/settings.json` on the Raspberry Pi. You can edit it with any text editor; the settings take effect the next time you start CineMate.
 

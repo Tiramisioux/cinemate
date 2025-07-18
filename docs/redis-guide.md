@@ -1,8 +1,30 @@
 # Redis API quick start
 
+## Redis-cli
+
+```bash
+# List all keys
+redis-cli KEYS '*'
+
+# Read the current ISO value
+redis-cli GET iso
+
+# Start a recording (same as pressing the Rec button)
+redis-cli SET is_recording 1
+redis-cli PUBLISH cp_controls is_recording
+```
+
+You can also type:
+
+```shell
+redis-cli
+```
+
+This will open the redis cli.
+
 ## cp_controls
 
-Both CinePi-raw and Cinemnate writes values and immediately publish the key name. The recorder only reacts when it receives that publish event. 
+Both CinePi-raw and Cinemate writes values and immediately publish the key name. The recorder only reacts when it receives that publish event. 
 
 Any key may be sent this way. For example, to adjust the preview zoom:
 
@@ -41,26 +63,9 @@ Every frame, cinepi-raw sends a small JSON object containing live statistics.
 
 CineMate’s `RedisListener` parses these messages and updates Redis keys like `framecount`, `BUFFER` and `fps_actual`.
 
-## Redis-cli
-
-Because everything is plain Redis you can poke around from the command line. Here are a few handy commands:
-
-```bash
-# List all keys
-redis-cli KEYS '*'
-
-# Read the current ISO value
-redis-cli GET iso
-
-# Start a recording (same as pressing the Rec button)
-redis-cli SET is_recording 1
-redis-cli PUBLISH cp_controls is_recording
-```
-
 ## Controlling the camera from your own script
 
-Below is a very small example using `redis-py`. This is basically what Cinemate does: it keeps track of variables  being set by cinepi-raw, and also setting the same, or other variable by itself.
-
+Below is a very small example using `redis-py`. 
 
 
 ```python
@@ -75,5 +80,10 @@ r.publish('cp_controls', 'is_recording')
 ```
 
 Note that in this example, the publishing of the is_recording key is not strictly needed for recording to start/stop, but for formality's sake I think we should keep the publish command.
+
+!!! info
+    
+    This is basically what Cinemate does: it keeps track of variables being set by cinepi-raw, and also sets variables itself.
+
 
 

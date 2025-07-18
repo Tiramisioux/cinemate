@@ -1,1540 +1,214 @@
+<!DOCTYPE html>
 
-<!doctype html>
-<html lang="en" class="no-js">
-  <head>
-    
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width,initial-scale=1">
-      
-        <meta name="description" content="Documentation for Cinemate">
-      
-      
-      
-        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/installation-steps/">
-      
-      
-        <link rel="prev" href="../troubleshooting/">
-      
-      
-        <link rel="next" href="../todo/">
-      
-      
-      <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.15">
-    
-    
-      
-        <title>Manual installation (from scratch) - Cinemate Docs</title>
-      
-    
-    
-      <link rel="stylesheet" href="../assets/stylesheets/main.342714a4.min.css">
-      
-        
-        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
-      
-      
-
-
-    
-    
-      
-    
-    
-      
-        
-        
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
-        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
-      
-    
-    
-      <link rel="stylesheet" href="../overrides/github-markdown.css">
-    
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
-    
-      
-
-    
-    
-    
-  </head>
-  
-  
-    
-    
-      
-    
-    
-    
-    
-    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="black">
-  
-    
-    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
-    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
-    <label class="md-overlay" for="__drawer"></label>
-    <div data-md-component="skip">
-      
-        
-        <a href="#manual-installation" class="md-skip">
-          Skip to content
+<html class="writer-html5" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://tiramisioux.github.io/cinemate/installation-steps/" rel="canonical"/>
+<link href="../img/favicon.ico" rel="shortcut icon"/>
+<title>Manual installation (from scratch) - Cinemate Docs</title>
+<link href="../css/theme.css" rel="stylesheet"/>
+<link href="../css/theme_extra.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" rel="stylesheet"/>
+<link href="../overrides/github-markdown.css" rel="stylesheet"/>
+<script>
+        // Current page data
+        var mkdocs_page_name = "Manual installation (from scratch)";
+        var mkdocs_page_input_path = "installation-steps.md";
+        var mkdocs_page_url = "/cinemate/installation-steps/";
+      </script>
+<!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+<link href="../renders/Cinemate-Docs.pdf" rel="alternate" title="PDF" type="application/pdf"/></head>
+<body class="wy-body-for-nav" role="document">
+<div class="wy-grid-for-nav">
+<nav class="wy-nav-side stickynav" data-toggle="wy-nav-shift">
+<div class="wy-side-scroll">
+<div class="wy-side-nav-search">
+<a class="icon icon-home" href=".."> Cinemate Docs
         </a>
-      
-    </div>
-    <div data-md-component="announce">
-      
-    </div>
-    
-    
-      
-
-  
-
-<header class="md-header md-header--shadow" data-md-component="header">
-  <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="Cinemate Docs" class="md-header__button md-logo" aria-label="Cinemate Docs" data-md-component="logo">
-      
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
-
-    </a>
-    <label class="md-header__button md-icon" for="__drawer">
-      
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
-    </label>
-    <div class="md-header__title" data-md-component="header-title">
-      <div class="md-header__ellipsis">
-        <div class="md-header__topic">
-          <span class="md-ellipsis">
-            Cinemate Docs
-          </span>
-        </div>
-        <div class="md-header__topic" data-md-component="header-topic">
-          <span class="md-ellipsis">
-            
-              Manual installation (from scratch)
-            
-          </span>
-        </div>
-      </div>
-    </div>
-    
-      
-        <form class="md-header__option" data-md-component="palette">
-  
-    
-    
-    
-    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="black"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
-    
-  
-</form>
-      
-    
-    
-      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
-    
-    
-    
-    
-      <div class="md-header__source">
-        <a href="https://github.com/tiramisioux/cinemate" title="Go to repository" class="md-source" data-md-component="source">
-  <div class="md-source__icon md-icon">
-    
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
-  </div>
-  <div class="md-source__repository">
-    GitHub
-  </div>
-</a>
-      </div>
-    
-  </nav>
-  
-</header>
-    
-    <div class="md-container" data-md-component="container">
-      
-      
-        
-          
-        
-      
-      <main class="md-main" data-md-component="main">
-        <div class="md-main__inner md-grid">
-          
-            
-              
-              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
-                <div class="md-sidebar__scrollwrap">
-                  <div class="md-sidebar__inner">
-                    
-
-
-
-  
-
-<nav class="md-nav md-nav--primary md-nav--integrated" aria-label="Navigation" data-md-level="0">
-  <label class="md-nav__title" for="__drawer">
-    <a href=".." title="Cinemate Docs" class="md-nav__button md-logo" aria-label="Cinemate Docs" data-md-component="logo">
-      
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
-
-    </a>
-    Cinemate Docs
-  </label>
-  
-    <div class="md-nav__source">
-      <a href="https://github.com/tiramisioux/cinemate" title="Go to repository" class="md-source" data-md-component="source">
-  <div class="md-source__icon md-icon">
-    
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
-  </div>
-  <div class="md-source__repository">
-    GitHub
-  </div>
-</a>
-    </div>
-  
-  <ul class="md-nav__list" data-md-scrollfix>
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Home
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    Quick start
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2">
-            <span class="md-nav__icon md-icon"></span>
-            Quick start
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../getting-started/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Getting started
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../bare-bones-build/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Bare bones build
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../brick/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Brick build
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    Using the camera
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3">
-            <span class="md-nav__icon md-icon"></span>
-            Using the camera
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../web-gui/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Web GUI
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../simple-gui/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    HDMI GUI
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../sensors/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Sensors
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../audio-recording/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Audio recording
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../digital-zoom/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Digital zoom
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../speed-ramping/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Speed ramping & shutter angle synchronization
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../dual-sensors/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Dual sensors
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
-        
-          
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    Customising your build
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4">
-            <span class="md-nav__icon md-icon"></span>
-            Customising your build
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../settings-json/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Settings file
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../cli-user-guide/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Using the CLI
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../cli-commands/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Commands reference
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../ssh/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Connecting via SSH
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../hotspot-logic/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Configuring the Wi-Fi hotspot
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
-        
-          
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    System management
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5">
-            <span class="md-nav__icon md-icon"></span>
-            System management
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../system-services/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    System services
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../config-txt/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Modifying config.txt
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../compiling-cinepi-raw/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Recompiling cinepi-raw
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../overclocking/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Overclocking the Pi
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../backing-up-sd-card/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Backing up the SD card
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
-        
-          
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    Reference & troubleshooting
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6">
-            <span class="md-nav__icon md-icon"></span>
-            Reference & troubleshooting
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../redis-guide/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Redis API
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../redis-keys/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Key reference
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../preinstalled-hardware/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Hardware overview
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../known-issues/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Known issues
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../troubleshooting/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Troubleshooting
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-    
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    Development & contributing
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_7">
-            <span class="md-nav__icon md-icon"></span>
-            Development & contributing
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    Manual installation (from scratch)
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    Manual installation (from scratch)
-    
-  </span>
-  
-
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#libcamera-170" class="md-nav__link">
-    <span class="md-ellipsis">
-      libcamera 1.7.0
-    </span>
-  </a>
-  
+</div>
+<div aria-label="Navigation menu" class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="..">Home</a>
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#nvm" class="md-nav__link">
-    <span class="md-ellipsis">
-      nvm
-    </span>
-  </a>
-  
+</ul>
+<p class="caption"><span class="caption-text">Quick start</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#cpp-mjpeg-streamer" class="md-nav__link">
-    <span class="md-ellipsis">
-      cpp-mjpeg-streamer
-    </span>
-  </a>
-  
+</ul>
+<p class="caption"><span class="caption-text">Using the camera</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#cinepi-raw" class="md-nav__link">
-    <span class="md-ellipsis">
-      cinepi-raw
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="cinepi-raw">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#dependencies" class="md-nav__link">
-    <span class="md-ellipsis">
-      Dependencies
-    </span>
-  </a>
-  
+<li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#cinepi-raw_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      cinepi-raw
-    </span>
-  </a>
-  
+<li class="toctree-l1"><a class="reference internal" href="../sensors/">Sensors</a>
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#imx585-driver" class="md-nav__link">
-    <span class="md-ellipsis">
-      imx585 driver
-    </span>
-  </a>
-  
+<li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#imx283-driver" class="md-nav__link">
-    <span class="md-ellipsis">
-      imx283 driver
-    </span>
-  </a>
-  
+<li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
 </li>
-        
-      </ul>
-    </nav>
-  
+<li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping &amp; shutter angle synchronization</a>
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#enabling-i2c" class="md-nav__link">
-    <span class="md-ellipsis">
-      Enabling I²C
-    </span>
-  </a>
-  
+<li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#hostname" class="md-nav__link">
-    <span class="md-ellipsis">
-      Hostname
-    </span>
-  </a>
-  
+</ul>
+<p class="caption"><span class="caption-text">Customising your build</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#add-camera-modules-to-configtxt" class="md-nav__link">
-    <span class="md-ellipsis">
-      Add camera modules to config.txt
-    </span>
-  </a>
-  
+<li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">Using the CLI</a>
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#add-the-imx585-tuning-file-optional" class="md-nav__link">
-    <span class="md-ellipsis">
-      Add the IMX585 tuning file (optional)
-    </span>
-  </a>
-  
+<li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Commands reference</a>
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#ir-filter-switch-script-optional" class="md-nav__link">
-    <span class="md-ellipsis">
-      IR filter switch script (optional)
-    </span>
-  </a>
-  
+<li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#change-the-console-font-optional" class="md-nav__link">
-    <span class="md-ellipsis">
-      Change the console font (optional)
-    </span>
-  </a>
-  
+<li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#create-post-processing-configs" class="md-nav__link">
-    <span class="md-ellipsis">
-      Create post-processing configs
-    </span>
-  </a>
-  
+</ul>
+<p class="caption"><span class="caption-text">System management</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#install-pishrink" class="md-nav__link">
-    <span class="md-ellipsis">
-      Install PiShrink
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Install PiShrink">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#reboot-before-installing-cinemate" class="md-nav__link">
-    <span class="md-ellipsis">
-      Reboot before installing Cinemate:
-    </span>
-  </a>
-  
+<li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
 </li>
-        
-      </ul>
-    </nav>
-  
+<li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#create-a-python-virtual-environment" class="md-nav__link">
-    <span class="md-ellipsis">
-      Create a Python virtual environment
-    </span>
-  </a>
-  
+<li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#grant-sudo-privileges-and-enable-i2c" class="md-nav__link">
-    <span class="md-ellipsis">
-      Grant sudo privileges and enable I²C
-    </span>
-  </a>
-  
+<li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#cinemate" class="md-nav__link">
-    <span class="md-ellipsis">
-      Cinemate
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Cinemate">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#dependencies_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Dependencies
-    </span>
-  </a>
-  
+</ul>
+<p class="caption"><span class="caption-text">Reference &amp; troubleshooting</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#replace-rpigpio-with-lgpio" class="md-nav__link">
-    <span class="md-ellipsis">
-      Replace RPi.GPIO with lgpio
-    </span>
-  </a>
-  
+<li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#clone-the-cinemate-repo" class="md-nav__link">
-    <span class="md-ellipsis">
-      Clone the Cinemate repo
-    </span>
-  </a>
-  
+<li class="toctree-l1"><a class="reference internal" href="../preinstalled-hardware/">Hardware overview</a>
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#allow-cinemates-mainpy-to-run-with-sudo" class="md-nav__link">
-    <span class="md-ellipsis">
-      Allow Cinemates main.py to run with sudo
-    </span>
-  </a>
-  
+<li class="toctree-l1"><a class="reference internal" href="../known-issues/">Known issues</a>
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#enable-networkmanager" class="md-nav__link">
-    <span class="md-ellipsis">
-      Enable NetworkManager
-    </span>
-  </a>
-  
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#rotate-logs" class="md-nav__link">
-    <span class="md-ellipsis">
-      Rotate logs
-    </span>
-  </a>
-  
+</ul>
+<p class="caption"><span class="caption-text">Cinemate builds</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../bare-bones-build/">Bare bones build</a>
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#seed-redis-with-default-keys" class="md-nav__link">
-    <span class="md-ellipsis">
-      Seed Redis with default keys
-    </span>
-  </a>
-  
+<li class="toctree-l1"><a class="reference internal" href="../brick/">Box build</a>
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#add-a-convenience-alias" class="md-nav__link">
-    <span class="md-ellipsis">
-      Add a convenience alias
-    </span>
-  </a>
-  
+</ul>
+<p class="caption"><span class="caption-text">Development &amp; contributing</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal current" href="#">Manual installation (from scratch)</a>
+<ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="#libcamera-170">libcamera 1.7.0</a>
 </li>
-        
-      </ul>
-    </nav>
-  
+<li class="toctree-l2"><a class="reference internal" href="#nvm">nvm</a>
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#cinemate-services" class="md-nav__link">
-    <span class="md-ellipsis">
-      Cinemate services
-    </span>
-  </a>
-  
+<li class="toctree-l2"><a class="reference internal" href="#cpp-mjpeg-streamer">cpp-mjpeg-streamer</a>
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#starting-cinemate" class="md-nav__link">
-    <span class="md-ellipsis">
-      Starting Cinemate
-    </span>
-  </a>
-  
+<li class="toctree-l2"><a class="reference internal" href="#cinepi-raw">cinepi-raw</a>
+<ul>
+<li class="toctree-l3"><a class="reference internal" href="#dependencies">Dependencies</a>
 </li>
-      
-    </ul>
-  
+<li class="toctree-l3"><a class="reference internal" href="#cinepi-raw_1">cinepi-raw</a>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#imx585-driver">imx585 driver</a>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#imx283-driver">imx283 driver</a>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#enabling-i2c">Enabling I²C</a>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#hostname">Hostname</a>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#add-camera-modules-to-configtxt">Add camera modules to config.txt</a>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#add-the-imx585-tuning-file-optional">Add the IMX585 tuning file (optional)</a>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#ir-filter-switch-script-optional">IR filter switch script (optional)</a>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#change-the-console-font-optional">Change the console font (optional)</a>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#create-post-processing-configs">Create post-processing configs</a>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#install-pishrink">Install PiShrink</a>
+<ul>
+<li class="toctree-l3"><a class="reference internal" href="#reboot-before-installing-cinemate">Reboot before installing Cinemate:</a>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#create-a-python-virtual-environment">Create a Python virtual environment</a>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#grant-sudo-privileges-and-enable-i2c">Grant sudo privileges and enable I²C</a>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#cinemate">Cinemate</a>
+<ul>
+<li class="toctree-l3"><a class="reference internal" href="#dependencies_1">Dependencies</a>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#replace-rpigpio-with-lgpio">Replace RPi.GPIO with lgpio</a>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#clone-the-cinemate-repo">Clone the Cinemate repo</a>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#allow-cinemates-mainpy-to-run-with-sudo">Allow Cinemates main.py to run with sudo</a>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#enable-networkmanager">Enable NetworkManager</a>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#rotate-logs">Rotate logs</a>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#seed-redis-with-default-keys">Seed Redis with default keys</a>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#add-a-convenience-alias">Add a convenience alias</a>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#cinemate-services">Cinemate services</a>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#starting-cinemate">Starting Cinemate</a>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../todo/">Todo</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing/">Contributing guide</a>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../renders/Cinemate-Docs.pdf">Download PDF</a>
+</li>
+</ul>
+</div>
+</div>
 </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../todo/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Todo
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../contributing/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Contributing guide
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../renders/Cinemate-Docs.pdf" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Download PDF
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-    
-  </ul>
+<section class="wy-nav-content-wrap" data-toggle="wy-nav-shift">
+<nav aria-label="Mobile navigation menu" class="wy-nav-top" role="navigation">
+<i class="fa fa-bars" data-toggle="wy-nav-top"></i>
+<a href="..">Cinemate Docs</a>
 </nav>
-                  </div>
-                </div>
-              </div>
-            
-            
-          
-          
-            <div class="md-content" data-md-component="content">
-              <article class="md-content__inner md-typeset">
-                
+<div class="wy-nav-content">
+<div class="rst-content"><div aria-label="breadcrumbs navigation" role="navigation">
+<ul class="wy-breadcrumbs">
+<li><a aria-label="Docs" class="icon icon-home" href=".."></a></li>
+<li class="breadcrumb-item">Development &amp; contributing</li>
+<li class="breadcrumb-item active">Manual installation (from scratch)</li>
+<li class="wy-breadcrumbs-aside">
+<a class="icon icon-github" href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/installation-steps.md"> Edit on GitHub</a>
+</li>
+</ul>
+<hr/>
+</div>
+<div class="document" itemscope="itemscope" itemtype="http://schema.org/Article" role="main">
+<div class="section" itemprop="articleBody">
 <div class="markdown-body">
-  <h1 id="manual-installation">Manual installation<a class="headerlink" href="#manual-installation" title="Permanent link">#</a></h1>
+<h1 id="manual-installation">Manual installation<a class="headerlink" href="#manual-installation" title="Permanent link">#</a></h1>
 <p>Here is how you can manually install libcamera, cinepi-raw, cinemate and accompanying software on the Raspberry Pi.</p>
 <blockquote>
 <p>Although Raspberry Pi 4 (and even 3) has been known to work with the stack below, a Raspopberry Pi 5B or Compute Module 5 is recommended. Also note that for high speed USB 3, a Raspberry Pi 4 or 5 is needed.</p>
@@ -1543,9 +217,9 @@
 <p>If you run Raspberry Pi OS Lite, begin by installing the following packages:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>python-pip<span class="w"> </span>git<span class="w"> </span>python3-jinja2
 </code></pre></div>
-<h2 id="libcamera-170">libcamera 1.7.0 <img src="https://img.shields.io/badge/raspberry pi-fork-red" height="12" ><a class="headerlink" href="#libcamera-170" title="Permanent link">#</a></h2>
+<h2 id="libcamera-170">libcamera 1.7.0 <img height="12" src="https://img.shields.io/badge/raspberry pi-fork-red"/><a class="headerlink" href="#libcamera-170" title="Permanent link">#</a></h2>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/raspberrypi/libcamera<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
-sudo<span class="w"> </span>find<span class="w"> </span>~/libcamera<span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span><span class="se">\(</span><span class="w"> </span>-name<span class="w"> </span><span class="s1">&#39;*.py&#39;</span><span class="w"> </span>-o<span class="w"> </span>-name<span class="w"> </span><span class="s1">&#39;*.sh&#39;</span><span class="w"> </span><span class="se">\)</span><span class="w"> </span>-exec<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span><span class="o">{}</span><span class="w"> </span><span class="se">\;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+sudo<span class="w"> </span>find<span class="w"> </span>~/libcamera<span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span><span class="se">\(</span><span class="w"> </span>-name<span class="w"> </span><span class="s1">'*.py'</span><span class="w"> </span>-o<span class="w"> </span>-name<span class="w"> </span><span class="s1">'*.sh'</span><span class="w"> </span><span class="se">\)</span><span class="w"> </span>-exec<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span><span class="o">{}</span><span class="w"> </span><span class="se">\;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
 <span class="nb">cd</span><span class="w"> </span>libcamera<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
 sudo<span class="w"> </span>meson<span class="w"> </span>setup<span class="w"> </span>build<span class="w"> </span>--buildtype<span class="o">=</span>release<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-Dpipelines<span class="o">=</span>rpi/vc4,rpi/pisp<span class="w"> </span><span class="se">\</span>
@@ -1563,7 +237,7 @@ sudo<span class="w"> </span>ninja<span class="w"> </span>-C<span class="w"> </sp
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>~/libcamera/utils<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>*.py<span class="w"> </span>*.sh<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>~/libcamera/src/ipa/ipa-sign.sh<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>~/libcamera<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>ninja<span class="w"> </span>-C<span class="w"> </span>build<span class="w"> </span>install
 </code></pre></div>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>--reinstall<span class="w"> </span>libtiff5-dev<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>ln<span class="w"> </span>-sf<span class="w"> </span><span class="k">$(</span>find<span class="w"> </span>/usr/lib<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;libtiff.so&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-n<span class="w"> </span><span class="m">1</span><span class="k">)</span><span class="w"> </span>/usr/lib/aarch64-linux-gnu/libtiff.so.5<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">LD_LIBRARY_PATH</span><span class="o">=</span>/usr/lib/aarch64-linux-gnu:<span class="nv">$LD_LIBRARY_PATH</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>ldconfig
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>--reinstall<span class="w"> </span>libtiff5-dev<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>ln<span class="w"> </span>-sf<span class="w"> </span><span class="k">$(</span>find<span class="w"> </span>/usr/lib<span class="w"> </span>-name<span class="w"> </span><span class="s2">"libtiff.so"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-n<span class="w"> </span><span class="m">1</span><span class="k">)</span><span class="w"> </span>/usr/lib/aarch64-linux-gnu/libtiff.so.5<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">LD_LIBRARY_PATH</span><span class="o">=</span>/usr/lib/aarch64-linux-gnu:<span class="nv">$LD_LIBRARY_PATH</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>ldconfig
 </code></pre></div>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>python3-pip<span class="w"> </span>git<span class="w"> </span>python3-jinja2<span class="w"> </span>libboost-dev<span class="w"> </span>libgnutls28-dev<span class="w"> </span>openssl<span class="w"> </span>pybind11-dev<span class="w"> </span>qtbase5-dev<span class="w"> </span>libqt5core5a<span class="w"> </span>meson<span class="w"> </span>cmake<span class="w"> </span>python3-yaml<span class="w"> </span>python3-ply<span class="w"> </span>libglib2.0-dev<span class="w"> </span>libgstreamer-plugins-base1.0-dev<span class="w"> </span>libgstreamer1.0-dev<span class="w"> </span>libavdevice59
 </code></pre></div>
@@ -1575,7 +249,7 @@ nvm<span class="w"> </span>install<span class="w"> </span>--lts
 <blockquote>
 <p>Cinemate uses nvm (Node Version Manager) for its web ui. If you plan to use cionepi-raw only, nvm is not needed.</p>
 </blockquote>
-<h2 id="cpp-mjpeg-streamer">cpp-mjpeg-streamer <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" ><a class="headerlink" href="#cpp-mjpeg-streamer" title="Permanent link">#</a></h2>
+<h2 id="cpp-mjpeg-streamer">cpp-mjpeg-streamer <img height="12" src="https://img.shields.io/badge/cinemate-fork-gren"/><a class="headerlink" href="#cpp-mjpeg-streamer" title="Permanent link">#</a></h2>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>libspdlog-dev<span class="w"> </span>libjsoncpp-dev
 <span class="nb">cd</span><span class="w"> </span>/home/pi
 git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/cpp-mjpeg-streamer.git<span class="w"> </span>--branch<span class="w"> </span>cinemate
@@ -1590,7 +264,7 @@ make<span class="w"> </span>install-here
 <h3 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo apt install -y cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev &amp;&amp; sudo apt-get install libjsoncpp-dev &amp;&amp; cd ~ &amp;&amp; git clone https://github.com/sewenew/redis-plus-plus.git &amp;&amp; cd redis-plus-plus &amp;&amp; mkdir build &amp;&amp; cd build &amp;&amp; cmake .. &amp;&amp; make &amp;&amp; sudo make install &amp;&amp; cd ~
 </code></pre></div>
-<h3 id="cinepi-raw_1">cinepi-raw <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" ><a class="headerlink" href="#cinepi-raw_1" title="Permanent link">#</a></h3>
+<h3 id="cinepi-raw_1">cinepi-raw <img height="12" src="https://img.shields.io/badge/cinemate-fork-gren"/><a class="headerlink" href="#cinepi-raw_1" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/cinepi-raw.git<span class="w"> </span>--branch<span class="w"> </span>rpicam-apps_1.7_custom_encoder
 <span class="nb">cd</span><span class="w"> </span>/home/pi/cinepi-raw
 sudo<span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>build<span class="w"> </span><span class="o">(</span><span class="k">if</span><span class="w"> </span>you<span class="w"> </span>have<span class="w"> </span>a<span class="w"> </span>previous<span class="w"> </span>build<span class="o">)</span>
@@ -1603,7 +277,7 @@ sudo<span class="w"> </span>meson<span class="w"> </span>install<span class="w">
 <p>Cinemate depends on a custom branch of cinepi-raw created by Csaba Nagy. If you plan to use the original version you can find it adapted for rpicam-apps 0.7 here: https://github.com/Tiramisioux/cinepi-raw/tree/rpicam-apps_1.7</p>
 <p>Join the CinePi Discord <a href="https://discord.gg/Hr4dfhuK">here</a>!</p>
 </blockquote>
-<h3 id="imx585-driver">imx585 driver <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" ><a class="headerlink" href="#imx585-driver" title="Permanent link">#</a></h3>
+<h3 id="imx585-driver">imx585 driver <img height="12" src="https://img.shields.io/badge/cinemate-fork-gren"/><a class="headerlink" href="#imx585-driver" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>linux-headers<span class="w"> </span>dkms<span class="w"> </span>git
 </code></pre></div>
 <div class="highlight"><pre><span></span><code>git clone https://github.com/Tiramisioux/imx585-v4l2-driver.git
@@ -1613,7 +287,7 @@ cd imx585-v4l2-driver/
 <blockquote>
 <p>The imx585 is written by Will Whang. For original drivers and startup guides, visit https://github.com/will127534/StarlightEye</p>
 </blockquote>
-<h3 id="imx283-driver">imx283 driver <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" ><a class="headerlink" href="#imx283-driver" title="Permanent link">#</a></h3>
+<h3 id="imx283-driver">imx283 driver <img height="12" src="https://img.shields.io/badge/cinemate-fork-gren"/><a class="headerlink" href="#imx283-driver" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>linux-headers<span class="w"> </span>dkms<span class="w"> </span>git
 </code></pre></div>
 <div class="highlight"><pre><span></span><code>git clone https://github.com/Tiramisioux/imx283-v4l2-driver.git
@@ -1675,7 +349,7 @@ sudo<span class="w"> </span>raspi-config<span class="w"> </span>nonint<span clas
 <h2 id="add-the-imx585-tuning-file-optional">Add the IMX585 tuning file (optional)<a class="headerlink" href="#add-the-imx585-tuning-file-optional" title="Permanent link">#</a></h2>
 <p><div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-L<span class="w"> </span>-o<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585.json
-sed<span class="w"> </span>-i<span class="w"> </span><span class="s1">&#39;8s/&quot;black_level&quot;: *[0-9]\+/&quot;black_level&quot;: 0/&#39;</span><span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json
+sed<span class="w"> </span>-i<span class="w"> </span><span class="s1">'8s/"black_level": *[0-9]\+/"black_level": 0/'</span><span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json
 <span class="c1"># cp /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json /usr/local/share/libcamera/ipa/rpi/pisp/</span>
 </code></pre></div>
 For the mono sensor use <code>imx585_mono.json</code> instead.</p>
@@ -1692,8 +366,8 @@ sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> <
 sudo<span class="w"> </span>dpkg-reconfigure<span class="w"> </span>console-setup<span class="w">  </span><span class="c1"># choose Terminus / 16x32</span>
 </code></pre></div>
 <p>Verify <code>/etc/default/console-setup</code> contains:
-<div class="highlight"><pre><span></span><code>FONTFACE=&quot;Terminus&quot;
-FONTSIZE=&quot;16x32&quot;
+<div class="highlight"><pre><span></span><code>FONTFACE="Terminus"
+FONTSIZE="16x32"
 </code></pre></div>
 Then enable the service:
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>systemctl<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>console-setup.service
@@ -1704,32 +378,32 @@ sudo<span class="w"> </span>systemctl<span class="w"> </span>start<span class="w
 </blockquote>
 <h2 id="create-post-processing-configs">Create post-processing configs<a class="headerlink" href="#create-post-processing-configs" title="Permanent link">#</a></h2>
 <p>Paste this into the terminal and hit enter:
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;cat &gt; post-processing.json &lt;&lt; EOF</span>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="s1">'cat &gt; post-processing.json &lt;&lt; EOF</span>
 <span class="s1">{</span>
-<span class="s1">    &quot;sharedContext&quot;: {},</span>
-<span class="s1">    &quot;mjpegPreview&quot;: {</span>
-<span class="s1">        &quot;port&quot;: 8000</span>
+<span class="s1">    "sharedContext": {},</span>
+<span class="s1">    "mjpegPreview": {</span>
+<span class="s1">        "port": 8000</span>
 <span class="s1">    }</span>
 <span class="s1">}</span>
-<span class="s1">EOF&#39;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+<span class="s1">EOF'</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
 sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>post-processing.json<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
-sudo<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;cat &gt; post-processing0.json &lt;&lt; EOF</span>
+sudo<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="s1">'cat &gt; post-processing0.json &lt;&lt; EOF</span>
 <span class="s1">{</span>
-<span class="s1">    &quot;sharedContext&quot;: {},</span>
-<span class="s1">    &quot;mjpegPreview&quot;: {</span>
-<span class="s1">        &quot;port&quot;: 8000</span>
+<span class="s1">    "sharedContext": {},</span>
+<span class="s1">    "mjpegPreview": {</span>
+<span class="s1">        "port": 8000</span>
 <span class="s1">    }</span>
 <span class="s1">}</span>
-<span class="s1">EOF&#39;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+<span class="s1">EOF'</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
 sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>post-processing0.json<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
-sudo<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;cat &gt; post-processing1.json &lt;&lt; EOF</span>
+sudo<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="s1">'cat &gt; post-processing1.json &lt;&lt; EOF</span>
 <span class="s1">{</span>
-<span class="s1">    &quot;sharedContext&quot;: {},</span>
-<span class="s1">    &quot;mjpegPreview&quot;: {</span>
-<span class="s1">        &quot;port&quot;: 8001</span>
+<span class="s1">    "sharedContext": {},</span>
+<span class="s1">    "mjpegPreview": {</span>
+<span class="s1">        "port": 8001</span>
 <span class="s1">    }</span>
 <span class="s1">}</span>
-<span class="s1">EOF&#39;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+<span class="s1">EOF'</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
 sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>post-processing1.json
 </code></pre></div></p>
 <h2 id="install-pishrink">Install PiShrink<a class="headerlink" href="#install-pishrink" title="Permanent link">#</a></h2>
@@ -1747,16 +421,16 @@ sudo<span class="w"> </span>install<span class="w"> </span>-m755<span class="w">
 <h2 id="create-a-python-virtual-environment">Create a Python virtual environment<a class="headerlink" href="#create-a-python-virtual-environment" title="Permanent link">#</a></h2>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>python3-venv
 python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>/home/pi/.cinemate-env
-<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;source /home/pi/.cinemate-env/bin/activate&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.bashrc
+<span class="nb">echo</span><span class="w"> </span><span class="s2">"source /home/pi/.cinemate-env/bin/activate"</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.bashrc
 <span class="nb">source</span><span class="w"> </span>/home/pi/.cinemate-env/bin/activate
 </code></pre></div>
 <h2 id="grant-sudo-privileges-and-enable-i2c">Grant sudo privileges and enable I²C<a class="headerlink" href="#grant-sudo-privileges-and-enable-i2c" title="Permanent link">#</a></h2>
-<p><div class="highlight"><pre><span></span><code><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;pi ALL=(ALL) NOPASSWD: /home/pi/.cinemate-env/bin/*&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>/etc/sudoers.d/cinemate-env
+<p><div class="highlight"><pre><span></span><code><span class="nb">echo</span><span class="w"> </span><span class="s2">"pi ALL=(ALL) NOPASSWD: /home/pi/.cinemate-env/bin/*"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>/etc/sudoers.d/cinemate-env
 sudo<span class="w"> </span>chown<span class="w"> </span>-R<span class="w"> </span>pi:pi<span class="w"> </span>/home/pi/.cinemate-env
 sudo<span class="w"> </span>chown<span class="w"> </span>-R<span class="w"> </span>pi:pi<span class="w"> </span>/media<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>chmod<span class="w"> </span><span class="m">755</span><span class="w"> </span>/media
 sudo<span class="w"> </span>usermod<span class="w"> </span>-aG<span class="w"> </span>i2c<span class="w"> </span>pi
 sudo<span class="w"> </span>modprobe<span class="w"> </span>i2c-dev<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span>i2c-dev<span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/modules
-<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;pi ALL=(ALL) NOPASSWD: /home/pi/run_cinemate.sh&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/sudoers.d/pi_cinemate
+<span class="nb">echo</span><span class="w"> </span><span class="s2">"pi ALL=(ALL) NOPASSWD: /home/pi/run_cinemate.sh"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/sudoers.d/pi_cinemate
 </code></pre></div>
 Reboot so the group changes take effect:</p>
 <div class="highlight"><pre><span></span><code>reboot
@@ -1796,7 +470,7 @@ pi ALL=(ALL) NOPASSWD: /sbin/mount.ext4
 </code></pre></div>
 <h3 id="rotate-logs">Rotate logs<a class="headerlink" href="#rotate-logs" title="Permanent link">#</a></h3>
 <p>Paste this into the terminal and hit enter:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># tee /etc/logrotate.d/general_logs &lt;&lt;&#39;EOP&#39;</span>
+<div class="highlight"><pre><span></span><code><span class="c1"># tee /etc/logrotate.d/general_logs &lt;&lt;'EOP'</span>
 /var/log/*.log<span class="w"> </span><span class="o">{</span>
 <span class="w">   </span>size<span class="w"> </span>100M
 <span class="w">   </span>rotate<span class="w"> </span><span class="m">5</span>
@@ -1807,7 +481,7 @@ pi ALL=(ALL) NOPASSWD: /sbin/mount.ext4
 EOP
 </code></pre></div>
 <h3 id="seed-redis-with-default-keys">Seed Redis with default keys<a class="headerlink" href="#seed-redis-with-default-keys" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code>redis-cli<span class="w"> </span><span class="s">&lt;&lt;&#39;EOF&#39;</span>
+<div class="highlight"><pre><span></span><code>redis-cli<span class="w"> </span><span class="s">&lt;&lt;'EOF'</span>
 <span class="s">SET anamorphic_factor 1.0</span>
 <span class="s">PUBLISH cp_controls anamorphic_factor</span>
 <span class="s">SET bit_depth 12</span>
@@ -1818,7 +492,7 @@ EOP
 <p>(See the settings guide for the full list.)</p>
 <h3 id="add-a-convenience-alias">Add a convenience alias<a class="headerlink" href="#add-a-convenience-alias" title="Permanent link">#</a></h3>
 <p>Append to <code>~/.bashrc</code>:</p>
-<p><div class="highlight"><pre><span></span><code><span class="nb">alias</span><span class="w"> </span><span class="nv">Cinemate</span><span class="o">=</span><span class="s1">&#39;python3 /home/pi/Cinemate/src/main.py&#39;</span>
+<p><div class="highlight"><pre><span></span><code><span class="nb">alias</span><span class="w"> </span><span class="nv">Cinemate</span><span class="o">=</span><span class="s1">'python3 /home/pi/Cinemate/src/main.py'</span>
 </code></pre></div>
 Then, inside <code>cinemate</code> folder:</p>
 <div class="highlight"><pre><span></span><code>make<span class="w"> </span>install
@@ -1848,53 +522,40 @@ sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable<
 <p>This would be the recommended way of trying out Cinemate as you will get extended logging in the terminal which can be helpful when troubleshooting. The Cinemate logger also relays logging messages from the running cinepi-raw instance.</p>
 </blockquote>
 </div>
-
-              </article>
-            </div>
-          
-          
-<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
-        </div>
-        
-          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
-  Back to top
-</button>
-        
-      </main>
-      
-        <footer class="md-footer">
-  
-  <div class="md-footer-meta md-typeset">
-    <div class="md-footer-meta__inner md-grid">
-      <div class="md-copyright">
-  
-  
-    Made with
-    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
-      Material for MkDocs
-    </a>
-  
 </div>
-      
-    </div>
-  </div>
+</div><footer>
+<div aria-label="Footer Navigation" class="rst-footer-buttons" role="navigation">
+<a class="btn btn-neutral float-left" href="../brick/" title="Box build"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+<a class="btn btn-neutral float-right" href="../todo/" title="Todo">Next <span class="icon icon-circle-arrow-right"></span></a>
+</div>
+<hr/>
+<div role="contentinfo">
+<!-- Copyright etc -->
+</div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
 </footer>
-      
-    </div>
-    <div class="md-dialog" data-md-component="dialog">
-      <div class="md-dialog__inner md-typeset"></div>
-    </div>
-    
-    
-    
-      
-      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.top", "toc.integrate", "toc.follow", "content.code.copy", "content.action.edit"], "search": "../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
-    
-    
-      <script src="../assets/javascripts/bundle.56ea9cef.min.js"></script>
-      
-    
-  </body>
+</div>
+</div>
+</section>
+</div>
+<div aria-label="Versions" class="rst-versions" role="note">
+<span class="rst-current-version" data-toggle="rst-current-version">
+<span>
+<a class="fa fa-github" href="https://github.com/tiramisioux/cinemate" style="color: #fcfcfc"> GitHub</a>
+</span>
+<span><a href="../brick/" style="color: #fcfcfc">« Previous</a></span>
+<span><a href="../todo/" style="color: #fcfcfc">Next »</a></span>
+</span>
+</div>
+<script src="../js/jquery-3.6.0.min.js"></script>
+<script>var base_url = "..";</script>
+<script src="../js/theme_extra.js"></script>
+<script src="../js/theme.js"></script>
+<script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+</body>
 </html>

@@ -1,1288 +1,156 @@
+<!DOCTYPE html>
 
-<!doctype html>
-<html lang="en" class="no-js">
-  <head>
-    
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width,initial-scale=1">
-      
-        <meta name="description" content="Documentation for Cinemate">
-      
-      
-      
-        <link rel="canonical" href="https://tiramisioux.github.io/cinemate/redis-guide/">
-      
-      
-        <link rel="prev" href="../backing-up-sd-card/">
-      
-      
-        <link rel="next" href="../redis-keys/">
-      
-      
-      <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.15">
-    
-    
-      
-        <title>Redis API - Cinemate Docs</title>
-      
-    
-    
-      <link rel="stylesheet" href="../assets/stylesheets/main.342714a4.min.css">
-      
-        
-        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
-      
-      
-
-
-    
-    
-      
-    
-    
-      
-        
-        
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
-        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
-      
-    
-    
-      <link rel="stylesheet" href="../overrides/github-markdown.css">
-    
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
-    
-      
-
-    
-    
-    
-  </head>
-  
-  
-    
-    
-      
-    
-    
-    
-    
-    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="black">
-  
-    
-    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
-    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
-    <label class="md-overlay" for="__drawer"></label>
-    <div data-md-component="skip">
-      
-        
-        <a href="#redis-api-quick-start" class="md-skip">
-          Skip to content
+<html class="writer-html5" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://tiramisioux.github.io/cinemate/redis-guide/" rel="canonical"/>
+<link href="../img/favicon.ico" rel="shortcut icon"/>
+<title>Redis API - Cinemate Docs</title>
+<link href="../css/theme.css" rel="stylesheet"/>
+<link href="../css/theme_extra.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" rel="stylesheet"/>
+<link href="../overrides/github-markdown.css" rel="stylesheet"/>
+<script>
+        // Current page data
+        var mkdocs_page_name = "Redis API";
+        var mkdocs_page_input_path = "redis-guide.md";
+        var mkdocs_page_url = "/cinemate/redis-guide/";
+      </script>
+<!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+<link href="../renders/Cinemate-Docs.pdf" rel="alternate" title="PDF" type="application/pdf"/></head>
+<body class="wy-body-for-nav" role="document">
+<div class="wy-grid-for-nav">
+<nav class="wy-nav-side stickynav" data-toggle="wy-nav-shift">
+<div class="wy-side-scroll">
+<div class="wy-side-nav-search">
+<a class="icon icon-home" href=".."> Cinemate Docs
         </a>
-      
-    </div>
-    <div data-md-component="announce">
-      
-    </div>
-    
-    
-      
-
-  
-
-<header class="md-header md-header--shadow" data-md-component="header">
-  <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="Cinemate Docs" class="md-header__button md-logo" aria-label="Cinemate Docs" data-md-component="logo">
-      
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
-
-    </a>
-    <label class="md-header__button md-icon" for="__drawer">
-      
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
-    </label>
-    <div class="md-header__title" data-md-component="header-title">
-      <div class="md-header__ellipsis">
-        <div class="md-header__topic">
-          <span class="md-ellipsis">
-            Cinemate Docs
-          </span>
-        </div>
-        <div class="md-header__topic" data-md-component="header-topic">
-          <span class="md-ellipsis">
-            
-              Redis API
-            
-          </span>
-        </div>
-      </div>
-    </div>
-    
-      
-        <form class="md-header__option" data-md-component="palette">
-  
-    
-    
-    
-    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="black"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
-    
-  
-</form>
-      
-    
-    
-      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
-    
-    
-    
-    
-      <div class="md-header__source">
-        <a href="https://github.com/tiramisioux/cinemate" title="Go to repository" class="md-source" data-md-component="source">
-  <div class="md-source__icon md-icon">
-    
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
-  </div>
-  <div class="md-source__repository">
-    GitHub
-  </div>
-</a>
-      </div>
-    
-  </nav>
-  
-</header>
-    
-    <div class="md-container" data-md-component="container">
-      
-      
-        
-          
-        
-      
-      <main class="md-main" data-md-component="main">
-        <div class="md-main__inner md-grid">
-          
-            
-              
-              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
-                <div class="md-sidebar__scrollwrap">
-                  <div class="md-sidebar__inner">
-                    
-
-
-
-  
-
-<nav class="md-nav md-nav--primary md-nav--integrated" aria-label="Navigation" data-md-level="0">
-  <label class="md-nav__title" for="__drawer">
-    <a href=".." title="Cinemate Docs" class="md-nav__button md-logo" aria-label="Cinemate Docs" data-md-component="logo">
-      
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
-
-    </a>
-    Cinemate Docs
-  </label>
-  
-    <div class="md-nav__source">
-      <a href="https://github.com/tiramisioux/cinemate" title="Go to repository" class="md-source" data-md-component="source">
-  <div class="md-source__icon md-icon">
-    
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
-  </div>
-  <div class="md-source__repository">
-    GitHub
-  </div>
-</a>
-    </div>
-  
-  <ul class="md-nav__list" data-md-scrollfix>
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Home
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    Quick start
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2">
-            <span class="md-nav__icon md-icon"></span>
-            Quick start
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../getting-started/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Getting started
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../bare-bones-build/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Bare bones build
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../brick/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Brick build
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    Using the camera
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3">
-            <span class="md-nav__icon md-icon"></span>
-            Using the camera
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../web-gui/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Web GUI
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../simple-gui/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    HDMI GUI
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../sensors/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Sensors
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../audio-recording/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Audio recording
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../digital-zoom/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Digital zoom
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../speed-ramping/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Speed ramping & shutter angle synchronization
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../dual-sensors/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Dual sensors
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
-        
-          
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    Customising your build
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4">
-            <span class="md-nav__icon md-icon"></span>
-            Customising your build
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../settings-json/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Settings file
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../cli-user-guide/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Using the CLI
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../cli-commands/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Commands reference
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../ssh/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Connecting via SSH
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../hotspot-logic/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Configuring the Wi-Fi hotspot
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
-        
-          
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    System management
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5">
-            <span class="md-nav__icon md-icon"></span>
-            System management
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../system-services/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    System services
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../config-txt/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Modifying config.txt
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../compiling-cinepi-raw/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Recompiling cinepi-raw
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../overclocking/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Overclocking the Pi
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../backing-up-sd-card/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Backing up the SD card
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-    
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    Reference & troubleshooting
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_6">
-            <span class="md-nav__icon md-icon"></span>
-            Reference & troubleshooting
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    Redis API
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    Redis API
-    
-  </span>
-  
-
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#cp_controls" class="md-nav__link">
-    <span class="md-ellipsis">
-      cp_controls
-    </span>
-  </a>
-  
+</div>
+<div aria-label="Navigation menu" class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="..">Home</a>
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#cp_stats" class="md-nav__link">
-    <span class="md-ellipsis">
-      cp_stats
-    </span>
-  </a>
-  
+</ul>
+<p class="caption"><span class="caption-text">Quick start</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#redis-cli" class="md-nav__link">
-    <span class="md-ellipsis">
-      Redis-cli
-    </span>
-  </a>
-  
+</ul>
+<p class="caption"><span class="caption-text">Using the camera</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#controlling-the-camera-from-your-own-script" class="md-nav__link">
-    <span class="md-ellipsis">
-      Controlling the camera from your own script
-    </span>
-  </a>
-  
+<li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
 </li>
-      
-    </ul>
-  
+<li class="toctree-l1"><a class="reference internal" href="../sensors/">Sensors</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping &amp; shutter angle synchronization</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Customising your build</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">Using the CLI</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Commands reference</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">System management</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Reference &amp; troubleshooting</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal current" href="#">Redis API</a>
+<ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="#cp_controls">cp_controls</a>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#cp_stats">cp_stats</a>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#redis-cli">Redis-cli</a>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#controlling-the-camera-from-your-own-script">Controlling the camera from your own script</a>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../preinstalled-hardware/">Hardware overview</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../known-issues/">Known issues</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Cinemate builds</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../bare-bones-build/">Bare bones build</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../brick/">Box build</a>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Development &amp; contributing</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation (from scratch)</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../todo/">Todo</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing/">Contributing guide</a>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../renders/Cinemate-Docs.pdf">Download PDF</a>
+</li>
+</ul>
+</div>
+</div>
 </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../redis-keys/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Key reference
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../preinstalled-hardware/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Hardware overview
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../known-issues/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Known issues
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../troubleshooting/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Troubleshooting
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
-        
-          
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    Development & contributing
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_7">
-            <span class="md-nav__icon md-icon"></span>
-            Development & contributing
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../installation-steps/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Manual installation (from scratch)
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../todo/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Todo
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../contributing/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Contributing guide
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../renders/Cinemate-Docs.pdf" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Download PDF
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-    
-  </ul>
+<section class="wy-nav-content-wrap" data-toggle="wy-nav-shift">
+<nav aria-label="Mobile navigation menu" class="wy-nav-top" role="navigation">
+<i class="fa fa-bars" data-toggle="wy-nav-top"></i>
+<a href="..">Cinemate Docs</a>
 </nav>
-                  </div>
-                </div>
-              </div>
-            
-            
-          
-          
-            <div class="md-content" data-md-component="content">
-              <article class="md-content__inner md-typeset">
-                
+<div class="wy-nav-content">
+<div class="rst-content"><div aria-label="breadcrumbs navigation" role="navigation">
+<ul class="wy-breadcrumbs">
+<li><a aria-label="Docs" class="icon icon-home" href=".."></a></li>
+<li class="breadcrumb-item">Reference &amp; troubleshooting</li>
+<li class="breadcrumb-item active">Redis API</li>
+<li class="wy-breadcrumbs-aside">
+<a class="icon icon-github" href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/redis-guide.md"> Edit on GitHub</a>
+</li>
+</ul>
+<hr/>
+</div>
+<div class="document" itemscope="itemscope" itemtype="http://schema.org/Article" role="main">
+<div class="section" itemprop="articleBody">
 <div class="markdown-body">
-  <h1 id="redis-api-quick-start">Redis API quick start<a class="headerlink" href="#redis-api-quick-start" title="Permanent link">#</a></h1>
+<h1 id="redis-api-quick-start">Redis API quick start<a class="headerlink" href="#redis-api-quick-start" title="Permanent link">#</a></h1>
 <h2 id="cp_controls">cp_controls<a class="headerlink" href="#cp_controls" title="Permanent link">#</a></h2>
 <p>Both CinePi-raw and Cinemnate writes values and immediately publish the key name. The recorder only reacts when it receives that publish event. </p>
 <p>Any key may be sent this way. For example, to adjust the preview zoom:</p>
@@ -1304,18 +172,18 @@ redis-cli<span class="w"> </span>SET<span class="w"> </span>is_recording<span cl
 <p>Every frame, cinepi-raw sends a small JSON object containing live statistics. </p>
 <div class="highlight"><pre><span></span><code><span class="w">    </span><span class="n">Json</span><span class="o">::</span><span class="n">Value</span><span class="w"> </span><span class="n">data</span><span class="p">;</span>
 <span class="w">    </span><span class="n">Json</span><span class="o">::</span><span class="n">Value</span><span class="w"> </span><span class="n">histo</span><span class="p">;</span>
-<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;framerate&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">completed_request</span><span class="o">-&gt;</span><span class="n">framerate</span><span class="p">;</span>
-<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;colorTemp&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">colorTemp</span><span class="p">;</span>
-<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;focus&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">focus</span><span class="p">;</span>
-<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;frameCount&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">app_</span><span class="o">-&gt;</span><span class="n">GetEncoder</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">getFrameCount</span><span class="p">();</span>
-<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;bufferSize&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">app_</span><span class="o">-&gt;</span><span class="n">GetEncoder</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">bufferSize</span><span class="p">();</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"framerate"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">completed_request</span><span class="o">-&gt;</span><span class="n">framerate</span><span class="p">;</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"colorTemp"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">colorTemp</span><span class="p">;</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"focus"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">focus</span><span class="p">;</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"frameCount"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">app_</span><span class="o">-&gt;</span><span class="n">GetEncoder</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">getFrameCount</span><span class="p">();</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"bufferSize"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">app_</span><span class="o">-&gt;</span><span class="n">GetEncoder</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">bufferSize</span><span class="p">();</span>
 <span class="w">    </span><span class="n">redis_</span><span class="o">-&gt;</span><span class="n">publish</span><span class="p">(</span><span class="n">CHANNEL_STATS</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">toStyledString</span><span class="p">());</span>
 </code></pre></div>
 <p>CineMate’s <code>RedisListener</code> parses these messages and updates Redis keys like <code>framecount</code>, <code>BUFFER</code> and <code>fps_actual</code>.</p>
 <h2 id="redis-cli">Redis-cli<a class="headerlink" href="#redis-cli" title="Permanent link">#</a></h2>
 <p>Because everything is plain Redis you can poke around from the command line. Here are a few handy commands:</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># List all keys</span>
-redis-cli<span class="w"> </span>KEYS<span class="w"> </span><span class="s1">&#39;*&#39;</span>
+redis-cli<span class="w"> </span>KEYS<span class="w"> </span><span class="s1">'*'</span>
 
 <span class="c1"># Read the current ISO value</span>
 redis-cli<span class="w"> </span>GET<span class="w"> </span>iso
@@ -1327,63 +195,50 @@ redis-cli<span class="w"> </span>PUBLISH<span class="w"> </span>cp_controls<span
 <h2 id="controlling-the-camera-from-your-own-script">Controlling the camera from your own script<a class="headerlink" href="#controlling-the-camera-from-your-own-script" title="Permanent link">#</a></h2>
 <p>Below is a very small example using <code>redis-py</code>. This is basically what Cinemate does: it keeps track of variables  being set by cinepi-raw, and also setting the same, or other variable by itself.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">redis</span>
-<span class="n">r</span> <span class="o">=</span> <span class="n">redis</span><span class="o">.</span><span class="n">Redis</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">6379</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">r</span> <span class="o">=</span> <span class="n">redis</span><span class="o">.</span><span class="n">Redis</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s1">'localhost'</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">6379</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
 <span class="c1"># toggle recording</span>
-<span class="n">current</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;is_recording&#39;</span><span class="p">)</span>
-<span class="n">new_value</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;0&#39;</span> <span class="k">if</span> <span class="n">current</span> <span class="o">==</span> <span class="sa">b</span><span class="s1">&#39;1&#39;</span> <span class="k">else</span> <span class="sa">b</span><span class="s1">&#39;1&#39;</span>
-<span class="n">r</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;is_recording&#39;</span><span class="p">,</span> <span class="n">new_value</span><span class="p">)</span>
-<span class="n">r</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s1">&#39;cp_controls&#39;</span><span class="p">,</span> <span class="s1">&#39;is_recording&#39;</span><span class="p">)</span>
+<span class="n">current</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'is_recording'</span><span class="p">)</span>
+<span class="n">new_value</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">'0'</span> <span class="k">if</span> <span class="n">current</span> <span class="o">==</span> <span class="sa">b</span><span class="s1">'1'</span> <span class="k">else</span> <span class="sa">b</span><span class="s1">'1'</span>
+<span class="n">r</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">'is_recording'</span><span class="p">,</span> <span class="n">new_value</span><span class="p">)</span>
+<span class="n">r</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s1">'cp_controls'</span><span class="p">,</span> <span class="s1">'is_recording'</span><span class="p">)</span>
 </code></pre></div>
 <p>Note that in this example, the publishing of the is_recording key is not strictly needed for recording to start/stop, but for formality's sake I think we should keep the publish command.</p>
 </div>
-
-              </article>
-            </div>
-          
-          
-<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
-        </div>
-        
-          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
-  Back to top
-</button>
-        
-      </main>
-      
-        <footer class="md-footer">
-  
-  <div class="md-footer-meta md-typeset">
-    <div class="md-footer-meta__inner md-grid">
-      <div class="md-copyright">
-  
-  
-    Made with
-    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
-      Material for MkDocs
-    </a>
-  
 </div>
-      
-    </div>
-  </div>
+</div><footer>
+<div aria-label="Footer Navigation" class="rst-footer-buttons" role="navigation">
+<a class="btn btn-neutral float-left" href="../backing-up-sd-card/" title="Backing up the SD card"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+<a class="btn btn-neutral float-right" href="../redis-keys/" title="Key reference">Next <span class="icon icon-circle-arrow-right"></span></a>
+</div>
+<hr/>
+<div role="contentinfo">
+<!-- Copyright etc -->
+</div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
 </footer>
-      
-    </div>
-    <div class="md-dialog" data-md-component="dialog">
-      <div class="md-dialog__inner md-typeset"></div>
-    </div>
-    
-    
-    
-      
-      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.top", "toc.integrate", "toc.follow", "content.code.copy", "content.action.edit"], "search": "../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
-    
-    
-      <script src="../assets/javascripts/bundle.56ea9cef.min.js"></script>
-      
-    
-  </body>
+</div>
+</div>
+</section>
+</div>
+<div aria-label="Versions" class="rst-versions" role="note">
+<span class="rst-current-version" data-toggle="rst-current-version">
+<span>
+<a class="fa fa-github" href="https://github.com/tiramisioux/cinemate" style="color: #fcfcfc"> GitHub</a>
+</span>
+<span><a href="../backing-up-sd-card/" style="color: #fcfcfc">« Previous</a></span>
+<span><a href="../redis-keys/" style="color: #fcfcfc">Next »</a></span>
+</span>
+</div>
+<script src="../js/jquery-3.6.0.min.js"></script>
+<script>var base_url = "..";</script>
+<script src="../js/theme_extra.js"></script>
+<script src="../js/theme.js"></script>
+<script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+</body>
 </html>

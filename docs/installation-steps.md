@@ -8,23 +8,32 @@ This guide assumes fresh Raspbery Pi Bookworm installation running kernel 6.12.2
 
 If you run Raspberry Pi OS Lite, begin by installing the following packages:
 
+## Install script
 ```bash
 sudo apt install -y python-pip git python3-jinja2
 ```
 
-## One-click installer script
-
 This installer script combines the below install processes of CinePi-Raw and Cinemate.
 
 ```shell
-wget https://raw.githubusercontent.com/<USER>/<REPO>/<BRANCH>/scripts/install.sh -O install.sh
-chmod +x install.sh
-sudo bash install.sh
+wget -O cinemate-installer.sh https://raw.githubusercontent.com/Tiramisioux/cinemate/cinemate-3.1/cinemate-stack-installer.sh
+chmod +x cinemate-stack-installer.sh
+sudo bash cinemate-stack-installer.sh
 ```
 
-This installer script combines the below install processes of CinePi-Raw and Cinemate.
+Start the script by type:
 
-## CinePi-RAW
+```shell
+./cinemate-stack-installer.sh
+```
+
+Watch it work by opening up another ssh window and typing:
+
+```shell
+sudo journalctl -fu cinemate-installer.service
+```
+
+## Manual install
 
 ### libcamera 1.7.0 <img src="https://img.shields.io/badge/raspberry pi-fork-red" height="12" >
 

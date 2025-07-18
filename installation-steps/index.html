@@ -125,6 +125,10 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#imx585-driver">imx585 driver</a>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#add-the-imx585-tuning-files-optional">Add the IMX585 tuning files (optional)</a>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#ir-filter-switch-script-optional">IR filter switch script (optional)</a>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="#imx283-driver">imx283 driver</a>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#enabling-i2c">Enabling I²C</a>
@@ -133,17 +137,15 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#add-camera-modules-to-configtxt">Add camera modules to config.txt</a>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#add-the-imx585-tuning-file-optional">Add the IMX585 tuning file (optional)</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#ir-filter-switch-script-optional">IR filter switch script (optional)</a>
-</li>
 <li class="toctree-l3"><a class="reference internal" href="#change-the-console-font-optional">Change the console font (optional)</a>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#create-post-processing-configs">Create post-processing configs</a>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#install-pishrink">Install PiShrink</a>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#reboot-before-installing-cinemate">Reboot before installing Cinemate:</a>
+<li class="toctree-l3"><a class="reference internal" href="#reboot">Reboot:</a>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#trying-out-cinepi-from-the-terminal">Trying out CinePi from the terminal</a>
 </li>
 </ul>
 </li>
@@ -230,6 +232,8 @@
 </code></pre></div>
 <h2 id="manual-install">Manual install<a class="headerlink" href="#manual-install" title="Permanent link">#</a></h2>
 <h3 id="tools-dependencies">Tools &amp; dependencies<a class="headerlink" href="#tools-dependencies" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>sudo apt update &amp;&amp; sudo apt upgrade
+</code></pre></div>
 <div class="highlight"><pre><span></span><code>sudo apt install -y cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev &amp;&amp; sudo apt-get install libjsoncpp-dev &amp;&amp; cd ~ &amp;&amp; git clone https://github.com/sewenew/redis-plus-plus.git &amp;&amp; cd redis-plus-plus &amp;&amp; mkdir build &amp;&amp; cd build &amp;&amp; cmake .. &amp;&amp; make &amp;&amp; sudo make install &amp;&amp; cd ~
 </code></pre></div>
 <h3 id="libcamera-170">libcamera 1.7.0 <img height="12" src="https://img.shields.io/badge/raspberry pi-fork-red"/><a class="headerlink" href="#libcamera-170" title="Permanent link">#</a></h3>
@@ -265,16 +269,37 @@ sudo<span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span
 sudo<span class="w"> </span>meson<span class="w"> </span>setup<span class="w"> </span>build
 sudo<span class="w"> </span>ninja<span class="w"> </span>-C<span class="w"> </span>build
 sudo<span class="w"> </span>meson<span class="w"> </span>install<span class="w"> </span>-C<span class="w"> </span>build
+<span class="nb">cd</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>redis-cli &lt;&lt;EOF
+SET cg_rb 2.5,2.2
+PUBLISH cp_controls cg_rb
+EOF
 </code></pre></div>
 <h3 id="imx585-driver">imx585 driver <img height="12" src="https://img.shields.io/badge/cinemate-fork-gren"/><a class="headerlink" href="#imx585-driver" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>linux-headers<span class="w"> </span>dkms<span class="w"> </span>git
 </code></pre></div>
-<div class="highlight"><pre><span></span><code>git clone https://github.com/Tiramisioux/imx585-v4l2-driver.git
+<div class="highlight"><pre><span></span><code>git clone https://github.com/will127534/imx585-v4l2-driver.git --branch 6.12.y
 cd imx585-v4l2-driver/
 ./setup.sh
 </code></pre></div>
 <blockquote>
 <p>The imx585 is written by Will Whang. For original drivers and startup guides, visit https://github.com/will127534/StarlightEye</p>
+</blockquote>
+<h3 id="add-the-imx585-tuning-files-optional">Add the IMX585 tuning files (optional)<a class="headerlink" href="#add-the-imx585-tuning-files-optional" title="Permanent link">#</a></h3>
+<p><div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-L<span class="w"> </span>-o<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585.json
+sed<span class="w"> </span>-i<span class="w"> </span><span class="s1">'8s/"black_level": *[0-9]\+/"black_level": 0/'</span><span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json
+cp<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json<span class="w"> </span>/usr/local/share/libcamera/ipa/rpi/pisp/
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>curl -L -o /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585_mono.json https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585_mono.json &amp;&amp; sudo cp /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585_mono.json /usr/local/share/libcamera/ipa/rpi/pisp/
+</code></pre></div></p>
+<h3 id="ir-filter-switch-script-optional">IR filter switch script (optional)<a class="headerlink" href="#ir-filter-switch-script-optional" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>wget<span class="w"> </span>https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter<span class="w"> </span>-O<span class="w"> </span>/usr/local/bin/IRFilter
+sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>/usr/local/bin/IRFilter
+</code></pre></div>
+<blockquote>
+<p>Cinemate has its own way of handling the IR switch but the installation above can be convenient for use outside of Cinemate</p>
 </blockquote>
 <h3 id="imx283-driver">imx283 driver <img height="12" src="https://img.shields.io/badge/cinemate-fork-gren"/><a class="headerlink" href="#imx283-driver" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>linux-headers<span class="w"> </span>dkms<span class="w"> </span>git
@@ -287,8 +312,7 @@ cd imx283-v4l2-driver/
 <p>The imx283 is written by Will Whang. For original drivers and startup guides, visit https://github.com/will127534/imx283-v4l2-driver</p>
 </blockquote>
 <h3 id="enabling-i2c">Enabling I²C<a class="headerlink" href="#enabling-i2c" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>apt<span class="w"> </span>upgrade
-sudo<span class="w"> </span>raspi-config<span class="w"> </span>nonint<span class="w"> </span>do_i2c<span class="w"> </span><span class="m">0</span>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>raspi-config<span class="w"> </span>nonint<span class="w"> </span>do_i2c<span class="w"> </span><span class="m">0</span>
 </code></pre></div>
 <blockquote>
 <p>Enabling I2C is needed for using the camera modules.</p>
@@ -305,8 +329,8 @@ sudo<span class="w"> </span>raspi-config<span class="w"> </span>nonint<span clas
 <p>Paste this into your file, and uncomment the sensor you are using.</p>
 <p>Also specify which physical camera port you have connected your sensor to.</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># Raspberry Pi HQ camera</span>
-<span class="c1">#camera_auto_detect=1</span>
-<span class="c1">#dtoverlay=imx477,cam0</span>
+<span class="nv">camera_auto_detect</span><span class="o">=</span><span class="m">1</span>
+<span class="nv">dtoverlay</span><span class="o">=</span>imx477,cam0
 
 <span class="c1"># Raspberry Pi GS camera</span>
 <span class="c1">#camera_auto_detect=1</span>
@@ -317,11 +341,11 @@ sudo<span class="w"> </span>raspi-config<span class="w"> </span>nonint<span clas
 <span class="c1">#dtoverlay=imx283,cam0</span>
 
 <span class="c1"># StarlightEye</span>
-<span class="nv">camera_auto_detect</span><span class="o">=</span><span class="m">0</span>
-<span class="nv">dtoverlay</span><span class="o">=</span>imx585,cam0
+<span class="c1">#camera_auto_detect=0</span>
+<span class="c1">#dtoverlay=imx585,cam0</span>
 
 <span class="c1"># StarlightEye Mono</span>
-<span class="nv">camera_auto_detect</span><span class="o">=</span><span class="m">0</span>
+<span class="c1">#camera_auto_detect=0</span>
 <span class="c1">#dtoverlay=imx585,cam1,mono</span>
 
 <span class="c1"># CFE Hat (pi 5 only)</span>
@@ -335,22 +359,8 @@ sudo<span class="w"> </span>raspi-config<span class="w"> </span>nonint<span clas
 <span class="nv">avoid_warnings</span><span class="o">=</span><span class="m">1</span>
 <span class="nv">disable_splash</span><span class="o">=</span><span class="m">1</span>
 </code></pre></div>
-<h3 id="add-the-imx585-tuning-file-optional">Add the IMX585 tuning file (optional)<a class="headerlink" href="#add-the-imx585-tuning-file-optional" title="Permanent link">#</a></h3>
-<p><div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-L<span class="w"> </span>-o<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585.json
-sed<span class="w"> </span>-i<span class="w"> </span><span class="s1">'8s/"black_level": *[0-9]\+/"black_level": 0/'</span><span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json
-<span class="c1"># cp /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json /usr/local/share/libcamera/ipa/rpi/pisp/</span>
-</code></pre></div>
-For the mono sensor use <code>imx585_mono.json</code> instead.</p>
-<h3 id="ir-filter-switch-script-optional">IR filter switch script (optional)<a class="headerlink" href="#ir-filter-switch-script-optional" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code>wget<span class="w"> </span>https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter<span class="w"> </span>-O<span class="w"> </span>/usr/local/bin/IRFilter
-sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>/usr/local/bin/IRFilter
-</code></pre></div>
-<blockquote>
-<p>Cinemate has its own way of handling the IR switch but the installation above can be convenient for use outside of Cinemate</p>
-</blockquote>
 <h3 id="change-the-console-font-optional">Change the console font (optional)<a class="headerlink" href="#change-the-console-font-optional" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code>sudi<span class="w"> </span>apt<span class="w"> </span>update
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>update
 sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>console-setup<span class="w"> </span>kbd
 sudo<span class="w"> </span>dpkg-reconfigure<span class="w"> </span>console-setup<span class="w">  </span><span class="c1"># choose Terminus / 16x32</span>
 </code></pre></div>
@@ -402,13 +412,20 @@ sudo<span class="w"> </span>install<span class="w"> </span>-m755<span class="w">
 <blockquote>
 <p>PiShrink is a great tool for compressing SD image file backups of the SD card. See here for instructions</p>
 </blockquote>
-<h3 id="reboot-before-installing-cinemate">Reboot before installing Cinemate:<a class="headerlink" href="#reboot-before-installing-cinemate" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code>reboot
+<h3 id="reboot">Reboot:<a class="headerlink" href="#reboot" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>reboot
 </code></pre></div>
-<p>You should now have a working install of cinepi-raw. To try it out, see <a href="/cli-user-guide.md">this section</a>. </p>
+<h3 id="trying-out-cinepi-from-the-terminal">Trying out CinePi from the terminal<a class="headerlink" href="#trying-out-cinepi-from-the-terminal" title="Permanent link">#</a></h3>
+<p>You should now have a working install of cinepi-raw. To see if your camera is recognized by the system:</p>
+<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>--list-cameras
+</code></pre></div>
+<p>Try it out with a simple cli command:</p>
+<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">2028</span>:1080:12:U<span class="w"> </span>--width<span class="w"> </span><span class="m">2028</span><span class="w">   </span>--height<span class="w"> </span><span class="m">1080</span><span class="w"> </span>--lores-width<span class="w"> </span><span class="m">1280</span><span class="w"> </span>--lores-height<span class="w"> </span><span class="m">720</span>
+</code></pre></div>
+<p>For more details on running CinePi-raw from the command line, see <a href="/cli-user-guide.md">this section</a>. </p>
 <h2 id="cinemate">Cinemate<a class="headerlink" href="#cinemate" title="Permanent link">#</a></h2>
 <h3 id="create-a-python-virtual-environment">Create a Python virtual environment<a class="headerlink" href="#create-a-python-virtual-environment" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>python3-venv
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>python3-venv
 python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>/home/pi/.cinemate-env
 <span class="nb">echo</span><span class="w"> </span><span class="s2">"source /home/pi/.cinemate-env/bin/activate"</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.bashrc
 <span class="nb">source</span><span class="w"> </span>/home/pi/.cinemate-env/bin/activate

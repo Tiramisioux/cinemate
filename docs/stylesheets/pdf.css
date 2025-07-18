@@ -6,7 +6,7 @@
     white-space: pre;
     color: grey;
     @top-left {
-        content: '© 2018 My Company';
+        content: 'Cinemate Docs;
     }
     @top-center {
         content: string(chapter);

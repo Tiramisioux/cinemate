@@ -4,9 +4,9 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://tiramisioux.github.io/cinemate/installation-steps/" rel="canonical"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://tiramisioux.github.io/cinemate/installation-steps%20copy/" rel="canonical"/>
 <link href="../img/favicon.ico" rel="shortcut icon"/>
-<title>Manual installation (from scratch) - Cinemate Docs</title>
+<title>Manual installation - Cinemate Docs</title>
 <link href="../css/theme.css" rel="stylesheet"/>
 <link href="../css/theme_extra.css" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" rel="stylesheet"/>
@@ -14,9 +14,9 @@
 <link href="../templates/styles.scss" rel="stylesheet"/>
 <script>
         // Current page data
-        var mkdocs_page_name = "Manual installation (from scratch)";
-        var mkdocs_page_input_path = "installation-steps.md";
-        var mkdocs_page_url = "/cinemate/installation-steps/";
+        var mkdocs_page_name = "Manual installation";
+        var mkdocs_page_input_path = "installation-steps copy.md";
+        var mkdocs_page_url = "/cinemate/installation-steps%20copy/";
       </script>
 <!--[if lt IE 9]>
       <script src="../js/html5shiv.min.js"></script>
@@ -110,74 +110,8 @@
 </li>
 </ul>
 <p class="caption"><span class="caption-text">Development &amp; contributing</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="reference internal current" href="#">Manual installation (from scratch)</a>
-<ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="#libcamera-170">libcamera 1.7.0</a>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#cpp-mjpeg-streamer">cpp-mjpeg-streamer</a>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#cinepi-raw">CinePi-raw</a>
 <ul>
-<li class="toctree-l3"><a class="reference internal" href="#dependencies">Dependencies</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#cinepi-raw_1">cinepi-raw</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#imx585-driver">imx585 driver</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#imx283-driver">imx283 driver</a>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#enabling-i2c">Enabling I²C</a>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#hostname">Hostname</a>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#add-camera-modules-to-configtxt">Add camera modules to config.txt</a>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#add-the-imx585-tuning-file-optional">Add the IMX585 tuning file (optional)</a>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#ir-filter-switch-script-optional">IR filter switch script (optional)</a>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#change-the-console-font-optional">Change the console font (optional)</a>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#create-post-processing-configs">Create post-processing configs</a>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#install-pishrink">Install PiShrink</a>
-<ul>
-<li class="toctree-l3"><a class="reference internal" href="#reboot-before-installing-cinemate">Reboot before installing Cinemate:</a>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#create-a-python-virtual-environment">Create a Python virtual environment</a>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#grant-sudo-privileges-and-enable-i2c">Grant sudo privileges and enable I²C</a>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#cinemate">Cinemate</a>
-<ul>
-<li class="toctree-l3"><a class="reference internal" href="#dependencies_1">Dependencies</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#replace-rpigpio-with-lgpio">Replace RPi.GPIO with lgpio</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#clone-the-cinemate-repo">Clone the Cinemate repo</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#allow-cinemates-mainpy-to-run-with-sudo">Allow Cinemates main.py to run with sudo</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#enable-networkmanager">Enable NetworkManager</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#rotate-logs">Rotate logs</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#seed-redis-with-default-keys">Seed Redis with default keys</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#add-a-convenience-alias">Add a convenience alias</a>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#cinemate-services">Cinemate services</a>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#starting-cinemate">Starting Cinemate</a>
-</li>
-</ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation (from scratch)</a>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../todo/">Todo</a>
 </li>
@@ -200,10 +134,9 @@
 <div class="rst-content"><div aria-label="breadcrumbs navigation" role="navigation">
 <ul class="wy-breadcrumbs">
 <li><a aria-label="Docs" class="icon icon-home" href=".."></a></li>
-<li class="breadcrumb-item">Development &amp; contributing</li>
-<li class="breadcrumb-item active">Manual installation (from scratch)</li>
+<li class="breadcrumb-item active">Manual installation</li>
 <li class="wy-breadcrumbs-aside">
-<a class="icon icon-github" href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/installation-steps.md"> Edit on GitHub</a>
+<a class="icon icon-github" href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/installation-steps copy.md"> Edit on GitHub</a>
 </li>
 </ul>
 <hr/>
@@ -244,6 +177,14 @@ sudo<span class="w"> </span>ninja<span class="w"> </span>-C<span class="w"> </sp
 </code></pre></div>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>python3-pip<span class="w"> </span>git<span class="w"> </span>python3-jinja2<span class="w"> </span>libboost-dev<span class="w"> </span>libgnutls28-dev<span class="w"> </span>openssl<span class="w"> </span>pybind11-dev<span class="w"> </span>qtbase5-dev<span class="w"> </span>libqt5core5a<span class="w"> </span>meson<span class="w"> </span>cmake<span class="w"> </span>python3-yaml<span class="w"> </span>python3-ply<span class="w"> </span>libglib2.0-dev<span class="w"> </span>libgstreamer-plugins-base1.0-dev<span class="w"> </span>libgstreamer1.0-dev<span class="w"> </span>libavdevice59
 </code></pre></div>
+<h2 id="nvm">nvm<a class="headerlink" href="#nvm" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code>wget<span class="w"> </span>-qO-<span class="w"> </span>https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash
+<span class="nb">source</span><span class="w"> </span>~/.bashrc
+nvm<span class="w"> </span>install<span class="w"> </span>--lts
+</code></pre></div>
+<blockquote>
+<p>Cinemate uses nvm (Node Version Manager) for its web ui. If you plan to use cionepi-raw only, nvm is not needed.</p>
+</blockquote>
 <h2 id="cpp-mjpeg-streamer">cpp-mjpeg-streamer <img height="12" src="https://img.shields.io/badge/cinemate-fork-gren"/><a class="headerlink" href="#cpp-mjpeg-streamer" title="Permanent link">#</a></h2>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>libspdlog-dev<span class="w"> </span>libjsoncpp-dev
 <span class="nb">cd</span><span class="w"> </span>/home/pi
@@ -519,10 +460,6 @@ sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable<
 </div>
 </div>
 </div><footer>
-<div aria-label="Footer Navigation" class="rst-footer-buttons" role="navigation">
-<a class="btn btn-neutral float-left" href="../brick/" title="Box build"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-<a class="btn btn-neutral float-right" href="../todo/" title="Todo">Next <span class="icon icon-circle-arrow-right"></span></a>
-</div>
 <hr/>
 <div role="contentinfo">
 <!-- Copyright etc -->
@@ -539,8 +476,6 @@ sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable<
 <span>
 <a class="fa fa-github" href="https://github.com/tiramisioux/cinemate" style="color: #fcfcfc"> GitHub</a>
 </span>
-<span><a href="../brick/" style="color: #fcfcfc">« Previous</a></span>
-<span><a href="../todo/" style="color: #fcfcfc">Next »</a></span>
 </span>
 </div>
 <script src="../js/jquery-3.6.0.min.js"></script>

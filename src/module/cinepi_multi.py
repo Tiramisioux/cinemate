@@ -57,12 +57,16 @@ class CameraInfo:
 
     @property
     def port(self):
-        
-        # map physical camera ports: i2c@88000 => cam0, i2c@80000 => cam1
-        if 'i2c@88000' in self.path:
+        # Pi 4 / Zero 2 W
+        if 'i2c@1a0000' in self.path or 'i2c@10' in self.path:
             return 'cam0'
-        else:
+        # Pi 5 / CM4 / CM3
+        elif 'i2c@88000' in self.path:
+            return 'cam0'
+        elif 'i2c@80000' in self.path:
             return 'cam1'
+        # Fallback: assume cam0
+        return 'cam0'
 
     def as_dict(self):
         return {
@@ -86,13 +90,20 @@ def discover_cameras(timeout: float = 10.0, interval: float = 1.0) -> List[Camer
     attempt = 0
     while time.monotonic() < end:
         attempt += 1
-        proc = subprocess.run(['cinepi-raw', '--list-cameras'], text=True, capture_output=True)
+        proc = subprocess.run(['cinepi-raw', '--list-cameras'],
+                              text=True, capture_output=True)
         cams: List[CameraInfo] = []
         for line in (proc.stdout or '').splitlines():
             m = rx.match(line)
             if m:
                 idx, name, fmt, path = m.groups()
-                cams.append(CameraInfo(int(idx), name, fmt, path))
+
+                # ───── create → log → append ─────
+                cam = CameraInfo(int(idx), name, fmt, path)
+                logging.info("Detected %s on %s (%s)",
+                             cam.name, cam.port, cam.path)
+                cams.append(cam)
+
         if cams:
             logging.info('Discovered cameras on attempt %d: %s', attempt, cams)
             return cams
@@ -290,6 +301,7 @@ class CinePiProcess(Thread):
         
         # ── if running in multi-camera mode, pass --sync server/client ──
         if self.multi:
+            args += ["--cam-port", self.cam.port]
             if self.primary:
                 args += ['--sync', 'server']
             else:
@@ -340,6 +352,25 @@ class CinePiManager:
 
         # ── 1. discovery ───────────────────────────────────────────
         cams = discover_cameras()                    # helper unchanged
+        logging.info("Detected %s on %s (%s)", cam.name, cam.port, cam.path)
+
+        # ── Pi 4 sanity check ────────────────────────────────────────────
+        try:
+            with open("/proc/device-tree/model", "r") as f:
+                model_str = f.read()
+        except FileNotFoundError:
+            model_str = ""
+
+        if "Raspberry Pi 4" in model_str:
+            for cam in cams:
+                if cam.port != "cam0":          # Pi 4 has only CSI-0
+                    logging.warning(
+                        "[init] Sensor on %s but this is a Pi 4 – forcing cam0",
+                        cam.port,
+                    )
+                    cam._port = "cam0"          # override in place
+
+
         cams.sort(key=lambda c: c.port)              # cam0, cam1, …
         self.redis_controller.set_value(
             ParameterKey.CAMERAS.value,

@@ -113,8 +113,6 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal current" href="#">Manual installation (from scratch)</a>
 <ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="#install-script">Install script</a>
-</li>
 <li class="toctree-l2"><a class="reference internal" href="#manual-install">Manual install</a>
 <ul>
 <li class="toctree-l3"><a class="reference internal" href="#libcamera-170">libcamera 1.7.0</a>
@@ -227,18 +225,6 @@
 <p>This guide assumes fresh Raspbery Pi Bookworm installation running kernel 6.12.20+.</p>
 <p>If you run Raspberry Pi OS Lite, begin by installing the following packages:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>python-pip<span class="w"> </span>git<span class="w"> </span>python3-jinja2
-</code></pre></div>
-<h2 id="install-script">Install script<a class="headerlink" href="#install-script" title="Permanent link">#</a></h2>
-<p>This installer script combines the below install processes of CinePi-Raw and Cinemate.</p>
-<div class="highlight"><pre><span></span><code>wget<span class="w"> </span>-O<span class="w"> </span>cinemate-stack-installer.sh<span class="w"> </span>https://raw.githubusercontent.com/Tiramisioux/cinemate/cinemate-3.1/cinemate-stack-installer.sh
-chmod<span class="w"> </span>+x<span class="w"> </span>cinemate-stack-installer.sh
-sudo<span class="w"> </span>bash<span class="w"> </span>cinemate-stack-installer.sh
-</code></pre></div>
-<p>Start the script by type:</p>
-<div class="highlight"><pre><span></span><code>./cinemate-stack-installer.sh
-</code></pre></div>
-<p>Watch it work by opening up another ssh window and typing:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>journalctl<span class="w"> </span>-fu<span class="w"> </span>cinemate-installer.service
 </code></pre></div>
 <h2 id="manual-install">Manual install<a class="headerlink" href="#manual-install" title="Permanent link">#</a></h2>
 <h3 id="libcamera-170">libcamera 1.7.0 <img height="12" src="https://img.shields.io/badge/raspberry pi-fork-red"/><a class="headerlink" href="#libcamera-170" title="Permanent link">#</a></h3>

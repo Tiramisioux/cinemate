@@ -12,7 +12,7 @@ If you run Raspberry Pi OS Lite, begin by installing the following packages:
 sudo apt install -y python-pip git python3-jinja2
 ```
 
-## libcamera 1.7.0 <img src="https://img.shields.io/badge/raspberry pi-fork-red" height="10" >
+## libcamera 1.7.0 <img src="https://img.shields.io/badge/raspberry pi-fork-red" height="12" >
 
 ```shell
 git clone https://github.com/raspberrypi/libcamera && \
@@ -55,7 +55,7 @@ nvm install --lts
 
 >Cinemate uses nvm (Node Version Manager) for its web ui. If you plan to use cionepi-raw only, nvm is not needed.
 
-## cpp-mjpeg-streamer <img src="https://img.shields.io/badge/cinemate-fork-gren" height="10" >
+## cpp-mjpeg-streamer <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
 ```bash
 sudo apt install -y libspdlog-dev libjsoncpp-dev
@@ -75,7 +75,7 @@ make install-here
 sudo apt install -y cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev && sudo apt-get install libjsoncpp-dev && cd ~ && git clone https://github.com/sewenew/redis-plus-plus.git && cd redis-plus-plus && mkdir build && cd build && cmake .. && make && sudo make install && cd ~
 ```
 
-### cinepi-raw <img src="https://img.shields.io/badge/cinemate-fork-gren" height="10" >
+### cinepi-raw <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 ```bash
 git clone https://github.com/Tiramisioux/cinepi-raw.git --branch rpicam-apps_1.7_custom_encoder
 cd /home/pi/cinepi-raw
@@ -90,7 +90,7 @@ sudo meson install -C build
 
 >Join the CinePi Discord [here](https://discord.gg/Hr4dfhuK)!
 
-### imx585 driver <img src="https://img.shields.io/badge/cinemate-fork-gren" height="10" >
+### imx585 driver <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
 ```shell
 sudo apt install linux-headers dkms git
@@ -104,7 +104,7 @@ cd imx585-v4l2-driver/
 
 >The imx585 is written by Will Whang. For original drivers and startup guides, visit https://github.com/will127534/StarlightEye
 
-### imx283 driver <img src="https://img.shields.io/badge/cinemate-fork-gren" height="10" >
+### imx283 driver <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
 ```shell
 sudo apt install linux-headers dkms git

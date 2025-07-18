@@ -255,29 +255,18 @@ sudo<span class="w"> </span>ninja<span class="w"> </span>-C<span class="w"> </sp
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>~/libcamera/utils<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>*.py<span class="w"> </span>*.sh<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>~/libcamera/src/ipa/ipa-sign.sh<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>~/libcamera<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>ninja<span class="w"> </span>-C<span class="w"> </span>build<span class="w"> </span>install
 </code></pre></div>
-<h3 id="cpp-mjpeg-streamer">cpp-mjpeg-streamer <img height="12" src="https://img.shields.io/badge/cinemate-fork-gren"/><a class="headerlink" href="#cpp-mjpeg-streamer" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>libspdlog-dev<span class="w"> </span>libjsoncpp-dev
-<span class="nb">cd</span><span class="w"> </span>/home/pi
-git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/cpp-mjpeg-streamer.git<span class="w"> </span>--branch<span class="w"> </span>cinemate
-<span class="nb">cd</span><span class="w"> </span>cpp-mjpeg-streamer<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>mkdir<span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>build
-cmake<span class="w"> </span>..<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make
-make<span class="w"> </span>install-here
+<h3 id="cpp-mjpeg-streamer">cpp-mjpeg-streamer<a class="headerlink" href="#cpp-mjpeg-streamer" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>libspdlog-dev<span class="w"> </span>libjsoncpp-dev<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>/home/pi<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/nadjieb/cpp-mjpeg-streamer.git<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>cpp-mjpeg-streamer<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>mkdir<span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>cmake<span class="w"> </span>..<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>make<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span>
 </code></pre></div>
-<blockquote>
-<p>Cinemate uses a custom fork of cpp-mjpeg-streamer. If you plan to use only cinepi-raw, you can use the original app found at https://github.com/nadjieb/cpp-mjpeg-streamer</p>
-</blockquote>
 <h3 id="cinepi-raw">CinePi-raw <img height="12" src="https://img.shields.io/badge/cinemate-fork-gren"/><a class="headerlink" href="#cinepi-raw" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/cinepi-raw.git<span class="w"> </span>--branch<span class="w"> </span>rpicam-apps_1.7_custom_encoder
-<span class="nb">cd</span><span class="w"> </span>/home/pi/cinepi-raw
-sudo<span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>build<span class="w"> </span><span class="o">(</span><span class="k">if</span><span class="w"> </span>you<span class="w"> </span>have<span class="w"> </span>a<span class="w"> </span>previous<span class="w"> </span>build<span class="o">)</span>
-<span class="nb">export</span><span class="w"> </span><span class="nv">PKG_CONFIG_PATH</span><span class="o">=</span>/home/pi/cpp-mjpeg-streamer/build:<span class="nv">$PKG_CONFIG_PATH</span>
+<span class="nb">cd</span><span class="w"> </span>cinepi-raw
+sudo<span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>build
 sudo<span class="w"> </span>meson<span class="w"> </span>setup<span class="w"> </span>build
 sudo<span class="w"> </span>ninja<span class="w"> </span>-C<span class="w"> </span>build
+<span class="nb">cd</span><span class="w"> </span>..
 sudo<span class="w"> </span>meson<span class="w"> </span>install<span class="w"> </span>-C<span class="w"> </span>build
 </code></pre></div>
-<blockquote>
-<p>Cinemate depends on a custom branch of cinepi-raw created by Csaba Nagy. If you plan to use the original version you can find it adapted for rpicam-apps 0.7 here: https://github.com/Tiramisioux/cinepi-raw/tree/rpicam-apps_1.7</p>
-</blockquote>
 <h3 id="imx585-driver">imx585 driver <img height="12" src="https://img.shields.io/badge/cinemate-fork-gren"/><a class="headerlink" href="#imx585-driver" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>linux-headers<span class="w"> </span>dkms<span class="w"> </span>git
 </code></pre></div>

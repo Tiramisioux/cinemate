@@ -52,32 +52,23 @@ sudo ninja -C build install
 cd ~/libcamera/utils && sudo chmod +x *.py *.sh && sudo chmod +x ~/libcamera/src/ipa/ipa-sign.sh && cd ~/libcamera && sudo ninja -C build install
 ```
 
-### cpp-mjpeg-streamer <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
+### cpp-mjpeg-streamer
 
 ```bash
-sudo apt install -y libspdlog-dev libjsoncpp-dev
-cd /home/pi
-git clone https://github.com/Tiramisioux/cpp-mjpeg-streamer.git --branch cinemate
-cd cpp-mjpeg-streamer && mkdir build && cd build
-cmake .. && make
-make install-here
+sudo apt install -y libspdlog-dev libjsoncpp-dev && cd /home/pi && git clone https://github.com/nadjieb/cpp-mjpeg-streamer.git && cd cpp-mjpeg-streamer && mkdir build && cd build && cmake .. && make && sudo make install && cd
 ```
-
->Cinemate uses a custom fork of cpp-mjpeg-streamer. If you plan to use only cinepi-raw, you can use the original app found at https://github.com/nadjieb/cpp-mjpeg-streamer
 
 ### CinePi-raw <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
 ```bash
 git clone https://github.com/Tiramisioux/cinepi-raw.git --branch rpicam-apps_1.7_custom_encoder
-cd /home/pi/cinepi-raw
-sudo rm -rf build (if you have a previous build)
-export PKG_CONFIG_PATH=/home/pi/cpp-mjpeg-streamer/build:$PKG_CONFIG_PATH
+cd cinepi-raw
+sudo rm -rf build
 sudo meson setup build
 sudo ninja -C build
+cd ..
 sudo meson install -C build
 ```
-
->Cinemate depends on a custom branch of cinepi-raw created by Csaba Nagy. If you plan to use the original version you can find it adapted for rpicam-apps 0.7 here: https://github.com/Tiramisioux/cinepi-raw/tree/rpicam-apps_1.7
 
 ### imx585 driver <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 

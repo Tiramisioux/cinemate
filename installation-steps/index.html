@@ -171,20 +171,6 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#add-a-convenience-alias">Add a convenience alias</a>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#cinemate-services">Cinemate services</a>
-<ul>
-<li class="toctree-l4"><a class="reference internal" href="#storage-automount">storage-automount</a>
-</li>
-<li class="toctree-l4"><a class="reference internal" href="#wifi-hotspot">wifi-hotspot</a>
-</li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#starting-cinemate">Starting Cinemate</a>
-<ul>
-<li class="toctree-l4"><a class="reference internal" href="#cinemate-autostartservice">cinemate-autostart.service</a>
-</li>
-</ul>
-</li>
 </ul>
 </li>
 </ul>
@@ -226,7 +212,7 @@
 <blockquote>
 <p>Although Raspberry Pi 4 (and even 3) has been known to work with the stack below, a Raspopberry Pi 5B or Compute Module 5 is recommended. Also note that for high speed USB 3, a Raspberry Pi 4 or 5 is needed.</p>
 </blockquote>
-<p>This guide assumes fresh Raspbery Pi Bookworm installation running kernel 6.12.20+.</p>
+<p>This guide assumes fresh Raspbery Pi Bookworm installation running kernel 6.12.34 (this is what you get with the official Raspberry Pi imager and doing a sudo apt update &amp;&amp; sudo apt upgrade).</p>
 <p>If you run Raspberry Pi OS Lite, begin by installing the following packages:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>python3-jinja2<span class="w"> </span>python3-ply<span class="w"> </span>python3-yaml
 </code></pre></div>
@@ -442,8 +428,7 @@ Reboot so the group changes take effect:</p>
 <div class="highlight"><pre><span></span><code>reboot
 </code></pre></div>
 <h3 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code><span class="nb">source</span><span class="w"> </span>/home/pi/.cinemate-env/bin/activate
-python3<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>pip<span class="w"> </span>setuptools<span class="w"> </span>wheel
+<div class="highlight"><pre><span></span><code>python3<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>pip<span class="w"> </span>setuptools<span class="w"> </span>wheel
 sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>i2c-tools<span class="w"> </span>portaudio19-dev<span class="w"> </span>build-essential<span class="w"> </span>python3-dev<span class="w"> </span>python3-pip<span class="w"> </span>python3-smbus<span class="w"> </span>python3-serial<span class="w"> </span>git
 pip3<span class="w"> </span>install<span class="w"> </span>adafruit-circuitpython-ssd1306<span class="w"> </span>watchdog<span class="w"> </span>psutil<span class="w"> </span>Pillow<span class="w"> </span>redis<span class="w"> </span>keyboard<span class="w"> </span>pyudev<span class="w"> </span>sounddevice<span class="w"> </span>smbus2<span class="w"> </span>gpiozero<span class="w"> </span>RPI.GPIO<span class="w"> </span>evdev<span class="w"> </span>termcolor<span class="w"> </span>pyserial<span class="w"> </span>inotify_simple<span class="w"> </span>numpy<span class="w"> </span>rpi_hardware_pwm
 pip3<span class="w"> </span>uninstall<span class="w"> </span>-y<span class="w"> </span>Pillow<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>pip3<span class="w"> </span>install<span class="w"> </span>Pillow
@@ -458,7 +443,7 @@ sudo<span class="w"> </span>make<span class="w"> </span>install
 <span class="nb">cd</span><span class="w"> </span>..<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>lgpio
 </code></pre></div>
 <h3 id="clone-the-cinemate-repo">Clone the Cinemate repo<a class="headerlink" href="#clone-the-cinemate-repo" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/cinemate.git
+<div class="highlight"><pre><span></span><code><span class="w">  </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/cinemate.git
 </code></pre></div>
 <h3 id="allow-cinemate-to-run-with-sudo">Allow Cinemate to run with sudo<a class="headerlink" href="#allow-cinemate-to-run-with-sudo" title="Permanent link">#</a></h3>
 <p>Edit the sudoers file:</p>
@@ -470,20 +455,21 @@ pi ALL=(ALL) NOPASSWD: /bin/mount, /bin/umount, /usr/bin/ntfs-3g
 pi ALL=(ALL) NOPASSWD: /home/pi/cinemate/src/logs/system.log
 pi ALL=(ALL) NOPASSWD: /sbin/mount.ext4
 </code></pre></div></p>
+<p>Exit with Ctrl+x</p>
 <h3 id="enable-networkmanager">Enable NetworkManager<a class="headerlink" href="#enable-networkmanager" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>systemctl<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>NetworkManager<span class="w"> </span>--now
 </code></pre></div>
 <h3 id="rotate-logs">Rotate logs<a class="headerlink" href="#rotate-logs" title="Permanent link">#</a></h3>
 <p>Paste this into the terminal and hit enter:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># tee /etc/logrotate.d/general_logs &lt;&lt;'EOP'</span>
-/var/log/*.log<span class="w"> </span><span class="o">{</span>
-<span class="w">   </span>size<span class="w"> </span>100M
-<span class="w">   </span>rotate<span class="w"> </span><span class="m">5</span>
-<span class="w">   </span>compress
-<span class="w">   </span>missingok
-<span class="w">   </span>notifempty
-<span class="o">}</span>
-EOP
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>tee<span class="w"> </span>/etc/logrotate.d/general_logs<span class="w"> </span><span class="s">&lt;&lt;'EOP'</span>
+<span class="s">/var/log/*.log {</span>
+<span class="s">   size 100M</span>
+<span class="s">   rotate 5</span>
+<span class="s">   compress</span>
+<span class="s">   missingok</span>
+<span class="s">   notifempty</span>
+<span class="s">}</span>
+<span class="s">EOP</span>
 </code></pre></div>
 <h3 id="seed-redis-with-default-keys">Seed Redis with default keys<a class="headerlink" href="#seed-redis-with-default-keys" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>redis-cli<span class="w"> </span><span class="s">&lt;&lt;'EOF'</span>
@@ -491,16 +477,18 @@ EOP
 <span class="s">PUBLISH cp_controls anamorphic_factor</span>
 <span class="s">SET bit_depth 12</span>
 <span class="s">PUBLISH cp_controls bit_depth</span>
-<span class="s">...</span>
 <span class="s">EOF</span>
 </code></pre></div>
 <p>(See the settings guide for the full list.)</p>
 <h3 id="add-a-convenience-alias">Add a convenience alias<a class="headerlink" href="#add-a-convenience-alias" title="Permanent link">#</a></h3>
-<p>Append to <code>~/.bashrc</code>:</p>
-<p><div class="highlight"><pre><span></span><code><span class="nb">alias</span><span class="w"> </span><span class="nv">cinemate</span><span class="o">=</span><span class="s1">'python3 /home/pi/Cinemate/src/main.py'</span>
+<div class="highlight"><pre><span></span><code>nano<span class="w"> </span>~/.bashrc
 </code></pre></div>
-Then, inside <code>cinemate</code> folder:</p>
-<div class="highlight"><pre><span></span><code>make<span class="w"> </span>install
+<h1 id="add-to-the-end-of-the-file">add to the end of the file<a class="headerlink" href="#add-to-the-end-of-the-file" title="Permanent link">#</a></h1>
+<div class="highlight"><pre><span></span><code><span class="nb">alias</span><span class="w"> </span><span class="nv">cinemate</span><span class="o">=</span><span class="s1">'python3 /home/pi/Cinemate/src/main.py'</span>
+</code></pre></div>
+<p>Exit with Ctrl+x</p>
+<p>Reload .bashrc</p>
+<div class="highlight"><pre><span></span><code><span class="nb">source</span><span class="w"> </span>~/.bashrc
 </code></pre></div>
 <h3 id="cinemate-services">Cinemate services<a class="headerlink" href="#cinemate-services" title="Permanent link">#</a></h3>
 <p>Cinemate with two small helper services under <code>services/</code>:</p>
@@ -517,11 +505,43 @@ Then, inside <code>cinemate</code> folder:</p>
 sudo<span class="w"> </span>make<span class="w"> </span>install
 sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable</span>
 </code></pre></div>
+<p>Note that if you were connected to the Pi via wifi, this connection is now broken due to the Pi setting up its own hotspot.</p>
+<p>To connect again, check your available wifi networks. There should now be a network available named CinePi. Connect to it using password <code>11111111</code></p>
+<p>Now you shuld be able to ssh to the Pi this command:</p>
+<div class="highlight"><pre><span></span><code>ssh<span class="w"> </span>pi@cinepi.local
+</code></pre></div>
+<p>You should also be able to find the Pi by opening a terminal and typing:</p>
+<div class="highlight"><pre><span></span><code>arp<span class="w"> </span>-a
+</code></pre></div>
+<p>You will see something like
+<div class="highlight"><pre><span></span><code>❯<span class="w"> </span>arp<span class="w"> </span>-a
+
+?<span class="w"> </span><span class="o">(</span><span class="m">10</span>.42.0.1<span class="o">)</span><span class="w"> </span>at<span class="w"> </span>e4:5f:1:a9:72:a7<span class="w"> </span>on<span class="w"> </span>en0<span class="w"> </span>ifscope<span class="w"> </span><span class="o">[</span>ethernet<span class="o">]</span>
+...
+</code></pre></div></p>
+<p>Connect to the Pi:</p>
+<div class="highlight"><pre><span></span><code>ssh pi@10.42.0.1
+
+# password: 1
+</code></pre></div>
 <h3 id="starting-cinemate">Starting Cinemate<a class="headerlink" href="#starting-cinemate" title="Permanent link">#</a></h3>
-<p>If you are not using the service file for autostart, anywhere in the terminal, type:</p>
+<h4 id="initializing-redis-keys">Initializing Redis Keys<a class="headerlink" href="#initializing-redis-keys" title="Permanent link">#</a></h4>
+<p>This has only to be done once on your system:</p>
+<div class="highlight"><pre><span></span><code>redis-cli<span class="w"> </span>MSET<span class="w"> </span><span class="se">\</span>
+anamorphic_factor<span class="w"> </span><span class="m">0</span><span class="w"> </span>bit_depth<span class="w"> </span><span class="m">0</span><span class="w"> </span>buffer<span class="w"> </span><span class="m">0</span><span class="w"> </span>buffer_size<span class="w"> </span><span class="m">0</span><span class="w"> </span>cam_init<span class="w"> </span><span class="m">0</span><span class="w"> </span>cameras<span class="w"> </span><span class="m">0</span><span class="w"> </span>cg_rb<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+file_size<span class="w"> </span><span class="m">0</span><span class="w"> </span>fps<span class="w"> </span><span class="m">1</span><span class="w"> </span>fps_actual<span class="w"> </span><span class="m">1</span><span class="w"> </span>fps_last<span class="w"> </span><span class="m">1</span><span class="w"> </span>fps_max<span class="w"> </span><span class="m">1</span><span class="w"> </span>fps_user<span class="w"> </span><span class="m">1</span><span class="w"> </span>framecount<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+gui_layout<span class="w"> </span><span class="m">0</span><span class="w"> </span>height<span class="w"> </span><span class="m">0</span><span class="w"> </span>ir_filter<span class="w"> </span><span class="m">0</span><span class="w"> </span>is_buffering<span class="w"> </span><span class="m">0</span><span class="w"> </span>is_mounted<span class="w"> </span><span class="m">0</span><span class="w"> </span>is_recording<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+is_writing<span class="w"> </span><span class="m">0</span><span class="w"> </span>is_writing_buf<span class="w"> </span><span class="m">0</span><span class="w"> </span>tc_cam0<span class="w"> </span><span class="m">0</span><span class="w"> </span>tc_cam1<span class="w"> </span><span class="m">0</span><span class="w"> </span>iso<span class="w"> </span><span class="m">0</span><span class="w"> </span>lores_height<span class="w"> </span><span class="m">0</span><span class="w"> </span>lores_width<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+pi_model<span class="w"> </span><span class="m">0</span><span class="w"> </span>rec<span class="w"> </span><span class="m">0</span><span class="w"> </span>sensor<span class="w"> </span><span class="m">0</span><span class="w"> </span>sensor_mode<span class="w"> </span><span class="m">0</span><span class="w"> </span>shutter_a<span class="w"> </span><span class="m">0</span><span class="w"> </span>space_left<span class="w"> </span><span class="m">0</span><span class="w"> </span>storage_type<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+trigger_mode<span class="w"> </span><span class="m">0</span><span class="w"> </span>wb<span class="w"> </span><span class="m">0</span><span class="w"> </span>wb_user<span class="w"> </span><span class="m">0</span><span class="w"> </span>width<span class="w"> </span><span class="m">0</span><span class="w"> </span>memory_alert<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+shutter_a_sync_mode<span class="w"> </span><span class="m">0</span><span class="w"> </span>shutter_angle_nom<span class="w"> </span><span class="m">0</span><span class="w"> </span>shutter_angle_actual<span class="w"> </span><span class="m">0</span><span class="w"> </span>shutter_angle_transient<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+exposure_time<span class="w"> </span><span class="m">0</span><span class="w"> </span>last_dng_cam1<span class="w"> </span><span class="m">0</span><span class="w"> </span>last_dng_cam0<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+zoom<span class="w"> </span><span class="m">0</span><span class="w"> </span>write_speed_to_drive<span class="w"> </span><span class="m">0</span><span class="w"> </span>recording_time<span class="w"> </span><span class="m">0</span>
+</code></pre></div>
+<p>Now, back on the Pi, anywhere in the terminal, type:</p>
 <div class="highlight"><pre><span></span><code>cinemate
 </code></pre></div>
-<p>Make sure things are running smoothly and then move on to enabling the cinemate-autostart service:</p>
+<p>Make sure things are running smoothly and then you can move on to enabling the cinemate-autostart service:</p>
 <h4 id="cinemate-autostartservice">cinemate-autostart.service<a class="headerlink" href="#cinemate-autostartservice" title="Permanent link">#</a></h4>
 <div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/home/pi/cinemate/
 

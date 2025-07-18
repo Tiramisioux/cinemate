@@ -4,7 +4,7 @@ Here is how you can manually install libcamera, cinepi-raw, cinemate and accompa
 
 >Although Raspberry Pi 4 (and even 3) has been known to work with the stack below, a Raspopberry Pi 5B or Compute Module 5 is recommended. Also note that for high speed USB 3, a Raspberry Pi 4 or 5 is needed.
 
-This guide assumes fresh Raspbery Pi Bookworm installation running kernel 6.12.20+.
+This guide assumes fresh Raspbery Pi Bookworm installation running kernel 6.12.34 (this is what you get with the official Raspberry Pi imager and doing a sudo apt update && sudo apt upgrade).
 
 If you run Raspberry Pi OS Lite, begin by installing the following packages:
 
@@ -306,7 +306,6 @@ reboot
 ### Dependencies
 
 ```bash
-source /home/pi/.cinemate-env/bin/activate
 python3 -m pip install --upgrade pip setuptools wheel
 sudo apt-get install -y i2c-tools portaudio19-dev build-essential python3-dev python3-pip python3-smbus python3-serial git
 pip3 install adafruit-circuitpython-ssd1306 watchdog psutil Pillow redis keyboard pyudev sounddevice smbus2 gpiozero RPI.GPIO evdev termcolor pyserial inotify_simple numpy rpi_hardware_pwm
@@ -328,7 +327,7 @@ cd .. && pip install lgpio
 ### Clone the Cinemate repo
 
 ```bash
-git clone https://github.com/Tiramisioux/cinemate.git
+  git clone https://github.com/Tiramisioux/cinemate.git
 ```
 
 ### Allow Cinemate to run with sudo
@@ -347,6 +346,8 @@ pi ALL=(ALL) NOPASSWD: /home/pi/cinemate/src/logs/system.log
 pi ALL=(ALL) NOPASSWD: /sbin/mount.ext4
 ```
 
+Exit with Ctrl+x
+
 ### Enable NetworkManager
 
 ```bash
@@ -358,7 +359,7 @@ sudo systemctl enable NetworkManager --now
 Paste this into the terminal and hit enter:
 
 ```bash
-# tee /etc/logrotate.d/general_logs <<'EOP'
+sudo tee /etc/logrotate.d/general_logs <<'EOP'
 /var/log/*.log {
    size 100M
    rotate 5
@@ -377,7 +378,6 @@ SET anamorphic_factor 1.0
 PUBLISH cp_controls anamorphic_factor
 SET bit_depth 12
 PUBLISH cp_controls bit_depth
-...
 EOF
 ```
 
@@ -385,15 +385,22 @@ EOF
 
 ### Add a convenience alias
 
-Append to `~/.bashrc`:
-
-```bash
-alias cinemate='python3 /home/pi/Cinemate/src/main.py'
+```shell
+nano ~/.bashrc
 ```
-Then, inside `cinemate` folder:
+
+# add to the end of the file
 
 ```shell
-make install
+alias cinemate='python3 /home/pi/Cinemate/src/main.py'
+```
+
+Exit with Ctrl+x
+
+Reload .bashrc
+
+```shell
+source ~/.bashrc
 ```
 
 ### Cinemate services
@@ -419,15 +426,68 @@ cd /home/pi/cinemate/services
 sudo make install
 sudo make enable
 ```
+
+Note that if you were connected to the Pi via wifi, this connection is now broken due to the Pi setting up its own hotspot.
+
+To connect again, check your available wifi networks. There should now be a network available named CinePi. Connect to it using password `11111111`
+
+Now you shuld be able to ssh to the Pi this command:
+
+```shell
+ssh pi@cinepi.local
+```
+
+You should also be able to find the Pi by opening a terminal and typing:
+
+```shell
+arp -a
+```
+
+You will see something like
+```shell
+
+❯ arp -a
+
+? (10.42.0.1) at e4:5f:1:a9:72:a7 on en0 ifscope [ethernet]
+...
+```
+
+Connect to the Pi:
+
+```
+ssh pi@10.42.0.1
+
+# password: 1
+```
+
+
 ### Starting Cinemate
 
-If you are not using the service file for autostart, anywhere in the terminal, type:
+#### Initializing Redis Keys
+
+This has only to be done once on your system:
+
+```shell
+redis-cli MSET \
+anamorphic_factor 0 bit_depth 0 buffer 0 buffer_size 0 cam_init 0 cameras 0 cg_rb 0 \
+file_size 0 fps 1 fps_actual 1 fps_last 1 fps_max 1 fps_user 1 framecount 0 \
+gui_layout 0 height 0 ir_filter 0 is_buffering 0 is_mounted 0 is_recording 0 \
+is_writing 0 is_writing_buf 0 tc_cam0 0 tc_cam1 0 iso 0 lores_height 0 lores_width 0 \
+pi_model 0 rec 0 sensor 0 sensor_mode 0 shutter_a 0 space_left 0 storage_type 0 \
+trigger_mode 0 wb 0 wb_user 0 width 0 memory_alert 0 \
+shutter_a_sync_mode 0 shutter_angle_nom 0 shutter_angle_actual 0 shutter_angle_transient 0 \
+exposure_time 0 last_dng_cam1 0 last_dng_cam0 0 \
+zoom 0 write_speed_to_drive 0 recording_time 0
+```
+
+
+Now, back on the Pi, anywhere in the terminal, type:
 
 ```shell
 cinemate
 ```
 
-Make sure things are running smoothly and then move on to enabling the cinemate-autostart service:
+Make sure things are running smoothly and then you can move on to enabling the cinemate-autostart service:
 
 #### cinemate-autostart.service
 

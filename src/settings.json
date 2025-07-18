@@ -24,7 +24,7 @@
 
   "output": {
     "cam0": {
-      "hdmi_port": 0
+      "hdmi_port": 1
     },
     "cam1": {
       "hdmi_port": 1
@@ -72,8 +72,6 @@
     "wb_free": false
   },
 
-
-  
 "buttons": [
     {
       "pin": 5,

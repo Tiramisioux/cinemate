@@ -8,10 +8,11 @@ This guide assumes fresh Raspbery Pi Bookworm installation running kernel 6.12.2
 
 If you run Raspberry Pi OS Lite, begin by installing the following packages:
 
-## Install script
 ```bash
 sudo apt install -y python-pip git python3-jinja2
 ```
+
+## Install script
 
 This installer script combines the below install processes of CinePi-Raw and Cinemate.
 

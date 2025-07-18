@@ -1,4 +1,4 @@
-# Manual installation
+# Installation
 
 Here is how you can manually install libcamera, cinepi-raw, cinemate and accompanying software on the Raspberry Pi.
 
@@ -12,7 +12,21 @@ If you run Raspberry Pi OS Lite, begin by installing the following packages:
 sudo apt install -y python-pip git python3-jinja2
 ```
 
-## libcamera 1.7.0 <img src="https://img.shields.io/badge/raspberry pi-fork-red" height="12" >
+## One-click installer script
+
+This installer script combines the below install processes of CinePi-Raw and Cinemate.
+
+```shell
+wget https://raw.githubusercontent.com/<USER>/<REPO>/<BRANCH>/scripts/install.sh -O install.sh
+chmod +x install.sh
+sudo bash install.sh
+```
+
+This installer script combines the below install processes of CinePi-Raw and Cinemate.
+
+## CinePi-RAW
+
+### libcamera 1.7.0 <img src="https://img.shields.io/badge/raspberry pi-fork-red" height="12" >
 
 ```shell
 git clone https://github.com/raspberrypi/libcamera && \
@@ -45,7 +59,7 @@ sudo apt-get install --reinstall libtiff5-dev && sudo ln -sf $(find /usr/lib -na
 sudo apt install -y python3-pip git python3-jinja2 libboost-dev libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a meson cmake python3-yaml python3-ply libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libavdevice59
 ```
 
-## cpp-mjpeg-streamer <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
+### cpp-mjpeg-streamer <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
 ```bash
 sudo apt install -y libspdlog-dev libjsoncpp-dev
@@ -58,14 +72,12 @@ make install-here
 
 >Cinemate uses a custom fork of cpp-mjpeg-streamer. If you plan to use only cinepi-raw, you can use the original app found at https://github.com/nadjieb/cpp-mjpeg-streamer
 
-## CinePi-raw
+### CinePi-raw <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
-### Dependencies
 ```
 sudo apt install -y cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev && sudo apt-get install libjsoncpp-dev && cd ~ && git clone https://github.com/sewenew/redis-plus-plus.git && cd redis-plus-plus && mkdir build && cd build && cmake .. && make && sudo make install && cd ~
 ```
 
-### cinepi-raw <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 ```bash
 git clone https://github.com/Tiramisioux/cinepi-raw.git --branch rpicam-apps_1.7_custom_encoder
 cd /home/pi/cinepi-raw
@@ -77,8 +89,6 @@ sudo meson install -C build
 ```
 
 >Cinemate depends on a custom branch of cinepi-raw created by Csaba Nagy. If you plan to use the original version you can find it adapted for rpicam-apps 0.7 here: https://github.com/Tiramisioux/cinepi-raw/tree/rpicam-apps_1.7
-
->Join the CinePi Discord [here](https://discord.gg/Hr4dfhuK)!
 
 ### imx585 driver <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
@@ -108,7 +118,7 @@ cd imx283-v4l2-driver/
 
 >The imx283 is written by Will Whang. For original drivers and startup guides, visit https://github.com/will127534/imx283-v4l2-driver
 
-## Enabling I²C
+### Enabling I²C
 
 ```bash
 sudo apt update && apt upgrade
@@ -116,14 +126,14 @@ sudo raspi-config nonint do_i2c 0
 ```
 >Enabling I2C is needed for using the camera modules.
 
-## Hostname
+### Setting hostname
 
 ```bash
 sudo hostnamectl set-hostname cinepi
 ```
 >You will find the pi as `cinepi.local` on the local network, or at the hotspot Cinemate creates
 
-## Add camera modules to config.txt
+### Add camera modules to config.txt
 
 ```shell
 sudo nano /boot/firmware/config.txt
@@ -169,7 +179,7 @@ avoid_warnings=1
 disable_splash=1
 ```
 
-## Add the IMX585 tuning file (optional)
+### Add the IMX585 tuning file (optional)
 
 ```bash
 curl -L -o /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json \
@@ -179,7 +189,7 @@ sed -i '8s/"black_level": *[0-9]\+/"black_level": 0/' /home/pi/libcamera/src/ipa
 ```
 For the mono sensor use `imx585_mono.json` instead.
  
-## IR filter switch script (optional)
+### IR filter switch script (optional)
 
 ```bash
 wget https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter -O /usr/local/bin/IRFilter
@@ -188,7 +198,7 @@ sudo chmod +x /usr/local/bin/IRFilter
 
 >Cinemate has its own way of handling the IR switch but the installation above can be convenient for use outside of Cinemate
 
-## Change the console font (optional)
+### Change the console font (optional)
 
 ```bash
 sudi apt update
@@ -209,7 +219,7 @@ sudo systemctl start console-setup.service
 
 > This can be useful if running the Pi on a small HD field monitor
 
-## Create post-processing configs
+### Create post-processing configs
 
 Paste this into the terminal and hit enter:
 ```shell
@@ -242,7 +252,7 @@ EOF' && \
 sudo chmod +x post-processing1.json
 ```
 
-## Install PiShrink
+### Install PiShrink
 
 ```bash
 wget https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh
@@ -257,10 +267,11 @@ sudo install -m755 pishrink.sh /usr/local/bin/pishrink
 reboot
 ```
 
-You should now have a working install of cinepi-raw. To try it out, see this section [TBA]
+You should now have a working install of cinepi-raw. To try it out, see [this section](/cli-user-guide.md). 
 
-To continue installing Cinemate, follow the steps below:
-## Create a Python virtual environment
+## Cinemate
+
+### Create a Python virtual environment
 
 ```bash
 sudo apt update && apt install -y python3-venv
@@ -269,7 +280,7 @@ echo "source /home/pi/.cinemate-env/bin/activate" >> ~/.bashrc
 source /home/pi/.cinemate-env/bin/activate
 ```
 
-## Grant sudo privileges and enable I²C
+### Grant sudo privileges and enable I²C
 
 ```bash
 echo "pi ALL=(ALL) NOPASSWD: /home/pi/.cinemate-env/bin/*" | sudo tee /etc/sudoers.d/cinemate-env
@@ -284,8 +295,6 @@ Reboot so the group changes take effect:
 ```bash
 reboot
 ```
-
-## Cinemate 
 
 ### Dependencies
 
@@ -315,7 +324,7 @@ cd .. && pip install lgpio
 git clone https://github.com/Tiramisioux/cinemate.git
 ```
 
-### Allow Cinemates `main.py` to run with sudo
+### Allow Cinemate to run with sudo
 
 Edit the sudoers file:
 
@@ -372,7 +381,7 @@ EOF
 Append to `~/.bashrc`:
 
 ```bash
-alias Cinemate='python3 /home/pi/Cinemate/src/main.py'
+alias cinemate='python3 /home/pi/Cinemate/src/main.py'
 ```
 Then, inside `cinemate` folder:
 
@@ -380,14 +389,18 @@ Then, inside `cinemate` folder:
 make install
 ```
 
-## Cinemate services
+### Cinemate services
 
 Cinemate with two small helper services under `services/`:
 
-- **storage-automount** – mounts and unmounts removable drives such as SSDs,
-  NVMe enclosures and the CFE HAT. Partitions named `RAW` are attached at
+#### storage-automount
+
+Mounts and unmounts removable drives such as SSDs, NVMe enclosures and the CFE HAT. Partitions named `RAW` are attached at
   `/media/RAW`; all others are mounted under `/media/<LABEL>`.
-- **wifi-hotspot** – keeps a simple Wi‑Fi hotspot running via NetworkManager so
+
+#### wifi-hotspot
+
+keeps a simple Wi‑Fi hotspot running via NetworkManager so
   you can reach the web UI even without other networking. The SSID and password
   come from the `system.wifi_hotspot` section of `settings.json`.
 
@@ -395,14 +408,11 @@ Install and enable both services with:
 
 ```bash
 cd /home/pi/cinemate/services
+
 sudo make install
 sudo make enable
 ```
-
-You can manage each one individually with `make <action>-<service>`, for example
-`make status-wifi-hotspot`.
-
-## Starting Cinemate
+### Starting Cinemate
 
 If you are not using the service file for autostart, anywhere in the terminal, type:
 
@@ -410,4 +420,17 @@ If you are not using the service file for autostart, anywhere in the terminal, t
 cinemate
 ```
 
->This would be the recommended way of trying out Cinemate as you will get extended logging in the terminal which can be helpful when troubleshooting. The Cinemate logger also relays logging messages from the running cinepi-raw instance.
+Make sure things are running smoothly and then move on to enabling the cinemate-autostart service:
+
+#### cinemate-autostart.service
+
+```bash
+cd /home/pi/cinemate/
+
+sudo make install   # copy service file
+sudo make enable    # start on boot
+make start          # launch now
+```
+
+After enabling the service, Cinemate should autostart on boot.
+

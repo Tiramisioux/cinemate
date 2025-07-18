@@ -4,9 +4,9 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://tiramisioux.github.io/cinemate/coverpage/" rel="canonical"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://tiramisioux.github.io/cinemate/sensor.sizes/" rel="canonical"/>
 <link href="../img/favicon.ico" rel="shortcut icon"/>
-<title>Cinemate Documentation - Cinemate Docs</title>
+<title>Image circles and sensor sizes - Cinemate Docs</title>
 <link href="../css/theme.css" rel="stylesheet"/>
 <link href="../css/theme_extra.css" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" rel="stylesheet"/>
@@ -14,9 +14,9 @@
 <link href="../templates/styles.scss" rel="stylesheet"/>
 <script>
         // Current page data
-        var mkdocs_page_name = "Cinemate Documentation";
-        var mkdocs_page_input_path = "coverpage.md";
-        var mkdocs_page_url = "/cinemate/coverpage/";
+        var mkdocs_page_name = "Image circles and sensor sizes";
+        var mkdocs_page_input_path = "sensor.sizes.md";
+        var mkdocs_page_url = "/cinemate/sensor.sizes/";
       </script>
 <!--[if lt IE 9]>
       <script src="../js/html5shiv.min.js"></script>
@@ -134,9 +134,9 @@
 <div class="rst-content"><div aria-label="breadcrumbs navigation" role="navigation">
 <ul class="wy-breadcrumbs">
 <li><a aria-label="Docs" class="icon icon-home" href=".."></a></li>
-<li class="breadcrumb-item active">Cinemate Documentation</li>
+<li class="breadcrumb-item active">Image circles and sensor sizes</li>
 <li class="wy-breadcrumbs-aside">
-<a class="icon icon-github" href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/coverpage.md"> Edit on GitHub</a>
+<a class="icon icon-github" href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/sensor.sizes.md"> Edit on GitHub</a>
 </li>
 </ul>
 <hr/>
@@ -144,7 +144,80 @@
 <div class="document" itemscope="itemscope" itemtype="http://schema.org/Article" role="main">
 <div class="section" itemprop="articleBody">
 <div class="markdown-body">
-<p><strong>Built:</strong> 2025-07-18 17:15 UTC</p>
+<h1 id="image-circles-and-sensor-sizes">Image circles and sensor sizes<a class="headerlink" href="#image-circles-and-sensor-sizes" title="Permanent link">#</a></h1>
+<h2 id="what-do-1-inch-and-123-inch-actually-mean">What do “1 inch” and “1/2.3 inch” actually mean?<a class="headerlink" href="#what-do-1-inch-and-123-inch-actually-mean" title="Permanent link">#</a></h2>
+<p>Those fractions are legacy video‑tube designations and <em>not</em> the physical diagonal of the sensor. For example:</p>
+<table>
+<thead>
+<tr>
+<th>Marketing name</th>
+<th>Actual diagonal</th>
+<th>Typical crop factor*</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>“Full‑frame” (35 mm stills)</td>
+<td>43 mm</td>
+<td>1.0× (reference)</td>
+</tr>
+<tr>
+<td> Micro‑Four‑Thirds</td>
+<td>22 mm</td>
+<td>~2.0×</td>
+</tr>
+<tr>
+<td>“1 inch”</td>
+<td>16 mm</td>
+<td>~2.7×</td>
+</tr>
+<tr>
+<td>Raspberry Pi HQ (IMX477, sold as “1/2.3 inch”)</td>
+<td>7.9 mm</td>
+<td>~5.6×</td>
+</tr>
+</tbody>
+</table>
+<p>As we can see, the smaller the sensor the larger the crop factor with regards to the 35mm standard reference.</p>
+<p>C/CS Mounts</p>
+<p>C and CS lenses were designed for small‑format video and security cameras, so their image circles perfectly cover the IMX477. The Raspberry Pi HQ board also has a built‑in back‑focus adjustment </p>
+<hr/>
+<h2 id="4-what-if-i-really-want-wide-shots">4  What if I really want wide shots?<a class="headerlink" href="#4-what-if-i-really-want-wide-shots" title="Permanent link">#</a></h2>
+<p>You have two realistic options:</p>
+<ol>
+<li><strong>Speed‑boosters and focal reducers</strong><br/>
+   These compress a larger image circle down onto the small sensor, regaining some angle of view. They cost more than the camera and introduce extra optical surfaces, but can work in a pinch.  </li>
+<li><strong>A bigger sensor</strong><br/>
+   Stepping up to something like the IMX585 (“1/1.2 inch”) cuts the crop factor roughly in half. At that point, adapting Micro‑Four‑Thirds or vintage 35 mm lenses begins to make practical sense.</li>
+</ol>
+<hr/>
+<h2 id="5-buying-roadmap-for-beginners">5  Buying roadmap for beginners<a class="headerlink" href="#5-buying-roadmap-for-beginners" title="Permanent link">#</a></h2>
+<ol>
+<li><strong>Start with the stock 6 – 12 mm Raspberry Pi zoom</strong><br/>
+   It teaches you which focal lengths you genuinely use.  </li>
+<li><strong>Add one or two vintage C‑mount primes</strong><br/>
+   Look for 8 mm or 12 mm lenses from brands such as Kern‑Paillard, Computar, or Angénieux. They’re small, sharp, and often under €100.  </li>
+<li><strong>Master back‑focus adjustment</strong><br/>
+   The HQ board’s silver ring lets you dial in infinity focus without spacers—a lifesaver when swapping lenses.  </li>
+<li><strong>Only then consider adapters</strong><br/>
+   If you’re bumping into the limits of the sensor rather than the lens, that’s the signal to explore larger sensors like the IMX585 plus an MFT or EF adapter.</li>
+</ol>
+<hr/>
+<h2 id="6-rules-of-thumb-bookmark-these">6  Rules of thumb (bookmark these)<a class="headerlink" href="#6-rules-of-thumb-bookmark-these" title="Permanent link">#</a></h2>
+<ul>
+<li><strong>Focal length math:</strong><br/>
+  Effective 35 mm focal length = <em>Lens focal length × Crop factor</em>.<br/>
+  (e.g., 12 mm × 5.6 ≈ 67 mm portrait.)  </li>
+<li><strong>Image circle &gt; sensor diagonal.</strong><br/>
+  If the spec sheet doesn’t list it, assume C/CS lenses cover up to 11 mm and nothing larger.  </li>
+<li><strong>Big‑sensor lenses on tiny sensors ≠ better image.</strong><br/>
+  Quality comes from glass <em>matched</em> to the sensor, not size alone.</li>
+</ul>
+<hr/>
+<h3 id="tldr">TL;DR<a class="headerlink" href="#tldr" title="Permanent link">#</a></h3>
+<p>For the Raspberry Pi HQ camera (IMX477), <strong>vintage C‑mount lenses are your best friends</strong>—they cover the sensor perfectly, cost little, and keep the rig small.<br/>
+If you crave a wider field of view or shallower depth of field that feels “cinematic,” consider upgrading the sensor itself (e.g., IMX585) before chasing exotic adapters and full‑frame glass.</p>
+<p>Happy shooting, and may your pixels always land exactly where you intend!</p>
 </div>
 </div>
 </div><footer>

@@ -501,7 +501,7 @@ make start          # launch now
 
 After enabling the service, Cinemate should autostart on boot.
 
-### Thinking about the wifi-hotspot service
+!!! info "Thinking about the wifi-hotspot service"
 
 The optional `wifi-hotspot` service gives the Pi its own wireless network so you
 can always connect to the web interface. It is great for field work where there
@@ -516,4 +516,5 @@ service with `sudo systemctl stop wifi-hotspot`.
 If you plug in an Ethernet cable you can keep the hotspot active while the wired
 connection provides internet access. See [Hotspot logic](hotspot-logic.md) for
 more details on how the hotspot works.
+
 

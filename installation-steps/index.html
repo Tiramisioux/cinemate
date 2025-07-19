@@ -302,9 +302,6 @@ cd imx585-v4l2-driver/
 ./setup.sh
 cd
 </code></pre></div>
-<blockquote>
-<p>The imx585 is written by Will Whang. For original drivers and startup guides, visit https://github.com/will127534/StarlightEye</p>
-</blockquote>
 <h4 id="add-imx585-tuning-files">Add IMX585 tuning files<a class="headerlink" href="#add-imx585-tuning-files" title="Permanent link">#</a></h4>
 <p><div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-L<span class="w"> </span>-o<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585.json
@@ -320,15 +317,12 @@ sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </sp
 <blockquote>
 <p>Cinemate has its own way of handling the IR switch but the installation above can be convenient for use outside of Cinemate</p>
 </blockquote>
-<h4 id="imx283-driver">imx283 driver <img height="12" src="https://img.shields.io/badge/cinemate-fork-gren"/><a class="headerlink" href="#imx283-driver" title="Permanent link">#</a></h4>
+<h4 id="imx283-driver">imx283 driver<a class="headerlink" href="#imx283-driver" title="Permanent link">#</a></h4>
 <div class="highlight"><pre><span></span><code>git clone https://github.com/will127534/imx283-v4l2-driver.git
 cd imx283-v4l2-driver/
 ./setup.sh
 cd
 </code></pre></div>
-<blockquote>
-<p>The imx283 is written by Will Whang. For original drivers and startup guides, visit https://github.com/will127534/imx283-v4l2-driver</p>
-</blockquote>
 <h3 id="enabling-i2c">Enabling I²C<a class="headerlink" href="#enabling-i2c" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>raspi-config<span class="w"> </span>nonint<span class="w"> </span>do_i2c<span class="w"> </span><span class="m">0</span>
 </code></pre></div>

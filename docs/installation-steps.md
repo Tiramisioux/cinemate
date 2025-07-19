@@ -2,9 +2,9 @@
 
 Here is how you can manually install libcamera, cinepi-raw, cinemate and accompanying software on the Raspberry Pi.
 
->Although Raspberry Pi 4 (and even 3) has been known to work with the stack below, a Raspopberry Pi 5B or Compute Module 5 is recommended. Also note that for high speed USB 3, a Raspberry Pi 4 or 5 is needed.
+Stack is confirmed to work on Raspberry pi 4 and 5 models.
 
-This guide assumes fresh Raspbery Pi Bookworm installation running kernel 6.12.34 (this is what you get with the official Raspberry Pi imager and doing a sudo apt update && sudo apt upgrade).
+This guide assumes fresh Raspbery Pi Bookworm installation running kernel 6.12.34.
 
 If you run Raspberry Pi OS Lite, begin by installing the following packages:
 
@@ -12,22 +12,23 @@ If you run Raspberry Pi OS Lite, begin by installing the following packages:
 sudo apt-get install python3-jinja2 python3-ply python3-yaml
 ```
 
-## Manual install
+## Camera stack
 
 ### Tools & dependencies
 
 ```
-sudo apt update && sudo apt upgrade
+sudo apt update -y
+sudo apt upgrade -y
 ```
 
 ```
-sudo apt install -y cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev && sudo apt-get install libjsoncpp-dev && cd ~ && git clone https://github.com/sewenew/redis-plus-plus.git && cd redis-plus-plus && mkdir build && cd build && cmake .. && make && sudo make install && cd ~
+sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev && sudo apt-get install libjsoncpp-dev && cd ~ && git clone https://github.com/sewenew/redis-plus-plus.git && cd redis-plus-plus && mkdir build && cd build && cmake .. && make && sudo make install && cd ~
 ```
 
 ### libcamera 1.7.0 <img src="https://img.shields.io/badge/raspberry pi-fork-red" height="12" >
 
 ```shell
-sudo apt install -y python3-pip git python3-jinja2 libboost-dev libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a meson cmake python3-yaml python3-ply libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libavdevice59
+sudo apt install -y python3-pip  python3-jinja2 libboost-dev libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a meson cmake python3-yaml python3-ply libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libavdevice59
 ```
 
 ```shell
@@ -72,7 +73,10 @@ sudo meson setup build
 sudo ninja -C build
 sudo meson install -C build
 cd
+sudo ldconfig
 ```
+
+### Seed Redis with white balance default keys
 
 ```
 redis-cli <<EOF
@@ -81,21 +85,25 @@ PUBLISH cp_controls cg_rb
 EOF
 ```
 
-### imx585 driver <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
+### Additional drivers
 
 ```shell
-sudo apt install linux-headers dkms git
+sudo apt install linux-headers dkms -y
 ```
+
+#### imx585 driver
 
 ```
 git clone https://github.com/will127534/imx585-v4l2-driver.git --branch 6.12.y
 cd imx585-v4l2-driver/
 ./setup.sh
+cd
+
 ```
 
 >The imx585 is written by Will Whang. For original drivers and startup guides, visit https://github.com/will127534/StarlightEye
 
-### Add the IMX585 tuning files (optional)
+#### Add IMX585 tuning files 
 
 ```bash
 curl -L -o /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json \
@@ -107,7 +115,7 @@ cp /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json /usr/local/share/libcame
 curl -L -o /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585_mono.json https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585_mono.json && sudo cp /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585_mono.json /usr/local/share/libcamera/ipa/rpi/pisp/
 ```
  
-### IR filter switch script (optional)
+#### IR filter switch script
 
 ```bash
 sudo wget https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter -O /usr/local/bin/IRFilter
@@ -116,16 +124,13 @@ sudo chmod +x /usr/local/bin/IRFilter
 
 >Cinemate has its own way of handling the IR switch but the installation above can be convenient for use outside of Cinemate
 
-### imx283 driver <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
-
-```shell
-sudo apt install linux-headers dkms git
-```
+#### imx283 driver <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
 ```
-git clone https://github.com/Tiramisioux/imx283-v4l2-driver.git
+git clone https://github.com/will127534/imx283-v4l2-driver.git
 cd imx283-v4l2-driver/
 ./setup.sh
+cd
 ```
 
 >The imx283 is written by Will Whang. For original drivers and startup guides, visit https://github.com/will127534/imx283-v4l2-driver
@@ -153,7 +158,7 @@ sudo nano /boot/firmware/config.txt
 
 Paste this into your file, and uncomment the sensor you are using.
 
-Also specify which physical camera port you have connected your sensor to.
+Also specify which physical camera port you have connected your sensor to (example shows imx477 activated)
 
 ```bash
 # Raspberry Pi HQ camera
@@ -191,20 +196,22 @@ avoid_warnings=1
 disable_splash=1
 ```
 
+Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.
+
 ### Change the console font (optional)
 
 ```bash
-sudo apt update
 sudo apt install console-setup kbd
-sudo dpkg-reconfigure console-setup  # choose Terminus / 16x32
+sudo dpkg-reconfigure console-setup  
+
+# choose: UTF-8
+#         Guess optimal character set
+#         Terminus
+#         16x32 (framebuffer only)
 ```
 
-Verify `/etc/default/console-setup` contains:
-```text
-FONTFACE="Terminus"
-FONTSIZE="16x32"
-```
-Then enable the service:
+Enable the service:
+
 ```bash
 sudo systemctl enable console-setup.service
 sudo systemctl start console-setup.service
@@ -284,7 +291,7 @@ For more details on running CinePi-raw from the command line, see [this section]
 sudo apt update
 sudo apt install -y \
     git build-essential python3-dev python3-pip python3-venv \
-    i2c-tools python3-smbus \
+    i2c-tools python3-smbus python3-pyudev \
     libgpiod-dev libgpiod2 python3-libgpiod gpiod \
     portaudio19-dev python3-systemd \
     e2fsprogs ntfs-3g exfatprogs \
@@ -312,7 +319,7 @@ echo "pi ALL=(ALL) NOPASSWD: /home/pi/run_cinemate.sh" | sudo tee -a /etc/sudoer
 Reboot so the group changes take effect:
 
 ```bash
-reboot
+sudo reboot
 ```
 
 ### Python packages
@@ -321,6 +328,7 @@ reboot
 
 ```bash
 pip install \
+    pyudev gpiozero \
     adafruit-blinka adafruit-circuitpython-ssd1306 adafruit-circuitpython-seesaw \
     luma.oled grove.py pigpio-encoder smbus2 rpi_hardware_pwm \
     watchdog psutil pillow redis keyboard pyudev numpy termcolor sounddevice \
@@ -340,7 +348,7 @@ cd .. && pip install lgpio
 ### Clone the Cinemate repo
 
 ```bash
-  git clone https://github.com/Tiramisioux/cinemate.git
+  git clone https://github.com/Tiramisioux/cinemate.git --branch cinemate-3.1
 ```
 
 ### Allow Cinemate to run with sudo
@@ -359,7 +367,7 @@ pi ALL=(ALL) NOPASSWD: /home/pi/cinemate/src/logs/system.log
 pi ALL=(ALL) NOPASSWD: /sbin/mount.ext4
 ```
 
-Exit with Ctrl+x
+Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.
 
 ### Enable NetworkManager
 
@@ -385,13 +393,17 @@ EOP
 
 ### Seed Redis with default keys
 
-```bash
-redis-cli <<'EOF'
-SET anamorphic_factor 1.0
-PUBLISH cp_controls anamorphic_factor
-SET bit_depth 12
-PUBLISH cp_controls bit_depth
-EOF
+```shell
+redis-cli MSET \
+anamorphic_factor 0 bit_depth 0 buffer 0 buffer_size 0 cam_init 0 cameras 0 cg_rb 3.5,1.5 \
+file_size 0 fps 24 fps_actual 24 fps_last 24 fps_max 1 fps_user 24 framecount 0 \
+gui_layout 0 height 0 ir_filter 0 is_buffering 0 is_mounted 0 is_recording 0 \
+is_writing 0 is_writing_buf 0 tc_cam0 0 tc_cam1 0 iso 100 lores_height 0 lores_width 0 \
+pi_model 0 rec 0 sensor 0 sensor_mode 0 shutter_a 0 space_left 0 storage_type 0 \
+wb 5600 wb_user 5600 width 0 memory_alert 0 \
+shutter_a_sync_mode 0 shutter_angle_nom 0 shutter_angle_actual 0 shutter_angle_transient 0 \
+exposure_time 0 last_dng_cam1 0 last_dng_cam0 0 \
+zoom 0 write_speed_to_drive 0 recording_time 0
 ```
 
 (See the settings guide for the full list.)
@@ -408,7 +420,7 @@ nano ~/.bashrc
 alias cinemate='python3 /home/pi/cinemate/src/main.py'
 ```
 
-Exit with Ctrl+x
+Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.
 
 Reload .bashrc
 
@@ -418,18 +430,13 @@ source ~/.bashrc
 
 ### Cinemate services
 
-Cinemate with two small helper services under `services/`:
-
 #### storage-automount
 
-Mounts and unmounts removable drives such as SSDs, NVMe enclosures and the CFE HAT. Partitions named `RAW` are attached at
-  `/media/RAW`; all others are mounted under `/media/<LABEL>`.
+Mounts and unmounts removable drives such as SSDs, NVMe enclosures and the CFE HAT. 
 
 #### wifi-hotspot
 
-keeps a simple Wi‑Fi hotspot running via NetworkManager so
-  you can reach the web UI even without other networking. The SSID and password
-  come from the `system.wifi_hotspot` section of `settings.json`.
+Keeps a simple Wi‑Fi hotspot running via NetworkManager so you can reach the web UI while in the field. The SSID and password come from the `system.wifi_hotspot` section of `settings.json`.
 
 Install and enable both services with:
 
@@ -437,8 +444,11 @@ Install and enable both services with:
 cd /home/pi/cinemate/services
 
 sudo make install
-sudo make enable
+sudo make start  # starts the service
+sudo make enable # makes the service start on boot
+
 ```
+You can also start and enable the service individually, by entering their respective folders and issuing the `sudo make` command
 
 Note that if you were connected to the Pi via wifi, this connection is now broken due to the Pi setting up its own hotspot.
 
@@ -465,9 +475,19 @@ You will see something like
 ...
 ```
 
-Connect to the Pi:
+!!! info ""
 
-```
+    During development/building your rig you might prefer the Pi to use your normal Wi‑Fi instead of its own hotspot so you remain online while tinkering. 
+    
+    Disable the hotspot by setting `system.wifi_hotspot.enabled` to `false` `settings.json` _and_ by stopping the service with `sudo systemctl stop wifi-hotspot`.
+
+    To stop the hotspot from starting on boot, type `sudo systemctl disable wifi-hotspot`.
+
+    If you plug in an Ethernet cable you can keep the hotspot active while the wired connection provides internet access. See [Hotspot logic](hotspot-logic.md) for more details on how the hotspot works.
+
+### Connect to the Pi (if not already connected):
+
+```shell
 ssh pi@10.42.0.1
 
 # password: 1
@@ -475,23 +495,6 @@ ssh pi@10.42.0.1
 
 
 ### Starting Cinemate
-
-#### Initializing Redis Keys
-
-This has only to be done once on your system:
-
-```shell
-redis-cli MSET \
-anamorphic_factor 0 bit_depth 0 buffer 0 buffer_size 0 cam_init 0 cameras 0 cg_rb 2.5,2.2 \
-file_size 0 fps 1 fps_actual 1 fps_last 1 fps_max 1 fps_user 1 framecount 0 \
-gui_layout 0 height 0 ir_filter 0 is_buffering 0 is_mounted 0 is_recording 0 \
-is_writing 0 is_writing_buf 0 tc_cam0 0 tc_cam1 0 iso 0 lores_height 0 lores_width 0 \
-pi_model 0 rec 0 sensor 0 sensor_mode 0 shutter_a 0 space_left 0 storage_type 0 \
-trigger_mode 0 wb 0 wb_user 0 width 0 memory_alert 0 \
-shutter_a_sync_mode 0 shutter_angle_nom 0 shutter_angle_actual 0 shutter_angle_transient 0 \
-exposure_time 0 last_dng_cam1 0 last_dng_cam0 0 \
-zoom 0 write_speed_to_drive 0 recording_time 0
-```
 
 Now, back on the Pi, anywhere in the terminal, type:
 
@@ -503,7 +506,7 @@ Make sure things are running smoothly and then you can move on to enabling the c
 
 #### cinemate-autostart.service
 
-```bash
+```shell
 cd /home/pi/cinemate/
 
 sudo make install   # copy service file
@@ -513,20 +516,8 @@ make start          # launch now
 
 After enabling the service, Cinemate should autostart on boot.
 
-!!! info "Thinking about the wifi-hotspot service"
+You now have a 12 bit RAW image capturing system on your Raspberry Pi!
 
-    The optional `wifi-hotspot` service gives the Pi its own wireless network so you
-    can always connect to the web interface. It is great for field work where there
-    may be no existing network. Simply join the **CinePi** network on your phone or
-    laptop and browse to the GUI.
 
-    During development you might prefer the Pi to use your normal Wi‑Fi instead so
-    you remain online while tinkering. Disable the hotspot by setting
-    `system.wifi_hotspot.enabled` to `false` in `settings.json` or by stopping the
-    service with `sudo systemctl stop wifi-hotspot`.
-
-    If you plug in an Ethernet cable you can keep the hotspot active while the wired
-    connection provides internet access. See [Hotspot logic](hotspot-logic.md) for
-    more details on how the hotspot works.
 
 

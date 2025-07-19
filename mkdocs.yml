@@ -16,19 +16,20 @@ nav:
   - Home: index.md
   - Quick start:
       - Getting started with a minimal build: getting-started.md
-  - Using the camera:
-      - Web GUI: web-gui.md
       - HDMI GUI: simple-gui.md
+      - Web GUI: web-gui.md
+  - Using the camera:
+      - Using the CLI: cli-user-guide.md
+      - Commands reference: cli-commands.md
       - Sensors: sensors.md
       - Audio recording: audio-recording.md
       - Digital zoom: digital-zoom.md
       - Speed ramping & shutter angle synchronization: speed-ramping.md
       - Dual sensors: dual-sensors.md
   - Customising your build:
-      - Settings file: settings-json.md
-      - Using the CLI: cli-user-guide.md
-      - Commands reference: cli-commands.md
       - Connecting via SSH: ssh.md
+      - Settings file: settings-json.md
+      - Adding hardware controls: hardware-controls.md
       - Configuring the Wi-Fi hotspot: hotspot-logic.md
   - System management:
       - System services: system-services.md

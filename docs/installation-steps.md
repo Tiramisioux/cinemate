@@ -101,8 +101,6 @@ cd
 
 ```
 
->The imx585 is written by Will Whang. For original drivers and startup guides, visit https://github.com/will127534/StarlightEye
-
 #### Add IMX585 tuning files 
 
 ```bash
@@ -124,7 +122,7 @@ sudo chmod +x /usr/local/bin/IRFilter
 
 >Cinemate has its own way of handling the IR switch but the installation above can be convenient for use outside of Cinemate
 
-#### imx283 driver <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
+#### imx283 driver 
 
 ```
 git clone https://github.com/will127534/imx283-v4l2-driver.git
@@ -132,9 +130,6 @@ cd imx283-v4l2-driver/
 ./setup.sh
 cd
 ```
-
->The imx283 is written by Will Whang. For original drivers and startup guides, visit https://github.com/will127534/imx283-v4l2-driver
-
 
 ### Enabling I²C
 

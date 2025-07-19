@@ -177,7 +177,23 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#seed-redis-with-default-keys">Seed Redis with default keys</a>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#add-a-convenience-alias">Add a convenience alias</a>
+<li class="toctree-l3"><a class="reference internal" href="#add-alias">Add alias</a>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#cinemate-services">Cinemate services</a>
+<ul>
+<li class="toctree-l4"><a class="reference internal" href="#storage-automount">storage-automount</a>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="#wifi-hotspot">wifi-hotspot</a>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#connect-to-the-pi-if-not-already-connected">Connect to the Pi (if not already connected):</a>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#starting-cinemate">Starting Cinemate</a>
+<ul>
+<li class="toctree-l4"><a class="reference internal" href="#cinemate-autostartservice">cinemate-autostart.service</a>
+</li>
+</ul>
 </li>
 </ul>
 </li>
@@ -507,10 +523,10 @@ exposure_time<span class="w"> </span><span class="m">0</span><span class="w"> </
 zoom<span class="w"> </span><span class="m">0</span><span class="w"> </span>write_speed_to_drive<span class="w"> </span><span class="m">0</span><span class="w"> </span>recording_time<span class="w"> </span><span class="m">0</span>
 </code></pre></div>
 <p>(See the settings guide for the full list.)</p>
-<h3 id="add-a-convenience-alias">Add a convenience alias<a class="headerlink" href="#add-a-convenience-alias" title="Permanent link">#</a></h3>
+<h3 id="add-alias">Add alias<a class="headerlink" href="#add-alias" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>nano<span class="w"> </span>~/.bashrc
 </code></pre></div>
-<h1 id="add-to-the-end-of-the-file">add to the end of the file<a class="headerlink" href="#add-to-the-end-of-the-file" title="Permanent link">#</a></h1>
+<p>Add to the end of the file:</p>
 <div class="highlight"><pre><span></span><code><span class="nb">alias</span><span class="w"> </span><span class="nv">cinemate</span><span class="o">=</span><span class="s1">'python3 /home/pi/cinemate/src/main.py'</span>
 </code></pre></div>
 <p>Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.</p>

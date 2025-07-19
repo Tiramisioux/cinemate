@@ -49,7 +49,9 @@ nav:
   - Development & contributing:
       - Manual installation (from scratch): installation-steps.md
       - Todo: todo.md
-      - Contributing guide: contributing.md
+      - Contributors: contributors.md
+      - Contributing to the project: contributing.md
+      - Acknowledgements: acknowledgments.md
   - Download PDF: renders/Cinemate-Docs.pdf
 # Theme
 # ───────────────────────────

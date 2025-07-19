@@ -328,7 +328,7 @@ sudo reboot
 
 ```bash
 pip install \
-    pyudev gpiozero \
+    gpiozero \
     adafruit-blinka adafruit-circuitpython-ssd1306 adafruit-circuitpython-seesaw \
     luma.oled grove.py pigpio-encoder smbus2 rpi_hardware_pwm \
     watchdog psutil pillow redis keyboard pyudev numpy termcolor sounddevice \

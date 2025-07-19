@@ -95,7 +95,7 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#rotary_encoders">rotary_encoders</a>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#quad_rotary_encoders">quad_rotary_encoders</a>
+<li class="toctree-l2"><a class="reference internal" href="#quad_rotary_controller">quad_rotary_controller</a>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#i2c_oled">i2c_oled</a>
 </li>
@@ -343,15 +343,31 @@
 <li><strong>clk_pin</strong> and <strong>dt_pin</strong> – the two pins of the encoder.</li>
 <li><strong>encoder_actions</strong> – commands to run when turning the dial.</li>
 </ul>
-<h2 id="quad_rotary_encoders">quad_rotary_encoders<a class="headerlink" href="#quad_rotary_encoders" title="Permanent link">#</a></h2>
-<p>Support for the Adafruit Neopixel Quad I2C rotary encoder breakout with four dials. Each entry assigns a dial to a setting and clones the behaviour of a button pin.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">"quad_rotary_encoders"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">"0"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"setting_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"iso"</span><span class="p">,</span><span class="w"> </span><span class="nt">"gpio_pin"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"1"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"setting_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shutter_a"</span><span class="p">,</span><span class="w"> </span><span class="nt">"gpio_pin"</span><span class="p">:</span><span class="w"> </span><span class="mi">16</span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"2"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"setting_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fps"</span><span class="p">,</span><span class="w"> </span><span class="nt">"gpio_pin"</span><span class="p">:</span><span class="w"> </span><span class="mi">26</span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"3"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"setting_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wb"</span><span class="p">,</span><span class="w"> </span><span class="nt">"gpio_pin"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">}</span>
+<h2 id="quad_rotary_controller">quad_rotary_controller<a class="headerlink" href="#quad_rotary_controller" title="Permanent link">#</a></h2>
+<p>Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry maps one of the four dials to a setting and defines the push button actions similar to the <code>buttons</code> section.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">"quad_rotary_controller"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"enabled"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"encoders"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"0"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"setting_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"iso"</span><span class="p">,</span><span class="w"> </span><span class="nt">"button"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"press_action"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rec"</span><span class="p">}}},</span>
+<span class="w">    </span><span class="nt">"1"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"setting_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"shutter_a"</span><span class="p">,</span><span class="w"> </span><span class="nt">"button"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"press_action"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"set_fps_double"</span><span class="p">}}},</span>
+<span class="w">    </span><span class="nt">"2"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"setting_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fps"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"button"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"press_action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"None"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"single_click_action"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"set_resolution"</span><span class="p">},</span>
+<span class="w">        </span><span class="nt">"double_click_action"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"restart_cinemate"</span><span class="p">},</span>
+<span class="w">        </span><span class="nt">"triple_click_action"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"reboot"</span><span class="p">},</span>
+<span class="w">        </span><span class="nt">"hold_action"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"toggle_mount"</span><span class="p">}</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">"3"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"setting_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"wb"</span><span class="p">,</span><span class="w"> </span><span class="nt">"button"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"press_action"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"method"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rec"</span><span class="p">}}}</span>
+<span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
+<ul>
+<li><strong>enabled</strong> – turn the quad rotary controller on or off.</li>
+<li><strong>encoders</strong> – mapping of each dial to a setting and button actions.</li>
+</ul>
 <h2 id="i2c_oled">i2c_oled<a class="headerlink" href="#i2c_oled" title="Permanent link">#</a></h2>
 <p>Configuration for the optional OLED status screen. This can be useful for presenting extra information appart from the HDMI/web display.</p>
 <div class="highlight"><pre><span></span><code><span class="nt">"i2c_oled"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -368,7 +384,7 @@
 <li><strong>font_size</strong> – size of the displayed text.</li>
 <li><strong>values</strong> – list of Redis keys or pseudo‑keys to show (for example <code>cpu_temp</code>).</li>
 </ul>
-<p>Available keys come from <code>src/module/i2c_oled.py</code>. Here are some examples:</p>
+<p>Available keys come from <code>src/module/i2c/i2c_oled.py</code>. Here are some examples:</p>
 <ul>
 <li><code>iso</code>, <code>fps</code> – basic camera settings.</li>
 <li><code>shutter_a</code> – shown as <strong>SHUTTER</strong> with a <code>°</code> suffix.</li>

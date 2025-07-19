@@ -32,7 +32,8 @@ from module.analog_controls import AnalogControls
 from module.mediator import Mediator
 from module.serial_handler import SerialHandler
 from module.cinepi_multi import CinePiManager as CinePi
-from module.i2c_oled import I2cOled
+from module.i2c.i2c_oled import I2cOled
+from module.i2c.quad_rotary_controller import QuadRotaryController
 from module.framebuffer import Framebuffer   # the same wrapper SimpleGUI uses
 
 # Constants
@@ -342,6 +343,12 @@ def main():
         i2c_oled = I2cOled(settings, redis_controller)
         i2c_oled.start()
 
+    quad_rotary = None
+    qcfg = settings.get("quad_rotary_controller", {})
+    if qcfg.get("enabled", False) and qcfg.get("encoders"):
+        quad_rotary = QuadRotaryController(cinepi_controller, settings)
+        quad_rotary.start()
+
     # Start Streaming if a network connection is available
     stream = None
     if network_available():
@@ -411,6 +418,8 @@ def main():
 
         if i2c_oled:
             i2c_oled.join()
+        if quad_rotary:
+            quad_rotary.join()
 
         if simple_gui:
             simple_gui.stop()              # <— new: quit the thread

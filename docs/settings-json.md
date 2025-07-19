@@ -213,18 +213,33 @@ Rotary encoders used for fine adjustment of settings. These can be wired straigh
 * **clk_pin** and **dt_pin** – the two pins of the encoder.
 * **encoder_actions** – commands to run when turning the dial.
 
-## quad_rotary_encoders
+## quad_rotary_controller
 
-Support for the Adafruit Neopixel Quad I2C rotary encoder breakout with four dials. Each entry assigns a dial to a setting and clones the behaviour of a button pin.
+Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry maps one of the four dials to a setting and defines the push button actions similar to the `buttons` section.
 
 ```json
-"quad_rotary_encoders": {
-  "0": {"setting_name": "iso", "gpio_pin": 5},
-  "1": {"setting_name": "shutter_a", "gpio_pin": 16},
-  "2": {"setting_name": "fps", "gpio_pin": 26},
-  "3": {"setting_name": "wb", "gpio_pin": 5}
+"quad_rotary_controller": {
+  "enabled": true,
+  "encoders": {
+    "0": {"setting_name": "iso", "button": {"press_action": {"method": "rec"}}},
+    "1": {"setting_name": "shutter_a", "button": {"press_action": {"method": "set_fps_double"}}},
+    "2": {
+      "setting_name": "fps",
+      "button": {
+        "press_action": "None",
+        "single_click_action": {"method": "set_resolution"},
+        "double_click_action": {"method": "restart_cinemate"},
+        "triple_click_action": {"method": "reboot"},
+        "hold_action": {"method": "toggle_mount"}
+      }
+    },
+    "3": {"setting_name": "wb", "button": {"press_action": {"method": "rec"}}}
+  }
 }
 ```
+
+* **enabled** – turn the quad rotary controller on or off.
+* **encoders** – mapping of each dial to a setting and button actions.
 
 ## i2c_oled
 
@@ -245,7 +260,7 @@ Configuration for the optional OLED status screen. This can be useful for presen
 * **font_size** – size of the displayed text.
 * **values** – list of Redis keys or pseudo‑keys to show (for example `cpu_temp`).
 
-Available keys come from `src/module/i2c_oled.py`. Here are some examples:
+Available keys come from `src/module/i2c/i2c_oled.py`. Here are some examples:
 
 * `iso`, `fps` – basic camera settings.
 * `shutter_a` – shown as **SHUTTER** with a `°` suffix.

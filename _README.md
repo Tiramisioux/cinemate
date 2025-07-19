@@ -322,22 +322,30 @@ Note that if rotary encoders with buttons are used, these are connected and defi
 #### Adafruit Neopixel Quad Rotary Encoder
 
 ```json
-  "quad_rotary_encoders": {
-    "0": {"setting_name": "iso", "gpio_pin": 5},
-    "1": {"setting_name": "shutter_a", "gpio_pin": 16},
-    "2": {"setting_name": "fps", "gpio_pin": 26},
-    "3": {"setting_name": "wb", "gpio_pin": 5}
+  "quad_rotary_controller": {
+    "enabled": true,
+    "encoders": {
+      "0": {"setting_name": "iso", "button": {"press_action": {"method": "rec"}}},
+      "1": {"setting_name": "shutter_a", "button": {"press_action": {"method": "set_fps_double"}}},
+      "2": {
+        "setting_name": "fps",
+        "button": {
+          "press_action": "None",
+          "single_click_action": {"method": "set_resolution"},
+          "double_click_action": {"method": "restart_cinemate"},
+          "triple_click_action": {"method": "reboot"},
+          "hold_action": {"method": "toggle_mount"}
+        }
+      },
+      "3": {"setting_name": "wb", "button": {"press_action": {"method": "rec"}}}
+  }
   }
 ```
 
-##### Defaults encoder push buttons settings
+* **enabled** – turn the quad rotary controller on or off.
+* **encoders** – mapping of each dial to a setting and button actions.
 
-- Encoder 0 (ISO): Encoder push button clones behaviour of rec button on GPIO 5
-- Encoder 1 (Shutter Angle): Encoder push button clones behaviour of fps double button in GPIO 16
-- Encoder 2 (FPS): Encoder push button clones behaviour of system push button on GPIO 26
-- Encoder 3 (White Balance): Encoder push button clones behaviour of rec button on GPIO 5
-
-These push buttons can be programmed to perform various functions like toggling locks, changing modes, or triggering specific actions, just like regular GPIO buttons. The `gpio_pin` setting clones the behaviour of pins defined in the Buttons section of the settings file.
+Each encoder dial is assigned to a setting and the push button behaviour is defined just like in the `buttons` section of the settings file.
 
 ## Compatible sensors 
 

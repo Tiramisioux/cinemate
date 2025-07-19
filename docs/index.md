@@ -10,7 +10,7 @@ For sharing your build with others, inspiration and discussion, make sure to joi
 
     [Download ](Cinemate-Docs.pdf) this documentation in pdf format for easy offline reference.
 
-## Acknowledgements
+### Acknowledgements
 
 The [**Cinemate**](https://github.com/Tiramisioux/cinemate) stack is built on top of several open-source projects. Special thanks to all authors!
 

@@ -408,13 +408,13 @@ zoom 0 write_speed_to_drive 0 recording_time 0
 
 (See the settings guide for the full list.)
 
-### Add a convenience alias
+### Add alias
 
 ```shell
 nano ~/.bashrc
 ```
 
-# add to the end of the file
+Add to the end of the file:
 
 ```shell
 alias cinemate='python3 /home/pi/cinemate/src/main.py'

@@ -1,14 +1,10 @@
-import logging
-import os
-import threading
-import time
+import logging, os, threading, time
+from pathlib import Path
 from typing import TypedDict
-import board
-import busio
-import adafruit_ssd1306
-from PIL import Image, ImageDraw, ImageFont
-from module.utils import Utils
 
+import board, busio, adafruit_ssd1306
+from PIL import Image, ImageDraw, ImageFont
+from module.utils import Utils           # keep your original helper
 
 class i2cOledSettings(TypedDict):
     width: int
@@ -16,38 +12,62 @@ class i2cOledSettings(TypedDict):
     enabled: bool
     font_size: int
     values: list[str]
-    
 
 class I2cOled(threading.Thread):
-    RECONNECT_INTERVAL = 5  # seconds between reconnection attempts
+    RECONNECT_INTERVAL = 5      # seconds
 
+    # ──────────────────────────────────────────────────────────────────────
+    # Constructor
+    # ──────────────────────────────────────────────────────────────────────
     def __init__(self, settings: i2cOledSettings, redis_controller):
         super().__init__(daemon=True)
-        self.settings: i2cOledSettings = settings.get("i2c_oled", {})
-        self.redis_controller = redis_controller
-        self.width = self.settings.get("width", 128)
-        self.height = self.settings.get("height", 64)
-        self.font_size = self.settings.get("font_size", 10)
-        self.values = self.settings.get(
+        logging.warning("I2cOled from %s LOADED", __file__)
+
+        s = settings.get("i2c_oled", {})
+        self.width    = s.get("width", 128)
+        self.height   = s.get("height", 64)
+        self.font_sz  = s.get("font_size", 10)
+        self.values   = s.get(
             "values", ["iso", "fps", "shutter_a", "resolution", "is_recording"]
         )
 
-        self.i2c = None
-        self.oled = None
-        self.connected = False
-        self._last_reconnect = 0
+        self.redis_controller = redis_controller
+        self.i2c, self.oled   = None, None
+        self.connected        = False
+        self._last_reconnect  = 0
 
+        self.font = self._load_font()
         self._initialize_display()
 
+    # ──────────────────────────────────────────────────────────────────────
+    # Font handling
+    # ──────────────────────────────────────────────────────────────────────
+    def _load_font(self):
+        """Return an ImageFont; always succeeds."""
+        candidates = [
+            Path(__file__).parent / "../../resources/fonts/Arial.ttf",
+            Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+        ]
+        for path in candidates:
+            try:
+                return ImageFont.truetype(str(path), self.font_sz)
+            except (OSError, IOError):
+                continue
+
+        logging.warning("No TTF font found – falling back to Pillow default")
+        try:
+            return ImageFont.load_default()
+        except Exception as e:                     # last-ditch defence
+            logging.error("PIL default font failed: %s", e)
+            raise                                    # now we *do* stop
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Hardware init
+    # ──────────────────────────────────────────────────────────────────────
     def _initialize_display(self):
-        """
-        Attempt to set up the I2C interface and OLED display.
-        If the device is not found, mark as disconnected and retry later.
-        """
         try:
             self.i2c = busio.I2C(board.SCL, board.SDA)
-            # wait briefly for bus
-            time.sleep(0.1)
+            time.sleep(0.1)   # let the bus settle
             self.oled = adafruit_ssd1306.SSD1306_I2C(
                 self.width, self.height, self.i2c
             )
@@ -55,61 +75,52 @@ class I2cOled(threading.Thread):
             logging.info("OLED initialized successfully.")
         except Exception as e:
             self.connected = False
-            logging.warning(
-                "Failed to initialize OLED: %s. Will retry in %ds.",
-                e,
-                self.RECONNECT_INTERVAL,
-            )
             self._last_reconnect = time.time()
+            logging.warning("Failed to init OLED: %s – retry in %ds",
+                            e, self.RECONNECT_INTERVAL)
 
+    # ──────────────────────────────────────────────────────────────────────
+    # Drawing helper
+    # ──────────────────────────────────────────────────────────────────────
     def display_text(self, text, x=0, y=0):
         if not self.connected:
             return
-
         try:
-            image = Image.new("1", (self.oled.width, self.oled.height))
-            draw = ImageDraw.Draw(image)
-            current_directory = os.path.dirname(os.path.abspath(__file__))
-            font_path = os.path.join(
-                current_directory, '../../resources/fonts/Arial.ttf'
-            )
-            font = ImageFont.truetype(font_path, self.font_size)
-            draw.text((x, y), text, font=font, fill=255)
-            self.oled.image(image)
-            self.oled.show()
-        except OSError as e:
-            # Handle I/O errors (e.g., disconnected during runtime)
-            self.connected = False
-            logging.error("OLED write error: %s. Marking as disconnected.", e)
+            img  = Image.new("1", (self.oled.width, self.oled.height))
+            draw = ImageDraw.Draw(img)
+            draw.text((x, y), text, font=self.font, fill=255)
 
+            self.oled.image(img)
+            self.oled.show()
+        except RuntimeError as e:      # adafruit_ssd1306 signals bus errors this way
+            self.connected = False
+            logging.error("OLED I/O error: %s – marking as disconnected", e)
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Public update API (unchanged logic)
+    # ──────────────────────────────────────────────────────────────────────
     def update(self):
-        # Attempt reconnection if disconnected and interval has passed
-        if not self.connected:
-            now = time.time()
-            if now - self._last_reconnect >= self.RECONNECT_INTERVAL:
-                self._initialize_display()
+        # reconnect if needed
+        if not self.connected and time.time() - self._last_reconnect >= self.RECONNECT_INTERVAL:
+            self._initialize_display()
             return
 
         texts = {
-            "shutter_a": {"label": "SHUTTER", "suffix": "°"},
-            "wb_user": {"label": "WB", "suffix": "K"},
-            "space_left": {"label": "SPACE", "suffix": "GB"},
+            "shutter_a":  {"label": "SHUTTER", "suffix": "°"},
+            "wb_user":    {"label": "WB",      "suffix": "K"},
+            "space_left": {"label": "SPACE",   "suffix": "GB"},
         }
-        lines = []
-        firstLine = []
+
+        first, lines = [], []
         for key in self.values:
             match key:
                 case "is_recording":
-                    firstLine.append(
-                        "●"
-                        if bool(int(self.redis_controller.get_value(key, 0)))
-                        else " "
-                    )
+                    first.append("●" if int(self.redis_controller.get_value(key, 0)) else " ")
                 case "resolution":
-                    firstLine.append(
-                        f"{self.redis_controller.get_value('width', '')}x"
-                        f"{self.redis_controller.get_value('height', '')}@"
-                        f"{self.redis_controller.get_value('bit_depth', '')}Bit"
+                    first.append(
+                        f"{self.redis_controller.get_value('width','')}x"
+                        f"{self.redis_controller.get_value('height','')}@"
+                        f"{self.redis_controller.get_value('bit_depth','')}Bit"
                     )
                 case "cpu_load":
                     lines.append(f"CPU: {Utils.cpu_load()}")
@@ -118,17 +129,18 @@ class I2cOled(threading.Thread):
                 case "memory_usage":
                     lines.append(f"RAM: {Utils.memory_usage()}")
                 case _:
-                    value = self.redis_controller.get_value(key, "N/A")
-                    label = texts.get(key, {}).get("label", key.upper())
-                    suffix = texts.get(key, {}).get("suffix", "")
-                    lines.append(f"{label}: {value}{suffix}")
+                    v  = self.redis_controller.get_value(key, "N/A")
+                    lbl = texts.get(key, {}).get("label", key.upper())
+                    suf = texts.get(key, {}).get("suffix", "")
+                    lines.append(f"{lbl}: {v}{suf}")
 
-        if firstLine:
-            lines.insert(0, " ".join(firstLine))
-        text = "\n".join(lines)
-        # logging.info("Updating OLED: \n%s", text)
-        self.display_text(text, 0, 0)
+        if first:
+            lines.insert(0, " ".join(first))
+        self.display_text("\n".join(lines))
 
+    # ──────────────────────────────────────────────────────────────────────
+    # Thread loop
+    # ──────────────────────────────────────────────────────────────────────
     def run(self):
         while True:
             self.update()

@@ -35,3 +35,12 @@ Full manual installation instructions, configuration guides and CLI reference li
 
 Join the [CinePi Discord](https://discord.gg/Hr4dfhuK) for discussions and sharing builds.
 
+## Acknowledgements
+
+The [**Cinemate**](https://github.com/Tiramisioux/cinemate) stack is built on top of several open-source projects. Spåecial thanks to all authors!
+
+- [**CinePi-raw**](https://github.com/cinepi/cinepi-raw) – Csaba Nagy
+- [**IMX585 and IMX283 drivers**](https://github.com/will127534) – Will Whang
+- [**libcamera**](https://libcamera.org) – Ideas on board
+- [**cpp-mjpeg-streamer**](https://github.com/nadjieb/cpp-mjpeg-streamer) – Nadjieb Mohammadi
+- [**lgpio**](https://github.com/joan2937/lg) – Joan

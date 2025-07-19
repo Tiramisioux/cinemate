@@ -9,3 +9,15 @@ For sharing your build with others, inspiration and discussion, make sure to joi
 !!! info ""
 
     [Download ](Cinemate-Docs.pdf) this documentation in pdf format for easy offline reference.
+
+# Acknowledgements
+
+The [**Cinemate**](https://github.com/Tiramisioux/cinemate) stack is built on top of several open-source projects. Thank you to all of the authors of the Cinemate components!
+
+## Components and authors
+
+- **CinePi-raw** – [Csaba Nagy](https://github.com/cinepi/cinepi-raw).
+- **IMX585 and IMX283 drivers** – [Will Whang](https://github.com/will127534)
+- **libcamera** – [Ideas on board](https://libcamera.org)
+- **cpp-mjpeg-streamer** – [Nadjieb Mohammadi](https://github.com/nadjieb/cpp-mjpeg-streamer)
+- **lgpio** – [Joan](https://github.com/joan2937/lg)

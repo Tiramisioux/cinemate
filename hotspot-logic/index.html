@@ -148,7 +148,10 @@
 <div class="section" itemprop="articleBody">
 <div class="markdown-body">
 <h1 id="configuring-the-wi-fi-hotspot">Configuring the Wi-Fi hotspot<a class="headerlink" href="#configuring-the-wi-fi-hotspot" title="Permanent link">#</a></h1>
-<p>If <code>wifi_hotspot</code> in <code>settings.json</code> is <code>true</code> and no hotspot is active, Cinemate starts its own hotspot <code>nmcli device wifi hotspot</code> using your chosen SSID and password. If the Pi is already connected to wifi (for example WiFi settings set with <code>sudo raspi-config</code>) this connection will be replaced by Cinemates hotspot. Set <code>enabled: false</code> to keep wlan0 free for regular Wi‑Fi use. </p>
+<p>The built‑in hotspot ensures you can always reach Cinemate even when there is no other network available. When <code>wifi_hotspot</code> in <code>settings.json</code> is set to <code>true</code> and no hotspot is active, Cinemate runs <code>nmcli device wifi hotspot</code> using your chosen SSID and password.</p>
+<p>This is handy when shooting in the field. Connect your phone or laptop directly to the hotspot and browse to the GUI to control the camera. If the Pi was previously connected to a Wi‑Fi network, that connection is replaced by the hotspot.</p>
+<p>During development you may want the Pi to join your normal Wi‑Fi so it has internet access. Set <code>system.wifi_hotspot.enabled</code> to <code>false</code> and configure Wi‑Fi through <code>raspi-config</code> or the desktop tools. The web interface will appear on the Pi's regular network address, letting you stay connected to both the Pi and the internet.</p>
+<p>If you plug an Ethernet cable into the Pi, you can keep the hotspot running while also having a wired connection for internet and local networking.</p>
 <blockquote>
 <p>Note that Cinemate still streams its web gui on whatever network the Pi is connected to, with GUI at <ip-address>:5000 and clean preview without GUI on <ip-address>:8000/stream</ip-address></ip-address></p>
 </blockquote>

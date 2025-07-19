@@ -45,6 +45,6 @@ The [**Cinemate**](https://github.com/Tiramisioux/cinemate) stack is built on to
 - [**cpp-mjpeg-streamer**](https://github.com/nadjieb/cpp-mjpeg-streamer) – Nadjieb Mohammadi
 - [**lgpio**](https://github.com/joan2937/lg) – Joan
 
-Also thanks to Simon at [Altcinecam](https://altcinecam.com) for support and assistance
+Also thanks to Simon at [Altcinecam](https://altcinecam.com) for support and assistance!
 
 Get your sensors and CFE Hats here: https://www.tindie.com/stores/will123321/

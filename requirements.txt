@@ -13,7 +13,6 @@ numpy
 sugarpie
 flask_socketio
 termcolor
-board
 adafruit-blinka
 adafruit-circuitpython-seesaw
 adafruit-circuitpython-ssd1306

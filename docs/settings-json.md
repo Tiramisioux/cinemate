@@ -35,7 +35,7 @@ If `welcome image` path is set, this will override the text message.
 - **password** – password for joining the hotspot.
 - **enabled** – set to `true` to start the hotspot automatically on boot. If set to `false`, CineMate will still start its web ui but stream it on whatever network the Pi is connected to.
 
-Use the hotspot when you need a direct connection in the field. Disable it during development so the Pi can join your regular Wi‑Fi and reach the internet. If Ethernet is available you can keep the hotspot on while still being connected to your network over the cable.
+Use the hotspot when you need a direct connection in the field. Disable it during development so the Pi can join your regular Wi‑Fi and reach the internet. If you are connected to the Pi via Ethernet you can keep the hotspot on.
 
 ## geometry
 

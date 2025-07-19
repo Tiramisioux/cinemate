@@ -305,9 +305,10 @@ python3 -m pip install --upgrade pip setuptools wheel
 sudo apt-get install -y i2c-tools portaudio19-dev build-essential python3-dev python3-pip python3-smbus python3-serial git
 pip3 install adafruit-circuitpython-ssd1306 watchdog psutil Pillow redis keyboard pyudev sounddevice smbus2 gpiozero RPI.GPIO evdev termcolor pyserial inotify_simple numpy rpi_hardware_pwm
 pip3 uninstall -y Pillow && pip3 install Pillow
-pip3 install sugarpie flask_socketio board adafruit-blinka adafruit-circuitpython-seesaw luma.oled grove.py pigpio-encoder gpiod
+pip3 install sugarpie flask_socketio adafruit-blinka adafruit-circuitpython-seesaw luma.oled grove.py pigpio-encoder gpiod
 sudo apt install python3-systemd e2fsprogs ntfs-3g exfatprogs console-terminus
 ```
+> If you previously installed the `board` Python package, remove it with `pip3 uninstall board`.
 
 ### Replace RPi.GPIO with lgpio
 

@@ -4,9 +4,9 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://tiramisioux.github.io/cinemate/compiling-cinepi-raw/" rel="canonical"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://tiramisioux.github.io/cinemate/acknowledgments/" rel="canonical"/>
 <link href="../img/favicon.ico" rel="shortcut icon"/>
-<title>Recompiling cinepi-raw - Cinemate Docs</title>
+<title>Acknowledgements - Cinemate Docs</title>
 <link href="../css/theme.css" rel="stylesheet"/>
 <link href="../css/theme_extra.css" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" rel="stylesheet"/>
@@ -14,9 +14,9 @@
 <link href="../templates/styles.scss" rel="stylesheet"/>
 <script>
         // Current page data
-        var mkdocs_page_name = "Recompiling cinepi-raw";
-        var mkdocs_page_input_path = "compiling-cinepi-raw.md";
-        var mkdocs_page_url = "/cinemate/compiling-cinepi-raw/";
+        var mkdocs_page_name = "Acknowledgements";
+        var mkdocs_page_input_path = "acknowledgments.md";
+        var mkdocs_page_url = "/cinemate/acknowledgments/";
       </script>
 <!--[if lt IE 9]>
       <script src="../js/html5shiv.min.js"></script>
@@ -79,14 +79,12 @@
 </li>
 </ul>
 <p class="caption"><span class="caption-text">System management</span></p>
-<ul class="current">
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
 </li>
-<li class="toctree-l1 current"><a class="reference internal current" href="#">Recompiling cinepi-raw</a>
-<ul class="current">
-</ul>
+<li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
 </li>
@@ -114,7 +112,7 @@
 </li>
 </ul>
 <p class="caption"><span class="caption-text">Development &amp; contributing</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation (from scratch)</a>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../todo/">Todo</a>
@@ -123,7 +121,9 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing/">Contributing to the project</a>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
+<li class="toctree-l1 current"><a class="reference internal current" href="#">Acknowledgements</a>
+<ul class="current">
+</ul>
 </li>
 </ul>
 <ul>
@@ -142,10 +142,10 @@
 <div class="rst-content"><div aria-label="breadcrumbs navigation" role="navigation">
 <ul class="wy-breadcrumbs">
 <li><a aria-label="Docs" class="icon icon-home" href=".."></a></li>
-<li class="breadcrumb-item">System management</li>
-<li class="breadcrumb-item active">Recompiling cinepi-raw</li>
+<li class="breadcrumb-item">Development &amp; contributing</li>
+<li class="breadcrumb-item active">Acknowledgements</li>
 <li class="wy-breadcrumbs-aside">
-<a class="icon icon-github" href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/compiling-cinepi-raw.md"> Edit on GitHub</a>
+<a class="icon icon-github" href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/acknowledgments.md"> Edit on GitHub</a>
 </li>
 </ul>
 <hr/>
@@ -153,27 +153,23 @@
 <div class="document" itemscope="itemscope" itemtype="http://schema.org/Article" role="main">
 <div class="section" itemprop="articleBody">
 <div class="markdown-body">
-<h1 id="recompiling-cinepi-raw">Recompiling cinepi-raw<a class="headerlink" href="#recompiling-cinepi-raw" title="Permanent link">#</a></h1>
-<p>Compiling cinepi-raw</p>
-<p>For easy later rebuilding and installation of cinepi-raw you can create the file compile-raw.sh.</p>
-<div class="highlight"><pre><span></span><code>nano<span class="w"> </span>compile-raw.sh
-</code></pre></div>
-<p>Paste this into the file</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>meson<span class="w"> </span>install<span class="w"> </span>-C<span class="w"> </span>build
-</code></pre></div>
-<p>Exit by pressing Ctrl+C</p>
-<p>Make it exectutable:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>compile-raw.sh
-</code></pre></div>
-<p>Now, from the same folder, to build and install cinepi-raw:</p>
-<div class="highlight"><pre><span></span><code>./compile-raw.sh
-</code></pre></div>
+<h1 id="acknowledgements">Acknowledgements<a class="headerlink" href="#acknowledgements" title="Permanent link">#</a></h1>
+<p>The <a href="https://github.com/Tiramisioux/cinemate"><strong>Cinemate</strong></a> stack is built on top of several open-source projects. Special thanks to all authors!</p>
+<ul>
+<li><a href="https://github.com/cinepi/cinepi-raw"><strong>CinePi-raw</strong></a> – Csaba Nagy</li>
+<li><a href="https://github.com/will127534"><strong>IMX585 and IMX283 drivers</strong></a> – Will Whang</li>
+<li><a href="https://libcamera.org"><strong>libcamera</strong></a> – Ideas on board</li>
+<li><a href="https://github.com/nadjieb/cpp-mjpeg-streamer"><strong>cpp-mjpeg-streamer</strong></a> – Nadjieb Mohammadi</li>
+<li><a href="https://github.com/joan2937/lg"><strong>lgpio</strong></a> – Joan</li>
+</ul>
+<p>Also thanks to Simon at <a href="https://altcinecam.com">Altcinecam</a> for support and assistance!</p>
+<p>Get your sensors and CFE Hats here: https://www.tindie.com/stores/will123321/</p>
 </div>
 </div>
 </div><footer>
 <div aria-label="Footer Navigation" class="rst-footer-buttons" role="navigation">
-<a class="btn btn-neutral float-left" href="../config-txt/" title="Modifying config.txt"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-<a class="btn btn-neutral float-right" href="../overclocking/" title="Overclocking the Pi">Next <span class="icon icon-circle-arrow-right"></span></a>
+<a class="btn btn-neutral float-left" href="../contributing/" title="Contributing to the project"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+<a class="btn btn-neutral float-right" href="../renders/Cinemate-Docs.pdf" title="Download PDF">Next <span class="icon icon-circle-arrow-right"></span></a>
 </div>
 <hr/>
 <div role="contentinfo">
@@ -191,8 +187,8 @@
 <span>
 <a class="fa fa-github" href="https://github.com/tiramisioux/cinemate" style="color: #fcfcfc"> GitHub</a>
 </span>
-<span><a href="../config-txt/" style="color: #fcfcfc">« Previous</a></span>
-<span><a href="../overclocking/" style="color: #fcfcfc">Next »</a></span>
+<span><a href="../contributing/" style="color: #fcfcfc">« Previous</a></span>
+<span><a href="../renders/Cinemate-Docs.pdf" style="color: #fcfcfc">Next »</a></span>
 </span>
 </div>
 <script src="../js/jquery-3.6.0.min.js"></script>

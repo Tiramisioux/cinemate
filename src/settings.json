@@ -166,7 +166,7 @@
   ],
 
   "quad_rotary_controller": {
-    "enabled": true,
+    "enabled": false,
     "encoders": {
       "0": {
         "setting_name": "iso",
@@ -194,7 +194,7 @@
   },
 
   "i2c_oled": {
-    "enabled": true,
+    "enabled": false,
     "width": 128,
     "height": 64,
     "font_size": 30,

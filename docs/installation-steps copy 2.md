@@ -278,25 +278,13 @@ For more details on running CinePi-raw from the command line, see [this section]
 
 ## Cinemate
 
-### System wide packages
-
-```shell
-sudo apt update
-sudo apt install -y \
-    git build-essential python3-dev python3-pip python3-venv \
-    i2c-tools python3-smbus \
-    libgpiod-dev libgpiod2 python3-libgpiod gpiod \
-    portaudio19-dev python3-systemd \
-    e2fsprogs ntfs-3g exfatprogs \
-    console-terminus
-```
-
 ### Create a Python virtual environment
 
 ```bash
-python3 -m venv ~/.cinemate-env
-source /home/pi/.cinemate-env/bin/activate
+sudo apt update && sudo apt install -y python3-venv
+python3 -m venv /home/pi/.cinemate-env
 echo "source /home/pi/.cinemate-env/bin/activate" >> ~/.bashrc
+source /home/pi/.cinemate-env/bin/activate
 ```
 
 ### Grant sudo privileges and enable I²C
@@ -315,19 +303,19 @@ Reboot so the group changes take effect:
 reboot
 ```
 
-### Python packages
-
-> If you previously installed the `board` Python package, remove it with `pip3 uninstall board`.
+### Dependencies
 
 ```bash
-pip install \
-    adafruit-blinka adafruit-circuitpython-ssd1306 adafruit-circuitpython-seesaw \
-    luma.oled grove.py pigpio-encoder smbus2 rpi_hardware_pwm \
-    watchdog psutil pillow redis keyboard pyudev numpy termcolor sounddevice \
-    evdev inotify_simple sysv_ipc flask_socketio sugarpie
+python3 -m pip install --upgrade pip setuptools wheel
+sudo apt-get install -y i2c-tools portaudio19-dev build-essential python3-dev python3-pip python3-smbus python3-serial git
+pip3 install adafruit-circuitpython-ssd1306 watchdog psutil Pillow redis keyboard pyudev sounddevice smbus2 gpiozero RPI.GPIO evdev termcolor pyserial inotify_simple numpy rpi_hardware_pwm
+pip3 uninstall -y Pillow && pip3 install Pillow
+pip3 install sugarpie flask_socketio adafruit-blinka adafruit-circuitpython-seesaw luma.oled grove.py pigpio-encoder gpiod
+sudo apt install python3-systemd e2fsprogs ntfs-3g exfatprogs console-terminus
 ```
+> If you previously installed the `board` Python package, remove it with `pip3 uninstall board`.
 
-### Alternative GPIO back-end
+### Replace RPi.GPIO with lgpio
 
 ```bash
 sudo apt install -y swig python3-dev build-essential git

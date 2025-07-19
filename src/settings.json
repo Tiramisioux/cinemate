@@ -5,7 +5,7 @@
     "wifi_hotspot": {
       "name": "CinePi",
       "password": "11111111",
-      "enabled": true
+      "enabled": false
     }
   },
 

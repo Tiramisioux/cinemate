@@ -4,13 +4,6 @@ import threading
 import logging
 import shlex  # Add this import
 
-import board
-import busio
-import digitalio
-import adafruit_seesaw.seesaw
-import adafruit_seesaw.rotaryio
-import adafruit_seesaw.digitalio
-import adafruit_seesaw.neopixel
 import warnings
 import logging
 import time
@@ -24,7 +17,6 @@ class ComponentInitializer:
         self.smart_buttons_list = []
         
         self.initialize_components()
-        self.initialize_quad_rotary_encoder()  # Initialize Quad Rotary Encoder
         
     def initialize_components(self):
         combined_actions = self.settings.get('combined_actions', [])
@@ -101,16 +93,6 @@ class ComponentInitializer:
                 actions=encoder_config['encoder_actions']
             )
         
-    def initialize_quad_rotary_encoder(self):
-        pass
-        quad_rotary_settings = self.settings.get('quad_rotary_encoders', {})
-        
-        self.quad_rotary_encoder = QuadRotaryEncoder(
-            self.cinepi_controller,
-            quad_rotary_settings,
-            self,
-            self.smart_buttons_list  # Pass the list of smart buttons
-        )
 
     def get_smart_button_by_pin(self, pin):
         for button in self.smart_buttons_list:
@@ -582,144 +564,3 @@ class RotaryEncoder:
 
 # Suppress specific warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning, module="adafruit_blinka.microcontroller.generic_linux.i2c")
-
-class QuadRotaryEncoder:
-    def __init__(self, cinepi_controller, settings_mapping, component_initializer, smart_buttons):
-        self.i2c = busio.I2C(board.SCL, board.SDA, frequency=50000)
-        self.cinepi_controller = cinepi_controller
-        self.settings_mapping = settings_mapping
-        self.component_initializer = component_initializer
-        self.smart_buttons = smart_buttons  # Store the list of SmartButton instances
-
-        self.encoders = []
-        self.switches = []
-        self.pixels = None
-        self.colors = [0, 0, 0, 0]
-        self.last_positions = [0, 0, 0, 0]  # Initialized to zero for relative changes
-        self.settings = {settings_mapping[key]['setting_name']: 100 for key in settings_mapping}
-        self.debounced_time = 0.1  # Example debounce time in seconds
-        self.button_states = [False] * len(settings_mapping)
-
-        try:
-            self.seesaw = adafruit_seesaw.seesaw.Seesaw(self.i2c, 0x49)
-            self.encoders = [adafruit_seesaw.rotaryio.IncrementalEncoder(self.seesaw, n) for n in range(4)]
-            self.switches = [adafruit_seesaw.digitalio.DigitalIO(self.seesaw, pin) for pin in (12, 14, 17, 9)]
-            for switch in self.switches:
-                switch.switch_to_input(digitalio.Pull.UP)
-
-            self.pixels = adafruit_seesaw.neopixel.NeoPixel(self.seesaw, 18, 4)
-            self.pixels.brightness = 0.5
-            logging.info("Quad Rotary Encoder found and initialized")
-            self.start()
-        except ValueError:
-            logging.warning("No I2C device found at address: 0x49. Quad Rotary Encoder not initialized.")
-
-    def start(self):
-        if self.encoders:
-            thread = threading.Thread(target=self.run, daemon=True)
-            thread.start()
-
-    def update(self):
-        if not self.encoders:
-            return
-
-        positions = [encoder.position for encoder in self.encoders]
-
-        for n, rotary_pos in enumerate(positions):
-            if str(n) not in self.settings_mapping:
-                logging.warning(f"No setting mapped for encoder index {n}")
-                continue
-
-            if rotary_pos != self.last_positions[n]:
-                change = rotary_pos - self.last_positions[n]
-                self.last_positions[n] = rotary_pos
-
-                setting_name = self.settings_mapping[str(n)].get('setting_name')
-                if setting_name is not None:
-                    if change > 0:
-                        self.settings[setting_name] += change
-                    else:
-                        self.settings[setting_name] += change
-                    self.settings[setting_name] = max(0, self.settings[setting_name])
-                    self.update_setting(n, change)
-                    logging.info(f"Quad Rotary #{n}: {rotary_pos}")
-                else:
-                    logging.info(f"No setting mapped for encoder index {n}")
-
-                if not self.switches[n].value:
-                    self.pixels[n] = 0xFFFFFF
-                else:
-                    self.pixels[n] = self.colorwheel(self.colors[n])
-
-            # Handle button press and hold
-            if not self.switches[n].value:  # Button pressed
-                if not self.button_states[n]:  # First detection of press
-                    self.button_states[n] = True
-                    self.handle_button_press(n)
-            else:
-                if self.button_states[n]:  # Button released
-                    self.button_states[n] = False
-                    self.handle_button_release(n)
-
-    def handle_button_press(self, encoder_index):
-        button_pin = self.settings_mapping[str(encoder_index)].get('gpio_pin')
-        if button_pin is not None:
-            smart_button = self.component_initializer.get_smart_button_by_pin(button_pin)
-            if smart_button is not None:
-                smart_button.on_press()
-            else:
-                logging.error(f"No SmartButton found for pin {button_pin}")
-        else:
-            logging.error(f"No button pin mapped for encoder index {encoder_index}")
-
-    def handle_button_release(self, encoder_index):
-        button_pin = self.settings_mapping[str(encoder_index)].get('gpio_pin')
-        if button_pin is not None:
-            smart_button = self.component_initializer.get_smart_button_by_pin(button_pin)
-            if smart_button is not None:
-                smart_button.on_release()
-            else:
-                logging.error(f"No SmartButton found for pin {button_pin}")
-        else:
-            logging.error(f"No button pin mapped for encoder index {encoder_index}")
-
-    def update_setting(self, encoder_index, change):
-        setting_name = self.settings_mapping[str(encoder_index)].get('setting_name')
-        if setting_name is not None:
-            try:
-                inc_func_name = f"inc_{setting_name}"
-                dec_func_name = f"dec_{setting_name}"
-
-                if hasattr(self.cinepi_controller, inc_func_name) and hasattr(self.cinepi_controller, dec_func_name):
-                    if change > 0:
-                        getattr(self.cinepi_controller, inc_func_name)()
-                        self.colors[encoder_index] = (self.colors[encoder_index] + 8) % 256
-                    elif change < 0:
-                        getattr(self.cinepi_controller, dec_func_name)()
-                        self.colors[encoder_index] = (self.colors[encoder_index] - 8) % 256
-                else:
-                    raise AttributeError(f"{self.cinepi_controller.__class__.__name__} module does not have functions for {setting_name}.")
-            except KeyError:
-                raise ValueError(f"Invalid setting_name: {setting_name}.")
-        else:
-            logging.info(f"Encoder index {encoder_index} is out of range of settings_mapping.")
-
-    def run(self):
-        while True:
-            self.update()
-            time.sleep(0.1)
-
-    @staticmethod
-    def colorwheel(pos):
-        if pos < 85:
-            return (255 - pos * 3, pos * 3, 0)
-        elif pos < 170:
-            pos -= 85
-            return (0, 255 - pos * 3, pos * 3)
-        else:
-            pos -= 170
-            return (pos * 3, 0, 255 - pos * 3)
-        
-    def clone_smart_button_behavior(self, existing_button):
-        logging.info(f"Cloning behavior of SmartButton {existing_button} for Quad Rotary Encoder.")
-        existing_button.on_press()  # Or trigger the required behavior

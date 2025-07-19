@@ -165,11 +165,32 @@
     }
   ],
 
-  "quad_rotary_encoders": {
-    "0": {"setting_name": "iso", "gpio_pin": 5},
-    "1": {"setting_name": "shutter_a", "gpio_pin": 16},
-    "2": {"setting_name": "fps", "gpio_pin": 26},
-    "3": {"setting_name": "wb", "gpio_pin": 5}
+  "quad_rotary_controller": {
+    "enabled": true,
+    "encoders": {
+      "0": {
+        "setting_name": "iso",
+        "button": {"press_action": {"method": "rec"}}
+      },
+      "1": {
+        "setting_name": "shutter_a",
+        "button": {"press_action": {"method": "set_fps_double"}}
+      },
+      "2": {
+        "setting_name": "fps",
+        "button": {
+          "press_action": "None",
+          "single_click_action": {"method": "set_resolution"},
+          "double_click_action": {"method": "restart_cinemate"},
+          "triple_click_action": {"method": "reboot"},
+          "hold_action": {"method": "toggle_mount"}
+        }
+      },
+      "3": {
+        "setting_name": "wb",
+        "button": {"press_action": {"method": "rec"}}
+      }
+    }
   },
 
   "i2c_oled": {

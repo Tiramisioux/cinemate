@@ -194,12 +194,14 @@
   },
 
   "i2c_oled": {
-    "enabled": false,
+    "enabled": true,
     "width": 128,
     "height": 64,
-    "font_size": 30,
+    "font_size": 20,
     "values": [
-      "write_speed_to_drive"
+      "iso",
+      "tc_cam0",
+      "RECORDING_TC"
 
     ]
   },

@@ -67,7 +67,9 @@ class ParameterKey(Enum):
     
     ZOOM                = "zoom"  # digital zoom factor for streams 0 & 2
     WRITE_SPEED_TO_DRIVE = "write_speed_to_drive"
-    RECORDING_TIME       = "recording_time"
+    RECORDING_TIME         = "recording_tc"      # elapsed-time in seconds   
+    RECORDING_TC_REC     = "recording_tc_rec"    # elapsed-time time-code
+    RECORDING_TC_TOD   = "recording_time_tod"    # time-of-day time-code
 
 
 # ────────────────────────── tiny pub‑sub helper ──────────────────────
@@ -135,65 +137,140 @@ class RedisController:
         with self.lock:
             return self.cache.get(key, default)
 
+        # ────────────────────────── public helpers ───────────────────────
     def set_value(self, key, value):
-        """Write key, publish, update cache, emit single consolidated log."""
-        # normalise key to plain string for comparisons / logging
+        """Write key, publish, update cache, emit consolidated log output."""
+        # normalise key to plain string
         key_name = key.value if isinstance(key, ParameterKey) else str(key)
 
+        # ─── Redis write / publish / cache ───────────────────────────
         with self.lock:
             if str(self.cache.get(key_name)) == str(value):
-                return  # unchanged
+                return                             # unchanged – nothing to do
             self.r.set(key_name, value)
             self.r.publish("cp_controls", key_name)
             self.cache[key_name] = str(value)
             self.local_updates.add(key_name)
 
-        # ─── enhanced logging ───────────────────────────────────────
-        if key_name.startswith("last_dng_cam"):
+        # ─── enhanced logging rules ─────────────────────────────────
+        if key_name == ParameterKey.FRAMECOUNT.value:
+            # Consolidated once-per-frame entry
+            rec_secs = self.cache.get(ParameterKey.RECORDING_TIME.value, "0")
+            rec_tc   = self.cache.get(ParameterKey.RECORDING_TC_REC.value, "00:00:00:00")
+            tod_tc   = self.cache.get(ParameterKey.RECORDING_TC_TOD.value, "00:00:00:00")
+            cam0_tc  = self.cache.get(ParameterKey.TC_CAM0.value,          "—")
+            cam1_tc  = self.cache.get(ParameterKey.TC_CAM1.value,          "—")
+
+            # format seconds nicely (fallback to raw string if not numeric)
+            try:
+                rec_secs_fmt = f"{float(rec_secs):.3f}"
+            except ValueError:
+                rec_secs_fmt = rec_secs
+
+            logging.info(
+                f"Frame {value} ┃rec={rec_secs_fmt}s "
+                f"┃tc_rec={rec_tc} ┃tc_tod={tod_tc} "
+                f"┃cam0={cam0_tc} ┃cam1={cam1_tc}"
+            )
+
+        elif key_name.startswith("last_dng_cam"):
             ram = psutil.virtual_memory().percent
             logging.info(
                 f"Changed value: {key_name} = {value} ┃RAM: {ram:.0f}%"
             )
-        elif key_name not in (ParameterKey.FPS_ACTUAL.value, ParameterKey.BUFFER.value):
-            # skip standalone BUFFER, & FPS_ACTUAL noise
+
+        elif key_name in (
+            ParameterKey.RECORDING_TIME.value,
+            ParameterKey.RECORDING_TC_REC.value,
+            ParameterKey.RECORDING_TC_TOD.value,
+            ParameterKey.TC_CAM0.value,
+            ParameterKey.TC_CAM1.value,
+            ParameterKey.FPS_ACTUAL.value,
+            ParameterKey.BUFFER.value,
+        ):
+            # Suppress high-frequency keys
+            pass
+
+        else:
             logging.info(f"Changed value: {key_name} = {value}")
 
-        # immediate local notification
+        # ─── immediate local notification to subscribers ─────────────
         self.redis_parameter_changed.emit({"key": key_name, "value": str(value)})
 
-    # ─────────────────────── recording timer helpers ─────────────────────
-    def _format_timecode(self, elapsed: float) -> str:
-        rate = self.conform_frame_rate
-        total_frames = int(elapsed * rate)
-        frames = total_frames % rate
-        total_seconds = total_frames // rate
-        seconds = total_seconds % 60
-        minutes = (total_seconds // 60) % 60
-        hours = total_seconds // 3600
-        return f"{hours:02d}:{minutes:02d}:{seconds:02d}:{frames:02d}"
 
-    def _run_recording_timer(self):
+
+        # ─────────────────────── time-code helpers ────────────────────────
+    def _format_timecode(self, seconds_total: float) -> str:
+        """Return hh:mm:ss:ff for any positive offset in *seconds_total*."""
+        rate          = self.conform_frame_rate
+        total_frames  = int(seconds_total * rate)
+        frames        = total_frames % rate
+        whole_seconds = total_frames // rate      # drop fractional frames
+        secs          =  whole_seconds         % 60
+        mins          = (whole_seconds // 60)  % 60
+        hours         =  whole_seconds // 3600
+        return f"{hours:02d}:{mins:02d}:{secs:02d}:{frames:02d}"
+
+    def _current_tod_timecode(self) -> str:
+        """Time-of-day time-code (localtime) at *conform_frame_rate*."""
+        now                  = time.time()
+        lt                   = time.localtime(now)
+        since_midnight_float = (
+            lt.tm_hour * 3600
+            + lt.tm_min  * 60
+            + lt.tm_sec
+            + (now - int(now))                 # fractional part for frames
+        )
+        return self._format_timecode(since_midnight_float)
+
+    # ─────────────────────── recording timer loop ─────────────────────
+    def _run_recording_timer(self) -> None:
         while not self._rec_timer_stop.is_set():
             if self.recording_start_time is None:
                 break
+
+            # elapsed time, in seconds (float)
             elapsed = time.time() - self.recording_start_time
-            tc = self._format_timecode(elapsed)
-            self.set_value(ParameterKey.RECORDING_TIME, tc)
+            self.set_value(ParameterKey.RECORDING_TIME, elapsed)
+
+            # elapsed time-code
+            self.set_value(
+                ParameterKey.RECORDING_TC_REC,
+                self._format_timecode(elapsed)
+            )
+
+            # time-of-day time-code
+            self.set_value(
+                ParameterKey.RECORDING_TC_TOD,
+                self._current_tod_timecode()
+            )
+
+            # wait just long enough to hit every frame edge
             self._rec_timer_stop.wait(1 / self.conform_frame_rate)
 
-    def _start_recording_timer(self):
-        self._stop_recording_timer()
+    # ─────────────────────── recording timer control ──────────────────
+    def _start_recording_timer(self) -> None:
+        self._stop_recording_timer()                 # safety first
         self.recording_start_time = time.time()
-        self.set_value(ParameterKey.RECORDING_TIME, "00:00:00:00")
+
+        # prime the three keys with deterministic values
+        self.set_value(ParameterKey.RECORDING_TIME,      0.0)
+        self.set_value(ParameterKey.RECORDING_TC_REC,    "00:00:00:00")
+        self.set_value(ParameterKey.RECORDING_TC_TOD,    self._current_tod_timecode())
+
         self._rec_timer_stop.clear()
-        self._rec_timer_thread = threading.Thread(target=self._run_recording_timer, daemon=True)
+        self._rec_timer_thread = threading.Thread(
+            target=self._run_recording_timer,
+            daemon=True
+        )
         self._rec_timer_thread.start()
 
-    def _stop_recording_timer(self):
+    def _stop_recording_timer(self) -> None:
         self._rec_timer_stop.set()
         if self._rec_timer_thread and self._rec_timer_thread.is_alive():
             self._rec_timer_thread.join(timeout=0.5)
         self._rec_timer_thread = None
+
 
     # optional helper -------------------------------------------------
     def stop_listener(self):

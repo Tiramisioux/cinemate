@@ -4,6 +4,7 @@ import threading
 import datetime
 import json
 from collections import deque
+from module.redis_controller import ParameterKey
 
 class RedisListener:
     def __init__(self, redis_controller, ssd_monitor, framerate_callback=None, host='localhost', port=6379, db=0):
@@ -153,10 +154,27 @@ class RedisListener:
                         self.frame_count = stats_data.get('frameCount', None)
                         color_temp = stats_data.get('colorTemp', None)
                         sensor_timestamp = stats_data.get('sensorTimestamp', None)
+                        timestamp = stats_data.get('timestamp')
+                        timestamp_cam0 = stats_data.get('timestamp_cam0')
+                        timestamp_cam1 = stats_data.get('timestamp_cam1')
                         self.current_framerate = stats_data.get('framerate', None)
-                        
+
                         if color_temp:
                             self.colorTemp = color_temp
+
+                        fps_user = float(
+                            self.redis_controller.get_value(ParameterKey.FPS_USER.value) or 24
+                        )
+
+                        if timestamp is not None:
+                            tc = self.redis_controller.nanoseconds_to_timecode(int(timestamp), fps_user)
+                            self.redis_controller.set_value(ParameterKey.TC_CAM0.value, tc)
+                        if timestamp_cam0 is not None:
+                            tc0 = self.redis_controller.nanoseconds_to_timecode(int(timestamp_cam0), fps_user)
+                            self.redis_controller.set_value(ParameterKey.TC_CAM0.value, tc0)
+                        if timestamp_cam1 is not None:
+                            tc1 = self.redis_controller.nanoseconds_to_timecode(int(timestamp_cam1), fps_user)
+                            self.redis_controller.set_value(ParameterKey.TC_CAM1.value, tc1)
 
                         # Update Redis key for current buffer size if changed
                         if buffer_size is not None:

@@ -12,6 +12,7 @@ What’s new in this revision
 from __future__ import annotations
 import logging, threading, redis, psutil, time
 from enum import Enum
+import time, math
 
 # ───────────────────────── parameter keys ────────────────────────────
 class ParameterKey(Enum):
@@ -200,24 +201,48 @@ class RedisController:
 
 
         # ─────────────────────── time-code helpers ────────────────────────
-    def _format_timecode(self, seconds_total: float, frame_rate: float | None = None) -> str:
-        """Return ``hh:mm:ss:ff`` for any positive offset in ``seconds_total``.
-
-        Parameters
-        ----------
-        seconds_total : float
-            Time offset in seconds.
-        frame_rate : float, optional
-            Frame rate used for the timecode calculation.  Defaults to the
-            controller's ``conform_frame_rate``.
+    def nanoseconds_to_timecode(self, ns: int, frame_rate: float | None = None) -> str:
         """
-        rate          = frame_rate if frame_rate is not None else self.conform_frame_rate
-        total_frames  = int(seconds_total * rate)
-        frames        = total_frames % rate
-        whole_seconds = total_frames // rate      # drop fractional frames
-        secs          =  whole_seconds         % 60
-        mins          = (whole_seconds // 60)  % 60
-        hours         =  whole_seconds // 3600
+        Convert an **epoch** nanosecond timestamp to an SMPTE hh:mm:ss:ff TOD code.
+        """
+        # 1.  Epoch seconds (float)
+        epoch_sec  = ns / 1_000_000_000
+
+        # 2.  Local time-of-day → seconds since midnight (fractional!)
+        lt         = time.localtime(epoch_sec)
+        tod_sec    = (
+            lt.tm_hour * 3600 +
+            lt.tm_min  * 60   +
+            lt.tm_sec        +
+            (epoch_sec - math.floor(epoch_sec))    # sub-second fraction → frames
+        )
+
+        # 3.  Wrap exactly every 24 h so hh runs 00…23
+        tod_sec %= 86_400
+
+        # 4.  Format with existing helper
+        return self._format_timecode(tod_sec, frame_rate)    
+        
+    def _format_timecode(
+        self,
+        seconds_total: float,
+        frame_rate: float | None = None
+    ) -> str:
+        """
+        Return SMPTE time-code hh:mm:ss:ff for any positive offset in seconds.
+        """
+        rate = frame_rate if frame_rate is not None else self.conform_frame_rate
+        rate = int(round(rate))               # ensure integer fps
+
+        total_frames  = int(round(seconds_total * rate))
+        frames        = total_frames % rate               # 0 … rate-1  (int)
+        whole_seconds = total_frames // rate
+
+        secs   =  whole_seconds         % 60
+        mins   = (whole_seconds // 60)  % 60
+        hours  =  whole_seconds // 3600
+
+        # now every field is guaranteed to be an int → safe with :02d
         return f"{hours:02d}:{mins:02d}:{secs:02d}:{frames:02d}"
 
     def _current_tod_timecode(self) -> str:
@@ -232,9 +257,6 @@ class RedisController:
         )
         return self._format_timecode(since_midnight_float)
 
-    def nanoseconds_to_timecode(self, ns: int, frame_rate: float | None = None) -> str:
-        """Convert a nanosecond timestamp to SMPTE timecode."""
-        return self._format_timecode(ns / 1_000_000_000, frame_rate)
 
     # ─────────────────────── recording timer loop ─────────────────────
     def _run_recording_timer(self) -> None:

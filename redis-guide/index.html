@@ -211,7 +211,8 @@ redis-cli<span class="w"> </span>SET<span class="w"> </span>is_recording<span cl
 </code></pre></div>
 <p>CineMate’s <code>RedisListener</code> parses these messages and updates Redis keys like <code>framecount</code>, <code>BUFFER</code> and <code>fps_actual</code>.
 The timestamp fields are converted to SMPTE timecode based on <code>fps_user</code> and
-written to <code>tc_cam0</code> and <code>tc_cam1</code>.</p>
+written to <code>tc_cam0</code> and <code>tc_cam1</code>.  Values are only updated when the underlying
+timestamp changes so Redis clients receive a new timecode once per frame.</p>
 <h2 id="controlling-the-camera-from-your-own-script">Controlling the camera from your own script<a class="headerlink" href="#controlling-the-camera-from-your-own-script" title="Permanent link">#</a></h2>
 <p>Below is a very small example using <code>redis-py</code>. </p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">redis</span>

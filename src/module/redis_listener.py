@@ -81,7 +81,11 @@ class RedisListener:
 
 
         self.current_framerate = None
-        
+
+        self.last_timestamp_single = None
+        self.last_timestamp_cam0 = None
+        self.last_timestamp_cam1 = None
+
         self.start_listeners()
 
     def start_listeners(self):
@@ -166,15 +170,18 @@ class RedisListener:
                             self.redis_controller.get_value(ParameterKey.FPS_USER.value) or 24
                         )
 
-                        if timestamp is not None:
+                        if timestamp is not None and timestamp != self.last_timestamp_cam0:
                             tc = self.redis_controller.nanoseconds_to_timecode(int(timestamp), fps_user)
                             self.redis_controller.set_value(ParameterKey.TC_CAM0.value, tc)
-                        if timestamp_cam0 is not None:
+                            self.last_timestamp_cam0 = timestamp
+                        if timestamp_cam0 is not None and timestamp_cam0 != self.last_timestamp_cam0:
                             tc0 = self.redis_controller.nanoseconds_to_timecode(int(timestamp_cam0), fps_user)
                             self.redis_controller.set_value(ParameterKey.TC_CAM0.value, tc0)
-                        if timestamp_cam1 is not None:
+                            self.last_timestamp_cam0 = timestamp_cam0
+                        if timestamp_cam1 is not None and timestamp_cam1 != self.last_timestamp_cam1:
                             tc1 = self.redis_controller.nanoseconds_to_timecode(int(timestamp_cam1), fps_user)
                             self.redis_controller.set_value(ParameterKey.TC_CAM1.value, tc1)
+                            self.last_timestamp_cam1 = timestamp_cam1
 
                         # Update Redis key for current buffer size if changed
                         if buffer_size is not None:

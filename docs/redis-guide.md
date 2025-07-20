@@ -67,7 +67,8 @@ Every frame, cinepi-raw sends a small JSON object containing live statistics.
 
 CineMate’s `RedisListener` parses these messages and updates Redis keys like `framecount`, `BUFFER` and `fps_actual`.
 The timestamp fields are converted to SMPTE timecode based on `fps_user` and
-written to `tc_cam0` and `tc_cam1`.
+written to `tc_cam0` and `tc_cam1`.  Values are only updated when the underlying
+timestamp changes so Redis clients receive a new timecode once per frame.
 
 ## Controlling the camera from your own script
 

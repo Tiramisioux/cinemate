@@ -21,7 +21,7 @@ class I2cOled(threading.Thread):
     # ──────────────────────────────────────────────────────────────────────
     def __init__(self, settings: i2cOledSettings, redis_controller):
         super().__init__(daemon=True)
-        logging.warning("I2cOled from %s LOADED", __file__)
+        logging.info("I2cOled from %s LOADED", __file__)
 
         s = settings.get("i2c_oled", {})
         self.width    = s.get("width", 128)
@@ -109,6 +109,8 @@ class I2cOled(threading.Thread):
             "shutter_a":  {"label": "SHUTTER", "suffix": "°"},
             "wb_user":    {"label": "WB",      "suffix": "K"},
             "space_left": {"label": "SPACE",   "suffix": "GB"},
+            "tc_cam0":   {"label": "", "suffix": ""},
+            "RECORDING_TC": {"label": "", "suffix": ""},
         }
 
         first, lines = [], []

@@ -200,9 +200,18 @@ class RedisController:
 
 
         # ─────────────────────── time-code helpers ────────────────────────
-    def _format_timecode(self, seconds_total: float) -> str:
-        """Return hh:mm:ss:ff for any positive offset in *seconds_total*."""
-        rate          = self.conform_frame_rate
+    def _format_timecode(self, seconds_total: float, frame_rate: float | None = None) -> str:
+        """Return ``hh:mm:ss:ff`` for any positive offset in ``seconds_total``.
+
+        Parameters
+        ----------
+        seconds_total : float
+            Time offset in seconds.
+        frame_rate : float, optional
+            Frame rate used for the timecode calculation.  Defaults to the
+            controller's ``conform_frame_rate``.
+        """
+        rate          = frame_rate if frame_rate is not None else self.conform_frame_rate
         total_frames  = int(seconds_total * rate)
         frames        = total_frames % rate
         whole_seconds = total_frames // rate      # drop fractional frames
@@ -222,6 +231,10 @@ class RedisController:
             + (now - int(now))                 # fractional part for frames
         )
         return self._format_timecode(since_midnight_float)
+
+    def nanoseconds_to_timecode(self, ns: int, frame_rate: float | None = None) -> str:
+        """Convert a nanosecond timestamp to SMPTE timecode."""
+        return self._format_timecode(ns / 1_000_000_000, frame_rate)
 
     # ─────────────────────── recording timer loop ─────────────────────
     def _run_recording_timer(self) -> None:

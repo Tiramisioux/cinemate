@@ -58,10 +58,16 @@ Every frame, cinepi-raw sends a small JSON object containing live statistics.
     data["focus"] = info.focus;
     data["frameCount"] = app_->GetEncoder()->getFrameCount();
     data["bufferSize"] = app_->GetEncoder()->bufferSize();
+    // per-camera timestamps in nanoseconds
+    data["timestamp"]      = info.timestamp;       // single sensor
+    data["timestamp_cam0"] = info.timestamp_cam0;  // multi-sensor
+    data["timestamp_cam1"] = info.timestamp_cam1;  // multi-sensor
     redis_->publish(CHANNEL_STATS, data.toStyledString());
 ```
 
 CineMate’s `RedisListener` parses these messages and updates Redis keys like `framecount`, `BUFFER` and `fps_actual`.
+The timestamp fields are converted to SMPTE timecode based on `fps_user` and
+written to `tc_cam0` and `tc_cam1`.
 
 ## Controlling the camera from your own script
 

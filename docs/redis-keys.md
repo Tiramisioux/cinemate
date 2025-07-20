@@ -43,7 +43,7 @@ Each entry explains which component normally writes the key and what happens whe
 | gui_layout | Cinemate | Path to GUI layout preset | No |
 | pi_model | Cinemate | Raspberry Pi model string | No |
 | sensor | CinePi-raw | Active camera model | No |
-| tc_cam0/tc_cam1 | CinePi-raw → Cinemate | SMPTE time code per camera | No |
+| tc_cam0/tc_cam1 | CinePi-raw → Cinemate | SMPTE time code per camera (derived from `timestamp*` fields) | No |
 | shutter_angle_actual | Cinemate | Calculated shutter angle applied after clamping or sync | No |
 | shutter_angle_transient | Cinemate | Temporary value during ramping | No |
 | exposure_time | Cinemate | Current exposure time in seconds | No |

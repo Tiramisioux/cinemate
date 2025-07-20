@@ -4,13 +4,84 @@ Here is how you can manually install libcamera, cinepi-raw, cinemate and accompa
 
 Stack is confirmed to work on Raspberry pi 4 and 5 models.
 
-This guide assumes fresh Raspbery Pi Bookworm installation running kernel 6.12.34.
+## Preparing the SD card
 
-If you run Raspberry Pi OS Lite, begin by installing the following packages:
+[Download the Raspberry Pi Imager(https://www.raspberrypi.com/software/)
+
+1. **Insert your SD card** (minimum 8GB recommended).
+2. **Launch Raspberry Pi Imager**.
+3. Click **“Choose OS”** →  
+   Select: `Raspberry Pi OS (other)`  
+   Then: `Raspberry Pi OS Lite (64-bit)`
+4. Click **“Choose Storage”** → Select your SD card.
+5. Apply settings:
+   - Set hostname (e.g. `cinepi`)
+   - Enable SSH
+   - Set username `pi` and password `1`
+   - Configure Wi-Fi (SSID and password) (optional)
+
+6. Click **“Write”** and confirm.
+
+You now have a minimal, clean **64-bit Raspberry Pi OS Lite** system — ideal for headless SSH setups and embedded projects.
+
+## Raspberry Pi First Boot: Auto-Login + SSH Access
+
+### Enable Auto Login to Console
+
+After first boot (with keyboard + monitor):
 
 ```bash
-sudo apt-get install python3-jinja2 python3-ply python3-yaml
+sudo raspi-config
 ```
+
+Navigate:
+
+1 System Options → S5 Boot / Auto Login → B2 Console Autologin
+
+Then reboot:
+
+```shell
+sudo reboot
+```
+
+Your Pi now boots to console and logs in automatically as user pi.
+
+### SSH Access
+
+
+From your computer:
+
+ssh pi@<your-pi-ip>
+
+ssh pi@192.168.2.2
+
+password: 1
+
+#### Fix: "REMOTE HOST IDENTIFICATION HAS CHANGED
+
+If you see this:
+
+```shell
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+...
+Host key verification failed.
+```
+
+It usually means your Pi got a new host key (e.g. reinstalled OS, new SD card). Fix it by removing the old key:
+
+```shell
+ssh-keygen -R 192.168.2.2
+```
+
+Then try again:
+
+```
+ssh pi@192.168.2.2
+```
+
+
 
 ## Camera stack
 
@@ -19,6 +90,11 @@ sudo apt-get install python3-jinja2 python3-ply python3-yaml
 ```
 sudo apt update -y
 sudo apt upgrade -y
+```
+
+
+```bash
+sudo apt-get install python3-jinja2 python3-ply python3-yaml
 ```
 
 ```
@@ -63,7 +139,7 @@ cd ~/libcamera/utils && sudo chmod +x *.py *.sh && sudo chmod +x ~/libcamera/src
 sudo apt install -y libspdlog-dev libjsoncpp-dev && cd /home/pi && git clone https://github.com/nadjieb/cpp-mjpeg-streamer.git && cd cpp-mjpeg-streamer && mkdir build && cd build && cmake .. && make && sudo make install && cd
 ```
 
-### CinePi-raw <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
+### CinePi-RAW <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
 ```bash
 git clone https://github.com/Tiramisioux/cinepi-raw.git --branch rpicam-apps_1.7_custom_encoder
@@ -85,13 +161,11 @@ PUBLISH cp_controls cg_rb
 EOF
 ```
 
-### Additional drivers
+### IMX585 driver (optional)
 
 ```shell
 sudo apt install linux-headers dkms -y
 ```
-
-#### imx585 driver
 
 ```
 git clone https://github.com/will127534/imx585-v4l2-driver.git --branch 6.12.y
@@ -101,13 +175,15 @@ cd
 
 ```
 
+>The imx585 is written by Will Whang. For original drivers and startup guides, visit https://github.com/will127534/StarlightEye
+
 #### Add IMX585 tuning files 
 
 ```bash
 curl -L -o /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json \
   https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585.json
 sed -i '8s/"black_level": *[0-9]\+/"black_level": 0/' /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json
-cp /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json /usr/local/share/libcamera/ipa/rpi/pisp/
+sudo cp /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json /usr/local/share/libcamera/ipa/rpi/pisp/
 ```
 ```
 curl -L -o /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585_mono.json https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585_mono.json && sudo cp /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585_mono.json /usr/local/share/libcamera/ipa/rpi/pisp/
@@ -121,15 +197,6 @@ sudo chmod +x /usr/local/bin/IRFilter
 ```
 
 >Cinemate has its own way of handling the IR switch but the installation above can be convenient for use outside of Cinemate
-
-#### imx283 driver 
-
-```
-git clone https://github.com/will127534/imx283-v4l2-driver.git
-cd imx283-v4l2-driver/
-./setup.sh
-cd
-```
 
 ### Enabling I²C
 

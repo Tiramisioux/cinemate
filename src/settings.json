@@ -72,6 +72,12 @@
     "wb_free": false
   },
 
+  "resolutions": {
+    "k_steps": [1.5, 2, 4],
+    "bit_depths": [10, 12],
+    "custom_modes": {}
+  },
+
 "buttons": [
     {
       "pin": 5,

@@ -89,4 +89,15 @@ def load_settings(filename: str | Path) -> dict:
         arrays_cfg.setdefault(k, v)
     settings["arrays"] = arrays_cfg
 
+    # ── resolution filter defaults ─────────────────────────────────────
+    resolution_defaults = {
+        "k_steps": [1.5, 2.0, 4.0],
+        "bit_depths": [10, 12],
+        "custom_modes": {},
+    }
+    res_cfg = settings.setdefault("resolutions", {})
+    for k, v in resolution_defaults.items():
+        res_cfg.setdefault(k, v)
+    settings["resolutions"] = res_cfg
+
     return settings

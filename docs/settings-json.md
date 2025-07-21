@@ -162,6 +162,26 @@ When enabled, ignores the preset arrays and exposes the full range supported by 
 }
 ```
 
+## resolutions
+
+Limit which sensor modes appear when cycling resolutions.
+
+```json
+"resolutions": {
+  "k_steps": [1.5, 2, 4],
+  "bit_depths": [10, 12],
+  "custom_modes": {
+    "imx283": [
+      {"width": 3936, "height": 2176, "bit_depth": 12, "fps_max": 24}
+    ]
+  }
+}
+```
+
+- **k_steps** – K‑style categories for allowed widths. Modes are grouped to the nearest half‑K. Example: 1332×990 counts as **1.5 K**.
+- **bit_depths** – list of bit depths to expose.
+- **custom_modes** – optional extra modes per sensor if the driver advertises none.
+
 ## buttons
 
 Defines GPIO push buttons. Each entry describes one button and the actions it triggers.

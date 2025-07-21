@@ -4,7 +4,7 @@ Here is how you can manually install libcamera, cinepi-raw, cinemate and accompa
 
 Stack works on Raspberry Pi 4 and 5 models.
 
-!!!  Infor
+!!!  Info ""
     
     Cinemate is using Linux kernel version 6.12.25.
 

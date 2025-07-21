@@ -1,6 +1,7 @@
 import subprocess
 import re
 import logging
+from typing import Tuple, Dict
 
 class SensorDetect:
     def __init__(self):
@@ -46,8 +47,66 @@ class SensorDetect:
                 #3: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 16, 'packing': 'U', 'fps_max': 21, 'gui_layout': 0, 'file_size': 8},                                      
             },
         }
-        
-        #self.detect_camera_model()
+        # Populate camera model and modes on startup
+        self.detect_camera_model()
+
+    def _parse_cinepi_output(self, output: str) -> Tuple[str, Dict[int, Dict]]:
+        """Parse ``cinepi-raw --list-cameras`` output and return the camera
+        model along with a dictionary of resolution modes."""
+
+        camera_model = None
+        modes_list = []
+        current_bit_depth = None
+        parsing = False
+
+        for raw_line in output.splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+
+            if camera_model is None:
+                match = re.search(r"\d+\s*:\s*([^\s]+)\s*\[", line)
+                if match:
+                    camera_model = match.group(1)
+
+            if "Modes:" in line:
+                parsing = True
+                line = line.split("Modes:", 1)[1].strip()
+                if not line:
+                    continue
+
+            if not parsing:
+                continue
+
+            if line.startswith("'"):
+                depth_match = re.search(r"'(?:[^']*?)(\d+)", line)
+                if depth_match:
+                    current_bit_depth = int(depth_match.group(1))
+                if ':' in line:
+                    line = line.split(':', 1)[1].strip()
+
+            width_height = re.search(r"(\d+)x(\d+)", line)
+            if not width_height:
+                continue
+
+            width = int(width_height.group(1))
+            height = int(width_height.group(2))
+            fps_match = re.search(r"\[(\d+(?:\.\d+)?)\s*fps", line)
+            fps_max = int(float(fps_match.group(1))) if fps_match else None
+
+            modes_list.append({
+                'aspect': round(width / height, 2),
+                'width': width,
+                'height': height,
+                'bit_depth': current_bit_depth,
+                'packing': 'U',
+                'fps_max': fps_max,
+                'gui_layout': 0,
+                'file_size': round(width * height * 2 / 1024 / 1024, 1)
+            })
+
+        modes = {i: m for i, m in enumerate(reversed(modes_list))}
+        return camera_model, modes
 
     def detect_camera_model(self):
         try:
@@ -55,13 +114,10 @@ class SensorDetect:
             logging.info(f"cinepi-raw output: {result.stdout}")
 
             if result.stdout:
-                # Updated regex to capture the entire line
-                match = re.search(r'\d+\s*:\s*(\w+)\s*\[(.*?)\]', result.stdout)
-                if match:
-                    self.camera_model = match.group(1)
-                    details = match.group(2)
-                    if 'MONO' in details and self.camera_model == 'imx585':
-                        self.camera_model = 'imx585_mono'
+                model, modes = self._parse_cinepi_output(result.stdout)
+                if model:
+                    self.camera_model = model
+                    self.sensor_resolutions[self.camera_model] = modes
                     logging.info(f"Detected camera model: {self.camera_model}")
                     self.load_sensor_resolutions()
                 else:
@@ -71,49 +127,13 @@ class SensorDetect:
             else:
                 logging.warning("No output from cinepi-raw")
 
-            # if result.returncode != 0:
-            #     logging.warning(f"cinepi-raw command exited with non-zero status: {result.returncode}")
-            #     logging.warning(f"stderr: {result.stderr}")
-
-        except subprocess.CalledProcessError as e:
-            logging.error(f"Error running cinepi-raw: {e}")
-            self.camera_model = None
-            self.res_modes = []
         except Exception as e:
             logging.error(f"Unexpected error: {e}")
             self.camera_model = None
             self.res_modes = []
 
     def check_camera(self):
-        try:
-            result = subprocess.run('cinepi-raw --list-cameras', shell=True, capture_output=True, text=True)
-            logging.info(f"cinepi-raw output: {result.stdout}")
-
-            if result.stdout:
-                # Updated regex to capture the entire line
-                match = re.search(r'\d+\s*:\s*(\w+)\s*\[(.*?)\]', result.stdout)
-                if match:
-                    self.camera_model = match.group(1)
-                    details = match.group(2)
-                    if 'MONO' in details and self.camera_model == 'imx585':
-                        self.camera_model = 'imx585_mono'
-                    logging.info(f"Detected camera model: {self.camera_model}")
-                    self.load_sensor_resolutions()
-                else:
-                    logging.warning("No camera model detected")
-                    self.camera_model = None
-                    self.res_modes = []
-            else:
-                logging.warning("No output from cinepi-raw")
-
-            if result.returncode != 0:
-                logging.warning(f"cinepi-raw command exited with non-zero status: {result.returncode}")
-                logging.warning(f"stderr: {result.stderr}")
-
-        except Exception as e:
-            logging.error(f"Unexpected error: {e}")
-            self.camera_model = None
-
+        self.detect_camera_model()
         return self.camera_model
 
     def load_sensor_resolutions(self):
@@ -165,10 +185,7 @@ class SensorDetect:
     def get_packing(self, camera_name, sensor_mode):
         resolution_info = self.get_resolution_info(camera_name, sensor_mode)
         return resolution_info.get('packing', None)
-    
-    def get_fps_max(self, camera_name, sensor_mode):
-        resolution_info = self.get_resolution_info(camera_name, sensor_mode)
-        return resolution_info.get('fps_max', None)
+
     
     def get_file_size(self, camera_name, sensor_mode):
         resolution_info = self.get_resolution_info(camera_name, sensor_mode)

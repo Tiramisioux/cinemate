@@ -11,4 +11,4 @@
 | IMX585 | 0    | 1928 x 1090  | 1.77         | 12        | 87      | 4              |
 |        | 1    | 3840 x 2160  | 1.77         | 12        | 34      | 4   
 
-Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames. You can cap Cinemates max fps values for your specific build by editing the file `cinemate/src/module/sensor_detect.py`
+Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames. From version 3.1 the resolution list is generated dynamically from `cinepi-raw --list-cameras`, so manual edits to `sensor_detect.py` are rarely needed.

@@ -4,9 +4,9 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="IE=edge" http-equiv="X-UA-Compatible"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://tiramisioux.github.io/cinemate/coverpage/" rel="canonical"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://tiramisioux.github.io/cinemate/readme/" rel="canonical"/>
 <link href="../img/favicon.ico" rel="shortcut icon"/>
-<title>Cinemate Documentation - Cinemate Docs</title>
+<title>What is it? - Cinemate Docs</title>
 <link href="../css/theme.css" rel="stylesheet"/>
 <link href="../css/theme_extra.css" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" rel="stylesheet"/>
@@ -14,9 +14,9 @@
 <link href="../templates/styles.scss" rel="stylesheet"/>
 <script>
         // Current page data
-        var mkdocs_page_name = "Cinemate Documentation";
-        var mkdocs_page_input_path = "coverpage.md";
-        var mkdocs_page_url = "/cinemate/coverpage/";
+        var mkdocs_page_name = "What is it?";
+        var mkdocs_page_input_path = "readme.md";
+        var mkdocs_page_url = "/cinemate/readme/";
       </script>
 <!--[if lt IE 9]>
       <script src="../js/html5shiv.min.js"></script>
@@ -140,9 +140,9 @@
 <div class="rst-content"><div aria-label="breadcrumbs navigation" role="navigation">
 <ul class="wy-breadcrumbs">
 <li><a aria-label="Docs" class="icon icon-home" href=".."></a></li>
-<li class="breadcrumb-item active">Cinemate Documentation</li>
+<li class="breadcrumb-item active">What is it?</li>
 <li class="wy-breadcrumbs-aside">
-<a class="icon icon-github" href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/coverpage.md"> Edit on GitHub</a>
+<a class="icon icon-github" href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/readme.md"> Edit on GitHub</a>
 </li>
 </ul>
 <hr/>
@@ -150,7 +150,68 @@
 <div class="document" itemscope="itemscope" itemtype="http://schema.org/Article" role="main">
 <div class="section" itemprop="articleBody">
 <div class="markdown-body">
-<p><strong>Built:</strong> 2025-07-21 11:21 UTC</p>
+<h1 id="what-is-it">What is it?<a class="headerlink" href="#what-is-it" title="Permanent link">#</a></h1>
+<p><strong>Cinemate</strong> is a boilerplate cinema camera system for Raspberry Pi 5.  builds upon CinePi-raw, authored by Csaba Nagy for enabling 12 bit (or even 16 bit) Cinema DNG recordings using off-the-shelf components.  </p>
+<p>Cinemate provides a minimal starting point that you can extend with your own controls and accessories. </p>
+<p>The project combines a Python UI with a custom fork of <a href="https://github.com/Tiramisioux/cinepi-raw/tree/rpicam-apps_1.7_custom_encoder">cinepi-raw</a>.</p>
+<h2 id="new-features-in-version-31">New features in version 3.1<a class="headerlink" href="#new-features-in-version-31" title="Permanent link">#</a></h2>
+<ul>
+<li>fast uncompressed dng encoder, supporting both IMX 585 color and mono sensors (normal SSD's working well for HD @ 25 fps)</li>
+<li>redesigned HDMI ui</li>
+<li>sound recording activated</li>
+<li>punch in digital zoom of preview</li>
+<li>i2c oled module and enum enhanced Redis key handling by <a href="https://github.com/tevey">tevey</a></li>
+<li>selection of physical camera port cam0 or cam1</li>
+<li>choose specific HDMI output port, 0 or 1</li>
+<li>adapted to libcamera 0.5/rpicam-apps 1.7</li>
+</ul>
+<h2 id="compatible-sensors">Compatible sensors<a class="headerlink" href="#compatible-sensors" title="Permanent link">#</a></h2>
+<ul>
+<li>IMX477 (official Raspberry Pi HQ camera)</li>
+<li>IMX294 (official Raspberry Pi GS camera)</li>
+<li>IMX585 (<a href="https://www.tindie.com/products/will123321/starlighteye/">Starlight Eye</a> by Will Whang)</li>
+<li>IMX283 (<a href="https://www.tindie.com/products/will123321/oneincheye-v20/">OneInchEye</a> by Will Whang)</li>
+</ul>
+<h2 id="preinstalled-hardware">Preinstalled hardware<a class="headerlink" href="#preinstalled-hardware" title="Permanent link">#</a></h2>
+<ul>
+<li><a href="https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/">CFE Hat</a></li>
+<li><a href="https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/">Grove Base Hat</a></li>
+<li><a href="https://www.adafruit.com/product/5752">Adafruit I2C Quad Rotary Encoder</a></li>
+</ul>
+<h2 id="camera-stack">Camera stack<a class="headerlink" href="#camera-stack" title="Permanent link">#</a></h2>
+<ol>
+<li><strong>Camera sensor</strong> connected to the Raspberry Pi</li>
+<li>Raspberry Pi SoC running <strong>libcamera</strong></li>
+<li><strong>cinepi-raw</strong> recorder (C++)</li>
+<li><strong>Redis</strong> key-value store</li>
+<li><strong>Cinemate</strong> (Python)</li>
+</ol>
+<p>Apps change settings by updating Redis keys. CinePi-RAW listens for those updates and captures frames accordingly while Cinemate provides the camera user interface.</p>
+<h2 id="bare-bones-build">Bare-bones build<a class="headerlink" href="#bare-bones-build" title="Permanent link">#</a></h2>
+<p>To try Cinemate you need:
+- Raspberry Pi 4 or 5
+- Official HQ or GS camera module
+- SSD drive such as a Samsung T7 formatted <code>ext4</code> and labelled <code>RAW</code>
+- HDMI monitor or a phone/tablet connected to the Pi hotspot for preview</p>
+<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h2>
+<p>See the <a href="https://github.com/Tiramisioux/cinemate/releases">releases section</a> for preinstalled image file and Quick Start Guide.</p>
+<h2 id="customization">Customization<a class="headerlink" href="#customization" title="Permanent link">#</a></h2>
+<p>Buttons, encoders and oled display are optional and configured via settings file.</p>
+<h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">#</a></h2>
+<p>Full manual installation instructions, configuration guides and CLI reference live <a href="https://tiramisioux.github.io/cinemate/">here</a>.</p>
+<p>Join the <a href="https://discord.gg/Hr4dfhuK">CinePi Discord</a> for discussions and sharing builds.</p>
+<h2 id="acknowledgements">Acknowledgements<a class="headerlink" href="#acknowledgements" title="Permanent link">#</a></h2>
+<p>The <a href="https://github.com/Tiramisioux/cinemate"><strong>Cinemate</strong></a> stack is built on top of several open-source projects. Special thanks to all authors!</p>
+<ul>
+<li><a href="https://github.com/cinepi/cinepi-raw"><strong>CinePi-raw</strong></a> – Csaba Nagy</li>
+<li><a href="https://github.com/will127534"><strong>IMX585 and IMX283 drivers</strong></a> – Will Whang</li>
+<li><a href="https://libcamera.org"><strong>libcamera</strong></a> – Ideas on board</li>
+<li><a href="https://github.com/nadjieb/cpp-mjpeg-streamer"><strong>cpp-mjpeg-streamer</strong></a> – Nadjieb Mohammadi</li>
+<li><a href="https://github.com/joan2937/lg"><strong>lgpio</strong></a> – Joan</li>
+<li><a href="https://github.com/Drewsif/PiShrink"><strong>PiShrink</strong></a> - Drew Bonasera </li>
+</ul>
+<p>Also thanks to Simon at <a href="https://altcinecam.com">Altcinecam</a> for support and assistance!</p>
+<p>Get your sensors and CFE Hats here: https://www.tindie.com/stores/will123321/</p>
 </div>
 </div>
 </div><footer>

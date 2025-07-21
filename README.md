@@ -36,7 +36,7 @@ Cinemate provides a minimal starting point that you can extend with your own con
 4. **Redis** key-value store
 5. **Cinemate** (Python)
 
-Apps change settings by updating Redis keys. CinePi-raw listens for those updates and captures frames accordingly while Cinemate provides the camear user interface.
+Apps change settings by updating Redis keys. CinePi-RAW listens for those updates and captures frames accordingly while Cinemate provides the camera user interface.
 
 ## Bare-bones build
 To try Cinemate you need:

@@ -2,7 +2,9 @@
 
 **Cinemate** is a boilerplate cinema camera system for Raspberry Pi 5.  builds upon CinePi-raw, authored by Csaba Nagy for enabling 12 bit (or even 16 bit) Cinema DNG recordings using off-the-shelf components.  
 
-Cinemate provides a minimal starting point that you can extend with your own controls and accessories. The project pairs a small Python UI with a custom fork of [cinepi-raw](https://github.com/Tiramisioux/cinepi-raw/tree/rpicam-apps_1.7_custom_encoder).
+Cinemate provides a minimal starting point that you can extend with your own controls and accessories. 
+
+The project combines a Python UI with a custom fork of [cinepi-raw](https://github.com/Tiramisioux/cinepi-raw/tree/rpicam-apps_1.7_custom_encoder).
 
 ## New features in version 3.1
 

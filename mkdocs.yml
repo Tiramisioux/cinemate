@@ -14,8 +14,8 @@ dev_addr: 0.0.0.0:8000            # live-preview reachable from your laptop
 # ───────────────────────────
 nav:
   - Home: index.md
+  - Introduction: readme.md
   - Quick start:
-      - Introduction: readme.md
       - Getting started with a minimal build: getting-started.md
   - Using the camera:
       - Using the CLI: cli-user-guide.md

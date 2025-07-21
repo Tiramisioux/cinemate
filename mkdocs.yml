@@ -15,17 +15,18 @@ dev_addr: 0.0.0.0:8000            # live-preview reachable from your laptop
 nav:
   - Home: index.md
   - Quick start:
+      - Introduction: readme.md
       - Getting started with a minimal build: getting-started.md
-      - HDMI GUI: simple-gui.md
-      - Web GUI: web-gui.md
   - Using the camera:
       - Using the CLI: cli-user-guide.md
-      - Commands reference: cli-commands.md
+      HDMI GUI: simple-gui.md
+      - Web GUI: web-gui.md
       - Sensors: sensors.md
       - Audio recording: audio-recording.md
       - Digital zoom: digital-zoom.md
       - Speed ramping & shutter angle synchronization: speed-ramping.md
       - Dual sensors: dual-sensors.md
+      - Commands reference: cli-commands.md
   - Customising your build:
       - Connecting via SSH: ssh.md
       - Settings file: settings-json.md

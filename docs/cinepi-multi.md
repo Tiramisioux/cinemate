@@ -16,24 +16,7 @@ This information is kept in the `CameraInfo` class and written to Redis under th
 
 ## Loading Resolution Data
 
-`cinepi_multi.py` relies on `sensor_detect.py` to look up valid resolutions and frame rates for each sensor. The mapping lives in `src/module/sensor_detect.py` and is organised like this:
-
-```python
-sensor_resolutions = {
-    'imx477': {
-        0: {'width': 2028, 'height': 1080, 'bit_depth': 12, 'fps_max': 50},
-        1: {'width': 2028, 'height': 1520, 'bit_depth': 12, 'fps_max': 40},
-        # ...
-    },
-    'imx585_mono': {
-        0: {'width': 1928, 'height': 1090, 'bit_depth': 12, 'fps_max': 87},
-    }
-}
-```
-
-If you add support for a new sensor or want to tweak maximum frame rates, modify this dictionary. `cinepi_multi` calls `get_resolution_info()` to fetch the entry for the detected model and sensor mode (stored in Redis as `sensor_mode`).
-
->Note that there is a diference between driver sensor modes and Cinemate sensor modes . Driver sensor modes are presented with the terminal command `cinepi-raw --list-cameras` and then used by the list in `src/module/sensor_detect.py` to match the Cinemate / user sensor mode with the actual one. This is a bit clumsy so future updates aim at having sensor modes loaded dynamically. What firther complicate things is that libcameras sensor numbering dows not match the physical port numbering, which Cinemate uses for its mapping of preview to HDMI ports. So this need to be sorted out somehow. :)
+`cinepi_multi.py` relies on `sensor_detect.py` to look up valid resolutions and frame rates for each sensor. From version 3.1 the list of modes is parsed automatically from the output of `cinepi-raw --list-cameras`. Packing information and optional FPS correction factors are stored per sensor in `sensor_detect.py`.
 
 ## Building the `cinepi-raw` Command
 
@@ -65,6 +48,6 @@ Each `cinepi-raw` instance prints `Encoder configured` when it has finished init
 
 ## Customising Behaviour
 
-- **`sensor_detect.py`** – add new entries or adjust values under `sensor_resolutions` if you connect a sensor with different modes. The dictionary format mirrors the command-line `--mode` flag.
+- **`sensor_detect.py`** – adjust the packing or FPS correction factor dictionaries if needed for new sensors.
 - **`settings.json`** – update the `geometry` and `output` sections for per‑camera rotation, flipping and HDMI mapping. These settings are read at startup and directly influence the arguments passed to `cinepi-raw`.
 

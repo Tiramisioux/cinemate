@@ -99,6 +99,8 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#free_mode">free_mode</a>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#resolutions">resolutions</a>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#buttons">buttons</a>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#two_way_switches">two_way_switches</a>
@@ -312,6 +314,23 @@
 <span class="w">  </span><span class="nt">"wb_free"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
 <span class="p">}</span>
 </code></pre></div>
+<h2 id="resolutions">resolutions<a class="headerlink" href="#resolutions" title="Permanent link">#</a></h2>
+<p>Limit which sensor modes appear when cycling resolutions.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">"resolutions"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"k_steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">1.5</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"bit_depths"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"custom_modes"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"imx283"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">      </span><span class="p">{</span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="mi">3936</span><span class="p">,</span><span class="w"> </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="mi">2176</span><span class="p">,</span><span class="w"> </span><span class="nt">"bit_depth"</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="nt">"fps_max"</span><span class="p">:</span><span class="w"> </span><span class="mi">24</span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<ul>
+<li><strong>k_steps</strong> – K‑style categories for allowed widths. Modes are grouped to the nearest half‑K. Example: 1332×990 counts as <strong>1.5 K</strong>.</li>
+<li><strong>bit_depths</strong> – list of bit depths to expose.</li>
+<li><strong>custom_modes</strong> – optional extra modes per sensor if the driver advertises none.</li>
+</ul>
 <h2 id="buttons">buttons<a class="headerlink" href="#buttons" title="Permanent link">#</a></h2>
 <p>Defines GPIO push buttons. Each entry describes one button and the actions it triggers.</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>

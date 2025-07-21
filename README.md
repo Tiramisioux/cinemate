@@ -45,12 +45,11 @@ To try Cinemate you need:
 - SSD drive such as a Samsung T7 formatted `ext4` and labelled `RAW`
 - HDMI monitor or a phone/tablet connected to the Pi hotspot for preview
 
+## Installation
+See the [releases section](https://github.com/Tiramisioux/cinemate/releases) for preinstalled image file and Quick Start Guide.
+
 ## Customization
 Buttons, encoders and oled display are optional and configured via settings file.
-
-## Installation
-
-See the [releases section](https://github.com/Tiramisioux/cinemate/releases) for preinstalled image file and Quick Start Guide.
 
 ## Documentation
 Full manual installation instructions, configuration guides and CLI reference live [here](https://tiramisioux.github.io/cinemate/).

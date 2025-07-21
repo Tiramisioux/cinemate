@@ -335,7 +335,7 @@ cd .. && pip install lgpio
 ### Clone the Cinemate repo
 
 ```bash
-  git clone https://github.com/Tiramisioux/cinemate.git --branch cinemate-3.1
+  git clone https://github.com/Tiramisioux/cinemate.git
 ```
 
 ### Allow Cinemate to run with sudo

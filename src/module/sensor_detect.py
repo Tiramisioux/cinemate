@@ -7,46 +7,25 @@ class SensorDetect:
     def __init__(self):
         self.camera_model = None
         self.res_modes = []
-        self.sensor_resolutions = {
+        # Detected resolutions per camera will be stored here
+        self.sensor_resolutions = {}
 
-            'imx296': {                                                        
-                0: {'aspect': 1.33, 'width': 1456, 'height': 1088, 'bit_depth': 12, 'packing': 'P', 'fps_max': 60, 'gui_layout': 0, 'file_size': 2},
-            },
-            'imx283': {             
-                0: {'aspect': 1.80, 'width': 2736, 'height': 1538, 'bit_depth': 12, 'packing': 'U', 'fps_max': 40, 'gui_layout': 0, 'file_size': 7.1}, # driver fps max 40
-                1: {'aspect': 1.53, 'width': 2736, 'height': 1824, 'bit_depth': 12, 'packing': 'U', 'fps_max': 34, 'gui_layout': 0, 'file_size': 8.2}, # driver fps max 34
-                2: {'aspect': 1.77, 'width': 3936, 'height': 2176, 'bit_depth': 10, 'packing': 'U', 'fps_max': 60, 'gui_layout': 0, 'file_size': 8.2}, # driver fps max 21
-                #3: {'aspect': 1.52, 'width': 5568, 'height': 3664, 'bit_depth': 10, 'packing': 'U', 'fps_max': 17, 'gui_layout': 0, 'file_size': 31}, # driver fps max 17
-                #4: {'aspect': 1.52, 'width': 5568, 'height': 3664, 'bit_depth': 12, 'packing': 'U', 'fps_max': 17, 'gui_layout': 0, 'file_size': 31}, # driver fps max 17
-                #5: {'aspect': 1.80, 'width': 5568, 'height': 3094, 'bit_depth': 10, 'packing': 'U', 'fps_max': 21, 'gui_layout': 0, 'file_size': 2}, # driver fps max 21                                      
-            },
-
-            'imx477': {                                                             
-                0: {'aspect': 1.87, 'width': 2028, 'height': 1080, 'bit_depth': 12, 'packing': 'U', 'fps_max': 50, 'gui_layout': 0, 'file_size': 4.3, 'fps_correction_factor': 0.9995}, # driver fps max 50
-                1: {'aspect': 1.33, 'width': 2028, 'height': 1520, 'bit_depth': 12, 'packing': 'U', 'fps_max': 40, 'gui_layout': 0, 'file_size': 5.3, 'fps_correction_factor': 0.9995}, # driver fps max 40
-                2: {'aspect': 1.34, 'width': 1332, 'height': 990, 'bit_depth': 10, 'packing': 'U', 'fps_max': 120, 'gui_layout': 0, 'file_size': 2.7, 'fps_correction_factor': 0.9995}, # driver fps max 120 
-            },
-            'imx519': {             
-                0: {'aspect': 1.77, 'width': 1280, 'height': 720, 'bit_depth': 10, 'packing': 'P', 'fps_max': 80, 'gui_layout': 0, 'file_size': 7.1}, # driver fps max 80
-                1: {'aspect': 1.77, 'width': 1920, 'height': 1080, 'bit_depth': 10, 'packing': 'P', 'fps_max': 60, 'gui_layout': 0, 'file_size': 8.2}, # driver fps max 60
-                2: {'aspect': 1.77, 'width': 2328, 'height': 1748, 'bit_depth': 10, 'packing': 'P', 'fps_max': 30, 'gui_layout': 0, 'file_size': 8.2}, # driver fps max 30
-                3: {'aspect': 1.77, 'width': 3840, 'height': 2160, 'bit_depth': 10, 'packing': 'P', 'fps_max': 18, 'gui_layout': 0, 'file_size': 31}, # driver fps max 18                   
-            },
-            'imx585': {             
-                0: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 12, 'packing': 'U', 'fps_max': 87, 'gui_layout': 0, 'file_size': 4.1}, # driver fps max 87
-                1: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 12, 'packing': 'U', 'fps_max': 34, 'gui_layout': 0, 'file_size': 13.5}, # driver fps max 34
-               # 2: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 16, 'packing': 'U', 'fps_max': 30, 'gui_layout': 0, 'file_size': 13.5}, # driver fps max 30
-
-                #3: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 16, 'packing': 'U', 'fps_max': 21, 'gui_layout': 0, 'file_size': 8},                                      
-            },
-            'imx585_mono': {             
-                0: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 12, 'packing': 'U', 'fps_max': 87, 'gui_layout': 0, 'file_size': 4.1, 'fps_correction_factor': 0.9980},  # driver fps max 87
-                1: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 12, 'packing': 'U', 'fps_max': 34, 'gui_layout': 0, 'file_size': 13.5, 'fps_correction_factor': 0.9980}, # driver fps max 34
-                #2: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 16, 'packing': 'U', 'fps_max': 30, 'gui_layout': 0, 'file_size': 13.5, 'fps_correction_factor': 0.9980}, # driver fps max 30
-
-                #3: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 16, 'packing': 'U', 'fps_max': 21, 'gui_layout': 0, 'file_size': 8},                                      
-            },
+        # Packing information per sensor (U = unpacked, P = packed)
+        self.packing_info = {
+            "imx296": "P",
+            "imx283": "U",
+            "imx477": "U",
+            "imx519": "P",
+            "imx585": "U",
+            "imx585_mono": "U",
         }
+
+        # Optional fps correction factors per sensor
+        self.fps_correction_factors = {
+            "imx477": 0.9995,
+            "imx585_mono": 0.9980,
+        }
+
         # Populate camera model and modes on startup
         self.detect_camera_model()
 
@@ -94,15 +73,19 @@ class SensorDetect:
             fps_match = re.search(r"\[(\d+(?:\.\d+)?)\s*fps", line)
             fps_max = int(float(fps_match.group(1))) if fps_match else None
 
+            packing = self.packing_info.get(camera_model, 'U')
+            bytes_per_pixel = current_bit_depth / 8
+            file_size = round(width * height * bytes_per_pixel / (1024 * 1024), 1)
+
             modes_list.append({
                 'aspect': round(width / height, 2),
                 'width': width,
                 'height': height,
                 'bit_depth': current_bit_depth,
-                'packing': 'U',
+                'packing': packing,
                 'fps_max': fps_max,
                 'gui_layout': 0,
-                'file_size': round(width * height * 2 / 1024 / 1024, 1)
+                'file_size': file_size
             })
 
         modes = {i: m for i, m in enumerate(reversed(modes_list))}
@@ -207,5 +190,4 @@ class SensorDetect:
         return resolutions
     
     def get_fps_correction_factor(self, camera_name, sensor_mode):
-        resolution_info = self.get_resolution_info(camera_name, sensor_mode)
-        return resolution_info.get('fps_correction_factor', 1.0)
+        return self.fps_correction_factors.get(camera_name, 1.0)

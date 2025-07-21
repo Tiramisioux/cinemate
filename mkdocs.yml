@@ -7,7 +7,7 @@ site_url: https://tiramisioux.github.io/cinemate/
 repo_url: https://github.com/tiramisioux/cinemate
 edit_uri: blob/cinemate-v3.1/docs/
 repo_name: GitHub
-dev_addr: 0.0.0.0:8000            # live-preview reachable from your laptop
+dev_addr: 0.0.0.0:8000            # live-preview reachable from your laptop 
 
 # ───────────────────────────
 # Navigation (edit to match your .md files)

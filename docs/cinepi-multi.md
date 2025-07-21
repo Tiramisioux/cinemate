@@ -18,6 +18,8 @@ This information is kept in the `CameraInfo` class and written to Redis under th
 
 `cinepi_multi.py` relies on `sensor_detect.py` to look up valid resolutions and frame rates for each sensor. From version 3.1 the list of modes is parsed automatically from the output of `cinepi-raw --list-cameras`. Packing information and optional FPS correction factors are stored per sensor in `sensor_detect.py`.
 
+You can narrow down the list of selectable modes via the `resolutions` section in `settings.json`. Only modes whose width falls into one of your chosen *K* categories and whose bit depth matches will be shown. Custom modes not reported by `cinepi-raw` can also be added here.
+
 ## Building the `cinepi-raw` Command
 
 For each detected camera the manager creates a `CinePiProcess`. The `_build_args()` method constructs a list of command-line flags for `cinepi-raw`:

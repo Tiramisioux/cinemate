@@ -19,7 +19,7 @@ nav:
       - Getting started with a minimal build: getting-started.md
   - Using the camera:
       - Using the CLI: cli-user-guide.md
-      HDMI GUI: simple-gui.md
+      - HDMI GUI: simple-gui.md
       - Web GUI: web-gui.md
       - Sensors: sensors.md
       - Audio recording: audio-recording.md

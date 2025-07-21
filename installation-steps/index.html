@@ -115,20 +115,6 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal current" href="#">Manual installation (from scratch)</a>
 <ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="#preparing-the-sd-card">Preparing the SD card</a>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#raspberry-pi-first-boot-auto-login-ssh-access">Raspberry Pi First Boot: Auto-Login + SSH Access</a>
-<ul>
-<li class="toctree-l3"><a class="reference internal" href="#enable-auto-login-to-console">Enable Auto Login to Console</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#ssh-access">SSH Access</a>
-<ul>
-<li class="toctree-l4"><a class="reference internal" href="#fix-remote-host-identification-has-changed">Fix: "REMOTE HOST IDENTIFICATION HAS CHANGED</a>
-</li>
-</ul>
-</li>
-</ul>
-</li>
 <li class="toctree-l2"><a class="reference internal" href="#camera-stack">Camera stack</a>
 <ul>
 <li class="toctree-l3"><a class="reference internal" href="#tools-dependencies">Tools &amp; dependencies</a>
@@ -249,58 +235,7 @@
 <div class="markdown-body">
 <h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h1>
 <p>Here is how you can manually install libcamera, cinepi-raw, cinemate and accompanying software on the Raspberry Pi.</p>
-<p>Stack is confirmed to work on Raspberry pi 4 and 5 models.</p>
-<h2 id="preparing-the-sd-card">Preparing the SD card<a class="headerlink" href="#preparing-the-sd-card" title="Permanent link">#</a></h2>
-<p>[Download the Raspberry Pi Imager(https://www.raspberrypi.com/software/)</p>
-<ol>
-<li><strong>Insert your SD card</strong> (minimum 8GB recommended).</li>
-<li><strong>Launch Raspberry Pi Imager</strong>.</li>
-<li>Click <strong>“Choose OS”</strong> →<br/>
-   Select: <code>Raspberry Pi OS (other)</code><br/>
-   Then: <code>Raspberry Pi OS Lite (64-bit)</code></li>
-<li>Click <strong>“Choose Storage”</strong> → Select your SD card.</li>
-<li>Apply settings:</li>
-<li>Set hostname (e.g. <code>cinepi</code>)</li>
-<li>Enable SSH</li>
-<li>Set username <code>pi</code> and password <code>1</code></li>
-<li>
-<p>Configure Wi-Fi (SSID and password) (optional)</p>
-</li>
-<li>
-<p>Click <strong>“Write”</strong> and confirm.</p>
-</li>
-</ol>
-<p>You now have a minimal, clean <strong>64-bit Raspberry Pi OS Lite</strong> system — ideal for headless SSH setups and embedded projects.</p>
-<h2 id="raspberry-pi-first-boot-auto-login-ssh-access">Raspberry Pi First Boot: Auto-Login + SSH Access<a class="headerlink" href="#raspberry-pi-first-boot-auto-login-ssh-access" title="Permanent link">#</a></h2>
-<h3 id="enable-auto-login-to-console">Enable Auto Login to Console<a class="headerlink" href="#enable-auto-login-to-console" title="Permanent link">#</a></h3>
-<p>After first boot (with keyboard + monitor):</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>raspi-config
-</code></pre></div>
-<p>Navigate:</p>
-<p>1 System Options → S5 Boot / Auto Login → B2 Console Autologin</p>
-<p>Then reboot:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>reboot
-</code></pre></div>
-<p>Your Pi now boots to console and logs in automatically as user pi.</p>
-<h3 id="ssh-access">SSH Access<a class="headerlink" href="#ssh-access" title="Permanent link">#</a></h3>
-<p>From your computer:</p>
-<p>ssh pi@<your-pi-ip></your-pi-ip></p>
-<p>ssh pi@192.168.2.2</p>
-<p>password: 1</p>
-<h4 id="fix-remote-host-identification-has-changed">Fix: "REMOTE HOST IDENTIFICATION HAS CHANGED<a class="headerlink" href="#fix-remote-host-identification-has-changed" title="Permanent link">#</a></h4>
-<p>If you see this:</p>
-<div class="highlight"><pre><span></span><code>@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@<span class="w">    </span>WARNING:<span class="w"> </span>REMOTE<span class="w"> </span>HOST<span class="w"> </span>IDENTIFICATION<span class="w"> </span>HAS<span class="w"> </span>CHANGED!<span class="w">     </span>@
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-...
-Host<span class="w"> </span>key<span class="w"> </span>verification<span class="w"> </span>failed.
-</code></pre></div>
-<p>It usually means your Pi got a new host key (e.g. reinstalled OS, new SD card). Fix it by removing the old key:</p>
-<div class="highlight"><pre><span></span><code>ssh-keygen<span class="w"> </span>-R<span class="w"> </span><span class="m">192</span>.168.2.2
-</code></pre></div>
-<p>Then try again:</p>
-<div class="highlight"><pre><span></span><code>ssh pi@192.168.2.2
-</code></pre></div>
+<p>Stack works on Raspberry Pi 4 and 5 models.</p>
 <h2 id="camera-stack">Camera stack<a class="headerlink" href="#camera-stack" title="Permanent link">#</a></h2>
 <h3 id="tools-dependencies">Tools &amp; dependencies<a class="headerlink" href="#tools-dependencies" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo apt update -y

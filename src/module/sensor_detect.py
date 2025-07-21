@@ -4,9 +4,14 @@ import logging
 from typing import Tuple, Dict
 
 class SensorDetect:
-    def __init__(self):
+    def __init__(self, settings=None):
         self.camera_model = None
-        self.res_modes = []
+        self.res_modes = {}
+        self.settings = settings or {}
+        res_cfg = self.settings.get("resolutions", {})
+        self.k_steps = res_cfg.get("k_steps", [])
+        self.bit_depths = res_cfg.get("bit_depths", [])
+        self.custom_modes = res_cfg.get("custom_modes", {})
         # Detected resolutions per camera will be stored here
         self.sensor_resolutions = {}
 
@@ -88,7 +93,39 @@ class SensorDetect:
                 'file_size': file_size
             })
 
-        modes = {i: m for i, m in enumerate(reversed(modes_list))}
+        # Add custom modes from settings
+        for extra in self.custom_modes.get(camera_model, []):
+            width = int(extra.get("width"))
+            height = int(extra.get("height"))
+            bit_depth = int(extra.get("bit_depth"))
+            fps_max = extra.get("fps_max")
+
+            packing = self.packing_info.get(camera_model, 'U')
+            bytes_per_pixel = bit_depth / 8
+            file_size = round(width * height * bytes_per_pixel / (1024 * 1024), 1)
+
+            modes_list.append({
+                'aspect': round(width / height, 2),
+                'width': width,
+                'height': height,
+                'bit_depth': bit_depth,
+                'packing': packing,
+                'fps_max': fps_max,
+                'gui_layout': 0,
+                'file_size': file_size,
+            })
+
+        # Filter by desired bit depths and K-steps
+        filtered = []
+        for m in modes_list:
+            if self.bit_depths and m['bit_depth'] not in self.bit_depths:
+                continue
+            k_val = round(m['width'] / 1000 * 2) / 2
+            if self.k_steps and k_val not in self.k_steps:
+                continue
+            filtered.append(m)
+
+        modes = {i: m for i, m in enumerate(reversed(filtered))}
         return camera_model, modes
 
     def detect_camera_model(self):
@@ -106,14 +143,14 @@ class SensorDetect:
                 else:
                     logging.warning("No camera model detected")
                     self.camera_model = None
-                    self.res_modes = []
+                    self.res_modes = {}
             else:
                 logging.warning("No output from cinepi-raw")
 
         except Exception as e:
             logging.error(f"Unexpected error: {e}")
             self.camera_model = None
-            self.res_modes = []
+            self.res_modes = {}
 
     def check_camera(self):
         self.detect_camera_model()
@@ -124,7 +161,7 @@ class SensorDetect:
             self.res_modes = self.sensor_resolutions[self.camera_model]
         else:
             logging.error(f"Unknown camera model: {self.camera_model}")
-            self.res_modes = []
+            self.res_modes = {}
 
     def get_sensor_resolution(self, mode):
         return self.res_modes.get(mode, {})

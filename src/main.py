@@ -222,7 +222,7 @@ def initialize_system(settings):
     """Initialize core system components."""
     conf_rate = settings.get("settings", {}).get("conform_frame_rate", 24)
     redis_controller = RedisController(conform_frame_rate=conf_rate)
-    sensor_detect = SensorDetect()
+    sensor_detect = SensorDetect(settings)
     ssd_monitor = SSDMonitor(redis_controller=redis_controller)
     usb_monitor = USBMonitor(ssd_monitor)
     gpio_output = GPIOOutput(rec_out_pins=settings["gpio_output"]["rec_out_pin"])

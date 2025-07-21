@@ -238,11 +238,11 @@ sudo chmod +x post-processing1.json
 ### Install PiShrink
 
 ```bash
-wget https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh
-sudo install -m755 pishrink.sh /usr/local/bin/pishrink
+sudo wget https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh -O /usr/local/bin/pishrink.sh
+sudo chmod +x /usr/local/bin/pishrink.sh
 ```
 
->PiShrink is a great tool for compressing SD image file backups of the SD card. See here for instructions
+>PiShrink is a handy tool for compressing SD image file backups of the SD card. See here for instructions
 
 ### Reboot:
 

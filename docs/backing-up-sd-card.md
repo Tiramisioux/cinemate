@@ -34,9 +34,8 @@ sudo bash -Eeuo pipefail -c '
 
 To copy the file to your desktop computer:
 
-```
+```shell
 # From the desktop computers terminal
 
-```shell
 scp -r pi@<IP ADDRESS OF YOU PI>:/media/RAW/<COMPRESSED IMAGE FILE NAME> ~/Desktop/
 ```

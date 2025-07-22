@@ -146,4 +146,4 @@ class I2cOled(threading.Thread):
     def run(self):
         while True:
             self.update()
-            time.sleep(1)
+            time.sleep(0.01)

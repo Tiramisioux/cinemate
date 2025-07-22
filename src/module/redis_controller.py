@@ -141,7 +141,10 @@ class RedisController:
         # ────────────────────────── public helpers ───────────────────────
     def set_value(self, key, value):
         """Write key, publish, update cache, emit consolidated log output."""
-        # normalise key to plain string
+        if value is None:
+            logging.warning(f"Attempted to set Redis key '{key}' to None. Ignoring.")
+            return
+
         key_name = key.value if isinstance(key, ParameterKey) else str(key)
 
         # ─── Redis write / publish / cache ───────────────────────────

@@ -35,7 +35,7 @@ class SensorDetect:
         self.detect_camera_model()
 
     def _parse_cinepi_output(self, output: str) -> Tuple[str, Dict[int, Dict]]:
-        """Parse ``cinepi-raw --list-cameras`` output and return the camera
+        """Parse `cinepi-raw --list-cameras` output and return the camera
         model along with a dictionary of resolution modes."""
 
         camera_model = None
@@ -48,10 +48,13 @@ class SensorDetect:
             if not line:
                 continue
 
+            # Extract camera model and handle mono override
             if camera_model is None:
-                match = re.search(r"\d+\s*:\s*([^\s]+)\s*\[", line)
+                match = re.search(r"\d+\s*:\s*([^\s]+)\s*\[.*?(MONO)?\]", line)
                 if match:
                     camera_model = match.group(1)
+                    if match.group(2) == "MONO":
+                        camera_model += "_mono"
 
             if "Modes:" in line:
                 parsing = True
@@ -62,10 +65,11 @@ class SensorDetect:
             if not parsing:
                 continue
 
+            # Detect bit depth from format name like 'R12_CSI2P' or 'R16'
             if line.startswith("'"):
-                depth_match = re.search(r"'(?:[^']*?)(\d+)", line)
-                if depth_match:
-                    current_bit_depth = int(depth_match.group(1))
+                format_match = re.match(r"'R(\d+)", line)
+                if format_match:
+                    current_bit_depth = int(format_match.group(1))
                 if ':' in line:
                     line = line.split(':', 1)[1].strip()
 
@@ -127,6 +131,7 @@ class SensorDetect:
 
         modes = {i: m for i, m in enumerate(reversed(filtered))}
         return camera_model, modes
+
 
     def detect_camera_model(self):
         try:

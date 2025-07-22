@@ -5,7 +5,7 @@
     "wifi_hotspot": {
       "name": "CinePi",
       "password": "11111111",
-      "enabled": false
+      "enabled": true
     }
   },
 
@@ -42,7 +42,6 @@
   },
 
   "gpio_output": {
-    "pwm_pin": 19,
     "rec_out_pin": [6, 21]
   },
   
@@ -107,6 +106,24 @@
       "hold_action": "None"
     },
     {
+      "pin": 24,
+      "pull_up": "False",
+      "debounce_time": "0.1",
+      "press_action": {"method": "set_zoom"},
+      "single_click_action": "None",
+      "double_click_action": "None",
+      "hold_action": "None"
+    },
+    {
+      "pin": 25,
+      "pull_up": "False",
+      "debounce_time": "0.1",
+      "press_action": {"method": "set_zoom"},
+      "single_click_action": "None",
+      "double_click_action": "None",
+      "hold_action": "None"
+    },
+    {
       "pin": 26,
       "pull_up": "False",
       "debounce_time": "0.1",
@@ -147,7 +164,7 @@
     },
     {
       "clk_pin": 23,
-      "dt_pin": 25,
+      "dt_pin": 19,
       "encoder_actions": {
         "rotate_clockwise": {"method": "inc_shutter_a_nom", "args": []},
         "rotate_counterclockwise": {"method": "dec_shutter_a_nom", "args": []}

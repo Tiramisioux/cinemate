@@ -68,6 +68,7 @@ class CameraInfo:
         # Fallback: assume cam0
         return 'cam0'
 
+
     def as_dict(self):
         return {
             'index': self.index,
@@ -90,19 +91,15 @@ def discover_cameras(timeout: float = 10.0, interval: float = 1.0) -> List[Camer
     attempt = 0
     while time.monotonic() < end:
         attempt += 1
-        proc = subprocess.run(['cinepi-raw', '--list-cameras'],
-                              text=True, capture_output=True)
+
+        proc = subprocess.run(['cinepi-raw', '--list-cameras'], text=True, capture_output=True)
+
         cams: List[CameraInfo] = []
         for line in (proc.stdout or '').splitlines():
             m = rx.match(line)
             if m:
                 idx, name, fmt, path = m.groups()
-
-                # ───── create → log → append ─────
-                cam = CameraInfo(int(idx), name, fmt, path)
-                logging.info("Detected %s on %s (%s)",
-                             cam.name, cam.port, cam.path)
-                cams.append(cam)
+                cams.append(CameraInfo(int(idx), name, fmt, path))
 
         if cams:
             logging.info('Discovered cameras on attempt %d: %s', attempt, cams)
@@ -300,11 +297,12 @@ class CinePiProcess(Thread):
         # * Skip --tuning-file on Pi 4.  All other models keep it. *
         if not self._is_pi4():
             args += ["--tuning-file", tune]
-            
+
         zoom_init = self.redis_controller.get_value(ParameterKey.ZOOM.value)
         
         if zoom_init and float(zoom_init) != 1.0:
             args += ['--zoom', str(zoom_init)]
+
 
         # ── if running in multi-camera mode, pass --sync server/client ──
         if self.multi:
@@ -359,7 +357,6 @@ class CinePiManager:
 
         # ── 1. discovery ───────────────────────────────────────────
         cams = discover_cameras()                    # helper unchanged
-
 
         # ── Pi 4 sanity check ────────────────────────────────────────────
         try:

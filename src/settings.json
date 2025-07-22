@@ -1,6 +1,9 @@
 {
   "$schema": "./settings.schema.json",
 
+  "welcome_message": "THIS IS A COOL MACHINE",
+  "welcome_image": null,
+
   "system": {
     "wifi_hotspot": {
       "name": "CinePi",
@@ -8,6 +11,7 @@
       "enabled": true
     }
   },
+
 
   "geometry": {
     "cam0": {
@@ -24,7 +28,9 @@
 
   "output": {
     "cam0": {
+
       "hdmi_port": 1
+
     },
     "cam1": {
       "hdmi_port": 1
@@ -101,24 +107,6 @@
       "pull_up": "False",
       "debounce_time": "0.1",
       "press_action": {"method": "set_fps_double"},
-      "single_click_action": "None",
-      "double_click_action": "None",
-      "hold_action": "None"
-    },
-    {
-      "pin": 24,
-      "pull_up": "False",
-      "debounce_time": "0.1",
-      "press_action": {"method": "set_zoom"},
-      "single_click_action": "None",
-      "double_click_action": "None",
-      "hold_action": "None"
-    },
-    {
-      "pin": 25,
-      "pull_up": "False",
-      "debounce_time": "0.1",
-      "press_action": {"method": "set_zoom"},
       "single_click_action": "None",
       "double_click_action": "None",
       "hold_action": "None"
@@ -214,20 +202,18 @@
         "button": {"press_action": {"method": "rec"}}
       }
     }
+
   },
 
   "i2c_oled": {
     "enabled": true,
     "width": 128,
     "height": 64,
-    "font_size": 20,
+    "font_size": 30,
     "values": [
-      "iso",
-      "tc_cam0",
-      "RECORDING_TC"
-
+      "write_speed_to_drive"
     ]
-  },
-  "welcome_message": "THIS IS A COOL MACHINE",
-  "welcome_image": null
+  }
 }
+
+

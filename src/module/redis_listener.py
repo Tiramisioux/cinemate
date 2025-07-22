@@ -158,6 +158,7 @@ class RedisListener:
                         self.frame_count = stats_data.get('frameCount', None)
                         color_temp = stats_data.get('colorTemp', None)
                         sensor_timestamp = stats_data.get('sensorTimestamp', None)
+
                         timestamp = stats_data.get('timestamp')
                         timestamp_cam0 = stats_data.get('timestamp_cam0')
                         timestamp_cam1 = stats_data.get('timestamp_cam1')

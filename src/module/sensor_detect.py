@@ -1,11 +1,15 @@
 import subprocess
 import re
 import logging
+<<<<<<< HEAD
 from typing import Tuple, Dict
+=======
+>>>>>>> pr-14
 
 class SensorDetect:
     def __init__(self, settings=None):
         self.camera_model = None
+<<<<<<< HEAD
         self.res_modes = {}
         self.settings = settings or {}
         res_cfg = self.settings.get("resolutions", {})
@@ -33,6 +37,51 @@ class SensorDetect:
 
         # Populate camera model and modes on startup
         self.detect_camera_model()
+=======
+        self.res_modes = []
+        self.sensor_resolutions = {
+
+            'imx296': {                                                        
+                0: {'aspect': 1.33, 'width': 1456, 'height': 1088, 'bit_depth': 12, 'packing': 'P', 'fps_max': 60, 'gui_layout': 0, 'file_size': 2},
+            },
+            'imx283': {             
+                0: {'aspect': 1.80, 'width': 2736, 'height': 1538, 'bit_depth': 12, 'packing': 'U', 'fps_max': 40, 'gui_layout': 0, 'file_size': 7.1}, # driver fps max 40
+                1: {'aspect': 1.53, 'width': 2736, 'height': 1824, 'bit_depth': 12, 'packing': 'U', 'fps_max': 34, 'gui_layout': 0, 'file_size': 8.2}, # driver fps max 34
+                2: {'aspect': 1.77, 'width': 3936, 'height': 2176, 'bit_depth': 10, 'packing': 'U', 'fps_max': 60, 'gui_layout': 0, 'file_size': 8.2}, # driver fps max 21
+                #3: {'aspect': 1.52, 'width': 5568, 'height': 3664, 'bit_depth': 10, 'packing': 'U', 'fps_max': 17, 'gui_layout': 0, 'file_size': 31}, # driver fps max 17
+                #4: {'aspect': 1.52, 'width': 5568, 'height': 3664, 'bit_depth': 12, 'packing': 'U', 'fps_max': 17, 'gui_layout': 0, 'file_size': 31}, # driver fps max 17
+                #5: {'aspect': 1.80, 'width': 5568, 'height': 3094, 'bit_depth': 10, 'packing': 'U', 'fps_max': 21, 'gui_layout': 0, 'file_size': 2}, # driver fps max 21                                      
+            },
+
+            'imx477': {                                                             
+                0: {'aspect': 1.87, 'width': 2028, 'height': 1080, 'bit_depth': 12, 'packing': 'U', 'fps_max': 50, 'gui_layout': 0, 'file_size': 4.3, 'fps_correction_factor': 0.9995}, # driver fps max 50
+                1: {'aspect': 1.33, 'width': 2028, 'height': 1520, 'bit_depth': 12, 'packing': 'U', 'fps_max': 40, 'gui_layout': 0, 'file_size': 5.3, 'fps_correction_factor': 0.9995}, # driver fps max 40
+                2: {'aspect': 1.34, 'width': 1332, 'height': 990, 'bit_depth': 10, 'packing': 'U', 'fps_max': 120, 'gui_layout': 0, 'file_size': 2.7, 'fps_correction_factor': 0.9995}, # driver fps max 120 
+            },
+            'imx519': {             
+                0: {'aspect': 1.77, 'width': 1280, 'height': 720, 'bit_depth': 10, 'packing': 'P', 'fps_max': 80, 'gui_layout': 0, 'file_size': 7.1}, # driver fps max 80
+                1: {'aspect': 1.77, 'width': 1920, 'height': 1080, 'bit_depth': 10, 'packing': 'P', 'fps_max': 60, 'gui_layout': 0, 'file_size': 8.2}, # driver fps max 60
+                2: {'aspect': 1.77, 'width': 2328, 'height': 1748, 'bit_depth': 10, 'packing': 'P', 'fps_max': 30, 'gui_layout': 0, 'file_size': 8.2}, # driver fps max 30
+                3: {'aspect': 1.77, 'width': 3840, 'height': 2160, 'bit_depth': 10, 'packing': 'P', 'fps_max': 18, 'gui_layout': 0, 'file_size': 31}, # driver fps max 18                   
+            },
+            'imx585': {             
+                0: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 12, 'packing': 'U', 'fps_max': 87, 'gui_layout': 0, 'file_size': 4.1}, # driver fps max 87
+                1: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 12, 'packing': 'U', 'fps_max': 34, 'gui_layout': 0, 'file_size': 13.5}, # driver fps max 34
+               # 2: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 16, 'packing': 'U', 'fps_max': 30, 'gui_layout': 0, 'file_size': 13.5}, # driver fps max 30
+
+                #3: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 16, 'packing': 'U', 'fps_max': 21, 'gui_layout': 0, 'file_size': 8},                                      
+            },
+            'imx585_mono': {             
+                0: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 12, 'packing': 'U', 'fps_max': 87, 'gui_layout': 0, 'file_size': 4.1, 'fps_correction_factor': 0.9980},  # driver fps max 87
+                1: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 12, 'packing': 'U', 'fps_max': 34, 'gui_layout': 0, 'file_size': 13.5, 'fps_correction_factor': 0.9980}, # driver fps max 34
+                #2: {'aspect': 1.77, 'width': 1928, 'height': 1090, 'bit_depth': 16, 'packing': 'U', 'fps_max': 30, 'gui_layout': 0, 'file_size': 13.5, 'fps_correction_factor': 0.9980}, # driver fps max 30
+
+                #3: {'aspect': 1.77, 'width': 3856, 'height': 2180, 'bit_depth': 16, 'packing': 'U', 'fps_max': 21, 'gui_layout': 0, 'file_size': 8},                                      
+            },
+        }
+        
+        #self.detect_camera_model()
+>>>>>>> pr-14
 
     def _parse_cinepi_output(self, output: str) -> Tuple[str, Dict[int, Dict]]:
         """Parse ``cinepi-raw --list-cameras`` output and return the camera
@@ -132,17 +181,65 @@ class SensorDetect:
         try:
             result = subprocess.run('cinepi-raw --list-cameras', shell=True, capture_output=True, text=True)
             logging.info(f"cinepi-raw output: {result.stdout}")
+<<<<<<< HEAD
 
             if result.stdout:
                 model, modes = self._parse_cinepi_output(result.stdout)
                 if model:
                     self.camera_model = model
                     self.sensor_resolutions[self.camera_model] = modes
+=======
+
+            if result.stdout:
+                # Updated regex to capture the entire line
+                match = re.search(r'\d+\s*:\s*(\w+)\s*\[(.*?)\]', result.stdout)
+                if match:
+                    self.camera_model = match.group(1)
+                    details = match.group(2)
+                    if 'MONO' in details and self.camera_model == 'imx585':
+                        self.camera_model = 'imx585_mono'
                     logging.info(f"Detected camera model: {self.camera_model}")
                     self.load_sensor_resolutions()
                 else:
                     logging.warning("No camera model detected")
                     self.camera_model = None
+                    self.res_modes = []
+            else:
+                logging.warning("No output from cinepi-raw")
+
+            # if result.returncode != 0:
+            #     logging.warning(f"cinepi-raw command exited with non-zero status: {result.returncode}")
+            #     logging.warning(f"stderr: {result.stderr}")
+
+        except subprocess.CalledProcessError as e:
+            logging.error(f"Error running cinepi-raw: {e}")
+            self.camera_model = None
+            self.res_modes = []
+        except Exception as e:
+            logging.error(f"Unexpected error: {e}")
+            self.camera_model = None
+            self.res_modes = []
+
+    def check_camera(self):
+        try:
+            result = subprocess.run('cinepi-raw --list-cameras', shell=True, capture_output=True, text=True)
+            logging.info(f"cinepi-raw output: {result.stdout}")
+
+            if result.stdout:
+                # Updated regex to capture the entire line
+                match = re.search(r'\d+\s*:\s*(\w+)\s*\[(.*?)\]', result.stdout)
+                if match:
+                    self.camera_model = match.group(1)
+                    details = match.group(2)
+                    if 'MONO' in details and self.camera_model == 'imx585':
+                        self.camera_model = 'imx585_mono'
+>>>>>>> pr-14
+                    logging.info(f"Detected camera model: {self.camera_model}")
+                    self.load_sensor_resolutions()
+                else:
+                    logging.warning("No camera model detected")
+                    self.camera_model = None
+<<<<<<< HEAD
                     self.res_modes = {}
             else:
                 logging.warning("No output from cinepi-raw")
@@ -154,6 +251,20 @@ class SensorDetect:
 
     def check_camera(self):
         self.detect_camera_model()
+=======
+                    self.res_modes = []
+            else:
+                logging.warning("No output from cinepi-raw")
+
+            if result.returncode != 0:
+                logging.warning(f"cinepi-raw command exited with non-zero status: {result.returncode}")
+                logging.warning(f"stderr: {result.stderr}")
+
+        except Exception as e:
+            logging.error(f"Unexpected error: {e}")
+            self.camera_model = None
+
+>>>>>>> pr-14
         return self.camera_model
 
     def load_sensor_resolutions(self):
@@ -203,6 +314,13 @@ class SensorDetect:
         return resolution_info.get('bit_depth', None)
     
     def get_packing(self, camera_name, sensor_mode):
+<<<<<<< HEAD
+=======
+        resolution_info = self.get_resolution_info(camera_name, sensor_mode)
+        return resolution_info.get('packing', None)
+    
+    def get_fps_max(self, camera_name, sensor_mode):
+>>>>>>> pr-14
         resolution_info = self.get_resolution_info(camera_name, sensor_mode)
         return resolution_info.get('packing', None)
 
@@ -227,4 +345,9 @@ class SensorDetect:
         return resolutions
     
     def get_fps_correction_factor(self, camera_name, sensor_mode):
+<<<<<<< HEAD
         return self.fps_correction_factors.get(camera_name, 1.0)
+=======
+        resolution_info = self.get_resolution_info(camera_name, sensor_mode)
+        return resolution_info.get('fps_correction_factor', 1.0)
+>>>>>>> pr-14

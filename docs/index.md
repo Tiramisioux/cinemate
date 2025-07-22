@@ -9,4 +9,3 @@ For sharing your build with others, inspiration and discussion, make sure to joi
 !!! info ""
 
     [Download ](Cinemate-Docs.pdf) this documentation in pdf format for easy offline reference.
-

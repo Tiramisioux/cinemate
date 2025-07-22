@@ -46,20 +46,26 @@ def _load_settings(path: Path = SETTINGS_PATH) -> dict:
         return {}
 
 
-def _extract_credentials(cfg: dict | None) -> tuple[str, str, bool]:
-    """Extract SSID, password and ``enabled`` flag from settings.
 
-    Returns safe defaults when cfg is *None* or keys are missing.
+def _extract_credentials(cfg: dict | None) -> tuple[str, str]:
+    """Extract SSID & password from an already‑loaded *settings* dict.
+
+    Returns the safe defaults when cfg is *None* or keys are missing.
+
     """
     wifi_cfg = (cfg or {}).get("system", {}).get("wifi_hotspot", {})
     ssid = wifi_cfg.get("name", DEFAULT_SSID) or DEFAULT_SSID
     pw = wifi_cfg.get("password", DEFAULT_PASS) or DEFAULT_PASS
+
     enabled = bool(wifi_cfg.get("enabled", True))
+
 
     if len(pw) < 8:
         logger.warning("Password from settings < 8 chars – using default.")
         pw = DEFAULT_PASS
+
     return ssid, pw, enabled
+
 
 # ---------------------------------------------------------------------------
 # Main class
@@ -87,6 +93,7 @@ class WiFiHotspotManager:
         self.iface = iface
 
         if settings is not None:  # caller already did the JSON I/O
+
             self._ssid_cfg, self._pw_cfg, self.enabled = _extract_credentials(settings)
         else:  # self‑contained usage – read from disk
             self._ssid_cfg, self._pw_cfg, self.enabled = _extract_credentials(
@@ -124,9 +131,11 @@ class WiFiHotspotManager:
             ssid:      Optional override for SSID.
             password:  Optional override for password.
         """
+
         if not self.enabled:
             logger.info("Wi-Fi hotspot creation disabled in settings")
             return
+
 
         if self.is_hotspot_active():
             logger.info("Wi‑Fi hotspot already active – skipping creation.")

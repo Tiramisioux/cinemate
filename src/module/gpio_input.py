@@ -92,7 +92,6 @@ class ComponentInitializer:
                 dt_pin=encoder_config['dt_pin'],
                 actions=encoder_config['encoder_actions']
             )
-        
 
     def get_smart_button_by_pin(self, pin):
         for button in self.smart_buttons_list:

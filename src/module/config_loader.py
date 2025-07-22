@@ -24,6 +24,7 @@ def load_settings(filename: str | Path) -> dict:
     settings.setdefault("gpio_output",     {})
     settings.setdefault("arrays",          {})
     settings.setdefault("settings",        {"light_hz": [50, 60], "conform_frame_rate": 24})
+
     system_cfg = settings.setdefault("system", {})
     wifi_defaults = {
         "name": "CinePi",
@@ -35,6 +36,7 @@ def load_settings(filename: str | Path) -> dict:
         wifi_cfg.setdefault(k, v)
     system_cfg["wifi_hotspot"] = wifi_cfg
     settings["system"] = system_cfg
+
     settings.setdefault("analog_controls", {})
     settings.setdefault("free_mode",       {
         "iso_free":       False,
@@ -45,10 +47,12 @@ def load_settings(filename: str | Path) -> dict:
     settings.setdefault("buttons",              [])
     settings.setdefault("two_way_switches",     [])
     settings.setdefault("rotary_encoders",      [])
+
     settings.setdefault(
         "quad_rotary_controller",
         {"enabled": False, "encoders": {}}
     )
+
     settings.setdefault("welcome_message", "THIS IS A COOL MACHINE")
     settings.setdefault("welcome_image", None)
 
@@ -89,6 +93,7 @@ def load_settings(filename: str | Path) -> dict:
         arrays_cfg.setdefault(k, v)
     settings["arrays"] = arrays_cfg
 
+
     # ── resolution filter defaults ─────────────────────────────────────
     resolution_defaults = {
         "k_steps": [1.5, 2.0, 4.0],
@@ -99,5 +104,4 @@ def load_settings(filename: str | Path) -> dict:
     for k, v in resolution_defaults.items():
         res_cfg.setdefault(k, v)
     settings["resolutions"] = res_cfg
-
     return settings

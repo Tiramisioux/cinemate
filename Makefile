@@ -22,9 +22,14 @@ all: help
 # Install / update the service file
 # -------------------------------------------------------------------
 install:
+
+
 	sudo install -m 644 $(LOCAL_SERVICE_FILE) $(SERVICE_FILE_PATH)
-	sudo systemctl daemon-reload
+
 	@echo "Installed $(SERVICE_FILE_PATH)"
+	
+	cd src/module/app && npm ci
+	sudo systemctl daemon-reload
 
 # -------------------------------------------------------------------
 # Enable / disable (boot autostart)

@@ -1,0 +1,5 @@
+# Ignore artifacts:
+static
+main
+node_modules
+**/*.py

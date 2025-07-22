@@ -12,7 +12,9 @@ What’s new in this revision
 from __future__ import annotations
 import logging, threading, redis, psutil, time
 from enum import Enum
+
 import time, math
+-14
 
 # ───────────────────────── parameter keys ────────────────────────────
 class ParameterKey(Enum):
@@ -68,9 +70,10 @@ class ParameterKey(Enum):
     
     ZOOM                = "zoom"  # digital zoom factor for streams 0 & 2
     WRITE_SPEED_TO_DRIVE = "write_speed_to_drive"
-    RECORDING_TIME         = "recording_tc"      # elapsed-time in seconds   
+ 
     RECORDING_TC_REC     = "recording_tc_rec"    # elapsed-time time-code
     RECORDING_TC_TOD   = "recording_time_tod"    # time-of-day time-code
+    RECORDING_TIME       = "recording_time" # elapsed-time in seconds 
 
 
 # ────────────────────────── tiny pub‑sub helper ──────────────────────
@@ -148,6 +151,7 @@ class RedisController:
         with self.lock:
             if str(self.cache.get(key_name)) == str(value):
                 return                             # unchanged – nothing to do
+
             self.r.set(key_name, value)
             self.r.publish("cp_controls", key_name)
             self.cache[key_name] = str(value)
@@ -301,11 +305,11 @@ class RedisController:
         self._rec_timer_thread.start()
 
     def _stop_recording_timer(self) -> None:
+
         self._rec_timer_stop.set()
         if self._rec_timer_thread and self._rec_timer_thread.is_alive():
             self._rec_timer_thread.join(timeout=0.5)
         self._rec_timer_thread = None
-
 
     # optional helper -------------------------------------------------
     def stop_listener(self):

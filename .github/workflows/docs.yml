@@ -9,7 +9,12 @@ permissions:
 on:
   push:
     branches:
+<<<<<<< HEAD
       - cinemate-3.1
+=======
+      - main
+      - v3_dev
+>>>>>>> pr-14
   workflow_dispatch:
 
 jobs:
@@ -34,11 +39,20 @@ jobs:
             mkdocs-material \
             mkdocs-pdf-export-plugin \
             mkdocs-git-revision-date-localized-plugin \
+<<<<<<< HEAD
             mkdocs-macros-plugin \
             "mkdocs-with-pdf==0.9.3"
 
       - name: Generate dynamic cover page
         run: bash docs/scripts/generate_coverpage.sh  
+=======
+            mkdocs-macros-plugin
+
+      - name: Generate cover page
+        run: |
+          chmod +x ./generate_coverpage.sh
+          ./generate_coverpage.sh
+>>>>>>> pr-14
 
       - name: Build site
         run: python -m mkdocs build --clean
@@ -48,7 +62,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cinemate-docs-pdf
+<<<<<<< HEAD
           path: site/renders/*.pdf
+=======
+          path: site/pdf/*.pdf
+>>>>>>> pr-14
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -59,6 +77,7 @@ jobs:
           user_name: github-actions[bot]
           user_email: github-actions[bot]@users.noreply.github.com
           allow_empty_commit: true
+<<<<<<< HEAD
 
       - name: Copy PDF to docs/renders and push
         run: |
@@ -68,3 +87,5 @@ jobs:
           git add docs/renders/Cinemate-Docs.pdf
           git commit -m "CI: update rendered PDF"
           git push
+=======
+>>>>>>> pr-14

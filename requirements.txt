@@ -13,7 +13,14 @@ numpy
 sugarpie
 flask_socketio
 termcolor
+<<<<<<< HEAD
 adafruit-blinka
 adafruit-circuitpython-seesaw
 adafruit-circuitpython-ssd1306
 mkdocs-with-pdf==0.9.3
+=======
+board
+adafruit-blinka
+adafruit-circuitpython-seesaw
+adafruit-circuitpython-ssd1306
+>>>>>>> pr-14

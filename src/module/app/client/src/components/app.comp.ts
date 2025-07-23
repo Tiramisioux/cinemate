@@ -340,9 +340,9 @@ export class CinemateApp extends LitElement {
                     ? html`<p class="stats">FC: ${this._data.get('frame_count')}</p>`
                     : null}-->
             </div>
-            <!-- <cinemate-video src="http://cinepi.local:8000/stream"></cinemate-video> -->
-            <!-- <cinemate-video src="../static/image.png"></cinemate-video> -->
-            <cinemate-video></cinemate-video>
+            <cinemate-video src="http://cinepi.local:8000/stream" @click="${this._onRecClick}"></cinemate-video>
+            <!-- <cinemate-video src="../static/image.png" @click="${this._onRecClick}"></cinemate-video> -->
+            <!-- <cinemate-video @click="${this._onRecClick}"></cinemate-video> -->
             <div class="bottom-bar">
                 <div class="left-container">
                     <cinemate-menu

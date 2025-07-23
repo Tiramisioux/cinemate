@@ -63,7 +63,7 @@ export class CinemateRecButton extends LitElement {
 
     protected update(changedProperties: PropertyValues): void {
         if (changedProperties.has('status')) {
-            this.style.setProperty('--status-color', statusData[this.status].color);
+            document.documentElement.style.setProperty('--status-color', statusData[this.status].color);
             this._label = statusData[this.status].label;
         }
         super.update(changedProperties);

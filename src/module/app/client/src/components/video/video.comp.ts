@@ -28,16 +28,24 @@ export class CinemateVideo extends LitElement {
             min-height: 0;
             min-width: 0;
             display: block;
+            background: black;
+            overflow: hidden;
         }
-        img,
-        #main-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
+        #video-stream {
+            position: relative;
+            width: auto;
             height: 100%;
-            object-fit: contain;
-            background-color: black;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        @media (orientation: portrait) {
+            #video-stream {
+                width: 100%;
+                height: auto;
+                top: 50%;
+                transform: translateY(-50%);
+            }
         }
         #focus-canvas,
         #exposure-canvas,
@@ -93,22 +101,24 @@ export class CinemateVideo extends LitElement {
             width: 20px;
             height: 100%;
         }
+        .status-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            transform: translate(-50%, -50%);
+            border: 2px solid var(--status-color);
+        }
     `;
 
     @property({ type: String })
-    src: string = 'https://picsum.photos/915/354';
+    src: string = 'https://picsum.photos/2028/1520';
 
     @property({ type: Array })
     activeOverlays: string[] = [];
 
-    private _lastDrawTime = 0;
-    private _previewUpDateRateFPS = 25;
-
-    private _img: HTMLImageElement | null = null;
     private _animationFrame: number | null = null;
-
-    private _mainCanvas: HTMLCanvasElement | undefined;
-    private _ctx: CanvasRenderingContext2D | null | undefined;
 
     private _histogram: Histogram | undefined;
     private _focusPeaking: FocusPeaking | undefined;
@@ -120,45 +130,33 @@ export class CinemateVideo extends LitElement {
     private _overlays: OverlayBase[] = [];
 
     firstUpdated() {
-        this._mainCanvas = this.renderRoot.querySelector('#main-canvas') as HTMLCanvasElement;
-        this._ctx = this._mainCanvas.getContext('2d', { willReadFrequently: true, alpha: false });
-        this._img = new window.Image();
-        this._img.crossOrigin = 'anonymous';
-        this._img.onload = () => this._drawFrame();
 
         this._exposure = new Exposure(
-            this._mainCanvas,
-            this._ctx!,
+            this._img as HTMLImageElement,
             this.renderRoot.querySelector('#exposure-canvas') as HTMLCanvasElement
         );
         this._el = new ElColor(
-            this._mainCanvas,
-            this._ctx!,
+            this._img as HTMLImageElement,
             this.renderRoot.querySelector('#el-canvas') as HTMLCanvasElement
         );
         this._falseColor = new FalseColor(
-            this._mainCanvas,
-            this._ctx!,
-            this.renderRoot.querySelector('#false-canvas') as HTMLCanvasElement
+            this._img as HTMLImageElement,
+            this.renderRoot.querySelector('#false-canvas') as HTMLCanvasElement,
         );
         this._focusPeaking = new FocusPeaking(
-            this._mainCanvas,
-            this._ctx!,
+            this._img as HTMLImageElement,
             this.renderRoot.querySelector('#focus-canvas') as HTMLCanvasElement
         );
         this._histogram = new Histogram(
-            this._mainCanvas,
-            this._ctx!,
+            this._img as HTMLImageElement,
             this.renderRoot.querySelector('#histogram-canvas') as HTMLCanvasElement
         );
         this._vectorScope = new Vectorscope(
-            this._mainCanvas,
-            this._ctx!,
+            this._img as HTMLImageElement,
             this.renderRoot.querySelector('#vectorscope-canvas') as HTMLCanvasElement
         );
         this._waveform = new Waveform(
-            this._mainCanvas,
-            this._ctx!,
+            this._img as HTMLImageElement,
             this.renderRoot.querySelector('#waveform-canvas') as HTMLCanvasElement
         );
         this._overlays = [
@@ -171,16 +169,17 @@ export class CinemateVideo extends LitElement {
             this._falseColor,
         ];
         this._toggleOverlays();
-        this._startStream();
+        this._updateOverlays();
     }
 
     updated(changedProps: Map<string, any>) {
         if (changedProps.has('activeOverlays')) {
             this._toggleOverlays();
         }
-        if (changedProps.has('src')) {
-            this._startStream();
-        }
+    }
+
+    private get _img(): HTMLImageElement | null {
+        return this.renderRoot.querySelector('#video-stream') as HTMLImageElement;
     }
 
     private _toggleOverlays() {
@@ -195,34 +194,17 @@ export class CinemateVideo extends LitElement {
         });
     }
 
-    private _startStream() {
+    private _updateOverlays() {
         if (!this._img) return;
-        // For MJPEG, set the src to the stream URL
-        this._img.crossOrigin = 'anonymous';
-        this._img.src = this.src;
-    }
-
-    private _drawFrame() {
-        // only update at max at the framerate that _previewUpDateRateFPS is set to.
-        const now = performance.now();
-        const minInterval = 1000 / this._previewUpDateRateFPS;
-        if (now - this._lastDrawTime < minInterval) {
-            this._animationFrame = requestAnimationFrame(() => this._drawFrame());
-            return;
+        
+        const statusOverlay = this.renderRoot.querySelector('.status-overlay') as HTMLDivElement;
+        if (statusOverlay) {
+            statusOverlay.style.width = (this._img.getBoundingClientRect().width - 4) + 'px';
+            statusOverlay.style.height = (this._img.getBoundingClientRect().height - 4) + 'px';
         }
-        this._lastDrawTime = now;
-
-        if (!this._mainCanvas || !this._img || !this._ctx) return;
-
-        // Resize canvas to match image
-        if (this._mainCanvas.width !== this._img.naturalWidth) {
-            this._mainCanvas.width = this._img.naturalWidth;
-            this._mainCanvas.height = this._img.naturalHeight;
-        }
-        this._ctx.drawImage(this._img, 0, 0, this._mainCanvas.width, this._mainCanvas.height);
 
         this._overlays.forEach((overlay) => overlay.update());
-        this._animationFrame = requestAnimationFrame(() => this._drawFrame());
+        this._animationFrame = requestAnimationFrame(() => this._updateOverlays());
     }
 
     disconnectedCallback() {
@@ -234,7 +216,7 @@ export class CinemateVideo extends LitElement {
 
     render() {
         return html`
-            <canvas id="main-canvas"></canvas>
+            <img id="video-stream" src="${this.src}" crossorigin="anonymous"/>
             <div class="el-zones-bar">
                 ${Object.keys(EL_ZONE_COLORS)
                     .sort((a, b) => parseFloat(a) - parseFloat(b))
@@ -259,6 +241,7 @@ export class CinemateVideo extends LitElement {
                     `;
                 })}
             </div>
+            <div class="status-overlay"></div>
             <canvas id="focus-canvas"></canvas>
             <canvas id="exposure-canvas"></canvas>
             <canvas id="el-canvas"></canvas>
@@ -268,8 +251,4 @@ export class CinemateVideo extends LitElement {
             <canvas id="vectorscope-canvas"></canvas>
         `;
     }
-
-    /* render() {
-        return html`<img src="${this.src}" />`;
-    } */
 }

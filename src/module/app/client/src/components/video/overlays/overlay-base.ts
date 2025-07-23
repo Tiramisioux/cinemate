@@ -2,14 +2,18 @@ export abstract class OverlayBase {
     public name: string = '';
 
     protected upDateRateFPS: number = 25;
-    protected videoCanvas: HTMLCanvasElement;
-    protected videoContext: CanvasRenderingContext2D;
+    protected imageElement: HTMLImageElement;
+    
+    protected tempCanvas: HTMLCanvasElement;
+    protected tempCtx: CanvasRenderingContext2D | null;
 
     private _lastUpdate: number = 0;
     private _enabled: boolean = false;
-    constructor(videoCanvas: HTMLCanvasElement, videoContext: CanvasRenderingContext2D) {
-        this.videoCanvas = videoCanvas;
-        this.videoContext = videoContext;
+    constructor(imageElement: HTMLImageElement) {
+        this.imageElement = imageElement;
+
+        this.tempCanvas = document.createElement('canvas');
+        this.tempCtx = this.tempCanvas.getContext('2d', { willReadFrequently: true });
     }
 
     public update(): void {}
@@ -40,7 +44,7 @@ export abstract class OverlayBase {
         return true;
     }
 
-    protected limiteRgbToFullRGB(v: number): number {
+    protected limitedRgbToFullRGB(v: number): number {
         // Clamp to [16, 235] just in case
         v = Math.max(16, Math.min(235, v));
         // Map [16, 235] to [0, 255]

@@ -22,42 +22,35 @@ export const falseColorLut = [
 export class FalseColor extends OverlayBase {
     // Downscale factor for performance
     private _scale: number = 0.3; // Adjust for quality/performance tradeoff
-    private _tempCanvas: HTMLCanvasElement;
-    private _tempCtx: CanvasRenderingContext2D | null;
 
     private _falseColorCanvas: HTMLCanvasElement;
     private _falseColorContext: CanvasRenderingContext2D | null;
 
     constructor(
-        videoCanvas: HTMLCanvasElement,
-        videoContext: CanvasRenderingContext2D,
-        falseColorCanvas: HTMLCanvasElement
+        imageElement: HTMLImageElement,
+        falseColorCanvas: HTMLCanvasElement,
     ) {
-        super(videoCanvas, videoContext);
+        super(imageElement);
         this.name = VideoOverlay.FalseColor;
-
-        // Create a temporary canvas for downscaled processing
-        this._tempCanvas = document.createElement('canvas');
-        this._tempCtx = this._tempCanvas.getContext('2d', { willReadFrequently: true });
 
         this._falseColorCanvas = falseColorCanvas;
         this._falseColorContext = this._falseColorCanvas?.getContext('2d', { alpha: true });
     }
 
     public update(): void {
-        if (!this.shouldUpdate() || !this._tempCtx || !this._falseColorContext) {
+        if (!this.shouldUpdate() || !this.tempCtx || !this._falseColorContext) {
             return;
         }
 
-        this._falseColorCanvas.width = this.videoCanvas.width;
-        this._falseColorCanvas.height = this.videoCanvas.height;
+        this._falseColorCanvas.width = this.imageElement.naturalWidth;
+        this._falseColorCanvas.height = this.imageElement.naturalHeight;
 
-        this._tempCanvas.width = Math.max(1, Math.floor(this.videoCanvas.width * this._scale));
-        this._tempCanvas.height = Math.max(1, Math.floor(this.videoCanvas.height * this._scale));
-        this._tempCtx.drawImage(this.videoCanvas, 0, 0, this._tempCanvas.width, this._tempCanvas.height);
+        this.tempCanvas.width = Math.max(1, Math.floor(this._falseColorCanvas.width * this._scale));
+        this.tempCanvas.height = Math.max(1, Math.floor(this._falseColorCanvas.height * this._scale));
+        this.tempCtx.drawImage(this.imageElement, 0, 0, this.tempCanvas.width, this.tempCanvas.height);
 
         // Get image data from the downscaled canvas
-        const imageData = this._tempCtx.getImageData(0, 0, this._tempCanvas.width, this._tempCanvas.height);
+        const imageData = this.tempCtx.getImageData(0, 0, this.tempCanvas.width, this.tempCanvas.height);
         const { data, width, height } = imageData;
 
         function getFalseColor(luma: number): [number, number, number] | number[] {
@@ -71,9 +64,9 @@ export class FalseColor extends OverlayBase {
 
         // === Process each pixel ===
         for (let i = 0; i < data.length; i += 4) {
-            const r = this.limiteRgbToFullRGB(data[i]);
-            const g = this.limiteRgbToFullRGB(data[i + 1]);
-            const b = this.limiteRgbToFullRGB(data[i + 2]);
+            const r = this.limitedRgbToFullRGB(data[i]);
+            const g = this.limitedRgbToFullRGB(data[i + 1]);
+            const b = this.limitedRgbToFullRGB(data[i + 2]);
             const luma = 0.299 * r + 0.587 * g + 0.114 * b;
 
             const [fr, fg, fb] = getFalseColor(luma);
@@ -84,10 +77,10 @@ export class FalseColor extends OverlayBase {
         }
 
         // Put processed data back to the temp canvas
-        this._tempCtx.putImageData(new ImageData(data, width, height), 0, 0);
+        this.tempCtx.putImageData(new ImageData(data, width, height), 0, 0);
 
         // Draw the processed (upscaled) result back onto the main canvas
-        this._falseColorContext.drawImage(this._tempCanvas, 0, 0, this.videoCanvas.width, this.videoCanvas.height);
+        this._falseColorContext.drawImage(this.tempCanvas, 0, 0, this._falseColorCanvas.width, this._falseColorCanvas.height);
     }
 
     public clear(): void {

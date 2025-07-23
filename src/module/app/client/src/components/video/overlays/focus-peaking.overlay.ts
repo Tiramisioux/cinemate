@@ -5,8 +5,6 @@ import { OverlayBase } from './overlay-base';
 export class FocusPeaking extends OverlayBase {
     // Downscale factor for performance
     private _scale: number = 0.5; // Adjust for quality/performance tradeoff
-    private _tempCanvas: HTMLCanvasElement;
-    private _tempCtx: CanvasRenderingContext2D | null;
 
     private _focusCanvas: HTMLCanvasElement;
     private _focusContext: CanvasRenderingContext2D | null;
@@ -17,23 +15,18 @@ export class FocusPeaking extends OverlayBase {
     public static readonly DefaultThreshold: number = 80;
 
     constructor(
-        videoCanvas: HTMLCanvasElement,
-        videoContext: CanvasRenderingContext2D,
+        imageElement: HTMLImageElement,
         focusCanvas: HTMLCanvasElement
     ) {
-        super(videoCanvas, videoContext);
+        super(imageElement);
         this.name = VideoOverlay.FocusPeaking;
-
-        // Create a temporary canvas for downscaled processing
-        this._tempCanvas = document.createElement('canvas');
-        this._tempCtx = this._tempCanvas.getContext('2d', { willReadFrequently: true });
 
         this._focusCanvas = focusCanvas;
         this._focusContext = this._focusCanvas?.getContext('2d', { alpha: true });
     }
 
     public update(): void {
-        if (!this.shouldUpdate() || !this._tempCtx || !this._focusContext) {
+        if (!this.shouldUpdate() || !this.tempCtx || !this._focusContext) {
             return;
         }
 
@@ -42,15 +35,15 @@ export class FocusPeaking extends OverlayBase {
             FocusPeaking.DefaultThreshold
         );
 
-        this._focusCanvas.width = this.videoCanvas.width;
-        this._focusCanvas.height = this.videoCanvas.height;
+        this._focusCanvas.width = this.imageElement.naturalWidth;
+        this._focusCanvas.height = this.imageElement.naturalHeight;
 
-        this._tempCanvas.width = Math.max(1, Math.floor(this.videoCanvas.width * this._scale));
-        this._tempCanvas.height = Math.max(1, Math.floor(this.videoCanvas.height * this._scale));
-        this._tempCtx.drawImage(this.videoCanvas, 0, 0, this._tempCanvas.width, this._tempCanvas.height);
+        this.tempCanvas.width = Math.max(1, Math.floor(this._focusCanvas.width * this._scale));
+        this.tempCanvas.height = Math.max(1, Math.floor(this._focusCanvas.height * this._scale));
+        this.tempCtx.drawImage(this.imageElement, 0, 0, this.tempCanvas.width, this.tempCanvas.height);
 
         // Get image data from the downscaled canvas
-        const imageData = this._tempCtx.getImageData(0, 0, this._tempCanvas.width, this._tempCanvas.height);
+        const imageData = this.tempCtx.getImageData(0, 0, this.tempCanvas.width, this.tempCanvas.height);
         const { data, width, height } = imageData;
         const output = new Uint8ClampedArray(data.length);
 
@@ -90,10 +83,10 @@ export class FocusPeaking extends OverlayBase {
         }
 
         // Put processed data back to the temp canvas
-        this._tempCtx.putImageData(new ImageData(output, width, height), 0, 0);
+        this.tempCtx.putImageData(new ImageData(output, width, height), 0, 0);
 
         // Draw the processed (upscaled) result back onto the main canvas
-        this._focusContext.drawImage(this._tempCanvas, 0, 0, this.videoCanvas.width, this.videoCanvas.height);
+        this._focusContext.drawImage(this.tempCanvas, 0, 0, this._focusCanvas.width, this._focusCanvas.height);
     }
 
     public clear(): void {

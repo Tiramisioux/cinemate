@@ -24,41 +24,34 @@ export const EL_ZONE_COLORS: { [zone: string]: [number, number, number] } = {
 export class ElColor extends OverlayBase {
     // Downscale factor for performance
     private _scale: number = 0.3; // Adjust for quality/performance tradeoff
-    private _tempCanvas: HTMLCanvasElement;
-    private _tempCtx: CanvasRenderingContext2D | null;
 
     private _exposureCanvas: HTMLCanvasElement;
     private _exposureContext: CanvasRenderingContext2D | null;
 
     constructor(
-        videoCanvas: HTMLCanvasElement,
-        videoContext: CanvasRenderingContext2D,
+        imageElement: HTMLImageElement,
         exposureCanvas: HTMLCanvasElement
     ) {
-        super(videoCanvas, videoContext);
+        super(imageElement);
         this.name = VideoOverlay.ElColor;
-
-        // Create a temporary canvas for downscaled processing
-        this._tempCanvas = document.createElement('canvas');
-        this._tempCtx = this._tempCanvas.getContext('2d', { willReadFrequently: true });
 
         this._exposureCanvas = exposureCanvas;
         this._exposureContext = this._exposureCanvas?.getContext('2d', { alpha: true });
     }
 
     public update(): void {
-        if (!this.shouldUpdate() || !this._tempCtx || !this._exposureContext) {
+        if (!this.shouldUpdate() || !this.tempCtx || !this._exposureContext) {
             return;
         }
 
-        this._exposureCanvas.width = this.videoCanvas.width;
-        this._exposureCanvas.height = this.videoCanvas.height;
+        this._exposureCanvas.width = this.imageElement.naturalWidth;
+        this._exposureCanvas.height = this.imageElement.naturalHeight;
 
-        this._tempCanvas.width = Math.max(1, Math.floor(this.videoCanvas.width * this._scale));
-        this._tempCanvas.height = Math.max(1, Math.floor(this.videoCanvas.height * this._scale));
-        this._tempCtx.drawImage(this.videoCanvas, 0, 0, this._tempCanvas.width, this._tempCanvas.height);
+        this.tempCanvas.width = Math.max(1, Math.floor(this._exposureCanvas.width * this._scale));
+        this.tempCanvas.height = Math.max(1, Math.floor(this._exposureCanvas.height * this._scale));
+        this.tempCtx.drawImage(this.imageElement, 0, 0, this.tempCanvas.width, this.tempCanvas.height);
 
-        const imageData = this._tempCtx.getImageData(0, 0, this._tempCanvas.width, this._tempCanvas.height);
+        const imageData = this.tempCtx.getImageData(0, 0, this.tempCanvas.width, this.tempCanvas.height);
         const { data, width, height } = imageData;
 
         const zoneKeys = [];
@@ -90,8 +83,8 @@ export class ElColor extends OverlayBase {
             // data[i + 3] = 180;
         }
 
-        this._tempCtx.putImageData(new ImageData(data, width, height), 0, 0);
-        this._exposureContext.drawImage(this._tempCanvas, 0, 0, this.videoCanvas.width, this.videoCanvas.height);
+        this.tempCtx.putImageData(new ImageData(data, width, height), 0, 0);
+        this._exposureContext.drawImage(this.tempCanvas, 0, 0, this._exposureCanvas.width, this._exposureCanvas.height);
     }
 
     public clear(): void {

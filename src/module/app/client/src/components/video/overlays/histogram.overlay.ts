@@ -11,11 +11,10 @@ export class Histogram extends OverlayBase {
     private _y: number = 0;
 
     constructor(
-        videoCanvas: HTMLCanvasElement,
-        videoContext: CanvasRenderingContext2D,
+        imageElement: HTMLImageElement,
         histogramCanvas: HTMLCanvasElement
     ) {
-        super(videoCanvas, videoContext);
+        super(imageElement);
         this.name = VideoOverlay.Histogram;
         this.upDateRateFPS = 10;
 
@@ -32,13 +31,17 @@ export class Histogram extends OverlayBase {
             return;
         }
 
-        const data = this.videoContext?.getImageData(0, 0, this.videoCanvas.width, this.videoCanvas.height).data || [];
+        this.tempCanvas.width = this.imageElement.width;
+        this.tempCanvas.height = this.imageElement.height;
+        this.tempCtx?.drawImage(this.imageElement, 0, 0, this.tempCanvas.width, this.tempCanvas.height);
+
+        const data = this.tempCtx?.getImageData(0, 0, this.tempCanvas.width, this.tempCanvas.height).data || [];
         const hist = new Array(256).fill(0);
         // Calculate luminance histogram
         for (let i = 0; i < data.length; i += 4) {
-            const r = this.limiteRgbToFullRGB(data[i]);
-            const g = this.limiteRgbToFullRGB(data[i + 1]);
-            const b = this.limiteRgbToFullRGB(data[i + 2]);
+            const r = this.limitedRgbToFullRGB(data[i]);
+            const g = this.limitedRgbToFullRGB(data[i + 1]);
+            const b = this.limitedRgbToFullRGB(data[i + 2]);
             // Standard luminance formula
             const lum = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
             hist[lum]++;

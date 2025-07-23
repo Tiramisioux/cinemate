@@ -17,8 +17,16 @@
             color: #fff;
             padding: 10px;
             display: flex;
-            justify-content: space-between;
+            justify-content: space-evenly;
             align-items: center;
+            gap: 10px;
+        }
+        .bottom-bar > div {
+            flex: 1;
+            text-align: center;
+        }
+        .bottom-bar button {
+            flex: 0 0 auto;
         }
         .top-bar select, .bottom-bar select {
             margin-left: 10px;
@@ -194,6 +202,9 @@
             }
             if (data.wb !== undefined) {
                 document.getElementById('wb-select').value = data.wb;
+            }
+            if (data.buffer !== undefined) {
+                document.getElementById('buffer-used').innerText = data.buffer;
             }
         });
 

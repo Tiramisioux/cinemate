@@ -55,10 +55,10 @@
 </head>
 <body>
     <div class="top-bar">
-        <div>ISO:
-            <select id="iso-select">
-                {% for iso_value in iso_values %}
-                    <option value="{{ iso_value }}" {% if iso_value == current_iso %}selected{% endif %}>{{ iso_value }}</option>
+        <div>FPS:
+            <select id="fps-select">
+                {% for fps_value in fps_values %}
+                    <option value="{{ fps_value }}" {% if fps_value == current_fps %}selected{% endif %}>{{ fps_value }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -69,10 +69,11 @@
                 {% endfor %}
             </select>
         </div>
-        <div>FPS:
-            <select id="fps-select">
-                {% for fps_value in fps_values %}
-                    <option value="{{ fps_value }}" {% if fps_value == current_fps %}selected{% endif %}>{{ fps_value }}</option>
+        <div>Exposure: <span id="exposure-time"></span></div>
+        <div>ISO:
+            <select id="iso-select">
+                {% for iso_value in iso_values %}
+                    <option value="{{ iso_value }}" {% if iso_value == current_iso %}selected{% endif %}>{{ iso_value }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -83,26 +84,27 @@
                 {% endfor %}
             </select>
         </div>
-    </div>
-    <div id="stream-container">
-        <img id="stream" src="{{ stream_url }}" alt="Stream">
-    </div>
-    <div class="bottom-bar">
-        <div><span id="disk-space"></span></div>
-        <button id="unmount-btn">Unmount</button>
-        <div>CPU: <span id="cpu-load"></span></div>
-        <div>RAM: <span id="ram-load"></span></div>
-        <div>TEMP: <span id="cpu-temp"></span></div>
-        <div><span id="current-sensor"></span>
+        <div>Resolution:
             <select id="resolution-select">
                 {% for resolution in resolution_values %}
                     <option value="{{ resolution.mode }}">{{ resolution.width }}x{{ resolution.height }}</option>
                 {% endfor %}
             </select>
         </div>
-        <div><span id="framecount"></span></div>
-        <div> <span id="buffer"></span></div>
-        <button id="fullscreen-btn">Enter Fullscreen</button>
+    </div>
+    <div id="stream-container">
+        <img id="stream" src="{{ stream_url }}" alt="Stream">
+    </div>
+    <div class="bottom-bar">
+        <button id="unmount-btn">Unmount</button>
+        <div><span id="disk-space"></span></div>
+        <div>WRITE: <span id="write-speed"></span></div>
+        <div>FRAMES: <span id="buffer-used"></span></div>
+        <div>BUFFER: <span id="buffer-size"></span></div>
+        <div>CPU: <span id="cpu-load"></span></div>
+        <div>RAM: <span id="ram-load"></span></div>
+        <div>TEMP: <span id="cpu-temp"></span></div>
+        <button id="fullscreen-btn" style="margin-left:auto;">Enter Fullscreen</button>
     </div>
     <script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
     <script>
@@ -158,14 +160,13 @@
 
             document.body.style.backgroundColor = data.background_color;
             document.getElementById('disk-space').innerText = data.disk_space;
+            document.getElementById('write-speed').innerText = data.write_speed;
+            document.getElementById('buffer-used').innerText = data.buffer_used;
+            document.getElementById('buffer-size').innerText = data.buffer_size;
             document.getElementById('cpu-load').innerText = data.cpu_load;
             document.getElementById('ram-load').innerText = data.ram_load;
             document.getElementById('cpu-temp').innerText = data.cpu_temp;
-
-            document.getElementById('framecount').innerText = data.framecount;
-            document.getElementById('buffer').innerText = data.buffer;
-
-            document.getElementById('current-sensor').innerText = data.current_sensor;
+            document.getElementById('exposure-time').innerText = data.exposure_time;
             const resolutionSelect = document.getElementById('resolution-select');
             resolutionSelect.innerHTML = '';
             data.sensor_resolutions.forEach(res => {
@@ -194,9 +195,6 @@
             if (data.wb !== undefined) {
                 document.getElementById('wb-select').value = data.wb;
             }
-            if (data.framebuffer !== undefined) {
-                document.getElementById('framebuffer').value = data.framebuffer;
-            }   
         });
 
         socket.on('shutter_a_update', data => {
@@ -211,11 +209,26 @@
             if (data.disk_space !== undefined) {
                 document.getElementById('disk-space').innerText = data.disk_space;
             }
+            if (data.write_speed !== undefined) {
+                document.getElementById('write-speed').innerText = data.write_speed;
+            }
+            if (data.buffer_used !== undefined) {
+                document.getElementById('buffer-used').innerText = data.buffer_used;
+            }
+            if (data.buffer_size !== undefined) {
+                document.getElementById('buffer-size').innerText = data.buffer_size;
+            }
             if (data.cpu_load !== undefined) {
                 document.getElementById('cpu-load').innerText = data.cpu_load;
             }
             if (data.ram_load !== undefined) {
                 document.getElementById('ram-load').innerText = data.ram_load;
+            }
+            if (data.cpu_temp !== undefined) {
+                document.getElementById('cpu-temp').innerText = data.cpu_temp;
+            }
+            if (data.exposure_time !== undefined) {
+                document.getElementById('exposure-time').innerText = data.exposure_time;
             }
         });
 

@@ -505,6 +505,11 @@ class SimpleGUI(threading.Thread):
                     f"{self.redis_controller.get_value(ParameterKey.BUFFER.value)}"
         values["frame_count"] = re.sub(r"[^0-9 /]", "", frame_count)
 
+        values["buffer_used"] = str(
+            self.redis_controller.get_value(ParameterKey.BUFFER.value) or "0")
+        values["buffer_size"] = str(
+            self.redis_controller.get_value(ParameterKey.BUFFER_SIZE.value) or "0")
+
         # if values["fps"] != int(float(self.redis_controller.get_value(ParameterKey.FPS_USER.value))):
         #     self.colors["fps"]["normal"] = "yellow"
         if self.cinepi_controller.shutter_a_sync_mode != 0:

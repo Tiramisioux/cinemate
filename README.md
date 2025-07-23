@@ -11,6 +11,7 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
 - fast uncompressed dng encoder, supporting both IMX 585 color and mono sensors (normal SSD's working well for HD @ 25 fps)
 - redesigned HDMI ui
 - sound recording activated
+- dual sensor support
 - punch in digital zoom of preview
 - i2c oled module and enum enhanced Redis key handling by [tevey](https://github.com/tevey)
 - selection of physical camera port cam0 or cam1

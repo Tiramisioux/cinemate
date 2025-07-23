@@ -635,6 +635,14 @@ class CinePiController:
 
         # Commit the final value outside the lock
         self.redis_controller.set_value(ParameterKey.SHUTTER_A.value, safe_value)
+        
+        # also update the "actual" key so GUI reflects CLI changes
+        self.redis_controller.set_value(ParameterKey.SHUTTER_A_ACTUAL.value, safe_value)
+        # keep nominal angle in sync when not using sync mode
+
+        if self.shutter_a_sync_mode == 0:
+            self.shutter_angle_nom = safe_value
+        
         self.exposure_time_seconds = (safe_value / 360.0) / self.current_fps
 
         self.exposure_time_fractions = self.seconds_to_fraction_text(
@@ -701,6 +709,9 @@ class CinePiController:
                     logging.info(
                         f"Normal mode: shutter angle actual set to {safe_value}°"
                 )
+                    
+                # ensure main shutter_a value is updated for preview and web UI
+                self.redis_controller.set_value(ParameterKey.SHUTTER_A.value, safe_value)
 
     def set_shu_fps_lock(self, value=None):
         if value is not None:

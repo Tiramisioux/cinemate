@@ -189,7 +189,7 @@ def setup_logging(debug_mode):
     logging_level = logging.DEBUG if debug_mode else logging.INFO
 
     # Ensure logs directory exists
-    log_dir = '/home/p<<<<<<< HEADi/cinemate/src/logs'
+    log_dir = '/home/pi/cinemate/src/logs'
     os.makedirs(log_dir, exist_ok=True)
 
     # Clear existing log files
@@ -224,11 +224,7 @@ def initialize_system(settings):
     """Initialize core system components."""
     conf_rate = settings.get("settings", {}).get("conform_frame_rate", 24)
     redis_controller = RedisController(conform_frame_rate=conf_rate)
-<<<<<<< HEAD
     sensor_detect = SensorDetect(settings)
-=======
-    sensor_detect = SensorDetect()
->>>>>>> pr-14
     ssd_monitor = SSDMonitor(redis_controller=redis_controller)
     usb_monitor = USBMonitor(ssd_monitor)
     gpio_output = GPIOOutput(rec_out_pins=settings["gpio_output"]["rec_out_pin"])
@@ -283,13 +279,8 @@ def main():
     logging.info(f"Detected Raspberry Pi model: {pi_model}")
     set
 
-<<<<<<< HEAD
     # Start WiFi hotspot if configured
     start_hotspot(settings)
-=======
-    # Start WiFi hotspot if available
-#    start_hotspot()
->>>>>>> pr-14
 
     # Initialize system components
     redis_controller, sensor_detect, ssd_monitor, usb_monitor, gpio_output, dmesg_monitor = initialize_system(settings)
@@ -353,8 +344,7 @@ def main():
     if settings.get("i2c_oled", {}).get("enabled", False):
         i2c_oled = I2cOled(settings, redis_controller)
         i2c_oled.start()
-
-<<<<<<< HEAD
+        
     quad_rotary = None
     qcfg = settings.get("quad_rotary_controller", {})
     if qcfg.get("enabled", False) and qcfg.get("encoders"):
@@ -364,11 +354,6 @@ def main():
     # Start Streaming if a network connection is available
     stream = None
     if network_available():
-=======
-    # Start Streaming if hotspot is available
-    stream = None
-    if check_hotspot_status():
->>>>>>> pr-14
         app, socketio = create_app(redis_controller, cinepi_controller, simple_gui, sensor_detect)
         simple_gui.socketio = socketio
         stream = threading.Thread(target=socketio.run, args=(app,), kwargs={'host': '0.0.0.0', 'port': 5000, 'allow_unsafe_werkzeug': True})
@@ -381,7 +366,6 @@ def main():
     
     # Initialize USB monitoring
     usb_monitor.check_initial_devices()
-<<<<<<< HEAD
 
     # Setup Analog Controls
     analog_controls = AnalogControls(
@@ -457,89 +441,9 @@ def main():
     def handle_exit(sig, frame):
         logging.info("Graceful shutdown initiated.")
         cleanup()                 # stop your threads, join them if you like
-        # restore default handler and re-raise
-        signal.signal(signal.SIGINT, signal.SIG_DFL)
-        os.kill(os.getpid(), signal.SIGINT)
+        sys.exit(0)
 
-=======
-
-    # Setup Analog Controls
-    analog_controls = AnalogControls(
-        cinepi_controller, redis_controller,
-        settings["analog_controls"]["iso_pot"],
-        settings["analog_controls"]["shutter_a_pot"],
-        settings["analog_controls"]["fps_pot"],
-        settings["analog_controls"]["wb_pot"],
-        settings["arrays"]["iso_steps"],
-        settings["arrays"]["shutter_a_steps"],
-        settings["arrays"]["fps_steps"],
-        settings["arrays"]["wb_steps"]
-    )
-
-    logging.info("--- Initialization Complete ---")
-    
-    # Stop splash screen and clear framebuffer/tty
-    if fb_splash:
-        fb_splash.show(Image.new("RGB", fb_splash.size, "black"))
-    elif splash_stop:
-        splash_stop.set()
-        splash_thread.join()
-    clear_screen()
-    
-    # Ensure system cleanup on exit
-    cleanup_called = False
-
-    # Ensure system cleanup on exit
-    def cleanup():
-        nonlocal cleanup_called
-        if cleanup_called:
-            return
-        cleanup_called = True
-        logging.info("Shutting down components...")
-        redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
-        redis_controller.set_value(ParameterKey.IS_WRITING.value, 0)
-        redis_controller.set_value(
-            ParameterKey.FPS_LAST.value,
-            redis_controller.get_value(ParameterKey.FPS.value)
-        )
-
-        # Stop peripherals
-        dmesg_monitor.join()
-        if hasattr(dmesg_monitor, "stop"):
-            dmesg_monitor.stop() 
-        if hasattr(command_executor, "stop"):
-            command_executor.stop()
-        command_executor.join()
-        cinepi_controller.stop()
-        serial_handler.running = False
-        serial_handler.join()
-
-        if i2c_oled:
-            i2c_oled.join()
-
-        if simple_gui:
-            simple_gui.stop()              # <— new: quit the thread
-            simple_gui.clear_framebuffer() # <— new: blank fb0
-
-        if fb_splash:
-            fb_splash.show(Image.new("RGB", fb_splash.size, "black"))
-        elif splash_stop:
-            splash_stop.set()
-            splash_thread.join()
-
-        clear_screen()                     # wipe tty1
-        show_cursor()
-        
-    atexit.register(cleanup)
-    
-    def handle_exit(sig, frame):
-        logging.info("Graceful shutdown initiated.")
-        cleanup()                 # stop your threads, join them if you like
-        # restore default handler and re-raise
-        signal.signal(signal.SIGINT, signal.SIG_DFL)
-        os.kill(os.getpid(), signal.SIGINT)
-
->>>>>>> pr-14
+    # Register signal handlers for graceful shutdown
     signal.signal(signal.SIGINT, handle_exit)
     signal.signal(signal.SIGTERM, handle_exit)
 

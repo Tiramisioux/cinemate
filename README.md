@@ -1,4 +1,37 @@
-<<<<<<< HEAD
+# web-ui install instructions
+
+```shell
+wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+		
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+nvm install --lts
+
+cd
+sudo rm -r cpp-mjpeg-streamer
+
+sudo apt install -y libspdlog-dev libjsoncpp-dev && cd /home/pi && git clone https://github.com/Tiramisioux/cpp-mjpeg-streamer.git --branch cinemate && cd cpp-mjpeg-streamer && mkdir build && cd build && cmake .. && make && sudo make install && cd
+
+sudo apt install -y libspdlog-dev libjsoncpp-dev && cd /home/pi && git clone https://github.com/Tiramisioux/cpp-mjpeg-streamer.git --branch cinemate && cd cpp-mjpeg-streamer && mkdir build && cd build && cmake .. && make && sudo make install && cd
+
+sudo ldconfig
+
+cd /home/pi/cinepi-raw
+sudo rm -rf build
+export PKG_CONFIG_PATH=/home/pi/cpp-mjpeg-streamer/build:$PKG_CONFIG_PATH
+sudo meson setup build
+sudo ninja -C build
+cd /home/pi
+./compile-raw.sh
+
+# Once installed, re-run from your project directory:
+
+cd ~/cinemate/src/module/app 
+npm ci
+```
+
 # What is it?
 
 **Cinemate** is a boilerplate cinema camera system for Raspberry Pi 5.  builds upon CinePi-raw, authored by Csaba Nagy for enabling 12 bit (or even 16 bit) Cinema DNG recordings using off-the-shelf components.  
@@ -24,14 +57,6 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
 - IMX294 (official Raspberry Pi GS camera)
 - IMX585 ([Starlight Eye](https://www.tindie.com/products/will123321/starlighteye/) by Will Whang)
 - IMX283 ([OneInchEye](https://www.tindie.com/products/will123321/oneincheye-v20/) by Will Whang)
-=======
-## Overview
-CineMate scripts is a way for users to implement and customize manual controls for their [cinepi-raw](https://github.com/cinepi/cinepi-raw) build. 
-
-Project aims at offering an easy way to build a custom camera. For basic operation and experimentation, Raspberry Pi, camera board and monitor is needed. For practical use, buttons and switches can easily be added.
-
-A ready made disk image can be found [here](https://github.com/Tiramisioux/cinemate/releases).
->>>>>>> pr-14
 
 ## Preinstalled hardware
 
@@ -59,32 +84,7 @@ To try Cinemate you need:
 
 ## Installation
 See the [releases section](https://github.com/Tiramisioux/cinemate/releases) for preinstalled image file and Quick Start Guide.
-=======
-### Relationship to cinepi-raw
 
-The original **cinepi-raw** project is a C++/libcamera application that records 12-bit CinemaDNG sequences on Raspberry Pi hardware. It extends Raspberry Pi’s own *rpicam-apps* with a custom DNG encoder and a lightweight Redis‐based API so external tools can change parameters, start/stop takes, etc.  
-
-CineMate** is a pure-Python companion that autostarts on the Pi, shows a simple GUI over HDMI, maps GPIO buttons/encoders, and talks to **cinepi-raw** through Redis commands. Think of it as the “camera body UI” while *cinepi-raw* is the “sensor & recorder”.
-
-CineMate relies on a custom fork of [cinepi-raw](https://github.com/Tiramisioux/cinepi-raw/tree/rpicam-apps_1.7_custom_encoder), adapted for libcamera 0.5 and rpicam-apps 1.0.7. 
-
-## Getting started
-
-### Hardware requirements
-- Rasberry Pi 5
-- Official HQ or GS camera
-- HDMI monitor or device (phone or tablet) for monitoring
-
-### Installation
-1. Burn image to SD card. 8 GB or larger.
-
-2. Connect Pi and camera sensor board.
->>>>>>> pr-14
-
-## Customization
-Buttons, encoders and oled display are optional and configured via settings file.
-
-<<<<<<< HEAD
 ## Documentation
 Full manual installation instructions, configuration guides and CLI reference live [here](https://tiramisioux.github.io/cinemate/).
 

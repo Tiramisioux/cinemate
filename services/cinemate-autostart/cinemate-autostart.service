@@ -9,6 +9,7 @@ User=pi
 Group=pi
 Restart=always
 RestartSec=5
+TimeoutStopSec=10s
 
 [Install]
 WantedBy=multi-user.target

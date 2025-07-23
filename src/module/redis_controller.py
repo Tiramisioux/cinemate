@@ -139,13 +139,20 @@ class RedisController:
     # ───────────────────────── public helpers ───────────────────────
     def get_value(self, key, default=None):
         with self.lock:
-            return self.cache.get(key, default)
+            return self.cache.get(key, default) 
 
         # ────────────────────────── public helpers ───────────────────────
     def set_value(self, key, value):
         """Write key, publish, update cache, emit consolidated log output."""
+        if value is None:
+            logging.warning(f"Attempted to set Redis key '{key}' to None. Ignoring.")
+            return
         # normalise key to plain string
         key_name = key.value if isinstance(key, ParameterKey) else str(key)
+        
+        if value is None:
+            logging.warning(f"Attempted to set Redis key '{key}' to None. Ignoring.")
+            return
 
         # ─── Redis write / publish / cache ───────────────────────────
         with self.lock:

@@ -29,7 +29,6 @@ install:
 	@echo "Installed $(SERVICE_FILE_PATH)"
 	
 	cd src/module/app && npm ci
-	sudo systemctl daemon-reload
 
 # -------------------------------------------------------------------
 # Enable / disable (boot autostart)

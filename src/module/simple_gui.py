@@ -26,7 +26,8 @@ class SimpleGUI(threading.Thread):
                 #timekeeper, 
                 socketio: SocketIO = None,
                 usb_monitor=None,
-                serial_handler=None):
+                serial_handler=None,
+                settings=None):
         threading.Thread.__init__(self)
         
         self.daemon = True          # die if the parent dies
@@ -60,6 +61,14 @@ class SimpleGUI(threading.Thread):
         
         self.serial_handler = serial_handler
 
+        # Buffer VU meter configuration from settings
+        if settings is not None:
+            gui_cfg = settings.get("hdmi_gui", {})
+            self.show_buffer_vu = bool(gui_cfg.get("buffer_vu_meter", True))
+            self.buffer_vu_hatch = bool(gui_cfg.get("vu_meter_hatch", True))
+        else:
+            self.show_buffer_vu = True
+            self.buffer_vu_hatch = True
 
         self.background_color_changed = False
         
@@ -874,10 +883,11 @@ class SimpleGUI(threading.Thread):
                             base_x + BAR_W,
                             base_y + BAR_H],
                         fill=fill_colour)
-        # ── optional hatch lines (unchanged) ────────────────────────
-        for dy in range(0, filled_h, 2):
-            y = base_y + BAR_H - 1 - dy
-            draw.line([(base_x, y), (base_x + BAR_W, y)], fill=border_col)
+        # ── optional hatch lines ─────────────────────────────────────
+        if self.buffer_vu_hatch:
+            for dy in range(0, filled_h, 2):
+                y = base_y + BAR_H - 1 - dy
+                draw.line([(base_x, y), (base_x + BAR_W, y)], fill=border_col)
 
         # ── tick marks at 25/50/75/100 % (unchanged) ────────────────
         for frac in (0.25, 0.50, 0.75, 1.00):
@@ -1038,7 +1048,8 @@ class SimpleGUI(threading.Thread):
                 
         self.update_smoothed_vu_levels()
         self.draw_right_vu_meter(draw)
-        #self.draw_framebuffer_vu_meter(draw)
+        if self.show_buffer_vu:
+            self.draw_framebuffer_vu_meter(draw)
 
         vu = self.vu_smoothed  # Or .usb_monitor.audio_monitor.vu_levels if you want raw
         # if vu:

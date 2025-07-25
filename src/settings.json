@@ -31,6 +31,11 @@
     }
   },
 
+  "hdmi_gui": {
+    "buffer_vu_meter": true,
+    "vu_meter_hatch": true
+  },
+
   "preview": {
     "default_zoom": 1.0,
     "zoom_steps":   [1.0, 1.5, 2.0]

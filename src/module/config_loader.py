@@ -52,6 +52,16 @@ def load_settings(filename: str | Path) -> dict:
     settings.setdefault("welcome_message", "THIS IS A COOL MACHINE")
     settings.setdefault("welcome_image", None)
 
+    # ── HDMI GUI defaults ───────────────────────────────────────────────
+    hdmi_gui_defaults = {
+        "buffer_vu_meter": True,
+        "vu_meter_hatch": True,
+    }
+    hdmi_gui_cfg = settings.setdefault("hdmi_gui", {})
+    for k, v in hdmi_gui_defaults.items():
+        hdmi_gui_cfg.setdefault(k, v)
+    settings["hdmi_gui"] = hdmi_gui_cfg
+
     # ── preview / zoom defaults ──────────────────────────────────────────
     preview_defaults = {
         "default_zoom": 1.0,

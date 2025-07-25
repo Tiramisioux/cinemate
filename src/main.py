@@ -336,8 +336,19 @@ def main():
     redis_listener = RedisListener(redis_controller, ssd_monitor)
     battery_monitor = BatteryMonitor()
 
-    simple_gui = SimpleGUI(redis_controller, cinepi_controller, ssd_monitor, dmesg_monitor,
-                       battery_monitor, sensor_detect, redis_listener, None, usb_monitor=usb_monitor, serial_handler=serial_handler)
+    simple_gui = SimpleGUI(
+        redis_controller,
+        cinepi_controller,
+        ssd_monitor,
+        dmesg_monitor,
+        battery_monitor,
+        sensor_detect,
+        redis_listener,
+        None,
+        usb_monitor=usb_monitor,
+        serial_handler=serial_handler,
+        settings=settings,
+    )
 
     if settings.get("i2c_oled", {}).get("enabled", False):
         i2c_oled = I2cOled(settings, redis_controller)

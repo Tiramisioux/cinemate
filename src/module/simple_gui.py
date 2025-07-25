@@ -26,7 +26,8 @@ class SimpleGUI(threading.Thread):
                 #timekeeper, 
                 socketio: SocketIO = None,
                 usb_monitor=None,
-                serial_handler=None):
+                serial_handler=None,
+                settings=None):
         threading.Thread.__init__(self)
         
         self.daemon = True          # die if the parent dies
@@ -60,6 +61,11 @@ class SimpleGUI(threading.Thread):
         
         self.serial_handler = serial_handler
 
+        # Buffer VU meter toggle from settings
+        if settings is not None:
+            self.show_buffer_vu = bool(settings.get("buffer_vu_meter", True))
+        else:
+            self.show_buffer_vu = True
 
         self.background_color_changed = False
         
@@ -1038,7 +1044,8 @@ class SimpleGUI(threading.Thread):
                 
         self.update_smoothed_vu_levels()
         self.draw_right_vu_meter(draw)
-        #self.draw_framebuffer_vu_meter(draw)
+        if self.show_buffer_vu:
+            self.draw_framebuffer_vu_meter(draw)
 
         vu = self.vu_smoothed  # Or .usb_monitor.audio_monitor.vu_levels if you want raw
         # if vu:

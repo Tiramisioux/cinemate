@@ -100,4 +100,7 @@ def load_settings(filename: str | Path) -> dict:
         res_cfg.setdefault(k, v)
     settings["resolutions"] = res_cfg
 
+    # Default for buffer VU meter visibility
+    settings.setdefault("buffer_vu_meter", True)
+
     return settings

@@ -61,11 +61,14 @@ class SimpleGUI(threading.Thread):
         
         self.serial_handler = serial_handler
 
-        # Buffer VU meter toggle from settings
+        # Buffer VU meter and hatch line toggles from settings
         if settings is not None:
-            self.show_buffer_vu = bool(settings.get("buffer_vu_meter", True))
+            hdmi_cfg = settings.get("hdmi_gui", {})
+            self.show_buffer_vu = bool(hdmi_cfg.get("buffer_vu_meter", True))
+            self.vu_meter_hatch_lines = bool(hdmi_cfg.get("vu_meter_hatch_lines", True))
         else:
             self.show_buffer_vu = True
+            self.vu_meter_hatch_lines = True
 
         self.background_color_changed = False
         
@@ -880,10 +883,11 @@ class SimpleGUI(threading.Thread):
                             base_x + BAR_W,
                             base_y + BAR_H],
                         fill=fill_colour)
-        # ── optional hatch lines (unchanged) ────────────────────────
-        for dy in range(0, filled_h, 2):
-            y = base_y + BAR_H - 1 - dy
-            draw.line([(base_x, y), (base_x + BAR_W, y)], fill=border_col)
+        # ── optional hatch lines ───────────────────────────────────
+        if self.vu_meter_hatch_lines:
+            for dy in range(0, filled_h, 2):
+                y = base_y + BAR_H - 1 - dy
+                draw.line([(base_x, y), (base_x + BAR_W, y)], fill=border_col)
 
         # ── tick marks at 25/50/75/100 % (unchanged) ────────────────
         for frac in (0.25, 0.50, 0.75, 1.00):

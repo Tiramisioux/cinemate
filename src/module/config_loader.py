@@ -100,7 +100,14 @@ def load_settings(filename: str | Path) -> dict:
         res_cfg.setdefault(k, v)
     settings["resolutions"] = res_cfg
 
-    # Default for buffer VU meter visibility
-    settings.setdefault("buffer_vu_meter", True)
+    # Defaults for HDMI GUI settings
+    hdmi_gui_defaults = {
+        "buffer_vu_meter": True,
+        "vu_meter_hatch_lines": True,
+    }
+    hdmi_gui_cfg = settings.setdefault("hdmi_gui", {})
+    for k, v in hdmi_gui_defaults.items():
+        hdmi_gui_cfg.setdefault(k, v)
+    settings["hdmi_gui"] = hdmi_gui_cfg
 
     return settings

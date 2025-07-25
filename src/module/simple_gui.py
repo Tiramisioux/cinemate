@@ -12,7 +12,14 @@ from statistics import mean
 from module.utils import Utils
 from module.redis_controller import ParameterKey
 import json
-import re  
+import re
+
+
+def _to_bool(value) -> bool:
+    """Return *value* as bool, accepting common string variants."""
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
 
 class SimpleGUI(threading.Thread):
     def __init__(self, 
@@ -64,8 +71,8 @@ class SimpleGUI(threading.Thread):
         # Buffer VU meter and hatch line toggles from settings
         if settings is not None:
             hdmi_cfg = settings.get("hdmi_gui", {})
-            self.show_buffer_vu = bool(hdmi_cfg.get("buffer_vu_meter", True))
-            self.vu_meter_hatch_lines = bool(hdmi_cfg.get("vu_meter_hatch_lines", True))
+            self.show_buffer_vu = _to_bool(hdmi_cfg.get("buffer_vu_meter", True))
+            self.vu_meter_hatch_lines = _to_bool(hdmi_cfg.get("vu_meter_hatch_lines", True))
         else:
             self.show_buffer_vu = True
             self.vu_meter_hatch_lines = True

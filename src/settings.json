@@ -212,5 +212,6 @@
     ]
   },
   "welcome_message": "THIS IS A COOL MACHINE",
-  "welcome_image": null
+  "welcome_image": null,
+  "buffer_vu_meter": true
 }

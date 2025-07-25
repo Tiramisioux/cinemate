@@ -185,12 +185,12 @@ class RedisListener:
 
                         # Update Redis key for current buffer size if changed
                         if buffer_size is not None:
-                            current_buffer = self.redis_controller.get_value('BUFFER')
+                            current_buffer = self.redis_controller.get_value(ParameterKey.BUFFER.value)
                             # Redis returns bytes or None → normalise to int or None
                             current_buffer = int(current_buffer) if current_buffer is not None else None
 
                             if current_buffer != buffer_size:
-                                self.redis_controller.set_value('BUFFER', buffer_size)
+                                self.redis_controller.set_value(ParameterKey.BUFFER.value, buffer_size)
                                 #logging.info(f"Buffer size changed to {buffer_size}")
 
                         # Update sensor timestamps

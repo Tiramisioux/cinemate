@@ -6,7 +6,7 @@
 - HDMI monitor or a phone/tablet for monitoring
 
 ## Installation
-1. **Burn the Cinemate image** to an SD card (8&nbsp;GB or larger).
+1. **Burn the [latest Cinemate image](https://github.com/Tiramisioux/cinemate/releases/tag/3.1)** to an SD card (8&nbsp;GB or larger).
 2. **Connect the Pi and the camera sensor board.**
    > **Important:** Ensure the Pi is powered off before attaching the camera ribbon cable. Hot-swapping the cable is not advised.
 3. **Boot the Pi.** CineMate should start automatically.

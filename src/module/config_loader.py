@@ -21,7 +21,14 @@ def load_settings(filename: str | Path) -> dict:
         settings = {}
 
     # ── top-level placeholders ───────────────────────────────────────────
-    settings.setdefault("gpio_output",     {})
+    gpio_defaults = {
+        "pwm_pin": 19,
+        "rec_out_pin": [6, 21],
+    }
+    gpio_cfg = settings.setdefault("gpio_output", {})
+    for k, v in gpio_defaults.items():
+        gpio_cfg.setdefault(k, v)
+    settings["gpio_output"] = gpio_cfg
     settings.setdefault("arrays",          {})
     settings.setdefault("settings",        {"light_hz": [50, 60], "conform_frame_rate": 24})
     system_cfg = settings.setdefault("system", {})

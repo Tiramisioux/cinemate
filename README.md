@@ -73,3 +73,9 @@ The [**Cinemate**](https://github.com/Tiramisioux/cinemate) stack is built on to
 Also thanks to Simon at [Altcinecam](https://altcinecam.com) for support and assistance!
 
 Get your sensors and CFE Hats here: https://www.tindie.com/stores/will123321/
+
+## Supporting the project
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/G2G21IM9RO)
+
+

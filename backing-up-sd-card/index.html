@@ -41,22 +41,20 @@
 <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
 </li>
 </ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
-</li>
-</ul>
 <p class="caption"><span class="caption-text">Quick start</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
 </li>
 </ul>
 <p class="caption"><span class="caption-text">Using the camera</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">Using the CLI</a>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
+<li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Commands reference</a>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../sensors/">Sensors</a>
 </li>
@@ -67,8 +65,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping &amp; shutter angle synchronization</a>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Commands reference</a>
 </li>
 </ul>
 <p class="caption"><span class="caption-text">Customising your build</span></p>
@@ -159,7 +155,7 @@
 <div class="markdown-body">
 <h1 id="backing-up-the-sd-card">Backing up the SD card<a class="headerlink" href="#backing-up-the-sd-card" title="Permanent link">#</a></h1>
 <p>Create a compressed image:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>dd<span class="w"> </span><span class="k">if</span><span class="o">=</span>/dev/mmcblk0<span class="w"> </span><span class="nv">bs</span><span class="o">=</span>4M<span class="w"> </span><span class="nv">conv</span><span class="o">=</span>sparse,noerror<span class="w"> </span><span class="nv">status</span><span class="o">=</span>progress<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\ </span>gzip<span class="w"> </span>-c<span class="w"> </span>&gt;<span class="w"> </span>/media/RAW/cinemate_<span class="k">$(</span>date<span class="w"> </span>+<span class="s2">"%Y%m%d_%H%M%S"</span><span class="k">)</span>.img.gz
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>dd<span class="w"> </span><span class="k">if</span><span class="o">=</span>/dev/mmcblk0<span class="w"> </span><span class="nv">bs</span><span class="o">=</span>4M<span class="w"> </span><span class="nv">conv</span><span class="o">=</span>sparse,noerror<span class="w"> </span><span class="nv">status</span><span class="o">=</span>progress<span class="w"> </span><span class="p">|</span><span class="w"> </span>gzip<span class="w"> </span>-c<span class="w"> </span>&gt;<span class="w"> </span>/media/RAW/cinemate_<span class="k">$(</span>date<span class="w"> </span>+<span class="s2">"%Y%m%d_%H%M%S"</span><span class="k">)</span>.img.gz
 </code></pre></div>
 <p>Or use PiShrink for a smaller file:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>bash<span class="w"> </span>-Eeuo<span class="w"> </span>pipefail<span class="w"> </span>-c<span class="w"> </span><span class="s1">'</span>
@@ -183,11 +179,6 @@
 <span class="s1">  # 4 ─ Remove the now-unused raw image</span>
 <span class="s1">  rm -f "$raw"</span>
 <span class="s1">'</span>
-</code></pre></div>
-<p>To copy the file to your desktop computer:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># From the desktop computers terminal</span>
-
-scp<span class="w"> </span>-r<span class="w"> </span>pi@&lt;IP<span class="w"> </span>ADDRESS<span class="w"> </span>OF<span class="w"> </span>YOU<span class="w"> </span>PI&gt;:/media/RAW/&lt;COMPRESSED<span class="w"> </span>IMAGE<span class="w"> </span>FILE<span class="w"> </span>NAME&gt;<span class="w"> </span>~/Desktop/
 </code></pre></div>
 </div>
 </div>

@@ -41,22 +41,20 @@
 <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
 </li>
 </ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
-</li>
-</ul>
 <p class="caption"><span class="caption-text">Quick start</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
 </li>
 </ul>
 <p class="caption"><span class="caption-text">Using the camera</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">Using the CLI</a>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
+<li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Commands reference</a>
 </li>
 <li class="toctree-l1 current"><a class="reference internal current" href="#">Sensors</a>
 <ul class="current">
@@ -69,8 +67,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping &amp; shutter angle synchronization</a>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Commands reference</a>
 </li>
 </ul>
 <p class="caption"><span class="caption-text">Customising your build</span></p>
@@ -245,13 +241,12 @@
 </tr>
 </tbody>
 </table>
-<p>Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames. From version 3.1 the resolution list is generated dynamically from <code>cinepi-raw --list-cameras</code>.</p>
-<p>You can limit which modes appear inside CineMate by editing the <code>resolutions</code> section in <code>settings.json</code>. Only the K categories and bit depths you list will be shown. Custom driver modes can also be added here.</p>
+<p>Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames. You can cap Cinemates max fps values for your specific build by editing the file <code>cinemate/src/module/sensor_detect.py</code></p>
 </div>
 </div>
 </div><footer>
 <div aria-label="Footer Navigation" class="rst-footer-buttons" role="navigation">
-<a class="btn btn-neutral float-left" href="../web-gui/" title="Web GUI"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+<a class="btn btn-neutral float-left" href="../cli-commands/" title="Commands reference"><span class="icon icon-circle-arrow-left"></span> Previous</a>
 <a class="btn btn-neutral float-right" href="../audio-recording/" title="Audio recording">Next <span class="icon icon-circle-arrow-right"></span></a>
 </div>
 <hr/>
@@ -270,7 +265,7 @@
 <span>
 <a class="fa fa-github" href="https://github.com/tiramisioux/cinemate" style="color: #fcfcfc"> GitHub</a>
 </span>
-<span><a href="../web-gui/" style="color: #fcfcfc">« Previous</a></span>
+<span><a href="../cli-commands/" style="color: #fcfcfc">« Previous</a></span>
 <span><a href="../audio-recording/" style="color: #fcfcfc">Next »</a></span>
 </span>
 </div>

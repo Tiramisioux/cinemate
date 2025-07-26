@@ -41,22 +41,20 @@
 <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
 </li>
 </ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
-</li>
-</ul>
 <p class="caption"><span class="caption-text">Quick start</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
 </li>
 </ul>
 <p class="caption"><span class="caption-text">Using the camera</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">Using the CLI</a>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
+<li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Commands reference</a>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../sensors/">Sensors</a>
 </li>
@@ -67,8 +65,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping &amp; shutter angle synchronization</a>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Commands reference</a>
 </li>
 </ul>
 <p class="caption"><span class="caption-text">Customising your build</span></p>
@@ -207,16 +203,9 @@ redis-cli<span class="w"> </span>SET<span class="w"> </span>is_recording<span cl
 <span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"focus"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">focus</span><span class="p">;</span>
 <span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"frameCount"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">app_</span><span class="o">-&gt;</span><span class="n">GetEncoder</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">getFrameCount</span><span class="p">();</span>
 <span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"bufferSize"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">app_</span><span class="o">-&gt;</span><span class="n">GetEncoder</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">bufferSize</span><span class="p">();</span>
-<span class="w">    </span><span class="c1">// per-camera timestamps in nanoseconds</span>
-<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"timestamp"</span><span class="p">]</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">timestamp</span><span class="p">;</span><span class="w">       </span><span class="c1">// single sensor</span>
-<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"timestamp_cam0"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">timestamp_cam0</span><span class="p">;</span><span class="w">  </span><span class="c1">// multi-sensor</span>
-<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"timestamp_cam1"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">timestamp_cam1</span><span class="p">;</span><span class="w">  </span><span class="c1">// multi-sensor</span>
 <span class="w">    </span><span class="n">redis_</span><span class="o">-&gt;</span><span class="n">publish</span><span class="p">(</span><span class="n">CHANNEL_STATS</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">toStyledString</span><span class="p">());</span>
 </code></pre></div>
-<p>CineMate’s <code>RedisListener</code> parses these messages and updates Redis keys like <code>framecount</code>, <code>BUFFER</code> and <code>fps_actual</code>.
-The timestamp fields are converted to SMPTE timecode based on <code>fps_user</code> and
-written to <code>tc_cam0</code> and <code>tc_cam1</code>.  Values are only updated when the underlying
-timestamp changes so Redis clients receive a new timecode once per frame.</p>
+<p>CineMate’s <code>RedisListener</code> parses these messages and updates Redis keys like <code>framecount</code>, <code>BUFFER</code> and <code>fps_actual</code>.</p>
 <h2 id="controlling-the-camera-from-your-own-script">Controlling the camera from your own script<a class="headerlink" href="#controlling-the-camera-from-your-own-script" title="Permanent link">#</a></h2>
 <p>Below is a very small example using <code>redis-py</code>. </p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">redis</span>

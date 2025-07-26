@@ -41,22 +41,20 @@
 <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
 </li>
 </ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
-</li>
-</ul>
 <p class="caption"><span class="caption-text">Quick start</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
 </li>
 </ul>
 <p class="caption"><span class="caption-text">Using the camera</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">Using the CLI</a>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
+<li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Commands reference</a>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../sensors/">Sensors</a>
 </li>
@@ -67,8 +65,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping &amp; shutter angle synchronization</a>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Commands reference</a>
 </li>
 </ul>
 <p class="caption"><span class="caption-text">Customising your build</span></p>
@@ -166,8 +162,22 @@
 </ul>
 <p>This information is kept in the <code>CameraInfo</code> class and written to Redis under the <code>cam_info</code> keys so that other modules know which sensors are present.</p>
 <h2 id="loading-resolution-data">Loading Resolution Data<a class="headerlink" href="#loading-resolution-data" title="Permanent link">#</a></h2>
-<p><code>cinepi_multi.py</code> relies on <code>sensor_detect.py</code> to look up valid resolutions and frame rates for each sensor. From version 3.1 the list of modes is parsed automatically from the output of <code>cinepi-raw --list-cameras</code>. Packing information and optional FPS correction factors are stored per sensor in <code>sensor_detect.py</code>.</p>
-<p>You can narrow down the list of selectable modes via the <code>resolutions</code> section in <code>settings.json</code>. Only modes whose width falls into one of your chosen <em>K</em> categories and whose bit depth matches will be shown. Custom modes not reported by <code>cinepi-raw</code> can also be added here.</p>
+<p><code>cinepi_multi.py</code> relies on <code>sensor_detect.py</code> to look up valid resolutions and frame rates for each sensor. The mapping lives in <code>src/module/sensor_detect.py</code> and is organised like this:</p>
+<div class="highlight"><pre><span></span><code><span class="n">sensor_resolutions</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">'imx477'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="mi">0</span><span class="p">:</span> <span class="p">{</span><span class="s1">'width'</span><span class="p">:</span> <span class="mi">2028</span><span class="p">,</span> <span class="s1">'height'</span><span class="p">:</span> <span class="mi">1080</span><span class="p">,</span> <span class="s1">'bit_depth'</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span> <span class="s1">'fps_max'</span><span class="p">:</span> <span class="mi">50</span><span class="p">},</span>
+        <span class="mi">1</span><span class="p">:</span> <span class="p">{</span><span class="s1">'width'</span><span class="p">:</span> <span class="mi">2028</span><span class="p">,</span> <span class="s1">'height'</span><span class="p">:</span> <span class="mi">1520</span><span class="p">,</span> <span class="s1">'bit_depth'</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span> <span class="s1">'fps_max'</span><span class="p">:</span> <span class="mi">40</span><span class="p">},</span>
+        <span class="c1"># ...</span>
+    <span class="p">},</span>
+    <span class="s1">'imx585_mono'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="mi">0</span><span class="p">:</span> <span class="p">{</span><span class="s1">'width'</span><span class="p">:</span> <span class="mi">1928</span><span class="p">,</span> <span class="s1">'height'</span><span class="p">:</span> <span class="mi">1090</span><span class="p">,</span> <span class="s1">'bit_depth'</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span> <span class="s1">'fps_max'</span><span class="p">:</span> <span class="mi">87</span><span class="p">},</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>If you add support for a new sensor or want to tweak maximum frame rates, modify this dictionary. <code>cinepi_multi</code> calls <code>get_resolution_info()</code> to fetch the entry for the detected model and sensor mode (stored in Redis as <code>sensor_mode</code>).</p>
+<blockquote>
+<p>Note that there is a diference between driver sensor modes and Cinemate sensor modes . Driver sensor modes are presented with the terminal command <code>cinepi-raw --list-cameras</code> and then used by the list in <code>src/module/sensor_detect.py</code> to match the Cinemate / user sensor mode with the actual one. This is a bit clumsy so future updates aim at having sensor modes loaded dynamically. What firther complicate things is that libcameras sensor numbering dows not match the physical port numbering, which Cinemate uses for its mapping of preview to HDMI ports. So this need to be sorted out somehow. :)</p>
+</blockquote>
 <h2 id="building-the-cinepi-raw-command">Building the <code>cinepi-raw</code> Command<a class="headerlink" href="#building-the-cinepi-raw-command" title="Permanent link">#</a></h2>
 <p>For each detected camera the manager creates a <code>CinePiProcess</code>. The <code>_build_args()</code> method constructs a list of command-line flags for <code>cinepi-raw</code>:</p>
 <ol>
@@ -192,7 +202,7 @@
 <p>Each <code>cinepi-raw</code> instance prints <code>Encoder configured</code> when it has finished initialising. <code>cinepi_multi</code> watches the output and sets a Redis key like <code>cinepi_ready_cam0</code>. The manager waits until every launched camera reports ready before CineMate proceeds. This ensures that the very first REC command is seen by all sensors simultaneously.</p>
 <h2 id="customising-behaviour">Customising Behaviour<a class="headerlink" href="#customising-behaviour" title="Permanent link">#</a></h2>
 <ul>
-<li><strong><code>sensor_detect.py</code></strong> – adjust the packing or FPS correction factor dictionaries if needed for new sensors.</li>
+<li><strong><code>sensor_detect.py</code></strong> – add new entries or adjust values under <code>sensor_resolutions</code> if you connect a sensor with different modes. The dictionary format mirrors the command-line <code>--mode</code> flag.</li>
 <li><strong><code>settings.json</code></strong> – update the <code>geometry</code> and <code>output</code> sections for per‑camera rotation, flipping and HDMI mapping. These settings are read at startup and directly influence the arguments passed to <code>cinepi-raw</code>.</li>
 </ul>
 </div>

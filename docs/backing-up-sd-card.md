@@ -3,7 +3,7 @@
 Create a compressed image:
 
 ```shell
-sudo dd if=/dev/mmcblk0 bs=4M conv=sparse,noerror status=progress | \ gzip -c > /media/RAW/cinemate_$(date +"%Y%m%d_%H%M%S").img.gz
+sudo dd if=/dev/mmcblk0 bs=4M conv=sparse,noerror status=progress | gzip -c > /media/RAW/cinemate_$(date +"%Y%m%d_%H%M%S").img.gz
 ```
 
 Or use PiShrink for a smaller file:

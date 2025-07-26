@@ -13,6 +13,9 @@ import sys
 
 from module.redis_controller import ParameterKey
 from module.ir_filter import IRFilter
+from module.config_loader import load_settings as _load_settings
+
+SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
 
 class CinePiController:
     def __init__(self,
@@ -297,10 +300,9 @@ class CinePiController:
 
     def load_settings(self):
         try:
-            with open('/home/pi/cinemate/src/settings.json', 'r') as file:
-                settings = json.load(file)
-                logging.info("Settings loaded successfully.")
-                return settings
+            settings = _load_settings(SETTINGS_FILE)
+            logging.info("Settings loaded successfully.")
+            return settings
         except Exception as e:
             logging.error(f"Error loading settings: {e}")
             return {}

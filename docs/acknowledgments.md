@@ -14,10 +14,13 @@ Get your sensors and CFE Hats here: (https://www.tindie.com/stores/will123321/)[
 
 ## Supporting the project
 
-<div id="ko-fi-container">
-  <noscript>
+<script src="https://storage.ko-fi.com/cdn/widget/Widget_2.js"></script>
+<script>
+kofiwidget2.init('Support Cinemate on Ko-fi', '#72a4f2', 'G2G21IM9RO');
+kofiwidget2.draw();
+</script>
+<noscript>
     <a href="https://ko-fi.com/G2G21IM9RO" target="_blank">
-      <img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support on Ko-fi" />
+    <img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support on Ko-fi" />
     </a>
-  </noscript>
-</div>
+</noscript>

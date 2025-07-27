@@ -10,7 +10,7 @@ The [**Cinemate**](https://github.com/Tiramisioux/cinemate) stack is built on to
 
 Also thanks to Simon at [Altcinecam](https://altcinecam.com) for support and assistance!
 
-Get your sensors and CFE Hats here: (https://www.tindie.com/stores/will123321/)[https://www.tindie.com/stores/will123321/]
+Get your sensors and CFE Hats here: [https://www.tindie.com/stores/will123321/](https://www.tindie.com/stores/will123321/)
 
 ## Supporting the project
 
@@ -24,3 +24,4 @@ kofiwidget2.draw();
     <img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support on Ko-fi" />
     </a>
 </noscript>
+

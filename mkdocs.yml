@@ -89,9 +89,11 @@ theme:
       primary: black
       accent: black
 
-extra_css:  
+extra_css:
   - overrides/github-markdown.css
-  - templates/styles.scss  
+  - templates/styles.scss
+extra_javascript:
+  - js/ko-fi-widget.js
 # ───────────────────────────
 # Markdown add-ons
 # ───────────────────────────

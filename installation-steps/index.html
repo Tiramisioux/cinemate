@@ -1,248 +1,252 @@
 <!DOCTYPE html>
-
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" >
 <head>
-<meta charset="utf-8"/>
-<meta content="IE=edge" http-equiv="X-UA-Compatible"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://tiramisioux.github.io/cinemate/installation-steps/" rel="canonical"/>
-<link href="../img/favicon.ico" rel="shortcut icon"/>
-<title>Manual installation (from scratch) - Cinemate Docs</title>
-<link href="../css/theme.css" rel="stylesheet"/>
-<link href="../css/theme_extra.css" rel="stylesheet"/>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" rel="stylesheet"/>
-<link href="../overrides/github-markdown.css" rel="stylesheet"/>
-<link href="../templates/styles.scss" rel="stylesheet"/>
-<script>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/installation-steps/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Manual installation (from scratch) - Cinemate Docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../overrides/github-markdown.css" rel="stylesheet" />
+        <link href="../templates/styles.scss" rel="stylesheet" />
+    
+      <script>
         // Current page data
         var mkdocs_page_name = "Manual installation (from scratch)";
         var mkdocs_page_input_path = "installation-steps.md";
         var mkdocs_page_url = "/cinemate/installation-steps/";
       </script>
-<!--[if lt IE 9]>
+    
+    <!--[if lt IE 9]>
       <script src="../js/html5shiv.min.js"></script>
     <![endif]-->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-<script>hljs.highlightAll();</script>
-<link href="../renders/Cinemate-Docs.pdf" rel="alternate" title="PDF" type="application/pdf"/></head>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
 <body class="wy-body-for-nav" role="document">
-<div class="wy-grid-for-nav">
-<nav class="wy-nav-side stickynav" data-toggle="wy-nav-shift">
-<div class="wy-side-scroll">
-<div class="wy-side-nav-search">
-<a class="icon icon-home" href=".."> Cinemate Docs
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Cinemate Docs
         </a><div role="search">
-<form action="../search.html" class="wy-form" id="rtd-search-form" method="get">
-<input aria-label="Search docs" name="q" placeholder="Search docs" title="Type search term here" type="text"/>
-</form>
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
 </div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Quick start</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Using the camera</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">Using the CLI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Sensors</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Commands reference</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Customising your build</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">System management</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../preinstalled-hardware/">Hardware overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../known-issues/">Known issues</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Cinemate builds</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../bare-bones-build/">Bare bones build</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../brick/">Box build</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Manual installation (from scratch)</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#camera-stack">Camera stack</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#tools-dependencies">Tools &amp; dependencies</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#libcamera-170">libcamera 1.7.0</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#cpp-mjpeg-streamer">cpp-mjpeg-streamer</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#cinepi-raw">CinePi-RAW</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#seed-redis-with-white-balance-default-keys">Seed Redis with white balance default keys</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#imx585-driver-optional">IMX585 driver (optional)</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#add-imx585-tuning-files">Add IMX585 tuning files</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#ir-filter-switch-script">IR filter switch script</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#enabling-i2c">Enabling I²C</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#setting-hostname">Setting hostname</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#add-camera-modules-to-configtxt">Add camera modules to config.txt</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#change-the-console-font-optional">Change the console font (optional)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#create-post-processing-configs">Create post-processing configs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#install-pishrink">Install PiShrink</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#reboot">Reboot:</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#trying-out-cinepi-from-the-terminal">Trying out CinePi from the terminal</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cinemate">Cinemate</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#system-wide-packages">System wide packages</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#create-a-python-virtual-environment">Create a Python virtual environment</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#grant-sudo-privileges-and-enable-i2c">Grant sudo privileges and enable I²C</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#python-packages">Python packages</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#alternative-gpio-back-end">Alternative GPIO back-end</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#clone-the-cinemate-repo">Clone the Cinemate repo</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#allow-cinemate-to-run-with-sudo">Allow Cinemate to run with sudo</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#enable-networkmanager">Enable NetworkManager</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#rotate-logs">Rotate logs</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#seed-redis-with-default-keys">Seed Redis with default keys</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#add-alias">Add alias</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#cinemate-services">Cinemate services</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#storage-automount">storage-automount</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#wifi-hotspot">wifi-hotspot</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#connect-to-the-pi-if-not-already-connected">Connect to the Pi (if not already connected):</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#starting-cinemate">Starting Cinemate</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#cinemate-autostartservice">cinemate-autostart.service</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../todo/">Todo</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../contributors/">Contributors</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../contributing/">Contributing to the project</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Cinemate Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Development & contributing</li>
+      <li class="breadcrumb-item active">Manual installation (from scratch)</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/installation-steps.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
 </div>
-<div aria-label="Navigation menu" class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="..">Home</a>
-</li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
-</li>
-</ul>
-<p class="caption"><span class="caption-text">Quick start</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
-</li>
-</ul>
-<p class="caption"><span class="caption-text">Using the camera</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">Using the CLI</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../sensors/">Sensors</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping &amp; shutter angle synchronization</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Commands reference</a>
-</li>
-</ul>
-<p class="caption"><span class="caption-text">Customising your build</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
-</li>
-</ul>
-<p class="caption"><span class="caption-text">System management</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
-</li>
-</ul>
-<p class="caption"><span class="caption-text">Reference &amp; troubleshooting</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../preinstalled-hardware/">Hardware overview</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../known-issues/">Known issues</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
-</li>
-</ul>
-<p class="caption"><span class="caption-text">Cinemate builds</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../bare-bones-build/">Bare bones build</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../brick/">Box build</a>
-</li>
-</ul>
-<p class="caption"><span class="caption-text">Development &amp; contributing</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="reference internal current" href="#">Manual installation (from scratch)</a>
-<ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="#camera-stack">Camera stack</a>
-<ul>
-<li class="toctree-l3"><a class="reference internal" href="#tools-dependencies">Tools &amp; dependencies</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#libcamera-170">libcamera 1.7.0</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#cpp-mjpeg-streamer">cpp-mjpeg-streamer</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#cinepi-raw">CinePi-RAW</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#seed-redis-with-white-balance-default-keys">Seed Redis with white balance default keys</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#imx585-driver-optional">IMX585 driver (optional)</a>
-<ul>
-<li class="toctree-l4"><a class="reference internal" href="#add-imx585-tuning-files">Add IMX585 tuning files</a>
-</li>
-<li class="toctree-l4"><a class="reference internal" href="#ir-filter-switch-script">IR filter switch script</a>
-</li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#enabling-i2c">Enabling I²C</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#setting-hostname">Setting hostname</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#add-camera-modules-to-configtxt">Add camera modules to config.txt</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#change-the-console-font-optional">Change the console font (optional)</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#create-post-processing-configs">Create post-processing configs</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#install-pishrink">Install PiShrink</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#reboot">Reboot:</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#trying-out-cinepi-from-the-terminal">Trying out CinePi from the terminal</a>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#cinemate">Cinemate</a>
-<ul>
-<li class="toctree-l3"><a class="reference internal" href="#system-wide-packages">System wide packages</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#create-a-python-virtual-environment">Create a Python virtual environment</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#grant-sudo-privileges-and-enable-i2c">Grant sudo privileges and enable I²C</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#python-packages">Python packages</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#alternative-gpio-back-end">Alternative GPIO back-end</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#clone-the-cinemate-repo">Clone the Cinemate repo</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#allow-cinemate-to-run-with-sudo">Allow Cinemate to run with sudo</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#enable-networkmanager">Enable NetworkManager</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#rotate-logs">Rotate logs</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#seed-redis-with-default-keys">Seed Redis with default keys</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#add-alias">Add alias</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#cinemate-services">Cinemate services</a>
-<ul>
-<li class="toctree-l4"><a class="reference internal" href="#storage-automount">storage-automount</a>
-</li>
-<li class="toctree-l4"><a class="reference internal" href="#wifi-hotspot">wifi-hotspot</a>
-</li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#connect-to-the-pi-if-not-already-connected">Connect to the Pi (if not already connected):</a>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#starting-cinemate">Starting Cinemate</a>
-<ul>
-<li class="toctree-l4"><a class="reference internal" href="#cinemate-autostartservice">cinemate-autostart.service</a>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../todo/">Todo</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../contributors/">Contributors</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../contributing/">Contributing to the project</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
-</li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../renders/Cinemate-Docs.pdf">Download PDF</a>
-</li>
-</ul>
-</div>
-</div>
-</nav>
-<section class="wy-nav-content-wrap" data-toggle="wy-nav-shift">
-<nav aria-label="Mobile navigation menu" class="wy-nav-top" role="navigation">
-<i class="fa fa-bars" data-toggle="wy-nav-top"></i>
-<a href="..">Cinemate Docs</a>
-</nav>
-<div class="wy-nav-content">
-<div class="rst-content"><div aria-label="breadcrumbs navigation" role="navigation">
-<ul class="wy-breadcrumbs">
-<li><a aria-label="Docs" class="icon icon-home" href=".."></a></li>
-<li class="breadcrumb-item">Development &amp; contributing</li>
-<li class="breadcrumb-item active">Manual installation (from scratch)</li>
-<li class="wy-breadcrumbs-aside">
-<a class="icon icon-github" href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/installation-steps.md"> Edit on GitHub</a>
-</li>
-</ul>
-<hr/>
-</div>
-<div class="document" itemscope="itemscope" itemtype="http://schema.org/Article" role="main">
-<div class="section" itemprop="articleBody">
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
 <div class="markdown-body">
-<h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h1>
+  <h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h1>
 <p>Here is how you can manually install libcamera, cinepi-raw, cinemate and accompanying software on the Raspberry Pi.</p>
 <p>Stack works on Raspberry Pi 4 and 5 models.</p>
 <p>!!!  Info ""</p>
 <div class="codehilite"><pre><span></span><code>Cinemate is using Linux kernel version 6.12.25.
 </code></pre></div>
+
 <h2 id="camera-stack">Camera stack<a class="headerlink" href="#camera-stack" title="Permanent link">#</a></h2>
 <h3 id="tools-dependencies">Tools &amp; dependencies<a class="headerlink" href="#tools-dependencies" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo apt update -y
@@ -252,13 +256,13 @@ sudo apt upgrade -y
 </code></pre></div>
 <div class="highlight"><pre><span></span><code>sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev &amp;&amp; sudo apt-get install libjsoncpp-dev &amp;&amp; cd ~ &amp;&amp; git clone https://github.com/sewenew/redis-plus-plus.git &amp;&amp; cd redis-plus-plus &amp;&amp; mkdir build &amp;&amp; cd build &amp;&amp; cmake .. &amp;&amp; make &amp;&amp; sudo make install &amp;&amp; cd ~
 </code></pre></div>
-<h3 id="libcamera-170">libcamera 1.7.0 <img height="12" src="https://img.shields.io/badge/raspberry pi-fork-red"/><a class="headerlink" href="#libcamera-170" title="Permanent link">#</a></h3>
+<h3 id="libcamera-170">libcamera 1.7.0 <img src="https://img.shields.io/badge/raspberry pi-fork-red" height="12" ><a class="headerlink" href="#libcamera-170" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>python3-pip<span class="w">  </span>python3-jinja2<span class="w"> </span>libboost-dev<span class="w"> </span>libgnutls28-dev<span class="w"> </span>openssl<span class="w"> </span>pybind11-dev<span class="w"> </span>qtbase5-dev<span class="w"> </span>libqt5core5a<span class="w"> </span>meson<span class="w"> </span>cmake<span class="w"> </span>python3-yaml<span class="w"> </span>python3-ply<span class="w"> </span>libglib2.0-dev<span class="w"> </span>libgstreamer-plugins-base1.0-dev<span class="w"> </span>libgstreamer1.0-dev<span class="w"> </span>libavdevice59
 </code></pre></div>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>--reinstall<span class="w"> </span>libtiff5-dev<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>ln<span class="w"> </span>-sf<span class="w"> </span><span class="k">$(</span>find<span class="w"> </span>/usr/lib<span class="w"> </span>-name<span class="w"> </span><span class="s2">"libtiff.so"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-n<span class="w"> </span><span class="m">1</span><span class="k">)</span><span class="w"> </span>/usr/lib/aarch64-linux-gnu/libtiff.so.5<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">LD_LIBRARY_PATH</span><span class="o">=</span>/usr/lib/aarch64-linux-gnu:<span class="nv">$LD_LIBRARY_PATH</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>ldconfig
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>--reinstall<span class="w"> </span>libtiff5-dev<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>ln<span class="w"> </span>-sf<span class="w"> </span><span class="k">$(</span>find<span class="w"> </span>/usr/lib<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;libtiff.so&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-n<span class="w"> </span><span class="m">1</span><span class="k">)</span><span class="w"> </span>/usr/lib/aarch64-linux-gnu/libtiff.so.5<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">LD_LIBRARY_PATH</span><span class="o">=</span>/usr/lib/aarch64-linux-gnu:<span class="nv">$LD_LIBRARY_PATH</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>ldconfig
 </code></pre></div>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/raspberrypi/libcamera.git<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
-sudo<span class="w"> </span>find<span class="w"> </span>~/libcamera<span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span><span class="se">\(</span><span class="w"> </span>-name<span class="w"> </span><span class="s1">'*.py'</span><span class="w"> </span>-o<span class="w"> </span>-name<span class="w"> </span><span class="s1">'*.sh'</span><span class="w"> </span><span class="se">\)</span><span class="w"> </span>-exec<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span><span class="o">{}</span><span class="w"> </span><span class="se">\;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+sudo<span class="w"> </span>find<span class="w"> </span>~/libcamera<span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span><span class="se">\(</span><span class="w"> </span>-name<span class="w"> </span><span class="s1">&#39;*.py&#39;</span><span class="w"> </span>-o<span class="w"> </span>-name<span class="w"> </span><span class="s1">&#39;*.sh&#39;</span><span class="w"> </span><span class="se">\)</span><span class="w"> </span>-exec<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span><span class="o">{}</span><span class="w"> </span><span class="se">\;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
 <span class="nb">cd</span><span class="w"> </span>libcamera<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
 sudo<span class="w"> </span>meson<span class="w"> </span>setup<span class="w"> </span>build<span class="w"> </span>--buildtype<span class="o">=</span>release<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-Dpipelines<span class="o">=</span>rpi/vc4,rpi/pisp<span class="w"> </span><span class="se">\</span>
@@ -278,7 +282,7 @@ sudo<span class="w"> </span>ninja<span class="w"> </span>-C<span class="w"> </sp
 <h3 id="cpp-mjpeg-streamer">cpp-mjpeg-streamer<a class="headerlink" href="#cpp-mjpeg-streamer" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>libspdlog-dev<span class="w"> </span>libjsoncpp-dev<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>/home/pi<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/nadjieb/cpp-mjpeg-streamer.git<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>cpp-mjpeg-streamer<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>mkdir<span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>cmake<span class="w"> </span>..<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>make<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span>
 </code></pre></div>
-<h3 id="cinepi-raw">CinePi-RAW <img height="12" src="https://img.shields.io/badge/cinemate-fork-gren"/><a class="headerlink" href="#cinepi-raw" title="Permanent link">#</a></h3>
+<h3 id="cinepi-raw">CinePi-RAW <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" ><a class="headerlink" href="#cinepi-raw" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/cinepi-raw.git<span class="w"> </span>--branch<span class="w"> </span>rpicam-apps_1.7_custom_encoder
 <span class="nb">cd</span><span class="w"> </span>cinepi-raw
 sudo<span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>build
@@ -308,7 +312,7 @@ cd
 <h4 id="add-imx585-tuning-files">Add IMX585 tuning files<a class="headerlink" href="#add-imx585-tuning-files" title="Permanent link">#</a></h4>
 <p><div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-L<span class="w"> </span>-o<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585.json
-sed<span class="w"> </span>-i<span class="w"> </span><span class="s1">'8s/"black_level": *[0-9]\+/"black_level": 0/'</span><span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json
+sed<span class="w"> </span>-i<span class="w"> </span><span class="s1">&#39;8s/&quot;black_level&quot;: *[0-9]\+/&quot;black_level&quot;: 0/&#39;</span><span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json
 sudo<span class="w"> </span>cp<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json<span class="w"> </span>/usr/local/share/libcamera/ipa/rpi/pisp/
 </code></pre></div>
 <div class="highlight"><pre><span></span><code>curl -L -o /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585_mono.json https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585_mono.json &amp;&amp; sudo cp /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585_mono.json /usr/local/share/libcamera/ipa/rpi/pisp/
@@ -387,32 +391,32 @@ sudo<span class="w"> </span>systemctl<span class="w"> </span>start<span class="w
 </blockquote>
 <h3 id="create-post-processing-configs">Create post-processing configs<a class="headerlink" href="#create-post-processing-configs" title="Permanent link">#</a></h3>
 <p>Paste this into the terminal and hit enter:
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="s1">'cat &gt; post-processing.json &lt;&lt; EOF</span>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;cat &gt; post-processing.json &lt;&lt; EOF</span>
 <span class="s1">{</span>
-<span class="s1">    "sharedContext": {},</span>
-<span class="s1">    "mjpegPreview": {</span>
-<span class="s1">        "port": 8000</span>
+<span class="s1">    &quot;sharedContext&quot;: {},</span>
+<span class="s1">    &quot;mjpegPreview&quot;: {</span>
+<span class="s1">        &quot;port&quot;: 8000</span>
 <span class="s1">    }</span>
 <span class="s1">}</span>
-<span class="s1">EOF'</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+<span class="s1">EOF&#39;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
 sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>post-processing.json<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
-sudo<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="s1">'cat &gt; post-processing0.json &lt;&lt; EOF</span>
+sudo<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;cat &gt; post-processing0.json &lt;&lt; EOF</span>
 <span class="s1">{</span>
-<span class="s1">    "sharedContext": {},</span>
-<span class="s1">    "mjpegPreview": {</span>
-<span class="s1">        "port": 8000</span>
+<span class="s1">    &quot;sharedContext&quot;: {},</span>
+<span class="s1">    &quot;mjpegPreview&quot;: {</span>
+<span class="s1">        &quot;port&quot;: 8000</span>
 <span class="s1">    }</span>
 <span class="s1">}</span>
-<span class="s1">EOF'</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+<span class="s1">EOF&#39;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
 sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>post-processing0.json<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
-sudo<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="s1">'cat &gt; post-processing1.json &lt;&lt; EOF</span>
+sudo<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;cat &gt; post-processing1.json &lt;&lt; EOF</span>
 <span class="s1">{</span>
-<span class="s1">    "sharedContext": {},</span>
-<span class="s1">    "mjpegPreview": {</span>
-<span class="s1">        "port": 8001</span>
+<span class="s1">    &quot;sharedContext&quot;: {},</span>
+<span class="s1">    &quot;mjpegPreview&quot;: {</span>
+<span class="s1">        &quot;port&quot;: 8001</span>
 <span class="s1">    }</span>
 <span class="s1">}</span>
-<span class="s1">EOF'</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+<span class="s1">EOF&#39;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
 sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>post-processing1.json
 </code></pre></div></p>
 <h3 id="install-pishrink">Install PiShrink<a class="headerlink" href="#install-pishrink" title="Permanent link">#</a></h3>
@@ -447,15 +451,15 @@ sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> <
 <h3 id="create-a-python-virtual-environment">Create a Python virtual environment<a class="headerlink" href="#create-a-python-virtual-environment" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>~/.cinemate-env
 <span class="nb">source</span><span class="w"> </span>/home/pi/.cinemate-env/bin/activate
-<span class="nb">echo</span><span class="w"> </span><span class="s2">"source /home/pi/.cinemate-env/bin/activate"</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.bashrc
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;source /home/pi/.cinemate-env/bin/activate&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.bashrc
 </code></pre></div>
 <h3 id="grant-sudo-privileges-and-enable-i2c">Grant sudo privileges and enable I²C<a class="headerlink" href="#grant-sudo-privileges-and-enable-i2c" title="Permanent link">#</a></h3>
-<p><div class="highlight"><pre><span></span><code><span class="nb">echo</span><span class="w"> </span><span class="s2">"pi ALL=(ALL) NOPASSWD: /home/pi/.cinemate-env/bin/*"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>/etc/sudoers.d/cinemate-env
+<p><div class="highlight"><pre><span></span><code><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;pi ALL=(ALL) NOPASSWD: /home/pi/.cinemate-env/bin/*&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>/etc/sudoers.d/cinemate-env
 sudo<span class="w"> </span>chown<span class="w"> </span>-R<span class="w"> </span>pi:pi<span class="w"> </span>/home/pi/.cinemate-env
 sudo<span class="w"> </span>chown<span class="w"> </span>-R<span class="w"> </span>pi:pi<span class="w"> </span>/media<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>chmod<span class="w"> </span><span class="m">755</span><span class="w"> </span>/media
 sudo<span class="w"> </span>usermod<span class="w"> </span>-aG<span class="w"> </span>i2c<span class="w"> </span>pi
 sudo<span class="w"> </span>modprobe<span class="w"> </span>i2c-dev<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span>i2c-dev<span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/modules
-<span class="nb">echo</span><span class="w"> </span><span class="s2">"pi ALL=(ALL) NOPASSWD: /home/pi/run_cinemate.sh"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/sudoers.d/pi_cinemate
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;pi ALL=(ALL) NOPASSWD: /home/pi/run_cinemate.sh&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/sudoers.d/pi_cinemate
 </code></pre></div>
 Reboot so the group changes take effect:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>reboot
@@ -497,7 +501,7 @@ pi ALL=(ALL) NOPASSWD: /sbin/mount.ext4
 </code></pre></div>
 <h3 id="rotate-logs">Rotate logs<a class="headerlink" href="#rotate-logs" title="Permanent link">#</a></h3>
 <p>Paste this into the terminal and hit enter:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>tee<span class="w"> </span>/etc/logrotate.d/general_logs<span class="w"> </span><span class="s">&lt;&lt;'EOP'</span>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>tee<span class="w"> </span>/etc/logrotate.d/general_logs<span class="w"> </span><span class="s">&lt;&lt;&#39;EOP&#39;</span>
 <span class="s">/var/log/*.log {</span>
 <span class="s">   size 100M</span>
 <span class="s">   rotate 5</span>
@@ -524,7 +528,7 @@ zoom<span class="w"> </span><span class="m">0</span><span class="w"> </span>writ
 <div class="highlight"><pre><span></span><code>nano<span class="w"> </span>~/.bashrc
 </code></pre></div>
 <p>Add to the end of the file:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">alias</span><span class="w"> </span><span class="nv">cinemate</span><span class="o">=</span><span class="s1">'python3 /home/pi/cinemate/src/main.py'</span>
+<div class="highlight"><pre><span></span><code><span class="nb">alias</span><span class="w"> </span><span class="nv">cinemate</span><span class="o">=</span><span class="s1">&#39;python3 /home/pi/cinemate/src/main.py&#39;</span>
 </code></pre></div>
 <p>Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.</p>
 <p>Reload .bashrc</p>
@@ -583,41 +587,56 @@ make<span class="w"> </span>start<span class="w">          </span><span class="c
 <p>After enabling the service, Cinemate should autostart on boot.</p>
 <p>You now have a 12 bit RAW image capturing system on your Raspberry Pi!</p>
 </div>
-</div>
-</div><footer>
-<div aria-label="Footer Navigation" class="rst-footer-buttons" role="navigation">
-<a class="btn btn-neutral float-left" href="../brick/" title="Box build"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-<a class="btn btn-neutral float-right" href="../todo/" title="Todo">Next <span class="icon icon-circle-arrow-right"></span></a>
-</div>
-<hr/>
-<div role="contentinfo">
-<!-- Copyright etc -->
-</div>
+
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../brick/" class="btn btn-neutral float-left" title="Box build"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../todo/" class="btn btn-neutral float-right" title="Todo">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
 
   Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
 </footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tiramisioux/cinemate" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../brick/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../todo/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
 </div>
-</div>
-</section>
-</div>
-<div aria-label="Versions" class="rst-versions" role="note">
-<span class="rst-current-version" data-toggle="rst-current-version">
-<span>
-<a class="fa fa-github" href="https://github.com/tiramisioux/cinemate" style="color: #fcfcfc"> GitHub</a>
-</span>
-<span><a href="../brick/" style="color: #fcfcfc">« Previous</a></span>
-<span><a href="../todo/" style="color: #fcfcfc">Next »</a></span>
-</span>
-</div>
-<script src="../js/jquery-3.6.0.min.js"></script>
-<script>var base_url = "..";</script>
-<script src="../js/theme_extra.js"></script>
-<script src="../js/theme.js"></script>
-<script src="../search/main.js"></script>
-<script>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../js/ko-fi-widget.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
         jQuery(function () {
             SphinxRtdTheme.Navigation.enable(true);
         });
     </script>
+
 </body>
 </html>

@@ -93,7 +93,6 @@ extra_css:
   - stylesheets/extra.css
 extra_javascript:
   - js/ko-fi-widget.js
-  - js/init-mermaid.js
 # ───────────────────────────
 # Markdown add-ons
 # ───────────────────────────
@@ -125,8 +124,7 @@ markdown_extensions:
 # ───────────────────────────
 plugins:
   - search
-  - mermaid2:                        # list item ➜ 2-space indent
-      javascript: "https://cdn.jsdelivr.net/npm/mermaid@10.4.0/dist/mermaid.min.js"
+ 
   # - with-pdf:
   #     # ── template ─────────────────────────────
   #     custom_template_path: docs/stylesheets     # where styles.scss now lives

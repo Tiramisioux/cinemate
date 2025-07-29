@@ -1,4 +1,4 @@
-# CLI user guide
+# Using CinePi-RAW from the terminal
 
 Here is how you can operate **CinePi-raw** from the command line. 
 

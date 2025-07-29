@@ -43,6 +43,9 @@ jobs:
       - name: Build site
         run: python -m mkdocs build --clean
 
+      - name: Restore coverpage
+        run: git restore docs/coverpage.md
+
       - name: Upload PDF artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -66,5 +69,9 @@ jobs:
           git config user.name "CI"
           git config user.email "ci@users.noreply.github.com"
           git add docs/renders/Cinemate-Docs.pdf
-          git commit -m "CI: update rendered PDF"
-          git push
+          if ! git diff --cached --quiet; then
+            git commit -m "CI: update rendered PDF"
+            git push
+          else
+            echo "PDF unchanged, skipping commit"
+          fi

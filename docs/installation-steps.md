@@ -1,8 +1,16 @@
 # Installation
+Here is how you can manually install libcamera, cinepi-raw, cinemate and accompanying software on the Raspberry Pi.
 
-## Camera stack
+!!! Note
+
+     Stack works on Raspberry Pi 4 and 5 models. 2 GB RAM is sufficient, while more RAM will give you a larger framebuffer. Useful at high frame rates.
+
+!!! Note
+
+     Cinemate is using Linux kernel version 6.12.25. Recommended OS is Bookworm Lite.
 
 ### Tools & dependencies
+
 
 ```
 sudo apt update -y

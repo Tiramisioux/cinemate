@@ -1,0 +1,16 @@
+.rst-content code {
+color: #000000;
+}
+
+/* Float an image to the right and keep some breathing-room on mobile */
+.img-right {
+  float: right;          /* let following text wrap on the left   */
+  margin: 0 0 1em 1em;   /* top 0, right 0, bottom 1 em, left 1 em */
+  max-width: 100%;       /* never exceed the parent’s width */
+  border:#ffffff 1px solid; /* add a border */
+    box-shadow: 0 0 5px rgba(0,0,0,0.2); /* add a shadow */
+
+}
+@media (max-width: 600px) {        /* small screens */
+  .img-right { float: none; margin: 0 auto 1em; display: block; }
+}

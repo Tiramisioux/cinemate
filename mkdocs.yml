@@ -17,8 +17,13 @@ nav:
   - Introduction: readme.md
   - Quick start:
       - Getting started with a minimal build: getting-started.md
+  - Customising your build:
+    - Connecting via SSH: ssh.md
+    - Settings file: settings-json.md
+    - Adding hardware controls: hardware-controls.md
+    - Configuring the Wi-Fi hotspot: hotspot-logic.md
   - Using the camera:
-      - Using the CLI: cli-user-guide.md
+      - CinePi RAW terminal commands: cli-user-guide.md
       - HDMI GUI: simple-gui.md
       - Web GUI: web-gui.md
       - Sensors: sensors.md
@@ -26,12 +31,7 @@ nav:
       - Digital zoom: digital-zoom.md
       - Speed ramping & shutter angle synchronization: speed-ramping.md
       - Dual sensors: dual-sensors.md
-      - Commands reference: cli-commands.md
-  - Customising your build:
-      - Connecting via SSH: ssh.md
-      - Settings file: settings-json.md
-      - Adding hardware controls: hardware-controls.md
-      - Configuring the Wi-Fi hotspot: hotspot-logic.md
+      - Cinemate terminal commands: cli-commands.md
   - System management:
       - System services: system-services.md
       - Modifying config.txt: config-txt.md
@@ -75,7 +75,7 @@ theme:
     - toc.integrate 
     - toc.follow
     - content.code.copy
-    - content.action.edit       # “Edit this page” link to repo
+    - content.code.select
 
     # Read the Docs specific
     - collapse_navigation: True,
@@ -83,34 +83,50 @@ theme:
     - navigation_depth: 4,
     - includehidden: True,
     - titles_only: False
-    
+      
   palette:
     - scheme: default           # WCAG-AA compliant base
-      primary: black
-      accent: black
 
 extra_css:
-  - overrides/github-markdown.css
+  # - overrides/github-markdown.css
   - templates/styles.scss
+  - stylesheets/extra.css
 extra_javascript:
   - js/ko-fi-widget.js
+  - js/init-mermaid.js
 # ───────────────────────────
 # Markdown add-ons
 # ───────────────────────────
+
 markdown_extensions:
   - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - tables
   - codehilite
   - toc:
       permalink: "#"            # tiny link-icon on headings
-  - pymdownx.superfences
+  - pymdownx.snippets
   - pymdownx.tabbed
   - pymdownx.emoji
+  - pymdownx.details
+  - pymdownx.keys
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.critic
+  - pymdownx.caret
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tilde
 
 # ───────────────────────────
 # Plugins
 # ───────────────────────────
 plugins:
   - search
+  - mermaid2:                        # list item ➜ 2-space indent
+      javascript: "https://cdn.jsdelivr.net/npm/mermaid@10.4.0/dist/mermaid.min.js"
   # - with-pdf:
   #     # ── template ─────────────────────────────
   #     custom_template_path: docs/stylesheets     # where styles.scss now lives

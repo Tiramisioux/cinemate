@@ -35,7 +35,7 @@ ls
 
 Your output will look something like this:
 
-![Image title](images/check_name_image_file.png)
+![check_name_of_image_file](images/check_name_image_file.png)
 
 The file ending with .img.xz is your compressed file.
 

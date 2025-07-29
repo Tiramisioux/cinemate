@@ -9,8 +9,8 @@
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../overrides/github-markdown.css" rel="stylesheet" />
         <link href="../templates/styles.scss" rel="stylesheet" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
     
       <script>
         // Current page data
@@ -54,9 +54,20 @@
                   <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
                   </li>
               </ul>
+              <p class="caption"><span class="caption-text">Customising your build</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">Using the CLI</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
                   </li>
@@ -72,18 +83,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Commands reference</a>
-                  </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Customising your build</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">System management</span></p>
@@ -159,7 +159,7 @@
           <li class="breadcrumb-item">Reference & troubleshooting</li>
       <li class="breadcrumb-item active">Redis API</li>
     <li class="wy-breadcrumbs-aside">
-          <a href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/redis-guide.md" class="icon icon-github"> Edit on GitHub</a>
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/redis-guide.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
   </ul>
   <hr/>
@@ -170,7 +170,7 @@
 <div class="markdown-body">
   <h1 id="redis-api-quick-start">Redis API quick start<a class="headerlink" href="#redis-api-quick-start" title="Permanent link">#</a></h1>
 <h2 id="redis-cli">Redis-cli<a class="headerlink" href="#redis-cli" title="Permanent link">#</a></h2>
-<div class="highlight"><pre><span></span><code><span class="c1"># List all keys</span>
+<div class="codehilite"><pre><span></span><code><span class="c1"># List all keys</span>
 redis-cli<span class="w"> </span>KEYS<span class="w"> </span><span class="s1">&#39;*&#39;</span>
 
 <span class="c1"># Read the current ISO value</span>
@@ -180,30 +180,34 @@ redis-cli<span class="w"> </span>GET<span class="w"> </span>iso
 redis-cli<span class="w"> </span>SET<span class="w"> </span>is_recording<span class="w"> </span><span class="m">1</span>
 redis-cli<span class="w"> </span>PUBLISH<span class="w"> </span>cp_controls<span class="w"> </span>is_recording
 </code></pre></div>
+
 <p>You can also type:</p>
-<div class="highlight"><pre><span></span><code>redis-cli
+<div class="codehilite"><pre><span></span><code>redis-cli
 </code></pre></div>
+
 <p>This will open the redis cli.</p>
 <h2 id="cp_controls">cp_controls<a class="headerlink" href="#cp_controls" title="Permanent link">#</a></h2>
 <p>Both CinePi-raw and Cinemate writes values and immediately publish the key name. The recorder only reacts when it receives that publish event. </p>
 <p>Any key may be sent this way. For example, to adjust the preview zoom:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Set preview zoom level</span>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Set preview zoom level</span>
 
 redis-cli<span class="w"> </span>SET<span class="w"> </span>zoom<span class="w"> </span><span class="m">1</span>.5
 redis-cli<span class="w"> </span>PUBLISH<span class="w"> </span>cp_controls<span class="w"> </span>zoom
 </code></pre></div>
+
 <blockquote>
 <p>Note that for the <strong>is_recording</strong> key Cinemate stops recording upon edge detection (the variable changes from 0 to 1 or vice versa). The reason for this exception has to do with how the CinePi-raw fork handles recording with multiple cameras</p>
 </blockquote>
-<div class="highlight"><pre><span></span><code><span class="c1"># Start recording</span>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Start recording</span>
 redis-cli<span class="w"> </span>SET<span class="w"> </span>is_recording<span class="w"> </span><span class="m">1</span><span class="w">                    </span><span class="c1"># triggers 0 → 1 edge</span>
 
 <span class="c1"># Stop recording</span>
 redis-cli<span class="w"> </span>SET<span class="w"> </span>is_recording<span class="w"> </span><span class="m">0</span><span class="w">                    </span><span class="c1"># triggers 1 → 0 edge</span>
 </code></pre></div>
+
 <h2 id="cp_stats">cp_stats<a class="headerlink" href="#cp_stats" title="Permanent link">#</a></h2>
 <p>Every frame, cinepi-raw sends a small JSON object containing live statistics. </p>
-<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="n">Json</span><span class="o">::</span><span class="n">Value</span><span class="w"> </span><span class="n">data</span><span class="p">;</span>
+<div class="codehilite"><pre><span></span><code><span class="w">    </span><span class="n">Json</span><span class="o">::</span><span class="n">Value</span><span class="w"> </span><span class="n">data</span><span class="p">;</span>
 <span class="w">    </span><span class="n">Json</span><span class="o">::</span><span class="n">Value</span><span class="w"> </span><span class="n">histo</span><span class="p">;</span>
 <span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;framerate&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">completed_request</span><span class="o">-&gt;</span><span class="n">framerate</span><span class="p">;</span>
 <span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;colorTemp&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">colorTemp</span><span class="p">;</span>
@@ -216,13 +220,14 @@ redis-cli<span class="w"> </span>SET<span class="w"> </span>is_recording<span cl
 <span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;timestamp_cam1&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">timestamp_cam1</span><span class="p">;</span><span class="w">  </span><span class="c1">// multi-sensor</span>
 <span class="w">    </span><span class="n">redis_</span><span class="o">-&gt;</span><span class="n">publish</span><span class="p">(</span><span class="n">CHANNEL_STATS</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">toStyledString</span><span class="p">());</span>
 </code></pre></div>
+
 <p>CineMate’s <code>RedisListener</code> parses these messages and updates Redis keys like <code>framecount</code>, <code>BUFFER</code> and <code>fps_actual</code>.
 The timestamp fields are converted to SMPTE timecode based on <code>fps_user</code> and
 written to <code>tc_cam0</code> and <code>tc_cam1</code>.  Values are only updated when the underlying
 timestamp changes so Redis clients receive a new timecode once per frame.</p>
 <h2 id="controlling-the-camera-from-your-own-script">Controlling the camera from your own script<a class="headerlink" href="#controlling-the-camera-from-your-own-script" title="Permanent link">#</a></h2>
 <p>Below is a very small example using <code>redis-py</code>. </p>
-<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">redis</span>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">redis</span>
 <span class="n">r</span> <span class="o">=</span> <span class="n">redis</span><span class="o">.</span><span class="n">Redis</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">6379</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
 <span class="c1"># toggle recording</span>
@@ -231,6 +236,7 @@ timestamp changes so Redis clients receive a new timecode once per frame.</p>
 <span class="n">r</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;is_recording&#39;</span><span class="p">,</span> <span class="n">new_value</span><span class="p">)</span>
 <span class="n">r</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s1">&#39;cp_controls&#39;</span><span class="p">,</span> <span class="s1">&#39;is_recording&#39;</span><span class="p">)</span>
 </code></pre></div>
+
 <p>Note that in this example, the publishing of the is_recording key is not strictly needed for recording to start/stop, but for formality's sake I think we should keep the publish command.</p>
 <div class="admonition info">
 <p class="admonition-title">Info</p>

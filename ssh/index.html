@@ -9,8 +9,8 @@
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../overrides/github-markdown.css" rel="stylesheet" />
         <link href="../templates/styles.scss" rel="stylesheet" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
     
       <script>
         // Current page data
@@ -54,9 +54,22 @@
                   <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
                   </li>
               </ul>
+              <p class="caption"><span class="caption-text">Customising your build</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Connecting via SSH</a>
+    <ul class="current">
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">Using the CLI</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
                   </li>
@@ -72,20 +85,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Commands reference</a>
-                  </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Customising your build</span></p>
-              <ul class="current">
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Connecting via SSH</a>
-    <ul class="current">
-    </ul>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">System management</span></p>
@@ -151,7 +151,7 @@
           <li class="breadcrumb-item">Customising your build</li>
       <li class="breadcrumb-item active">Connecting via SSH</li>
     <li class="wy-breadcrumbs-aside">
-          <a href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/ssh.md" class="icon icon-github"> Edit on GitHub</a>
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/ssh.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
   </ul>
   <hr/>
@@ -164,30 +164,33 @@
 <p>Connect your computer and the Pi to the same network. If you are using the preinstalled image file, the system automatically starts a built-in hotspot: join the <strong>CinePi</strong> Wi‑Fi with password <code>11111111</code>.</p>
 <p>You can change this behaviour later in the settings file.</p>
 <p>Open a terminal (on Windows you can use PowerShell).</p>
-<p>Try the hostname first:
-   <div class="highlight"><pre><span></span><code>ssh<span class="w"> </span>pi@cinepi.local
+<p>Try the hostname first:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">ssh</span><span class="w"> </span><span class="nf">pi</span><span class="nv">@cinepi</span><span class="p">.</span><span class="k">local</span>
 </code></pre></div>
-   If this fails you can list devices on the network:
-   <div class="highlight"><pre><span></span><code>arp<span class="w"> </span>-a
-</code></pre></div>
+
+<p>If this fails you can list devices on the network:
+   <code>bash
+   arp -a</code>
    Look for an entry labelled <code>cinepi</code> or note the new IP address that appears.</p>
-<p>Use the hostname or IP address with SSH:
-<div class="highlight"><pre><span></span><code>ssh<span class="w"> </span>pi@cinepi.local
+<p>Use the hostname or IP address with SSH:</p>
+<div class="codehilite"><pre><span></span><code>ssh<span class="w"> </span>pi@cinepi.local
 <span class="c1"># or</span>
 ssh<span class="w"> </span>pi@&lt;ip-address&gt;
 </code></pre></div>
-When asked about the host key, type <code>yes</code>. Enter the default password <code>1</code> when prompted.</p>
+
+<p>When asked about the host key, type <code>yes</code>. Enter the default password <code>1</code> when prompted.</p>
 <p>You will now see the <code>pi@cinepi</code> prompt, meaning you are logged in.</p>
-<blockquote>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
 <p>If you are installing Cinemate manually, the hostname has not yet been set to cinepi. Then you will have to identify which ip address on the network is actually the Raspberry Pi and use that ip address.</p>
-</blockquote>
+</div>
 <p>From here you can run <code>cinemate</code> to start the interface or use <code>make</code> commands to manage the service. For security you should change the password with <code>passwd</code> after the first login.</p>
 </div>
 
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../cli-commands/" class="btn btn-neutral float-left" title="Commands reference"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../getting-started/" class="btn btn-neutral float-left" title="Getting started with a minimal build"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../settings-json/" class="btn btn-neutral float-right" title="Settings file">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -215,7 +218,7 @@ When asked about the host key, type <code>yes</code>. Enter the default password
         </span>
     
     
-      <span><a href="../cli-commands/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../getting-started/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../settings-json/" style="color: #fcfcfc">Next &raquo;</a></span>

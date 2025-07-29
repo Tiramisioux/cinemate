@@ -5,16 +5,16 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/cli-user-guide/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Using the CLI - Cinemate Docs</title>
+    <title>CinePi RAW terminal commands - Cinemate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../overrides/github-markdown.css" rel="stylesheet" />
         <link href="../templates/styles.scss" rel="stylesheet" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Using the CLI";
+        var mkdocs_page_name = "CinePi RAW terminal commands";
         var mkdocs_page_input_path = "cli-user-guide.md";
         var mkdocs_page_url = "/cinemate/cli-user-guide/";
       </script>
@@ -54,9 +54,20 @@
                   <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
                   </li>
               </ul>
+              <p class="caption"><span class="caption-text">Customising your build</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
               <ul class="current">
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Using the CLI</a>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">CinePi RAW terminal commands</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#checking-available-options">Checking available options</a>
     </li>
@@ -96,18 +107,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Commands reference</a>
-                  </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Customising your build</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">System management</span></p>
@@ -171,9 +171,9 @@
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
           <li class="breadcrumb-item">Using the camera</li>
-      <li class="breadcrumb-item active">Using the CLI</li>
+      <li class="breadcrumb-item active">CinePi RAW terminal commands</li>
     <li class="wy-breadcrumbs-aside">
-          <a href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/cli-user-guide.md" class="icon icon-github"> Edit on GitHub</a>
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/cli-user-guide.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
   </ul>
   <hr/>
@@ -186,13 +186,15 @@
 <p>Here is how you can operate <strong>CinePi-raw</strong> from the command line. </p>
 <h2 id="checking-available-options">Checking available options<a class="headerlink" href="#checking-available-options" title="Permanent link">#</a></h2>
 <p>Before running the program you can view all command‑line flags with:</p>
-<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>-h
+<div class="codehilite"><pre><span></span><code>cinepi-raw<span class="w"> </span>-h
 </code></pre></div>
+
 <p>This prints a long list of options supported by the application. It includes the standard parameters from <code>rpicam-apps</code> (such as resolution and exposure settings) plus additional flags specific to the Cinemate.</p>
 <h2 id="camera-modes">Camera modes<a class="headerlink" href="#camera-modes" title="Permanent link">#</a></h2>
 <p>CinePi-raw uses <strong>Libcamera</strong> to talk to your Raspberry Pi camera module. Each sensor supports one or more <em>modes</em>, which define the resolution and bit depth of the RAW images that the sensor can produce. A mode is written as:</p>
-<div class="highlight"><pre><span></span><code>--mode 2028:1080:12:U
+<div class="codehilite"><pre><span></span><code>--mode 2028:1080:12:U
 </code></pre></div>
+
 <ul>
 <li><code>width</code> and <code>height</code> select the active pixel area of the sensor.</li>
 <li><code>bit-depth</code> is usually 12 or 16 bits per pixel.</li>
@@ -200,17 +202,20 @@
 </ul>
 <p>The mode must match the sensor you are using. For example, an IMX477 camera can run at <code>4056:3040:12</code> (full sensor) or at smaller cropped resolutions. When specifying a mode you typically also set the output <code>--width</code> and <code>--height</code> which control the size of the image written to disk. These can be equal to the mode values or smaller when scaling is applied.</p>
 <h2 id="lowresolution-lores-stream">Low‑resolution (lores) stream<a class="headerlink" href="#lowresolution-lores-stream" title="Permanent link">#</a></h2>
-<div class="highlight"><pre><span></span><code>--lores-width 1280 --lores-height 720
+<div class="codehilite"><pre><span></span><code>--lores-width 1280 --lores-height 720
 </code></pre></div>
+
 <p>CinePi-raw can produce a secondary low‑resolution stream alongside the full‑resolution RAW frames.</p>
 <h2 id="preview-window">Preview window<a class="headerlink" href="#preview-window" title="Permanent link">#</a></h2>
 <p>By default the program opens an HDMI preview so you can see what the camera captures. The size and position of this window are controlled with:</p>
-<div class="highlight"><pre><span></span><code>-p 0,30,1920,1020
+<div class="codehilite"><pre><span></span><code>-p 0,30,1920,1020
 </code></pre></div>
+
 <p>This positions the preview 30 pixels from the top of the screen with a 1920×1020 window.</p>
 <h2 id="tuning-files">Tuning files<a class="headerlink" href="#tuning-files" title="Permanent link">#</a></h2>
-<div class="highlight"><pre><span></span><code>--tuning-file /home/pi/cinemate/resources/tuning_files/imx477.json
+<div class="codehilite"><pre><span></span><code>--tuning-file /home/pi/cinemate/resources/tuning_files/imx477.json
 </code></pre></div>
+
 <p>Describes the camera’s colour and lens characteristics. Point to a file supplied with Libcamera (for example <code>imx477.json</code> for the HQ camera)</p>
 <h2 id="post-processing">Post processing<a class="headerlink" href="#post-processing" title="Permanent link">#</a></h2>
 <p>--post-process-file /home/pi/post-processing.json</p>
@@ -257,21 +262,23 @@
 <h2 id="example-commands">Example commands<a class="headerlink" href="#example-commands" title="Permanent link">#</a></h2>
 <p>Below are sample commands for different sensors and modes. </p>
 <h3 id="imx477-12bit-full-width">IMX477 (12‑bit, full width)<a class="headerlink" href="#imx477-12bit-full-width" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">4056</span>:2160:12<span class="w"> </span>--width<span class="w"> </span><span class="m">4056</span><span class="w"> </span>--height<span class="w"> </span><span class="m">2160</span><span class="w"> </span><span class="se">\</span>
+<div class="codehilite"><pre><span></span><code>cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">4056</span>:2160:12<span class="w"> </span>--width<span class="w"> </span><span class="m">4056</span><span class="w"> </span>--height<span class="w"> </span><span class="m">2160</span><span class="w"> </span><span class="se">\</span>
 <span class="w">           </span>--lores-width<span class="w"> </span><span class="m">1280</span><span class="w"> </span>--lores-height<span class="w"> </span><span class="m">720</span><span class="w"> </span><span class="se">\</span>
 <span class="w">           </span>-p<span class="w"> </span><span class="m">0</span>,30,1920,1020<span class="w"> </span><span class="se">\</span>
 <span class="w">           </span>--post-process-file<span class="w"> </span>/home/pi/post-processing.json<span class="w"> </span><span class="se">\</span>
 <span class="w">           </span>--tuning-file<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json<span class="w"> </span><span class="se">\</span>
 </code></pre></div>
+
 <h3 id="imx585-12bit-unpacked">IMX585 (12‑bit unpacked)<a class="headerlink" href="#imx585-12bit-unpacked" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">1928</span>:1090:12:U<span class="w"> </span>--width<span class="w"> </span><span class="m">1928</span><span class="w"> </span>--height<span class="w"> </span><span class="m">1090</span><span class="w"> </span><span class="se">\</span>
+<div class="codehilite"><pre><span></span><code>cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">1928</span>:1090:12:U<span class="w"> </span>--width<span class="w"> </span><span class="m">1928</span><span class="w"> </span>--height<span class="w"> </span><span class="m">1090</span><span class="w"> </span><span class="se">\</span>
 <span class="w">           </span>--lores-width<span class="w"> </span><span class="m">1280</span><span class="w"> </span>--lores-height<span class="w"> </span><span class="m">720</span><span class="w"> </span><span class="se">\</span>
 <span class="w">           </span>-p<span class="w"> </span><span class="m">0</span>,30,1920,1020<span class="w"> </span><span class="se">\</span>
 <span class="w">           </span>--post-process-file<span class="w"> </span>/home/pi/post-processing.json<span class="w"> </span><span class="se">\</span>
 <span class="w">           </span>--tuning-file<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json<span class="w"> </span><span class="se">\</span>
 </code></pre></div>
+
 <p>Now, with an SSH shell running redis-cli you should be able to capture RAW footage from the command line!</p>
-<div class="highlight"><pre><span></span><code>redis-cli
+<div class="codehilite"><pre><span></span><code>redis-cli
 &gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>is_recording<span class="w"> </span><span class="m">1</span>
 &gt;<span class="w"> </span>publish<span class="w"> </span>cp_controls<span class="w"> </span>is_recording
 </code></pre></div>
@@ -280,7 +287,7 @@
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../getting-started/" class="btn btn-neutral float-left" title="Getting started with a minimal build"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../hotspot-logic/" class="btn btn-neutral float-left" title="Configuring the Wi-Fi hotspot"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../simple-gui/" class="btn btn-neutral float-right" title="HDMI GUI">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -308,7 +315,7 @@
         </span>
     
     
-      <span><a href="../getting-started/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../hotspot-logic/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../simple-gui/" style="color: #fcfcfc">Next &raquo;</a></span>

@@ -9,8 +9,8 @@
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../overrides/github-markdown.css" rel="stylesheet" />
         <link href="../templates/styles.scss" rel="stylesheet" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
     
       <script>
         // Current page data
@@ -54,9 +54,20 @@
                   <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
                   </li>
               </ul>
+              <p class="caption"><span class="caption-text">Customising your build</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
               <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">Using the CLI</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
                   </li>
@@ -76,18 +87,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Commands reference</a>
-                  </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Customising your build</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">System management</span></p>
@@ -153,7 +153,7 @@
           <li class="breadcrumb-item">Using the camera</li>
       <li class="breadcrumb-item active">Audio recording</li>
     <li class="wy-breadcrumbs-aside">
-          <a href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/audio-recording.md" class="icon icon-github"> Edit on GitHub</a>
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/audio-recording.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
   </ul>
   <hr/>
@@ -169,10 +169,11 @@
 <p>Audio is written as <code>.wav</code> files into the same folder as the <code>.dng</code> frames. The implementation is still experimental and audio/video synchronization needs further investigation.</p>
 <h3 id="asoundrc-setup">.asoundrc Setup<a class="headerlink" href="#asoundrc-setup" title="Permanent link">#</a></h3>
 <p>For <code>dsnoop</code> support, create a <code>~/.asoundrc</code> in home directory:</p>
-<div class="highlight"><pre><span></span><code>nano<span class="w"> </span>~/.asoundrc
+<div class="codehilite"><pre><span></span><code>nano<span class="w"> </span>~/.asoundrc
 </code></pre></div>
+
 <p>Paste this into the file:</p>
-<div class="highlight"><pre><span></span><code><span class="w">    </span>pcm.dsnoop_24bit<span class="w"> </span><span class="o">{</span>
+<div class="codehilite"><pre><span></span><code><span class="w">    </span>pcm.dsnoop_24bit<span class="w"> </span><span class="o">{</span>
 <span class="w">        </span><span class="nb">type</span><span class="w"> </span>dsnoop
 <span class="w">        </span>ipc_key<span class="w"> </span><span class="m">2048</span>
 <span class="w">        </span>slave<span class="w"> </span><span class="o">{</span>
@@ -208,6 +209,7 @@
 <span class="w">        </span>slave.pcm<span class="w"> </span><span class="s2">&quot;dsnoop_16bit&quot;</span>
 <span class="w">    </span><span class="o">}</span>
 </code></pre></div>
+
 <p>Exit nano editor using ctrl+x.</p>
 </div>
 

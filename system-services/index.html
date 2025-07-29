@@ -9,8 +9,8 @@
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../overrides/github-markdown.css" rel="stylesheet" />
         <link href="../templates/styles.scss" rel="stylesheet" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
     
       <script>
         // Current page data
@@ -54,9 +54,20 @@
                   <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
                   </li>
               </ul>
+              <p class="caption"><span class="caption-text">Customising your build</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">Using the CLI</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
                   </li>
@@ -72,18 +83,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Commands reference</a>
-                  </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Customising your build</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">System management</span></p>
@@ -161,7 +161,7 @@
           <li class="breadcrumb-item">System management</li>
       <li class="breadcrumb-item active">System services</li>
     <li class="wy-breadcrumbs-aside">
-          <a href="https://github.com/tiramisioux/cinemate/blob/cinemate-v3.1/docs/system-services.md" class="icon icon-github"> Edit on GitHub</a>
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/system-services.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
   </ul>
   <hr/>
@@ -180,7 +180,7 @@
 </div>
 <h3 id="starting-stopping-enabling-and-disabling-the-service">Starting, stopping, enabling and disabling the service<a class="headerlink" href="#starting-stopping-enabling-and-disabling-the-service" title="Permanent link">#</a></h3>
 <p>Go to the Cinemate folder:</p>
-<div class="highlight"><pre><span></span><code>cd cinemate
+<div class="codehilite"><pre><span></span><code>cd cinemate
 
 make install   # copy service file
 make enable    # start on boot
@@ -190,6 +190,7 @@ make status    # check status
 make disable   # disable autostart
 make clean     # remove the service
 </code></pre></div>
+
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Note that in order for the web ui to work properly you have to run <code>make install</code> once in the <code>/home/pi/cinemate</code> folder, even if you are not using the autostart service.</p>
@@ -202,23 +203,26 @@ make clean     # remove the service
 <p>On the image file, the storage-automount.service is activated by default.</p>
 </div>
 <p>To manually install and enable the service:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>cinemate/services/storage-automount
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>cinemate/services/storage-automount
 
 sudo<span class="w"> </span>make<span class="w"> </span>install
 sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable</span>
 </code></pre></div>
-<p>You can stop or disable it later with:
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>make<span class="w"> </span>stop
+
+<p>You can stop or disable it later with:</p>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>make<span class="w"> </span>stop
 sudo<span class="w"> </span>make<span class="w"> </span>disable
-</code></pre></div></p>
+</code></pre></div>
+
 <h2 id="wifi-hotspotservice">wifi-hotspot.service<a class="headerlink" href="#wifi-hotspotservice" title="Permanent link">#</a></h2>
 <p>Wifi-hotspot keeps a small access point running with the help of NetworkManager so you can always reach the web interface. The SSID and password are read from <code>/home/pi/cinemate/src/settings.json</code> under <code>system.wifi_hotspot</code>.</p>
 <p>Install and enable it with:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>cinemate/services/wifi-hotspot
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>cinemate/services/wifi-hotspot
 
 sudo<span class="w"> </span>make<span class="w"> </span>install
 sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable</span>
 </code></pre></div>
+
 <p>As with <strong>storage-automount</strong>, you can stop or disable the hotspot with </p>
 <p><code>`
 make stop
@@ -232,7 +236,7 @@ make disable</code></p>
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../hotspot-logic/" class="btn btn-neutral float-left" title="Configuring the Wi-Fi hotspot"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../cli-commands/" class="btn btn-neutral float-left" title="Cinemate terminal commands"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../config-txt/" class="btn btn-neutral float-right" title="Modifying config.txt">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -260,7 +264,7 @@ make disable</code></p>
         </span>
     
     
-      <span><a href="../hotspot-logic/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../cli-commands/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../config-txt/" style="color: #fcfcfc">Next &raquo;</a></span>

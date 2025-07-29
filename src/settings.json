@@ -64,10 +64,10 @@
   },
   
   "analog_controls": {
-    "iso_pot": 0,
-    "shutter_a_pot": 2,
-    "fps_pot": 4,
-    "wb_pot": 6
+    "iso_pot": "None",
+    "shutter_a_pot": "None",
+    "fps_pot": "None",
+    "wb_pot": "None"
   },
   
   "free_mode": {
@@ -154,8 +154,8 @@
       "clk_pin": 23,
       "dt_pin": 25,
       "encoder_actions": {
-        "rotate_clockwise": {"method": "inc_shutter_a_nom", "args": []},
-        "rotate_counterclockwise": {"method": "dec_shutter_a_nom", "args": []}
+        "rotate_clockwise": {"method": "inc_shutter_a", "args": []},
+        "rotate_counterclockwise": {"method": "dec_shutter_a", "args": []}
       }
     },
     {

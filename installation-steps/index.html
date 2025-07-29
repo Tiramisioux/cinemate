@@ -41,20 +41,22 @@
 <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
 </li>
 </ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+</li>
+</ul>
 <p class="caption"><span class="caption-text">Quick start</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
 </li>
 </ul>
 <p class="caption"><span class="caption-text">Using the camera</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">Using the CLI</a>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Commands reference</a>
+<li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../sensors/">Sensors</a>
 </li>
@@ -65,6 +67,8 @@
 <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping &amp; shutter angle synchronization</a>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Commands reference</a>
 </li>
 </ul>
 <p class="caption"><span class="caption-text">Customising your build</span></p>
@@ -123,19 +127,15 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#cpp-mjpeg-streamer">cpp-mjpeg-streamer</a>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#cinepi-raw">CinePi-raw</a>
+<li class="toctree-l3"><a class="reference internal" href="#cinepi-raw">CinePi-RAW</a>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#seed-redis-with-white-balance-default-keys">Seed Redis with white balance default keys</a>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#additional-drivers">Additional drivers</a>
+<li class="toctree-l3"><a class="reference internal" href="#imx585-driver-optional">IMX585 driver (optional)</a>
 <ul>
-<li class="toctree-l4"><a class="reference internal" href="#imx585-driver">imx585 driver</a>
-</li>
 <li class="toctree-l4"><a class="reference internal" href="#add-imx585-tuning-files">Add IMX585 tuning files</a>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="#ir-filter-switch-script">IR filter switch script</a>
-</li>
-<li class="toctree-l4"><a class="reference internal" href="#imx283-driver">imx283 driver</a>
 </li>
 </ul>
 </li>
@@ -239,15 +239,16 @@
 <div class="markdown-body">
 <h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h1>
 <p>Here is how you can manually install libcamera, cinepi-raw, cinemate and accompanying software on the Raspberry Pi.</p>
-<p>Stack is confirmed to work on Raspberry pi 4 and 5 models.</p>
-<p>This guide assumes fresh Raspbery Pi Bookworm installation running kernel 6.12.34.</p>
-<p>If you run Raspberry Pi OS Lite, begin by installing the following packages:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>python3-jinja2<span class="w"> </span>python3-ply<span class="w"> </span>python3-yaml
+<p>Stack works on Raspberry Pi 4 and 5 models.</p>
+<p>!!!  Info ""</p>
+<div class="codehilite"><pre><span></span><code>Cinemate is using Linux kernel version 6.12.25.
 </code></pre></div>
 <h2 id="camera-stack">Camera stack<a class="headerlink" href="#camera-stack" title="Permanent link">#</a></h2>
 <h3 id="tools-dependencies">Tools &amp; dependencies<a class="headerlink" href="#tools-dependencies" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo apt update -y
 sudo apt upgrade -y
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>python3-jinja2<span class="w"> </span>python3-ply<span class="w"> </span>python3-yaml
 </code></pre></div>
 <div class="highlight"><pre><span></span><code>sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev &amp;&amp; sudo apt-get install libjsoncpp-dev &amp;&amp; cd ~ &amp;&amp; git clone https://github.com/sewenew/redis-plus-plus.git &amp;&amp; cd redis-plus-plus &amp;&amp; mkdir build &amp;&amp; cd build &amp;&amp; cmake .. &amp;&amp; make &amp;&amp; sudo make install &amp;&amp; cd ~
 </code></pre></div>
@@ -277,7 +278,7 @@ sudo<span class="w"> </span>ninja<span class="w"> </span>-C<span class="w"> </sp
 <h3 id="cpp-mjpeg-streamer">cpp-mjpeg-streamer<a class="headerlink" href="#cpp-mjpeg-streamer" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>libspdlog-dev<span class="w"> </span>libjsoncpp-dev<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>/home/pi<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/nadjieb/cpp-mjpeg-streamer.git<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>cpp-mjpeg-streamer<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>mkdir<span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>cmake<span class="w"> </span>..<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>make<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span>
 </code></pre></div>
-<h3 id="cinepi-raw">CinePi-raw <img height="12" src="https://img.shields.io/badge/cinemate-fork-gren"/><a class="headerlink" href="#cinepi-raw" title="Permanent link">#</a></h3>
+<h3 id="cinepi-raw">CinePi-RAW <img height="12" src="https://img.shields.io/badge/cinemate-fork-gren"/><a class="headerlink" href="#cinepi-raw" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/cinepi-raw.git<span class="w"> </span>--branch<span class="w"> </span>rpicam-apps_1.7_custom_encoder
 <span class="nb">cd</span><span class="w"> </span>cinepi-raw
 sudo<span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>build
@@ -293,20 +294,22 @@ SET cg_rb 2.5,2.2
 PUBLISH cp_controls cg_rb
 EOF
 </code></pre></div>
-<h3 id="additional-drivers">Additional drivers<a class="headerlink" href="#additional-drivers" title="Permanent link">#</a></h3>
+<h3 id="imx585-driver-optional">IMX585 driver (optional)<a class="headerlink" href="#imx585-driver-optional" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>linux-headers<span class="w"> </span>dkms<span class="w"> </span>-y
 </code></pre></div>
-<h4 id="imx585-driver">imx585 driver<a class="headerlink" href="#imx585-driver" title="Permanent link">#</a></h4>
 <div class="highlight"><pre><span></span><code>git clone https://github.com/will127534/imx585-v4l2-driver.git --branch 6.12.y
 cd imx585-v4l2-driver/
 ./setup.sh
 cd
 </code></pre></div>
+<blockquote>
+<p>The imx585 is written by Will Whang. For original drivers and startup guides, visit https://github.com/will127534/StarlightEye</p>
+</blockquote>
 <h4 id="add-imx585-tuning-files">Add IMX585 tuning files<a class="headerlink" href="#add-imx585-tuning-files" title="Permanent link">#</a></h4>
 <p><div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-L<span class="w"> </span>-o<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585.json
 sed<span class="w"> </span>-i<span class="w"> </span><span class="s1">'8s/"black_level": *[0-9]\+/"black_level": 0/'</span><span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json
-cp<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json<span class="w"> </span>/usr/local/share/libcamera/ipa/rpi/pisp/
+sudo<span class="w"> </span>cp<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json<span class="w"> </span>/usr/local/share/libcamera/ipa/rpi/pisp/
 </code></pre></div>
 <div class="highlight"><pre><span></span><code>curl -L -o /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585_mono.json https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585_mono.json &amp;&amp; sudo cp /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585_mono.json /usr/local/share/libcamera/ipa/rpi/pisp/
 </code></pre></div></p>
@@ -317,12 +320,6 @@ sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </sp
 <blockquote>
 <p>Cinemate has its own way of handling the IR switch but the installation above can be convenient for use outside of Cinemate</p>
 </blockquote>
-<h4 id="imx283-driver">imx283 driver<a class="headerlink" href="#imx283-driver" title="Permanent link">#</a></h4>
-<div class="highlight"><pre><span></span><code>git clone https://github.com/will127534/imx283-v4l2-driver.git
-cd imx283-v4l2-driver/
-./setup.sh
-cd
-</code></pre></div>
 <h3 id="enabling-i2c">Enabling I²C<a class="headerlink" href="#enabling-i2c" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>raspi-config<span class="w"> </span>nonint<span class="w"> </span>do_i2c<span class="w"> </span><span class="m">0</span>
 </code></pre></div>
@@ -419,11 +416,11 @@ sudo<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </spa
 sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>post-processing1.json
 </code></pre></div></p>
 <h3 id="install-pishrink">Install PiShrink<a class="headerlink" href="#install-pishrink" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code>wget<span class="w"> </span>https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh
-sudo<span class="w"> </span>install<span class="w"> </span>-m755<span class="w"> </span>pishrink.sh<span class="w"> </span>/usr/local/bin/pishrink
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>wget<span class="w"> </span>https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh<span class="w"> </span>-O<span class="w"> </span>/usr/local/bin/pishrink.sh
+sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>/usr/local/bin/pishrink.sh
 </code></pre></div>
 <blockquote>
-<p>PiShrink is a great tool for compressing SD image file backups of the SD card. See here for instructions</p>
+<p>PiShrink is a handy tool for compressing SD image file backups of the SD card. See here for instructions</p>
 </blockquote>
 <h3 id="reboot">Reboot:<a class="headerlink" href="#reboot" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>reboot
@@ -482,7 +479,7 @@ sudo<span class="w"> </span>make<span class="w"> </span>install
 <span class="nb">cd</span><span class="w"> </span>..<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>lgpio
 </code></pre></div>
 <h3 id="clone-the-cinemate-repo">Clone the Cinemate repo<a class="headerlink" href="#clone-the-cinemate-repo" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code><span class="w">  </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/cinemate.git<span class="w"> </span>--branch<span class="w"> </span>cinemate-3.1
+<div class="highlight"><pre><span></span><code><span class="w">  </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/cinemate.git
 </code></pre></div>
 <h3 id="allow-cinemate-to-run-with-sudo">Allow Cinemate to run with sudo<a class="headerlink" href="#allow-cinemate-to-run-with-sudo" title="Permanent link">#</a></h3>
 <p>Edit the sudoers file:</p>

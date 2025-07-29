@@ -1,6 +1,5 @@
 # What is it?
-
-**Cinemate** is a boilerplate cinema camera system for Raspberry Pi 5.  builds upon CinePi-raw, authored by Csaba Nagy for enabling 12 bit (or even 16 bit) Cinema DNG recordings using off-the-shelf components.  
+**Cinemate** is a boilerplate cinema camera system for Raspberry Pi 5 building on CinePi-raw, authored by Csaba Nagy for enabling 12 bit (or even 16 bit) Cinema DNG recordings using off-the-shelf components.  
 
 Cinemate provides a minimal starting point that you can extend with your own controls and accessories. 
 
@@ -32,14 +31,14 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
 - [Adafruit I2C Quad Rotary Encoder](https://www.adafruit.com/product/5752)
 
 ## Camera stack
-
-1. **Camera sensor** connected to the Raspberry Pi
-2. Raspberry Pi SoC running **libcamera**
-3. **cinepi-raw** recorder (C++)
-4. **Redis** key-value store
-5. **Cinemate** (Python)
+![Camera stack exploded](images/camera-stack3.png){ width="40%" }
 
 Apps change settings by updating Redis keys. CinePi-RAW listens for those updates and captures frames accordingly while Cinemate provides the camera user interface.
+
+## Installation
+See the [releases section](https://github.com/Tiramisioux/cinemate/releases) for preinstalled image file and Quick Start Guide. 
+
+For manual install, see the [documentation](https://tiramisioux.github.io/cinemate/installation-steps/).
 
 ## Bare-bones build
 To try Cinemate you need:
@@ -47,9 +46,6 @@ To try Cinemate you need:
 - Official HQ or GS camera module
 - SSD drive such as a Samsung T7 formatted `ext4` and labelled `RAW`
 - HDMI monitor or a phone/tablet connected to the Pi hotspot for preview
-
-## Installation
-See the [releases section](https://github.com/Tiramisioux/cinemate/releases) for preinstalled image file and Quick Start Guide.
 
 ## Customization
 Buttons, encoders and oled display are optional and configured via settings file.
@@ -73,3 +69,7 @@ The [**Cinemate**](https://github.com/Tiramisioux/cinemate) stack is built on to
 Also thanks to Simon at [Altcinecam](https://altcinecam.com) for support and assistance!
 
 Get your sensors and CFE Hats here: https://www.tindie.com/stores/will123321/
+
+## Supporting the project
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/G2G21IM9RO)

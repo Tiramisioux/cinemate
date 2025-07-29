@@ -1,13 +1,5 @@
 # Installation
 
-Here is how you can manually install libcamera, cinepi-raw, cinemate and accompanying software on the Raspberry Pi.
-
-Stack works on Raspberry Pi 4 and 5 models.
-
-!!!  Info ""
-    
-    Cinemate is using Linux kernel version 6.12.25.
-
 ## Camera stack
 
 ### Tools & dependencies
@@ -16,7 +8,6 @@ Stack works on Raspberry Pi 4 and 5 models.
 sudo apt update -y
 sudo apt upgrade -y
 ```
-
 
 ```bash
 sudo apt-get install python3-jinja2 python3-ply python3-yaml

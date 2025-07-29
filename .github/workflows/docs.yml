@@ -9,7 +9,7 @@ permissions:
 on:
   push:
     branches:
-      - cinemate-3.1
+      - main
   workflow_dispatch:
 
 jobs:

@@ -8,15 +8,17 @@ Open a terminal (on Windows you can use PowerShell).
 
 Try the hostname first:
 
-```terminal
+```bash
 ssh pi@cinepi.local
 ```
 
 If this fails you can list devices on the network:
-   ```bash
-   arp -a
-   ```
-   Look for an entry labelled `cinepi` or note the new IP address that appears.
+
+```bash
+arp -a
+```
+
+Look for an entry labelled `cinepi` or note the new IP address that appears.
 
 
 Use the hostname or IP address with SSH:

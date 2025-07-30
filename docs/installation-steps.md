@@ -1,16 +1,15 @@
 # Installation
 Here is how you can manually install libcamera, cinepi-raw, cinemate and accompanying software on the Raspberry Pi.
 
-!!! Note
+!!! Note ""
 
      Stack works on Raspberry Pi 4 and 5 models. 2 GB RAM is sufficient, while more RAM will give you a larger framebuffer. Useful at high frame rates.
 
-!!! Note
+!!! Note ""
 
      Cinemate is using Linux kernel version 6.12.25. Recommended OS is Bookworm Lite.
 
 ### Tools & dependencies
-
 
 ```
 sudo apt update -y
@@ -247,7 +246,7 @@ sudo chmod +x /usr/local/bin/pishrink.sh
 
 >PiShrink is a handy tool for compressing SD image file backups of the SD card. See here for instructions
 
-### Reboot:
+### Reboot
 
 ```bash
 sudo reboot
@@ -352,7 +351,6 @@ pi ALL=(ALL) NOPASSWD: /bin/mount, /bin/umount, /usr/bin/ntfs-3g
 pi ALL=(ALL) NOPASSWD: /home/pi/cinemate/src/logs/system.log
 pi ALL=(ALL) NOPASSWD: /sbin/mount.ext4
 ```
-
 Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.
 
 ### Enable NetworkManager
@@ -414,7 +412,7 @@ Reload .bashrc
 source ~/.bashrc
 ```
 
-### Cinemate services
+## Cinemate services
 
 #### storage-automount
 
@@ -428,11 +426,12 @@ Install and enable both services with:
 
 ```bash
 cd /home/pi/cinemate/services
+```
 
+```
 sudo make install
 sudo make start  # starts the service
 sudo make enable # makes the service start on boot
-
 ```
 You can also start and enable the service individually, by entering their respective folders and issuing the `sudo make` command
 
@@ -453,31 +452,34 @@ arp -a
 ```
 
 You will see something like
-```shell
-
+```shell    
 ❯ arp -a
 
 ? (10.42.0.1) at e4:5f:1:a9:72:a7 on en0 ifscope [ethernet]
-...
 ```
 
-!!! info ""
+During development/building your rig you might prefer the Pi to use your normal Wi‑Fi instead of its own hotspot so you remain online while tinkering. Disable the hotspot by setting `system.wifi_hotspot.enabled` to `false` in `settings.json` _and_ by stopping the service with: 
 
-    During development/building your rig you might prefer the Pi to use your normal Wi‑Fi instead of its own hotspot so you remain online while tinkering. 
-    
-    Disable the hotspot by setting `system.wifi_hotspot.enabled` to `false` `settings.json` _and_ by stopping the service with `sudo systemctl stop wifi-hotspot`.
+```
+sudo systemctl stop wifi-hotspot
+```
 
-    To stop the hotspot from starting on boot, type `sudo systemctl disable wifi-hotspot`.
+To stop the hotspot from starting on boot, type 
 
-    If you plug in an Ethernet cable you can keep the hotspot active while the wired connection provides internet access. See [Hotspot logic](hotspot-logic.md) for more details on how the hotspot works.
+```
+sudo systemctl disable wifi-hotspot
+```
+
+See [Hotspot logic](hotspot-logic.md) for more details on how the hotspot works.
 
 ### Connect to the Pi (if not already connected):
 
 ```shell
 ssh pi@10.42.0.1
-
-# password: 1
 ```
+
+password: 1
+
 
 
 ### Starting Cinemate
@@ -494,7 +496,9 @@ Make sure things are running smoothly and then you can move on to enabling the c
 
 ```shell
 cd /home/pi/cinemate/
+```
 
+```
 sudo make install   # copy service file
 sudo make enable    # start on boot
 make start          # launch now

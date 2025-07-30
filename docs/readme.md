@@ -31,7 +31,7 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
 - [Adafruit I2C Quad Rotary Encoder](https://www.adafruit.com/product/5752)
 
 ## Camera stack
-![Camera stack exploded](images/camera-stack3.png){ width="40%" }
+![Camera stack exploded](images/camera-stack3.png){ width="60%" }
 
 Apps change settings by updating Redis keys. CinePi-RAW listens for those updates and captures frames accordingly while Cinemate provides the camera user interface.
 
@@ -42,6 +42,7 @@ For manual install, see the [documentation](https://tiramisioux.github.io/cinema
 
 ## Bare-bones build
 To try Cinemate you need:
+
 - Raspberry Pi 4 or 5
 - Official HQ or GS camera module
 - SSD drive such as a Samsung T7 formatted `ext4` and labelled `RAW`

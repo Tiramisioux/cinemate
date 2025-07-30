@@ -11,6 +11,7 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
         <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
       <script>
         // Current page data
@@ -178,16 +179,14 @@
 <li>HDMI monitor or a phone/tablet for monitoring</li>
 </ul>
 <div class="admonition tip">
-<p class="admonition-title">Which Pi to choose?</p>
-<p>For most users the 4 GB or even 2 GB is sufficient. More ram gives you a larger frame buffer. But ideally you don’t want to have to use the framebuffer anyway, as realtime writing to storage is preferred.</p>
-<p>There could be some rare high speed slomo cases you would want faster frame capture for short bursts but in most cases, the 4GB models are sufficient.</p>
+<p>For most users the 4GB or even 2GB models are sufficient. More RAM gives you a larger frame buffer. But ideally you don’t want to have to use the framebuffer anyway, as realtime writing to storage is preferred.</p>
+<p>There could be some rare high speed slomo cases you would want faster frame capture for short bursts but in most cases, the 4GB models will do fine.</p>
 </div>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h2>
 <p>Burn the latest <a href="https://github.com/Tiramisioux/cinemate/releases/tag/3.1">Cinemate image</a> to an SD card (8 GB or larger).</p>
 <p>Connect the Pi and the camera sensor board, connect power and boot the Pi. </p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Ensure the Pi is powered off before attaching the camera ribbon cable. Hot-swapping the cable is not advised.</p>
+<div class="admonition danger">
+<p>Ensure the Pi is powered off before attaching the camera ribbon cable. Hot-swapping may damage the hardware.</p>
 </div>
 <h2 id="starting-cinemate">Starting Cinemate<a class="headerlink" href="#starting-cinemate" title="Permanent link">#</a></h2>
 <ul>
@@ -210,8 +209,7 @@ Open a browser and go to <code>cinepi.local:5000</code> to see the interface. A 
 </li>
 </ul>
 <p>That's it—your bare‑bones Cinemate build is ready!</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
+<div class="admonition danger">
 <p>Remember to power everything down before disconnecting hardware!</p>
 </div>
 </div>
@@ -258,7 +256,9 @@ Open a browser and go to <code>cinepi.local:5000</code> to see the interface. A 
     <script>var base_url = "..";</script>
     <script src="../js/theme_extra.js"></script>
     <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
       <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
       <script src="../search/main.js"></script>
     <script>
         jQuery(function () {

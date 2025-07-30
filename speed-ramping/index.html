@@ -11,6 +11,7 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
         <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
       <script>
         // Current page data
@@ -168,18 +169,16 @@
 <p>Speed ramping is the process of changing the camera's frame rate during a shot so that playback speed varies once the footage is conformed to a constant frame rate in post production. Ramping up the frame rate produces slow motion while ramping down speeds up the action.</p>
 <h2 id="speed-ramping-in-cinemate">Speed ramping in Cinemate<a class="headerlink" href="#speed-ramping-in-cinemate" title="Permanent link">#</a></h2>
 <p>Cinemate exposes frame rate control through the <code>CinePiController</code> class. The simplest way to change speed on the fly is the CLI command:</p>
-<div class="codehilite"><pre><span></span><code><span class="nb">set</span><span class="w"> </span>fps<span class="w"> </span>&lt;value&gt;
-</code></pre></div>
-
+<pre><code class="language-bash">set fps &lt;value&gt;
+</code></pre>
 <p>For quick 2× changes Cinemate also implements <code>set_fps_double</code> which toggles between the current FPS and twice that value. This can be used for designing a slow-motion button. Here is how you would to it in the settings file, button section:</p>
-<div class="codehilite"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">18</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;pull_up&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;debounce_time&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;press_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_fps_double&quot;</span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div>
-
+<pre><code class="language-json">{
+  &quot;pin&quot;: 18,
+  &quot;pull_up&quot;: true,
+  &quot;debounce_time&quot;: 0.1,
+  &quot;press_action&quot;: {&quot;method&quot;: &quot;set_fps_double&quot;}
+}
+</code></pre>
 <blockquote>
 <p>No argument is needed here. For methods such as <code>set_fps_double</code>, calling the method without an argument will simply toggle the control, in tis caseturning the slow motion on and off. If the user provides an argument, the control will be set explicitly to that value.</p>
 </blockquote>
@@ -233,7 +232,9 @@
     <script>var base_url = "..";</script>
     <script src="../js/theme_extra.js"></script>
     <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
       <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
       <script src="../search/main.js"></script>
     <script>
         jQuery(function () {

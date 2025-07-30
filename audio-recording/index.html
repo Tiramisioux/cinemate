@@ -11,6 +11,7 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
         <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
       <script>
         // Current page data
@@ -169,47 +170,47 @@
 <p>Audio is written as <code>.wav</code> files into the same folder as the <code>.dng</code> frames. The implementation is still experimental and audio/video synchronization needs further investigation.</p>
 <h3 id="asoundrc-setup">.asoundrc Setup<a class="headerlink" href="#asoundrc-setup" title="Permanent link">#</a></h3>
 <p>For <code>dsnoop</code> support, create a <code>~/.asoundrc</code> in home directory:</p>
-<div class="codehilite"><pre><span></span><code>nano<span class="w"> </span>~/.asoundrc
-</code></pre></div>
-
+<pre><code class="language-bash">nano ~/.asoundrc
+</code></pre>
 <p>Paste this into the file:</p>
-<div class="codehilite"><pre><span></span><code><span class="w">    </span>pcm.dsnoop_24bit<span class="w"> </span><span class="o">{</span>
-<span class="w">        </span><span class="nb">type</span><span class="w"> </span>dsnoop
-<span class="w">        </span>ipc_key<span class="w"> </span><span class="m">2048</span>
-<span class="w">        </span>slave<span class="w"> </span><span class="o">{</span>
-<span class="w">            </span>pcm<span class="w"> </span><span class="s2">&quot;hw:Device,0&quot;</span>
-<span class="w">            </span>channels<span class="w"> </span><span class="m">2</span>
-<span class="w">            </span>rate<span class="w"> </span><span class="m">48000</span>
-<span class="w">            </span>format<span class="w"> </span>S24_3LE
-<span class="w">            </span>period_size<span class="w"> </span><span class="m">1024</span>
-<span class="w">            </span>buffer_size<span class="w"> </span><span class="m">4096</span>
-<span class="w">        </span><span class="o">}</span>
-<span class="w">    </span><span class="o">}</span>
+<pre><code class="language-bash">
+    pcm.dsnoop_24bit {
+        type dsnoop
+        ipc_key 2048
+        slave {
+            pcm &quot;hw:Device,0&quot;
+            channels 2
+            rate 48000
+            format S24_3LE
+            period_size 1024
+            buffer_size 4096
+        }
+    }
 
-<span class="w">    </span>pcm.dsnoop_16bit<span class="w"> </span><span class="o">{</span>
-<span class="w">        </span><span class="nb">type</span><span class="w"> </span>dsnoop
-<span class="w">        </span>ipc_key<span class="w"> </span><span class="m">2049</span>
-<span class="w">        </span>slave<span class="w"> </span><span class="o">{</span>
-<span class="w">            </span>pcm<span class="w"> </span><span class="s2">&quot;hw:Device,0&quot;</span>
-<span class="w">            </span>channels<span class="w"> </span><span class="m">1</span>
-<span class="w">            </span>rate<span class="w"> </span><span class="m">48000</span>
-<span class="w">            </span>format<span class="w"> </span>S16_LE
-<span class="w">            </span>period_size<span class="w"> </span><span class="m">1024</span>
-<span class="w">            </span>buffer_size<span class="w"> </span><span class="m">4096</span>
-<span class="w">        </span><span class="o">}</span>
-<span class="w">    </span><span class="o">}</span>
+    pcm.dsnoop_16bit {
+        type dsnoop
+        ipc_key 2049
+        slave {
+            pcm &quot;hw:Device,0&quot;
+            channels 1
+            rate 48000
+            format S16_LE
+            period_size 1024
+            buffer_size 4096
+        }
+    }
 
-<span class="w">    </span>pcm.mic_24bit<span class="w"> </span><span class="o">{</span>
-<span class="w">        </span><span class="nb">type</span><span class="w"> </span>plug
-<span class="w">        </span>slave.pcm<span class="w"> </span><span class="s2">&quot;dsnoop_24bit&quot;</span>
-<span class="w">    </span><span class="o">}</span>
+    pcm.mic_24bit {
+        type plug
+        slave.pcm &quot;dsnoop_24bit&quot;
+    }
 
-<span class="w">    </span>pcm.mic_16bit<span class="w"> </span><span class="o">{</span>
-<span class="w">        </span><span class="nb">type</span><span class="w"> </span>plug
-<span class="w">        </span>slave.pcm<span class="w"> </span><span class="s2">&quot;dsnoop_16bit&quot;</span>
-<span class="w">    </span><span class="o">}</span>
-</code></pre></div>
+    pcm.mic_16bit {
+        type plug
+        slave.pcm &quot;dsnoop_16bit&quot;
+    }
 
+</code></pre>
 <p>Exit nano editor using ctrl+x.</p>
 </div>
 
@@ -255,7 +256,9 @@
     <script>var base_url = "..";</script>
     <script src="../js/theme_extra.js"></script>
     <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
       <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
       <script src="../search/main.js"></script>
     <script>
         jQuery(function () {

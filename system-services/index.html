@@ -11,6 +11,7 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
         <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
       <script>
         // Current page data
@@ -180,7 +181,7 @@
 </div>
 <h3 id="starting-stopping-enabling-and-disabling-the-service">Starting, stopping, enabling and disabling the service<a class="headerlink" href="#starting-stopping-enabling-and-disabling-the-service" title="Permanent link">#</a></h3>
 <p>Go to the Cinemate folder:</p>
-<div class="codehilite"><pre><span></span><code>cd cinemate
+<pre><code>cd cinemate
 
 make install   # copy service file
 make enable    # start on boot
@@ -189,8 +190,7 @@ make stop      # stop it
 make status    # check status
 make disable   # disable autostart
 make clean     # remove the service
-</code></pre></div>
-
+</code></pre>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Note that in order for the web ui to work properly you have to run <code>make install</code> once in the <code>/home/pi/cinemate</code> folder, even if you are not using the autostart service.</p>
@@ -203,26 +203,23 @@ make clean     # remove the service
 <p>On the image file, the storage-automount.service is activated by default.</p>
 </div>
 <p>To manually install and enable the service:</p>
-<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>cinemate/services/storage-automount
+<pre><code class="language-bash">cd cinemate/services/storage-automount
 
-sudo<span class="w"> </span>make<span class="w"> </span>install
-sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable</span>
-</code></pre></div>
-
+sudo make install
+sudo make enable
+</code></pre>
 <p>You can stop or disable it later with:</p>
-<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>make<span class="w"> </span>stop
-sudo<span class="w"> </span>make<span class="w"> </span>disable
-</code></pre></div>
-
+<pre><code class="language-bash">sudo make stop
+sudo make disable
+</code></pre>
 <h2 id="wifi-hotspotservice">wifi-hotspot.service<a class="headerlink" href="#wifi-hotspotservice" title="Permanent link">#</a></h2>
 <p>Wifi-hotspot keeps a small access point running with the help of NetworkManager so you can always reach the web interface. The SSID and password are read from <code>/home/pi/cinemate/src/settings.json</code> under <code>system.wifi_hotspot</code>.</p>
 <p>Install and enable it with:</p>
-<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>cinemate/services/wifi-hotspot
+<pre><code class="language-bash">cd cinemate/services/wifi-hotspot
 
-sudo<span class="w"> </span>make<span class="w"> </span>install
-sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable</span>
-</code></pre></div>
-
+sudo make install
+sudo make enable
+</code></pre>
 <p>As with <strong>storage-automount</strong>, you can stop or disable the hotspot with </p>
 <p><code>`
 make stop
@@ -275,7 +272,9 @@ make disable</code></p>
     <script>var base_url = "..";</script>
     <script src="../js/theme_extra.js"></script>
     <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
       <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
       <script src="../search/main.js"></script>
     <script>
         jQuery(function () {

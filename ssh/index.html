@@ -11,6 +11,7 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
         <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
       <script>
         // Current page data
@@ -165,19 +166,17 @@
 <p>You can change this behaviour later in the settings file.</p>
 <p>Open a terminal (on Windows you can use PowerShell).</p>
 <p>Try the hostname first:</p>
-<div class="codehilite"><pre><span></span><code><span class="n">ssh</span><span class="w"> </span><span class="nf">pi</span><span class="nv">@cinepi</span><span class="p">.</span><span class="k">local</span>
-</code></pre></div>
-
-<p>If this fails you can list devices on the network:
-   <code>bash
-   arp -a</code>
-   Look for an entry labelled <code>cinepi</code> or note the new IP address that appears.</p>
+<pre><code class="language-bash">ssh pi@cinepi.local
+</code></pre>
+<p>If this fails you can list devices on the network:</p>
+<pre><code class="language-bash">arp -a
+</code></pre>
+<p>Look for an entry labelled <code>cinepi</code> or note the new IP address that appears.</p>
 <p>Use the hostname or IP address with SSH:</p>
-<div class="codehilite"><pre><span></span><code>ssh<span class="w"> </span>pi@cinepi.local
-<span class="c1"># or</span>
-ssh<span class="w"> </span>pi@&lt;ip-address&gt;
-</code></pre></div>
-
+<pre><code class="language-bash">ssh pi@cinepi.local
+# or
+ssh pi@&lt;ip-address&gt;
+</code></pre>
 <p>When asked about the host key, type <code>yes</code>. Enter the default password <code>1</code> when prompted.</p>
 <p>You will now see the <code>pi@cinepi</code> prompt, meaning you are logged in.</p>
 <div class="admonition note">
@@ -229,7 +228,9 @@ ssh<span class="w"> </span>pi@&lt;ip-address&gt;
     <script>var base_url = "..";</script>
     <script src="../js/theme_extra.js"></script>
     <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
       <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
       <script src="../search/main.js"></script>
     <script>
         jQuery(function () {

@@ -11,6 +11,7 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
         <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
       <script>
         // Current page data
@@ -168,13 +169,12 @@
 <h2 id="building-the-cinepi-raw-command">Building the <code>cinepi-raw</code> Command<a class="headerlink" href="#building-the-cinepi-raw-command" title="Permanent link">#</a></h2>
 <p>For each detected camera the manager creates a <code>CinePiProcess</code>. The <code>_build_args()</code> method constructs a list of command-line flags for <code>cinepi-raw</code>.</p>
 <p>Here is an example of the resulting command:</p>
-<div class="codehilite"><pre><span></span><code>cinepi-raw<span class="w"> </span>--camera<span class="w"> </span><span class="m">0</span><span class="w"> </span>--mode<span class="w"> </span><span class="m">2028</span>:1080:12:U<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--width<span class="w"> </span><span class="m">2028</span><span class="w"> </span>--height<span class="w"> </span><span class="m">1080</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--lores-width<span class="w"> </span><span class="m">1280</span><span class="w"> </span>--lores-height<span class="w"> </span><span class="m">720</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--hdmi-port<span class="w"> </span><span class="m">0</span><span class="w"> </span>--rotation<span class="w"> </span><span class="m">0</span><span class="w"> </span>--hflip<span class="w"> </span><span class="m">0</span><span class="w"> </span>--vflip<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--tuning-file<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json
-</code></pre></div>
-
+<pre><code class="language-bash">cinepi-raw --camera 0 --mode 2028:1080:12:U \
+           --width 2028 --height 1080 \
+           --lores-width 1280 --lores-height 720 \
+           --hdmi-port 0 --rotation 0 --hflip 0 --vflip 0 \
+           --tuning-file /home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json
+</code></pre>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>If you want to change how arguments are built, look inside the <code>_build_args()</code> method. The rest of the file deals with process management, log forwarding and readiness checks.</p>
@@ -215,7 +215,9 @@
     <script>var base_url = "..";</script>
     <script src="../js/theme_extra.js"></script>
     <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
       <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
       <script src="../search/main.js"></script>
     <script>
         jQuery(function () {

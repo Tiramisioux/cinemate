@@ -58,11 +58,13 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#starting-cinemate">Starting Cinemate</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#previewing-the-image">Previewing the image</a>
+    <li class="toctree-l2"><a class="reference internal" href="#preview">Preview</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#recording">Recording</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#further-reading">Further reading</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#remote-connection-and-disabling-autostart">Remote connection and disabling autostart</a>
     </li>
     </ul>
                   </li>
@@ -184,22 +186,17 @@
 </div>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h2>
 <p>Burn the latest <a href="https://github.com/Tiramisioux/cinemate/releases/tag/3.1">Cinemate image</a> to an SD card (8 GB or larger).</p>
-<p>Connect the Pi and the camera sensor board, connect power and boot the Pi. </p>
+<p>Connect the Pi and the camera sensor board, connect power an boot the Pi. Cinemate should autstart on boot. </p>
 <div class="admonition danger">
 <p>Ensure the Pi is powered off before attaching the camera ribbon cable. Hot-swapping may damage the hardware.</p>
 </div>
-<h2 id="starting-cinemate">Starting Cinemate<a class="headerlink" href="#starting-cinemate" title="Permanent link">#</a></h2>
-<ul>
-<li>Start Cinemate by typing <code>cinemate</code> anywhere in the terminal.</li>
-<li>To connect to the Pi from another computer, see the <a href="../ssh/">ssh section</a>. To enable autostart on boot, see <a href="../system-services/#cinemate-autostartservice">this section</a>.</li>
-</ul>
-<h2 id="previewing-the-image">Previewing the image<a class="headerlink" href="#previewing-the-image" title="Permanent link">#</a></h2>
+<h2 id="preview">Preview<a class="headerlink" href="#preview" title="Permanent link">#</a></h2>
 <ul>
 <li>Plug in an HDMI monitor <strong>or</strong> </li>
 <li>Connect your phone/tablet to the Wi‑Fi network <code>CinePi</code> (password <code>11111111</code>).
 Open a browser and go to <code>cinepi.local:5000</code> to see the interface. A clean video feed without the GUI is available at <code>cinepi.local:8000/stream</code>.</li>
 </ul>
-<h2 id="recording"><strong>Recording</strong><a class="headerlink" href="#recording" title="Permanent link">#</a></h2>
+<h2 id="recording">Recording<a class="headerlink" href="#recording" title="Permanent link">#</a></h2>
 <ul>
 <li>
 <p>Attach a high‑speed drive: an <strong>SSD</strong> (Samsung T7 recommended), an <strong>NVMe drive</strong>, or the <strong><a href="https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/">CFE Hat</a></strong>. Make sure storage medoa is formatted as <code>ext4</code> and labeled <code>RAW</code>.</p>
@@ -212,6 +209,11 @@ Open a browser and go to <code>cinepi.local:5000</code> to see the interface. A 
 <div class="admonition danger">
 <p>Remember to power everything down before disconnecting hardware!</p>
 </div>
+<h2 id="further-reading">Further reading<a class="headerlink" href="#further-reading" title="Permanent link">#</a></h2>
+<p><a href="https://tiramisioux.github.io/cinemate/">Documentation</a> available at GitHub Pages. </p>
+<h2 id="remote-connection-and-disabling-autostart">Remote connection and disabling autostart<a class="headerlink" href="#remote-connection-and-disabling-autostart" title="Permanent link">#</a></h2>
+<p>To connect to the Pi from another computer, see the <a href="../ssh/">ssh section</a>. 
+To disable autostart on boot, see <a href="../system-services/#cinemate-autostartservice">this section</a>.</p>
 </div>
 
             </div>

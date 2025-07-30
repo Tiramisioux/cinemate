@@ -98,7 +98,8 @@ cd
 
 ```
 
->The imx585 is written by Will Whang. For original drivers and startup guides, visit https://github.com/will127534/StarlightEye
+!!! note ""
+    The imx585 is written by Will Whang. For original drivers and startup guides, visit https://github.com/will127534/StarlightEye
 
 #### Add IMX585 tuning files 
 
@@ -119,21 +120,24 @@ sudo wget https://raw.githubusercontent.com/will127534/StarlightEye/master/softw
 sudo chmod +x /usr/local/bin/IRFilter
 ```
 
->Cinemate has its own way of handling the IR switch but the installation above can be convenient for use outside of Cinemate
+!!! note ""
+    Cinemate has its own way of handling the IR switch but the installation above can be convenient for use outside of Cinemate
 
 ### Enabling I²C
 
 ```bash
 sudo raspi-config nonint do_i2c 0
 ```
->Enabling I2C is needed for using the camera modules.
+!!! note ""
+    Enabling I2C is needed for using the camera modules.
 
 ### Setting hostname
 
 ```bash
 sudo hostnamectl set-hostname cinepi
 ```
->You will find the pi as `cinepi.local` on the local network, or at the hotspot Cinemate creates
+!!! note ""
+    You will find the pi as `cinepi.local` on the local network, or at the hotspot Cinemate creates
 
 ### Add camera modules to config.txt
 
@@ -202,7 +206,8 @@ sudo systemctl enable console-setup.service
 sudo systemctl start console-setup.service
 ```
 
-> This can be useful if running the Pi on a small HD field monitor
+!!! note ""
+    This can be useful if running the Pi on a small HD field monitor
 
 ### Create post-processing configs
 
@@ -244,7 +249,8 @@ sudo wget https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh 
 sudo chmod +x /usr/local/bin/pishrink.sh
 ```
 
->PiShrink is a handy tool for compressing SD image file backups of the SD card. See here for instructions
+!!! tip ""
+    PiShrink is a handy tool for compressing SD image file backups of the SD card. See here for instructions
 
 ### Reboot
 

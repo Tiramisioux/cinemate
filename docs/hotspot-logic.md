@@ -7,4 +7,5 @@ During development you may want the Pi to join your normal Wi‑Fi so it has int
 
 If you plug an Ethernet cable into the Pi, you can keep the hotspot running while also having a wired connection for internet and local networking.
 
->Note that Cinemate still streams its web gui on whatever network the Pi is connected to, with GUI at <ip-address>:5000 and clean preview without GUI on <ip-address>:8000/stream
+!!! note ""
+    Note that Cinemate still streams its web gui on whatever network the Pi is connected to, with GUI at `<ip-address>:5000` and clean preview on `<ip-address>:8000/stream`.

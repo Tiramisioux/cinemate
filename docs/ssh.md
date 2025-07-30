@@ -1,8 +1,9 @@
-# Connecting to the Pi with SSH
+# Connecting to the Pi remotely with SSH
 
-Connect your computer and the Pi to the same network. If you are using the preinstalled image file, the system automatically starts a built-in hotspot: join the **CinePi** Wi‑Fi with password `11111111`.
+Connect your computer and the Pi to the same network.
 
-You can change this behaviour later in the settings file.
+!!! tip ""
+    If you are using the preinstalled image file, the system automatically starts a built-in hotspot: join the **CinePi** Wi‑Fi with password `11111111`. You can change this behaviour later in the [settings file](settings-json.md).
 
 Open a terminal (on Windows you can use PowerShell).
 
@@ -31,7 +32,10 @@ When asked about the host key, type `yes`. Enter the default password `1` when p
 
 You will now see the `pi@cinepi` prompt, meaning you are logged in.
 
-!!! note
+!!! note ""
     If you are installing Cinemate manually, the hostname has not yet been set to cinepi. Then you will have to identify which ip address on the network is actually the Raspberry Pi and use that ip address.
 
-From here you can run `cinemate` to start the interface or use `make` commands to manage the service. For security you should change the password with `passwd` after the first login.
+Tyoep `cinemate` anywhere in the cli to start the app. 
+
+!!! tip ""
+    If you are running Cinemate from the preinstalled image file, Cinemate is already running, as it autostarts on boot. [See here for how to manage the autostart-service](system-services.md).

@@ -36,11 +36,3 @@ That's it—your bare‑bones Cinemate build is ready!
 !!! danger ""
 
     Remember to power everything down before disconnecting hardware!
-
-## Further reading
-
-[Documentation](https://tiramisioux.github.io/cinemate/) available at GitHub Pages. 
-
-## Remote connection and disabling autostart
-To connect to the Pi from another computer, see the [ssh section](ssh.md). 
-To disable autostart on boot, see [this section](system-services.md/#cinemate-autostartservice).

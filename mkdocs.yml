@@ -19,19 +19,19 @@ nav:
       - Getting started with a minimal build: getting-started.md
   - Customising your build:
     - Connecting via SSH: ssh.md
-    - Settings file: settings-json.md
+    - Cinemate terminal commands: cli-commands.md
+    - Custom settings: settings-json.md
     - Adding hardware controls: hardware-controls.md
     - Configuring the Wi-Fi hotspot: hotspot-logic.md
   - Using the camera:
       - CinePi RAW terminal commands: cli-user-guide.md
-      - HDMI GUI: simple-gui.md
-      - Web GUI: web-gui.md
-      - Sensors: sensors.md
+      - Simple GUI: simple-gui.md
+      - Camera sensors: sensors.md
       - Audio recording: audio-recording.md
       - Digital zoom: digital-zoom.md
       - Speed ramping & shutter angle synchronization: speed-ramping.md
       - Dual sensors: dual-sensors.md
-      - Cinemate terminal commands: cli-commands.md
+
   - System management:
       - System services: system-services.md
       - Modifying config.txt: config-txt.md
@@ -91,8 +91,10 @@ extra_css:
   # - overrides/github-markdown.css
   - templates/styles.scss
   - stylesheets/extra.css
+
   - https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css
 extra_javascript:
+
   - https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js
   - js/ko-fi-widget.js
   - js/copybutton-init.js
@@ -107,6 +109,10 @@ markdown_extensions:
   - def_list
   - footnotes
   - tables
+  - codehilite:
+      guess_lang: true
+      use_pygments: true
+      pygments_style: friendly
   - toc:
       permalink: "#"            # tiny link-icon on headings
   - pymdownx.snippets

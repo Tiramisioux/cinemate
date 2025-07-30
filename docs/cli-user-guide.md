@@ -47,10 +47,10 @@ This positions the preview 30 pixels from the top of the screen with a 1920×102
 ## Tuning file
 
 ```
---tuning-file /home/pi/cinemate/resources/tuning_files/imx477.json
+--tuning-file /home/pi/libcamera/src/ipa/rpi/pisp/data/{model_key}.json
 ```
 
-Describes the camera’s colour and lens characteristics. Point to a file supplied with Libcamera (for example `imx477.json` for the HQ camera)
+Describes the camera’s colour and lens characteristics. Point to a file supplied with Libcamera (for example `/home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json` for the HQ camera)
 
 ## Post processing
 

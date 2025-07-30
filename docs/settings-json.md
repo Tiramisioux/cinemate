@@ -8,7 +8,7 @@ The configuration is structured as JSON. Each top‑level key describes a featur
 
 Text or image displayed briefly when Cinemate starts.
 
-```json
+```yaml
 "welcome_image": null
 "welcome_message": "THIS IS A COOL MACHINE",
 ```

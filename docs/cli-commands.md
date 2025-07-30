@@ -4,7 +4,7 @@ Cinemate doesn’t use a real shell parser. Instead, a background thread
 reads simple text commands from SSH or the serial port and calls the
 corresponding controller methods.
 
-!!! note
+!!! note ""
 
      Commands without an explicit argument will toggle the current state when possible (e.g. `set fps lock` flips the lock; `set fps lock 1` forces it on).
 

@@ -122,6 +122,8 @@ markdown_extensions:
   - pymdownx.mark
   - pymdownx.tilde
 
+  - schemdraw_markdown 
+
 # ───────────────────────────
 # Plugins
 # ───────────────────────────

@@ -44,7 +44,7 @@ By default the program opens an HDMI preview so you can see what the camera capt
 
 This positions the preview 30 pixels from the top of the screen with a 1920×1020 window.
 
-## Tuning files
+## Tuning file
 
 ```
 --tuning-file /home/pi/cinemate/resources/tuning_files/imx477.json
@@ -54,11 +54,15 @@ Describes the camera’s colour and lens characteristics. Point to a file suppli
 
 ## Post processing
 
+```
 --post-process-file /home/pi/post-processing.json
+```
 
 For cinepi-raw, this file defines the port used by cpp-mjpeg-streamer (default cinepi.local:8000)
 
->If you have more than one camera connected to the Pi, and activated in `boot/firmware/config.txt`, the camera commected to physical cam0 will use /home/pi/post-processing0.json and the camera connected to cam1 will use /home/pi/post-processing1.json
+!!! note ""
+
+     If you have more than one camera connected to the Pi, and activated in `boot/firmware/config.txt`, the camera commected to physical cam0 will use `/home/pi/post-processing0.json` and the camera connected to cam1 will use `/home/pi/post-processing1.json`.
 
 ## Cinemate‑specific flags
 
@@ -71,8 +75,9 @@ The CineMate fork introduces several extra options:
 | `--same-hdmi` | *(none)*           | Force both capture and controller GUI to share the same HDMI output.                        |
 | `--keep16`    | `true` \| `false`  | Save full 16-bit DNGs instead of 12-bit packed files.                                       |
 
+!!! note ""
 
->At this moment though, Cinemate is 12bit only. The flag is for future updates of the IMX585 16bit clear HDR modes.
+     At this moment though, Cinemate is 12bit only. The flag is for future updates of the IMX585 16bit clear HDR modes.
 
 ## Example commands
 

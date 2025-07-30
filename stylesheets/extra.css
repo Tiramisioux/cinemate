@@ -23,7 +23,7 @@ margin-bottom: 16px;
 
 .rst-content code {
 color: #000000;
-
+border-radius: 5px;
 }
 
 .rst-content pre code {
@@ -32,6 +32,7 @@ word-wrap: normal;
 display: block;
 padding: 12px;
 font-size: 12px;
+border-radius: 0px;
 }
 
 /* Float an image to the right and keep some breathing-room on mobile */

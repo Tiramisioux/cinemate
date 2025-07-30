@@ -417,11 +417,12 @@ def main():
         )
 
         # Stop peripherals
-        dmesg_monitor.join()
+
         if hasattr(dmesg_monitor, "stop"):
             dmesg_monitor.stop() 
         if hasattr(command_executor, "stop"):
             command_executor.stop()
+        dmesg_monitor.join()
         command_executor.join()
         cinepi_controller.stop()
         serial_handler.running = False

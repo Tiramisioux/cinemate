@@ -16,9 +16,15 @@ class DmesgMonitor(threading.Thread):
         self.undervoltage_timer = None
         self.disk_attached = False
         self.disk_detached_event = threading.Event()
+        self._stop_event = threading.Event()
 
     def run(self):
         self._start_monitoring()
+        
+    def stop(self):
+        """Signal the monitoring loop to exit."""
+        self._stop_event.set()
+
 
     def read_dmesg_log(self):
         try:
@@ -54,7 +60,7 @@ class DmesgMonitor(threading.Thread):
 
     def _start_monitoring(self):
         # Main event loop
-        while True:
+        while not self._stop_event.is_set():
             dmesg_lines = self.read_dmesg_log()
             new_messages = self.parse_dmesg_messages(dmesg_lines)
             new_messages = self.track_last_occurrence(new_messages)
@@ -78,6 +84,7 @@ class DmesgMonitor(threading.Thread):
                                 self.disk_attached = False
                                 logging.info("Disk detached.")
                                 self.disk_detached_event.set()
-            time.sleep(5)
+            if self._stop_event.wait(5):
+                break
 
 

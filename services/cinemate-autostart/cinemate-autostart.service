@@ -7,8 +7,8 @@ ExecStart=/home/pi/.cinemate-env/bin/python3 /home/pi/cinemate/src/main.py
 WorkingDirectory=/home/pi/cinemate
 User=pi
 Group=pi
-Restart=always
-RestartSec=5
+TimeoutStopSec=5
+KillSignal=SIGINT
 
 [Install]
 WantedBy=multi-user.target

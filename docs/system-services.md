@@ -6,10 +6,6 @@ Cinemate uses three system services for its operation.
 
 Responsible for autostart of Cinemate on boot. By default, it is turned off on the [downloadable image file](https://github.com/Tiramisioux/cinemate/releases/tag/3.1).
 
-!!! note
-    
-     Users are recommended to first start Cinemate manually (by typing `cinemate` in the cli) to be able to inspect the startup sequence and make sure that the app starts as expected. Then, when smooth startup is confirmed, the cinemate-autostart.service can be activated.
-
 ### Starting, stopping, enabling and disabling the service
 
 Go to the Cinemate folder:

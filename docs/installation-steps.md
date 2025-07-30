@@ -309,7 +309,8 @@ sudo reboot
 
 ### Python packages
 
-> If you previously installed the `board` Python package, remove it with `pip3 uninstall board`.
+!!! Note ""
+    If you previously installed the `board` Python package, remove it with `pip3 uninstall board`.
 
 ```bash
 pip install \

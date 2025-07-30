@@ -51,21 +51,13 @@
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#new-features-in-version-31">New features in version 3.1</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#compatible-sensors">Compatible sensors</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#preinstalled-hardware">Preinstalled hardware</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#camera-stack">Camera stack</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#bare-bones-build">Bare-bones build</a>
-    </li>
     <li class="toctree-l2"><a class="reference internal" href="#customization">Customization</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#documentation">Documentation</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#acknowledgements">Acknowledgements</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#supporting-the-project">Supporting the project</a>
     </li>
@@ -81,7 +73,9 @@
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
                   </li>
@@ -92,11 +86,9 @@
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Sensors</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -105,8 +97,6 @@
                   <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">System management</span></p>
@@ -181,9 +171,15 @@
               
 <div class="markdown-body">
   <h1 id="what-is-it">What is it?<a class="headerlink" href="#what-is-it" title="Permanent link">#</a></h1>
-<p><strong>Cinemate</strong> is a boilerplate cinema camera system for Raspberry Pi 5 building on CinePi-raw, authored by Csaba Nagy for enabling 12 bit (or even 16 bit) Cinema DNG recordings using off-the-shelf components.  </p>
+<p><strong>Cinemate</strong> is a boilerplate cinema camera system for Raspberry Pi 5 building on <a href="https://github.com/cinepi">CinePi‑RAW recorder by Csaba Nagy</a> for enabling 12 bit (or even 16 bit) Cinema DNG recordings using off-the-shelf components.  </p>
 <p>Cinemate provides a minimal starting point that you can extend with your own controls and accessories. </p>
 <p>The project combines a Python UI with a custom fork of <a href="https://github.com/Tiramisioux/cinepi-raw/tree/rpicam-apps_1.7_custom_encoder">cinepi-raw</a>.</p>
+<div style="text-align: center;">
+  <img src="/cinemate/images/camera-stack3.png" alt="Camera stack exploded" width="60%" />
+  <p><em>Figure 1: Camera stack exploded view. Apps change settings by updating Redis keys. CinePi-RAW listens for those updates and captures frames accordingly while Cinemate provides the camera user interface.</em></p>
+</div>
+
+<div class="admonition tip">
 <h2 id="new-features-in-version-31">New features in version 3.1<a class="headerlink" href="#new-features-in-version-31" title="Permanent link">#</a></h2>
 <ul>
 <li>fast uncompressed dng encoder, supporting both IMX 585 color and mono sensors (normal SSD's working well for HD @ 25 fps)</li>
@@ -196,6 +192,10 @@
 <li>choose specific HDMI output port, 0 or 1</li>
 <li>adapted to libcamera 0.5/rpicam-apps 1.7</li>
 </ul>
+</div>
+<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h2>
+<p>See the <a href="https://github.com/Tiramisioux/cinemate/releases">releases section</a> for preinstalled image file and <a href="https://tiramisioux.github.io/cinemate/getting-started/">Quick Start Guide</a>. </p>
+<p>For manual install of the camera stack on Raspberry Pi Bookworm, see the <a href="https://tiramisioux.github.io/cinemate/installation-steps/">here</a>.</p>
 <h2 id="compatible-sensors">Compatible sensors<a class="headerlink" href="#compatible-sensors" title="Permanent link">#</a></h2>
 <ul>
 <li>IMX477 (official Raspberry Pi HQ camera)</li>
@@ -209,37 +209,12 @@
 <li><a href="https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/">Grove Base Hat</a></li>
 <li><a href="https://www.adafruit.com/product/5752">Adafruit I2C Quad Rotary Encoder</a></li>
 </ul>
-<h2 id="camera-stack">Camera stack<a class="headerlink" href="#camera-stack" title="Permanent link">#</a></h2>
-<p><img alt="Camera stack exploded" src="../images/camera-stack3.png" width="60%" /></p>
-<p>Apps change settings by updating Redis keys. CinePi-RAW listens for those updates and captures frames accordingly while Cinemate provides the camera user interface.</p>
-<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h2>
-<p>See the <a href="https://github.com/Tiramisioux/cinemate/releases">releases section</a> for preinstalled image file and Quick Start Guide. </p>
-<p>For manual install, see the <a href="https://tiramisioux.github.io/cinemate/installation-steps/">documentation</a>.</p>
-<h2 id="bare-bones-build">Bare-bones build<a class="headerlink" href="#bare-bones-build" title="Permanent link">#</a></h2>
-<p>To try Cinemate you need:</p>
-<ul>
-<li>Raspberry Pi 4 or 5</li>
-<li>Official HQ or GS camera module</li>
-<li>SSD drive such as a Samsung T7 formatted <code>ext4</code> and labelled <code>RAW</code></li>
-<li>HDMI monitor or a phone/tablet connected to the Pi hotspot for preview</li>
-</ul>
 <h2 id="customization">Customization<a class="headerlink" href="#customization" title="Permanent link">#</a></h2>
-<p>Buttons, encoders and oled display are optional and configured via settings file.</p>
-<h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">#</a></h2>
-<p>Full manual installation instructions, configuration guides and CLI reference live <a href="https://tiramisioux.github.io/cinemate/">here</a>.</p>
+<p>Buttons, encoders and oled display are optional and configured via <a href="https://tiramisioux.github.io/cinemate/settings-json/">the settings file</a>.</p>
+<!-- ## Documentation
+Full manual installation instructions, configuration guides and CLI reference live [here](https://tiramisioux.github.io/cinemate/). -->
+
 <p>Join the <a href="https://discord.gg/Hr4dfhuK">CinePi Discord</a> for discussions and sharing builds.</p>
-<h2 id="acknowledgements">Acknowledgements<a class="headerlink" href="#acknowledgements" title="Permanent link">#</a></h2>
-<p>The <a href="https://github.com/Tiramisioux/cinemate"><strong>Cinemate</strong></a> stack is built on top of several open-source projects. Special thanks to all authors!</p>
-<ul>
-<li><a href="https://github.com/cinepi/cinepi-raw"><strong>CinePi-raw</strong></a> – Csaba Nagy</li>
-<li><a href="https://github.com/will127534"><strong>IMX585 and IMX283 drivers</strong></a> – Will Whang</li>
-<li><a href="https://libcamera.org"><strong>libcamera</strong></a> – Ideas on board</li>
-<li><a href="https://github.com/nadjieb/cpp-mjpeg-streamer"><strong>cpp-mjpeg-streamer</strong></a> – Nadjieb Mohammadi</li>
-<li><a href="https://github.com/joan2937/lg"><strong>lgpio</strong></a> – Joan</li>
-<li><a href="https://github.com/Drewsif/PiShrink"><strong>PiShrink</strong></a> - Drew Bonasera </li>
-</ul>
-<p>Also thanks to Simon at <a href="https://altcinecam.com">Altcinecam</a> for support and assistance!</p>
-<p>Get your sensors and CFE Hats here: https://www.tindie.com/stores/will123321/</p>
 <h2 id="supporting-the-project">Supporting the project<a class="headerlink" href="#supporting-the-project" title="Permanent link">#</a></h2>
 <p><a href="https://ko-fi.com/G2G21IM9RO"><img alt="ko-fi" src="https://ko-fi.com/img/githubbutton_sm.svg" /></a></p>
 </div>

@@ -59,7 +59,9 @@
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
                   </li>
@@ -70,11 +72,9 @@
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Sensors</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -83,8 +83,6 @@
                   <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">System management</span></p>
@@ -162,15 +160,16 @@
               
 <div class="markdown-body">
   <h2 id="todo">Todo<a class="headerlink" href="#todo" title="Permanent link">#</a></h2>
-<pre><code class="language-todo">- simple_gui.py adaptive layout for non 1920x1080 screens
-- 16 bit modes for imx585
-- support for imx294
-- overclocking of ISP
-- optional auto-exposure
-- hardware sync of sensor frame capture, perhaps via a pico
-- rendering mode, for creating proxy files in camera (using https://github.com/mrjulesfletcher/dng_to_video)
-- automatic detection of attached sensor and dynamic dtoverlay
-</code></pre>
+<div class="codehilite"><pre><span></span><code><span class="o">-</span><span class="w"> </span><span class="nx">simple_gui</span><span class="p">.</span><span class="nx">py</span><span class="w"> </span><span class="nx">adaptive</span><span class="w"> </span><span class="nx">layout</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nx">non</span><span class="w"> </span><span class="mi">1920</span><span class="nx">x1080</span><span class="w"> </span><span class="nx">screens</span>
+<span class="o">-</span><span class="w"> </span><span class="mi">16</span><span class="w"> </span><span class="nx">bit</span><span class="w"> </span><span class="nx">modes</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nx">imx585</span>
+<span class="o">-</span><span class="w"> </span><span class="nx">support</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nx">imx294</span>
+<span class="o">-</span><span class="w"> </span><span class="nx">overclocking</span><span class="w"> </span><span class="nx">of</span><span class="w"> </span><span class="nx">ISP</span>
+<span class="o">-</span><span class="w"> </span><span class="nx">optional</span><span class="w"> </span><span class="kt">auto</span><span class="o">-</span><span class="nx">exposure</span>
+<span class="o">-</span><span class="w"> </span><span class="nx">hardware</span><span class="w"> </span><span class="nx">sync</span><span class="w"> </span><span class="nx">of</span><span class="w"> </span><span class="nx">sensor</span><span class="w"> </span><span class="nx">frame</span><span class="w"> </span><span class="nx">capture</span><span class="p">,</span><span class="w"> </span><span class="nx">perhaps</span><span class="w"> </span><span class="nx">via</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">pico</span>
+<span class="o">-</span><span class="w"> </span><span class="nx">rendering</span><span class="w"> </span><span class="nx">mode</span><span class="p">,</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nx">creating</span><span class="w"> </span><span class="nx">proxy</span><span class="w"> </span><span class="nx">files</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="nx">camera</span><span class="w"> </span><span class="p">(</span><span class="nx">using</span><span class="w"> </span><span class="nx">https</span><span class="p">:</span><span class="c1">//github.com/mrjulesfletcher/dng_to_video)</span>
+<span class="o">-</span><span class="w"> </span><span class="nx">automatic</span><span class="w"> </span><span class="nx">detection</span><span class="w"> </span><span class="nx">of</span><span class="w"> </span><span class="nx">attached</span><span class="w"> </span><span class="nx">sensor</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="nx">dynamic</span><span class="w"> </span><span class="nx">dtoverlay</span>
+</code></pre></div>
+
 <!-- ::schemdraw:: alt="Raspberry Pi 40-pin header (colour-coded)"
     += elm.Dot(color='#ff9800', radius=0.09).at((0,  0.00)).label('3V3',  'left')
     += elm.Dot(color='#f44336', radius=0.09).at((1,  0.00)).label('5V',   'right')

@@ -59,7 +59,9 @@
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
                   </li>
@@ -70,11 +72,9 @@
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Sensors</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -83,8 +83,6 @@
                   <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">System management</span></p>
@@ -164,18 +162,21 @@
   <h1 id="recompiling-cinepi-raw">Recompiling cinepi-raw<a class="headerlink" href="#recompiling-cinepi-raw" title="Permanent link">#</a></h1>
 <p>Compiling cinepi-raw</p>
 <p>For easy later rebuilding and installation of cinepi-raw you can create the file compile-raw.sh.</p>
-<pre><code class="language-shell">nano compile-raw.sh
-</code></pre>
+<div class="codehilite"><pre><span></span><code>nano<span class="w"> </span>compile-raw.sh
+</code></pre></div>
+
 <p>Paste this into the file</p>
-<pre><code class="language-shell">sudo meson install -C build
-</code></pre>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>meson<span class="w"> </span>install<span class="w"> </span>-C<span class="w"> </span>build
+</code></pre></div>
+
 <p>Exit by pressing Ctrl+C</p>
 <p>Make it exectutable:</p>
-<pre><code class="language-shell">sudo chmod +x compile-raw.sh
-</code></pre>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>compile-raw.sh
+</code></pre></div>
+
 <p>Now, from the same folder, to build and install cinepi-raw:</p>
-<pre><code class="language-shell">./compile-raw.sh
-</code></pre>
+<div class="codehilite"><pre><span></span><code>./compile-raw.sh
+</code></pre></div>
 </div>
 
             </div>

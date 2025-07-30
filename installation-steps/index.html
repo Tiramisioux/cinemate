@@ -59,7 +59,9 @@
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
                   </li>
@@ -70,11 +72,9 @@
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Sensors</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -83,8 +83,6 @@
                   <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">System management</span></p>
@@ -246,341 +244,393 @@
 <p>Cinemate is using Linux kernel version 6.12.25. Recommended OS is Bookworm Lite.</p>
 </div>
 <h3 id="tools-dependencies">Tools &amp; dependencies<a class="headerlink" href="#tools-dependencies" title="Permanent link">#</a></h3>
-<pre><code>sudo apt update -y
+<div class="codehilite"><pre><span></span><code>sudo apt update -y
 sudo apt upgrade -y
-</code></pre>
-<pre><code class="language-bash">sudo apt-get install python3-jinja2 python3-ply python3-yaml
-</code></pre>
-<pre><code>sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev &amp;&amp; sudo apt-get install libjsoncpp-dev &amp;&amp; cd ~ &amp;&amp; git clone https://github.com/sewenew/redis-plus-plus.git &amp;&amp; cd redis-plus-plus &amp;&amp; mkdir build &amp;&amp; cd build &amp;&amp; cmake .. &amp;&amp; make &amp;&amp; sudo make install &amp;&amp; cd ~
-</code></pre>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>python3-jinja2<span class="w"> </span>python3-ply<span class="w"> </span>python3-yaml
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="n">sudo</span><span class="w"> </span><span class="n">apt</span><span class="w"> </span><span class="n">install</span><span class="w"> </span><span class="o">-</span><span class="bp">y</span><span class="w"> </span><span class="n">git</span><span class="w"> </span><span class="n">cmake</span><span class="w"> </span><span class="n">libepoxy</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">libavdevice</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">build</span><span class="o">-</span><span class="n">essential</span><span class="w"> </span><span class="n">cmake</span><span class="w"> </span><span class="n">libboost</span><span class="o">-</span><span class="n">program</span><span class="o">-</span><span class="n">options</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">libdrm</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">libexif</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">libcamera</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">libjpeg</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">libtiff5</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">libpng</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">redis</span><span class="o">-</span><span class="n">server</span><span class="w"> </span><span class="n">libhiredis</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">libasound2</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">libjsoncpp</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">libpng</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">meson</span><span class="w"> </span><span class="n">ninja</span><span class="o">-</span><span class="n">build</span><span class="w"> </span><span class="n">libavcodec</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">libavdevice</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">libavformat</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="n">libswresample</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">sudo</span><span class="w"> </span><span class="n">apt</span><span class="o">-</span><span class="n">get</span><span class="w"> </span><span class="n">install</span><span class="w"> </span><span class="n">libjsoncpp</span><span class="o">-</span><span class="n">dev</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">cd</span><span class="w"> </span><span class="err">~</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">git</span><span class="w"> </span><span class="n">clone</span><span class="w"> </span><span class="n">https</span><span class="err">:</span><span class="c1">//github.com/sewenew/redis-plus-plus.git &amp;&amp; cd redis-plus-plus &amp;&amp; mkdir build &amp;&amp; cd build &amp;&amp; cmake .. &amp;&amp; make &amp;&amp; sudo make install &amp;&amp; cd ~</span>
+</code></pre></div>
+
 <h3 id="libcamera-170">libcamera 1.7.0 <img src="https://img.shields.io/badge/raspberry pi-fork-red" height="12" ><a class="headerlink" href="#libcamera-170" title="Permanent link">#</a></h3>
-<pre><code class="language-shell">sudo apt install -y python3-pip  python3-jinja2 libboost-dev libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a meson cmake python3-yaml python3-ply libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libavdevice59
-</code></pre>
-<pre><code class="language-shell">sudo apt-get install --reinstall libtiff5-dev &amp;&amp; sudo ln -sf $(find /usr/lib -name &quot;libtiff.so&quot; | head -n 1) /usr/lib/aarch64-linux-gnu/libtiff.so.5 &amp;&amp; export LD_LIBRARY_PATH=/usr/lib/aarch64-linux-gnu:$LD_LIBRARY_PATH &amp;&amp; sudo ldconfig
-</code></pre>
-<pre><code class="language-shell">git clone https://github.com/raspberrypi/libcamera.git &amp;&amp; \
-sudo find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; &amp;&amp; \
-cd libcamera &amp;&amp; \
-sudo meson setup build --buildtype=release \
-  -Dpipelines=rpi/vc4,rpi/pisp \
-  -Dipas=rpi/vc4,rpi/pisp \
-  -Dv4l2=true \
-  -Dgstreamer=enabled \
-  -Dtest=false \
-  -Dlc-compliance=disabled \
-  -Dcam=disabled \
-  -Dqcam=disabled \
-  -Ddocumentation=disabled \
-  -Dpycamera=enabled &amp;&amp; \
-sudo ninja -C build install
-</code></pre>
-<pre><code class="language-shell">cd ~/libcamera/utils &amp;&amp; sudo chmod +x *.py *.sh &amp;&amp; sudo chmod +x ~/libcamera/src/ipa/ipa-sign.sh &amp;&amp; cd ~/libcamera &amp;&amp; sudo ninja -C build install
-</code></pre>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>python3-pip<span class="w">  </span>python3-jinja2<span class="w"> </span>libboost-dev<span class="w"> </span>libgnutls28-dev<span class="w"> </span>openssl<span class="w"> </span>pybind11-dev<span class="w"> </span>qtbase5-dev<span class="w"> </span>libqt5core5a<span class="w"> </span>meson<span class="w"> </span>cmake<span class="w"> </span>python3-yaml<span class="w"> </span>python3-ply<span class="w"> </span>libglib2.0-dev<span class="w"> </span>libgstreamer-plugins-base1.0-dev<span class="w"> </span>libgstreamer1.0-dev<span class="w"> </span>libavdevice59
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>--reinstall<span class="w"> </span>libtiff5-dev<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>ln<span class="w"> </span>-sf<span class="w"> </span><span class="k">$(</span>find<span class="w"> </span>/usr/lib<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;libtiff.so&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-n<span class="w"> </span><span class="m">1</span><span class="k">)</span><span class="w"> </span>/usr/lib/aarch64-linux-gnu/libtiff.so.5<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">LD_LIBRARY_PATH</span><span class="o">=</span>/usr/lib/aarch64-linux-gnu:<span class="nv">$LD_LIBRARY_PATH</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>ldconfig
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/raspberrypi/libcamera.git<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+sudo<span class="w"> </span>find<span class="w"> </span>~/libcamera<span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span><span class="se">\(</span><span class="w"> </span>-name<span class="w"> </span><span class="s1">&#39;*.py&#39;</span><span class="w"> </span>-o<span class="w"> </span>-name<span class="w"> </span><span class="s1">&#39;*.sh&#39;</span><span class="w"> </span><span class="se">\)</span><span class="w"> </span>-exec<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span><span class="o">{}</span><span class="w"> </span><span class="se">\;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+<span class="nb">cd</span><span class="w"> </span>libcamera<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+sudo<span class="w"> </span>meson<span class="w"> </span>setup<span class="w"> </span>build<span class="w"> </span>--buildtype<span class="o">=</span>release<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Dpipelines<span class="o">=</span>rpi/vc4,rpi/pisp<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Dipas<span class="o">=</span>rpi/vc4,rpi/pisp<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Dv4l2<span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Dgstreamer<span class="o">=</span>enabled<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Dtest<span class="o">=</span><span class="nb">false</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Dlc-compliance<span class="o">=</span>disabled<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Dcam<span class="o">=</span>disabled<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Dqcam<span class="o">=</span>disabled<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Ddocumentation<span class="o">=</span>disabled<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Dpycamera<span class="o">=</span>enabled<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+sudo<span class="w"> </span>ninja<span class="w"> </span>-C<span class="w"> </span>build<span class="w"> </span>install
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>~/libcamera/utils<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>*.py<span class="w"> </span>*.sh<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>~/libcamera/src/ipa/ipa-sign.sh<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>~/libcamera<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>ninja<span class="w"> </span>-C<span class="w"> </span>build<span class="w"> </span>install
+</code></pre></div>
+
 <h3 id="cpp-mjpeg-streamer">cpp-mjpeg-streamer<a class="headerlink" href="#cpp-mjpeg-streamer" title="Permanent link">#</a></h3>
-<pre><code class="language-bash">sudo apt install -y libspdlog-dev libjsoncpp-dev &amp;&amp; cd /home/pi &amp;&amp; git clone https://github.com/nadjieb/cpp-mjpeg-streamer.git &amp;&amp; cd cpp-mjpeg-streamer &amp;&amp; mkdir build &amp;&amp; cd build &amp;&amp; cmake .. &amp;&amp; make &amp;&amp; sudo make install &amp;&amp; cd
-</code></pre>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>libspdlog-dev<span class="w"> </span>libjsoncpp-dev<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>/home/pi<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/nadjieb/cpp-mjpeg-streamer.git<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>cpp-mjpeg-streamer<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>mkdir<span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>cmake<span class="w"> </span>..<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>make<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span>
+</code></pre></div>
+
 <h3 id="cinepi-raw">CinePi-RAW <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" ><a class="headerlink" href="#cinepi-raw" title="Permanent link">#</a></h3>
-<pre><code class="language-bash">git clone https://github.com/Tiramisioux/cinepi-raw.git --branch rpicam-apps_1.7_custom_encoder
-cd cinepi-raw
-sudo rm -rf build
-sudo meson setup build
-sudo ninja -C build
-sudo meson install -C build
-cd
-sudo ldconfig
-</code></pre>
+<div class="codehilite"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/cinepi-raw.git<span class="w"> </span>--branch<span class="w"> </span>rpicam-apps_1.7_custom_encoder
+<span class="nb">cd</span><span class="w"> </span>cinepi-raw
+sudo<span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>build
+sudo<span class="w"> </span>meson<span class="w"> </span>setup<span class="w"> </span>build
+sudo<span class="w"> </span>ninja<span class="w"> </span>-C<span class="w"> </span>build
+sudo<span class="w"> </span>meson<span class="w"> </span>install<span class="w"> </span>-C<span class="w"> </span>build
+<span class="nb">cd</span>
+sudo<span class="w"> </span>ldconfig
+</code></pre></div>
+
 <h3 id="seed-redis-with-white-balance-default-keys">Seed Redis with white balance default keys<a class="headerlink" href="#seed-redis-with-white-balance-default-keys" title="Permanent link">#</a></h3>
-<pre><code>redis-cli &lt;&lt;EOF
+<div class="codehilite"><pre><span></span><code>redis-cli &lt;&lt;EOF
 SET cg_rb 2.5,2.2
 PUBLISH cp_controls cg_rb
 EOF
-</code></pre>
+</code></pre></div>
+
 <h3 id="imx585-driver-optional">IMX585 driver (optional)<a class="headerlink" href="#imx585-driver-optional" title="Permanent link">#</a></h3>
-<pre><code class="language-shell">sudo apt install linux-headers dkms -y
-</code></pre>
-<pre><code>git clone https://github.com/will127534/imx585-v4l2-driver.git --branch 6.12.y
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>linux-headers<span class="w"> </span>dkms<span class="w"> </span>-y
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>git clone https://github.com/will127534/imx585-v4l2-driver.git --branch 6.12.y
 cd imx585-v4l2-driver/
 ./setup.sh
 cd
+</code></pre></div>
 
-</code></pre>
-<blockquote>
+<div class="admonition note">
 <p>The imx585 is written by Will Whang. For original drivers and startup guides, visit https://github.com/will127534/StarlightEye</p>
-</blockquote>
+</div>
 <h4 id="add-imx585-tuning-files">Add IMX585 tuning files<a class="headerlink" href="#add-imx585-tuning-files" title="Permanent link">#</a></h4>
-<pre><code class="language-bash">curl -L -o /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json \
-  https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585.json
-sed -i '8s/&quot;black_level&quot;: *[0-9]\+/&quot;black_level&quot;: 0/' /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json
-sudo cp /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json /usr/local/share/libcamera/ipa/rpi/pisp/
-</code></pre>
-<pre><code>curl -L -o /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585_mono.json https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585_mono.json &amp;&amp; sudo cp /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585_mono.json /usr/local/share/libcamera/ipa/rpi/pisp/
-</code></pre>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>-L<span class="w"> </span>-o<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585.json
+sed<span class="w"> </span>-i<span class="w"> </span><span class="s1">&#39;8s/&quot;black_level&quot;: *[0-9]\+/&quot;black_level&quot;: 0/&#39;</span><span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json
+sudo<span class="w"> </span>cp<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json<span class="w"> </span>/usr/local/share/libcamera/ipa/rpi/pisp/
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="n">curl</span><span class="w"> </span><span class="o">-</span><span class="n">L</span><span class="w"> </span><span class="o">-</span><span class="n">o</span><span class="w"> </span><span class="o">/</span><span class="n">home</span><span class="o">/</span><span class="k">pi</span><span class="o">/</span><span class="n">libcamera</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">ipa</span><span class="o">/</span><span class="n">rpi</span><span class="o">/</span><span class="n">pisp</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">imx585_mono</span><span class="o">.</span><span class="n">json</span><span class="w"> </span><span class="n">https</span><span class="err">:</span><span class="c1">//raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585_mono.json &amp;&amp; sudo cp /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585_mono.json /usr/local/share/libcamera/ipa/rpi/pisp/</span>
+</code></pre></div>
+
 <h4 id="ir-filter-switch-script">IR filter switch script<a class="headerlink" href="#ir-filter-switch-script" title="Permanent link">#</a></h4>
-<pre><code class="language-bash">sudo wget https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter -O /usr/local/bin/IRFilter
-sudo chmod +x /usr/local/bin/IRFilter
-</code></pre>
-<blockquote>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>wget<span class="w"> </span>https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter<span class="w"> </span>-O<span class="w"> </span>/usr/local/bin/IRFilter
+sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>/usr/local/bin/IRFilter
+</code></pre></div>
+
+<div class="admonition note">
 <p>Cinemate has its own way of handling the IR switch but the installation above can be convenient for use outside of Cinemate</p>
-</blockquote>
+</div>
 <h3 id="enabling-i2c">Enabling I²C<a class="headerlink" href="#enabling-i2c" title="Permanent link">#</a></h3>
-<pre><code class="language-bash">sudo raspi-config nonint do_i2c 0
-</code></pre>
-<blockquote>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>raspi-config<span class="w"> </span>nonint<span class="w"> </span>do_i2c<span class="w"> </span><span class="m">0</span>
+</code></pre></div>
+
+<div class="admonition note">
 <p>Enabling I2C is needed for using the camera modules.</p>
-</blockquote>
+</div>
 <h3 id="setting-hostname">Setting hostname<a class="headerlink" href="#setting-hostname" title="Permanent link">#</a></h3>
-<pre><code class="language-bash">sudo hostnamectl set-hostname cinepi
-</code></pre>
-<blockquote>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>hostnamectl<span class="w"> </span>set-hostname<span class="w"> </span>cinepi
+</code></pre></div>
+
+<div class="admonition note">
 <p>You will find the pi as <code>cinepi.local</code> on the local network, or at the hotspot Cinemate creates</p>
-</blockquote>
+</div>
 <h3 id="add-camera-modules-to-configtxt">Add camera modules to config.txt<a class="headerlink" href="#add-camera-modules-to-configtxt" title="Permanent link">#</a></h3>
-<pre><code class="language-shell">sudo nano /boot/firmware/config.txt
-</code></pre>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>nano<span class="w"> </span>/boot/firmware/config.txt
+</code></pre></div>
+
 <p>Paste this into your file, and uncomment the sensor you are using.</p>
 <p>Also specify which physical camera port you have connected your sensor to (example shows imx477 activated)</p>
-<pre><code class="language-bash"># Raspberry Pi HQ camera
-camera_auto_detect=1
-dtoverlay=imx477,cam0
+<div class="codehilite"><pre><span></span><code><span class="c1"># Raspberry Pi HQ camera</span>
+<span class="nv">camera_auto_detect</span><span class="o">=</span><span class="m">1</span>
+<span class="nv">dtoverlay</span><span class="o">=</span>imx477,cam0
 
-# Raspberry Pi GS camera
-#camera_auto_detect=1
-#dtoverlay=imx296,cam0
+<span class="c1"># Raspberry Pi GS camera</span>
+<span class="c1">#camera_auto_detect=1</span>
+<span class="c1">#dtoverlay=imx296,cam0</span>
 
-# OneInchEye
-#camera_auto_detect=0
-#dtoverlay=imx283,cam0
+<span class="c1"># OneInchEye</span>
+<span class="c1">#camera_auto_detect=0</span>
+<span class="c1">#dtoverlay=imx283,cam0</span>
 
-# StarlightEye
-#camera_auto_detect=0
-#dtoverlay=imx585,cam0
+<span class="c1"># StarlightEye</span>
+<span class="c1">#camera_auto_detect=0</span>
+<span class="c1">#dtoverlay=imx585,cam0</span>
 
-# StarlightEye Mono
-#camera_auto_detect=0
-#dtoverlay=imx585,cam1,mono
+<span class="c1"># StarlightEye Mono</span>
+<span class="c1">#camera_auto_detect=0</span>
+<span class="c1">#dtoverlay=imx585,cam1,mono</span>
 
-# CFE Hat (pi 5 only)
-dtparam=pciex1
-dtparam=pciex1_gen=3
+<span class="c1"># CFE Hat (pi 5 only)</span>
+<span class="nv">dtparam</span><span class="o">=</span>pciex1
+<span class="nv">dtparam</span><span class="o">=</span><span class="nv">pciex1_gen</span><span class="o">=</span><span class="m">3</span>
 
-dtoverlay=disable-bt
-</code></pre>
+<span class="nv">dtoverlay</span><span class="o">=</span>disable-bt
+</code></pre></div>
+
 <p>And at the very bottom of the file:</p>
-<pre><code class="language-bash">[all]
-avoid_warnings=1
-disable_splash=1
-</code></pre>
+<div class="codehilite"><pre><span></span><code><span class="o">[</span>all<span class="o">]</span>
+<span class="nv">avoid_warnings</span><span class="o">=</span><span class="m">1</span>
+<span class="nv">disable_splash</span><span class="o">=</span><span class="m">1</span>
+</code></pre></div>
+
 <p>Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.</p>
 <h3 id="change-the-console-font-optional">Change the console font (optional)<a class="headerlink" href="#change-the-console-font-optional" title="Permanent link">#</a></h3>
-<pre><code class="language-bash">sudo apt install console-setup kbd
-sudo dpkg-reconfigure console-setup  
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>console-setup<span class="w"> </span>kbd
+sudo<span class="w"> </span>dpkg-reconfigure<span class="w"> </span>console-setup<span class="w">  </span>
 
-# choose: UTF-8
-#         Guess optimal character set
-#         Terminus
-#         16x32 (framebuffer only)
-</code></pre>
+<span class="c1"># choose: UTF-8</span>
+<span class="c1">#         Guess optimal character set</span>
+<span class="c1">#         Terminus</span>
+<span class="c1">#         16x32 (framebuffer only)</span>
+</code></pre></div>
+
 <p>Enable the service:</p>
-<pre><code class="language-bash">sudo systemctl enable console-setup.service
-sudo systemctl start console-setup.service
-</code></pre>
-<blockquote>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>systemctl<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>console-setup.service
+sudo<span class="w"> </span>systemctl<span class="w"> </span>start<span class="w"> </span>console-setup.service
+</code></pre></div>
+
+<div class="admonition note">
 <p>This can be useful if running the Pi on a small HD field monitor</p>
-</blockquote>
+</div>
 <h3 id="create-post-processing-configs">Create post-processing configs<a class="headerlink" href="#create-post-processing-configs" title="Permanent link">#</a></h3>
 <p>Paste this into the terminal and hit enter:</p>
-<pre><code class="language-shell">sudo bash -c 'cat &gt; post-processing.json &lt;&lt; EOF
-{
-    &quot;sharedContext&quot;: {},
-    &quot;mjpegPreview&quot;: {
-        &quot;port&quot;: 8000
-    }
-}
-EOF' &amp;&amp; \
-sudo chmod +x post-processing.json &amp;&amp; \
-sudo bash -c 'cat &gt; post-processing0.json &lt;&lt; EOF
-{
-    &quot;sharedContext&quot;: {},
-    &quot;mjpegPreview&quot;: {
-        &quot;port&quot;: 8000
-    }
-}
-EOF' &amp;&amp; \
-sudo chmod +x post-processing0.json &amp;&amp; \
-sudo bash -c 'cat &gt; post-processing1.json &lt;&lt; EOF
-{
-    &quot;sharedContext&quot;: {},
-    &quot;mjpegPreview&quot;: {
-        &quot;port&quot;: 8001
-    }
-}
-EOF' &amp;&amp; \
-sudo chmod +x post-processing1.json
-</code></pre>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;cat &gt; post-processing.json &lt;&lt; EOF</span>
+<span class="s1">{</span>
+<span class="s1">    &quot;sharedContext&quot;: {},</span>
+<span class="s1">    &quot;mjpegPreview&quot;: {</span>
+<span class="s1">        &quot;port&quot;: 8000</span>
+<span class="s1">    }</span>
+<span class="s1">}</span>
+<span class="s1">EOF&#39;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>post-processing.json<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+sudo<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;cat &gt; post-processing0.json &lt;&lt; EOF</span>
+<span class="s1">{</span>
+<span class="s1">    &quot;sharedContext&quot;: {},</span>
+<span class="s1">    &quot;mjpegPreview&quot;: {</span>
+<span class="s1">        &quot;port&quot;: 8000</span>
+<span class="s1">    }</span>
+<span class="s1">}</span>
+<span class="s1">EOF&#39;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>post-processing0.json<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+sudo<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;cat &gt; post-processing1.json &lt;&lt; EOF</span>
+<span class="s1">{</span>
+<span class="s1">    &quot;sharedContext&quot;: {},</span>
+<span class="s1">    &quot;mjpegPreview&quot;: {</span>
+<span class="s1">        &quot;port&quot;: 8001</span>
+<span class="s1">    }</span>
+<span class="s1">}</span>
+<span class="s1">EOF&#39;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>post-processing1.json
+</code></pre></div>
+
 <h3 id="install-pishrink">Install PiShrink<a class="headerlink" href="#install-pishrink" title="Permanent link">#</a></h3>
-<pre><code class="language-bash">sudo wget https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh -O /usr/local/bin/pishrink.sh
-sudo chmod +x /usr/local/bin/pishrink.sh
-</code></pre>
-<blockquote>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>wget<span class="w"> </span>https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh<span class="w"> </span>-O<span class="w"> </span>/usr/local/bin/pishrink.sh
+sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>/usr/local/bin/pishrink.sh
+</code></pre></div>
+
+<div class="admonition tip">
 <p>PiShrink is a handy tool for compressing SD image file backups of the SD card. See here for instructions</p>
-</blockquote>
+</div>
 <h3 id="reboot">Reboot<a class="headerlink" href="#reboot" title="Permanent link">#</a></h3>
-<pre><code class="language-bash">sudo reboot
-</code></pre>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>reboot
+</code></pre></div>
+
 <h3 id="trying-out-cinepi-from-the-terminal">Trying out CinePi from the terminal<a class="headerlink" href="#trying-out-cinepi-from-the-terminal" title="Permanent link">#</a></h3>
 <p>You should now have a working install of cinepi-raw. To see if your camera is recognized by the system:</p>
-<pre><code class="language-shell">cinepi-raw --list-cameras
-</code></pre>
+<div class="codehilite"><pre><span></span><code>cinepi-raw<span class="w"> </span>--list-cameras
+</code></pre></div>
+
 <p>Try it out with a simple cli command:</p>
-<pre><code class="language-shell">cinepi-raw --mode 2028:1080:12:U --width 2028 --height 1080 --lores-width 1280 --lores-height 720
-</code></pre>
+<div class="codehilite"><pre><span></span><code>cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">2028</span>:1080:12:U<span class="w"> </span>--width<span class="w"> </span><span class="m">2028</span><span class="w"> </span>--height<span class="w"> </span><span class="m">1080</span><span class="w"> </span>--lores-width<span class="w"> </span><span class="m">1280</span><span class="w"> </span>--lores-height<span class="w"> </span><span class="m">720</span>
+</code></pre></div>
+
 <p>For more details on running CinePi-raw from the command line, see <a href="/cli-user-guide.md">this section</a>. </p>
 <h2 id="cinemate">Cinemate<a class="headerlink" href="#cinemate" title="Permanent link">#</a></h2>
 <h3 id="system-wide-packages">System wide packages<a class="headerlink" href="#system-wide-packages" title="Permanent link">#</a></h3>
-<pre><code class="language-shell">sudo apt update
-sudo apt install -y \
-    git build-essential python3-dev python3-pip python3-venv \
-    i2c-tools python3-smbus python3-pyudev \
-    libgpiod-dev libgpiod2 python3-libgpiod gpiod \
-    portaudio19-dev python3-systemd \
-    e2fsprogs ntfs-3g exfatprogs \
-    console-terminus
-</code></pre>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>update
+sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>git<span class="w"> </span>build-essential<span class="w"> </span>python3-dev<span class="w"> </span>python3-pip<span class="w"> </span>python3-venv<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>i2c-tools<span class="w"> </span>python3-smbus<span class="w"> </span>python3-pyudev<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>libgpiod-dev<span class="w"> </span>libgpiod2<span class="w"> </span>python3-libgpiod<span class="w"> </span>gpiod<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>portaudio19-dev<span class="w"> </span>python3-systemd<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>e2fsprogs<span class="w"> </span>ntfs-3g<span class="w"> </span>exfatprogs<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>console-terminus
+</code></pre></div>
+
 <h3 id="create-a-python-virtual-environment">Create a Python virtual environment<a class="headerlink" href="#create-a-python-virtual-environment" title="Permanent link">#</a></h3>
-<pre><code class="language-bash">python3 -m venv ~/.cinemate-env
-source /home/pi/.cinemate-env/bin/activate
-echo &quot;source /home/pi/.cinemate-env/bin/activate&quot; &gt;&gt; ~/.bashrc
-</code></pre>
+<div class="codehilite"><pre><span></span><code>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>~/.cinemate-env
+<span class="nb">source</span><span class="w"> </span>/home/pi/.cinemate-env/bin/activate
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;source /home/pi/.cinemate-env/bin/activate&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.bashrc
+</code></pre></div>
+
 <h3 id="grant-sudo-privileges-and-enable-i2c">Grant sudo privileges and enable I²C<a class="headerlink" href="#grant-sudo-privileges-and-enable-i2c" title="Permanent link">#</a></h3>
-<pre><code class="language-bash">echo &quot;pi ALL=(ALL) NOPASSWD: /home/pi/.cinemate-env/bin/*&quot; | sudo tee /etc/sudoers.d/cinemate-env
-sudo chown -R pi:pi /home/pi/.cinemate-env
-sudo chown -R pi:pi /media &amp;&amp; chmod 755 /media
-sudo usermod -aG i2c pi
-sudo modprobe i2c-dev &amp;&amp; echo i2c-dev | sudo tee -a /etc/modules
-echo &quot;pi ALL=(ALL) NOPASSWD: /home/pi/run_cinemate.sh&quot; | sudo tee -a /etc/sudoers.d/pi_cinemate
-</code></pre>
+<div class="codehilite"><pre><span></span><code><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;pi ALL=(ALL) NOPASSWD: /home/pi/.cinemate-env/bin/*&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>/etc/sudoers.d/cinemate-env
+sudo<span class="w"> </span>chown<span class="w"> </span>-R<span class="w"> </span>pi:pi<span class="w"> </span>/home/pi/.cinemate-env
+sudo<span class="w"> </span>chown<span class="w"> </span>-R<span class="w"> </span>pi:pi<span class="w"> </span>/media<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>chmod<span class="w"> </span><span class="m">755</span><span class="w"> </span>/media
+sudo<span class="w"> </span>usermod<span class="w"> </span>-aG<span class="w"> </span>i2c<span class="w"> </span>pi
+sudo<span class="w"> </span>modprobe<span class="w"> </span>i2c-dev<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span>i2c-dev<span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/modules
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;pi ALL=(ALL) NOPASSWD: /home/pi/run_cinemate.sh&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/sudoers.d/pi_cinemate
+</code></pre></div>
+
 <p>Reboot so the group changes take effect:</p>
-<pre><code class="language-bash">sudo reboot
-</code></pre>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>reboot
+</code></pre></div>
+
 <h3 id="python-packages">Python packages<a class="headerlink" href="#python-packages" title="Permanent link">#</a></h3>
 <div class="admonition note">
 <p>If you previously installed the <code>board</code> Python package, remove it with <code>pip3 uninstall board</code>.</p>
 </div>
-<pre><code class="language-bash">pip install \
-    gpiozero \
-    adafruit-blinka adafruit-circuitpython-ssd1306 adafruit-circuitpython-seesaw \
-    luma.oled grove.py pigpio-encoder smbus2 rpi_hardware_pwm \
-    watchdog psutil pillow redis keyboard pyudev numpy termcolor sounddevice \
-    evdev inotify_simple sysv_ipc flask_socketio sugarpie
-</code></pre>
+<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>gpiozero<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>adafruit-blinka<span class="w"> </span>adafruit-circuitpython-ssd1306<span class="w"> </span>adafruit-circuitpython-seesaw<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>luma.oled<span class="w"> </span>grove.py<span class="w"> </span>pigpio-encoder<span class="w"> </span>smbus2<span class="w"> </span>rpi_hardware_pwm<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>watchdog<span class="w"> </span>psutil<span class="w"> </span>pillow<span class="w"> </span>redis<span class="w"> </span>keyboard<span class="w"> </span>pyudev<span class="w"> </span>numpy<span class="w"> </span>termcolor<span class="w"> </span>sounddevice<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>evdev<span class="w"> </span>inotify_simple<span class="w"> </span>sysv_ipc<span class="w"> </span>flask_socketio<span class="w"> </span>sugarpie
+</code></pre></div>
+
 <h3 id="alternative-gpio-back-end">Alternative GPIO back-end<a class="headerlink" href="#alternative-gpio-back-end" title="Permanent link">#</a></h3>
-<pre><code class="language-bash">sudo apt install -y swig python3-dev build-essential git
-git clone https://github.com/joan2937/lg
-cd lg &amp;&amp; make
-sudo make install
-cd .. &amp;&amp; pip install lgpio
-</code></pre>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>swig<span class="w"> </span>python3-dev<span class="w"> </span>build-essential<span class="w"> </span>git
+git<span class="w"> </span>clone<span class="w"> </span>https://github.com/joan2937/lg
+<span class="nb">cd</span><span class="w"> </span>lg<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make
+sudo<span class="w"> </span>make<span class="w"> </span>install
+<span class="nb">cd</span><span class="w"> </span>..<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>lgpio
+</code></pre></div>
+
 <h3 id="clone-the-cinemate-repo">Clone the Cinemate repo<a class="headerlink" href="#clone-the-cinemate-repo" title="Permanent link">#</a></h3>
-<pre><code class="language-bash">  git clone https://github.com/Tiramisioux/cinemate.git
-</code></pre>
+<div class="codehilite"><pre><span></span><code><span class="w">  </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/cinemate.git
+</code></pre></div>
+
 <h3 id="allow-cinemate-to-run-with-sudo">Allow Cinemate to run with sudo<a class="headerlink" href="#allow-cinemate-to-run-with-sudo" title="Permanent link">#</a></h3>
 <p>Edit the sudoers file:</p>
-<pre><code class="language-shell">sudo visudo
-</code></pre>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>visudo
+</code></pre></div>
+
 <p>add this to the end of the file:</p>
-<pre><code class="language-text">pi ALL=(ALL) NOPASSWD: /home/pi/cinemate/src/main.py
+<div class="codehilite"><pre><span></span><code>pi ALL=(ALL) NOPASSWD: /home/pi/cinemate/src/main.py
 pi ALL=(ALL) NOPASSWD: /bin/mount, /bin/umount, /usr/bin/ntfs-3g
 pi ALL=(ALL) NOPASSWD: /home/pi/cinemate/src/logs/system.log
 pi ALL=(ALL) NOPASSWD: /sbin/mount.ext4
-</code></pre>
+</code></pre></div>
+
 <p>Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.</p>
 <h3 id="enable-networkmanager">Enable NetworkManager<a class="headerlink" href="#enable-networkmanager" title="Permanent link">#</a></h3>
-<pre><code class="language-bash">sudo systemctl enable NetworkManager --now
-</code></pre>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>systemctl<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>NetworkManager<span class="w"> </span>--now
+</code></pre></div>
+
 <h3 id="rotate-logs">Rotate logs<a class="headerlink" href="#rotate-logs" title="Permanent link">#</a></h3>
 <p>Paste this into the terminal and hit enter:</p>
-<pre><code class="language-bash">sudo tee /etc/logrotate.d/general_logs &lt;&lt;'EOP'
-/var/log/*.log {
-   size 100M
-   rotate 5
-   compress
-   missingok
-   notifempty
-}
-EOP
-</code></pre>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>tee<span class="w"> </span>/etc/logrotate.d/general_logs<span class="w"> </span><span class="s">&lt;&lt;&#39;EOP&#39;</span>
+<span class="s">/var/log/*.log {</span>
+<span class="s">   size 100M</span>
+<span class="s">   rotate 5</span>
+<span class="s">   compress</span>
+<span class="s">   missingok</span>
+<span class="s">   notifempty</span>
+<span class="s">}</span>
+<span class="s">EOP</span>
+</code></pre></div>
+
 <h3 id="seed-redis-with-default-keys">Seed Redis with default keys<a class="headerlink" href="#seed-redis-with-default-keys" title="Permanent link">#</a></h3>
-<pre><code class="language-shell">redis-cli MSET \
-anamorphic_factor 0 bit_depth 0 buffer 0 buffer_size 0 cam_init 0 cameras 0 cg_rb 3.5,1.5 \
-file_size 0 fps 24 fps_actual 24 fps_last 24 fps_max 1 fps_user 24 framecount 0 \
-gui_layout 0 height 0 ir_filter 0 is_buffering 0 is_mounted 0 is_recording 0 \
-is_writing 0 is_writing_buf 0 tc_cam0 0 tc_cam1 0 iso 100 lores_height 0 lores_width 0 \
-pi_model 0 rec 0 sensor 0 sensor_mode 0 shutter_a 0 space_left 0 storage_type 0 \
-wb 5600 wb_user 5600 width 0 memory_alert 0 \
-shutter_a_sync_mode 0 shutter_angle_nom 0 shutter_angle_actual 0 shutter_angle_transient 0 \
-exposure_time 0 last_dng_cam1 0 last_dng_cam0 0 \
-zoom 0 write_speed_to_drive 0 recording_time 0
-</code></pre>
+<div class="codehilite"><pre><span></span><code>redis-cli<span class="w"> </span>MSET<span class="w"> </span><span class="se">\</span>
+anamorphic_factor<span class="w"> </span><span class="m">0</span><span class="w"> </span>bit_depth<span class="w"> </span><span class="m">0</span><span class="w"> </span>buffer<span class="w"> </span><span class="m">0</span><span class="w"> </span>buffer_size<span class="w"> </span><span class="m">0</span><span class="w"> </span>cam_init<span class="w"> </span><span class="m">0</span><span class="w"> </span>cameras<span class="w"> </span><span class="m">0</span><span class="w"> </span>cg_rb<span class="w"> </span><span class="m">3</span>.5,1.5<span class="w"> </span><span class="se">\</span>
+file_size<span class="w"> </span><span class="m">0</span><span class="w"> </span>fps<span class="w"> </span><span class="m">24</span><span class="w"> </span>fps_actual<span class="w"> </span><span class="m">24</span><span class="w"> </span>fps_last<span class="w"> </span><span class="m">24</span><span class="w"> </span>fps_max<span class="w"> </span><span class="m">1</span><span class="w"> </span>fps_user<span class="w"> </span><span class="m">24</span><span class="w"> </span>framecount<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+gui_layout<span class="w"> </span><span class="m">0</span><span class="w"> </span>height<span class="w"> </span><span class="m">0</span><span class="w"> </span>ir_filter<span class="w"> </span><span class="m">0</span><span class="w"> </span>is_buffering<span class="w"> </span><span class="m">0</span><span class="w"> </span>is_mounted<span class="w"> </span><span class="m">0</span><span class="w"> </span>is_recording<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+is_writing<span class="w"> </span><span class="m">0</span><span class="w"> </span>is_writing_buf<span class="w"> </span><span class="m">0</span><span class="w"> </span>tc_cam0<span class="w"> </span><span class="m">0</span><span class="w"> </span>tc_cam1<span class="w"> </span><span class="m">0</span><span class="w"> </span>iso<span class="w"> </span><span class="m">100</span><span class="w"> </span>lores_height<span class="w"> </span><span class="m">0</span><span class="w"> </span>lores_width<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+pi_model<span class="w"> </span><span class="m">0</span><span class="w"> </span>rec<span class="w"> </span><span class="m">0</span><span class="w"> </span>sensor<span class="w"> </span><span class="m">0</span><span class="w"> </span>sensor_mode<span class="w"> </span><span class="m">0</span><span class="w"> </span>shutter_a<span class="w"> </span><span class="m">0</span><span class="w"> </span>space_left<span class="w"> </span><span class="m">0</span><span class="w"> </span>storage_type<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+wb<span class="w"> </span><span class="m">5600</span><span class="w"> </span>wb_user<span class="w"> </span><span class="m">5600</span><span class="w"> </span>width<span class="w"> </span><span class="m">0</span><span class="w"> </span>memory_alert<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+shutter_a_sync_mode<span class="w"> </span><span class="m">0</span><span class="w"> </span>shutter_angle_nom<span class="w"> </span><span class="m">0</span><span class="w"> </span>shutter_angle_actual<span class="w"> </span><span class="m">0</span><span class="w"> </span>shutter_angle_transient<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+exposure_time<span class="w"> </span><span class="m">0</span><span class="w"> </span>last_dng_cam1<span class="w"> </span><span class="m">0</span><span class="w"> </span>last_dng_cam0<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+zoom<span class="w"> </span><span class="m">0</span><span class="w"> </span>write_speed_to_drive<span class="w"> </span><span class="m">0</span><span class="w"> </span>recording_time<span class="w"> </span><span class="m">0</span>
+</code></pre></div>
+
 <p>(See the settings guide for the full list.)</p>
 <h3 id="add-alias">Add alias<a class="headerlink" href="#add-alias" title="Permanent link">#</a></h3>
-<pre><code class="language-shell">nano ~/.bashrc
-</code></pre>
+<div class="codehilite"><pre><span></span><code>nano<span class="w"> </span>~/.bashrc
+</code></pre></div>
+
 <p>Add to the end of the file:</p>
-<pre><code class="language-shell">alias cinemate='python3 /home/pi/cinemate/src/main.py'
-</code></pre>
+<div class="codehilite"><pre><span></span><code><span class="nb">alias</span><span class="w"> </span><span class="nv">cinemate</span><span class="o">=</span><span class="s1">&#39;python3 /home/pi/cinemate/src/main.py&#39;</span>
+</code></pre></div>
+
 <p>Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.</p>
 <p>Reload .bashrc</p>
-<pre><code class="language-shell">source ~/.bashrc
-</code></pre>
+<div class="codehilite"><pre><span></span><code><span class="nb">source</span><span class="w"> </span>~/.bashrc
+</code></pre></div>
+
 <h2 id="cinemate-services">Cinemate services<a class="headerlink" href="#cinemate-services" title="Permanent link">#</a></h2>
 <h4 id="storage-automount">storage-automount<a class="headerlink" href="#storage-automount" title="Permanent link">#</a></h4>
 <p>Mounts and unmounts removable drives such as SSDs, NVMe enclosures and the CFE HAT. </p>
 <h4 id="wifi-hotspot">wifi-hotspot<a class="headerlink" href="#wifi-hotspot" title="Permanent link">#</a></h4>
 <p>Keeps a simple Wi‑Fi hotspot running via NetworkManager so you can reach the web UI while in the field. The SSID and password come from the <code>system.wifi_hotspot</code> section of <code>settings.json</code>.</p>
 <p>Install and enable both services with:</p>
-<pre><code class="language-bash">cd /home/pi/cinemate/services
-</code></pre>
-<pre><code>sudo make install
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/home/pi/cinemate/services
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>sudo make install
 sudo make start  # starts the service
 sudo make enable # makes the service start on boot
-</code></pre>
+</code></pre></div>
+
 <p>You can also start and enable the service individually, by entering their respective folders and issuing the <code>sudo make</code> command</p>
 <p>Note that if you were connected to the Pi via wifi, this connection is now broken due to the Pi setting up its own hotspot.</p>
 <p>To connect again, check your available wifi networks. There should now be a network available named CinePi. Connect to it using password <code>11111111</code></p>
 <p>Now you shuld be able to ssh to the Pi this command:</p>
-<pre><code class="language-shell">ssh pi@cinepi.local
-</code></pre>
-<p>You should also be able to find the Pi by opening a terminal and typing:</p>
-<pre><code class="language-shell">arp -a
-</code></pre>
-<p>You will see something like</p>
-<pre><code class="language-shell">❯ arp -a
+<div class="codehilite"><pre><span></span><code>ssh<span class="w"> </span>pi@cinepi.local
+</code></pre></div>
 
-? (10.42.0.1) at e4:5f:1:a9:72:a7 on en0 ifscope [ethernet]
-</code></pre>
+<p>You should also be able to find the Pi by opening a terminal and typing:</p>
+<div class="codehilite"><pre><span></span><code>arp<span class="w"> </span>-a
+</code></pre></div>
+
+<p>You will see something like</p>
+<div class="codehilite"><pre><span></span><code>❯<span class="w"> </span>arp<span class="w"> </span>-a
+
+?<span class="w"> </span><span class="o">(</span><span class="m">10</span>.42.0.1<span class="o">)</span><span class="w"> </span>at<span class="w"> </span>e4:5f:1:a9:72:a7<span class="w"> </span>on<span class="w"> </span>en0<span class="w"> </span>ifscope<span class="w"> </span><span class="o">[</span>ethernet<span class="o">]</span>
+</code></pre></div>
+
 <p>During development/building your rig you might prefer the Pi to use your normal Wi‑Fi instead of its own hotspot so you remain online while tinkering. Disable the hotspot by setting <code>system.wifi_hotspot.enabled</code> to <code>false</code> in <code>settings.json</code> <em>and</em> by stopping the service with: </p>
-<pre><code>sudo systemctl stop wifi-hotspot
-</code></pre>
+<div class="codehilite"><pre><span></span><code>sudo systemctl stop wifi-hotspot
+</code></pre></div>
+
 <p>To stop the hotspot from starting on boot, type </p>
-<pre><code>sudo systemctl disable wifi-hotspot
-</code></pre>
+<div class="codehilite"><pre><span></span><code>sudo systemctl disable wifi-hotspot
+</code></pre></div>
+
 <p>See <a href="../hotspot-logic/">Hotspot logic</a> for more details on how the hotspot works.</p>
 <h3 id="connect-to-the-pi-if-not-already-connected">Connect to the Pi (if not already connected):<a class="headerlink" href="#connect-to-the-pi-if-not-already-connected" title="Permanent link">#</a></h3>
-<pre><code class="language-shell">ssh pi@10.42.0.1
-</code></pre>
+<div class="codehilite"><pre><span></span><code>ssh<span class="w"> </span>pi@10.42.0.1
+</code></pre></div>
+
 <p>password: 1</p>
 <h3 id="starting-cinemate">Starting Cinemate<a class="headerlink" href="#starting-cinemate" title="Permanent link">#</a></h3>
 <p>Now, back on the Pi, anywhere in the terminal, type:</p>
-<pre><code class="language-shell">cinemate
-</code></pre>
+<div class="codehilite"><pre><span></span><code>cinemate
+</code></pre></div>
+
 <p>Make sure things are running smoothly and then you can move on to enabling the cinemate-autostart service:</p>
 <h4 id="cinemate-autostartservice">cinemate-autostart.service<a class="headerlink" href="#cinemate-autostartservice" title="Permanent link">#</a></h4>
-<pre><code class="language-shell">cd /home/pi/cinemate/
-</code></pre>
-<pre><code>sudo make install   # copy service file
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/home/pi/cinemate/
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>sudo make install   # copy service file
 sudo make enable    # start on boot
 make start          # launch now
-</code></pre>
+</code></pre></div>
+
 <p>After enabling the service, Cinemate should autostart on boot.</p>
 <p>You now have a 12 bit RAW image capturing system on your Raspberry Pi!</p>
 </div>

@@ -59,7 +59,9 @@
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
                   </li>
@@ -70,11 +72,9 @@
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Sensors</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -83,8 +83,6 @@
                   <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">System management</span></p>
@@ -177,7 +175,7 @@
 <p>Responsible for autostart of Cinemate on boot. By default, it is turned off on the <a href="https://github.com/Tiramisioux/cinemate/releases/tag/3.1">downloadable image file</a>.</p>
 <h3 id="starting-stopping-enabling-and-disabling-the-service">Starting, stopping, enabling and disabling the service<a class="headerlink" href="#starting-stopping-enabling-and-disabling-the-service" title="Permanent link">#</a></h3>
 <p>Go to the Cinemate folder:</p>
-<pre><code>cd cinemate
+<div class="codehilite"><pre><span></span><code>cd cinemate
 
 make install   # copy service file
 make enable    # start on boot
@@ -186,7 +184,8 @@ make stop      # stop it
 make status    # check status
 make disable   # disable autostart
 make clean     # remove the service
-</code></pre>
+</code></pre></div>
+
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Note that in order for the web ui to work properly you have to run <code>make install</code> once in the <code>/home/pi/cinemate</code> folder, even if you are not using the autostart service.</p>
@@ -199,23 +198,26 @@ make clean     # remove the service
 <p>On the image file, the storage-automount.service is activated by default.</p>
 </div>
 <p>To manually install and enable the service:</p>
-<pre><code class="language-bash">cd cinemate/services/storage-automount
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>cinemate/services/storage-automount
 
-sudo make install
-sudo make enable
-</code></pre>
+sudo<span class="w"> </span>make<span class="w"> </span>install
+sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable</span>
+</code></pre></div>
+
 <p>You can stop or disable it later with:</p>
-<pre><code class="language-bash">sudo make stop
-sudo make disable
-</code></pre>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>make<span class="w"> </span>stop
+sudo<span class="w"> </span>make<span class="w"> </span>disable
+</code></pre></div>
+
 <h2 id="wifi-hotspotservice">wifi-hotspot.service<a class="headerlink" href="#wifi-hotspotservice" title="Permanent link">#</a></h2>
 <p>Wifi-hotspot keeps a small access point running with the help of NetworkManager so you can always reach the web interface. The SSID and password are read from <code>/home/pi/cinemate/src/settings.json</code> under <code>system.wifi_hotspot</code>.</p>
 <p>Install and enable it with:</p>
-<pre><code class="language-bash">cd cinemate/services/wifi-hotspot
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>cinemate/services/wifi-hotspot
 
-sudo make install
-sudo make enable
-</code></pre>
+sudo<span class="w"> </span>make<span class="w"> </span>install
+sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable</span>
+</code></pre></div>
+
 <p>As with <strong>storage-automount</strong>, you can stop or disable the hotspot with </p>
 <p><code>`
 make stop
@@ -229,7 +231,7 @@ make disable</code></p>
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../cli-commands/" class="btn btn-neutral float-left" title="Cinemate terminal commands"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../dual-sensors/" class="btn btn-neutral float-left" title="Dual sensors"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../config-txt/" class="btn btn-neutral float-right" title="Modifying config.txt">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -257,7 +259,7 @@ make disable</code></p>
         </span>
     
     
-      <span><a href="../cli-commands/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../dual-sensors/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../config-txt/" style="color: #fcfcfc">Next &raquo;</a></span>

@@ -59,7 +59,9 @@
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
                   </li>
@@ -94,11 +96,9 @@
     </li>
     </ul>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Sensors</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -107,8 +107,6 @@
                   <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">System management</span></p>
@@ -187,13 +185,15 @@
 <p>Here is how you can operate <strong>CinePi-raw</strong> from the command line. </p>
 <h2 id="checking-available-options">Checking available options<a class="headerlink" href="#checking-available-options" title="Permanent link">#</a></h2>
 <p>Before running the program you can view all command‑line flags with:</p>
-<pre><code class="language-bash">cinepi-raw -h
-</code></pre>
+<div class="codehilite"><pre><span></span><code>cinepi-raw<span class="w"> </span>-h
+</code></pre></div>
+
 <p>This prints a long list of options supported by the application. It includes the standard parameters from <code>rpicam-apps</code> (such as resolution and exposure settings) plus additional flags specific to the Cinemate.</p>
 <h2 id="camera-modes">Camera modes<a class="headerlink" href="#camera-modes" title="Permanent link">#</a></h2>
 <p>CinePi-raw uses <strong>Libcamera</strong> to talk to your Raspberry Pi camera module. Each sensor supports one or more <em>modes</em>, which define the resolution and bit depth of the RAW images that the sensor can produce. A mode is written as:</p>
-<pre><code>--mode 2028:1080:12:U
-</code></pre>
+<div class="codehilite"><pre><span></span><code>--mode 2028:1080:12:U
+</code></pre></div>
+
 <ul>
 <li><code>width</code> and <code>height</code> select the active pixel area of the sensor.</li>
 <li><code>bit-depth</code> is usually 12 or 16 bits per pixel.</li>
@@ -201,21 +201,25 @@
 </ul>
 <p>The mode must match the sensor you are using. For example, an IMX477 camera can run at <code>4056:3040:12</code> (full sensor) or at smaller cropped resolutions. When specifying a mode you typically also set the output <code>--width</code> and <code>--height</code> which control the size of the image written to disk. These can be equal to the mode values or smaller when scaling is applied.</p>
 <h2 id="lowresolution-lores-stream">Low‑resolution (lores) stream<a class="headerlink" href="#lowresolution-lores-stream" title="Permanent link">#</a></h2>
-<pre><code>--lores-width 1280 --lores-height 720
-</code></pre>
+<div class="codehilite"><pre><span></span><code>--lores-width 1280 --lores-height 720
+</code></pre></div>
+
 <p>CinePi-raw can produce a secondary low‑resolution stream alongside the full‑resolution RAW frames.</p>
 <h2 id="preview-window">Preview window<a class="headerlink" href="#preview-window" title="Permanent link">#</a></h2>
 <p>By default the program opens an HDMI preview so you can see what the camera captures. The size and position of this window are controlled with:</p>
-<pre><code>-p 0,30,1920,1020
-</code></pre>
+<div class="codehilite"><pre><span></span><code>-p 0,30,1920,1020
+</code></pre></div>
+
 <p>This positions the preview 30 pixels from the top of the screen with a 1920×1020 window.</p>
 <h2 id="tuning-file">Tuning file<a class="headerlink" href="#tuning-file" title="Permanent link">#</a></h2>
-<pre><code>--tuning-file /home/pi/cinemate/resources/tuning_files/imx477.json
-</code></pre>
-<p>Describes the camera’s colour and lens characteristics. Point to a file supplied with Libcamera (for example <code>imx477.json</code> for the HQ camera)</p>
+<div class="codehilite"><pre><span></span><code><span class="o">--</span><span class="n">tuning</span><span class="o">-</span><span class="n">file</span><span class="w"> </span><span class="o">/</span><span class="n">home</span><span class="o">/</span><span class="k">pi</span><span class="o">/</span><span class="n">libcamera</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">ipa</span><span class="o">/</span><span class="n">rpi</span><span class="o">/</span><span class="n">pisp</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="p">{</span><span class="n">model_key</span><span class="p">}</span><span class="o">.</span><span class="n">json</span>
+</code></pre></div>
+
+<p>Describes the camera’s colour and lens characteristics. Point to a file supplied with Libcamera (for example <code>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json</code> for the HQ camera)</p>
 <h2 id="post-processing">Post processing<a class="headerlink" href="#post-processing" title="Permanent link">#</a></h2>
-<pre><code>--post-process-file /home/pi/post-processing.json
-</code></pre>
+<div class="codehilite"><pre><span></span><code>--post-process-file /home/pi/post-processing.json
+</code></pre></div>
+
 <p>For cinepi-raw, this file defines the port used by cpp-mjpeg-streamer (default cinepi.local:8000)</p>
 <div class="admonition note">
 <p>If you have more than one camera connected to the Pi, and activated in <code>boot/firmware/config.txt</code>, the camera commected to physical cam0 will use <code>/home/pi/post-processing0.json</code> and the camera connected to cam1 will use <code>/home/pi/post-processing1.json</code>.</p>
@@ -259,31 +263,33 @@
 <h2 id="example-commands">Example commands<a class="headerlink" href="#example-commands" title="Permanent link">#</a></h2>
 <p>Below are sample commands for different sensors and modes. </p>
 <h3 id="imx477-12bit-full-width">IMX477 (12‑bit, full width)<a class="headerlink" href="#imx477-12bit-full-width" title="Permanent link">#</a></h3>
-<pre><code class="language-bash">cinepi-raw --mode 4056:2160:12 --width 4056 --height 2160 \
-           --lores-width 1280 --lores-height 720 \
-           -p 0,30,1920,1020 \
-           --post-process-file /home/pi/post-processing.json \
-           --tuning-file /home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json \
-</code></pre>
+<div class="codehilite"><pre><span></span><code>cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">4056</span>:2160:12<span class="w"> </span>--width<span class="w"> </span><span class="m">4056</span><span class="w"> </span>--height<span class="w"> </span><span class="m">2160</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--lores-width<span class="w"> </span><span class="m">1280</span><span class="w"> </span>--lores-height<span class="w"> </span><span class="m">720</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>-p<span class="w"> </span><span class="m">0</span>,30,1920,1020<span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--post-process-file<span class="w"> </span>/home/pi/post-processing.json<span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--tuning-file<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json<span class="w"> </span><span class="se">\</span>
+</code></pre></div>
+
 <h3 id="imx585-12bit-unpacked">IMX585 (12‑bit unpacked)<a class="headerlink" href="#imx585-12bit-unpacked" title="Permanent link">#</a></h3>
-<pre><code class="language-bash">cinepi-raw --mode 1928:1090:12:U --width 1928 --height 1090 \
-           --lores-width 1280 --lores-height 720 \
-           -p 0,30,1920,1020 \
-           --post-process-file /home/pi/post-processing.json \
-           --tuning-file /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json \
-</code></pre>
+<div class="codehilite"><pre><span></span><code>cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">1928</span>:1090:12:U<span class="w"> </span>--width<span class="w"> </span><span class="m">1928</span><span class="w"> </span>--height<span class="w"> </span><span class="m">1090</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--lores-width<span class="w"> </span><span class="m">1280</span><span class="w"> </span>--lores-height<span class="w"> </span><span class="m">720</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>-p<span class="w"> </span><span class="m">0</span>,30,1920,1020<span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--post-process-file<span class="w"> </span>/home/pi/post-processing.json<span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--tuning-file<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json<span class="w"> </span><span class="se">\</span>
+</code></pre></div>
+
 <p>Now, with an SSH shell running redis-cli you should be able to capture RAW footage from the command line!</p>
-<pre><code class="language-shell">redis-cli
-&gt; set is_recording 1
-&gt; publish cp_controls is_recording
-</code></pre>
+<div class="codehilite"><pre><span></span><code>redis-cli
+&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>is_recording<span class="w"> </span><span class="m">1</span>
+&gt;<span class="w"> </span>publish<span class="w"> </span>cp_controls<span class="w"> </span>is_recording
+</code></pre></div>
 </div>
 
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
         <a href="../hotspot-logic/" class="btn btn-neutral float-left" title="Configuring the Wi-Fi hotspot"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../simple-gui/" class="btn btn-neutral float-right" title="HDMI GUI">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../simple-gui/" class="btn btn-neutral float-right" title="Simple GUI">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>

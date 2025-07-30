@@ -59,7 +59,9 @@
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
                   </li>
@@ -70,11 +72,9 @@
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Sensors</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -83,8 +83,6 @@
                   <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">System management</span></p>
@@ -169,42 +167,45 @@
 <div class="markdown-body">
   <h1 id="backing-up-the-sd-card">Backing up the SD card<a class="headerlink" href="#backing-up-the-sd-card" title="Permanent link">#</a></h1>
 <h2 id="to-create-a-compressed-image-using-pishrink">To create a compressed image using PiShrink<a class="headerlink" href="#to-create-a-compressed-image-using-pishrink" title="Permanent link">#</a></h2>
-<pre><code class="language-shell" hl_lines="[2, 3]">sudo bash -Eeuo pipefail -c '
-  # Timestamp like 2025-07-19_19-38-33
-  ts=$(date +%F_%H-%M-%S)
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>bash<span class="w"> </span>-Eeuo<span class="w"> </span>pipefail<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;</span>
+<span class="hll"><span class="s1">  # Timestamp like 2025-07-19_19-38-33</span>
+</span><span class="hll"><span class="s1">  ts=$(date +%F_%H-%M-%S)</span>
+</span>
+<span class="s1">  # Paths on /media/RAW</span>
+<span class="s1">  raw=&quot;/media/RAW/Cinemate_${ts}.img&quot;         # working image</span>
+<span class="s1">  final=&quot;/media/RAW/cinemate_${ts}.img.xz&quot;    # desired end-result</span>
 
-  # Paths on /media/RAW
-  raw=&quot;/media/RAW/Cinemate_${ts}.img&quot;         # working image
-  final=&quot;/media/RAW/cinemate_${ts}.img.xz&quot;    # desired end-result
+<span class="s1">  # 1 ─ Image the SD-card (pads bad blocks, keeps sparsity)</span>
+<span class="s1">  dd if=/dev/mmcblk0 of=&quot;$raw&quot; \</span>
+<span class="s1">     bs=4M conv=noerror,sync,sparse status=progress</span>
 
-  # 1 ─ Image the SD-card (pads bad blocks, keeps sparsity)
-  dd if=/dev/mmcblk0 of=&quot;$raw&quot; \
-     bs=4M conv=noerror,sync,sparse status=progress
+<span class="s1">  # 2 ─ Shrink + parallel-xz compress **in place**</span>
+<span class="s1">  /usr/local/bin/pishrink.sh -s -v -Z -a &quot;$raw&quot;</span>
 
-  # 2 ─ Shrink + parallel-xz compress **in place**
-  /usr/local/bin/pishrink.sh -s -v -Z -a &quot;$raw&quot;
+<span class="s1">  # 3 ─ Rename the freshly-made .xz to the lowercase style you want</span>
+<span class="s1">  mv &quot;${raw}.xz&quot; &quot;$final&quot;</span>
 
-  # 3 ─ Rename the freshly-made .xz to the lowercase style you want
-  mv &quot;${raw}.xz&quot; &quot;$final&quot;
+<span class="s1">  # 4 ─ Remove the now-unused raw image</span>
+<span class="s1">  rm -f &quot;$raw&quot;</span>
+<span class="s1">&#39;</span>
+</code></pre></div>
 
-  # 4 ─ Remove the now-unused raw image
-  rm -f &quot;$raw&quot;
-'
-</code></pre>
 <h2 id="check-the-name-of-the-resulting-file">Check the name of the resulting file<a class="headerlink" href="#check-the-name-of-the-resulting-file" title="Permanent link">#</a></h2>
-<pre><code class="language-shell">cd /media/RAW
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/media/RAW
 ls
-</code></pre>
+</code></pre></div>
+
 <p>Your output will look something like this:</p>
 <p><img alt="check_name_of_image_file" src="../images/check-name-image-file.png" /></p>
 <p>The file ending with .img.xz is your compressed file.</p>
 <h2 id="to-copy-the-file-to-your-desktop-computer">To copy the file to your desktop computer:<a class="headerlink" href="#to-copy-the-file-to-your-desktop-computer" title="Permanent link">#</a></h2>
-<pre><code class="language-shell"># From the desktop computers terminal
+<div class="codehilite"><pre><span></span><code><span class="c1"># From the desktop computers terminal</span>
 
-scp pi@cinepi.local:/media/RAW/cinemate_2025-07-29_13-37-37.img.xz ~/Downloads/
+scp<span class="w"> </span>pi@cinepi.local:/media/RAW/cinemate_2025-07-29_13-37-37.img.xz<span class="w"> </span>~/Downloads/
 
-# Change the file name to that of you image file.
-</code></pre>
+<span class="c1"># Change the file name to that of you image file.</span>
+</code></pre></div>
+
 <div class="admonition note">
 <p>When unpacking the image, it will inflate to the smallest possible size, even if it was made from a larger SD card. So an Cinemate image created from a 64 GB SD card will inflate to only about 6 GB, allowing for flashing it to SD cards down to 8 GB.</p>
 </div>

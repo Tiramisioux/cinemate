@@ -59,7 +59,9 @@
               <ul class="current">
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
                   </li>
@@ -72,11 +74,9 @@
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">HDMI GUI</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Sensors</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -85,8 +85,6 @@
                   <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">System management</span></p>
@@ -166,9 +164,9 @@
 <p>This is handy when shooting in the field. Connect your phone or laptop directly to the hotspot and browse to the GUI to control the camera. If the Pi was previously connected to a Wi‑Fi network, that connection is replaced by the hotspot.</p>
 <p>During development you may want the Pi to join your normal Wi‑Fi so it has internet access. Set <code>system.wifi_hotspot.enabled</code> to <code>false</code> and configure Wi‑Fi through <code>raspi-config</code> or the desktop tools. The web interface will appear on the Pi's regular network address, letting you stay connected to both the Pi and the internet.</p>
 <p>If you plug an Ethernet cable into the Pi, you can keep the hotspot running while also having a wired connection for internet and local networking.</p>
-<blockquote>
-<p>Note that Cinemate still streams its web gui on whatever network the Pi is connected to, with GUI at <ip-address>:5000 and clean preview without GUI on <ip-address>:8000/stream</p>
-</blockquote>
+<div class="admonition note">
+<p>Note that Cinemate still streams its web gui on whatever network the Pi is connected to, with GUI at <code>&lt;ip-address&gt;:5000</code> and clean preview on <code>&lt;ip-address&gt;:8000/stream</code>.</p>
+</div>
 </div>
 
             </div>

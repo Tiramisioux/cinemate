@@ -91,8 +91,12 @@ extra_css:
   # - overrides/github-markdown.css
   - templates/styles.scss
   - stylesheets/extra.css
+  - https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css
 extra_javascript:
+  - https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js
   - js/ko-fi-widget.js
+  - js/copybutton-init.js
+                                         
 # ───────────────────────────
 # Markdown add-ons
 # ───────────────────────────
@@ -103,7 +107,6 @@ markdown_extensions:
   - def_list
   - footnotes
   - tables
-  - codehilite
   - toc:
       permalink: "#"            # tiny link-icon on headings
   - pymdownx.snippets

@@ -1,5 +1,37 @@
+.markdown-body {
+  -ms-text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+  margin: 0;
+  color: var(--fgColor-default);
+  background-color: var(--bgColor-default);
+  font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji";
+  font-size: 16px;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+body {
+font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji";
+/* font-family: Lato,proxima-nova,Helvetica Neue,Arial,sans-serif; */
+font-weight: 400;
+color: #404040;
+}
+
+.rst-content .toctree-wrapper>p.caption, .rst-content h1, .rst-content h2, .rst-content h3, .rst-content h4, .rst-content h5, .rst-content h6 {
+margin-bottom: 16px;
+}
+
 .rst-content code {
 color: #000000;
+
+}
+
+.rst-content pre code {
+white-space: pre;
+word-wrap: normal;
+display: block;
+padding: 12px;
+font-size: 12px;
 }
 
 /* Float an image to the right and keep some breathing-room on mobile */
@@ -13,4 +45,47 @@ color: #000000;
 }
 @media (max-width: 600px) {        /* small screens */
   .img-right { float: none; margin: 0 auto 1em; display: block; }
+}
+
+  /* Custom look for the copy-to-clipboard button */
+
+  /* Base: hidden until hover because autohide:true flips visibility */
+  .hljs-copy-button {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    font-size: 0;              /* hide default text                */
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    background-image: url("/assets/icons/clipboard.svg");
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+
+  /* Hover state (optional subtle highlight) */
+  .hljs-copy-container:hover .hljs-copy-button {
+    filter: brightness(0.9);
+  }
+
+  /* Success – plugin sets data-copied="true" for 2 s */
+  .hljs-copy-button[data-copied="true"] {
+    background-image: url("/assets/icons/checkmark.svg"); /* e.g. ✅ icon */
+  }
+
+/* 1 — neutralise every token class … */
+.hljs,
+.hljs * {
+  color: inherit !important;
+  background: inherit !important;
+  text-shadow: none !important;
+  font-weight: inherit !important;
+}
+
+/* 2 — …except comments */
+.hljs-comment,
+.hljs-quote {                /* .hljs-quote covers #! / shebang lines */
+  color: #6a737d !important; /* GitHub-style grey */
+  font-style: italic;        /* remove if you prefer upright */
 }

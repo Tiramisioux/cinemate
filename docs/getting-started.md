@@ -5,11 +5,11 @@
 - Official HQ or Global Shutter camera
 - HDMI monitor or a phone/tablet for monitoring
 
-!!! tip "Which Pi to choose?"
+!!! tip ""
 
-    For most users the 4 GB or even 2 GB is sufficient. More ram gives you a larger frame buffer. But ideally you don’t want to have to use the framebuffer anyway, as realtime writing to storage is preferred.
+    For most users the 4GB or even 2GB models are sufficient. More RAM gives you a larger frame buffer. But ideally you don’t want to have to use the framebuffer anyway, as realtime writing to storage is preferred.
     
-    There could be some rare high speed slomo cases you would want faster frame capture for short bursts but in most cases, the 4GB models are sufficient.
+    There could be some rare high speed slomo cases you would want faster frame capture for short bursts but in most cases, the 4GB models will do fine.
 
 ## Installation
 
@@ -17,9 +17,9 @@ Burn the latest [Cinemate image](https://github.com/Tiramisioux/cinemate/release
 
 Connect the Pi and the camera sensor board, connect power and boot the Pi. 
     
-!!! note   
+!!! danger ""   
 
-    Ensure the Pi is powered off before attaching the camera ribbon cable. Hot-swapping the cable is not advised.
+    Ensure the Pi is powered off before attaching the camera ribbon cable. Hot-swapping may damage the hardware.
 
 ## Starting Cinemate
 
@@ -38,6 +38,6 @@ Open a browser and go to `cinepi.local:5000` to see the interface. A clean video
 
 That's it—your bare‑bones Cinemate build is ready!
 
-!!! note
+!!! danger ""
 
     Remember to power everything down before disconnecting hardware!

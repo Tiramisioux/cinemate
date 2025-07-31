@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/installation-steps/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Manual installation (from scratch) - Cinemate Docs</title>
+    <title>Manual installation - Cinemate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -15,7 +15,7 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Manual installation (from scratch)";
+        var mkdocs_page_name = "Manual installation";
         var mkdocs_page_input_path = "installation-steps.md";
         var mkdocs_page_url = "/cinemate/installation-steps/";
       </script>
@@ -63,8 +63,6 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Adding hardware controls</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
                   </li>
               </ul>
@@ -78,49 +76,18 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">System management</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
-                  </li>
+              <ul class="current">
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
-                  </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../preinstalled-hardware/">Hardware overview</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../known-issues/">Known issues</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
-                  </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Cinemate builds</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../bare-bones-build/">Bare bones build</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../brick/">Box build</a>
-                  </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Development & contributing</span></p>
-              <ul class="current">
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Manual installation (from scratch)</a>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Manual installation</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#tools-dependencies">Tools &amp; dependencies</a>
     </li>
@@ -200,12 +167,20 @@
     </li>
     </ul>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../todo/">Todo</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../contributors/">Contributors</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../contributing/">Contributing to the project</a>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
               </ul>
@@ -223,8 +198,8 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
-          <li class="breadcrumb-item">Development & contributing</li>
-      <li class="breadcrumb-item active">Manual installation (from scratch)</li>
+          <li class="breadcrumb-item">System management</li>
+      <li class="breadcrumb-item active">Manual installation</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/installation-steps.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
@@ -638,8 +613,8 @@ make start          # launch now
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../brick/" class="btn btn-neutral float-left" title="Box build"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../todo/" class="btn btn-neutral float-right" title="Todo">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../system-services/" class="btn btn-neutral float-left" title="System services"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../compiling-cinepi-raw/" class="btn btn-neutral float-right" title="Recompiling cinepi-raw">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -666,10 +641,10 @@ make start          # launch now
         </span>
     
     
-      <span><a href="../brick/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../system-services/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../todo/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../compiling-cinepi-raw/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

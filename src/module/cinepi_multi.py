@@ -60,11 +60,13 @@ class CameraInfo:
         # Pi 4 / Zero 2 W
         if 'i2c@1a0000' in self.path or 'i2c@10' in self.path:
             return 'cam0'
+
         # Pi 5 / CM4 / CM3
-        elif 'i2c@88000' in self.path:
+        if 'i2c@88000' in self.path:
             return 'cam0'
-        elif 'i2c@80000' in self.path:
+        if 'i2c@80000' in self.path or 'i2c@70000' in self.path:
             return 'cam1'
+
         # Fallback: assume cam0
         return 'cam0'
 

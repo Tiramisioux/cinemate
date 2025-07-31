@@ -21,37 +21,38 @@ nav:
     - Connecting via SSH: ssh.md
     - Cinemate terminal commands: cli-commands.md
     - Custom settings: settings-json.md
-    - Adding hardware controls: hardware-controls.md
+    # - Adding hardware controls: hardware-controls.md
     - Configuring the Wi-Fi hotspot: hotspot-logic.md
   - Using the camera:
       - CinePi RAW terminal commands: cli-user-guide.md
       - Simple GUI: simple-gui.md
       - Camera sensors: sensors.md
       - Audio recording: audio-recording.md
-      - Digital zoom: digital-zoom.md
+      # - Digital zoom: digital-zoom.md
       - Speed ramping & shutter angle synchronization: speed-ramping.md
       - Dual sensors: dual-sensors.md
-
   - System management:
-      - System services: system-services.md
       - Modifying config.txt: config-txt.md
+      - System services: system-services.md
+      - Manual installation: installation-steps.md
       - Recompiling cinepi-raw: compiling-cinepi-raw.md
-      - Overclocking the Pi: overclocking.md
+      # - Overclocking the Pi: overclocking.md
       - Backing up the SD card: backing-up-sd-card.md
+
   - Reference & troubleshooting:
       - Redis API: redis-guide.md
       - Key reference: redis-keys.md
-      - Hardware overview: preinstalled-hardware.md
-      - Known issues: known-issues.md
-      - Troubleshooting: troubleshooting.md
-  - Cinemate builds:
-      - Bare bones build: bare-bones-build.md
-      - Box build: brick.md
+      # - Hardware overview: preinstalled-hardware.md
+      # - Known issues: known-issues.md
+      # - Troubleshooting: troubleshooting.md
+  # - Cinemate builds:
+  #     - Bare bones build: bare-bones-build.md
+  #     - Box build: brick.md
   - Development & contributing:
-      - Manual installation (from scratch): installation-steps.md
-      - Todo: todo.md
-      - Contributors: contributors.md
-      - Contributing to the project: contributing.md
+
+      # - Todo: todo.md
+      # - Contributors: contributors.md
+      # - Contributing to the project: contributing.md
       - Acknowledgements: acknowledgments.md
   #- Download PDF: renders/Cinemate-Docs.pdf
 # Theme

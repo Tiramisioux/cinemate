@@ -24,7 +24,6 @@ nav:
     # - Adding hardware controls: hardware-controls.md
     - Configuring the Wi-Fi hotspot: hotspot-logic.md
   - Using the camera:
-      - CinePi RAW terminal commands: cli-user-guide.md
       - Simple GUI: simple-gui.md
       - Camera sensors: sensors.md
       - Audio recording: audio-recording.md
@@ -40,6 +39,7 @@ nav:
       - Backing up the SD card: backing-up-sd-card.md
 
   - Reference & troubleshooting:
+      - CinePi RAW terminal commands: cli-user-guide.md
       - Redis API: redis-guide.md
       - Key reference: redis-keys.md
       # - Hardware overview: preinstalled-hardware.md

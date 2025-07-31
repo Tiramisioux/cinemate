@@ -31,9 +31,9 @@ If `welcome image` path is set, this will override the text message.
 }
 ```
 
-- **name** – the Wi‑Fi network name (SSID) broadcast by the Pi when hotspot mode is enabled.
-- **password** – password for joining the hotspot.
-- **enabled** – set to `true` to start the hotspot automatically on boot. If set to `false`, CineMate will still start its web ui but stream it on whatever network the Pi is connected to.
+`name` – the Wi‑Fi network name (SSID) broadcast by the Pi when hotspot mode is enabled.
+`password` – password for joining the hotspot.
+`enabled` – set to `true` to start the hotspot automatically on boot. If set to `false`, CineMate will still start its web ui but stream it on whatever network the Pi is connected to.
 
 Use the hotspot when you need a direct connection in the field. Disable it during development so the Pi can join your regular Wi‑Fi and reach the internet. If you are connected to the Pi via Ethernet you can keep the hotspot on.
 
@@ -48,9 +48,7 @@ Controls image orientation for each camera port (`cam0`, `cam1`, etc.). These se
 }
 ```
 
-- **rotate_180** – flip the image upside‑down.
-- **horizontal_flip** – mirror the image left/right.
-- **vertical_flip** – mirror the image top/bottom.
+`rotate_180` – flip the image upside‑down.<br>`horizontal_flip` – mirror the image left/right.<br>`vertical_flip` – mirror the image top/bottom.
 
 
 ## output
@@ -75,8 +73,7 @@ Adjusts zoom levels for the HDMI/browser preview.
 }
 ```
 
-- **default_zoom** – magnification factor used at startup.
-- **zoom_steps** – list of zoom factors you can cycle through with the `set_zoom_step` command.
+`default_zoom` – magnification factor used at startup.<br>`zoom_steps` – list of zoom factors you can cycle through with the `set_zoom_step` command.
 
 ## anamorphic_preview
 
@@ -89,8 +86,8 @@ For stretching the preview when using anamorphic lenses.
 }
 ```
 
-- **default_anamorphic_factor** – factor loaded when Cinemate starts.
-- **anamorphic_steps** – selectable squeeze factors; values above `1.0` widen the image.
+`default_anamorphic_factor` – factor loaded when Cinemate starts.
+<br>`anamorphic_steps` – selectable squeeze factors; values above `1.0` widen the image.
 
 ## gpio_output
 
@@ -103,9 +100,9 @@ Defines pins used for visual feedback or sync signals.
 }
 ```
 
-* **pwm_pin** – outputs a strobe for shutter sync or external devices.
+* `pwm_pin` – outputs a strobe for shutter sync or external devices.
 
-* **rec_out_pin** – list of pins pulled high while recording (useful for tally LEDs).
+* `rec_out_pin` – list of pins pulled high while recording (useful for tally LEDs).
 
 ## arrays
 
@@ -131,8 +128,8 @@ General options for runtime behaviour.
 }
 ```
 
-* **light_hz** – list of mains frequencies used to calculate flicker‑free shutter angles. These are added to the shutter angle array and also dynamically calculated upon each fps change. This way, there is always a flicker free shutter angle value close by, when toggling through shutter angles, either via the cli or using buttons/pots/rotary encoder.
-* **conform_frame_rate** – frame rate intendend for project conforming in post. This setting is not really used by CineMate except for calculating the recording timecode tracker in redis but might be used in future updates.
+`light_hz` – list of mains frequencies used to calculate flicker‑free shutter angles. These are added to the shutter angle array and also dynamically calculated upon each fps change. This way, there is always a flicker free shutter angle value close by, when toggling through shutter angles, either via the cli or using buttons/pots/rotary encoder.
+<br>`conform_frame_rate` – frame rate intendend for project conforming in post. This setting is not really used by CineMate except for calculating the recording timecode tracker in redis but might be used in future updates.
 
 ## analog_controls
 
@@ -147,7 +144,8 @@ Maps Grove Base HAT ADC channels to analogue dials (potentiometers). Use `null` 
 }
 ```
 
->_**Note** that even if you are using a Grove Base Hat, it might be useful to disable the dials not connected to pots, since noise from these connectors might trigger false readings._
+!!! note ""
+  Even if you are using a Grove Base Hat, it might be useful to disable the dials not connected to pots, since noise from these connectors might trigger false readings._
 
 ## free_mode
 
@@ -178,9 +176,9 @@ Limit which sensor modes appear when cycling resolutions.
 }
 ```
 
-- **k_steps** – K‑style categories for allowed widths. Modes are grouped to the nearest half‑K. Example: 1332×990 counts as **1.5 K**.
-- **bit_depths** – list of bit depths to expose.
-- **custom_modes** – optional extra modes per sensor if the driver advertises none.
+`k_steps` – K‑style categories for allowed widths. Modes are grouped to the nearest half‑K. Example: 1332×990 counts as **1.5 K**.
+<br>`bit_depths` – list of bit depths to expose.
+<br>`custom_modes` – optional extra modes per sensor if the driver advertises none.
 
 ## buttons
 
@@ -195,12 +193,9 @@ Defines GPIO push buttons. Each entry describes one button and the actions it tr
 }
 ```
 
-* **pin** – BCM pin number the button is connected to.
-* **pull_up** – set `true` if the pin idles high (internal pull‑up). Use `false` for pull‑down wiring.
-* **debounce_time** – ignore additional presses within this time window (seconds).
-* **press_action**, **single_click_action**, **double_click_action**, **triple_click_action**, **hold_action** – actions to perform for each type of interaction. Actions call Cinemate CLI commands with optional `args`.
+`pin` – BCM pin number the button is connected to.<br>`pull_up` – set `true` if the pin idles high (internal pull‑up). Use `false` for pull‑down wiring.<br>`debounce_time` – ignore additional presses within this time window (seconds).<br>`press_action`, `single_click_action`, `double_click_action`, `triple_click_action`, `hold_action` – actions to perform for each type of interaction. Actions call Cinemate CLI commands with optional `args`.
 
-!!! info inline end "Automatic detection of inverse push buttons"
+!!! info ""
 
     Some push-buttons are wired closed = logic 1 and open = 0. At start-up, CineMate automatically detects buttons in state `true` and reverses them. This way the user can use any type of push buttons, both 1-0-1 and 0-1-0 types.
 
@@ -232,8 +227,7 @@ Rotary encoders used for fine adjustment of settings. These can be wired straigh
 }
 ```
 
-* **clk_pin** and **dt_pin** – the two pins of the encoder.
-* **encoder_actions** – commands to run when turning the dial.
+<br>`clk_pin` and `dt_pin` – the two pins of the encoder.<br>`encoder_actions` – commands to run when turning the dial.
 
 ## quad_rotary_controller
 
@@ -260,8 +254,7 @@ Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry m
 }
 ```
 
-* **enabled** – turn the quad rotary controller on or off.
-* **encoders** – mapping of each dial to a setting and button actions.
+`enabled` – turn the quad rotary controller on or off.<br>`encoders` – mapping of each dial to a setting and button actions.
 
 ## i2c_oled
 
@@ -277,21 +270,21 @@ Configuration for the optional OLED status screen. This can be useful for presen
 }
 ```
 
-* **enabled** – turn the OLED display on or off.
-* **width / height** – pixel dimensions of your screen.
-* **font_size** – size of the displayed text.
-* **values** – list of Redis keys or pseudo‑keys to show (for example `cpu_temp`).
+`enabled` – turn the OLED display on or off.
+`width / height` – pixel dimensions of your screen.
+`font_size` – size of the displayed text.
+`values` – list of Redis keys or pseudo‑keys to show (for example `cpu_temp`).
 
 Available keys come from `src/module/i2c/i2c_oled.py`. Here are some examples:
 
-* `iso`, `fps` – basic camera settings.
-* `shutter_a` – shown as **SHUTTER** with a `°` suffix.
-* `wb_user` – shown as **WB** with a trailing `K`.
-* `space_left` – displayed as **SPACE** in gigabytes.
-* `write_speed_to_drive` – write speed in MB/s.
-* `resolution` – prints `width×height@bit_depth` on the first line.
-* `is_recording` – draws a bullet `●` when recording.
-* `cpu_load`, `cpu_temp`, `memory_usage` – Pi system statistics.
+`iso`, `fps` – basic camera settings.<br>
+`shutter_a` – shown as `SHUTTER` with a `°` suffix.<br>
+`wb_user` – shown as `WB` with a trailing `K`.<br>
+`space_left` – displayed as `SPACE` in gigabytes.<br>
+`write_speed_to_drive` – write speed in MB/s.<br>
+`resolution` – prints `width×height@bit_depth` on the first line.<br>
+`is_recording` – draws a bullet `●` when recording.<br>
+`cpu_load`, `cpu_temp`, `memory_usage` – Pi system statistics.
 
 Other keys will display their name in uppercase and the raw value from Redis.
 

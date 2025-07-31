@@ -190,11 +190,9 @@
 <span class="p">}</span>
 </code></pre></div>
 
-<ul>
-<li><strong>name</strong> – the Wi‑Fi network name (SSID) broadcast by the Pi when hotspot mode is enabled.</li>
-<li><strong>password</strong> – password for joining the hotspot.</li>
-<li><strong>enabled</strong> – set to <code>true</code> to start the hotspot automatically on boot. If set to <code>false</code>, CineMate will still start its web ui but stream it on whatever network the Pi is connected to.</li>
-</ul>
+<p><code>name</code> – the Wi‑Fi network name (SSID) broadcast by the Pi when hotspot mode is enabled.
+<code>password</code> – password for joining the hotspot.
+<code>enabled</code> – set to <code>true</code> to start the hotspot automatically on boot. If set to <code>false</code>, CineMate will still start its web ui but stream it on whatever network the Pi is connected to.</p>
 <p>Use the hotspot when you need a direct connection in the field. Disable it during development so the Pi can join your regular Wi‑Fi and reach the internet. If you are connected to the Pi via Ethernet you can keep the hotspot on.</p>
 <h2 id="geometry">geometry<a class="headerlink" href="#geometry" title="Permanent link">#</a></h2>
 <p>Controls image orientation for each camera port (<code>cam0</code>, <code>cam1</code>, etc.). These settings let you mount cameras in any orientation and still get an upright preview and recording. Example:</p>
@@ -204,11 +202,7 @@
 <span class="p">}</span>
 </code></pre></div>
 
-<ul>
-<li><strong>rotate_180</strong> – flip the image upside‑down.</li>
-<li><strong>horizontal_flip</strong> – mirror the image left/right.</li>
-<li><strong>vertical_flip</strong> – mirror the image top/bottom.</li>
-</ul>
+<p><code>rotate_180</code> – flip the image upside‑down.<br><code>horizontal_flip</code> – mirror the image left/right.<br><code>vertical_flip</code> – mirror the image top/bottom.</p>
 <h2 id="output">output<a class="headerlink" href="#output" title="Permanent link">#</a></h2>
 <p>Maps each camera to an HDMI connector. Use <code>-1</code> for automatic selection.</p>
 <div class="codehilite"><pre><span></span><code><span class="nt">&quot;output&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -225,10 +219,7 @@
 <span class="p">}</span>
 </code></pre></div>
 
-<ul>
-<li><strong>default_zoom</strong> – magnification factor used at startup.</li>
-<li><strong>zoom_steps</strong> – list of zoom factors you can cycle through with the <code>set_zoom_step</code> command.</li>
-</ul>
+<p><code>default_zoom</code> – magnification factor used at startup.<br><code>zoom_steps</code> – list of zoom factors you can cycle through with the <code>set_zoom_step</code> command.</p>
 <h2 id="anamorphic_preview">anamorphic_preview<a class="headerlink" href="#anamorphic_preview" title="Permanent link">#</a></h2>
 <p>For stretching the preview when using anamorphic lenses.</p>
 <div class="codehilite"><pre><span></span><code><span class="nt">&quot;anamorphic_preview&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -237,10 +228,8 @@
 <span class="p">}</span>
 </code></pre></div>
 
-<ul>
-<li><strong>default_anamorphic_factor</strong> – factor loaded when Cinemate starts.</li>
-<li><strong>anamorphic_steps</strong> – selectable squeeze factors; values above <code>1.0</code> widen the image.</li>
-</ul>
+<p><code>default_anamorphic_factor</code> – factor loaded when Cinemate starts.
+<br><code>anamorphic_steps</code> – selectable squeeze factors; values above <code>1.0</code> widen the image.</p>
 <h2 id="gpio_output">gpio_output<a class="headerlink" href="#gpio_output" title="Permanent link">#</a></h2>
 <p>Defines pins used for visual feedback or sync signals.</p>
 <div class="codehilite"><pre><span></span><code><span class="nt">&quot;gpio_output&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -251,10 +240,10 @@
 
 <ul>
 <li>
-<p><strong>pwm_pin</strong> – outputs a strobe for shutter sync or external devices.</p>
+<p><code>pwm_pin</code> – outputs a strobe for shutter sync or external devices.</p>
 </li>
 <li>
-<p><strong>rec_out_pin</strong> – list of pins pulled high while recording (useful for tally LEDs).</p>
+<p><code>rec_out_pin</code> – list of pins pulled high while recording (useful for tally LEDs).</p>
 </li>
 </ul>
 <h2 id="arrays">arrays<a class="headerlink" href="#arrays" title="Permanent link">#</a></h2>
@@ -275,10 +264,8 @@
 <span class="p">}</span>
 </code></pre></div>
 
-<ul>
-<li><strong>light_hz</strong> – list of mains frequencies used to calculate flicker‑free shutter angles. These are added to the shutter angle array and also dynamically calculated upon each fps change. This way, there is always a flicker free shutter angle value close by, when toggling through shutter angles, either via the cli or using buttons/pots/rotary encoder.</li>
-<li><strong>conform_frame_rate</strong> – frame rate intendend for project conforming in post. This setting is not really used by CineMate except for calculating the recording timecode tracker in redis but might be used in future updates.</li>
-</ul>
+<p><code>light_hz</code> – list of mains frequencies used to calculate flicker‑free shutter angles. These are added to the shutter angle array and also dynamically calculated upon each fps change. This way, there is always a flicker free shutter angle value close by, when toggling through shutter angles, either via the cli or using buttons/pots/rotary encoder.
+<br><code>conform_frame_rate</code> – frame rate intendend for project conforming in post. This setting is not really used by CineMate except for calculating the recording timecode tracker in redis but might be used in future updates.</p>
 <h2 id="analog_controls">analog_controls<a class="headerlink" href="#analog_controls" title="Permanent link">#</a></h2>
 <p>Maps Grove Base HAT ADC channels to analogue dials (potentiometers). Use <code>null</code> to disable a dial.</p>
 <div class="codehilite"><pre><span></span><code><span class="nt">&quot;analog_controls&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -289,9 +276,8 @@
 <span class="p">}</span>
 </code></pre></div>
 
-<blockquote>
-<p><em><strong>Note</strong> that even if you are using a Grove Base Hat, it might be useful to disable the dials not connected to pots, since noise from these connectors might trigger false readings.</em></p>
-</blockquote>
+<div class="admonition note"></div>
+<p>Even if you are using a Grove Base Hat, it might be useful to disable the dials not connected to pots, since noise from these connectors might trigger false readings._</p>
 <h2 id="free_mode">free_mode<a class="headerlink" href="#free_mode" title="Permanent link">#</a></h2>
 <p>When enabled, ignores the preset arrays and exposes the full range supported by the sensor.</p>
 <div class="codehilite"><pre><span></span><code><span class="nt">&quot;free_mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -315,11 +301,9 @@
 <span class="p">}</span>
 </code></pre></div>
 
-<ul>
-<li><strong>k_steps</strong> – K‑style categories for allowed widths. Modes are grouped to the nearest half‑K. Example: 1332×990 counts as <strong>1.5 K</strong>.</li>
-<li><strong>bit_depths</strong> – list of bit depths to expose.</li>
-<li><strong>custom_modes</strong> – optional extra modes per sensor if the driver advertises none.</li>
-</ul>
+<p><code>k_steps</code> – K‑style categories for allowed widths. Modes are grouped to the nearest half‑K. Example: 1332×990 counts as <strong>1.5 K</strong>.
+<br><code>bit_depths</code> – list of bit depths to expose.
+<br><code>custom_modes</code> – optional extra modes per sensor if the driver advertises none.</p>
 <h2 id="buttons">buttons<a class="headerlink" href="#buttons" title="Permanent link">#</a></h2>
 <p>Defines GPIO push buttons. Each entry describes one button and the actions it triggers.</p>
 <div class="codehilite"><pre><span></span><code><span class="p">{</span>
@@ -330,14 +314,8 @@
 <span class="p">}</span>
 </code></pre></div>
 
-<ul>
-<li><strong>pin</strong> – BCM pin number the button is connected to.</li>
-<li><strong>pull_up</strong> – set <code>true</code> if the pin idles high (internal pull‑up). Use <code>false</code> for pull‑down wiring.</li>
-<li><strong>debounce_time</strong> – ignore additional presses within this time window (seconds).</li>
-<li><strong>press_action</strong>, <strong>single_click_action</strong>, <strong>double_click_action</strong>, <strong>triple_click_action</strong>, <strong>hold_action</strong> – actions to perform for each type of interaction. Actions call Cinemate CLI commands with optional <code>args</code>.</li>
-</ul>
-<div class="admonition info inline end">
-<p class="admonition-title">Automatic detection of inverse push buttons</p>
+<p><code>pin</code> – BCM pin number the button is connected to.<br><code>pull_up</code> – set <code>true</code> if the pin idles high (internal pull‑up). Use <code>false</code> for pull‑down wiring.<br><code>debounce_time</code> – ignore additional presses within this time window (seconds).<br><code>press_action</code>, <code>single_click_action</code>, <code>double_click_action</code>, <code>triple_click_action</code>, <code>hold_action</code> – actions to perform for each type of interaction. Actions call Cinemate CLI commands with optional <code>args</code>.</p>
+<div class="admonition info">
 <p>Some push-buttons are wired closed = logic 1 and open = 0. At start-up, CineMate automatically detects buttons in state <code>true</code> and reverses them. This way the user can use any type of push buttons, both 1-0-1 and 0-1-0 types.</p>
 </div>
 <h2 id="two_way_switches">two_way_switches<a class="headerlink" href="#two_way_switches" title="Permanent link">#</a></h2>
@@ -361,10 +339,7 @@
 <span class="p">}</span>
 </code></pre></div>
 
-<ul>
-<li><strong>clk_pin</strong> and <strong>dt_pin</strong> – the two pins of the encoder.</li>
-<li><strong>encoder_actions</strong> – commands to run when turning the dial.</li>
-</ul>
+<p><br><code>clk_pin</code> and <code>dt_pin</code> – the two pins of the encoder.<br><code>encoder_actions</code> – commands to run when turning the dial.</p>
 <h2 id="quad_rotary_controller">quad_rotary_controller<a class="headerlink" href="#quad_rotary_controller" title="Permanent link">#</a></h2>
 <p>Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry maps one of the four dials to a setting and defines the push button actions similar to the <code>buttons</code> section.</p>
 <div class="codehilite"><pre><span></span><code><span class="nt">&quot;quad_rotary_controller&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -387,10 +362,7 @@
 <span class="p">}</span>
 </code></pre></div>
 
-<ul>
-<li><strong>enabled</strong> – turn the quad rotary controller on or off.</li>
-<li><strong>encoders</strong> – mapping of each dial to a setting and button actions.</li>
-</ul>
+<p><code>enabled</code> – turn the quad rotary controller on or off.<br><code>encoders</code> – mapping of each dial to a setting and button actions.</p>
 <h2 id="i2c_oled">i2c_oled<a class="headerlink" href="#i2c_oled" title="Permanent link">#</a></h2>
 <p>Configuration for the optional OLED status screen. This can be useful for presenting extra information appart from the HDMI/web display.</p>
 <div class="codehilite"><pre><span></span><code><span class="nt">&quot;i2c_oled&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -402,23 +374,19 @@
 <span class="p">}</span>
 </code></pre></div>
 
-<ul>
-<li><strong>enabled</strong> – turn the OLED display on or off.</li>
-<li><strong>width / height</strong> – pixel dimensions of your screen.</li>
-<li><strong>font_size</strong> – size of the displayed text.</li>
-<li><strong>values</strong> – list of Redis keys or pseudo‑keys to show (for example <code>cpu_temp</code>).</li>
-</ul>
+<p><code>enabled</code> – turn the OLED display on or off.
+<code>width / height</code> – pixel dimensions of your screen.
+<code>font_size</code> – size of the displayed text.
+<code>values</code> – list of Redis keys or pseudo‑keys to show (for example <code>cpu_temp</code>).</p>
 <p>Available keys come from <code>src/module/i2c/i2c_oled.py</code>. Here are some examples:</p>
-<ul>
-<li><code>iso</code>, <code>fps</code> – basic camera settings.</li>
-<li><code>shutter_a</code> – shown as <strong>SHUTTER</strong> with a <code>°</code> suffix.</li>
-<li><code>wb_user</code> – shown as <strong>WB</strong> with a trailing <code>K</code>.</li>
-<li><code>space_left</code> – displayed as <strong>SPACE</strong> in gigabytes.</li>
-<li><code>write_speed_to_drive</code> – write speed in MB/s.</li>
-<li><code>resolution</code> – prints <code>width×height@bit_depth</code> on the first line.</li>
-<li><code>is_recording</code> – draws a bullet <code>●</code> when recording.</li>
-<li><code>cpu_load</code>, <code>cpu_temp</code>, <code>memory_usage</code> – Pi system statistics.</li>
-</ul>
+<p><code>iso</code>, <code>fps</code> – basic camera settings.<br>
+<code>shutter_a</code> – shown as <code>SHUTTER</code> with a <code>°</code> suffix.<br>
+<code>wb_user</code> – shown as <code>WB</code> with a trailing <code>K</code>.<br>
+<code>space_left</code> – displayed as <code>SPACE</code> in gigabytes.<br>
+<code>write_speed_to_drive</code> – write speed in MB/s.<br>
+<code>resolution</code> – prints <code>width×height@bit_depth</code> on the first line.<br>
+<code>is_recording</code> – draws a bullet <code>●</code> when recording.<br>
+<code>cpu_load</code>, <code>cpu_temp</code>, <code>memory_usage</code> – Pi system statistics.</p>
 <p>Other keys will display their name in uppercase and the raw value from Redis.</p>
 <hr />
 </div>

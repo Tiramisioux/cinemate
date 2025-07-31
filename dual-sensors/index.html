@@ -142,7 +142,10 @@
 <li>Preview windows are centered and sized according to your <code>geometry</code> settings.</li>
 </ul>
 <p>Cameras are synchronized with cam0 being the server and cam1 being the client.</p>
-<p>On Raspberry Pi 5 carrier boards, the second CSI connector may appear as <code>i2c@70000</code> in <code>--list-cameras</code>. Cinemate maps this path to <strong>cam1</strong> so each sensor gets the correct port assignment.</p>
+<p>On Raspberry Pi 5 Compute Model carrier boards, the second CSI connector (cam1) may appear as <code>i2c@70000</code> in <code>--list-cameras</code>. Cinemate maps this path to <strong>cam1</strong> so each sensor gets the correct port assignment.</p>
+<div class="admonition note">
+<p>When using the cam1 with the official Raspberry Pi CM carrier board, make sure to connect the JC GPIO pins as described here: <a href="https://www.raspberrypi.com/documentation/computers/compute-module.html#connect-two-cameras">https://www.raspberrypi.com/documentation/computers/compute-module.html#connect-two-cameras</a></p>
+</div>
 <p>You can override default HDMI mappings in <code>settings.json</code> under the <code>output</code> section.</p>
 </div>
 

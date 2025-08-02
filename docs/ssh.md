@@ -35,7 +35,7 @@ You will now see the `pi@cinepi` prompt, meaning you are logged in.
 !!! note ""
     If you are installing Cinemate manually, the hostname has not yet been set to cinepi. Then you will have to identify which ip address on the network is actually the Raspberry Pi and use that ip address.
 
-Tyoep `cinemate` anywhere in the cli to start the app. 
+Type `cinemate` anywhere in the cli to start the app. 
 
 !!! tip ""
     If you are running Cinemate from the preinstalled image file, Cinemate is already running, as it autostarts on boot. [See here for how to manage the autostart-service](system-services.md).

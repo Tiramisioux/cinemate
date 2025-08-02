@@ -169,7 +169,10 @@
               
 <div class="markdown-body">
   <h1 id="settings-file">Settings file<a class="headerlink" href="#settings-file" title="Permanent link">#</a></h1>
-<p>This file controls how the camera behaves and how your buttons, switches and displays are mapped. It lives in <code>~/cinemate/src/settings.json</code> on the Raspberry Pi. You can edit it with any text editor; the settings take effect the next time you start CineMate.</p>
+<p>This file controls how the camera behaves and how your buttons, switches and displays are mapped. It lives in <code>~/cinemate/src/settings.json</code>. You can edit it with any text editor; the settings take effect the next time you start Cinemate.</p>
+<div class="admonition tip">
+<p>For easy editing of settings on the preinstalled image file, type <code>editsettings</code> anywhere in Raspberry Pi terminal.</p>
+</div>
 <p>The configuration is structured as JSON. Each top‑level key describes a feature area of the system. Below is a tour of every section and what the options do.</p>
 <h2 id="welcome-message">welcome message<a class="headerlink" href="#welcome-message" title="Permanent link">#</a></h2>
 <p>Text or image displayed briefly when Cinemate starts.</p>
@@ -272,12 +275,13 @@
 <span class="w">  </span><span class="nt">&quot;iso_pot&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;shutter_a_pot&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;fps_pot&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;wb_pot&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span>
+<span class="w">  </span><span class="nt">&quot;wb_pot&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;None&quot;</span>
 <span class="p">}</span>
 </code></pre></div>
 
-<div class="admonition note"></div>
-<p>Even if you are using a Grove Base Hat, it might be useful to disable the dials not connected to pots, since noise from these connectors might trigger false readings._</p>
+<div class="admonition info">
+<p>When using a Grove Base Hat with potentiometers, make sure to define only channels actually connected to potentiometers, since noise from unused connectors might trigger false readings.</p>
+</div>
 <h2 id="free_mode">free_mode<a class="headerlink" href="#free_mode" title="Permanent link">#</a></h2>
 <p>When enabled, ignores the preset arrays and exposes the full range supported by the sensor.</p>
 <div class="codehilite"><pre><span></span><code><span class="nt">&quot;free_mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>

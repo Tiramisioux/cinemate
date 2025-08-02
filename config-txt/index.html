@@ -84,6 +84,10 @@
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Modifying config.txt</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#adjusting-configtxt-for-different-sensors">Adjusting config.txt for different sensors:</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example-configtxt">Example config.txt</a>
+    </li>
+        </ul>
     </li>
     </ul>
                   </li>
@@ -138,11 +142,97 @@
 <div class="markdown-body">
   <h1 id="modifying-configtxt">Modifying config.txt<a class="headerlink" href="#modifying-configtxt" title="Permanent link">#</a></h1>
 <h2 id="adjusting-configtxt-for-different-sensors">Adjusting config.txt for different sensors:<a class="headerlink" href="#adjusting-configtxt-for-different-sensors" title="Permanent link">#</a></h2>
+<div class="admonition tip">
+<p>For easy editing of <code>config.txt</code> on the preinstalled image file, type <code>editboot</code> anywhere in Raspberry Pi terminal.</p>
+</div>
+<p>If using a manual install without the above alias, type:</p>
 <div class="codehilite"><pre><span></span><code>sudo nano /boot/firmware/config.txt
 </code></pre></div>
 
 <p>Uncomment the section for the sensor being used, and make sure to comment out the others. Reboot the Pi for changes to take effect.</p>
+<h3 id="example-configtxt">Example config.txt<a class="headerlink" href="#example-configtxt" title="Permanent link">#</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># For more options and information see</span>
+<span class="c1"># http://rptl.io/configtxt</span>
+<span class="c1"># Some settings may impact device functionality. See link above for details</span>
+
+<span class="c1"># Uncomment some or all of these to enable the optional hardware interfaces</span>
+<span class="nv">dtparam</span><span class="o">=</span><span class="nv">i2c_arm</span><span class="o">=</span>on
+<span class="c1">#dtparam=i2s=on</span>
+<span class="c1">#dtparam=spi=on</span>
+
+<span class="c1"># Enable audio (loads snd_bcm2835)</span>
+<span class="nv">dtparam</span><span class="o">=</span><span class="nv">audio</span><span class="o">=</span>on
+
+<span class="c1"># ---- Camera section</span>
+
+<span class="c1"># Raspberry Pi HQ camera</span>
+<span class="nv">camera_auto_detect</span><span class="o">=</span><span class="m">1</span>
+<span class="nv">dtoverlay</span><span class="o">=</span>imx477,cam0
+
+<span class="c1"># Raspberry Pi GS camera</span>
+<span class="c1">#camera_auto_detect=1</span>
+<span class="c1">#dtoverlay=imx296</span>
+
+<span class="c1"># OneInchEye</span>
+<span class="c1">#camera_auto_detect=0</span>
+<span class="c1">#dtoverlay=imx283</span>
+
+<span class="c1"># Starlight Eye</span>
+<span class="c1">#camera_auto_detect=0</span>
+<span class="c1">#dtoverlay=imx585,cam0</span>
+
+<span class="c1"># Starlight Eye Mono</span>
+<span class="c1">#camera_auto_detect=0</span>
+<span class="c1">#dtoverlay=imx585,cam1,mono</span>
+
+<span class="c1"># -----</span>
+
+<span class="c1"># Automatically load overlays for detected DSI displays</span>
+<span class="nv">display_auto_detect</span><span class="o">=</span><span class="m">1</span>
+
+<span class="c1"># Automatically load initramfs files, if found</span>
+<span class="nv">auto_initramfs</span><span class="o">=</span><span class="m">1</span>
+
+<span class="c1"># Enable DRM VC4 V3D driver</span>
+<span class="nv">dtoverlay</span><span class="o">=</span>vc4-kms-v3d
+<span class="nv">max_framebuffers</span><span class="o">=</span><span class="m">2</span>
+
+<span class="c1"># Don&#39;t have the firmware create an initial video= setting in cmdline.txt.</span>
+<span class="c1"># Use the kernel&#39;s default instead.</span>
+<span class="nv">disable_fw_kms_setup</span><span class="o">=</span><span class="m">1</span>
+
+<span class="c1"># Run in 64-bit mode</span>
+<span class="nv">arm_64bit</span><span class="o">=</span><span class="m">1</span>
+
+<span class="c1"># Disable compensation for displays with overscan</span>
+<span class="nv">disable_overscan</span><span class="o">=</span><span class="m">1</span>
+
+<span class="c1"># Run as fast as firmware / board allows</span>
+<span class="nv">arm_boost</span><span class="o">=</span><span class="m">1</span>
+
+<span class="o">[</span>cm4<span class="o">]</span>
+<span class="c1"># Enable host mode on the 2711 built-in XHCI USB controller.</span>
+<span class="c1"># This line should be removed if the legacy DWC2 controller is required</span>
+<span class="c1"># (e.g. for USB device mode) or if USB support is not required.</span>
+<span class="nv">otg_mode</span><span class="o">=</span><span class="m">1</span>
+
+<span class="o">[</span>cm5<span class="o">]</span>
+<span class="nv">dtoverlay</span><span class="o">=</span>dwc2,dr_mode<span class="o">=</span>host
+
+<span class="o">[</span>all<span class="o">]</span>
+<span class="nv">auto_initramfs</span><span class="o">=</span><span class="m">1</span>
+<span class="nv">disable_splash</span><span class="o">=</span><span class="m">1</span>
+<span class="nv">dtparam</span><span class="o">=</span><span class="nv">i2c1</span><span class="o">=</span>on
+<span class="nv">dtoverlay</span><span class="o">=</span>miniuart-bt
+</code></pre></div>
+
 <p>Exit the editor by pressing Ctrl+C</p>
+<div class="admonition note">
+<p>Note that Cinemate needs you to explicitly set the camera port, match that of the physical camera port you are using. Default is <code>cam0</code>.</p>
+</div>
+<div class="admonition tip">
+<p>The preinstalled image file comes with <strong>OneInchEye</strong> and <strong>StarlightEye</strong> preinstalled.</p>
+</div>
 </div>
 
             </div>

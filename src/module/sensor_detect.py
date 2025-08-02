@@ -17,7 +17,7 @@ class SensorDetect:
 
         # Packing information per sensor (U = unpacked, P = packed)
         self.packing_info = {
-            "imx296": "P",
+            "imx296": "U",
             "imx283": "U",
             "imx477": "U",
             "imx519": "P",

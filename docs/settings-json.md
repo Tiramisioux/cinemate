@@ -1,6 +1,9 @@
 # Settings file
 
-This file controls how the camera behaves and how your buttons, switches and displays are mapped. It lives in `~/cinemate/src/settings.json` on the Raspberry Pi. You can edit it with any text editor; the settings take effect the next time you start CineMate.
+This file controls how the camera behaves and how your buttons, switches and displays are mapped. It lives in `~/cinemate/src/settings.json`. You can edit it with any text editor; the settings take effect the next time you start Cinemate.
+
+!!! tip ""
+    For easy editing of settings on the preinstalled image file, type `editsettings` anywhere in Raspberry Pi terminal.
 
 The configuration is structured as JSON. Each top‑level key describes a feature area of the system. Below is a tour of every section and what the options do.
 
@@ -140,12 +143,13 @@ Maps Grove Base HAT ADC channels to analogue dials (potentiometers). Use `null` 
   "iso_pot": 0,
   "shutter_a_pot": 2,
   "fps_pot": 4,
-  "wb_pot": 6
+  "wb_pot": "None"
 }
 ```
 
-!!! note ""
-  Even if you are using a Grove Base Hat, it might be useful to disable the dials not connected to pots, since noise from these connectors might trigger false readings._
+!!! info ""
+
+    When using a Grove Base Hat with potentiometers, make sure to define only channels actually connected to potentiometers, since noise from unused connectors might trigger false readings.
 
 ## free_mode
 

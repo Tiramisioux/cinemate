@@ -89,9 +89,12 @@ theme:
     - scheme: default           # WCAG-AA compliant base
 
 extra_css:
-  # - overrides/github-markdown.css
+  
   - templates/styles.scss
   - stylesheets/extra.css
+  # - overrides/github-markdown.css
+  # - overrides/highlight.css
+  # - overrides/markdown.css
 
   - https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css
 extra_javascript:

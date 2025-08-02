@@ -18,6 +18,7 @@ color: #404040;
 .rst-content .toctree-wrapper>p.caption, .rst-content h1, .rst-content h2, .rst-content h3, .rst-content h4, .rst-content h5, .rst-content h6 {
 margin-bottom: 24px;
 margin-top: 34px;
+
 }
 
 .rst-content .admonition, .rst-content .admonition-todo, .rst-content .attention, .rst-content .caution, .rst-content .danger, .rst-content .error, .rst-content .hint, .rst-content .important, .rst-content .note, .rst-content .seealso, .rst-content .tip, .rst-content .warning {
@@ -27,6 +28,13 @@ border-radius: 6px;
 font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji";
 font-weight: 400;
 word-wrap: normal;
+
+border: 1px solid var(--cine-code-border);
+border-radius: 6px;
+box-shadow: inset 0 0 0 1px rgba(0,0,0,.03); /* faint inner stroke */
+
+
+
 }
 
 .rst-content code {
@@ -34,6 +42,8 @@ word-wrap: normal;
 border-radius: 6px;
 background-color: #f5f5f5;;
 color: #2d3135;
+
+
 
 }
 
@@ -43,6 +53,7 @@ display: block;
 padding: 12px;
 font-size: 12px;
 border-radius: 5px;
+
 }
 
 .markdown-body .highlight pre,
@@ -109,3 +120,34 @@ border-radius: 5px;
   font-style: italic;        /* remove if you prefer upright */
 }
 
+/* =========================================================
+   Cinemate – admonition accent bar (no text-colour change)
+   ========================================================= */
+
+.markdown-body .admonition,
+.rst-content  .admonition {
+  /* keep existing font, border-radius, etc. from your sheet */
+  background: #fafbfc;                   /* lighter than #f5f5f5        */
+  border-left: 6px solid transparent;    /* will be set per-type below  */
+  padding-left: calc(1rem - 6px);        /* keep text aligned           */
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+}
+
+/* Per-type accent colours —              ONLY the bar gets coloured  */
+.admonition.tip,
+.admonition.hint,
+.admonition.success      { border-left-color: #28b4a4; } /* light teal  */
+
+.admonition.note,
+.admonition.important    { border-left-color: #3b82f6; } /* light blue  */
+
+.admonition.warning,
+.admonition.caution      { border-left-color: #f59e0b; } /* light amber */
+
+.admonition.danger,
+.admonition.error        { border-left-color: #ef4444; } /* light red   */
+
+/* Optional: emphasise the built-in title without altering colour */
+.admonition > .admonition-title {
+  font-weight: 600;
+}

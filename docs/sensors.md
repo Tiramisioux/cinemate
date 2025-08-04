@@ -46,8 +46,8 @@ For continouos recording without the system utilizing the frame buffer and with 
 
 | Resolution         | Bit Depth | Storage          | Sustainable FPS  |
 |--------------------|-----------|------------------|------|
-| 1928 x 1090        | 12 bit    | SSD              | 33   |
-| 3856 x 2180        | 12 bit    | SSD              | 10   |
+| 1928 x 1090        | 12 bit    | SSD (Samsung T7) | 33   |
+| 3856 x 2180        | 12 bit    | SSD (Samsung T7) | 10   |
 | 1928 x 1090        | 12 bit    | CFE Hat / NVMe   | 87   |
 | 3856 x 2180        | 12 bit    | CFE Hat / NVMe   | 43   |
 

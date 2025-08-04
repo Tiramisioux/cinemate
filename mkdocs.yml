@@ -25,7 +25,7 @@ nav:
     - Configuring the Wi-Fi hotspot: hotspot-logic.md
   - Using the camera:
       - Simple GUI: simple-gui.md
-      - Camera sensors: sensors.md
+      - Camera sensors and frame rates: sensors.md
       - Audio recording: audio-recording.md
       # - Digital zoom: digital-zoom.md
       - Speed ramping & shutter angle synchronization: speed-ramping.md

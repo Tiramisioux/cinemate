@@ -12,7 +12,7 @@
 
 | Mode | Resolution       | Aspect Ratio | Bit Depth | Max FPS | DNG Frame File Size (MB) |
 |------|------------------|--------------|-----------|---------|----------------|
-| 0    | 1456 x 1088      | 1.33         | 12        | 60      | 2.0            |
+| 0    | 1456 x 1088      | 1.33         | 12        | 60      | 3.1            |
 
 ### IMX585 (Starlight Eye)
 
@@ -44,7 +44,7 @@ You can limit which modes appear inside CineMate by editing the `resolutions` se
 }
 ```
 
-!!! warning ""
+!!! note ""
 
     The dng_encoder in Cinemate fork of Cinepi-RAW currently outputs all modes as 12 bit DNG.
 

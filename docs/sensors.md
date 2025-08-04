@@ -11,6 +11,44 @@
 | IMX585 | 0    | 1928 x 1090  | 1.77         | 12        | 87      | 4              |
 |        | 1    | 3840 x 2160  | 1.77         | 12        | 34      | 4
 
-Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames. From version 3.1 the resolution list is generated dynamically from `cinepi-raw --list-cameras`.
+Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames.
 
-You can limit which modes appear inside CineMate by editing the `resolutions` section in `settings.json`. Only the K categories and bit depths you list will be shown. Custom driver modes can also be added here.
+You can limit which modes appear inside CineMate by editing the `resolutions` section in `settings.json`. `k_steps` are approximate resolution steps. Custom driver modes can also be added here.
+
+```json
+"resolutions": {
+  "k_steps": [1.5, 2, 4],
+  "bit_depths": [10, 12],
+  "custom_modes": {
+    "imx283": [
+      {"width": 3936, "height": 2176, "bit_depth": 12, "fps_max": 24}
+    ]
+  }
+}
+```
+
+## Sustainable frame rates
+
+For continouos recording without the system utilizing the frame buffer and with no drop frames. Performance will depend on sensor and storage media. Here are measured results.
+
+### IMX477
+
+| Resolution         | Bit Depth | Storage          | Sustainable FPS  |
+|--------------------|-----------|------------------|------|
+| 2028 x 1080        | 12 bit    | SSD (Samsung T7) | 34   |
+| 2028 x 1520        | 12 bit    | SSD (Samsung T7) | 24   |
+| 1332 x 990         | 12 bit    | SSD (Samsung T7) | 71   |
+| 2028 x 1080        | 12 bit    | CFE Hat / NVMe   | 50   |
+| 2028 x 1520        | 12 bit    | CFE Hat / NVMe   | 40   |
+| 1332 x 990         | 12 bit    | CFE Hat / NVMe   | 119  |
+
+### IMX585
+
+| Resolution         | Bit Depth | Storage          | Sustainable FPS  |
+|--------------------|-----------|------------------|------|
+| 1928 x 1090        | 12 bit    | SSD              | 33   |
+| 3856 x 2180        | 12 bit    | SSD              | 10   |
+| 1928 x 1090        | 12 bit    | CFE Hat / NVMe   | 87   |
+| 3856 x 2180        | 12 bit    | CFE Hat / NVMe   | 43   |
+
+Note that the frame buffer is occationally used, especially for SSD drives, due to occational drop in write speed.

@@ -72,13 +72,13 @@
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Camera sensors</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#sustainable-frame-rates">Sustainable frame rates</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#imx477">IMX477</a>
+    <li class="toctree-l2"><a class="reference internal" href="#imx477-raspberry-pi-hq-camera">IMX477 (Raspberry Pi HQ Camera)</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#imx585">IMX585</a>
+    <li class="toctree-l2"><a class="reference internal" href="#imx296-raspberry-pi-global-shutter-camera">IMX296 (Raspberry Pi Global Shutter Camera)</a>
     </li>
-        </ul>
+    <li class="toctree-l2"><a class="reference internal" href="#imx585-starlight-eye">IMX585 (Starlight Eye)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#imx283-oneincheye">IMX283 (OneInchEye)</a>
     </li>
     </ul>
                   </li>
@@ -142,49 +142,21 @@
             <div class="section" itemprop="articleBody">
               
 <div class="markdown-body">
-  <h1 id="compatible-sensors">Compatible sensors<a class="headerlink" href="#compatible-sensors" title="Permanent link">#</a></h1>
+  <h2 id="compatible-sensors">Compatible sensors<a class="headerlink" href="#compatible-sensors" title="Permanent link">#</a></h2>
+<h3 id="imx477-raspberry-pi-hq-camera">IMX477 (Raspberry Pi HQ Camera)<a class="headerlink" href="#imx477-raspberry-pi-hq-camera" title="Permanent link">#</a></h3>
 <table>
 <thead>
 <tr>
-<th>Sensor</th>
-<th>Cinemate sensor mode</th>
+<th>Mode</th>
 <th>Resolution</th>
 <th>Aspect Ratio</th>
 <th>Bit Depth</th>
-<th>Max FPS*</th>
-<th>File Size (MB)</th>
+<th>Max FPS</th>
+<th>DNG Frame File Size (MB)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>IMX283</td>
-<td>0</td>
-<td>2736 x 1538</td>
-<td>1.80</td>
-<td>12</td>
-<td>40</td>
-<td>7.1</td>
-</tr>
-<tr>
-<td></td>
-<td>1</td>
-<td>2736 x 1824</td>
-<td>1.53</td>
-<td>12</td>
-<td>34</td>
-<td>8.2</td>
-</tr>
-<tr>
-<td>IMX296</td>
-<td>0</td>
-<td>1456 x 1088</td>
-<td>1.33</td>
-<td>12</td>
-<td>60</td>
-<td>2</td>
-</tr>
-<tr>
-<td>IMX477</td>
 <td>0</td>
 <td>2028 x 1080</td>
 <td>1.87</td>
@@ -193,7 +165,6 @@
 <td>4.3</td>
 </tr>
 <tr>
-<td></td>
 <td>1</td>
 <td>2028 x 1520</td>
 <td>1.33</td>
@@ -202,7 +173,6 @@
 <td>5.3</td>
 </tr>
 <tr>
-<td></td>
 <td>2</td>
 <td>1332 x 990</td>
 <td>1.34</td>
@@ -210,23 +180,90 @@
 <td>120</td>
 <td>2.7</td>
 </tr>
+</tbody>
+</table>
+<h3 id="imx296-raspberry-pi-global-shutter-camera">IMX296 (Raspberry Pi Global Shutter Camera)<a class="headerlink" href="#imx296-raspberry-pi-global-shutter-camera" title="Permanent link">#</a></h3>
+<table>
+<thead>
 <tr>
-<td>IMX585</td>
+<th>Mode</th>
+<th>Resolution</th>
+<th>Aspect Ratio</th>
+<th>Bit Depth</th>
+<th>Max FPS</th>
+<th>DNG Frame File Size (MB)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>1456 x 1088</td>
+<td>1.33</td>
+<td>12</td>
+<td>60</td>
+<td>2.0</td>
+</tr>
+</tbody>
+</table>
+<h3 id="imx585-starlight-eye">IMX585 (Starlight Eye)<a class="headerlink" href="#imx585-starlight-eye" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Resolution</th>
+<th>Aspect Ratio</th>
+<th>Bit Depth</th>
+<th>Max FPS</th>
+<th>DNG Frame File Size (MB)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
 <td>0</td>
 <td>1928 x 1090</td>
 <td>1.77</td>
 <td>12</td>
 <td>87</td>
-<td>4</td>
+<td>4.0</td>
 </tr>
 <tr>
-<td></td>
 <td>1</td>
 <td>3840 x 2160</td>
 <td>1.77</td>
 <td>12</td>
 <td>34</td>
-<td>4</td>
+<td>4.0</td>
+</tr>
+</tbody>
+</table>
+<h3 id="imx283-oneincheye">IMX283 (OneInchEye)<a class="headerlink" href="#imx283-oneincheye" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Resolution</th>
+<th>Aspect Ratio</th>
+<th>Bit Depth</th>
+<th>Max FPS</th>
+<th>DNG Frame File Size (MB)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>2736 x 1538</td>
+<td>1.80</td>
+<td>12</td>
+<td>40</td>
+<td>7.1</td>
+</tr>
+<tr>
+<td>1</td>
+<td>2736 x 1824</td>
+<td>1.53</td>
+<td>12</td>
+<td>34</td>
+<td>8.2</td>
 </tr>
 </tbody>
 </table>
@@ -243,6 +280,9 @@
 <span class="p">}</span>
 </code></pre></div>
 
+<div class="admonition warning">
+<p>The dng_encoder in Cinemate fork of Cinepi-RAW currently outputs all modes as 12 bit DNG.</p>
+</div>
 <h2 id="sustainable-frame-rates">Sustainable frame rates<a class="headerlink" href="#sustainable-frame-rates" title="Permanent link">#</a></h2>
 <p>For continouos recording without the system utilizing the frame buffer and with no drop frames. Performance will depend on sensor and storage media. Here are measured results.</p>
 <h3 id="imx477">IMX477<a class="headerlink" href="#imx477" title="Permanent link">#</a></h3>

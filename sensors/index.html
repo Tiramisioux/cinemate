@@ -72,6 +72,14 @@
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Camera sensors</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#sustainable-frame-rates">Sustainable frame rates</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#imx477">IMX477</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#imx585">IMX585</a>
+    </li>
+        </ul>
+    </li>
     </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
@@ -222,8 +230,108 @@
 </tr>
 </tbody>
 </table>
-<p>Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames. From version 3.1 the resolution list is generated dynamically from <code>cinepi-raw --list-cameras</code>.</p>
-<p>You can limit which modes appear inside CineMate by editing the <code>resolutions</code> section in <code>settings.json</code>. Only the K categories and bit depths you list will be shown. Custom driver modes can also be added here.</p>
+<p>Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames.</p>
+<p>You can limit which modes appear inside CineMate by editing the <code>resolutions</code> section in <code>settings.json</code>. <code>k_steps</code> are approximate resolution steps. Custom driver modes can also be added here.</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&quot;resolutions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;k_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">1.5</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;bit_depths&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;custom_modes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;imx283&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">      </span><span class="p">{</span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3936</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2176</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;bit_depth&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;fps_max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">24</span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="sustainable-frame-rates">Sustainable frame rates<a class="headerlink" href="#sustainable-frame-rates" title="Permanent link">#</a></h2>
+<p>For continouos recording without the system utilizing the frame buffer and with no drop frames. Performance will depend on sensor and storage media. Here are measured results.</p>
+<h3 id="imx477">IMX477<a class="headerlink" href="#imx477" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Resolution</th>
+<th>Bit Depth</th>
+<th>Storage</th>
+<th>Sustainable FPS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2028 x 1080</td>
+<td>12 bit</td>
+<td>SSD (Samsung T7)</td>
+<td>34</td>
+</tr>
+<tr>
+<td>2028 x 1520</td>
+<td>12 bit</td>
+<td>SSD (Samsung T7)</td>
+<td>24</td>
+</tr>
+<tr>
+<td>1332 x 990</td>
+<td>12 bit</td>
+<td>SSD (Samsung T7)</td>
+<td>71</td>
+</tr>
+<tr>
+<td>2028 x 1080</td>
+<td>12 bit</td>
+<td>CFE Hat / NVMe</td>
+<td>50</td>
+</tr>
+<tr>
+<td>2028 x 1520</td>
+<td>12 bit</td>
+<td>CFE Hat / NVMe</td>
+<td>40</td>
+</tr>
+<tr>
+<td>1332 x 990</td>
+<td>12 bit</td>
+<td>CFE Hat / NVMe</td>
+<td>119</td>
+</tr>
+</tbody>
+</table>
+<h3 id="imx585">IMX585<a class="headerlink" href="#imx585" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Resolution</th>
+<th>Bit Depth</th>
+<th>Storage</th>
+<th>Sustainable FPS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1928 x 1090</td>
+<td>12 bit</td>
+<td>SSD</td>
+<td>33</td>
+</tr>
+<tr>
+<td>3856 x 2180</td>
+<td>12 bit</td>
+<td>SSD</td>
+<td>10</td>
+</tr>
+<tr>
+<td>1928 x 1090</td>
+<td>12 bit</td>
+<td>CFE Hat / NVMe</td>
+<td>87</td>
+</tr>
+<tr>
+<td>3856 x 2180</td>
+<td>12 bit</td>
+<td>CFE Hat / NVMe</td>
+<td>43</td>
+</tr>
+</tbody>
+</table>
+<p>Note that the frame buffer is occationally used, especially for SSD drives, due to occational drop in write speed.</p>
 </div>
 
             </div>

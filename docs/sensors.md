@@ -72,6 +72,6 @@ For continouos recording without the system utilizing the frame buffer and with 
 | 1928 x 1090        | 12 bit    | CFE Hat / NVMe   | 87   |
 | 3856 x 2180        | 12 bit    | CFE Hat / NVMe   | 43   |
 
-!!! info ""
+!!! note ""
 
     Note that the frame buffer is occationally used, especially for SSD drives, due to occational drop in write speed.

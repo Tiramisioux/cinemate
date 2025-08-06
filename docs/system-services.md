@@ -2,6 +2,10 @@
 
 Cinemate uses three system services for its operation.
 
+!!! note ""
+
+     Note if you have Cinemate already running, for example by running the preinstalled image file, anything you type will be interpreted by the Cinemate CLI only. In order to use these commands you have to [start an SSH session](ssh.md) and log in in a new shell.
+
 ## cinemate-autostart.service
 
 Responsible for autostart of Cinemate on boot. By default, it is turned off on the [downloadable image file](https://github.com/Tiramisioux/cinemate/releases/tag/3.1).
@@ -21,10 +25,6 @@ make status    # check status
 make disable   # disable autostart
 make clean     # remove the service
 ```
-
-!!! note
-
-     Note that in order for the web ui to work properly you have to run `make install` once in the `/home/pi/cinemate` folder, even if you are not using the autostart service.
 
 ## storage-automount.service
 

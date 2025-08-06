@@ -146,6 +146,9 @@
 <div class="markdown-body">
   <h1 id="system-services">System services<a class="headerlink" href="#system-services" title="Permanent link">#</a></h1>
 <p>Cinemate uses three system services for its operation.</p>
+<div class="admonition note">
+<p>Note if you have Cinemate already running, for example by running the preinstalled image file, anything you type will be interpreted by the Cinemate CLI only. In order to use these commands you have to <a href="../ssh/">start an SSH session</a> and log in in a new shell.</p>
+</div>
 <h2 id="cinemate-autostartservice">cinemate-autostart.service<a class="headerlink" href="#cinemate-autostartservice" title="Permanent link">#</a></h2>
 <p>Responsible for autostart of Cinemate on boot. By default, it is turned off on the <a href="https://github.com/Tiramisioux/cinemate/releases/tag/3.1">downloadable image file</a>.</p>
 <h3 id="starting-stopping-enabling-and-disabling-the-service">Starting, stopping, enabling and disabling the service<a class="headerlink" href="#starting-stopping-enabling-and-disabling-the-service" title="Permanent link">#</a></h3>
@@ -161,10 +164,6 @@ make disable   # disable autostart
 make clean     # remove the service
 </code></pre></div>
 
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Note that in order for the web ui to work properly you have to run <code>make install</code> once in the <code>/home/pi/cinemate</code> folder, even if you are not using the autostart service.</p>
-</div>
 <h2 id="storage-automountservice">storage-automount.service<a class="headerlink" href="#storage-automountservice" title="Permanent link">#</a></h2>
 <p>Storage-automount is a systemd service that watches for removable drives and mounts them automatically. The accompanying Python script reacts to udev events and the CFE-HAT eject button so drives can be attached or detached safely.</p>
 <p>It understands <code>ext4</code>, <code>ntfs</code> and <code>exfat</code> filesystems. Partitions labelled <code>RAW</code> are mounted at <code>/media/RAW</code>; any other label is mounted under <code>/media/&lt;LABEL&gt;</code> after sanitising the name. This applies to USB SSDs, NVMe drives and the CFE-HAT slot.</p>

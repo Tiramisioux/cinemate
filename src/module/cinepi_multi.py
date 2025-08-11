@@ -19,7 +19,7 @@ SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
 _SETTINGS = load_settings(SETTINGS_FILE)
 
 _READY_RX   = re.compile(r"Encoder configured")      # line printed by DngEncoder
-_READY_WAIT = 10.0                                   # seconds to wait for all cams
+_READY_WAIT = 2.0                                   # seconds to wait for all cams
 
 # ───────────────────────── zoom default ──────────────────────────
 def _seed_default_zoom(redis_ctl):

@@ -450,8 +450,8 @@ class SimpleGUI(threading.Thread):
             "storage_type":   self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value),
             "write_speed":    self.redis_controller.get_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value) or "0 MB/s",
 
-            # "clip_label": "CLIP",
-            # "clip_name":    self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value) or "N/A",
+            #"clip_label": "CLIP",
+            #"clip_name":    self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value) or "N/A",
 
             # static captions
             "cam": "CAM", "raw": "RAW", "ram_label": "RAM",

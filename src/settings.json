@@ -19,7 +19,7 @@
       "vertical_flip": false
     },
     "cam1": {
-      "rotate_180": false,
+      "rotate_180": true,
       "horizontal_flip": false,
       "vertical_flip":false
     }
@@ -188,22 +188,22 @@
       },
       "1": {
         "setting_name": "shutter_a",
-        "button": {"press_action": {"method": "set_fps_double"}}
+        "button": {"press_action": {"method": "set_shutter_a_sync_mode"}}
       },
       "2": {
         "setting_name": "fps",
+        "button": {"press_action": {"method": "set_fps_double"}}
+      },
+      "3": {
+        "setting_name": "wb",
         "button": {
           "press_action": "None",
           "single_click_action": {"method": "set_resolution"},
           "double_click_action": {"method": "restart_cinemate"},
           "triple_click_action": {"method": "reboot"},
           "hold_action": {"method": "toggle_mount"}
-        }
-      },
-      "3": {
-        "setting_name": "wb",
-        "button": {"press_action": {"method": "rec"}}
       }
+    }
     }
   },
 

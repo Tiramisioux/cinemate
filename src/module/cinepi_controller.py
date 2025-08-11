@@ -240,16 +240,25 @@ class CinePiController:
                 flicker_free_angles.append(round(angle, 1))
         return flicker_free_angles
                   
-                      
-    def set_shutter_a_sync_mode(self, mode):
-        self.shutter_a_sync_mode = mode
-        if mode == 1:
+    def set_shutter_a_sync_mode(self, value=None):
+        if value is not None:
+            if value in (0, False):
+                self.shutter_a_sync_mode = 0
+            elif value in (1, True):
+                self.shutter_a_sync_mode = 1
+            else:
+                raise ValueError("Invalid value. Please provide either 0, 1, True, or False.")
+        else:
+            self.shutter_a_sync_mode = 0 if self.shutter_a_sync_mode else 1
+
+        if self.shutter_a_sync_mode == 1:
             self.exposure_time_nominal = (self.shutter_angle_nom / 360) / self.current_fps
             self.shutter_angle_steps = [round(x * 0.1, 1) for x in range(10, 3601)]
         else:
             self.initialize_shutter_angle_steps()
 
-        self.redis_controller.set_value(ParameterKey.SHUTTER_A_SYNC_MODE.value, mode)
+        self.redis_controller.set_value(ParameterKey.SHUTTER_A_SYNC_MODE.value, self.shutter_a_sync_mode)
+        logging.info(f"Shutter angle sync mode {self.shutter_a_sync_mode}")
 
     def calculate_exposure(self):
         fps = self.redis_controller.get_value(ParameterKey.FPS.value)

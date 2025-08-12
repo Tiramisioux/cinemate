@@ -28,6 +28,7 @@ class SensorDetect:
         # Optional fps correction factors per sensor
         self.fps_correction_factors = {
             "imx477": 0.9995,
+            #"imx585": 0.9980,
             "imx585_mono": 0.9980,
         }
 

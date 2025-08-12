@@ -467,21 +467,57 @@ class SimpleGUI(threading.Thread):
         if abs(z - 1.0) > 1e-3:                    # only show when ≠ 1.0
             values["zoom_factor"] = f"{z:.1f}"
 
-        # ─── format recording_time from "HH:MM:SS:ff" → "MM:SS" or "HH:MM:SS" ───
+        # ─── recording time ───
         raw_rt = self.redis_controller.get_value(ParameterKey.RECORDING_TIME.value)
-        if raw_rt:
-            parts = raw_rt.split(":")
-            # expect at least ["HH","MM","SS",...]
-            if len(parts) >= 3:
-                h, m, s = map(int, parts[:3])
-                if h > 0:
-                    fmt = f"{h:02d}:{m:02d}:{s:02d}"
+
+        if raw_rt is not None:
+            s = str(raw_rt).strip()
+
+            # Only proceed if Redis value is not exactly "0" or 0.0
+            try:
+                if float(s) == 0:
+                    pass  # skip drawing
                 else:
-                    fmt = f"{m:02d}:{s:02d}"
-                if raw_rt != "0":
-                    values["recording_time"] = fmt
-                else:
-                    values["recording_time"] = ""
+                    # 1) Try numeric seconds
+                    total = None
+                    try:
+                        total = int(float(s))
+                    except ValueError:
+                        # 2) Fallback: parse "HH:MM:SS" or "MM:SS"
+                        parts = s.split(":")
+                        try:
+                            if len(parts) >= 3:
+                                h = int(parts[0]); m = int(parts[1]); sec = int(parts[2])
+                                total = h * 3600 + m * 60 + sec
+                            elif len(parts) == 2:
+                                m = int(parts[0]); sec = int(parts[1])
+                                total = m * 60 + sec
+                            elif len(parts) == 1 and parts[0].isdigit():
+                                total = int(parts[0])
+                        except (TypeError, ValueError):
+                            total = None
+
+                    # format if we have a valid total
+                    if total is not None:
+                        if total >= 3600:
+                            h = total // 3600
+                            rem = total % 3600
+                            m = rem // 60
+                            sec = rem % 60
+                            values["recording_time"] = f"{h}:{m}:{sec:02d}"
+                        else:
+                            m = total // 60
+                            sec = total % 60
+                            values["recording_time"] = f"{m}:{sec:02d}"
+            except ValueError:
+                pass  # skip if float conversion fails
+
+
+
+
+
+
+
 
         # ───────────────── CLIP / LAST-DNG display ───────────────
         last_cam1_full = self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value)
@@ -1137,8 +1173,8 @@ class SimpleGUI(threading.Thread):
         finally:
             pass
 
-    def emit_gui_data_change(self, changed_data):
-        self.socketio.emit('gui_data_change', changed_data)
+    # def emit_gui_data_change(self, changed_data):
+    #     self.socketio.emit('gui_data_change', changed_data)
         
 #         fsck = redis.get_value("FSCK_STATUS", "")
 # if fsck.startswith("FAIL"):

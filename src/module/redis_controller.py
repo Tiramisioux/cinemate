@@ -68,7 +68,7 @@ class ParameterKey(Enum):
     
     ZOOM                = "zoom"  # digital zoom factor for streams 0 & 2
     WRITE_SPEED_TO_DRIVE = "write_speed_to_drive"
-    RECORDING_TIME         = "recording_tc"      # elapsed-time in seconds   
+    RECORDING_TIME         = "recording_time"      # elapsed-time in seconds   
     RECORDING_TC_REC     = "recording_tc_rec"    # elapsed-time time-code
     RECORDING_TC_TOD   = "recording_time_tod"    # time-of-day time-code
 

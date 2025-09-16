@@ -175,6 +175,9 @@
 <li><code>packing</code> can be <code>P</code> for packed or <code>U</code> for unpacked data. </li>
 </ul>
 <p>The mode must match the sensor you are using. For example, an IMX477 camera can run at <code>4056:3040:12</code> (full sensor) or at smaller cropped resolutions. When specifying a mode you typically also set the output <code>--width</code> and <code>--height</code> which control the size of the image written to disk. These can be equal to the mode values or smaller when scaling is applied.</p>
+<div class="admonition note">
+<p>On the Pi 5, the cinepi-raw flag for HQ sensor is <code>--mode 2028:1080:12:U</code>. On the Pi 4 it should read <code>--mode 2028:1080:12:P</code>.</p>
+</div>
 <h2 id="lowresolution-lores-stream">Low‑resolution (lores) stream<a class="headerlink" href="#lowresolution-lores-stream" title="Permanent link">#</a></h2>
 <div class="codehilite"><pre><span></span><code>--lores-width 1280 --lores-height 720
 </code></pre></div>

@@ -26,6 +26,10 @@ CinePi-raw uses **Libcamera** to talk to your Raspberry Pi camera module. Each s
 
 The mode must match the sensor you are using. For example, an IMX477 camera can run at `4056:3040:12` (full sensor) or at smaller cropped resolutions. When specifying a mode you typically also set the output `--width` and `--height` which control the size of the image written to disk. These can be equal to the mode values or smaller when scaling is applied.
 
+!!! note ""
+     On the Pi 5, the cinepi-raw flag for HQ sensor is `--mode 2028:1080:12:U`. On the Pi 4 it should read `--mode 2028:1080:12:P`.
+
+
 ## Low‑resolution (lores) stream
 
 ```

@@ -29,14 +29,14 @@ class SensorDetect:
         self.fps_correction_factors = {
             "imx477": 0.9995,
             #"imx585": 0.9980,
-            "imx585_mono": 0.9980,
+            "imx585_mono": 1, # 0.9980,
         }
 
         # Populate camera model and modes on startup
         self.detect_camera_model()
 
     # ────────────────────────────────────────────────────────────────
-    #  1.  Parse *all* cameras and all modes that cinepi-raw reports
+    #  1.  Parse *all* cameras and all modes that cinepi-raw reports    
     # ────────────────────────────────────────────────────────────────
     def _parse_cinepi_output(self, output: str) -> Dict[str, Dict[int, Dict]]:
         """

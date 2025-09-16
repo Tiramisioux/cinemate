@@ -948,12 +948,12 @@ class SimpleGUI(threading.Thread):
         # ─── choose background colour & colour-mode ────────────────────
         prev_bg = self.get_background_color()      # ← fixed () call
         
-        if int(self.redis_controller.get_value(ParameterKey.REC.value)) and self.redis_listener.drop_frame == 1:
-            # at least one camera is actively recording
-            self.current_background_color = "purple"
-            self.color_mode = "inverse"
+        # if int(self.redis_controller.get_value(ParameterKey.REC.value)) and self.redis_listener.drop_frame == 1:
+        #     # at least one camera is actively recording
+        #     self.current_background_color = "purple"
+        #     self.color_mode = "inverse"
 
-        elif int(self.redis_controller.get_value(ParameterKey.REC.value)) == 1:
+        if int(self.redis_controller.get_value(ParameterKey.REC.value)) == 1:
             # at least one camera is actively recording
             self.current_background_color = "red"
             self.color_mode = "inverse"

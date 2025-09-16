@@ -26,6 +26,10 @@ Connect the Pi and the camera sensor board, connect power an boot the Pi. Cinema
 - Connect your phone/tablet to the Wi‑Fi network `CinePi` (password `11111111`).
 Open a browser and go to `cinepi.local:5000` to see the interface. A clean video feed without the GUI is available at `cinepi.local:8000/stream`.
 
+!!! note ""
+     Note that by default, the Cinemate Wi-Fi hotspot is disabled. To enable it, see [this section](settings-json.md).
+
+
 ## Recording
 - Attach a high‑speed drive: an **SSD** (Samsung T7 recommended), an **NVMe drive**, or the **[CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/)**. Make sure storage medoa is formatted as `ext4` and labeled `RAW`.
 

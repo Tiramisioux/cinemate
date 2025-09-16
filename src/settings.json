@@ -8,7 +8,7 @@
     "wifi_hotspot": {
       "name": "CinePi",
       "password": "11111111",
-      "enabled": false
+      "enabled": true
     }
   },
 
@@ -41,7 +41,7 @@
 
   "preview": {
     "default_zoom": 1.0,
-    "zoom_steps":   [1.0, 1.5, 2.0]
+    "zoom_steps":   [1.0, 2.0]
   },
 
   "anamorphic_preview": {
@@ -88,26 +88,20 @@
 
 "buttons": [
     {
-      "pin": 5,
+      "pin": 13,
       "pull_up": true,
       "debounce_time": 0.1,
       "press_action": {"method": "rec"}
     },
     {
-      "pin": 13,
-      "pull_up": false,
+      "pin": 7,
+      "pull_up": true,
       "debounce_time": 0.1,
-      "press_action": {"method": "inc_iso"}
+      "press_action": {"method": "set_zoom"}
     },
     {
       "pin": 10,
-      "pull_up": false,
-      "debounce_time": 0.1,
-      "press_action": {"method": "dec_iso"}
-    },
-    {
-      "pin": 16,
-      "pull_up": "False",
+      "pull_up": true,
       "debounce_time": "0.1",
       "press_action": {"method": "set_fps_double"},
       "single_click_action": "None",
@@ -115,7 +109,7 @@
       "hold_action": "None"
     },
     {
-      "pin": 26,
+      "pin": 27,
       "pull_up": "False",
       "debounce_time": "0.1",
       "press_action": "None",
@@ -128,9 +122,9 @@
 
   "two_way_switches": [
       {
-        "pin": 27,
-        "state_on_action": {"method": "set_all_lock", "args": [1]},
-        "state_off_action": {"method": "set_all_lock", "args": [0]}
+        "pin": 5,
+        "state_on_action": {"method": "set_zoom", "args": [2]},
+        "state_off_action": {"method": "set_zoom", "args": [1]}
       },
     {
       "pin": 22,
@@ -144,41 +138,6 @@
     }
   ],
   
-  "rotary_encoders": [
-    {
-      "clk_pin": 9,
-      "dt_pin": 11,
-      "encoder_actions": {
-        "rotate_clockwise": {"method": "inc_iso", "args": []},
-        "rotate_counterclockwise": {"method": "dec_iso", "args": []}
-      }
-    },
-    {
-      "clk_pin": 23,
-      "dt_pin": 25,
-      "encoder_actions": {
-        "rotate_clockwise": {"method": "inc_shutter_a", "args": []},
-        "rotate_counterclockwise": {"method": "dec_shutter_a", "args": []}
-      }
-    },
-    {
-      "clk_pin": 8,
-      "dt_pin": 7,
-      "encoder_actions": {
-        "rotate_clockwise": {"method": "inc_fps", "args": []},
-        "rotate_counterclockwise": {"method": "dec_fps", "args": []}
-      }
-    },
-    {
-      "clk_pin": 12,
-      "dt_pin": 20,
-      "encoder_actions": {
-        "rotate_clockwise": {"method": "inc_wb", "args": []},
-        "rotate_counterclockwise": {"method": "dec_wb", "args": []}
-      }
-    }
-  ],
-
   "quad_rotary_controller": {
     "enabled": true,
     "encoders": {

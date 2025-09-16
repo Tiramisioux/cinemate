@@ -391,6 +391,9 @@ def main():
 
     logging.info("--- Initialization Complete ---")
     
+    # Mount CFE card if not mounted
+    cinepi_controller.mount()
+    
     # Stop splash screen and clear framebuffer/tty
     if fb_splash:
         fb_splash.show(Image.new("RGB", fb_splash.size, "black"))

@@ -35,6 +35,7 @@ from module.cinepi_multi import CinePiManager as CinePi
 from module.i2c.i2c_oled import I2cOled
 from module.i2c.quad_rotary_controller import QuadRotaryController
 from module.framebuffer import Framebuffer   # the same wrapper SimpleGUI uses
+from module.timekeeper import Timekeeper
 
 # Constants
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
@@ -300,7 +301,7 @@ def main():
     
     # Initialize CinePi application
     cinepi = CinePi(redis_controller, sensor_detect)
-    
+
     cinepi.start_all()
 
     # cinepi.set_log_level('INFO')
@@ -354,6 +355,7 @@ def main():
         i2c_oled = I2cOled(settings, redis_controller)
         i2c_oled.start()
 
+    timekeeper = None
     quad_rotary = None
     qcfg = settings.get("quad_rotary_controller", {})
     if qcfg.get("enabled", False) and qcfg.get("encoders"):
@@ -389,11 +391,14 @@ def main():
         settings["arrays"]["wb_steps"]
     )
 
+    timekeeper = Timekeeper(redis_controller, cinepi_controller)
+    timekeeper.start()
+
     logging.info("--- Initialization Complete ---")
-    
+
     # Mount CFE card if not mounted
     cinepi_controller.mount()
-    
+
     # Stop splash screen and clear framebuffer/tty
     if fb_splash:
         fb_splash.show(Image.new("RGB", fb_splash.size, "black"))
@@ -401,7 +406,7 @@ def main():
         splash_stop.set()
         splash_thread.join()
     clear_screen()
-    
+
     # Ensure system cleanup on exit
     cleanup_called = False
 
@@ -445,6 +450,9 @@ def main():
         elif splash_stop:
             splash_stop.set()
             splash_thread.join()
+
+        if timekeeper:
+            timekeeper.stop()
 
         clear_screen()                     # wipe tty1
         show_cursor()

@@ -331,6 +331,18 @@ def main():
         log_queue=log_queue  # Optional: for future serial logging
     )
     serial_handler.start()
+    
+    def _relay_rec_over_serial(rc, sh, poll=0.05):
+        last = rc.get_value(ParameterKey.IS_RECORDING.value)
+        while True:
+            cur = rc.get_value(ParameterKey.IS_RECORDING.value)
+            if cur != last:
+                sh.write_to_ports("rec" if str(cur) == "1" else "stop")
+                last = cur
+            time.sleep(poll)
+
+    t = threading.Thread(target=_relay_rec_over_serial, args=(redis_controller, serial_handler), daemon=True)
+    t.start()
 
 
     redis_listener = RedisListener(redis_controller, ssd_monitor)
@@ -445,6 +457,10 @@ def main():
         elif splash_stop:
             splash_stop.set()
             splash_thread.join()
+            
+        if timekeeper:
+            timekeeper.stop()
+
 
         clear_screen()                     # wipe tty1
         show_cursor()

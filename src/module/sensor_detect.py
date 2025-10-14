@@ -29,7 +29,7 @@ class SensorDetect:
         self.fps_correction_factors = {
             "imx477": 0.9995,
             #"imx585": 0.9980,
-            "imx585_mono": 1, # 0.9980,
+            "imx585_mono": 0.9993, #1, # 0.9980,
         }
 
         # Populate camera model and modes on startup

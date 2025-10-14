@@ -9,6 +9,7 @@ from typing import List, Optional
 from threading import Event as ThreadEvent
 from typing import List
 import os, signal
+import shutil
 
 from module.config_loader import load_settings
 from module.redis_controller import ParameterKey
@@ -20,6 +21,17 @@ _SETTINGS = load_settings(SETTINGS_FILE)
 
 _READY_RX   = re.compile(r"Encoder configured")      # line printed by DngEncoder
 _READY_WAIT = 2.0                                   # seconds to wait for all cams
+
+def _rt_permitted():
+    if shutil.which("chrt") is None:
+        return False
+    try:
+        # Will only succeed if this user has CAP_SYS_NICE
+        subprocess.run(["chrt", "-f", "70", "/bin/true"],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+        return True
+    except Exception:
+        return False
 
 # ───────────────────────── zoom default ──────────────────────────
 def _seed_default_zoom(redis_ctl):
@@ -155,16 +167,34 @@ class CinePiProcess(Thread):
         out_cfg = _SETTINGS.get('output', {})
         self.output = out_cfg.get(self.cam.port, {})
 
+
     def run(self):
-        cmd = ['cinepi-raw'] + self._build_args()
+        cine_cmd = ['cinepi-raw'] + self._build_args()
+
+        prefix = []
+        if _rt_permitted():
+            # SCHED_FIFO 70 for the whole process (capture threads benefit most)
+            prefix += ["chrt", "-f", "70"]
+        else:
+            logging.warning("[%s] RT scheduling not permitted; running without chrt", self.cam.port)
+
+        # Best-effort I/O (no CAP_SYS_ADMIN needed)
+        if shutil.which("ionice"):
+            prefix += ["ionice", "-c2", "-n0"]
+
+        # Keep the entire process off CPU0; allow 1–3 (GUI/OS left on 0)
+        if shutil.which("taskset"):
+            prefix += ["taskset", "-c", "1-3"]
+
+        cmd = (prefix + cine_cmd) if prefix else cine_cmd
         logging.info('[%s] Launch: %s', self.cam, cmd)
-        self.proc = subprocess.Popen(cmd,
-                                     stdout=subprocess.PIPE, 
-                                     stderr=subprocess.PIPE)
+        self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         Thread(target=self._pump, args=(self.proc.stdout, self.out_q)).start()
         Thread(target=self._pump, args=(self.proc.stderr, self.err_q)).start()
         self.proc.wait()
         logging.info('[%s] exited %s', self.cam, self.proc.returncode)
+
+
         
     def _log(self, text):
         for name, rx in self.log_filters.items():
@@ -320,6 +350,17 @@ class CinePiProcess(Thread):
             args += ['-p', f'{ox},{oy},{pw},{ph}']
         else:
             args += ['--nopreview']
+            
+        # ───── Option A: Stable 24p (3 enc, 1 writer; keep CPU3 mostly free for capture) ─────
+        args += [
+            "--encode-workers",  "4",
+            "--disk-workers",    "2",
+            "--encode-affinity", "1-2",   # encoders on CPUs 1–2
+            "--disk-affinity",   "2",     # writer on CPU 2 (near NVMe IRQs you’ll pin)
+            "--encode-nice",     "-10",
+            "--disk-nice",       "-5",
+        ]
+        
         return args
 
     def stop(self):

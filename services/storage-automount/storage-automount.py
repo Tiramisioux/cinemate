@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Consolidated automounter for Raspberry Pi 5.
-
-Extensive logging version.
+Consolidated, media-aware automounter for Raspberry Pi 5.
+- PCIe (CFE-HAT) NVMe, USB NVMe, USB SSD (and fallback).
+- Per-media mount+I/O tuning, sysctl cushions, watchdogs, RAW arbitration.
 """
 
 import errno
@@ -16,134 +16,352 @@ import threading
 import time
 from pathlib import Path
 
-import pyudev                    # sudo apt install python3-pyudev
+import pyudev  # sudo apt install python3-pyudev
 try:
-    import smbus                 # sudo apt install python3-smbus
-except ImportError:
+    import smbus  # sudo apt install python3-smbus
+except Exception:
     smbus = None
 
-# ---------------------------------------------------------------------------
-# Logging setup
-# ---------------------------------------------------------------------------
-
+# ─────────────────────────────────────────────────────────────────────────────
+# Logging
+# ─────────────────────────────────────────────────────────────────────────────
 LOG_LEVEL = os.getenv("STORAGE_AUTOMOUNT_LOG", "INFO").upper()
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL, logging.INFO),
     format="%(asctime)s [storage-automount] %(levelname)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
-    stream=sys.stderr,            # journald captures stderr into the journal
+    stream=sys.stderr,
 )
 log = logging.getLogger("storage-automount")
 
-# ─── RAW arbitration helpers ───────────────────────────────────────────
-_raw_pool    = []          # list of /dev/… currently present and LABEL==RAW
-_active_raw  = None        # the device node that is mounted at /media/RAW
-_raw_lock    = threading.Lock()   # <── add this line
+# ─────────────────────────────────────────────────────────────────────────────
+# Globals
+# ─────────────────────────────────────────────────────────────────────────────
+PI_UID = int(os.getenv("PI_UID", "1000"))
+PI_GID = int(os.getenv("PI_GID", "1000"))
 
-
-def _register_raw_add(dev: str):
-    if dev not in _raw_pool:
-        _raw_pool.append(dev)
-
-def _register_raw_remove(dev: str):
-    if dev in _raw_pool:
-        _raw_pool.remove(dev)
-
-def _switch_to_raw(dev: str | None):
-    """Mount *dev* (LABEL=RAW) and unmount the previous one."""
-    global _active_raw
-    if dev == _active_raw:
-        return                          # nothing to do
-    if _active_raw is not None:
-        _unmount(_active_raw)
-    if dev is not None:
-        _mount(dev)
-    _active_raw = dev
-
-# ---------------------------------------------------------------------------
-# Constants & helpers
-# ---------------------------------------------------------------------------
-
-PI_UID     = "1000"
-PI_GID     = "1000"
 MOUNT_BASE = Path("/media")
 
-FS_OPTS = {
-    "ext4":  "rw,noatime",
+# Active mounts and kinds (devnode → mountpoint / kind)
+_mounts: dict[str, Path] = {}
+_active_mount_kinds: dict[str, str] = {}
+
+# RAW arbitration
+_raw_pool: list[str] = []     # list of /dev/… that have LABEL==RAW (present)
+_active_raw: str | None = None
+_raw_lock = threading.Lock()
+
+# pyudev context
+_udev_ctx = pyudev.Context()
+
+# Saved sysctl values for restoration
+_sysctl_saved: dict[str, str | None] = {}
+
+# Optional override (debugging): cfe_nvme | usb_nvme | usb_ssd | other
+PROFILE_OVERRIDE = (os.getenv("STORAGE_AUTOMOUNT_PROFILE_OVERRIDE") or "").strip()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Media profiles (mount + kernel/block I/O cushions)
+# ─────────────────────────────────────────────────────────────────────────────
+PROFILES = {
+    "cfe_nvme": {  # PCIe NVMe (CFE-HAT)
+        "ext4_opts": "rw,noatime,nodiratime,commit=60",
+        "dirty_bytes":        1 * 1024**3,      # 1 GiB
+        "dirty_bg_bytes":   256 * 1024**2,      # 256 MiB
+        "rq_affinity": "2",
+        "scheduler":   "none",
+        "nr_requests": "512",
+        "nvme_ps_latency_us": "0",              # prefer lowest latency
+    },
+    "usb_nvme": {  # UAS bridge → NVMe
+        "ext4_opts": "rw,noatime,nodiratime,commit=60",
+        "dirty_bytes":      512 * 1024**2,      # 512 MiB
+        "dirty_bg_bytes":   256 * 1024**2,      # 256 MiB
+        "rq_affinity": "2",
+        "scheduler":   "none",
+        "nr_requests": "256",
+        "nvme_ps_latency_us": "0",
+    },
+    "usb_ssd": {   # UAS/SATA SSD
+        "ext4_opts": "rw,noatime,nodiratime,commit=60",
+        "dirty_bytes":      512 * 1024**2,
+        "dirty_bg_bytes":   256 * 1024**2,
+        "rq_affinity": "2",
+        "scheduler":   "none",
+        "nr_requests": "256",
+    },
+    "other": {     # fallback: safe, not too aggressive
+        "ext4_opts": "rw,noatime",
+        "dirty_bytes":      256 * 1024**2,
+        "dirty_bg_bytes":   128 * 1024**2,
+        "rq_affinity": "1",
+        "scheduler":   "mq-deadline",
+        "nr_requests": "128",
+    },
+}
+
+# Non-ext4 base opts
+FS_OPTS_BASE = {
     "ntfs":  f"uid={PI_UID},gid={PI_GID},rw,noatime,umask=000",
     "exfat": f"uid={PI_UID},gid={PI_GID},rw,noatime",
 }
 
-_udev_ctx = pyudev.Context()
-_mounts   = {}          # devnode -> Path
+# ─────────────────────────────────────────────────────────────────────────────
+# Utilities
+# ─────────────────────────────────────────────────────────────────────────────
+def _read(path: str) -> str | None:
+    try:
+        return Path(path).read_text().strip()
+    except Exception:
+        return None
 
+def _write(path: str, val: str) -> bool:
+    try:
+        Path(path).write_text(str(val))
+        return True
+    except Exception as e:
+        log.debug("write(%s=%s) failed: %s", path, val, e)
+        return False
+
+def _sysctl_get(key: str) -> str | None:
+    return _read(f"/proc/sys/{key.replace('.', '/')}")
+
+def _sysctl_set(key: str, val: str) -> bool:
+    return _write(f"/proc/sys/{key.replace('.', '/')}", val)
 
 def _sanitize(label: str) -> str:
     return re.sub(r"[^\w\-.]", "_", label)[:64] or "RAW"
 
+def _root_block_name(devnode: str) -> str:
+    """nvme0n1p1 → nvme0n1 ; sda1 → sda"""
+    name = Path(devnode).name
+    if name.startswith("nvme") and "p" in name:
+        return name.split("p", 1)[0]
+    return re.sub(r"\d+$", "", name)
 
-def _get_fs(dev: str, retries: int = 3, delay: float = 0.5):
+def _ext4_opts_for(kind: str) -> str:
+    return PROFILES.get(kind, PROFILES["other"])["ext4_opts"]
+
+def _current_mount_opts(mp: Path) -> str:
+    """Return current comma-joined option string for mountpoint (best effort)."""
+    try:
+        with open("/proc/self/mountinfo") as f:
+            for line in f:
+                # fields: ... mountpoint ... - fstype source options
+                if f" {mp} " in line or line.rstrip().endswith(f" {mp}"):
+                    after_dash = line.split(" - ", 1)[1]
+                    # e.g. "ext4 /dev/root rw,noatime"
+                    parts = after_dash.split()
+                    return parts[2] if len(parts) >= 3 else ""
+    except Exception:
+        pass
+    return ""
+
+def _is_dev_mounted(dev: str) -> bool:
+    with open("/proc/self/mountinfo", "r") as f:
+        for line in f:
+            try:
+                after_dash = line.split(" - ", 1)[1]
+                source = after_dash.split()[1]
+                if source == dev:
+                    return True
+            except IndexError:
+                continue
+    return False
+
+def _is_mp_busy(mp: Path) -> bool:
+    try:
+        mp.rmdir()
+        mp.mkdir(parents=True, exist_ok=True)
+        return False
+    except OSError:
+        return True
+
+def _get_fs(dev: str, retries: int = 5, delay: float = 0.5):
     """
-    Return (LABEL, FSTYPE) of *dev*.  Retry a few times because NVMe
-    partitions on the CFE-Hat can need a second or two to become readable.
+    Return (LABEL, FSTYPE). Retries to let udev/blkid settle (CFE NVMe needs a moment).
     """
     for i in range(retries):
         try:
             label = subprocess.check_output(
                 ["blkid", "-s", "LABEL", "-o", "value", dev], text=True
             ).strip()
+        except subprocess.CalledProcessError:
+            label = ""
+        try:
             fstype = subprocess.check_output(
                 ["blkid", "-s", "TYPE", "-o", "value", dev], text=True
             ).strip()
-            if fstype:
-                return label, fstype
         except subprocess.CalledProcessError:
-            pass
-        if i < retries - 1:
-            time.sleep(delay)
+            fstype = ""
+        if fstype:
+            return (label or None), fstype
+        time.sleep(delay)
     log.warning("blkid retries exhausted for %s", dev)
     return None, None
 
-    
-# ---------------------------------------------------------------------------
-# Helpers to detect existing mounts / busy directories
-# ---------------------------------------------------------------------------
+def _classify(devnode: str) -> str:
+    """Return one of: 'cfe_nvme', 'usb_nvme', 'usb_ssd', 'other' (env override wins)."""
+    if PROFILE_OVERRIDE:
+        return PROFILE_OVERRIDE
 
-def _is_dev_mounted(dev: str) -> bool:
-    """
-    Return True if *dev* already shows up in /proc/self/mountinfo.
-
-    We split each line at the first ' - ' (kernel field separator).  The
-    first token after that is the filesystem type, the second is the
-    device node we want to compare with.
-    """
-    with open("/proc/self/mountinfo", "r") as f:
-        for line in f:
-            try:
-                after_dash = line.split(" - ", 1)[1]
-                source = after_dash.split()[1]      # fs-source (device node)
-                if source == dev:
-                    return True
-            except IndexError:
-                continue          # malformed line (should never happen)
-    return False
-
-def _is_mp_busy(mp: Path) -> bool:
-    """Return True if some process still holds the directory open."""
     try:
-        mp.rmdir()                      # succeeds only if not busy / empty
-        mp.mkdir(parents=True, exist_ok=True)
-        return False
-    except OSError:
-        return True
+        u = pyudev.Device.from_device_file(_udev_ctx, devnode)
+    except Exception:
+        return "other"
 
+    if devnode.startswith("/dev/nvme"):
+        for p in u.ancestors:
+            if p.subsystem == "usb":
+                return "usb_nvme"
+        return "cfe_nvme"
+
+    # sdX class
+    for p in u.ancestors:
+        if p.subsystem == "usb":
+            drv = (u.get("ID_USB_DRIVER") or "").lower()
+            # Heuristic: treat UAS storage with NVMe bridges as usb_nvme
+            if drv == "uas":
+                return "usb_nvme"
+            return "usb_ssd"
+    return "other"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Tuning
+# ─────────────────────────────────────────────────────────────────────────────
+def _apply_block_tuning(devnode: str, kind: str):
+    root = _root_block_name(devnode)
+    qpath = f"/sys/block/{root}/queue"
+    prof  = PROFILES.get(kind, PROFILES["other"])
+
+    # I/O scheduler
+    sched = prof.get("scheduler")
+    if sched:
+        _write(f"{qpath}/scheduler", sched)
+
+    # Completion affinity
+    rq = prof.get("rq_affinity")
+    if rq:
+        _write(f"{qpath}/rq_affinity", rq)
+
+    # Queue depth hint
+    nr = prof.get("nr_requests")
+    if nr:
+        _write(f"{qpath}/nr_requests", nr)
+
+def _apply_nvme_power_saver(kind: str):
+    """Lower NVMe APST latency target when writable; otherwise log a hint."""
+    target = "/sys/module/nvme_core/parameters/default_ps_max_latency_us"
+    if not Path(target).exists():
+        target = "/sys/module/nvme/parameters/default_ps_max_latency_us"
+    val = PROFILES.get(kind, PROFILES["other"]).get("nvme_ps_latency_us")
+    if val is None:
+        return
+    if not _write(target, val):
+        log.debug(
+            "NVMe APST knob not writable; consider adding "
+            "nvme_core.default_ps_max_latency_us=%s to /boot/firmware/cmdline.txt",
+            val,
+        )
+
+def _apply_sysctl_profile(kind: str):
+    """Apply dirty_* cushions; save originals on first application."""
+    if not _sysctl_saved:
+        for k in (
+            "vm.dirty_bytes",
+            "vm.dirty_background_bytes",
+            "vm.dirty_writeback_centisecs",
+            "vm.dirty_expire_centisecs",
+            "vm.dirty_ratio",
+            "vm.dirty_background_ratio",
+        ):
+            _sysctl_saved[k] = _sysctl_get(k)
+
+    prof = PROFILES.get(kind, PROFILES["other"])
+    _sysctl_set("vm.dirty_ratio", "0")
+    _sysctl_set("vm.dirty_background_ratio", "0")
+    _sysctl_set("vm.dirty_writeback_centisecs", "150")  # 1.5 s flush cadence
+    _sysctl_set("vm.dirty_expire_centisecs", "3000")    # 30 s max age
+    _sysctl_set("vm.dirty_background_bytes", str(prof["dirty_bg_bytes"]))
+    _sysctl_set("vm.dirty_bytes", str(prof["dirty_bytes"]))
+    log.info(
+        "Applied sysctl cushions for %s: dirty=%s BG=%s",
+        kind,
+        prof["dirty_bytes"],
+        prof["dirty_bg_bytes"],
+    )
+
+def _maybe_restore_sysctls():
+    """Restore saved sysctl values when no active mounts remain."""
+    if _active_mount_kinds:
+        return
+    if not _sysctl_saved:
+        return
+    for k, v in _sysctl_saved.items():
+        if v is not None:
+            _sysctl_set(k, v)
+    log.info("Restored sysctl defaults (no active media)")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RAW arbitration helpers
+# ─────────────────────────────────────────────────────────────────────────────
+def _register_raw_add(dev: str):
+    with _raw_lock:
+        if dev not in _raw_pool:
+            _raw_pool.append(dev)
+
+def _register_raw_remove(dev: str):
+    with _raw_lock:
+        if dev in _raw_pool:
+            _raw_pool.remove(dev)
+
+def _switch_to_raw(dev: str | None):
+    """Mount *dev* (LABEL=RAW) and unmount the previous one."""
+    global _active_raw
+    with _raw_lock:
+        if dev == _active_raw:
+            return
+        if _active_raw is not None:
+            _unmount(_active_raw)
+        if dev is not None:
+            _mount(dev)
+        _active_raw = dev
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stale mountpoint cleanup
+# ─────────────────────────────────────────────────────────────────────────────
+def _purge_stale_mountpoints() -> None:
+    """Ensure stale /media/RAW dirs never block future mounts."""
+    mp = MOUNT_BASE / "RAW"
+    if not mp.exists():
+        return
+    if os.path.ismount(mp):
+        return
+    if not any(mp.iterdir()):
+        try:
+            mp.rmdir()
+            log.info("Removed empty stale mount-point %s", mp)
+        except OSError as exc:
+            log.warning("Unable to remove %s: %s", mp, exc)
+        return
+    ts = time.strftime("%Y%m%d-%H%M%S")
+    new = mp.with_name(f"RAW.STALE-{ts}")
+    try:
+        mp.rename(new)
+        log.warning("%s existed but was not a mount-point → renamed to %s", mp, new)
+    except OSError as exc:
+        log.error("Cannot rename busy directory %s (%s) — aborting start-up", mp, exc)
+        sys.exit(1)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Mount / unmount
+# ─────────────────────────────────────────────────────────────────────────────
 def _auto_repair(dev: str, fstype: str) -> bool:
-    """Try once to repair a dirty filesystem.  Return True if repair *and*
-    subsequent fsck indicate the FS is OK enough to retry the mount."""
+    """Try one non-interactive repair; return True if FS is OK afterward."""
     if fstype == "ext4":
         log.warning("Repairing %s with e2fsck -p", dev)
         res = subprocess.call(["e2fsck", "-f", "-p", dev])
-        ok  = res in (0, 1, 2)          # 0=clean, 1/2=repaired
+        ok = res in (0, 1, 2)
     elif fstype == "ntfs":
         log.warning("Repairing %s with ntfsfix", dev)
         ok = subprocess.call(["ntfsfix", dev]) == 0
@@ -152,182 +370,123 @@ def _auto_repair(dev: str, fstype: str) -> bool:
         ok = subprocess.call(["fsck.exfat", "-a", dev]) == 0
     else:
         ok = False
-
-    if ok:
-        log.info("%s: repair successful", dev)
-    else:
-        log.error("%s: repair failed (filesystem still dirty)", dev)
     return ok
 
-# ────────────────────────────────────────────────────────────────
-# Watchdog that cleans up when the NVMe controller dies
-# ────────────────────────────────────────────────────────────────
-def _dead_nvme_cleanup():
-    """
-    If an NVMe controller reports state=dead, lazily unmount the RAW
-    partition so user-space stops writing to a read-only mount.
-    """
-    for dev, mp in list(_mounts.items()):
-        if not dev.startswith("/dev/nvme"):
-            continue
-
-        # ── translate /dev/nvme0n1p1 → nvme0n1 ───────────────────────────
-        root = Path(dev).name          # nvme0n1p1
-        if "p" in root:
-            root = root.split("p", 1)[0]
-
-        state_file = Path(f"/sys/block/{root}/device/state")
-        if not state_file.exists():        # device already gone → ignore
-            continue
-
-        try:
-            state = state_file.read_text().strip()
-        except OSError:
-            continue                       # transient read error – skip
-
-        if state == "dead":
-            log.warning(
-                "NVMe controller for %s reported state=dead – "
-                "forcing lazy unmount.  "
-                "This usually means a power-dip or cable issue.",
-                dev
-            )
-            _unmount(dev)
-
-# ────────────────────────────────────────────────────────────────
-
-# ---------------------------------------------------------------------------
-# Watchdog thread
-# ---------------------------------------------------------------------------
-def _nvme_watchdog():
-    log.debug("NVMe watchdog thread started")
-    while True:
-        _dead_nvme_cleanup()
-        time.sleep(0.5)
-
-                     # timed-out
-
-# ---------------------------------------------------------------------------
-# Guard against stale /media/RAW directories
-# ---------------------------------------------------------------------------
-def _purge_stale_mountpoints() -> None:
-    """
-    Ensure that an existing /media/RAW directory can never block a future
-    mount attempt.  Empty → delete.  Non-empty → rename to RAW.STALE-YYYYmmdd-HHMMSS.
-    """
-    mp = MOUNT_BASE / "RAW"
-    if not mp.exists():
-        return
-
-    if os.path.ismount(mp):
-        return  # an actual drive is mounted – leave it alone
-
-    if not any(mp.iterdir()):
-        try:
-            mp.rmdir()
-            log.info("Removed empty stale mount-point %s", mp)
-        except OSError as exc:
-            log.warning("Unable to remove %s: %s", mp, exc)
-        return
-
-    ts  = time.strftime("%Y%m%d-%H%M%S")
-    new = mp.with_name(f"RAW.STALE-{ts}")
+def _remount_with_opts(dev: str, mp: Path, opts: str) -> bool:
+    """Try to remount with new options when something else mounted it."""
     try:
-        mp.rename(new)
-        log.warning("%s existed but was not a mount-point → renamed to %s",
-                    mp, new)
-    except OSError as exc:
-        log.error("Cannot rename busy directory %s (%s) — aborting start-up",
-                  mp, exc)
-        sys.exit(1)
-
-
-
-# ---------------------------------------------------------------------------
-# Mount / unmount
-# ---------------------------------------------------------------------------
+        res = subprocess.call(["mount", "-o", f"remount,{opts}", str(mp)])
+        if res == 0:
+            log.info("Remounted %s at %s with opts='%s'", dev, mp, opts)
+            return True
+    except Exception as e:
+        log.debug("remount failed for %s: %s", mp, e)
+    return False
 
 def _mount(dev: str):
     """
-    Mount *dev* under /media/<LABEL> (or a sanitised fall-back name).
-
-    Improvements vs. the original version
-        •  Purges/renames any stale /media/RAW (or other) directory first.
-        •  Cleans stale bookkeeping entries so a manual umount/yank never
-           blocks the next mount.
-        •  Falls straight through if some other process already mounted it.
-        •  Replaces the slow recursive chown with a single os.chown() on
-           the mount-point – fast enough but still guarantees pi can write.
+    Mount *dev* under /media/<LABEL>, apply media-specific tunings, sysctls,
+    and attempt to remount if already mounted with sub-optimal options.
     """
-    # 0 ── one-time sanitation (kills blocking /media/RAW folders) ──────────
     _purge_stale_mountpoints()
 
-    # 1 ── reconcile bookkeeping with reality ──────────────────────────────
+    # Reconcile stale table entries
     mp_prev = _mounts.get(dev)
     if mp_prev and not os.path.ismount(mp_prev):
         log.info("Cleaning up stale mount record for %s", dev)
         _mounts.pop(dev, None)
 
-    if dev in _mounts:                    # already mounted by *us*
+    if dev in _mounts:
         log.debug("%s already mounted by this daemon – skipping", dev)
         return
 
-    if _is_dev_mounted(dev):              # mounted by something else (fstab…)
-        log.debug("%s is already mounted elsewhere – skipping", dev)
-        return
-
-    # 2 ── discover filesystem & label ──────────────────────────────────────
     label, fstype = _get_fs(dev)
     if not fstype:
         log.warning("%s: unknown filesystem – skipping", dev)
         return
 
+    kind = _classify(dev)
     mp = MOUNT_BASE / _sanitize(label or Path(dev).name)
     mp.mkdir(parents=True, exist_ok=True)
 
-    # 3 ── assemble mount command ───────────────────────────────────────────
-    opts = FS_OPTS.get(fstype, "rw,noatime")
-    cmd  = ["mount", "-t", fstype, "-o", opts, dev, str(mp)]
+    if fstype == "ext4":
+        opts = _ext4_opts_for(kind)
+    else:
+        opts = FS_OPTS_BASE.get(fstype, "rw,noatime")
 
-    log.info("Mounting %s (%s) → %s", dev, fstype, mp)
+    # Already mounted elsewhere? Try to tune/remount; otherwise fall through to mount.
+    if _is_dev_mounted(dev):
+        log.debug("%s is already mounted (elsewhere) – checking opts", dev)
+        # Best effort: find mountpoint from /proc/self/mountinfo
+        mpt = None
+        with open("/proc/self/mountinfo") as f:
+            for line in f:
+                if f" - {fstype} {dev} " in line:
+                    mpt = Path(line.split()[4])
+                    break
+        if mpt:
+            current = _current_mount_opts(mpt)
+            if current and current != opts:
+                _remount_with_opts(dev, mpt, opts)
+            _mounts[dev] = mpt
+            _active_mount_kinds[dev] = kind
+            _apply_block_tuning(dev, kind)
+            if dev.startswith("/dev/nvme"):
+                _apply_nvme_power_saver(kind)
+            _apply_sysctl_profile(kind)
+            return
+        else:
+            # Unknown mpt; skip double-mounting
+            log.warning("%s already mounted but mountpoint unknown – skipping", dev)
+            return
+
+    # Normal mount path
+    cmd = ["mount", "-t", fstype, "-o", opts, dev, str(mp)]
+    log.info("Mounting %s (%s, kind=%s) → %s  opts='%s'", dev, fstype, kind, mp, opts)
+
     if subprocess.call(cmd) == 0:
-        # ── success ───────────────────────────────────────────────────────
         _mounts[dev] = mp
+        _active_mount_kinds[dev] = kind
         try:
-            os.chown(mp, int(PI_UID), int(PI_GID))   # fast, non-recursive
+            os.chown(mp, PI_UID, PI_GID)
         except Exception as exc:
             log.debug("Unable to chown %s: %s (continuing)", mp, exc)
+
+        _apply_block_tuning(dev, kind)
+        if dev.startswith("/dev/nvme"):
+            _apply_nvme_power_saver(kind)
+        _apply_sysctl_profile(kind)
+
         log.info("Mounted %s OK", dev)
         return
 
-    # 4 ── first try failed – attempt automatic repair once ────────────────
+    # First attempt failed → auto-repair once
     log.error("Mount failed (%s)", " ".join(cmd))
     if _auto_repair(dev, fstype):
         log.info("%s: repair successful, retrying mount", dev)
         if subprocess.call(cmd) == 0:
             _mounts[dev] = mp
+            _active_mount_kinds[dev] = kind
             try:
-                os.chown(mp, int(PI_UID), int(PI_GID))
+                os.chown(mp, PI_UID, PI_GID)
             except Exception as exc:
                 log.debug("Unable to chown %s after repair: %s", mp, exc)
+            _apply_block_tuning(dev, kind)
+            if dev.startswith("/dev/nvme"):
+                _apply_nvme_power_saver(kind)
+            _apply_sysctl_profile(kind)
             log.info("Mounted %s OK after repair", dev)
             return
 
-    # 5 ── still failing – clean up the empty directory so it won’t block ──
-    log.error("%s: repair attempt did not resolve the problem", dev)
+    # Still failing — clean up empty dir
     try:
-        mp.rmdir()
-    except OSError as exc:
-        log.debug("Mountpoint %s left in place (%s)", mp, exc)
-        
-# ---------------------------------------------------------------------------
-# helper: lazy-umount by mount-point when /dev node is already gone
-# ---------------------------------------------------------------------------
+        if not any(mp.iterdir()):
+            mp.rmdir()
+    except Exception:
+        pass
+    log.error("%s: mount failed; leaving mountpoint in place", dev)
+
 def _lazy_umount_mp(mp: Path, retries: int = 10) -> bool:
-    """
-    Issue “umount -l <mountpoint>” repeatedly until the kernel drops the entry
-    (or until *retries* attempts have been made).  Returns True on success.
-    """
     for _ in range(retries):
         if not os.path.ismount(mp):
             return True
@@ -335,21 +494,15 @@ def _lazy_umount_mp(mp: Path, retries: int = 10) -> bool:
         time.sleep(0.2)
     return False
 
-# ---------------------------------------------------------------------------
-# tiny helper — wait up to `timeout` s until RAW is mounted
-# ---------------------------------------------------------------------------
 def _wait_for_raw_mount(timeout: float = 8.0) -> bool:
     mp = MOUNT_BASE / "RAW"
     t0 = time.time()
     while time.time() - t0 < timeout:
         if os.path.ismount(mp):
-            return True                 # success
+            return True
         time.sleep(0.2)
-    return False   
+    return False
 
-# ---------------------------------------------------------------------------
-# wait until /media/RAW is **not** a mount-point
-# ---------------------------------------------------------------------------
 def _wait_for_raw_unmount(timeout: float = 3.0) -> bool:
     mp = MOUNT_BASE / "RAW"
     t0 = time.time()
@@ -360,28 +513,24 @@ def _wait_for_raw_unmount(timeout: float = 3.0) -> bool:
     return False
 
 def _unmount(dev: str):
-    
     if dev not in _mounts:
-        return          # already cleaned up – no need to log again
+        return
 
     mp = _mounts.pop(dev, None)
+    _active_mount_kinds.pop(dev, None)
+
     if not mp:
-        log.debug("Unmount requested for %s but not tracked", dev)
         return
 
     log.info("Unmounting %s from %s", dev, mp)
-
-    # first try the normal way (might fail if /dev vanished)
     res = subprocess.call(["umount", dev])
-
-    if res != 0:                      # e.g. ENOENT or EBUSY
-        log.warning("umount %s failed (exit=%d) – retrying lazy by mount-point",
-                    dev, res)
+    if res != 0:
+        log.warning("umount %s failed (exit=%d) – retrying lazy by mount-point", dev, res)
         if not _lazy_umount_mp(mp):
             log.error("Lazy umount also failed, mount is still busy")
-            return                    # give up, keep it in _mounts
+            _mounts[dev] = mp  # keep it tracked
+            return
 
-    # success – tidy up
     if not _is_mp_busy(mp):
         try:
             mp.rmdir()
@@ -389,60 +538,126 @@ def _unmount(dev: str):
             pass
     log.info("Unmounted %s OK", dev)
 
-# ---------------------------------------------------------------------------
-# helper: fast lazy-unmount of a RAW partition
-# ---------------------------------------------------------------------------
+    if not _active_mount_kinds:
+        _maybe_restore_sysctls()
+
 def _force_lazy_unmount(dev: str, retries: int = 20) -> bool:
-    """
-    Immediately detach *dev* with  “umount -l <mountpoint>”.
-    Poll up to `retries`×0.1 s until the kernel drops the entry.
-    Returns True when the mount is gone.
-    """
     mp = _mounts.get(dev)
     if mp is None:
-        return False                            # nothing to do
-
-    # one non-blocking lazy-umount
+        return False
     subprocess.call(["umount", "-l", str(mp)],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL)
-
-    for _ in range(retries):                    # ≤ 2 s total
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    for _ in range(retries):
         if not os.path.ismount(mp):
-            _mounts.pop(dev, None)              # tidy table
+            _mounts.pop(dev, None)
+            _active_mount_kinds.pop(dev, None)
             try:
                 if not _is_mp_busy(mp):
                     mp.rmdir()
             except OSError:
                 pass
+            if not _active_mount_kinds:
+                _maybe_restore_sysctls()
             return True
         time.sleep(0.1)
-
     log.warning("Lazy unmount timeout for %s", dev)
     return False
 
-# ---------------------------------------------------------------------------
-# udev monitoring thread
-# ---------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
+# Watchdogs
+# ─────────────────────────────────────────────────────────────────────────────
+def _dead_nvme_cleanup():
+    """If NVMe controller is 'dead', lazily unmount RAW to stop writes."""
+    for dev, mp in list(_mounts.items()):
+        if not dev.startswith("/dev/nvme"):
+            continue
+        root = _root_block_name(dev)
+        state_file = Path(f"/sys/block/{root}/device/state")
+        if not state_file.exists():
+            continue
+        try:
+            state = state_file.read_text().strip()
+        except OSError:
+            continue
+        if state == "dead":
+            log.warning("NVMe controller for %s reported state=dead – lazy unmount", dev)
+            _unmount(dev)
 
+def _nvme_watchdog():
+    log.debug("NVMe watchdog thread started")
+    while True:
+        _dead_nvme_cleanup()
+        time.sleep(0.5)
+
+def _sanity_watchdog():
+    """
+    Every 3 s:
+      • reconcile _mounts with /proc/self/mountinfo
+      • statvfs() each mount; on EIO/ENOENT assume yank and lazy-unmount
+      • auto-recover: ensure RAW arbitration still holds (if multiple RAW present)
+    """
+    while True:
+        # Reconcile table with reality
+        real_sources = {line.split(" - ", 1)[1].split()[1] for line in open("/proc/self/mountinfo")}
+        for dev in list(_mounts):
+            if dev not in real_sources:
+                log.debug("Watchdog: %s vanished from mountinfo, cleaning up", dev)
+                _mounts.pop(dev, None)
+                _active_mount_kinds.pop(dev, None)
+        # Yank detection
+        for dev, mp in list(_mounts.items()):
+            try:
+                os.statvfs(mp)
+            except OSError as exc:
+                if exc.errno in (errno.EIO, errno.ENOENT):
+                    log.warning("Watchdog: I/O error on %s (%s) – assuming yank, lazy-unmounting",
+                                dev, os.strerror(exc.errno))
+                    _force_lazy_unmount(dev)
+
+        # RAW arbitration self-heal (if multiple RAW present, pick the last seen)
+        with _raw_lock:
+            if len(_raw_pool) > 1:
+                preferred = _raw_pool[-1]
+                if preferred != _active_raw:
+                    _switch_to_raw(preferred)
+
+        time.sleep(3)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# udev worker
+# ─────────────────────────────────────────────────────────────────────────────
 def _udev_worker():
     """
-    Handle all block-layer udev events, not just partitions.
-
-    •  add/partition   → normal _mount() or RAW arbitration
-    •  remove/partition→ _unmount() (current logic)
-    •  remove/disk     → unmount every partition that belongs to the disk,
-                         then run RAW arbitration fallback.
+    Handle block-layer udev events (disk + partitions).
+      • add/change partition → normal _mount() or RAW arbitration
+      • remove partition     → _unmount(), RAW fallback
+      • remove disk          → unmount all partitions under it, RAW fallback
     """
     monitor = pyudev.Monitor.from_netlink(_udev_ctx)
     monitor.filter_by(subsystem="block")
     log.debug("udev worker started")
 
-    for action, device in monitor:
-        devnode = device.device_node           # e.g. /dev/nvme0n1p1
-        dtype   = device.get("DEVTYPE")        # "disk" or "partition"
+    # pyudev yields Device objects; some versions yield (action, device).
+    # Normalize to (action, device).
+    def _iter_events():
+        for evt in monitor:
+            try:
+                action = evt.action
+                yield (action, evt)
+            except AttributeError:
+                # Older style: (action, device)
+                try:
+                    action, dev = evt
+                    yield (action, dev)
+                except Exception:
+                    continue
 
-        # ---------- device appeared / became ready --------------------
+    for action, device in _iter_events():
+        devnode = device.device_node
+        dtype   = device.get("DEVTYPE")  # "disk" or "partition"
+        if not devnode:
+            continue
+
         if action in ("add", "change") and dtype == "partition":
             label, _ = _get_fs(devnode)
             if label == "RAW":
@@ -452,36 +667,30 @@ def _udev_worker():
                 _mount(devnode)
             continue
 
-
-        # ---------- partition vanished ------------------------------
         if action == "remove" and dtype == "partition":
             _register_raw_remove(devnode)
             _unmount(devnode)
-
-            if devnode == _active_raw:
-                fallback = _raw_pool[-1] if _raw_pool else None
-                _switch_to_raw(fallback)
+            with _raw_lock:
+                if devnode == _active_raw:
+                    fallback = _raw_pool[-1] if _raw_pool else None
+                    _switch_to_raw(fallback)
             continue
 
-        # ---------- whole disk vanished -----------------------------
         if action == "remove" and dtype == "disk":
-            # unmount **every** partition we still track on that disk
             victims = [d for d in list(_mounts) if d.startswith(devnode)]
             for part in victims:
                 _register_raw_remove(part)
                 _unmount(part)
+            with _raw_lock:
+                if _active_raw and _active_raw.startswith(devnode):
+                    fallback = _raw_pool[-1] if _raw_pool else None
+                    _switch_to_raw(fallback)
 
-            if devnode in (_active_raw or ""):
-                fallback = _raw_pool[-1] if _raw_pool else None
-                _switch_to_raw(fallback)
-
-
-# ---------------------------------------------------------------------------
-# CFE-HAT worker  (robust edge-detector + thread-safe updates)
-# ---------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
+# CFE-HAT worker (insert/eject edge + LED + PCIe bind/unbind)
+# ─────────────────────────────────────────────────────────────────────────────
 def _cfe_hat_worker():
-    global _active_raw            # ★ declare once at function top
-
+    global _active_raw
     if smbus is None:
         log.debug("No smbus module, CFE-HAT thread disabled")
         return
@@ -489,21 +698,12 @@ def _cfe_hat_worker():
     I2C_CH, I2C_ADDR = 1, 0x34
     try:
         bus = smbus.SMBus(I2C_CH)
-        bus.read_byte(I2C_ADDR)                # probe once
+        bus.read_byte(I2C_ADDR)
     except OSError:
         log.info("CFE-HAT not detected on I²C, skipping thread")
         return
 
-    led_on     = False
-    last_state = 0x00
-    try:
-        last_state = bus.read_byte(I2C_ADDR)   # current idle byte
-    except OSError:
-        pass
-
-    log.info("CFE-HAT thread started — idle byte 0x%02X", last_state)
-
-    # ── small helpers ──────────────────────────────────────────────────
+    led_on = False
     def _set_led(state: bool):
         nonlocal led_on
         if state == led_on:
@@ -511,25 +711,29 @@ def _cfe_hat_worker():
         led_on = state
         try:
             bus.write_byte(I2C_ADDR, 0x01 if state else 0x00)
-            log.debug("LED %s", "ON" if state else "OFF")
         except OSError as e:
-            log.warning("CFE-HAT LED write error: %s", e)
+            log.debug("CFE-HAT LED write error: %s", e)
 
-    def _pcie_bind(bind: bool):
+    def _pcie(bind: bool):
         path, node = "/sys/bus/platform/drivers/brcm-pcie", "1000110000.pcie"
         target = "bind" if bind else "unbind"
         try:
             with open(f"{path}/{target}", "w") as f:
                 f.write(node)
-            log.debug("PCIe %s OK", target)
         except OSError as e:
             if e.errno != errno.EBUSY:
-                log.warning("PCIe %s error: %s", target, e)
+                log.debug("PCIe %s error: %s", target, e)
         if bind:
             time.sleep(0.5)
             subprocess.call(["sh", "-c", "echo 1 > /sys/bus/pci/rescan"])
 
-    # ── polling loop (≈20 Hz) ─────────────────────────────────────────
+    last_state = 0x00
+    try:
+        last_state = bus.read_byte(I2C_ADDR)
+    except OSError:
+        pass
+    log.info("CFE-HAT thread started — idle byte 0x%02X", last_state)
+
     while True:
         try:
             raw = bus.read_byte(I2C_ADDR)
@@ -538,138 +742,93 @@ def _cfe_hat_worker():
             time.sleep(0.1)
             continue
 
-        # bit0 = insert / latch, bit1 = eject
-        ins_now  =  raw        & 1
-        ej_now   = (raw >> 1)  & 1
+        ins_now  =  raw        & 1    # bit0
+        ej_now   = (raw >> 1)  & 1    # bit1
         ins_prev =  last_state & 1
         ej_prev  = (last_state >> 1) & 1
         last_state = raw
 
-        # ──────────────────────────────────────────────────────────────
-        # INSERT DOWN  → latch opened  (yank about to happen)
-        # ──────────────────────────────────────────────────────────────
-
+        # INSERT pressed (latch open) — pre-emptive unmount & power-down
         if ins_prev == 0 and ins_now == 1:
-            log.debug("Insert pressed (latch open) – pre-emptive unmount")
+            log.debug("Insert pressed: pre-emptive unmount of NVMe")
             any_unmounted = False
-
             for dev in list(_mounts):
                 if dev.startswith("/dev/nvme"):
                     if _force_lazy_unmount(dev):
                         any_unmounted = True
-                        log.info("Pre-emptive unmount of %s OK", dev)   # NEW
                         with _raw_lock:
                             _register_raw_remove(dev)
                             if dev == _active_raw:
                                 _active_raw = None
-
             if any_unmounted:
                 _wait_for_raw_unmount()
-                _pcie_bind(False)          # NEW – power down slot
+                _pcie(False)
                 _set_led(False)
-
             _purge_stale_mountpoints()
 
-        # ──────────────────────────────────────────────────────────────
-        # INSERT UP  → power up + wait for mount
-        # ──────────────────────────────────────────────────────────────
+        # INSERT released — power back up and wait for mount
         if ins_prev == 1 and ins_now == 0:
-            log.info("Insert released → powering up and waiting for udev mount")
-            _pcie_bind(True)
+            log.info("Insert released → power up PCIe and wait for mount")
+            _pcie(True)
             _set_led(True)
-
             if _wait_for_raw_mount(timeout=20.0):
                 log.info("Insert: mount succeeded ✓")
             else:
-                log.warning("Insert: mount FAILED (timeout) – check NVMe, cable, power")
+                log.warning("Insert: mount FAILED (timeout)")
                 _set_led(False)
 
-        # ──────────────────────────────────────────────────────────────
-        # EJECT DOWN  → just debounce log
-        # ──────────────────────────────────────────────────────────────
-        if ej_prev == 0 and ej_now == 1:
-            log.debug("Eject pressed (bit1 went 0→1)")
-
-        # ──────────────────────────────────────────────────────────────
-        # EJECT UP  → unmount everything, power down
-        # ──────────────────────────────────────────────────────────────
+        # EJECT released — unmount everything, power down
         if ej_prev == 1 and ej_now == 0:
-            log.info("Eject released → attempting unmount")
+            log.info("Eject released → lazy unmount all")
             any_unmounted = False
             for d in list(_mounts):
                 if _force_lazy_unmount(d):
                     any_unmounted = True
-                    # ★ cleanup arbitration table safely
                     with _raw_lock:
                         _register_raw_remove(d)
                         if d == _active_raw:
                             _active_raw = None
-
             if any_unmounted:
                 if _wait_for_raw_unmount():
                     log.info("Eject: unmount succeeded ✓")
                 else:
-                    log.warning("Eject: unmount timed-out (busy) ✗")
-                _pcie_bind(False)
+                    log.warning("Eject: unmount timed-out")
+                _pcie(False)
                 _set_led(False)
             else:
-                log.warning("Eject: no RAW partition was mounted")
+                log.warning("Eject: no partitions were mounted")
 
-        time.sleep(0.05)          # ~20 Hz
+        time.sleep(0.05)
 
-
+# ─────────────────────────────────────────────────────────────────────────────
+# Initial scan + auto-mount
+# ─────────────────────────────────────────────────────────────────────────────
 def _initial_scan():
     _purge_stale_mountpoints()
     log.debug("Initial device scan")
 
-    # Build an ordered list: first non-RAW, then RAW (so arbitration wins)
     raws, others = [], []
     for dev in _udev_ctx.list_devices(subsystem="block", DEVTYPE="partition"):
-        label, _ = _get_fs(dev.device_node)
-        (raws if label == "RAW" else others).append(dev.device_node)
+        devnode = dev.device_node
+        if not devnode:
+            continue
+        label, _fst = _get_fs(devnode)
+        (raws if label == "RAW" else others).append(devnode)
 
-    for dev in others + raws[:1]:      # at most one RAW
-        _mount(dev)
-        if label == "RAW":
-            _register_raw_add(dev)
-            _active_raw = dev
+    # Mount non-RAW first
+    for devnode in others:
+        _mount(devnode)
 
+    # Then arbitrate one RAW
+    if raws:
+        # take the latest raw by path sort (heuristic); _switch_to_raw will unmount previous
+        devnode = sorted(raws)[-1]
+        _register_raw_add(devnode)
+        _switch_to_raw(devnode)
 
-def _sanity_watchdog():
-    """
-    Every 3 s
-        • reconcile _mounts with /proc/self/mountinfo (as before)
-        • probe every mount with statvfs()
-              ↳ on EIO/ENOENT we assume the medium was yanked and lazily
-                un-mount it.
-    """
-    while True:
-        # ── 1. normal bookkeeping cleanup ───────────────────────────────
-        real = {line.split()[9] for line in open("/proc/self/mountinfo")}
-        for dev in list(_mounts):
-            if dev not in real:
-                log.debug("Watchdog: %s vanished, cleaning up", dev)
-                _mounts.pop(dev)
-
-        # ── 2. yank detection via I/O error ─────────────────────────────
-        for dev, mp in list(_mounts.items()):
-            try:
-                os.statvfs(mp)                      # cheap, cached in VFS
-            except OSError as exc:
-                if exc.errno in (errno.EIO, errno.ENOENT):
-                    log.warning(
-                        "Watchdog: I/O error on %s (%s) – assuming yank, "
-                        "lazy-unmounting", dev, os.strerror(exc.errno)
-                    )
-                    _force_lazy_unmount(dev)
-
-        time.sleep(3)
-
-
-# ---------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
 # Main
-# ---------------------------------------------------------------------------
-
+# ─────────────────────────────────────────────────────────────────────────────
 def main():
     def _sigterm(_sig, _frm):
         log.info("SIGTERM received, unmounting everything")
@@ -681,17 +840,14 @@ def main():
 
     _initial_scan()
 
-    threading.Thread(target=_udev_worker,   daemon=True).start()
-    threading.Thread(target=_cfe_hat_worker, daemon=True).start()
+    threading.Thread(target=_udev_worker,     daemon=True).start()
+    threading.Thread(target=_cfe_hat_worker,  daemon=True).start()
     threading.Thread(target=_nvme_watchdog,   daemon=True).start()
     threading.Thread(target=_sanity_watchdog, daemon=True).start()
-   
 
     log.info("storage-automount started (log level %s)", LOG_LEVEL)
     while True:
         time.sleep(60)
-
-# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     main()

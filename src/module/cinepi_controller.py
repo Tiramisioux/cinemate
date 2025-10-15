@@ -505,6 +505,11 @@ class CinePiController:
     def start_recording(self):
         self.redis_controller.set_value(ParameterKey.MEMORY_ALERT.value, 0)
         if self.ssd_monitor.is_mounted == True and self.ssd_monitor.get_space_left:
+            try:
+                probe_speed = self.ssd_monitor.run_probe()
+                logging.info("Pre-record media probe %.1f MB/s", probe_speed)
+            except Exception as exc:
+                logging.warning("Media probe failed: %s", exc)
             self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 1)
             logging.info(f"Started recording")
         else:

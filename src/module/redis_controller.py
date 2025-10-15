@@ -38,7 +38,11 @@ class ParameterKey(Enum):
     IS_RECORDING      = "is_recording"
     IS_WRITING        = "is_writing"
     IS_WRITING_BUF    = "is_writing_buf"
-    
+    ENCODER_READY     = "encoder_ready"
+    WRITER_READY      = "writer_ready"
+    FIRST_DNG_WRITTEN = "first_dng_written"
+    CADENCE_ACTIVE    = "cadence_active"
+
     TC_CAM0           = "tc_cam0"
     TC_CAM1           = "tc_cam1"
     
@@ -68,6 +72,8 @@ class ParameterKey(Enum):
     
     ZOOM                = "zoom"  # digital zoom factor for streams 0 & 2
     WRITE_SPEED_TO_DRIVE = "write_speed_to_drive"
+    STORAGE_PROBE_MBPS   = "storage_probe_mbps"
+    STORAGE_PROBE_WARN   = "storage_probe_warn"
     RECORDING_TIME         = "recording_time"      # elapsed-time in seconds   
     RECORDING_TC_REC     = "recording_tc_rec"    # elapsed-time time-code
     RECORDING_TC_TOD   = "recording_time_tod"    # time-of-day time-code

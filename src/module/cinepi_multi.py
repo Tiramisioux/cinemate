@@ -10,6 +10,7 @@ from threading import Event as ThreadEvent
 from typing import List
 import os, signal
 import shutil
+from pathlib import Path
 
 from module.config_loader import load_settings
 from module.redis_controller import ParameterKey
@@ -137,6 +138,7 @@ class CinePiProcess(Thread):
         cam: CameraInfo,
         primary: bool,
         multi: bool,
+        output_root: Path,
     ):
         super().__init__(daemon=True)
         self.redis_controller = redis_controller
@@ -144,6 +146,7 @@ class CinePiProcess(Thread):
         self.cam = cam
         self.primary = primary
         self.multi = multi
+        self.output_root = output_root
         self.proc: Optional[subprocess.Popen] = None
         self.message = Event()
         self.out_q, self.err_q = Queue(), Queue()
@@ -182,9 +185,9 @@ class CinePiProcess(Thread):
         if shutil.which("ionice"):
             prefix += ["ionice", "-c2", "-n0"]
 
-        # Keep the entire process off CPU0; allow 1–3 (GUI/OS left on 0)
+        # Pin capture stack to the first 4 cores so encoder threads stay hot
         if shutil.which("taskset"):
-            prefix += ["taskset", "-c", "1-3"]
+            prefix += ["taskset", "-c", "0-3"]
 
         cmd = (prefix + cine_cmd) if prefix else cine_cmd
         logging.info('[%s] Launch: %s', self.cam, cmd)
@@ -211,6 +214,11 @@ class CinePiProcess(Thread):
     def _pump(self, pipe, q):
         dng_rx    = re.compile(r'DNG written:\s*(\S+\.dng)')
         redis_key = f'last_dng_{self.cam.port}'   # cam0 → last_dng_cam0 …
+        phase_markers = {
+            "ENCODER_READY": ParameterKey.ENCODER_READY,
+            "WRITER_READY": ParameterKey.WRITER_READY,
+            "FIRST_DNG_WRITTEN": ParameterKey.FIRST_DNG_WRITTEN,
+        }
 
         for raw in iter(pipe.readline, b''):
             # 1. canonicalise ---------------------------------------------------
@@ -220,6 +228,18 @@ class CinePiProcess(Thread):
             q.put(line)
             self.message.emit(line)
             self._log(line)
+
+            for marker, param in phase_markers.items():
+                if marker in line:
+                    payload = line.split(marker, 1)[1].strip()
+                    stamp = payload or f"{time.time():.3f}"
+                    value = f"{self.cam.port}:{stamp}"
+                    try:
+                        self.redis_controller.set_value(param.value, value)
+                    except Exception as exc:
+                        logging.debug('[%s] Failed to update %s: %s', self.cam.port, param.value, exc)
+                    # Break so a single line cannot satisfy multiple markers
+                    break
 
             # 3. special-case the new encoder message --------------------------
             m = dng_rx.search(line)
@@ -359,8 +379,11 @@ class CinePiProcess(Thread):
             "--disk-affinity",   "2",     # writer on CPU 2 (near NVMe IRQs you’ll pin)
             "--encode-nice",     "-10",
             "--disk-nice",       "-5",
+            "--ignore-start-frames", "12",
+            "--preroll-ms", "300",
+            "--output-dir", str(self.output_root),
         ]
-        
+
         return args
 
     def stop(self):
@@ -384,6 +407,9 @@ class CinePiManager:
         self.sensor_detect    = sensor_detect
         self.processes: List[CinePiProcess] = []
         self.message = Event()                        # fan-out for log relay
+        self.output_root = Path(
+            os.getenv("CINEMATE_OUTPUT_ROOT", "/media/RAW/cinemate")
+        )
 
     # ───────────────────────── public api ──────────────────────────
     start_cinepi_process = lambda self: self.start_all()
@@ -431,6 +457,19 @@ class CinePiManager:
             return
         
         self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)  # reset recording flag
+
+        for key in (
+            ParameterKey.ENCODER_READY,
+            ParameterKey.WRITER_READY,
+            ParameterKey.FIRST_DNG_WRITTEN,
+            ParameterKey.CADENCE_ACTIVE,
+        ):
+            self.redis_controller.set_value(key.value, "0")
+
+        try:
+            self.output_root.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            logging.warning("Unable to pre-create output root %s: %s", self.output_root, exc)
         
         if self.redis_controller.get_value(ParameterKey.FPS) is not None:
             self.redis_controller.set_value(ParameterKey.FPS.value, self.redis_controller.get_value(ParameterKey.FPS))          # reset FPS
@@ -462,6 +501,7 @@ class CinePiManager:
                 cam,
                 primary=(i == 0),
                 multi=multi,
+                output_root=self.output_root,
             )
             proc.message.subscribe(self.message.emit)
             proc.start()
@@ -526,6 +566,13 @@ class CinePiManager:
         for p in self.processes:
             p.join()
         self.processes.clear()
+
+        for key in (
+            ParameterKey.ENCODER_READY,
+            ParameterKey.WRITER_READY,
+            ParameterKey.CADENCE_ACTIVE,
+        ):
+            self.redis_controller.set_value(key.value, "0")
         
         # ── tidy up “ready” flags ──────────────────────────────────
         raw_keys = self.redis_controller.r.keys("cinepi_ready_*")   # list[bytes]

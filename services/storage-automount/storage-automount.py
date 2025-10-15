@@ -5,6 +5,7 @@ Consolidated, media-aware automounter for Raspberry Pi 5.
 - Per-media mount+I/O tuning, sysctl cushions, watchdogs, RAW arbitration.
 """
 
+import contextlib
 import errno
 import logging
 import os
@@ -51,6 +52,10 @@ _raw_pool: list[str] = []     # list of /dev/… that have LABEL==RAW (present)
 _active_raw: str | None = None
 _raw_lock = threading.Lock()
 
+# Warm-up bookkeeping (devnode → mount-token)
+_warmup_tokens: dict[str, str] = {}
+_warmup_lock = threading.Lock()
+
 # pyudev context
 _udev_ctx = pyudev.Context()
 
@@ -76,7 +81,7 @@ PROFILES = {
     "usb_nvme": {  # UAS bridge → NVMe
         "ext4_opts": "rw,noatime,nodiratime,commit=60",
         "dirty_bytes":      512 * 1024**2,      # 512 MiB
-        "dirty_bg_bytes":   256 * 1024**2,      # 256 MiB
+        "dirty_bg_bytes":   128 * 1024**2,      # 128 MiB
         "rq_affinity": "2",
         "scheduler":   "none",
         "nr_requests": "256",
@@ -85,7 +90,7 @@ PROFILES = {
     "usb_ssd": {   # UAS/SATA SSD
         "ext4_opts": "rw,noatime,nodiratime,commit=60",
         "dirty_bytes":      512 * 1024**2,
-        "dirty_bg_bytes":   256 * 1024**2,
+        "dirty_bg_bytes":   128 * 1024**2,
         "rq_affinity": "2",
         "scheduler":   "none",
         "nr_requests": "256",
@@ -138,6 +143,37 @@ def _root_block_name(devnode: str) -> str:
     if name.startswith("nvme") and "p" in name:
         return name.split("p", 1)[0]
     return re.sub(r"\d+$", "", name)
+
+def _decode_mount_field(field: str) -> str:
+    """Translate mountinfo escape sequences (\040, \011, …) into real chars."""
+    try:
+        return field.encode("utf-8").decode("unicode_escape")
+    except Exception:
+        return field
+
+def _mount_token(mp: Path) -> str | None:
+    """Return a stable token for this mount (ID:major:minor) from mountinfo."""
+    mp_str = str(mp)
+    try:
+        with open("/proc/self/mountinfo", "r") as fh:
+            for line in fh:
+                try:
+                    left, _ = line.split(" - ", 1)
+                except ValueError:
+                    continue
+                parts = left.split()
+                if len(parts) < 5:
+                    continue
+                mount_point = _decode_mount_field(parts[4])
+                if mount_point == mp_str:
+                    mount_id = parts[0]
+                    majmin = parts[2]
+                    return f"{mount_id}:{majmin}"
+    except FileNotFoundError:
+        pass
+    except Exception as exc:
+        log.debug("mountinfo lookup failed for %s: %s", mp, exc)
+    return None
 
 def _ext4_opts_for(kind: str) -> str:
     return PROFILES.get(kind, PROFILES["other"])["ext4_opts"]
@@ -302,6 +338,87 @@ def _maybe_restore_sysctls():
             _sysctl_set(k, v)
     log.info("Restored sysctl defaults (no active media)")
 
+def _maybe_warmup(dev: str, mp: Path, kind: str) -> None:
+    """Run a one-shot sequential write to warm caches for fast first takes."""
+    if kind not in ("cfe_nvme", "usb_nvme", "usb_ssd"):
+        return
+    if not mp.is_dir():
+        return
+
+    try:
+        fallback = os.stat(mp).st_dev
+    except OSError:
+        fallback = 0
+    token = _mount_token(mp) or f"legacy:{fallback}"
+
+    with _warmup_lock:
+        prev = _warmup_tokens.get(dev)
+        if prev in (token, "<in-progress>"):
+            return
+        _warmup_tokens[dev] = "<in-progress>"
+
+    warm_bytes = 256 * 1024**2 if kind == "cfe_nvme" else 128 * 1024**2
+    chunk_size = 4 * 1024**2
+    zeros = b"\x00" * chunk_size
+    warm_path = mp / ".warmup"
+    stamp_path = mp / ".warmup.stamp"
+
+    success = False
+    start = time.perf_counter()
+    try:
+        try:
+            st = os.statvfs(mp)
+        except OSError as exc:
+            log.debug("statvfs(%s) failed, skipping warm-up: %s", mp, exc)
+            return
+
+        avail = st.f_frsize * st.f_bavail
+        if avail < warm_bytes * 2:
+            log.info(
+                "Skipping warm-up on %s: only %.1f MiB free (need ≥ %.1f MiB)",
+                mp,
+                avail / 1024**2,
+                (warm_bytes * 2) / 1024**2,
+            )
+            return
+
+        warm_path.parent.mkdir(parents=True, exist_ok=True)
+        written = 0
+        with open(warm_path, "wb", buffering=0) as fh:
+            remaining = warm_bytes
+            while remaining > 0:
+                chunk = zeros if remaining >= chunk_size else zeros[:remaining]
+                fh.write(chunk)
+                written += len(chunk)
+                remaining -= len(chunk)
+            fh.flush()
+            os.fsync(fh.fileno())
+        elapsed = max(time.perf_counter() - start, 1e-6)
+        mb = written / 1024**2
+        rate = mb / elapsed
+        log.info(
+            "Warm-up wrote %.0f MiB to %s in %.2fs (%.0f MB/s)",
+            mb,
+            mp,
+            elapsed,
+            rate,
+        )
+        try:
+            stamp_path.write_text(f"{time.time():.3f} {token}\n")
+        except Exception:
+            pass
+        success = True
+    except Exception as exc:
+        log.warning("Warm-up write on %s failed: %s", mp, exc)
+    finally:
+        with contextlib.suppress(FileNotFoundError):
+            warm_path.unlink()
+        with _warmup_lock:
+            if success:
+                _warmup_tokens[dev] = token
+            else:
+                _warmup_tokens.pop(dev, None)
+
 # ─────────────────────────────────────────────────────────────────────────────
 # RAW arbitration helpers
 # ─────────────────────────────────────────────────────────────────────────────
@@ -434,6 +551,7 @@ def _mount(dev: str):
             if dev.startswith("/dev/nvme"):
                 _apply_nvme_power_saver(kind)
             _apply_sysctl_profile(kind)
+            _maybe_warmup(dev, mpt, kind)
             return
         else:
             # Unknown mpt; skip double-mounting
@@ -456,6 +574,7 @@ def _mount(dev: str):
         if dev.startswith("/dev/nvme"):
             _apply_nvme_power_saver(kind)
         _apply_sysctl_profile(kind)
+        _maybe_warmup(dev, mp, kind)
 
         log.info("Mounted %s OK", dev)
         return
@@ -475,6 +594,7 @@ def _mount(dev: str):
             if dev.startswith("/dev/nvme"):
                 _apply_nvme_power_saver(kind)
             _apply_sysctl_profile(kind)
+            _maybe_warmup(dev, mp, kind)
             log.info("Mounted %s OK after repair", dev)
             return
 
@@ -518,6 +638,8 @@ def _unmount(dev: str):
 
     mp = _mounts.pop(dev, None)
     _active_mount_kinds.pop(dev, None)
+    with _warmup_lock:
+        _warmup_tokens.pop(dev, None)
 
     if not mp:
         return
@@ -551,6 +673,8 @@ def _force_lazy_unmount(dev: str, retries: int = 20) -> bool:
         if not os.path.ismount(mp):
             _mounts.pop(dev, None)
             _active_mount_kinds.pop(dev, None)
+            with _warmup_lock:
+                _warmup_tokens.pop(dev, None)
             try:
                 if not _is_mp_busy(mp):
                     mp.rmdir()

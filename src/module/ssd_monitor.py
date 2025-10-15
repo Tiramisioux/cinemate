@@ -9,6 +9,7 @@ from typing import Optional, Tuple, List
 import datetime
 import re
 import errno
+import contextlib
 
 try:
     from systemd import journal            # python3-systemd package
@@ -213,6 +214,8 @@ class SSDMonitor:
         self._redis.set_value(ParameterKey.SPACE_LEFT.value,   "0")
         self._redis.set_value(REDIS_KEY_FSCK_STATUS,           "unknown")
         self._redis.set_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value, "0")
+        self._redis.set_value(ParameterKey.STORAGE_PROBE_MBPS.value, "0")
+        self._redis.set_value(ParameterKey.STORAGE_PROBE_WARN.value, "0")
 
  
     # ------------------------------------------------------------------
@@ -484,6 +487,111 @@ class SSDMonitor:
                 self._redis.set_value(ParameterKey.SPACE_LEFT.value,
                                       f"{gb:.2f}")
             self.space_event.emit(gb)
+
+    def run_probe(self, duration: float = 1.0, warn_threshold: float = 250.0) -> float:
+        """Run a short sequential write to gauge media throughput."""
+        if not self._is_mounted:
+            logging.warning("Storage probe skipped: media not mounted")
+            return 0.0
+
+        try:
+            st = os.statvfs(self._mount_path)
+        except OSError as exc:
+            logging.warning("Storage probe skipped: statvfs failed (%s)", exc)
+            return 0.0
+
+        avail = st.f_frsize * st.f_bavail
+        min_bytes = 64 * 1024**2
+        if avail < min_bytes:
+            logging.warning(
+                "Storage probe skipped: only %.1f MiB free (< %.1f MiB)",
+                avail / 1024**2,
+                min_bytes / 1024**2,
+            )
+            self._publish_probe_result(0.0, warn_threshold)
+            self._log_health_snapshot()
+            return 0.0
+
+        probe_path = self._mount_path / ".probe"
+        chunk = 4 * 1024**2
+        zeros = b"\x00" * chunk
+        start = time.perf_counter()
+        written = 0
+        try:
+            with open(probe_path, "wb", buffering=0) as fh:
+                while time.perf_counter() - start < duration:
+                    fh.write(zeros)
+                    written += chunk
+                fh.flush()
+                os.fsync(fh.fileno())
+        except OSError as exc:
+            logging.warning("Storage probe write failed: %s", exc)
+            mb_s = 0.0
+        else:
+            elapsed = max(time.perf_counter() - start, 1e-6)
+            mb_s = (written / 1024**2) / elapsed
+            logging.info(
+                "Storage probe completed: %.1f MB/s over %.2fs",
+                mb_s,
+                elapsed,
+            )
+        finally:
+            with contextlib.suppress(FileNotFoundError):
+                probe_path.unlink()
+
+        self._publish_probe_result(mb_s, warn_threshold)
+        self._log_health_snapshot()
+        return mb_s
+
+    def _publish_probe_result(self, mb_s: float, warn_threshold: float) -> None:
+        if self._redis:
+            self._redis.set_value(
+                ParameterKey.STORAGE_PROBE_MBPS.value,
+                f"{mb_s:.1f}"
+            )
+            warn = 1 if mb_s and mb_s < warn_threshold else 0
+            self._redis.set_value(ParameterKey.STORAGE_PROBE_WARN.value, str(warn))
+        if mb_s and mb_s < warn_threshold:
+            logging.warning(
+                "Storage probe %.1f MB/s below recommended %.0f MB/s",
+                mb_s,
+                warn_threshold,
+            )
+
+    def _log_health_snapshot(self) -> None:
+        dirty, writeback = self._snapshot_dirty_writeback()
+        logging.info(
+            "Dirty cache: %s KB │ Writeback: %s KB",
+            dirty,
+            writeback,
+        )
+        temps = self._snapshot_thermals()
+        if temps:
+            summary = ", ".join(f"{name}={temp:.1f}°C" for name, temp in temps)
+            logging.info("Thermals: %s", summary)
+
+    @staticmethod
+    def _snapshot_dirty_writeback() -> tuple[str, str]:
+        try:
+            lines = Path("/proc/meminfo").read_text().splitlines()
+        except OSError:
+            return "n/a", "n/a"
+        dirty = next((line.split()[1] for line in lines if line.startswith("Dirty:")), None)
+        writeback = next((line.split()[1] for line in lines if line.startswith("Writeback:")), None)
+        return dirty or "n/a", writeback or "n/a"
+
+    @staticmethod
+    def _snapshot_thermals() -> list[tuple[str, float]]:
+        temps: list[tuple[str, float]] = []
+        for zone in Path("/sys/class/thermal").glob("thermal_zone*/temp"):
+            try:
+                raw = zone.read_text().strip()
+                if not raw:
+                    continue
+                temps.append((zone.name, int(raw) / 1000.0))
+            except (OSError, ValueError):
+                continue
+        return temps
 
 
     # ---------- fsck (read-only) --------------------------------------

@@ -49,6 +49,26 @@ To try Cinemate you need:
 ## Customization
 Buttons, encoders and oled display are optional and configured via settings file.
 
+## Zero-warm-up mode
+
+Cinemate now brings the recorder to a "hot" state before the first frame so
+operators no longer need sacrificial takes.  The pipeline automatically:
+
+* Detects CFE NVMe, USB NVMe, and USB SSD media and applies tuned mount options,
+  queue schedulers, and write-back cushions for each profile.
+* Performs a one-shot warm-up write on newly mounted media and restores the
+  kernel defaults once drives are removed.
+* Launches `cinepi-raw` with real-time affinity (`chrt`, `ionice`, `taskset`)
+  and preroll flags so encode and disk workers are primed before `REC`.
+* Pre-creates the configurable output root (`/media/RAW/cinemate` by default,
+  override via `CINEMATE_OUTPUT_ROOT`) and gates cadence/drop alarms until the
+  first DNG is confirmed on disk.
+* Runs a quick sequential probe before arming a take, logging throughput and
+  surfacing warnings in Redis if the media cannot sustain ~310 MB/s ingest.
+
+See the unit tests under `tests/` for examples of how the warm-up and cadence
+gating can be exercised in isolation.
+
 ## Documentation
 Full manual installation instructions, configuration guides and CLI reference live [here](https://tiramisioux.github.io/cinemate/).
 

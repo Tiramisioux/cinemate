@@ -11,6 +11,7 @@ import re
 import time
 import math
 import statistics
+from pathlib import Path
 
 class RedisListener:
     def __init__(self, redis_controller, ssd_monitor, framerate_callback=None, host='localhost', port=6379, db=0):
@@ -33,7 +34,7 @@ class RedisListener:
         self.redis_controller = redis_controller
         self.ssd_monitor = ssd_monitor
         self.framerate_callback = framerate_callback
-        
+
         self.framerate = float(self.redis_controller.get_value('fps_actual', 0))
         self.framecount_last_update_time = datetime.datetime.now()
         self.framecount = 0
@@ -48,32 +49,41 @@ class RedisListener:
         self.focus = 0
         self.framecount = 0
         self.redis_controller.set_value('framecount', 0)
-        
+
         self.last_non_increasing_time = None
-        self.stable_hold_seconds = 0.1 
-        
+        self.stable_hold_seconds = 0.1
+
         self.last_is_recording_value = self.redis_controller.get_value('is_recording')
-        
+
         self.allow_initial_zero = False
-        
+
         self.sensor_counts = {}          # { 'CAM0': 0, 'CAM1': 0, … }
         self.all_sensors_ready = False       # True if all sensors are ready, False otherwise
 
         self.last_rise_time = None          # when frameCount last increased
         self.rec_hold_seconds = 0.3         # how long frameCount must stay flat before rec=0
 
-        
+
         self.drop_frame = False
         self.drop_frame_timer = None
-        
+
         self.cinepi_running = True
-        
+
         self.framecount_changing = False
         self.last_framecount = 0
         self.last_framecount_check_time = datetime.datetime.now()
         self.framecount_check_interval = 1.0  # Default to 1 second, will be updated based on FPS
-        
+
         self.redis_controller.set_value('rec', "0")
+
+        # Cadence/arming state for zero warm-up recordings
+        self.cadence_ignore_frames = 12
+        self.cadence_armed = False
+        self.cadence_active = False
+        self.ignore_until_frame = 0
+        self.first_dng_seen = False
+        self.redis_controller.set_value(ParameterKey.CADENCE_ACTIVE.value, "0")
+        self.redis_controller.set_value(ParameterKey.FIRST_DNG_WRITTEN.value, "0")
         
         self.max_fps_adjustment = 0.1  # Maximum adjustment per iteration
         self.min_fps_adjustment = 0.0001  # Minimum adjustment increment
@@ -156,6 +166,85 @@ class RedisListener:
                 # keep the higher value; do not publish
                 return
 
+    def _arm_cadence(self) -> None:
+        self.cadence_armed = True
+        self.cadence_active = False
+        self.first_dng_seen = False
+        self.ignore_until_frame = 0
+        self.drop_frame = False
+        self.redis_controller.set_value(ParameterKey.CADENCE_ACTIVE.value, "0")
+        logging.debug("Cadence armed for next take")
+
+    def _reset_cadence(self) -> None:
+        self.cadence_armed = False
+        self.cadence_active = False
+        self.first_dng_seen = False
+        self.ignore_until_frame = 0
+        self.drop_frame = False
+        self.redis_controller.set_value(ParameterKey.CADENCE_ACTIVE.value, "0")
+        self.redis_controller.set_value(ParameterKey.FIRST_DNG_WRITTEN.value, "0")
+        logging.debug("Cadence state reset")
+
+    def _activate_cadence(self, trigger: str) -> None:
+        if not self.cadence_armed or self.cadence_active:
+            return
+        start_frame = self.framecount if isinstance(self.framecount, int) else 0
+        self.ignore_until_frame = start_frame + self.cadence_ignore_frames
+        self.cadence_active = True
+        self.redis_controller.set_value(ParameterKey.CADENCE_ACTIVE.value, "1")
+        logging.info(
+            "Cadence active (trigger=%s); ignoring drops until frame %d",
+            trigger,
+            self.ignore_until_frame,
+        )
+
+    def _handle_first_dng(self, source: str, payload: str | None) -> None:
+        if not self.is_recording or self.first_dng_seen:
+            return
+        if source == "redis" and (not payload or payload == "0"):
+            return
+        self.first_dng_seen = True
+        if source != "redis":
+            current = self.redis_controller.get_value(ParameterKey.FIRST_DNG_WRITTEN.value)
+            if not current or current == "0":
+                stamp = payload or f"{time.time():.3f}"
+                self.redis_controller.set_value(ParameterKey.FIRST_DNG_WRITTEN.value, stamp)
+        logging.info("First DNG observed via %s (%s)", source, payload or "—")
+        self._activate_cadence(source)
+
+    @staticmethod
+    def _fmt_metric(value, *, integer: bool = False) -> str:
+        if value is None:
+            return "—"
+        try:
+            if integer:
+                return f"{int(value)}"
+            return f"{float(value):.1f}"
+        except (TypeError, ValueError):
+            return str(value)
+
+    @staticmethod
+    def _read_dirty_writeback() -> tuple[int | None, int | None]:
+        try:
+            lines = Path("/proc/meminfo").read_text().splitlines()
+        except OSError:
+            return None, None
+
+        dirty = None
+        writeback = None
+        for line in lines:
+            if line.startswith("Dirty:"):
+                try:
+                    dirty = int(line.split()[1])
+                except (IndexError, ValueError):
+                    dirty = None
+            elif line.startswith("Writeback:"):
+                try:
+                    writeback = int(line.split()[1])
+                except (IndexError, ValueError):
+                    writeback = None
+        return dirty, writeback
+
     def listen_stats(self):
         for message in self.pubsub_stats.listen():
             if message['type'] == 'message':
@@ -227,17 +316,49 @@ class RedisListener:
                             
                         # Check for framerate deviation
                         expected_fps = float(self.redis_controller.get_value('fps'))
-                        if self.current_framerate is not None:
+                        gating_ready = self.cadence_active and (
+                            (self.framecount or 0) >= self.ignore_until_frame
+                        )
+
+                        if not self.cadence_active:
+                            self.drop_frame = False
+
+                        if gating_ready and self.current_framerate is not None:
                             fps_difference = abs((self.current_framerate) - expected_fps)
                             # print(f"Expected FPS: {expected_fps}, Actual FPS: {self.current_framerate*1000}")
                             # print(f"FPS difference: {fps_difference}")
-                            
+
                             # do NOT raise drop-frame while the user is changing fps
                             if fps_difference > 1 and not self.drop_frame and not self.user_changing_fps:
 
                                 self.drop_frame = True
-                                logging.info("Drop frame detected")
-                                
+                                encode_ms = (
+                                    stats_data.get('encodeMs')
+                                    or stats_data.get('encodeTimeMs')
+                                    or stats_data.get('encode_time_ms')
+                                )
+                                write_ms = (
+                                    stats_data.get('writeMs')
+                                    or stats_data.get('writeTimeMs')
+                                    or stats_data.get('write_time_ms')
+                                )
+                                queue_depth = (
+                                    stats_data.get('writerQueue')
+                                    or stats_data.get('queueDepth')
+                                    or stats_data.get('diskQueueDepth')
+                                )
+                                dirty_kb, writeback_kb = self._read_dirty_writeback()
+                                logging.warning(
+                                    "Frame cadence drop: actual %.2f fps vs %.2f target │ encode_ms=%s write_ms=%s queue=%s dirty=%sKB writeback=%sKB",
+                                    self.current_framerate,
+                                    expected_fps,
+                                    self._fmt_metric(encode_ms),
+                                    self._fmt_metric(write_ms),
+                                    self._fmt_metric(queue_depth, integer=True),
+                                    self._fmt_metric(dirty_kb, integer=True),
+                                    self._fmt_metric(writeback_kb, integer=True),
+                                )
+
                                 # Set a timer to reset the drop_frame flag after 0.5 seconds
                                 if self.drop_frame_timer:
                                     self.drop_frame_timer.cancel()
@@ -379,6 +500,7 @@ class RedisListener:
                     self.reset_framecount()
                     self.recording_start_time = datetime.datetime.now()
                     logging.info(f"Recording started at: {self.recording_start_time}")
+                    self._arm_cadence()
 
                     # Lock the FPS at start (configured value)
                     try:
@@ -393,6 +515,7 @@ class RedisListener:
                 elif value_str == '0':
                     if self.is_recording:
                         self.is_recording = False
+                        self._reset_cadence()
                         if self.recording_start_time:
                             self.recording_end_time = datetime.datetime.now()
                             logging.info(f"Recording stopped at: {self.recording_end_time}")
@@ -408,6 +531,15 @@ class RedisListener:
                 except ValueError:
                     logging.warning(f"Ignoring invalid fps value {value_str!r}")
                 continue
+
+            elif changed_key in (
+                ParameterKey.LAST_DNG_CAM0.value,
+                ParameterKey.LAST_DNG_CAM1.value,
+            ):
+                self._handle_first_dng("fs", value_str)
+
+            elif changed_key == ParameterKey.FIRST_DNG_WRITTEN.value:
+                self._handle_first_dng("redis", value_str)
 
 
     def calculate_current_framerate(self):

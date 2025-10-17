@@ -734,35 +734,17 @@ class SSDMonitor:
             self._check_mount_status()
 
 
-        def _follow_with_systemd() -> bool:
-            if not _HAVE_JOURNAL:
-                return False
-
-            try:
-                j = journal.Reader()
-                j.add_match(_SYSTEMD_UNIT="storage-automount.service")
-                j.seek_tail()
-                j.get_previous()              # position at last entry
-                j.seek_tail()
-                while not self._stop_evt.is_set():
-                    if j.wait(1000) == journal.APPEND:
-                        for entry in j:
-                            _process_line(entry["MESSAGE"])
-                return True
-            except (OSError, PermissionError, RuntimeError) as exc:
-                logging.warning(
-                    "Direct journal access unavailable (%s); falling back to journalctl.",
-                    exc,
-                )
-                return False
-            except Exception as exc:
-                logging.exception(
-                    "storage-automount journal reader failed: %s; falling back to journalctl.",
-                    exc,
-                )
-                return False
-
-        def _follow_with_journalctl() -> None:
+        if _HAVE_JOURNAL:
+            j = journal.Reader()
+            j.add_match(_SYSTEMD_UNIT="storage-automount.service")
+            j.seek_tail()
+            j.get_previous()                  # position at last entry
+            j.seek_tail()
+            while not self._stop_evt.is_set():
+                if j.wait(1000) == journal.APPEND:
+                    for entry in j:
+                        _process_line(entry["MESSAGE"])
+        else:
             if not shutil.which("journalctl"):
                 logging.warning(
                     "journalctl not available; storage-automount logs will not be mirrored."
@@ -775,7 +757,7 @@ class SSDMonitor:
                     try:
                         while not self._stop_evt.is_set():
                             line = proc.stdout.readline()
-                            if not line:          # EOF (service stopped)
+                            if not line:              # EOF (service stopped)
                                 if proc.poll() is not None:
                                     break
                                 time.sleep(0.5)
@@ -792,6 +774,3 @@ class SSDMonitor:
                 logging.exception(
                     "storage-automount log mirroring failed: %s", exc
                 )
-
-        if not _follow_with_systemd():
-            _follow_with_journalctl()

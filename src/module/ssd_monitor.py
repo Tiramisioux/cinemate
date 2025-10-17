@@ -1,4 +1,5 @@
 import os
+import shutil
 import logging
 import threading
 import time
@@ -110,11 +111,17 @@ class SSDMonitor:
         )
 
         # --- watch storage-automount logs -----------------------------------
-        # self._jthread = threading.Thread(
-        #     target=self._journal_loop, daemon=True, name="SSDJournal"
-        # )
-        # self._jthread.start()
-        # logging.info("SSDMonitor journal listener started.")
+        self._jthread: Optional[threading.Thread] = None
+        if _HAVE_JOURNAL or shutil.which("journalctl"):
+            self._jthread = threading.Thread(
+                target=self._journal_loop, daemon=True, name="SSDJournal"
+            )
+            self._jthread.start()
+            logging.info("SSDMonitor journal listener started.")
+        else:
+            logging.debug(
+                "Storage automount journal listener disabled: journalctl not available."
+            )
 
 
         self._cfe_hat_present = self._detect_cfe_hat()
@@ -125,7 +132,8 @@ class SSDMonitor:
     def stop(self) -> None:
         self._stop_evt.set()
         self._thread.join()
-        self._jthread.join()
+        if self._jthread and self._jthread.is_alive():
+            self._jthread.join()
         logging.info("SSD monitoring stopped.")
 
     # ------------------------------------------------------------------
@@ -737,12 +745,32 @@ class SSDMonitor:
                     for entry in j:
                         _process_line(entry["MESSAGE"])
         else:
-            # Portable fallback using journalctl -fu …
+            if not shutil.which("journalctl"):
+                logging.warning(
+                    "journalctl not available; storage-automount logs will not be mirrored."
+                )
+                return
+
             cmd = ["journalctl", "-fu", "storage-automount", "-n", "0", "-o", "cat"]
-            with subprocess.Popen(cmd, stdout=subprocess.PIPE, text=True) as proc:
-                while not self._stop_evt.is_set():
-                    line = proc.stdout.readline()
-                    if not line:              # EOF (service stopped)
-                        time.sleep(0.5)
-                        continue
-                    _process_line(line)
+            try:
+                with subprocess.Popen(cmd, stdout=subprocess.PIPE, text=True) as proc:
+                    try:
+                        while not self._stop_evt.is_set():
+                            line = proc.stdout.readline()
+                            if not line:              # EOF (service stopped)
+                                if proc.poll() is not None:
+                                    break
+                                time.sleep(0.5)
+                                continue
+                            _process_line(line)
+                    finally:
+                        if proc.poll() is None:
+                            proc.terminate()
+            except FileNotFoundError:
+                logging.warning(
+                    "journalctl command missing; unable to follow storage-automount logs."
+                )
+            except Exception as exc:
+                logging.exception(
+                    "storage-automount log mirroring failed: %s", exc
+                )

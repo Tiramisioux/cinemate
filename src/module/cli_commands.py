@@ -170,6 +170,10 @@ class CommandExecutor(threading.Thread):
 
         func, expected_types = self.commands[command_name]
 
+        if command_name == 'rec':
+            self.handle_rec_command(command_args)
+            return
+
         # Handle commands with arguments or those that can be called without arguments
         if isinstance(expected_types, list):  # If the command can take multiple types
             if command_args:  # Arguments provided
@@ -195,10 +199,44 @@ class CommandExecutor(threading.Thread):
                     logging.info(f"Command '{command_name}' requires an argument")
 
     def stop(self):
-        
+
         """Stops the command executor thread."""
         logging.info("Stopping CommandExecutor thread.")
         self.running = False
+
+    def handle_rec_command(self, args):
+        """Handle recording command with optional timed arguments."""
+        if not args:
+            self.cinepi_controller.rec()
+            return
+
+        mode = args[0].lower()
+
+        if mode in {"s", "sec", "secs", "second", "seconds"}:
+            if len(args) < 2:
+                logging.info("Timed recording in seconds requires a duration argument.")
+                return
+            try:
+                seconds = float(args[1])
+            except ValueError:
+                logging.info("Invalid seconds value for timed recording.")
+                return
+            self.cinepi_controller.rec(mode, seconds)
+            return
+
+        if mode in {"f", "frame", "frames"}:
+            if len(args) < 2:
+                logging.info("Timed recording in frames requires a frame count.")
+                return
+            try:
+                frames = int(args[1])
+            except ValueError:
+                logging.info("Invalid frame count for timed recording.")
+                return
+            self.cinepi_controller.rec(mode, frames)
+            return
+
+        logging.info("Unknown rec mode. Use 's' for seconds or 'f' for frames.")
 
     def run(self):
             """Thread run function to continuously process input commands."""

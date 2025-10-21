@@ -6,7 +6,7 @@ import json
 from fractions import Fraction
 import math
 import subprocess
-from threading import Thread
+from threading import Thread, Timer
 import psutil
 import math
 import sys
@@ -72,6 +72,8 @@ class CinePiController:
         self._rec_thread        = None
         self._rec_thread_stop   = threading.Event()
         self._preroll_active    = threading.Event()
+        self._timed_rec_timer   = None
+        self._timed_rec_description = None
         
         # Set startup flag
         self.startup = True
@@ -495,16 +497,125 @@ class CinePiController:
         else:
             self.fps_lock = not self.fps_lock
         logging.info(f"FPS lock {self.fps_lock}")
- 
-    def rec(self):
-        logging.info(f"rec button pushed")
+
+    def _cancel_timed_recording_stop(self):
+        if self._timed_rec_timer:
+            self._timed_rec_timer.cancel()
+            self._timed_rec_timer = None
+            if self._timed_rec_description:
+                logging.info(f"Cancelled scheduled recording stop ({self._timed_rec_description}).")
+            self._timed_rec_description = None
+
+    def _timed_recording_timeout(self):
+        description = self._timed_rec_description or "timed recording"
+        self._timed_rec_timer = None
+        self._timed_rec_description = None
+        logging.info(f"Timed recording limit reached ({description}); stopping.")
+        if self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "1":
+            self.stop_recording()
+
+    def _schedule_timed_recording_stop(self, seconds: float, description: str) -> None:
+        self._cancel_timed_recording_stop()
+        self._timed_rec_description = description
+        self._timed_rec_timer = Timer(seconds, self._timed_recording_timeout)
+        self._timed_rec_timer.start()
+        logging.info(f"Recording will stop in {seconds:.3f}s ({description}).")
+
+    def _get_current_fps(self) -> float:
+        candidates = [
+            self.redis_controller.get_value(ParameterKey.FPS_ACTUAL.value),
+            self.redis_controller.get_value(ParameterKey.FPS.value),
+            self.redis_controller.get_value(ParameterKey.FPS_LAST.value),
+            self.current_fps,
+            self.fps,
+        ]
+        for value in candidates:
+            if value is None:
+                continue
+            try:
+                fps = float(value)
+            except (TypeError, ValueError):
+                continue
+            if fps > 0:
+                return fps
+        return 0.0
+
+    def rec(self, mode=None, amount=None):
+        logging.info(f"rec command received (mode={mode}, amount={amount})")
         if self.is_preroll_active():
             logging.info("rec request ignored – storage pre-roll in progress")
             return
-        if self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "0":
-            self.start_recording()
-        elif self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "1":
-            self.stop_recording()
+
+        if mode is None:
+            if self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "0":
+                self.start_recording()
+            elif self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "1":
+                self.stop_recording()
+            else:
+                logging.warning("Unknown recording state received from Redis.")
+            return
+
+        if isinstance(mode, str):
+            mode_key = mode.lower()
+        else:
+            mode_key = str(mode).lower()
+
+        seconds_aliases = {"s", "sec", "secs", "second", "seconds"}
+        frames_aliases = {"f", "frame", "frames"}
+
+        if mode_key in seconds_aliases:
+            try:
+                duration_seconds = float(amount)
+            except (TypeError, ValueError):
+                logging.warning("Invalid seconds value provided for timed recording.")
+                return
+            if duration_seconds <= 0:
+                logging.warning("Timed recording duration must be greater than zero seconds.")
+                return
+
+            recording_state = self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)
+            is_recording = str(recording_state) == "1"
+            if not is_recording:
+                self.start_recording()
+                is_recording = str(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)) == "1"
+                if not is_recording:
+                    logging.warning("Unable to start recording; timed stop not scheduled.")
+                    return
+
+            self._schedule_timed_recording_stop(duration_seconds, f"{duration_seconds:.3f} seconds")
+            return
+
+        if mode_key in frames_aliases:
+            try:
+                frames_target = int(amount)
+            except (TypeError, ValueError):
+                logging.warning("Invalid frame count provided for timed recording.")
+                return
+            if frames_target <= 0:
+                logging.warning("Timed recording frame count must be greater than zero.")
+                return
+
+            fps = self._get_current_fps()
+            if fps <= 0:
+                logging.warning("Current FPS unavailable; cannot schedule frame-limited recording.")
+                return
+
+            duration_seconds = frames_target / fps
+
+            recording_state = self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)
+            is_recording = str(recording_state) == "1"
+            if not is_recording:
+                self.start_recording()
+                is_recording = str(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)) == "1"
+                if not is_recording:
+                    logging.warning("Unable to start recording; timed stop not scheduled.")
+                    return
+
+            description = f"{frames_target} frames (~{duration_seconds:.3f} seconds)"
+            self._schedule_timed_recording_stop(duration_seconds, description)
+            return
+
+        logging.warning(f"Unknown recording mode '{mode}'. Expected 's' for seconds or 'f' for frames.")
 
     def set_preroll_active(self, active: bool) -> None:
         if active:
@@ -524,6 +635,7 @@ class CinePiController:
             logging.info(f"No disk.")
             
     def stop_recording(self):
+        self._cancel_timed_recording_stop()
         self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         logging.info(f"Stopped recording")
 

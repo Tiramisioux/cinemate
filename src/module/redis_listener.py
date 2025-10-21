@@ -382,7 +382,7 @@ class RedisListener:
 
                     # Lock the FPS at start (configured value)
                     try:
-                        self.fps_at_rec_start = float(self.redis_controller.get_value('fps'))
+                        self.fps_at_rec_start = float(self.redis_controller.get_value('fps_user'))
                     except (TypeError, ValueError):
                         self.fps_at_rec_start = None
 

@@ -71,6 +71,7 @@ class CinePiController:
         
         self._rec_thread        = None
         self._rec_thread_stop   = threading.Event()
+        self._preroll_active    = threading.Event()
         
         # Set startup flag
         self.startup = True
@@ -497,11 +498,23 @@ class CinePiController:
  
     def rec(self):
         logging.info(f"rec button pushed")
+        if self.is_preroll_active():
+            logging.info("rec request ignored – storage pre-roll in progress")
+            return
         if self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "0":
             self.start_recording()
         elif self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "1":
             self.stop_recording()
-            
+
+    def set_preroll_active(self, active: bool) -> None:
+        if active:
+            self._preroll_active.set()
+        else:
+            self._preroll_active.clear()
+
+    def is_preroll_active(self) -> bool:
+        return self._preroll_active.is_set()
+
     def start_recording(self):
         self.redis_controller.set_value(ParameterKey.MEMORY_ALERT.value, 0)
         if self.ssd_monitor.is_mounted == True and self.ssd_monitor.get_space_left:

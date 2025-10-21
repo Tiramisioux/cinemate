@@ -26,6 +26,7 @@ from module.gpio_input import ComponentInitializer
 from module.battery_monitor import BatteryMonitor
 from module.wifi_hotspot import WiFiHotspotManager
 from module.cli_commands import CommandExecutor
+from module.storage_preroll import StoragePreroll
 from module.dmesg_monitor import DmesgMonitor
 from module.app import create_app
 from module.analog_controls import AnalogControls
@@ -310,17 +311,26 @@ def main():
         cinepi, redis_controller, ssd_monitor, sensor_detect,
         iso_steps=settings["arrays"]["iso_steps"],
         shutter_a_steps=settings["arrays"]["shutter_a_steps"],
-        fps_steps=settings["arrays"]["fps_steps"],  
+        fps_steps=settings["arrays"]["fps_steps"],
         wb_steps=settings["arrays"]["wb_steps"],
         light_hz=settings["settings"]["light_hz"],
         anamorphic_steps=settings["anamorphic_preview"]["anamorphic_steps"],
         default_anamorphic_factor=settings["anamorphic_preview"]["default_anamorphic_factor"]
     )
 
+    storage_preroll = StoragePreroll(
+        cinepi_controller=cinepi_controller,
+        redis_controller=redis_controller,
+        ssd_monitor=ssd_monitor,
+        sensor_detect=sensor_detect,
+    )
+
     gpio_input = ComponentInitializer(cinepi_controller, settings)
-    
+
     # Create CommandExecutor (for both CLI and Serial)
-    command_executor = CommandExecutor(cinepi_controller, cinepi)
+    command_executor = CommandExecutor(
+        cinepi_controller, cinepi, storage_preroll=storage_preroll
+    )
     command_executor.start()  # CLI thread
 
     # SerialHandler to receive serial commands and treat them as CLI

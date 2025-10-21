@@ -38,7 +38,8 @@ class ParameterKey(Enum):
     IS_RECORDING      = "is_recording"
     IS_WRITING        = "is_writing"
     IS_WRITING_BUF    = "is_writing_buf"
-    
+    STORAGE_PREROLL_ACTIVE = "storage_preroll_active"
+
     TC_CAM0           = "tc_cam0"
     TC_CAM1           = "tc_cam1"
     

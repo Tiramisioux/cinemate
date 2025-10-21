@@ -152,7 +152,12 @@ class SSDMonitor:
     def device_name(self) -> Optional[str]:
         """Returns e.g. 'sda1' or 'nvme0n1p1' (legacy API)."""
         return self._device_name
-    
+
+    @property
+    def mount_path(self) -> Path:
+        """Return the mount path as a :class:`pathlib.Path`."""
+        return self._mount_path
+
     @property
     def write_speed_mb_s(self) -> float:
         """Current write speed in megabytes per second."""

@@ -33,6 +33,7 @@ nav:
   - System management:
       - Modifying config.txt: config-txt.md
       - System services: system-services.md
+      - Storage pre-roll warm-up: storage-preroll.md
       - Manual installation: installation-steps.md
       - Recompiling cinepi-raw: compiling-cinepi-raw.md
       # - Overclocking the Pi: overclocking.md

@@ -6,10 +6,11 @@ import os
 import logging  
 
 class CommandExecutor(threading.Thread):
-    def __init__(self, cinepi_controller, cinepi_app):
+    def __init__(self, cinepi_controller, cinepi_app, storage_preroll=None):
         threading.Thread.__init__(self, daemon=True)  # Initialize thread
         self.cinepi_controller = cinepi_controller  # Set controller object reference
         self.cinepi_app = cinepi_app
+        self.storage_preroll = storage_preroll
         self.running = True  # Flag to control the thread's execution
 
         # ---------------------------------------------------------------------------
@@ -65,6 +66,7 @@ class CommandExecutor(threading.Thread):
             'toggle mount'           : (cinepi_controller.toggle_mount,   None),
             'erase'                  : (cinepi_controller.erase_drive,    None),
             'format'                 : (cinepi_controller.format_drive,   [str, None]),
+            'storage preroll'        : (storage_preroll.trigger_manual,   None) if storage_preroll else None,
 
             # ── Info / diagnostics ────────────────────────────────────────────────
             'time'                   : (self.display_time,                None),
@@ -100,6 +102,11 @@ class CommandExecutor(threading.Thread):
             'set zoom' : (cinepi_controller.set_zoom, [float, None]),  # toggle when arg omitted
             'inc zoom' : (cinepi_controller.inc_zoom,  None),
             'dec zoom' : (cinepi_controller.dec_zoom,  None),
+        }
+
+        # Remove commands that were conditionally set to None
+        self.commands = {
+            name: action for name, action in self.commands.items() if action is not None
         }
 
 

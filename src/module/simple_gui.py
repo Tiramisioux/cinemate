@@ -941,36 +941,51 @@ class SimpleGUI(threading.Thread):
         # ─── choose background colour & colour-mode ────────────────────
         prev_bg = self.get_background_color()      # ← fixed () call
         
-        if int(self.redis_controller.get_value(ParameterKey.REC.value)) and self.redis_listener.drop_frame == 1:
+        try:
+            preroll_active = int(
+                self.redis_controller.get_value(
+                    ParameterKey.STORAGE_PREROLL_ACTIVE.value
+                )
+                or 0
+            )
+        except (TypeError, ValueError):
+            preroll_active = 0
+
+        if preroll_active:
+            self.current_background_color = "blue"
+            self.color_mode = "inverse"
+
+        elif int(self.redis_controller.get_value(ParameterKey.REC.value)) and self.redis_listener.drop_frame == 1:
             # at least one camera is actively recording
             self.current_background_color = "purple"
             self.color_mode = "inverse"
 
-        if int(self.redis_controller.get_value(ParameterKey.REC.value)) == 1:
-            # at least one camera is actively recording
-            self.current_background_color = "red"
-            self.color_mode = "inverse"
+        if not preroll_active:
+            if int(self.redis_controller.get_value(ParameterKey.REC.value)) == 1:
+                # at least one camera is actively recording
+                self.current_background_color = "red"
+                self.color_mode = "inverse"
 
-        elif int(self.redis_controller.get_value(ParameterKey.IS_WRITING_BUF.value) or 0):
-            # recording has stopped but buffer still flushing to disk
-            self.current_background_color = "green"
-            self.color_mode = "inverse"
+            elif int(self.redis_controller.get_value(ParameterKey.IS_WRITING_BUF.value) or 0):
+                # recording has stopped but buffer still flushing to disk
+                self.current_background_color = "green"
+                self.color_mode = "inverse"
 
-        elif int(self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value) or 0):
-            # cameras are building up the RAM buffer
-            self.current_background_color = "green"
-            self.color_mode = "inverse"
+            elif int(self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value) or 0):
+                # cameras are building up the RAM buffer
+                self.current_background_color = "green"
+                self.color_mode = "inverse"
 
-        elif int(values["ram_load"].rstrip('%')) > 95:
-            # safety: RAM nearly full – warn & auto-stop
-            self.current_background_color = "yellow"
-            self.color_mode = "inverse"
-            self.cinepi_controller.rec()        # stop recording
+            elif int(values["ram_load"].rstrip('%')) > 95:
+                # safety: RAM nearly full – warn & auto-stop
+                self.current_background_color = "yellow"
+                self.color_mode = "inverse"
+                self.cinepi_controller.rec()        # stop recording
 
-        else:
-            # idle
-            self.current_background_color = "black"
-            self.color_mode = "normal"
+            else:
+                # idle
+                self.current_background_color = "black"
+                self.color_mode = "normal"
             
         if self.current_background_color != previous_background_color:
             self.background_color_changed = True

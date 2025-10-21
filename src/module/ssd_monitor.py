@@ -624,6 +624,72 @@ class SSDMonitor:
         self._handle_mount()
         return True
 
+    def erase_drive(self) -> bool:
+        """Erase all files from the mounted RAW volume."""
+        if not self._is_mounted:
+            logging.error("erase_drive(): RAW drive is not mounted")
+            return False
+
+        cmd = ["sudo", "find", str(self._mount_path), "-mindepth", "1", "-delete"]
+        try:
+            subprocess.run(cmd, check=True)
+        except subprocess.CalledProcessError as exc:
+            logging.error("erase_drive(): failed to erase %s (%s)", self._mount_path, exc)
+            return False
+
+        logging.info("erase_drive(): removed all files from %s", self._mount_path)
+        self._update_space_left(force=True)
+        return True
+
+    def format_drive(self, filesystem: Optional[str] = None) -> bool:
+        """Format the RAW drive with the requested filesystem."""
+        if not self._is_mounted:
+            logging.error("format_drive(): RAW drive is not mounted")
+            return False
+
+        fs = (filesystem or "ext4").lower()
+        if fs == "ex4":  # tolerate typo
+            fs = "ext4"
+
+        if fs not in {"ext4", "ntfs"}:
+            logging.error("format_drive(): unsupported filesystem '%s'", filesystem)
+            return False
+
+        dev_name = self._device_name or self._get_device_name()
+        if not dev_name:
+            logging.error("format_drive(): unable to determine device node")
+            return False
+
+        device = f"/dev/{dev_name}"
+
+        try:
+            subprocess.run(["sudo", "umount", str(self._mount_path)], check=True)
+        except subprocess.CalledProcessError as exc:
+            logging.error("format_drive(): failed to unmount %s (%s)", self._mount_path, exc)
+            return False
+
+        # refresh monitor state after unmount
+        self._check_mount_status()
+
+        if fs == "ext4":
+            mkfs_cmd = ["sudo", "mkfs.ext4", "-F", "-L", "RAW", device]
+        else:
+            mkfs_cmd = ["sudo", "mkfs.ntfs", "-F", "-L", "RAW", device]
+
+        try:
+            subprocess.run(mkfs_cmd, check=True)
+        except subprocess.CalledProcessError as exc:
+            logging.error("format_drive(): mkfs failed for %s (%s)", device, exc)
+            return False
+
+        logging.info("format_drive(): formatted %s as %s", device, fs)
+
+        if not self.mount_drive():
+            logging.error("format_drive(): failed to remount RAW after formatting")
+            return False
+
+        return True
+
 
     # ------------------------------------------------------------------
     # recording-finder helpers (unchanged)

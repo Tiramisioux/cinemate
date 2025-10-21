@@ -787,7 +787,7 @@ class CinePiController:
     
     def mount(self):
         self.ssd_monitor.mount_drive()
-    
+
     def unmount(self):
         # if self.ssd_monitor.is_mounted:
         self.ssd_monitor.unmount_drive()
@@ -800,6 +800,12 @@ class CinePiController:
 
     def toggle_mount(self):
         self.ssd_monitor.toggle_mount_drive()
+
+    def erase_drive(self):
+        self.ssd_monitor.erase_drive()
+
+    def format_drive(self, filesystem: str = "ext4"):
+        self.ssd_monitor.format_drive(filesystem)
     
     def calculate_dynamic_shutter_angles(self, fps):
         if fps <= 0:

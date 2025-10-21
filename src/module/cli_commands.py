@@ -63,6 +63,8 @@ class CommandExecutor(threading.Thread):
             'mount'                  : (cinepi_controller.mount,          None),
             'unmount'                : (cinepi_controller.unmount,        None),
             'toggle mount'           : (cinepi_controller.toggle_mount,   None),
+            'erase'                  : (cinepi_controller.erase_drive,    None),
+            'format'                 : (cinepi_controller.format_drive,   [str, None]),
 
             # ── Info / diagnostics ────────────────────────────────────────────────
             'time'                   : (self.display_time,                None),

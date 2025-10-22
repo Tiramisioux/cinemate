@@ -1,7 +1,8 @@
 import subprocess
 import re
 import logging
-from typing import Tuple, Dict
+from pathlib import Path
+from typing import Tuple, Dict, Optional
 
 class SensorDetect:
     def __init__(self, settings=None):
@@ -34,6 +35,9 @@ class SensorDetect:
             "imx585": {0: 1.0, 1: 1.0, 2: 1.0},
             "imx585_mono": {0: 1.0, 1: 1.0, 2: 1.0},
         }
+
+        # Cache detected sensor subdevice
+        self._sensor_subdevice: Optional[str] = None
 
         # Populate camera model and modes on startup
         self.detect_camera_model()
@@ -279,12 +283,151 @@ class SensorDetect:
             resolution = f"{info['width']} : {info['height']} : {info['bit_depth']}b"
             resolutions.append({'mode': mode, 'resolution': resolution})
         return resolutions
-    
+
+    # ────────────────────────────────────────────────────────────────
+    #  Sensor timing helpers (v4l2 + media controller)
+    # ────────────────────────────────────────────────────────────────
+    def _run_command(self, command):
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, check=False)
+        except FileNotFoundError:
+            logging.error("Command not found: %s", command[0])
+            return None
+
+        if result.returncode != 0:
+            logging.debug("Command failed (%s): %s", result.returncode, " ".join(command))
+            return None
+
+        return result.stdout.strip()
+
+    def _find_sensor_subdevice(self) -> Optional[str]:
+        if self._sensor_subdevice and Path(self._sensor_subdevice).exists():
+            return self._sensor_subdevice
+
+        for subdev in sorted(Path("/dev").glob("v4l-subdev*")):
+            output = self._run_command(["v4l2-ctl", "-d", str(subdev), "-l"])
+            if output and "vertical_blanking" in output:
+                self._sensor_subdevice = str(subdev)
+                logging.debug("Detected sensor subdevice: %s", self._sensor_subdevice)
+                return self._sensor_subdevice
+
+        logging.warning("Unable to locate sensor subdevice with vertical_blanking control")
+        self._sensor_subdevice = None
+        return None
+
+    def _read_control_int(self, subdevice: str, control: str) -> Optional[int]:
+        output = self._run_command(["v4l2-ctl", "-d", subdevice, f"--get-ctrl={control}"])
+        if not output:
+            return None
+
+        match = re.search(r"(-?\d+)", output)
+        if not match:
+            logging.debug("Could not parse %s from output: %s", control, output)
+            return None
+
+        return int(match.group(1))
+
+    def _get_active_sensor_size(self, subdevice: str) -> Tuple[Optional[int], Optional[int]]:
+        output = self._run_command(["media-ctl", "-p"])
+        if not output:
+            return None, None
+
+        subdev_name = Path(subdevice).name
+        pattern = re.compile(rf"entity\s+\d+:.*\({re.escape(subdev_name)}\)(.*?)(?:\n\n|$)", re.DOTALL)
+        match = pattern.search(output)
+        if not match:
+            logging.debug("media-ctl output did not contain block for %s", subdevice)
+            return None, None
+
+        block = match.group(1)
+        fmt_match = re.search(r"fmt:\s*\S+\s+(\d+)x(\d+)", block)
+        if not fmt_match:
+            logging.debug("No format information found in media-ctl block for %s", subdevice)
+            return None, None
+
+        width, height = map(int, fmt_match.groups())
+        return width, height
+
+    def _calculate_dynamic_fps_factor(self, camera_name: str, sensor_mode: int) -> Optional[float]:
+        subdevice = self._find_sensor_subdevice()
+        if not subdevice:
+            return None
+
+        vblank = self._read_control_int(subdevice, "vertical_blanking")
+        pixel_rate = self._read_control_int(subdevice, "pixel_rate")
+        if vblank is None or pixel_rate in (None, 0):
+            logging.debug("Missing vblank or pixel rate (vblank=%s, pixel_rate=%s)", vblank, pixel_rate)
+            return None
+
+        width, height = self._get_active_sensor_size(subdevice)
+        if width is None:
+            width = self.get_width(camera_name, sensor_mode)
+        if height is None:
+            height = self.get_height(camera_name, sensor_mode)
+
+        if width in (None, 0) or height in (None, 0):
+            logging.debug("Unable to determine sensor dimensions (width=%s, height=%s)", width, height)
+            return None
+
+        line_length = self._read_control_int(subdevice, "line_length_pixels")
+        if line_length in (None, 0):
+            hblank = self._read_control_int(subdevice, "horizontal_blanking")
+            line_length = width + hblank if hblank not in (None, 0) else None
+
+        if line_length in (None, 0):
+            logging.debug("Unable to determine line length (width=%s)", width)
+            return None
+
+        frame_lines = height + vblank
+        if frame_lines <= 0:
+            logging.debug("Invalid frame lines computed: %s", frame_lines)
+            return None
+
+        fps_actual = pixel_rate / (line_length * frame_lines)
+        if fps_actual <= 0:
+            return None
+
+        fps_nominal = self.get_fps_max(camera_name, sensor_mode)
+        if not fps_nominal:
+            return None
+
+        factor = fps_actual / float(fps_nominal)
+        if factor <= 0:
+            return None
+
+        # Guard against wildly inaccurate readings (e.g. when the sensor
+        # reports stale blanking values during a mode switch).  A factor far
+        # outside a reasonable ±50% window would push the controller to
+        # extreme FPS requests which then cascade into dropped frames.
+        if not 0.5 <= factor <= 1.5:
+            logging.warning(
+                "Discarding unrealistic FPS correction factor: camera=%s mode=%s "
+                "actual=%.6f nominal=%s factor=%.8f",
+                camera_name,
+                sensor_mode,
+                fps_actual,
+                fps_nominal,
+                factor,
+            )
+            return None
+
+        logging.debug("Calculated FPS correction factor: camera=%s mode=%s actual=%.6f nominal=%s factor=%.8f",
+                      camera_name, sensor_mode, fps_actual, fps_nominal, factor)
+
+        return factor
+
     def get_fps_correction_factor(self, camera_name, sensor_mode):
         try:
             mode = int(sensor_mode)
         except (TypeError, ValueError):
             mode = sensor_mode
+
+        dynamic_factor = self._calculate_dynamic_fps_factor(camera_name, mode)
+        if dynamic_factor is not None:
+            sensor_entry = self.fps_correction_factors.setdefault(camera_name, {})
+            if isinstance(sensor_entry, dict):
+                sensor_entry[mode] = dynamic_factor
+            return dynamic_factor
 
         sensor_factors = self.fps_correction_factors.get(camera_name)
         if isinstance(sensor_factors, dict):

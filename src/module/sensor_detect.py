@@ -395,22 +395,6 @@ class SensorDetect:
         if factor <= 0:
             return None
 
-        # Guard against wildly inaccurate readings (e.g. when the sensor
-        # reports stale blanking values during a mode switch).  A factor far
-        # outside a reasonable ±50% window would push the controller to
-        # extreme FPS requests which then cascade into dropped frames.
-        if not 0.5 <= factor <= 1.5:
-            logging.warning(
-                "Discarding unrealistic FPS correction factor: camera=%s mode=%s "
-                "actual=%.6f nominal=%s factor=%.8f",
-                camera_name,
-                sensor_mode,
-                fps_actual,
-                fps_nominal,
-                factor,
-            )
-            return None
-
         logging.debug("Calculated FPS correction factor: camera=%s mode=%s actual=%.6f nominal=%s factor=%.8f",
                       camera_name, sensor_mode, fps_actual, fps_nominal, factor)
 

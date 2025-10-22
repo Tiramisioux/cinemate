@@ -25,11 +25,14 @@ class SensorDetect:
             "imx585_mono": "U",
         }
 
-        # Optional fps correction factors per sensor
+        # Optional fps correction factors per sensor and sensor mode
         self.fps_correction_factors = {
-            "imx477": 0.9995,
-            #"imx585": 0.9980,
-            "imx585_mono": 0.9993, #1, # 0.9980,
+            "imx296": {0: 1.0, 1: 1.0, 2: 1.0},
+            "imx286": {0: 1.0, 1: 1.0, 2: 1.0},
+            "imx477": {0: 1.0, 1: 1.0, 2: 1.0},
+            "imx519": {0: 1.0, 1: 1.0, 2: 1.0},
+            "imx585": {0: 1.0, 1: 1.0, 2: 1.0},
+            "imx585_mono": {0: 1.0, 1: 1.0, 2: 1.0},
         }
 
         # Populate camera model and modes on startup
@@ -278,4 +281,14 @@ class SensorDetect:
         return resolutions
     
     def get_fps_correction_factor(self, camera_name, sensor_mode):
-        return self.fps_correction_factors.get(camera_name, 1.0)
+        try:
+            mode = int(sensor_mode)
+        except (TypeError, ValueError):
+            mode = sensor_mode
+
+        sensor_factors = self.fps_correction_factors.get(camera_name)
+        if isinstance(sensor_factors, dict):
+            return sensor_factors.get(mode, 1.0)
+
+        # Fallback to scalar factors or the default 1.0 if no mapping is defined
+        return sensor_factors if isinstance(sensor_factors, (int, float)) else 1.0

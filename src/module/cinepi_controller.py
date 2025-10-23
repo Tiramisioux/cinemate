@@ -104,12 +104,14 @@ class CinePiController:
         self.current_sensor = self.sensor_detect.camera_model
         self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)
         
+        initial_sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
         self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
             self.current_sensor,
-            int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
+            initial_sensor_mode,
+            fps=self.current_fps,
         )
 
-        self.sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
+        self.sensor_mode = initial_sensor_mode
         self.fps_max = int(self.sensor_detect.get_fps_max(self.current_sensor, self.sensor_mode))
         
         self.redis_controller.set_value(ParameterKey.FPS_MAX.value, self.fps_max)
@@ -413,6 +415,11 @@ class CinePiController:
         self.user_fps = float(value)
         self.redis_controller.set_value(ParameterKey.FPS_USER.value, self.user_fps)
 
+        self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
+            self.current_sensor,
+            self.sensor_mode,
+            fps=self.user_fps,
+        )
         corrected = self.user_fps * self.fps_correction_factor
         fps_max   = int(self.redis_controller.get_value(ParameterKey.FPS_MAX.value))
 
@@ -692,13 +699,15 @@ class CinePiController:
                 
                 logging.info(f"Resolution set to mode {value}, height: {height_new}, width: {width_new}, gui_layout: {gui_layout_new}")
                 
-                fps_current = int(float(self.redis_controller.get_value(ParameterKey.FPS.value)))
+                current_fps = self._get_current_fps()
                 time.sleep(0.5)
-                
+
                 self.cinepi.restart()
-                
+
                 self.set_fps(float(self.redis_controller.get_value(ParameterKey.FPS_LAST.value)))
-                
+
+                current_fps = self._get_current_fps()
+
                 self.file_size = file_size_new
                 
                 # Initialize fps_steps based on the provided list and capped by fps_max
@@ -711,10 +720,13 @@ class CinePiController:
                 
                 self.update_steps()
                 
+                sensor_mode_value = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
                 self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
                     self.current_sensor,
-                    int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
-                    )
+                    sensor_mode_value,
+                    fps=current_fps,
+                )
+                self.sensor_mode = sensor_mode_value
 
                 self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)
                 time.sleep(1)
@@ -965,6 +977,11 @@ class CinePiController:
 
     def update_fps(self, new_fps):
         self.current_fps = new_fps
+        self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
+            self.current_sensor,
+            self.sensor_mode,
+            fps=new_fps,
+        )
         self.redis_controller.set_value(ParameterKey.FPS.value, new_fps)
 
         if self.shutter_a_sync_mode == 0:

@@ -1,7 +1,11 @@
+import copy
 import os
 import threading
 import time
+from typing import Dict, Tuple
+
 from PIL import Image, ImageDraw, ImageFont
+
 from module.framebuffer import Framebuffer  # Assuming this is a custom module
 import subprocess
 import logging
@@ -13,6 +17,26 @@ from module.utils import Utils
 from module.redis_controller import ParameterKey
 import json
 import re
+
+
+class _FontCache:
+    """Cache truetype fonts keyed by weight + size."""
+
+    def __init__(self, regular_path: str, bold_path: str):
+        self._paths = {
+            "regular": os.path.realpath(regular_path),
+            "bold": os.path.realpath(bold_path),
+        }
+        self._cache: Dict[Tuple[str, int], ImageFont.FreeTypeFont] = {}
+
+    def get(self, weight: str, size: int) -> ImageFont.FreeTypeFont:
+        weight_key = "bold" if weight == "bold" else "regular"
+        key = (weight_key, max(1, int(size)))
+        font = self._cache.get(key)
+        if font is None:
+            font = ImageFont.truetype(self._paths[weight_key], key[1])
+            self._cache[key] = font
+        return font
 
 
 def _to_bool(value) -> bool:
@@ -43,7 +67,12 @@ class SimpleGUI(threading.Thread):
         self.current_background_color = "black"
         self.color_mode = "normal"
         
+        self.base_resolution = (1920, 1080)
         self.setup_resources()
+        self.font_cache = _FontCache(self.regular_font_path, self.bold_font_path)
+        self.scale_x = self.scale_y = self.scale_font = 1.0
+        self._layout_defaults = {}
+        self._layout_size = None
         self.check_display()
 
         self.color_mode = "normal"  # Can be changed to "inverse" as needed
@@ -73,9 +102,16 @@ class SimpleGUI(threading.Thread):
             hdmi_cfg = settings.get("hdmi_gui", {})
             self.show_buffer_vu = _to_bool(hdmi_cfg.get("buffer_vu_meter", True))
             self.vu_meter_hatch_lines = _to_bool(hdmi_cfg.get("vu_meter_hatch_lines", True))
+            try:
+                self.target_fps = float(hdmi_cfg.get("target_fps", 15))
+            except (TypeError, ValueError):
+                self.target_fps = 15.0
         else:
             self.show_buffer_vu = True
             self.vu_meter_hatch_lines = True
+            self.target_fps = 15.0
+
+        self.target_fps = max(1.0, self.target_fps)
 
         self.background_color_changed = False
         
@@ -92,18 +128,17 @@ class SimpleGUI(threading.Thread):
     def _adjust_clip_layout(self, two_clips: bool):
         """Shrink/enlarge the font & Y-positions of the clip-name fields."""
         if two_clips:
-            new_size = 24               # ↓ from 41 → 24 px
-            y_base   = 1053
+            new_size = self._font_size(24)               # ↓ from 41 → 24 px
+            y_base   = self._sy(1053)
             self.layout["clip_name"]["size"]        = new_size
             self.layout["clip_name_cam1"]["size"]   = new_size
-            self.layout["clip_name"]["pos"]         = (700, y_base)       # lower line
-            self.layout["clip_name_cam1"]["pos"]    = (700, y_base-19)    # 19 px up
+            self.layout["clip_name"]["pos"]         = (self._sx(700), y_base)       # lower line
+            self.layout["clip_name_cam1"]["pos"]    = (self._sx(700), self._sy(1053 - 19))    # 19 px up
         else:
             # Fall back to the original settings
-            self.layout["clip_name"]["size"]        = 24
-            self.layout["clip_name_cam1"]["size"]   = 24
-            self.layout["clip_name"]["pos"]         = (700, 1041)
-            self.layout["clip_name_cam1"]["pos"]    = (700, 998)
+            for key in ("clip_name", "clip_name_cam1"):
+                if key in self._layout_defaults:
+                    self.layout[key] = self._layout_defaults[key].copy()
 
 
     def load_sensor_values_from_redis(self):
@@ -149,6 +184,8 @@ class SimpleGUI(threading.Thread):
             logging.info(f"HDMI display found. {self.disp_width, self.disp_height}")
         else:
             logging.info("No HDMI display found")
+            self.disp_width, self.disp_height = self.base_resolution
+        self._ensure_display_metrics()
 
     def setup_resources(self):
         self.current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -157,7 +194,7 @@ class SimpleGUI(threading.Thread):
         self.font_path = os.path.join(self.current_directory, '../../resources/fonts/DIN2014-Bold.ttf')
 
         # Define layout directly as a dict (not nested in another dict)
-        self.layout = {
+        self.base_layout = {
             # column 0
             "fps_label":      {"pos": (  90,   4), "size": 30, "font": "regular"},
             "fps":            {"pos": ( 155,   3), "size": 41, "font": "bold"},
@@ -289,7 +326,7 @@ class SimpleGUI(threading.Thread):
                 ]
             }
         ]
-        
+
         # ───────────── right side column (mirrors left) ──────────────
         self.right_section_layout = [
             {   # this label will be replaced by _update_cam_section_labels()
@@ -303,6 +340,53 @@ class SimpleGUI(threading.Thread):
                 ]
             },
         ]
+
+    # ─────────────────────────────────────────────────────────────
+    # Display scaling helpers
+    # ─────────────────────────────────────────────────────────────
+    def _ensure_display_metrics(self):
+        base_w, base_h = self.base_resolution
+        if self.fb is not None:
+            fb_w, fb_h = self.fb.size
+            if (fb_w, fb_h) != (self.disp_width, self.disp_height):
+                self.disp_width, self.disp_height = fb_w, fb_h
+
+        target_w = self.disp_width or base_w
+        target_h = self.disp_height or base_h
+
+        if (target_w, target_h) != self._layout_size:
+            self.scale_x = target_w / base_w
+            self.scale_y = target_h / base_h
+            self.scale_font = (self.scale_x + self.scale_y) / 2.0
+            self.layout = self._scale_layout(self.base_layout)
+            self._layout_defaults = copy.deepcopy(self.layout)
+            self._layout_size = (target_w, target_h)
+
+    def _scale_layout(self, layout):
+        scaled = {}
+        for key, info in layout.items():
+            scaled_info = info.copy()
+            if "pos" in info:
+                x, y = info["pos"]
+                scaled_info["pos"] = (self._sx(x), self._sy(y))
+            if "size" in info:
+                scaled_info["size"] = self._font_size(info["size"])
+            if "width" in info:
+                scaled_info["width"] = max(1, self._sx(info["width"]))
+            scaled[key] = scaled_info
+        return scaled
+
+    def _sx(self, value: float) -> int:
+        return int(round(value * self.scale_x))
+
+    def _sy(self, value: float) -> int:
+        return int(round(value * self.scale_y))
+
+    def _font_size(self, value: float) -> int:
+        return max(1, int(round(value * self.scale_font)))
+
+    def _get_font(self, weight: str, size: int) -> ImageFont.FreeTypeFont:
+        return self.font_cache.get(weight, size)
 
     def estimate_resolution_in_k(self):
         """
@@ -350,6 +434,7 @@ class SimpleGUI(threading.Thread):
         self.right_section_layout[0]["label"] = r_lbl
 
     def populate_values(self):
+        self._ensure_display_metrics()
         # update section headers first
         self._update_cam_section_labels()
         self.load_sensor_values_from_redis()
@@ -666,19 +751,19 @@ class SimpleGUI(threading.Thread):
     # LEFT-HAND COLUMN  (CAM / MON / SYS …)
     # ─────────────────────────────────────────────────────────────
     def draw_left_sections(self, draw, values):
-        label_font = ImageFont.truetype(self.regular_font_path, 26)
-        box_font   = ImageFont.truetype(self.bold_font_path,     26)
+        label_font = self._get_font("regular", self._font_size(26))
+        box_font   = self._get_font("bold",     self._font_size(26))
 
-        BOX_H, BOX_W  = 40, 60
+        BOX_H, BOX_W  = max(1, self._sy(40)), max(1, self._sx(60))
         BOX_COLOR     = (136, 136, 136)
         TEXT_COLOR    = (0,   0,   0)
 
-        label_x       = 19
-        box_x         = 15
-        y             = 97
-        LABEL_SPACING = -4
-        BOX_GAP       = 14
-        SECTION_GAP   = 60
+        label_x       = self._sx(19)
+        box_x         = self._sx(15)
+        y             = self._sy(97)
+        LABEL_SPACING = self._sy(-4)
+        BOX_GAP       = self._sy(14)
+        SECTION_GAP   = self._sy(60)
 
         # ── CAM / MON sections ───────────────────────────────────
         for section in self.left_section_layout:
@@ -705,7 +790,7 @@ class SimpleGUI(threading.Thread):
                                    fill=box_fill)
 
                     if item["key"] in ("aspect", "anamorphic_factor"):
-                        m = 2
+                        m = max(1, self._sx(2))
                         inner = [box_x + m, y + m,
                                  box_x + BOX_W - m, y + BOX_H - m]
                         draw.rectangle(inner, outline=(0, 0, 0), width=2)
@@ -728,7 +813,7 @@ class SimpleGUI(threading.Thread):
         ])
 
         if show_sys:
-            draw.text((label_x + 1, y), "SYS",
+            draw.text((label_x + self._sx(1), y), "SYS",
                       font=label_font,
                       fill=self.colors["label"][self.color_mode])
             y += BOX_H + LABEL_SPACING
@@ -772,18 +857,18 @@ class SimpleGUI(threading.Thread):
     # RIGHT-HAND MIRROR COLUMN
     # ─────────────────────────────────────────────────────────────
     def draw_right_sections(self, draw, values):
-        label_font = ImageFont.truetype(self.regular_font_path, 26)
-        box_font   = ImageFont.truetype(self.bold_font_path,     24)
+        label_font = self._get_font("regular", self._font_size(26))
+        box_font   = self._get_font("bold",     self._font_size(24))
 
-        BOX_H, BOX_W  = 40, 60
+        BOX_H, BOX_W  = max(1, self._sy(40)), max(1, self._sx(60))
         BOX_COLOR     = (136, 136, 136)
         TEXT_COLOR    = (0,   0,   0)
 
-        box_pad_x     = self.disp_width - 15 - BOX_W
-        y             = 97
-        LABEL_SPACING = -4
-        BOX_GAP       = 14
-        SECTION_GAP   = 60
+        box_pad_x     = self.disp_width - self._sx(15) - BOX_W
+        y             = self._sy(97)
+        LABEL_SPACING = self._sy(-4)
+        BOX_GAP       = self._sy(14)
+        SECTION_GAP   = self._sy(60)
 
         for section in self.right_section_layout:
             lbl_w = draw.textbbox((0,0), section["label"], font=label_font)[2]
@@ -820,11 +905,11 @@ class SimpleGUI(threading.Thread):
             return
 
         n_channels = len(vu_levels)
-        bar_width = 10
-        spacing = 8
-        margin_right = 32
-        bar_height = 200
-        margin_bottom = 80
+        bar_width = max(1, self._sx(10))
+        spacing = max(1, self._sx(8))
+        margin_right = self._sx(32)
+        bar_height = max(1, self._sy(200))
+        margin_bottom = self._sy(80)
 
         base_y = self.disp_height - margin_bottom - bar_height
         total_width = n_channels * bar_width + (n_channels - 1) * spacing
@@ -849,12 +934,12 @@ class SimpleGUI(threading.Thread):
             draw_bar(x, bar_width, vu_levels[i], vu_peaks[i])
 
         # Optional: Draw channel labels
-        label_font = ImageFont.truetype(self.regular_font_path, 16)
+        label_font = self._get_font("regular", self._font_size(16))
         labels = ["L", "R"] if n_channels == 2 else [str(i+1) for i in range(n_channels)]
         for i, label in enumerate(labels):
             text_bbox = draw.textbbox((0, 0), label, font=label_font)
             text_x = base_x + i * (bar_width + spacing) + (bar_width - (text_bbox[2] - text_bbox[0])) // 2
-            text_y = base_y + bar_height + 5
+            text_y = base_y + bar_height + self._sy(5)
             draw.text((text_x, text_y), label, font=label_font, fill=(249,249,249))
 
     # ─────────────────────────────────────────────────────────────
@@ -894,10 +979,10 @@ class SimpleGUI(threading.Thread):
         else:              fill_colour = (255,   0,   0)
 
         # ── geometry constants (match existing GUI) ───────────────────
-        BAR_H      = 200
-        BAR_W      = 28
-        BASE_X     = 30
-        GAP_BOTTOM = 80
+        BAR_H      = max(1, self._sy(200))
+        BAR_W      = max(1, self._sx(28))
+        BASE_X     = self._sx(30)
+        GAP_BOTTOM = self._sy(80)
 
         base_y = self.disp_height - GAP_BOTTOM - BAR_H
         base_x = BASE_X
@@ -921,7 +1006,8 @@ class SimpleGUI(threading.Thread):
                         fill=fill_colour)
         # ── optional hatch lines ───────────────────────────────────
         if self.vu_meter_hatch_lines:
-            for dy in range(0, filled_h, 2):
+            hatch_step = max(1, abs(self._sy(2)))
+            for dy in range(0, filled_h, hatch_step):
                 y = base_y + BAR_H - 1 - dy
                 draw.line([(base_x, y), (base_x + BAR_W, y)], fill=border_col)
 
@@ -932,7 +1018,8 @@ class SimpleGUI(threading.Thread):
 
 
     def draw_gui(self, values):
-        
+        self._ensure_display_metrics()
+
         # ── shrink clip-name text when two cameras are active ─────────────────────────
         self._adjust_clip_layout(self._has_two_clips(values))
 
@@ -1020,22 +1107,39 @@ class SimpleGUI(threading.Thread):
         self.draw_left_sections(draw, values)
 
         # Get sensor resolution
-        self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value))
-        self.height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value))
-        self.aspect_ratio = self.width / self.height
-        self.anamorphic_factor = float(self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value))
-        lores_width = int(self.redis_controller.get_value(ParameterKey.LORES_WIDTH.value))
-        lores_height = int(self.redis_controller.get_value(ParameterKey.LORES_HEIGHT.value))
+        try:
+            self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value))
+        except (TypeError, ValueError):
+            self.width = self.base_resolution[0]
+        try:
+            self.height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value))
+        except (TypeError, ValueError):
+            self.height = self.base_resolution[1]
+        self.aspect_ratio = self.width / self.height if self.height else 1
+        try:
+            self.anamorphic_factor = float(self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value))
+        except (TypeError, ValueError):
+            self.anamorphic_factor = 1.0
+        try:
+            lores_width = int(self.redis_controller.get_value(ParameterKey.LORES_WIDTH.value))
+        except (TypeError, ValueError):
+            lores_width = self.width
+        try:
+            lores_height = int(self.redis_controller.get_value(ParameterKey.LORES_HEIGHT.value))
+        except (TypeError, ValueError):
+            lores_height = self.height
 
-        frame_width = 1920
-        frame_height = 1080
-        padding_x = 92
-        padding_y = 46
-        max_draw_width = frame_width - (2 * padding_x)
-        max_draw_height = frame_height - (2 * padding_y)
+        frame_width = self.disp_width
+        frame_height = self.disp_height
+        padding_x = max(0, self._sx(92))
+        padding_y = max(0, self._sy(46))
+        max_draw_width = max(1, frame_width - (2 * padding_x))
+        max_draw_height = max(1, frame_height - (2 * padding_y))
 
-        adjusted_lores_width = lores_width * self.anamorphic_factor
-        adjusted_lores_height = lores_height * self.anamorphic_factor
+        adjusted_lores_width = lores_width * max(self.anamorphic_factor, 0.1)
+        adjusted_lores_height = lores_height * max(self.anamorphic_factor, 0.1)
+        if adjusted_lores_height <= 0:
+            adjusted_lores_height = 1
         adjusted_aspect_ratio = adjusted_lores_width / adjusted_lores_height
 
         if adjusted_aspect_ratio >= 1:
@@ -1055,11 +1159,12 @@ class SimpleGUI(threading.Thread):
         preview_y = (frame_height - preview_h) // 2
 
         line_color = (249, 249, 249)
+        border_width = max(1, self._sx(2))
 
         draw.rectangle(
             [preview_x, preview_y, preview_x + preview_w, preview_y + preview_h],
             outline=line_color,
-            width=2
+            width=border_width
         )
 
         current_layout = self.layout
@@ -1077,10 +1182,7 @@ class SimpleGUI(threading.Thread):
                 continue
             position = info["pos"]
             font_size = info.get("size", 12)  # 12 is the default font size
-            font = ImageFont.truetype(
-                os.path.realpath(self.bold_font_path if info.get("font", "bold") == "bold" else self.regular_font_path),
-                font_size
-            )
+            font = self._get_font(info.get("font", "bold"), font_size)
             value = str(values.get(element, ''))
             color_mode = self.color_mode
             color = self.colors.get(element, {}).get(color_mode, "white")
@@ -1116,15 +1218,22 @@ class SimpleGUI(threading.Thread):
         self.fb.show(image)
         
     def draw_rounded_box(self, draw, text, position, font_size, padding, text_color, fill_color, image, extra_height=-17, reduce_top=12):
-        font = ImageFont.truetype(os.path.realpath(self.font_path), font_size)
+        font = self._get_font("bold", font_size)
         bbox = draw.textbbox((0, 0), text, font=font)
         text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1] + extra_height  # Increase height by extra_height
+        scaled_extra_height = int(round(extra_height * self.scale_y))
+        text_height = bbox[3] - bbox[1] + scaled_extra_height  # Increase height by extra_height
 
         # Reduce the top padding by reduce_top and increase the bottom by the same amount
-        upper_left = ((position[0] - padding), position[1] - (padding - reduce_top)-6) 
-        bottom_right = (upper_left[0] + text_width + 2 * padding, upper_left[1] + text_height + 2 * padding + reduce_top)
-        radius = 5
+        scaled_padding = max(1, int(round(padding * self.scale_font)))
+        scaled_reduce_top = int(round(reduce_top * self.scale_y))
+        offset_y = self._sy(6)
+        upper_left = (position[0] - scaled_padding, position[1] - (scaled_padding - scaled_reduce_top) - offset_y)
+        bottom_right = (
+            upper_left[0] + text_width + 2 * scaled_padding,
+            upper_left[1] + text_height + 2 * scaled_padding + scaled_reduce_top,
+        )
+        radius = max(1, int(round(5 * self.scale_font)))
         radius_2x = radius * 2
 
         mask = Image.new('L', (radius_2x, radius_2x), 0)
@@ -1134,22 +1243,22 @@ class SimpleGUI(threading.Thread):
         # Top-left corner
         image.paste(fill_color, (upper_left[0], upper_left[1]), mask)
         # Top-right corner
-        image.paste(fill_color, (upper_left[0] + text_width + padding * 2 - radius_2x, upper_left[1]), mask)
+        image.paste(fill_color, (upper_left[0] + text_width + scaled_padding * 2 - radius_2x, upper_left[1]), mask)
         # Bottom-left corner
-        image.paste(fill_color, (upper_left[0], upper_left[1] + text_height + padding * 2 - radius_2x + reduce_top), mask)
+        image.paste(fill_color, (upper_left[0], upper_left[1] + text_height + scaled_padding * 2 - radius_2x + scaled_reduce_top), mask)
         # Bottom-right corner
-        image.paste(fill_color, (upper_left[0] + text_width + padding * 2 - radius_2x, upper_left[1] + text_height + padding * 2 - radius_2x + reduce_top), mask)
+        image.paste(fill_color, (upper_left[0] + text_width + scaled_padding * 2 - radius_2x, upper_left[1] + text_height + scaled_padding * 2 - radius_2x + scaled_reduce_top), mask)
 
         # Top side
-        draw.rectangle([upper_left[0] + radius, upper_left[1], upper_left[0] + text_width + padding * 2 - radius, upper_left[1] + radius], fill=fill_color)
+        draw.rectangle([upper_left[0] + radius, upper_left[1], upper_left[0] + text_width + scaled_padding * 2 - radius, upper_left[1] + radius], fill=fill_color)
         # Bottom side
-        draw.rectangle([upper_left[0] + radius, upper_left[1] + text_height + padding * 2 - radius + reduce_top, upper_left[0] + text_width + padding * 2 - radius, upper_left[1] + text_height + padding * 2 + reduce_top], fill=fill_color)
+        draw.rectangle([upper_left[0] + radius, upper_left[1] + text_height + scaled_padding * 2 - radius + scaled_reduce_top, upper_left[0] + text_width + scaled_padding * 2 - radius, upper_left[1] + text_height + scaled_padding * 2 + scaled_reduce_top], fill=fill_color)
         # Left side
-        draw.rectangle([upper_left[0], upper_left[1] + radius, upper_left[0] + radius, upper_left[1] + text_height + padding * 2 - radius + reduce_top], fill=fill_color)
+        draw.rectangle([upper_left[0], upper_left[1] + radius, upper_left[0] + radius, upper_left[1] + text_height + scaled_padding * 2 - radius + scaled_reduce_top], fill=fill_color)
         # Right side
-        draw.rectangle([upper_left[0] + text_width + padding * 2 - radius, upper_left[1] + radius, upper_left[0] + text_width + padding * 2, upper_left[1] + text_height + padding * 2 - radius + reduce_top], fill=fill_color)
+        draw.rectangle([upper_left[0] + text_width + scaled_padding * 2 - radius, upper_left[1] + radius, upper_left[0] + text_width + scaled_padding * 2, upper_left[1] + text_height + scaled_padding * 2 - radius + scaled_reduce_top], fill=fill_color)
         # Center box
-        draw.rectangle([upper_left[0] + radius, upper_left[1] + radius, upper_left[0] + text_width + padding * 2 - radius, upper_left[1] + text_height + padding * 2 - radius + reduce_top], fill=fill_color)
+        draw.rectangle([upper_left[0] + radius, upper_left[1] + radius, upper_left[0] + text_width + scaled_padding * 2 - radius, upper_left[1] + text_height + scaled_padding * 2 - radius + scaled_reduce_top], fill=fill_color)
 
         draw.text(position, text, font=font, fill=text_color)
 
@@ -1173,11 +1282,15 @@ class SimpleGUI(threading.Thread):
             self.vu_right_smoothed = 0
             self.vu_decay_factor = 0.2
 
+            frame_interval = 1.0 / max(1.0, self.target_fps)
             while self._running:
+                frame_start = time.perf_counter()
                 values = self.populate_values()
-                self.update_smoothed_vu_levels()
                 self.draw_gui(values)
-                time.sleep(0.2)
+                elapsed = time.perf_counter() - frame_start
+                sleep_time = frame_interval - elapsed
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
         finally:
             pass
 

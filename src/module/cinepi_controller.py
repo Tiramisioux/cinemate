@@ -104,12 +104,12 @@ class CinePiController:
         self.current_sensor = self.sensor_detect.camera_model
         self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)
         
+        self.sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
         self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
             self.current_sensor,
-            int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
+            self.sensor_mode,
+            self.fps,
         )
-
-        self.sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
         self.fps_max = int(self.sensor_detect.get_fps_max(self.current_sensor, self.sensor_mode))
         
         self.redis_controller.set_value(ParameterKey.FPS_MAX.value, self.fps_max)
@@ -413,6 +413,12 @@ class CinePiController:
         self.user_fps = float(value)
         self.redis_controller.set_value(ParameterKey.FPS_USER.value, self.user_fps)
 
+        self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
+            self.current_sensor,
+            self.sensor_mode,
+            self.user_fps,
+        )
+
         corrected = self.user_fps * self.fps_correction_factor
         fps_max   = int(self.redis_controller.get_value(ParameterKey.FPS_MAX.value))
 
@@ -667,6 +673,10 @@ class CinePiController:
                     value = 0
 
                 self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, str(value))
+                try:
+                    self.sensor_mode = int(value)
+                except (TypeError, ValueError):
+                    self.sensor_mode = value
 
                 resolution_info = self.sensor_detect.res_modes[value]
                 height_new = resolution_info.get('height', None)
@@ -713,8 +723,9 @@ class CinePiController:
                 
                 self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
                     self.current_sensor,
-                    int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
-                    )
+                    self.sensor_mode,
+                    self.current_fps,
+                )
 
                 self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)
                 time.sleep(1)

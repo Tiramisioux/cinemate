@@ -8,7 +8,6 @@ from .sensor_correction_factors import (
     SENSOR_CORRECTION_FACTORS,
 )
 
-
 class SensorDetect:
     def __init__(self, settings=None):
         self.camera_model = None
@@ -32,17 +31,7 @@ class SensorDetect:
         }
 
         # Optional fps correction factors per sensor/mode/fps triplet
-        self.fps_correction_factor = SENSOR_CORRECTION_FACTORS
-
-        # # Optional fps correction factors per sensor and sensor mode
-        # self.fps_correction_factor = {
-        #     "imx296": {0: 1.0, 1: 1.0, 2: 1.0},
-        #     "imx286": {0: 1.0, 1: 1.0, 2: 1.0},
-        #     "imx477": {0: 1.0, 1: 1.0, 2: 1.0},
-        #     "imx519": {0: 1.0, 1: 1.0, 2: 1.0},
-        #     "imx585": {0: 1.0, 1: 1.0, 2: 1.0},
-        #     "imx585_mono": {0: 0.9994, 1: 0.9980, 2: 1.0},
-        # }
+        self.fps_correction_factors = SENSOR_CORRECTION_FACTORS
 
         # Populate camera model and modes on startup
         self.detect_camera_model()
@@ -289,15 +278,35 @@ class SensorDetect:
             resolutions.append({'mode': mode, 'resolution': resolution})
         return resolutions
     
-    def get_fps_correction_factor(self, camera_name, sensor_mode):
+    def get_fps_correction_factor(self, camera_name, sensor_mode, fps=None):
         try:
             mode = int(sensor_mode)
         except (TypeError, ValueError):
             mode = sensor_mode
 
-        sensor_factors = self.fps_correction_factor.get(camera_name)
-        if isinstance(sensor_factors, dict):
-            return sensor_factors.get(mode, 1.0)
+        try:
+            fps_value = int(round(float(fps))) if fps is not None else None
+        except (TypeError, ValueError):
+            fps_value = None
 
-        # Fallback to scalar factors or the default 1.0 if no mapping is defined
-        return sensor_factors if isinstance(sensor_factors, (int, float)) else 1.0
+        sensor_table = self.fps_correction_factors.get(camera_name)
+
+        # Numeric fallback if a scalar is stored for the sensor (legacy support)
+        if isinstance(sensor_table, (int, float)):
+            return float(sensor_table)
+
+        if not isinstance(sensor_table, dict):
+            return DEFAULT_CORRECTION_FACTOR
+
+        mode_table = sensor_table.get(mode)
+        mode_default = sensor_table.get("_default", DEFAULT_CORRECTION_FACTOR)
+
+        if isinstance(mode_table, (int, float)):
+            return float(mode_table)
+
+        if isinstance(mode_table, dict):
+            if fps_value is not None and fps_value in mode_table:
+                return float(mode_table[fps_value])
+            return float(mode_table.get("_default", mode_default))
+
+        return float(mode_default)

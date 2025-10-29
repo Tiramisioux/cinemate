@@ -33,7 +33,7 @@ class RedisListener:
         self.redis_controller = redis_controller
         self.ssd_monitor = ssd_monitor
         self.framerate_callback = framerate_callback
-        
+
         self.framerate = float(self.redis_controller.get_value('fps_actual', 0))
         self.framecount_last_update_time = datetime.datetime.now()
         self.framecount = 0
@@ -95,8 +95,11 @@ class RedisListener:
         self.last_timestamp_single = None
         self.last_timestamp_cam0 = None
         self.last_timestamp_cam1 = None
-        
+
         self.fps_at_rec_start = None
+        self.fps_correction_factor_at_rec_start: float | None = None
+
+        self.recording_was_preroll = False
 
 
         self.start_listeners()
@@ -198,6 +201,42 @@ class RedisListener:
             pass
 
         return 1
+
+    def _current_correction_factor(self) -> float | None:
+        try:
+            fps_user_raw = self.redis_controller.get_value(ParameterKey.FPS_USER.value)
+            fps_effective_raw = self.redis_controller.get_value(ParameterKey.FPS.value)
+            if fps_user_raw is None or fps_effective_raw is None:
+                return None
+            fps_user = float(fps_user_raw)
+            fps_effective = float(fps_effective_raw)
+        except (TypeError, ValueError):
+            return None
+
+        if fps_user == 0:
+            return None
+
+        return fps_effective / fps_user
+
+    def _storage_preroll_active(self) -> bool:
+        try:
+            value = self.redis_controller.get_value(
+                ParameterKey.STORAGE_PREROLL_ACTIVE.value
+            )
+        except Exception:
+            return False
+
+        if value is None:
+            return False
+
+        text = str(value).strip().lower()
+        if text in ("1", "true", "yes", "on"):
+            return True
+
+        try:
+            return bool(int(text))
+        except (TypeError, ValueError):
+            return False
 
     def _determine_expected_fps(self) -> float | None:
         if self.fps_at_rec_start is not None and self.fps_at_rec_start > 0:
@@ -473,9 +512,14 @@ class RedisListener:
                     self.recording_start_time = datetime.datetime.now()
                     logging.info(f"Recording started at: {self.recording_start_time}")
 
+                    self.recording_was_preroll = self._storage_preroll_active()
+
+                    self.fps_correction_factor_at_rec_start = self._current_correction_factor()
+                    initial_correction = self.fps_correction_factor_at_rec_start or 1.0
+
                     self.redis_controller.set_value(
                         ParameterKey.FPS_CORRECTION_SUGGESTION.value,
-                        1.0,
+                        f"{initial_correction:.6f}",
                     )
 
                     # Lock the FPS at start (configured value)
@@ -494,10 +538,14 @@ class RedisListener:
                         if self.recording_start_time:
                             self.recording_end_time = datetime.datetime.now()
                             logging.info(f"Recording stopped at: {self.recording_end_time}")
-                            self.analyze_frames()
+                            try:
+                                self.analyze_frames()
+                            finally:
+                                self.recording_was_preroll = False
                             self.framerate_values = []
                         else:
                             logging.warning("Recording stopped, but no recording start time was registered.")
+                            self.recording_was_preroll = False
                     self.allow_initial_zero = True
                     
             elif changed_key == "fps":
@@ -769,7 +817,8 @@ class RedisListener:
         logging.info(f"Actual number of recorded frames: {recorded_frames_total}")
 
         diff = expected_frames_total - recorded_frames_total
-        if diff == 0:
+        all_frames_accounted = diff == 0
+        if all_frames_accounted:
             logging.info("✓ All frames accounted for.")
         else:
             if abs(diff) == 1:
@@ -783,11 +832,37 @@ class RedisListener:
             1 if frames_in_sync else 0,
         )
 
-        suggestion_value = 1.0
-        if expected_frames_float > 0 and recorded_frames_total > 0:
-            suggestion_value = expected_frames_float / recorded_frames_total
+        current_correction_factor = self.fps_correction_factor_at_rec_start
+        if not current_correction_factor or current_correction_factor <= 0:
+            current_correction_factor = self._current_correction_factor()
+
+        suggestion_value = current_correction_factor or 1.0
+
+        if self.recording_was_preroll:
             logging.info(
-                f"Suggested FPS correction factor based on recording: {suggestion_value:.6f}"
+                "Skipping FPS correction suggestion: storage pre-roll recording (keeping %.6f).",
+                suggestion_value,
+            )
+        elif all_frames_accounted:
+            if current_correction_factor:
+                logging.info(
+                    "No FPS correction adjustment needed; existing factor %.6f matches the capture.",
+                    current_correction_factor,
+                )
+            else:
+                logging.info("No FPS correction suggestion needed: all frames accounted for.")
+        elif (
+            expected_frames_float > 0
+            and recorded_frames_total > 0
+            and current_correction_factor
+        ):
+            multiplier = expected_frames_float / recorded_frames_total
+            suggestion_value = current_correction_factor * multiplier
+            logging.info(
+                "Suggested FPS correction factor based on recording: %.6f (multiplier %.6f × current %.6f)",
+                suggestion_value,
+                multiplier,
+                current_correction_factor,
             )
         else:
             logging.info("Insufficient data to derive FPS correction factor suggestion.")
@@ -796,6 +871,8 @@ class RedisListener:
             ParameterKey.FPS_CORRECTION_SUGGESTION.value,
             f"{suggestion_value:.6f}",
         )
+
+        self.fps_correction_factor_at_rec_start = None
 
 
     def calculate_average_framerate_last_100_frames(self):

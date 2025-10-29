@@ -62,18 +62,22 @@ class RedisListener:
         self.last_rise_time = None          # when frameCount last increased
         self.rec_hold_seconds = 0.3         # how long frameCount must stay flat before rec=0
 
-        
+
         self.drop_frame = False
         self.drop_frame_timer = None
-        
+
         self.cinepi_running = True
-        
+
         self.framecount_changing = False
         self.last_framecount = 0
         self.last_framecount_check_time = datetime.datetime.now()
         self.framecount_check_interval = 1.0  # Default to 1 second, will be updated based on FPS
-        
+
         self.redis_controller.set_value('rec', "0")
+
+        self.active_sensor_labels: set[str] = set()
+        self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 1)
+        self.redis_controller.set_value(ParameterKey.FPS_CORRECTION_SUGGESTION.value, 1.0)
         
         self.max_fps_adjustment = 0.1  # Maximum adjustment per iteration
         self.min_fps_adjustment = 0.0001  # Minimum adjustment increment
@@ -156,6 +160,92 @@ class RedisListener:
                 # keep the higher value; do not publish
                 return
 
+    def _update_active_sensors(self, stats_data: dict[str, object] | None) -> None:
+        if not stats_data:
+            return
+
+        detected: set[str] = set()
+        for key, value in stats_data.items():
+            if value is None:
+                continue
+            if key.startswith('timestamp_cam'):
+                detected.add(key[len('timestamp_'):])
+            elif key.startswith('frameCount_cam'):
+                detected.add(key[len('frameCount_'):])
+
+        if not detected:
+            if stats_data.get('timestamp') is not None or stats_data.get('sensorTimestamp') is not None:
+                detected.add('cam0')
+
+        if detected:
+            self.active_sensor_labels.update(detected)
+
+    def _current_sensor_count(self) -> int:
+        if self.active_sensor_labels:
+            return len(self.active_sensor_labels)
+
+        try:
+            cams_json = self.redis_controller.get_value(ParameterKey.CAMERAS.value)
+            if not cams_json:
+                return 1
+            data = json.loads(cams_json)
+            if isinstance(data, (list, tuple)):
+                ready = [c for c in data if isinstance(c, dict) and c.get('ready')]
+                if ready:
+                    return len(ready)
+                return len(data) or 1
+        except Exception:
+            pass
+
+        return 1
+
+    def _determine_expected_fps(self) -> float | None:
+        if self.fps_at_rec_start is not None and self.fps_at_rec_start > 0:
+            return self.fps_at_rec_start
+
+        try:
+            value = self.redis_controller.get_value('fps')
+            return float(value) if value is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _expected_frame_counts(fps_expected: float | None, duration: float, sensor_count: int) -> tuple[int, float]:
+        if fps_expected is None or fps_expected <= 0 or duration <= 0:
+            return 0, 0.0
+
+        sensor_effective = max(1, sensor_count)
+        expected_float = fps_expected * duration * sensor_effective
+        expected_int = int(math.floor(expected_float + 1e-6))
+        return expected_int, expected_float
+
+    def _update_frames_in_sync(self, stats_data: dict[str, object] | None = None) -> None:
+        if stats_data is not None:
+            self._update_active_sensors(stats_data)
+
+        if not self.is_recording or not self.recording_start_time:
+            self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 1)
+            return
+
+        fps_expected = self._determine_expected_fps()
+        if fps_expected is None or fps_expected <= 0:
+            return
+
+        now = datetime.datetime.now()
+        duration = (now - self.recording_start_time).total_seconds()
+        if duration < 0:
+            duration = 0.0
+
+        sensor_count = self._current_sensor_count()
+        expected_int, _ = self._expected_frame_counts(fps_expected, duration, sensor_count)
+        recorded_frames = int(self.framecount or 0)
+
+        in_sync = abs(expected_int - recorded_frames) <= 1
+        self.redis_controller.set_value(
+            ParameterKey.FRAMES_IN_SYNC.value,
+            1 if in_sync else 0,
+        )
+
     def listen_stats(self):
         for message in self.pubsub_stats.listen():
             if message['type'] == 'message':
@@ -212,6 +302,7 @@ class RedisListener:
 
                         # Update framecount in Redis (only if it has changed, and doesnt report a lower number than before, except 0
                         self._maybe_publish_framecount(self.frame_count)
+                        self._update_frames_in_sync(stats_data)
 
                         # Check and set buffering status if changed
                         is_buffering = buffer_size > 0 if buffer_size is not None else False
@@ -354,6 +445,8 @@ class RedisListener:
         self.framecount = 0
         self.frame_count = 0
         self.redis_controller.set_value('framecount', 0)
+        self.active_sensor_labels.clear()
+        self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 1)
         logging.info("Framecount reset to 0.")
 
     def listen_controls(self):
@@ -379,6 +472,11 @@ class RedisListener:
                     self.reset_framecount()
                     self.recording_start_time = datetime.datetime.now()
                     logging.info(f"Recording started at: {self.recording_start_time}")
+
+                    self.redis_controller.set_value(
+                        ParameterKey.FPS_CORRECTION_SUGGESTION.value,
+                        1.0,
+                    )
 
                     # Lock the FPS at start (configured value)
                     try:
@@ -661,7 +759,11 @@ class RedisListener:
 
         # ----------------------- expected frames (per sensor) -----------------
         # Discrete sampling: frames are whole numbers; floor avoids the +1 overshoot at the stop edge.
-        expected_frames_total = int(math.floor((fps_expected * duration * max(1, sensor_count_effective)) + 1e-6))
+        expected_frames_total, expected_frames_float = self._expected_frame_counts(
+            fps_expected,
+            duration,
+            sensor_count_effective,
+        )
 
         logging.info(f"Calculated expected number of frames: {expected_frames_total}")
         logging.info(f"Actual number of recorded frames: {recorded_frames_total}")
@@ -674,6 +776,26 @@ class RedisListener:
                 logging.warning(f"Discrepancy detected: {diff:+d} frame (boundary rounding).")
             else:
                 logging.warning(f"Discrepancy detected: {diff:+d} frames difference between expected and recorded counts.")
+
+        frames_in_sync = abs(diff) <= 1
+        self.redis_controller.set_value(
+            ParameterKey.FRAMES_IN_SYNC.value,
+            1 if frames_in_sync else 0,
+        )
+
+        suggestion_value = 1.0
+        if expected_frames_float > 0 and recorded_frames_total > 0:
+            suggestion_value = expected_frames_float / recorded_frames_total
+            logging.info(
+                f"Suggested FPS correction factor based on recording: {suggestion_value:.6f}"
+            )
+        else:
+            logging.info("Insufficient data to derive FPS correction factor suggestion.")
+
+        self.redis_controller.set_value(
+            ParameterKey.FPS_CORRECTION_SUGGESTION.value,
+            f"{suggestion_value:.6f}",
+        )
 
 
     def calculate_average_framerate_last_100_frames(self):

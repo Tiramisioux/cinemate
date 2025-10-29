@@ -29,6 +29,7 @@ class ParameterKey(Enum):
     FPS_LAST          = "fps_last"
     FPS_MAX           = "fps_max"
     FPS_USER          = "fps_user"
+    FPS_CORRECTION_SUGGESTION = "fps_correction_suggestion"
     FRAMECOUNT        = "framecount"
     GUI_LAYOUT        = "gui_layout"
     HEIGHT            = "height"
@@ -72,6 +73,7 @@ class ParameterKey(Enum):
     RECORDING_TIME         = "recording_time"      # elapsed-time in seconds   
     RECORDING_TC_REC     = "recording_tc_rec"    # elapsed-time time-code
     RECORDING_TC_TOD   = "recording_time_tod"    # time-of-day time-code
+    FRAMES_IN_SYNC      = "frames_in_sync"
 
 
 # ────────────────────────── tiny pub‑sub helper ──────────────────────

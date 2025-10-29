@@ -362,7 +362,7 @@ class SimpleGUI(threading.Thread):
         except (ValueError, TypeError):
             cam_list = []
 
-        sensor_left  = ""
+        sensor_left  = ""   
         sensor_right = ""
         cam1         = None
 
@@ -424,7 +424,7 @@ class SimpleGUI(threading.Thread):
             "shutter_label":  "SHUTTER",
             "shutter_speed":  shutter_speed,
             "fps_label":      "FPS",
-            "fps":            round(float(self.redis_controller.get_value(ParameterKey.FPS.value))),
+            "fps":            round(float(self.redis_controller.get_value(ParameterKey.FPS_USER.value))),
             "wb_label":       "WB",
             "color_temp":     f"{self.redis_controller.get_value(ParameterKey.WB_USER.value)} K",
             "color_temp_libcamera": f"/ {self.redis_listener.colorTemp}K",

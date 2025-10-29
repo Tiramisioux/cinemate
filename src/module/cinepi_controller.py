@@ -58,7 +58,7 @@ class CinePiController:
         self.wb_cg_rb_array = {}  # Initialize as an empty dictionary
         
         self.fps = int(round(float(self.redis_controller.get_value(ParameterKey.FPS_LAST.value))))
-        self.current_fps = self.fps
+        self.current_fps = float(self.redis_controller.get_value(ParameterKey.FPS_USER.value))
         
         self.shutter_a_steps_dynamic = self.calculate_dynamic_shutter_angles(self.fps)
 

@@ -320,8 +320,13 @@ def _switch_to_raw(dev: str | None):
     global _active_raw
     with _raw_lock:
         if dev == _active_raw:
-            return
-        if _active_raw is not None:
+            mp = _mounts.get(dev)
+            if mp and os.path.ismount(mp):
+                return
+            log.info(
+                "RAW %s requested but not currently mounted — remounting", dev
+            )
+        if _active_raw is not None and _active_raw != dev:
             _unmount(_active_raw)
         if dev is not None:
             _mount(dev)
@@ -551,6 +556,12 @@ def _force_lazy_unmount(dev: str, retries: int = 20) -> bool:
         if not os.path.ismount(mp):
             _mounts.pop(dev, None)
             _active_mount_kinds.pop(dev, None)
+            if mp.name == "RAW":
+                with _raw_lock:
+                    if dev in _raw_pool:
+                        _raw_pool.remove(dev)
+                    if _active_raw == dev:
+                        _active_raw = None
             try:
                 if not _is_mp_busy(mp):
                     mp.rmdir()
@@ -599,11 +610,17 @@ def _sanity_watchdog():
     while True:
         # Reconcile table with reality
         real_sources = {line.split(" - ", 1)[1].split()[1] for line in open("/proc/self/mountinfo")}
-        for dev in list(_mounts):
+        for dev, mp in list(_mounts.items()):
             if dev not in real_sources:
                 log.debug("Watchdog: %s vanished from mountinfo, cleaning up", dev)
                 _mounts.pop(dev, None)
                 _active_mount_kinds.pop(dev, None)
+                if mp and mp.name == "RAW":
+                    with _raw_lock:
+                        if dev in _raw_pool:
+                            _raw_pool.remove(dev)
+                        if _active_raw == dev:
+                            _active_raw = None
         # Yank detection
         for dev, mp in list(_mounts.items()):
             try:
@@ -616,6 +633,11 @@ def _sanity_watchdog():
 
         # RAW arbitration self-heal (if multiple RAW present, pick the last seen)
         with _raw_lock:
+            if _active_raw and _active_raw not in _mounts:
+                log.debug(
+                    "Watchdog: active RAW %s disappeared from mount table", _active_raw
+                )
+                _active_raw = None
             if len(_raw_pool) > 1:
                 preferred = _raw_pool[-1]
                 if preferred != _active_raw:

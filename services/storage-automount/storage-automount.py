@@ -51,11 +51,20 @@ _raw_pool: list[str] = []     # list of /dev/… that have LABEL==RAW (present)
 _active_raw: str | None = None
 _raw_lock = threading.Lock()
 
+# CFE-HAT LED coordination (best-effort when the HAT is present)
+_cfe_hat_led_lock = threading.Lock()
+_cfe_hat_led_target: bool | None = False
+
 # pyudev context
 _udev_ctx = pyudev.Context()
 
 # Saved sysctl values for restoration
 _sysctl_saved: dict[str, str | None] = {}
+
+_CFE_PLATFORM_NODE = "1000110000.pcie"
+_CFE_PLATFORM_DRIVER = Path(f"/sys/devices/platform/axi/{_CFE_PLATFORM_NODE}/driver")
+_CFE_PLATFORM_BIND = Path("/sys/bus/platform/drivers/brcm-pcie/bind")
+_CFE_PCI_RESCAN = Path("/sys/bus/pci/rescan")
 
 # Optional override (debugging): cfe_nvme | usb_nvme | usb_ssd | other
 PROFILE_OVERRIDE = (os.getenv("STORAGE_AUTOMOUNT_PROFILE_OVERRIDE") or "").strip()
@@ -128,6 +137,59 @@ def _sysctl_get(key: str) -> str | None:
 
 def _sysctl_set(key: str, val: str) -> bool:
     return _write(f"/proc/sys/{key.replace('.', '/')}", val)
+
+def _cfe_hat_request_led(state: bool) -> None:
+    """Request the CFE-HAT LED to switch to *state* (best effort)."""
+    global _cfe_hat_led_target
+    if smbus is None:
+        return
+    with _cfe_hat_led_lock:
+        _cfe_hat_led_target = state
+
+def _cfe_pci_slot() -> str | None:
+    """Return the PCI tree node for the NVMe controller if present."""
+    try:
+        output = subprocess.check_output(["lspci", "-mm"], text=True)
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return None
+
+    for line in output.splitlines():
+        if "Non-Volatile memory controller" not in line:
+            continue
+        slot = line.split()[0]
+        if len(slot) <= 7:
+            slot = f"0000:{slot}"
+        return slot
+    return None
+
+def _cfe_pcie_remove() -> bool:
+    slot = _cfe_pci_slot()
+    if not slot:
+        return False
+    path = Path(f"/sys/bus/pci/devices/{slot}/remove")
+    if not path.exists():
+        return False
+    if _write(str(path), "1"):
+        log.debug("CFE-HAT: requested PCIe remove for %s", slot)
+        time.sleep(0.1)
+        return True
+    return False
+
+def _cfe_pcie_enable() -> bool:
+    """Ensure the PCIe controller is bound and rescan for NVMe devices."""
+    ok = False
+    if _CFE_PLATFORM_DRIVER.exists():
+        ok = _write(str(_CFE_PCI_RESCAN), "1")
+    else:
+        ok = _write(str(_CFE_PLATFORM_BIND), _CFE_PLATFORM_NODE)
+        if ok:
+            time.sleep(0.5)
+            ok = _write(str(_CFE_PCI_RESCAN), "1")
+    if ok:
+        time.sleep(0.5)
+    else:
+        log.debug("CFE-HAT: PCIe enable failed (driver=%s)", _CFE_PLATFORM_DRIVER.exists())
+    return ok
 
 def _sanitize(label: str) -> str:
     return re.sub(r"[^\w\-.]", "_", label)[:64] or "RAW"
@@ -320,10 +382,18 @@ def _switch_to_raw(dev: str | None):
     global _active_raw
     with _raw_lock:
         if dev == _active_raw:
-            return
-        if _active_raw is not None:
+            mp = _mounts.get(dev)
+            if mp and os.path.ismount(mp):
+                return
+            log.info(
+                "RAW %s requested but not currently mounted — remounting", dev
+            )
+        if _active_raw is not None and _active_raw != dev:
             _unmount(_active_raw)
         if dev is not None:
+            if dev.startswith("/dev/nvme") and not Path(dev).exists():
+                if not _cfe_pcie_enable():
+                    log.debug("RAW switch: PCIe enable request failed for %s", dev)
             _mount(dev)
         _active_raw = dev
 
@@ -434,6 +504,8 @@ def _mount(dev: str):
             if dev.startswith("/dev/nvme"):
                 _apply_nvme_power_saver(kind)
             _apply_sysctl_profile(kind)
+            if kind == "cfe_nvme":
+                _cfe_hat_request_led(True)
             return
         else:
             # Unknown mpt; skip double-mounting
@@ -456,6 +528,8 @@ def _mount(dev: str):
         if dev.startswith("/dev/nvme"):
             _apply_nvme_power_saver(kind)
         _apply_sysctl_profile(kind)
+        if kind == "cfe_nvme":
+            _cfe_hat_request_led(True)
 
         log.info("Mounted %s OK", dev)
         return
@@ -475,6 +549,8 @@ def _mount(dev: str):
             if dev.startswith("/dev/nvme"):
                 _apply_nvme_power_saver(kind)
             _apply_sysctl_profile(kind)
+            if kind == "cfe_nvme":
+                _cfe_hat_request_led(True)
             log.info("Mounted %s OK after repair", dev)
             return
 
@@ -493,6 +569,31 @@ def _lazy_umount_mp(mp: Path, retries: int = 10) -> bool:
         subprocess.call(["umount", "-l", str(mp)])
         time.sleep(0.2)
     return False
+
+def _finalize_mount_removal(dev: str, mp: Path | None, kind: str | None) -> None:
+    if mp and mp.name == "RAW":
+        with _raw_lock:
+            if dev in _raw_pool:
+                _raw_pool.remove(dev)
+            if _active_raw == dev:
+                _active_raw = None
+
+    if mp and not os.path.ismount(mp) and not _is_mp_busy(mp):
+        try:
+            mp.rmdir()
+        except OSError:
+            pass
+
+    if kind == "cfe_nvme" and not any(v == "cfe_nvme" for v in _active_mount_kinds.values()):
+        removed = _cfe_pcie_remove()
+        if removed:
+            log.info("CFE-HAT PCIe link powered down")
+        else:
+            log.debug("CFE-HAT PCIe remove skipped (controller absent)")
+        _cfe_hat_request_led(False)
+
+    if not _active_mount_kinds:
+        _maybe_restore_sysctls()
 
 def _wait_for_raw_mount(timeout: float = 8.0) -> bool:
     mp = MOUNT_BASE / "RAW"
@@ -513,14 +614,10 @@ def _wait_for_raw_unmount(timeout: float = 3.0) -> bool:
     return False
 
 def _unmount(dev: str):
-    if dev not in _mounts:
+    mp = _mounts.get(dev)
+    if mp is None:
         return
-
-    mp = _mounts.pop(dev, None)
-    _active_mount_kinds.pop(dev, None)
-
-    if not mp:
-        return
+    kind = _active_mount_kinds.get(dev)
 
     log.info("Unmounting %s from %s", dev, mp)
     res = subprocess.call(["umount", dev])
@@ -531,33 +628,24 @@ def _unmount(dev: str):
             _mounts[dev] = mp  # keep it tracked
             return
 
-    if not _is_mp_busy(mp):
-        try:
-            mp.rmdir()
-        except OSError:
-            pass
-    log.info("Unmounted %s OK", dev)
+    _mounts.pop(dev, None)
+    _active_mount_kinds.pop(dev, None)
+    _finalize_mount_removal(dev, mp, kind)
 
-    if not _active_mount_kinds:
-        _maybe_restore_sysctls()
+    log.info("Unmounted %s OK", dev)
 
 def _force_lazy_unmount(dev: str, retries: int = 20) -> bool:
     mp = _mounts.get(dev)
     if mp is None:
         return False
+    kind = _active_mount_kinds.get(dev)
     subprocess.call(["umount", "-l", str(mp)],
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for _ in range(retries):
         if not os.path.ismount(mp):
             _mounts.pop(dev, None)
             _active_mount_kinds.pop(dev, None)
-            try:
-                if not _is_mp_busy(mp):
-                    mp.rmdir()
-            except OSError:
-                pass
-            if not _active_mount_kinds:
-                _maybe_restore_sysctls()
+            _finalize_mount_removal(dev, mp, kind)
             return True
         time.sleep(0.1)
     log.warning("Lazy unmount timeout for %s", dev)
@@ -599,11 +687,12 @@ def _sanity_watchdog():
     while True:
         # Reconcile table with reality
         real_sources = {line.split(" - ", 1)[1].split()[1] for line in open("/proc/self/mountinfo")}
-        for dev in list(_mounts):
+        for dev, mp in list(_mounts.items()):
             if dev not in real_sources:
                 log.debug("Watchdog: %s vanished from mountinfo, cleaning up", dev)
+                kind = _active_mount_kinds.pop(dev, None)
                 _mounts.pop(dev, None)
-                _active_mount_kinds.pop(dev, None)
+                _finalize_mount_removal(dev, mp, kind)
         # Yank detection
         for dev, mp in list(_mounts.items()):
             try:
@@ -616,6 +705,11 @@ def _sanity_watchdog():
 
         # RAW arbitration self-heal (if multiple RAW present, pick the last seen)
         with _raw_lock:
+            if _active_raw and _active_raw not in _mounts:
+                log.debug(
+                    "Watchdog: active RAW %s disappeared from mount table", _active_raw
+                )
+                _active_raw = None
             if len(_raw_pool) > 1:
                 preferred = _raw_pool[-1]
                 if preferred != _active_raw:
@@ -706,26 +800,24 @@ def _cfe_hat_worker():
     led_on = False
     def _set_led(state: bool):
         nonlocal led_on
+        global _cfe_hat_led_target
         if state == led_on:
             return
         led_on = state
         try:
             bus.write_byte(I2C_ADDR, 0x01 if state else 0x00)
+            with _cfe_hat_led_lock:
+                _cfe_hat_led_target = state
         except OSError as e:
             log.debug("CFE-HAT LED write error: %s", e)
 
     def _pcie(bind: bool):
-        path, node = "/sys/bus/platform/drivers/brcm-pcie", "1000110000.pcie"
-        target = "bind" if bind else "unbind"
-        try:
-            with open(f"{path}/{target}", "w") as f:
-                f.write(node)
-        except OSError as e:
-            if e.errno != errno.EBUSY:
-                log.debug("PCIe %s error: %s", target, e)
         if bind:
-            time.sleep(0.5)
-            subprocess.call(["sh", "-c", "echo 1 > /sys/bus/pci/rescan"])
+            if not _cfe_pcie_enable():
+                log.warning("CFE-HAT: PCIe enable failed")
+        else:
+            if not _cfe_pcie_remove():
+                log.debug("CFE-HAT: PCIe remove skipped (controller absent)")
 
     last_state = 0x00
     try:
@@ -733,6 +825,11 @@ def _cfe_hat_worker():
     except OSError:
         pass
     log.info("CFE-HAT thread started — idle byte 0x%02X", last_state)
+
+    with _cfe_hat_led_lock:
+        initial_led = bool(_cfe_hat_led_target)
+    if initial_led:
+        _set_led(True)
 
     while True:
         try:
@@ -798,6 +895,11 @@ def _cfe_hat_worker():
             else:
                 log.warning("Eject: no partitions were mounted")
 
+        with _cfe_hat_led_lock:
+            desired = _cfe_hat_led_target
+        if desired is not None and desired != led_on:
+            _set_led(bool(desired))
+
         time.sleep(0.05)
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -825,6 +927,11 @@ def _initial_scan():
         devnode = sorted(raws)[-1]
         _register_raw_add(devnode)
         _switch_to_raw(devnode)
+
+    if any(kind == "cfe_nvme" for kind in _active_mount_kinds.values()):
+        _cfe_hat_request_led(True)
+    else:
+        _cfe_hat_request_led(False)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Main

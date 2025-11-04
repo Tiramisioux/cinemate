@@ -645,7 +645,19 @@ def _force_lazy_unmount(dev: str, retries: int = 20) -> bool:
         if not os.path.ismount(mp):
             _mounts.pop(dev, None)
             _active_mount_kinds.pop(dev, None)
-            _finalize_mount_removal(dev, mp, kind)
+            if mp.name == "RAW":
+                with _raw_lock:
+                    if dev in _raw_pool:
+                        _raw_pool.remove(dev)
+                    if _active_raw == dev:
+                        _active_raw = None
+            try:
+                if not _is_mp_busy(mp):
+                    mp.rmdir()
+            except OSError:
+                pass
+            if not _active_mount_kinds:
+                _maybe_restore_sysctls()
             return True
         time.sleep(0.1)
     log.warning("Lazy unmount timeout for %s", dev)
@@ -692,7 +704,13 @@ def _sanity_watchdog():
                 log.debug("Watchdog: %s vanished from mountinfo, cleaning up", dev)
                 kind = _active_mount_kinds.pop(dev, None)
                 _mounts.pop(dev, None)
-                _finalize_mount_removal(dev, mp, kind)
+                _active_mount_kinds.pop(dev, None)
+                if mp and mp.name == "RAW":
+                    with _raw_lock:
+                        if dev in _raw_pool:
+                            _raw_pool.remove(dev)
+                        if _active_raw == dev:
+                            _active_raw = None
         # Yank detection
         for dev, mp in list(_mounts.items()):
             try:

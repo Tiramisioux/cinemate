@@ -32,6 +32,8 @@ Each entry explains which component normally writes the key and what happens whe
 | is_writing_buf | Cinemate | Internal countdown after recording stops | No |
 | is_mounted | Cinemate (SSD monitor) | 1 when storage is mounted | No |
 | storage_type | Cinemate (SSD monitor) | Drive type (NVME/USB/SD) | No |
+| storage_mechanical_status | storage-automount.service | Physical status of attached media (`cfe:mounted`, `ssd:unmounted`, …) | No |
+| storage_status_message | storage-automount.service | Human-readable status message from automounter | No |
 | space_left | Cinemate (SSD monitor) | Remaining space in GB | No |
 | write_speed_to_drive | Cinemate (SSD monitor) | Current write speed MB/s | No |
 | file_size | Cinemate | Bytes per frame for current mode | No |

@@ -16,6 +16,13 @@ import threading
 import time
 from pathlib import Path
 
+try:
+    import redis  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    redis = None
+
+import shutil
+
 import pyudev  # sudo apt install python3-pyudev
 try:
     import smbus  # sudo apt install python3-smbus
@@ -34,6 +41,162 @@ logging.basicConfig(
 )
 log = logging.getLogger("storage-automount")
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Redis integration (optional)
+# ─────────────────────────────────────────────────────────────────────────────
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_DB   = int(os.getenv("REDIS_DB", "0"))
+
+REDIS_KEY_IS_MOUNTED          = os.getenv("REDIS_KEY_IS_MOUNTED", "is_mounted")
+REDIS_KEY_STORAGE_TYPE        = os.getenv("REDIS_KEY_STORAGE_TYPE", "storage_type")
+REDIS_KEY_MECHANICAL_STATUS   = os.getenv("REDIS_KEY_MECHANICAL_STATUS", "storage_mechanical_status")
+REDIS_KEY_STATUS_MESSAGE      = os.getenv("REDIS_KEY_STATUS_MESSAGE", "storage_status_message")
+REDIS_KEY_SPACE_LEFT          = os.getenv("REDIS_KEY_SPACE_LEFT", "space_left")
+
+REDIS_LOG_LIST    = os.getenv("REDIS_STORAGE_LOG_LIST", "storage_automount:log")
+REDIS_LOG_LAST    = os.getenv("REDIS_STORAGE_LOG_LAST", "storage_automount:last")
+REDIS_LOG_CHANNEL = os.getenv("REDIS_STORAGE_LOG_CHANNEL", "storage_automount.log")
+REDIS_LOG_MAX     = int(os.getenv("REDIS_STORAGE_LOG_MAX", "200"))
+
+_redis_client = None
+_redis_lock = threading.Lock()
+
+
+def _redis_connect():
+    global _redis_client
+    if redis is None:
+        return None
+    with _redis_lock:
+        if _redis_client is not None:
+            return _redis_client
+        try:
+            client = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
+            client.ping()
+        except Exception as exc:  # pragma: no cover - connectivity failure
+            log.debug("Redis unavailable (%s:%s/%s): %s", REDIS_HOST, REDIS_PORT, REDIS_DB, exc)
+            _redis_client = None
+        else:
+            _redis_client = client
+        return _redis_client
+
+
+def _redis_safe_call(fn, *args, **kwargs) -> None:
+    client = _redis_connect()
+    if client is None:
+        return
+    try:
+        fn(client, *args, **kwargs)
+    except Exception as exc:  # pragma: no cover - runtime connectivity failure
+        log.debug("Redis call failed: %s", exc)
+
+
+def _redis_set_value(key: str, value: str) -> None:
+    def _set(client, k, v):
+        client.set(k, v)
+    _redis_safe_call(_set, key, value)
+
+
+def _redis_pipeline_exec(cmds) -> None:
+    client = _redis_connect()
+    if client is None:
+        return
+    try:
+        pipe = client.pipeline()
+        for fn, args, kwargs in cmds:
+            getattr(pipe, fn)(*args, **kwargs)
+        pipe.execute()
+    except Exception as exc:  # pragma: no cover - runtime connectivity failure
+        log.debug("Redis pipeline failed: %s", exc)
+
+
+class RedisLogHandler(logging.Handler):
+    """Forward log lines to Redis so the CLI/UI can mirror service output."""
+
+    def emit(self, record: logging.LogRecord) -> None:  # pragma: no cover - logging side-effect
+        msg = self.format(record)
+        client = _redis_connect()
+        if client is None:
+            return
+        try:
+            pipe = client.pipeline()
+            pipe.lpush(REDIS_LOG_LIST, msg)
+            pipe.ltrim(REDIS_LOG_LIST, 0, REDIS_LOG_MAX - 1)
+            pipe.set(REDIS_LOG_LAST, msg)
+            pipe.publish(REDIS_LOG_CHANNEL, msg)
+            pipe.execute()
+        except Exception as exc:  # pragma: no cover - runtime connectivity failure
+            log.debug("Redis log emit failed: %s", exc)
+
+
+if redis is not None:
+    redis_handler = RedisLogHandler()
+    redis_handler.setLevel(logging.INFO)
+    redis_handler.setFormatter(logging.Formatter("%(asctime)s [storage-automount] %(levelname)s: %(message)s",
+                                               datefmt="%Y-%m-%d %H:%M:%S"))
+    log.addHandler(redis_handler)
+
+
+def _redis_update_state(*, mounted: bool | None = None,
+                        storage_type: str | None = None,
+                        mechanical: str | None = None,
+                        message: str | None = None,
+                        space_left: float | None = None) -> None:
+    cmds = []
+    if mounted is not None:
+        cmds.append(("set", (REDIS_KEY_IS_MOUNTED, "1" if mounted else "0"), {}))
+    if storage_type is not None:
+        cmds.append(("set", (REDIS_KEY_STORAGE_TYPE, storage_type), {}))
+    if mechanical is not None:
+        cmds.append(("set", (REDIS_KEY_MECHANICAL_STATUS, mechanical), {}))
+    if message is not None:
+        cmds.append(("set", (REDIS_KEY_STATUS_MESSAGE, message), {}))
+    if space_left is not None:
+        cmds.append(("set", (REDIS_KEY_SPACE_LEFT, f"{space_left:.2f}"), {}))
+    if cmds:
+        _redis_pipeline_exec(cmds)
+
+
+def _storage_type_from_kind(kind: str) -> str:
+    return MECHANICAL_KIND_MAP.get(kind, "other")
+
+
+def _space_left_gb(mp: Path) -> float | None:
+    try:
+        usage = shutil.disk_usage(mp)
+        return usage.free / (1024 ** 3)
+    except Exception:
+        return None
+
+
+def _redis_record_mount(kind: str, label: str | None, mp: Path) -> None:
+    storage_type = _storage_type_from_kind(kind)
+    message = f"Mounted {label or mp.name} at {mp}" if label else f"Mounted {mp}"
+    space_left = _space_left_gb(mp)
+    mechanical = f"{storage_type}:mounted"
+    mounted_flag = label == "RAW"
+    _redis_update_state(
+        mounted=mounted_flag,
+        storage_type=storage_type if mounted_flag else None,
+        mechanical=mechanical,
+        message=message,
+        space_left=space_left if mounted_flag and space_left is not None else None,
+    )
+
+
+def _redis_record_unmount(kind: str | None, label: str | None) -> None:
+    storage_type = _storage_type_from_kind(kind or "other")
+    mechanical = f"{storage_type}:unmounted"
+    mounted_flag = label == "RAW"
+    _redis_update_state(
+        mounted=False if mounted_flag else None,
+        storage_type="none" if mounted_flag else None,
+        mechanical=mechanical,
+        message=f"Unmounted {label or storage_type}",
+        space_left=0.0 if mounted_flag else None,
+    )
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Globals
 # ─────────────────────────────────────────────────────────────────────────────
@@ -45,6 +208,7 @@ MOUNT_BASE = Path("/media")
 # Active mounts and kinds (devnode → mountpoint / kind)
 _mounts: dict[str, Path] = {}
 _active_mount_kinds: dict[str, str] = {}
+_mount_labels: dict[str, str] = {}
 
 # RAW arbitration
 _raw_pool: list[str] = []     # list of /dev/… that have LABEL==RAW (present)
@@ -59,6 +223,13 @@ _sysctl_saved: dict[str, str | None] = {}
 
 # Optional override (debugging): cfe_nvme | usb_nvme | usb_ssd | other
 PROFILE_OVERRIDE = (os.getenv("STORAGE_AUTOMOUNT_PROFILE_OVERRIDE") or "").strip()
+
+MECHANICAL_KIND_MAP = {
+    "cfe_nvme": "cfe",
+    "usb_nvme": "nvme",
+    "usb_ssd": "ssd",
+    "other": "other",
+}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Media profiles (mount + kernel/block I/O cushions)
@@ -430,6 +601,8 @@ def _mount(dev: str):
                 _remount_with_opts(dev, mpt, opts)
             _mounts[dev] = mpt
             _active_mount_kinds[dev] = kind
+            _mount_labels[dev] = label or Path(dev).name
+            _redis_record_mount(kind, label, mpt)
             _apply_block_tuning(dev, kind)
             if dev.startswith("/dev/nvme"):
                 _apply_nvme_power_saver(kind)
@@ -447,6 +620,7 @@ def _mount(dev: str):
     if subprocess.call(cmd) == 0:
         _mounts[dev] = mp
         _active_mount_kinds[dev] = kind
+        _mount_labels[dev] = label or Path(dev).name
         try:
             os.chown(mp, PI_UID, PI_GID)
         except Exception as exc:
@@ -458,6 +632,7 @@ def _mount(dev: str):
         _apply_sysctl_profile(kind)
 
         log.info("Mounted %s OK", dev)
+        _redis_record_mount(kind, label, mp)
         return
 
     # First attempt failed → auto-repair once
@@ -467,6 +642,7 @@ def _mount(dev: str):
         if subprocess.call(cmd) == 0:
             _mounts[dev] = mp
             _active_mount_kinds[dev] = kind
+            _mount_labels[dev] = label or Path(dev).name
             try:
                 os.chown(mp, PI_UID, PI_GID)
             except Exception as exc:
@@ -476,6 +652,7 @@ def _mount(dev: str):
                 _apply_nvme_power_saver(kind)
             _apply_sysctl_profile(kind)
             log.info("Mounted %s OK after repair", dev)
+            _redis_record_mount(kind, label, mp)
             return
 
     # Still failing — clean up empty dir
@@ -517,7 +694,8 @@ def _unmount(dev: str):
         return
 
     mp = _mounts.pop(dev, None)
-    _active_mount_kinds.pop(dev, None)
+    kind = _active_mount_kinds.pop(dev, None)
+    label = _mount_labels.pop(dev, None)
 
     if not mp:
         return
@@ -541,6 +719,8 @@ def _unmount(dev: str):
     if not _active_mount_kinds:
         _maybe_restore_sysctls()
 
+    _redis_record_unmount(kind, label)
+
 def _force_lazy_unmount(dev: str, retries: int = 20) -> bool:
     mp = _mounts.get(dev)
     if mp is None:
@@ -550,7 +730,8 @@ def _force_lazy_unmount(dev: str, retries: int = 20) -> bool:
     for _ in range(retries):
         if not os.path.ismount(mp):
             _mounts.pop(dev, None)
-            _active_mount_kinds.pop(dev, None)
+            kind = _active_mount_kinds.pop(dev, None)
+            label = _mount_labels.pop(dev, None)
             try:
                 if not _is_mp_busy(mp):
                     mp.rmdir()
@@ -558,6 +739,7 @@ def _force_lazy_unmount(dev: str, retries: int = 20) -> bool:
                 pass
             if not _active_mount_kinds:
                 _maybe_restore_sysctls()
+            _redis_record_unmount(kind, label)
             return True
         time.sleep(0.1)
     log.warning("Lazy unmount timeout for %s", dev)
@@ -687,7 +869,7 @@ def _udev_worker():
                     _switch_to_raw(fallback)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CFE-HAT worker (insert/eject edge + LED + PCIe bind/unbind)
+# CFE-HAT worker (new mechanics)
 # ─────────────────────────────────────────────────────────────────────────────
 def _cfe_hat_worker():
     global _active_raw
@@ -703,102 +885,263 @@ def _cfe_hat_worker():
         log.info("CFE-HAT not detected on I²C, skipping thread")
         return
 
-    led_on = False
-    def _set_led(state: bool):
-        nonlocal led_on
-        if state == led_on:
+    log.info("=" * 80)
+    log.info("CFE Hat Auto Mount worker initialising")
+    log.info("=" * 80)
+
+    led_state = False
+
+    def _set_led(state: bool) -> None:
+        nonlocal led_state
+        if state == led_state:
             return
-        led_on = state
         try:
             bus.write_byte(I2C_ADDR, 0x01 if state else 0x00)
-        except OSError as e:
-            log.debug("CFE-HAT LED write error: %s", e)
+            led_state = state
+            log.debug("CFE LED set to %s", "ON" if state else "OFF")
+        except OSError as exc:
+            log.debug("CFE-HAT LED write error: %s", exc)
 
-    def _pcie(bind: bool):
-        path, node = "/sys/bus/platform/drivers/brcm-pcie", "1000110000.pcie"
+    def _redis_mech(status: str, message: str | None = None) -> None:
+        _redis_update_state(mechanical=status, message=message)
+
+    def _read_buttons() -> tuple[int, int]:
+        try:
+            while True:
+                data = bus.read_byte(I2C_ADDR)
+                if data != 0x69:
+                    break
+                time.sleep(0.1)
+        except OSError as exc:
+            log.error("CFE I2C read failed: %s", exc)
+            return (0, 0)
+        insert_button = 1 if (data & 0x01) else 0
+        eject_button = 1 if (data & 0x02) else 0
+        log.debug("CFE buttons → insert=%d eject=%d raw=0x%02X", insert_button, eject_button, data)
+        return (insert_button, eject_button)
+
+    def _pcie_bind(bind: bool) -> None:
+        node = "1000110000.pcie"
+        driver_path = "/sys/bus/platform/drivers/brcm-pcie"
         target = "bind" if bind else "unbind"
         try:
-            with open(f"{path}/{target}", "w") as f:
-                f.write(node)
-        except OSError as e:
-            if e.errno != errno.EBUSY:
-                log.debug("PCIe %s error: %s", target, e)
+            with open(f"{driver_path}/{target}", "w") as fh:
+                fh.write(node)
+            log.info("PCIe %s request for %s", target, node)
+        except OSError as exc:
+            if exc.errno != errno.EBUSY:
+                log.error("PCIe %s error: %s", target, exc)
         if bind:
             time.sleep(0.5)
             subprocess.call(["sh", "-c", "echo 1 > /sys/bus/pci/rescan"])
 
-    last_state = 0x00
-    try:
-        last_state = bus.read_byte(I2C_ADDR)
-    except OSError:
-        pass
-    log.info("CFE-HAT thread started — idle byte 0x%02X", last_state)
-
-    while True:
+    def _check_for_device(device_name: str) -> str | None:
         try:
-            raw = bus.read_byte(I2C_ADDR)
-        except OSError as e:
-            log.debug("I²C read error: %s", e)
-            time.sleep(0.1)
-            continue
+            output = subprocess.check_output("lspci -mm", shell=True, text=True)
+        except subprocess.CalledProcessError as exc:
+            log.error("lspci failed: %s", exc)
+            return None
+        for line in output.splitlines():
+            if device_name in line:
+                addr = line.split()[0]
+                if len(addr) <= 7:
+                    addr = "0000:" + addr
+                log.debug("Found PCIe device %s at %s", device_name, addr)
+                return addr
+        return None
 
-        ins_now  =  raw        & 1    # bit0
-        ej_now   = (raw >> 1)  & 1    # bit1
-        ins_prev =  last_state & 1
-        ej_prev  = (last_state >> 1) & 1
-        last_state = raw
+    def _remove_pcie_device(addr: str | None) -> None:
+        if not addr:
+            return
+        path = f"/sys/bus/pci/devices/{addr}/remove"
+        if not Path(path).exists():
+            return
+        try:
+            subprocess.check_call(["sh", "-c", f"echo 1 > {path}"])
+            log.info("Removed PCIe device %s", addr)
+        except subprocess.CalledProcessError as exc:
+            log.warning("Failed to remove PCIe device %s: %s", addr, exc)
 
-        # INSERT pressed (latch open) — pre-emptive unmount & power-down
-        if ins_prev == 0 and ins_now == 1:
-            log.debug("Insert pressed: pre-emptive unmount of NVMe")
-            any_unmounted = False
-            for dev in list(_mounts):
-                if dev.startswith("/dev/nvme"):
-                    if _force_lazy_unmount(dev):
-                        any_unmounted = True
-                        with _raw_lock:
-                            _register_raw_remove(dev)
-                            if dev == _active_raw:
-                                _active_raw = None
-            if any_unmounted:
-                _wait_for_raw_unmount()
-                _pcie(False)
-                _set_led(False)
-            _purge_stale_mountpoints()
+    def _nvme_partitions() -> list[str]:
+        names = []
+        for entry in os.listdir("/dev"):
+            if re.match(r"nvme\d+n\d+p\d+", entry):
+                names.append(f"/dev/{entry}")
+        return sorted(names)
 
-        # INSERT released — power back up and wait for mount
-        if ins_prev == 1 and ins_now == 0:
-            log.info("Insert released → power up PCIe and wait for mount")
-            _pcie(True)
-            _set_led(True)
-            if _wait_for_raw_mount(timeout=20.0):
-                log.info("Insert: mount succeeded ✓")
-            else:
-                log.warning("Insert: mount FAILED (timeout)")
-                _set_led(False)
+    def _mount_last_partition(device_addr: str | None) -> tuple[bool, str | None]:
+        # Wait for partitions to appear
+        for attempt in range(5):
+            parts = _nvme_partitions()
+            if parts:
+                dev_path = parts[-1]
+                log.info("Detected NVMe partition %s (attempt %d)", dev_path, attempt + 1)
+                _mount(dev_path)
+                if dev_path in _mounts:
+                    return True, dev_path
+                log.debug("Partition %s not mounted yet, retrying", dev_path)
+            time.sleep(0.5)
+        log.warning("No NVMe partitions found after PCIe rescan")
+        return False, None
 
-        # EJECT released — unmount everything, power down
-        if ej_prev == 1 and ej_now == 0:
-            log.info("Eject released → lazy unmount all")
-            any_unmounted = False
-            for d in list(_mounts):
-                if _force_lazy_unmount(d):
+    def _force_unmount_all_nvme() -> bool:
+        any_unmounted = False
+        for dev in list(_mounts):
+            if dev.startswith("/dev/nvme"):
+                if _force_lazy_unmount(dev):
                     any_unmounted = True
                     with _raw_lock:
-                        _register_raw_remove(d)
-                        if d == _active_raw:
+                        _register_raw_remove(dev)
+                        if dev == _active_raw:
                             _active_raw = None
-            if any_unmounted:
-                if _wait_for_raw_unmount():
-                    log.info("Eject: unmount succeeded ✓")
-                else:
-                    log.warning("Eject: unmount timed-out")
-                _pcie(False)
-                _set_led(False)
-            else:
-                log.warning("Eject: no partitions were mounted")
+        if any_unmounted:
+            _wait_for_raw_unmount()
+        return any_unmounted
 
-        time.sleep(0.05)
+    def _mount_pcie() -> tuple[bool, str | None, str | None]:
+        log.info("=" * 60)
+        log.info("MOUNT REQUEST - Starting CFE mount sequence")
+        log.info("=" * 60)
+        _redis_mech("cfe:mounting", "CFE mount requested")
+        time.sleep(0.5)
+
+        driver_path = Path('/sys/devices/platform/axi/1000110000.pcie/driver')
+        if driver_path.exists():
+            log.info("PCIe driver already bound – rescanning bus")
+            subprocess.call(["sh", "-c", "echo 1 > /sys/bus/pci/rescan"])
+        else:
+            log.info("Binding PCIe driver for CFE Hat")
+            _pcie_bind(True)
+
+        time.sleep(0.5)
+        addr = _check_for_device("Non-Volatile memory controller")
+        if not addr:
+            log.warning("No NVMe controller detected after PCIe init")
+            _set_led(False)
+            _redis_mech("cfe:error", "NVMe controller not detected")
+            return False, None, None
+
+        ok, dev_path = _mount_last_partition(addr)
+        if not ok:
+            _set_led(False)
+            _redis_mech("cfe:error", "Failed to mount NVMe partition")
+            return False, addr, None
+
+        if _wait_for_raw_mount(timeout=20.0):
+            log.info("CFE mount succeeded")
+            _set_led(True)
+            _redis_mech("cfe:mounted", "CFE card mounted")
+            return True, addr, dev_path
+
+        log.warning("CFE mount timed out waiting for /media/RAW")
+        _set_led(False)
+        _redis_mech("cfe:error", "Timeout waiting for RAW mount")
+        return False, addr, dev_path
+
+    def _unmount_pcie(current_addr: str | None, is_yank: bool = False) -> None:
+        log.info("=" * 60)
+        log.info("UNMOUNT REQUEST - Starting CFE unmount sequence")
+        log.info("=" * 60)
+        _redis_mech("cfe:unmounting", "CFE unmount requested")
+
+        removed = _force_unmount_all_nvme()
+        if not removed and not is_yank:
+            log.warning("CFE unmount requested but no NVMe mounts were active")
+
+        if is_yank:
+            log.info("Card yanked – performing lazy cleanup")
+            subprocess.call(["umount", "-l", str(MOUNT_BASE / "RAW")],
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        _remove_pcie_device(current_addr)
+        _set_led(False)
+        _redis_mech("cfe:ejected", "CFE card unmounted")
+        log.info("CFE unmount sequence complete")
+        _purge_stale_mountpoints()
+
+    def _check_for_yank(mounted_dev: str | None, addr: str | None) -> bool:
+        if not mounted_dev:
+            return False
+        try:
+            with open('/proc/partitions', 'r') as fh:
+                if os.path.basename(mounted_dev) not in fh.read():
+                    log.critical("CFE card removed – device missing from /proc/partitions")
+                    _unmount_pcie(addr, is_yank=True)
+                    return True
+        except Exception as exc:
+            log.debug("/proc/partitions check failed: %s", exc)
+
+        try:
+            fd = os.open(mounted_dev, os.O_RDONLY | os.O_DIRECT)
+            os.close(fd)
+        except OSError as exc:
+            log.critical("Direct read failed on %s: %s", mounted_dev, exc)
+            _unmount_pcie(addr, is_yank=True)
+            return True
+
+        mp = _mounts.get(mounted_dev)
+        if mp:
+            try:
+                entries = os.listdir(mp)
+                if entries:
+                    os.stat(os.path.join(mp, entries[0]))
+            except OSError as exc:
+                log.critical("Mount point %s inaccessible: %s", mp, exc)
+                _unmount_pcie(addr, is_yank=True)
+                return True
+        return False
+
+    last_insert, last_eject = _read_buttons()
+    card_present = (last_insert == 0)
+    mounted_flag = False
+    current_addr: str | None = None
+    mounted_dev: str | None = None
+
+    _redis_mech("cfe:present" if card_present else "cfe:absent",
+                "CFE card present on startup" if card_present else "CFE slot empty")
+
+    if card_present:
+        log.info("Card detected at startup – attempting automatic mount")
+        mounted_flag, current_addr, mounted_dev = _mount_pcie()
+
+    log.info("CFE Hat worker entering monitoring loop")
+
+    while True:
+        insert_button, eject_button = _read_buttons()
+        card_now_present = (insert_button == 0)
+
+        if card_now_present and not card_present:
+            log.info(">>> CARD INSERTION DETECTED <<<")
+            _redis_mech("cfe:inserted", "CFE card inserted")
+            mounted_flag, current_addr, mounted_dev = _mount_pcie()
+
+        if not card_now_present and card_present:
+            if mounted_flag:
+                log.critical("!!! CARD YANKED - physical removal detected !!!")
+                _unmount_pcie(current_addr, is_yank=True)
+            else:
+                log.info("CFE slot opened")
+            mounted_flag = False
+            current_addr = None
+            mounted_dev = None
+            _redis_mech("cfe:absent", "CFE card removed")
+
+        if last_eject == 1 and eject_button == 0:
+            log.info(">>> EJECT BUTTON PRESSED <<<")
+            _unmount_pcie(current_addr, is_yank=False)
+            mounted_flag = False
+            current_addr = None
+            mounted_dev = None
+
+        if mounted_flag:
+            if _check_for_yank(mounted_dev, current_addr):
+                mounted_flag = False
+                current_addr = None
+                mounted_dev = None
+
+        last_insert, last_eject = insert_button, eject_button
+        card_present = card_now_present
+        time.sleep(0.1)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Initial scan + auto-mount

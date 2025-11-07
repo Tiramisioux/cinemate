@@ -60,6 +60,13 @@ _sysctl_saved: dict[str, str | None] = {}
 # Optional override (debugging): cfe_nvme | usb_nvme | usb_ssd | other
 PROFILE_OVERRIDE = (os.getenv("STORAGE_AUTOMOUNT_PROFILE_OVERRIDE") or "").strip()
 
+_allowed_env = os.getenv("STORAGE_AUTOMOUNT_ALLOWED_KINDS", "").strip()
+ALLOWED_KINDS = (
+    {k.strip() for k in _allowed_env.split(",") if k.strip()}
+    if _allowed_env
+    else set()
+)
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Media profiles (mount + kernel/block I/O cushions)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -105,6 +112,12 @@ FS_OPTS_BASE = {
     "ntfs":  f"uid={PI_UID},gid={PI_GID},rw,noatime,umask=000",
     "exfat": f"uid={PI_UID},gid={PI_GID},rw,noatime",
 }
+
+
+def _kind_allowed(kind: str) -> bool:
+    if not ALLOWED_KINDS:
+        return True
+    return kind in ALLOWED_KINDS
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Utilities
@@ -406,6 +419,9 @@ def _mount(dev: str):
         return
 
     kind = _classify(dev)
+    if not _kind_allowed(kind):
+        log.debug("Skipping %s (kind=%s not allowed by filter)", dev, kind)
+        return
     mp = MOUNT_BASE / _sanitize(label or Path(dev).name)
     mp.mkdir(parents=True, exist_ok=True)
 
@@ -661,30 +677,37 @@ def _udev_worker():
         if action in ("add", "change") and dtype == "partition":
             label, _ = _get_fs(devnode)
             if label == "RAW":
-                _register_raw_add(devnode)
-                _switch_to_raw(devnode)
+                if _kind_allowed("cfe_nvme"):
+                    _register_raw_add(devnode)
+                    _switch_to_raw(devnode)
+                else:
+                    log.debug("Ignoring RAW partition %s (cfe_nvme filter disabled)", devnode)
             else:
                 _mount(devnode)
             continue
 
         if action == "remove" and dtype == "partition":
-            _register_raw_remove(devnode)
+            if _kind_allowed("cfe_nvme"):
+                _register_raw_remove(devnode)
             _unmount(devnode)
-            with _raw_lock:
-                if devnode == _active_raw:
-                    fallback = _raw_pool[-1] if _raw_pool else None
-                    _switch_to_raw(fallback)
+            if _kind_allowed("cfe_nvme"):
+                with _raw_lock:
+                    if devnode == _active_raw:
+                        fallback = _raw_pool[-1] if _raw_pool else None
+                        _switch_to_raw(fallback)
             continue
 
         if action == "remove" and dtype == "disk":
             victims = [d for d in list(_mounts) if d.startswith(devnode)]
             for part in victims:
-                _register_raw_remove(part)
+                if _kind_allowed("cfe_nvme"):
+                    _register_raw_remove(part)
                 _unmount(part)
-            with _raw_lock:
-                if _active_raw and _active_raw.startswith(devnode):
-                    fallback = _raw_pool[-1] if _raw_pool else None
-                    _switch_to_raw(fallback)
+            if _kind_allowed("cfe_nvme"):
+                with _raw_lock:
+                    if _active_raw and _active_raw.startswith(devnode):
+                        fallback = _raw_pool[-1] if _raw_pool else None
+                        _switch_to_raw(fallback)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CFE-HAT worker (insert/eject edge + LED + PCIe bind/unbind)
@@ -821,10 +844,13 @@ def _initial_scan():
 
     # Then arbitrate one RAW
     if raws:
-        # take the latest raw by path sort (heuristic); _switch_to_raw will unmount previous
-        devnode = sorted(raws)[-1]
-        _register_raw_add(devnode)
-        _switch_to_raw(devnode)
+        if _kind_allowed("cfe_nvme"):
+            # take the latest raw by path sort (heuristic); _switch_to_raw will unmount previous
+            devnode = sorted(raws)[-1]
+            _register_raw_add(devnode)
+            _switch_to_raw(devnode)
+        else:
+            log.debug("RAW volumes present but cfe_nvme kind not allowed – ignoring")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Main
@@ -840,12 +866,26 @@ def main():
 
     _initial_scan()
 
-    threading.Thread(target=_udev_worker,     daemon=True).start()
-    threading.Thread(target=_cfe_hat_worker,  daemon=True).start()
-    threading.Thread(target=_nvme_watchdog,   daemon=True).start()
+    threading.Thread(target=_udev_worker, daemon=True).start()
+    if _kind_allowed("cfe_nvme"):
+        threading.Thread(target=_cfe_hat_worker, daemon=True).start()
+
+    nvme_watchdog_enabled = (
+        not ALLOWED_KINDS or any(k in ("cfe_nvme", "usb_nvme") for k in ALLOWED_KINDS)
+    )
+    if nvme_watchdog_enabled:
+        threading.Thread(target=_nvme_watchdog, daemon=True).start()
+
     threading.Thread(target=_sanity_watchdog, daemon=True).start()
 
-    log.info("storage-automount started (log level %s)", LOG_LEVEL)
+    if ALLOWED_KINDS:
+        log.info(
+            "storage-automount started (log level %s, allowed kinds: %s)",
+            LOG_LEVEL,
+            ",".join(sorted(ALLOWED_KINDS)),
+        )
+    else:
+        log.info("storage-automount started (log level %s)", LOG_LEVEL)
     while True:
         time.sleep(60)
 

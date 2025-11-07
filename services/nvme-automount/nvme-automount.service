@@ -14,7 +14,8 @@ ExecStart=/usr/bin/python3 /usr/local/bin/storage-automount.py
 Restart=always
 RestartSec=2
 User=root
-# Root context is required for GPIO/I²C helpers when the hardware is present
+# Ensure script can access I²C and GPIO if relevant
+CapabilityBoundingSet=CAP_SYS_ADMIN CAP_DAC_READ_SEARCH
 
 [Install]
 WantedBy=multi-user.target

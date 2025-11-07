@@ -61,6 +61,12 @@
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Cinemate terminal commands</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#timed-recording-shortcuts">Timed recording shortcuts</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#storage-maintenance-commands">Storage maintenance commands</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#storage-pre-roll-warm-up">Storage pre-roll warm-up</a>
+    </li>
     </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
@@ -86,6 +92,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
                   </li>
@@ -156,9 +164,9 @@ corresponding controller methods.</p>
 <tbody>
 <tr>
 <td><code>rec</code> / <code>stop</code></td>
-<td>-</td>
-<td></td>
-<td>Toggle recording on or off</td>
+<td><code>[s &lt;seconds&gt;] \| [f &lt;frames&gt;]</code></td>
+<td><code>rec s 10</code></td>
+<td>Toggle recording or schedule an automatic stop after a timed duration or frame count</td>
 </tr>
 <tr>
 <td><code>set iso &lt;value&gt;</code></td>
@@ -255,6 +263,24 @@ corresponding controller methods.</p>
 <td>-</td>
 <td></td>
 <td>Mount if not mounted, otherwise unmount</td>
+</tr>
+<tr>
+<td><code>erase</code></td>
+<td>-</td>
+<td><code>erase</code></td>
+<td>Delete every clip on the mounted RAW volume without reformatting</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td><code>[ext4\|ntfs]</code></td>
+<td><code>format ntfs</code></td>
+<td>Reformat the RAW drive (defaults to ext4) and remount it</td>
+</tr>
+<tr>
+<td><code>storage preroll</code></td>
+<td>-</td>
+<td><code>storage preroll</code></td>
+<td>Run the storage warm-up recording that prepares the media</td>
 </tr>
 <tr>
 <td><code>time</code></td>
@@ -372,6 +398,23 @@ corresponding controller methods.</p>
 </tr>
 </tbody>
 </table>
+<h2 id="timed-recording-shortcuts">Timed recording shortcuts<a class="headerlink" href="#timed-recording-shortcuts" title="Permanent link">#</a></h2>
+<p>The <code>rec</code> command now accepts timed modes so you can walk away from the camera while it captures a precisely bounded take.</p>
+<ul>
+<li><code>rec s &lt;seconds&gt;</code> stops the recording after the requested duration. Short forms such as <code>sec</code>, <code>secs</code> and <code>seconds</code> are also accepted.</li>
+<li><code>rec f &lt;frames&gt;</code> converts the requested frame count to seconds using the current FPS and schedules the stop for you. You can type <code>frame</code> or <code>frames</code> instead of <code>f</code>.</li>
+</ul>
+<p>If recording is not already running, the CLI starts it automatically before arming the timer. An invalid or zero value is ignored so you cannot accidentally stop a clip immediately.【F:src/module/cli_commands.py†L205-L237】【F:src/module/cinepi_controller.py†L533-L591】</p>
+<h2 id="storage-maintenance-commands">Storage maintenance commands<a class="headerlink" href="#storage-maintenance-commands" title="Permanent link">#</a></h2>
+<p>Two new commands simplify preparing removable media directly from the Cinemate CLI:</p>
+<ul>
+<li><code>erase</code> empties the mounted RAW volume without touching the filesystem structure so you can clear cards quickly between takes.【F:src/module/ssd_monitor.py†L628-L648】</li>
+<li><code>format [ext4|ntfs]</code> reformats the drive with the chosen filesystem (<code>ext4</code> by default), remounts it and refreshes the free-space monitor. The helper tolerates the common <code>ex4</code> typo and refuses unsupported targets so you do not accidentally create an unusable volume.【F:src/module/ssd_monitor.py†L650-L716】</li>
+</ul>
+<p>Both actions require the RAW drive to be mounted; otherwise the CLI reports an error and leaves the media untouched.【F:src/module/ssd_monitor.py†L632-L636】【F:src/module/ssd_monitor.py†L652-L657】</p>
+<h2 id="storage-pre-roll-warm-up">Storage pre-roll warm-up<a class="headerlink" href="#storage-pre-roll-warm-up" title="Permanent link">#</a></h2>
+<p><code>storage preroll</code> triggers the automatic warm-up clip that Cinemate normally runs on startup or when you mount new storage. During the pre-roll, Cinemate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take.【F:src/module/storage_preroll.py†L40-L175】</p>
+<p>See <a href="../storage-preroll/">Storage pre-roll warm-up</a> for a detailed walkthrough of the workflow and tips on when to run it manually.</p>
 </div>
 
             </div>

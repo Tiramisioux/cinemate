@@ -48,4 +48,5 @@ $(foreach s,$(SUBSERVICES),\
 # ---------------------------------------------------------------
 all help:
 	@echo "Targets: install|enable|disable|start|stop|restart|status|clean"
-	@echo "Add -<service> suffix for one service only, e.g. 'make start-storage-automount'"
+	@echo "Add -<service> suffix for one service only, e.g. 'make start-ssd-automount'"
+	@echo "Available services: $(SUBSERVICES)"

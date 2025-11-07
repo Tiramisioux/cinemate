@@ -1,6 +1,6 @@
 # System services
 
-Cinemate uses three system services for its operation.
+Cinemate uses several system services for its operation.
 
 !!! note ""
 
@@ -26,29 +26,42 @@ make disable   # disable autostart
 make clean     # remove the service
 ```
 
-## storage-automount.service
+## Storage automount services
 
-Storage-automount is a systemd service that watches for removable drives and mounts them automatically. The accompanying Python script reacts to udev events and the CFE-HAT eject button so drives can be attached or detached safely.
+Removable storage is managed by a shared Python helper (`services/storage-automount/storage-automount.py`) and three dedicated systemd units. Each unit targets a specific bus or hat so you can enable only what your build requires:
 
-It understands `ext4`, `ntfs` and `exfat` filesystems. Partitions labelled `RAW` are mounted at `/media/RAW`; any other label is mounted under `/media/<LABEL>` after sanitising the name. This applies to USB SSDs, NVMe drives and the CFE-HAT slot.
+* `ssd-automount.service` – USB SSD enclosures and card readers
+* `nvme-automount.service` – USB NVMe bridge adapters
+* `cfe-hat-automount.service` – Will Whang's CFExpress hat on the PCIe slot
+
+All three services understand `ext4`, `ntfs` and `exfat` filesystems. Partitions labelled `RAW` are mounted at `/media/RAW`; any other label is mounted under `/media/<LABEL>` after sanitising the name.
 
 !!! note
 
-     On the image file, the storage-automount.service is activated by default.
+     On the stock image the appropriate automount service is enabled automatically. If you rebuild manually, enable the units that match your hardware.
 
-To manually install and enable the service:
+To manually install and enable one of the services:
 
 ```bash
-cd cinemate/services/storage-automount
+cd cinemate/services/ssd-automount    # or nvme-automount / cfe-hat-automount
 
 sudo make install
 sudo make enable
 ```
 
 You can stop or disable it later with:
+
 ```bash
 sudo make stop
 sudo make disable
+```
+
+If you prefer to install all automount units together, run:
+
+```bash
+cd cinemate/services
+
+sudo make -f cinemate-services.Makefile install
 ```
 
 ## wifi-hotspot.service
@@ -63,7 +76,7 @@ sudo make install
 sudo make enable
 ```
 
-As with **storage-automount**, you can stop or disable the hotspot with 
+As with the storage automount services, you can stop or disable the hotspot with
 
 ````
 make stop

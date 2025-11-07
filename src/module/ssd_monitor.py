@@ -36,6 +36,17 @@ REDIS_KEY_FSCK_STATUS  = "FSCK_STATUS"      # "OK …"  |  "FAIL …"
 
 
 # ----------------------------------------------------------------------
+# systemd units that emit automount logs (legacy name + split services)
+# ----------------------------------------------------------------------
+AUTOMOUNT_UNITS = (
+    "storage-automount.service",
+    "ssd-automount.service",
+    "nvme-automount.service",
+    "cfe-hat-automount.service",
+)
+
+
+# ----------------------------------------------------------------------
 # Event helper
 # ----------------------------------------------------------------------
 class Event:
@@ -749,13 +760,14 @@ class SSDMonitor:
     # ---------- journal subscriber --------------------------------------
     def _journal_loop(self) -> None:
         """
-        Listen to storage-automount.service log lines and translate them
-        into SSDMonitor events.  Works with python-systemd if available,
-        otherwise falls back to running `journalctl -fu`.
+        Listen to storage automount service log lines (legacy single unit
+        and the new per-media units) and translate them into SSDMonitor
+        events.  Works with python-systemd if available, otherwise falls
+        back to running `journalctl -f`.
         """
         def _process_line(line: str) -> None:
             """
-            Parse one message coming from the `storage-automount.service`
+            Parse one message coming from any storage automount service
             and update our state – while forwarding every message verbatim.
             """
             msg = line.strip()
@@ -797,19 +809,33 @@ class SSDMonitor:
             self._check_mount_status()
 
 
+        units = [u for u in AUTOMOUNT_UNITS]
+
         if _HAVE_JOURNAL:
             j = journal.Reader()
-            j.add_match(_SYSTEMD_UNIT="storage-automount.service")
+            if hasattr(j, "add_disjunction"):
+                for idx, unit in enumerate(units):
+                    if idx:
+                        j.add_disjunction()
+                    j.add_match(_SYSTEMD_UNIT=unit)
+            elif units:
+                j.add_match(_SYSTEMD_UNIT=units[0])
             j.seek_tail()
             j.get_previous()                  # position at last entry
             j.seek_tail()
             while not self._stop_evt.is_set():
                 if j.wait(1000) == journal.APPEND:
                     for entry in j:
-                        _process_line(entry["MESSAGE"])
+                        msg = entry.get("MESSAGE")
+                        unit = entry.get("_SYSTEMD_UNIT")
+                        if not msg or (unit and unit not in units):
+                            continue
+                        _process_line(msg)
         else:
-            # Portable fallback using journalctl -fu …
-            cmd = ["journalctl", "-fu", "storage-automount", "-n", "0", "-o", "cat"]
+            # Portable fallback using journalctl -f …
+            cmd = ["journalctl", "-f", "-n", "0", "-o", "cat"]
+            for unit in units:
+                cmd.extend(["-u", unit])
             with subprocess.Popen(cmd, stdout=subprocess.PIPE, text=True) as proc:
                 while not self._stop_evt.is_set():
                     line = proc.stdout.readline()

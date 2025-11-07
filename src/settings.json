@@ -19,7 +19,7 @@
       "vertical_flip": false
     },
     "cam1": {
-      "rotate_180": true,
+      "rotate_180": false,
       "horizontal_flip": false,
       "vertical_flip":false
     }
@@ -94,22 +94,7 @@
       "press_action": {"method": "rec"}
     },
     {
-      "pin": 7,
-      "pull_up": true,
-      "debounce_time": 0.1,
-      "press_action": {"method": "set_zoom"}
-    },
-    {
-      "pin": 10,
-      "pull_up": true,
-      "debounce_time": "0.1",
-      "press_action": {"method": "set_fps_double"},
-      "single_click_action": "None",
-      "double_click_action": "None",
-      "hold_action": "None"
-    },
-    {
-      "pin": 27,
+      "pin": 5,
       "pull_up": "False",
       "debounce_time": "0.1",
       "press_action": "None",
@@ -122,7 +107,7 @@
 
   "two_way_switches": [
       {
-        "pin": 5,
+        "pin": 7,
         "state_on_action": {"method": "set_zoom", "args": [2]},
         "state_off_action": {"method": "set_zoom", "args": [1]}
       },
@@ -139,7 +124,7 @@
   ],
   
   "quad_rotary_controller": {
-    "enabled": true,
+    "enabled": false,
     "encoders": {
       "0": {
         "setting_name": "iso",

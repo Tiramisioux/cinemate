@@ -13,7 +13,7 @@ corresponding controller methods.
 
 | Command                                    | Argument        | Example                                 |  Function                                      |
 |--------------------------------------------|-------------------|-----------------------------------------|-------------------------------------------------|
-| `rec` / `stop`                             | -              |                                    | Toggle recording on or off                      |
+| `rec` / `stop`                             | `[s <seconds>] \| [f <frames>]` | `rec s 10`                           | Toggle recording or schedule an automatic stop after a timed duration or frame count |
 | `set iso <value>`                          | int               | `set iso 800`                           | Set ISO to nearest allowed step                 |
 | `inc iso` / `dec iso`                      | -              |                                | Step ISO up or down                             |
 | `set shutter a <angle>`                    | float             | `set shutter a 180`                     | Set actual shutter angle (snaps unless free/sync)|
@@ -30,6 +30,9 @@ corresponding controller methods.
 | `inc zoom` / `dec zoom`                    | -              |                              | Step preview zoom factor                        |
 | `mount` / `unmount`                        | -              |                                  | Mount or unmount external storage               |
 | `toggle mount`                             | -              |                           | Mount if not mounted, otherwise unmount         |
+| `erase`                                    | -              | `erase`                                | Delete every clip on the mounted RAW volume without reformatting |
+| `format`                                   | `[ext4\|ntfs]` | `format ntfs`                          | Reformat the RAW drive (defaults to ext4) and remount it |
+| `storage preroll`                          | -              | `storage preroll`                       | Run the storage warm-up recording that prepares the media |
 | `time`                                     | -              |                                   | Show system and RTC time                        |
 | `set rtc time`                             | -              |                           | Copy system time to the RTC                     |
 | `space`                                    | -              |                                  | Report remaining SSD space                      |
@@ -50,4 +53,28 @@ corresponding controller methods.
 | `set wb free [0/1]`                        | 0/1 or none       | `set wb free`                           | Allow any white balance                         |
 | `set filter <0/1>`                         | 0/1               | `set filter 1`                          | Toggle IR-cut filter (IMX585)                   |
 
+
+## Timed recording shortcuts
+
+The `rec` command now accepts timed modes so you can walk away from the camera while it captures a precisely bounded take.
+
+- `rec s <seconds>` stops the recording after the requested duration. Short forms such as `sec`, `secs` and `seconds` are also accepted.
+- `rec f <frames>` converts the requested frame count to seconds using the current FPS and schedules the stop for you. You can type `frame` or `frames` instead of `f`.
+
+If recording is not already running, the CLI starts it automatically before arming the timer. An invalid or zero value is ignored so you cannot accidentally stop a clip immediately.【F:src/module/cli_commands.py†L205-L237】【F:src/module/cinepi_controller.py†L533-L591】
+
+## Storage maintenance commands
+
+Two new commands simplify preparing removable media directly from the Cinemate CLI:
+
+- `erase` empties the mounted RAW volume without touching the filesystem structure so you can clear cards quickly between takes.【F:src/module/ssd_monitor.py†L628-L648】
+- `format [ext4|ntfs]` reformats the drive with the chosen filesystem (`ext4` by default), remounts it and refreshes the free-space monitor. The helper tolerates the common `ex4` typo and refuses unsupported targets so you do not accidentally create an unusable volume.【F:src/module/ssd_monitor.py†L650-L716】
+
+Both actions require the RAW drive to be mounted; otherwise the CLI reports an error and leaves the media untouched.【F:src/module/ssd_monitor.py†L632-L636】【F:src/module/ssd_monitor.py†L652-L657】
+
+## Storage pre-roll warm-up
+
+`storage preroll` triggers the automatic warm-up clip that Cinemate normally runs on startup or when you mount new storage. During the pre-roll, Cinemate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take.【F:src/module/storage_preroll.py†L40-L175】
+
+See [Storage pre-roll warm-up](storage-preroll.md) for a detailed walkthrough of the workflow and tips on when to run it manually.
 

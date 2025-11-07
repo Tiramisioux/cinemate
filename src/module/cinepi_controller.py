@@ -6,7 +6,7 @@ import json
 from fractions import Fraction
 import math
 import subprocess
-from threading import Thread
+from threading import Thread, Timer
 import psutil
 import math
 import sys
@@ -58,7 +58,7 @@ class CinePiController:
         self.wb_cg_rb_array = {}  # Initialize as an empty dictionary
         
         self.fps = int(round(float(self.redis_controller.get_value(ParameterKey.FPS_LAST.value))))
-        self.current_fps = self.fps
+        self.current_fps = float(self.redis_controller.get_value(ParameterKey.FPS_USER.value))
         
         self.shutter_a_steps_dynamic = self.calculate_dynamic_shutter_angles(self.fps)
 
@@ -71,6 +71,9 @@ class CinePiController:
         
         self._rec_thread        = None
         self._rec_thread_stop   = threading.Event()
+        self._preroll_active    = threading.Event()
+        self._timed_rec_timer   = None
+        self._timed_rec_description = None
         
         # Set startup flag
         self.startup = True
@@ -101,12 +104,12 @@ class CinePiController:
         self.current_sensor = self.sensor_detect.camera_model
         self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)
         
+        self.sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
         self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
             self.current_sensor,
-            int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
+            self.sensor_mode,
+            self.fps,
         )
-
-        self.sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
         self.fps_max = int(self.sensor_detect.get_fps_max(self.current_sensor, self.sensor_mode))
         
         self.redis_controller.set_value(ParameterKey.FPS_MAX.value, self.fps_max)
@@ -410,6 +413,12 @@ class CinePiController:
         self.user_fps = float(value)
         self.redis_controller.set_value(ParameterKey.FPS_USER.value, self.user_fps)
 
+        self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
+            self.current_sensor,
+            self.sensor_mode,
+            self.user_fps,
+        )
+
         corrected = self.user_fps * self.fps_correction_factor
         fps_max   = int(self.redis_controller.get_value(ParameterKey.FPS_MAX.value))
 
@@ -494,14 +503,135 @@ class CinePiController:
         else:
             self.fps_lock = not self.fps_lock
         logging.info(f"FPS lock {self.fps_lock}")
- 
-    def rec(self):
-        logging.info(f"rec button pushed")
-        if self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "0":
-            self.start_recording()
-        elif self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "1":
+
+    def _cancel_timed_recording_stop(self):
+        if self._timed_rec_timer:
+            self._timed_rec_timer.cancel()
+            self._timed_rec_timer = None
+            if self._timed_rec_description:
+                logging.info(f"Cancelled scheduled recording stop ({self._timed_rec_description}).")
+            self._timed_rec_description = None
+
+    def _timed_recording_timeout(self):
+        description = self._timed_rec_description or "timed recording"
+        self._timed_rec_timer = None
+        self._timed_rec_description = None
+        logging.info(f"Timed recording limit reached ({description}); stopping.")
+        if self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "1":
             self.stop_recording()
-            
+
+    def _schedule_timed_recording_stop(self, seconds: float, description: str) -> None:
+        self._cancel_timed_recording_stop()
+        self._timed_rec_description = description
+        self._timed_rec_timer = Timer(seconds, self._timed_recording_timeout)
+        self._timed_rec_timer.start()
+        logging.info(f"Recording will stop in {seconds:.3f}s ({description}).")
+
+    def _get_current_fps(self) -> float:
+        candidates = [
+            self.redis_controller.get_value(ParameterKey.FPS_ACTUAL.value),
+            self.redis_controller.get_value(ParameterKey.FPS.value),
+            self.redis_controller.get_value(ParameterKey.FPS_LAST.value),
+            self.current_fps,
+            self.fps,
+        ]
+        for value in candidates:
+            if value is None:
+                continue
+            try:
+                fps = float(value)
+            except (TypeError, ValueError):
+                continue
+            if fps > 0:
+                return fps
+        return 0.0
+
+    def rec(self, mode=None, amount=None):
+        logging.info(f"rec command received (mode={mode}, amount={amount})")
+        if self.is_preroll_active():
+            logging.info("rec request ignored – storage pre-roll in progress")
+            return
+
+        if mode is None:
+            if self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "0":
+                self.start_recording()
+            elif self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "1":
+                self.stop_recording()
+            else:
+                logging.warning("Unknown recording state received from Redis.")
+            return
+
+        if isinstance(mode, str):
+            mode_key = mode.lower()
+        else:
+            mode_key = str(mode).lower()
+
+        seconds_aliases = {"s", "sec", "secs", "second", "seconds"}
+        frames_aliases = {"f", "frame", "frames"}
+
+        if mode_key in seconds_aliases:
+            try:
+                duration_seconds = float(amount)
+            except (TypeError, ValueError):
+                logging.warning("Invalid seconds value provided for timed recording.")
+                return
+            if duration_seconds <= 0:
+                logging.warning("Timed recording duration must be greater than zero seconds.")
+                return
+
+            recording_state = self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)
+            is_recording = str(recording_state) == "1"
+            if not is_recording:
+                self.start_recording()
+                is_recording = str(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)) == "1"
+                if not is_recording:
+                    logging.warning("Unable to start recording; timed stop not scheduled.")
+                    return
+
+            self._schedule_timed_recording_stop(duration_seconds, f"{duration_seconds:.3f} seconds")
+            return
+
+        if mode_key in frames_aliases:
+            try:
+                frames_target = int(amount)
+            except (TypeError, ValueError):
+                logging.warning("Invalid frame count provided for timed recording.")
+                return
+            if frames_target <= 0:
+                logging.warning("Timed recording frame count must be greater than zero.")
+                return
+
+            fps = self._get_current_fps()
+            if fps <= 0:
+                logging.warning("Current FPS unavailable; cannot schedule frame-limited recording.")
+                return
+
+            duration_seconds = frames_target / fps
+
+            recording_state = self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)
+            is_recording = str(recording_state) == "1"
+            if not is_recording:
+                self.start_recording()
+                is_recording = str(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)) == "1"
+                if not is_recording:
+                    logging.warning("Unable to start recording; timed stop not scheduled.")
+                    return
+
+            description = f"{frames_target} frames (~{duration_seconds:.3f} seconds)"
+            self._schedule_timed_recording_stop(duration_seconds, description)
+            return
+
+        logging.warning(f"Unknown recording mode '{mode}'. Expected 's' for seconds or 'f' for frames.")
+
+    def set_preroll_active(self, active: bool) -> None:
+        if active:
+            self._preroll_active.set()
+        else:
+            self._preroll_active.clear()
+
+    def is_preroll_active(self) -> bool:
+        return self._preroll_active.is_set()
+
     def start_recording(self):
         self.redis_controller.set_value(ParameterKey.MEMORY_ALERT.value, 0)
         if self.ssd_monitor.is_mounted == True and self.ssd_monitor.get_space_left:
@@ -511,6 +641,7 @@ class CinePiController:
             logging.info(f"No disk.")
             
     def stop_recording(self):
+        self._cancel_timed_recording_stop()
         self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         logging.info(f"Stopped recording")
 
@@ -542,6 +673,10 @@ class CinePiController:
                     value = 0
 
                 self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, str(value))
+                try:
+                    self.sensor_mode = int(value)
+                except (TypeError, ValueError):
+                    self.sensor_mode = value
 
                 resolution_info = self.sensor_detect.res_modes[value]
                 height_new = resolution_info.get('height', None)
@@ -588,8 +723,9 @@ class CinePiController:
                 
                 self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
                     self.current_sensor,
-                    int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
-                    )
+                    self.sensor_mode,
+                    self.current_fps,
+                )
 
                 self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)
                 time.sleep(1)
@@ -787,7 +923,7 @@ class CinePiController:
     
     def mount(self):
         self.ssd_monitor.mount_drive()
-    
+
     def unmount(self):
         # if self.ssd_monitor.is_mounted:
         self.ssd_monitor.unmount_drive()
@@ -800,6 +936,12 @@ class CinePiController:
 
     def toggle_mount(self):
         self.ssd_monitor.toggle_mount_drive()
+
+    def erase_drive(self):
+        self.ssd_monitor.erase_drive()
+
+    def format_drive(self, filesystem: str = "ext4"):
+        self.ssd_monitor.format_drive(filesystem)
     
     def calculate_dynamic_shutter_angles(self, fps):
         if fps <= 0:

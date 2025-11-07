@@ -29,6 +29,7 @@ class ParameterKey(Enum):
     FPS_LAST          = "fps_last"
     FPS_MAX           = "fps_max"
     FPS_USER          = "fps_user"
+    FPS_CORRECTION_SUGGESTION = "fps_correction_suggestion"
     FRAMECOUNT        = "framecount"
     GUI_LAYOUT        = "gui_layout"
     HEIGHT            = "height"
@@ -38,7 +39,8 @@ class ParameterKey(Enum):
     IS_RECORDING      = "is_recording"
     IS_WRITING        = "is_writing"
     IS_WRITING_BUF    = "is_writing_buf"
-    
+    STORAGE_PREROLL_ACTIVE = "storage_preroll_active"
+
     TC_CAM0           = "tc_cam0"
     TC_CAM1           = "tc_cam1"
     
@@ -71,6 +73,7 @@ class ParameterKey(Enum):
     RECORDING_TIME         = "recording_time"      # elapsed-time in seconds   
     RECORDING_TC_REC     = "recording_tc_rec"    # elapsed-time time-code
     RECORDING_TC_TOD   = "recording_time_tod"    # time-of-day time-code
+    FRAMES_IN_SYNC      = "frames_in_sync"
 
 
 # ────────────────────────── tiny pub‑sub helper ──────────────────────

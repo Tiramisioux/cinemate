@@ -6,10 +6,11 @@ import os
 import logging  
 
 class CommandExecutor(threading.Thread):
-    def __init__(self, cinepi_controller, cinepi_app):
+    def __init__(self, cinepi_controller, cinepi_app, storage_preroll=None):
         threading.Thread.__init__(self, daemon=True)  # Initialize thread
         self.cinepi_controller = cinepi_controller  # Set controller object reference
         self.cinepi_app = cinepi_app
+        self.storage_preroll = storage_preroll
         self.running = True  # Flag to control the thread's execution
 
         # ---------------------------------------------------------------------------
@@ -63,6 +64,9 @@ class CommandExecutor(threading.Thread):
             'mount'                  : (cinepi_controller.mount,          None),
             'unmount'                : (cinepi_controller.unmount,        None),
             'toggle mount'           : (cinepi_controller.toggle_mount,   None),
+            'erase'                  : (cinepi_controller.erase_drive,    None),
+            'format'                 : (cinepi_controller.format_drive,   [str, None]),
+            'storage preroll'        : (storage_preroll.trigger_manual,   None) if storage_preroll else None,
 
             # ── Info / diagnostics ────────────────────────────────────────────────
             'time'                   : (self.display_time,                None),
@@ -98,6 +102,11 @@ class CommandExecutor(threading.Thread):
             'set zoom' : (cinepi_controller.set_zoom, [float, None]),  # toggle when arg omitted
             'inc zoom' : (cinepi_controller.inc_zoom,  None),
             'dec zoom' : (cinepi_controller.dec_zoom,  None),
+        }
+
+        # Remove commands that were conditionally set to None
+        self.commands = {
+            name: action for name, action in self.commands.items() if action is not None
         }
 
 
@@ -161,6 +170,10 @@ class CommandExecutor(threading.Thread):
 
         func, expected_types = self.commands[command_name]
 
+        if command_name == 'rec':
+            self.handle_rec_command(command_args)
+            return
+
         # Handle commands with arguments or those that can be called without arguments
         if isinstance(expected_types, list):  # If the command can take multiple types
             if command_args:  # Arguments provided
@@ -186,10 +199,44 @@ class CommandExecutor(threading.Thread):
                     logging.info(f"Command '{command_name}' requires an argument")
 
     def stop(self):
-        
+
         """Stops the command executor thread."""
         logging.info("Stopping CommandExecutor thread.")
         self.running = False
+
+    def handle_rec_command(self, args):
+        """Handle recording command with optional timed arguments."""
+        if not args:
+            self.cinepi_controller.rec()
+            return
+
+        mode = args[0].lower()
+
+        if mode in {"s", "sec", "secs", "second", "seconds"}:
+            if len(args) < 2:
+                logging.info("Timed recording in seconds requires a duration argument.")
+                return
+            try:
+                seconds = float(args[1])
+            except ValueError:
+                logging.info("Invalid seconds value for timed recording.")
+                return
+            self.cinepi_controller.rec(mode, seconds)
+            return
+
+        if mode in {"f", "frame", "frames"}:
+            if len(args) < 2:
+                logging.info("Timed recording in frames requires a frame count.")
+                return
+            try:
+                frames = int(args[1])
+            except ValueError:
+                logging.info("Invalid frame count for timed recording.")
+                return
+            self.cinepi_controller.rec(mode, frames)
+            return
+
+        logging.info("Unknown rec mode. Use 's' for seconds or 'f' for frames.")
 
     def run(self):
             """Thread run function to continuously process input commands."""

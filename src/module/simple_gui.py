@@ -96,14 +96,14 @@ class SimpleGUI(threading.Thread):
             y_base   = 1053
             self.layout["clip_name"]["size"]        = new_size
             self.layout["clip_name_cam1"]["size"]   = new_size
-            self.layout["clip_name"]["pos"]         = (480, y_base)       # lower line
-            self.layout["clip_name_cam1"]["pos"]    = (480, y_base-19)    # 19 px up
+            self.layout["clip_name"]["pos"]         = (700, y_base)       # lower line
+            self.layout["clip_name_cam1"]["pos"]    = (700, y_base-19)    # 19 px up
         else:
             # Fall back to the original settings
-            self.layout["clip_name"]["size"]        = 41
-            self.layout["clip_name_cam1"]["size"]   = 41
-            self.layout["clip_name"]["pos"]         = (480, 1041)
-            self.layout["clip_name_cam1"]["pos"]    = (480, 998)
+            self.layout["clip_name"]["size"]        = 24
+            self.layout["clip_name_cam1"]["size"]   = 24
+            self.layout["clip_name"]["pos"]         = (700, 1041)
+            self.layout["clip_name_cam1"]["pos"]    = (700, 998)
 
 
     def load_sensor_values_from_redis(self):
@@ -191,8 +191,8 @@ class SimpleGUI(threading.Thread):
             "recording_time": {"pos": (580, 1041), "size": 41, "font": "bold"},
             
             "clip_label": {"pos": (510, 1050), "size": 30, "font": "regular"},
-            "clip_name": {"pos": (540, 1041), "size": 41, "font": "bold"},
-            "clip_name_cam1": {"pos": (540, 998), "size": 41, "font": "bold"},
+            "clip_name": {"pos": (640, 1041), "size": 24, "font": "bold"},
+            "clip_name_cam1": {"pos": (640, 998), "size": 24, "font": "bold"},
 
             
             "battery_level": {"pos": (600, 1041), "size": 41, "font": "bold"},
@@ -362,7 +362,7 @@ class SimpleGUI(threading.Thread):
         except (ValueError, TypeError):
             cam_list = []
 
-        sensor_left  = ""
+        sensor_left  = ""   
         sensor_right = ""
         cam1         = None
 
@@ -424,7 +424,7 @@ class SimpleGUI(threading.Thread):
             "shutter_label":  "SHUTTER",
             "shutter_speed":  shutter_speed,
             "fps_label":      "FPS",
-            "fps":            round(float(self.redis_controller.get_value(ParameterKey.FPS.value))),
+            "fps":            round(float(self.redis_controller.get_value(ParameterKey.FPS_USER.value))),
             "wb_label":       "WB",
             "color_temp":     f"{self.redis_controller.get_value(ParameterKey.WB_USER.value)} K",
             "color_temp_libcamera": f"/ {self.redis_listener.colorTemp}K",
@@ -450,8 +450,8 @@ class SimpleGUI(threading.Thread):
             "storage_type":   self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value),
             "write_speed":    self.redis_controller.get_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value) or "0 MB/s",
 
-            #"clip_label": "CLIP",
-            #"clip_name":    self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value) or "N/A",
+            # "clip_label": "CLIP",
+            "clip_name":    self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value) or "N/A",
 
             # static captions
             "cam": "CAM", "raw": "RAW", "ram_label": "RAM",
@@ -512,13 +512,6 @@ class SimpleGUI(threading.Thread):
             except ValueError:
                 pass  # skip if float conversion fails
 
-
-
-
-
-
-
-
         # ───────────────── CLIP / LAST-DNG display ───────────────
         last_cam1_full = self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value)
         last_cam0_full = self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM0.value)
@@ -532,8 +525,8 @@ class SimpleGUI(threading.Thread):
             values["clip_name"]      = clip_cam0
         else:
             pass
-            # only one camera – keep it on the baseline row
-            #values["clip_name"] = clip_cam0 or clip_cam1 or ""
+            #only one camera – keep it on the baseline row
+            values["clip_name"] = clip_cam0 or clip_cam1 or ""
             
 
         # ── add right-column data when CAM1 exists ────────────────
@@ -634,7 +627,7 @@ class SimpleGUI(threading.Thread):
         stem = os.path.splitext(os.path.basename(path))[0]  # filename w/out .dng
 
         # Strip “…_000000009”
-        stem = re.sub(r'_\d+$', '', stem)
+        #stem = re.sub(r'_\d+$', '', stem)
 
         # Strip camera suffix “…_cam0 / …_cam1”
         stem = re.sub(r'_cam[01]$', '', stem, flags=re.IGNORECASE)
@@ -948,36 +941,51 @@ class SimpleGUI(threading.Thread):
         # ─── choose background colour & colour-mode ────────────────────
         prev_bg = self.get_background_color()      # ← fixed () call
         
-        # if int(self.redis_controller.get_value(ParameterKey.REC.value)) and self.redis_listener.drop_frame == 1:
-        #     # at least one camera is actively recording
-        #     self.current_background_color = "purple"
-        #     self.color_mode = "inverse"
+        try:
+            preroll_active = int(
+                self.redis_controller.get_value(
+                    ParameterKey.STORAGE_PREROLL_ACTIVE.value
+                )
+                or 0
+            )
+        except (TypeError, ValueError):
+            preroll_active = 0
 
-        if int(self.redis_controller.get_value(ParameterKey.REC.value)) == 1:
+        if preroll_active:
+            self.current_background_color = "blue"
+            self.color_mode = "inverse"
+
+        elif int(self.redis_controller.get_value(ParameterKey.REC.value)) and self.redis_listener.drop_frame == 1:
             # at least one camera is actively recording
-            self.current_background_color = "red"
+            self.current_background_color = "purple"
             self.color_mode = "inverse"
 
-        elif int(self.redis_controller.get_value(ParameterKey.IS_WRITING_BUF.value) or 0):
-            # recording has stopped but buffer still flushing to disk
-            self.current_background_color = "green"
-            self.color_mode = "inverse"
+        if not preroll_active:
+            if int(self.redis_controller.get_value(ParameterKey.REC.value)) == 1:
+                # at least one camera is actively recording
+                self.current_background_color = "red"
+                self.color_mode = "inverse"
 
-        elif int(self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value) or 0):
-            # cameras are building up the RAM buffer
-            self.current_background_color = "green"
-            self.color_mode = "inverse"
+            elif int(self.redis_controller.get_value(ParameterKey.IS_WRITING_BUF.value) or 0):
+                # recording has stopped but buffer still flushing to disk
+                self.current_background_color = "green"
+                self.color_mode = "inverse"
 
-        elif int(values["ram_load"].rstrip('%')) > 95:
-            # safety: RAM nearly full – warn & auto-stop
-            self.current_background_color = "yellow"
-            self.color_mode = "inverse"
-            self.cinepi_controller.rec()        # stop recording
+            elif int(self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value) or 0):
+                # cameras are building up the RAM buffer
+                self.current_background_color = "green"
+                self.color_mode = "inverse"
 
-        else:
-            # idle
-            self.current_background_color = "black"
-            self.color_mode = "normal"
+            elif int(values["ram_load"].rstrip('%')) > 95:
+                # safety: RAM nearly full – warn & auto-stop
+                self.current_background_color = "yellow"
+                self.color_mode = "inverse"
+                self.cinepi_controller.rec()        # stop recording
+
+            else:
+                # idle
+                self.current_background_color = "black"
+                self.color_mode = "normal"
             
         if self.current_background_color != previous_background_color:
             self.background_color_changed = True

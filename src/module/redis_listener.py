@@ -6,6 +6,12 @@ import json
 from collections import deque
 from module.redis_controller import ParameterKey
 
+import os
+import re
+import time
+import math
+import statistics
+
 class RedisListener:
     def __init__(self, redis_controller, ssd_monitor, framerate_callback=None, host='localhost', port=6379, db=0):
         self.redis_client = redis.StrictRedis(host=host, port=port, db=db)
@@ -27,7 +33,7 @@ class RedisListener:
         self.redis_controller = redis_controller
         self.ssd_monitor = ssd_monitor
         self.framerate_callback = framerate_callback
-        
+
         self.framerate = float(self.redis_controller.get_value('fps_actual', 0))
         self.framecount_last_update_time = datetime.datetime.now()
         self.framecount = 0
@@ -56,18 +62,22 @@ class RedisListener:
         self.last_rise_time = None          # when frameCount last increased
         self.rec_hold_seconds = 0.3         # how long frameCount must stay flat before rec=0
 
-        
+
         self.drop_frame = False
         self.drop_frame_timer = None
-        
+
         self.cinepi_running = True
-        
+
         self.framecount_changing = False
         self.last_framecount = 0
         self.last_framecount_check_time = datetime.datetime.now()
         self.framecount_check_interval = 1.0  # Default to 1 second, will be updated based on FPS
-        
+
         self.redis_controller.set_value('rec', "0")
+
+        self.active_sensor_labels: set[str] = set()
+        self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 1)
+        self.redis_controller.set_value(ParameterKey.FPS_CORRECTION_SUGGESTION.value, 1.0)
         
         self.max_fps_adjustment = 0.1  # Maximum adjustment per iteration
         self.min_fps_adjustment = 0.0001  # Minimum adjustment increment
@@ -85,6 +95,12 @@ class RedisListener:
         self.last_timestamp_single = None
         self.last_timestamp_cam0 = None
         self.last_timestamp_cam1 = None
+
+        self.fps_at_rec_start = None
+        self.fps_correction_factor_at_rec_start: float | None = None
+
+        self.recording_was_preroll = False
+
 
         self.start_listeners()
 
@@ -147,6 +163,128 @@ class RedisListener:
                 # keep the higher value; do not publish
                 return
 
+    def _update_active_sensors(self, stats_data: dict[str, object] | None) -> None:
+        if not stats_data:
+            return
+
+        detected: set[str] = set()
+        for key, value in stats_data.items():
+            if value is None:
+                continue
+            if key.startswith('timestamp_cam'):
+                detected.add(key[len('timestamp_'):])
+            elif key.startswith('frameCount_cam'):
+                detected.add(key[len('frameCount_'):])
+
+        if not detected:
+            if stats_data.get('timestamp') is not None or stats_data.get('sensorTimestamp') is not None:
+                detected.add('cam0')
+
+        if detected:
+            self.active_sensor_labels.update(detected)
+
+    def _current_sensor_count(self) -> int:
+        if self.active_sensor_labels:
+            return len(self.active_sensor_labels)
+
+        try:
+            cams_json = self.redis_controller.get_value(ParameterKey.CAMERAS.value)
+            if not cams_json:
+                return 1
+            data = json.loads(cams_json)
+            if isinstance(data, (list, tuple)):
+                ready = [c for c in data if isinstance(c, dict) and c.get('ready')]
+                if ready:
+                    return len(ready)
+                return len(data) or 1
+        except Exception:
+            pass
+
+        return 1
+
+    def _current_correction_factor(self) -> float | None:
+        try:
+            fps_user_raw = self.redis_controller.get_value(ParameterKey.FPS_USER.value)
+            fps_effective_raw = self.redis_controller.get_value(ParameterKey.FPS.value)
+            if fps_user_raw is None or fps_effective_raw is None:
+                return None
+            fps_user = float(fps_user_raw)
+            fps_effective = float(fps_effective_raw)
+        except (TypeError, ValueError):
+            return None
+
+        if fps_user == 0:
+            return None
+
+        return fps_effective / fps_user
+
+    def _storage_preroll_active(self) -> bool:
+        try:
+            value = self.redis_controller.get_value(
+                ParameterKey.STORAGE_PREROLL_ACTIVE.value
+            )
+        except Exception:
+            return False
+
+        if value is None:
+            return False
+
+        text = str(value).strip().lower()
+        if text in ("1", "true", "yes", "on"):
+            return True
+
+        try:
+            return bool(int(text))
+        except (TypeError, ValueError):
+            return False
+
+    def _determine_expected_fps(self) -> float | None:
+        if self.fps_at_rec_start is not None and self.fps_at_rec_start > 0:
+            return self.fps_at_rec_start
+
+        try:
+            value = self.redis_controller.get_value('fps')
+            return float(value) if value is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _expected_frame_counts(fps_expected: float | None, duration: float, sensor_count: int) -> tuple[int, float]:
+        if fps_expected is None or fps_expected <= 0 or duration <= 0:
+            return 0, 0.0
+
+        sensor_effective = max(1, sensor_count)
+        expected_float = fps_expected * duration * sensor_effective
+        expected_int = int(math.floor(expected_float + 1e-6))
+        return expected_int, expected_float
+
+    def _update_frames_in_sync(self, stats_data: dict[str, object] | None = None) -> None:
+        if stats_data is not None:
+            self._update_active_sensors(stats_data)
+
+        if not self.is_recording or not self.recording_start_time:
+            self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 1)
+            return
+
+        fps_expected = self._determine_expected_fps()
+        if fps_expected is None or fps_expected <= 0:
+            return
+
+        now = datetime.datetime.now()
+        duration = (now - self.recording_start_time).total_seconds()
+        if duration < 0:
+            duration = 0.0
+
+        sensor_count = self._current_sensor_count()
+        expected_int, _ = self._expected_frame_counts(fps_expected, duration, sensor_count)
+        recorded_frames = int(self.framecount or 0)
+
+        in_sync = abs(expected_int - recorded_frames) <= 1
+        self.redis_controller.set_value(
+            ParameterKey.FRAMES_IN_SYNC.value,
+            1 if in_sync else 0,
+        )
+
     def listen_stats(self):
         for message in self.pubsub_stats.listen():
             if message['type'] == 'message':
@@ -203,6 +341,7 @@ class RedisListener:
 
                         # Update framecount in Redis (only if it has changed, and doesnt report a lower number than before, except 0
                         self._maybe_publish_framecount(self.frame_count)
+                        self._update_frames_in_sync(stats_data)
 
                         # Check and set buffering status if changed
                         is_buffering = buffer_size > 0 if buffer_size is not None else False
@@ -345,6 +484,8 @@ class RedisListener:
         self.framecount = 0
         self.frame_count = 0
         self.redis_controller.set_value('framecount', 0)
+        self.active_sensor_labels.clear()
+        self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 1)
         logging.info("Framecount reset to 0.")
 
     def listen_controls(self):
@@ -370,9 +511,26 @@ class RedisListener:
                     self.reset_framecount()
                     self.recording_start_time = datetime.datetime.now()
                     logging.info(f"Recording started at: {self.recording_start_time}")
-                    
-                    self.framerate = float(self.redis_controller.get_value('fps'))
+
+                    self.recording_was_preroll = self._storage_preroll_active()
+
+                    self.fps_correction_factor_at_rec_start = self._current_correction_factor()
+                    initial_correction = self.fps_correction_factor_at_rec_start or 1.0
+
+                    self.redis_controller.set_value(
+                        ParameterKey.FPS_CORRECTION_SUGGESTION.value,
+                        f"{initial_correction:.6f}",
+                    )
+
+                    # Lock the FPS at start (configured value)
+                    try:
+                        self.fps_at_rec_start = float(self.redis_controller.get_value('fps_user'))
+                    except (TypeError, ValueError):
+                        self.fps_at_rec_start = None
+
+                    self.framerate = float(self.redis_controller.get_value('fps_user'))  # keep if you still use it elsewhere
                     self.allow_initial_zero = True
+
 
                 elif value_str == '0':
                     if self.is_recording:
@@ -380,10 +538,14 @@ class RedisListener:
                         if self.recording_start_time:
                             self.recording_end_time = datetime.datetime.now()
                             logging.info(f"Recording stopped at: {self.recording_end_time}")
-                            self.analyze_frames()
+                            try:
+                                self.analyze_frames()
+                            finally:
+                                self.recording_was_preroll = False
                             self.framerate_values = []
                         else:
                             logging.warning("Recording stopped, but no recording start time was registered.")
+                            self.recording_was_preroll = False
                     self.allow_initial_zero = True
                     
             elif changed_key == "fps":
@@ -412,61 +574,305 @@ class RedisListener:
         else:
             self.current_framerate = None
         self.redis_controller.set_value('fps_actual', self.current_framerate)
+        
+    # ------------------------ DNG enumeration helpers ------------------------
+    _DNG_SUFFIX = ('.dng', '.DNG')
+    _IDX_RE = re.compile(r'C(\d{5,})', re.IGNORECASE)
+
+    def _resolve_folder_path(self, folder_hint: str | os.PathLike) -> str | None:
+        """
+        Try to turn a folder hint into an existing absolute directory.
+        Strategy:
+          1) If it's absolute and exists → use it.
+          2) Try ssd_monitor roots if present (root_dir/base_path/mount_dir).
+          3) Try common media roots (/media/RAW, /media).
+          4) Try parent of last_dng_cam0/1 from Redis (exact path).
+        Returns an absolute path or None.
+        """
+        # Normalize the hint
+        if folder_hint is None:
+            hint = None
+        else:
+            hint = str(folder_hint).strip()
+
+        # short-circuit: absolute and exists
+        if hint and os.path.isabs(hint) and os.path.isdir(hint):
+            return hint
+
+        # Collect candidate roots
+        roots = []
+        for attr in ("root_dir", "base_path", "mount_dir", "mount_point"):
+            r = getattr(self.ssd_monitor, attr, None)
+            if r:
+                roots.append(str(r))
+        roots += ["/media/RAW", "/media"]
+
+        # If the hint is just a basename, try to place it under roots
+        base = os.path.basename(hint) if hint else None
+        for root in roots:
+            if base:
+                p = os.path.join(root, base)
+                if os.path.isdir(p):
+                    return os.path.abspath(p)
+
+        # Fallback: derive from last_dng_cam0/1 parents (exact folder)
+        for key in ("last_dng_cam0", "last_dng_cam1", "last_dng"):
+            try:
+                val = self.redis_controller.get_value(key)
+                if not val:
+                    continue
+                d = os.path.dirname(str(val))
+                if os.path.isdir(d):
+                    # If no hint, use this; if we have a base, require suffix match
+                    if not base or os.path.basename(d) == base:
+                        return os.path.abspath(d)
+            except Exception:
+                pass
+
+        # Last attempt: if hint is relative and exists from CWD
+        if hint:
+            abs_guess = os.path.abspath(hint)
+            if os.path.isdir(abs_guess):
+                return abs_guess
+
+        return None
+
+    def _scan_dngs_once(self, folder_path: str):
+        """
+        Single pass: count valid DNG files and find the highest C##### index.
+        Skips non-files and zero-length/in-flight files.
+        Returns (count, last_idx:int|None, last_name:str|None, latest_mtime:float|None).
+        """
+        cnt = 0
+        last_idx = None
+        last_name = None
+        latest_mtime = None
+
+        try:
+            with os.scandir(folder_path) as it:
+                for e in it:
+                    if not e.is_file():
+                        continue
+                    name = e.name
+                    if not name.endswith(self._DNG_SUFFIX):
+                        continue
+                    try:
+                        st = e.stat()
+                    except FileNotFoundError:
+                        continue
+                    if st.st_size <= 0:
+                        continue
+
+                    cnt += 1
+                    if (latest_mtime is None) or (st.st_mtime > latest_mtime):
+                        latest_mtime = st.st_mtime
+
+                    m = self._IDX_RE.search(name)
+                    if m:
+                        idx = int(m.group(1))
+                        if last_idx is None or idx > last_idx:
+                            last_idx = idx
+                            last_name = name
+        except FileNotFoundError:
+            return 0, None, None, None
+
+        return cnt, last_idx, last_name, latest_mtime
+
+    def _stable_dng_count(self, folder_path: str, settle_s: float = 0.35, max_attempts: int = 4):
+        """
+        Repeat scans until the count is identical twice in a row AND the newest
+        file's mtime is older than settle_s (no in-flight files).
+        """
+        last = None
+        last_latest_mtime = None
+        for _ in range(max_attempts):
+            cnt, li, ln, latest_mtime = self._scan_dngs_once(folder_path)
+            now = time.time()
+
+            # Same count twice in a row?
+            if last is not None and cnt == last:
+                # Also require that the newest file is older than settle window
+                if latest_mtime is None or (now - latest_mtime) >= settle_s:
+                    return cnt, li, ln
+
+            last = cnt
+            last_latest_mtime = latest_mtime
+            time.sleep(settle_s)
+
+        # final return after attempts
+        return last or 0, None, None
+
 
     def analyze_frames(self):
         """
-        Check that the number of DNGs written to disk matches the
-        theoretical frame count for the recording.
+        Compare the actual number of DNGs on disk with the theoretical count.
+        Robust against path ambiguities, in-flight files, and off-by-one rounding.
         """
-        # ------------------------------------------------------------------
-        # 1) How many frames actually hit the SSD?
-        # ------------------------------------------------------------------
+        # --------------------------- 1) collect candidate dirs -----------------
         folders = self.ssd_monitor.get_latest_recording_infos()
-        if not folders:
+        per_sensor = []   # (label, fs_count|None, monitor_count|None, last_idx|None, last_name|None)
+
+        if folders:
+            for info in folders:
+                # Extract hint path and the monitor's own count if present
+                hint_path = info[0] if isinstance(info, (list, tuple)) else info
+                monitor_count = None
+                if isinstance(info, (list, tuple)) and len(info) >= 2:
+                    try:
+                        monitor_count = int(info[1])
+                    except Exception:
+                        monitor_count = None
+
+                resolved = self._resolve_folder_path(hint_path)
+                label = os.path.basename(str(hint_path)) if hint_path else "(unknown)"
+
+                fs_count = None
+                last_idx = None
+                last_name = None
+                if resolved:
+                    c, li, ln = self._stable_dng_count(resolved)
+                    fs_count, last_idx, last_name = c, li, ln
+                    if fs_count is None:
+                        fs_count = 0
+
+                per_sensor.append((label, fs_count, monitor_count, last_idx, last_name))
+
+        # If we found nothing, also try the parents of last_dng_cam0/1 directly
+        if not per_sensor:
+            for key in ("last_dng_cam0", "last_dng_cam1"):
+                val = self.redis_controller.get_value(key)
+                if not val:
+                    continue
+                d = os.path.dirname(str(val))
+                if not os.path.isdir(d):
+                    continue
+                label = os.path.basename(d)
+                c, li, ln = self._stable_dng_count(d)
+                per_sensor.append((label, c, None, li, ln))
+
+        # ------------------------------ 2) totals ------------------------------
+        if not per_sensor:
             logging.warning("No recent recording folders found — falling back to RAM counter.")
-            recorded_frames_total = self.framecount
-            sensor_count = 1
+            recorded_frames_total = int(self.framecount or 0)
+            sensor_count_effective = 1 if recorded_frames_total > 0 else 0
         else:
-            recorded_frames_total = sum(n_dng for _, n_dng, _ in folders)
-            sensor_count = len(folders)
+            # Prefer filesystem counts; if fs_count == 0 because path couldn't be resolved
+            # but the monitor reported a positive count, use the monitor's count as fallback.
+            final_counts = []
+            for label, fs_c, mon_c, li, ln in per_sensor:
+                use_c = fs_c if (fs_c is not None and fs_c > 0) else (mon_c or 0)
+                final_counts.append((label, use_c, li, ln))
 
-            # One compact line instead of “N sensor(s) detected — …”
-            logging.info(f"Total frames on disk: {recorded_frames_total}")
+            sensor_count_effective = sum(1 for _, c, _, _ in final_counts if c > 0)
+            recorded_frames_total = sum(c for _, c, _, _ in final_counts)
 
-        # ------------------------------------------------------------------
-        # 2) How long was the take?
-        # ------------------------------------------------------------------
+            # Diagnostics
+            for label, c, li, ln in final_counts:
+                if ln:
+                    logging.info(f"{label}: {c} DNGs (last={ln}, idx={li})")
+                else:
+                    logging.info(f"{label}: {c} DNGs")
+
+            logging.info(f"Total frames on disk: {recorded_frames_total} from {sensor_count_effective} sensor(s)")
+
+        # ------------------------------ duration ------------------------------
         if not (self.recording_start_time and self.recording_end_time):
             logging.warning("No start/end timestamps; cannot compute frame diff.")
             return
-        duration = (self.recording_end_time - self.recording_start_time).total_seconds()
-        logging.info(f"Recording duration in seconds: {duration:.3f}")
 
-        # ------------------------------------------------------------------
-        # 3) Expected frame count (fps × duration × sensor_count)
-        # ------------------------------------------------------------------
-        try:
-            fps_expected = float(self.redis_controller.get_value("fps"))
-            logging.info(f"Expected framerate retrieved from Redis: {fps_expected} FPS")
-        except (TypeError, ValueError):
-            logging.error("Expected FPS missing or invalid in Redis.")
-            return
+        # Prefer the timestamp of the last *accepted* frame rise (more accurate end)
+        end_for_calc = self.recording_end_time
 
-        expected_frames_total = int(round(fps_expected * duration * sensor_count))
+        if end_for_calc < self.recording_start_time:
+            # guard against clock skew or odd ordering
+            end_for_calc = self.recording_end_time
+
+        duration = (end_for_calc - self.recording_start_time).total_seconds()
+        if duration < 0:
+            duration = 0.0
+        logging.info(f"Recording duration in seconds (start→end): {duration:.6f}")
+
+        # ------------------------- expected FPS (locked) ----------------------
+        if self.fps_at_rec_start is not None and self.fps_at_rec_start > 0:
+            fps_expected = self.fps_at_rec_start
+            logging.info(f"Using FPS locked at record start: {fps_expected:.6f}")
+        else:
+            # hard fallback if start FPS was missing
+            try:
+                fps_expected = float(self.redis_controller.get_value('fps'))
+                logging.info(f"Using configured FPS (fallback): {fps_expected:.6f}")
+            except (TypeError, ValueError):
+                logging.error("Expected FPS missing/invalid; aborting expected-frame calc.")
+                return
+
+        # ----------------------- expected frames (per sensor) -----------------
+        # Discrete sampling: frames are whole numbers; floor avoids the +1 overshoot at the stop edge.
+        expected_frames_total, expected_frames_float = self._expected_frame_counts(
+            fps_expected,
+            duration,
+            sensor_count_effective,
+        )
+
         logging.info(f"Calculated expected number of frames: {expected_frames_total}")
         logging.info(f"Actual number of recorded frames: {recorded_frames_total}")
 
-        # ------------------------------------------------------------------
-        # 4) Compare and report
-        # ------------------------------------------------------------------
         diff = expected_frames_total - recorded_frames_total
-        if diff == 0:
+        all_frames_accounted = diff == 0
+        if all_frames_accounted:
             logging.info("✓ All frames accounted for.")
         else:
-            logging.warning(f"Discrepancy detected: {diff:+d} frames difference "
-                            f"between expected and recorded counts.")
+            if abs(diff) == 1:
+                logging.warning(f"Discrepancy detected: {diff:+d} frame (boundary rounding).")
+            else:
+                logging.warning(f"Discrepancy detected: {diff:+d} frames difference between expected and recorded counts.")
 
+        frames_in_sync = abs(diff) <= 1
+        self.redis_controller.set_value(
+            ParameterKey.FRAMES_IN_SYNC.value,
+            1 if frames_in_sync else 0,
+        )
 
+        current_correction_factor = self.fps_correction_factor_at_rec_start
+        if not current_correction_factor or current_correction_factor <= 0:
+            current_correction_factor = self._current_correction_factor()
+
+        suggestion_value = current_correction_factor or 1.0
+
+        if self.recording_was_preroll:
+            logging.info(
+                "Skipping FPS correction suggestion: storage pre-roll recording (keeping %.6f).",
+                suggestion_value,
+            )
+        elif all_frames_accounted:
+            if current_correction_factor:
+                logging.info(
+                    "No FPS correction adjustment needed; existing factor %.6f matches the capture.",
+                    current_correction_factor,
+                )
+            else:
+                logging.info("No FPS correction suggestion needed: all frames accounted for.")
+        elif (
+            expected_frames_float > 0
+            and recorded_frames_total > 0
+            and current_correction_factor
+        ):
+            multiplier = expected_frames_float / recorded_frames_total
+            suggestion_value = current_correction_factor * multiplier
+            logging.info(
+                "Suggested FPS correction factor based on recording: %.6f (multiplier %.6f × current %.6f)",
+                suggestion_value,
+                multiplier,
+                current_correction_factor,
+            )
+        else:
+            logging.info("Insufficient data to derive FPS correction factor suggestion.")
+
+        self.redis_controller.set_value(
+            ParameterKey.FPS_CORRECTION_SUGGESTION.value,
+            f"{suggestion_value:.6f}",
+        )
+
+        self.fps_correction_factor_at_rec_start = None
 
 
     def calculate_average_framerate_last_100_frames(self):

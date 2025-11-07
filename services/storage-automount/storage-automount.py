@@ -687,6 +687,113 @@ def _udev_worker():
                     _switch_to_raw(fallback)
 
 # ─────────────────────────────────────────────────────────────────────────────
+# CFE-HAT worker helpers
+# ─────────────────────────────────────────────────────────────────────────────
+def _cfe_read_buttons(bus, i2c_addr):
+    """Read button states from I2C microcontroller with debouncing"""
+    try:
+        # Wait for valid data (not idle state 0x69)
+        for _ in range(10):
+            data = bus.read_byte(i2c_addr)
+            if data != 0x69:
+                break
+            time.sleep(0.1)
+
+        eject_button = (data & 0x02 == 0x02)
+        insert_button = (data & 0x01 == 0x01)
+        log.debug(f"Button read: insert={insert_button}, eject={eject_button}, raw=0x{data:02x}")
+        return (insert_button, eject_button)
+    except Exception as e:
+        log.error(f"Error reading buttons from I2C: {e}")
+        return (0, 0)  # Return safe default
+
+
+def _cfe_check_for_nvme_device():
+    """Check for PCIe NVMe device using lspci and return device address"""
+    try:
+        log.debug("Searching for PCIe NVMe device")
+        output = subprocess.check_output("lspci -mm", shell=True, text=True)
+        lines = output.split('\n')
+
+        for line in lines:
+            if "Non-Volatile memory controller" in line:
+                # Extract the PCI address
+                addr_part = line.split(" ")[0]
+                if len(addr_part) <= 7:
+                    device_addr = "0000:" + addr_part
+                else:
+                    device_addr = addr_part
+                log.debug(f"Found NVMe device at address: {device_addr}")
+                return device_addr
+
+        log.debug("NVMe device not found in lspci output")
+        return None
+    except subprocess.CalledProcessError as e:
+        log.error(f"Error running lspci command: {e}")
+        return None
+    except Exception as e:
+        log.error(f"Unexpected error in _cfe_check_for_nvme_device: {e}")
+        return None
+
+
+def _cfe_check_for_yank(card_physically_present):
+    """
+    Detect if the CFE card was yanked (removed without proper unmount).
+    Returns list of devices that were yanked.
+
+    For PCIe-based CFE cards, we check both:
+    1. Physical card presence (mechanical switch)
+    2. Device accessibility in /proc/partitions
+    """
+    yanked_devices = []
+
+    for dev in list(_mounts):
+        if not dev.startswith("/dev/nvme"):
+            continue
+
+        # Check if card is physically gone (mechanical switch says so)
+        if not card_physically_present:
+            log.critical("!" * 60)
+            log.critical("CARD YANKED - CFE card physically removed!")
+            log.critical(f"Device {dev} marked as yanked due to physical removal")
+            log.critical("!" * 60)
+            yanked_devices.append(dev)
+            continue
+
+        # Check if device appears in /proc/partitions (real-time kernel view)
+        try:
+            with open('/proc/partitions', 'r') as f:
+                partitions_content = f.read()
+                device_name = os.path.basename(dev)  # e.g., "nvme0n1p1"
+                if device_name not in partitions_content:
+                    log.critical("!" * 60)
+                    log.critical("CARD YANKED - CFE card removed without unmount!")
+                    log.critical(f"Device {dev} not found in /proc/partitions")
+                    log.critical("!" * 60)
+                    yanked_devices.append(dev)
+                    continue
+                else:
+                    log.debug(f"Device {device_name} found in /proc/partitions")
+        except Exception as e:
+            log.error(f"Error checking /proc/partitions: {e}")
+
+        # Try to open device with O_DIRECT to bypass all caching
+        try:
+            # O_DIRECT = 0x4000 on Linux - bypasses kernel page cache
+            fd = os.open(dev, os.O_RDONLY | os.O_DIRECT)
+            os.close(fd)
+            log.debug(f"Direct device access successful - card still present")
+        except (IOError, OSError) as e:
+            log.critical("!" * 60)
+            log.critical("CARD YANKED - CFE card removed without unmount!")
+            log.critical(f"Direct I/O failed on device {dev}: {e}")
+            log.critical("!" * 60)
+            yanked_devices.append(dev)
+
+    return yanked_devices
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # CFE-HAT worker (insert/eject edge + LED + PCIe bind/unbind)
 # ─────────────────────────────────────────────────────────────────────────────
 def _cfe_hat_worker():
@@ -704,6 +811,8 @@ def _cfe_hat_worker():
         return
 
     led_on = False
+    card_physically_present = False  # Hardware state: True=card in slot, False=card out
+
     def _set_led(state: bool):
         nonlocal led_on
         if state == led_on:
@@ -711,46 +820,103 @@ def _cfe_hat_worker():
         led_on = state
         try:
             bus.write_byte(I2C_ADDR, 0x01 if state else 0x00)
+            log.debug(f"LED state set to: {state}")
         except OSError as e:
             log.debug("CFE-HAT LED write error: %s", e)
 
     def _pcie(bind: bool):
         path, node = "/sys/bus/platform/drivers/brcm-pcie", "1000110000.pcie"
-        target = "bind" if bind else "unbind"
-        try:
-            with open(f"{path}/{target}", "w") as f:
-                f.write(node)
-        except OSError as e:
-            if e.errno != errno.EBUSY:
-                log.debug("PCIe %s error: %s", target, e)
         if bind:
+            # Check if driver already loaded
+            driver_path = '/sys/devices/platform/axi/1000110000.pcie/driver'
+            if os.path.exists(driver_path):
+                log.info("PCIe driver already loaded, performing bus rescan...")
+                subprocess.call(["sh", "-c", "echo 1 > /sys/bus/pci/rescan"])
+            else:
+                log.info("PCIe driver not loaded, binding driver...")
+                try:
+                    with open(f"{path}/bind", "w") as f:
+                        f.write(node)
+                except OSError as e:
+                    if e.errno != errno.EBUSY:
+                        log.debug("PCIe bind error: %s", e)
             time.sleep(0.5)
+            # Additional rescan to ensure device enumeration
             subprocess.call(["sh", "-c", "echo 1 > /sys/bus/pci/rescan"])
+        else:
+            # Unbind/remove PCIe device
+            nvme_port = _cfe_check_for_nvme_device()
+            if nvme_port:
+                log.info(f"Removing PCIe device at {nvme_port}...")
+                try:
+                    subprocess.call(["sh", "-c", f"echo 1 > /sys/bus/pci/devices/{nvme_port}/remove"])
+                    log.info(f"Successfully removed PCIe device {nvme_port}")
+                except Exception as e:
+                    log.error(f"Error removing PCIe device: {e}")
+            else:
+                log.warning("No NVMe device found to remove")
 
-    last_state = 0x00
-    try:
-        last_state = bus.read_byte(I2C_ADDR)
-    except OSError:
-        pass
-    log.info("CFE-HAT thread started — idle byte 0x%02X", last_state)
+    # Initial button state check
+    log.info("Performing initial CFE HAT button state check...")
+    (insert_button, eject_button) = _cfe_read_buttons(bus, I2C_ADDR)
+
+    # Update card presence state (insert_button==False means card is IN)
+    card_physically_present = not insert_button
+    log.info(f"Initial CFE card state: {'PRESENT' if card_physically_present else 'NOT PRESENT'}")
+
+    # Auto-mount if card is already inserted at startup
+    if card_physically_present:
+        log.info("CFE card detected at startup, initializing PCIe...")
+        _pcie(True)
+        # Wait for udev to detect and mount via _udev_worker
+        if _wait_for_raw_mount(timeout=20.0):
+            log.info("CFE card mounted successfully at startup")
+            _set_led(True)
+        else:
+            log.warning("CFE card mount failed at startup")
+
+    last_insert_button = insert_button
+    last_eject_button = eject_button
+
+    log.info("CFE-HAT thread started — entering event loop")
 
     while True:
         try:
-            raw = bus.read_byte(I2C_ADDR)
+            # Read current button states
+            (insert_button, eject_button) = _cfe_read_buttons(bus, I2C_ADDR)
         except OSError as e:
             log.debug("I²C read error: %s", e)
             time.sleep(0.1)
             continue
 
-        ins_now  =  raw        & 1    # bit0
-        ej_now   = (raw >> 1)  & 1    # bit1
-        ins_prev =  last_state & 1
-        ej_prev  = (last_state >> 1) & 1
-        last_state = raw
+        # Update card physically present state
+        # insert_button==False (raw=0x02) means card is IN slot
+        # insert_button==True (raw=0x03) means card is OUT of slot
+        card_physically_present = not insert_button
 
-        # INSERT pressed (latch open) — pre-emptive unmount & power-down
-        if ins_prev == 0 and ins_now == 1:
-            log.debug("Insert pressed: pre-emptive unmount of NVMe")
+        # Detect card insertion (falling edge on insert button)
+        if last_insert_button == 1 and insert_button == 0:
+            log.info("=" * 60)
+            log.info(">>> CARD INSERTION DETECTED (Insert button pressed) <<<")
+            log.info("=" * 60)
+            log.debug(f"State: card_physically_present={card_physically_present}")
+
+            # Power up PCIe and wait for mount
+            _pcie(True)
+            _set_led(True)
+            if _wait_for_raw_mount(timeout=20.0):
+                log.info("Insert: mount succeeded ✓")
+            else:
+                log.warning("Insert: mount FAILED (timeout)")
+                _set_led(False)
+
+        # Detect eject button press (falling edge on eject button)
+        if last_eject_button == 1 and eject_button == 0:
+            log.info("=" * 60)
+            log.info(">>> EJECT BUTTON PRESSED <<<")
+            log.info("=" * 60)
+            log.info("Eject released → lazy unmount all NVMe devices")
+
             any_unmounted = False
             for dev in list(_mounts):
                 if dev.startswith("/dev/nvme"):
@@ -760,34 +926,7 @@ def _cfe_hat_worker():
                             _register_raw_remove(dev)
                             if dev == _active_raw:
                                 _active_raw = None
-            if any_unmounted:
-                _wait_for_raw_unmount()
-                _pcie(False)
-                _set_led(False)
-            _purge_stale_mountpoints()
 
-        # INSERT released — power back up and wait for mount
-        if ins_prev == 1 and ins_now == 0:
-            log.info("Insert released → power up PCIe and wait for mount")
-            _pcie(True)
-            _set_led(True)
-            if _wait_for_raw_mount(timeout=20.0):
-                log.info("Insert: mount succeeded ✓")
-            else:
-                log.warning("Insert: mount FAILED (timeout)")
-                _set_led(False)
-
-        # EJECT released — unmount everything, power down
-        if ej_prev == 1 and ej_now == 0:
-            log.info("Eject released → lazy unmount all")
-            any_unmounted = False
-            for d in list(_mounts):
-                if _force_lazy_unmount(d):
-                    any_unmounted = True
-                    with _raw_lock:
-                        _register_raw_remove(d)
-                        if d == _active_raw:
-                            _active_raw = None
             if any_unmounted:
                 if _wait_for_raw_unmount():
                     log.info("Eject: unmount succeeded ✓")
@@ -798,7 +937,35 @@ def _cfe_hat_worker():
             else:
                 log.warning("Eject: no partitions were mounted")
 
-        time.sleep(0.05)
+            _purge_stale_mountpoints()
+
+        # Detect card yank - check for physical removal or device inaccessibility
+        yanked = _cfe_check_for_yank(card_physically_present)
+        if yanked:
+            log.critical("=" * 60)
+            log.critical("HANDLING YANKED DEVICES")
+            log.critical("=" * 60)
+            for dev in yanked:
+                # Force lazy unmount instantly (skip normal umount which would timeout)
+                _force_lazy_unmount(dev)
+                with _raw_lock:
+                    _register_raw_remove(dev)
+                    if dev == _active_raw:
+                        _active_raw = None
+
+            # Clean up PCIe and turn off LED
+            _pcie(False)
+            _set_led(False)
+            _purge_stale_mountpoints()
+
+            log.warning("System ready for new card insertion")
+            log.critical("=" * 60)
+
+        # Update button state
+        last_insert_button = insert_button
+        last_eject_button = eject_button
+
+        time.sleep(0.1)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Initial scan + auto-mount

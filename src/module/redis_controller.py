@@ -110,8 +110,22 @@ class RedisController:
     # ─────────────────────── initial cache fill ─────────────────────
     def _prime_cache(self):
         for key in self.r.keys("*"):
+            key_type = self.r.type(key)
+            if isinstance(key_type, bytes):
+                key_type = key_type.decode()
+
+            key_name = key.decode() if isinstance(key, bytes) else str(key)
+
+            if key_type != "string":
+                logging.info(
+                    "Skipping Redis key '%s' of type '%s' during cache priming",
+                    key_name,
+                    key_type,
+                )
+                continue
+
             val = self.r.get(key) or b""
-            self.cache[key.decode()] = val.decode(errors="replace")
+            self.cache[key_name] = val.decode(errors="replace")
         logging.info("RedisController cache primed with %d keys", len(self.cache))
 
     # ─────────────────────── background listener ────────────────────
@@ -124,6 +138,19 @@ class RedisController:
                 # suppress echo of own writes
                 if key in self.local_updates:
                     self.local_updates.remove(key)
+                key_type = self.r.type(key)
+                if isinstance(key_type, bytes):
+                    key_type = key_type.decode()
+
+                if key_type != "string":
+                    logging.info(
+                        "Skipping Redis key '%s' of type '%s' during listener update",
+                        key,
+                        key_type,
+                    )
+                    self.cache.pop(key, None)
+                    continue
+
                 value = (self.r.get(key) or b"").decode()
                 self.cache[key] = value
 

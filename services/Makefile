@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------
 # Manage *all* services under cinemate/services/*
 # ---------------------------------------------------------------
-SUBSERVICES := storage-automount wifi-hotspot
+SUBSERVICES := cfe-hat-automount nvme-automount ssd-automount wifi-hotspot
 
 .PHONY: all install enable disable start stop restart status clean uninstall \
         $(addprefix install-,$(SUBSERVICES))  \
@@ -48,4 +48,5 @@ $(foreach s,$(SUBSERVICES),\
 # ---------------------------------------------------------------
 all help:
 	@echo "Targets: install|enable|disable|start|stop|restart|status|clean"
-	@echo "Add -<service> suffix for one service only, e.g. 'make start-storage-automount'"
+	@echo "Add -<service> suffix for one service only, e.g. 'make start-ssd-automount'"
+	@echo "Available services: $(SUBSERVICES)"

@@ -1,5 +1,5 @@
 [Unit]
-Description=Consolidated automount for external storage (USB / NVMe / CFE-HAT)
+Description=Cinemate storage automount (CFE HAT)
 After=systemd-udevd.service multi-user.target
 Wants=systemd-udevd.service
 
@@ -8,13 +8,13 @@ Wants=systemd-udevd.service
 CapabilityBoundingSet=CAP_SYS_ADMIN CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE CAP_CHOWN
 AmbientCapabilities=CAP_CHOWN
 Environment=STORAGE_AUTOMOUNT_LOG=DEBUG
+Environment=STORAGE_AUTOMOUNT_ALLOWED_KINDS=cfe_nvme
 Type=simple
 ExecStart=/usr/bin/python3 /usr/local/bin/storage-automount.py
 Restart=always
 RestartSec=2
 User=root
-# Ensure script can access I²C and GPIO if relevant
-CapabilityBoundingSet=CAP_SYS_ADMIN CAP_DAC_READ_SEARCH
+# Root context is required for GPIO/I²C helpers when the hardware is present
 
 [Install]
 WantedBy=multi-user.target

@@ -1,0 +1,20 @@
+[Unit]
+Description=Cinemate storage automount (NVMe hats)
+After=systemd-udevd.service multi-user.target
+Wants=systemd-udevd.service
+
+[Service]
+# minimal set: mount/unmount + ignore DAC + change ownership
+CapabilityBoundingSet=CAP_SYS_ADMIN CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE CAP_CHOWN
+AmbientCapabilities=CAP_CHOWN
+Environment=STORAGE_AUTOMOUNT_LOG=DEBUG
+Environment=STORAGE_AUTOMOUNT_ALLOWED_KINDS=usb_nvme
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/bin/storage-automount.py
+Restart=always
+RestartSec=2
+User=root
+# Root context is required for GPIO/I²C helpers when the hardware is present
+
+[Install]
+WantedBy=multi-user.target

@@ -1,20 +1,33 @@
 [Unit]
-Description=Consolidated automount for external storage (USB / NVMe / CFE-HAT)
-After=systemd-udevd.service multi-user.target
-Wants=systemd-udevd.service
+Description=Unified Storage Auto-Mount with Media-Aware Tuning
+Documentation=https://github.com/Tiramisioux/RPI5-CFE-Hat
+After=local-fs.target
+Before=cinemate.service
 
 [Service]
-# minimal set: mount/unmount + ignore DAC + change ownership
-CapabilityBoundingSet=CAP_SYS_ADMIN CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE CAP_CHOWN
-AmbientCapabilities=CAP_CHOWN
-Environment=STORAGE_AUTOMOUNT_LOG=DEBUG
 Type=simple
 ExecStart=/usr/bin/python3 /usr/local/bin/storage-automount.py
 Restart=always
-RestartSec=2
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
 User=root
-# Ensure script can access I²C and GPIO if relevant
-CapabilityBoundingSet=CAP_SYS_ADMIN CAP_DAC_READ_SEARCH
+
+# Environment variables (optional overrides)
+#Environment="STORAGE_AUTOMOUNT_LOG=DEBUG"
+#Environment="PI_UID=1000"
+#Environment="PI_GID=1000"
+
+# Security hardening (optional)
+#NoNewPrivileges=true
+#PrivateTmp=true
+#ProtectSystem=strict
+#ReadWritePaths=/media /proc/sys/vm
+
+# Resource limits for safety
+LimitNOFILE=65536
+Nice=-10
 
 [Install]
 WantedBy=multi-user.target
+    

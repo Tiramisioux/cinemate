@@ -501,6 +501,8 @@ make start          # launch now
 
 After enabling the service, Cinemate should autostart on boot.
 
+> **Tip:** `sudo make install` also places `/usr/local/bin/camera-ready.sh` on the system. The script waits for `cinepi-raw` to report a camera before systemd launches Cinemate, preventing the black-screen-on-boot issue that occurred when the GUI started before the sensor initialised.
+
 !!! info "Thinking about the wifi-hotspot service"
 
     The optional `wifi-hotspot` service gives the Pi its own wireless network so you

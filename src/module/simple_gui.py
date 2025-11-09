@@ -96,18 +96,18 @@ class SimpleGUI(threading.Thread):
     def _adjust_clip_layout(self, two_clips: bool):
         """Shrink/enlarge the font & Y-positions of the clip-name fields."""
         if two_clips:
-            new_size = 24               # ↓ from 41 → 24 px
+            new_size = 20               # ↓ from 41 → 24 px
             y_base   = 1053
             self.layout["clip_name"]["size"]        = new_size
             self.layout["clip_name_cam1"]["size"]   = new_size
-            self.layout["clip_name"]["pos"]         = (700, y_base)       # lower line
-            self.layout["clip_name_cam1"]["pos"]    = (700, y_base-19)    # 19 px up
+            self.layout["clip_name"]["pos"]         = (720, y_base)       # lower line
+            self.layout["clip_name_cam1"]["pos"]    = (720, y_base-19)    # 19 px up
         else:
             # Fall back to the original settings
-            self.layout["clip_name"]["size"]        = 24
-            self.layout["clip_name_cam1"]["size"]   = 24
-            self.layout["clip_name"]["pos"]         = (700, 1041)
-            self.layout["clip_name_cam1"]["pos"]    = (700, 998)
+            self.layout["clip_name"]["size"]        = 20
+            self.layout["clip_name_cam1"]["size"]   = 20
+            self.layout["clip_name"]["pos"]         = (720, 1050)
+            self.layout["clip_name_cam1"]["pos"]    = (720, 1050)
 
 
     def load_sensor_values_from_redis(self):
@@ -198,8 +198,8 @@ class SimpleGUI(threading.Thread):
             "recording_time": {"pos": (580, 1041), "size": 41, "font": "bold"},
             
             "clip_label": {"pos": (510, 1050), "size": 30, "font": "regular"},
-            "clip_name": {"pos": (640, 1041), "size": 24, "font": "bold"},
-            "clip_name_cam1": {"pos": (640, 998), "size": 24, "font": "bold"},
+            "clip_name": {"pos": (640, 1041), "size": 18, "font": "bold"},
+            "clip_name_cam1": {"pos": (640, 998), "size": 18, "font": "bold"},
 
             
             "battery_level": {"pos": (600, 1041), "size": 41, "font": "bold"},

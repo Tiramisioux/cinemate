@@ -27,7 +27,7 @@
 
   "output": {
     "cam0": {
-      "hdmi_port": 1
+      "hdmi_port": 0
     },
     "cam1": {
       "hdmi_port": 1
@@ -40,7 +40,7 @@
   },
 
   "hdmi_display": {
-    "width": 920,
+    "width": 1920,
     "height": 1080
   },
 

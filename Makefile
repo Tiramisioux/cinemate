@@ -24,11 +24,11 @@ all: help
 # Install / update the service file
 # -------------------------------------------------------------------
 install:
-        sudo install -m 755 $(LOCAL_SCRIPT_FILE) $(SCRIPT_PATH)
-        sudo install -m 644 $(LOCAL_SERVICE_FILE) $(SERVICE_FILE_PATH)
-        sudo systemctl daemon-reload
-        @echo "Installed $(SERVICE_FILE_PATH)"
-        @echo "Installed $(SCRIPT_PATH)"
+	sudo install -m 755 $(LOCAL_SCRIPT_FILE) $(SCRIPT_PATH)
+	sudo install -m 644 $(LOCAL_SERVICE_FILE) $(SERVICE_FILE_PATH)
+	sudo systemctl daemon-reload
+	@echo "Installed $(SERVICE_FILE_PATH)"
+	@echo "Installed $(SCRIPT_PATH)"
 
 # -------------------------------------------------------------------
 # Enable / disable (boot autostart)

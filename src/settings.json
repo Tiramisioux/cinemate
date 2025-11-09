@@ -39,6 +39,11 @@
     "vu_meter_hatch_lines": true
   },
 
+  "hdmi_display": {
+    "width": 920,
+    "height": 1080
+  },
+
   "preview": {
     "default_zoom": 1.0,
     "zoom_steps":   [1.0, 2.0]

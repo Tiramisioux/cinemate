@@ -3,6 +3,7 @@ import threading
 import time
 from PIL import Image, ImageDraw, ImageFont
 from module.framebuffer import Framebuffer  # Assuming this is a custom module
+from module.config_loader import load_settings
 import subprocess
 import logging
 from sugarpie import pisugar
@@ -42,6 +43,9 @@ class SimpleGUI(threading.Thread):
         
         self.current_background_color = "black"
         self.color_mode = "normal"
+        
+        # Load settings, not sure when the settings will be None so left the code here
+        self.settings = settings or load_settings("/home/pi/cinemate/src/settings.json")
         
         self.setup_resources()
         self.check_display()
@@ -145,8 +149,11 @@ class SimpleGUI(threading.Thread):
         fb_path = "/dev/fb0"
         if os.path.exists(fb_path):
             self.fb = Framebuffer(0)
-            self.disp_width, self.disp_height = self.fb.size
-            logging.info(f"HDMI display found. {self.disp_width, self.disp_height}")
+            # Get resolution from settings, fallback to framebuffer size
+            hdmi_config = self.settings.get("hdmi_display", {})
+            self.disp_width = hdmi_config.get("width", self.fb.size[0])
+            self.disp_height = hdmi_config.get("height", self.fb.size[1])
+            logging.info(f"HDMI display found. Resolution set to {self.disp_width}x{self.disp_height}")
         else:
             logging.info("No HDMI display found")
 
@@ -1027,8 +1034,11 @@ class SimpleGUI(threading.Thread):
         lores_width = int(self.redis_controller.get_value(ParameterKey.LORES_WIDTH.value))
         lores_height = int(self.redis_controller.get_value(ParameterKey.LORES_HEIGHT.value))
 
-        frame_width = 1920
-        frame_height = 1080
+        frame_width = self.disp_width
+        frame_height = self.disp_height
+        shrink_x = self.disp_width / 1920
+        shrink_y = self.disp_height / 1080
+        
         padding_x = 92
         padding_y = 46
         max_draw_width = frame_width - (2 * padding_x)
@@ -1075,8 +1085,9 @@ class SimpleGUI(threading.Thread):
         for element, info in current_layout.items():
             if values.get(element) is None:
                 continue
-            position = info["pos"]
-            font_size = info.get("size", 12)  # 12 is the default font size
+            position = [info["pos"][0] * shrink_x, info["pos"][1] * shrink_y]
+            font_size = info.get("size", 12) * min(min(shrink_x, shrink_y), 1) 
+            # 12 is the default font size, min with 1 makes sure the font stays same in bigger displays
             font = ImageFont.truetype(
                 os.path.realpath(self.bold_font_path if info.get("font", "bold") == "bold" else self.regular_font_path),
                 font_size

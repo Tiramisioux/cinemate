@@ -273,7 +273,11 @@ class CinePiProcess(Thread):
         # lores & preview
         aspect = width / height
         anam = float(self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value) or 1.0)
-        fw, fh = 1920, 1080
+        
+        # Get HDMI resolution from settings
+        hdmi_config = _SETTINGS.get("hdmi_display", {})
+        fw, fh = hdmi_config.get("width", 1920), hdmi_config.get("height", 1080)
+        
         px, py = 94, 50
         aw, ah = fw - 2*px, fh - 2*py
         lh = min(720, ah)

@@ -6,10 +6,12 @@ SERVICE_NAME        := cinemate-autostart
 # where systemd expects it
 SYSTEMD_DIR         := /etc/systemd/system
 SERVICE_FILE_PATH   := $(SYSTEMD_DIR)/$(SERVICE_NAME).service
+SCRIPT_PATH         := /usr/local/bin/camera-ready.sh
 
 # where the service file lives inside the repo
 SERVICE_DIR         := services/$(SERVICE_NAME)
 LOCAL_SERVICE_FILE  := $(SERVICE_DIR)/$(SERVICE_NAME).service
+LOCAL_SCRIPT_FILE   := $(SERVICE_DIR)/camera-ready.sh
 
 .PHONY: all install enable disable start stop restart status clean help
 
@@ -22,9 +24,11 @@ all: help
 # Install / update the service file
 # -------------------------------------------------------------------
 install:
-	sudo install -m 644 $(LOCAL_SERVICE_FILE) $(SERVICE_FILE_PATH)
-	sudo systemctl daemon-reload
-	@echo "Installed $(SERVICE_FILE_PATH)"
+        sudo install -m 755 $(LOCAL_SCRIPT_FILE) $(SCRIPT_PATH)
+        sudo install -m 644 $(LOCAL_SERVICE_FILE) $(SERVICE_FILE_PATH)
+        sudo systemctl daemon-reload
+        @echo "Installed $(SERVICE_FILE_PATH)"
+        @echo "Installed $(SCRIPT_PATH)"
 
 # -------------------------------------------------------------------
 # Enable / disable (boot autostart)
@@ -59,6 +63,7 @@ clean:
 	- sudo systemctl stop    $(SERVICE_NAME)
 	- sudo systemctl disable $(SERVICE_NAME)
 	- sudo rm -f             $(SERVICE_FILE_PATH)
+	- sudo rm -f             $(SCRIPT_PATH)
 	 sudo systemctl daemon-reload
 	@echo "Removed $(SERVICE_NAME)"
 

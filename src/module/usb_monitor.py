@@ -6,8 +6,10 @@ import re
 
 import subprocess
 import time
+import shlex
 
 from collections import deque
+from typing import Optional
 
 
 class Event:
@@ -95,76 +97,147 @@ class USBDriveMonitor:
 
 class AudioMonitor:
     def __init__(self):
-        self.format = None
-        self.channels = None
-        self.sample_rate = None
-        self.bit_depth = None
-        self.device_name = None
-        self.card = None
-        self.device = None
-        self.device_alias = None
+        self.format: Optional[str] = None
+        self.channels: Optional[int] = None
+        self.sample_rate: Optional[int] = None
+        self.bit_depth: Optional[int] = None
+        self.device_name: Optional[str] = None
+        self.card: Optional[str] = None
+        self.device: Optional[str] = None
+        self.device_alias: Optional[str] = None
         self.model = None
         self.serial = None
         self.vu_levels = []
         self.running = False
         self.thread = None
-        self.vu_history = deque(maxlen=10)  
+        self.vu_history = deque(maxlen=10)
+        self.audio_sample_rate = 48000
+        self.can_record_audio = False
 
     def set_model_info(self, model, serial):
         self.model = model.strip().lower() if model else "unknown"
         self.serial = serial
 
-    def detect_device(self):
+    @staticmethod
+    def run_with_stderr_capture(cmd: str) -> tuple[int, str]:
+        """Run a shell command, merging stderr into stdout and return the exit code and first line."""
+        logging.debug("Executing command with stderr capture: %s", cmd)
         try:
-            output = subprocess.check_output("arecord -l", shell=True).decode()
-            match = re.search(r'card (\d+):.*?device (\d+):.*?\[(.*?)\]', output, re.DOTALL)
-            if match:
-                self.card, self.device, self.device_name = match.groups()
+            process = subprocess.Popen(
+                cmd,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+        except OSError as exc:
+            logging.error("Failed to launch '%s': %s", cmd, exc)
+            return -1, ""
 
-                # Hardcoded handling for known models
-                model_lc = self.model.lower()
-                if "videomic" in model_lc or "rode" in model_lc:
-                    self.device_alias = "mic_24bit"
-                    self.format = "S24_3LE"
-                    self.channels = 2
-                    self.sample_rate = 48000
-                    logging.info("Hardcoded config for RØDE VideoMic NTG → mic_24bit")
-                    return True
-                elif "pnp" in model_lc or "c-media" in model_lc:
-                    self.device_alias = "mic_16bit"
-                    self.format = "S16_LE"
-                    self.channels = 1
-                    self.sample_rate = 48000
-                    logging.info("Hardcoded config for USB PnP mic → mic_16bit")
-                    return True
+        output, _ = process.communicate()
+        rc = process.returncode if process.returncode is not None else -1
+        first_line = output.splitlines()[0] if output else ""
+        return rc, first_line
 
-                # Derive bit depth from format
-                if self.format == "S24_3LE":
-                    self.bit_depth = 24
-                elif self.format == "S16_LE":
-                    self.bit_depth = 16
-                else:
-                    self.bit_depth = None
-
-                logging.warning("No hardcoded match for model '%s', skipping detection.", self.model)
-                return False
+    def detect_recording_devices(self) -> bool:
+        try:
+            output = subprocess.check_output([
+                "arecord", "-l"
+            ], stderr=subprocess.DEVNULL, text=True)
+        except FileNotFoundError:
+            logging.error("arecord not found; cannot detect recording devices.")
+            self.can_record_audio = False
+            return False
         except subprocess.CalledProcessError:
             logging.exception("arecord failed during detection.")
+            self.can_record_audio = False
             return False
 
-    def try_audio_config(self, fmt, channels, rate):
-        cmd = [
-            'arecord', '-D', f'{self.device_alias}',
-            '--format', fmt, '--channels', str(channels), '--rate', str(rate),
-            '-d', '1', '-t', 'raw', '/dev/null'
-        ]
-        try:
-            subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
+        if "card " not in output:
+            logging.error("No recording devices detected!")
+            self.can_record_audio = False
+        else:
+            self.can_record_audio = True
+        logging.debug("Audio device present: %s", "yes" if self.can_record_audio else "no")
+        return self.can_record_audio
+
+    def try_audio_config(self, device_alias: str, fmt: str, channels: int, rate: int) -> bool:
+        cmd = (
+            f"arecord -D {shlex.quote(device_alias)}"
+            f" -f {fmt} -c {channels} -r {rate} -d 1 -t raw"
+        )
+        rc, first_line = self.run_with_stderr_capture(cmd)
+        exit_code = rc if rc is not None else -1
+        if exit_code == 0:
+            logging.info(
+                "Probe OK: %s (fmt %s, ch %s, %s Hz)",
+                device_alias,
+                fmt,
+                channels,
+                rate,
+            )
             return True
-        except subprocess.CalledProcessError:
-            return False
+
+        logging.debug(
+            "Probe FAILED rc=%s : %s | %s",
+            exit_code,
+            cmd,
+            first_line,
+        )
+        return False
+
+    def parse_hardware_params(self) -> None:
+        self.sample_rate = self.audio_sample_rate
+        if self.try_audio_config("mic_24bit", "S24_3LE", 2, self.sample_rate):
+            self.format = "S24_3LE"
+            self.channels = 2
+            self.device_alias = "mic_24bit"
+            self.can_record_audio = True
+            self.bit_depth = 24
+            logging.info("parse_hardware_params(): using mic_24bit")
+        elif self.try_audio_config("mic_16bit", "S16_LE", 1, self.sample_rate):
+            self.format = "S16_LE"
+            self.channels = 1
+            self.device_alias = "mic_16bit"
+            self.can_record_audio = True
+            self.bit_depth = 16
+            logging.info("parse_hardware_params(): using mic_16bit")
+        else:
+            self.format = None
+            self.device_alias = None
+            self.channels = None
+            self.sample_rate = None
+            self.can_record_audio = False
+            self.bit_depth = None
+            logging.error("parse_hardware_params(): no usable mic_* alias found")
+
+        if self.can_record_audio:
+            self.publish_mic_selection()
+
+    def publish_mic_selection(self) -> None:
+        if not self.can_record_audio or not self.device_alias:
+            return
+        try:
+            import redis  # type: ignore
+
+            client = redis.StrictRedis(host="localhost", port=6379, db=0)
+            client.mset({
+                "MIC_PCM_ALIAS": self.device_alias,
+                "MIC_FORMAT": self.format or "",
+                "MIC_CHANNELS": str(self.channels or ""),
+                "MIC_RATE": str(self.sample_rate or ""),
+            })
+            logging.debug("Published MIC_* to Redis")
+        except ModuleNotFoundError:
+            logging.debug("Redis module not available; skipping MIC_* publish.")
+        except Exception as exc:  # pragma: no cover - redis optional
+            logging.debug("Failed to publish MIC_* to Redis: %s", exc)
 
     def vu_monitor_loop(self):
+        if not self.device_alias or not self.format or not self.channels or not self.sample_rate:
+            logging.warning("VU monitor loop requested without a valid audio configuration.")
+            return
+
         cmd = [
             'arecord', '-D', f'{self.device_alias}',
             '--format', self.format, '--channels', str(self.channels), '--rate', str(self.sample_rate),
@@ -200,8 +273,16 @@ class AudioMonitor:
     def start(self):
         if self.running:
             return False
-        if not self.detect_device():
+
+        if not self.detect_recording_devices():
+            logging.warning("AudioMonitor start aborted: no recording device present.")
             return False
+
+        self.parse_hardware_params()
+        if not self.can_record_audio:
+            logging.warning("AudioMonitor start aborted: unable to determine usable mic alias.")
+            return False
+
         self.running = True
         self.thread = threading.Thread(target=self.vu_monitor_loop, daemon=True)
         self.thread.start()

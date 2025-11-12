@@ -129,6 +129,8 @@ class AudioMonitor:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
             )
         except OSError as exc:
             logging.error("Failed to launch '%s': %s", cmd, exc)

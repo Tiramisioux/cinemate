@@ -360,7 +360,7 @@ class USBMonitor():
         serial = chosen_device.get('ID_SERIAL', '') or "Unknown"
         model = raw_model.replace('_', ' ').strip() or "Unknown"
         
-        threading.Timer(3.0, lambda: (self.audio_monitor.set_model_info(model, serial), self.audio_monitor.start())).start()
+        # Do not start here – we may replace audio_monitor below. Start only after finalising selection.
 
         # Always initialize to prevent UnboundLocalError
         card_name = "Unknown"
@@ -378,21 +378,23 @@ class USBMonitor():
 
         if mic_has_changed:
             logging.info(f"Microphone changed from {self.current_mic_id} → {mic_id}")
-            self.audio_monitor.stop()
+            # Stop old monitor and create a fresh one bound to this mic
+            try:
+                self.audio_monitor.stop()
+            except Exception:
+                pass
             self.audio_monitor = AudioMonitor()
             self.audio_monitor.set_model_info(model, serial)
-
-            # started = self.audio_monitor.start()
-
-            # if started:
-            #     logging.info("Audio monitor restarted for new mic.")
-            # else:
-            #     logging.error("Audio monitor failed to restart for new mic.")
-
-            # if trigger_event:
-            #     self.usb_event.emit('mic_changed', chosen_device, model, serial, card_name)
-            
             self.current_mic_id = mic_id
+            # Let ALSA settle briefly, then start the *current* monitor
+            threading.Timer(0.5, self.audio_monitor.start).start()
+            if trigger_event:
+                self.usb_event.emit('mic_changed', chosen_device, model, serial, card_name)
+        else:
+            # First detection or unchanged mic: ensure monitor is running
+            if not self.audio_monitor.running:
+                self.audio_monitor.set_model_info(model, serial)
+                threading.Timer(0.5, self.audio_monitor.start).start()
 
         logging.info(f'USB Microphone connected: Model={model}, Serial={serial}, Name={card_name}')
         self.usb_event.emit('add', chosen_device, model, serial, card_name)
@@ -460,7 +462,6 @@ class USBMonitor():
                 self.usb_mic_path = None
                 self.current_mic_id = None
                 self.usb_event.emit('mic_removed', device, model, serial)  # <-- Added this line
-                self.audio_monitor.stop()
                 self.audio_monitor.stop()
 
 

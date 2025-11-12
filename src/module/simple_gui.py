@@ -1,6 +1,7 @@
 import os
 import threading
 import time
+from typing import Dict, Iterable, Optional, Set, Tuple
 from PIL import Image, ImageDraw, ImageFont
 from module.framebuffer import Framebuffer  # Assuming this is a custom module
 from module.config_loader import load_settings
@@ -23,10 +24,10 @@ def _to_bool(value) -> bool:
     return bool(value)
 
 class SimpleGUI(threading.Thread):
-    def __init__(self, 
-                redis_controller, 
-                cinepi_controller, 
-                ssd_monitor, 
+    def __init__(self,
+                redis_controller,
+                cinepi_controller,
+                ssd_monitor,
                 dmesg_monitor, 
                 battery_monitor, 
                 sensor_detect, 
@@ -67,10 +68,30 @@ class SimpleGUI(threading.Thread):
         self.vu_decay_factor = 0.1     # Fall factor (0.0–1.0, lower = slower)
 
         self.socketio = socketio  # Add socketio reference
-        
+
         self.usb_monitor = usb_monitor
-        
+
         self.serial_handler = serial_handler
+
+        self.idle_interval = 0.2
+        self.active_interval = 0.05
+        self._slow_metric_interval = 0.2
+        self._value_lock = threading.Lock()
+        self._latest_values: Dict[str, object] = {}
+        self._last_changed_keys: Set[str] = set()
+        self._update_event = threading.Event()
+        self._slow_metrics_cache: Dict[str, Tuple[object, float]] = {}
+        self._font_cache: Dict[Tuple[str, int], ImageFont.FreeTypeFont] = {}
+        self._element_regions: Dict[str, Tuple[int, int, int, int]] = {}
+        self._current_image: Optional[Image.Image] = None
+        self._needs_full_redraw = True
+        self._left_section_bbox: Optional[Tuple[int, int, int, int]] = None
+        self._right_section_bbox: Optional[Tuple[int, int, int, int]] = None
+        self._preview_bbox: Optional[Tuple[int, int, int, int]] = None
+        self._vu_bbox: Optional[Tuple[int, int, int, int]] = None
+        self._framebuffer_vu_bbox: Optional[Tuple[int, int, int, int]] = None
+        self._prev_vu_levels: Tuple[float, ...] = tuple()
+        self._prev_vu_peaks: Tuple[float, ...] = tuple()
 
         # Buffer VU meter and hatch line toggles from settings
         if settings is not None:
@@ -86,11 +107,58 @@ class SimpleGUI(threading.Thread):
         # Load sensor values from Redis upon instantiation
         self.load_sensor_values_from_redis()
 
+        self._left_section_keys = self._collect_section_keys(self.left_section_layout)
+        self._right_section_keys = self._collect_section_keys(self.right_section_layout)
+        self._left_section_keys.update({"usb_connected", "mic_connected", "keyboard_connected", "storage_type"})
+
+        self._data_thread = threading.Thread(target=self._data_loop, name="SimpleGUIData", daemon=True)
+        self._data_thread.start()
+
         self.start()
 
     # ───────────────── helper: do we have two non-empty clip names? ────────────────
     def _has_two_clips(self, values) -> bool:
         return bool(values.get("clip_name") and values.get("clip_name_cam1"))
+
+    @staticmethod
+    def _safe_int(value, default=0):
+        try:
+            return int(float(value))
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _safe_float(value, default=0.0):
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+    def _get_font(self, kind: str, size: float) -> ImageFont.FreeTypeFont:
+        font_size = max(int(round(size)), 1)
+        key = (kind, font_size)
+        if key not in self._font_cache:
+            font_path = self.bold_font_path if kind == "bold" else self.regular_font_path
+            self._font_cache[key] = ImageFont.truetype(os.path.realpath(font_path), font_size)
+        return self._font_cache[key]
+
+    def _clear_region(self, draw: ImageDraw.ImageDraw, bbox: Optional[Tuple[int, int, int, int]], fill=None):
+        if not bbox:
+            return
+        draw.rectangle(bbox, fill=fill or self.current_background_color)
+
+    def _get_slow_metric(self, key: str, func, fallback=""):
+        """Return cached metric values, refreshing at most every 0.2 s."""
+        now = time.monotonic()
+        cached_value, expires_at = self._slow_metrics_cache.get(key, (fallback, 0))
+        if now >= expires_at:
+            try:
+                cached_value = func()
+            except Exception:
+                # Keep the previous/fallback value if the probe fails.
+                pass
+            self._slow_metrics_cache[key] = (cached_value, now + self._slow_metric_interval)
+        return cached_value
 
     # ───────────────── helper: tweak GUI layout for clip lines ────────────────────
     def _adjust_clip_layout(self, two_clips: bool):
@@ -311,6 +379,15 @@ class SimpleGUI(threading.Thread):
             },
         ]
 
+    def _collect_section_keys(self, sections) -> Set[str]:
+        keys: Set[str] = set()
+        for section in sections:
+            for item in section.get("items", []):
+                key = item.get("key")
+                if key:
+                    keys.add(key)
+        return keys
+
     def estimate_resolution_in_k(self):
         """
         Estimate the current resolution in K.
@@ -423,6 +500,10 @@ class SimpleGUI(threading.Thread):
 
 
 
+        anamorphic_factor_value = self._safe_float(self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value), 1.0)
+        lores_width_value = self._safe_int(self.redis_controller.get_value(ParameterKey.LORES_WIDTH.value), 0)
+        lores_height_value = self._safe_int(self.redis_controller.get_value(ParameterKey.LORES_HEIGHT.value), 0)
+
         values = {
             # top-row stuff
             "resolution":     resolution_value,
@@ -446,16 +527,21 @@ class SimpleGUI(threading.Thread):
 
             # misc labels / live data
             "zoom_factor": "",   # will be filled below if ≠ 1.0
-            "anamorphic_factor": f"{self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value)}X",
-            "ram_load":       Utils.memory_usage(),
-            "cpu_load":       Utils.cpu_load(),
-            "cpu_temp":       Utils.cpu_temp(),
+            "anamorphic_factor": f"{anamorphic_factor_value}X",
+            "ram_load":       self._get_slow_metric("ram_load", Utils.memory_usage, "0%"),
+            "cpu_load":       self._get_slow_metric("cpu_load", Utils.cpu_load, "0%"),
+            "cpu_temp":       self._get_slow_metric("cpu_temp", Utils.cpu_temp, "0°C"),
             "disk_label":     (self.ssd_monitor.device_name or "").upper()[:4],
             "usb_connected":  bool(self.serial_handler.serial_connected),
             "mic_connected":  self.usb_monitor.usb_mic is not None,
             "keyboard_connected": bool(self.usb_monitor and self.usb_monitor.usb_keyboard),
             "storage_type":   self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value),
             "write_speed":    self.redis_controller.get_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value) or "0 MB/s",
+            "sensor_width":   self.width,
+            "sensor_height":  self.height,
+            "lores_width_value":    lores_width_value,
+            "lores_height_value":   lores_height_value,
+            "anamorphic_factor_value": anamorphic_factor_value,
 
             # "clip_label": "CLIP",
             "clip_name":    self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value) or "N/A",
@@ -673,8 +759,8 @@ class SimpleGUI(threading.Thread):
     # LEFT-HAND COLUMN  (CAM / MON / SYS …)
     # ─────────────────────────────────────────────────────────────
     def draw_left_sections(self, draw, values):
-        label_font = ImageFont.truetype(self.regular_font_path, 26)
-        box_font   = ImageFont.truetype(self.bold_font_path,     26)
+        label_font = self._get_font("regular", 26)
+        box_font   = self._get_font("bold", 26)
 
         BOX_H, BOX_W  = 40, 60
         BOX_COLOR     = (136, 136, 136)
@@ -687,6 +773,9 @@ class SimpleGUI(threading.Thread):
         BOX_GAP       = 14
         SECTION_GAP   = 60
 
+        min_x, min_y = float("inf"), float("inf")
+        max_x, max_y = float("-inf"), float("-inf")
+
         # ── CAM / MON sections ───────────────────────────────────
         for section in self.left_section_layout:
             # centre the label over the column
@@ -695,6 +784,9 @@ class SimpleGUI(threading.Thread):
             draw.text((lbl_x, y), section["label"],
                       font=label_font,
                       fill=self.colors["label"][self.color_mode])
+            min_x, min_y = min(min_x, lbl_x), min(min_y, y)
+            max_x = max(max_x, lbl_x + lbl_w)
+            max_y = max(max_y, y + BOX_H)
             y += BOX_H + LABEL_SPACING
 
             for item in section["items"]:
@@ -722,6 +814,10 @@ class SimpleGUI(threading.Thread):
                     ty = y     + (BOX_H - th)//2
                     draw.text((tx, ty), part, font=box_font, fill=TEXT_COLOR)
 
+                    min_x = min(min_x, box_x)
+                    min_y = min(min_y, y)
+                    max_x = max(max_x, box_x + BOX_W)
+                    max_y = max(max_y, y + BOX_H)
                     y += BOX_H + BOX_GAP
 
             y += SECTION_GAP
@@ -738,6 +834,8 @@ class SimpleGUI(threading.Thread):
             draw.text((label_x + 1, y), "SYS",
                       font=label_font,
                       fill=self.colors["label"][self.color_mode])
+            min_x, min_y = min(min_x, label_x + 1), min(min_y, y)
+            max_x = max(max_x, label_x + 1 + draw.textbbox((0, 0), "SYS", font=label_font)[2])
             y += BOX_H + LABEL_SPACING
 
             for key, lbl in [("usb_connected", "SER"),
@@ -751,6 +849,10 @@ class SimpleGUI(threading.Thread):
                 tx = box_x + (BOX_W - tw) // 2
                 ty = y      + (BOX_H - th) // 2
                 draw.text((tx, ty), lbl, font=box_font, fill=TEXT_COLOR)
+                min_x = min(min_x, box_x)
+                min_y = min(min_y, y)
+                max_x = max(max_x, box_x + BOX_W)
+                max_y = max(max_y, y + BOX_H)
                 y += BOX_H + BOX_GAP
 
             storage = str(values.get("storage_type", "")).upper()
@@ -761,8 +863,12 @@ class SimpleGUI(threading.Thread):
                 tx = box_x + (BOX_W - tw) // 2
                 ty = y      + (BOX_H - th) // 2
                 draw.text((tx, ty), storage, font=box_font, fill=TEXT_COLOR)
+                min_x = min(min_x, box_x)
+                min_y = min(min_y, y)
+                max_x = max(max_x, box_x + BOX_W)
+                max_y = max(max_y, y + BOX_H)
                 y += BOX_H + BOX_GAP
-            
+
             # write_speed = values.get("write_speed", "")
             # if write_speed:
             #     text = write_speed.split()[0]
@@ -774,13 +880,20 @@ class SimpleGUI(threading.Thread):
             #     draw.text((tx, ty), text, font=box_font, fill=TEXT_COLOR)
             #     y += BOX_H + BOX_GAP
 
+        if min_x == float("inf"):
+            return None
+
+        padding = 6
+        return (int(min_x) - padding, int(min_y) - padding,
+                int(max_x) + padding, int(max_y) + padding)
+
 
     # ─────────────────────────────────────────────────────────────
     # RIGHT-HAND MIRROR COLUMN
     # ─────────────────────────────────────────────────────────────
     def draw_right_sections(self, draw, values):
-        label_font = ImageFont.truetype(self.regular_font_path, 26)
-        box_font   = ImageFont.truetype(self.bold_font_path,     24)
+        label_font = self._get_font("regular", 26)
+        box_font   = self._get_font("bold", 24)
 
         BOX_H, BOX_W  = 40, 60
         BOX_COLOR     = (136, 136, 136)
@@ -792,12 +905,19 @@ class SimpleGUI(threading.Thread):
         BOX_GAP       = 14
         SECTION_GAP   = 60
 
+        min_x, min_y = float("inf"), float("inf")
+        max_x, max_y = float("-inf"), float("-inf")
+
         for section in self.right_section_layout:
             lbl_w = draw.textbbox((0,0), section["label"], font=label_font)[2]
             lbl_x = box_pad_x + (BOX_W - lbl_w)//2      # centred
             draw.text((lbl_x, y), section["label"],
                       font=label_font,
                       fill=self.colors["label"][self.color_mode])
+            min_x = min(min_x, lbl_x)
+            min_y = min(min_y, y)
+            max_x = max(max_x, lbl_x + lbl_w)
+            max_y = max(max_y, y + BOX_H)
             y += BOX_H + LABEL_SPACING
 
             for item in section["items"]:
@@ -812,19 +932,30 @@ class SimpleGUI(threading.Thread):
                     tx = box_pad_x + (BOX_W - tw)//2
                     ty = y         + (BOX_H - th)//2
                     draw.text((tx, ty), part, font=box_font, fill=TEXT_COLOR)
+                    min_x = min(min_x, box_pad_x)
+                    min_y = min(min_y, y)
+                    max_x = max(max_x, box_pad_x + BOX_W)
+                    max_y = max(max_y, y + BOX_H)
                     y += BOX_H + BOX_GAP
             y += SECTION_GAP
 
+        if min_x == float("inf"):
+            return None
+
+        padding = 6
+        return (int(min_x) - padding, int(min_y) - padding,
+                int(max_x) + padding, int(max_y) + padding)
+
     def draw_right_vu_meter(self, draw, amplification_factor=4):
         if not self.usb_monitor or not hasattr(self.usb_monitor, "audio_monitor"):
-            return
+            return None
 
         monitor = self.usb_monitor.audio_monitor
         vu_levels = self.vu_smoothed
         vu_peaks = self.vu_peaks
 
         if not monitor.running or not vu_levels:
-            return
+            return None
 
         n_channels = len(vu_levels)
         bar_width = 10
@@ -836,6 +967,14 @@ class SimpleGUI(threading.Thread):
         base_y = self.disp_height - margin_bottom - bar_height
         total_width = n_channels * bar_width + (n_channels - 1) * spacing
         base_x = self.disp_width - margin_right - total_width
+
+        label_font = self._get_font("regular", 16)
+        bbox = (int(base_x - 6),
+                int(base_y - 6),
+                int(base_x + total_width + 6),
+                int(base_y + bar_height + 6 + label_font.size + 8))
+
+        self._clear_region(draw, bbox)
 
         def level_to_height(level):
             import math
@@ -856,13 +995,14 @@ class SimpleGUI(threading.Thread):
             draw_bar(x, bar_width, vu_levels[i], vu_peaks[i])
 
         # Optional: Draw channel labels
-        label_font = ImageFont.truetype(self.regular_font_path, 16)
         labels = ["L", "R"] if n_channels == 2 else [str(i+1) for i in range(n_channels)]
         for i, label in enumerate(labels):
             text_bbox = draw.textbbox((0, 0), label, font=label_font)
             text_x = base_x + i * (bar_width + spacing) + (bar_width - (text_bbox[2] - text_bbox[0])) // 2
             text_y = base_y + bar_height + 5
             draw.text((text_x, text_y), label, font=label_font, fill=(249,249,249))
+
+        return bbox
 
     # ─────────────────────────────────────────────────────────────
     # FRAME-BUFFER “VU”  (queued frames vs. capacity)
@@ -909,6 +1049,9 @@ class SimpleGUI(threading.Thread):
         base_y = self.disp_height - GAP_BOTTOM - BAR_H
         base_x = BASE_X
 
+        bbox = (int(base_x - 6), int(base_y - 6), int(base_x + BAR_W + 6), int(base_y + BAR_H + 6))
+        self._clear_region(draw, bbox)
+
         rec         = int(self.redis_controller.get_value(ParameterKey.REC.value) or 0)
         border_col  = (50, 50, 50) if rec else (249, 249, 249)
         back_col    = (50, 50, 50)
@@ -937,9 +1080,151 @@ class SimpleGUI(threading.Thread):
             y = base_y + BAR_H - int(BAR_H * frac)
             draw.line([(base_x, y), (base_x + BAR_W, y)], fill=(136,136,136))
 
+        return bbox
 
-    def draw_gui(self, values):
-        
+
+    def _data_loop(self):
+        previous_values: Dict[str, object] = {}
+        while self._running:
+            start = time.monotonic()
+            values = self.populate_values()
+            changed_keys = {k for k, v in values.items() if previous_values.get(k) != v}
+            previous_values = values
+
+            self.update_smoothed_vu_levels()
+            vu_snapshot = tuple(round(v, 3) for v in self.vu_smoothed)
+            peak_snapshot = tuple(round(v, 3) for v in self.vu_peaks)
+            if vu_snapshot != self._prev_vu_levels or peak_snapshot != self._prev_vu_peaks:
+                changed_keys.add("__vu__")
+                self._prev_vu_levels = vu_snapshot
+                self._prev_vu_peaks = peak_snapshot
+
+            with self._value_lock:
+                should_signal = bool(changed_keys) or not self._latest_values
+                self._latest_values = values
+                self._last_changed_keys = changed_keys
+
+            if should_signal:
+                self._update_event.set()
+
+            interval = self.active_interval if changed_keys else self.idle_interval
+            elapsed = time.monotonic() - start
+            sleep_time = max(interval - elapsed, 0.01)
+            if not self._running:
+                break
+            time.sleep(sleep_time)
+
+
+    def _draw_preview_frame(self, draw: ImageDraw.ImageDraw, values: Dict[str, object]):
+        lores_width = max(self._safe_int(values.get("lores_width_value"), 0), 1)
+        lores_height = max(self._safe_int(values.get("lores_height_value"), 0), 1)
+        anamorphic = max(self._safe_float(values.get("anamorphic_factor_value"), 1.0), 1e-3)
+
+        frame_width = self.disp_width or 1920
+        frame_height = self.disp_height or 1080
+
+        padding_x = 92
+        padding_y = 46
+        max_draw_width = frame_width - (2 * padding_x)
+        max_draw_height = frame_height - (2 * padding_y)
+
+        adjusted_lores_width = lores_width * anamorphic
+        adjusted_lores_height = lores_height * anamorphic
+        adjusted_aspect_ratio = adjusted_lores_width / adjusted_lores_height if adjusted_lores_height else 1
+
+        if adjusted_aspect_ratio >= 1:
+            preview_w = max_draw_width
+            preview_h = int(preview_w / adjusted_aspect_ratio) if adjusted_aspect_ratio else max_draw_height
+            if preview_h > max_draw_height:
+                preview_h = max_draw_height
+                preview_w = int(preview_h * adjusted_aspect_ratio)
+        else:
+            preview_h = max_draw_height
+            preview_w = int(preview_h * adjusted_aspect_ratio)
+            if preview_w > max_draw_width:
+                preview_w = max_draw_width
+                preview_h = int(preview_w / adjusted_aspect_ratio) if adjusted_aspect_ratio else max_draw_height
+
+        preview_x = (frame_width - preview_w) // 2
+        preview_y = (frame_height - preview_h) // 2
+
+        line_color = (249, 249, 249)
+
+        draw.rectangle(
+            [preview_x, preview_y, preview_x + preview_w, preview_y + preview_h],
+            outline=line_color,
+            width=2
+        )
+
+        padding = 6
+        return (
+            int(preview_x) - padding,
+            int(preview_y) - padding,
+            int(preview_x + preview_w) + padding,
+            int(preview_y + preview_h) + padding,
+        )
+
+
+    def _draw_layout_text(self, draw: ImageDraw.ImageDraw, values: Dict[str, object], elements: Iterable[str], clear_previous: bool):
+        shrink_x = self.disp_width / 1920 if self.disp_width else 1
+        shrink_y = self.disp_height / 1080 if self.disp_height else 1
+        scale = min(min(shrink_x, shrink_y), 1)
+
+        lock_mapping = {
+            "iso": "iso_lock",
+            "shutter_speed": "shutter_a_nom_lock",
+            "fps": "fps_lock",
+            "exposure_time": "shutter_a_nom_lock",
+        }
+
+        for element in elements:
+            info = self.layout.get(element)
+            if not info:
+                continue
+
+            value = values.get(element)
+            if value is None:
+                continue
+
+            position = [info["pos"][0] * shrink_x, info["pos"][1] * shrink_y]
+            font_kind = "bold" if info.get("font", "bold") == "bold" else "regular"
+            font_size = info.get("size", 12) * scale
+            font = self._get_font(font_kind, font_size)
+            text = str(value)
+            color_mode = self.color_mode
+            color = self.colors.get(element, {}).get(color_mode, "white")
+
+            prev_bbox = self._element_regions.get(element)
+            if clear_previous and prev_bbox:
+                self._clear_region(draw, prev_bbox)
+
+            if text == "":
+                self._element_regions[element] = None
+                continue
+
+            if element == "sensor" and info.get("align") == "right":
+                text_bbox = draw.textbbox((0, 0), text, font=font)
+                text_width = text_bbox[2] - text_bbox[0]
+                x = position[0] + info["width"] - text_width
+                position = (x, position[1])
+
+            if element in lock_mapping and getattr(self.cinepi_controller, lock_mapping[element]):
+                bbox = self.draw_rounded_box(draw, text, position, font_size, 5, "black", "white", self._current_image)
+            else:
+                draw.text(position, text, font=font, fill=color)
+                text_bbox = draw.textbbox((0, 0), text, font=font)
+                bbox = (
+                    int(position[0]) - 4,
+                    int(position[1]) - 4,
+                    int(position[0] + (text_bbox[2] - text_bbox[0]) + 4),
+                    int(position[1] + (text_bbox[3] - text_bbox[1]) + 4),
+                )
+
+            self._element_regions[element] = bbox
+
+
+    def draw_gui(self, values, changed_keys: Set[str]):
+
         # ── shrink clip-name text when two cameras are active ─────────────────────────
         self._adjust_clip_layout(self._has_two_clips(values))
 
@@ -1005,10 +1290,7 @@ class SimpleGUI(threading.Thread):
 
         current_values = values
         if hasattr(self, 'previous_values'):
-            changed_data = {}
-            for key, value in current_values.items():
-                if value != self.previous_values.get(key):
-                    changed_data[key] = value
+            changed_data = {k: current_values[k] for k in changed_keys if k in current_values and current_values[k] != self.previous_values.get(k)}
             if changed_data:
                 try:
                     self.emit_gui_data_change(changed_data)
@@ -1019,115 +1301,81 @@ class SimpleGUI(threading.Thread):
         if not self.fb:
             return
 
-        image = Image.new("RGBA", self.fb.size)
-        draw = ImageDraw.Draw(image)
-        draw.rectangle(((0, 0), self.fb.size), fill=self.current_background_color)
+        full_redraw = self._needs_full_redraw or self.background_color_changed or self._current_image is None
 
-        # Draw left-hand labels and boxes dynamically
-        self.draw_left_sections(draw, values)
-
-        # Get sensor resolution
-        self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value))
-        self.height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value))
-        self.aspect_ratio = self.width / self.height
-        self.anamorphic_factor = float(self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value))
-        lores_width = int(self.redis_controller.get_value(ParameterKey.LORES_WIDTH.value))
-        lores_height = int(self.redis_controller.get_value(ParameterKey.LORES_HEIGHT.value))
-
-        frame_width = self.disp_width
-        frame_height = self.disp_height
-        shrink_x = self.disp_width / 1920
-        shrink_y = self.disp_height / 1080
-        
-        padding_x = 92
-        padding_y = 46
-        max_draw_width = frame_width - (2 * padding_x)
-        max_draw_height = frame_height - (2 * padding_y)
-
-        adjusted_lores_width = lores_width * self.anamorphic_factor
-        adjusted_lores_height = lores_height * self.anamorphic_factor
-        adjusted_aspect_ratio = adjusted_lores_width / adjusted_lores_height
-
-        if adjusted_aspect_ratio >= 1:
-            preview_w = max_draw_width
-            preview_h = int(preview_w / adjusted_aspect_ratio)
-            if preview_h > max_draw_height:
-                preview_h = max_draw_height
-                preview_w = int(preview_h * adjusted_aspect_ratio)
+        if full_redraw:
+            self._current_image = Image.new("RGBA", self.fb.size)
+            draw = ImageDraw.Draw(self._current_image)
+            draw.rectangle(((0, 0), self.fb.size), fill=self.current_background_color)
+            self._element_regions.clear()
+            sections_to_redraw: Set[str] = {"left", "preview", "layout", "vu"}
+            if self.draw_right_col:
+                sections_to_redraw.add("right")
+            if self.show_buffer_vu:
+                sections_to_redraw.add("framebuffer")
         else:
-            preview_h = max_draw_height
-            preview_w = int(preview_h * adjusted_aspect_ratio)
-            if preview_w > max_draw_width:
-                preview_w = max_draw_width
-                preview_h = int(preview_w / adjusted_aspect_ratio)
+            draw = ImageDraw.Draw(self._current_image)
+            sections_to_redraw = set()
+            layout_keys = set(self.layout.keys())
+            changed_layout = changed_keys & layout_keys
+            if changed_layout:
+                sections_to_redraw.add("layout")
+            if changed_keys & self._left_section_keys:
+                sections_to_redraw.add("left")
+            if changed_keys & self._right_section_keys:
+                sections_to_redraw.add("right")
+            preview_keys = {"sensor_width", "sensor_height", "lores_width_value", "lores_height_value", "anamorphic_factor_value"}
+            if changed_keys & preview_keys:
+                sections_to_redraw.add("preview")
+            if self.show_buffer_vu and changed_keys & {"buffer_used", "buffer_size"}:
+                sections_to_redraw.add("framebuffer")
+            if "__vu__" in changed_keys:
+                sections_to_redraw.add("vu")
+            if "mic_connected" in changed_keys:
+                sections_to_redraw.add("vu")
 
-        preview_x = (frame_width - preview_w) // 2
-        preview_y = (frame_height - preview_h) // 2
+        if not full_redraw and not sections_to_redraw:
+            return
 
-        line_color = (249, 249, 249)
+        if full_redraw and not self.background_color_changed:
+            draw.rectangle(((0, 0), self.fb.size), fill=self.current_background_color)
 
-        draw.rectangle(
-            [preview_x, preview_y, preview_x + preview_w, preview_y + preview_h],
-            outline=line_color,
-            width=2
-        )
+        if "left" in sections_to_redraw:
+            self._clear_region(draw, self._left_section_bbox)
+            self._left_section_bbox = self.draw_left_sections(draw, values)
 
-        current_layout = self.layout
+        if "right" in sections_to_redraw and self.draw_right_col:
+            self._clear_region(draw, self._right_section_bbox)
+            self._right_section_bbox = self.draw_right_sections(draw, values)
+        elif not self.draw_right_col and self._right_section_bbox:
+            self._clear_region(draw, self._right_section_bbox)
+            self._right_section_bbox = None
 
-        lock_mapping = {
-            "iso": "iso_lock",
-            "shutter_speed": "shutter_a_nom_lock",
-            "fps": "fps_lock",
-            "exposure_time": "shutter_a_nom_lock",
+        if "preview" in sections_to_redraw:
+            self._clear_region(draw, self._preview_bbox)
+            self._preview_bbox = self._draw_preview_frame(draw, values)
 
-        }
+        if "layout" in sections_to_redraw:
+            elements = self.layout.keys() if full_redraw else changed_keys & set(self.layout.keys())
+            if full_redraw:
+                elements = self.layout.keys()
+            self._draw_layout_text(draw, values, elements, clear_previous=not full_redraw)
 
-        for element, info in current_layout.items():
-            if values.get(element) is None:
-                continue
-            position = [info["pos"][0] * shrink_x, info["pos"][1] * shrink_y]
-            font_size = info.get("size", 12) * min(min(shrink_x, shrink_y), 1) 
-            # 12 is the default font size, min with 1 makes sure the font stays same in bigger displays
-            font = ImageFont.truetype(
-                os.path.realpath(self.bold_font_path if info.get("font", "bold") == "bold" else self.regular_font_path),
-                font_size
-            )
-            value = str(values.get(element, ''))
-            color_mode = self.color_mode
-            color = self.colors.get(element, {}).get(color_mode, "white")
+        if self.show_buffer_vu and "framebuffer" in sections_to_redraw:
+            self._framebuffer_vu_bbox = self.draw_framebuffer_vu_meter(draw)
+        elif not self.show_buffer_vu and self._framebuffer_vu_bbox:
+            self._clear_region(draw, self._framebuffer_vu_bbox)
+            self._framebuffer_vu_bbox = None
 
-            if element == "sensor" and info.get("align") == "right":
-                text_bbox = draw.textbbox((0, 0), value, font=font)
-                text_width = text_bbox[2] - text_bbox[0]
-                x = position[0] + info["width"] - text_width
-                position = (x, position[1])
+        if "vu" in sections_to_redraw:
+            self._clear_region(draw, self._vu_bbox)
+            self._vu_bbox = self.draw_right_vu_meter(draw)
 
-            if element in lock_mapping and getattr(self.cinepi_controller, lock_mapping[element]):
-                # Only draw inside the box
-                self.draw_rounded_box(draw, value, position, font_size, 5, "black", "white", image)
-            else:
-                draw.text(position, value, font=font, fill=color)
-                
-        self.update_smoothed_vu_levels()
-        self.draw_right_vu_meter(draw)
-        if self.show_buffer_vu:
-            self.draw_framebuffer_vu_meter(draw)
-
-        vu = self.vu_smoothed  # Or .usb_monitor.audio_monitor.vu_levels if you want raw
-        # if vu:
-        #     levels = " | ".join([f"Ch{i+1}={v:.1f}%" for i, v in enumerate(vu)])
-        #     logging.info(f"Mic levels: {levels}")
-        # else:
-        #     logging.info("Mic level: No VU data available.")
-
-        if self.draw_right_col:
-            self.draw_right_sections(draw, values)
-
-
-        self.fb.show(image)
+        self.fb.show(self._current_image)
+        self._needs_full_redraw = False
         
     def draw_rounded_box(self, draw, text, position, font_size, padding, text_color, fill_color, image, extra_height=-17, reduce_top=12):
-        font = ImageFont.truetype(os.path.realpath(self.font_path), font_size)
+        font = self._get_font("bold", font_size)
         bbox = draw.textbbox((0, 0), text, font=font)
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1] + extra_height  # Increase height by extra_height
@@ -1164,6 +1412,13 @@ class SimpleGUI(threading.Thread):
 
         draw.text(position, text, font=font, fill=text_color)
 
+        return (
+            int(upper_left[0]),
+            int(upper_left[1]),
+            int(bottom_right[0]),
+            int(bottom_right[1])
+        )
+
     def clear_framebuffer(self):
         if self.fb:
             blank_image = Image.new("RGBA", self.fb.size, "black")
@@ -1172,23 +1427,28 @@ class SimpleGUI(threading.Thread):
     def stop(self):
         """Ask the GUI thread to exit, wait for it, then blank fb0."""
         self._running = False
+        self._update_event.set()
         self.join()                     # wait for run() to finish
+        if hasattr(self, "_data_thread") and self._data_thread.is_alive():
+            self._data_thread.join(timeout=1.0)
         self.clear_framebuffer()        # black screen
 
 
     def run(self):
         try:
-            self.vu_left_peak = 0
-            self.vu_right_peak = 0
-            self.vu_left_smoothed = 0
-            self.vu_right_smoothed = 0
-            self.vu_decay_factor = 0.2
-
             while self._running:
-                values = self.populate_values()
-                self.update_smoothed_vu_levels()
-                self.draw_gui(values)
-                time.sleep(0.2)
+                triggered = self._update_event.wait(timeout=self.idle_interval)
+                self._update_event.clear()
+                if not self._running:
+                    break
+                with self._value_lock:
+                    values = dict(self._latest_values)
+                    changed = set(self._last_changed_keys)
+                if not values:
+                    continue
+                if not triggered and not self._needs_full_redraw:
+                    continue
+                self.draw_gui(values, changed)
         finally:
             pass
 

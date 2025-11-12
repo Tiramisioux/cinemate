@@ -75,10 +75,12 @@ class SimpleGUI(threading.Thread):
 
         self.idle_interval = 0.2
         self.active_interval = 0.05
+        self._slow_metric_interval = 0.2
         self._value_lock = threading.Lock()
         self._latest_values: Dict[str, object] = {}
         self._last_changed_keys: Set[str] = set()
         self._update_event = threading.Event()
+        self._slow_metrics_cache: Dict[str, Tuple[object, float]] = {}
         self._font_cache: Dict[Tuple[str, int], ImageFont.FreeTypeFont] = {}
         self._element_regions: Dict[str, Tuple[int, int, int, int]] = {}
         self._current_image: Optional[Image.Image] = None
@@ -144,6 +146,19 @@ class SimpleGUI(threading.Thread):
         if not bbox:
             return
         draw.rectangle(bbox, fill=fill or self.current_background_color)
+
+    def _get_slow_metric(self, key: str, func, fallback=""):
+        """Return cached metric values, refreshing at most every 0.2 s."""
+        now = time.monotonic()
+        cached_value, expires_at = self._slow_metrics_cache.get(key, (fallback, 0))
+        if now >= expires_at:
+            try:
+                cached_value = func()
+            except Exception:
+                # Keep the previous/fallback value if the probe fails.
+                pass
+            self._slow_metrics_cache[key] = (cached_value, now + self._slow_metric_interval)
+        return cached_value
 
     # ───────────────── helper: tweak GUI layout for clip lines ────────────────────
     def _adjust_clip_layout(self, two_clips: bool):
@@ -513,9 +528,9 @@ class SimpleGUI(threading.Thread):
             # misc labels / live data
             "zoom_factor": "",   # will be filled below if ≠ 1.0
             "anamorphic_factor": f"{anamorphic_factor_value}X",
-            "ram_load":       Utils.memory_usage(),
-            "cpu_load":       Utils.cpu_load(),
-            "cpu_temp":       Utils.cpu_temp(),
+            "ram_load":       self._get_slow_metric("ram_load", Utils.memory_usage, "0%"),
+            "cpu_load":       self._get_slow_metric("cpu_load", Utils.cpu_load, "0%"),
+            "cpu_temp":       self._get_slow_metric("cpu_temp", Utils.cpu_temp, "0°C"),
             "disk_label":     (self.ssd_monitor.device_name or "").upper()[:4],
             "usb_connected":  bool(self.serial_handler.serial_connected),
             "mic_connected":  self.usb_monitor.usb_mic is not None,
@@ -1316,6 +1331,8 @@ class SimpleGUI(threading.Thread):
                 sections_to_redraw.add("framebuffer")
             if "__vu__" in changed_keys:
                 sections_to_redraw.add("vu")
+            if "mic_connected" in changed_keys:
+                sections_to_redraw.add("vu")
 
         if not full_redraw and not sections_to_redraw:
             return
@@ -1353,9 +1370,6 @@ class SimpleGUI(threading.Thread):
         if "vu" in sections_to_redraw:
             self._clear_region(draw, self._vu_bbox)
             self._vu_bbox = self.draw_right_vu_meter(draw)
-        elif self._vu_bbox:
-            self._clear_region(draw, self._vu_bbox)
-            self._vu_bbox = None
 
         self.fb.show(self._current_image)
         self._needs_full_redraw = False

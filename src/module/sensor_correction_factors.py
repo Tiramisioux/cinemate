@@ -42,8 +42,14 @@ SENSOR_CORRECTION_FACTORS: Dict[str, Dict[int | str, Dict[int, float] | float]] 
     },
     "imx585": {
         "_default": DEFAULT_CORRECTION_FACTOR,
-        0: {},
-        1: {},
+        0: {
+            24: 0.9994, #verified 10000 frames 4K
+            25: 0.9993,    
+        },
+        1: {
+            24: 0.9980, #verified 10000 frames
+            25: 0.9979, #verified 10000 frames
+        },
     },
     "imx585_mono": {
         "_default": DEFAULT_CORRECTION_FACTOR,

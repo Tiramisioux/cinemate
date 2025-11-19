@@ -1,7 +1,7 @@
 import logging
+import select
 import subprocess
 import threading
-import time
 
 class DmesgMonitor(threading.Thread):
     def __init__(self):
@@ -59,32 +59,57 @@ class DmesgMonitor(threading.Thread):
         #logging.info("Under voltage flag reset.")
 
     def _start_monitoring(self):
-        # Main event loop
-        while not self._stop_event.is_set():
-            dmesg_lines = self.read_dmesg_log()
-            new_messages = self.parse_dmesg_messages(dmesg_lines)
-            new_messages = self.track_last_occurrence(new_messages)
-            if new_messages:
-                for message_type, message in new_messages.items():
-                    parts = message.split(":", 4)
-                    if len(parts) > 4:
-                        message = ":".join(parts[4:])
-                        if "Under-voltage" in message:
-                            if not self.undervoltage_flag:
-                                logging.warning("Under-voltage detected!")
-                                self.undervoltage_flag = True
-                        elif "Voltage normalised" in message:
-                            logging.info("Voltage normalised")
-                            self.undervoltage_flag = False
-                        elif "sda" in message:
-                            if "[sda] Attached SCSI disk" in message:
-                                self.disk_attached = True
-                                logging.info("Disk attached.")
-                            elif "[sda] Synchronize Cache" and "failed" in message:
-                                self.disk_attached = False
-                                logging.info("Disk detached.")
-                                self.disk_detached_event.set()
-            if self._stop_event.wait(5):
-                break
+        process = None
+        try:
+            process = subprocess.Popen(
+                ["dmesg", "--follow", "--human"],
+                stdout=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+            )
+
+            while not self._stop_event.is_set():
+                ready, _, _ = select.select([process.stdout], [], [], 0.5)
+                if self._stop_event.is_set():
+                    break
+
+                for stream in ready:
+                    line = stream.readline()
+                    if not line:
+                        if process.poll() is not None:
+                            return
+                        continue
+
+                    new_messages = self.parse_dmesg_messages([line])
+                    new_messages = self.track_last_occurrence(new_messages)
+                    if new_messages:
+                        for message_type, message in new_messages.items():
+                            parts = message.split(":", 4)
+                            if len(parts) > 4:
+                                message = ":".join(parts[4:])
+                                if "Under-voltage" in message:
+                                    if not self.undervoltage_flag:
+                                        logging.warning("Under-voltage detected!")
+                                        self.undervoltage_flag = True
+                                elif "Voltage normalised" in message:
+                                    logging.info("Voltage normalised")
+                                    self.undervoltage_flag = False
+                                elif "sda" in message:
+                                    if "[sda] Attached SCSI disk" in message:
+                                        self.disk_attached = True
+                                        logging.info("Disk attached.")
+                                    elif "[sda] Synchronize Cache" and "failed" in message:
+                                        self.disk_attached = False
+                                        logging.info("Disk detached.")
+                                        self.disk_detached_event.set()
+        except Exception as e:
+            logging.error(f"Error monitoring dmesg: {e}")
+        finally:
+            if process:
+                process.terminate()
+                try:
+                    process.wait(timeout=1)
+                except subprocess.TimeoutExpired:
+                    process.kill()
 
 

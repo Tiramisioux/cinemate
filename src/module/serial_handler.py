@@ -1,5 +1,6 @@
 # module/serial_handler.py
 import time
+import select
 import threading
 import logging
 import queue
@@ -217,7 +218,31 @@ class SerialHandler(threading.Thread):
         self.serial_connected = False
 
     def run(self):
+        next_port_refresh = 0  # force initial scan
+
         while self.running:
-            self.update_available_ports()
-            self.read_from_ports()
-            time.sleep(0.01)
+            now = time.time()
+
+            # Refresh ports either on cadence (when some are open) or when a
+            # retry/backoff window has elapsed (when none are available).
+            if now >= next_port_refresh:
+                self.update_available_ports()
+                now = time.time()
+                if self.serials:
+                    next_port_refresh = now + 0.5
+                else:
+                    next_retry = min(self._next_try.values(), default=now + 1.0)
+                    next_port_refresh = max(now + 0.05, next_retry)
+
+            pollable = [ser for ser in self.serials if ser.is_open]
+
+            # Wait for input (or until the next port refresh) to avoid busy
+            # polling when idle/no ports.
+            timeout = max(0.0, next_port_refresh - time.time())
+            if pollable:
+                fd_map = {ser.fileno(): ser for ser in pollable}
+                readable, _, _ = select.select(fd_map.keys(), [], [], timeout)
+                if readable:
+                    self.read_from_ports()
+            else:
+                time.sleep(timeout if timeout > 0 else 0.05)

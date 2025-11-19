@@ -93,13 +93,25 @@
 
 "buttons": [
     {
-      "pin": 13,
+      "pin": 5,
       "pull_up": true,
       "debounce_time": 0.1,
       "press_action": {"method": "rec"}
     },
     {
-      "pin": 5,
+      "pin": 27,
+      "pull_up": true,
+      "debounce_time": 0.1,
+      "press_action": {"method": "rec"}
+    },
+    {
+      "pin": 16,
+      "pull_up": true,
+      "debounce_time": 0.1,
+      "press_action": {"method": "set_fps_double"}
+    },
+    {
+      "pin": 13,
       "pull_up": "False",
       "debounce_time": "0.1",
       "press_action": "None",
@@ -112,7 +124,7 @@
 
   "two_way_switches": [
       {
-        "pin": 7,
+        "pin": 24,
         "state_on_action": {"method": "set_zoom", "args": [2]},
         "state_off_action": {"method": "set_zoom", "args": [1]}
       },

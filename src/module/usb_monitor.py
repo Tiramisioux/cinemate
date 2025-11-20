@@ -205,6 +205,24 @@ class AudioMonitor:
             self.bit_depth = 16
             logging.info("parse_hardware_params(): using mic_16bit")
         else:
+            for device_alias in self.find_hw_device_aliases():
+                for channels in (1, 2):
+                    if self.try_audio_config(device_alias, "S16_LE", channels, self.sample_rate):
+                        self.format = "S16_LE"
+                        self.channels = channels
+                        self.device_alias = device_alias
+                        self.can_record_audio = True
+                        self.bit_depth = 16
+                        logging.info(
+                            "parse_hardware_params(): using fallback alias %s (%s ch)",
+                            device_alias,
+                            channels,
+                        )
+                        break
+                if self.can_record_audio:
+                    break
+
+        if not self.can_record_audio:
             self.format = None
             self.device_alias = None
             self.channels = None
@@ -531,6 +549,40 @@ class USBMonitor():
         except Exception as e:
             logging.error(f"Failed to get card name from arecord: {e}")
         return "Unknown"
+
+    def find_hw_device_aliases(self) -> list[str]:
+        """Return ALSA device aliases derived from arecord -l output, prioritizing the current mic."""
+
+        aliases: list[tuple[int, str]] = []
+        try:
+            output = subprocess.check_output(
+                ["arecord", "-l"],
+                stderr=subprocess.DEVNULL,
+                text=True,
+            )
+        except FileNotFoundError:
+            logging.error("arecord not found; cannot inspect hardware devices.")
+            return []
+        except subprocess.CalledProcessError:
+            logging.error("arecord -l failed while inspecting hardware devices.")
+            return []
+
+        pattern = re.compile(r"card (\d+): [^\[]+\[([^\]]+)\], device (\d+): [^\[]+\[([^\]]+)\]")
+        for card_num, card_name, device_num, device_name in pattern.findall(output):
+            alias = f"plughw:{card_num},{device_num}"
+            score = 0
+            card_name_lower = card_name.lower()
+            device_name_lower = device_name.lower()
+
+            if self.model and (self.model in card_name_lower or self.model in device_name_lower):
+                score += 2
+            if "usb" in card_name_lower or "usb" in device_name_lower:
+                score += 1
+
+            aliases.append((score, alias))
+
+        aliases.sort(key=lambda entry: entry[0], reverse=True)
+        return [alias for _, alias in aliases]
 
     def monitor_devices(self):
         observer = pyudev.MonitorObserver(self.monitor, self.device_event)

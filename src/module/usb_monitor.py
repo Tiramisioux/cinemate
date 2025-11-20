@@ -188,6 +188,40 @@ class AudioMonitor:
         )
         return False
 
+    def find_hw_device_aliases(self) -> list[str]:
+        """Return ALSA device aliases derived from arecord -l output, prioritizing the current mic."""
+
+        aliases: list[tuple[int, str]] = []
+        try:
+            output = subprocess.check_output(
+                ["arecord", "-l"],
+                stderr=subprocess.DEVNULL,
+                text=True,
+            )
+        except FileNotFoundError:
+            logging.error("arecord not found; cannot inspect hardware devices.")
+            return []
+        except subprocess.CalledProcessError:
+            logging.error("arecord -l failed while inspecting hardware devices.")
+            return []
+
+        pattern = re.compile(r"card (\d+): [^\[]+\[([^\]]+)\], device (\d+): [^\[]+\[([^\]]+)\]")
+        for card_num, card_name, device_num, device_name in pattern.findall(output):
+            alias = f"plughw:{card_num},{device_num}"
+            score = 0
+            card_name_lower = card_name.lower()
+            device_name_lower = device_name.lower()
+
+            if self.model and (self.model in card_name_lower or self.model in device_name_lower):
+                score += 2
+            if "usb" in card_name_lower or "usb" in device_name_lower:
+                score += 1
+
+            aliases.append((score, alias))
+
+        aliases.sort(key=lambda entry: entry[0], reverse=True)
+        return [alias for _, alias in aliases]
+
     def parse_hardware_params(self) -> None:
         self.sample_rate = self.audio_sample_rate
         if self.try_audio_config("mic_24bit", "S24_3LE", 2, self.sample_rate):

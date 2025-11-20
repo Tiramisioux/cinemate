@@ -4,6 +4,8 @@ Cinemate records audio alongside the image sequence. Support is currently limite
  - **RØDE VideoMic NTG** – recorded in stereo at 24‑bit/48 kHz.
  - **USB PnP microphones** – recorded in mono at 16‑bit/48 kHz.
 
+Other class‑compliant USB microphones are now detected automatically by probing the ALSA hardware devices reported by `arecord -l`. Cinemate will fall back to using the matching USB device (via `plughw:<card>,<device>`) if the `mic_24bit` or `mic_16bit` aliases are not available.
+
 Audio is written as `.wav` files into the same folder as the `.dng` frames. The implementation is still experimental and audio/video synchronization needs further investigation.
 
 ### .asoundrc Setup

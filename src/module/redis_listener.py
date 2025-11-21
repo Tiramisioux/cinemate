@@ -262,7 +262,8 @@ class RedisListener:
         if stats_data is not None:
             self._update_active_sensors(stats_data)
 
-        if not self.is_recording or not self.recording_start_time:
+        if not self.recording_start_time:
+            # No reference point – assume healthy until a recording starts.
             self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 1)
             return
 
@@ -270,8 +271,15 @@ class RedisListener:
         if fps_expected is None or fps_expected <= 0:
             return
 
-        now = datetime.datetime.now()
-        duration = (now - self.recording_start_time).total_seconds()
+        if self.is_recording:
+            end_for_calc = datetime.datetime.now()
+        elif self.recording_end_time:
+            end_for_calc = self.recording_end_time
+        else:
+            # Recording hasn’t officially started or stopped; keep the last known value.
+            return
+
+        duration = (end_for_calc - self.recording_start_time).total_seconds()
         if duration < 0:
             duration = 0.0
 
@@ -510,6 +518,7 @@ class RedisListener:
                     self.is_recording = True
                     self.reset_framecount()
                     self.recording_start_time = datetime.datetime.now()
+                    self.recording_end_time = None
                     logging.info(f"Recording started at: {self.recording_start_time}")
 
                     self.recording_was_preroll = self._storage_preroll_active()
@@ -538,6 +547,7 @@ class RedisListener:
                         if self.recording_start_time:
                             self.recording_end_time = datetime.datetime.now()
                             logging.info(f"Recording stopped at: {self.recording_end_time}")
+                            self._update_frames_in_sync()
                             try:
                                 self.analyze_frames()
                             finally:
@@ -817,16 +827,22 @@ class RedisListener:
         logging.info(f"Actual number of recorded frames: {recorded_frames_total}")
 
         diff = expected_frames_total - recorded_frames_total
-        all_frames_accounted = diff == 0
-        if all_frames_accounted:
-            logging.info("✓ All frames accounted for.")
-        else:
-            if abs(diff) == 1:
-                logging.warning(f"Discrepancy detected: {diff:+d} frame (boundary rounding).")
-            else:
-                logging.warning(f"Discrepancy detected: {diff:+d} frames difference between expected and recorded counts.")
-
         frames_in_sync = abs(diff) <= 1
+
+        if frames_in_sync:
+            if diff == 0:
+                logging.info("✓ All frames accounted for.")
+            else:
+                logging.info(
+                    "Frames within tolerance: %+d frame difference between expected and recorded counts.",
+                    diff,
+                )
+        else:
+            logging.warning(
+                f"Discrepancy detected: {diff:+d} frames difference between expected and recorded counts."
+            )
+
+        all_frames_accounted = frames_in_sync
         self.redis_controller.set_value(
             ParameterKey.FRAMES_IN_SYNC.value,
             1 if frames_in_sync else 0,

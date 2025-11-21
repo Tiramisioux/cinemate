@@ -294,6 +294,15 @@ class SimpleGUI(threading.Thread):
                     {"key": "zoom_factor", "text": lambda v: v.get("zoom_factor", "")},
                     {"key": "anamorphic_factor", "text": lambda v: v.get("anamorphic_factor", "")}
                 ]
+            },
+            {
+                "label": "AUD",
+                "condition": lambda v: bool(v.get("mic_connected")),
+                "items": [
+                    {"key": "mic_bit_depth", "text": lambda v: v.get("mic_bit_depth", "")},
+                    {"key": "mic_sample_rate", "text": lambda v: v.get("mic_sample_rate", "")},
+                    {"key": "frames_in_sync", "text": lambda v: "SYNC" if v.get("frames_in_sync") else ""},
+                ],
             }
         ]
         
@@ -464,8 +473,31 @@ class SimpleGUI(threading.Thread):
             "cam": "CAM", "raw": "RAW", "ram_label": "RAM",
             "cpu_label": "CPU", "cpu_temp_label": "TEMP",
             "media_label": "MEDIA", "mon": "MON",
-            
+
         }
+        # ── audio stats ─────────────────────────────────────────────────
+        if values["mic_connected"]:
+            monitor = getattr(self.usb_monitor, "audio_monitor", None)
+            bit_depth = getattr(monitor, "bit_depth", None)
+            if bit_depth:
+                values["mic_bit_depth"] = f"{bit_depth}b"
+
+            sample_rate = getattr(monitor, "sample_rate", None) or getattr(monitor, "audio_sample_rate", None)
+            if sample_rate:
+                try:
+                    sr_khz = sample_rate / 1000
+                    if abs(round(sr_khz) - sr_khz) < 1e-3:
+                        values["mic_sample_rate"] = f"{int(round(sr_khz))}"
+                    else:
+                        values["mic_sample_rate"] = f"{sr_khz:.1f}".rstrip("0").rstrip(".")
+                except (TypeError, ValueError):
+                    pass
+
+            try:
+                values["frames_in_sync"] = int(self.redis_controller.get_value(ParameterKey.FRAMES_IN_SYNC.value) or 0) == 1
+            except (TypeError, ValueError):
+                values["frames_in_sync"] = False
+
         # ── Zoom factor (preview punch-in) ────────────────────────────────
         try:
             z = float(self.redis_controller.get_value(ParameterKey.ZOOM.value) or 1.0)
@@ -689,6 +721,8 @@ class SimpleGUI(threading.Thread):
 
         # ── CAM / MON sections ───────────────────────────────────
         for section in self.left_section_layout:
+            if section.get("condition") and not section["condition"](values):
+                continue
             # centre the label over the column
             lbl_w  = draw.textbbox((0,0), section["label"], font=label_font)[2]
             lbl_x  = box_x + (BOX_W - lbl_w)//2

@@ -1225,7 +1225,7 @@ class SimpleGUI(threading.Thread):
                 time.sleep(0.2)
         finally:
             pass
-
+ 
     # def emit_gui_data_change(self, changed_data):
     #     self.socketio.emit('gui_data_change', changed_data)
         

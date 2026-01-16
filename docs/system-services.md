@@ -2,10 +2,6 @@
 
 Cinemate uses three system services for its operation.
 
-!!! note ""
-
-     Note if you have Cinemate already running, for example by running the preinstalled image file, anything you type will be interpreted by the Cinemate CLI only. In order to use these commands you have to [start an SSH session](ssh.md) and log in in a new shell.
-
 ## cinemate-autostart.service
 
 Responsible for autostart of Cinemate on boot. By default, it is turned off on the [downloadable image file](https://github.com/Tiramisioux/cinemate/releases/tag/3.1).
@@ -29,6 +25,8 @@ make clean     # remove the service
 ```
 
 The `make install` step also copies `camera-ready.sh` into `/usr/local/bin/` with execute permissions so that the systemd unit can call it from `ExecStartPre`.
+
+To start Cinemate manually, anywhere in the cli, type `cinemate`.
 
 ## storage-automount.service
 

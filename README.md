@@ -8,13 +8,10 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
 ## New features in version 3.2
 
 - improved mounting mechanics for NVME and SSD drives with less drop frames
-
+- erase and format drives via Cinemate CLI (ext4/NTFS)
 - storage preroll to "warm up" the recording media, improving writing stability
-
 - improved audio sync with correction of effective fps (different resolutions/frame rates due to sensor VBLANK), available for fine tuning in `src/module/sensor_correction_factors.py`
-
 - option to record a fixed number of frames or seconds for user calibration of fps correction factors (run Cinemate manually for this calibration as feedback is supplied in the terminal)
-
 - improved recognition of attached microphones
 
 

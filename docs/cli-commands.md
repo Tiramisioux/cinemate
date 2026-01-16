@@ -5,6 +5,14 @@ reads simple text commands from SSH or the serial port and calls the
 corresponding controller methods.
 
 !!! note ""
+
+     Note if you have Cinemate already running, for example by running the preinstalled image file, you first need to stop the autostarted instance in order and manually start Cinemate in order to use the Cinemate CLI:
+
+     cd cinemate    # change directory to cinemate folder
+     make stop      # stop the autostarted instance
+     cinemate       # start cinemate manually
+
+!!! note ""
      Commands without an explicit argument will toggle the current state when possible (e.g. `set fps lock` flips the lock; `set fps lock 1` forces it on).
 
 !!! note ""
@@ -67,10 +75,10 @@ If recording is not already running, the CLI starts it automatically before armi
 
 Two new commands simplify preparing removable media directly from the Cinemate CLI:
 
-- `erase` empties the mounted RAW volume without touching the filesystem structure so you can clear cards quickly between takes.【F:src/module/ssd_monitor.py†L628-L648】
-- `format [ext4|ntfs]` reformats the drive with the chosen filesystem (`ext4` by default), remounts it and refreshes the free-space monitor. The helper tolerates the common `ex4` typo and refuses unsupported targets so you do not accidentally create an unusable volume.【F:src/module/ssd_monitor.py†L650-L716】
+- `erase` empties the mounted RAW volume without touching the filesystem structure so you can clear cards quickly between takes.
+- `format [ext4|ntfs]` reformats the drive with the chosen filesystem (`ext4` by default), remounts it and refreshes the free-space monitor. The helper tolerates the common `ex4` typo and refuses unsupported targets so you do not accidentally create an unusable volume.
 
-Both actions require the RAW drive to be mounted; otherwise the CLI reports an error and leaves the media untouched.【F:src/module/ssd_monitor.py†L632-L636】【F:src/module/ssd_monitor.py†L652-L657】
+Both actions require the RAW drive to be mounted; otherwise the CLI reports an error and leaves the media untouched.
 
 ## Storage pre-roll warm-up
 

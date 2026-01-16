@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/redis-keys/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Key reference - Cinemate Docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../templates/styles.scss" rel="stylesheet" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Key reference";
+        var mkdocs_page_input_path = "redis-keys.md";
+        var mkdocs_page_url = "/cinemate/redis-keys/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Cinemate Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Quick start</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Customising your build</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Using the camera</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">System management</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Key reference</a>
+    <ul class="current">
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Cinemate Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Reference & troubleshooting</li>
+      <li class="breadcrumb-item active">Key reference</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/redis-keys.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+<div class="markdown-body">
+  <h1 id="redis-key-reference">Redis key reference<a class="headerlink" href="#redis-key-reference" title="Permanent link">#</a></h1>
+<p>This page lists all Redis keys used by Cinemate and CinePi-raw.  Values are simple strings so you can read or write them with <code>redis-cli</code>.</p>
+<p>Each entry explains which component normally writes the key and what happens when you change it manually.</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Written by</th>
+<th>Description</th>
+<th>Safe to change manually?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>anamorphic_factor</td>
+<td>Cinemate</td>
+<td>Preview squeeze for anamorphic lenses</td>
+<td>Yes (publish key to apply)</td>
+</tr>
+<tr>
+<td>iso</td>
+<td>Cinemate → CinePi-raw</td>
+<td>Sensor gain in ISO</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>shutter_a</td>
+<td>Cinemate → CinePi-raw</td>
+<td>Actual shutter angle in degrees</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>shutter_angle_nom</td>
+<td>Cinemate</td>
+<td>Desired shutter angle before sync/free adjustments</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>shutter_a_sync_mode</td>
+<td>Cinemate</td>
+<td>Keep exposure constant when changing FPS</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>fps</td>
+<td>Cinemate → CinePi-raw</td>
+<td>Target frames per second</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>sensor_mode</td>
+<td>Cinemate → CinePi-raw startup</td>
+<td>Active sensor resolution/mode</td>
+<td>Yes (causes pipeline restart)</td>
+</tr>
+<tr>
+<td>wb</td>
+<td>Cinemate → CinePi-raw</td>
+<td>White‑balance temperature (Kelvin)</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>zoom</td>
+<td>Cinemate</td>
+<td>Digital zoom for preview streams</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>ir_filter</td>
+<td>Cinemate → CinePi-raw</td>
+<td>Toggle IR‑cut filter (IMX585 only)</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>rec / is_recording</td>
+<td>Cinemate → CinePi-raw</td>
+<td>Start/stop recording when toggled</td>
+<td>Yes (edge‑triggered)</td>
+</tr>
+<tr>
+<td>bit_depth</td>
+<td>Cinemate → CinePi-raw startup</td>
+<td>Sensor bit depth (10 or 12)</td>
+<td>No (set at startup)</td>
+</tr>
+<tr>
+<td>height / width</td>
+<td>Cinemate → CinePi-raw startup</td>
+<td>Active sensor resolution</td>
+<td>No</td>
+</tr>
+<tr>
+<td>lores_width / lores_height</td>
+<td>CinePi-raw startup</td>
+<td>Preview stream resolution</td>
+<td>No</td>
+</tr>
+<tr>
+<td>cg_rb</td>
+<td>Cinemate → CinePi-raw</td>
+<td>White‑balance gain pair "1/R,1/B"</td>
+<td>Yes (advanced)</td>
+</tr>
+<tr>
+<td>fps_user</td>
+<td>Cinemate</td>
+<td>Temporary storage for the UI slider</td>
+<td>No</td>
+</tr>
+<tr>
+<td>fps_last</td>
+<td>Cinemate</td>
+<td>Previous stable fps from stats</td>
+<td>No</td>
+</tr>
+<tr>
+<td>fps_actual</td>
+<td>CinePi-raw → Cinemate</td>
+<td>Measured FPS from pipeline</td>
+<td>No</td>
+</tr>
+<tr>
+<td>framecount</td>
+<td>CinePi-raw → Cinemate</td>
+<td>Total frames recorded</td>
+<td>No</td>
+</tr>
+<tr>
+<td>buffer</td>
+<td>CinePi-raw → Cinemate</td>
+<td>Raw frames currently in RAM</td>
+<td>No</td>
+</tr>
+<tr>
+<td>buffer_size</td>
+<td>CinePi-raw  →  Cinemate</td>
+<td>Size of RAM buffer in frames</td>
+<td>No</td>
+</tr>
+<tr>
+<td>is_buffering</td>
+<td>CinePi-raw → Cinemate</td>
+<td>1 while buffer pre‑fills</td>
+<td>No</td>
+</tr>
+<tr>
+<td>is_writing</td>
+<td>CinePi-raw → Cinemate</td>
+<td>1 while frames are flushing to disk</td>
+<td>No</td>
+</tr>
+<tr>
+<td>is_writing_buf</td>
+<td>Cinemate</td>
+<td>Internal countdown after recording stops</td>
+<td>No</td>
+</tr>
+<tr>
+<td>is_mounted</td>
+<td>Cinemate (SSD monitor)</td>
+<td>1 when storage is mounted</td>
+<td>No</td>
+</tr>
+<tr>
+<td>storage_type</td>
+<td>Cinemate (SSD monitor)</td>
+<td>Drive type (NVME/USB/SD)</td>
+<td>No</td>
+</tr>
+<tr>
+<td>space_left</td>
+<td>Cinemate (SSD monitor)</td>
+<td>Remaining space in GB</td>
+<td>No</td>
+</tr>
+<tr>
+<td>write_speed_to_drive</td>
+<td>Cinemate (SSD monitor)</td>
+<td>Current write speed MB/s</td>
+<td>No</td>
+</tr>
+<tr>
+<td>file_size</td>
+<td>Cinemate</td>
+<td>Bytes per frame for current mode</td>
+<td>No</td>
+</tr>
+<tr>
+<td>last_dng_cam0/1</td>
+<td>CinePi-raw → Cinemate</td>
+<td>Path to last written DNG frame</td>
+<td>No</td>
+</tr>
+<tr>
+<td>recording_time</td>
+<td>Cinemate</td>
+<td>HH:MM:SS:FF timer while recording</td>
+<td>No</td>
+</tr>
+<tr>
+<td>memory_alert</td>
+<td>Cinemate</td>
+<td>1 if RAM usage high</td>
+<td>No</td>
+</tr>
+<tr>
+<td>cam_init</td>
+<td>CinePi-raw</td>
+<td>Internal flag during startup</td>
+<td>No</td>
+</tr>
+<tr>
+<td>cameras</td>
+<td>CinePi-raw</td>
+<td>JSON list of detected cameras</td>
+<td>No</td>
+</tr>
+<tr>
+<td>gui_layout</td>
+<td>Cinemate</td>
+<td>Path to GUI layout preset</td>
+<td>No</td>
+</tr>
+<tr>
+<td>pi_model</td>
+<td>Cinemate</td>
+<td>Raspberry Pi model string</td>
+<td>No</td>
+</tr>
+<tr>
+<td>sensor</td>
+<td>CinePi-raw</td>
+<td>Active camera model</td>
+<td>No</td>
+</tr>
+<tr>
+<td>tc_cam0/tc_cam1</td>
+<td>CinePi-raw → Cinemate</td>
+<td>SMPTE time code per camera (derived from <code>timestamp*</code> fields)</td>
+<td>No</td>
+</tr>
+<tr>
+<td>shutter_angle_actual</td>
+<td>Cinemate</td>
+<td>Calculated shutter angle applied after clamping or sync</td>
+<td>No</td>
+</tr>
+<tr>
+<td>shutter_angle_transient</td>
+<td>Cinemate</td>
+<td>Temporary value during ramping</td>
+<td>No</td>
+</tr>
+<tr>
+<td>exposure_time</td>
+<td>Cinemate</td>
+<td>Current exposure time in seconds</td>
+<td>No</td>
+</tr>
+<tr>
+<td>wb_user</td>
+<td>Cinemate</td>
+<td>Kelvin value set before converting to cg_rb</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../redis-guide/" class="btn btn-neutral float-left" title="Redis API"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../acknowledgments/" class="btn btn-neutral float-right" title="Acknowledgements">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tiramisioux/cinemate" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../redis-guide/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../acknowledgments/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
+      <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

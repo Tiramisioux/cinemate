@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/redis-guide/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Redis API - Cinemate Docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../templates/styles.scss" rel="stylesheet" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Redis API";
+        var mkdocs_page_input_path = "redis-guide.md";
+        var mkdocs_page_url = "/cinemate/redis-guide/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Cinemate Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Quick start</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Customising your build</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Using the camera</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">System management</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Redis API</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#redis-cli">Redis-cli</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cp_controls">cp_controls</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#cp_stats">cp_stats</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#controlling-the-camera-from-your-own-script">Controlling the camera from your own script</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Cinemate Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Reference & troubleshooting</li>
+      <li class="breadcrumb-item active">Redis API</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/redis-guide.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+<div class="markdown-body">
+  <h1 id="redis-api-quick-start">Redis API quick start<a class="headerlink" href="#redis-api-quick-start" title="Permanent link">#</a></h1>
+<h2 id="redis-cli">Redis-cli<a class="headerlink" href="#redis-cli" title="Permanent link">#</a></h2>
+<div class="codehilite"><pre><span></span><code><span class="c1"># List all keys</span>
+redis-cli<span class="w"> </span>KEYS<span class="w"> </span><span class="s1">&#39;*&#39;</span>
+
+<span class="c1"># Read the current ISO value</span>
+redis-cli<span class="w"> </span>GET<span class="w"> </span>iso
+
+<span class="c1"># Start a recording (same as pressing the Rec button)</span>
+redis-cli<span class="w"> </span>SET<span class="w"> </span>is_recording<span class="w"> </span><span class="m">1</span>
+redis-cli<span class="w"> </span>PUBLISH<span class="w"> </span>cp_controls<span class="w"> </span>is_recording
+</code></pre></div>
+
+<p>You can also type:</p>
+<div class="codehilite"><pre><span></span><code>redis-cli
+</code></pre></div>
+
+<p>This will open the redis cli.</p>
+<h2 id="cp_controls">cp_controls<a class="headerlink" href="#cp_controls" title="Permanent link">#</a></h2>
+<p>Both CinePi-raw and Cinemate writes values and immediately publish the key name. The recorder only reacts when it receives that publish event. </p>
+<p>Any key may be sent this way. For example, to adjust the preview zoom:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Set preview zoom level</span>
+
+redis-cli<span class="w"> </span>SET<span class="w"> </span>zoom<span class="w"> </span><span class="m">1</span>.5
+redis-cli<span class="w"> </span>PUBLISH<span class="w"> </span>cp_controls<span class="w"> </span>zoom
+</code></pre></div>
+
+<blockquote>
+<p>Note that for the <strong>is_recording</strong> key Cinemate stops recording upon edge detection (the variable changes from 0 to 1 or vice versa). The reason for this exception has to do with how the CinePi-raw fork handles recording with multiple cameras</p>
+</blockquote>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Start recording</span>
+redis-cli<span class="w"> </span>SET<span class="w"> </span>is_recording<span class="w"> </span><span class="m">1</span><span class="w">                    </span><span class="c1"># triggers 0 → 1 edge</span>
+
+<span class="c1"># Stop recording</span>
+redis-cli<span class="w"> </span>SET<span class="w"> </span>is_recording<span class="w"> </span><span class="m">0</span><span class="w">                    </span><span class="c1"># triggers 1 → 0 edge</span>
+</code></pre></div>
+
+<h2 id="cp_stats">cp_stats<a class="headerlink" href="#cp_stats" title="Permanent link">#</a></h2>
+<p>Every frame, cinepi-raw sends a small JSON object containing live statistics. </p>
+<div class="codehilite"><pre><span></span><code><span class="w">    </span><span class="n">Json</span><span class="o">::</span><span class="n">Value</span><span class="w"> </span><span class="n">data</span><span class="p">;</span>
+<span class="w">    </span><span class="n">Json</span><span class="o">::</span><span class="n">Value</span><span class="w"> </span><span class="n">histo</span><span class="p">;</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;framerate&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">completed_request</span><span class="o">-&gt;</span><span class="n">framerate</span><span class="p">;</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;colorTemp&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">colorTemp</span><span class="p">;</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;focus&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">focus</span><span class="p">;</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;frameCount&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">app_</span><span class="o">-&gt;</span><span class="n">GetEncoder</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">getFrameCount</span><span class="p">();</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;bufferSize&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">app_</span><span class="o">-&gt;</span><span class="n">GetEncoder</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">bufferSize</span><span class="p">();</span>
+<span class="w">    </span><span class="c1">// per-camera timestamps in nanoseconds</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;timestamp&quot;</span><span class="p">]</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">timestamp</span><span class="p">;</span><span class="w">       </span><span class="c1">// single sensor</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;timestamp_cam0&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">timestamp_cam0</span><span class="p">;</span><span class="w">  </span><span class="c1">// multi-sensor</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;timestamp_cam1&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">timestamp_cam1</span><span class="p">;</span><span class="w">  </span><span class="c1">// multi-sensor</span>
+<span class="w">    </span><span class="n">redis_</span><span class="o">-&gt;</span><span class="n">publish</span><span class="p">(</span><span class="n">CHANNEL_STATS</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">toStyledString</span><span class="p">());</span>
+</code></pre></div>
+
+<p>CineMate’s <code>RedisListener</code> parses these messages and updates Redis keys like <code>framecount</code>, <code>BUFFER</code> and <code>fps_actual</code>.
+The timestamp fields are converted to SMPTE timecode based on <code>fps_user</code> and
+written to <code>tc_cam0</code> and <code>tc_cam1</code>.  Values are only updated when the underlying
+timestamp changes so Redis clients receive a new timecode once per frame.</p>
+<h2 id="controlling-the-camera-from-your-own-script">Controlling the camera from your own script<a class="headerlink" href="#controlling-the-camera-from-your-own-script" title="Permanent link">#</a></h2>
+<p>Below is a very small example using <code>redis-py</code>. </p>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">redis</span>
+<span class="n">r</span> <span class="o">=</span> <span class="n">redis</span><span class="o">.</span><span class="n">Redis</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">6379</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="c1"># toggle recording</span>
+<span class="n">current</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;is_recording&#39;</span><span class="p">)</span>
+<span class="n">new_value</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;0&#39;</span> <span class="k">if</span> <span class="n">current</span> <span class="o">==</span> <span class="sa">b</span><span class="s1">&#39;1&#39;</span> <span class="k">else</span> <span class="sa">b</span><span class="s1">&#39;1&#39;</span>
+<span class="n">r</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;is_recording&#39;</span><span class="p">,</span> <span class="n">new_value</span><span class="p">)</span>
+<span class="n">r</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s1">&#39;cp_controls&#39;</span><span class="p">,</span> <span class="s1">&#39;is_recording&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<p>Note that in this example, the publishing of the is_recording key is not strictly needed for recording to start/stop, but for formality's sake I think we should keep the publish command.</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>This is basically what Cinemate does: it keeps track of variables being set by cinepi-raw, and also sets variables itself.</p>
+</div>
+</div>
+
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../cli-user-guide/" class="btn btn-neutral float-left" title="CinePi RAW terminal commands"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../redis-keys/" class="btn btn-neutral float-right" title="Key reference">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tiramisioux/cinemate" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../cli-user-guide/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../redis-keys/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
+      <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

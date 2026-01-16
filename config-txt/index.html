@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/config-txt/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Modifying config.txt - Cinemate Docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../templates/styles.scss" rel="stylesheet" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Modifying config.txt";
+        var mkdocs_page_input_path = "config-txt.md";
+        var mkdocs_page_url = "/cinemate/config-txt/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Cinemate Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Quick start</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Customising your build</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Using the camera</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">System management</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Modifying config.txt</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#adjusting-configtxt-for-different-sensors">Adjusting config.txt for different sensors:</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example-configtxt">Example config.txt</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Cinemate Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">System management</li>
+      <li class="breadcrumb-item active">Modifying config.txt</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/config-txt.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+<div class="markdown-body">
+  <h1 id="modifying-configtxt">Modifying config.txt<a class="headerlink" href="#modifying-configtxt" title="Permanent link">#</a></h1>
+<h2 id="adjusting-configtxt-for-different-sensors">Adjusting config.txt for different sensors:<a class="headerlink" href="#adjusting-configtxt-for-different-sensors" title="Permanent link">#</a></h2>
+<div class="admonition tip">
+<p>For easy editing of <code>config.txt</code> on the preinstalled image file, type <code>editboot</code> anywhere in Raspberry Pi terminal.</p>
+</div>
+<p>If using a manual install without the above alias, type:</p>
+<div class="codehilite"><pre><span></span><code>sudo nano /boot/firmware/config.txt
+</code></pre></div>
+
+<p>Uncomment the section for the sensor being used, and make sure to comment out the others. Reboot the Pi for changes to take effect.</p>
+<h3 id="example-configtxt">Example config.txt<a class="headerlink" href="#example-configtxt" title="Permanent link">#</a></h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># For more options and information see</span>
+<span class="c1"># http://rptl.io/configtxt</span>
+<span class="c1"># Some settings may impact device functionality. See link above for details</span>
+
+<span class="c1"># Uncomment some or all of these to enable the optional hardware interfaces</span>
+<span class="nv">dtparam</span><span class="o">=</span><span class="nv">i2c_arm</span><span class="o">=</span>on
+<span class="c1">#dtparam=i2s=on</span>
+<span class="c1">#dtparam=spi=on</span>
+
+<span class="c1"># Enable audio (loads snd_bcm2835)</span>
+<span class="nv">dtparam</span><span class="o">=</span><span class="nv">audio</span><span class="o">=</span>on
+
+<span class="c1"># ---- Camera section</span>
+
+<span class="c1"># Raspberry Pi HQ camera</span>
+<span class="nv">camera_auto_detect</span><span class="o">=</span><span class="m">1</span>
+<span class="nv">dtoverlay</span><span class="o">=</span>imx477,cam0
+
+<span class="c1"># Raspberry Pi GS camera</span>
+<span class="c1">#camera_auto_detect=1</span>
+<span class="c1">#dtoverlay=imx296</span>
+
+<span class="c1"># OneInchEye</span>
+<span class="c1">#camera_auto_detect=0</span>
+<span class="c1">#dtoverlay=imx283</span>
+
+<span class="c1"># Starlight Eye</span>
+<span class="c1">#camera_auto_detect=0</span>
+<span class="c1">#dtoverlay=imx585,cam0</span>
+
+<span class="c1"># Starlight Eye Mono</span>
+<span class="c1">#camera_auto_detect=0</span>
+<span class="c1">#dtoverlay=imx585,cam1,mono</span>
+
+<span class="c1"># -----</span>
+
+<span class="c1"># Automatically load overlays for detected DSI displays</span>
+<span class="nv">display_auto_detect</span><span class="o">=</span><span class="m">1</span>
+
+<span class="c1"># Automatically load initramfs files, if found</span>
+<span class="nv">auto_initramfs</span><span class="o">=</span><span class="m">1</span>
+
+<span class="c1"># Enable DRM VC4 V3D driver</span>
+<span class="nv">dtoverlay</span><span class="o">=</span>vc4-kms-v3d
+<span class="nv">max_framebuffers</span><span class="o">=</span><span class="m">2</span>
+
+<span class="c1"># Don&#39;t have the firmware create an initial video= setting in cmdline.txt.</span>
+<span class="c1"># Use the kernel&#39;s default instead.</span>
+<span class="nv">disable_fw_kms_setup</span><span class="o">=</span><span class="m">1</span>
+
+<span class="c1"># Run in 64-bit mode</span>
+<span class="nv">arm_64bit</span><span class="o">=</span><span class="m">1</span>
+
+<span class="c1"># Disable compensation for displays with overscan</span>
+<span class="nv">disable_overscan</span><span class="o">=</span><span class="m">1</span>
+
+<span class="c1"># Run as fast as firmware / board allows</span>
+<span class="nv">arm_boost</span><span class="o">=</span><span class="m">1</span>
+
+<span class="o">[</span>cm4<span class="o">]</span>
+<span class="c1"># Enable host mode on the 2711 built-in XHCI USB controller.</span>
+<span class="c1"># This line should be removed if the legacy DWC2 controller is required</span>
+<span class="c1"># (e.g. for USB device mode) or if USB support is not required.</span>
+<span class="nv">otg_mode</span><span class="o">=</span><span class="m">1</span>
+
+<span class="o">[</span>cm5<span class="o">]</span>
+<span class="nv">dtoverlay</span><span class="o">=</span>dwc2,dr_mode<span class="o">=</span>host
+
+<span class="o">[</span>all<span class="o">]</span>
+<span class="nv">auto_initramfs</span><span class="o">=</span><span class="m">1</span>
+<span class="nv">disable_splash</span><span class="o">=</span><span class="m">1</span>
+<span class="nv">dtparam</span><span class="o">=</span><span class="nv">i2c1</span><span class="o">=</span>on
+<span class="nv">dtoverlay</span><span class="o">=</span>miniuart-bt
+</code></pre></div>
+
+<p>Exit the editor by pressing Ctrl+C</p>
+<div class="admonition note">
+<p>Note that Cinemate needs you to explicitly set the camera port, match that of the physical camera port you are using. Default is <code>cam0</code>.</p>
+</div>
+<div class="admonition tip">
+<p>The preinstalled image file comes with <strong>OneInchEye</strong> and <strong>StarlightEye</strong> preinstalled.</p>
+</div>
+</div>
+
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../dual-sensors/" class="btn btn-neutral float-left" title="Dual sensors"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../system-services/" class="btn btn-neutral float-right" title="System services">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tiramisioux/cinemate" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../dual-sensors/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../system-services/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
+      <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

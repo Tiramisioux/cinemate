@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/cli-commands/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Cinemate terminal commands - Cinemate Docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../templates/styles.scss" rel="stylesheet" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Cinemate terminal commands";
+        var mkdocs_page_input_path = "cli-commands.md";
+        var mkdocs_page_url = "/cinemate/cli-commands/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Cinemate Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Quick start</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Customising your build</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Cinemate terminal commands</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#timed-recording-shortcuts">Timed recording shortcuts</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#storage-maintenance-commands">Storage maintenance commands</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#storage-pre-roll-warm-up">Storage pre-roll warm-up</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Using the camera</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">System management</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Cinemate Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Customising your build</li>
+      <li class="breadcrumb-item active">Cinemate terminal commands</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/cli-commands.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+<div class="markdown-body">
+  <h1 id="commands-reference">Commands reference<a class="headerlink" href="#commands-reference" title="Permanent link">#</a></h1>
+<p>Cinemate doesn’t use a real shell parser. Instead, a background thread
+reads simple text commands from SSH or the serial port and calls the
+corresponding controller methods.</p>
+<div class="admonition note">
+<p>Note if you have Cinemate already running, for example by running the preinstalled image file, you first need to stop the autostarted instance in order and manually start Cinemate in order to use the Cinemate CLI:</p>
+<p>cd cinemate    # change directory to cinemate folder
+ make stop      # stop the autostarted instance
+ cinemate       # start cinemate manually</p>
+</div>
+<div class="admonition note">
+<p>Commands without an explicit argument will toggle the current state when possible (e.g. <code>set fps lock</code> flips the lock; <code>set fps lock 1</code> forces it on).</p>
+</div>
+<div class="admonition note">
+<p>All of the commands below can be easily mapped to GPIO buttons rotary encoders and other input devices. See <a href="../settings-json/">this section</a> for how to configure the settings file.</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Argument</th>
+<th>Example</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rec</code> / <code>stop</code></td>
+<td><code>[s &lt;seconds&gt;] \| [f &lt;frames&gt;]</code></td>
+<td><code>rec s 10</code></td>
+<td>Toggle recording or schedule an automatic stop after a timed duration or frame count</td>
+</tr>
+<tr>
+<td><code>set iso &lt;value&gt;</code></td>
+<td>int</td>
+<td><code>set iso 800</code></td>
+<td>Set ISO to nearest allowed step</td>
+</tr>
+<tr>
+<td><code>inc iso</code> / <code>dec iso</code></td>
+<td>-</td>
+<td></td>
+<td>Step ISO up or down</td>
+</tr>
+<tr>
+<td><code>set shutter a &lt;angle&gt;</code></td>
+<td>float</td>
+<td><code>set shutter a 180</code></td>
+<td>Set actual shutter angle (snaps unless free/sync)</td>
+</tr>
+<tr>
+<td><code>inc shutter a</code> / <code>dec shutter a</code></td>
+<td>-</td>
+<td></td>
+<td>Cycle through shutter angles</td>
+</tr>
+<tr>
+<td><code>set shutter a nom &lt;angle&gt;</code></td>
+<td>float</td>
+<td><code>set shutter a nom 180</code></td>
+<td>Set nominal shutter angle for motion blur</td>
+</tr>
+<tr>
+<td><code>inc shutter a nom</code> / <code>dec shutter a nom</code></td>
+<td>-</td>
+<td></td>
+<td>Step the nominal shutter angle</td>
+</tr>
+<tr>
+<td><code>set fps &lt;value&gt;</code></td>
+<td>float</td>
+<td><code>set fps 24</code></td>
+<td>Change frame rate (snaps unless free)</td>
+</tr>
+<tr>
+<td><code>inc fps</code> / <code>dec fps</code></td>
+<td>-</td>
+<td></td>
+<td>Step through FPS list</td>
+</tr>
+<tr>
+<td><code>set wb [&lt;Kelvin&gt;]</code></td>
+<td>int or none</td>
+<td><code>set wb 5600</code></td>
+<td>Set white balance or cycle presets</td>
+</tr>
+<tr>
+<td><code>inc wb</code> / <code>dec wb</code></td>
+<td>-</td>
+<td></td>
+<td>Cycle white balance steps</td>
+</tr>
+<tr>
+<td><code>set resolution [&lt;mode&gt;]</code></td>
+<td>int or none</td>
+<td><code>set resolution 2</code></td>
+<td>Apply or cycle sensor mode</td>
+</tr>
+<tr>
+<td><code>set anamorphic factor [&lt;float&gt;]</code></td>
+<td>float or none</td>
+<td><code>set anamorphic factor 1.33</code></td>
+<td>Set or toggle anamorphic stretch</td>
+</tr>
+<tr>
+<td><code>set zoom [&lt;float&gt;]</code></td>
+<td>float or none</td>
+<td><code>set zoom 2</code></td>
+<td>Change digital zoom; omit to cycle</td>
+</tr>
+<tr>
+<td><code>inc zoom</code> / <code>dec zoom</code></td>
+<td>-</td>
+<td></td>
+<td>Step preview zoom factor</td>
+</tr>
+<tr>
+<td><code>mount</code> / <code>unmount</code></td>
+<td>-</td>
+<td></td>
+<td>Mount or unmount external storage</td>
+</tr>
+<tr>
+<td><code>toggle mount</code></td>
+<td>-</td>
+<td></td>
+<td>Mount if not mounted, otherwise unmount</td>
+</tr>
+<tr>
+<td><code>erase</code></td>
+<td>-</td>
+<td><code>erase</code></td>
+<td>Delete every clip on the mounted RAW volume without reformatting</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td><code>[ext4\|ntfs]</code></td>
+<td><code>format ntfs</code></td>
+<td>Reformat the RAW drive (defaults to ext4) and remount it</td>
+</tr>
+<tr>
+<td><code>storage preroll</code></td>
+<td>-</td>
+<td><code>storage preroll</code></td>
+<td>Run the storage warm-up recording that prepares the media</td>
+</tr>
+<tr>
+<td><code>time</code></td>
+<td>-</td>
+<td></td>
+<td>Show system and RTC time</td>
+</tr>
+<tr>
+<td><code>set rtc time</code></td>
+<td>-</td>
+<td></td>
+<td>Copy system time to the RTC</td>
+</tr>
+<tr>
+<td><code>space</code></td>
+<td>-</td>
+<td></td>
+<td>Report remaining SSD space</td>
+</tr>
+<tr>
+<td><code>get</code></td>
+<td>-</td>
+<td></td>
+<td>Print all current settings (Redis keys in cp_controls channel)</td>
+</tr>
+<tr>
+<td><code>set shutter a sync [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set shutter a sync 1</code></td>
+<td>Enable exposure sync mode</td>
+</tr>
+<tr>
+<td><code>set iso lock [0/1]</code></td>
+<td>0/1 or none</td>
+<td></td>
+<td>Lock or unlock ISO setting</td>
+</tr>
+<tr>
+<td><code>set shutter a nom lock [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set shutter a nom lock</code></td>
+<td>Lock or unlock nominal shutter</td>
+</tr>
+<tr>
+<td><code>set shutter a nom fps lock [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set shutter a nom fps lock 1</code></td>
+<td>Lock nominal shutter and FPS together</td>
+</tr>
+<tr>
+<td><code>set fps lock [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set fps lock 1</code></td>
+<td>Lock or unlock the frame rate</td>
+</tr>
+<tr>
+<td><code>set all lock [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set all lock 0</code></td>
+<td>Toggle all exposure locks at once</td>
+</tr>
+<tr>
+<td><code>set fps double [0/1]</code></td>
+<td>0/1 or none</td>
+<td></td>
+<td>Instant or toggled 2× FPS mode</td>
+</tr>
+<tr>
+<td><code>reboot</code> / <code>shutdown</code></td>
+<td>-</td>
+<td></td>
+<td>Safely reboot or halt the Pi</td>
+</tr>
+<tr>
+<td><code>restart camera</code></td>
+<td>-</td>
+<td>`</td>
+<td>Restart the libcamera pipeline</td>
+</tr>
+<tr>
+<td><code>restart cinemate</code></td>
+<td>-</td>
+<td></td>
+<td>Restart the Cinemate process</td>
+</tr>
+<tr>
+<td><code>set iso free [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set iso free 1</code></td>
+<td>Allow any ISO instead of presets</td>
+</tr>
+<tr>
+<td><code>set shutter a free [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set shutter a free 0</code></td>
+<td>Allow any shutter angle</td>
+</tr>
+<tr>
+<td><code>set fps free [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set fps free 1</code></td>
+<td>Allow any FPS</td>
+</tr>
+<tr>
+<td><code>set wb free [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set wb free</code></td>
+<td>Allow any white balance</td>
+</tr>
+<tr>
+<td><code>set filter &lt;0/1&gt;</code></td>
+<td>0/1</td>
+<td><code>set filter 1</code></td>
+<td>Toggle IR-cut filter (IMX585)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="timed-recording-shortcuts">Timed recording shortcuts<a class="headerlink" href="#timed-recording-shortcuts" title="Permanent link">#</a></h2>
+<p>The <code>rec</code> command now accepts timed modes so you can walk away from the camera while it captures a precisely bounded take.</p>
+<ul>
+<li><code>rec s &lt;seconds&gt;</code> stops the recording after the requested duration. Short forms such as <code>sec</code>, <code>secs</code> and <code>seconds</code> are also accepted.</li>
+<li><code>rec f &lt;frames&gt;</code> converts the requested frame count to seconds using the current FPS and schedules the stop for you. You can type <code>frame</code> or <code>frames</code> instead of <code>f</code>.</li>
+</ul>
+<p>If recording is not already running, the CLI starts it automatically before arming the timer. An invalid or zero value is ignored so you cannot accidentally stop a clip immediately.【F:src/module/cli_commands.py†L205-L237】【F:src/module/cinepi_controller.py†L533-L591】</p>
+<h2 id="storage-maintenance-commands">Storage maintenance commands<a class="headerlink" href="#storage-maintenance-commands" title="Permanent link">#</a></h2>
+<p>Two new commands simplify preparing removable media directly from the Cinemate CLI:</p>
+<ul>
+<li><code>erase</code> empties the mounted RAW volume without touching the filesystem structure so you can clear cards quickly between takes.</li>
+<li><code>format [ext4|ntfs]</code> reformats the drive with the chosen filesystem (<code>ext4</code> by default), remounts it and refreshes the free-space monitor. The helper tolerates the common <code>ex4</code> typo and refuses unsupported targets so you do not accidentally create an unusable volume.</li>
+</ul>
+<p>Both actions require the RAW drive to be mounted; otherwise the CLI reports an error and leaves the media untouched.</p>
+<h2 id="storage-pre-roll-warm-up">Storage pre-roll warm-up<a class="headerlink" href="#storage-pre-roll-warm-up" title="Permanent link">#</a></h2>
+<p><code>storage preroll</code> triggers the automatic warm-up clip that Cinemate normally runs on startup or when you mount new storage. During the pre-roll, Cinemate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take.【F:src/module/storage_preroll.py†L40-L175】</p>
+<p>See <a href="../storage-preroll/">Storage pre-roll warm-up</a> for a detailed walkthrough of the workflow and tips on when to run it manually.</p>
+</div>
+
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../ssh/" class="btn btn-neutral float-left" title="Connecting via SSH"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../settings-json/" class="btn btn-neutral float-right" title="Custom settings">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tiramisioux/cinemate" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../ssh/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../settings-json/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
+      <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

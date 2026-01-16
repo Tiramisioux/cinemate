@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/system-services/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>System services - Cinemate Docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../templates/styles.scss" rel="stylesheet" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "System services";
+        var mkdocs_page_input_path = "system-services.md";
+        var mkdocs_page_url = "/cinemate/system-services/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Cinemate Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Quick start</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Customising your build</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Using the camera</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">System management</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">System services</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#cinemate-autostartservice">cinemate-autostart.service</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#starting-stopping-enabling-and-disabling-the-service">Starting, stopping, enabling and disabling the service</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#storage-automountservice">storage-automount.service</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#wifi-hotspotservice">wifi-hotspot.service</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Cinemate Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">System management</li>
+      <li class="breadcrumb-item active">System services</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/system-services.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+<div class="markdown-body">
+  <h1 id="system-services">System services<a class="headerlink" href="#system-services" title="Permanent link">#</a></h1>
+<p>Cinemate uses three system services for its operation.</p>
+<h2 id="cinemate-autostartservice">cinemate-autostart.service<a class="headerlink" href="#cinemate-autostartservice" title="Permanent link">#</a></h2>
+<p>Responsible for autostart of Cinemate on boot. By default, it is turned off on the <a href="https://github.com/Tiramisioux/cinemate/releases/tag/3.1">downloadable image file</a>.</p>
+<p>Starting in v3.2 the service now waits for the camera sensor to come online before launching the UI. The helper script <code>/usr/local/bin/camera-ready.sh</code> polls <code>cinepi-raw --list-cameras</code> for up to 30 seconds and logs progress to the systemd journal so Cinemate does not start with a black screen if the IMX sensor is still initialising.</p>
+<h3 id="starting-stopping-enabling-and-disabling-the-service">Starting, stopping, enabling and disabling the service<a class="headerlink" href="#starting-stopping-enabling-and-disabling-the-service" title="Permanent link">#</a></h3>
+<p>Go to the Cinemate folder:</p>
+<div class="codehilite"><pre><span></span><code>cd cinemate
+
+make install   # copy service file
+make enable    # start on boot
+make start     # launch now
+make stop      # stop it
+make status    # check status
+make disable   # disable autostart
+make clean     # remove the service
+</code></pre></div>
+
+<p>The <code>make install</code> step also copies <code>camera-ready.sh</code> into <code>/usr/local/bin/</code> with execute permissions so that the systemd unit can call it from <code>ExecStartPre</code>.</p>
+<p>To start Cinemate manually, anywhere in the cli, type <code>cinemate</code>.</p>
+<h2 id="storage-automountservice">storage-automount.service<a class="headerlink" href="#storage-automountservice" title="Permanent link">#</a></h2>
+<p>Storage-automount is a systemd service that watches for removable drives and mounts them automatically. The accompanying Python script reacts to udev events and the CFE-HAT eject button so drives can be attached or detached safely.</p>
+<p>It understands <code>ext4</code>, <code>ntfs</code> and <code>exfat</code> filesystems. Partitions labelled <code>RAW</code> are mounted at <code>/media/RAW</code>; any other label is mounted under <code>/media/&lt;LABEL&gt;</code> after sanitising the name. This applies to USB SSDs, NVMe drives and the CFE-HAT slot.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>On the image file, the storage-automount.service is activated by default.</p>
+</div>
+<p>To manually install and enable the service:</p>
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>cinemate/services/storage-automount
+
+sudo<span class="w"> </span>make<span class="w"> </span>install
+sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable</span>
+</code></pre></div>
+
+<p>You can stop or disable it later with:</p>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>make<span class="w"> </span>stop
+sudo<span class="w"> </span>make<span class="w"> </span>disable
+</code></pre></div>
+
+<h2 id="wifi-hotspotservice">wifi-hotspot.service<a class="headerlink" href="#wifi-hotspotservice" title="Permanent link">#</a></h2>
+<p>Wifi-hotspot keeps a small access point running with the help of NetworkManager so you can always reach the web interface. The SSID and password are read from <code>/home/pi/cinemate/src/settings.json</code> under <code>system.wifi_hotspot</code>.</p>
+<p>Install and enable it with:</p>
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>cinemate/services/wifi-hotspot
+
+sudo<span class="w"> </span>make<span class="w"> </span>install
+sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable</span>
+</code></pre></div>
+
+<p>As with <strong>storage-automount</strong>, you can stop or disable the hotspot with </p>
+<p><code>`
+make stop
+make disable</code></p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>While evaluating, it might be practical to have the Pi connect to your local wifi for easy access (<code>sudo raspi-config</code>). Therefore, on the image file, the wifi-hotspot.service is <strong>not</strong> activated by default. Cinemate will still stream its web interface on the available netowrk. You can read more <a href="../hotspot-logic/">here</a></p>
+</div>
+</div>
+
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../config-txt/" class="btn btn-neutral float-left" title="Modifying config.txt"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../storage-preroll/" class="btn btn-neutral float-right" title="Storage pre-roll warm-up">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tiramisioux/cinemate" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../config-txt/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../storage-preroll/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
+      <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

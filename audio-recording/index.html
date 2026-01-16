@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/audio-recording/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Audio recording - Cinemate Docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../templates/styles.scss" rel="stylesheet" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Audio recording";
+        var mkdocs_page_input_path = "audio-recording.md";
+        var mkdocs_page_url = "/cinemate/audio-recording/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Cinemate Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Quick start</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Customising your build</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Using the camera</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Audio recording</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#asoundrc-setup">.asoundrc Setup</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">System management</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Cinemate Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Using the camera</li>
+      <li class="breadcrumb-item active">Audio recording</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/audio-recording.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+<div class="markdown-body">
+  <h1 id="audio-recording-experimental">Audio recording (experimental)<a class="headerlink" href="#audio-recording-experimental" title="Permanent link">#</a></h1>
+<p>Cinemate records audio alongside the image sequence. Support is currently limited to a few USB microphones with hard coded configurations:
+ - <strong>RØDE VideoMic NTG</strong> – recorded in stereo at 24‑bit/48 kHz.
+ - <strong>USB PnP microphones</strong> – recorded in mono at 16‑bit/48 kHz.</p>
+<p>Other class‑compliant USB microphones are now detected automatically by probing the ALSA hardware devices reported by <code>arecord -l</code>. Cinemate will fall back to using the matching USB device (via <code>plughw:&lt;card&gt;,&lt;device&gt;</code>) if the <code>mic_24bit</code> or <code>mic_16bit</code> aliases are not available.</p>
+<p>Audio is written as <code>.wav</code> files into the same folder as the <code>.dng</code> frames. The implementation is still experimental and audio/video synchronization needs further investigation.</p>
+<h3 id="asoundrc-setup">.asoundrc Setup<a class="headerlink" href="#asoundrc-setup" title="Permanent link">#</a></h3>
+<p>For <code>dsnoop</code> support, create a <code>~/.asoundrc</code> in home directory:</p>
+<div class="codehilite"><pre><span></span><code>nano<span class="w"> </span>~/.asoundrc
+</code></pre></div>
+
+<p>Paste this into the file:</p>
+<div class="codehilite"><pre><span></span><code><span class="w">    </span>pcm.dsnoop_24bit<span class="w"> </span><span class="o">{</span>
+<span class="w">        </span><span class="nb">type</span><span class="w"> </span>dsnoop
+<span class="w">        </span>ipc_key<span class="w"> </span><span class="m">2048</span>
+<span class="w">        </span>slave<span class="w"> </span><span class="o">{</span>
+<span class="w">            </span>pcm<span class="w"> </span><span class="s2">&quot;hw:Device,0&quot;</span>
+<span class="w">            </span>channels<span class="w"> </span><span class="m">2</span>
+<span class="w">            </span>rate<span class="w"> </span><span class="m">48000</span>
+<span class="w">            </span>format<span class="w"> </span>S24_3LE
+<span class="w">            </span>period_size<span class="w"> </span><span class="m">1024</span>
+<span class="w">            </span>buffer_size<span class="w"> </span><span class="m">4096</span>
+<span class="w">        </span><span class="o">}</span>
+<span class="w">    </span><span class="o">}</span>
+
+<span class="w">    </span>pcm.dsnoop_16bit<span class="w"> </span><span class="o">{</span>
+<span class="w">        </span><span class="nb">type</span><span class="w"> </span>dsnoop
+<span class="w">        </span>ipc_key<span class="w"> </span><span class="m">2049</span>
+<span class="w">        </span>slave<span class="w"> </span><span class="o">{</span>
+<span class="w">            </span>pcm<span class="w"> </span><span class="s2">&quot;hw:Device,0&quot;</span>
+<span class="w">            </span>channels<span class="w"> </span><span class="m">1</span>
+<span class="w">            </span>rate<span class="w"> </span><span class="m">48000</span>
+<span class="w">            </span>format<span class="w"> </span>S16_LE
+<span class="w">            </span>period_size<span class="w"> </span><span class="m">1024</span>
+<span class="w">            </span>buffer_size<span class="w"> </span><span class="m">4096</span>
+<span class="w">        </span><span class="o">}</span>
+<span class="w">    </span><span class="o">}</span>
+
+<span class="w">    </span>pcm.mic_24bit<span class="w"> </span><span class="o">{</span>
+<span class="w">        </span><span class="nb">type</span><span class="w"> </span>plug
+<span class="w">        </span>slave.pcm<span class="w"> </span><span class="s2">&quot;dsnoop_24bit&quot;</span>
+<span class="w">    </span><span class="o">}</span>
+
+<span class="w">    </span>pcm.mic_16bit<span class="w"> </span><span class="o">{</span>
+<span class="w">        </span><span class="nb">type</span><span class="w"> </span>plug
+<span class="w">        </span>slave.pcm<span class="w"> </span><span class="s2">&quot;dsnoop_16bit&quot;</span>
+<span class="w">    </span><span class="o">}</span>
+</code></pre></div>
+
+<p>Exit nano editor using ctrl+x.</p>
+</div>
+
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../sensors/" class="btn btn-neutral float-left" title="Camera sensors and frame rates"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../speed-ramping/" class="btn btn-neutral float-right" title="Speed ramping & shutter angle synchronization">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tiramisioux/cinemate" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../sensors/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../speed-ramping/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
+      <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

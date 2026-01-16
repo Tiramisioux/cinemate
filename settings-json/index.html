@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/settings-json/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Custom settings - Cinemate Docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../templates/styles.scss" rel="stylesheet" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Custom settings";
+        var mkdocs_page_input_path = "settings-json.md";
+        var mkdocs_page_url = "/cinemate/settings-json/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Cinemate Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Quick start</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Customising your build</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Custom settings</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#welcome-message">welcome message</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#system">system</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#geometry">geometry</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#output">output</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#preview">preview</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#anamorphic_preview">anamorphic_preview</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#gpio_output">gpio_output</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#arrays">arrays</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#settings">settings</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#analog_controls">analog_controls</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#free_mode">free_mode</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#resolutions">resolutions</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#buttons">buttons</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#two_way_switches">two_way_switches</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#rotary_encoders">rotary_encoders</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#quad_rotary_controller">quad_rotary_controller</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#i2c_oled">i2c_oled</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Using the camera</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">System management</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Cinemate Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Customising your build</li>
+      <li class="breadcrumb-item active">Custom settings</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/settings-json.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+<div class="markdown-body">
+  <h1 id="settings-file">Settings file<a class="headerlink" href="#settings-file" title="Permanent link">#</a></h1>
+<p>This file controls how the camera behaves and how your buttons, switches and displays are mapped. It lives in <code>~/cinemate/src/settings.json</code>. You can edit it with any text editor; the settings take effect the next time you start Cinemate.</p>
+<div class="admonition tip">
+<p>For easy editing of settings on the preinstalled image file, type <code>editsettings</code> anywhere in Raspberry Pi terminal.</p>
+</div>
+<p>The configuration is structured as JSON. Each top‑level key describes a feature area of the system. Below is a tour of every section and what the options do.</p>
+<h2 id="welcome-message">welcome message<a class="headerlink" href="#welcome-message" title="Permanent link">#</a></h2>
+<p>Text or image displayed briefly when Cinemate starts.</p>
+<div class="codehilite"><pre><span></span><code><span class="s">&quot;welcome_image&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+<span class="s">&quot;welcome_message&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;THIS</span><span class="nv"> </span><span class="s">IS</span><span class="nv"> </span><span class="s">A</span><span class="nv"> </span><span class="s">COOL</span><span class="nv"> </span><span class="s">MACHINE&quot;</span><span class="err">,</span>
+</code></pre></div>
+
+<p>Set <code>welcome_image</code> to the path of a bitmap file to show a logo instead of text. </p>
+<p>Example path: <code>/home/pi/welcome_image.bmp</code>. </p>
+<p>If <code>welcome image</code> path is set, this will override the text message.</p>
+<h2 id="system">system<a class="headerlink" href="#system" title="Permanent link">#</a></h2>
+<div class="codehilite"><pre><span></span><code><span class="nt">&quot;system&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;wifi_hotspot&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CinePi&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;password&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;11111111&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><code>name</code> – the Wi‑Fi network name (SSID) broadcast by the Pi when hotspot mode is enabled.
+<code>password</code> – password for joining the hotspot.
+<code>enabled</code> – set to <code>true</code> to start the hotspot automatically on boot. If set to <code>false</code>, CineMate will still start its web ui but stream it on whatever network the Pi is connected to.</p>
+<p>Use the hotspot when you need a direct connection in the field. Disable it during development so the Pi can join your regular Wi‑Fi and reach the internet. If you are connected to the Pi via Ethernet you can keep the hotspot on.</p>
+<h2 id="geometry">geometry<a class="headerlink" href="#geometry" title="Permanent link">#</a></h2>
+<p>Controls image orientation for each camera port (<code>cam0</code>, <code>cam1</code>, etc.). These settings let you mount cameras in any orientation and still get an upright preview and recording. Example:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&quot;geometry&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;cam0&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;rotate_180&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;horizontal_flip&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;vertical_flip&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;cam1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;rotate_180&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;horizontal_flip&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;vertical_flip&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><code>rotate_180</code> – flip the image upside‑down.<br><code>horizontal_flip</code> – mirror the image left/right.<br><code>vertical_flip</code> – mirror the image top/bottom.</p>
+<h2 id="output">output<a class="headerlink" href="#output" title="Permanent link">#</a></h2>
+<p>Maps each camera to an HDMI connector. Use <code>-1</code> for automatic selection.</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&quot;output&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;cam0&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;hdmi_port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;cam1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;hdmi_port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="preview">preview<a class="headerlink" href="#preview" title="Permanent link">#</a></h2>
+<p>Adjusts zoom levels for the HDMI/browser preview.</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&quot;preview&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;default_zoom&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;zoom_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.5</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><code>default_zoom</code> – magnification factor used at startup.<br><code>zoom_steps</code> – list of zoom factors you can cycle through with the <code>set_zoom_step</code> command.</p>
+<h2 id="anamorphic_preview">anamorphic_preview<a class="headerlink" href="#anamorphic_preview" title="Permanent link">#</a></h2>
+<p>For stretching the preview when using anamorphic lenses.</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&quot;anamorphic_preview&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;default_anamorphic_factor&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;anamorphic_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mf">1.33</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><code>default_anamorphic_factor</code> – factor loaded when Cinemate starts.
+<br><code>anamorphic_steps</code> – selectable squeeze factors; values above <code>1.0</code> widen the image.</p>
+<h2 id="gpio_output">gpio_output<a class="headerlink" href="#gpio_output" title="Permanent link">#</a></h2>
+<p>Defines pins used for visual feedback or sync signals.</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&quot;gpio_output&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;pwm_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">19</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;rec_out_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="mi">21</span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<ul>
+<li>
+<p><code>pwm_pin</code> – outputs a strobe for shutter sync or external devices.</p>
+</li>
+<li>
+<p><code>rec_out_pin</code> – list of pins pulled high while recording (useful for tally LEDs).</p>
+</li>
+</ul>
+<h2 id="arrays">arrays<a class="headerlink" href="#arrays" title="Permanent link">#</a></h2>
+<p>Preset lists for exposure and frame‑rate settings. Cinemate will step through these values unless you enable free mode, either in the settings file or during runtime.</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&quot;arrays&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;iso_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="mi">400</span><span class="p">,</span><span class="w"> </span><span class="mi">640</span><span class="p">,</span><span class="w"> </span><span class="mi">800</span><span class="p">,</span><span class="w"> </span><span class="mi">1200</span><span class="p">,</span><span class="w"> </span><span class="mi">1600</span><span class="p">,</span><span class="w"> </span><span class="mi">2500</span><span class="p">,</span><span class="w"> </span><span class="mi">3200</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;shutter_a_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">45</span><span class="p">,</span><span class="w"> </span><span class="mi">90</span><span class="p">,</span><span class="w"> </span><span class="mi">135</span><span class="p">,</span><span class="w"> </span><span class="mf">172.8</span><span class="p">,</span><span class="w"> </span><span class="mi">180</span><span class="p">,</span><span class="w"> </span><span class="mi">225</span><span class="p">,</span><span class="w"> </span><span class="mi">270</span><span class="p">,</span><span class="w"> </span><span class="mi">315</span><span class="p">,</span><span class="w"> </span><span class="mf">346.6</span><span class="p">,</span><span class="w"> </span><span class="mi">360</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;fps_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="mi">16</span><span class="p">,</span><span class="w"> </span><span class="mi">18</span><span class="p">,</span><span class="w"> </span><span class="mi">24</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="mi">33</span><span class="p">,</span><span class="w"> </span><span class="mi">40</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;wb_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">3200</span><span class="p">,</span><span class="w"> </span><span class="mi">4400</span><span class="p">,</span><span class="w"> </span><span class="mi">5600</span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="settings">settings<a class="headerlink" href="#settings" title="Permanent link">#</a></h2>
+<p>General options for runtime behaviour.</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&quot;settings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;light_hz&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="mi">60</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;conform_frame_rate&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">24</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><code>light_hz</code> – list of mains frequencies used to calculate flicker‑free shutter angles. These are added to the shutter angle array and also dynamically calculated upon each fps change. This way, there is always a flicker free shutter angle value close by, when toggling through shutter angles, either via the cli or using buttons/pots/rotary encoder.
+<br><code>conform_frame_rate</code> – frame rate intendend for project conforming in post. This setting is not really used by CineMate except for calculating the recording timecode tracker in redis but might be used in future updates.</p>
+<h2 id="analog_controls">analog_controls<a class="headerlink" href="#analog_controls" title="Permanent link">#</a></h2>
+<p>Maps Grove Base HAT ADC channels to analogue dials (potentiometers). Use <code>null</code> to disable a dial.</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&quot;analog_controls&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;iso_pot&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;shutter_a_pot&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;fps_pot&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;wb_pot&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;None&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="admonition info">
+<p>When using a Grove Base Hat with potentiometers, make sure to define only channels actually connected to potentiometers, since noise from unused connectors might trigger false readings.</p>
+</div>
+<h2 id="free_mode">free_mode<a class="headerlink" href="#free_mode" title="Permanent link">#</a></h2>
+<p>When enabled, ignores the preset arrays and exposes the full range supported by the sensor.</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&quot;free_mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;iso_free&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;shutter_a_free&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;fps_free&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;wb_free&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="resolutions">resolutions<a class="headerlink" href="#resolutions" title="Permanent link">#</a></h2>
+<p>Limit which sensor modes appear when cycling resolutions.</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&quot;resolutions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;k_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">1.5</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;bit_depths&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;custom_modes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;imx283&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">      </span><span class="p">{</span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3936</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2176</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;bit_depth&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;fps_max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">24</span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><code>k_steps</code> – K‑style categories for allowed widths. Modes are grouped to the nearest half‑K. Example: 1332×990 counts as <strong>1.5 K</strong>.
+<br><code>bit_depths</code> – list of bit depths to expose.
+<br><code>custom_modes</code> – optional extra modes per sensor if the driver advertises none.</p>
+<h2 id="buttons">buttons<a class="headerlink" href="#buttons" title="Permanent link">#</a></h2>
+<p>Defines GPIO push buttons. Each entry describes one button and the actions it triggers.</p>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;pull_up&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;debounce_time&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;press_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rec&quot;</span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><code>pin</code> – BCM pin number the button is connected to.<br><code>pull_up</code> – set <code>true</code> if the pin idles high (internal pull‑up). Use <code>false</code> for pull‑down wiring.<br><code>debounce_time</code> – ignore additional presses within this time window (seconds).<br><code>press_action</code>, <code>single_click_action</code>, <code>double_click_action</code>, <code>triple_click_action</code>, <code>hold_action</code> – actions to perform for each type of interaction. Actions call Cinemate CLI commands with optional <code>args</code>.</p>
+<div class="admonition info">
+<p>Some push-buttons are wired closed = logic 1 and open = 0. At start-up, CineMate automatically detects buttons in state <code>true</code> and reverses them. This way the user can use any type of push buttons, both 1-0-1 and 0-1-0 types.</p>
+</div>
+<h2 id="two_way_switches">two_way_switches<a class="headerlink" href="#two_way_switches" title="Permanent link">#</a></h2>
+<p>Latching on/off switches. Cinemate triggers an action whenever the state changes.</p>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">27</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;state_on_action&quot;</span><span class="p">:</span><span class="w">  </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_all_lock&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">]},</span>
+<span class="w">  </span><span class="nt">&quot;state_off_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_all_lock&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">]}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="rotary_encoders">rotary_encoders<a class="headerlink" href="#rotary_encoders" title="Permanent link">#</a></h2>
+<p>Rotary encoders used for fine adjustment of settings. These can be wired straight to the GPIO pins of the Pi.</p>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;clk_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;dt_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">11</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;encoder_actions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;rotate_clockwise&quot;</span><span class="p">:</span><span class="w">        </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;inc_iso&quot;</span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;rotate_counterclockwise&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dec_iso&quot;</span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><br><code>clk_pin</code> and <code>dt_pin</code> – the two pins of the encoder.<br><code>encoder_actions</code> – commands to run when turning the dial.</p>
+<h2 id="quad_rotary_controller">quad_rotary_controller<a class="headerlink" href="#quad_rotary_controller" title="Permanent link">#</a></h2>
+<p>Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry maps one of the four dials to a setting and defines the push button actions similar to the <code>buttons</code> section.</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&quot;quad_rotary_controller&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;encoders&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;0&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;setting_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;iso&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;button&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;press_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rec&quot;</span><span class="p">}}},</span>
+<span class="w">    </span><span class="nt">&quot;1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;setting_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;shutter_a&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;button&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;press_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_fps_double&quot;</span><span class="p">}}},</span>
+<span class="w">    </span><span class="nt">&quot;2&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;setting_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fps&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;button&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;press_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;None&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;single_click_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_resolution&quot;</span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;double_click_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;restart_cinemate&quot;</span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;triple_click_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;reboot&quot;</span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;hold_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;toggle_mount&quot;</span><span class="p">}</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;3&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;setting_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wb&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;button&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;press_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rec&quot;</span><span class="p">}}}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><code>enabled</code> – turn the quad rotary controller on or off.<br><code>encoders</code> – mapping of each dial to a setting and button actions.</p>
+<h2 id="i2c_oled">i2c_oled<a class="headerlink" href="#i2c_oled" title="Permanent link">#</a></h2>
+<p>Configuration for the optional OLED status screen. This can be useful for presenting extra information appart from the HDMI/web display.</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">&quot;i2c_oled&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">64</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;font_size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;values&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;write_speed_to_drive&quot;</span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><code>enabled</code> – turn the OLED display on or off.
+<code>width / height</code> – pixel dimensions of your screen.
+<code>font_size</code> – size of the displayed text.
+<code>values</code> – list of Redis keys or pseudo‑keys to show (for example <code>cpu_temp</code>).</p>
+<p>Available keys come from <code>src/module/i2c/i2c_oled.py</code>. Here are some examples:</p>
+<p><code>iso</code>, <code>fps</code> – basic camera settings.<br>
+<code>shutter_a</code> – shown as <code>SHUTTER</code> with a <code>°</code> suffix.<br>
+<code>wb_user</code> – shown as <code>WB</code> with a trailing <code>K</code>.<br>
+<code>space_left</code> – displayed as <code>SPACE</code> in gigabytes.<br>
+<code>write_speed_to_drive</code> – write speed in MB/s.<br>
+<code>resolution</code> – prints <code>width×height@bit_depth</code> on the first line.<br>
+<code>is_recording</code> – draws a bullet <code>●</code> when recording.<br>
+<code>cpu_load</code>, <code>cpu_temp</code>, <code>memory_usage</code> – Pi system statistics.</p>
+<p>Other keys will display their name in uppercase and the raw value from Redis.</p>
+<hr />
+</div>
+
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../cli-commands/" class="btn btn-neutral float-left" title="Cinemate terminal commands"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../hotspot-logic/" class="btn btn-neutral float-right" title="Configuring the Wi-Fi hotspot">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tiramisioux/cinemate" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../cli-commands/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../hotspot-logic/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
+      <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/sensor.sizes/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Image circles and sensor sizes - Cinemate Docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../templates/styles.scss" rel="stylesheet" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Image circles and sensor sizes";
+        var mkdocs_page_input_path = "sensor.sizes.md";
+        var mkdocs_page_url = "/cinemate/sensor.sizes/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Cinemate Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Quick start</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Customising your build</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Using the camera</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">System management</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Cinemate Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Image circles and sensor sizes</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/sensor.sizes.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+<div class="markdown-body">
+  <h1 id="image-circles-and-sensor-sizes">Image circles and sensor sizes<a class="headerlink" href="#image-circles-and-sensor-sizes" title="Permanent link">#</a></h1>
+<h2 id="what-do-1-inch-and-123-inch-actually-mean">What do “1 inch” and “1/2.3 inch” actually mean?<a class="headerlink" href="#what-do-1-inch-and-123-inch-actually-mean" title="Permanent link">#</a></h2>
+<p>Those fractions are legacy video‑tube designations and <em>not</em> the physical diagonal of the sensor. For example:</p>
+<table>
+<thead>
+<tr>
+<th>Marketing name</th>
+<th>Actual diagonal</th>
+<th>Typical crop factor*</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>“Full‑frame” (35 mm stills)</td>
+<td>43 mm</td>
+<td>1.0× (reference)</td>
+</tr>
+<tr>
+<td> Micro‑Four‑Thirds</td>
+<td>22 mm</td>
+<td>~2.0×</td>
+</tr>
+<tr>
+<td>“1 inch”</td>
+<td>16 mm</td>
+<td>~2.7×</td>
+</tr>
+<tr>
+<td>Raspberry Pi HQ (IMX477, sold as “1/2.3 inch”)</td>
+<td>7.9 mm</td>
+<td>~5.6×</td>
+</tr>
+</tbody>
+</table>
+<p>As we can see, the smaller the sensor the larger the crop factor with regards to the 35mm standard reference.</p>
+<p>C/CS Mounts</p>
+<p>C and CS lenses were designed for small‑format video and security cameras, so their image circles perfectly cover the IMX477. The Raspberry Pi HQ board also has a built‑in back‑focus adjustment </p>
+<hr />
+<h2 id="4-what-if-i-really-want-wide-shots">4  What if I really want wide shots?<a class="headerlink" href="#4-what-if-i-really-want-wide-shots" title="Permanent link">#</a></h2>
+<p>You have two realistic options:</p>
+<ol>
+<li><strong>Speed‑boosters and focal reducers</strong><br />
+   These compress a larger image circle down onto the small sensor, regaining some angle of view. They cost more than the camera and introduce extra optical surfaces, but can work in a pinch.  </li>
+<li><strong>A bigger sensor</strong><br />
+   Stepping up to something like the IMX585 (“1/1.2 inch”) cuts the crop factor roughly in half. At that point, adapting Micro‑Four‑Thirds or vintage 35 mm lenses begins to make practical sense.</li>
+</ol>
+<hr />
+<h2 id="5-buying-roadmap-for-beginners">5  Buying roadmap for beginners<a class="headerlink" href="#5-buying-roadmap-for-beginners" title="Permanent link">#</a></h2>
+<ol>
+<li><strong>Start with the stock 6 – 12 mm Raspberry Pi zoom</strong><br />
+   It teaches you which focal lengths you genuinely use.  </li>
+<li><strong>Add one or two vintage C‑mount primes</strong><br />
+   Look for 8 mm or 12 mm lenses from brands such as Kern‑Paillard, Computar, or Angénieux. They’re small, sharp, and often under €100.  </li>
+<li><strong>Master back‑focus adjustment</strong><br />
+   The HQ board’s silver ring lets you dial in infinity focus without spacers—a lifesaver when swapping lenses.  </li>
+<li><strong>Only then consider adapters</strong><br />
+   If you’re bumping into the limits of the sensor rather than the lens, that’s the signal to explore larger sensors like the IMX585 plus an MFT or EF adapter.</li>
+</ol>
+<hr />
+<h2 id="6-rules-of-thumb-bookmark-these">6  Rules of thumb (bookmark these)<a class="headerlink" href="#6-rules-of-thumb-bookmark-these" title="Permanent link">#</a></h2>
+<ul>
+<li><strong>Focal length math:</strong><br />
+  Effective 35 mm focal length = <em>Lens focal length × Crop factor</em>.<br />
+  (e.g., 12 mm × 5.6 ≈ 67 mm portrait.)  </li>
+<li><strong>Image circle &gt; sensor diagonal.</strong><br />
+  If the spec sheet doesn’t list it, assume C/CS lenses cover up to 11 mm and nothing larger.  </li>
+<li><strong>Big‑sensor lenses on tiny sensors ≠ better image.</strong><br />
+  Quality comes from glass <em>matched</em> to the sensor, not size alone.</li>
+</ul>
+<hr />
+<h3 id="tldr">TL;DR<a class="headerlink" href="#tldr" title="Permanent link">#</a></h3>
+<p>For the Raspberry Pi HQ camera (IMX477), <strong>vintage C‑mount lenses are your best friends</strong>—they cover the sensor perfectly, cost little, and keep the rig small.<br />
+If you crave a wider field of view or shallower depth of field that feels “cinematic,” consider upgrading the sensor itself (e.g., IMX585) before chasing exotic adapters and full‑frame glass.</p>
+<p>Happy shooting, and may your pixels always land exactly where you intend!</p>
+</div>
+
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tiramisioux/cinemate" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
+      <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/controller-methods/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>CinePi Controller Methods - Cinemate Docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../templates/styles.scss" rel="stylesheet" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "CinePi Controller Methods";
+        var mkdocs_page_input_path = "controller-methods.md";
+        var mkdocs_page_url = "/cinemate/controller-methods/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Cinemate Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Quick start</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Customising your build</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Using the camera</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">System management</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Cinemate Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">CinePi Controller Methods</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/controller-methods.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+<div class="markdown-body">
+  <h1 id="cinepi-controller-methods">CinePi Controller Methods<a class="headerlink" href="#cinepi-controller-methods" title="Permanent link">#</a></h1>
+<p>CineMate exposes most of its runtime features through the <code>CinePiController</code> class in <code>src/module/cinepi_controller.py</code>. Buttons, the pseudo‑CLI and the web UI all call these methods. Below is an overview of the most useful ones and what they do.</p>
+<h2 id="recording">Recording<a class="headerlink" href="#recording" title="Permanent link">#</a></h2>
+<ul>
+<li><code>rec()</code> – Toggle recording on or off depending on the current state.</li>
+<li><code>start_recording()</code> – Begin recording if storage is mounted and space is available.</li>
+<li><code>stop_recording()</code> – Stop the current recording.</li>
+</ul>
+<h2 id="exposure-settings">Exposure settings<a class="headerlink" href="#exposure-settings" title="Permanent link">#</a></h2>
+<p>These methods adjust ISO, shutter angle and frame rate. Increment/decrement helpers step through the arrays defined in <code>settings.json</code> unless free mode is active.</p>
+<ul>
+<li><code>set_iso(value)</code> – Set ISO to a specific value.</li>
+<li><code>inc_iso()</code> / <code>dec_iso()</code> – Step ISO up or down.</li>
+<li><code>set_shutter_a(value)</code> – Set the <em>actual</em> shutter angle. In normal mode the value snaps to the nearest valid angle.</li>
+<li><code>inc_shutter_a()</code> / <code>dec_shutter_a()</code> – Cycle through shutter angles.</li>
+<li><code>set_shutter_a_nom(value)</code> – Set the <em>nominal</em> shutter angle used for motion‑blur calculations.</li>
+<li><code>inc_shutter_a_nom()</code> / <code>dec_shutter_a_nom()</code> – Step the nominal shutter angle.</li>
+<li><code>set_fps(value)</code> – Apply a new frame rate while respecting locks and sync mode.</li>
+<li><code>inc_fps()</code> / <code>dec_fps()</code> – Step through the configured FPS list.</li>
+</ul>
+<h2 id="white-balance">White balance<a class="headerlink" href="#white-balance" title="Permanent link">#</a></h2>
+<ul>
+<li><code>set_wb(kelvin=None, direction='next')</code> – Set white balance to a specific Kelvin temperature or cycle through presets if no value is given.</li>
+<li><code>inc_wb()</code> / <code>dec_wb()</code> – Move to the next or previous white balance preset.</li>
+</ul>
+<h2 id="resolution-and-preview">Resolution and preview<a class="headerlink" href="#resolution-and-preview" title="Permanent link">#</a></h2>
+<ul>
+<li><code>set_resolution(value=None)</code> – Switch sensor mode. Passing <code>None</code> cycles through the available modes.</li>
+<li><code>set_anamorphic_factor(value=None)</code> – Change the preview’s anamorphic stretch. Omit the value to toggle between presets.</li>
+<li><code>set_zoom(value=None, direction="next")</code> – Adjust the digital zoom factor. Without a value it steps through <code>preview.zoom_steps</code>.</li>
+<li><code>inc_zoom()</code> / <code>dec_zoom()</code> – Convenience wrappers around <code>set_zoom()</code>.</li>
+</ul>
+<h2 id="storage-control">Storage control<a class="headerlink" href="#storage-control" title="Permanent link">#</a></h2>
+<ul>
+<li><code>mount()</code> / <code>unmount()</code> – Mount or unmount the external drive.</li>
+<li><code>toggle_mount()</code> – Convenience method that mounts when no drive is present and unmounts otherwise.</li>
+</ul>
+<h2 id="system-information">System information<a class="headerlink" href="#system-information" title="Permanent link">#</a></h2>
+<ul>
+<li><code>print_settings()</code> – Log all current Redis parameters.</li>
+<li><code>ssd_monitor.space_left()</code> – Report remaining disk space (used by the <code>space</code> CLI command).</li>
+<li><code>reboot()</code> – Safely reboot the Pi.</li>
+<li><code>safe_shutdown()</code> – Shut the Pi down cleanly.</li>
+<li><code>restart_cinemate()</code> – Restart the Cinemate Python process without rebooting.</li>
+</ul>
+<h2 id="locks-and-sync-modes">Locks and sync modes<a class="headerlink" href="#locks-and-sync-modes" title="Permanent link">#</a></h2>
+<p>These helpers prevent accidental changes or keep shutter speed in sync with FPS:</p>
+<ul>
+<li><code>set_shutter_a_sync_mode(value=None)</code> – Enable exposure‑sync mode (1) or normal mode (0). Omitting the value toggles the state.</li>
+<li><code>set_iso_lock(value=None)</code> – Toggle or explicitly set the ISO lock.</li>
+<li><code>set_shutter_a_nom_lock(value=None)</code> – Lock or unlock the nominal shutter angle.</li>
+<li><code>set_shu_fps_lock(value=None)</code> – Lock both shutter angle and FPS together.</li>
+<li><code>set_fps_lock(value=None)</code> – Lock or unlock the frame rate.</li>
+<li><code>set_all_lock(value=None)</code> – Toggle all three locks at once.</li>
+<li><code>set_fps_double(value=None)</code> – Temporarily double the frame rate. Omit the value to toggle.</li>
+</ul>
+<h2 id="freemode-toggles">Free‑mode toggles<a class="headerlink" href="#freemode-toggles" title="Permanent link">#</a></h2>
+<p>When free mode is enabled, the preset arrays from <code>settings.json</code> are ignored and you can dial any value supported by the sensor.</p>
+<ul>
+<li><code>set_iso_free(value=None)</code></li>
+<li><code>set_shutter_a_free(value=None)</code></li>
+<li><code>set_fps_free(value=None)</code></li>
+<li><code>set_wb_free(value=None)</code></li>
+</ul>
+<h2 id="sensorspecific-tools">Sensor‑specific tools<a class="headerlink" href="#sensorspecific-tools" title="Permanent link">#</a></h2>
+<ul>
+<li><code>set_filter(value=None)</code> – Enable or disable the StarlightEye IR cut filter (IMX585 sensors only).</li>
+</ul>
+</div>
+
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tiramisioux/cinemate" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
+      <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

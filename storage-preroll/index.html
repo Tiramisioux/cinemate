@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/storage-preroll/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Storage pre-roll warm-up - Cinemate Docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../templates/styles.scss" rel="stylesheet" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Storage pre-roll warm-up";
+        var mkdocs_page_input_path = "storage-preroll.md";
+        var mkdocs_page_url = "/cinemate/storage-preroll/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Cinemate Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Quick start</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Customising your build</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Using the camera</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">System management</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Storage pre-roll warm-up</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#when-the-pre-roll-runs">When the pre-roll runs</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#what-happens-during-a-run">What happens during a run</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#why-it-matters">Why it matters</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Cinemate Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">System management</li>
+      <li class="breadcrumb-item active">Storage pre-roll warm-up</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/storage-preroll.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+<div class="markdown-body">
+  <h1 id="storage-pre-roll-warm-up">Storage pre-roll warm-up<a class="headerlink" href="#storage-pre-roll-warm-up" title="Permanent link">#</a></h1>
+<p>Cinemate includes an automatic "storage pre-roll" that records and discards a short clip to make sure new media can keep up before you roll on something important.【F:src/module/storage_preroll.py†L1-L57】 The warm-up runs the recorder at full speed so SSDs spin up, controllers cache their write tables and the rest of the pipeline has a chance to stabilise.</p>
+<h2 id="when-the-pre-roll-runs">When the pre-roll runs<a class="headerlink" href="#when-the-pre-roll-runs" title="Permanent link">#</a></h2>
+<ul>
+<li><strong>On startup:</strong> after a brief settle delay, the helper checks whether the RAW volume is mounted and triggers a warm-up run if so.【F:src/module/storage_preroll.py†L58-L96】</li>
+<li><strong>Whenever storage mounts:</strong> the SSD monitor emits an event that immediately schedules another pre-roll so freshly attached drives are exercised before you use them.【F:src/module/storage_preroll.py†L40-L92】</li>
+<li><strong>On demand:</strong> you can type <code>storage preroll</code> in the Cinemate CLI to queue a run manually. The command is ignored while a pre-roll is already active so repeated presses do not stack up.【F:src/module/cli_commands.py†L64-L72】【F:src/module/storage_preroll.py†L40-L92】</li>
+</ul>
+<p>The module keeps a lock so only one warm-up runs at a time and exposes the <code>storage_preroll_active</code> Redis key to let the UI show progress.【F:src/module/storage_preroll.py†L26-L74】</p>
+<h2 id="what-happens-during-a-run">What happens during a run<a class="headerlink" href="#what-happens-during-a-run" title="Permanent link">#</a></h2>
+<ol>
+<li>The helper aborts if no media is mounted or if a real recording is in progress; it will try again after the next trigger.【F:src/module/storage_preroll.py†L108-L133】</li>
+<li>It records the user's current FPS choice, switches the camera to the maximum FPS supported by the sensor/mode and raises a "pre-roll active" flag so other systems (such as the <code>rec</code> command) leave it alone.【F:src/module/storage_preroll.py†L134-L170】【F:src/module/cinepi_controller.py†L523-L542】</li>
+<li>Cinemate starts recording, waits until the REC flag is live, keeps rolling for the configured duration (two seconds by default) and then stops once all file buffers have flushed to disk.【F:src/module/storage_preroll.py†L134-L170】</li>
+<li>Finally, it restores the previous FPS, clears the activity flag and deletes any temporary clip directories created during the warm-up so the test footage never clutters your drive.【F:src/module/storage_preroll.py†L170-L208】</li>
+</ol>
+<h2 id="why-it-matters">Why it matters<a class="headerlink" href="#why-it-matters" title="Permanent link">#</a></h2>
+<p>Running a quick high-FPS burst before your first take helps avoid storage hiccups (for example, when an SSD controller is still negotiating link speed or establishing its allocation tables). Because Cinemate blocks normal <code>rec</code> requests while a pre-roll is active, you will always start your real recording on a fresh, warmed-up drive.【F:src/module/storage_preroll.py†L134-L208】【F:src/module/cinepi_controller.py†L523-L542】 Trigger it manually after swapping drives or when you have not recorded for a while to ensure peak performance.</p>
+</div>
+
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../system-services/" class="btn btn-neutral float-left" title="System services"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../installation-steps/" class="btn btn-neutral float-right" title="Manual installation">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tiramisioux/cinemate" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../system-services/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../installation-steps/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
+      <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

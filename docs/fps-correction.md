@@ -17,11 +17,12 @@ To validate or tune the correction factor, you can record a clip with a fixed fr
 rec f 1000
 ```
 
-This records exactly 1000 frames (based on the current FPS) and stops automatically. It is ideal for calibration because Cinemate knows exactly how many frames *should* have landed over the elapsed duration.
+This records exactly 1000 frames (based on the current FPS) and stops automatically. 
+Cinemate knows exactly how many frames *should* have landed over the elapsed duration and when recording stops it performs an analysis and proposes an fps correction factor
 
 ### How Cinemate analyzes the results
 
-After the recording finishes, Cinemate compares the expected frame count with the actual frames captured. When there is a mismatch, it derives a suggested correction factor and stores it for you to review (for example by reading the `fps_correction_suggestion` Redis key or checking the logs). If the frames are already in sync, it keeps the existing correction factor. This makes it easy to iteratively tune the correction for a specific sensor mode and FPS without guesswork.
+After the recording finishes, Cinemate compares the expected frame count with the actual frames captured. When there is a mismatch, it derives a suggested correction factor and suggests it to the user. If the frame count lands on the expected number of frames (with the tolerance of +/- 1 frame), it suggests to keep the existing correction factor.
 
 !!! note ""
      See [here](cli-commands.md) how to run Cinemate manually.

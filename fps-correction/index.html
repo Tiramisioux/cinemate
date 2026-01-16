@@ -156,9 +156,10 @@
 <div class="codehilite"><pre><span></span><code>rec f 1000
 </code></pre></div>
 
-<p>This records exactly 1000 frames (based on the current FPS) and stops automatically. It is ideal for calibration because Cinemate knows exactly how many frames <em>should</em> have landed over the elapsed duration.</p>
+<p>This records exactly 1000 frames (based on the current FPS) and stops automatically. 
+Cinemate knows exactly how many frames <em>should</em> have landed over the elapsed duration and when recording stops it performs an analysis and proposes an fps correction factor</p>
 <h3 id="how-cinemate-analyzes-the-results">How Cinemate analyzes the results<a class="headerlink" href="#how-cinemate-analyzes-the-results" title="Permanent link">#</a></h3>
-<p>After the recording finishes, Cinemate compares the expected frame count with the actual frames captured. When there is a mismatch, it derives a suggested correction factor and stores it for you to review (for example by reading the <code>fps_correction_suggestion</code> Redis key or checking the logs). If the frames are already in sync, it keeps the existing correction factor. This makes it easy to iteratively tune the correction for a specific sensor mode and FPS without guesswork.</p>
+<p>After the recording finishes, Cinemate compares the expected frame count with the actual frames captured. When there is a mismatch, it derives a suggested correction factor and suggests it to the user. If the frame count lands on the expected number of frames (with the tolerance of +/- 1 frame), it suggests to keep the existing correction factor.</p>
 <div class="admonition note">
 <p>See <a href="../cli-commands/">here</a> how to run Cinemate manually.</p>
 </div>

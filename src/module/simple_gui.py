@@ -299,9 +299,10 @@ class SimpleGUI(threading.Thread):
                 "label": "AUD",
                 "condition": lambda v: bool(v.get("mic_connected")),
                 "items": [
-                    {"key": "mic_bit_depth", "text": lambda v: v.get("mic_bit_depth", "")},
                     {"key": "mic_sample_rate", "text": lambda v: v.get("mic_sample_rate", "")},
-                    {"key": "frames_in_sync", "text": lambda v: "SYNC" if v.get("frames_in_sync") else ""},
+                    {"key": "mic_bit_depth", "text": lambda v: v.get("mic_bit_depth", "")},
+
+                    # {"key": "frames_in_sync", "text": lambda v: "SYNC" if v.get("frames_in_sync") else ""},
                 ],
             }
         ]
@@ -480,7 +481,7 @@ class SimpleGUI(threading.Thread):
             monitor = getattr(self.usb_monitor, "audio_monitor", None)
             bit_depth = getattr(monitor, "bit_depth", None)
             if bit_depth:
-                values["mic_bit_depth"] = f"{bit_depth}b"
+                values["mic_bit_depth"] = f"{bit_depth}"
 
             sample_rate = getattr(monitor, "sample_rate", None) or getattr(monitor, "audio_sample_rate", None)
             if sample_rate:

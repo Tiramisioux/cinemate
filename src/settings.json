@@ -35,7 +35,7 @@
   },
 
   "hdmi_gui": {
-    "buffer_vu_meter": true,
+    "buffer_vu_meter": false,
     "vu_meter_hatch_lines": true
   },
 
@@ -99,7 +99,7 @@
       "press_action": {"method": "rec"}
     },
     {
-      "pin": 27,
+      "pin": 7,
       "pull_up": true,
       "debounce_time": 0.1,
       "press_action": {"method": "rec"}
@@ -145,7 +145,7 @@
     "encoders": {
       "0": {
         "setting_name": "iso",
-        "button": {"press_action": {"method": "rec"}}
+        "button": {"press_action": {"method": "set_zoom"}}
       },
       "1": {
         "setting_name": "shutter_a",

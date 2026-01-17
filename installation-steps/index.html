@@ -151,7 +151,7 @@
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#seed-redis-with-default-keys">Seed Redis with default keys</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#add-alias">Add alias</a>
+    <li class="toctree-l3"><a class="reference internal" href="#add-aliases">Add aliases</a>
     </li>
         </ul>
     </li>
@@ -581,12 +581,14 @@ zoom<span class="w"> </span><span class="m">0</span><span class="w"> </span>writ
 </code></pre></div>
 
 <p>(See the settings guide for the full list.)</p>
-<h3 id="add-alias">Add alias<a class="headerlink" href="#add-alias" title="Permanent link">#</a></h3>
+<h3 id="add-aliases">Add aliases<a class="headerlink" href="#add-aliases" title="Permanent link">#</a></h3>
 <div class="codehilite"><pre><span></span><code>nano<span class="w"> </span>~/.bashrc
 </code></pre></div>
 
 <p>Add to the end of the file:</p>
 <div class="codehilite"><pre><span></span><code><span class="nb">alias</span><span class="w"> </span><span class="nv">cinemate</span><span class="o">=</span><span class="s1">&#39;python3 /home/pi/cinemate/src/main.py&#39;</span>
+<span class="nb">alias</span><span class="w"> </span><span class="nv">editboot</span><span class="o">=</span><span class="s1">&#39;sudo nano /boot/firmware/config.txt&#39;</span>
+<span class="nb">alias</span><span class="w"> </span><span class="nv">editsettings</span><span class="o">=</span><span class="s1">&#39;sudo nano /home/pi/cinemate/src/settings.json&#39;</span>
 </code></pre></div>
 
 <p>Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.</p>

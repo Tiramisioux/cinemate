@@ -445,7 +445,7 @@ zoom 0 write_speed_to_drive 0 recording_time 0
 
 (See the settings guide for the full list.)
 
-### Add alias
+### Add aliases
 
 ```shell
 nano ~/.bashrc
@@ -455,6 +455,8 @@ Add to the end of the file:
 
 ```shell
 alias cinemate='python3 /home/pi/cinemate/src/main.py'
+alias editboot='sudo nano /boot/firmware/config.txt'
+alias editsettings='sudo nano /home/pi/cinemate/src/settings.json'
 ```
 
 Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.

@@ -86,11 +86,7 @@ EOF
 
 ### .asoundrc Setup
 
-For `dsnoop` support, create a `~/etc/asound.conf` in home directory:
-
-```bash
-nano ~/etc/asound.conf
-```
+For `dsnoop` support, create a `~/etc/asound.conf`:
 
 ```bash
 

@@ -65,7 +65,7 @@ sudo apt install -y libspdlog-dev libjsoncpp-dev && cd /home/pi && git clone htt
 ### CinePi-RAW <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
 ```bash
-git clone https://github.com/Tiramisioux/cinepi-raw.git --branch rpicam-apps_1.7_custom_encoder
+git clone https://github.com/Tiramisioux/cinepi-raw.git
 cd cinepi-raw
 sudo rm -rf build
 sudo meson setup build

@@ -1,4 +1,5 @@
 import os
+import math
 import threading
 import time
 from PIL import Image, ImageDraw, ImageFont
@@ -46,6 +47,10 @@ class SimpleGUI(threading.Thread):
         
         # Load settings, not sure when the settings will be None so left the code here
         self.settings = settings or load_settings("/home/pi/cinemate/src/settings.json")
+        try:
+            self.preview_default_zoom = float(self.settings.get("preview", {}).get("default_zoom", 1.0))
+        except (TypeError, ValueError):
+            self.preview_default_zoom = 1.0
         
         self.setup_resources()
         self.check_display()
@@ -455,7 +460,8 @@ class SimpleGUI(threading.Thread):
             "exposure_time":  str(self.cinepi_controller.exposure_time_fractions),
 
             # misc labels / live data
-            "zoom_factor": "",   # will be filled below if ≠ 1.0
+            "zoom_factor": "",   # will be filled below
+            "zoom_is_default": True,
             "anamorphic_factor": f"{self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value)}X",
             "ram_load":       Utils.memory_usage(),
             "cpu_load":       Utils.cpu_load(),
@@ -504,8 +510,9 @@ class SimpleGUI(threading.Thread):
             z = float(self.redis_controller.get_value(ParameterKey.ZOOM.value) or 1.0)
         except (TypeError, ValueError):
             z = 1.0
-        if abs(z - 1.0) > 1e-3:                    # only show when ≠ 1.0
-            values["zoom_factor"] = f"{z:.1f}"
+        zoom_is_default = math.isclose(z, self.preview_default_zoom, abs_tol=1e-3)
+        values["zoom_is_default"] = zoom_is_default
+        values["zoom_factor"] = f"{z:.1f}"
 
         # ─── recording time ───
         raw_rt = self.redis_controller.get_value(ParameterKey.RECORDING_TIME.value)
@@ -740,7 +747,10 @@ class SimpleGUI(threading.Thread):
                 for part in str(val).split('\n'):
                     # choose box colour depending on item
                     if item["key"] == "zoom_factor":
-                        box_fill = (249, 249, 249)   # white box
+                        if values.get("zoom_is_default", True):
+                            box_fill = BOX_COLOR     # default grey
+                        else:
+                            box_fill = (255, 215, 0)   # yellow highlight
                     else:
                         box_fill = BOX_COLOR         # default grey
                     draw.rectangle([box_x, y, box_x + BOX_W, y + BOX_H],
@@ -1100,6 +1110,8 @@ class SimpleGUI(threading.Thread):
         preview_y = (frame_height - preview_h) // 2
 
         line_color = (249, 249, 249)
+        if not values.get("zoom_is_default", True):
+            line_color = (255, 215, 0)
 
         draw.rectangle(
             [preview_x, preview_y, preview_x + preview_w, preview_y + preview_h],

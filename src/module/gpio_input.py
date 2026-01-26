@@ -82,15 +82,19 @@ class ComponentInitializer:
             encoder_actions = encoder_config.get('encoder_actions', {})
             rotate_cw_action_method = self.extract_action_method(encoder_actions.get('rotate_clockwise'))
             rotate_ccw_action_method = self.extract_action_method(encoder_actions.get('rotate_counterclockwise'))
+            detents_per_pulse = self._normalize_detents_per_pulse(encoder_config.get('detents_per_pulse'))
             
             self.logger.info(f"Rotary Encoder with Button on CLK pin: {encoder_config['clk_pin']}, DT pin: {encoder_config['dt_pin']}")
             if not "None" in str(rotate_cw_action_method): self.logger.info(f"  Rotate Clockwise: {rotate_cw_action_method}")
             if not "None" in str(rotate_ccw_action_method): self.logger.info(f"  Rotate CounterClockwise: {rotate_ccw_action_method}")
+            if detents_per_pulse > 1:
+                self.logger.info(f"  Detents per pulse: {detents_per_pulse}")
             RotaryEncoder(
                 cinepi_controller=self.cinepi_controller,
                 clk_pin=encoder_config['clk_pin'],
                 dt_pin=encoder_config['dt_pin'],
-                actions=encoder_config['encoder_actions']
+                actions=encoder_config['encoder_actions'],
+                detents_per_pulse=detents_per_pulse
             )
         
 
@@ -109,6 +113,13 @@ class ComponentInitializer:
             return action_config.get('method')
         else:
             return None
+
+    @staticmethod
+    def _normalize_detents_per_pulse(value):
+        try:
+            return max(1, int(value or 1))
+        except (TypeError, ValueError):
+            return 1
 
     def _describe_actions(self, config):
         """
@@ -524,7 +535,7 @@ class ThreeWaySwitch:
         return -1  # Undefined position
     
 class RotaryEncoder:
-    def __init__(self, cinepi_controller, clk_pin, dt_pin, actions):
+    def __init__(self, cinepi_controller, clk_pin, dt_pin, actions, detents_per_pulse=1):
         self.logger = logging.getLogger(f"RotaryEncoder{clk_pin}_{dt_pin}")
         
         # Correct initialization with gpiozero's RotaryEncoder using a and b for pin names
@@ -532,6 +543,7 @@ class RotaryEncoder:
         
         self.actions = actions
         self.cinepi_controller = cinepi_controller
+        self.detents_per_pulse = ComponentInitializer._normalize_detents_per_pulse(detents_per_pulse)
 
         # Set up event handlers
         self.encoder.when_rotated_clockwise = self.on_rotated_clockwise
@@ -540,26 +552,29 @@ class RotaryEncoder:
     def on_rotated_clockwise(self):
         action = self.actions.get('rotate_clockwise')
         if action:
-            method_name = action.get('method')
-            args = action.get('args', [])
-            method = getattr(self.cinepi_controller, method_name, None)
-            if method:
-                method(*args)
-                self.logger.info(f"Rotary encoder rotated clockwise, calling method {method_name} with args {args}.") 
-            else:
-                self.logger.error(f"Method {method_name} not found in cinepi_controller.")
+            self._trigger_action(action, direction="clockwise")
 
     def on_rotated_counter_clockwise(self):
         action = self.actions.get('rotate_counterclockwise')
         if action:
-            method_name = action.get('method')
-            args = action.get('args', [])
-            method = getattr(self.cinepi_controller, method_name, None)
-            if method:
+            self._trigger_action(action, direction="counterclockwise")
+
+    def _trigger_action(self, action, direction):
+        method_name = action.get('method')
+        args = action.get('args', [])
+        method = getattr(self.cinepi_controller, method_name, None)
+        if method:
+            for _ in range(self.detents_per_pulse):
                 method(*args)
-                self.logger.info(f"Rotary encoder rotated counterclockwise, calling method {method_name} with args {args}.")
-            else:
-                self.logger.error(f"Method {method_name} not found in cinepi_controller.")
+            self.logger.info(
+                "Rotary encoder rotated %s, calling method %s with args %s (%sx)",
+                direction,
+                method_name,
+                args,
+                self.detents_per_pulse,
+            )
+        else:
+            self.logger.error(f"Method {method_name} not found in cinepi_controller.")
 
 
 # Suppress specific warnings

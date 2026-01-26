@@ -224,6 +224,7 @@ Rotary encoders used for fine adjustment of settings. These can be wired straigh
 {
   "clk_pin": 9,
   "dt_pin": 11,
+  "detents_per_pulse": 2,
   "encoder_actions": {
     "rotate_clockwise":        {"method": "inc_iso"},
     "rotate_counterclockwise": {"method": "dec_iso"}
@@ -231,7 +232,7 @@ Rotary encoders used for fine adjustment of settings. These can be wired straigh
 }
 ```
 
-<br>`clk_pin` and `dt_pin` – the two pins of the encoder.<br>`encoder_actions` – commands to run when turning the dial.
+<br>`clk_pin` and `dt_pin` – the two pins of the encoder.<br>`detents_per_pulse` – number of mechanical clicks per electrical pulse (use 2 for encoders that require two detents for one pulse). This scales the action count to match the detents you feel.<br>`encoder_actions` – commands to run when turning the dial.
 
 ## quad_rotary_controller
 
@@ -241,10 +242,11 @@ Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry m
 "quad_rotary_controller": {
   "enabled": true,
   "encoders": {
-    "0": {"setting_name": "iso", "button": {"press_action": {"method": "rec"}}},
-    "1": {"setting_name": "shutter_a", "button": {"press_action": {"method": "set_fps_double"}}},
+    "0": {"setting_name": "iso", "detents_per_pulse": 2, "button": {"press_action": {"method": "rec"}}},
+    "1": {"setting_name": "shutter_a", "detents_per_pulse": 1, "button": {"press_action": {"method": "set_fps_double"}}},
     "2": {
       "setting_name": "fps",
+      "detents_per_pulse": 2,
       "button": {
         "press_action": "None",
         "single_click_action": {"method": "set_resolution"},
@@ -253,12 +255,12 @@ Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry m
         "hold_action": {"method": "toggle_mount"}
       }
     },
-    "3": {"setting_name": "wb", "button": {"press_action": {"method": "rec"}}}
+    "3": {"setting_name": "wb", "detents_per_pulse": 1, "button": {"press_action": {"method": "rec"}}}
   }
 }
 ```
 
-`enabled` – turn the quad rotary controller on or off.<br>`encoders` – mapping of each dial to a setting and button actions.
+`enabled` – turn the quad rotary controller on or off.<br>`encoders` – mapping of each dial to a setting and button actions.<br>`detents_per_pulse` – number of mechanical clicks per electrical pulse; multiply the setting changes per pulse so each detent feels like one step.
 
 ## i2c_oled
 

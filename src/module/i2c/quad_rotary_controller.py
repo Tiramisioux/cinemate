@@ -168,7 +168,7 @@ class QuadRotaryController(threading.Thread):
                     change = pos - self.last_positions[idx]
                     self.last_positions[idx] = pos
                     setting = cfg.get("setting_name")
-                    detents_per_pulse = self._normalize_detents_per_pulse(cfg.get("detents_per_pulse"))
+                    detents_per_pulse = max(1, int(cfg.get("detents_per_pulse", 1)))
                     if setting:
                         self._update_setting(setting, change, detents_per_pulse)
                 if not self.switches[idx].value:

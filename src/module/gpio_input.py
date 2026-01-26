@@ -82,7 +82,7 @@ class ComponentInitializer:
             encoder_actions = encoder_config.get('encoder_actions', {})
             rotate_cw_action_method = self.extract_action_method(encoder_actions.get('rotate_clockwise'))
             rotate_ccw_action_method = self.extract_action_method(encoder_actions.get('rotate_counterclockwise'))
-            detents_per_pulse = self._normalize_detents_per_pulse(encoder_config.get('detents_per_pulse'))
+            detents_per_pulse = int(encoder_config.get('detents_per_pulse', 1))
             
             self.logger.info(f"Rotary Encoder with Button on CLK pin: {encoder_config['clk_pin']}, DT pin: {encoder_config['dt_pin']}")
             if not "None" in str(rotate_cw_action_method): self.logger.info(f"  Rotate Clockwise: {rotate_cw_action_method}")
@@ -543,7 +543,7 @@ class RotaryEncoder:
         
         self.actions = actions
         self.cinepi_controller = cinepi_controller
-        self.detents_per_pulse = ComponentInitializer._normalize_detents_per_pulse(detents_per_pulse)
+        self.detents_per_pulse = max(1, int(detents_per_pulse))
 
         # Set up event handlers
         self.encoder.when_rotated_clockwise = self.on_rotated_clockwise

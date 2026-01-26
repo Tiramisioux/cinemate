@@ -461,6 +461,7 @@ class SimpleGUI(threading.Thread):
 
             # misc labels / live data
             "zoom_factor": "",   # will be filled below
+            "zoom_factor": "",   # will be filled below if ≠ default zoom
             "zoom_is_default": True,
             "anamorphic_factor": f"{self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value)}X",
             "ram_load":       Utils.memory_usage(),
@@ -510,9 +511,11 @@ class SimpleGUI(threading.Thread):
             z = float(self.redis_controller.get_value(ParameterKey.ZOOM.value) or 1.0)
         except (TypeError, ValueError):
             z = 1.0
-        zoom_is_default = math.isclose(z, self.preview_default_zoom, abs_tol=1e-3)
+        zoom_is_default = abs(z - self.preview_default_zoom) <= 1e-3
         values["zoom_is_default"] = zoom_is_default
         values["zoom_factor"] = f"{z:.1f}"
+        if not zoom_is_default:                    # only show when ≠ default
+            values["zoom_factor"] = f"{z:.1f}"
 
         # ─── recording time ───
         raw_rt = self.redis_controller.get_value(ParameterKey.RECORDING_TIME.value)
@@ -751,6 +754,7 @@ class SimpleGUI(threading.Thread):
                             box_fill = BOX_COLOR     # default grey
                         else:
                             box_fill = (255, 215, 0)   # yellow highlight
+                        box_fill = (255, 215, 0)   # yellow highlight
                     else:
                         box_fill = BOX_COLOR         # default grey
                     draw.rectangle([box_x, y, box_x + BOX_W, y + BOX_H],

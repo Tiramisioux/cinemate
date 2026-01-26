@@ -459,6 +459,7 @@ class SimpleGUI(threading.Thread):
             "exposure_time":  str(self.cinepi_controller.exposure_time_fractions),
 
             # misc labels / live data
+            "zoom_factor": "",   # will be filled below
             "zoom_factor": "",   # will be filled below if ≠ default zoom
             "zoom_is_default": True,
             "anamorphic_factor": f"{self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value)}X",
@@ -511,6 +512,7 @@ class SimpleGUI(threading.Thread):
             z = 1.0
         zoom_is_default = abs(z - self.preview_default_zoom) <= 1e-3
         values["zoom_is_default"] = zoom_is_default
+        values["zoom_factor"] = f"{z:.1f}"
         if not zoom_is_default:                    # only show when ≠ default
             values["zoom_factor"] = f"{z:.1f}"
 
@@ -747,6 +749,10 @@ class SimpleGUI(threading.Thread):
                 for part in str(val).split('\n'):
                     # choose box colour depending on item
                     if item["key"] == "zoom_factor":
+                        if values.get("zoom_is_default", True):
+                            box_fill = BOX_COLOR     # default grey
+                        else:
+                            box_fill = (255, 215, 0)   # yellow highlight
                         box_fill = (255, 215, 0)   # yellow highlight
                     else:
                         box_fill = BOX_COLOR         # default grey

@@ -168,8 +168,9 @@ class QuadRotaryController(threading.Thread):
                     change = pos - self.last_positions[idx]
                     self.last_positions[idx] = pos
                     setting = cfg.get("setting_name")
+                    detents_per_pulse = max(1, int(cfg.get("detents_per_pulse", 1)))
                     if setting:
-                        self._update_setting(setting, change)
+                        self._update_setting(setting, change, detents_per_pulse)
                 if not self.switches[idx].value:
                     if not self.button_states[idx]:
                         self.button_states[idx] = True
@@ -187,14 +188,17 @@ class QuadRotaryController(threading.Thread):
             self._last_reconnect = time.time()
             logging.error("Quad rotary controller I/O error: %s", exc)
 
-    def _update_setting(self, name: str, change: int):
+    def _update_setting(self, name: str, change: int, detents_per_pulse: int):
         inc = getattr(self.cinepi_controller, f"inc_{name}", None)
         dec = getattr(self.cinepi_controller, f"dec_{name}", None)
         try:
+            steps = abs(change) * detents_per_pulse
             if change > 0 and inc:
-                inc()
+                for _ in range(steps):
+                    inc()
             elif change < 0 and dec:
-                dec()
+                for _ in range(steps):
+                    dec()
         except Exception as exc:
             logging.error("Failed to update %s: %s", name, exc)
 

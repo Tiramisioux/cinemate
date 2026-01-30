@@ -28,7 +28,10 @@ SENSOR_CORRECTION_FACTORS: Dict[str, Dict[int | str, Dict[int, float] | float]] 
     "imx283": {
         "_default": DEFAULT_CORRECTION_FACTOR,
         0: {},
-        1: {},
+        1: {
+	    24: 1.0,
+            25: 0.9990 #verified 10000 frames 2.7K
+    	},
     },
     "imx477": {
         "_default": DEFAULT_CORRECTION_FACTOR,

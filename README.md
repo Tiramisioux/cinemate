@@ -14,13 +14,12 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
 - option to record a fixed number of frames or seconds for user calibration of fps correction factors (run Cinemate manually for this calibration as feedback is supplied in the terminal)
 - improved recognition of attached microphones
 
-
 ## Compatible sensors
 
 - IMX477 (official Raspberry Pi HQ camera)
-- IMX294 (official Raspberry Pi GS camera)
-- IMX585 ([Starlight Eye](https://www.tindie.com/products/will123321/starlighteye/) by Will Whang)
+- IMX296 (official Raspberry Pi GS camera)
 - IMX283 ([OneInchEye](https://www.tindie.com/products/will123321/oneincheye-v20/) by Will Whang)
+- IMX585 ([Starlight Eye](https://www.tindie.com/products/will123321/starlighteye/) by Will Whang)
 
 ## Preinstalled hardware
 

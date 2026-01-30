@@ -10,8 +10,6 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
   <p><em>Figure 1: Camera stack exploded view. Apps change settings by updating Redis keys. CinePi-RAW listens for those updates and captures frames accordingly while Cinemate provides the camera user interface.</em></p>
 </div>
 
-
-
 !!! tip ""
     ## New features in version 3.2
 
@@ -35,9 +33,9 @@ For manual install of the camera stack on Raspberry Pi Bookworm, see the [here](
 ## Compatible sensors
 
 - IMX477 (official Raspberry Pi HQ camera)
-- IMX294 (official Raspberry Pi GS camera)
-- IMX585 ([Starlight Eye](https://www.tindie.com/products/will123321/starlighteye/) by Will Whang)
+- IMX296 (official Raspberry Pi GS camera)
 - IMX283 ([OneInchEye](https://www.tindie.com/products/will123321/oneincheye-v20/) by Will Whang)
+- IMX585 ([Starlight Eye](https://www.tindie.com/products/will123321/starlighteye/) by Will Whang)
 
 ## Preinstalled hardware
 

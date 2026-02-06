@@ -94,6 +94,7 @@ class SSDMonitor:
         self._write_speed   = 0.0       # current write speed in MB/s
         
         self._last_cfe_mount_try = 0.
+        self._last_recording_log = {}
 
         # next fsck schedule (run once right after boot/mount)
         self._next_fsck_ts = time.time()
@@ -726,8 +727,11 @@ class SSDMonitor:
                     dng += 1
                 elif suf == ".wav":
                     wav += 1
-            logging.info("Latest recording “%s”: %d DNG | %d WAV",
-                         d.name, dng, wav)
+            last_logged = self._last_recording_log.get(d.name)
+            if last_logged != (dng, wav):
+                logging.info("Latest recording “%s”: %d DNG | %d WAV",
+                             d.name, dng, wav)
+                self._last_recording_log[d.name] = (dng, wav)
             infos.append((d.name, dng, wav))
         return infos
 

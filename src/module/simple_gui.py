@@ -504,6 +504,16 @@ class SimpleGUI(threading.Thread):
 
             if self.ssd_monitor:
                 try:
+                    rec_active = any([
+                        int(self.redis_controller.get_value(ParameterKey.REC.value) or 0) == 1,
+                        int(self.redis_controller.get_value(ParameterKey.IS_WRITING_BUF.value) or 0) == 1,
+                        int(self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value) or 0) == 1,
+                    ])
+                    if rec_active:
+                        values["mic_wav_saved"] = False
+                    else:
+                        _, dng_count, wav_count = self.ssd_monitor.get_latest_recording_info()
+                        values["mic_wav_saved"] = dng_count > 0 and wav_count > 0
                     _, dng_count, wav_count = self.ssd_monitor.get_latest_recording_info()
                     values["mic_wav_saved"] = dng_count > 0 and wav_count > 0
                 except (TypeError, ValueError):

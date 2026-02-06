@@ -8,6 +8,8 @@ Responsible for autostart of Cinemate on boot. By default, it is turned off on t
 
 Starting in v3.2 the service now waits for the camera sensor to come online before launching the UI. The helper script `/usr/local/bin/camera-ready.sh` polls `cinepi-raw --list-cameras` for up to 30 seconds and logs progress to the systemd journal so Cinemate does not start with a black screen if the IMX sensor is still initialising.
 
+To keep `journalctl -fu cinemate-autostart` readable when ALSA reports noisy underruns, the unit rate-limits log output (see `LogRateLimitIntervalSec` and `LogRateLimitBurst` in the service file). Adjust those values if you need more or less verbosity.
+
 ### Starting, stopping, enabling and disabling the service
 
 Go to the Cinemate folder:

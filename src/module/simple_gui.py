@@ -514,6 +514,8 @@ class SimpleGUI(threading.Thread):
                     else:
                         _, dng_count, wav_count = self.ssd_monitor.get_latest_recording_info()
                         values["mic_wav_saved"] = dng_count > 0 and wav_count > 0
+                    _, dng_count, wav_count = self.ssd_monitor.get_latest_recording_info()
+                    values["mic_wav_saved"] = dng_count > 0 and wav_count > 0
                 except (TypeError, ValueError):
                     values["mic_wav_saved"] = False
 

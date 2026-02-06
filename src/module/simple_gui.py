@@ -301,6 +301,7 @@ class SimpleGUI(threading.Thread):
                 "items": [
                     {"key": "mic_sample_rate", "text": lambda v: v.get("mic_sample_rate", "")},
                     {"key": "mic_bit_depth", "text": lambda v: v.get("mic_bit_depth", "")},
+                    {"key": "mic_wav_saved", "text": lambda v: "WAV" if v.get("mic_wav_saved") else ""},
 
                     # {"key": "frames_in_sync", "text": lambda v: "SYNC" if v.get("frames_in_sync") else ""},
                 ],
@@ -464,6 +465,7 @@ class SimpleGUI(threading.Thread):
             "disk_label":     (self.ssd_monitor.device_name or "").upper()[:4],
             "usb_connected":  bool(self.serial_handler.serial_connected),
             "mic_connected":  self.usb_monitor.usb_mic is not None,
+            "mic_wav_saved":  False,
             "keyboard_connected": bool(self.usb_monitor and self.usb_monitor.usb_keyboard),
             "storage_type":   self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value),
             "write_speed":    self.redis_controller.get_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value) or "0 MB/s",
@@ -499,6 +501,21 @@ class SimpleGUI(threading.Thread):
                 values["frames_in_sync"] = int(self.redis_controller.get_value(ParameterKey.FRAMES_IN_SYNC.value) or 0) == 1
             except (TypeError, ValueError):
                 values["frames_in_sync"] = False
+
+            if self.ssd_monitor:
+                try:
+                    rec_active = any([
+                        int(self.redis_controller.get_value(ParameterKey.REC.value) or 0) == 1,
+                        int(self.redis_controller.get_value(ParameterKey.IS_WRITING_BUF.value) or 0) == 1,
+                        int(self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value) or 0) == 1,
+                    ])
+                    if rec_active:
+                        values["mic_wav_saved"] = False
+                    else:
+                        _, dng_count, wav_count = self.ssd_monitor.get_latest_recording_info()
+                        values["mic_wav_saved"] = dng_count > 0 and wav_count > 0
+                except (TypeError, ValueError):
+                    values["mic_wav_saved"] = False
 
         # ── Zoom factor (preview punch-in) ────────────────────────────────
         default_zoom = float(self.settings.get("preview", {}).get("default_zoom", 1.0))

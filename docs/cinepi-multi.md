@@ -1,6 +1,6 @@
 # How Cinemate launches cinepi-raw
 
-`cinemate/src/module/cinepi_multi.py`  starts one `cinepi-raw` process per connected camera. It takes camera information `cinemate/src/module/sensor_detect.py` and user settings from `cinemate/src/module/settings.json` to build the command and command-line flags passed to `cinepi-raw`.
+The file `cinemate/src/module/cinepi_multi.py`  starts one `cinepi-raw` process per connected camera. It takes camera information `cinemate/src/module/sensor_detect.py` and user settings from `cinemate/src/module/settings.json` to build the command and command-line flags passed to `cinepi-raw`.
 
 
 ## Detecting Cameras

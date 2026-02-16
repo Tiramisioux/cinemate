@@ -13,9 +13,11 @@ corresponding controller methods.
      cinemate       # start cinemate manually
 
 !!! note ""
+     
      Commands without an explicit argument will toggle the current state when possible (e.g. `set fps lock` flips the lock; `set fps lock 1` forces it on).
 
 !!! note ""
+
      All of the commands below can be easily mapped to GPIO buttons rotary encoders and other input devices. See [this section](settings-json.md) for how to configure the settings file.
 
 

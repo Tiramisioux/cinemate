@@ -1,60 +1,54 @@
 # Audio recording (experimental)
 
-Cinemate records audio alongside the image sequence. Support is currently limited to a few USB microphones with hard coded configurations:
+Cinemate records audio alongside the image sequence. Audio is written as `.wav` files into the same folder as the `.dng` frames. The implementation is still experimental and audio/video synchronization needs further investigation.
+
+## Supported microphones
  - **RØDE VideoMic NTG** – recorded in stereo at 24‑bit/48 kHz.
  - **USB PnP microphones** – recorded in mono at 16‑bit/48 kHz.
 
-Other class‑compliant USB microphones are now detected automatically by probing the ALSA hardware devices reported by `arecord -l`. Cinemate will fall back to using the matching USB device (via `plughw:<card>,<device>`) if the `mic_24bit` or `mic_16bit` aliases are not available.
 
-Audio is written as `.wav` files into the same folder as the `.dng` frames. The implementation is still experimental and audio/video synchronization needs further investigation.
 
-### .asoundrc Setup
+## .asoundrc Setup
 
-For `dsnoop` support, create a `~/.asoundrc` in home directory:
-
-```bash
-nano ~/.asoundrc
-```
-
-Paste this into the file:
+For `dsnoop` support, create a `~/etc/asound.conf`:
 
 ```bash
 
-    pcm.dsnoop_24bit {
-        type dsnoop
-        ipc_key 2048
-        slave {
-            pcm "hw:Device,0"
-            channels 2
-            rate 48000
-            format S24_3LE
-            period_size 1024
-            buffer_size 4096
-        }
-    }
+sudo tee /etc/asound.conf >/dev/null <<'EOF'
+# --- Hardware handle (use stable card name; change "NTG" if your card shows a different name in `arecord -l`)
+pcm.mic_hw {
+  type hw
+  card "NTG"
+  device 0
+}
 
-    pcm.dsnoop_16bit {
-        type dsnoop
-        ipc_key 2049
-        slave {
-            pcm "hw:Device,0"
-            channels 1
-            rate 48000
-            format S16_LE
-            period_size 1024
-            buffer_size 4096
-        }
-    }
+# --- One shared dsnoop backend pinned to the mic's native mode (RØDE NTG: S24_3LE @ 48k, stereo)
+pcm.mic_dsnoop {
+  type dsnoop
+  ipc_key 5978
+  ipc_perm 0666
+  ipc_key_add_uid false
+  slave {
+    pcm "hw:CARD=NTG,DEV=0"
+    format S24_3LE
+    rate 48000
+    channels 2
+  }
+  bindings.0 0
+  bindings.1 1
+}
 
-    pcm.mic_24bit {
-        type plug
-        slave.pcm "dsnoop_24bit"
-    }
+# --- Front-ends: let plug adapt whatever the app asks for (stereo 24-bit or mono 16-bit)
+pcm.mic_24bit {
+  type plug
+  slave.pcm "mic_dsnoop"
+}
 
-    pcm.mic_16bit {
-        type plug
-        slave.pcm "dsnoop_16bit"
-    }
+pcm.mic_16bit {
+  type plug
+  slave.pcm "mic_dsnoop"
+}
+EOF
 
 ```
 

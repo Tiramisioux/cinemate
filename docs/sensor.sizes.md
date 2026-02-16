@@ -20,18 +20,18 @@ C and CS lenses were designed for small‑format video and security cameras, so 
 
 ---
 
-## 4  What if I really want wide shots?
+## What if I really want wide shots?
 
 You have two realistic options:
 
 1. **Speed‑boosters and focal reducers**  
    These compress a larger image circle down onto the small sensor, regaining some angle of view. They cost more than the camera and introduce extra optical surfaces, but can work in a pinch.  
 2. **A bigger sensor**  
-   Stepping up to something like the IMX585 (“1/1.2 inch”) cuts the crop factor roughly in half. At that point, adapting Micro‑Four‑Thirds or vintage 35 mm lenses begins to make practical sense.
+   Stepping up to something like the IMX585 (“1/1.2 inch”) cuts the crop factor roughly in half. At that point, adapting Micro‑Four‑Thirds or vintage 35 mm lenses begins to make practical sense.
 
 ---
 
-## 5  Buying roadmap for beginners
+##  Buying tips for beginners
 
 1. **Start with the stock 6 – 12 mm Raspberry Pi zoom**  
    It teaches you which focal lengths you genuinely use.  

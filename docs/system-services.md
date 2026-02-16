@@ -4,7 +4,7 @@ Cinemate uses three system services for its operation.
 
 ## cinemate-autostart.service
 
-Responsible for autostart of Cinemate on boot. By default, it is turned off on the [downloadable image file](https://github.com/Tiramisioux/cinemate/releases/tag/3.1).
+Responsible for autostart of Cinemate on boot. By default, it is turned off on the [downloadable image file](https://github.com/Tiramisioux/cinemate/releases/tag/3.2).
 
 Starting in v3.2 the service now waits for the camera sensor to come online before launching the UI. The helper script `/usr/local/bin/camera-ready.sh` polls `cinepi-raw --list-cameras` for up to 30 seconds and logs progress to the systemd journal so Cinemate does not start with a black screen if the IMX sensor is still initialising.
 

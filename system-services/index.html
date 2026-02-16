@@ -153,7 +153,7 @@
   <h1 id="system-services">System services<a class="headerlink" href="#system-services" title="Permanent link">#</a></h1>
 <p>Cinemate uses three system services for its operation.</p>
 <h2 id="cinemate-autostartservice">cinemate-autostart.service<a class="headerlink" href="#cinemate-autostartservice" title="Permanent link">#</a></h2>
-<p>Responsible for autostart of Cinemate on boot. By default, it is turned off on the <a href="https://github.com/Tiramisioux/cinemate/releases/tag/3.1">downloadable image file</a>.</p>
+<p>Responsible for autostart of Cinemate on boot. By default, it is turned off on the <a href="https://github.com/Tiramisioux/cinemate/releases/tag/3.2">downloadable image file</a>.</p>
 <p>Starting in v3.2 the service now waits for the camera sensor to come online before launching the UI. The helper script <code>/usr/local/bin/camera-ready.sh</code> polls <code>cinepi-raw --list-cameras</code> for up to 30 seconds and logs progress to the systemd journal so Cinemate does not start with a black screen if the IMX sensor is still initialising.</p>
 <p>To keep <code>journalctl -fu cinemate-autostart</code> readable when ALSA reports noisy underruns, the unit rate-limits log output (see <code>LogRateLimitIntervalSec</code> and <code>LogRateLimitBurst</code> in the service file). Adjust those values if you need more or less verbosity.</p>
 <h3 id="starting-stopping-enabling-and-disabling-the-service">Starting, stopping, enabling and disabling the service<a class="headerlink" href="#starting-stopping-enabling-and-disabling-the-service" title="Permanent link">#</a></h3>

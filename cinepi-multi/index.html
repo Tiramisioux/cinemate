@@ -138,7 +138,7 @@
               
 <div class="markdown-body">
   <h1 id="how-cinemate-launches-cinepi-raw">How Cinemate launches cinepi-raw<a class="headerlink" href="#how-cinemate-launches-cinepi-raw" title="Permanent link">#</a></h1>
-<p><code>cinemate/src/module/cinepi_multi.py</code>  starts one <code>cinepi-raw</code> process per connected camera. It takes camera information <code>cinemate/src/module/sensor_detect.py</code> and user settings from <code>cinemate/src/module/settings.json</code> to build the command and command-line flags passed to <code>cinepi-raw</code>.</p>
+<p>The file <code>cinemate/src/module/cinepi_multi.py</code>  starts one <code>cinepi-raw</code> process per connected camera. It takes camera information <code>cinemate/src/module/sensor_detect.py</code> and user settings from <code>cinemate/src/module/settings.json</code> to build the command and command-line flags passed to <code>cinepi-raw</code>.</p>
 <h2 id="detecting-cameras">Detecting Cameras<a class="headerlink" href="#detecting-cameras" title="Permanent link">#</a></h2>
 <p>When CineMate starts, <code>cinemate/src/module/cinepi_multi.py/CinePiManager</code> runs the cli command <code>cinepi-raw --list-cameras</code>. The manager parses this output and stores resolution modes for each attached camera.</p>
 <div class="admonition tip">

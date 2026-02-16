@@ -95,8 +95,6 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#what-happens-during-a-run">What happens during a run</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#why-it-matters">Why it matters</a>
-    </li>
     </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
@@ -147,23 +145,35 @@
               
 <div class="markdown-body">
   <h1 id="storage-pre-roll-warm-up">Storage pre-roll warm-up<a class="headerlink" href="#storage-pre-roll-warm-up" title="Permanent link">#</a></h1>
-<p>Cinemate includes an automatic "storage pre-roll" that records and discards a short clip to make sure new media can keep up before you roll on something important.【F:src/module/storage_preroll.py†L1-L57】 The warm-up runs the recorder at full speed so SSDs spin up, controllers cache their write tables and the rest of the pipeline has a chance to stabilise.</p>
+<p>Cinemate includes an automatic "storage pre-roll" that records and discards a short clip to make sure new media can keep up. The warm-up runs the recorder at full speed so SSDs spin up, controllers cache their write tables and the rest of the pipeline has a chance to stabilise.</p>
 <h2 id="when-the-pre-roll-runs">When the pre-roll runs<a class="headerlink" href="#when-the-pre-roll-runs" title="Permanent link">#</a></h2>
 <ul>
-<li><strong>On startup:</strong> after a brief settle delay, the helper checks whether the RAW volume is mounted and triggers a warm-up run if so.【F:src/module/storage_preroll.py†L58-L96】</li>
-<li><strong>Whenever storage mounts:</strong> the SSD monitor emits an event that immediately schedules another pre-roll so freshly attached drives are exercised before you use them.【F:src/module/storage_preroll.py†L40-L92】</li>
-<li><strong>On demand:</strong> you can type <code>storage preroll</code> in the Cinemate CLI to queue a run manually. The command is ignored while a pre-roll is already active so repeated presses do not stack up.【F:src/module/cli_commands.py†L64-L72】【F:src/module/storage_preroll.py†L40-L92】</li>
+<li>
+<p><strong>On startup:</strong> after a brief settle delay, the helper checks whether the RAW volume is mounted and triggers a warm-up run if so.</p>
+</li>
+<li>
+<p><strong>Whenever storage mounts:</strong> the SSD monitor emits an event that immediately schedules another pre-roll so freshly attached drives are exercised before you use them.</p>
+</li>
+<li>
+<p><strong>On demand:</strong> you can type <code>storage preroll</code> in the Cinemate CLI to queue a run manually. The command is ignored while a pre-roll is already active so repeated presses do not stack up.</p>
+</li>
 </ul>
-<p>The module keeps a lock so only one warm-up runs at a time and exposes the <code>storage_preroll_active</code> Redis key to let the UI show progress.【F:src/module/storage_preroll.py†L26-L74】</p>
+<p>The module keeps a lock so only one warm-up runs at a time and exposes the <code>storage_preroll_active</code> Redis key to let the UI show progress.</p>
 <h2 id="what-happens-during-a-run">What happens during a run<a class="headerlink" href="#what-happens-during-a-run" title="Permanent link">#</a></h2>
 <ol>
-<li>The helper aborts if no media is mounted or if a real recording is in progress; it will try again after the next trigger.【F:src/module/storage_preroll.py†L108-L133】</li>
-<li>It records the user's current FPS choice, switches the camera to the maximum FPS supported by the sensor/mode and raises a "pre-roll active" flag so other systems (such as the <code>rec</code> command) leave it alone.【F:src/module/storage_preroll.py†L134-L170】【F:src/module/cinepi_controller.py†L523-L542】</li>
-<li>Cinemate starts recording, waits until the REC flag is live, keeps rolling for the configured duration (two seconds by default) and then stops once all file buffers have flushed to disk.【F:src/module/storage_preroll.py†L134-L170】</li>
-<li>Finally, it restores the previous FPS, clears the activity flag and deletes any temporary clip directories created during the warm-up so the test footage never clutters your drive.【F:src/module/storage_preroll.py†L170-L208】</li>
+<li>
+<p>The helper aborts if no media is mounted or if a real recording is in progress; it will try again after the next trigger.</p>
+</li>
+<li>
+<p>It records the user's current FPS choice, switches the camera to the maximum FPS supported by the sensor/mode and raises a "pre-roll active" flag so other systems (such as the <code>rec</code> command) leave it alone.</p>
+</li>
+<li>
+<p>Cinemate starts recording, waits until the REC flag is live, keeps rolling for the configured duration (two seconds by default) and then stops once all file buffers have flushed to disk.</p>
+</li>
+<li>
+<p>After recording the 2 second temporary clip, it restores the previous FPS, clears the activity flag and deletes the temporary clip directory.</p>
+</li>
 </ol>
-<h2 id="why-it-matters">Why it matters<a class="headerlink" href="#why-it-matters" title="Permanent link">#</a></h2>
-<p>Running a quick high-FPS burst before your first take helps avoid storage hiccups (for example, when an SSD controller is still negotiating link speed or establishing its allocation tables). Because Cinemate blocks normal <code>rec</code> requests while a pre-roll is active, you will always start your real recording on a fresh, warmed-up drive.【F:src/module/storage_preroll.py†L134-L208】【F:src/module/cinepi_controller.py†L523-L542】 Trigger it manually after swapping drives or when you have not recorded for a while to ensure peak performance.</p>
 </div>
 
             </div>

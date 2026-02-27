@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Settings",
+  "type": "object",
+  "properties": {
+    "i2c_oled": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "width": {
+          "type": "integer",
+          "default": 128
+        },
+        "height": {
+          "type": "integer",
+          "default": 64
+        },
+        "font_size": {
+          "type": "integer",
+          "default": 10
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "iso",
+                  "shutter_a",
+                  "fps",
+                  "wb_user",
+                  "is_recording",
+                  "resolution",
+                  "cpu_load",
+                  "cpu_temp",
+                  "memory_usage",
+                  "space_left"
+                ]
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "welcome_message": {
+      "type": "string",
+      "default": "THIS IS A COOL MACHINE"
+    },
+    "welcome_image": {
+      "anyOf": [{"type": "string"}, {"type": "null"}],
+      "default": null
+    },
+    "pico_link": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean", "default": false},
+        "bind_host": {"type": "string", "default": "0.0.0.0"},
+        "beacon_host": {"type": "string", "default": "192.168.4.255"},
+        "beacon_port": {"type": "integer", "default": 50020},
+        "command_port": {"type": "integer", "default": 50021},
+        "time_beacon_hz": {"type": "number", "default": 10},
+        "state_broadcast_on_change": {"type": "boolean", "default": true},
+        "state_heartbeat_sec": {"type": "number", "default": 2.0},
+        "control_enabled": {"type": "boolean", "default": false},
+        "allow_cli_commands": {"type": "boolean", "default": true},
+        "allow_method_calls": {"type": "boolean", "default": true},
+        "cli_prefix_whitelist": {
+          "type": "array",
+          "items": {"type": "string"},
+          "default": []
+        },
+        "allowed_commands": {
+          "type": "array",
+          "items": {"type": "string"},
+          "default": ["set_iso", "set_shutter_a", "set_fps", "set_wb", "set_rec", "cli", "call_method"]
+        },
+        "state_keys": {
+          "type": "array",
+          "items": {"type": "string"},
+          "default": ["iso", "shutter_a", "fps", "wb", "is_recording"]
+        }
+      },
+      "additionalProperties": true
+    },
+    "additionalProperties": true
+  }
+}

@@ -10,7 +10,6 @@ from sugarpie import pisugar
 from flask_socketio import SocketIO
 import re
 from statistics import mean
-from typing import Dict, Tuple
 from module.utils import Utils
 from module.redis_controller import ParameterKey
 import json
@@ -81,12 +80,6 @@ class SimpleGUI(threading.Thread):
         else:
             self.show_buffer_vu = True
             self.vu_meter_hatch_lines = True
-
-        self.target_fps = max(1, int((self.settings.get("hdmi_gui", {}) or {}).get("target_fps", 15)))
-        self.max_frame_skip_ms = max(0, int((self.settings.get("hdmi_gui", {}) or {}).get("max_frame_skip_ms", 5)))
-        self.frame_interval = 1.0 / self.target_fps
-
-        self._font_cache: Dict[Tuple[str, int], ImageFont.FreeTypeFont] = {}
 
         self.background_color_changed = False
         
@@ -733,15 +726,9 @@ class SimpleGUI(threading.Thread):
     # ─────────────────────────────────────────────────────────────
     # LEFT-HAND COLUMN  (CAM / MON / SYS …)
     # ─────────────────────────────────────────────────────────────
-    def get_font(self, font_path: str, font_size: int):
-        key = (os.path.realpath(font_path), int(font_size))
-        if key not in self._font_cache:
-            self._font_cache[key] = ImageFont.truetype(key[0], key[1])
-        return self._font_cache[key]
-
     def draw_left_sections(self, draw, values):
-        label_font = self.get_font(self.regular_font_path, 26)
-        box_font   = self.get_font(self.bold_font_path, 26)
+        label_font = ImageFont.truetype(self.regular_font_path, 26)
+        box_font   = ImageFont.truetype(self.bold_font_path,     26)
 
         BOX_H, BOX_W  = 40, 60
         BOX_COLOR     = (136, 136, 136)
@@ -849,8 +836,8 @@ class SimpleGUI(threading.Thread):
     # RIGHT-HAND MIRROR COLUMN
     # ─────────────────────────────────────────────────────────────
     def draw_right_sections(self, draw, values):
-        label_font = self.get_font(self.regular_font_path, 26)
-        box_font   = self.get_font(self.bold_font_path, 24)
+        label_font = ImageFont.truetype(self.regular_font_path, 26)
+        box_font   = ImageFont.truetype(self.bold_font_path,     24)
 
         BOX_H, BOX_W  = 40, 60
         BOX_COLOR     = (136, 136, 136)
@@ -926,7 +913,7 @@ class SimpleGUI(threading.Thread):
             draw_bar(x, bar_width, vu_levels[i], vu_peaks[i])
 
         # Optional: Draw channel labels
-        label_font = self.get_font(self.regular_font_path, 16)
+        label_font = ImageFont.truetype(self.regular_font_path, 16)
         labels = ["L", "R"] if n_channels == 2 else [str(i+1) for i in range(n_channels)]
         for i, label in enumerate(labels):
             text_bbox = draw.textbbox((0, 0), label, font=label_font)
@@ -1158,9 +1145,9 @@ class SimpleGUI(threading.Thread):
             position = [info["pos"][0] * shrink_x, info["pos"][1] * shrink_y]
             font_size = info.get("size", 12) * min(min(shrink_x, shrink_y), 1) 
             # 12 is the default font size, min with 1 makes sure the font stays same in bigger displays
-            font = self.get_font(
-                self.bold_font_path if info.get("font", "bold") == "bold" else self.regular_font_path,
-                int(font_size)
+            font = ImageFont.truetype(
+                os.path.realpath(self.bold_font_path if info.get("font", "bold") == "bold" else self.regular_font_path),
+                font_size
             )
             value = str(values.get(element, ''))
             color_mode = self.color_mode
@@ -1178,6 +1165,7 @@ class SimpleGUI(threading.Thread):
             else:
                 draw.text(position, value, font=font, fill=color)
                 
+        self.update_smoothed_vu_levels()
         self.draw_right_vu_meter(draw)
         if self.show_buffer_vu:
             self.draw_framebuffer_vu_meter(draw)
@@ -1196,7 +1184,7 @@ class SimpleGUI(threading.Thread):
         self.fb.show(image)
         
     def draw_rounded_box(self, draw, text, position, font_size, padding, text_color, fill_color, image, extra_height=-17, reduce_top=12):
-        font = self.get_font(self.font_path, int(font_size))
+        font = ImageFont.truetype(os.path.realpath(self.font_path), font_size)
         bbox = draw.textbbox((0, 0), text, font=font)
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1] + extra_height  # Increase height by extra_height
@@ -1252,21 +1240,12 @@ class SimpleGUI(threading.Thread):
             self.vu_left_smoothed = 0
             self.vu_right_smoothed = 0
             self.vu_decay_factor = 0.2
-            next_frame_at = time.monotonic()
 
             while self._running:
                 values = self.populate_values()
                 self.update_smoothed_vu_levels()
                 self.draw_gui(values)
-
-                next_frame_at += self.frame_interval
-                now = time.monotonic()
-                sleep_for = next_frame_at - now
-                if sleep_for > 0:
-                    time.sleep(sleep_for)
-                elif abs(sleep_for) > (self.max_frame_skip_ms / 1000):
-                    # When rendering falls behind, resync to avoid accumulating lag.
-                    next_frame_at = now
+                time.sleep(0.2)
         finally:
             pass
  

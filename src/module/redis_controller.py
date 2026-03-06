@@ -31,6 +31,7 @@ class ParameterKey(Enum):
     FPS_USER          = "fps_user"
     FPS_CORRECTION_SUGGESTION = "fps_correction_suggestion"
     FRAMECOUNT        = "framecount"
+    FRAMECOUNT_EXPECTED = "framecount_expected"
     GUI_LAYOUT        = "gui_layout"
     HEIGHT            = "height"
     IR_FILTER         = "ir_filter"
@@ -190,6 +191,7 @@ class RedisController:
             ParameterKey.RECORDING_TIME.value,
             ParameterKey.RECORDING_TC_REC.value,
             ParameterKey.RECORDING_TC_TOD.value,
+            ParameterKey.FRAMECOUNT_EXPECTED.value,
             ParameterKey.TC_CAM0.value,
             ParameterKey.TC_CAM1.value,
             ParameterKey.FPS_ACTUAL.value,
@@ -274,6 +276,14 @@ class RedisController:
             elapsed = time.time() - self.recording_start_time
             self.set_value(ParameterKey.RECORDING_TIME, elapsed)
 
+            fps_user = self.get_value(ParameterKey.FPS_USER.value)
+            fps = self._safe_float(fps_user)
+            if fps is None or fps <= 0:
+                fps = self._safe_float(self.get_value(ParameterKey.FPS.value))
+            if fps is None or fps <= 0:
+                fps = float(self.conform_frame_rate)
+            self.set_value(ParameterKey.FRAMECOUNT_EXPECTED, f"{(fps * elapsed):.3f}")
+
             # elapsed time-code
             self.set_value(
                 ParameterKey.RECORDING_TC_REC,
@@ -298,6 +308,7 @@ class RedisController:
         self.set_value(ParameterKey.RECORDING_TIME,      0.0)
         self.set_value(ParameterKey.RECORDING_TC_REC,    "00:00:00:00")
         self.set_value(ParameterKey.RECORDING_TC_TOD,    self._current_tod_timecode())
+        self.set_value(ParameterKey.FRAMECOUNT_EXPECTED, 0)
 
         self._rec_timer_stop.clear()
         self._rec_timer_thread = threading.Thread(
@@ -311,6 +322,17 @@ class RedisController:
         if self._rec_timer_thread and self._rec_timer_thread.is_alive():
             self._rec_timer_thread.join(timeout=0.5)
         self._rec_timer_thread = None
+        self.set_value(ParameterKey.FRAMECOUNT_EXPECTED, 0)
+
+
+    @staticmethod
+    def _safe_float(value):
+        try:
+            if value is None:
+                return None
+            return float(value)
+        except (TypeError, ValueError):
+            return None
 
 
     # optional helper -------------------------------------------------

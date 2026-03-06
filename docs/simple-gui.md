@@ -9,3 +9,4 @@ Simple GUI is available via browser and/or attached HDMI monitor.
 Buffer meter in the lower left indicates number of frames in buffer. Useful when testing storage media.
 
 When a compatible USB microphone is connected, VU meters appear on the right side of the GUI so you can monitor audio levels.
+

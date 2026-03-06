@@ -111,6 +111,8 @@ def load_settings(filename: str | Path) -> dict:
     hdmi_gui_defaults = {
         "buffer_vu_meter": True,
         "vu_meter_hatch_lines": True,
+        "target_fps": 15,
+        "max_frame_skip_ms": 5,
     }
     hdmi_gui_cfg = settings.setdefault("hdmi_gui", {})
     for k, v in hdmi_gui_defaults.items():

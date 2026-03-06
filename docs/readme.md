@@ -10,20 +10,20 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
   <p><em>Figure 1: Camera stack exploded view. Apps change settings by updating Redis keys. CinePi-RAW listens for those updates and captures frames accordingly while Cinemate provides the camera user interface.</em></p>
 </div>
 
-
-
 !!! tip ""
-    ## New features in version 3.1
+    ## New features in version 3.2
 
-    - fast uncompressed dng encoder, supporting both IMX 585 color and mono sensors (normal SSD's working well for HD @ 25 fps)
-    - redesigned HDMI ui
-    - sound recording activated
-    - dual sensor support
-    - punch in digital zoom of preview
-    - i2c oled module and enum enhanced Redis key handling by [tevey](https://github.com/tevey)
-    - selection of physical camera port cam0 or cam1
-    - choose specific HDMI output port, 0 or 1
-    - adapted to libcamera 0.5/rpicam-apps 1.7
+- improved mounting mechanics for NVME and SSD drives with less drop frames
+
+- storage preroll to "warm up" the recording media, improving writing stability
+
+- improved audio sync with correction of effective fps (different resolutions/frame rates due to sensor VBLANK), available for fine tuning in `src/module/sensor_correction_factors.py`
+
+- option to record a fixed number of frames or seconds for user calibration of fps correction factors (run Cinemate manually for this calibration as feedback is supplied in the terminal)
+
+- system startup fix to have Cinemate wait for sensor to be loaded properly by the system (contribution from user Yabbo01)
+
+- simple GUI now supports different resolutions defined by the user in `setting.json` (contribution from user 0point)
 
 ## Installation
 See the [releases section](https://github.com/Tiramisioux/cinemate/releases) for preinstalled image file and [Quick Start Guide](https://tiramisioux.github.io/cinemate/getting-started/). 
@@ -33,9 +33,9 @@ For manual install of the camera stack on Raspberry Pi Bookworm, see the [here](
 ## Compatible sensors
 
 - IMX477 (official Raspberry Pi HQ camera)
-- IMX294 (official Raspberry Pi GS camera)
-- IMX585 ([Starlight Eye](https://www.tindie.com/products/will123321/starlighteye/) by Will Whang)
+- IMX296 (official Raspberry Pi GS camera)
 - IMX283 ([OneInchEye](https://www.tindie.com/products/will123321/oneincheye-v20/) by Will Whang)
+- IMX585 ([Starlight Eye](https://www.tindie.com/products/will123321/starlighteye/) by Will Whang)
 
 ## Preinstalled hardware
 

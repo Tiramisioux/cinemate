@@ -1,6 +1,6 @@
 # Acknowledgements
 
-The [**Cinemate**](https://github.com/Tiramisioux/cinemate) stack is built on top of several open-source projects. Special thanks to all authors!
+The [**Cinemate**](https://github.com/Tiramisioux/cinemate) stack is built on of several open-source projects. Special thanks to all authors!
 
 - [**CinePi-raw**](https://github.com/cinepi/cinepi-raw) – Csaba Nagy
 - [**IMX585 and IMX283 drivers**](https://github.com/will127534) – Will Whang

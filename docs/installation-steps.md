@@ -65,7 +65,7 @@ sudo apt install -y libspdlog-dev libjsoncpp-dev && cd /home/pi && git clone htt
 ### CinePi-RAW <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
 ```bash
-git clone https://github.com/Tiramisioux/cinepi-raw.git --branch rpicam-apps_1.7_custom_encoder
+git clone https://github.com/Tiramisioux/cinepi-raw.git
 cd cinepi-raw
 sudo rm -rf build
 sudo meson setup build
@@ -83,6 +83,52 @@ SET cg_rb 2.5,2.2
 PUBLISH cp_controls cg_rb
 EOF
 ```
+
+### .asoundrc Setup
+
+For `dsnoop` support, create a `~/etc/asound.conf`:
+
+```bash
+
+    sudo tee /etc/asound.conf >/dev/null <<'EOF'
+# --- Hardware handle (use stable card name; change "NTG" if your card shows a different name in `arecord -l`)
+pcm.mic_hw {
+  type hw
+  card "NTG"
+  device 0
+}
+
+# --- One shared dsnoop backend pinned to the mic's native mode (RØDE NTG: S24_3LE @ 48k, stereo)
+pcm.mic_dsnoop {
+  type dsnoop
+  ipc_key 5978
+  ipc_perm 0666
+  ipc_key_add_uid false
+  slave {
+    pcm "hw:CARD=NTG,DEV=0"
+    format S24_3LE
+    rate 48000
+    channels 2
+  }
+  bindings.0 0
+  bindings.1 1
+}
+
+# --- Front-ends: let plug adapt whatever the app asks for (stereo 24-bit or mono 16-bit)
+pcm.mic_24bit {
+  type plug
+  slave.pcm "mic_dsnoop"
+}
+
+pcm.mic_16bit {
+  type plug
+  slave.pcm "mic_dsnoop"
+}
+EOF
+
+```
+
+Exit nano editor using ctrl+x.
 
 ### IMX585 driver (optional)
 
@@ -399,7 +445,7 @@ zoom 0 write_speed_to_drive 0 recording_time 0
 
 (See the settings guide for the full list.)
 
-### Add alias
+### Add aliases
 
 ```shell
 nano ~/.bashrc
@@ -409,6 +455,8 @@ Add to the end of the file:
 
 ```shell
 alias cinemate='python3 /home/pi/cinemate/src/main.py'
+alias editboot='sudo nano /boot/firmware/config.txt'
+alias editsettings='sudo nano /home/pi/cinemate/src/settings.json'
 ```
 
 Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.

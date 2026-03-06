@@ -826,7 +826,7 @@ class RedisListener:
         logging.info(f"Calculated expected number of frames: {expected_frames_total}")
         logging.info(f"Actual number of recorded frames: {recorded_frames_total}")
 
-        diff = expected_frames_total - recorded_frames_total
+        diff = recorded_frames_total - expected_frames_total
         frames_in_sync = abs(diff) <= 1
 
         if frames_in_sync:
@@ -834,12 +834,12 @@ class RedisListener:
                 logging.info("✓ All frames accounted for.")
             else:
                 logging.info(
-                    "Frames within tolerance: %+d frame difference between expected and recorded counts.",
+                    "Frames within tolerance: %+d frame difference between recorded and expected counts.",
                     diff,
                 )
         else:
             logging.warning(
-                f"Discrepancy detected: {diff:+d} frames difference between expected and recorded counts."
+                f"Discrepancy detected: {diff:+d} frames difference between recorded and expected counts."
             )
 
         all_frames_accounted = frames_in_sync

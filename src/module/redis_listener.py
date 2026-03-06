@@ -262,6 +262,12 @@ class RedisListener:
         if stats_data is not None:
             self._update_active_sensors(stats_data)
 
+        # Only track live sync while a recording is active.
+        # Final post-stop truth comes from analyze_frames(), and this avoids
+        # stale frameCount updates (often 0 after stop) overwriting that result.
+        if not self.is_recording:
+            return
+
         if not self.recording_start_time:
             # No reference point – assume healthy until a recording starts.
             self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 1)
@@ -543,17 +549,18 @@ class RedisListener:
 
                 elif value_str == '0':
                     if self.is_recording:
-                        self.is_recording = False
                         if self.recording_start_time:
                             self.recording_end_time = datetime.datetime.now()
                             logging.info(f"Recording stopped at: {self.recording_end_time}")
                             self._update_frames_in_sync()
+                            self.is_recording = False
                             try:
                                 self.analyze_frames()
                             finally:
                                 self.recording_was_preroll = False
                             self.framerate_values = []
                         else:
+                            self.is_recording = False
                             logging.warning("Recording stopped, but no recording start time was registered.")
                             self.recording_was_preroll = False
                     self.allow_initial_zero = True

@@ -1003,10 +1003,7 @@ class SimpleGUI(threading.Thread):
         previous_background_color = self.get_background_color()
 
         # ─── choose background colour & colour-mode ────────────────────
-        rec_flag = int(self.redis_controller.get_value(ParameterKey.REC.value) or 0) == 1
-        is_recording_flag = int(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) or 0) == 1
-        rec_active = rec_flag or is_recording_flag
-
+        rec_active = int(self.redis_controller.get_value(ParameterKey.REC.value) or 0) == 1
         drop_frame_detected = bool(self.redis_listener.drop_frame)
         frames_in_sync = int(self.redis_controller.get_value(ParameterKey.FRAMES_IN_SYNC.value) or 1)
         frame_count_mismatch = rec_active and frames_in_sync == 0

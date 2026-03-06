@@ -86,20 +86,13 @@ EOF
 
 ### .asoundrc Setup
 
-For `dsnoop` support, create a `~/etc/asound.conf`:
+For `dsnoop` support, create a `/etc/asound.conf`:
 
 ```bash
 
     sudo tee /etc/asound.conf >/dev/null <<'EOF'
-# --- Hardware handle (use stable card name; change "NTG" if your card shows a different name in `arecord -l`)
-pcm.mic_hw {
-  type hw
-  card "NTG"
-  device 0
-}
-
-# --- One shared dsnoop backend pinned to the mic's native mode (RØDE NTG: S24_3LE @ 48k, stereo)
-pcm.mic_dsnoop {
+# RODE NTG path (24-bit stereo)
+pcm.mic_dsnoop_24 {
   type dsnoop
   ipc_key 5978
   ipc_perm 0666
@@ -114,16 +107,25 @@ pcm.mic_dsnoop {
   bindings.1 1
 }
 
-# --- Front-ends: let plug adapt whatever the app asks for (stereo 24-bit or mono 16-bit)
-pcm.mic_24bit {
-  type plug
-  slave.pcm "mic_dsnoop"
+# Cheap USB path (16-bit mono)
+pcm.mic_dsnoop_16 {
+  type dsnoop
+  ipc_key 5979
+  ipc_perm 0666
+  ipc_key_add_uid false
+  slave {
+    pcm "hw:CARD=Device,DEV=0"
+    format S16_LE
+    rate 48000
+    channels 1
+  }
+  bindings.0 0
 }
 
-pcm.mic_16bit {
-  type plug
-  slave.pcm "mic_dsnoop"
-}
+pcm.mic_24bit { type plug; slave.pcm "mic_dsnoop_24" }
+pcm.mic_16bit { type plug; slave.pcm "mic_dsnoop_16" }
+
+
 EOF
 
 ```

@@ -47,7 +47,7 @@ SENSOR_CORRECTION_FACTORS: Dict[str, Dict[int | str, Dict[int, float] | float]] 
         "_default": DEFAULT_CORRECTION_FACTOR,
         0: {
             24: 0.9994, #verified 10000 frames 4K
-            25: 0.9993,    
+            25: 1.015709,    
         },
         1: {
             24: 0.9980, #verified 10000 frames
@@ -58,7 +58,7 @@ SENSOR_CORRECTION_FACTORS: Dict[str, Dict[int | str, Dict[int, float] | float]] 
         "_default": DEFAULT_CORRECTION_FACTOR,
         0: {
             24: 0.9994, #verified 10000 frames 4K
-            25: 0.9993,    
+            25: 1.0125,    
         },
         1: {
             24: 0.9980, #verified 10000 frames

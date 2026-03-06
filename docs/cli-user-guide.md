@@ -1,7 +1,5 @@
 # Using CinePi-RAW from the terminal
 
-Here is how you can operate **CinePi-raw** from the command line. 
-
 ## Checking available options
 
 Before running the program you can view all command‑line flags with:
@@ -14,7 +12,7 @@ This prints a long list of options supported by the application. It includes the
 
 ## Camera modes
 
-CinePi-raw uses **Libcamera** to talk to your Raspberry Pi camera module. Each sensor supports one or more *modes*, which define the resolution and bit depth of the RAW images that the sensor can produce. A mode is written as:
+CinePi-Raw uses **Libcamera** to talk to your Raspberry Pi camera module. Each sensor supports one or more *modes*, which define the resolution and bit depth of the RAW images that the sensor can produce. A mode is written as:
 
 ```
 --mode 2028:1080:12:U

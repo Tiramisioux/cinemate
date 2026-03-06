@@ -308,6 +308,7 @@ class SimpleGUI(threading.Thread):
                 "items": [
                     {"key": "mic_sample_rate", "text": lambda v: v.get("mic_sample_rate", "")},
                     {"key": "mic_bit_depth", "text": lambda v: v.get("mic_bit_depth", "")},
+                    {"key": "mic_wav_saved", "text": lambda v: "WAV" if v.get("mic_wav_saved") else ""},
 
                     # {"key": "frames_in_sync", "text": lambda v: "SYNC" if v.get("frames_in_sync") else ""},
                 ],
@@ -462,7 +463,8 @@ class SimpleGUI(threading.Thread):
             "exposure_time":  str(self.cinepi_controller.exposure_time_fractions),
 
             # misc labels / live data
-            "zoom_factor": "",   # will be filled below if ≠ 1.0
+            "zoom_factor": "",   # will be filled below
+            "zoom_is_default": True,
             "anamorphic_factor": f"{self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value)}X",
             "ram_load":       Utils.memory_usage(),
             "cpu_load":       Utils.cpu_load(),
@@ -470,6 +472,7 @@ class SimpleGUI(threading.Thread):
             "disk_label":     (self.ssd_monitor.device_name or "").upper()[:4],
             "usb_connected":  bool(self.serial_handler.serial_connected),
             "mic_connected":  self.usb_monitor.usb_mic is not None,
+            "mic_wav_saved":  False,
             "keyboard_connected": bool(self.usb_monitor and self.usb_monitor.usb_keyboard),
             "storage_type":   self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value),
             "write_speed":    self.redis_controller.get_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value) or "0 MB/s",
@@ -506,13 +509,31 @@ class SimpleGUI(threading.Thread):
             except (TypeError, ValueError):
                 values["frames_in_sync"] = False
 
+            if self.ssd_monitor:
+                try:
+                    rec_active = any([
+                        int(self.redis_controller.get_value(ParameterKey.REC.value) or 0) == 1,
+                        int(self.redis_controller.get_value(ParameterKey.IS_WRITING_BUF.value) or 0) == 1,
+                        int(self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value) or 0) == 1,
+                    ])
+                    if rec_active:
+                        values["mic_wav_saved"] = False
+                    else:
+                        _, dng_count, wav_count = self.ssd_monitor.get_latest_recording_info()
+                        values["mic_wav_saved"] = dng_count > 0 and wav_count > 0
+                    _, dng_count, wav_count = self.ssd_monitor.get_latest_recording_info()
+                    values["mic_wav_saved"] = dng_count > 0 and wav_count > 0
+                except (TypeError, ValueError):
+                    values["mic_wav_saved"] = False
+
         # ── Zoom factor (preview punch-in) ────────────────────────────────
+        default_zoom = float(self.settings.get("preview", {}).get("default_zoom", 1.0))
         try:
             z = float(self.redis_controller.get_value(ParameterKey.ZOOM.value) or 1.0)
         except (TypeError, ValueError):
             z = 1.0
-        if abs(z - 1.0) > 1e-3:                    # only show when ≠ 1.0
-            values["zoom_factor"] = f"{z:.1f}"
+        values["zoom_is_default"] = abs(z - default_zoom) <= 1e-3
+        values["zoom_factor"] = f"{z:.1f}"
 
         # ─── recording time ───
         raw_rt = self.redis_controller.get_value(ParameterKey.RECORDING_TIME.value)
@@ -724,6 +745,7 @@ class SimpleGUI(threading.Thread):
 
         BOX_H, BOX_W  = 40, 60
         BOX_COLOR     = (136, 136, 136)
+        ZOOM_HIGHLIGHT_COLOR = (255, 221, 0)
         TEXT_COLOR    = (0,   0,   0)
 
         label_x       = 19
@@ -753,7 +775,7 @@ class SimpleGUI(threading.Thread):
                 for part in str(val).split('\n'):
                     # choose box colour depending on item
                     if item["key"] == "zoom_factor":
-                        box_fill = (249, 249, 249)   # white box
+                        box_fill = BOX_COLOR if values.get("zoom_is_default") else ZOOM_HIGHLIGHT_COLOR
                     else:
                         box_fill = BOX_COLOR         # default grey
                     draw.rectangle([box_x, y, box_x + BOX_W, y + BOX_H],
@@ -1112,7 +1134,7 @@ class SimpleGUI(threading.Thread):
         preview_x = (frame_width - preview_w) // 2
         preview_y = (frame_height - preview_h) // 2
 
-        line_color = (249, 249, 249)
+        line_color = (249, 249, 249) if values.get("zoom_is_default", True) else (255, 221, 0)
 
         draw.rectangle(
             [preview_x, preview_y, preview_x + preview_w, preview_y + preview_h],

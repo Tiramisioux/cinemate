@@ -1,7 +1,6 @@
 # Recompiling cinepi-raw
-Compiling cinepi-raw
 
-For easy later rebuilding and installation of cinepi-raw you can create the file compile-raw.sh.
+For easy later rebuilding and installation of cinepi-raw you can create the file `compile-raw.sh`.
 
 ```shell
 nano compile-raw.sh

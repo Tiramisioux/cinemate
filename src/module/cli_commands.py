@@ -244,10 +244,14 @@ class CommandExecutor(threading.Thread):
                 time.sleep(0.1)  # Pause for 100 ms
                 try:
                     data = input("\n> ")  # Read the input as a single string
-                except (EOFError, KeyboardInterrupt) as e:
+                except EOFError as e:
                     logging.info(f"CLI input interrupted: {e}")
-                    continue
+                    self.running = False
+                    break
+                except KeyboardInterrupt as e:
+                    logging.info(f"CLI input interrupted: {e}")
+                    self.running = False
+                    break
 
                 if data.strip():  # Proceed only if there is some non-whitespace input
                     self.handle_received_data(data)  # Directly handle the received data
-

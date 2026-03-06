@@ -2,15 +2,13 @@
 
 Cinemate uses three system services for its operation.
 
-!!! note ""
-
-     Note if you have Cinemate already running, for example by running the preinstalled image file, anything you type will be interpreted by the Cinemate CLI only. In order to use these commands you have to [start an SSH session](ssh.md) and log in in a new shell.
-
 ## cinemate-autostart.service
 
-Responsible for autostart of Cinemate on boot. By default, it is turned off on the [downloadable image file](https://github.com/Tiramisioux/cinemate/releases/tag/3.1).
+Responsible for autostart of Cinemate on boot. By default, it is turned off on the [downloadable image file](https://github.com/Tiramisioux/cinemate/releases/tag/3.2).
 
 Starting in v3.2 the service now waits for the camera sensor to come online before launching the UI. The helper script `/usr/local/bin/camera-ready.sh` polls `cinepi-raw --list-cameras` for up to 30 seconds and logs progress to the systemd journal so Cinemate does not start with a black screen if the IMX sensor is still initialising.
+
+To keep `journalctl -fu cinemate-autostart` readable when ALSA reports noisy underruns, the unit rate-limits log output (see `LogRateLimitIntervalSec` and `LogRateLimitBurst` in the service file). Adjust those values if you need more or less verbosity.
 
 ### Starting, stopping, enabling and disabling the service
 
@@ -29,6 +27,8 @@ make clean     # remove the service
 ```
 
 The `make install` step also copies `camera-ready.sh` into `/usr/local/bin/` with execute permissions so that the systemd unit can call it from `ExecStartPre`.
+
+To start Cinemate manually, anywhere in the cli, type `cinemate`.
 
 ## storage-automount.service
 

@@ -1,6 +1,6 @@
 # Backing up the SD card
 
-## To create a compressed image using PiShrink
+## Create a compressed image using PiShrink
 
 ```shell hl_lines="2 3"
 sudo bash -Eeuo pipefail -c '

@@ -1038,12 +1038,12 @@ class SimpleGUI(threading.Thread):
                 self.current_background_color = "red"
                 self.color_mode = "inverse"
 
-            elif int(self.redis_controller.get_value(ParameterKey.IS_WRITING_BUF.value) or 0):
+            elif (not rec_active) and int(self.redis_controller.get_value(ParameterKey.IS_WRITING_BUF.value) or 0):
                 # recording has stopped but buffer still flushing to disk
                 self.current_background_color = "green"
                 self.color_mode = "inverse"
 
-            elif int(self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value) or 0):
+            elif (not rec_active) and int(self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value) or 0):
                 # cameras are building up the RAM buffer
                 self.current_background_color = "green"
                 self.color_mode = "inverse"

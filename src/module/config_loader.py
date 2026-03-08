@@ -42,7 +42,16 @@ def load_settings(filename: str | Path) -> dict:
         wifi_cfg.setdefault(k, v)
     system_cfg["wifi_hotspot"] = wifi_cfg
     settings["system"] = system_cfg
-    settings.setdefault("analog_controls", {})
+    analog_defaults = {
+        "iso_pot": None,
+        "shutter_a_pot": None,
+        "fps_pot": None,
+        "wb_pot": None,
+    }
+    analog_cfg = settings.setdefault("analog_controls", {})
+    for k, v in analog_defaults.items():
+        analog_cfg.setdefault(k, v)
+    settings["analog_controls"] = analog_cfg
     settings.setdefault("free_mode",       {
         "iso_free":       False,
         "shutter_a_free": False,

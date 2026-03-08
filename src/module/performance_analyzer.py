@@ -3,8 +3,10 @@ import datetime
 import json
 import logging
 import os
+import subprocess
 import threading
 import time
+from collections import Counter
 from pathlib import Path
 
 try:
@@ -49,6 +51,9 @@ class PerformanceAnalyzer:
         "fps_expected",
         "fps_actual",
         "dropped_frame_flag",
+        "hard_drop_flag",
+        "soft_drop_flag",
+        "drop_class",
         "drop_reason",
         "buffer_used",
         "buffer_size",
@@ -78,6 +83,7 @@ class PerformanceAnalyzer:
         "proc_cpu_cinemate",
         "proc_cpu_redis",
         "proc_cpu_arecord",
+        "throttled_flags",
     ]
 
     def __init__(
@@ -89,6 +95,7 @@ class PerformanceAnalyzer:
         usb_monitor=None,
         analysis_root="/media/RAW/_analysis",
         redis_client=None,
+        settings=None,
     ):
         self.redis_controller = redis_controller
         self.cinepi_controller = cinepi_controller
@@ -96,6 +103,8 @@ class PerformanceAnalyzer:
         self.dmesg_monitor = dmesg_monitor
         self.usb_monitor = usb_monitor
         self.analysis_root = Path(analysis_root)
+        self.settings = settings or {}
+        self._timestamp_gap_factor = self._read_timestamp_gap_factor()
         if redis_client is not None:
             self.redis_client = redis_client
         elif redis is not None:
@@ -111,6 +120,9 @@ class PerformanceAnalyzer:
         self._seq = 0
         self._rows = 0
         self._drop_count = 0
+        self._soft_drop_count = 0
+        self._hard_drop_reasons = Counter()
+        self._soft_drop_reasons = Counter()
         self._prev_timestamp_ns = None
         self._prev_frame_count = None
         self._prev_stats_seq = None
@@ -120,6 +132,8 @@ class PerformanceAnalyzer:
         self._last_disk_write_bytes = None
         self._last_net_tx = None
         self._last_net_rx = None
+        self._last_throttled_sample = 0.0
+        self._last_throttled_flags = ""
 
         self._target_mode = None
         self._target_amount = None
@@ -229,6 +243,9 @@ class PerformanceAnalyzer:
         self._seq = 0
         self._rows = 0
         self._drop_count = 0
+        self._soft_drop_count = 0
+        self._hard_drop_reasons.clear()
+        self._soft_drop_reasons.clear()
         self._prev_timestamp_ns = None
         self._prev_frame_count = None
         self._prev_stats_seq = None
@@ -241,6 +258,8 @@ class PerformanceAnalyzer:
         self._last_disk_write_bytes = getattr(disk, "write_bytes", None)
         self._last_net_tx = getattr(net, "bytes_sent", None)
         self._last_net_rx = getattr(net, "bytes_recv", None)
+        self._last_throttled_sample = 0.0
+        self._last_throttled_flags = ""
 
         if psutil:
             psutil.cpu_percent(interval=None)
@@ -325,7 +344,13 @@ class PerformanceAnalyzer:
         if fps_actual is None:
             fps_actual = self._read_float(ParameterKey.FPS_ACTUAL.value)
 
-        dropped_frame_flag, drop_reason = self._detect_drop(sensor_timestamp_ns, frame_count, fps_expected, fps_actual)
+        hard_drop_flag, soft_drop_flag, drop_reason = self._classify_drop(
+            sensor_timestamp_ns=sensor_timestamp_ns,
+            frame_count=frame_count,
+            cp_stats_seq_gap=cp_stats_seq_gap,
+            fps_expected=fps_expected,
+            fps_actual=fps_actual,
+        )
         cp_stats_timestamp_gap = 1 if drop_reason == "timestamp_gap" else 0
         if cp_stats_timestamp_gap:
             self._timestamp_gap_events += 1
@@ -348,7 +373,10 @@ class PerformanceAnalyzer:
             "frame_count": frame_count,
             "fps_expected": fps_expected,
             "fps_actual": fps_actual,
-            "dropped_frame_flag": int(dropped_frame_flag),
+            "dropped_frame_flag": int(hard_drop_flag),
+            "hard_drop_flag": int(hard_drop_flag),
+            "soft_drop_flag": int(soft_drop_flag),
+            "drop_class": "hard" if hard_drop_flag else "soft" if soft_drop_flag else "",
             "drop_reason": drop_reason,
             "buffer_used": buffer_used,
             "buffer_size": self._read_int(ParameterKey.BUFFER_SIZE.value),
@@ -378,6 +406,7 @@ class PerformanceAnalyzer:
             "proc_cpu_cinemate": self._process_cpu("python"),
             "proc_cpu_redis": self._process_cpu("redis"),
             "proc_cpu_arecord": self._process_cpu("arecord"),
+            "throttled_flags": self._sample_throttled_flags(),
         }
 
         return row
@@ -405,38 +434,49 @@ class PerformanceAnalyzer:
 
         return False
 
-    def _detect_drop(self, sensor_timestamp_ns, frame_count, fps_expected, fps_actual):
-        dropped = False
+    def _classify_drop(self, sensor_timestamp_ns, frame_count, cp_stats_seq_gap, fps_expected, fps_actual):
+        hard_drop = False
+        soft_drop = False
         reason = ""
 
-        if sensor_timestamp_ns is not None and self._prev_timestamp_ns is not None and fps_expected and fps_expected > 0:
-            expected_period_ns = int(1_000_000_000 / fps_expected)
+        expected_fps = fps_expected if fps_expected and fps_expected > 0 else fps_actual
+
+        if sensor_timestamp_ns is not None and self._prev_timestamp_ns is not None and expected_fps and expected_fps > 0:
+            expected_period_ns = int(1_000_000_000 / expected_fps)
             delta = sensor_timestamp_ns - self._prev_timestamp_ns
-            if delta > int(expected_period_ns * 1.5):
-                dropped = True
+            if delta > int(expected_period_ns * self._timestamp_gap_factor):
+                hard_drop = True
                 reason = "timestamp_gap"
 
-        if not dropped and frame_count is not None and self._prev_frame_count is not None:
+        if not hard_drop and cp_stats_seq_gap:
+            hard_drop = True
+            reason = "cp_stats_seq_gap"
+
+        if not hard_drop and frame_count is not None and self._prev_frame_count is not None:
             if frame_count - self._prev_frame_count > 1:
-                dropped = True
+                soft_drop = True
                 reason = "framecount_discontinuity"
 
-        if not dropped and fps_expected and fps_actual is not None and abs(fps_actual - fps_expected) > 1:
-            dropped = True
+        if not hard_drop and not soft_drop and fps_expected and fps_actual is not None and abs(fps_actual - fps_expected) > 1:
+            soft_drop = True
             reason = "fps_deviation_only"
 
-        if dropped and not reason:
+        if (hard_drop or soft_drop) and not reason:
             reason = "unknown"
 
-        if dropped:
+        if hard_drop:
             self._drop_count += 1
+            self._hard_drop_reasons[reason] += 1
+        elif soft_drop:
+            self._soft_drop_count += 1
+            self._soft_drop_reasons[reason] += 1
 
         if sensor_timestamp_ns is not None:
             self._prev_timestamp_ns = sensor_timestamp_ns
         if frame_count is not None:
             self._prev_frame_count = frame_count
 
-        return dropped, reason
+        return hard_drop, soft_drop, reason
 
     def _finalize(self):
         summary = {
@@ -445,6 +485,10 @@ class PerformanceAnalyzer:
             "target_amount": self._target_amount,
             "rows_written": self._rows,
             "drop_candidates": self._drop_count,
+            "hard_drop_count": self._drop_count,
+            "soft_drop_count": self._soft_drop_count,
+            "hard_drop_reasons": dict(self._hard_drop_reasons),
+            "soft_drop_reasons": dict(self._soft_drop_reasons),
             "stats_seq_gap_events": self._stats_seq_gap_events,
             "timestamp_gap_events": self._timestamp_gap_events,
             "start_recording_already_active": self._start_is_recording,
@@ -569,3 +613,37 @@ class PerformanceAnalyzer:
             return float(number)
         except ValueError:
             return None
+
+    def _read_timestamp_gap_factor(self):
+        value = (
+            self.settings.get("analysis", {})
+            .get("drop", {})
+            .get("timestamp_gap_factor", 1.5)
+        )
+        factor = self._to_float(value)
+        return factor if factor and factor > 0 else 1.5
+
+    def _sample_throttled_flags(self):
+        now = time.monotonic()
+        if now - self._last_throttled_sample < 1.0:
+            return self._last_throttled_flags
+
+        self._last_throttled_sample = now
+        try:
+            result = subprocess.run(
+                ["vcgencmd", "get_throttled"],
+                capture_output=True,
+                text=True,
+                timeout=0.2,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            self._last_throttled_flags = ""
+            return self._last_throttled_flags
+
+        output = (result.stdout or "").strip()
+        if "=" in output:
+            self._last_throttled_flags = output.split("=", 1)[1].strip()
+        else:
+            self._last_throttled_flags = ""
+        return self._last_throttled_flags

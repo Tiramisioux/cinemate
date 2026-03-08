@@ -71,6 +71,8 @@ Temporary baseline default remains **Profile B**:
 
 ## stdout metadata and relay controls
 - stdout `DNG written:` parsing remains best-effort and is controlled by:
+## stdout metadata deprecation path
+- stdout `DNG written:` parsing is now a best-effort path controlled by:
 
 ```json
 "stdout_metadata": { "enabled": false }
@@ -89,6 +91,7 @@ Temporary baseline default remains **Profile B**:
 - `stdout_metadata` and `stdout_relay` are intentionally independent.
 - Core state/control behavior does not depend on per-frame stdout metadata or stdout relay.
 - Cinemate can run with cinepi-raw stdout relay disabled; `cp_stats` remains authoritative.
+- Core state/control behavior should not depend on per-frame stdout metadata.
 
 ## Analyzer CSV additions
 Added columns:

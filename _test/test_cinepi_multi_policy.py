@@ -26,6 +26,10 @@ fake.ParameterKey = ParameterKey
 sys.modules.setdefault("module.redis_controller", fake)
 
 from module.cinepi_multi import _resolve_launch_policy, _resolve_recording_profile, _resolve_stdout_relay, CinePiProcess
+fake.ParameterKey = ParameterKey
+sys.modules.setdefault("module.redis_controller", fake)
+
+from module.cinepi_multi import _resolve_launch_policy, _resolve_recording_profile
 
 
 class TestCinePiLaunchAndProfile(unittest.TestCase):

@@ -58,6 +58,63 @@ def load_settings(filename: str | Path) -> dict:
     )
     settings.setdefault("welcome_message", "THIS IS A COOL MACHINE")
     settings.setdefault("welcome_image", None)
+    settings.setdefault("state_model", "v1")
+
+    launch_cfg = settings.setdefault("launch", {})
+    launch_cfg.setdefault("rt_mode", "off")
+    launch_cfg.setdefault("rt_priority", 20)
+    launch_cfg.setdefault("cpu_affinity", "1-3")
+    settings["launch"] = launch_cfg
+
+    recording_profiles = settings.setdefault("recording_profiles", {})
+    recording_profiles.setdefault("active", "B")
+    profile_table = recording_profiles.setdefault("profiles", {})
+    profile_table.setdefault(
+        "A",
+        {
+            "encode_workers": 3,
+            "disk_workers": 2,
+            "encode_affinity": "1-2",
+            "disk_affinity": "2",
+            "encode_nice": -10,
+            "disk_nice": -5,
+        },
+    )
+    profile_table.setdefault(
+        "B",
+        {
+            "encode_workers": 2,
+            "disk_workers": 1,
+            "encode_affinity": "2-3",
+            "disk_affinity": "1",
+            "encode_nice": -6,
+            "disk_nice": -12,
+        },
+    )
+    profile_table.setdefault(
+        "C",
+        {
+            "encode_workers": 2,
+            "disk_workers": 2,
+            "encode_affinity": "1-2",
+            "disk_affinity": "3",
+            "encode_nice": -8,
+            "disk_nice": -8,
+        },
+    )
+    profile_table.setdefault("custom", dict(profile_table["B"]))
+    recording_profiles["profiles"] = profile_table
+    settings["recording_profiles"] = recording_profiles
+
+    stdout_metadata_cfg = settings.setdefault("stdout_metadata", {})
+    stdout_metadata_cfg.setdefault("enabled", False)
+    settings["stdout_metadata"] = stdout_metadata_cfg
+
+    stdout_relay_cfg = settings.setdefault("stdout_relay", {})
+    stdout_relay_cfg.setdefault("enabled", False)
+    stdout_relay_cfg.setdefault("level", "debug")
+    stdout_relay_cfg.setdefault("filters", [])
+    settings["stdout_relay"] = stdout_relay_cfg
 
     # ── preview / zoom defaults ──────────────────────────────────────────
     preview_defaults = {

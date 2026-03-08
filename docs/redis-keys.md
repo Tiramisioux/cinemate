@@ -48,3 +48,10 @@ Each entry explains which component normally writes the key and what happens whe
 | shutter_angle_transient | Cinemate | Temporary value during ramping | No |
 | exposure_time | Cinemate | Current exposure time in seconds | No |
 | wb_user | Cinemate | Kelvin value set before converting to cg_rb | No |
+
+## cp_stats fields (v2 migration additions)
+
+- `sensorTimestamp` (preferred capture timestamp source).
+- `encode_queue_size`, `disk_queue_size`, `ram_buffers`.
+- `encode_latency_ms`, `disk_latency_ms` (sampled).
+- `stats_seq` for continuity / gap detection.

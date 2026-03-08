@@ -5,6 +5,7 @@ import datetime
 import json
 from collections import deque
 from module.redis_controller import ParameterKey
+from module.recording_state import RecordingStateAggregator
 
 import os
 import re
@@ -13,7 +14,7 @@ import math
 import statistics
 
 class RedisListener:
-    def __init__(self, redis_controller, ssd_monitor, framerate_callback=None, host='localhost', port=6379, db=0):
+    def __init__(self, redis_controller, ssd_monitor, framerate_callback=None, host='localhost', port=6379, db=0, state_model='v1'):
         self.redis_client = redis.StrictRedis(host=host, port=port, db=db)
         
         self.pubsub_stats = self.redis_client.pubsub()
@@ -98,6 +99,9 @@ class RedisListener:
 
         self.fps_at_rec_start = None
         self.fps_correction_factor_at_rec_start: float | None = None
+        self.state_model = state_model
+        self.state_aggregator = RecordingStateAggregator() if state_model == 'v2' else None
+        logging.info("recording_state_model=%s", self.state_model)
 
         self.recording_was_preroll = False
 
@@ -306,14 +310,25 @@ class RedisListener:
                 if message_data.startswith("{") and message_data.endswith("}"):
                     try:
                         stats_data = json.loads(message_data)
-                        buffer_size = stats_data.get('bufferSize', None)
-                        self.frame_count = stats_data.get('frameCount', None)
+                        if self.state_aggregator is not None:
+                            snapshot = self.state_aggregator.ingest_cp_stats(stats_data)
+                            buffer_size = snapshot.buffer_size
+                            self.frame_count = snapshot.frame_count
+                            sensor_timestamp = snapshot.sensor_timestamp_ns
+                            timestamp = snapshot.timestamp_ns
+                            timestamp_cam0 = snapshot.timestamp_cam0_ns
+                            timestamp_cam1 = snapshot.timestamp_cam1_ns
+                            self.current_framerate = snapshot.framerate
+                        else:
+                            buffer_size = stats_data.get('bufferSize', None)
+                            self.frame_count = stats_data.get('frameCount', None)
+                            sensor_timestamp = stats_data.get('sensorTimestamp', None)
+                            timestamp = stats_data.get('timestamp')
+                            timestamp_cam0 = stats_data.get('timestamp_cam0')
+                            timestamp_cam1 = stats_data.get('timestamp_cam1')
+                            self.current_framerate = stats_data.get('framerate', None)
+
                         color_temp = stats_data.get('colorTemp', None)
-                        sensor_timestamp = stats_data.get('sensorTimestamp', None)
-                        timestamp = stats_data.get('timestamp')
-                        timestamp_cam0 = stats_data.get('timestamp_cam0')
-                        timestamp_cam1 = stats_data.get('timestamp_cam1')
-                        self.current_framerate = stats_data.get('framerate', None)
 
                         if color_temp:
                             self.colorTemp = color_temp

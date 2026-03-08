@@ -57,6 +57,38 @@
       "anyOf": [{"type": "string"}, {"type": "null"}],
       "default": null
     },
-    "additionalProperties": true
+    "additionalProperties": true,
+    "stdout_metadata": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": true
+    },
+    "stdout_relay": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "level": {
+          "type": "string",
+          "enum": ["debug", "info"],
+          "default": "debug"
+        },
+        "filters": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        }
+      },
+      "additionalProperties": true
+    }
   }
 }

@@ -1,9 +1,7 @@
 {
   "$schema": "./settings.schema.json",
-
   "welcome_message": "THIS IS A COOL MACHINE",
   "welcome_image": null,
-
   "system": {
     "wifi_hotspot": {
       "name": "CinePi",
@@ -11,7 +9,6 @@
       "enabled": true
     }
   },
-
   "geometry": {
     "cam0": {
       "rotate_180": false,
@@ -21,10 +18,9 @@
     "cam1": {
       "rotate_180": false,
       "horizontal_flip": false,
-      "vertical_flip":false
+      "vertical_flip": false
     }
   },
-
   "output": {
     "cam0": {
       "hdmi_port": 0
@@ -33,143 +29,253 @@
       "hdmi_port": 1
     }
   },
-
   "hdmi_gui": {
     "buffer_vu_meter": false,
     "vu_meter_hatch_lines": true
   },
-
   "hdmi_display": {
     "width": 1920,
     "height": 1080
   },
-
   "preview": {
     "default_zoom": 1.2,
-    "zoom_steps":   [1.1, 2.0]
+    "zoom_steps": [
+      1.1,
+      2.0
+    ]
   },
-
   "anamorphic_preview": {
-      "default_anamorphic_factor": 1,
-    "anamorphic_steps": [1, 1.33, 2.0]
+    "default_anamorphic_factor": 1,
+    "anamorphic_steps": [
+      1,
+      1.33,
+      2.0
+    ]
   },
-
   "gpio_output": {
     "pwm_pin": 19,
-    "rec_out_pin": [6, 21]
+    "rec_out_pin": [
+      6,
+      21
+    ]
   },
-  
   "arrays": {
-    "iso_steps": [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200],
-    "shutter_a_steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360],
-    "fps_steps": [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50],
-    "wb_steps": [3200, 4400, 5600]
+    "iso_steps": [
+      100,
+      200,
+      400,
+      640,
+      800,
+      1200,
+      1600,
+      2500,
+      3200
+    ],
+    "shutter_a_steps": [
+      1,
+      45,
+      90,
+      135,
+      172.8,
+      180,
+      225,
+      270,
+      315,
+      346.6,
+      360
+    ],
+    "fps_steps": [
+      1,
+      2,
+      4,
+      8,
+      12,
+      16,
+      18,
+      24,
+      25,
+      33,
+      40,
+      50
+    ],
+    "wb_steps": [
+      3200,
+      4400,
+      5600
+    ]
   },
-  
   "settings": {
-    "light_hz": [50, 60],
+    "light_hz": [
+      50,
+      60
+    ],
     "conform_frame_rate": 24
   },
-  
   "analog_controls": {
     "iso_pot": "None",
     "shutter_a_pot": "None",
     "fps_pot": "None",
     "wb_pot": "None"
   },
-  
   "free_mode": {
     "iso_free": false,
     "shutter_a_free": false,
     "fps_free": true,
     "wb_free": false
   },
-
   "resolutions": {
-    "k_steps": [1.5, 2, 4],
-    "bit_depths": [10, 12],
+    "k_steps": [
+      1.5,
+      2,
+      4
+    ],
+    "bit_depths": [
+      10,
+      12
+    ],
     "custom_modes": {}
   },
-
-"buttons": [
+  "buttons": [
     {
       "pin": 5,
       "pull_up": true,
       "debounce_time": 0.1,
-      "press_action": {"method": "rec"}
+      "press_action": {
+        "method": "rec"
+      }
     },
     {
       "pin": 7,
       "pull_up": true,
       "debounce_time": 0.1,
-      "press_action": {"method": "rec"}
+      "press_action": {
+        "method": "rec"
+      }
     },
     {
       "pin": 16,
       "pull_up": true,
       "debounce_time": 0.1,
-      "press_action": {"method": "set_fps_double"}
+      "press_action": {
+        "method": "set_fps_double"
+      }
     },
     {
       "pin": 13,
       "pull_up": "False",
       "debounce_time": "0.1",
       "press_action": "None",
-      "single_click_action": {"method": "set_resolution"},
-      "double_click_action": {"method": "restart_cinemate"},
-      "triple_click_action": {"method": "reboot"},
-      "hold_action": {"method": "toggle_mount"}
+      "single_click_action": {
+        "method": "set_resolution"
+      },
+      "double_click_action": {
+        "method": "restart_cinemate"
+      },
+      "triple_click_action": {
+        "method": "reboot"
+      },
+      "hold_action": {
+        "method": "toggle_mount"
+      }
     }
   ],
-
   "two_way_switches": [
-      {
-        "pin": 24,
-        "state_on_action": {"method": "set_zoom", "args": [2]},
-        "state_off_action": {"method": "set_zoom", "args": [1]}
+    {
+      "pin": 24,
+      "state_on_action": {
+        "method": "set_zoom",
+        "args": [
+          2
+        ]
       },
+      "state_off_action": {
+        "method": "set_zoom",
+        "args": [
+          1
+        ]
+      }
+    },
     {
       "pin": 22,
-      "state_on_action": {"method": "set_shutter_a_sync_mode", "args": [1]},
-      "state_off_action": {"method": "set_shutter_a_sync_mode", "args": [0]}
+      "state_on_action": {
+        "method": "set_shutter_a_sync_mode",
+        "args": [
+          1
+        ]
+      },
+      "state_off_action": {
+        "method": "set_shutter_a_sync_mode",
+        "args": [
+          0
+        ]
+      }
     },
     {
       "pin": 18,
-      "state_on_action": {"method": "set_filter", "args": [0]},
-      "state_off_action": {"method": "set_filter", "args": [1]}
+      "state_on_action": {
+        "method": "set_filter",
+        "args": [
+          0
+        ]
+      },
+      "state_off_action": {
+        "method": "set_filter",
+        "args": [
+          1
+        ]
+      }
     }
   ],
-  
   "quad_rotary_controller": {
     "enabled": false,
     "encoders": {
       "0": {
         "setting_name": "iso",
         "button": {
-	  "press_action": {"method": "set_zoom"},
-	  "hold_action": {"method": "safe_shutdown"}}
+          "press_action": {
+            "method": "set_zoom"
+          },
+          "hold_action": {
+            "method": "safe_shutdown"
+          }
+        }
       },
       "1": {
         "setting_name": "shutter_a",
-        "button": {"press_action": {"method": "set_shutter_a_sync_mode"}}
+        "button": {
+          "press_action": {
+            "method": "set_shutter_a_sync_mode"
+          }
+        }
       },
       "2": {
         "setting_name": "fps",
-        "button": {"press_action": {"method": "set_fps_double"}}
+        "button": {
+          "press_action": {
+            "method": "set_fps_double"
+          }
+        }
       },
       "3": {
         "setting_name": "wb",
         "button": {
           "press_action": "None",
-          "single_click_action": {"method": "set_resolution"},
-          "double_click_action": {"method": "restart_cinemate"},
-          "triple_click_action": {"method": "reboot"},
-          "hold_action": {"method": "toggle_mount"}
+          "single_click_action": {
+            "method": "set_resolution"
+          },
+          "double_click_action": {
+            "method": "restart_cinemate"
+          },
+          "triple_click_action": {
+            "method": "reboot"
+          },
+          "hold_action": {
+            "method": "toggle_mount"
+          }
+        }
       }
     }
-    }
   },
-
   "i2c_oled": {
     "enabled": false,
     "width": 128,
@@ -179,8 +285,57 @@
       "iso",
       "tc_cam0",
       "RECORDING_TC"
-
     ]
+  },
+  "state_model": "v1",
+  "launch": {
+    "rt_mode": "off",
+    "rt_priority": 20,
+    "cpu_affinity": "1-3"
+  },
+  "recording_profiles": {
+    "active": "B",
+    "profiles": {
+      "A": {
+        "encode_workers": 3,
+        "disk_workers": 2,
+        "encode_affinity": "1-2",
+        "disk_affinity": "2",
+        "encode_nice": -10,
+        "disk_nice": -5
+      },
+      "B": {
+        "encode_workers": 2,
+        "disk_workers": 1,
+        "encode_affinity": "2-3",
+        "disk_affinity": "1",
+        "encode_nice": -6,
+        "disk_nice": -12
+      },
+      "C": {
+        "encode_workers": 2,
+        "disk_workers": 2,
+        "encode_affinity": "1-2",
+        "disk_affinity": "3",
+        "encode_nice": -8,
+        "disk_nice": -8
+      },
+      "custom": {
+        "encode_workers": 2,
+        "disk_workers": 1,
+        "encode_affinity": "2-3",
+        "disk_affinity": "1",
+        "encode_nice": -6,
+        "disk_nice": -12
+      }
+    }
+  },
+  "stdout_metadata": {
+    "enabled": false
+  },
+  "stdout_relay": {
+    "enabled": false,
+    "level": "debug",
+    "filters": []
   }
-  
 }

@@ -301,7 +301,7 @@ def main():
     redis_controller.set_value(ParameterKey.RECORDING_TIME.value, 0)
     
     # Initialize CinePi application
-    cinepi = CinePi(redis_controller, sensor_detect)
+    cinepi = CinePi(redis_controller, sensor_detect, settings=settings)
     
     cinepi.start_all()
 
@@ -367,7 +367,7 @@ def main():
     t.start()
 
 
-    redis_listener = RedisListener(redis_controller, ssd_monitor)
+    redis_listener = RedisListener(redis_controller, ssd_monitor, state_model=settings.get("state_model", "v1"))
     battery_monitor = BatteryMonitor()
 
     simple_gui = SimpleGUI(

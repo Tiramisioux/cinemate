@@ -334,6 +334,7 @@ def main():
         ssd_monitor=ssd_monitor,
         dmesg_monitor=dmesg_monitor,
         usb_monitor=usb_monitor,
+        settings=settings,
     )
 
     # Create CommandExecutor (for both CLI and Serial)

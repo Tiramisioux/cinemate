@@ -3,8 +3,12 @@ import datetime
 import json
 import logging
 import os
+import statistics
+import subprocess
 import threading
 import time
+from collections import Counter
+from dataclasses import dataclass
 from pathlib import Path
 
 try:
@@ -36,6 +40,23 @@ except Exception:  # pragma: no cover - tests can run without full runtime deps
         STORAGE_TYPE = _Key("storage_type")
 
 
+@dataclass
+class SamplerSnapshot:
+    cpu_percent_total: float | None = None
+    cpu_percent_per_core: str = "[]"
+    ram_percent: float | None = None
+    cpu_temp_c: float | None = None
+    loadavg_1m: float | None = None
+    disk_write_bytes_delta: int | None = None
+    net_tx_bytes_delta: int | None = None
+    net_rx_bytes_delta: int | None = None
+    proc_cpu_cinepi_raw: float = 0.0
+    proc_cpu_cinemate: float = 0.0
+    proc_cpu_redis: float = 0.0
+    proc_cpu_arecord: float = 0.0
+    throttled_flags: str = ""
+
+
 class PerformanceAnalyzer:
     CSV_FIELDS = [
         "monotonic_seq",
@@ -49,6 +70,9 @@ class PerformanceAnalyzer:
         "fps_expected",
         "fps_actual",
         "dropped_frame_flag",
+        "hard_drop_flag",
+        "soft_drop_flag",
+        "drop_class",
         "drop_reason",
         "buffer_used",
         "buffer_size",
@@ -78,6 +102,10 @@ class PerformanceAnalyzer:
         "proc_cpu_cinemate",
         "proc_cpu_redis",
         "proc_cpu_arecord",
+        "throttled_flags",
+        "analyzer_wall_dt_ms",
+        "sensor_dt_ms",
+        "ingest_lag_ms",
     ]
 
     def __init__(
@@ -89,6 +117,7 @@ class PerformanceAnalyzer:
         usb_monitor=None,
         analysis_root="/media/RAW/_analysis",
         redis_client=None,
+        settings=None,
     ):
         self.redis_controller = redis_controller
         self.cinepi_controller = cinepi_controller
@@ -96,6 +125,10 @@ class PerformanceAnalyzer:
         self.dmesg_monitor = dmesg_monitor
         self.usb_monitor = usb_monitor
         self.analysis_root = Path(analysis_root)
+        self.settings = settings or {}
+        self._timestamp_gap_factor = self._read_timestamp_gap_factor()
+        self._quality_min_rows_ratio = self._read_quality_min_rows_ratio()
+
         if redis_client is not None:
             self.redis_client = redis_client
         elif redis is not None:
@@ -104,6 +137,7 @@ class PerformanceAnalyzer:
             raise RuntimeError("redis package is required when redis_client is not provided")
 
         self._thread = None
+        self._sampler_thread = None
         self._stop_event = threading.Event()
         self._active = False
         self._lock = threading.Lock()
@@ -111,15 +145,28 @@ class PerformanceAnalyzer:
         self._seq = 0
         self._rows = 0
         self._drop_count = 0
+        self._soft_drop_count = 0
+        self._hard_drop_reasons = Counter()
+        self._soft_drop_reasons = Counter()
         self._prev_timestamp_ns = None
         self._prev_frame_count = None
         self._prev_stats_seq = None
         self._stats_seq_gap_events = 0
         self._timestamp_gap_events = 0
         self._start_monotonic = None
+        self._start_wall_time = None
+        self._prev_row_wall_time = None
+
+        self._analyzer_wall_dts_ms = []
+        self._sensor_dts_ms = []
+
+        self._sampler_lock = threading.Lock()
+        self._sampler_snapshot = SamplerSnapshot()
         self._last_disk_write_bytes = None
         self._last_net_tx = None
         self._last_net_rx = None
+        self._last_throttled_sample = 0.0
+        self._last_throttled_flags = ""
 
         self._target_mode = None
         self._target_amount = None
@@ -229,18 +276,27 @@ class PerformanceAnalyzer:
         self._seq = 0
         self._rows = 0
         self._drop_count = 0
+        self._soft_drop_count = 0
+        self._hard_drop_reasons.clear()
+        self._soft_drop_reasons.clear()
         self._prev_timestamp_ns = None
         self._prev_frame_count = None
         self._prev_stats_seq = None
         self._stats_seq_gap_events = 0
         self._timestamp_gap_events = 0
         self._start_monotonic = time.monotonic()
+        self._start_wall_time = time.time()
+        self._prev_row_wall_time = None
+        self._analyzer_wall_dts_ms = []
+        self._sensor_dts_ms = []
 
         disk = psutil.disk_io_counters() if psutil and hasattr(psutil, "disk_io_counters") else None
         net = psutil.net_io_counters() if psutil and hasattr(psutil, "net_io_counters") else None
         self._last_disk_write_bytes = getattr(disk, "write_bytes", None)
         self._last_net_tx = getattr(net, "bytes_sent", None)
         self._last_net_rx = getattr(net, "bytes_recv", None)
+        self._last_throttled_sample = 0.0
+        self._last_throttled_flags = ""
 
         if psutil:
             psutil.cpu_percent(interval=None)
@@ -248,9 +304,13 @@ class PerformanceAnalyzer:
             for process in psutil.process_iter(attrs=["name"]):
                 process.cpu_percent(None)
 
+        with self._sampler_lock:
+            self._sampler_snapshot = SamplerSnapshot()
+
     def _run(self):
         pubsub = self.redis_client.pubsub()
         pubsub.subscribe("cp_stats")
+        self._start_sampler()
 
         try:
             with self._csv_path.open("w", newline="", buffering=1, encoding="utf-8") as csv_file:
@@ -273,6 +333,9 @@ class PerformanceAnalyzer:
                     if self._should_finish(row):
                         break
         finally:
+            self._stop_event.set()
+            if self._sampler_thread is not None:
+                self._sampler_thread.join(timeout=2)
             try:
                 pubsub.close()
             except Exception:
@@ -280,6 +343,52 @@ class PerformanceAnalyzer:
             self._finalize()
             with self._lock:
                 self._active = False
+
+    def _start_sampler(self):
+        self._sampler_thread = threading.Thread(target=self._sampler_loop, daemon=True, name="PerformanceAnalyzerSampler")
+        self._sampler_thread.start()
+
+    def _sampler_loop(self):
+        while not self._stop_event.is_set():
+            snapshot = self._collect_sampler_snapshot()
+            with self._sampler_lock:
+                self._sampler_snapshot = snapshot
+            self._stop_event.wait(1.0)
+
+    def _collect_sampler_snapshot(self):
+        if not psutil:
+            return SamplerSnapshot(
+                loadavg_1m=os.getloadavg()[0] if hasattr(os, "getloadavg") else None,
+                throttled_flags=self._sample_throttled_flags(),
+            )
+
+        cpu_total = psutil.cpu_percent(interval=None)
+        cpu_per_core = json.dumps(psutil.cpu_percent(interval=None, percpu=True))
+        ram_percent = psutil.virtual_memory().percent
+        cpu_temp = self._cpu_temp_c()
+        loadavg = os.getloadavg()[0] if hasattr(os, "getloadavg") else None
+        disk_delta = self._sample_disk_delta()
+        net_tx_delta, net_rx_delta = self._sample_net_delta()
+
+        return SamplerSnapshot(
+            cpu_percent_total=cpu_total,
+            cpu_percent_per_core=cpu_per_core,
+            ram_percent=ram_percent,
+            cpu_temp_c=cpu_temp,
+            loadavg_1m=loadavg,
+            disk_write_bytes_delta=disk_delta,
+            net_tx_bytes_delta=net_tx_delta,
+            net_rx_bytes_delta=net_rx_delta,
+            proc_cpu_cinepi_raw=self._process_cpu("cinepi-raw"),
+            proc_cpu_cinemate=self._process_cpu("python"),
+            proc_cpu_redis=self._process_cpu("redis"),
+            proc_cpu_arecord=self._process_cpu("arecord"),
+            throttled_flags=self._sample_throttled_flags(),
+        )
+
+    def _get_sampler_snapshot(self):
+        with self._sampler_lock:
+            return self._sampler_snapshot
 
     def _decode_stats(self, payload):
         if payload is None:
@@ -314,7 +423,9 @@ class PerformanceAnalyzer:
 
     def _build_row(self, stats_data):
         self._seq += 1
-        now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        now_dt = datetime.datetime.now(datetime.timezone.utc)
+        now_iso = now_dt.isoformat()
+        now_wall_s = time.time()
 
         sensor_timestamp_ns, timestamp_key_used = self._extract_sensor_timestamp(stats_data)
         frame_count = self._to_int(stats_data.get("frameCount"))
@@ -325,7 +436,14 @@ class PerformanceAnalyzer:
         if fps_actual is None:
             fps_actual = self._read_float(ParameterKey.FPS_ACTUAL.value)
 
-        dropped_frame_flag, drop_reason = self._detect_drop(sensor_timestamp_ns, frame_count, fps_expected, fps_actual)
+        prev_sensor_timestamp_ns = self._prev_timestamp_ns
+        hard_drop_flag, soft_drop_flag, drop_reason = self._classify_drop(
+            sensor_timestamp_ns=sensor_timestamp_ns,
+            frame_count=frame_count,
+            cp_stats_seq_gap=cp_stats_seq_gap,
+            fps_expected=fps_expected,
+            fps_actual=fps_actual,
+        )
         cp_stats_timestamp_gap = 1 if drop_reason == "timestamp_gap" else 0
         if cp_stats_timestamp_gap:
             self._timestamp_gap_events += 1
@@ -334,8 +452,19 @@ class PerformanceAnalyzer:
         if buffer_used is None:
             buffer_used = self._read_int(ParameterKey.BUFFER.value)
 
-        disk_delta = self._sample_disk_delta()
-        net_tx_delta, net_rx_delta = self._sample_net_delta()
+        analyzer_wall_dt_ms = None
+        if self._prev_row_wall_time is not None:
+            analyzer_wall_dt_ms = round((now_wall_s - self._prev_row_wall_time) * 1000.0, 3)
+            self._analyzer_wall_dts_ms.append(analyzer_wall_dt_ms)
+        self._prev_row_wall_time = now_wall_s
+
+        sensor_dt_ms = None
+        if sensor_timestamp_ns is not None and prev_sensor_timestamp_ns is not None:
+            sensor_dt_ms = round((sensor_timestamp_ns - prev_sensor_timestamp_ns) / 1_000_000.0, 3)
+            self._sensor_dts_ms.append(sensor_dt_ms)
+
+        ingest_lag_ms = self._estimate_ingest_lag_ms(stats_data, now_wall_s)
+        snapshot = self._get_sampler_snapshot()
 
         row = {
             "monotonic_seq": self._seq,
@@ -348,7 +477,10 @@ class PerformanceAnalyzer:
             "frame_count": frame_count,
             "fps_expected": fps_expected,
             "fps_actual": fps_actual,
-            "dropped_frame_flag": int(dropped_frame_flag),
+            "dropped_frame_flag": int(hard_drop_flag),
+            "hard_drop_flag": int(hard_drop_flag),
+            "soft_drop_flag": int(soft_drop_flag),
+            "drop_class": "hard" if hard_drop_flag else "soft" if soft_drop_flag else "",
             "drop_reason": drop_reason,
             "buffer_used": buffer_used,
             "buffer_size": self._read_int(ParameterKey.BUFFER_SIZE.value),
@@ -360,27 +492,56 @@ class PerformanceAnalyzer:
             "ram_buffers": self._to_int(stats_data.get("ram_buffers")),
             "encode_latency_ms": self._to_float(stats_data.get("encode_latency_ms")),
             "disk_latency_ms": self._to_float(stats_data.get("disk_latency_ms")),
-            "cpu_percent_total": psutil.cpu_percent(interval=None) if psutil else None,
-            "cpu_percent_per_core": json.dumps(psutil.cpu_percent(interval=None, percpu=True)) if psutil else "[]",
-            "ram_percent": psutil.virtual_memory().percent if psutil else None,
-            "cpu_temp_c": self._cpu_temp_c(),
-            "loadavg_1m": os.getloadavg()[0] if hasattr(os, "getloadavg") else None,
-            "disk_write_bytes_delta": disk_delta,
-            "net_tx_bytes_delta": net_tx_delta,
-            "net_rx_bytes_delta": net_rx_delta,
+            "cpu_percent_total": snapshot.cpu_percent_total,
+            "cpu_percent_per_core": snapshot.cpu_percent_per_core,
+            "ram_percent": snapshot.ram_percent,
+            "cpu_temp_c": snapshot.cpu_temp_c,
+            "loadavg_1m": snapshot.loadavg_1m,
+            "disk_write_bytes_delta": snapshot.disk_write_bytes_delta,
+            "net_tx_bytes_delta": snapshot.net_tx_bytes_delta,
+            "net_rx_bytes_delta": snapshot.net_rx_bytes_delta,
             "undervoltage_flag": int(bool(getattr(self.dmesg_monitor, "undervoltage_flag", False))),
             "storage_type": self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value) or "",
             "is_mounted": int(bool(getattr(self.ssd_monitor, "is_mounted", False))),
             "mic_connected": int(bool(getattr(self.usb_monitor, "usb_mic", None))),
             "mic_sample_rate": getattr(getattr(self.usb_monitor, "audio_monitor", None), "sample_rate", None),
             "mic_channels": getattr(getattr(self.usb_monitor, "audio_monitor", None), "channels", None),
-            "proc_cpu_cinepi_raw": self._process_cpu("cinepi-raw"),
-            "proc_cpu_cinemate": self._process_cpu("python"),
-            "proc_cpu_redis": self._process_cpu("redis"),
-            "proc_cpu_arecord": self._process_cpu("arecord"),
+            "proc_cpu_cinepi_raw": snapshot.proc_cpu_cinepi_raw,
+            "proc_cpu_cinemate": snapshot.proc_cpu_cinemate,
+            "proc_cpu_redis": snapshot.proc_cpu_redis,
+            "proc_cpu_arecord": snapshot.proc_cpu_arecord,
+            "throttled_flags": snapshot.throttled_flags,
+            "analyzer_wall_dt_ms": analyzer_wall_dt_ms,
+            "sensor_dt_ms": sensor_dt_ms,
+            "ingest_lag_ms": ingest_lag_ms,
         }
 
         return row
+
+    def _estimate_ingest_lag_ms(self, stats_data, now_wall_s):
+        candidates = (
+            stats_data.get("wall_time_ms"),
+            stats_data.get("wallTimeMs"),
+            stats_data.get("wall_time"),
+            stats_data.get("wallTime"),
+            stats_data.get("timestamp_ms"),
+            stats_data.get("timestampMs"),
+        )
+        for value in candidates:
+            if value is None:
+                continue
+            numeric = self._to_float(value)
+            if numeric is None:
+                continue
+            if numeric > 10_000_000_000:  # likely ns
+                source_wall_s = numeric / 1_000_000_000.0
+            elif numeric > 10_000_000:  # likely ms
+                source_wall_s = numeric / 1000.0
+            else:
+                source_wall_s = numeric
+            lag_ms = (now_wall_s - source_wall_s) * 1000.0
+            return round(lag_ms, 3)
+        return None
 
     def _extract_seq_gap(self, stats_data):
         seq = self._to_int(stats_data.get("stats_seq"))
@@ -405,46 +566,76 @@ class PerformanceAnalyzer:
 
         return False
 
-    def _detect_drop(self, sensor_timestamp_ns, frame_count, fps_expected, fps_actual):
-        dropped = False
+    def _classify_drop(self, sensor_timestamp_ns, frame_count, cp_stats_seq_gap, fps_expected, fps_actual):
+        hard_drop = False
+        soft_drop = False
         reason = ""
 
-        if sensor_timestamp_ns is not None and self._prev_timestamp_ns is not None and fps_expected and fps_expected > 0:
-            expected_period_ns = int(1_000_000_000 / fps_expected)
+        expected_fps = fps_expected if fps_expected and fps_expected > 0 else fps_actual
+
+        if sensor_timestamp_ns is not None and self._prev_timestamp_ns is not None and expected_fps and expected_fps > 0:
+            expected_period_ns = int(1_000_000_000 / expected_fps)
             delta = sensor_timestamp_ns - self._prev_timestamp_ns
-            if delta > int(expected_period_ns * 1.5):
-                dropped = True
+            if delta > int(expected_period_ns * self._timestamp_gap_factor):
+                hard_drop = True
                 reason = "timestamp_gap"
 
-        if not dropped and frame_count is not None and self._prev_frame_count is not None:
+        if not hard_drop and cp_stats_seq_gap:
+            hard_drop = True
+            reason = "cp_stats_seq_gap"
+
+        if not hard_drop and frame_count is not None and self._prev_frame_count is not None:
             if frame_count - self._prev_frame_count > 1:
-                dropped = True
+                soft_drop = True
                 reason = "framecount_discontinuity"
 
-        if not dropped and fps_expected and fps_actual is not None and abs(fps_actual - fps_expected) > 1:
-            dropped = True
+        if not hard_drop and not soft_drop and fps_expected and fps_actual is not None and abs(fps_actual - fps_expected) > 1:
+            soft_drop = True
             reason = "fps_deviation_only"
 
-        if dropped and not reason:
+        if (hard_drop or soft_drop) and not reason:
             reason = "unknown"
 
-        if dropped:
+        if hard_drop:
             self._drop_count += 1
+            self._hard_drop_reasons[reason] += 1
+        elif soft_drop:
+            self._soft_drop_count += 1
+            self._soft_drop_reasons[reason] += 1
 
         if sensor_timestamp_ns is not None:
             self._prev_timestamp_ns = sensor_timestamp_ns
         if frame_count is not None:
             self._prev_frame_count = frame_count
 
-        return dropped, reason
+        return hard_drop, soft_drop, reason
 
     def _finalize(self):
+        elapsed = max(0.001, time.monotonic() - (self._start_monotonic or time.monotonic()))
+        rows_per_second = self._rows / elapsed
+
+        median_analyzer_wall_dt_ms = self._safe_median(self._analyzer_wall_dts_ms)
+        p95_analyzer_wall_dt_ms = self._safe_p95(self._analyzer_wall_dts_ms)
+        median_sensor_dt_ms = self._safe_median(self._sensor_dts_ms)
+
+        quality_warning, quality_message = self._compute_data_quality_warning(rows_per_second, median_sensor_dt_ms)
+
         summary = {
             "csv_path": str(self._csv_path),
             "target_mode": self._target_mode,
             "target_amount": self._target_amount,
             "rows_written": self._rows,
+            "rows_per_second": round(rows_per_second, 3),
+            "median_analyzer_wall_dt_ms": median_analyzer_wall_dt_ms,
+            "p95_analyzer_wall_dt_ms": p95_analyzer_wall_dt_ms,
+            "median_sensor_dt_ms": median_sensor_dt_ms,
+            "analysis_data_quality_warning": quality_warning,
+            "analysis_data_quality_message": quality_message,
             "drop_candidates": self._drop_count,
+            "hard_drop_count": self._drop_count,
+            "soft_drop_count": self._soft_drop_count,
+            "hard_drop_reasons": dict(self._hard_drop_reasons),
+            "soft_drop_reasons": dict(self._soft_drop_reasons),
             "stats_seq_gap_events": self._stats_seq_gap_events,
             "timestamp_gap_events": self._timestamp_gap_events,
             "start_recording_already_active": self._start_is_recording,
@@ -457,6 +648,52 @@ class PerformanceAnalyzer:
             logging.info("Performance analyzer complete. Summary: %s", self._summary_path)
         except OSError as exc:
             logging.error("Failed to write analyzer summary: %s", exc)
+
+    def _compute_data_quality_warning(self, rows_per_second, median_sensor_dt_ms):
+        elapsed = max(0.001, time.monotonic() - (self._start_monotonic or time.monotonic()))
+        expected_rows = None
+
+        if self._target_mode == "seconds" and self._target_seconds:
+            expected_fps = self._read_float(ParameterKey.FPS.value)
+            if expected_fps and expected_fps > 0:
+                expected_rows = self._target_seconds * expected_fps
+            elif median_sensor_dt_ms and median_sensor_dt_ms > 0:
+                expected_rows = self._target_seconds * (1000.0 / median_sensor_dt_ms)
+            else:
+                expected_rows = rows_per_second * self._target_seconds
+        elif self._target_mode == "frames" and self._target_frames:
+            expected_rows = float(self._target_frames)
+        elif median_sensor_dt_ms and median_sensor_dt_ms > 0:
+            expected_rows = elapsed * (1000.0 / median_sensor_dt_ms)
+
+        if not expected_rows or expected_rows <= 0:
+            return False, ""
+
+        ratio = self._rows / expected_rows
+        if ratio >= self._quality_min_rows_ratio:
+            return False, ""
+
+        message = (
+            f"Analyzer ingest appears under-sampled: rows={self._rows}, expected~{int(expected_rows)}, "
+            f"ratio={ratio:.3f}, min_ratio={self._quality_min_rows_ratio:.3f}."
+        )
+        return True, message
+
+    @staticmethod
+    def _safe_median(values):
+        if not values:
+            return None
+        return round(float(statistics.median(values)), 3)
+
+    @staticmethod
+    def _safe_p95(values):
+        if not values:
+            return None
+        if len(values) == 1:
+            return round(float(values[0]), 3)
+        ordered = sorted(values)
+        index = int(round(0.95 * (len(ordered) - 1)))
+        return round(float(ordered[index]), 3)
 
     def _sample_disk_delta(self):
         if not psutil:
@@ -569,3 +806,48 @@ class PerformanceAnalyzer:
             return float(number)
         except ValueError:
             return None
+
+    def _read_timestamp_gap_factor(self):
+        value = (
+            self.settings.get("analysis", {})
+            .get("drop", {})
+            .get("timestamp_gap_factor", 1.5)
+        )
+        factor = self._to_float(value)
+        return factor if factor and factor > 0 else 1.5
+
+    def _read_quality_min_rows_ratio(self):
+        value = (
+            self.settings.get("analysis", {})
+            .get("data_quality", {})
+            .get("min_rows_ratio", 0.5)
+        )
+        ratio = self._to_float(value)
+        if ratio is None:
+            return 0.5
+        return min(1.0, max(0.1, ratio))
+
+    def _sample_throttled_flags(self):
+        now = time.monotonic()
+        if now - self._last_throttled_sample < 1.0:
+            return self._last_throttled_flags
+
+        self._last_throttled_sample = now
+        try:
+            result = subprocess.run(
+                ["vcgencmd", "get_throttled"],
+                capture_output=True,
+                text=True,
+                timeout=0.2,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            self._last_throttled_flags = ""
+            return self._last_throttled_flags
+
+        output = (result.stdout or "").strip()
+        if "=" in output:
+            self._last_throttled_flags = output.split("=", 1)[1].strip()
+        else:
+            self._last_throttled_flags = ""
+        return self._last_throttled_flags

@@ -514,6 +514,11 @@ class PerformanceAnalyzer:
             "analyzer_wall_dt_ms": analyzer_wall_dt_ms,
             "sensor_dt_ms": sensor_dt_ms,
             "ingest_lag_ms": ingest_lag_ms,
+            "proc_cpu_cinepi_raw": self._process_cpu("cinepi-raw"),
+            "proc_cpu_cinemate": self._process_cpu("python"),
+            "proc_cpu_redis": self._process_cpu("redis"),
+            "proc_cpu_arecord": self._process_cpu("arecord"),
+            "throttled_flags": self._sample_throttled_flags(),
         }
 
         return row

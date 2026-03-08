@@ -332,5 +332,12 @@
   },
   "stdout_metadata": {
     "enabled": false
+  },
+  "stdout_relay": {
+    "enabled": false,
+    "level": "debug",
+    "filters": []
+  }
+}
   }
 }

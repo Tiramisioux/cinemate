@@ -49,6 +49,24 @@ def _resolve_launch_policy(settings: dict) -> dict:
         "cpu_affinity": launch_cfg.get("cpu_affinity", "1-3"),
     }
 
+
+def _resolve_stdout_relay(settings: dict) -> dict:
+    relay_cfg = settings.get("stdout_relay", {})
+    level = str(relay_cfg.get("level", "debug")).lower()
+    if level not in {"debug", "info"}:
+        level = "debug"
+
+    filters = relay_cfg.get("filters")
+    if not isinstance(filters, list):
+        filters = []
+    filters = [str(item) for item in filters if str(item).strip()]
+
+    return {
+        "enabled": bool(relay_cfg.get("enabled", False)),
+        "level": level,
+        "filters": filters,
+    }
+
 # ───────────────────────── zoom default ──────────────────────────
 def _seed_default_zoom(redis_ctl):
     """
@@ -191,6 +209,7 @@ class CinePiProcess(Thread):
         out_cfg = self.settings.get('output', {})
         self.output = out_cfg.get(self.cam.port, {})
         self.stdout_metadata_enabled = bool(self.settings.get("stdout_metadata", {}).get("enabled", False))
+        self.stdout_relay = _resolve_stdout_relay(self.settings)
 
 
     def run(self):
@@ -224,12 +243,14 @@ class CinePiProcess(Thread):
 
         
     def _log(self, text):
-        for name, rx in self.log_filters.items():
-            if name in self.active_filters and rx.search(text):
-                pass #logging.info('[%s] %s', self.cam, text)
-                break
-        logging.info('[%s] %s', self.cam.port, text)   # DEBUG → all lines
-        pass
+        filters = self.stdout_relay.get("filters", [])
+        if filters and not any(token in text for token in filters):
+            return
+
+        if self.stdout_relay.get("level") == "info":
+            logging.info('[%s] %s', self.cam.port, text)
+        else:
+            logging.debug('[%s] %s', self.cam.port, text)
         
     # ─────────────────────────────────────────────────────────────
     #  Stream one pipe from cinepi-raw, relay lines, intercept the
@@ -243,10 +264,11 @@ class CinePiProcess(Thread):
             # 1. canonicalise ---------------------------------------------------
             line = raw.decode('utf-8', 'replace').rstrip()
 
-            # 2. forward raw text exactly as before ----------------------------
+            # 2. always drain pipe; only relay/emit raw text when enabled ------
             q.put(line)
-            self.message.emit(line)
-            self._log(line)
+            if self.stdout_relay.get("enabled", False):
+                self.message.emit(line)
+                self._log(line)
 
             # 3. special-case the new encoder message --------------------------
             m = dng_rx.search(line)

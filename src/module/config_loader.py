@@ -110,6 +110,12 @@ def load_settings(filename: str | Path) -> dict:
     stdout_metadata_cfg.setdefault("enabled", False)
     settings["stdout_metadata"] = stdout_metadata_cfg
 
+    stdout_relay_cfg = settings.setdefault("stdout_relay", {})
+    stdout_relay_cfg.setdefault("enabled", False)
+    stdout_relay_cfg.setdefault("level", "debug")
+    stdout_relay_cfg.setdefault("filters", [])
+    settings["stdout_relay"] = stdout_relay_cfg
+
     # ── preview / zoom defaults ──────────────────────────────────────────
     preview_defaults = {
         "default_zoom": 1.0,

@@ -69,6 +69,8 @@ Temporary baseline default remains **Profile B**:
 - `encode_nice=-6`
 - `disk_nice=-12`
 
+## stdout metadata and relay controls
+- stdout `DNG written:` parsing remains best-effort and is controlled by:
 ## stdout metadata deprecation path
 - stdout `DNG written:` parsing is now a best-effort path controlled by:
 
@@ -76,6 +78,19 @@ Temporary baseline default remains **Profile B**:
 "stdout_metadata": { "enabled": false }
 ```
 
+- Raw stdout relay to Cinemate logs is independently controlled by:
+
+```json
+"stdout_relay": {
+  "enabled": false,
+  "level": "debug",
+  "filters": []
+}
+```
+
+- `stdout_metadata` and `stdout_relay` are intentionally independent.
+- Core state/control behavior does not depend on per-frame stdout metadata or stdout relay.
+- Cinemate can run with cinepi-raw stdout relay disabled; `cp_stats` remains authoritative.
 - Core state/control behavior should not depend on per-frame stdout metadata.
 
 ## Analyzer CSV additions
@@ -104,6 +119,7 @@ Summary JSON includes:
    - No control regressions in start/stop/restart.
    - Low/acceptable `stats_seq_gap_events` and `timestamp_gap_events`.
    - Stable framecount progression and expected/recorded tolerance.
+   - "Cinemate can run with cinepi-raw stdout relay fully disabled."
 
 ## Risk matrix (short)
 - **Launch policy regression**: misconfigured `fifo` priority or affinity can reduce stability.

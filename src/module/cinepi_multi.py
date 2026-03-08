@@ -16,22 +16,38 @@ from module.redis_controller import ParameterKey
 
 # Path to settings file
 SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
-# Load global settings
 _SETTINGS = load_settings(SETTINGS_FILE)
 
 _READY_RX   = re.compile(r"Encoder configured")      # line printed by DngEncoder
 _READY_WAIT = 2.0                                   # seconds to wait for all cams
 
-def _rt_permitted():
+def _rt_permitted(priority: int):
     if shutil.which("chrt") is None:
         return False
     try:
         # Will only succeed if this user has CAP_SYS_NICE
-        subprocess.run(["chrt", "-f", "70", "/bin/true"],
+        subprocess.run(["chrt", "-f", str(priority), "/bin/true"],
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
         return True
     except Exception:
         return False
+
+
+def _resolve_recording_profile(settings: dict) -> tuple[str, dict]:
+    profiles_cfg = settings.get("recording_profiles", {})
+    active = str(profiles_cfg.get("active", "B"))
+    table = profiles_cfg.get("profiles", {})
+    profile = table.get(active) or table.get("B") or {}
+    return active, profile
+
+
+def _resolve_launch_policy(settings: dict) -> dict:
+    launch_cfg = settings.get("launch", {})
+    return {
+        "rt_mode": str(launch_cfg.get("rt_mode", "off")).lower(),
+        "rt_priority": int(launch_cfg.get("rt_priority", 20)),
+        "cpu_affinity": launch_cfg.get("cpu_affinity", "1-3"),
+    }
 
 # ───────────────────────── zoom default ──────────────────────────
 def _seed_default_zoom(redis_ctl):
@@ -134,16 +150,24 @@ class CinePiProcess(Thread):
         self,
         redis_controller,
         sensor_detect,
+        settings,
         cam: CameraInfo,
         primary: bool,
         multi: bool,
+        profile_name: str,
+        profile: dict,
+        launch_policy: dict,
     ):
         super().__init__(daemon=True)
         self.redis_controller = redis_controller
         self.sensor_detect = sensor_detect
+        self.settings = settings
         self.cam = cam
         self.primary = primary
         self.multi = multi
+        self.profile_name = profile_name
+        self.profile = profile
+        self.launch_policy = launch_policy
         self.proc: Optional[subprocess.Popen] = None
         self.message = Event()
         self.out_q, self.err_q = Queue(), Queue()
@@ -160,31 +184,34 @@ class CinePiProcess(Thread):
         self.redis_channel = 'cinepi.last_dng'          # publish JSON here
         
         # load per-camera geometry from settings
-        geo = _SETTINGS.get('geometry', {})
+        geo = self.settings.get('geometry', {})
         self.geometry = geo.get(self.cam.port, {})
         
         # load per-camera output settings (e.g., HDMI port)
-        out_cfg = _SETTINGS.get('output', {})
+        out_cfg = self.settings.get('output', {})
         self.output = out_cfg.get(self.cam.port, {})
+        self.stdout_metadata_enabled = bool(self.settings.get("stdout_metadata", {}).get("enabled", False))
 
 
     def run(self):
         cine_cmd = ['cinepi-raw'] + self._build_args()
 
         prefix = []
-        if _rt_permitted():
-            # SCHED_FIFO 70 for the whole process (capture threads benefit most)
-            prefix += ["chrt", "-f", "70"]
-        else:
-            logging.warning("[%s] RT scheduling not permitted; running without chrt", self.cam.port)
+        if self.launch_policy["rt_mode"] == "fifo":
+            prio = self.launch_policy["rt_priority"]
+            if _rt_permitted(prio):
+                prefix += ["chrt", "-f", str(prio)]
+            else:
+                logging.warning("[%s] RT scheduling requested but unavailable; launching without chrt", self.cam.port)
 
         # Best-effort I/O (no CAP_SYS_ADMIN needed)
         if shutil.which("ionice"):
             prefix += ["ionice", "-c2", "-n0"]
 
         # Keep the entire process off CPU0; allow 1–3 (GUI/OS left on 0)
-        if shutil.which("taskset"):
-            prefix += ["taskset", "-c", "1-3"]
+        affinity = self.launch_policy.get("cpu_affinity")
+        if affinity and shutil.which("taskset"):
+            prefix += ["taskset", "-c", str(affinity)]
 
         cmd = (prefix + cine_cmd) if prefix else cine_cmd
         logging.info('[%s] Launch: %s', self.cam, cmd)
@@ -223,7 +250,7 @@ class CinePiProcess(Thread):
 
             # 3. special-case the new encoder message --------------------------
             m = dng_rx.search(line)
-            if m:
+            if m and self.stdout_metadata_enabled:
                 fname   = m.group(1)
                 payload = {
                     'type': 'dng',
@@ -275,7 +302,7 @@ class CinePiProcess(Thread):
         anam = float(self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value) or 1.0)
         
         # Get HDMI resolution from settings
-        hdmi_config = _SETTINGS.get("hdmi_display", {})
+        hdmi_config = self.settings.get("hdmi_display", {})
         fw, fh = hdmi_config.get("width", 1920), hdmi_config.get("height", 1080)
         
         px, py = 94, 50
@@ -355,14 +382,21 @@ class CinePiProcess(Thread):
         else:
             args += ['--nopreview']
             
-        # ───── Option A: Stable 24p (3 enc, 1 writer; keep CPU3 mostly free for capture) ─────
+        # Runtime profile (B is baseline for IMX585 migration)
+        encode_workers = int(self.profile.get("encode_workers", 2))
+        disk_workers = int(self.profile.get("disk_workers", 1))
+        encode_affinity = str(self.profile.get("encode_affinity", "2-3"))
+        disk_affinity = str(self.profile.get("disk_affinity", "1"))
+        encode_nice = int(self.profile.get("encode_nice", -6))
+        disk_nice = int(self.profile.get("disk_nice", -12))
+
         args += [
-            "--encode-workers",  "4",
-            "--disk-workers",    "2",
-            "--encode-affinity", "1-2",   # encoders on CPUs 1–2
-            "--disk-affinity",   "2",     # writer on CPU 2 (near NVMe IRQs you’ll pin)
-            "--encode-nice",     "-10",
-            "--disk-nice",       "-5",
+            "--encode-workers",  str(encode_workers),
+            "--disk-workers",    str(disk_workers),
+            "--encode-affinity", encode_affinity,
+            "--disk-affinity",   disk_affinity,
+            "--encode-nice",     str(encode_nice),
+            "--disk-nice",       str(disk_nice),
         ]
         
         return args
@@ -383,9 +417,10 @@ class CinePiManager:
     the very first REC edge is seen by every camera.
     """
 
-    def __init__(self, redis_controller, sensor_detect):
+    def __init__(self, redis_controller, sensor_detect, settings=None):
         self.redis_controller = redis_controller
         self.sensor_detect    = sensor_detect
+        self.settings = settings or load_settings(SETTINGS_FILE)
         self.processes: List[CinePiProcess] = []
         self.message = Event()                        # fan-out for log relay
 
@@ -403,6 +438,11 @@ class CinePiManager:
         # Seed the zoom factor before cinepi-raw processes read it
         # ------------------------------------------------------------------
         _seed_default_zoom(self.redis_controller)
+
+        profile_name, profile = _resolve_recording_profile(self.settings)
+        launch_policy = _resolve_launch_policy(self.settings)
+        logging.info("launch_policy=%s", json.dumps(launch_policy, separators=(",", ":")))
+        logging.info("recording_profile=%s resolved=%s", profile_name, json.dumps(profile, separators=(",", ":")))
 
         # ── 1. discovery ───────────────────────────────────────────
         cams = discover_cameras()                    # helper unchanged
@@ -463,9 +503,13 @@ class CinePiManager:
             proc = CinePiProcess(
                 self.redis_controller,
                 self.sensor_detect,
+                self.settings,
                 cam,
                 primary=(i == 0),
                 multi=multi,
+                profile_name=profile_name,
+                profile=profile,
+                launch_policy=launch_policy,
             )
             proc.message.subscribe(self.message.emit)
             proc.start()

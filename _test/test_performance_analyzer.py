@@ -99,16 +99,22 @@ class TestPerformanceAnalyzer(unittest.TestCase):
         self.assertEqual(len(summary_files), 1)
         summary = json.loads(summary_files[0].read_text())
         self.assertEqual(summary["rows_written"], 2)
+        self.assertIn("hard_drop_count", summary)
+        self.assertIn("soft_drop_count", summary)
+        self.assertIn("hard_drop_reasons", summary)
+        self.assertIn("soft_drop_reasons", summary)
         controller.rec.assert_called_once()
 
-    def test_timestamp_gap_drop_detection(self):
+    def test_timestamp_gap_classified_as_hard_drop(self):
         analyzer, *_ = self.build_analyzer(Path(tempfile.mkdtemp()), [])
-        dropped, reason = analyzer._detect_drop(1_000_000_000, 1, fps_expected=24, fps_actual=24)
-        self.assertFalse(dropped)
+        hard, soft, reason = analyzer._classify_drop(1_000_000_000, 1, cp_stats_seq_gap=0, fps_expected=24, fps_actual=24)
+        self.assertFalse(hard)
+        self.assertFalse(soft)
         self.assertEqual(reason, "")
 
-        dropped, reason = analyzer._detect_drop(1_100_000_000, 2, fps_expected=24, fps_actual=24)
-        self.assertTrue(dropped)
+        hard, soft, reason = analyzer._classify_drop(1_100_000_000, 2, cp_stats_seq_gap=0, fps_expected=24, fps_actual=24)
+        self.assertTrue(hard)
+        self.assertFalse(soft)
         self.assertEqual(reason, "timestamp_gap")
 
     def test_stats_seq_gap_detection(self):
@@ -120,6 +126,29 @@ class TestPerformanceAnalyzer(unittest.TestCase):
         seq, gap = analyzer._extract_seq_gap({"stats_seq": 4})
         self.assertEqual(seq, 4)
         self.assertEqual(gap, 1)
+
+    def test_framecount_only_discontinuity_is_soft_drop(self):
+        analyzer, *_ = self.build_analyzer(Path(tempfile.mkdtemp()), [])
+        analyzer._classify_drop(1_000_000_000, 1, cp_stats_seq_gap=0, fps_expected=24, fps_actual=24)
+        hard, soft, reason = analyzer._classify_drop(1_041_000_000, 3, cp_stats_seq_gap=0, fps_expected=24, fps_actual=24)
+        self.assertFalse(hard)
+        self.assertTrue(soft)
+        self.assertEqual(reason, "framecount_discontinuity")
+
+    def test_fps_deviation_only_is_soft_drop(self):
+        analyzer, *_ = self.build_analyzer(Path(tempfile.mkdtemp()), [])
+        hard, soft, reason = analyzer._classify_drop(1_000_000_000, 1, cp_stats_seq_gap=0, fps_expected=24, fps_actual=21.5)
+        self.assertFalse(hard)
+        self.assertTrue(soft)
+        self.assertEqual(reason, "fps_deviation_only")
+
+    def test_seq_gap_is_hard_drop(self):
+        analyzer, *_ = self.build_analyzer(Path(tempfile.mkdtemp()), [])
+        analyzer._classify_drop(1_000_000_000, 1, cp_stats_seq_gap=0, fps_expected=24, fps_actual=24)
+        hard, soft, reason = analyzer._classify_drop(1_041_000_000, 2, cp_stats_seq_gap=1, fps_expected=24, fps_actual=24)
+        self.assertTrue(hard)
+        self.assertFalse(soft)
+        self.assertEqual(reason, "cp_stats_seq_gap")
 
     @patch("module.performance_analyzer.os.path.ismount", return_value=False)
     def test_storage_unavailable_fails_cleanly(self, _ismount):

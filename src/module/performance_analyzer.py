@@ -42,6 +42,9 @@ class PerformanceAnalyzer:
         "wall_time_iso",
         "sensor_timestamp_ns",
         "timestamp_key_used",
+        "cp_stats_seq",
+        "cp_stats_seq_gap",
+        "cp_stats_timestamp_gap",
         "frame_count",
         "fps_expected",
         "fps_actual",
@@ -52,6 +55,11 @@ class PerformanceAnalyzer:
         "is_buffering",
         "is_writing_buf",
         "write_speed_mb_s",
+        "encode_queue_size",
+        "disk_queue_size",
+        "ram_buffers",
+        "encode_latency_ms",
+        "disk_latency_ms",
         "cpu_percent_total",
         "cpu_percent_per_core",
         "ram_percent",
@@ -105,6 +113,9 @@ class PerformanceAnalyzer:
         self._drop_count = 0
         self._prev_timestamp_ns = None
         self._prev_frame_count = None
+        self._prev_stats_seq = None
+        self._stats_seq_gap_events = 0
+        self._timestamp_gap_events = 0
         self._start_monotonic = None
         self._last_disk_write_bytes = None
         self._last_net_tx = None
@@ -220,6 +231,9 @@ class PerformanceAnalyzer:
         self._drop_count = 0
         self._prev_timestamp_ns = None
         self._prev_frame_count = None
+        self._prev_stats_seq = None
+        self._stats_seq_gap_events = 0
+        self._timestamp_gap_events = 0
         self._start_monotonic = time.monotonic()
 
         disk = psutil.disk_io_counters() if psutil and hasattr(psutil, "disk_io_counters") else None
@@ -304,6 +318,7 @@ class PerformanceAnalyzer:
 
         sensor_timestamp_ns, timestamp_key_used = self._extract_sensor_timestamp(stats_data)
         frame_count = self._to_int(stats_data.get("frameCount"))
+        cp_stats_seq, cp_stats_seq_gap = self._extract_seq_gap(stats_data)
 
         fps_expected = self._read_float(ParameterKey.FPS.value)
         fps_actual = self._to_float(stats_data.get("framerate"))
@@ -311,6 +326,9 @@ class PerformanceAnalyzer:
             fps_actual = self._read_float(ParameterKey.FPS_ACTUAL.value)
 
         dropped_frame_flag, drop_reason = self._detect_drop(sensor_timestamp_ns, frame_count, fps_expected, fps_actual)
+        cp_stats_timestamp_gap = 1 if drop_reason == "timestamp_gap" else 0
+        if cp_stats_timestamp_gap:
+            self._timestamp_gap_events += 1
 
         buffer_used = self._to_int(stats_data.get("bufferSize"))
         if buffer_used is None:
@@ -324,6 +342,9 @@ class PerformanceAnalyzer:
             "wall_time_iso": now_iso,
             "sensor_timestamp_ns": sensor_timestamp_ns,
             "timestamp_key_used": timestamp_key_used,
+            "cp_stats_seq": cp_stats_seq,
+            "cp_stats_seq_gap": cp_stats_seq_gap,
+            "cp_stats_timestamp_gap": cp_stats_timestamp_gap,
             "frame_count": frame_count,
             "fps_expected": fps_expected,
             "fps_actual": fps_actual,
@@ -334,6 +355,11 @@ class PerformanceAnalyzer:
             "is_buffering": self._read_bool(ParameterKey.IS_BUFFERING.value),
             "is_writing_buf": self._read_bool(ParameterKey.IS_WRITING_BUF.value),
             "write_speed_mb_s": self._parse_write_speed(self.redis_controller.get_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value)),
+            "encode_queue_size": self._to_int(stats_data.get("encode_queue_size")),
+            "disk_queue_size": self._to_int(stats_data.get("disk_queue_size")),
+            "ram_buffers": self._to_int(stats_data.get("ram_buffers")),
+            "encode_latency_ms": self._to_float(stats_data.get("encode_latency_ms")),
+            "disk_latency_ms": self._to_float(stats_data.get("disk_latency_ms")),
             "cpu_percent_total": psutil.cpu_percent(interval=None) if psutil else None,
             "cpu_percent_per_core": json.dumps(psutil.cpu_percent(interval=None, percpu=True)) if psutil else "[]",
             "ram_percent": psutil.virtual_memory().percent if psutil else None,
@@ -355,6 +381,16 @@ class PerformanceAnalyzer:
         }
 
         return row
+
+    def _extract_seq_gap(self, stats_data):
+        seq = self._to_int(stats_data.get("stats_seq"))
+        gap = 0
+        if seq is not None and self._prev_stats_seq is not None and seq > self._prev_stats_seq + 1:
+            gap = 1
+            self._stats_seq_gap_events += 1
+        if seq is not None:
+            self._prev_stats_seq = seq
+        return seq, gap
 
     def _should_finish(self, row):
         if self._target_mode == "seconds":
@@ -409,6 +445,8 @@ class PerformanceAnalyzer:
             "target_amount": self._target_amount,
             "rows_written": self._rows,
             "drop_candidates": self._drop_count,
+            "stats_seq_gap_events": self._stats_seq_gap_events,
+            "timestamp_gap_events": self._timestamp_gap_events,
             "start_recording_already_active": self._start_is_recording,
             "finished_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }

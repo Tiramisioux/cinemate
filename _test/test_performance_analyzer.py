@@ -111,6 +111,16 @@ class TestPerformanceAnalyzer(unittest.TestCase):
         self.assertTrue(dropped)
         self.assertEqual(reason, "timestamp_gap")
 
+    def test_stats_seq_gap_detection(self):
+        analyzer, *_ = self.build_analyzer(Path(tempfile.mkdtemp()), [])
+        seq, gap = analyzer._extract_seq_gap({"stats_seq": 1})
+        self.assertEqual(seq, 1)
+        self.assertEqual(gap, 0)
+
+        seq, gap = analyzer._extract_seq_gap({"stats_seq": 4})
+        self.assertEqual(seq, 4)
+        self.assertEqual(gap, 1)
+
     @patch("module.performance_analyzer.os.path.ismount", return_value=False)
     def test_storage_unavailable_fails_cleanly(self, _ismount):
         tempdir = Path(tempfile.mkdtemp())

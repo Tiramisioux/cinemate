@@ -26,6 +26,7 @@ from module.gpio_input import ComponentInitializer
 from module.battery_monitor import BatteryMonitor
 from module.wifi_hotspot import WiFiHotspotManager
 from module.cli_commands import CommandExecutor
+from module.performance_analyzer import PerformanceAnalyzer
 from module.storage_preroll import StoragePreroll
 from module.dmesg_monitor import DmesgMonitor
 from module.app import create_app
@@ -327,9 +328,20 @@ def main():
 
     gpio_input = ComponentInitializer(cinepi_controller, settings)
 
+    performance_analyzer = PerformanceAnalyzer(
+        redis_controller=redis_controller,
+        cinepi_controller=cinepi_controller,
+        ssd_monitor=ssd_monitor,
+        dmesg_monitor=dmesg_monitor,
+        usb_monitor=usb_monitor,
+    )
+
     # Create CommandExecutor (for both CLI and Serial)
     command_executor = CommandExecutor(
-        cinepi_controller, cinepi, storage_preroll=storage_preroll
+        cinepi_controller,
+        cinepi,
+        storage_preroll=storage_preroll,
+        performance_analyzer=performance_analyzer,
     )
     command_executor.start()  # CLI thread
 

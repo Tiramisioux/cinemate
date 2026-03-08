@@ -24,6 +24,7 @@ corresponding controller methods.
 | Command                                    | Argument        | Example                                 |  Function                                      |
 |--------------------------------------------|-------------------|-----------------------------------------|-------------------------------------------------|
 | `rec` / `stop`                             | `[s <seconds>] \| [f <frames>]` | `rec s 10`                           | Toggle recording or schedule an automatic stop after a timed duration or frame count |
+| `analyze`                                  | `s\|sec\|seconds <N>` / `f\|frame\|frames <N>` | `analyze s 10` | Start bounded performance analysis, auto-stop at N seconds or frames, and export CSV/summary under `/media/RAW/_analysis` |
 | `set iso <value>`                          | int               | `set iso 800`                           | Set ISO to nearest allowed step                 |
 | `inc iso` / `dec iso`                      | -              |                                | Step ISO up or down                             |
 | `set shutter a <angle>`                    | float             | `set shutter a 180`                     | Set actual shutter angle (snaps unless free/sync)|
@@ -88,3 +89,58 @@ Both actions require the RAW drive to be mounted; otherwise the CLI reports an e
 
 See [Storage pre-roll warm-up](storage-preroll.md) for a detailed walkthrough of the workflow and tips on when to run it manually.
 
+
+
+## Performance analyzer (phase 1)
+
+Use the new analyzer command to record per-frame and system performance metrics to CSV during a bounded window:
+
+- `analyze s <seconds>` (also accepts `sec`, `seconds`)
+- `analyze f <frames>` (also accepts `frame`, `frames`)
+
+Behavior:
+
+- Reuses the same scheduling semantics as `rec s/f` and validates `N > 0`.
+- If recording is not already running, Cinemate starts recording automatically before analysis.
+- Recording and analysis both stop automatically when the requested window is reached.
+- Output files are written to mounted RAW storage at:
+  - `/media/RAW/_analysis/<YYYYmmdd_HHMMSS>_analyze.csv`
+  - `/media/RAW/_analysis/<YYYYmmdd_HHMMSS>_summary.json`
+- If `/media/RAW` is not mounted or not writable, the command fails cleanly and logs an error.
+
+### CSV fields
+
+Minimum schema written by the analyzer:
+
+`monotonic_seq, wall_time_iso, sensor_timestamp_ns, timestamp_key_used, frame_count, fps_expected, fps_actual, dropped_frame_flag, drop_reason, buffer_used, buffer_size, is_buffering, is_writing_buf, write_speed_mb_s, cpu_percent_total, cpu_percent_per_core, ram_percent, cpu_temp_c, loadavg_1m, disk_write_bytes_delta, net_tx_bytes_delta, net_rx_bytes_delta, undervoltage_flag, storage_type, is_mounted, mic_connected, mic_sample_rate, mic_channels, proc_cpu_cinepi_raw, proc_cpu_cinemate, proc_cpu_redis, proc_cpu_arecord`
+
+### Timestamp normalization
+
+For each `cp_stats` sample, analyzer timestamp selection is:
+
+1. `sensorTimestamp` (preferred)
+2. fallback to `timestamp`
+
+Both are normalized into `sensor_timestamp_ns`, and `timestamp_key_used` records which key was used (`sensorTimestamp` or `timestamp`).
+
+### Drop-frame candidate detection
+
+Phase-1 drop detection combines:
+
+- timestamp gap check using `expected_period_ns = 1e9 / fps_expected`; a gap above `1.5x` period marks `timestamp_gap`
+- framecount discontinuity checks (`framecount_discontinuity`)
+- FPS deviation-only marker (`fps_deviation_only`)
+
+### How to run
+
+Examples:
+
+- `analyze s 15`
+- `analyze f 240`
+
+Quick validation:
+
+1. Run one command above.
+2. Confirm files exist in `/media/RAW/_analysis/`.
+3. Open CSV and verify non-empty rows plus expected headers.
+4. Open summary JSON and confirm `rows_written` and `drop_candidates`.

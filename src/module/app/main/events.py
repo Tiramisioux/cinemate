@@ -3,6 +3,7 @@ import time
 from module.redis_controller import ParameterKey
 
 def register_events(socketio, redis_controller, cinepi_controller, simple_gui, sensor_detect):
+    last_shutter_steps_fps = None
     
     @socketio.on('connect')
     def handle_connect():
@@ -26,16 +27,25 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
         emit('initial_values', initial_values)
 
     def redis_change_handler(data):
+        nonlocal last_shutter_steps_fps
         key = data['key']
         value = data['value']
         if key in [ParameterKey.ISO.value, ParameterKey.SHUTTER_A.value, ParameterKey.FPS_ACTUAL.value, ParameterKey.WB.value, ParameterKey.FRAMECOUNT.value, ParameterKey.BUFFER.value]:
             socketio.emit('parameter_change', {key: value})
 
         if key == ParameterKey.FPS_ACTUAL.value:
+            try:
+                fps_int = int(float(value))
+            except (TypeError, ValueError):
+                return
+
+            if fps_int == last_shutter_steps_fps:
+                return
+
+            last_shutter_steps_fps = fps_int
+
             # Emit the updated shutter_a_steps array and the current shutter speed
-            shutter_a_steps = cinepi_controller.calculate_dynamic_shutter_angles(
-                int(float(redis_controller.get_value(ParameterKey.FPS_ACTUAL.value)))
-            )
+            shutter_a_steps = cinepi_controller.calculate_dynamic_shutter_angles(fps_int)
             current_shutter_a = redis_controller.get_value(ParameterKey.SHUTTER_A.value)
             socketio.emit('shutter_a_update', {'shutter_a_steps': shutter_a_steps, 'current_shutter_a': current_shutter_a})
 

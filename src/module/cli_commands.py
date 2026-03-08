@@ -6,11 +6,12 @@ import os
 import logging  
 
 class CommandExecutor(threading.Thread):
-    def __init__(self, cinepi_controller, cinepi_app, storage_preroll=None):
+    def __init__(self, cinepi_controller, cinepi_app, storage_preroll=None, performance_analyzer=None):
         threading.Thread.__init__(self, daemon=True)  # Initialize thread
         self.cinepi_controller = cinepi_controller  # Set controller object reference
         self.cinepi_app = cinepi_app
         self.storage_preroll = storage_preroll
+        self.performance_analyzer = performance_analyzer
         self.running = True  # Flag to control the thread's execution
 
         # ---------------------------------------------------------------------------
@@ -67,6 +68,7 @@ class CommandExecutor(threading.Thread):
             'erase'                  : (cinepi_controller.erase_drive,    None),
             'format'                 : (cinepi_controller.format_drive,   [str, None]),
             'storage preroll'        : (storage_preroll.trigger_manual,   None) if storage_preroll else None,
+            'analyze'                : (self.handle_analyze_command,      None),
 
             # ── Info / diagnostics ────────────────────────────────────────────────
             'time'                   : (self.display_time,                None),
@@ -174,6 +176,10 @@ class CommandExecutor(threading.Thread):
             self.handle_rec_command(command_args)
             return
 
+        if command_name == 'analyze':
+            self.handle_analyze_command(command_args)
+            return
+
         # Handle commands with arguments or those that can be called without arguments
         if isinstance(expected_types, list):  # If the command can take multiple types
             if command_args:  # Arguments provided
@@ -255,3 +261,38 @@ class CommandExecutor(threading.Thread):
 
                 if data.strip():  # Proceed only if there is some non-whitespace input
                     self.handle_received_data(data)  # Directly handle the received data
+
+    def handle_analyze_command(self, args):
+        """Handle performance analyzer command with bounded windows."""
+        if self.performance_analyzer is None:
+            logging.info("Performance analyzer is not available in this build.")
+            return
+
+        if len(args) < 2:
+            logging.info("Analyze command requires mode and amount: analyze s <seconds> | analyze f <frames>.")
+            return
+
+        mode = args[0].lower()
+        amount_raw = args[1]
+
+        if mode in {"s", "sec", "secs", "second", "seconds"}:
+            try:
+                amount = float(amount_raw)
+            except ValueError:
+                logging.info("Invalid seconds value for analyze command.")
+                return
+        elif mode in {"f", "frame", "frames"}:
+            try:
+                amount = int(amount_raw)
+            except ValueError:
+                logging.info("Invalid frame count for analyze command.")
+                return
+        else:
+            logging.info("Unknown analyze mode. Use 's' for seconds or 'f' for frames.")
+            return
+
+        if amount <= 0:
+            logging.info("Analyze amount must be greater than zero.")
+            return
+
+        self.performance_analyzer.start(mode, amount)

@@ -15,14 +15,33 @@ from enum import Enum
 import time, math
 
 
+_CLI_RELAY_MODES = {"off", "event", "frame"}
+_CLI_RELAY_LEVELS = {"info", "debug"}
+
+_SUPPRESSED_EVENT_KEYS = {
+    "recording_time",
+    "recording_tc_rec",
+    "recording_time_tod",
+    "framecount_expected",
+    "tc_cam0",
+    "tc_cam1",
+    "fps_actual",
+    "buffer",
+}
+
+
 def _resolve_cli_relay(settings: dict | None) -> dict:
-    relay_cfg = (settings or {}).get("cli_relay", {})
-    mode = relay_cfg.get("mode", "event")
-    if mode not in {"off", "event", "frame"}:
+    settings = settings or {}
+    relay_cfg = settings.get("cli_relay", {})
+    if not isinstance(relay_cfg, dict):
+        relay_cfg = {}
+
+    mode = str(relay_cfg.get("mode", "event")).lower()
+    if mode not in _CLI_RELAY_MODES:
         mode = "event"
 
-    level = relay_cfg.get("level", "info")
-    if level not in {"info", "debug"}:
+    level = str(relay_cfg.get("level", "info")).lower()
+    if level not in _CLI_RELAY_LEVELS:
         level = "info"
 
     filters = relay_cfg.get("filters", [])
@@ -59,7 +78,7 @@ class _CliRelayPolicy:
         if self.mode == "event" and kind != "event":
             return False
 
-        if self.mode == "frame" and kind != "frame":
+        if self.mode == "frame" and kind not in {"frame", "event"}:
             return False
 
         if kind == "frame" and self.mode == "frame":
@@ -224,51 +243,43 @@ class RedisController:
         # cli_relay controls what Cinemate-originated Redis updates are emitted
         # to the CLI/log output path. Core Redis writes/subscriptions are always
         # performed regardless of relay settings.
-        if key_name == ParameterKey.FRAMECOUNT.value:
-            # Consolidated once-per-frame entry
-            rec_secs = self.cache.get(ParameterKey.RECORDING_TIME.value, "0")
-            rec_tc   = self.cache.get(ParameterKey.RECORDING_TC_REC.value, "00:00:00:00")
-            tod_tc   = self.cache.get(ParameterKey.RECORDING_TC_TOD.value, "00:00:00:00")
-            cam0_tc  = self.cache.get(ParameterKey.TC_CAM0.value,          "—")
-            cam1_tc  = self.cache.get(ParameterKey.TC_CAM1.value,          "—")
-
-            # format seconds nicely (fallback to raw string if not numeric)
-            try:
-                rec_secs_fmt = f"{float(rec_secs):.3f}"
-            except ValueError:
-                rec_secs_fmt = rec_secs
-
-            self._relay_cli_line(
-                "frame",
-                (
-                    f"Frame {value} ┃rec={rec_secs_fmt}s "
-                    f"┃tc_rec={rec_tc} ┃tc_tod={tod_tc} "
-                    f"┃cam0={cam0_tc} ┃cam1={cam1_tc}"
-                ),
-            )
-
-        elif key_name.startswith("last_dng_cam"):
-            ram = psutil.virtual_memory().percent
-            self._relay_cli_line("event", f"Changed value: {key_name} = {value} ┃RAM: {ram:.0f}%")
-
-        elif key_name in (
-            ParameterKey.RECORDING_TIME.value,
-            ParameterKey.RECORDING_TC_REC.value,
-            ParameterKey.RECORDING_TC_TOD.value,
-            ParameterKey.FRAMECOUNT_EXPECTED.value,
-            ParameterKey.TC_CAM0.value,
-            ParameterKey.TC_CAM1.value,
-            ParameterKey.FPS_ACTUAL.value,
-            ParameterKey.BUFFER.value,
-        ):
-            # Suppress high-frequency keys
-            pass
-
-        else:
-            self._relay_cli_line("event", f"Changed value: {key_name} = {value}")
+        self._emit_relay_log(key_name, value)
 
         # ─── immediate local notification to subscribers ─────────────
         self.redis_parameter_changed.emit({"key": key_name, "value": str(value)})
+
+    def _emit_relay_log(self, key_name: str, value) -> None:
+        if key_name == ParameterKey.FRAMECOUNT.value:
+            self._relay_cli_line("frame", self._format_frame_relay_message(value))
+            return
+
+        if key_name.startswith("last_dng_cam"):
+            ram = psutil.virtual_memory().percent
+            self._relay_cli_line("event", f"Changed value: {key_name} = {value} ┃RAM: {ram:.0f}%")
+            return
+
+        if key_name in _SUPPRESSED_EVENT_KEYS:
+            return
+
+        self._relay_cli_line("event", f"Changed value: {key_name} = {value}")
+
+    def _format_frame_relay_message(self, frame_value) -> str:
+        rec_secs = self.cache.get(ParameterKey.RECORDING_TIME.value, "0")
+        rec_tc = self.cache.get(ParameterKey.RECORDING_TC_REC.value, "00:00:00:00")
+        tod_tc = self.cache.get(ParameterKey.RECORDING_TC_TOD.value, "00:00:00:00")
+        cam0_tc = self.cache.get(ParameterKey.TC_CAM0.value, "—")
+        cam1_tc = self.cache.get(ParameterKey.TC_CAM1.value, "—")
+
+        try:
+            rec_secs_fmt = f"{float(rec_secs):.3f}"
+        except (TypeError, ValueError):
+            rec_secs_fmt = rec_secs
+
+        return (
+            f"Frame {frame_value} ┃rec={rec_secs_fmt}s "
+            f"┃tc_rec={rec_tc} ┃tc_tod={tod_tc} "
+            f"┃cam0={cam0_tc} ┃cam1={cam1_tc}"
+        )
 
     def _relay_cli_line(self, kind: str, message: str) -> None:
         if not self.cli_relay_policy.should_relay(kind, message):

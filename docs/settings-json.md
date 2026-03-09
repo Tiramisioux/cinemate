@@ -134,6 +134,33 @@ General options for runtime behaviour.
 `light_hz` – list of mains frequencies used to calculate flicker‑free shutter angles. These are added to the shutter angle array and also dynamically calculated upon each fps change. This way, there is always a flicker free shutter angle value close by, when toggling through shutter angles, either via the cli or using buttons/pots/rotary encoder.
 <br>`conform_frame_rate` – frame rate intendend for project conforming in post. This setting is not really used by CineMate except for calculating the recording timecode tracker in redis but might be used in future updates.
 
+
+## cli_relay
+
+Controls how much `cinepi-raw` stdout is relayed into Cinemate logs/CLI output.
+
+```json
+"cli_relay": {
+  "mode": "event",
+  "level": "info",
+  "filters": [],
+  "frame_sample_n": 1
+}
+```
+
+- `mode` – `off`, `event`, or `frame`.
+- `level` – relay lines via `logging.info` or `logging.debug`.
+- `filters` – optional allowlist tokens; when set, a relayed line must contain at least one token.
+- `frame_sample_n` – only used in `frame` mode; relay every Nth frame line.
+
+Examples:
+
+```json
+"cli_relay": { "mode": "off", "level": "info", "filters": [], "frame_sample_n": 1 }
+"cli_relay": { "mode": "event", "level": "info", "filters": [], "frame_sample_n": 1 }
+"cli_relay": { "mode": "frame", "level": "debug", "filters": [], "frame_sample_n": 10 }
+```
+
 ## analog_controls
 
 Maps Grove Base HAT ADC channels to analogue dials (potentiometers). Use `null` to disable a dial.

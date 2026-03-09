@@ -333,9 +333,10 @@
   "stdout_metadata": {
     "enabled": false
   },
-  "stdout_relay": {
-    "enabled": false,
-    "level": "debug",
-    "filters": []
+  "cli_relay": {
+    "mode": "event",
+    "level": "info",
+    "filters": [],
+    "frame_sample_n": 1
   }
 }

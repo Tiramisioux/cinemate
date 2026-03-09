@@ -1,3 +1,4 @@
+from pathlib import Path
 import logging
 from app import create_app
 
@@ -5,8 +6,10 @@ def run_app(host='0.0.0.0', port=5000):
     from module.cinepi_controller import CinePiController
     from module.redis_controller import RedisController
     from module.simple_gui import SimpleGUI
+    from module.config_loader import load_settings
 
-    redis_controller = RedisController()
+    settings = load_settings(Path(__file__).with_name("settings.json"))
+    redis_controller = RedisController(settings=settings)
     cinepi_controller = CinePiController()
     simple_gui = SimpleGUI()
 

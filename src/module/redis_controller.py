@@ -14,6 +14,64 @@ import logging, threading, redis, psutil, time
 from enum import Enum
 import time, math
 
+
+def _resolve_cli_relay(settings: dict | None) -> dict:
+    relay_cfg = (settings or {}).get("cli_relay", {})
+    mode = relay_cfg.get("mode", "event")
+    if mode not in {"off", "event", "frame"}:
+        mode = "event"
+
+    level = relay_cfg.get("level", "info")
+    if level not in {"info", "debug"}:
+        level = "info"
+
+    filters = relay_cfg.get("filters", [])
+    if not isinstance(filters, list):
+        filters = []
+    filters = [str(token).strip().lower() for token in filters if str(token).strip()]
+
+    frame_sample_n = relay_cfg.get("frame_sample_n", 1)
+    try:
+        frame_sample_n = int(frame_sample_n)
+    except (TypeError, ValueError):
+        frame_sample_n = 1
+    frame_sample_n = max(1, frame_sample_n)
+
+    return {
+        "mode": mode,
+        "level": level,
+        "filters": filters,
+        "frame_sample_n": frame_sample_n,
+    }
+
+
+class _CliRelayPolicy:
+    def __init__(self, relay_cfg: dict):
+        self.mode = relay_cfg.get("mode", "event")
+        self.filters = relay_cfg.get("filters", [])
+        self.frame_sample_n = max(1, int(relay_cfg.get("frame_sample_n", 1)))
+        self._frame_counter = 0
+
+    def should_relay(self, kind: str, message: str) -> bool:
+        if self.mode == "off":
+            return False
+
+        if self.mode == "event" and kind != "event":
+            return False
+
+        if self.mode == "frame" and kind != "frame":
+            return False
+
+        if kind == "frame" and self.mode == "frame":
+            self._frame_counter += 1
+            if (self._frame_counter - 1) % self.frame_sample_n != 0:
+                return False
+
+        if self.filters and not any(token in message.lower() for token in self.filters):
+            return False
+
+        return True
+
 # ───────────────────────── parameter keys ────────────────────────────
 class ParameterKey(Enum):
     ANAMORPHIC_FACTOR = "anamorphic_factor"
@@ -90,7 +148,7 @@ class Event:
 # ────────────────────────── main controller class ────────────────────
 class RedisController:
 
-    def __init__(self, host="localhost", port=6379, db=0, channel="cp_controls", conform_frame_rate: int = 24):
+    def __init__(self, host="localhost", port=6379, db=0, channel="cp_controls", conform_frame_rate: int = 24, settings: dict | None = None):
         self.r      = redis.StrictRedis(host=host, port=port, db=db)
         self.ps     = self.r.pubsub(); self.ps.subscribe(channel)
         self.lock   = threading.Lock()
@@ -100,6 +158,8 @@ class RedisController:
         self.redis_parameter_changed = Event()
 
         self.conform_frame_rate = conform_frame_rate
+        self.cli_relay = _resolve_cli_relay(settings)
+        self.cli_relay_policy = _CliRelayPolicy(self.cli_relay)
         self.recording_start_time: float | None = None
         self._rec_timer_stop = threading.Event()
         self._rec_timer_thread: threading.Thread | None = None
@@ -161,6 +221,9 @@ class RedisController:
             self.local_updates.add(key_name)
 
         # ─── enhanced logging rules ─────────────────────────────────
+        # cli_relay controls what Cinemate-originated Redis updates are emitted
+        # to the CLI/log output path. Core Redis writes/subscriptions are always
+        # performed regardless of relay settings.
         if key_name == ParameterKey.FRAMECOUNT.value:
             # Consolidated once-per-frame entry
             rec_secs = self.cache.get(ParameterKey.RECORDING_TIME.value, "0")
@@ -175,17 +238,18 @@ class RedisController:
             except ValueError:
                 rec_secs_fmt = rec_secs
 
-            logging.info(
-                f"Frame {value} ┃rec={rec_secs_fmt}s "
-                f"┃tc_rec={rec_tc} ┃tc_tod={tod_tc} "
-                f"┃cam0={cam0_tc} ┃cam1={cam1_tc}"
+            self._relay_cli_line(
+                "frame",
+                (
+                    f"Frame {value} ┃rec={rec_secs_fmt}s "
+                    f"┃tc_rec={rec_tc} ┃tc_tod={tod_tc} "
+                    f"┃cam0={cam0_tc} ┃cam1={cam1_tc}"
+                ),
             )
 
         elif key_name.startswith("last_dng_cam"):
             ram = psutil.virtual_memory().percent
-            logging.info(
-                f"Changed value: {key_name} = {value} ┃RAM: {ram:.0f}%"
-            )
+            self._relay_cli_line("event", f"Changed value: {key_name} = {value} ┃RAM: {ram:.0f}%")
 
         elif key_name in (
             ParameterKey.RECORDING_TIME.value,
@@ -201,10 +265,18 @@ class RedisController:
             pass
 
         else:
-            logging.info(f"Changed value: {key_name} = {value}")
+            self._relay_cli_line("event", f"Changed value: {key_name} = {value}")
 
         # ─── immediate local notification to subscribers ─────────────
         self.redis_parameter_changed.emit({"key": key_name, "value": str(value)})
+
+    def _relay_cli_line(self, kind: str, message: str) -> None:
+        if not self.cli_relay_policy.should_relay(kind, message):
+            return
+        if self.cli_relay.get("level") == "debug":
+            logging.debug(message)
+        else:
+            logging.info(message)
 
 
 

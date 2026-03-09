@@ -137,6 +137,8 @@ General options for runtime behaviour.
 
 ## cli_relay
 
+Controls how much runtime telemetry is relayed into Cinemate logs/CLI output
+(both `cinepi-raw` stdout relay and Cinemate Redis/state change relay).
 Controls how much `cinepi-raw` stdout is relayed into Cinemate logs/CLI output.
 
 ```json

@@ -78,7 +78,7 @@ Temporary baseline default remains **Profile B**:
 "stdout_metadata": { "enabled": false }
 ```
 
-- Raw stdout relay to Cinemate logs is independently controlled by:
+- CLI/log relay volume (including stdout relay and Cinemate Redis/state relay) is independently controlled by:
 
 ```json
 "cli_relay": {

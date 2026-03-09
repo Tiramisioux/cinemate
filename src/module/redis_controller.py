@@ -41,6 +41,11 @@ def _resolve_cli_relay(settings: dict | None) -> dict:
         mode = "event"
 
     level = str(relay_cfg.get("level", "info")).strip().lower()
+    mode = str(relay_cfg.get("mode", "event")).lower()
+    if mode not in _CLI_RELAY_MODES:
+        mode = "event"
+
+    level = str(relay_cfg.get("level", "info")).lower()
     if level not in _CLI_RELAY_LEVELS:
         level = "info"
 

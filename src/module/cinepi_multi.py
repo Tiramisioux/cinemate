@@ -55,11 +55,11 @@ def _resolve_cli_relay(settings: dict) -> dict:
     if not isinstance(relay_cfg, dict):
         relay_cfg = {}
 
-    mode = str(relay_cfg.get("mode", "event")).lower()
+    mode = str(relay_cfg.get("mode", "event")).strip().lower()
     if mode not in {"off", "event", "frame"}:
         mode = "event"
 
-    level = str(relay_cfg.get("level", "info")).lower()
+    level = str(relay_cfg.get("level", "info")).strip().lower()
     if level not in {"debug", "info"}:
         level = "info"
 

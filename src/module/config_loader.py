@@ -22,12 +22,12 @@ def _normalize_cli_relay(settings: dict, legacy_present: bool = False) -> dict:
             mode = "event" if bool(legacy_cfg.get("enabled")) else "off"
         else:
             mode = "event"
-    mode = str(mode).lower()
+    mode = str(mode).strip().lower()
     if mode not in _CLI_RELAY_MODES:
         mode = "event"
 
     legacy_level = legacy_cfg.get("level", "info") if legacy_present else "info"
-    level = str(cli_cfg.get("level", legacy_level)).lower()
+    level = str(cli_cfg.get("level", legacy_level)).strip().lower()
     if level not in _CLI_RELAY_LEVELS:
         level = "info"
 

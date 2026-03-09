@@ -50,13 +50,26 @@ class TestRedisCliRelayPolicy(unittest.TestCase):
         self.assertTrue(policy.should_relay("frame", "Frame 1"))
         self.assertFalse(policy.should_relay("frame", "Frame 2"))
         self.assertTrue(policy.should_relay("frame", "Frame 3"))
-        self.assertFalse(policy.should_relay("event", "Changed value: rec = 1"))
+
+    def test_frame_mode_keeps_event_lines(self):
+        policy = _CliRelayPolicy({"mode": "frame", "filters": [], "frame_sample_n": 2})
+        self.assertTrue(policy.should_relay("event", "Changed value: rec = 1"))
 
     def test_filters_applied_after_mode(self):
         policy = _CliRelayPolicy({"mode": "event", "filters": ["rec"], "frame_sample_n": 1})
         self.assertTrue(policy.should_relay("event", "Changed value: rec = 1"))
         self.assertFalse(policy.should_relay("event", "Changed value: iso = 200"))
 
+    def test_filters_apply_to_frame_mode_events_and_frames(self):
+        policy = _CliRelayPolicy({"mode": "frame", "filters": ["rec"], "frame_sample_n": 1})
+        self.assertTrue(policy.should_relay("event", "Changed value: rec = 1"))
+        self.assertFalse(policy.should_relay("event", "Changed value: iso = 100"))
+        self.assertFalse(policy.should_relay("frame", "Frame 1"))
+
+    def test_validation_trims_and_accepts_off(self):
+        relay = _resolve_cli_relay({"cli_relay": {"mode": " OFF ", "level": " DEBUG "}})
+        self.assertEqual(relay["mode"], "off")
+        self.assertEqual(relay["level"], "debug")
 
 if __name__ == "__main__":
     unittest.main()

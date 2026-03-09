@@ -137,9 +137,8 @@ General options for runtime behaviour.
 
 ## cli_relay
 
-Controls how much runtime telemetry is relayed into Cinemate logs/CLI output
-(both `cinepi-raw` stdout relay and Cinemate Redis/state change relay).
-Controls how much `cinepi-raw` stdout is relayed into Cinemate logs/CLI output.
+Controls runtime telemetry relay into Cinemate logs/CLI output for both
+`cinepi-raw` stdout and Cinemate Redis/state change lines.
 
 ```json
 "cli_relay": {
@@ -150,10 +149,10 @@ Controls how much `cinepi-raw` stdout is relayed into Cinemate logs/CLI output.
 }
 ```
 
-- `mode` – `off`, `event`, or `frame`.
+- `mode` – `off`, `event`, or `frame` for both stdout and Redis/state relay paths.
 - `level` – relay lines via `logging.info` or `logging.debug`.
 - `filters` – optional allowlist tokens; when set, a relayed line must contain at least one token.
-- `frame_sample_n` – only used in `frame` mode; relay every Nth frame line.
+- `frame_sample_n` – only used in `frame` mode; relay every Nth frame line (including Cinemate `framecount` relay lines).
 
 Examples:
 

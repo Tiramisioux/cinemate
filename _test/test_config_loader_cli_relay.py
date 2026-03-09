@@ -41,6 +41,11 @@ class TestConfigLoaderCliRelay(unittest.TestCase):
         self.assertEqual(settings["cli_relay"]["level"], "debug")
         self.assertEqual(settings["cli_relay"]["filters"], ["DNG"])
 
+    def test_cli_relay_trims_mode_and_level(self):
+        path = self._write_settings({"cli_relay": {"mode": " OFF ", "level": " DEBUG "}})
+        settings = load_settings(path)
+        self.assertEqual(settings["cli_relay"]["mode"], "off")
+        self.assertEqual(settings["cli_relay"]["level"], "debug")
 
 if __name__ == "__main__":
     unittest.main()

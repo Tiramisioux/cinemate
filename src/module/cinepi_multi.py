@@ -50,22 +50,99 @@ def _resolve_launch_policy(settings: dict) -> dict:
     }
 
 
-def _resolve_stdout_relay(settings: dict) -> dict:
-    relay_cfg = settings.get("stdout_relay", {})
-    level = str(relay_cfg.get("level", "debug")).lower()
-    if level not in {"debug", "info"}:
-        level = "debug"
+def _resolve_cli_relay(settings: dict) -> dict:
+    relay_cfg = settings.get("cli_relay", {})
+    if not isinstance(relay_cfg, dict):
+        relay_cfg = {}
 
-    filters = relay_cfg.get("filters")
+    mode = str(relay_cfg.get("mode", "event")).lower()
+    if mode not in {"off", "event", "frame"}:
+        mode = "event"
+
+    level = str(relay_cfg.get("level", "info")).lower()
+    if level not in {"debug", "info"}:
+        level = "info"
+
+    filters = relay_cfg.get("filters", [])
     if not isinstance(filters, list):
         filters = []
     filters = [str(item) for item in filters if str(item).strip()]
 
+    frame_sample_n = relay_cfg.get("frame_sample_n", 1)
+    try:
+        frame_sample_n = int(frame_sample_n)
+    except (TypeError, ValueError):
+        frame_sample_n = 1
+    frame_sample_n = max(1, frame_sample_n)
+
     return {
-        "enabled": bool(relay_cfg.get("enabled", False)),
+        "mode": mode,
         "level": level,
         "filters": filters,
+        "frame_sample_n": frame_sample_n,
     }
+
+
+# Fast token-based classifiers: keep checks simple to avoid pump-loop jitter.
+_FRAME_TOKENS = (
+    "frame number",
+    "dng written",
+    "encode latency",
+    "disk latency",
+    "encode queue",
+    "disk queue",
+    "ram buffers",
+)
+_EVENT_TOKENS = (
+    "encoder configured",
+    "recording started",
+    "recording stopped",
+    "camera",
+    "mount",
+    "storage",
+    "warning",
+    "error",
+    "failed",
+)
+
+
+def _classify_stdout_line(line: str) -> str | None:
+    lower = line.lower()
+    if any(token in lower for token in _FRAME_TOKENS):
+        return "frame"
+    if any(token in lower for token in _EVENT_TOKENS):
+        return "event"
+    return None
+
+
+class _CliRelayPolicy:
+    def __init__(self, cfg: dict):
+        self.mode = cfg.get("mode", "event")
+        self.level = cfg.get("level", "info")
+        self.filters = tuple(cfg.get("filters", []))
+        self.frame_sample_n = int(cfg.get("frame_sample_n", 1))
+        self._frame_counter = 0
+
+    def should_relay(self, line: str) -> bool:
+        line_type = _classify_stdout_line(line)
+        if self.mode == "off":
+            return False
+        if self.mode == "event":
+            if line_type != "event":
+                return False
+        elif self.mode == "frame":
+            if line_type != "frame":
+                return False
+            self._frame_counter += 1
+            if self._frame_counter % self.frame_sample_n != 0:
+                return False
+
+        if self.filters:
+            lower = line.lower()
+            if not any(token.lower() in lower for token in self.filters):
+                return False
+        return True
+
 
 # ───────────────────────── zoom default ──────────────────────────
 def _seed_default_zoom(redis_ctl):
@@ -209,7 +286,8 @@ class CinePiProcess(Thread):
         out_cfg = self.settings.get('output', {})
         self.output = out_cfg.get(self.cam.port, {})
         self.stdout_metadata_enabled = bool(self.settings.get("stdout_metadata", {}).get("enabled", False))
-        self.stdout_relay = _resolve_stdout_relay(self.settings)
+        self.cli_relay = _resolve_cli_relay(self.settings)
+        self.cli_relay_policy = _CliRelayPolicy(self.cli_relay)
 
 
     def run(self):
@@ -243,11 +321,7 @@ class CinePiProcess(Thread):
 
         
     def _log(self, text):
-        filters = self.stdout_relay.get("filters", [])
-        if filters and not any(token in text for token in filters):
-            return
-
-        if self.stdout_relay.get("level") == "info":
+        if self.cli_relay.get("level") == "info":
             logging.info('[%s] %s', self.cam.port, text)
         else:
             logging.debug('[%s] %s', self.cam.port, text)
@@ -266,7 +340,7 @@ class CinePiProcess(Thread):
 
             # 2. always drain pipe; only relay/emit raw text when enabled ------
             q.put(line)
-            if self.stdout_relay.get("enabled", False):
+            if self.cli_relay_policy.should_relay(line):
                 self.message.emit(line)
                 self._log(line)
 

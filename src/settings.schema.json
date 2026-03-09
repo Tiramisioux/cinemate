@@ -54,7 +54,14 @@
       "default": "THIS IS A COOL MACHINE"
     },
     "welcome_image": {
-      "anyOf": [{"type": "string"}, {"type": "null"}],
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
       "default": null
     },
     "additionalProperties": true,
@@ -77,7 +84,10 @@
         },
         "level": {
           "type": "string",
-          "enum": ["debug", "info"],
+          "enum": [
+            "debug",
+            "info"
+          ],
           "default": "debug"
         },
         "filters": {
@@ -86,6 +96,41 @@
             "type": "string"
           },
           "default": []
+        }
+      },
+      "additionalProperties": true
+    },
+    "cli_relay": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "off",
+            "event",
+            "frame"
+          ],
+          "default": "event"
+        },
+        "level": {
+          "type": "string",
+          "enum": [
+            "debug",
+            "info"
+          ],
+          "default": "info"
+        },
+        "filters": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "frame_sample_n": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
         }
       },
       "additionalProperties": true

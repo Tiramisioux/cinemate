@@ -78,17 +78,18 @@ Temporary baseline default remains **Profile B**:
 "stdout_metadata": { "enabled": false }
 ```
 
-- Raw stdout relay to Cinemate logs is independently controlled by:
+- CLI/log relay volume (including stdout relay and Cinemate Redis/state relay) is independently controlled by:
 
 ```json
-"stdout_relay": {
-  "enabled": false,
-  "level": "debug",
-  "filters": []
+"cli_relay": {
+  "mode": "event",
+  "level": "info",
+  "filters": [],
+  "frame_sample_n": 1
 }
 ```
 
-- `stdout_metadata` and `stdout_relay` are intentionally independent.
+- `stdout_metadata` and `cli_relay` are intentionally independent.
 - Core state/control behavior does not depend on per-frame stdout metadata or stdout relay.
 - Cinemate can run with cinepi-raw stdout relay disabled; `cp_stats` remains authoritative.
 - Core state/control behavior should not depend on per-frame stdout metadata.

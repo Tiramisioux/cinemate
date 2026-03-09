@@ -2,6 +2,55 @@ import json
 import logging
 from pathlib import Path
 
+
+_CLI_RELAY_MODES = {"off", "event", "frame"}
+_CLI_RELAY_LEVELS = {"debug", "info"}
+
+
+def _normalize_cli_relay(settings: dict, legacy_present: bool = False) -> dict:
+    """Resolve cli_relay, merging legacy stdout_relay when present."""
+    legacy_cfg = settings.get("stdout_relay", {})
+    cli_cfg = settings.get("cli_relay", {})
+    if not isinstance(legacy_cfg, dict):
+        legacy_cfg = {}
+    if not isinstance(cli_cfg, dict):
+        cli_cfg = {}
+
+    mode = cli_cfg.get("mode")
+    if mode is None:
+        if legacy_present and "enabled" in legacy_cfg:
+            mode = "event" if bool(legacy_cfg.get("enabled")) else "off"
+        else:
+            mode = "event"
+    mode = str(mode).lower()
+    if mode not in _CLI_RELAY_MODES:
+        mode = "event"
+
+    legacy_level = legacy_cfg.get("level", "info") if legacy_present else "info"
+    level = str(cli_cfg.get("level", legacy_level)).lower()
+    if level not in _CLI_RELAY_LEVELS:
+        level = "info"
+
+    legacy_filters = legacy_cfg.get("filters", []) if legacy_present else []
+    filters = cli_cfg.get("filters", legacy_filters)
+    if not isinstance(filters, list):
+        filters = []
+    filters = [str(token) for token in filters if str(token).strip()]
+
+    frame_sample_n = cli_cfg.get("frame_sample_n", 1)
+    try:
+        frame_sample_n = int(frame_sample_n)
+    except (TypeError, ValueError):
+        frame_sample_n = 1
+    frame_sample_n = max(1, frame_sample_n)
+
+    return {
+        "mode": mode,
+        "level": level,
+        "filters": filters,
+        "frame_sample_n": frame_sample_n,
+    }
+
 def load_settings(filename: str | Path) -> dict:
     """
     Load CineMate’s JSON configuration *and* guarantee that every section the
@@ -10,9 +59,11 @@ def load_settings(filename: str | Path) -> dict:
     Return an always-valid settings dict – never None.
     """
     filename = Path(filename)
+    legacy_stdout_relay_present = False
     try:
         with filename.open("r", encoding="utf-8") as fp:
             settings = json.load(fp)
+            legacy_stdout_relay_present = isinstance(settings, dict) and "stdout_relay" in settings
     except FileNotFoundError:
         logging.warning("Settings file %s not found – using built-in defaults", filename)
         settings = {}
@@ -124,6 +175,8 @@ def load_settings(filename: str | Path) -> dict:
     stdout_relay_cfg.setdefault("level", "debug")
     stdout_relay_cfg.setdefault("filters", [])
     settings["stdout_relay"] = stdout_relay_cfg
+
+    settings["cli_relay"] = _normalize_cli_relay(settings, legacy_present=legacy_stdout_relay_present)
 
     # ── preview / zoom defaults ──────────────────────────────────────────
     preview_defaults = {

@@ -4,16 +4,14 @@ import time
 from PIL import Image, ImageDraw, ImageFont
 from module.framebuffer import Framebuffer  # Assuming this is a custom module
 from module.config_loader import load_settings
-import subprocess
 import logging
-from sugarpie import pisugar
 from flask_socketio import SocketIO
 import re
-from statistics import mean
 from module.utils import Utils
 from module.redis_controller import ParameterKey
 import json
-import re
+import math
+from collections import deque
 
 
 def _to_bool(value) -> bool:
@@ -82,6 +80,31 @@ class SimpleGUI(threading.Thread):
             self.vu_meter_hatch_lines = True
 
         self.background_color_changed = False
+        self.debug_perf = _to_bool(self.settings.get("debug", {}).get("gui_perf", False))
+        self.emit_throttle_s = float(self.settings.get("hdmi_gui", {}).get("emit_throttle_s", 0.0) or 0.0)
+        self.loop_interval_s = float(self.settings.get("hdmi_gui", {}).get("refresh_interval_s", 0.2) or 0.2)
+        self.refresh_intervals = {
+            "fast": float(self.settings.get("hdmi_gui", {}).get("refresh_fast_s", 0.1) or 0.1),
+            "medium": float(self.settings.get("hdmi_gui", {}).get("refresh_medium_s", 0.4) or 0.4),
+            "slow": float(self.settings.get("hdmi_gui", {}).get("refresh_slow_s", 1.0) or 1.0),
+            "ssd": float(self.settings.get("hdmi_gui", {}).get("refresh_ssd_s", 0.75) or 0.75),
+        }
+        self._redis_cache = {}
+        self._cache_last_fetch = {"fast": 0.0, "medium": 0.0, "slow": 0.0}
+        self._cached_cam_json = None
+        self._cached_cam_list = []
+        self._cached_latest_recording_info = (0, 0, 0)
+        self._last_ssd_info_ts = 0.0
+        self._last_emit_ts = 0.0
+        self._textbbox_cache = {}
+        self._rounded_corner_mask = None
+        self._perf_samples = {
+            "loop": deque(maxlen=512),
+            "populate": deque(maxlen=512),
+            "draw": deque(maxlen=512),
+            "sleep_deficit": deque(maxlen=512),
+        }
+        self._last_perf_log = time.perf_counter()
         
         # Load sensor values from Redis upon instantiation
         self.load_sensor_values_from_redis()
@@ -341,309 +364,305 @@ class SimpleGUI(threading.Thread):
             resolution_value = "N/A"
         return resolution_value
     
-    def _update_cam_section_labels(self):
-        """
-        Look at the CAMERAS json stored by CinePiManager and set the
-        column headers (CAM0 / CAM1 / MON) and which layouts to draw.
-        """
-        cams_json = self.redis_controller.get_value(ParameterKey.CAMERAS.value) or '[]'
+    def _safe_float(self, value, default=0.0):
         try:
-            cams = json.loads(cams_json)
-        except (ValueError, TypeError):
-            cams = []
+            return float(value)
+        except (TypeError, ValueError):
+            return default
 
-        # defaults (no camera data yet)
-        l_lbl, r_lbl = "CAM", "MON"
-        self.draw_right_col = False
+    def _safe_int(self, value, default=0):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
 
-        if cams:
-            cams.sort(key=lambda c: c.get('port', ''))
-            l_lbl = cams[0]['port'].upper()        # "CAM0"
-            if len(cams) >= 2:
-                r_lbl           = cams[1]['port'].upper()   # "CAM1"
-                self.draw_right_col = True                  # we have a second column
+    def _redis_get_multi(self, keys):
+        values = {k: None for k in keys}
+        if hasattr(self.redis_controller, "mget"):
+            try:
+                raw = self.redis_controller.mget(keys)
+                if raw and len(raw) == len(keys):
+                    for key, value in zip(keys, raw):
+                        values[key] = value
+                    return values
+            except Exception:
+                pass
+        if hasattr(self.redis_controller, "client") and hasattr(self.redis_controller.client, "mget"):
+            try:
+                raw = self.redis_controller.client.mget(keys)
+                if raw and len(raw) == len(keys):
+                    for key, value in zip(keys, raw):
+                        if isinstance(value, bytes):
+                            value = value.decode("utf-8", errors="ignore")
+                        values[key] = value
+                    return values
+            except Exception:
+                pass
+        for key in keys:
+            try:
+                values[key] = self.redis_controller.get_value(key)
+            except Exception:
+                values[key] = None
+        return values
 
-        # write labels back
-        self.left_section_layout[0]["label"]  = l_lbl
-        self.right_section_layout[0]["label"] = r_lbl
+    def _update_redis_snapshot(self):
+        now = time.perf_counter()
+        key_groups = {
+            "fast": [
+                ParameterKey.REC.value,
+                ParameterKey.IS_RECORDING.value,
+                ParameterKey.IS_WRITING_BUF.value,
+                ParameterKey.IS_BUFFERING.value,
+                ParameterKey.BUFFER.value,
+                ParameterKey.BUFFER_SIZE.value,
+                ParameterKey.FRAMECOUNT.value,
+                ParameterKey.FRAMES_IN_SYNC.value,
+                ParameterKey.STORAGE_PREROLL_ACTIVE.value,
+                ParameterKey.RECORDING_TIME.value,
+                ParameterKey.ZOOM.value,
+            ],
+            "medium": [
+                ParameterKey.FPS_USER.value,
+                ParameterKey.WB_USER.value,
+                ParameterKey.SHUTTER_A_ACTUAL.value,
+                ParameterKey.ANAMORPHIC_FACTOR.value,
+                ParameterKey.WRITE_SPEED_TO_DRIVE.value,
+                ParameterKey.ISO.value,
+            ],
+            "slow": [
+                ParameterKey.CAMERAS.value,
+                ParameterKey.WIDTH.value,
+                ParameterKey.HEIGHT.value,
+                ParameterKey.BIT_DEPTH.value,
+                ParameterKey.LAST_DNG_CAM0.value,
+                ParameterKey.LAST_DNG_CAM1.value,
+                ParameterKey.STORAGE_TYPE.value,
+                ParameterKey.SENSOR_MODE.value,
+                ParameterKey.LORES_WIDTH.value,
+                ParameterKey.LORES_HEIGHT.value,
+            ],
+        }
 
-    def populate_values(self):
-        # update section headers first
-        self._update_cam_section_labels()
-        self.load_sensor_values_from_redis()
-        resolution_value = self.estimate_resolution_in_k()
+        for group, keys in key_groups.items():
+            if (now - self._cache_last_fetch[group]) >= self.refresh_intervals[group]:
+                self._redis_cache.update(self._redis_get_multi(keys))
+                self._cache_last_fetch[group] = now
 
-        # ── read CAMERAS json ─────────────────────────────────────
-        cams_json = self.redis_controller.get_value(ParameterKey.CAMERAS.value) or "[]"
+    def _rcache(self, key, default=None):
+        value = self._redis_cache.get(key)
+        return default if value is None else value
+
+    def _parse_camera_data(self):
+        cams_json = self._rcache(ParameterKey.CAMERAS.value, "[]")
+        if cams_json == self._cached_cam_json:
+            return self._cached_cam_list
         try:
             cam_list = json.loads(cams_json)
         except (ValueError, TypeError):
             cam_list = []
-
-        sensor_left  = ""   
-        sensor_right = ""
-        cam1         = None
-
         if cam_list:
-            cam_list.sort(key=lambda c: c.get("port", ""))
+            cam_list = sorted(cam_list, key=lambda c: c.get("port", ""))
+        self._cached_cam_json = cams_json
+        self._cached_cam_list = cam_list
+        return cam_list
+
+    def _update_cam_section_labels(self, cam_list):
+        l_lbl, r_lbl = "CAM", "MON"
+        self.draw_right_col = False
+        if cam_list:
+            l_lbl = cam_list[0].get("port", "CAM").upper()
+            if len(cam_list) >= 2:
+                r_lbl = cam_list[1].get("port", "CAM1").upper()
+                self.draw_right_col = True
+        self.left_section_layout[0]["label"] = l_lbl
+        self.right_section_layout[0]["label"] = r_lbl
+
+    def _parse_recording_time(self, raw_rt):
+        if raw_rt is None:
+            return None
+        s = str(raw_rt).strip()
+        try:
+            if float(s) == 0:
+                return None
+        except ValueError:
+            pass
+        total = None
+        try:
+            total = int(float(s))
+        except ValueError:
+            parts = s.split(":")
+            try:
+                if len(parts) >= 3:
+                    total = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+                elif len(parts) == 2:
+                    total = int(parts[0]) * 60 + int(parts[1])
+                elif len(parts) == 1 and parts[0].isdigit():
+                    total = int(parts[0])
+            except (TypeError, ValueError):
+                total = None
+        if total is None:
+            return None
+        if total >= 3600:
+            h = total // 3600
+            rem = total % 3600
+            m = rem // 60
+            sec = rem % 60
+            return f"{h}:{m}:{sec:02d}"
+        m = total // 60
+        sec = total % 60
+        return f"{m}:{sec:02d}"
+
+    def populate_values(self):
+        self._update_redis_snapshot()
+        cam_list = self._parse_camera_data()
+        self._update_cam_section_labels(cam_list)
+
+        self.width = self._safe_int(self._rcache(ParameterKey.WIDTH.value, 1920), 1920)
+        self.height = self._safe_int(self._rcache(ParameterKey.HEIGHT.value, 1080), 1080)
+        self.bit_depth = self._safe_int(self._rcache(ParameterKey.BIT_DEPTH.value, 12), 12)
+        resolution_value = self.estimate_resolution_in_k()
+
+        sensor_left, sensor_right, cam1 = "", "", None
+        if cam_list:
             cam0 = cam_list[0]
-            sensor_left = self._format_sensor_name(cam0["model"], cam0["mono"])
+            sensor_left = self._format_sensor_name(cam0.get("model", ""), bool(cam0.get("mono")))
             if len(cam_list) > 1:
                 cam1 = cam_list[1]
-                sensor_right = self._format_sensor_name(cam1["model"], cam1["mono"])
+                sensor_right = self._format_sensor_name(cam1.get("model", ""), bool(cam1.get("mono")))
 
-        # ── generic numbers ───────────────────────────────────────
-        width  = self.redis_controller.get_value(ParameterKey.WIDTH.value)
-        height = self.redis_controller.get_value(ParameterKey.HEIGHT.value)
+        aspect_ratio = "N/A"
+        if self.height:
+            aspect_ratio = round(self.width / self.height, 2)
+
+        actual_angle = self._rcache(ParameterKey.SHUTTER_A_ACTUAL.value)
         try:
-            w_int, h_int = int(width), int(height)
-            aspect_ratio = round(w_int / h_int, 2) if h_int else "N/A"
+            shutter_speed = f"{float(actual_angle):.1f}°"
         except (TypeError, ValueError):
-            aspect_ratio = "N/A"
+            shutter_speed = str(actual_angle)
 
-        # ───────────── build shutter_speed display value ─────────────
-        actual_angle = self.redis_controller.get_value(ParameterKey.SHUTTER_A_ACTUAL.value)
-        try:
-            actual_angle_f = float(actual_angle)
-            actual_str = f"{actual_angle_f:.1f}°"
-        except (TypeError, ValueError):
-            actual_str = str(actual_angle)
-
-        shutter_speed = actual_str
-
-        # if self.cinepi_controller.shutter_a_sync_mode == 1:
-        #     extras = []
-
-            # # Nominal angle
-            # nom_angle = self.cinepi_controller.shutter_angle_nom
-            # if nom_angle is not None:
-            #     try:
-            #         nom_angle_f = float(nom_angle)
-            #         nom_str = f"/ {nom_angle_f:.1f}°"
-            #     except (TypeError, ValueError):
-            #         nom_str = f"/ {nom_angle}"
-            #     extras.append(nom_str)
-
-            # Exposure fraction
-            # exposure_fraction = getattr(self.cinepi_controller, "exposure_time_fractions", None)
-            # if exposure_fraction:
-            #     extras.append(f" / {exposure_fraction}")
-
-            # if extras:
-            #     shutter_speed += " (" + ", ".join(extras) + ")"
-
-
+        fps_user = self._safe_float(self._rcache(ParameterKey.FPS_USER.value, 0), 0)
+        wb_user = self._rcache(ParameterKey.WB_USER.value)
+        anamorphic = self._rcache(ParameterKey.ANAMORPHIC_FACTOR.value, 1)
+        zoom_raw = self._safe_float(self._rcache(ParameterKey.ZOOM.value, 1.0), 1.0)
 
         values = {
-            # top-row stuff
-            "resolution":     resolution_value,
-            "iso_label":      "EI",
-            "iso":            self.redis_controller.get_value(ParameterKey.ISO.value),
-            "shutter_label":  "SHUTTER",
-            "shutter_speed":  shutter_speed,
-            "fps_label":      "FPS",
-            "fps":            round(float(self.redis_controller.get_value(ParameterKey.FPS_USER.value))),
-            "wb_label":       "WB",
-            "color_temp":     f"{self.redis_controller.get_value(ParameterKey.WB_USER.value)} K",
+            "resolution": resolution_value,
+            "iso_label": "EI",
+            "iso": self._rcache(ParameterKey.ISO.value),
+            "shutter_label": "SHUTTER",
+            "shutter_speed": shutter_speed,
+            "fps_label": "FPS",
+            "fps": round(fps_user),
+            "wb_label": "WB",
+            "color_temp": f"{wb_user} K",
             "color_temp_libcamera": f"/ {self.redis_listener.colorTemp}K",
-            "res_label":      "RES",
-            "res":            f"{self.width}×{self.height} :{self.bit_depth}b",
-
-            # left column (CAM0)
-            "sensor":         sensor_left,
-            "aspect":         str(aspect_ratio),
+            "res_label": "RES",
+            "res": f"{self.width}×{self.height} :{self.bit_depth}b",
+            "sensor": sensor_left,
+            "aspect": str(aspect_ratio),
             "exposure_label": "EXP",
-            "exposure_time":  str(self.cinepi_controller.exposure_time_fractions),
-
-            # misc labels / live data
-            "zoom_factor": "",   # will be filled below
-            "zoom_is_default": True,
-            "anamorphic_factor": f"{self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value)}X",
-            "ram_load":       Utils.memory_usage(),
-            "cpu_load":       Utils.cpu_load(),
-            "cpu_temp":       Utils.cpu_temp(),
-            "disk_label":     (self.ssd_monitor.device_name or "").upper()[:4],
-            "usb_connected":  bool(self.serial_handler.serial_connected),
-            "mic_connected":  self.usb_monitor.usb_mic is not None,
-            "mic_wav_saved":  False,
+            "exposure_time": str(self.cinepi_controller.exposure_time_fractions),
+            "zoom_factor": f"{zoom_raw:.1f}",
+            "zoom_is_default": abs(zoom_raw - float(self.settings.get("preview", {}).get("default_zoom", 1.0))) <= 1e-3,
+            "anamorphic_factor": f"{anamorphic}X",
+            "ram_load": Utils.memory_usage(),
+            "cpu_load": Utils.cpu_load(),
+            "cpu_temp": Utils.cpu_temp(),
+            "disk_label": (self.ssd_monitor.device_name or "").upper()[:4],
+            "usb_connected": bool(getattr(self.serial_handler, "serial_connected", False)),
+            "mic_connected": bool(self.usb_monitor and self.usb_monitor.usb_mic is not None),
+            "mic_wav_saved": False,
             "keyboard_connected": bool(self.usb_monitor and self.usb_monitor.usb_keyboard),
-            "storage_type":   self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value),
-            "write_speed":    self.redis_controller.get_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value) or "0 MB/s",
-
-            # "clip_label": "CLIP",
-            "clip_name":    self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value) or "N/A",
-
-            # static captions
+            "storage_type": self._rcache(ParameterKey.STORAGE_TYPE.value),
+            "write_speed": self._rcache(ParameterKey.WRITE_SPEED_TO_DRIVE.value) or "0 MB/s",
+            "clip_name": self._rcache(ParameterKey.LAST_DNG_CAM1.value) or "N/A",
             "cam": "CAM", "raw": "RAW", "ram_label": "RAM",
             "cpu_label": "CPU", "cpu_temp_label": "TEMP",
             "media_label": "MEDIA", "mon": "MON",
-
         }
-        # ── audio stats ─────────────────────────────────────────────────
+
+        rec_flag = self._safe_int(self._rcache(ParameterKey.REC.value, 0), 0) == 1
+        values["rec"] = 1 if rec_flag else 0
+        writing_flag = self._safe_int(self._rcache(ParameterKey.IS_WRITING_BUF.value, 0), 0) == 1
+        buffering_flag = self._safe_int(self._rcache(ParameterKey.IS_BUFFERING.value, 0), 0) == 1
+
         if values["mic_connected"]:
             monitor = getattr(self.usb_monitor, "audio_monitor", None)
             bit_depth = getattr(monitor, "bit_depth", None)
             if bit_depth:
                 values["mic_bit_depth"] = f"{bit_depth}"
-
             sample_rate = getattr(monitor, "sample_rate", None) or getattr(monitor, "audio_sample_rate", None)
             if sample_rate:
                 try:
                     sr_khz = sample_rate / 1000
-                    if abs(round(sr_khz) - sr_khz) < 1e-3:
-                        values["mic_sample_rate"] = f"{int(round(sr_khz))}"
-                    else:
-                        values["mic_sample_rate"] = f"{sr_khz:.1f}".rstrip("0").rstrip(".")
+                    values["mic_sample_rate"] = f"{int(round(sr_khz))}" if abs(round(sr_khz) - sr_khz) < 1e-3 else f"{sr_khz:.1f}".rstrip("0").rstrip(".")
                 except (TypeError, ValueError):
                     pass
-
-            try:
-                values["frames_in_sync"] = int(self.redis_controller.get_value(ParameterKey.FRAMES_IN_SYNC.value) or 0) == 1
-            except (TypeError, ValueError):
-                values["frames_in_sync"] = False
-
+            values["frames_in_sync"] = self._safe_int(self._rcache(ParameterKey.FRAMES_IN_SYNC.value, 0), 0) == 1
             if self.ssd_monitor:
-                try:
-                    rec_active = any([
-                        int(self.redis_controller.get_value(ParameterKey.REC.value) or 0) == 1,
-                        int(self.redis_controller.get_value(ParameterKey.IS_WRITING_BUF.value) or 0) == 1,
-                        int(self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value) or 0) == 1,
-                    ])
-                    if rec_active:
-                        values["mic_wav_saved"] = False
-                    else:
-                        _, dng_count, wav_count = self.ssd_monitor.get_latest_recording_info()
-                        values["mic_wav_saved"] = dng_count > 0 and wav_count > 0
-                    _, dng_count, wav_count = self.ssd_monitor.get_latest_recording_info()
-                    values["mic_wav_saved"] = dng_count > 0 and wav_count > 0
-                except (TypeError, ValueError):
+                now = time.perf_counter()
+                rec_active = rec_flag or writing_flag or buffering_flag
+                if rec_active:
                     values["mic_wav_saved"] = False
-
-        # ── Zoom factor (preview punch-in) ────────────────────────────────
-        default_zoom = float(self.settings.get("preview", {}).get("default_zoom", 1.0))
-        try:
-            z = float(self.redis_controller.get_value(ParameterKey.ZOOM.value) or 1.0)
-        except (TypeError, ValueError):
-            z = 1.0
-        values["zoom_is_default"] = abs(z - default_zoom) <= 1e-3
-        values["zoom_factor"] = f"{z:.1f}"
-
-        # ─── recording time ───
-        raw_rt = self.redis_controller.get_value(ParameterKey.RECORDING_TIME.value)
-
-        if raw_rt is not None:
-            s = str(raw_rt).strip()
-
-            # Only proceed if Redis value is not exactly "0" or 0.0
-            try:
-                if float(s) == 0:
-                    pass  # skip drawing
                 else:
-                    # 1) Try numeric seconds
-                    total = None
-                    try:
-                        total = int(float(s))
-                    except ValueError:
-                        # 2) Fallback: parse "HH:MM:SS" or "MM:SS"
-                        parts = s.split(":")
-                        try:
-                            if len(parts) >= 3:
-                                h = int(parts[0]); m = int(parts[1]); sec = int(parts[2])
-                                total = h * 3600 + m * 60 + sec
-                            elif len(parts) == 2:
-                                m = int(parts[0]); sec = int(parts[1])
-                                total = m * 60 + sec
-                            elif len(parts) == 1 and parts[0].isdigit():
-                                total = int(parts[0])
-                        except (TypeError, ValueError):
-                            total = None
+                    if (now - self._last_ssd_info_ts) >= self.refresh_intervals["ssd"]:
+                        self._cached_latest_recording_info = self.ssd_monitor.get_latest_recording_info()
+                        self._last_ssd_info_ts = now
+                    _, dng_count, wav_count = self._cached_latest_recording_info
+                    values["mic_wav_saved"] = dng_count > 0 and wav_count > 0
 
-                    # format if we have a valid total
-                    if total is not None:
-                        if total >= 3600:
-                            h = total // 3600
-                            rem = total % 3600
-                            m = rem // 60
-                            sec = rem % 60
-                            values["recording_time"] = f"{h}:{m}:{sec:02d}"
-                        else:
-                            m = total // 60
-                            sec = total % 60
-                            values["recording_time"] = f"{m}:{sec:02d}"
-            except ValueError:
-                pass  # skip if float conversion fails
+        rec_time = self._parse_recording_time(self._rcache(ParameterKey.RECORDING_TIME.value))
+        if rec_time:
+            values["recording_time"] = rec_time
 
-        # ───────────────── CLIP / LAST-DNG display ───────────────
-        last_cam1_full = self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value)
-        last_cam0_full = self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM0.value)
-
-        clip_cam1 = self._format_last_dng(last_cam1_full)
-        clip_cam0 = self._format_last_dng(last_cam0_full)
-
+        clip_cam1 = self._format_last_dng(self._rcache(ParameterKey.LAST_DNG_CAM1.value))
+        clip_cam0 = self._format_last_dng(self._rcache(ParameterKey.LAST_DNG_CAM0.value))
         if clip_cam0 and clip_cam1:
-            # two cameras – show CAM1 on the upper line, CAM0 on the baseline
             values["clip_name_cam1"] = clip_cam1
-            values["clip_name"]      = clip_cam0
+            values["clip_name"] = clip_cam0
         else:
-            pass
-            #only one camera – keep it on the baseline row
             values["clip_name"] = clip_cam0 or clip_cam1 or ""
-            
 
-        # ── add right-column data when CAM1 exists ────────────────
         if sensor_right and cam1:
-            sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value) or 0)
-            pk   = cam1["model"] + ("_mono" if cam1["mono"] else "")
+            sensor_mode = self._safe_int(self._rcache(ParameterKey.SENSOR_MODE.value, 0), 0)
+            pk = cam1.get("model", "") + ("_mono" if cam1.get("mono") else "")
             res1 = self.sensor_detect.get_resolution_info(pk, sensor_mode)
-            w1   = res1.get("width", 1920)
-            h1   = res1.get("height", 1080)
-            bd1  = res1.get("bit_depth", 12)
-
+            w1 = res1.get("width", 1920)
+            h1 = res1.get("height", 1080)
+            bd1 = res1.get("bit_depth", 12)
             values.update({
-                "sensor_cam1":     sensor_right,
-                "resolution_cam1": self.estimate_resolution_in_k(),
-                "aspect_cam1":     round(w1 / h1, 2),
-                "bit_depth_cam1":  f"{bd1}b",
+                "sensor_cam1": sensor_right,
+                "resolution_cam1": resolution_value,
+                "aspect_cam1": round(w1 / h1, 2),
+                "bit_depth_cam1": f"{bd1}b",
             })
 
-        # ── housekeeping tweaks (unchanged) ───────────────────────
-        frame_count = f"{self.redis_controller.get_value(ParameterKey.FRAMECOUNT.value)} / " \
-                    f"{self.redis_controller.get_value(ParameterKey.BUFFER.value)}"
-        values["frame_count"] = re.sub(r"[^0-9 /]", "", frame_count)
+        values["frame_count"] = re.sub(r"[^0-9 /]", "", f"{self._rcache(ParameterKey.FRAMECOUNT.value)} / {self._rcache(ParameterKey.BUFFER.value)}")
+        values["buffer_used"] = str(self._rcache(ParameterKey.BUFFER.value) or "0")
+        values["buffer_size"] = str(self._rcache(ParameterKey.BUFFER_SIZE.value) or "0")
 
-        values["buffer_used"] = str(
-            self.redis_controller.get_value(ParameterKey.BUFFER.value) or "0")
-        values["buffer_size"] = str(
-            self.redis_controller.get_value(ParameterKey.BUFFER_SIZE.value) or "0")
-
-        # if values["fps"] != int(float(self.redis_controller.get_value(ParameterKey.FPS_USER.value))):
-        #     self.colors["fps"]["normal"] = "yellow"
         if self.cinepi_controller.shutter_a_sync_mode != 0:
             self.colors["shutter_speed"]["normal"] = "lightgreen"
             self.colors["fps"]["normal"] = "lightgreen"
         else:
-            self.colors["shutter_speed"]["normal"] = (249,249,249)
-            self.colors["fps"]["normal"] = (249,249,249)
+            self.colors["shutter_speed"]["normal"] = (249, 249, 249)
+            self.colors["fps"]["normal"] = (249, 249, 249)
 
-        values["lock"]        = "LOCK"    if self.cinepi_controller.parameters_lock else ""
-        values["low_voltage"] = "VOLTAGE" if self.dmesg_monitor.undervoltage_flag  else ""
-
+        values["lock"] = "LOCK" if self.cinepi_controller.parameters_lock else ""
+        values["low_voltage"] = "VOLTAGE" if self.dmesg_monitor.undervoltage_flag else ""
         if self.battery_monitor.battery_level is not None:
             values["battery_level"] = f"{self.battery_monitor.battery_level}%"
         self.colors["battery_level"]["normal"] = "lightgreen" if self.battery_monitor.charging else "white"
 
         if self.ssd_monitor.space_left and self.ssd_monitor.is_mounted:
-            mins = (self.ssd_monitor.space_left * 1000) / (self.cinepi_controller.file_size *
-                                                        float(self.cinepi_controller.fps) * 60)
+            mins = (self.ssd_monitor.space_left * 1000) / (self.cinepi_controller.file_size * float(self.cinepi_controller.fps) * 60)
             values["disk_space"] = f"{round(mins)} MIN"
             values["write_speed"] = f"{self.ssd_monitor.write_speed_mb_s:.0f} MB/s"
         else:
             values["disk_space"] = "NO DISK"
             values["write_speed"] = ""
-        
         if self.ssd_monitor.write_speed_mb_s > 0:
             values["write_speed"] = f"{self.ssd_monitor.write_speed_mb_s:.0f} MB/s"
-        
         return values
 
     def _format_sensor_name(self, name: str, is_mono: bool) -> str:
@@ -695,6 +714,25 @@ class SimpleGUI(threading.Thread):
 
         return stem
 
+
+    def _get_font(self, font_path, size):
+        cache = getattr(self, "_font_cache", None)
+        if cache is None:
+            self._font_cache = {}
+            cache = self._font_cache
+        key = (font_path, int(size))
+        if key not in cache:
+            cache[key] = ImageFont.truetype(os.path.realpath(font_path), int(size))
+        return cache[key]
+
+    def _text_bbox(self, draw, text, font):
+        key = (id(font), text)
+        bbox = self._textbbox_cache.get(key)
+        if bbox is None:
+            bbox = draw.textbbox((0, 0), text, font=font)
+            self._textbbox_cache[key] = bbox
+        return bbox
+
     def update_smoothed_vu_levels(self):
         if not self.usb_monitor or not hasattr(self.usb_monitor, "audio_monitor"):
             return
@@ -727,8 +765,8 @@ class SimpleGUI(threading.Thread):
     # LEFT-HAND COLUMN  (CAM / MON / SYS …)
     # ─────────────────────────────────────────────────────────────
     def draw_left_sections(self, draw, values):
-        label_font = ImageFont.truetype(self.regular_font_path, 26)
-        box_font   = ImageFont.truetype(self.bold_font_path,     26)
+        label_font = self._get_font(self.regular_font_path, 26)
+        box_font   = self._get_font(self.bold_font_path, 26)
 
         BOX_H, BOX_W  = 40, 60
         BOX_COLOR     = (136, 136, 136)
@@ -747,7 +785,7 @@ class SimpleGUI(threading.Thread):
             if section.get("condition") and not section["condition"](values):
                 continue
             # centre the label over the column
-            lbl_w  = draw.textbbox((0,0), section["label"], font=label_font)[2]
+            lbl_w  = self._text_bbox(draw, section["label"], label_font)[2]
             lbl_x  = box_x + (BOX_W - lbl_w)//2
             draw.text((lbl_x, y), section["label"],
                       font=label_font,
@@ -774,7 +812,7 @@ class SimpleGUI(threading.Thread):
                                  box_x + BOX_W - m, y + BOX_H - m]
                         draw.rectangle(inner, outline=(0, 0, 0), width=2)
 
-                    tw, th = draw.textbbox((0,0), part, font=box_font)[2:]
+                    tw, th = self._text_bbox(draw, part, box_font)[2:]
                     tx = box_x + (BOX_W - tw)//2
                     ty = y     + (BOX_H - th)//2
                     draw.text((tx, ty), part, font=box_font, fill=TEXT_COLOR)
@@ -865,7 +903,7 @@ class SimpleGUI(threading.Thread):
                     draw.rectangle([box_pad_x, y,
                                     box_pad_x + BOX_W, y + BOX_H],
                                    fill=BOX_COLOR)
-                    tw, th = draw.textbbox((0,0), part, font=box_font)[2:]
+                    tw, th = self._text_bbox(draw, part, box_font)[2:]
                     tx = box_pad_x + (BOX_W - tw)//2
                     ty = y         + (BOX_H - th)//2
                     draw.text((tx, ty), part, font=box_font, fill=TEXT_COLOR)
@@ -895,7 +933,6 @@ class SimpleGUI(threading.Thread):
         base_x = self.disp_width - margin_right - total_width
 
         def level_to_height(level):
-            import math
             amplified_level = min(level * amplification_factor, 100)
             scaled = math.log10(1 + 9 * (amplified_level / 100))
             return int(scaled * bar_height)
@@ -913,10 +950,10 @@ class SimpleGUI(threading.Thread):
             draw_bar(x, bar_width, vu_levels[i], vu_peaks[i])
 
         # Optional: Draw channel labels
-        label_font = ImageFont.truetype(self.regular_font_path, 16)
+        label_font = self._get_font(self.regular_font_path, 16)
         labels = ["L", "R"] if n_channels == 2 else [str(i+1) for i in range(n_channels)]
         for i, label in enumerate(labels):
-            text_bbox = draw.textbbox((0, 0), label, font=label_font)
+            text_bbox = self._text_bbox(draw, label, label_font)
             text_x = base_x + i * (bar_width + spacing) + (bar_width - (text_bbox[2] - text_bbox[0])) // 2
             text_y = base_y + bar_height + 5
             draw.text((text_x, text_y), label, font=label_font, fill=(249,249,249))
@@ -924,7 +961,7 @@ class SimpleGUI(threading.Thread):
     # ─────────────────────────────────────────────────────────────
     # FRAME-BUFFER “VU”  (queued frames vs. capacity)
     # ─────────────────────────────────────────────────────────────
-    def draw_framebuffer_vu_meter(self, draw):
+    def draw_framebuffer_vu_meter(self, draw, values=None):
         """
         Visualises the RAM-buffer usage:
             • height  = used / total
@@ -933,15 +970,14 @@ class SimpleGUI(threading.Thread):
             • caption = “used / total”
         """
         # ── fetch numbers from Redis safely ─────────────────────────────
+        values = values or {}
         try:
-            raw_used  = self.redis_controller.get_value(ParameterKey.BUFFER.value)
-            used = int(raw_used) if raw_used is not None else 0
+            used = int(values.get("buffer_used", self._rcache(ParameterKey.BUFFER.value, 0)) or 0)
         except (TypeError, ValueError):
             used = 0
 
         try:
-            raw_total = self.redis_controller.get_value(ParameterKey.BUFFER_SIZE.value)
-            total = int(raw_total) if raw_total is not None else 0
+            total = int(values.get("buffer_size", self._rcache(ParameterKey.BUFFER_SIZE.value, 0)) or 0)
         except (TypeError, ValueError):
             total = 0
 
@@ -966,7 +1002,7 @@ class SimpleGUI(threading.Thread):
         base_y = self.disp_height - GAP_BOTTOM - BAR_H
         base_x = BASE_X
 
-        rec         = int(self.redis_controller.get_value(ParameterKey.REC.value) or 0)
+        rec = self._safe_int(values.get("rec", self._rcache(ParameterKey.REC.value, 0)), 0)
         border_col  = (50, 50, 50) if rec else (249, 249, 249)
         back_col    = (50, 50, 50)
 
@@ -1003,24 +1039,13 @@ class SimpleGUI(threading.Thread):
         previous_background_color = self.get_background_color()
 
         # ─── choose background colour & colour-mode ────────────────────
-        rec_flag = int(self.redis_controller.get_value(ParameterKey.REC.value) or 0) == 1
-        is_recording_flag = int(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) or 0) == 1
+        rec_flag = self._safe_int(values.get("rec", self._rcache(ParameterKey.REC.value, 0)), 0) == 1
+        is_recording_flag = self._safe_int(self._rcache(ParameterKey.IS_RECORDING.value, 0), 0) == 1
         rec_active = rec_flag or is_recording_flag
-
-        rec_active = int(self.redis_controller.get_value(ParameterKey.REC.value) or 0) == 1
         drop_frame_detected = bool(self.redis_listener.drop_frame)
-        frames_in_sync = int(self.redis_controller.get_value(ParameterKey.FRAMES_IN_SYNC.value) or 1)
+        frames_in_sync = self._safe_int(self._rcache(ParameterKey.FRAMES_IN_SYNC.value, 1), 1)
         frame_count_mismatch = rec_active and frames_in_sync == 0
-        
-        try:
-            preroll_active = int(
-                self.redis_controller.get_value(
-                    ParameterKey.STORAGE_PREROLL_ACTIVE.value
-                )
-                or 0
-            )
-        except (TypeError, ValueError):
-            preroll_active = 0
+        preroll_active = self._safe_int(self._rcache(ParameterKey.STORAGE_PREROLL_ACTIVE.value, 0), 0)
 
         if int(values["ram_load"].rstrip('%')) > 95:
             # safety: RAM nearly full – warn & auto-stop
@@ -1047,12 +1072,7 @@ class SimpleGUI(threading.Thread):
             self.current_background_color = "red"
             self.color_mode = "inverse"
 
-        elif int(self.redis_controller.get_value(ParameterKey.IS_WRITING_BUF.value) or 0):
-            # recording has stopped but buffer still flushing to disk
-            self.current_background_color = "green"
-            self.color_mode = "inverse"
-
-        elif (not rec_active) and int(self.redis_controller.get_value(ParameterKey.IS_WRITING_BUF.value) or 0):
+        elif self._safe_int(self._rcache(ParameterKey.IS_WRITING_BUF.value, 0), 0):
             # recording has stopped but buffer still flushing to disk
             self.current_background_color = "green"
             self.color_mode = "inverse"
@@ -1072,16 +1092,22 @@ class SimpleGUI(threading.Thread):
             self.background_color_changed = False
 
         current_values = values
-        if hasattr(self, 'previous_values'):
-            changed_data = {}
-            for key, value in current_values.items():
-                if value != self.previous_values.get(key):
-                    changed_data[key] = value
-            if changed_data:
-                try:
-                    self.emit_gui_data_change(changed_data)
-                except Exception:
-                    pass
+        if self.socketio is not None:
+            should_emit = True
+            now = time.perf_counter()
+            if self.emit_throttle_s > 0 and (now - self._last_emit_ts) < self.emit_throttle_s:
+                should_emit = False
+            if should_emit and hasattr(self, 'previous_values'):
+                changed_data = {}
+                for key, value in current_values.items():
+                    if value != self.previous_values.get(key):
+                        changed_data[key] = value
+                if changed_data:
+                    try:
+                        self.emit_gui_data_change(changed_data)
+                        self._last_emit_ts = now
+                    except Exception:
+                        pass
         self.previous_values = current_values.copy()
 
         if not self.fb:
@@ -1094,13 +1120,13 @@ class SimpleGUI(threading.Thread):
         # Draw left-hand labels and boxes dynamically
         self.draw_left_sections(draw, values)
 
-        # Get sensor resolution
-        self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value))
-        self.height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value))
-        self.aspect_ratio = self.width / self.height
-        self.anamorphic_factor = float(self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value))
-        lores_width = int(self.redis_controller.get_value(ParameterKey.LORES_WIDTH.value))
-        lores_height = int(self.redis_controller.get_value(ParameterKey.LORES_HEIGHT.value))
+        # Get sensor resolution (cached snapshot)
+        self.width = self._safe_int(self._rcache(ParameterKey.WIDTH.value, self.width), self.width)
+        self.height = self._safe_int(self._rcache(ParameterKey.HEIGHT.value, self.height), self.height)
+        self.aspect_ratio = self.width / max(self.height, 1)
+        self.anamorphic_factor = self._safe_float(self._rcache(ParameterKey.ANAMORPHIC_FACTOR.value, 1.0), 1.0)
+        lores_width = self._safe_int(self._rcache(ParameterKey.LORES_WIDTH.value, self.width), self.width)
+        lores_height = self._safe_int(self._rcache(ParameterKey.LORES_HEIGHT.value, self.height), self.height)
 
         frame_width = self.disp_width
         frame_height = self.disp_height
@@ -1156,16 +1182,14 @@ class SimpleGUI(threading.Thread):
             position = [info["pos"][0] * shrink_x, info["pos"][1] * shrink_y]
             font_size = info.get("size", 12) * min(min(shrink_x, shrink_y), 1) 
             # 12 is the default font size, min with 1 makes sure the font stays same in bigger displays
-            font = ImageFont.truetype(
-                os.path.realpath(self.bold_font_path if info.get("font", "bold") == "bold" else self.regular_font_path),
-                font_size
-            )
+            font_path = self.bold_font_path if info.get("font", "bold") == "bold" else self.regular_font_path
+            font = self._get_font(font_path, font_size)
             value = str(values.get(element, ''))
             color_mode = self.color_mode
             color = self.colors.get(element, {}).get(color_mode, "white")
 
             if element == "sensor" and info.get("align") == "right":
-                text_bbox = draw.textbbox((0, 0), value, font=font)
+                text_bbox = self._text_bbox(draw, value, font)
                 text_width = text_bbox[2] - text_bbox[0]
                 x = position[0] + info["width"] - text_width
                 position = (x, position[1])
@@ -1179,7 +1203,7 @@ class SimpleGUI(threading.Thread):
         self.update_smoothed_vu_levels()
         self.draw_right_vu_meter(draw)
         if self.show_buffer_vu:
-            self.draw_framebuffer_vu_meter(draw)
+            self.draw_framebuffer_vu_meter(draw, values)
 
         vu = self.vu_smoothed  # Or .usb_monitor.audio_monitor.vu_levels if you want raw
         # if vu:
@@ -1195,7 +1219,7 @@ class SimpleGUI(threading.Thread):
         self.fb.show(image)
         
     def draw_rounded_box(self, draw, text, position, font_size, padding, text_color, fill_color, image, extra_height=-17, reduce_top=12):
-        font = ImageFont.truetype(os.path.realpath(self.font_path), font_size)
+        font = self._get_font(self.font_path, font_size)
         bbox = draw.textbbox((0, 0), text, font=font)
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1] + extra_height  # Increase height by extra_height
@@ -1206,9 +1230,12 @@ class SimpleGUI(threading.Thread):
         radius = 5
         radius_2x = radius * 2
 
-        mask = Image.new('L', (radius_2x, radius_2x), 0)
-        mask_draw = ImageDraw.Draw(mask)
-        mask_draw.ellipse((0, 0, radius_2x, radius_2x), fill=255)
+        mask = self._rounded_corner_mask
+        if mask is None or mask.size != (radius_2x, radius_2x):
+            mask = Image.new('L', (radius_2x, radius_2x), 0)
+            mask_draw = ImageDraw.Draw(mask)
+            mask_draw.ellipse((0, 0, radius_2x, radius_2x), fill=255)
+            self._rounded_corner_mask = mask
 
         # Top-left corner
         image.paste(fill_color, (upper_left[0], upper_left[1]), mask)
@@ -1244,6 +1271,38 @@ class SimpleGUI(threading.Thread):
         self.clear_framebuffer()        # black screen
 
 
+    def _record_perf_sample(self, metric, value):
+        bucket = self._perf_samples.get(metric)
+        if bucket is not None:
+            bucket.append(value)
+
+    def _maybe_log_perf(self):
+        if not self.debug_perf:
+            return
+        now = time.perf_counter()
+        if (now - self._last_perf_log) < 10:
+            return
+        self._last_perf_log = now
+
+        def p95(values):
+            if not values:
+                return 0.0
+            data = sorted(values)
+            idx = max(0, min(len(data) - 1, int(0.95 * (len(data) - 1))))
+            return data[idx]
+
+        logging.info(
+            "GUI perf(ms): populate mean=%.2f p95=%.2f | draw mean=%.2f p95=%.2f | loop mean=%.2f p95=%.2f | sleep_deficit mean=%.2f p95=%.2f",
+            (sum(self._perf_samples["populate"]) / len(self._perf_samples["populate"]) * 1000) if self._perf_samples["populate"] else 0.0,
+            p95(self._perf_samples["populate"]) * 1000,
+            (sum(self._perf_samples["draw"]) / len(self._perf_samples["draw"]) * 1000) if self._perf_samples["draw"] else 0.0,
+            p95(self._perf_samples["draw"]) * 1000,
+            (sum(self._perf_samples["loop"]) / len(self._perf_samples["loop"]) * 1000) if self._perf_samples["loop"] else 0.0,
+            p95(self._perf_samples["loop"]) * 1000,
+            (sum(self._perf_samples["sleep_deficit"]) / len(self._perf_samples["sleep_deficit"]) * 1000) if self._perf_samples["sleep_deficit"] else 0.0,
+            p95(self._perf_samples["sleep_deficit"]) * 1000,
+        )
+
     def run(self):
         try:
             self.vu_left_peak = 0
@@ -1253,10 +1312,30 @@ class SimpleGUI(threading.Thread):
             self.vu_decay_factor = 0.2
 
             while self._running:
+                loop_start = time.perf_counter()
+
+                populate_start = time.perf_counter()
                 values = self.populate_values()
+                populate_dur = time.perf_counter() - populate_start
+                self._record_perf_sample("populate", populate_dur)
+
+                draw_start = time.perf_counter()
                 self.update_smoothed_vu_levels()
                 self.draw_gui(values)
-                time.sleep(0.2)
+                draw_dur = time.perf_counter() - draw_start
+                self._record_perf_sample("draw", draw_dur)
+
+                loop_dur = time.perf_counter() - loop_start
+                self._record_perf_sample("loop", loop_dur)
+
+                sleep_for = self.loop_interval_s - loop_dur
+                if sleep_for > 0:
+                    time.sleep(sleep_for)
+                    self._record_perf_sample("sleep_deficit", 0.0)
+                else:
+                    self._record_perf_sample("sleep_deficit", abs(sleep_for))
+
+                self._maybe_log_perf()
         finally:
             pass
  

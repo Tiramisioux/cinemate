@@ -40,6 +40,9 @@ class ParameterKey(Enum):
     IS_WRITING        = "is_writing"
     IS_WRITING_BUF    = "is_writing_buf"
     STORAGE_PREROLL_ACTIVE = "storage_preroll_active"
+    DROP_FRAME = "drop_frame"
+    DROP_FRAME_DURING_LAST_TAKE = "drop_frame_during_last_take"
+    DROP_FRAME_COUNT = "drop_frame_count"
 
     TC_CAM0           = "tc_cam0"
     TC_CAM1           = "tc_cam1"

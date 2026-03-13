@@ -54,13 +54,14 @@ class _HardwarePWMToneOutput(_ToneOutput):
 class GPIOOutput:
     HARDWARE_PWM_PINS = {18, 19}
 
-    def __init__(self, rec_out_pins=None, rec_tone_pins=None, rec_tone_frequency_hz=1000, rec_tone_duty_cycle=50):
+    def __init__(self, rec_out_pins=None, rec_tone_pins=None, rec_tone_frequency_hz=1000, rec_tone_duty_cycle=50, rec_tone_relay_drop_frames=False):
         self.rec_out_pins = rec_out_pins if rec_out_pins is not None else []  # This is the list of pins for recording
         self.rec_tone_pins = self._normalize_pins(rec_tone_pins)
         self.rec_tone_frequency_hz = rec_tone_frequency_hz
         self.rec_tone_duty_cycle = rec_tone_duty_cycle
         self._tone_outputs = []
         self._is_tone_active = False
+        self.rec_tone_relay_drop_frames = bool(rec_tone_relay_drop_frames)
 
         # Set up each pin in rec_out_pins as an output if the list is provided
         for pin in self.rec_out_pins:
@@ -115,6 +116,23 @@ class GPIOOutput:
 
     def set_rec_tone(self, active):
         self._set_tone(bool(active))
+
+
+    def relay_drop_frame_on_rec_tone(self, drop_frame_active):
+        if not self.rec_tone_relay_drop_frames:
+            return
+
+        if not self._is_tone_active:
+            return
+
+        for tone_output in self._tone_outputs:
+            try:
+                if drop_frame_active:
+                    tone_output.stop()
+                else:
+                    tone_output.start()
+            except Exception as exc:
+                logging.warning(f"Failed to {'stop' if drop_frame_active else 'start'} REC tone for drop-frame relay: {exc}")
 
     def set_recording(self, status):
         """Set the status of the recording pins based on the given status."""

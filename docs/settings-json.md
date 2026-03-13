@@ -122,6 +122,7 @@ Defines pins used for visual feedback or sync signals.
 * `rec_tone_frequency_hz` – tone frequency in hertz.
 
 * `rec_tone_duty_cycle` – PWM duty cycle percentage (`0–100`).
+* `rec_tone_relay_drop_frames` – when `true`, each live drop-frame pulse (`drop_frame_relay = 1`) briefly mutes REC tone output for about one frame, then resumes automatically.
 
 ## arrays
 

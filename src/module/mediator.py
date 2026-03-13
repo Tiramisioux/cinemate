@@ -27,6 +27,7 @@ class Mediator:
         self._is_recording = False
         self._is_writing = False
         self._storage_preroll_active = False
+        self._drop_frame_relay_active = False
 
         logging.info("Mediator instantiated")
         
@@ -91,6 +92,7 @@ class Mediator:
         # and should stop once writing stops.
         tone_active = self._is_recording and self._is_writing and not self._storage_preroll_active
         self.gpio_output.set_rec_tone(tone_active)
+        self.gpio_output.relay_drop_frame_on_rec_tone(self._drop_frame_relay_active)
 
     def handle_redis_event(self, data):
         key = data.get('key')
@@ -116,6 +118,11 @@ class Mediator:
                 logging.info("Recording stopped!")
                 self._refresh_gpio_outputs()
 
+            return
+
+        if key == ParameterKey.DROP_FRAME_RELAY.value:
+            self._drop_frame_relay_active = self._as_bool(data.get('value'))
+            self.gpio_output.relay_drop_frame_on_rec_tone(self._drop_frame_relay_active)
             return
 
         # Handle "is_writing" key changes

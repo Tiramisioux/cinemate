@@ -231,6 +231,7 @@ def initialize_system(settings):
         rec_tone_pins=settings["gpio_output"].get("rec_tone_pin"),
         rec_tone_frequency_hz=settings["gpio_output"].get("rec_tone_frequency_hz", 1000),
         rec_tone_duty_cycle=settings["gpio_output"].get("rec_tone_duty_cycle", 50),
+        rec_tone_relay_drop_frames=settings["gpio_output"].get("rec_tone_relay_drop_frames", False),
     )
     dmesg_monitor = DmesgMonitor()
     dmesg_monitor.start()

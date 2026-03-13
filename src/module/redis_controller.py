@@ -43,6 +43,7 @@ class ParameterKey(Enum):
     DROP_FRAME = "drop_frame"
     DROP_FRAME_DURING_LAST_TAKE = "drop_frame_during_last_take"
     DROP_FRAME_COUNT = "drop_frame_count"
+    DROP_FRAME_RELAY = "drop_frame_relay"
 
     TC_CAM0           = "tc_cam0"
     TC_CAM1           = "tc_cam1"

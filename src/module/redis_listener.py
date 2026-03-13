@@ -66,6 +66,7 @@ class RedisListener:
         self.drop_frame = False
         self.drop_frame_timer = None
         self.drop_frame_count_current_take = 0
+        self.drop_frame_relay_timer = None
 
 
         self.cinepi_running = True
@@ -83,6 +84,7 @@ class RedisListener:
         self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 0)
         self.redis_controller.set_value(ParameterKey.DROP_FRAME_DURING_LAST_TAKE.value, 0)
         self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, 0)
+        self.redis_controller.set_value(ParameterKey.DROP_FRAME_RELAY.value, 0)
         
         self.max_fps_adjustment = 0.1  # Maximum adjustment per iteration
         self.min_fps_adjustment = 0.0001  # Minimum adjustment increment
@@ -376,15 +378,17 @@ class RedisListener:
                             # print(f"FPS difference: {fps_difference}")
                             
                             # do NOT raise drop-frame while the user is changing fps
-                            if fps_difference > 1 and not self.drop_frame and not self.user_changing_fps:
-
-                                self.drop_frame = True
+                            if fps_difference > 1 and not self.user_changing_fps:
                                 self.drop_frame_count_current_take += 1
-                                self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 1)
                                 self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, self.drop_frame_count_current_take)
-                                logging.info(f"Drop frame detected (count={self.drop_frame_count_current_take})")
-                                
-                                # Set a timer to reset the drop_frame flag after 0.5 seconds
+                                self._pulse_drop_frame_relay(expected_fps)
+
+                                if not self.drop_frame:
+                                    self.drop_frame = True
+                                    self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 1)
+                                    logging.info(f"Drop frame detected (count={self.drop_frame_count_current_take})")
+
+                                # Keep the GUI drop-frame indicator alive for 0.5 seconds.
                                 if self.drop_frame_timer:
                                     self.drop_frame_timer.cancel()
                                 self.drop_frame_timer = threading.Timer(0.5, self.reset_drop_frame)
@@ -417,6 +421,22 @@ class RedisListener:
                 else:
                     logging.warning(f"Received unexpected data format: {message_data}")
                     
+
+    def _pulse_drop_frame_relay(self, expected_fps: float | None) -> None:
+        """Emit a short drop-frame relay pulse for REC tone interruption."""
+        frame_duration_s = 1 / expected_fps if expected_fps and expected_fps > 0 else (1 / 24)
+        frame_duration_s = min(max(frame_duration_s, 0.005), 0.1)
+
+        self.redis_controller.set_value(ParameterKey.DROP_FRAME_RELAY.value, 1)
+
+        if self.drop_frame_relay_timer:
+            self.drop_frame_relay_timer.cancel()
+        self.drop_frame_relay_timer = threading.Timer(frame_duration_s, self.reset_drop_frame_relay)
+        self.drop_frame_relay_timer.start()
+
+    def reset_drop_frame_relay(self):
+        self.redis_controller.set_value(ParameterKey.DROP_FRAME_RELAY.value, 0)
+
     def reset_drop_frame(self):
         self.drop_frame = False
         self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 0)
@@ -529,6 +549,7 @@ class RedisListener:
                     self.recording_start_time = datetime.datetime.now()
                     self.drop_frame_count_current_take = 0
                     self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, 0)
+                    self.redis_controller.set_value(ParameterKey.DROP_FRAME_RELAY.value, 0)
                     self.redis_controller.set_value(ParameterKey.DROP_FRAME_DURING_LAST_TAKE.value, 0)
                     self.recording_end_time = None
                     logging.info(f"Recording started at: {self.recording_start_time}")
@@ -554,8 +575,11 @@ class RedisListener:
 
                     if self.drop_frame_timer:
                         self.drop_frame_timer.cancel()
+                    if self.drop_frame_relay_timer:
+                        self.drop_frame_relay_timer.cancel()
                     self.drop_frame = False
                     self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 0)
+                    self.redis_controller.set_value(ParameterKey.DROP_FRAME_RELAY.value, 0)
 
 
                 elif value_str == '0':

@@ -65,6 +65,8 @@ class RedisListener:
 
         self.drop_frame = False
         self.drop_frame_timer = None
+        self.drop_frame_count_current_take = 0
+
 
         self.cinepi_running = True
 
@@ -78,6 +80,9 @@ class RedisListener:
         self.active_sensor_labels: set[str] = set()
         self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 1)
         self.redis_controller.set_value(ParameterKey.FPS_CORRECTION_SUGGESTION.value, 1.0)
+        self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 0)
+        self.redis_controller.set_value(ParameterKey.DROP_FRAME_DURING_LAST_TAKE.value, 0)
+        self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, 0)
         
         self.max_fps_adjustment = 0.1  # Maximum adjustment per iteration
         self.min_fps_adjustment = 0.0001  # Minimum adjustment increment
@@ -374,7 +379,10 @@ class RedisListener:
                             if fps_difference > 1 and not self.drop_frame and not self.user_changing_fps:
 
                                 self.drop_frame = True
-                                logging.info("Drop frame detected")
+                                self.drop_frame_count_current_take += 1
+                                self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 1)
+                                self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, self.drop_frame_count_current_take)
+                                logging.info(f"Drop frame detected (count={self.drop_frame_count_current_take})")
                                 
                                 # Set a timer to reset the drop_frame flag after 0.5 seconds
                                 if self.drop_frame_timer:
@@ -411,6 +419,7 @@ class RedisListener:
                     
     def reset_drop_frame(self):
         self.drop_frame = False
+        self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 0)
         logging.info("Drop frame flag reset")
         
     # ───────────────────  FPS-change handling  ──────────────────────────────
@@ -518,6 +527,9 @@ class RedisListener:
                     self.is_recording = True
                     self.reset_framecount()
                     self.recording_start_time = datetime.datetime.now()
+                    self.drop_frame_count_current_take = 0
+                    self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, 0)
+                    self.redis_controller.set_value(ParameterKey.DROP_FRAME_DURING_LAST_TAKE.value, 0)
                     self.recording_end_time = None
                     logging.info(f"Recording started at: {self.recording_start_time}")
 
@@ -539,6 +551,11 @@ class RedisListener:
 
                     self.framerate = float(self.redis_controller.get_value('fps_user'))  # keep if you still use it elsewhere
                     self.allow_initial_zero = True
+
+                    if self.drop_frame_timer:
+                        self.drop_frame_timer.cancel()
+                    self.drop_frame = False
+                    self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 0)
 
 
                 elif value_str == '0':
@@ -828,6 +845,20 @@ class RedisListener:
 
         diff = expected_frames_total - recorded_frames_total
         frames_in_sync = abs(diff) <= 1
+
+        drop_detected_this_take = self.drop_frame_count_current_take > 0
+        drop_during_last_take = (not self.recording_was_preroll) and drop_detected_this_take
+        self.redis_controller.set_value(
+            ParameterKey.DROP_FRAME_DURING_LAST_TAKE.value,
+            1 if drop_during_last_take else 0,
+        )
+        self.redis_controller.set_value(
+            ParameterKey.DROP_FRAME_COUNT.value,
+            self.drop_frame_count_current_take,
+        )
+        logging.info(
+            f"Drop frames detected this take: {self.drop_frame_count_current_take}"
+        )
 
         if frames_in_sync:
             if diff == 0:

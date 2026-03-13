@@ -1,6 +1,7 @@
 import lgpio
 
 class GPIO:
+    lgpio = lgpio
     OUT = 'out'
     IN = 'in'
     LOW = 0

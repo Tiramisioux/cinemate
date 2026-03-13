@@ -24,6 +24,10 @@ class Mediator:
         self.stop_recording_timer = None
         self.stop_recording_timeout = 2
 
+        self._is_recording = False
+        self._is_writing = False
+        self._storage_preroll_active = False
+
         logging.info("Mediator instantiated")
         
     def load_ssd_settings(self, settings_file):
@@ -54,7 +58,9 @@ class Mediator:
     def recording_stop(self):
         self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         self.redis_controller.set_value(ParameterKey.IS_WRITING.value, 0)
-        self.gpio_output.set_recording(0)        
+        self._is_recording = False
+        self._is_writing = False
+        self._refresh_gpio_outputs()
 
     def handle_write_status_change(self, status):
         self.redis_controller.set_value(ParameterKey.IS_WRITING.value, status)
@@ -69,36 +75,66 @@ class Mediator:
             if self.stop_recording_timer and self.stop_recording_timer.is_alive():
                 self.stop_recording_timer.cancel()        
 
+    @staticmethod
+    def _as_bool(value):
+        if isinstance(value, bool):
+            return value
+        if value is None:
+            return False
+        return str(value).strip().lower() in ("1", "true", "yes", "on")
+
+    def _refresh_gpio_outputs(self):
+        # REC light follows actual write status.
+        self.gpio_output.set_rec_light(self._is_writing)
+
+        # REC sync tone starts on record-start edge, but should not be active during storage pre-roll
+        # and should stop once writing stops.
+        tone_active = self._is_recording and self._is_writing and not self._storage_preroll_active
+        self.gpio_output.set_rec_tone(tone_active)
+
     def handle_redis_event(self, data):
-        # Handle "is_recording" key changes
-        if data['key'] == ParameterKey.REC.value:
-            is_recording = int(data['value'])
-            if is_recording:
+        key = data.get('key')
+
+        if key == ParameterKey.STORAGE_PREROLL_ACTIVE.value:
+            self._storage_preroll_active = self._as_bool(data.get('value'))
+            self._refresh_gpio_outputs()
+            return
+
+        # Start REC tone immediately on record start (sync edge).
+        if key in (ParameterKey.IS_RECORDING.value, ParameterKey.REC.value):
+            self._is_recording = self._as_bool(data.get('value'))
+            if self._is_recording:
                 logging.info("Recording started!")
-                self.gpio_output.set_recording(1)
-                
+                if not self._storage_preroll_active:
+                    # Start the sync tone immediately on record command.
+                    self.gpio_output.set_rec_tone(1)
+
                 # Cancel the stop_recording_timer if it's running
                 if self.stop_recording_timer is not None and self.stop_recording_timer.is_alive():
                     self.stop_recording_timer.cancel()
             else:
                 logging.info("Recording stopped!")
-                self.gpio_output.set_recording(0)
-        
-        # Handle "is_writing" key changes        
-        elif data['key'] == ParameterKey.IS_WRITING.value:
-            is_writing = bool(data['value'])
-            if is_writing == 1:
+                self._refresh_gpio_outputs()
+
+            return
+
+        # Handle "is_writing" key changes
+        if key == ParameterKey.IS_WRITING.value:
+            self._is_writing = self._as_bool(data.get('value'))
+            if self._is_writing:
                 self.stream.toggle_background_color()
-            else:
-                self.gpio_output.set_recording(0)    
+
+            self._refresh_gpio_outputs()
 
     def handle_stop_recording_timeout(self):
         """Handle the timeout event when recording should be stopped."""
         self.redis_controller.set_value(ParameterKey.IS_WRITING_BUF.value, 0)
         self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         self.redis_controller.set_value(ParameterKey.IS_WRITING.value, 0)
-        self.gpio_output.set_recording(0) 
-        
+        self._is_recording = False
+        self._is_writing = False
+        self._refresh_gpio_outputs()
+
         logging.info("Stop recording timeout reached. Stopping recording...")
 
     def handle_fps_change(self, data):

@@ -117,6 +117,10 @@ class GPIOOutput:
         self._set_tone(bool(active))
 
     def set_recording(self, status):
-        """Backward-compatible helper to set both REC light and REC tone."""
-        self.set_rec_light(status)
-        self.set_rec_tone(status)
+        """Set the status of the recording pins based on the given status."""
+        is_recording = bool(status)
+        for pin in self.rec_out_pins:
+            RPi.GPIO.output(pin, RPi.GPIO.HIGH if is_recording else RPi.GPIO.LOW)
+            logging.info(f"GPIO {pin} set to {'HIGH' if is_recording else 'LOW'}")
+
+        self._set_tone(is_recording)

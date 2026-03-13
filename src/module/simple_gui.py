@@ -477,6 +477,8 @@ class SimpleGUI(threading.Thread):
             "cam": "CAM", "raw": "RAW", "ram_label": "RAM",
             "cpu_label": "CPU", "cpu_temp_label": "TEMP",
             "media_label": "MEDIA", "mon": "MON",
+            "drop_frame_live": int(self.redis_controller.get_value(ParameterKey.DROP_FRAME.value) or 0) == 1,
+            "drop_frame_during_last_take": int(self.redis_controller.get_value(ParameterKey.DROP_FRAME_DURING_LAST_TAKE.value) or 0) == 1,
 
         }
         # ── audio stats ─────────────────────────────────────────────────
@@ -781,6 +783,14 @@ class SimpleGUI(threading.Thread):
 
                     y += BOX_H + BOX_GAP
 
+            if section == self.left_section_layout[0] and (values.get("drop_frame_live") or values.get("drop_frame_during_last_take")):
+                draw.rectangle([box_x, y, box_x + BOX_W, y + BOX_H], fill=(180, 40, 255))
+                tw, th = draw.textbbox((0, 0), "DROP", font=box_font)[2:]
+                tx = box_x + (BOX_W - tw) // 2
+                ty = y + (BOX_H - th) // 2
+                draw.text((tx, ty), "DROP", font=box_font, fill=TEXT_COLOR)
+                y += BOX_H + BOX_GAP
+
             y += SECTION_GAP
 
         # ── SYS section (USB / MIC / KEY / storage) ──────────────
@@ -870,6 +880,14 @@ class SimpleGUI(threading.Thread):
                     ty = y         + (BOX_H - th)//2
                     draw.text((tx, ty), part, font=box_font, fill=TEXT_COLOR)
                     y += BOX_H + BOX_GAP
+
+            if (values.get("drop_frame_live") or values.get("drop_frame_during_last_take")):
+                draw.rectangle([box_pad_x, y, box_pad_x + BOX_W, y + BOX_H], fill=(180, 40, 255))
+                tw, th = draw.textbbox((0, 0), "DROP", font=box_font)[2:]
+                tx = box_pad_x + (BOX_W - tw) // 2
+                ty = y + (BOX_H - th) // 2
+                draw.text((tx, ty), "DROP", font=box_font, fill=TEXT_COLOR)
+                y += BOX_H + BOX_GAP
             y += SECTION_GAP
 
     def draw_right_vu_meter(self, draw, amplification_factor=4):
@@ -1015,16 +1033,16 @@ class SimpleGUI(threading.Thread):
         except (TypeError, ValueError):
             preroll_active = 0
 
-        if preroll_active:
+        drop_frame_live = int(self.redis_controller.get_value(ParameterKey.DROP_FRAME.value) or 0) == 1
+
+        if drop_frame_live:
+            self.current_background_color = "purple"
+            self.color_mode = "inverse"
+        elif preroll_active:
             self.current_background_color = "blue"
             self.color_mode = "inverse"
 
-        elif int(self.redis_controller.get_value(ParameterKey.REC.value)) and self.redis_listener.drop_frame == 1:
-            # at least one camera is actively recording
-            self.current_background_color = "purple"
-            self.color_mode = "inverse"
-
-        if not preroll_active:
+        if not preroll_active and not drop_frame_live:
             if int(self.redis_controller.get_value(ParameterKey.REC.value)) == 1:
                 # at least one camera is actively recording
                 self.current_background_color = "red"

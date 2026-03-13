@@ -25,6 +25,9 @@ Each entry explains which component normally writes the key and what happens whe
 | fps_last | Cinemate | Previous stable fps from stats | No |
 | fps_actual | CinePi-raw → Cinemate | Measured FPS from pipeline | No |
 | framecount | CinePi-raw → Cinemate | Total frames recorded | No |
+| drop_frame | Cinemate (RedisListener) | Live drop-frame pulse (1 while active alert is shown) | No |
+| drop_frame_count | Cinemate (RedisListener) | Number of drop-frame detections in the current/last take | No |
+| drop_frame_during_last_take | Cinemate (RedisListener) | 1 if the previous non-preroll take had drop frames | No |
 | buffer | CinePi-raw → Cinemate | Raw frames currently in RAM | No |
 | buffer_size | CinePi-raw  →  Cinemate| Size of RAM buffer in frames | No |
 | is_buffering | CinePi-raw → Cinemate | 1 while buffer pre‑fills | No |

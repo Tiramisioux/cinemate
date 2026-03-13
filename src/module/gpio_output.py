@@ -107,16 +107,11 @@ class GPIOOutput:
             except Exception as exc:
                 logging.warning(f"Failed to {'start' if active else 'stop'} REC tone: {exc}")
 
-    def set_rec_light(self, active):
-        is_active = bool(active)
-        for pin in self.rec_out_pins:
-            RPi.GPIO.output(pin, RPi.GPIO.HIGH if is_active else RPi.GPIO.LOW)
-            logging.info(f"GPIO {pin} set to {'HIGH' if is_active else 'LOW'}")
-
-    def set_rec_tone(self, active):
-        self._set_tone(bool(active))
-
     def set_recording(self, status):
-        """Backward-compatible helper to set both REC light and REC tone."""
-        self.set_rec_light(status)
-        self.set_rec_tone(status)
+        """Set the status of the recording pins based on the given status."""
+        is_recording = bool(status)
+        for pin in self.rec_out_pins:
+            RPi.GPIO.output(pin, RPi.GPIO.HIGH if is_recording else RPi.GPIO.LOW)
+            logging.info(f"GPIO {pin} set to {'HIGH' if is_recording else 'LOW'}")
+
+        self._set_tone(is_recording)

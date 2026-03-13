@@ -1,7 +1,10 @@
 {   
   "gpio_output": {
     "pwm_pin": 19,
-    "rec_out_pin": [6, 21]
+    "rec_out_pin": [6, 21],
+    "rec_tone_pin": [],
+    "rec_tone_frequency_hz": 1000,
+    "rec_tone_duty_cycle": 50
     },
 
   "arrays": {

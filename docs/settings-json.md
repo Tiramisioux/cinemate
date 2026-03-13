@@ -115,6 +115,9 @@ Defines pins used for visual feedback or sync signals.
   * Any other pin uses **software PWM** fallback.
   * The tone starts as soon as recording is requested (`is_recording = 1`), even before REC-light write confirmation.
   * The tone stops once writing stops (`is_writing = 0`) and is muted during storage pre-roll.
+* `rec_tone_pin` – optional tone output pin(s) that are active while recording. You can pass a single pin or a list of pins.
+  * GPIO `18` and `19` use **hardware PWM** (preferred for stable tone generation).
+  * Any other pin uses **software PWM** fallback.
 
 * `rec_tone_frequency_hz` – tone frequency in hertz.
 

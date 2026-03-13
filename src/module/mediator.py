@@ -83,28 +83,14 @@ class Mediator:
             return False
         return str(value).strip().lower() in ("1", "true", "yes", "on")
 
-    def _set_gpio_rec_light(self, active):
-        if hasattr(self.gpio_output, "set_rec_light"):
-            self.gpio_output.set_rec_light(active)
-        else:
-            # Backward compatibility with older GPIOOutput implementations.
-            self.gpio_output.set_recording(active)
-
-    def _set_gpio_rec_tone(self, active):
-        if hasattr(self.gpio_output, "set_rec_tone"):
-            self.gpio_output.set_rec_tone(active)
-        elif not active:
-            # Legacy implementation cannot control tone independently, but we can always force OFF.
-            self.gpio_output.set_recording(0)
-
     def _refresh_gpio_outputs(self):
         # REC light follows actual write status.
-        self._set_gpio_rec_light(self._is_writing)
+        self.gpio_output.set_rec_light(self._is_writing)
 
         # REC sync tone starts on record-start edge, but should not be active during storage pre-roll
         # and should stop once writing stops.
         tone_active = self._is_recording and self._is_writing and not self._storage_preroll_active
-        self._set_gpio_rec_tone(tone_active)
+        self.gpio_output.set_rec_tone(tone_active)
 
     def handle_redis_event(self, data):
         key = data.get('key')
@@ -121,7 +107,7 @@ class Mediator:
                 logging.info("Recording started!")
                 if not self._storage_preroll_active:
                     # Start the sync tone immediately on record command.
-                    self._set_gpio_rec_tone(1)
+                    self.gpio_output.set_rec_tone(1)
 
                 # Cancel the stop_recording_timer if it's running
                 if self.stop_recording_timer is not None and self.stop_recording_timer.is_alive():

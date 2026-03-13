@@ -226,7 +226,12 @@ def initialize_system(settings):
     sensor_detect = SensorDetect(settings)
     ssd_monitor = SSDMonitor(redis_controller=redis_controller)
     usb_monitor = USBMonitor(ssd_monitor)
-    gpio_output = GPIOOutput(rec_out_pins=settings["gpio_output"]["rec_out_pin"])
+    gpio_output = GPIOOutput(
+        rec_out_pins=settings["gpio_output"]["rec_out_pin"],
+        rec_tone_pins=settings["gpio_output"].get("rec_tone_pin"),
+        rec_tone_frequency_hz=settings["gpio_output"].get("rec_tone_frequency_hz", 1000),
+        rec_tone_duty_cycle=settings["gpio_output"].get("rec_tone_duty_cycle", 50),
+    )
     dmesg_monitor = DmesgMonitor()
     dmesg_monitor.start()
 

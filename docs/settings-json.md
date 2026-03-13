@@ -99,13 +99,26 @@ Defines pins used for visual feedback or sync signals.
 ```json
 "gpio_output": {
   "pwm_pin": 19,
-  "rec_out_pin": [6, 21]
+  "rec_out_pin": [6, 21],
+  "rec_tone_pin": [18],
+  "rec_tone_frequency_hz": 1000,
+  "rec_tone_duty_cycle": 50
 }
 ```
 
 * `pwm_pin` – outputs a strobe for shutter sync or external devices.
 
 * `rec_out_pin` – list of pins pulled high while recording (useful for tally LEDs).
+
+* `rec_tone_pin` – optional tone output pin(s) used as recording sync tone. You can pass a single pin or a list of pins.
+  * GPIO `18` and `19` use **hardware PWM** (preferred for stable tone generation).
+  * Any other pin uses **software PWM** fallback.
+  * The tone starts as soon as recording is requested (`is_recording = 1`), even before REC-light write confirmation.
+  * The tone stops once writing stops (`is_writing = 0`) and is muted during storage pre-roll.
+
+* `rec_tone_frequency_hz` – tone frequency in hertz.
+
+* `rec_tone_duty_cycle` – PWM duty cycle percentage (`0–100`).
 
 ## arrays
 

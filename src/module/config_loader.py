@@ -27,6 +27,7 @@ def load_settings(filename: str | Path) -> dict:
         "rec_tone_pin": [],
         "rec_tone_frequency_hz": 1000,
         "rec_tone_duty_cycle": 50,
+        "rec_tone_relay_drop_frames": False,
     }
     gpio_cfg = settings.setdefault("gpio_output", {})
     for k, v in gpio_defaults.items():

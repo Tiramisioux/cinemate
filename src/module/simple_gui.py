@@ -1043,8 +1043,8 @@ class SimpleGUI(threading.Thread):
             self.color_mode = "inverse"
 
         if not preroll_active and not drop_frame_live:
-            if int(self.redis_controller.get_value(ParameterKey.REC.value)) == 1:
-                # at least one camera is actively recording
+            if int(self.redis_controller.get_value(ParameterKey.IS_WRITING.value) or 0) == 1:
+                # at least one camera is actively writing frames to disk
                 self.current_background_color = "red"
                 self.color_mode = "inverse"
 

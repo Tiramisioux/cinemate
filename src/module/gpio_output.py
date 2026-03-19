@@ -61,6 +61,7 @@ class GPIOOutput:
         self.rec_tone_duty_cycle = rec_tone_duty_cycle
         self._tone_outputs = []
         self._is_tone_active = False
+        self._is_rec_light_active = None
         self.rec_tone_relay_drop_frames = bool(rec_tone_relay_drop_frames)
 
         # Set up each pin in rec_out_pins as an output if the list is provided
@@ -110,6 +111,10 @@ class GPIOOutput:
 
     def set_rec_light(self, active):
         is_active = bool(active)
+        if self._is_rec_light_active is is_active:
+            return
+
+        self._is_rec_light_active = is_active
         for pin in self.rec_out_pins:
             RPi.GPIO.output(pin, RPi.GPIO.HIGH if is_active else RPi.GPIO.LOW)
             logging.info(f"GPIO {pin} set to {'HIGH' if is_active else 'LOW'}")

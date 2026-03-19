@@ -148,8 +148,11 @@ class Mediator:
         # Handle "is_writing" key changes
         if key == ParameterKey.IS_WRITING.value:
             self._is_writing = self._as_bool(data.get('value'))
-            if self._is_writing:
-                self.stream.toggle_background_color()
+            if self._is_writing and hasattr(self.stream, "toggle_background_color"):
+                try:
+                    self.stream.toggle_background_color()
+                except Exception as exc:
+                    logging.warning("Failed to toggle stream background color: %s", exc)
 
             self._refresh_gpio_outputs()
 

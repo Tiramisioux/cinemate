@@ -1,5 +1,6 @@
 import importlib
 import logging
+from pathlib import Path
 from module.rpi_gpio_wrapper import RPi
 
 
@@ -29,14 +30,36 @@ class _SoftwarePWMToneOutput(_ToneOutput):
 
 
 class _HardwarePWMToneOutput(_ToneOutput):
+    @staticmethod
+    def _is_raspberry_pi_5():
+        model_path = Path("/proc/device-tree/model")
+        try:
+            model = model_path.read_text(encoding="utf-8", errors="ignore").strip("\x00\n")
+        except Exception:
+            return False
+        return "Raspberry Pi 5" in model
+
     def __init__(self, pin, frequency_hz, duty_cycle):
         self.pin = pin
         self.frequency_hz = frequency_hz
         self.duty_cycle = duty_cycle
         self._pwm = None
 
-        # rpi_hardware_pwm maps: GPIO 18 -> channel 0, GPIO 19 -> channel 1.
-        channel = 0 if pin == 18 else 1
+        # rpi_hardware_pwm channel mapping differs on Raspberry Pi 5.
+        # - Pi 5: GPIO18->channel 2, GPIO19->channel 3
+        # - Older Pi models: GPIO18->channel 0, GPIO19->channel 1
+        is_pi5 = self._is_raspberry_pi_5()
+        if is_pi5:
+            channel = 2 if pin == 18 else 3
+        else:
+            channel = 0 if pin == 18 else 1
+
+        logging.info(
+            "REC tone using hardware PWM pin=%s channel=%s (pi5=%s)",
+            pin,
+            channel,
+            is_pi5,
+        )
         pwm_module = importlib.import_module("rpi_hardware_pwm")
         self._pwm = pwm_module.HardwarePWM(
             pwm_channel=channel,

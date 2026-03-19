@@ -88,9 +88,8 @@ class Mediator:
         # REC light follows actual write status.
         self.gpio_output.set_rec_light(self._is_writing)
 
-        # REC sync tone starts on record-start edge, but should not be active during storage pre-roll
-        # and should stop once writing stops.
-        tone_active = self._is_recording and self._is_writing and not self._storage_preroll_active
+        # REC sync tone follows record intent, but is muted during storage pre-roll.
+        tone_active = self._is_recording and not self._storage_preroll_active
         self.gpio_output.set_rec_tone(tone_active)
         self.gpio_output.relay_drop_frame_on_rec_tone(self._drop_frame_relay_active)
 
@@ -102,8 +101,16 @@ class Mediator:
             self._refresh_gpio_outputs()
             return
 
-        # Start REC tone immediately on record start (sync edge).
-        if key in (ParameterKey.IS_RECORDING.value, ParameterKey.REC.value):
+        # Start REC tone immediately on REC command edge, but do not use REC
+        # as a persistent recording-state source (REC can be edge-triggered).
+        if key == ParameterKey.REC.value:
+            rec_edge = self._as_bool(data.get('value'))
+            if rec_edge and not self._storage_preroll_active:
+                self.gpio_output.set_rec_tone(1)
+            return
+
+        # IS_RECORDING is the authoritative persistent recording state.
+        if key == ParameterKey.IS_RECORDING.value:
             self._is_recording = self._as_bool(data.get('value'))
             if self._is_recording:
                 logging.info("Recording started!")
@@ -116,8 +123,21 @@ class Mediator:
                     self.stop_recording_timer.cancel()
             else:
                 logging.info("Recording stopped!")
+                # REC light / GUI red should reflect real frame writes.
+                # Once recording intent is off, clear write-active state.
+                self._is_writing = False
+                self.redis_controller.set_value(ParameterKey.IS_WRITING.value, 0)
                 self._refresh_gpio_outputs()
 
+            return
+
+        # Treat per-frame encoder notifications as proof that frames are
+        # landing on storage while recording is active.
+        if key in (ParameterKey.LAST_DNG_CAM0.value, ParameterKey.LAST_DNG_CAM1.value):
+            if self._is_recording and not self._is_writing:
+                self._is_writing = True
+                self.redis_controller.set_value(ParameterKey.IS_WRITING.value, 1)
+                self._refresh_gpio_outputs()
             return
 
         if key == ParameterKey.DROP_FRAME_RELAY.value:
@@ -128,8 +148,11 @@ class Mediator:
         # Handle "is_writing" key changes
         if key == ParameterKey.IS_WRITING.value:
             self._is_writing = self._as_bool(data.get('value'))
-            if self._is_writing:
-                self.stream.toggle_background_color()
+            if self._is_writing and hasattr(self.stream, "toggle_background_color"):
+                try:
+                    self.stream.toggle_background_color()
+                except Exception as exc:
+                    logging.warning("Failed to toggle stream background color: %s", exc)
 
             self._refresh_gpio_outputs()
 

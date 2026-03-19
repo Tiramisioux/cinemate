@@ -339,7 +339,23 @@ def main():
         sensor_detect=sensor_detect,
     )
 
-    gpio_input = ComponentInitializer(cinepi_controller, settings)
+    gpio_cfg = settings.get("gpio_output", {})
+    rec_tone_pins = gpio_cfg.get("rec_tone_pin")
+    if rec_tone_pins in (None, []):
+        rec_tone_pins = gpio_cfg.get("pwm_pin")
+
+    reserved_output_pins = set(gpio_cfg.get("rec_out_pin", []))
+    if rec_tone_pins is not None:
+        if isinstance(rec_tone_pins, int):
+            reserved_output_pins.add(rec_tone_pins)
+        else:
+            reserved_output_pins.update(int(pin) for pin in rec_tone_pins)
+
+    gpio_input = ComponentInitializer(
+        cinepi_controller,
+        settings,
+        reserved_output_pins=reserved_output_pins,
+    )
 
     # Create CommandExecutor (for both CLI and Serial)
     command_executor = CommandExecutor(

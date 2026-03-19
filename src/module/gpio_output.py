@@ -39,7 +39,7 @@ class _HardwarePWMToneOutput(_ToneOutput):
             return False
         return "Raspberry Pi 5" in model
 
-    def __init__(self, pin, frequency_hz, duty_cycle, pi_model=None):
+    def __init__(self, pin, frequency_hz, duty_cycle):
         self.pin = pin
         self.frequency_hz = frequency_hz
         self.duty_cycle = duty_cycle
@@ -48,8 +48,7 @@ class _HardwarePWMToneOutput(_ToneOutput):
         # rpi_hardware_pwm channel mapping differs on Raspberry Pi 5.
         # - Pi 5: GPIO18->channel 2, GPIO19->channel 3
         # - Older Pi models: GPIO18->channel 0, GPIO19->channel 1
-        normalized_model = str(pi_model).strip().lower() if pi_model is not None else ""
-        is_pi5 = normalized_model == "pi5" or self._is_raspberry_pi_5()
+        is_pi5 = self._is_raspberry_pi_5()
         if is_pi5:
             channel = 2 if pin == 18 else 3
         else:

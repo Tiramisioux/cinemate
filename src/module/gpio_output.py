@@ -100,14 +100,39 @@ class GPIOOutput:
             return
 
         self._is_tone_active = active
-        for tone_output in self._tone_outputs:
+        for idx, tone_output in enumerate(list(self._tone_outputs)):
             try:
                 if active:
+                    logging.info(f"Setting REC tone ON on pin {tone_output.pin}")
                     tone_output.start()
                 else:
+                    logging.info(f"Setting REC tone OFF on pin {tone_output.pin}")
                     tone_output.stop()
             except Exception as exc:
-                logging.warning(f"Failed to {'start' if active else 'stop'} REC tone: {exc}")
+                # If hardware PWM fails at runtime, fall back to software PWM.
+                if active and isinstance(tone_output, _HardwarePWMToneOutput):
+                    logging.warning(
+                        "Hardware PWM start failed on pin %s (%s). Falling back to software PWM.",
+                        tone_output.pin,
+                        exc,
+                    )
+                    try:
+                        fallback = _SoftwarePWMToneOutput(
+                            tone_output.pin,
+                            self.rec_tone_frequency_hz,
+                            self.rec_tone_duty_cycle,
+                        )
+                        self._tone_outputs[idx] = fallback
+                        fallback.start()
+                        continue
+                    except Exception as fallback_exc:
+                        logging.warning(
+                            "Software PWM fallback failed on pin %s (%s).",
+                            tone_output.pin,
+                            fallback_exc,
+                        )
+
+                logging.warning(f"Failed to {'start' if active else 'stop'} REC tone on pin {tone_output.pin}: {exc}")
 
     def set_rec_light(self, active):
         is_active = bool(active)

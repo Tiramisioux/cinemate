@@ -9,10 +9,13 @@ import logging
 import time
     
 class ComponentInitializer:
-    def __init__(self, cinepi_controller, settings):
+    def __init__(self, cinepi_controller, settings, reserved_output_pins=None):
         self.cinepi_controller = cinepi_controller
         self.settings = settings
         self.logger = logging.getLogger('ComponentInitializer')
+        self.reserved_output_pins = {
+            int(pin) for pin in (reserved_output_pins or [])
+        }
         
         self.smart_buttons_list = []
         
@@ -23,6 +26,14 @@ class ComponentInitializer:
         
         # Initialize Buttons
         for button_config in self.settings.get('buttons', []):
+            pin = int(button_config['pin'])
+            if pin in self.reserved_output_pins:
+                self.logger.warning(
+                    "Skipping button on pin %s because it is reserved for GPIO output",
+                    pin,
+                )
+                continue
+
             press_action_method = self.extract_action_method(button_config.get('press_action'))
             single_click_action_method = self.extract_action_method(button_config.get('single_click_action'))
             double_click_action_method = self.extract_action_method(button_config.get('double_click_action'))
@@ -39,11 +50,11 @@ class ComponentInitializer:
             # Create and store SmartButton instance
             smart_button = SmartButton(
                 cinepi_controller=self.cinepi_controller,
-                pin=button_config['pin'],
+                pin=pin,
                 pull_up=bool(button_config['pull_up']),
                 debounce_time=float(button_config['debounce_time']),
                 actions=button_config,
-                identifier=str(button_config['pin']),
+                identifier=str(pin),
                 combined_actions=combined_actions
             )
             
@@ -51,15 +62,23 @@ class ComponentInitializer:
         
         # Initialize Two-Way Switches
         for switch_config in self.settings.get('two_way_switches', []):
+            pin = int(switch_config['pin'])
+            if pin in self.reserved_output_pins:
+                self.logger.warning(
+                    "Skipping two-way switch on pin %s because it is reserved for GPIO output",
+                    pin,
+                )
+                continue
+
             state_on_action_method = self.extract_action_method(switch_config.get('state_on_action'))
             state_off_action_method = self.extract_action_method(switch_config.get('state_off_action'))
             
-            self.logger.info(f"Two-way switch on pin {switch_config['pin']}:")
+            self.logger.info(f"Two-way switch on pin {pin}:")
             if not "None" in str(state_on_action_method): self.logger.info(f"  State ON action: {state_on_action_method}")
             if not "None" in str(state_off_action_method): self.logger.info(f"  State OFF action: {state_off_action_method}")
 
             SimpleSwitch(cinepi_controller=self.cinepi_controller,
-                         pin=switch_config['pin'],
+                         pin=pin,
                          actions=switch_config)
             
         # Initialize three-way switches

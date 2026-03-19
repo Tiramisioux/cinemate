@@ -77,7 +77,7 @@ class _HardwarePWMToneOutput(_ToneOutput):
 class GPIOOutput:
     HARDWARE_PWM_PINS = {18, 19}
 
-    def __init__(self, rec_out_pins=None, rec_tone_pins=None, rec_tone_frequency_hz=1000, rec_tone_duty_cycle=50, rec_tone_relay_drop_frames=False):
+    def __init__(self, rec_out_pins=None, rec_tone_pins=None, rec_tone_frequency_hz=1000, rec_tone_duty_cycle=50, rec_tone_relay_drop_frames=False, pi_model=None):
         self.rec_out_pins = rec_out_pins if rec_out_pins is not None else []  # This is the list of pins for recording
         self.rec_tone_pins = self._normalize_pins(rec_tone_pins)
         self.rec_tone_frequency_hz = rec_tone_frequency_hz
@@ -86,6 +86,7 @@ class GPIOOutput:
         self._is_tone_active = False
         self._is_rec_light_active = None
         self.rec_tone_relay_drop_frames = bool(rec_tone_relay_drop_frames)
+        self.pi_model = pi_model
 
         # Set up each pin in rec_out_pins as an output if the list is provided
         for pin in self.rec_out_pins:
@@ -107,7 +108,12 @@ class GPIOOutput:
         if pin in self.HARDWARE_PWM_PINS:
             try:
                 logging.info(f"REC tone configured for hardware PWM on pin {pin}")
-                return _HardwarePWMToneOutput(pin, self.rec_tone_frequency_hz, self.rec_tone_duty_cycle)
+                return _HardwarePWMToneOutput(
+                    pin,
+                    self.rec_tone_frequency_hz,
+                    self.rec_tone_duty_cycle,
+                    pi_model=self.pi_model,
+                )
             except Exception as exc:
                 logging.warning(
                     "Hardware PWM setup failed on pin %s (%s). Falling back to software PWM.",

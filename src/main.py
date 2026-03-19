@@ -219,7 +219,7 @@ def start_hotspot(settings) -> None:
     except Exception as e:
         logging.error(f"Failed to start WiFi hotspot: {e}")
 
-def initialize_system(settings):
+def initialize_system(settings, pi_model="unknown"):
     """Initialize core system components."""
     conf_rate = settings.get("settings", {}).get("conform_frame_rate", 24)
     redis_controller = RedisController(conform_frame_rate=conf_rate)
@@ -240,6 +240,7 @@ def initialize_system(settings):
         rec_tone_frequency_hz=gpio_cfg.get("rec_tone_frequency_hz", 1000),
         rec_tone_duty_cycle=gpio_cfg.get("rec_tone_duty_cycle", 50),
         rec_tone_relay_drop_frames=gpio_cfg.get("rec_tone_relay_drop_frames", False),
+        pi_model=pi_model,
     )
     dmesg_monitor = DmesgMonitor()
     dmesg_monitor.start()
@@ -296,7 +297,10 @@ def main():
     start_hotspot(settings)
 
     # Initialize system components
-    redis_controller, sensor_detect, ssd_monitor, usb_monitor, gpio_output, dmesg_monitor = initialize_system(settings)
+    redis_controller, sensor_detect, ssd_monitor, usb_monitor, gpio_output, dmesg_monitor = initialize_system(
+        settings,
+        pi_model=pi_model,
+    )
     
     # Store Pi model in Redis
     redis_controller.set_value(ParameterKey.PI_MODEL.value, pi_model)

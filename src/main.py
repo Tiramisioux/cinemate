@@ -226,12 +226,20 @@ def initialize_system(settings):
     sensor_detect = SensorDetect(settings)
     ssd_monitor = SSDMonitor(redis_controller=redis_controller)
     usb_monitor = USBMonitor(ssd_monitor)
+
+    gpio_cfg = settings["gpio_output"]
+    rec_tone_pins = gpio_cfg.get("rec_tone_pin")
+    if rec_tone_pins in (None, []):
+        # Backward compatibility: if no explicit rec_tone_pin is configured,
+        # fall back to pwm_pin for REC sync tone output.
+        rec_tone_pins = gpio_cfg.get("pwm_pin")
+
     gpio_output = GPIOOutput(
-        rec_out_pins=settings["gpio_output"]["rec_out_pin"],
-        rec_tone_pins=settings["gpio_output"].get("rec_tone_pin"),
-        rec_tone_frequency_hz=settings["gpio_output"].get("rec_tone_frequency_hz", 1000),
-        rec_tone_duty_cycle=settings["gpio_output"].get("rec_tone_duty_cycle", 50),
-        rec_tone_relay_drop_frames=settings["gpio_output"].get("rec_tone_relay_drop_frames", False),
+        rec_out_pins=gpio_cfg["rec_out_pin"],
+        rec_tone_pins=rec_tone_pins,
+        rec_tone_frequency_hz=gpio_cfg.get("rec_tone_frequency_hz", 1000),
+        rec_tone_duty_cycle=gpio_cfg.get("rec_tone_duty_cycle", 50),
+        rec_tone_relay_drop_frames=gpio_cfg.get("rec_tone_relay_drop_frames", False),
     )
     dmesg_monitor = DmesgMonitor()
     dmesg_monitor.start()

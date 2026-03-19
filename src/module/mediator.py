@@ -153,10 +153,6 @@ class Mediator:
                     self.stream.toggle_background_color()
                 except Exception as exc:
                     logging.warning("Failed to toggle stream background color: %s", exc)
-            if self._is_writing and self._is_recording and not self._storage_preroll_active:
-                # Re-assert REC tone once writes are confirmed. This handles
-                # cases where early start is preempted by other subsystems.
-                self.gpio_output.set_rec_tone(1, force=True)
 
             self._refresh_gpio_outputs()
 

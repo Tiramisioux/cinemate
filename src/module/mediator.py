@@ -101,8 +101,16 @@ class Mediator:
             self._refresh_gpio_outputs()
             return
 
-        # Start REC tone immediately on record start (sync edge).
-        if key in (ParameterKey.IS_RECORDING.value, ParameterKey.REC.value):
+        # Start REC tone immediately on REC command edge, but do not use REC
+        # as a persistent recording-state source (REC can be edge-triggered).
+        if key == ParameterKey.REC.value:
+            rec_edge = self._as_bool(data.get('value'))
+            if rec_edge and not self._storage_preroll_active:
+                self.gpio_output.set_rec_tone(1)
+            return
+
+        # IS_RECORDING is the authoritative persistent recording state.
+        if key == ParameterKey.IS_RECORDING.value:
             self._is_recording = self._as_bool(data.get('value'))
             if self._is_recording:
                 logging.info("Recording started!")

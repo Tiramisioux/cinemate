@@ -95,8 +95,8 @@ class GPIOOutput:
         logging.info(f"REC tone configured for software PWM on pin {pin}")
         return _SoftwarePWMToneOutput(pin, self.rec_tone_frequency_hz, self.rec_tone_duty_cycle)
 
-    def _set_tone(self, active):
-        if active == self._is_tone_active:
+    def _set_tone(self, active, force=False):
+        if active == self._is_tone_active and not (active and force):
             return
 
         self._is_tone_active = active
@@ -144,8 +144,8 @@ class GPIOOutput:
             RPi.GPIO.output(pin, RPi.GPIO.HIGH if is_active else RPi.GPIO.LOW)
             logging.info(f"GPIO {pin} set to {'HIGH' if is_active else 'LOW'}")
 
-    def set_rec_tone(self, active):
-        self._set_tone(bool(active))
+    def set_rec_tone(self, active, force=False):
+        self._set_tone(bool(active), force=bool(force))
 
 
     def relay_drop_frame_on_rec_tone(self, drop_frame_active):

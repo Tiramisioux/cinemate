@@ -17,11 +17,11 @@ sudo apt upgrade -y
 ```
 
 ```bash
-sudo apt-get install python3-jinja2 python3-ply python3-yaml
+sudo apt-get install python3-jinja2 python3-ply python3-yaml ffmpeg
 ```
 
 ```
-sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev && sudo apt-get install libjsoncpp-dev && cd ~ && git clone https://github.com/sewenew/redis-plus-plus.git && cd redis-plus-plus && mkdir build && cd build && cmake .. && make && sudo make install && cd ~
+sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev ffmpeg && sudo apt-get install libjsoncpp-dev && cd ~ && git clone https://github.com/sewenew/redis-plus-plus.git && cd redis-plus-plus && mkdir build && cd build && cmake .. && make && sudo make install && cd ~
 ```
 
 ### libcamera 1.7.0 <img src="https://img.shields.io/badge/raspberry pi-fork-red" height="12" >
@@ -63,6 +63,8 @@ sudo apt install -y libspdlog-dev libjsoncpp-dev && cd /home/pi && git clone htt
 ```
 
 ### CinePi-RAW <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
+
+WAV BEXT/iXML timecode metadata requires the `ffmpeg` package from the dependency step above.
 
 ```bash
 git clone https://github.com/Tiramisioux/cinepi-raw.git
@@ -566,7 +568,6 @@ After enabling the service, Cinemate should autostart on boot.
 > **Tip:** `sudo make install` also places `/usr/local/bin/camera-ready.sh` on the system. The script waits for `cinepi-raw` to report a camera before systemd launches Cinemate, preventing the black-screen-on-boot issue that occurred when the GUI started before the sensor initialised.
 
 You now have a 12 bit RAW image capturing system on your Raspberry Pi!
-
 
 
 

@@ -35,36 +35,16 @@ from module.serial_handler import SerialHandler
 from module.cinepi_multi import CinePiManager as CinePi
 from module.i2c.i2c_oled import I2cOled
 from module.i2c.quad_rotary_controller import QuadRotaryController
-from module.framebuffer import Framebuffer   # the same wrapper SimpleGUI uses
+from module.console_display import (
+    claim_console_for_framebuffer,
+    hide_cursor,
+    release_console_to_text,
+)
+from module.framebuffer import acquire_framebuffer
 
 # Constants
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
 SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
-
-def hide_cursor():
-    try:
-        with open('/dev/tty1', 'w') as tty:
-            tty.write('\033[?25l')
-            tty.flush()
-    except Exception as e:
-        logging.warning(f"Could not hide cursor: {e}")
-
-def show_cursor():
-    try:
-        with open('/dev/tty1', 'w') as tty:
-            tty.write('\033[?25h')
-            tty.flush()
-    except Exception as e:
-        logging.warning(f"Could not show cursor: {e}")
-
-def clear_screen():
-    """Clear tty1 and move the cursor to the top-left corner."""
-    try:
-        with open('/dev/tty1', 'w') as tty:
-            tty.write('\033[2J\033[H')       # CSI 2J = clear; CSI H = home
-            tty.flush()
-    except Exception as e:
-        logging.warning(f"Could not clear screen: {e}")
 
 def start_splash(text="THIS IS A COOL MACHINE"):
     stop_event = threading.Event()
@@ -108,13 +88,8 @@ def start_splash(text="THIS IS A COOL MACHINE"):
     return t, stop_event
 
 def graphic_splash(text="THIS IS A COOL MACHINE", image_path=None):
-    fb_path = "/dev/fb0"
-    if not os.path.exists(fb_path):
-        logging.info("No HDMI framebuffer found. Skipping graphic splash")
-        return None
-
-    fb = Framebuffer(0)
-    if fb.size == (0, 0):
+    fb = acquire_framebuffer(0)
+    if fb is None:
         logging.info("Framebuffer not ready. Skipping graphic splash")
         return None
 
@@ -138,8 +113,22 @@ def graphic_splash(text="THIS IS A COOL MACHINE", image_path=None):
         tw, th = draw.textbbox((0, 0), text, font=font)[2:]
         draw.text(((W - tw) // 2, (H - th) // 2), text, font=font, fill="white")
 
-    fb.show(img)
+    try:
+        fb.show(img)
+    except (OSError, RuntimeError, ValueError) as exc:
+        logging.warning(f"Failed to draw graphic splash: {exc}")
+        return None
     return fb        # keep it so you can blank later
+
+
+def blank_framebuffer(fb):
+    if fb is None:
+        return
+
+    try:
+        fb.show(Image.new("RGB", fb.size, "black"))
+    except (OSError, RuntimeError, ValueError) as exc:
+        logging.warning(f"Failed to blank framebuffer cleanly: {exc}")
 
 def get_raspberry_pi_model():
     try:
@@ -452,11 +441,11 @@ def main():
     
     # Stop splash screen and clear framebuffer/tty
     if fb_splash:
-        fb_splash.show(Image.new("RGB", fb_splash.size, "black"))
+        blank_framebuffer(fb_splash)
     elif splash_stop:
         splash_stop.set()
         splash_thread.join()
-    clear_screen()
+    claim_console_for_framebuffer()
     
     # Ensure system cleanup on exit
     cleanup_called = False
@@ -497,7 +486,7 @@ def main():
             simple_gui.clear_framebuffer() # <— new: blank fb0
 
         if fb_splash:
-            fb_splash.show(Image.new("RGB", fb_splash.size, "black"))
+            blank_framebuffer(fb_splash)
         elif splash_stop:
             splash_stop.set()
             splash_thread.join()
@@ -505,9 +494,7 @@ def main():
         if timekeeper:
             timekeeper.stop()
 
-
-        clear_screen()                     # wipe tty1
-        show_cursor()
+        release_console_to_text()
         
     atexit.register(cleanup)
     

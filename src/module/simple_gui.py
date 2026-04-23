@@ -2,7 +2,8 @@ import os
 import threading
 import time
 from PIL import Image, ImageDraw, ImageFont
-from module.framebuffer import Framebuffer  # Assuming this is a custom module
+from module.console_display import claim_console_for_framebuffer
+from module.framebuffer import Framebuffer, acquire_framebuffer
 from module.config_loader import load_settings
 import subprocess
 import logging
@@ -49,7 +50,15 @@ class SimpleGUI(threading.Thread):
         self.settings = settings or load_settings("/home/pi/cinemate/src/settings.json")
         
         self.setup_resources()
-        self.check_display()
+        self.display_poll_interval = 1.0
+        self._last_display_probe_ts = 0.0
+        self.display_restart_cooldown = 5.0
+        self._display_probe_count = 0
+        self._preview_restart_on_attach = False
+        self._pending_display_camera_restart = False
+        self._restart_waiting_logged = False
+        self._last_display_restart_ts = 0.0
+        self.check_display(force=True)
 
         self.color_mode = "normal"  # Can be changed to "inverse" as needed
 
@@ -159,17 +168,125 @@ class SimpleGUI(threading.Thread):
         else:
             logging.warning("SocketIO not initialized. Unable to emit gui_data_change.")
 
-    def check_display(self):
-        fb_path = "/dev/fb0"
-        if os.path.exists(fb_path):
-            self.fb = Framebuffer(0)
-            # Get resolution from settings, fallback to framebuffer size
-            hdmi_config = self.settings.get("hdmi_display", {})
-            self.disp_width = hdmi_config.get("width", self.fb.size[0])
-            self.disp_height = hdmi_config.get("height", self.fb.size[1])
-            logging.info(f"HDMI display found. Resolution set to {self.disp_width}x{self.disp_height}")
-        else:
-            logging.info("No HDMI display found")
+    def _configured_display_size(self, fb: Framebuffer):
+        hdmi_config = self.settings.get("hdmi_display", {})
+
+        try:
+            width = int(hdmi_config.get("width") or fb.size[0])
+        except (TypeError, ValueError):
+            width = fb.size[0]
+
+        try:
+            height = int(hdmi_config.get("height") or fb.size[1])
+        except (TypeError, ValueError):
+            height = fb.size[1]
+
+        if fb.size[0] > 0 and fb.size[1] > 0:
+            width = min(width, fb.size[0])
+            height = min(height, fb.size[1])
+
+        return width, height
+
+    def check_display(self, force=False):
+        now = time.monotonic()
+        if not force and (now - self._last_display_probe_ts) < self.display_poll_interval:
+            return False
+
+        self._last_display_probe_ts = now
+        initial_probe = self._display_probe_count == 0
+        self._display_probe_count += 1
+        had_display = self.fb is not None
+        fb = acquire_framebuffer(0)
+
+        if fb is None:
+            if initial_probe or had_display:
+                self._preview_restart_on_attach = True
+                self._pending_display_camera_restart = False
+                self._restart_waiting_logged = False
+            if had_display:
+                logging.info("HDMI framebuffer unavailable; switching GUI to headless mode")
+                self.fb = None
+                self.disp_width = 0
+                self.disp_height = 0
+                return True
+            return False
+
+        disp_width, disp_height = self._configured_display_size(fb)
+        display_changed = (
+            self.fb is None
+            or self.fb.size != fb.size
+            or self.fb.bits_per_pixel != fb.bits_per_pixel
+            or self.disp_width != disp_width
+            or self.disp_height != disp_height
+        )
+
+        self.fb = fb
+        self.disp_width = disp_width
+        self.disp_height = disp_height
+
+        if display_changed:
+            requested_width = self.settings.get("hdmi_display", {}).get("width", fb.size[0])
+            requested_height = self.settings.get("hdmi_display", {}).get("height", fb.size[1])
+            claim_console_for_framebuffer()
+            logging.info(
+                "HDMI framebuffer ready. fb0=%sx%s (%sbpp), GUI=%sx%s",
+                fb.size[0],
+                fb.size[1],
+                fb.bits_per_pixel,
+                self.disp_width,
+                self.disp_height,
+            )
+            if (self.disp_width, self.disp_height) != (requested_width, requested_height):
+                logging.warning(
+                    "Configured HDMI canvas %sx%s exceeds active framebuffer %sx%s; using the active framebuffer size",
+                    requested_width,
+                    requested_height,
+                    fb.size[0],
+                    fb.size[1],
+                )
+            if not had_display and self._preview_restart_on_attach:
+                self._pending_display_camera_restart = True
+                self._restart_waiting_logged = False
+                logging.info(
+                    "HDMI connected after headless start/loss; camera restart queued for preview recovery"
+                )
+
+        return display_changed
+
+    def _display_restart_allowed(self) -> bool:
+        return not (
+            _to_bool(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) or 0)
+            or _to_bool(self.redis_controller.get_value(ParameterKey.IS_WRITING.value) or 0)
+        )
+
+    def _maybe_restart_camera_for_display_attach(self):
+        if not self._pending_display_camera_restart:
+            return
+
+        now = time.monotonic()
+        if (now - self._last_display_restart_ts) < self.display_restart_cooldown:
+            return
+
+        if not self._display_restart_allowed():
+            if not self._restart_waiting_logged:
+                logging.info("HDMI preview restart deferred until recording and disk writes finish")
+                self._restart_waiting_logged = True
+            return
+
+        self._last_display_restart_ts = now
+        self._pending_display_camera_restart = False
+        self._preview_restart_on_attach = False
+        self._restart_waiting_logged = False
+
+        try:
+            logging.info("Restarting cinepi-raw after HDMI attach so preview binds to the active display")
+            self.cinepi_controller.restart_camera()
+            self._fast_dirty = True
+            self._slow_dirty = True
+        except Exception as exc:
+            self._pending_display_camera_restart = True
+            self._preview_restart_on_attach = True
+            logging.warning("Failed to restart camera after HDMI attach: %s", exc)
 
     def setup_resources(self):
         self.current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -1267,7 +1384,13 @@ class SimpleGUI(threading.Thread):
             self.draw_right_sections(draw, values)
 
 
-        self.fb.show(image)
+        try:
+            self.fb.show(image)
+        except (OSError, RuntimeError, ValueError) as exc:
+            logging.warning("Framebuffer write failed; detaching HDMI GUI until it returns: %s", exc)
+            self.fb = None
+            self.disp_width = 0
+            self.disp_height = 0
         
     def draw_rounded_box(self, draw, text, position, font_size, padding, text_color, fill_color, image, extra_height=-17, reduce_top=12):
         font = self._get_font("bold", font_size)
@@ -1310,7 +1433,13 @@ class SimpleGUI(threading.Thread):
     def clear_framebuffer(self):
         if self.fb:
             blank_image = Image.new("RGBA", self.fb.size, "black")
-            self.fb.show(blank_image)
+            try:
+                self.fb.show(blank_image)
+            except (OSError, RuntimeError, ValueError) as exc:
+                logging.warning("Failed to blank framebuffer cleanly: %s", exc)
+                self.fb = None
+                self.disp_width = 0
+                self.disp_height = 0
             
     def stop(self):
         """Ask the GUI thread to exit, wait for it, then blank fb0."""
@@ -1329,6 +1458,10 @@ class SimpleGUI(threading.Thread):
 
             while self._running:
                 now = time.monotonic()
+                if self.check_display():
+                    self._fast_dirty = True
+                self._maybe_restart_camera_for_display_attach()
+
                 if (
                     not self._slow_values
                     or (now - self._last_slow_refresh_ts) >= self.slow_refresh_interval

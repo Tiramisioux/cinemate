@@ -11,6 +11,8 @@ If using a manual install without the above alias, type:
 sudo nano /boot/firmware/config.txt
 ```
 
+For headless HDMI installs on Raspberry Pi Bookworm, also edit `/boot/firmware/cmdline.txt` and append a single-line KMS video override such as `video=HDMI-A-1:1920x1080M@60D` or `video=HDMI-A-2:1920x1080M@60D`. This pins the boot framebuffer to 1080p so hotplugged HDMI does not fall back to `1024x768`.
+
 Uncomment the section for the sensor being used, and make sure to comment out the others. Reboot the Pi for changes to take effect.
 
 ### Example config.txt

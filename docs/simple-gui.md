@@ -10,3 +10,4 @@ Buffer meter in the lower left indicates number of frames in buffer. Useful when
 
 When a compatible USB microphone is connected, VU meters appear on the right side of the GUI so you can monitor audio levels.
 
+For redraw timing and performance tuning, see `docs/simple-gui-refresh-tuning.md`.

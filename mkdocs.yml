@@ -25,6 +25,7 @@ nav:
     - Configuring the Wi-Fi hotspot: hotspot-logic.md
   - Using the camera:
       - Simple GUI: simple-gui.md
+      - Simple GUI refresh tuning: simple-gui-refresh-tuning.md
       - Camera sensors and frame rates: sensors.md
       - Audio recording: audio-recording.md
       - FPS correction and audio sync: fps-correction.md

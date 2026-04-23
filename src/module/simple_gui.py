@@ -22,6 +22,7 @@ def _to_bool(value) -> bool:
         return value.strip().lower() in {"1", "true", "yes", "on"}
     return bool(value)
 
+
 class SimpleGUI(threading.Thread):
     def __init__(self, 
                 redis_controller, 
@@ -82,9 +83,22 @@ class SimpleGUI(threading.Thread):
             self.vu_meter_hatch_lines = True
 
         self.background_color_changed = False
+        self.target_fps = 12
+        self.min_frame_interval = 1 / self.target_fps
+        self.slow_refresh_interval = 1.0
+        self._redraw_event = threading.Event()
+        self._fast_dirty = True
+        self._slow_dirty = True
+        self._last_draw_ts = 0.0
+        self._last_slow_refresh_ts = 0.0
+        self._font_cache = {}
+        self._cached_cams_json = None
+        self._cached_cams = []
+        self._slow_values = {}
         
         # Load sensor values from Redis upon instantiation
         self.load_sensor_values_from_redis()
+        self.redis_controller.redis_parameter_changed.subscribe(self._handle_redis_change)
 
         self.start()
 
@@ -341,16 +355,12 @@ class SimpleGUI(threading.Thread):
             resolution_value = "N/A"
         return resolution_value
     
-    def _update_cam_section_labels(self):
+    def _update_cam_section_labels(self, cams=None):
         """
         Look at the CAMERAS json stored by CinePiManager and set the
         column headers (CAM0 / CAM1 / MON) and which layouts to draw.
         """
-        cams_json = self.redis_controller.get_value(ParameterKey.CAMERAS.value) or '[]'
-        try:
-            cams = json.loads(cams_json)
-        except (ValueError, TypeError):
-            cams = []
+        cams = cams or []
 
         # defaults (no camera data yet)
         l_lbl, r_lbl = "CAM", "MON"
@@ -367,18 +377,79 @@ class SimpleGUI(threading.Thread):
         self.left_section_layout[0]["label"]  = l_lbl
         self.right_section_layout[0]["label"] = r_lbl
 
+    def _get_camera_list(self):
+        cams_json = self.redis_controller.get_value(ParameterKey.CAMERAS.value) or "[]"
+        if cams_json != self._cached_cams_json:
+            try:
+                cams = json.loads(cams_json)
+            except (ValueError, TypeError):
+                cams = []
+            if cams:
+                cams.sort(key=lambda c: c.get("port", ""))
+            self._cached_cams_json = cams_json
+            self._cached_cams = cams
+        return self._cached_cams
+
+    def _refresh_slow_values(self):
+        latest_recording_info = self._slow_values.get("latest_recording_info", (None, 0, 0))
+        cpu_load = self._slow_values.get("cpu_load", "0%")
+        cpu_temp = self._slow_values.get("cpu_temp", "--")
+
+        try:
+            cpu_load = Utils.cpu_load()
+        except Exception:
+            pass
+
+        try:
+            cpu_temp = Utils.cpu_temp()
+        except Exception:
+            pass
+
+        if self.ssd_monitor:
+            try:
+                latest_recording_info = self.ssd_monitor.get_latest_recording_info()
+            except Exception:
+                pass
+
+        self._slow_values.update({
+            "cpu_load": cpu_load,
+            "cpu_temp": cpu_temp,
+            "latest_recording_info": latest_recording_info,
+        })
+        self._last_slow_refresh_ts = time.monotonic()
+
+    def _maybe_refresh_slow_values(self):
+        if (
+            not self._slow_values
+            or (time.monotonic() - self._last_slow_refresh_ts) >= self.slow_refresh_interval
+        ):
+            self._refresh_slow_values()
+
+    def _handle_redis_change(self, _data):
+        self._fast_dirty = True
+        self._redraw_event.set()
+
+    def _vu_active(self):
+        monitor = getattr(self.usb_monitor, "audio_monitor", None)
+        return bool(monitor and getattr(monitor, "running", False))
+
+    def _get_font(self, kind: str, size):
+        font_size = max(1, int(round(size)))
+        key = (kind, font_size)
+        font = self._font_cache.get(key)
+        if font is None:
+            path = self.bold_font_path if kind == "bold" else self.regular_font_path
+            font = ImageFont.truetype(os.path.realpath(path), font_size)
+            self._font_cache[key] = font
+        return font
+
     def populate_values(self):
         # update section headers first
-        self._update_cam_section_labels()
+        cam_list = self._get_camera_list()
+        self._update_cam_section_labels(cam_list)
+        self._maybe_refresh_slow_values()
         self.load_sensor_values_from_redis()
         resolution_value = self.estimate_resolution_in_k()
-
-        # ── read CAMERAS json ─────────────────────────────────────
-        cams_json = self.redis_controller.get_value(ParameterKey.CAMERAS.value) or "[]"
-        try:
-            cam_list = json.loads(cams_json)
-        except (ValueError, TypeError):
-            cam_list = []
 
         sensor_left  = ""   
         sensor_right = ""
@@ -460,8 +531,8 @@ class SimpleGUI(threading.Thread):
             "zoom_is_default": True,
             "anamorphic_factor": f"{self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value)}X",
             "ram_load":       Utils.memory_usage(),
-            "cpu_load":       Utils.cpu_load(),
-            "cpu_temp":       Utils.cpu_temp(),
+            "cpu_load":       self._slow_values.get("cpu_load", "0%"),
+            "cpu_temp":       self._slow_values.get("cpu_temp", "--"),
             "disk_label":     (self.ssd_monitor.device_name or "").upper()[:4],
             "usb_connected":  bool(self.serial_handler.serial_connected),
             "mic_connected":  self.usb_monitor.usb_mic is not None,
@@ -514,10 +585,11 @@ class SimpleGUI(threading.Thread):
                     if rec_active:
                         values["mic_wav_saved"] = False
                     else:
-                        _, dng_count, wav_count = self.ssd_monitor.get_latest_recording_info()
+                        _, dng_count, wav_count = self._slow_values.get(
+                            "latest_recording_info",
+                            (None, 0, 0),
+                        )
                         values["mic_wav_saved"] = dng_count > 0 and wav_count > 0
-                    _, dng_count, wav_count = self.ssd_monitor.get_latest_recording_info()
-                    values["mic_wav_saved"] = dng_count > 0 and wav_count > 0
                 except (TypeError, ValueError):
                     values["mic_wav_saved"] = False
 
@@ -729,8 +801,8 @@ class SimpleGUI(threading.Thread):
     # LEFT-HAND COLUMN  (CAM / MON / SYS …)
     # ─────────────────────────────────────────────────────────────
     def draw_left_sections(self, draw, values):
-        label_font = ImageFont.truetype(self.regular_font_path, 26)
-        box_font   = ImageFont.truetype(self.bold_font_path,     26)
+        label_font = self._get_font("regular", 26)
+        box_font   = self._get_font("bold", 26)
 
         BOX_H, BOX_W  = 40, 60
         BOX_COLOR     = (136, 136, 136)
@@ -846,8 +918,8 @@ class SimpleGUI(threading.Thread):
     # RIGHT-HAND MIRROR COLUMN
     # ─────────────────────────────────────────────────────────────
     def draw_right_sections(self, draw, values):
-        label_font = ImageFont.truetype(self.regular_font_path, 26)
-        box_font   = ImageFont.truetype(self.bold_font_path,     24)
+        label_font = self._get_font("regular", 26)
+        box_font   = self._get_font("bold", 24)
 
         BOX_H, BOX_W  = 40, 60
         BOX_COLOR     = (136, 136, 136)
@@ -931,7 +1003,7 @@ class SimpleGUI(threading.Thread):
             draw_bar(x, bar_width, vu_levels[i], vu_peaks[i])
 
         # Optional: Draw channel labels
-        label_font = ImageFont.truetype(self.regular_font_path, 16)
+        label_font = self._get_font("regular", 16)
         labels = ["L", "R"] if n_channels == 2 else [str(i+1) for i in range(n_channels)]
         for i, label in enumerate(labels):
             text_bbox = draw.textbbox((0, 0), label, font=label_font)
@@ -1163,10 +1235,7 @@ class SimpleGUI(threading.Thread):
             position = [info["pos"][0] * shrink_x, info["pos"][1] * shrink_y]
             font_size = info.get("size", 12) * min(min(shrink_x, shrink_y), 1) 
             # 12 is the default font size, min with 1 makes sure the font stays same in bigger displays
-            font = ImageFont.truetype(
-                os.path.realpath(self.bold_font_path if info.get("font", "bold") == "bold" else self.regular_font_path),
-                font_size
-            )
+            font = self._get_font(info.get("font", "bold"), font_size)
             value = str(values.get(element, ''))
             color_mode = self.color_mode
             color = self.colors.get(element, {}).get(color_mode, "white")
@@ -1182,8 +1251,7 @@ class SimpleGUI(threading.Thread):
                 self.draw_rounded_box(draw, value, position, font_size, 5, "black", "white", image)
             else:
                 draw.text(position, value, font=font, fill=color)
-                
-        self.update_smoothed_vu_levels()
+
         self.draw_right_vu_meter(draw)
         if self.show_buffer_vu:
             self.draw_framebuffer_vu_meter(draw)
@@ -1202,7 +1270,7 @@ class SimpleGUI(threading.Thread):
         self.fb.show(image)
         
     def draw_rounded_box(self, draw, text, position, font_size, padding, text_color, fill_color, image, extra_height=-17, reduce_top=12):
-        font = ImageFont.truetype(os.path.realpath(self.font_path), font_size)
+        font = self._get_font("bold", font_size)
         bbox = draw.textbbox((0, 0), text, font=font)
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1] + extra_height  # Increase height by extra_height
@@ -1260,10 +1328,34 @@ class SimpleGUI(threading.Thread):
             self.vu_decay_factor = 0.2
 
             while self._running:
-                values = self.populate_values()
+                now = time.monotonic()
+                if (
+                    not self._slow_values
+                    or (now - self._last_slow_refresh_ts) >= self.slow_refresh_interval
+                ):
+                    self._slow_dirty = True
+
+                has_work = self._fast_dirty or self._slow_dirty or self._vu_active()
+                if not has_work:
+                    self._redraw_event.wait(timeout=0.1)
+                    self._redraw_event.clear()
+                    continue
+
+                due_in = max(0.0, self.min_frame_interval - (now - self._last_draw_ts))
+                if due_in > 0:
+                    self._redraw_event.wait(timeout=due_in)
+                    self._redraw_event.clear()
+                    continue
+
+                if self._slow_dirty:
+                    self._refresh_slow_values()
+
                 self.update_smoothed_vu_levels()
+                values = self.populate_values()
                 self.draw_gui(values)
-                time.sleep(0.2)
+                self._fast_dirty = False
+                self._slow_dirty = False
+                self._last_draw_ts = time.monotonic()
         finally:
             pass
  

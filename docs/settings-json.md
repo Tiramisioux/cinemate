@@ -65,6 +65,38 @@ Maps each camera to an HDMI connector. Use `-1` for automatic selection.
 }
 ```
 
+Use HDMI port `0` for `HDMI-A-1` and HDMI port `1` for `HDMI-A-2`.
+
+!!! note ""
+    This setting chooses which connector `cinepi-raw` uses at runtime. On Raspberry Pi Bookworm with KMS, the boot framebuffer mode still comes from `/boot/firmware/cmdline.txt`, so headless installs should also set a `video=HDMI-A-1:1920x1080M@60D` or `video=HDMI-A-2:1920x1080M@60D` override there.
+
+## hdmi_gui
+
+Controls optional HDMI GUI overlays.
+
+```json
+"hdmi_gui": {
+  "buffer_vu_meter": false,
+  "vu_meter_hatch_lines": true
+}
+```
+
+`buffer_vu_meter` – show or hide the vertical RAM-buffer meter on the HDMI GUI.
+<br>`vu_meter_hatch_lines` – draw hatch lines inside the buffer meter fill.
+
+## hdmi_display
+
+Sets the preferred HDMI GUI canvas size.
+
+```json
+"hdmi_display": {
+  "width": 1920,
+  "height": 1080
+}
+```
+
+Use this to tell Cinemate what size GUI canvas you want to target. If the active framebuffer is smaller, Cinemate now falls back to the active framebuffer size instead of drawing a clipped `1920x1080` layout into a smaller mode.
+
 ## preview
 
 Adjusts zoom levels for the HDMI/browser preview.

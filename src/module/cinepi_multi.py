@@ -13,6 +13,7 @@ import shutil
 
 from module.config_loader import load_settings
 from module.redis_controller import ParameterKey
+from module.framebuffer import Framebuffer
 
 # Path to settings file
 SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
@@ -32,6 +33,13 @@ def _rt_permitted():
         return True
     except Exception:
         return False
+
+
+def _active_framebuffer_size(device_no: int = 0):
+    fb = Framebuffer(device_no)
+    if fb.usable:
+        return fb.size
+    return None
 
 # ───────────────────────── zoom default ──────────────────────────
 def _seed_default_zoom(redis_ctl):
@@ -149,6 +157,7 @@ class CinePiProcess(Thread):
         self.out_q, self.err_q = Queue(), Queue()
         self.log_filters = {
             'frame': re.compile(r'Frame Number'),
+            'stats': re.compile(r'^#\d+\s+\([^)]+ fps\)\s+exp\b'),
             'agc': re.compile(r'RPiAgc'),
             'ccm': re.compile(r'RPiCcm'),
             'vu': re.compile(r'\[VU\]'),
@@ -199,10 +208,8 @@ class CinePiProcess(Thread):
     def _log(self, text):
         for name, rx in self.log_filters.items():
             if name in self.active_filters and rx.search(text):
-                pass #logging.info('[%s] %s', self.cam, text)
-                break
-        logging.info('[%s] %s', self.cam.port, text)   # DEBUG → all lines
-        pass
+                return
+        logging.info('[%s] %s', self.cam.port, text)
         
     # ─────────────────────────────────────────────────────────────
     #  Stream one pipe from cinepi-raw, relay lines, intercept the
@@ -274,9 +281,27 @@ class CinePiProcess(Thread):
         aspect = width / height
         anam = float(self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value) or 1.0)
         
-        # Get HDMI resolution from settings
+        # Get HDMI resolution from settings, but prefer the active
+        # framebuffer mode when HDMI is already attached.
         hdmi_config = _SETTINGS.get("hdmi_display", {})
         fw, fh = hdmi_config.get("width", 1920), hdmi_config.get("height", 1080)
+        try:
+            fw = int(fw)
+            fh = int(fh)
+        except (TypeError, ValueError):
+            fw, fh = 1920, 1080
+
+        active_fb_size = _active_framebuffer_size()
+        if active_fb_size is not None and active_fb_size != (fw, fh):
+            logging.info(
+                "[%s] Active framebuffer %sx%s overrides configured HDMI canvas %sx%s",
+                self.cam.port,
+                active_fb_size[0],
+                active_fb_size[1],
+                fw,
+                fh,
+            )
+            fw, fh = active_fb_size
         
         px, py = 94, 50
         aw, ah = fw - 2*px, fh - 2*py

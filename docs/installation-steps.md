@@ -237,6 +237,34 @@ disable_splash=1
 
 Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.
 
+### Pin the HDMI boot mode for headless startup
+
+On Raspberry Pi Bookworm with KMS enabled, a Pi that boots without a monitor can later hotplug into a fallback mode such as `1024x768`. That makes the GUI and preview appear inside a 4:3 framebuffer even if Cinemate is configured for `1920x1080`.
+
+Edit the kernel command line:
+
+```bash
+sudo nano /boot/firmware/cmdline.txt
+```
+
+Keep everything on a single line and append the display override at the end:
+
+```text
+video=HDMI-A-1:1920x1080M@60D
+```
+
+If your monitor is connected to the second full-size/micro-HDMI connector instead, use:
+
+```text
+video=HDMI-A-2:1920x1080M@60D
+```
+
+!!! note ""
+    `cmdline.txt` must stay on a single line. Do not add line breaks.
+
+!!! note ""
+    This boot-time `video=` setting pins the framebuffer mode. Cinemate still reads the preferred HDMI canvas and runtime HDMI port from `settings.json`.
+
 ### Change the console font (optional)
 
 ```bash
@@ -460,6 +488,7 @@ Add to the end of the file:
 ```shell
 alias cinemate='python3 /home/pi/cinemate/src/main.py'
 alias editboot='sudo nano /boot/firmware/config.txt'
+alias editcmdline='sudo nano /boot/firmware/cmdline.txt'
 alias editsettings='sudo nano /home/pi/cinemate/src/settings.json'
 ```
 
@@ -470,6 +499,33 @@ Reload .bashrc
 ```shell
 source ~/.bashrc
 ```
+
+### Match `settings.json` to the HDMI output you want to use
+
+Open the settings file:
+
+```shell
+editsettings
+```
+
+Make sure the HDMI sections are present and match your install:
+
+```json
+"output": {
+  "cam0": { "hdmi_port": 0 },
+  "cam1": { "hdmi_port": 1 }
+},
+
+"hdmi_display": {
+  "width": 1920,
+  "height": 1080
+}
+```
+
+Use HDMI port `0` for `HDMI-A-1` and port `1` for `HDMI-A-2`.
+
+!!! note ""
+    Current Cinemate builds can start without HDMI attached and recover when HDMI is plugged in later, but the Pi still needs the `video=` entry in `cmdline.txt` above if you want the headless boot framebuffer to come up in `1920x1080` instead of a fallback 4:3 mode.
 
 ## Cinemate services
 
@@ -568,6 +624,5 @@ After enabling the service, Cinemate should autostart on boot.
 > **Tip:** `sudo make install` also places `/usr/local/bin/camera-ready.sh` on the system. The script waits for `cinepi-raw` to report a camera before systemd launches Cinemate, preventing the black-screen-on-boot issue that occurred when the GUI started before the sensor initialised.
 
 You now have a 12 bit RAW image capturing system on your Raspberry Pi!
-
 
 

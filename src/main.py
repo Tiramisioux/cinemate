@@ -13,7 +13,7 @@ import socket
 from PIL import Image, ImageDraw, ImageFont
 import glob
 
-from module.config_loader import load_settings
+from module.config_loader import SettingsLoadError, load_settings
 from module.logger import configure_logging
 from module.redis_controller import RedisController, ParameterKey
 from module.ssd_monitor import SSDMonitor
@@ -47,6 +47,18 @@ from module.framebuffer import acquire_framebuffer
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
 SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
 STARTUP_MESSAGE_MIN_DURATION = 3.0
+CLI_COLOR_RED = "\033[1;31m"
+CLI_COLOR_YELLOW = "\033[1;33m"
+CLI_COLOR_RESET = "\033[0m"
+LOCAL_FAILURE_TTY_PATHS = ("/dev/tty1", "/dev/console")
+LOCAL_FAILURE_HOLD_SECONDS = 12.0
+STARTUP_LOG_TAIL_LINES = 40
+STARTUP_FAILURE_FILE = os.environ.get(
+    "CINEMATE_STARTUP_FAILURE_FILE",
+    "/home/pi/.cache/cinemate/startup-failure.ansi",
+)
+STARTUP_READY_SENT = False
+APP_RUNTIME_READY = False
 
 
 def _systemd_notify(message: str) -> bool:
@@ -72,7 +84,145 @@ def systemd_status(status: str) -> bool:
 
 
 def systemd_ready(status: str) -> bool:
-    return _systemd_notify(f"READY=1\nSTATUS={status}")
+    global STARTUP_READY_SENT
+    notified = _systemd_notify(f"READY=1\nSTATUS={status}")
+    if notified:
+        STARTUP_READY_SENT = True
+    return notified
+
+
+def mark_runtime_ready(status: str = "Cinemate running") -> bool:
+    global APP_RUNTIME_READY
+    APP_RUNTIME_READY = True
+    if STARTUP_READY_SENT:
+        return systemd_status(status)
+    return systemd_ready(status)
+
+
+def render_startup_failure_block(title: str, body: str, log_lines: list[str] | None = None) -> str:
+    separator = f"{CLI_COLOR_YELLOW}{'=' * 78}{CLI_COLOR_RESET}"
+    sections = [
+        "",
+        separator,
+        f"{CLI_COLOR_RED}{title}{CLI_COLOR_RESET}",
+        separator,
+        body,
+    ]
+    if log_lines:
+        sections.extend(
+            [
+                "",
+                f"{CLI_COLOR_YELLOW}Startup sequence:{CLI_COLOR_RESET}",
+                *log_lines,
+            ]
+        )
+    sections.extend(["", ""])
+    return "\n".join(sections)
+
+
+def print_startup_failure_block(title: str, body: str, log_lines: list[str] | None = None) -> None:
+    sys.stderr.write(render_startup_failure_block(title, body, log_lines))
+    sys.stderr.flush()
+
+
+def clear_persisted_startup_failure() -> None:
+    try:
+        os.remove(STARTUP_FAILURE_FILE)
+    except FileNotFoundError:
+        pass
+    except OSError as exc:
+        logging.debug("Failed to clear persisted startup failure at %s: %s", STARTUP_FAILURE_FILE, exc)
+
+
+def persist_startup_failure(title: str, body: str, log_lines: list[str] | None = None) -> bool:
+    if APP_RUNTIME_READY or not running_under_systemd_service():
+        return False
+
+    payload = render_startup_failure_block(title, body, log_lines)
+    try:
+        os.makedirs(os.path.dirname(STARTUP_FAILURE_FILE), exist_ok=True)
+        with open(STARTUP_FAILURE_FILE, "w", encoding="utf-8", errors="replace") as handle:
+            handle.write(payload)
+        return True
+    except OSError as exc:
+        logging.warning("Failed to persist startup failure for tty replay: %s", exc)
+        return False
+
+
+def get_recent_log_lines(log_queue, limit: int = STARTUP_LOG_TAIL_LINES) -> list[str]:
+    if log_queue is None:
+        return []
+    with log_queue.mutex:
+        return list(log_queue.queue)[-limit:]
+
+
+def running_under_systemd_service() -> bool:
+    return bool(os.environ.get("NOTIFY_SOCKET") or os.environ.get("INVOCATION_ID"))
+
+
+def current_stderr_tty_path() -> str | None:
+    try:
+        return os.ttyname(sys.stderr.fileno())
+    except OSError:
+        return None
+
+
+def should_mirror_failure_to_local_console() -> bool:
+    if APP_RUNTIME_READY:
+        return False
+    return current_stderr_tty_path() not in LOCAL_FAILURE_TTY_PATHS
+
+
+def handoff_plymouth_for_failure() -> None:
+    if not plymouth_is_running():
+        return
+
+    plymouth = shutil.which("plymouth")
+    if plymouth:
+        try:
+            subprocess.run(
+                [plymouth, "quit"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except OSError as exc:
+            logging.warning("Failed to quit Plymouth for startup failure display: %s", exc)
+    wait_for_plymouth_to_quit(timeout=2.0, poll_interval=0.1)
+
+
+def mirror_failure_to_local_console(title: str, body: str, log_lines: list[str] | None = None) -> bool:
+    if not should_mirror_failure_to_local_console():
+        return False
+
+    try:
+        release_console_to_text()
+    except Exception as exc:
+        logging.debug("Failed to release console to text before failure display: %s", exc)
+
+    handoff_plymouth_for_failure()
+    payload = "\033[2J\033[H" + render_startup_failure_block(title, body, log_lines)
+
+    for tty_path in LOCAL_FAILURE_TTY_PATHS:
+        try:
+            with open(tty_path, "w", encoding="utf-8", errors="replace") as tty:
+                tty.write(payload)
+                tty.flush()
+            return True
+        except OSError:
+            continue
+    return False
+
+
+def report_startup_failure(title: str, body: str, log_lines: list[str] | None = None) -> None:
+    print_startup_failure_block(title, body, log_lines)
+    if running_under_systemd_service():
+        persist_startup_failure(title, body, log_lines)
+        return
+
+    if mirror_failure_to_local_console(title, body, log_lines):
+        if running_under_systemd_service():
+            time.sleep(LOCAL_FAILURE_HOLD_SECONDS)
 
 
 def plymouth_is_running() -> bool:
@@ -310,18 +460,8 @@ def handle_vu_output(line):
         except Exception as e:
             logging.warning(f"Failed to parse VU line: {line} ({e})")
 
-def main():
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Run the CinePi application.")
-    parser.add_argument("-debug", action="store_true", help="Enable debug logging level.")
-    args = parser.parse_args()
-
-    # Load settings
+def run_application(args, log_queue):
     settings = load_settings(SETTINGS_FILE)
-
-    # Setup logging
-    logger, log_queue = setup_logging(args.debug)
     
     # # Start animated splash on HDMI
     # splash_thread, splash_stop = start_splash()
@@ -562,6 +702,7 @@ def main():
     # Wait until the welcome-message/Plymouth handoff and preview rebind are
     # finished before warming the storage media.
     storage_preroll.mark_startup_ready()
+    mark_runtime_ready("Cinemate running")
     
     # Ensure system cleanup on exit
     cleanup_called = False
@@ -626,12 +767,44 @@ def main():
     signal.signal(signal.SIGTERM, handle_exit)
 
 
+    from signal import pause
+    pause()
+    return 0
+
+
+def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run the CinePi application.")
+    parser.add_argument("-debug", action="store_true", help="Enable debug logging level.")
+    args = parser.parse_args()
+
+    _, log_queue = setup_logging(args.debug)
+    clear_persisted_startup_failure()
+
     try:
-        from signal import pause
-        pause()
-    except Exception:
-        logging.error("An unexpected error occurred:\n" + traceback.format_exc())
-        sys.exit(1)
+        return run_application(args, log_queue)
+    except SettingsLoadError as exc:
+        systemd_status("Cinemate startup failed: invalid settings.json")
+        logging.error("Cinemate startup aborted: %s", exc.detail)
+        report_startup_failure("Cinemate could not start", exc.format_for_cli())
+        return 1
+    except Exception as exc:
+        systemd_status("Cinemate startup failed before ready")
+        logging.exception("Cinemate crashed during startup")
+        report_startup_failure(
+            "Cinemate crashed during startup",
+            "\n".join(
+                [
+                    "Problem: Cinemate exited before the GUI finished starting.",
+                    f"Reason: {exc.__class__.__name__}: {exc}",
+                    "",
+                    "Recommended fix: Review the startup sequence below, then retry from SSH if you need the full traceback in the shell.",
+                ]
+            ),
+            log_lines=get_recent_log_lines(log_queue),
+        )
+        return 1
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

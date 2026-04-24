@@ -1,6 +1,6 @@
 # System services
 
-Cinemate uses three system services for its operation.
+Cinemate uses three long-running services and one maintenance timer for its operation.
 
 ## cinemate-autostart.service
 
@@ -15,7 +15,6 @@ Plymouth is optional. Cinemate still starts correctly if Plymouth is not install
 While `cinemate-autostart.service` is running, `tty1` is reserved for Plymouth and the Cinemate GUI. The local login prompt is therefore suppressed on `tty1` during runtime and restored when the service stops. Use SSH or switch to `tty2` if you need a shell while Cinemate is active.
 
 The service now uses `Type=notify`, so systemd can track Cinemate's boot progress through status messages such as the splash becoming active and the GUI starting.
-
 To keep `journalctl -fu cinemate-autostart` readable when ALSA reports noisy underruns, the unit rate-limits log output (see `LogRateLimitIntervalSec` and `LogRateLimitBurst` in the service file). Adjust those values if you need more or less verbosity.
 
 ### Starting, stopping, enabling and disabling the service
@@ -36,6 +35,7 @@ make clean     # remove the service
 
 The `make install` step also copies `camera-ready.sh` into `/usr/local/bin/` with execute permissions so that the systemd unit can call it from `ExecStartPre`.
 
+If Cinemate exits before it reaches its real ready state, the service now preserves the colored startup-failure block and the `tty1` login shell replays it before showing the prompt. That makes invalid `settings.json` errors and other early-start crashes visible on the HDMI console without losing the normal shell afterward.
 If you want the same boot spinner flow as the prebuilt image, install Plymouth separately as described in the manual install guide and then reinstall `cinemate-autostart.service` so the latest `tty1` and `plymouth-quit*` ordering is in place.
 
 To start Cinemate manually, anywhere in the cli, type `cinemate`.
@@ -91,3 +91,28 @@ make disable
 !!! note
 
       While evaluating, it might be practical to have the Pi connect to your local wifi for easy access (`sudo raspi-config`). Therefore, on the image file, the wifi-hotspot.service is **not** activated by default. Cinemate will still serve its web interface on the available network, but only after `wlan0` or `eth0` has an IP address. You can read more [here](hotspot-logic.md)
+      While evaluating, it might be practical to have the Pi connect to your local wifi for easy access (`sudo raspi-config`). Therefore, on the image file, the wifi-hotspot.service is **not** activated by default. Cinemate will still serve its web interface on the available network, but only after `wlan0` or `eth0` has an IP address. You can read more [here](hotspot-logic.md)
+
+## redis-log-maintenance.timer
+
+Redis log maintenance is a lightweight timer-backed helper that keeps `/var/log/redis/redis-server.log` from silently filling the Pi root filesystem over time.
+
+The companion `redis-log-maintenance.service` runs once per timer trigger. It trims the active Redis log in place when it grows too large and removes older Redis log rotations beyond the most recent few files.
+
+Install and enable it with:
+
+```bash
+cd cinemate/services/redis-log-maintenance
+
+sudo make install
+sudo make enable
+```
+
+The default timer waits a short time after boot and then runs hourly. This is intentionally conservative so it does not interfere with normal Redis logging while still keeping the SD card healthy.
+
+You can inspect it with:
+
+```bash
+systemctl status redis-log-maintenance.timer
+journalctl -u redis-log-maintenance.service
+```

@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------
 # Manage *all* services under cinemate/services/*
 # ---------------------------------------------------------------
-SUBSERVICES := storage-automount wifi-hotspot
+SUBSERVICES := storage-automount wifi-hotspot redis-log-maintenance
 
 .PHONY: all install enable disable start stop restart status clean uninstall \
         $(addprefix install-,$(SUBSERVICES))  \

@@ -20,7 +20,6 @@ Text or image displayed briefly when Cinemate starts.
 Set `show_welcome_message` to `true` to display the configured startup splash for at least 3 seconds. Set it to `false` to skip the startup message entirely. If the key is missing, Cinemate defaults to showing the startup message. Older installs that still use `show_startup_message` continue to work as a fallback.
 
 If Plymouth is active during boot, Cinemate waits until the spinner hands off before it shows the welcome message so the screen transition stays clean.
-
 Set `welcome_image` to the path of a bitmap file to show a logo instead of text. 
 
 Example path: `/home/pi/welcome_image.bmp`. 

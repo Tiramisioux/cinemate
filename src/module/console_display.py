@@ -1,6 +1,7 @@
 import fcntl
 import logging
 import os
+import errno
 
 
 TTY_PATH = "/dev/tty1"
@@ -26,7 +27,15 @@ def _set_console_mode(mode: int, label: str) -> bool:
         fcntl.ioctl(fd, KDSETMODE, mode)
         return True
     except OSError as exc:
-        logging.warning("Could not set %s to %s mode: %s", TTY_PATH, label, exc)
+        if exc.errno == errno.EPERM:
+            logging.debug(
+                "Could not set %s to %s mode without elevated privileges: %s",
+                TTY_PATH,
+                label,
+                exc,
+            )
+        else:
+            logging.warning("Could not set %s to %s mode: %s", TTY_PATH, label, exc)
         return False
     finally:
         os.close(fd)

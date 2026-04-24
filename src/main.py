@@ -558,6 +558,10 @@ def main():
         logging.error("No network connection found. Stream module not loaded")
 
     mediator = Mediator(cinepi, cinepi_controller, redis_listener, redis_controller, ssd_monitor, gpio_output, stream, usb_monitor)
+
+    # Wait until the welcome-message/Plymouth handoff and preview rebind are
+    # finished before warming the storage media.
+    storage_preroll.mark_startup_ready()
     
     # Ensure system cleanup on exit
     cleanup_called = False

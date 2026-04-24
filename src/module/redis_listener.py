@@ -759,6 +759,8 @@ class RedisListener:
         Compare the actual number of DNGs on disk with the theoretical count.
         Robust against path ambiguities, in-flight files, and off-by-one rounding.
         """
+        quiet_summary = self.recording_was_preroll
+
         # --------------------------- 1) collect candidate dirs -----------------
         folders = self.ssd_monitor.get_latest_recording_infos()
         per_sensor = []   # (label, fs_count|None, monitor_count|None, last_idx|None, last_name|None)
@@ -803,7 +805,8 @@ class RedisListener:
 
         # ------------------------------ 2) totals ------------------------------
         if not per_sensor:
-            logging.warning("No recent recording folders found — falling back to RAM counter.")
+            if not quiet_summary:
+                logging.warning("No recent recording folders found — falling back to RAM counter.")
             recorded_frames_total = int(self.framecount or 0)
             sensor_count_effective = 1 if recorded_frames_total > 0 else 0
         else:
@@ -818,13 +821,14 @@ class RedisListener:
             recorded_frames_total = sum(c for _, c, _, _ in final_counts)
 
             # Diagnostics
-            for label, c, li, ln in final_counts:
-                if ln:
-                    logging.info(f"{label}: {c} DNGs (last={ln}, idx={li})")
-                else:
-                    logging.info(f"{label}: {c} DNGs")
+            if not quiet_summary:
+                for label, c, li, ln in final_counts:
+                    if ln:
+                        logging.info(f"{label}: {c} DNGs (last={ln}, idx={li})")
+                    else:
+                        logging.info(f"{label}: {c} DNGs")
 
-            logging.info(f"Total frames on disk: {recorded_frames_total} from {sensor_count_effective} sensor(s)")
+                logging.info(f"Total frames on disk: {recorded_frames_total} from {sensor_count_effective} sensor(s)")
 
         # ------------------------------ duration ------------------------------
         if not (self.recording_start_time and self.recording_end_time):
@@ -841,17 +845,20 @@ class RedisListener:
         duration = (end_for_calc - self.recording_start_time).total_seconds()
         if duration < 0:
             duration = 0.0
-        logging.info(f"Recording duration in seconds (start→end): {duration:.6f}")
+        if not quiet_summary:
+            logging.info(f"Recording duration in seconds (start→end): {duration:.6f}")
 
         # ------------------------- expected FPS (locked) ----------------------
         if self.fps_at_rec_start is not None and self.fps_at_rec_start > 0:
             fps_expected = self.fps_at_rec_start
-            logging.info(f"Using FPS locked at record start: {fps_expected:.6f}")
+            if not quiet_summary:
+                logging.info(f"Using FPS locked at record start: {fps_expected:.6f}")
         else:
             # hard fallback if start FPS was missing
             try:
                 fps_expected = float(self.redis_controller.get_value('fps'))
-                logging.info(f"Using configured FPS (fallback): {fps_expected:.6f}")
+                if not quiet_summary:
+                    logging.info(f"Using configured FPS (fallback): {fps_expected:.6f}")
             except (TypeError, ValueError):
                 logging.error("Expected FPS missing/invalid; aborting expected-frame calc.")
                 return
@@ -864,8 +871,9 @@ class RedisListener:
             sensor_count_effective,
         )
 
-        logging.info(f"Calculated expected number of frames: {expected_frames_total}")
-        logging.info(f"Actual number of recorded frames: {recorded_frames_total}")
+        if not quiet_summary:
+            logging.info(f"Calculated expected number of frames: {expected_frames_total}")
+            logging.info(f"Actual number of recorded frames: {recorded_frames_total}")
 
         diff = expected_frames_total - recorded_frames_total
         frames_in_sync = abs(diff) <= 1
@@ -880,19 +888,21 @@ class RedisListener:
             ParameterKey.DROP_FRAME_COUNT.value,
             self.drop_frame_count_current_take,
         )
-        logging.info(
-            f"Drop frames detected this take: {self.drop_frame_count_current_take}"
-        )
+        if not quiet_summary:
+            logging.info(
+                f"Drop frames detected this take: {self.drop_frame_count_current_take}"
+            )
 
         if frames_in_sync:
-            if diff == 0:
-                logging.info("✓ All frames accounted for.")
-            else:
-                logging.info(
-                    "Frames within tolerance: %+d frame difference between expected and recorded counts.",
-                    diff,
-                )
-        else:
+            if not quiet_summary:
+                if diff == 0:
+                    logging.info("✓ All frames accounted for.")
+                else:
+                    logging.info(
+                        "Frames within tolerance: %+d frame difference between expected and recorded counts.",
+                        diff,
+                    )
+        elif not quiet_summary:
             logging.warning(
                 f"Discrepancy detected: {diff:+d} frames difference between expected and recorded counts."
             )
@@ -910,10 +920,7 @@ class RedisListener:
         suggestion_value = current_correction_factor or 1.0
 
         if self.recording_was_preroll:
-            logging.info(
-                "Skipping FPS correction suggestion: storage pre-roll recording (keeping %.6f).",
-                suggestion_value,
-            )
+            pass
         elif all_frames_accounted:
             if current_correction_factor:
                 logging.info(

@@ -716,6 +716,16 @@ class SSDMonitor:
         cutoff = latest_ts - window_seconds
         candidates = [p for p in subdirs if p.stat().st_mtime >= cutoff]
         candidates.sort(key=lambda p: p.stat().st_mtime)
+        preroll_active = False
+        if self._redis:
+            try:
+                raw_value = self._redis.get_value(ParameterKey.STORAGE_PREROLL_ACTIVE.value)
+                text = str(raw_value or "0").strip().lower()
+                preroll_active = text in ("1", "true", "yes", "on")
+                if not preroll_active:
+                    preroll_active = bool(int(text))
+            except (TypeError, ValueError, AttributeError):
+                preroll_active = False
         infos = []
         for d in candidates:
             dng = wav = 0
@@ -728,7 +738,7 @@ class SSDMonitor:
                 elif suf == ".wav":
                     wav += 1
             last_logged = self._last_recording_log.get(d.name)
-            if last_logged != (dng, wav):
+            if not preroll_active and last_logged != (dng, wav):
                 logging.info("Latest recording “%s”: %d DNG | %d WAV",
                              d.name, dng, wav)
                 self._last_recording_log[d.name] = (dng, wav)

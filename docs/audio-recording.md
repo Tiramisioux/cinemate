@@ -1,19 +1,22 @@
-# Audio recording (experimental)
+# Audio recording
 
-Cinemate records audio alongside the image sequence. Audio is written as `.wav` files into the same folder as the `.dng` frames. The implementation is still experimental and audio/video synchronization needs further investigation.
+Cinemate can record audio alongside the image sequence. Audio is written as `.wav` files into the same folder as the `.dng` frames. Timecode is readable by Davinci Resolve, which treats the .dng sequence and wav as one clip.
 
-## Supported microphones
- - **RØDE VideoMic NTG** – recorded in stereo at 24‑bit/48 kHz.
- - **USB PnP microphones** – recorded in mono at 16‑bit/48 kHz.
+## Supported paths
 
+- **Preferred 24-bit path:** `mic_24bit` at 48 kHz stereo
+- **Preferred 16-bit path:** `mic_16bit` at 48 kHz mono
+- **Fallback path:** if neither alias works, Cinemate probes `arecord -l`, builds `plughw:<card>,<device>` aliases, and tries them at 16-bit/48 kHz until one records successfully
 
+In practice this means a RODE VideoMic NTG can use the 24-bit alias, while simpler USB PnP microphones usually fall back to the 16-bit path.
 
-## .asoundrc Setup
+If `arecord` is missing or no recording device can be probed successfully, Cinemate disables audio capture for that run.
 
-For `dsnoop` support, create a `/etc/asound.conf`:
+## `/etc/asound.conf` setup
+
+For `dsnoop` support, create `/etc/asound.conf`:
 
 ```bash
-
 sudo tee /etc/asound.conf >/dev/null <<'EOF'
 # RODE NTG path (24-bit stereo)
 pcm.mic_dsnoop_24 {
@@ -48,9 +51,14 @@ pcm.mic_dsnoop_16 {
 
 pcm.mic_24bit { type plug; slave.pcm "mic_dsnoop_24" }
 pcm.mic_16bit { type plug; slave.pcm "mic_dsnoop_16" }
-
 EOF
-
 ```
 
-Exit nano editor using ctrl+x.
+## GUI indicators
+
+When a compatible microphone is connected, the Simple GUI shows:
+
+- live VU meters on the right side
+- the detected sample rate in kHz
+- the detected bit depth
+- a `WAV` badge once the latest take contains both DNG frames and a WAV sidecar

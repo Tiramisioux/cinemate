@@ -145,6 +145,16 @@ class RedisController:
         with self.lock:
             return self.cache.get(key, default)
 
+    def _storage_preroll_active(self) -> bool:
+        value = self.cache.get(ParameterKey.STORAGE_PREROLL_ACTIVE.value, "0")
+        text = str(value).strip().lower()
+        if text in ("1", "true", "yes", "on"):
+            return True
+        try:
+            return bool(int(text))
+        except (TypeError, ValueError):
+            return False
+
         # ────────────────────────── public helpers ───────────────────────
     def set_value(self, key, value):
         """Write key, publish, update cache, emit consolidated log output."""
@@ -164,31 +174,40 @@ class RedisController:
             self.local_updates.add(key_name)
 
         # ─── enhanced logging rules ─────────────────────────────────
+        preroll_active = self._storage_preroll_active()
+
         if key_name == ParameterKey.FRAMECOUNT.value:
+            if preroll_active:
+                pass
+            else:
             # Consolidated once-per-frame entry
-            rec_secs = self.cache.get(ParameterKey.RECORDING_TIME.value, "0")
-            rec_tc   = self.cache.get(ParameterKey.RECORDING_TC_REC.value, "00:00:00:00")
-            tod_tc   = self.cache.get(ParameterKey.RECORDING_TC_TOD.value, "00:00:00:00")
-            cam0_tc  = self.cache.get(ParameterKey.TC_CAM0.value,          "—")
-            cam1_tc  = self.cache.get(ParameterKey.TC_CAM1.value,          "—")
+                rec_secs = self.cache.get(ParameterKey.RECORDING_TIME.value, "0")
+                rec_tc   = self.cache.get(ParameterKey.RECORDING_TC_REC.value, "00:00:00:00")
+                tod_tc   = self.cache.get(ParameterKey.RECORDING_TC_TOD.value, "00:00:00:00")
+                cam0_tc  = self.cache.get(ParameterKey.TC_CAM0.value,          "—")
+                cam1_tc  = self.cache.get(ParameterKey.TC_CAM1.value,          "—")
 
-            # format seconds nicely (fallback to raw string if not numeric)
-            try:
-                rec_secs_fmt = f"{float(rec_secs):.3f}"
-            except ValueError:
-                rec_secs_fmt = rec_secs
+                # format seconds nicely (fallback to raw string if not numeric)
+                try:
+                    rec_secs_fmt = f"{float(rec_secs):.3f}"
+                except ValueError:
+                    rec_secs_fmt = rec_secs
 
-            logging.info(
-                f"Frame {value} ┃rec={rec_secs_fmt}s "
-                f"┃tc_rec={rec_tc} ┃tc_tod={tod_tc} "
-                f"┃cam0={cam0_tc} ┃cam1={cam1_tc}"
-            )
+                logging.info(
+                    f"Frame {value} ┃rec={rec_secs_fmt}s "
+                    f"┃tc_rec={rec_tc} ┃tc_tod={tod_tc} "
+                    f"┃cam0={cam0_tc} ┃cam1={cam1_tc}"
+                )
 
         elif key_name.startswith("last_dng_cam"):
-            ram = psutil.virtual_memory().percent
-            logging.info(
-                f"Changed value: {key_name} = {value} ┃RAM: {ram:.0f}%"
-            )
+            text = str(value).strip().lower()
+            if preroll_active or text in ("", "none"):
+                pass
+            else:
+                ram = psutil.virtual_memory().percent
+                logging.info(
+                    f"Changed value: {key_name} = {value} ┃RAM: {ram:.0f}%"
+                )
 
         elif key_name in (
             ParameterKey.RECORDING_TIME.value,

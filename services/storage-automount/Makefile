@@ -11,6 +11,8 @@ all:
 	@echo "Nothing to build – use 'make install'"
 
 install:
+	- systemctl stop cfe-hat-automount.service
+	- systemctl disable cfe-hat-automount.service
 	install -m 755 $(SCRIPT)  $(PREFIX)/bin/$(SCRIPT)
 	install -m 644 $(SERVICE) $(SYSDDIR)/$(SERVICE)
 	systemctl daemon-reload

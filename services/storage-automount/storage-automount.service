@@ -2,7 +2,8 @@
 Description=Unified Storage Auto-Mount with Media-Aware Tuning
 Documentation=https://github.com/Tiramisioux/RPI5-CFE-Hat
 After=local-fs.target
-Before=cinemate.service
+Before=cinemate-autostart.service
+Conflicts=cfe-hat-automount.service
 
 [Service]
 Type=simple

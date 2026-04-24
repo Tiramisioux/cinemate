@@ -719,8 +719,20 @@ class SimpleGUI(threading.Thread):
         values["zoom_is_default"] = abs(z - default_zoom) <= 1e-3
         values["zoom_factor"] = f"{z:.1f}"
 
+        try:
+            preroll_active = int(
+                self.redis_controller.get_value(
+                    ParameterKey.STORAGE_PREROLL_ACTIVE.value
+                )
+                or 0
+            ) == 1
+        except (TypeError, ValueError):
+            preroll_active = False
+
         # ─── recording time ───
-        raw_rt = self.redis_controller.get_value(ParameterKey.RECORDING_TIME.value)
+        raw_rt = None if preroll_active else self.redis_controller.get_value(
+            ParameterKey.RECORDING_TIME.value
+        )
 
         if raw_rt is not None:
             s = str(raw_rt).strip()
@@ -768,8 +780,8 @@ class SimpleGUI(threading.Thread):
         last_cam1_full = self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM1.value)
         last_cam0_full = self.redis_controller.get_value(ParameterKey.LAST_DNG_CAM0.value)
 
-        clip_cam1 = self._format_last_dng(last_cam1_full)
-        clip_cam0 = self._format_last_dng(last_cam0_full)
+        clip_cam1 = "" if preroll_active else self._format_last_dng(last_cam1_full)
+        clip_cam0 = "" if preroll_active else self._format_last_dng(last_cam0_full)
 
         if clip_cam0 and clip_cam1:
             # two cameras – show CAM1 on the upper line, CAM0 on the baseline

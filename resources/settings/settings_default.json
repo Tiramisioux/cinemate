@@ -1,4 +1,8 @@
-{   
+{
+  "welcome_message": "THIS IS A COOL MACHINE",
+  "show_welcome_message": true,
+  "welcome_image": null,
+
   "gpio_output": {
     "pwm_pin": 19,
     "rec_out_pin": [6, 21],

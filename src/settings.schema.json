@@ -53,6 +53,10 @@
       "type": "string",
       "default": "THIS IS A COOL MACHINE"
     },
+    "show_welcome_message": {
+      "type": "boolean",
+      "default": true
+    },
     "welcome_image": {
       "anyOf": [{"type": "string"}, {"type": "null"}],
       "default": null

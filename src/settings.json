@@ -2,6 +2,7 @@
   "$schema": "./settings.schema.json",
 
   "welcome_message": "THIS IS A COOL MACHINE",
+  "show_welcome_message": true,
   "welcome_image": null,
 
   "system": {

@@ -1,13 +1,23 @@
 # Simple GUI
 
-Simple GUI is available via browser and/or attached HDMI monitor.
+Simple GUI is available both on the attached HDMI output and through the browser-based web UI.
 
-- Red color means camera is recording.
-- Purple color means camera detected a drop frame 
-- Green color means camera is writing buffered frames to disk. You can still start recording at this stage, but any buffered frames from the last recording will be lost.
+## Background colours
 
-Buffer meter in the lower left indicates number of frames in buffer. Useful when testing storage media.
+- **Black:** idle
+- **Red:** at least one camera is actively writing frames to disk (`is_writing=1`)
+- **Green:** RAM buffer is filling or buffered frames are still flushing after stop (`is_buffering` or `is_writing_buf`)
+- **Purple:** live drop-frame alert
+- **Blue:** storage pre-roll warm-up is running
+- **Yellow:** RAM load has passed the safety threshold; the GUI asks the controller to stop recording
 
-When a compatible USB microphone is connected, VU meters appear on the right side of the GUI so you can monitor audio levels.
+The separate `DROP` tile can also stay visible after a take if the previous non-preroll recording had drop frames.
+
+## What the GUI shows
+
+- The buffer meter in the lower-left corner shows used vs total frame buffer. Optional hatch lines can be enabled in `settings.json` under `hdmi_gui`.
+- During storage pre-roll, the GUI intentionally hides recording time and clip names so the deleted warm-up clip does not appear to be the latest take.
+- If zoom is anything other than the configured default, the zoom box is highlighted.
+- When a compatible USB microphone is connected, the right side shows VU meters plus sample rate, bit depth, and a `WAV` badge once the latest take contains both DNG frames and a WAV sidecar.
 
 For redraw timing and performance tuning, see `docs/simple-gui-refresh-tuning.md`.

@@ -1,0 +1,12 @@
+[Unit]
+Description=Cinemate Redis Log Maintenance
+After=local-fs.target redis-server.service
+ConditionPathExists=/var/log/redis
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/bin/redis-log-maintenance.py
+User=root
+
+[Install]
+WantedBy=multi-user.target

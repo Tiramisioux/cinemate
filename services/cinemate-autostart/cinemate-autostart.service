@@ -1,11 +1,16 @@
 [Unit]
 Description=Cinemate Application Service
-After=network.target
+After=network.target plymouth-start.service
+Before=plymouth-quit.service plymouth-quit-wait.service getty@tty1.service
+Conflicts=getty@tty1.service
 
 [Service]
+Type=notify
+NotifyAccess=main
 ExecStartPre=/usr/local/bin/camera-ready.sh
 ExecStartPre=/bin/sleep 5
 ExecStart=/home/pi/.cinemate-env/bin/python3 /home/pi/cinemate/src/main.py
+ExecStopPost=-+/bin/systemctl start getty@tty1.service
 WorkingDirectory=/home/pi/cinemate
 User=pi
 Group=pi

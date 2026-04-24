@@ -61,6 +61,8 @@ def load_settings(filename: str | Path) -> dict:
         {"enabled": False, "encoders": {}}
     )
     settings.setdefault("welcome_message", "THIS IS A COOL MACHINE")
+    if "show_welcome_message" not in settings:
+        settings["show_welcome_message"] = settings.get("show_startup_message", True)
     settings.setdefault("welcome_image", None)
 
     # ── preview / zoom defaults ──────────────────────────────────────────

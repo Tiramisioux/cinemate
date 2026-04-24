@@ -527,6 +527,58 @@ Use HDMI port `0` for `HDMI-A-1` and port `1` for `HDMI-A-2`.
 !!! note ""
     Current Cinemate builds can start without HDMI attached and recover when HDMI is plugged in later, but the Pi still needs the `video=` entry in `cmdline.txt` above if you want the headless boot framebuffer to come up in `1920x1080` instead of a fallback 4:3 mode.
 
+### Optional: install Plymouth for the boot spinner
+
+If you want the same boot spinner and clean spinner-to-Cinemate handoff as the prebuilt image, install Plymouth before enabling `cinemate-autostart.service`.
+
+Install the required packages:
+
+```bash
+sudo apt update
+sudo apt install -y plymouth plymouth-themes plymouth-label
+```
+
+Set the theme to the stock spinner and scale it up for the Pi display:
+
+```bash
+sudo tee /etc/plymouth/plymouthd.conf <<'EOF'
+[Daemon]
+Theme=spinner
+DeviceScale=4
+EOF
+```
+
+Make sure `/boot/firmware/cmdline.txt` contains these boot flags on the same single line:
+
+```text
+quiet splash loglevel=1 plymouth.ignore-serial-consoles vt.global_cursor_default=0 logo.nologo
+```
+
+Keep the `video=HDMI-A-1:1920x1080M@60D` or `video=HDMI-A-2:1920x1080M@60D` override from the HDMI setup above on that same line as well.
+
+Apply the Plymouth theme and rebuild the initramfs:
+
+```bash
+sudo plymouth-set-default-theme spinner
+sudo update-initramfs -u
+```
+
+After that, reinstall the Cinemate autostart service so the latest Plymouth and `tty1` ordering is installed:
+
+```bash
+cd /home/pi/cinemate
+sudo make install
+sudo make enable
+```
+
+Reboot to test:
+
+```bash
+sudo reboot
+```
+
+If you skip Plymouth, Cinemate still works. You just will not get the boot spinner or the same CLI-suppressed boot handoff.
+
 ## Cinemate services
 
 #### storage-automount
@@ -549,6 +601,8 @@ sudo make start  # starts the service
 sudo make enable # makes the service start on boot
 ```
 You can also start and enable the service individually, by entering their respective folders and issuing the `sudo make` command
+
+When you install `storage-automount`, it should replace the older `cfe-hat-automount.service`. Do not leave both enabled at the same time, or `/media/RAW` can be mounted and then immediately unmounted again during boot.
 
 Note that if you were connected to the Pi via wifi, this connection is now broken due to the Pi setting up its own hotspot.
 
@@ -624,5 +678,3 @@ After enabling the service, Cinemate should autostart on boot.
 > **Tip:** `sudo make install` also places `/usr/local/bin/camera-ready.sh` on the system. The script waits for `cinepi-raw` to report a camera before systemd launches Cinemate, preventing the black-screen-on-boot issue that occurred when the GUI started before the sensor initialised.
 
 You now have a 12 bit RAW image capturing system on your Raspberry Pi!
-
-

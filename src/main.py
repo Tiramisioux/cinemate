@@ -9,6 +9,7 @@ import traceback
 import os
 import json
 import shutil
+import socket
 from PIL import Image, ImageDraw, ImageFont
 import glob
 
@@ -45,6 +46,66 @@ from module.framebuffer import acquire_framebuffer
 # Constants
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
 SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
+STARTUP_MESSAGE_MIN_DURATION = 3.0
+
+
+def _systemd_notify(message: str) -> bool:
+    notify_socket = os.environ.get("NOTIFY_SOCKET")
+    if not notify_socket:
+        return False
+
+    if notify_socket.startswith("@"):
+        notify_socket = "\0" + notify_socket[1:]
+
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM | socket.SOCK_CLOEXEC) as sock:
+            sock.connect(notify_socket)
+            sock.sendall(message.encode("utf-8"))
+        return True
+    except OSError as exc:
+        logging.warning("Failed to notify systemd: %s", exc)
+        return False
+
+
+def systemd_status(status: str) -> bool:
+    return _systemd_notify(f"STATUS={status}")
+
+
+def systemd_ready(status: str) -> bool:
+    return _systemd_notify(f"READY=1\nSTATUS={status}")
+
+
+def plymouth_is_running() -> bool:
+    if os.path.exists("/run/plymouth/pid"):
+        return True
+
+    plymouth = shutil.which("plymouth")
+    if not plymouth:
+        return False
+
+    try:
+        result = subprocess.run(
+            [plymouth, "--ping"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    except OSError as exc:
+        logging.warning("Failed to check Plymouth status: %s", exc)
+        return False
+
+    return result.returncode == 0
+
+
+def wait_for_plymouth_to_quit(timeout: float = 5.0, poll_interval: float = 0.05) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if not plymouth_is_running():
+            return True
+        time.sleep(poll_interval)
+
+    logging.warning("Timed out waiting for Plymouth to quit")
+    return False
 
 def start_splash(text="THIS IS A COOL MACHINE"):
     stop_event = threading.Event()
@@ -269,13 +330,32 @@ def main():
     hide_cursor()
 
     splash_thread = splash_stop = None
+    splash_visible_started_at = None
+    startup_ready_notified = False
+    timekeeper = None
 
     welcome_text = settings.get("welcome_message", "THIS IS A COOL MACHINE")
+    show_welcome_message = bool(
+        settings.get("show_welcome_message", settings.get("show_startup_message", True))
+    )
     welcome_image = settings.get("welcome_image")
+    plymouth_active_at_startup = plymouth_is_running()
+    defer_startup_message_until_after_plymouth = show_welcome_message and plymouth_active_at_startup
+    restart_camera_after_plymouth_handoff = plymouth_active_at_startup
+    if defer_startup_message_until_after_plymouth:
+        logging.info("Deferring startup message until after Plymouth quits")
 
-    fb_splash = graphic_splash(welcome_text, welcome_image)
-    if fb_splash is None:
-        splash_thread, splash_stop = start_splash(welcome_text)
+    fb_splash = None
+    if show_welcome_message and not defer_startup_message_until_after_plymouth:
+        fb_splash = graphic_splash(welcome_text, welcome_image)
+        if fb_splash is None:
+            splash_thread, splash_stop = start_splash(welcome_text)
+            systemd_ready("Cinemate text splash active")
+        else:
+            claim_console_for_framebuffer()
+            systemd_ready("Cinemate splash active")
+        splash_visible_started_at = time.monotonic()
+        startup_ready_notified = True
 
     # Detect Raspberry Pi model
     pi_model = get_raspberry_pi_model()
@@ -378,8 +458,69 @@ def main():
     t.start()
 
 
+    # Initialize USB monitoring
+    usb_monitor.check_initial_devices()
+
+    # Setup Analog Controls
+    analog_controls = AnalogControls(
+        cinepi_controller, redis_controller,
+        settings["analog_controls"]["iso_pot"],
+        settings["analog_controls"]["shutter_a_pot"],
+        settings["analog_controls"]["fps_pot"],
+        settings["analog_controls"]["wb_pot"],
+        settings["arrays"]["iso_steps"],
+        settings["arrays"]["shutter_a_steps"],
+        settings["arrays"]["fps_steps"],
+        settings["arrays"]["wb_steps"]
+    )
+
+    logging.info("--- Initialization Complete ---")
+    
+    # Mount CFE card if not mounted
+    cinepi_controller.mount()
+
+    if splash_visible_started_at is not None and not defer_startup_message_until_after_plymouth:
+        remaining_splash_time = STARTUP_MESSAGE_MIN_DURATION - (time.monotonic() - splash_visible_started_at)
+        if remaining_splash_time > 0:
+            time.sleep(remaining_splash_time)
+
+    if startup_ready_notified:
+        systemd_status("Cinemate GUI starting")
+    else:
+        systemd_ready("Cinemate GUI starting")
+        startup_ready_notified = True
+
+    if restart_camera_after_plymouth_handoff and not defer_startup_message_until_after_plymouth:
+        wait_for_plymouth_to_quit()
+
+    if defer_startup_message_until_after_plymouth:
+        wait_for_plymouth_to_quit()
+        logging.info("Showing startup message after Plymouth handoff")
+        fb_splash = graphic_splash(welcome_text, welcome_image)
+        if fb_splash is None:
+            splash_thread, splash_stop = start_splash(welcome_text)
+        else:
+            claim_console_for_framebuffer()
+        splash_visible_started_at = time.monotonic()
+        remaining_splash_time = STARTUP_MESSAGE_MIN_DURATION - (time.monotonic() - splash_visible_started_at)
+        if remaining_splash_time > 0:
+            time.sleep(remaining_splash_time)
+
+    # Stop splash screen and clear framebuffer/tty
+    if fb_splash:
+        blank_framebuffer(fb_splash)
+    elif splash_stop:
+        splash_stop.set()
+        splash_thread.join()
+    claim_console_for_framebuffer()
+
+    if restart_camera_after_plymouth_handoff:
+        logging.info("Restarting cinepi-raw after Plymouth handoff so preview binds above Cinemate")
+        cinepi_controller.restart_camera()
+
     redis_listener = RedisListener(redis_controller, ssd_monitor)
     battery_monitor = BatteryMonitor()
+    i2c_oled = None
 
     simple_gui = SimpleGUI(
         redis_controller,
@@ -418,35 +559,6 @@ def main():
 
     mediator = Mediator(cinepi, cinepi_controller, redis_listener, redis_controller, ssd_monitor, gpio_output, stream, usb_monitor)
     
-    # Initialize USB monitoring
-    usb_monitor.check_initial_devices()
-
-    # Setup Analog Controls
-    analog_controls = AnalogControls(
-        cinepi_controller, redis_controller,
-        settings["analog_controls"]["iso_pot"],
-        settings["analog_controls"]["shutter_a_pot"],
-        settings["analog_controls"]["fps_pot"],
-        settings["analog_controls"]["wb_pot"],
-        settings["arrays"]["iso_steps"],
-        settings["arrays"]["shutter_a_steps"],
-        settings["arrays"]["fps_steps"],
-        settings["arrays"]["wb_steps"]
-    )
-
-    logging.info("--- Initialization Complete ---")
-    
-    # Mount CFE card if not mounted
-    cinepi_controller.mount()
-    
-    # Stop splash screen and clear framebuffer/tty
-    if fb_splash:
-        blank_framebuffer(fb_splash)
-    elif splash_stop:
-        splash_stop.set()
-        splash_thread.join()
-    claim_console_for_framebuffer()
-    
     # Ensure system cleanup on exit
     cleanup_called = False
 
@@ -472,7 +584,8 @@ def main():
             command_executor.stop()
         dmesg_monitor.join()
         command_executor.join()
-        cinepi_controller.stop()
+        if hasattr(cinepi, "shutdown"):
+            cinepi.shutdown()
         serial_handler.running = False
         serial_handler.join()
 
@@ -491,7 +604,7 @@ def main():
             splash_stop.set()
             splash_thread.join()
             
-        if timekeeper:
+        if timekeeper and hasattr(timekeeper, "stop"):
             timekeeper.stop()
 
         release_console_to_text()

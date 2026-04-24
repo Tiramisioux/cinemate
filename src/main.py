@@ -58,6 +58,7 @@ STARTUP_FAILURE_FILE = os.environ.get(
     "/home/pi/.cache/cinemate/startup-failure.ansi",
 )
 STARTUP_READY_SENT = False
+APP_RUNTIME_READY = False
 
 
 def _systemd_notify(message: str) -> bool:
@@ -88,6 +89,14 @@ def systemd_ready(status: str) -> bool:
     if notified:
         STARTUP_READY_SENT = True
     return notified
+
+
+def mark_runtime_ready(status: str = "Cinemate running") -> bool:
+    global APP_RUNTIME_READY
+    APP_RUNTIME_READY = True
+    if STARTUP_READY_SENT:
+        return systemd_status(status)
+    return systemd_ready(status)
 
 
 def render_startup_failure_block(title: str, body: str, log_lines: list[str] | None = None) -> str:
@@ -126,7 +135,7 @@ def clear_persisted_startup_failure() -> None:
 
 
 def persist_startup_failure(title: str, body: str, log_lines: list[str] | None = None) -> bool:
-    if STARTUP_READY_SENT or not running_under_systemd_service():
+    if APP_RUNTIME_READY or not running_under_systemd_service():
         return False
 
     payload = render_startup_failure_block(title, body, log_lines)
@@ -159,7 +168,7 @@ def current_stderr_tty_path() -> str | None:
 
 
 def should_mirror_failure_to_local_console() -> bool:
-    if STARTUP_READY_SENT:
+    if APP_RUNTIME_READY:
         return False
     return current_stderr_tty_path() not in LOCAL_FAILURE_TTY_PATHS
 
@@ -481,10 +490,10 @@ def run_application(args, log_queue):
         fb_splash = graphic_splash(welcome_text, welcome_image)
         if fb_splash is None:
             splash_thread, splash_stop = start_splash(welcome_text)
-            systemd_status("Cinemate text splash active")
+            systemd_ready("Cinemate text splash active")
         else:
             claim_console_for_framebuffer()
-            systemd_status("Cinemate splash active")
+            systemd_ready("Cinemate splash active")
         splash_visible_started_at = time.monotonic()
         startup_ready_notified = True
 
@@ -615,7 +624,11 @@ def run_application(args, log_queue):
         if remaining_splash_time > 0:
             time.sleep(remaining_splash_time)
 
-    systemd_status("Cinemate GUI starting")
+    if startup_ready_notified:
+        systemd_status("Cinemate GUI starting")
+    else:
+        systemd_ready("Cinemate GUI starting")
+        startup_ready_notified = True
 
     if restart_camera_after_plymouth_handoff and not defer_startup_message_until_after_plymouth:
         wait_for_plymouth_to_quit()
@@ -689,7 +702,7 @@ def run_application(args, log_queue):
     # Wait until the welcome-message/Plymouth handoff and preview rebind are
     # finished before warming the storage media.
     storage_preroll.mark_startup_ready()
-    systemd_ready("Cinemate running")
+    mark_runtime_ready("Cinemate running")
     
     # Ensure system cleanup on exit
     cleanup_called = False

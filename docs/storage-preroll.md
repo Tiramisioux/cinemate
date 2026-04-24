@@ -1,23 +1,27 @@
 # Storage pre-roll warm-up
 
-Cinemate includes an automatic "storage pre-roll" that records and discards a short clip to make sure new media can keep up. The warm-up runs the recorder at full speed so SSDs spin up, controllers cache their write tables and the rest of the pipeline has a chance to stabilise.
+Cinemate includes an automatic "storage pre-roll" that records and discards a short clip to make sure new media can keep up. The warm-up runs the recorder at full speed so SSDs spin up, controllers cache their write tables, and the rest of the pipeline has a chance to stabilise before the first real take.
 
 ## When the pre-roll runs
 
-- **On startup:** after a brief settle delay, the helper checks whether the RAW volume is mounted and triggers a warm-up run if so.
+- **On startup:** the warm-up no longer arms immediately in `StoragePreroll.__init__()`. Instead, `main.py` calls `mark_startup_ready()` after the welcome-message/Plymouth handoff, GUI startup, and preview rebind are finished. This keeps the warm-up clip from racing the boot splash or the first camera restart.
 
-- **Whenever storage mounts:** the SSD monitor emits an event that immediately schedules another pre-roll so freshly attached drives are exercised before you use them.
+- **If storage mounts during startup:** mount-triggered warm-up is deferred until startup is marked ready. In that case the first run is scheduled as a `startup-mount` warm-up instead of firing immediately.
 
-- **On demand:** you can type `storage preroll` in the Cinemate CLI to queue a run manually. The command is ignored while a pre-roll is already active so repeated presses do not stack up.
+- **Whenever storage mounts after startup:** the SSD monitor schedules another warm-up so freshly attached drives are exercised before you use them.
 
-The module keeps a lock so only one warm-up runs at a time and exposes the `storage_preroll_active` Redis key to let the UI show progress.
+- **On demand:** you can type `storage preroll` in the Cinemate CLI to queue a run manually. Repeated requests do not stack up while a pre-roll is already active.
+
+Only one warm-up can run at a time. While active, Cinemate raises the `storage_preroll_active` Redis key so the GUI, CLI, and recording logic can treat the temporary take as a warm-up rather than a user clip.
 
 ## What happens during a run
 
-1. The helper aborts if no media is mounted or if a real recording is in progress; it will try again after the next trigger.
+1. The helper aborts if no media is mounted or if a real recording is already in progress. It will try again after the next trigger.
 
-2. It records the user's current FPS choice, switches the camera to the maximum FPS supported by the sensor/mode and raises a "pre-roll active" flag so other systems (such as the `rec` command) leave it alone.
+2. Before recording, it snapshots the current user-facing state: the selected FPS, `last_dng_cam0`, `last_dng_cam1`, `recording_time`, `recording_tc_rec`, `recording_time_tod`, and the clip directories already present on the mounted volume.
 
-3. Cinemate starts recording, waits until the REC flag is live, keeps rolling for the configured duration (two seconds by default) and then stops once all file buffers have flushed to disk.
+3. It switches the camera to the maximum FPS supported by the current mode, raises the preroll-active flag, starts recording, waits until `rec` is live, records for the configured duration (two seconds by default), and then waits for all file buffers to flush.
 
-4. After recording the 2 second temporary clip, it restores the previous FPS, clears the activity flag and deletes the temporary clip directory.
+4. After the run, it restores the previous FPS, deletes any new pre-roll clip directories, and writes the saved `last_dng_*` and recording-timer values back to Redis. This keeps the deleted warm-up take from becoming the "latest recording" shown in the GUI or CLI.
+
+5. While pre-roll is active, Cinemate suppresses most recording-summary logs and the Simple GUI hides clip names and recording time while showing a blue background.

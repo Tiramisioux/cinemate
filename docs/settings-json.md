@@ -11,19 +11,20 @@ The configuration is structured as JSON. Each top‑level key describes a featur
 
 Text or image displayed briefly when Cinemate starts.
 
-```yaml
-"show_welcome_message": true
-"welcome_image": null
-"welcome_message": "THIS IS A COOL MACHINE",
+```json
+"show_welcome_message": true,
+"welcome_image": null,
+"welcome_message": "THIS IS A COOL MACHINE"
 ```
 
 Set `show_welcome_message` to `true` to display the configured startup splash for at least 3 seconds. Set it to `false` to skip the startup message entirely. If the key is missing, Cinemate defaults to showing the startup message. Older installs that still use `show_startup_message` continue to work as a fallback.
 
+If Plymouth is active during boot, Cinemate waits until the spinner hands off before it shows the welcome message so the screen transition stays clean.
 Set `welcome_image` to the path of a bitmap file to show a logo instead of text. 
 
 Example path: `/home/pi/welcome_image.bmp`. 
 
-If `welcome image` path is set, this will override the text message.
+If `welcome_image` is set, it overrides the text message.
 
 ## system
 
@@ -39,7 +40,7 @@ If `welcome image` path is set, this will override the text message.
 
 `name` – the Wi‑Fi network name (SSID) broadcast by the Pi when hotspot mode is enabled.
 `password` – password for joining the hotspot.
-`enabled` – set to `true` to start the hotspot automatically on boot. If set to `false`, CineMate will still start its web ui but stream it on whatever network the Pi is connected to.
+`enabled` – set to `true` to start the hotspot automatically on boot. If set to `false`, Cinemate can still serve its web UI on whatever network the Pi is connected to, as long as `wlan0` or `eth0` already has an IP address when Cinemate starts.
 
 Use the hotspot when you need a direct connection in the field. Disable it during development so the Pi can join your regular Wi‑Fi and reach the internet. If you are connected to the Pi via Ethernet you can keep the hotspot on.
 
@@ -146,13 +147,7 @@ Defines pins used for visual feedback or sync signals.
 * `rec_out_pin` – list of pins pulled high while recording (useful for tally LEDs).
 
 * `rec_tone_pin` – optional tone output pin(s) used as recording sync tone. You can pass a single pin or a list of pins.
-  * GPIO `18` and `19` use **hardware PWM** (preferred for stable tone generation).
-  * Any other pin uses **software PWM** fallback.
-  * The tone starts as soon as recording is requested (`is_recording = 1`), even before REC-light write confirmation.
-  * The tone stops once writing stops (`is_writing = 0`) and is muted during storage pre-roll.
-* `rec_tone_pin` – optional tone output pin(s) that are active while recording. You can pass a single pin or a list of pins.
-  * GPIO `18` and `19` use **hardware PWM** (preferred for stable tone generation).
-  * Any other pin uses **software PWM** fallback.
+  GPIO `18` and `19` use **hardware PWM** (preferred for stable tone generation). Any other pin uses **software PWM** fallback. The tone starts as soon as recording is requested (`is_recording = 1`), even before REC-light write confirmation, stops once writing stops (`is_writing = 0`), and is muted during storage pre-roll. If `rec_tone_pin` is unset or an empty list, Cinemate falls back to `pwm_pin` for backward compatibility.
 
 * `rec_tone_frequency_hz` – tone frequency in hertz.
 
@@ -267,6 +262,46 @@ Latching on/off switches. Cinemate triggers an action whenever the state changes
   "state_off_action": {"method": "set_all_lock", "args": [0]}
 }
 ```
+
+## three_way_switches
+
+Three-position switches made from three GPIO inputs. Cinemate checks which pin is active and then runs the matching action.
+
+```json
+{
+  "pins": [5, 6, 13],
+  "state_0_action": {"method": "set_fps", "args": [24]},
+  "state_1_action": {"method": "set_fps", "args": [25]},
+  "state_2_action": {"method": "set_fps", "args": [50]}
+}
+```
+
+`pins` – the three GPIO inputs that represent the switch positions.
+<br>`state_0_action`, `state_1_action`, `state_2_action` – commands to run for each detected position.
+
+If none of the three inputs is active, the switch is treated as being in an undefined position and no action is run.
+
+## combined_actions
+
+Combined actions let one button act as a modifier for another button.
+
+```json
+"combined_actions": [
+  {
+    "hold_button_pin": 10,
+    "action_button_pin": 26,
+    "action_type": "press",
+    "action": {"method": "set_pwm_mode"}
+  }
+]
+```
+
+`hold_button_pin` – button that must already be held.
+<br>`action_button_pin` – second button that triggers the combined action.
+<br>`action_type` – either `press` or `release`.
+<br>`action` – Cinemate command to run when the hold/action combination matches.
+
+Combined actions only fire while the hold button is still held down. If the modifier button is not active, the normal per-button actions continue to run.
 
 ## rotary_encoders
 

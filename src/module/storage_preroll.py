@@ -28,6 +28,7 @@ class StoragePreroll:
         sensor_detect,
         duration: float = 2.0,
         settle_delay: float = 3.0,
+        startup_delay: float = 1.0,
     ) -> None:
         self.cinepi_controller = cinepi_controller
         self.redis_controller = redis_controller
@@ -35,9 +36,13 @@ class StoragePreroll:
         self.sensor_detect = sensor_detect
         self.duration = max(0.0, float(duration))
         self.settle_delay = max(0.0, float(settle_delay))
+        self.startup_delay = max(0.0, float(startup_delay))
 
         self._active_lock = threading.Lock()
         self._active = False
+        self._startup_ready = threading.Event()
+        self._startup_ready_thread_started = False
+        self._pending_mount_preroll = False
 
         # Ensure GUI defaults to normal state if CineMate crashed mid-preroll.
         try:
@@ -50,11 +55,6 @@ class StoragePreroll:
         # React to storage events.
         self.ssd_monitor.mount_event.subscribe(self._handle_mount_event)
 
-        # Run a startup preroll once the system has had a moment to settle.
-        threading.Thread(
-            target=self._startup_preroll, name="StoragePrerollStart", daemon=True
-        ).start()
-
     # ------------------------------------------------------------------
     # public API
     # ------------------------------------------------------------------
@@ -64,6 +64,26 @@ class StoragePreroll:
             logging.info("Storage pre-roll started (CLI request)")
         else:
             logging.info("Storage pre-roll already in progress; CLI request ignored")
+
+    def mark_startup_ready(self, delay: Optional[float] = None) -> bool:
+        """Allow automatic startup warmup once the app handoff is complete."""
+
+        if delay is None:
+            delay = self.startup_delay
+
+        with self._active_lock:
+            if self._startup_ready.is_set() or self._startup_ready_thread_started:
+                return False
+            self._startup_ready_thread_started = True
+
+        thread = threading.Thread(
+            target=self._arm_startup_preroll,
+            args=(max(0.0, float(delay)),),
+            name="StoragePrerollStartupReady",
+            daemon=True,
+        )
+        thread.start()
+        return True
 
     def trigger(self, reason: str, delay: Optional[float] = None) -> bool:
         """Schedule a pre-roll run.
@@ -92,13 +112,34 @@ class StoragePreroll:
     # ------------------------------------------------------------------
     # internal helpers
     # ------------------------------------------------------------------
-    def _startup_preroll(self) -> None:
-        # Give the rest of the system a head start before we try recording.
-        time.sleep(self.settle_delay)
-        if self.ssd_monitor.is_mounted:
-            self.trigger(reason="startup")
+    def _arm_startup_preroll(self, delay: float) -> None:
+        if delay:
+            time.sleep(delay)
+
+        self._startup_ready.set()
+
+        if not self.ssd_monitor.is_mounted:
+            if self._pending_mount_preroll:
+                logging.info(
+                    "Storage pre-roll remained deferred through startup, but no media is mounted"
+                )
+                self._pending_mount_preroll = False
+            return
+
+        reason = "startup"
+        if self._pending_mount_preroll:
+            reason = "startup-mount"
+            self._pending_mount_preroll = False
+
+        logging.info("Startup handoff complete – scheduling storage pre-roll warmup")
+        self.trigger(reason=reason, delay=0.0)
 
     def _handle_mount_event(self, *_args) -> None:
+        if not self._startup_ready.is_set():
+            self._pending_mount_preroll = True
+            logging.info("Storage mounted before startup completed – deferring pre-roll warmup")
+            return
+
         logging.info("Storage mounted – scheduling pre-roll warmup")
         self.trigger(reason="mount")
 
@@ -124,12 +165,25 @@ class StoragePreroll:
         logging.info("Starting storage pre-roll (%s)", reason)
 
         start_wall = time.time()
+        mount_root = self._mount_root()
+        baseline_mount_dirs = self._list_mount_dirs(mount_root)
         baseline_paths: Dict[ParameterKey, Optional[str]] = {
             ParameterKey.LAST_DNG_CAM0: self.redis_controller.get_value(
                 ParameterKey.LAST_DNG_CAM0.value
             ),
             ParameterKey.LAST_DNG_CAM1: self.redis_controller.get_value(
                 ParameterKey.LAST_DNG_CAM1.value
+            ),
+        }
+        baseline_recording_state: Dict[ParameterKey, Optional[str]] = {
+            ParameterKey.RECORDING_TIME: self.redis_controller.get_value(
+                ParameterKey.RECORDING_TIME.value
+            ),
+            ParameterKey.RECORDING_TC_REC: self.redis_controller.get_value(
+                ParameterKey.RECORDING_TC_REC.value
+            ),
+            ParameterKey.RECORDING_TC_TOD: self.redis_controller.get_value(
+                ParameterKey.RECORDING_TC_TOD.value
             ),
         }
 
@@ -169,7 +223,26 @@ class StoragePreroll:
             if prev_fps_user is not None:
                 self._apply_fps(prev_fps_user)
 
-            # Mark completion before cleanup to unlock GUI/controls.
+            # Clean up any clip directories generated by the warm-up.
+            try:
+                self._cleanup_preroll(
+                    start_wall,
+                    baseline_paths.values(),
+                    baseline_mount_dirs=baseline_mount_dirs,
+                )
+            except Exception as exc:
+                logging.warning("Storage pre-roll cleanup failed: %s", exc)
+
+            # Restore user-facing recording metadata so the deleted preroll
+            # clip never becomes the "latest" take shown in the GUI/CLI.
+            try:
+                self._restore_preroll_state(
+                    baseline_paths,
+                    baseline_recording_state,
+                )
+            except Exception as exc:
+                logging.warning("Storage pre-roll state restore failed: %s", exc)
+
             try:
                 self.redis_controller.set_value(
                     ParameterKey.STORAGE_PREROLL_ACTIVE.value, 0
@@ -177,12 +250,6 @@ class StoragePreroll:
             except Exception as exc:  # pragma: no cover - defensive
                 logging.debug("Unable to clear storage preroll flag: %s", exc)
             self.cinepi_controller.set_preroll_active(False)
-
-            # Clean up any clip directories generated by the warm-up.
-            try:
-                self._cleanup_preroll(start_wall, baseline_paths.values())
-            except Exception as exc:
-                logging.warning("Storage pre-roll cleanup failed: %s", exc)
 
         logging.info("Storage pre-roll complete")
 
@@ -240,19 +307,60 @@ class StoragePreroll:
         finally:
             self.cinepi_controller.lock_override = prev_override
 
+    def _restore_preroll_state(
+        self,
+        baseline_paths: Dict[ParameterKey, Optional[str]],
+        baseline_recording_state: Dict[ParameterKey, Optional[str]],
+    ) -> None:
+        defaults = {
+            ParameterKey.LAST_DNG_CAM0: "None",
+            ParameterKey.LAST_DNG_CAM1: "None",
+            ParameterKey.RECORDING_TIME: 0.0,
+            ParameterKey.RECORDING_TC_REC: "00:00:00:00",
+            ParameterKey.RECORDING_TC_TOD: "00:00:00:00",
+        }
+
+        restore_values = {}
+        restore_values.update(baseline_paths)
+        restore_values.update(baseline_recording_state)
+
+        for key, fallback in defaults.items():
+            value = restore_values.get(key)
+            if value in (None, ""):
+                value = fallback
+            self.redis_controller.set_value(key.value, value)
+
     # ------------------------------------------------------------------
     # filesystem cleanup
     # ------------------------------------------------------------------
-    def _cleanup_preroll(self, start_ts: float, baseline: Iterable[Optional[str]]) -> None:
+    def _mount_root(self) -> Optional[Path]:
         mount_root = getattr(self.ssd_monitor, "mount_path", None)
         if mount_root is None:
             mount_root = getattr(self.ssd_monitor, "_mount_path", None)
-        mount_root = Path(mount_root) if mount_root else None
+        return Path(mount_root) if mount_root else None
 
+    def _list_mount_dirs(self, mount_root: Optional[Path]) -> set[Path]:
+        if mount_root is None or not mount_root.is_dir():
+            return set()
+        try:
+            return {path for path in mount_root.iterdir() if path.is_dir()}
+        except OSError:
+            return set()
+
+    def _cleanup_preroll(
+        self,
+        start_ts: float,
+        baseline: Iterable[Optional[str]],
+        baseline_mount_dirs: Optional[Iterable[Path]] = None,
+    ) -> None:
+        mount_root = self._mount_root()
         if mount_root is None:
             logging.debug("Storage pre-roll cleanup skipped: unknown mount path")
             return
 
+        baseline_mount_dirs = {
+            Path(path) for path in (baseline_mount_dirs or ()) if path is not None
+        }
         baseline_dirs = {
             parent
             for parent in (
@@ -276,6 +384,16 @@ class StoragePreroll:
             try:
                 if candidate.stat().st_mtime + 1 < start_ts:
                     # Directory predates the pre-roll run.
+                    continue
+            except FileNotFoundError:
+                continue
+            new_dirs.add(candidate)
+
+        for candidate in self._list_mount_dirs(mount_root):
+            if candidate in baseline_mount_dirs:
+                continue
+            try:
+                if candidate.stat().st_mtime + 1 < start_ts:
                     continue
             except FileNotFoundError:
                 continue
@@ -321,4 +439,3 @@ class StoragePreroll:
             except OSError:
                 break
             parent = parent.parent
-

@@ -17,8 +17,14 @@ from module.framebuffer import Framebuffer
 
 # Path to settings file
 SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
-# Load global settings
-_SETTINGS = load_settings(SETTINGS_FILE)
+_SETTINGS: dict | None = None
+
+
+def _settings() -> dict:
+    global _SETTINGS
+    if _SETTINGS is None:
+        _SETTINGS = load_settings(SETTINGS_FILE)
+    return _SETTINGS
 
 _READY_RX   = re.compile(r"Encoder configured")      # line printed by DngEncoder
 _READY_WAIT = 2.0                                   # seconds to wait for all cams
@@ -47,7 +53,7 @@ def _seed_default_zoom(redis_ctl):
     Write preview.default_zoom to Redis once per boot, but
     only if the key doesn’t exist yet.
     """
-    preview_cfg  = _SETTINGS.get("preview", {})
+    preview_cfg  = _settings().get("preview", {})
     default_zoom = float(preview_cfg.get("default_zoom", 1.0))
 
     if redis_ctl.get_value(ParameterKey.ZOOM.value) is None:
@@ -169,11 +175,12 @@ class CinePiProcess(Thread):
         self.redis_channel = 'cinepi.last_dng'          # publish JSON here
         
         # load per-camera geometry from settings
-        geo = _SETTINGS.get('geometry', {})
+        settings = _settings()
+        geo = settings.get('geometry', {})
         self.geometry = geo.get(self.cam.port, {})
         
         # load per-camera output settings (e.g., HDMI port)
-        out_cfg = _SETTINGS.get('output', {})
+        out_cfg = settings.get('output', {})
         self.output = out_cfg.get(self.cam.port, {})
 
 
@@ -283,7 +290,7 @@ class CinePiProcess(Thread):
         
         # Get HDMI resolution from settings, but prefer the active
         # framebuffer mode when HDMI is already attached.
-        hdmi_config = _SETTINGS.get("hdmi_display", {})
+        hdmi_config = _settings().get("hdmi_display", {})
         fw, fh = hdmi_config.get("width", 1920), hdmi_config.get("height", 1080)
         try:
             fw = int(fw)

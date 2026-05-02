@@ -60,7 +60,6 @@ STARTUP_FAILURE_FILE = os.environ.get(
 STARTUP_READY_SENT = False
 APP_RUNTIME_READY = False
 
-
 def _systemd_notify(message: str) -> bool:
     notify_socket = os.environ.get("NOTIFY_SOCKET")
     if not notify_socket:
@@ -256,7 +255,6 @@ def wait_for_plymouth_to_quit(timeout: float = 5.0, poll_interval: float = 0.05)
 
     logging.warning("Timed out waiting for Plymouth to quit")
     return False
-
 def start_splash(text="THIS IS A COOL MACHINE"):
     stop_event = threading.Event()
 
@@ -490,10 +488,10 @@ def run_application(args, log_queue):
         fb_splash = graphic_splash(welcome_text, welcome_image)
         if fb_splash is None:
             splash_thread, splash_stop = start_splash(welcome_text)
-            systemd_ready("Cinemate text splash active")
+            systemd_status("Cinemate text splash active")
         else:
             claim_console_for_framebuffer()
-            systemd_ready("Cinemate splash active")
+            systemd_status("Cinemate splash active")
         splash_visible_started_at = time.monotonic()
         startup_ready_notified = True
 
@@ -624,11 +622,7 @@ def run_application(args, log_queue):
         if remaining_splash_time > 0:
             time.sleep(remaining_splash_time)
 
-    if startup_ready_notified:
-        systemd_status("Cinemate GUI starting")
-    else:
-        systemd_ready("Cinemate GUI starting")
-        startup_ready_notified = True
+    systemd_status("Cinemate GUI starting")
 
     if restart_camera_after_plymouth_handoff and not defer_startup_message_until_after_plymouth:
         wait_for_plymouth_to_quit()

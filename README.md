@@ -31,20 +31,37 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
 <img src="docs/images/camera-stack3.png" alt="Camera stack exploded" width="250"><br>
 Apps change settings by updating Redis keys. CinePi-RAW listens for those updates and captures frames accordingly while Cinemate provides the camera user interface.
 
-## Installation
-See the [releases section](https://github.com/Tiramisioux/cinemate/releases) for preinstalled image file and Quick Start Guide. 
-
-For manual install, see the [documentation](https://tiramisioux.github.io/cinemate/installation-steps/).
-
-## Bare-bones build
-To try Cinemate you need:
+## Hardware
+For a basic Cinemate setup you need:
 - Raspberry Pi 4 or 5
 - Official HQ or GS camera module
 - SSD drive such as a Samsung T7 formatted `ext4` and labelled `RAW`
 - HDMI monitor or a phone/tablet connected to the Pi hotspot for preview
 
+## Installation
+Choose the install path that fits your setup:
+
+1. Use the prebuilt image file
+
+See the [releases section](https://github.com/Tiramisioux/cinemate/releases) for the preinstalled image and Quick Start Guide.
+
+2. Clone the repo and run the one-click installer
+
+```bash
+git clone https://github.com/Tiramisioux/cinemate.git
+cd cinemate
+chmod +x cinemate-install.sh
+./cinemate-install.sh
+```
+
+The installer defaults to an `imx477` on camera port `cam0`. You can easily change this later by editing the file `boot/firmware/config.txt`.
+
+3. Follow the manual install guide
+
+For the full manual install, configuration steps, and CLI reference, use the [documentation](https://tiramisioux.github.io/cinemate/installation-steps/).
+
 ## Customization
-Buttons, encoders and oled display are optional and configured via settings file.
+GPIO buttons and switches, rotary encoders and oled display for controlling camera settings such as recording, iso etc. are configured in the `~/cinemate/src/settings.json` file.
 
 ## Documentation
 Full manual installation instructions, configuration guides and CLI reference live [here](https://tiramisioux.github.io/cinemate/).
@@ -69,5 +86,4 @@ Get your sensors and CFE Hats here: https://www.tindie.com/stores/will123321/
 ## Supporting the project
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/G2G21IM9RO)
-
 

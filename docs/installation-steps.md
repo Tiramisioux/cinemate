@@ -11,6 +11,24 @@ Here is how you can manually install libcamera, cinepi-raw, cinemate and accompa
 
 ### Tools & dependencies
 
+### One-click installer
+
+If you already have the Cinemate repo checked out on the Pi, you can run the repo-root installer instead of stepping through the whole page by hand:
+
+```bash
+cd /home/pi/cinemate
+chmod +x cinemate-install.sh
+./cinemate-install.sh
+```
+
+The default installer profile is `imx477` on `cam0` with the boot framebuffer pinned to `HDMI-A-1`.
+
+The script applies the full manual flow from this guide, including `storage-automount`, `wifi-hotspot`, and `redis-log-maintenance`, plus the optional console-font, PiShrink, Plymouth, and IMX585 helper steps. Set `SENSOR_MODEL`, `CAM_PORT`, and `HDMI_BOOT_PORT` at the top of the script or override them inline, for example:
+
+```bash
+SENSOR_MODEL=imx585_mono CAM_PORT=cam1 HDMI_BOOT_PORT=1 ./cinemate-install.sh
+```
+
 ```
 sudo apt update -y
 sudo apt upgrade -y
@@ -578,7 +596,6 @@ sudo reboot
 ```
 
 If you skip Plymouth, Cinemate still works. You just will not get the boot spinner or the same CLI-suppressed boot handoff.
-
 ## Cinemate services
 
 #### storage-automount
@@ -589,7 +606,11 @@ Mounts and unmounts removable drives such as SSDs, NVMe enclosures and the CFE H
 
 Keeps a simple Wi‑Fi hotspot running via NetworkManager so you can reach the web UI while in the field. The SSID and password come from the `system.wifi_hotspot` section of `settings.json`.
 
-Install and enable both services with:
+#### redis-log-maintenance
+
+Enables the `redis-log-maintenance.timer`, which periodically trims `/var/log/redis/redis-server.log` and removes old Redis log rotations so the Pi root filesystem does not slowly fill up.
+
+Install and enable the support services with:
 
 ```bash
 cd /home/pi/cinemate/services
@@ -597,8 +618,8 @@ cd /home/pi/cinemate/services
 
 ```
 sudo make install
-sudo make start  # starts the service
-sudo make enable # makes the service start on boot
+sudo make start  # starts storage-automount and wifi-hotspot now, and runs one redis cleanup pass
+sudo make enable # enables storage-automount, wifi-hotspot, and redis-log-maintenance.timer on boot
 ```
 You can also start and enable the service individually, by entering their respective folders and issuing the `sudo make` command
 
@@ -640,6 +661,13 @@ sudo systemctl disable wifi-hotspot
 ```
 
 See [Hotspot logic](hotspot-logic.md) for more details on how the hotspot works.
+
+To inspect the Redis log maintenance timer later:
+
+```bash
+systemctl status redis-log-maintenance.timer
+journalctl -u redis-log-maintenance.service
+```
 
 ### Connect to the Pi (if not already connected):
 

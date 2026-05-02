@@ -473,15 +473,22 @@ def run_application(args, log_queue):
     timekeeper = None
 
     welcome_text = settings.get("welcome_message", "THIS IS A COOL MACHINE")
-    show_welcome_message = bool(
+    configured_show_welcome_message = bool(
         settings.get("show_welcome_message", settings.get("show_startup_message", True))
     )
     welcome_image = settings.get("welcome_image")
     plymouth_active_at_startup = plymouth_is_running()
+    launched_by_systemd = bool(os.environ.get("INVOCATION_ID") or os.environ.get("JOURNAL_STREAM"))
+    show_welcome_message = configured_show_welcome_message
+    defer_preview_until_after_welcome = launched_by_systemd and show_welcome_message
     defer_startup_message_until_after_plymouth = show_welcome_message and plymouth_active_at_startup
-    restart_camera_after_plymouth_handoff = plymouth_active_at_startup
+    restart_camera_after_startup_handoff = plymouth_active_at_startup or launched_by_systemd
     if defer_startup_message_until_after_plymouth:
         logging.info("Deferring startup message until after Plymouth quits")
+    elif launched_by_systemd:
+        if defer_preview_until_after_welcome:
+            logging.info("Systemd launch detected; deferring preview until welcome message completes")
+        logging.info("Systemd launch detected; forcing preview rebind after startup handoff")
 
     fb_splash = None
     if show_welcome_message and not defer_startup_message_until_after_plymouth:
@@ -527,7 +534,7 @@ def run_application(args, log_queue):
     # Initialize CinePi application
     cinepi = CinePi(redis_controller, sensor_detect)
     
-    cinepi.start_all()
+    cinepi.start_all(preview_enabled=not defer_preview_until_after_welcome)
 
     # cinepi.set_log_level('INFO')
     # cinepi.message.subscribe(handle_vu_output)
@@ -624,7 +631,7 @@ def run_application(args, log_queue):
 
     systemd_status("Cinemate GUI starting")
 
-    if restart_camera_after_plymouth_handoff and not defer_startup_message_until_after_plymouth:
+    if restart_camera_after_startup_handoff and not defer_startup_message_until_after_plymouth:
         wait_for_plymouth_to_quit()
 
     if defer_startup_message_until_after_plymouth:
@@ -648,9 +655,10 @@ def run_application(args, log_queue):
         splash_thread.join()
     claim_console_for_framebuffer()
 
-    if restart_camera_after_plymouth_handoff:
-        logging.info("Restarting cinepi-raw after Plymouth handoff so preview binds above Cinemate")
-        cinepi_controller.restart_camera()
+    if restart_camera_after_startup_handoff:
+        time.sleep(0.75)
+        logging.info("Restarting cinepi-raw after startup handoff so preview binds above Cinemate")
+        cinepi_controller.restart_camera(preview_enabled=True)
 
     redis_listener = RedisListener(redis_controller, ssd_monitor)
     battery_monitor = BatteryMonitor()

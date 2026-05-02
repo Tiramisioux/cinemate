@@ -48,6 +48,8 @@ See the [releases section](https://github.com/Tiramisioux/cinemate/releases) for
 2. Clone the repo and run the one-click installer
 
 ```bash
+sudo apt update
+sudo apt install -y git
 git clone https://github.com/Tiramisioux/cinemate.git
 cd cinemate
 chmod +x cinemate-install.sh
@@ -58,7 +60,7 @@ The installer defaults to an `imx477` on camera port `cam0`. You can easily chan
 
 3. Follow the manual install guide
 
-For the full manual install, configuration steps, and CLI reference, use the [documentation](https://tiramisioux.github.io/cinemate/installation-steps/).
+For the full manual install, configuration steps, and CLI reference, use the [documentation](https://tiramisioux.github.io/cinemate/installation-steps/). The manual section begins after the installer instructions on that page.
 
 ## Customization
 GPIO buttons and switches, rotary encoders and oled display for controlling camera settings such as recording, iso etc. are configured in the `~/cinemate/src/settings.json` file.
@@ -86,4 +88,3 @@ Get your sensors and CFE Hats here: https://www.tindie.com/stores/will123321/
 ## Supporting the project
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/G2G21IM9RO)
-

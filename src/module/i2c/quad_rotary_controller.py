@@ -63,6 +63,12 @@ class I2CButton:
             self.click_timer.cancel()
             self.click_timer = None
 
+    def reset_state(self):
+        with self.lock:
+            self._cancel_timers()
+            self.click_count = 0
+            self.is_long_press = False
+
     def _trigger_hold_action(self):
         with self.lock:
             self.is_long_press = True
@@ -82,20 +88,36 @@ class I2CButton:
                 self._trigger_action(action)
             self.click_count = 0
 
+    @staticmethod
+    def _is_noop_action(action):
+        if not action:
+            return True
+        if isinstance(action, str):
+            return action.strip().lower() in {"", "none", "null"}
+
+        method_name = action.get("method")
+        if method_name is None:
+            return True
+        if isinstance(method_name, str):
+            return method_name.strip().lower() in {"", "none", "null"}
+        return False
+
     def _trigger_action(self, action):
-        if not action or action == "none":
+        if self._is_noop_action(action):
             return
         if isinstance(action, str):
-            action = {"method": action, "args": []}
-        method = getattr(self.cinepi_controller, action.get("method"), None)
+            action = {"method": action.strip(), "args": []}
+
+        method_name = action.get("method", "")
+        method = getattr(self.cinepi_controller, method_name, None)
         if method:
             try:
                 method(*action.get("args", []))
-                self.logger.debug("executed %s", action.get("method"))
+                self.logger.debug("executed %s", method_name)
             except Exception as exc:
-                self.logger.error("error executing %s: %s", action.get("method"), exc)
+                self.logger.error("error executing %s: %s", method_name, exc)
         else:
-            self.logger.error("method %s not found", action.get("method"))
+            self.logger.error("method %s not found", method_name)
 
 
 class QuadRotaryController(threading.Thread):
@@ -140,8 +162,16 @@ class QuadRotaryController(threading.Thread):
                 sw.switch_to_input(digitalio.Pull.UP)
             self.pixels = adafruit_seesaw.neopixel.NeoPixel(self.seesaw, 18, 4)
             self.pixels.brightness = 0.5
+            self.last_positions = [enc.position for enc in self.encoders]
+            self.button_states = [not sw.value for sw in self.switches]
+            for button in self.buttons.values():
+                button.reset_state()
             self.connected = True
-            logging.info("Quad rotary controller initialized")
+            logging.info(
+                "Quad rotary controller initialized with positions=%s button_states=%s",
+                self.last_positions,
+                self.button_states,
+            )
         except Exception as exc:
             self.connected = False
             logging.warning("Failed to initialize quad rotary controller: %s", exc)
@@ -159,29 +189,41 @@ class QuadRotaryController(threading.Thread):
             return
 
         try:
+            startup_active = bool(getattr(self.cinepi_controller, "startup", False))
             positions = [enc.position for enc in self.encoders]
             for idx, pos in enumerate(positions):
                 cfg = self.encoder_cfg.get(str(idx))
                 if cfg is None:
                     continue
                 if pos != self.last_positions[idx]:
-                    change = pos - self.last_positions[idx]
-                    self.last_positions[idx] = pos
-                    setting = cfg.get("setting_name")
-                    if setting:
-                        self._update_setting(setting, change)
-                if not self.switches[idx].value:
-                    if not self.button_states[idx]:
-                        self.button_states[idx] = True
+                    if startup_active:
+                        self.last_positions[idx] = pos
+                    else:
+                        change = pos - self.last_positions[idx]
+                        self.last_positions[idx] = pos
+                        setting = cfg.get("setting_name")
+                        if setting:
+                            self._update_setting(setting, change)
+
+                pressed = not self.switches[idx].value
+                if startup_active:
+                    if self.button_states[idx] != pressed:
+                        self.button_states[idx] = pressed
                         if idx in self.buttons:
-                            self.buttons[idx].on_press()
+                            self.buttons[idx].reset_state()
                 else:
-                    if self.button_states[idx]:
-                        self.button_states[idx] = False
-                        if idx in self.buttons:
-                            self.buttons[idx].on_release()
+                    if pressed:
+                        if not self.button_states[idx]:
+                            self.button_states[idx] = True
+                            if idx in self.buttons:
+                                self.buttons[idx].on_press()
+                    else:
+                        if self.button_states[idx]:
+                            self.button_states[idx] = False
+                            if idx in self.buttons:
+                                self.buttons[idx].on_release()
                 if self.pixels:
-                    self.pixels[idx] = 0xFFFFFF if not self.switches[idx].value else self.colorwheel(idx * 8)
+                    self.pixels[idx] = 0xFFFFFF if pressed else self.colorwheel(idx * 8)
         except OSError as exc:
             self.connected = False
             self._last_reconnect = time.time()

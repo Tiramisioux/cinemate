@@ -8,7 +8,7 @@ Responsible for autostart of Cinemate on boot. By default, it is turned off on t
 
 Starting in v3.2 the service now waits for the camera sensor to come online before launching the UI. The helper script `/usr/local/bin/camera-ready.sh` polls `cinepi-raw --list-cameras` for up to 30 seconds and logs progress to the systemd journal so Cinemate does not start with a black screen if the IMX sensor is still initialising.
 
-When Plymouth is enabled on the Pi image, the service is also ordered before `plymouth-quit.service`, `plymouth-quit-wait.service`, and `getty@tty1.service`. That keeps the boot spinner visible while the camera check and the extra display-settle delay run, instead of briefly showing the autologin CLI on `tty1` before Cinemate takes over the screen.
+When Plymouth is enabled on the Pi image, the service is ordered after `plymouth-quit-wait.service` and before `getty@tty1.service`. That lets the boot spinner finish cleanly before Cinemate starts, while still preventing the autologin CLI on `tty1` from flashing up before the GUI takes over.
 
 Plymouth is optional. Cinemate still starts correctly if Plymouth is not installed; you simply will not get the boot spinner or the smoother spinner-to-Cinemate handoff used on the image.
 
@@ -37,7 +37,7 @@ The `make install` step also copies `camera-ready.sh` into `/usr/local/bin/` wit
 
 If Cinemate exits before it reaches its real ready state, the service now preserves the colored startup-failure block and the `tty1` login shell replays it before showing the prompt. That makes invalid `settings.json` errors and other early-start crashes visible on the HDMI console without losing the normal shell afterward.
 
-If you want the same boot spinner flow as the prebuilt image, install Plymouth separately as described in the manual install guide and then reinstall `cinemate-autostart.service` so the latest `tty1` and `plymouth-quit*` ordering is in place.
+If you want the same clean boot handoff as the prebuilt image, install Plymouth separately as described in the manual install guide and then reinstall `cinemate-autostart.service` so the latest `tty1` and `plymouth-quit-wait.service` ordering is in place.
 
 To start Cinemate manually, anywhere in the cli, type `cinemate`.
 

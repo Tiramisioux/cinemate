@@ -596,7 +596,6 @@ sudo reboot
 ```
 
 If you skip Plymouth, Cinemate still works. You just will not get the boot spinner or the same CLI-suppressed boot handoff.
-
 ## Cinemate services
 
 #### storage-automount

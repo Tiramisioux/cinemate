@@ -60,7 +60,6 @@ STARTUP_FAILURE_FILE = os.environ.get(
 STARTUP_READY_SENT = False
 APP_RUNTIME_READY = False
 
-
 def _systemd_notify(message: str) -> bool:
     notify_socket = os.environ.get("NOTIFY_SOCKET")
     if not notify_socket:
@@ -97,6 +96,8 @@ def mark_runtime_ready(status: str = "Cinemate running") -> bool:
     if STARTUP_READY_SENT:
         return systemd_status(status)
     return systemd_ready(status)
+
+
 def render_startup_failure_block(title: str, body: str, log_lines: list[str] | None = None) -> str:
     separator = f"{CLI_COLOR_YELLOW}{'=' * 78}{CLI_COLOR_RESET}"
     sections = [
@@ -254,7 +255,6 @@ def wait_for_plymouth_to_quit(timeout: float = 5.0, poll_interval: float = 0.05)
 
     logging.warning("Timed out waiting for Plymouth to quit")
     return False
-
 def start_splash(text="THIS IS A COOL MACHINE"):
     stop_event = threading.Event()
 

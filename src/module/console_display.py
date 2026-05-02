@@ -1,7 +1,7 @@
+import errno
 import fcntl
 import logging
 import os
-import errno
 
 
 TTY_PATH = "/dev/tty1"

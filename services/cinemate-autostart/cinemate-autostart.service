@@ -1,7 +1,7 @@
 [Unit]
 Description=Cinemate Application Service
-After=network.target plymouth-start.service
-Before=plymouth-quit.service plymouth-quit-wait.service getty@tty1.service
+After=network.target plymouth-quit-wait.service
+Before=getty@tty1.service
 Conflicts=getty@tty1.service
 
 [Service]

@@ -1247,8 +1247,8 @@ class CinePiController:
         self.set_zoom(direction='prev')
 
         
-    def restart_camera(self):
-        self.cinepi.restart()
+    def restart_camera(self, preview_enabled=None):
+        self.cinepi.restart(preview_enabled=preview_enabled)
 
     def restart_cinemate(self):
         """Restart the entire CineMate application."""

@@ -151,6 +151,7 @@ class CinePiProcess(Thread):
         cam: CameraInfo,
         primary: bool,
         multi: bool,
+        preview_enabled: bool = True,
     ):
         super().__init__(daemon=True)
         self.redis_controller = redis_controller
@@ -158,6 +159,7 @@ class CinePiProcess(Thread):
         self.cam = cam
         self.primary = primary
         self.multi = multi
+        self.preview_enabled = preview_enabled
         self.proc: Optional[subprocess.Popen] = None
         self.message = Event()
         self.out_q, self.err_q = Queue(), Queue()
@@ -382,7 +384,7 @@ class CinePiProcess(Thread):
             else:
                 args += ['--sync', 'client']
         
-        if not (self.multi and not self.primary):
+        if self.preview_enabled and not (self.multi and not self.primary):
             args += ['-p', f'{ox},{oy},{pw},{ph}']
         else:
             args += ['--nopreview']
@@ -420,15 +422,25 @@ class CinePiManager:
         self.sensor_detect    = sensor_detect
         self.processes: List[CinePiProcess] = []
         self.message = Event()                        # fan-out for log relay
+        self.preview_enabled = True
 
     # ───────────────────────── public api ──────────────────────────
-    start_cinepi_process = lambda self: self.start_all()
-    restart              = lambda self: (self.stop_all(), self.start_all())
-    shutdown             = lambda self: self.stop_all()
+    def start_cinepi_process(self, preview_enabled: Optional[bool] = None):
+        self.start_all(preview_enabled=preview_enabled)
+
+    def restart(self, preview_enabled: Optional[bool] = None):
+        self.stop_all()
+        self.start_all(preview_enabled=preview_enabled)
+
+    def shutdown(self):
+        self.stop_all()
         
     # ────────────────────────── start / stop ──────────────────────────
-    def start_all(self) -> None:
+    def start_all(self, preview_enabled: Optional[bool] = None) -> None:
         """Discover sensors, launch one *cinepi-raw* each, wait for readiness."""
+        if preview_enabled is not None:
+            self.preview_enabled = bool(preview_enabled)
+
         self.stop_all()                              # clean previous run
         
         # ------------------------------------------------------------------
@@ -498,6 +510,7 @@ class CinePiManager:
                 cam,
                 primary=(i == 0),
                 multi=multi,
+                preview_enabled=self.preview_enabled,
             )
             proc.message.subscribe(self.message.emit)
             proc.start()

@@ -1,5 +1,5 @@
 # Installation
-Here is how you can manually install libcamera, cinepi-raw, cinemate and accompanying software on the Raspberry Pi.
+This page starts with the repo-root one-click installer and then continues with the full step-by-step manual install for libcamera, cinepi-raw, cinemate and accompanying software on the Raspberry Pi.
 
 !!! Note ""
 
@@ -9,13 +9,15 @@ Here is how you can manually install libcamera, cinepi-raw, cinemate and accompa
 
      Cinemate is using Linux kernel version 6.12.25. Recommended OS is Bookworm Lite.
 
-### Tools & dependencies
-
 ### One-click installer
 
-If you already have the Cinemate repo checked out on the Pi, you can run the repo-root installer instead of stepping through the whole page by hand:
+If you want the automated path, install `git`, clone the repo, and run the repo-root installer instead of stepping through the whole page by hand:
 
 ```bash
+sudo apt update
+sudo apt install -y git
+cd /home/pi
+git clone https://github.com/Tiramisioux/cinemate.git
 cd /home/pi/cinemate
 chmod +x cinemate-install.sh
 ./cinemate-install.sh
@@ -28,6 +30,10 @@ The script applies the full manual flow from this guide, including `storage-auto
 ```bash
 SENSOR_MODEL=imx585_mono CAM_PORT=cam1 HDMI_BOOT_PORT=1 ./cinemate-install.sh
 ```
+
+### Manual install starts here
+
+If you prefer to install everything by hand, continue with the steps below.
 
 ```
 sudo apt update -y
@@ -436,7 +442,8 @@ cd .. && pip install lgpio
 ### Clone the Cinemate repo
 
 ```bash
-  git clone https://github.com/Tiramisioux/cinemate.git
+sudo apt install -y git
+git clone https://github.com/Tiramisioux/cinemate.git
 ```
 
 ### Allow Cinemate to run with sudo
@@ -703,6 +710,6 @@ make start          # launch now
 
 After enabling the service, Cinemate should autostart on boot.
 
-> **Tip:** `sudo make install` also places `/usr/local/bin/camera-ready.sh` on the system. The script waits for `cinepi-raw` to report a camera before systemd launches Cinemate, preventing the black-screen-on-boot issue that occurred when the GUI started before the sensor initialised.
+> **Tip:** `sudo make install` also places `/usr/local/bin/camera-ready.sh` on the system. The script waits for `cinepi-raw` to report a camera before systemd launches Cinemate, and the installed unit starts after `plymouth-quit-wait.service` so the boot splash can finish before Cinemate binds its preview layer.
 
 You now have a 12 bit RAW image capturing system on your Raspberry Pi!

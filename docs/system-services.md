@@ -36,6 +36,7 @@ make clean     # remove the service
 The `make install` step also copies `camera-ready.sh` into `/usr/local/bin/` with execute permissions so that the systemd unit can call it from `ExecStartPre`.
 
 If Cinemate exits before it reaches its real ready state, the service now preserves the colored startup-failure block and the `tty1` login shell replays it before showing the prompt. That makes invalid `settings.json` errors and other early-start crashes visible on the HDMI console without losing the normal shell afterward.
+
 If you want the same boot spinner flow as the prebuilt image, install Plymouth separately as described in the manual install guide and then reinstall `cinemate-autostart.service` so the latest `tty1` and `plymouth-quit*` ordering is in place.
 
 To start Cinemate manually, anywhere in the cli, type `cinemate`.
@@ -90,7 +91,6 @@ make disable
 
 !!! note
 
-      While evaluating, it might be practical to have the Pi connect to your local wifi for easy access (`sudo raspi-config`). Therefore, on the image file, the wifi-hotspot.service is **not** activated by default. Cinemate will still serve its web interface on the available network, but only after `wlan0` or `eth0` has an IP address. You can read more [here](hotspot-logic.md)
       While evaluating, it might be practical to have the Pi connect to your local wifi for easy access (`sudo raspi-config`). Therefore, on the image file, the wifi-hotspot.service is **not** activated by default. Cinemate will still serve its web interface on the available network, but only after `wlan0` or `eth0` has an IP address. You can read more [here](hotspot-logic.md)
 
 ## redis-log-maintenance.timer

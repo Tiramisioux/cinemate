@@ -97,8 +97,6 @@ def mark_runtime_ready(status: str = "Cinemate running") -> bool:
     if STARTUP_READY_SENT:
         return systemd_status(status)
     return systemd_ready(status)
-
-
 def render_startup_failure_block(title: str, body: str, log_lines: list[str] | None = None) -> str:
     separator = f"{CLI_COLOR_YELLOW}{'=' * 78}{CLI_COLOR_RESET}"
     sections = [
@@ -490,10 +488,10 @@ def run_application(args, log_queue):
         fb_splash = graphic_splash(welcome_text, welcome_image)
         if fb_splash is None:
             splash_thread, splash_stop = start_splash(welcome_text)
-            systemd_ready("Cinemate text splash active")
+            systemd_status("Cinemate text splash active")
         else:
             claim_console_for_framebuffer()
-            systemd_ready("Cinemate splash active")
+            systemd_status("Cinemate splash active")
         splash_visible_started_at = time.monotonic()
         startup_ready_notified = True
 
@@ -624,11 +622,7 @@ def run_application(args, log_queue):
         if remaining_splash_time > 0:
             time.sleep(remaining_splash_time)
 
-    if startup_ready_notified:
-        systemd_status("Cinemate GUI starting")
-    else:
-        systemd_ready("Cinemate GUI starting")
-        startup_ready_notified = True
+    systemd_status("Cinemate GUI starting")
 
     if restart_camera_after_plymouth_handoff and not defer_startup_message_until_after_plymouth:
         wait_for_plymouth_to_quit()

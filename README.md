@@ -56,11 +56,11 @@ chmod +x cinemate-install.sh
 ./cinemate-install.sh
 ```
 
-The installer defaults to an `imx477` on camera port `cam0`. It follows the same order as the manual guide and auto-picks the right `libavdevice` and `libgpiod` runtime package names for the Pi's Debian release.
+Use Raspberry Pi OS Lite (Bookworm) for this path. The installer defaults to an `imx477` on camera port `cam0`, follows the same order as the manual guide, and stops on non-Bookworm releases such as Trixie.
 
 3. Follow the manual install guide
 
-For the full manual install, configuration steps, and CLI reference, use the [documentation](https://tiramisioux.github.io/cinemate/installation-steps/). The manual section begins after the installer instructions on that page.
+For the full manual install, configuration steps, and CLI reference, use the [documentation](https://tiramisioux.github.io/cinemate/installation-steps/). The manual section begins after the installer instructions on that page and assumes Raspberry Pi OS Lite (Bookworm).
 
 ## Customization
 GPIO buttons and switches, rotary encoders and oled display for controlling camera settings such as recording, iso etc. are configured in the `~/cinemate/src/settings.json` file.

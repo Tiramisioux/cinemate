@@ -45,6 +45,8 @@ ENABLE_AUTOSTART="${ENABLE_AUTOSTART:-1}"
 START_AUTOSTART_NOW="${START_AUTOSTART_NOW:-1}"
 RUN_REBOOT="${RUN_REBOOT:-0}"
 UPDATE_EXISTING_REPOS="${UPDATE_EXISTING_REPOS:-1}"
+SUPPORTED_OS_CODENAME="${SUPPORTED_OS_CODENAME:-bookworm}"
+ALLOW_UNSUPPORTED_OS="${ALLOW_UNSUPPORTED_OS:-0}"
 
 CINEMATE_DIR="${CINEMATE_DIR:-$PI_HOME/cinemate}"
 CINEPI_RAW_DIR="${CINEPI_RAW_DIR:-$PI_HOME/cinepi-raw}"
@@ -141,23 +143,25 @@ bootstrap_sudo() {
     sudo -v
 }
 
-package_exists() {
-    apt-cache show "$1" >/dev/null 2>&1
-}
+validate_supported_os() {
+    local os_release=/etc/os-release
+    local pretty_name="unknown"
+    local version_codename="unknown"
 
-resolve_first_available_package() {
-    local description="$1"
-    shift
+    [[ -r "$os_release" ]] || die "Could not read $os_release to verify the supported OS"
+    # shellcheck disable=SC1090
+    source "$os_release"
+    pretty_name="${PRETTY_NAME:-$pretty_name}"
+    version_codename="${VERSION_CODENAME:-$version_codename}"
 
-    local package_name
-    for package_name in "$@"; do
-        if package_exists "$package_name"; then
-            printf '%s\n' "$package_name"
-            return 0
-        fi
-    done
+    detail "Detected OS: $pretty_name"
+    if [[ "$version_codename" != "$SUPPORTED_OS_CODENAME" ]] && ! is_true "$ALLOW_UNSUPPORTED_OS"; then
+        die "Unsupported OS codename '$version_codename'. Cinemate currently targets Raspberry Pi OS Lite (Bookworm). Reimage to Bookworm before running this installer, or set ALLOW_UNSUPPORTED_OS=1 only if you are intentionally testing an unsupported release."
+    fi
 
-    die "Could not find a package for $description. Tried: $*"
+    if [[ "$version_codename" != "$SUPPORTED_OS_CODENAME" ]]; then
+        warn "Continuing on unsupported OS codename '$version_codename' because ALLOW_UNSUPPORTED_OS=1 was set"
+    fi
 }
 
 write_root_file() {
@@ -307,19 +311,11 @@ bootstrap_base_tools() {
 }
 
 install_apt_packages() {
-    local qt_core_pkg
-    local avdevice_runtime_pkg
-    local gpiod_runtime_pkg
     local -a camera_stack_packages
     local -a libcamera_packages
     local -a cpp_mjpeg_streamer_packages
     local -a cinemate_packages
     local -a optional_packages=()
-
-    qt_core_pkg="$(resolve_first_available_package "Qt5 core runtime" libqt5core5t64 libqt5core5a)"
-    avdevice_runtime_pkg="$(resolve_first_available_package "FFmpeg libavdevice runtime" libavdevice61 libavdevice59)"
-    gpiod_runtime_pkg="$(resolve_first_available_package "libgpiod runtime" libgpiod3 libgpiod2 libgpiod2t64)"
-    detail "Resolved runtime package names: $qt_core_pkg, $avdevice_runtime_pkg, $gpiod_runtime_pkg"
 
     camera_stack_packages=(
         python3-jinja2 python3-ply python3-yaml ffmpeg
@@ -331,8 +327,8 @@ install_apt_packages() {
     )
 
     libcamera_packages=(
-        libgnutls28-dev openssl pybind11-dev qtbase5-dev "$qt_core_pkg"
-        libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev "$avdevice_runtime_pkg"
+        libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a
+        libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libavdevice59
     )
 
     cpp_mjpeg_streamer_packages=(
@@ -342,7 +338,7 @@ install_apt_packages() {
     cinemate_packages=(
         build-essential python3-dev python3-pip python3-venv
         i2c-tools python3-smbus python3-pyudev
-        libgpiod-dev "$gpiod_runtime_pkg" python3-libgpiod gpiod
+        libgpiod-dev libgpiod2 python3-libgpiod gpiod
         portaudio19-dev python3-systemd
         e2fsprogs ntfs-3g exfatprogs
         console-terminus swig
@@ -1034,6 +1030,7 @@ main() {
 
     section "Validating environment and installer configuration"
     bootstrap_sudo
+    validate_supported_os
     print_configuration_summary
 
     section "Installing bootstrap tools"

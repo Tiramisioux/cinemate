@@ -7,7 +7,7 @@ This page starts with the repo-root one-click installer and then continues with 
 
 !!! Note ""
 
-     Cinemate is using Linux kernel version 6.12.25. Recommended OS is Bookworm Lite.
+     Cinemate is using Linux kernel version 6.12.25. Supported install target is Raspberry Pi OS Lite (Bookworm).
 
 ### One-click installer
 
@@ -25,7 +25,7 @@ chmod +x cinemate-install.sh
 
 The default installer profile is `imx477` on `cam0` with the boot framebuffer pinned to `HDMI-A-1`.
 
-The script applies the full manual flow from this guide in the same order, including `storage-automount`, `wifi-hotspot`, and `redis-log-maintenance`, plus the optional console-font, PiShrink, Plymouth, and IMX585 helper steps. It also auto-selects the correct `libavdevice` and `libgpiod` runtime package names for the Pi's Debian release. Set `SENSOR_MODEL`, `CAM_PORT`, and `HDMI_BOOT_PORT` at the top of the script or override them inline, for example:
+The script applies the full manual flow from this guide in the same order, including `storage-automount`, `wifi-hotspot`, and `redis-log-maintenance`, plus the optional console-font, PiShrink, Plymouth, and IMX585 helper steps. It is intended for Raspberry Pi OS Lite (Bookworm) and stops early on unsupported releases such as Trixie. Set `SENSOR_MODEL`, `CAM_PORT`, and `HDMI_BOOT_PORT` at the top of the script or override them inline, for example:
 
 ```bash
 SENSOR_MODEL=imx585_mono CAM_PORT=cam1 HDMI_BOOT_PORT=1 ./cinemate-install.sh
@@ -34,6 +34,8 @@ SENSOR_MODEL=imx585_mono CAM_PORT=cam1 HDMI_BOOT_PORT=1 ./cinemate-install.sh
 ### Manual install starts here
 
 If you prefer to install everything by hand, continue with the steps below.
+
+Start from a fresh Raspberry Pi OS Lite (Bookworm) install before continuing. If your Pi is already on Trixie, reimage with Bookworm first.
 
 ```
 sudo apt update -y
@@ -44,13 +46,6 @@ sudo apt upgrade -y
 sudo apt-get install python3-jinja2 python3-ply python3-yaml ffmpeg
 ```
 
-```bash
-AVDEVICE_RUNTIME="$(apt-cache pkgnames libavdevice | grep -E '^libavdevice[0-9]+$' | sort -V | tail -n 1)"
-GPIOD_RUNTIME="$(apt-cache pkgnames libgpiod | grep -E '^libgpiod[0-9]+$' | sort -V | tail -n 1)"
-```
-
-On current Debian Trixie images these usually resolve to `libavdevice61` and `libgpiod3`.
-
 ```
 sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev ffmpeg && sudo apt-get install libjsoncpp-dev && cd ~ && git clone https://github.com/sewenew/redis-plus-plus.git && cd redis-plus-plus && mkdir build && cd build && cmake .. && make && sudo make install && cd ~
 ```
@@ -58,7 +53,7 @@ sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake
 ### libcamera 1.7.0 <img src="https://img.shields.io/badge/raspberry pi-fork-red" height="12" >
 
 ```shell
-sudo apt install -y python3-pip python3-jinja2 libboost-dev libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a meson cmake python3-yaml python3-ply libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev "${AVDEVICE_RUNTIME}"
+sudo apt install -y python3-pip python3-jinja2 libboost-dev libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a meson cmake python3-yaml python3-ply libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libavdevice59
 ```
 
 ```shell
@@ -392,7 +387,7 @@ sudo apt update
 sudo apt install -y \
     git build-essential python3-dev python3-pip python3-venv \
     i2c-tools python3-smbus python3-pyudev \
-    libgpiod-dev "${GPIOD_RUNTIME}" python3-libgpiod gpiod \
+    libgpiod-dev libgpiod2 python3-libgpiod gpiod \
     portaudio19-dev python3-systemd \
     e2fsprogs ntfs-3g exfatprogs \
     console-terminus

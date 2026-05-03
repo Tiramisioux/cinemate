@@ -56,7 +56,7 @@ chmod +x cinemate-install.sh
 ./cinemate-install.sh
 ```
 
-Use Raspberry Pi OS Lite (Bookworm) for this path. The installer defaults to an `imx477` on camera port `cam0`, follows the same order as the manual guide, and stops on non-Bookworm releases such as Trixie.
+Use Raspberry Pi OS Lite (Bookworm) for this path. The installer defaults to an `imx477` on camera port `cam0`, follows the same order as the manual guide, stops on non-Bookworm releases such as Trixie, and pins `libcamera` to Raspberry Pi release tag `v0.7.0+rpt20260205` instead of tracking the moving repo tip.
 
 3. Follow the manual install guide
 

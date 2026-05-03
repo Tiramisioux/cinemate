@@ -25,7 +25,7 @@ chmod +x cinemate-install.sh
 
 The default installer profile is `imx477` on `cam0` with the boot framebuffer pinned to `HDMI-A-1`.
 
-The script applies the full manual flow from this guide in the same order, including `storage-automount`, `wifi-hotspot`, and `redis-log-maintenance`, plus the optional console-font, PiShrink, Plymouth, and IMX585 helper steps. It is intended for Raspberry Pi OS Lite (Bookworm) and stops early on unsupported releases such as Trixie. Set `SENSOR_MODEL`, `CAM_PORT`, and `HDMI_BOOT_PORT` at the top of the script or override them inline, for example:
+The script applies the full manual flow from this guide in the same order, including `storage-automount`, `wifi-hotspot`, and `redis-log-maintenance`, plus the optional console-font, PiShrink, Plymouth, and IMX585 helper steps. It is intended for Raspberry Pi OS Lite (Bookworm), stops early on unsupported releases such as Trixie, and pins `libcamera` to Raspberry Pi release tag `v0.7.0+rpt20260205` instead of building the moving repository tip. Set `SENSOR_MODEL`, `CAM_PORT`, and `HDMI_BOOT_PORT` at the top of the script or override them inline, for example:
 
 ```bash
 SENSOR_MODEL=imx585_mono CAM_PORT=cam1 HDMI_BOOT_PORT=1 ./cinemate-install.sh
@@ -61,7 +61,7 @@ sudo apt-get install --reinstall libtiff5-dev && sudo ln -sf $(find /usr/lib -na
 ```
 
 ```shell
-git clone https://github.com/raspberrypi/libcamera.git && \
+git clone --branch v0.7.0+rpt20260205 https://github.com/raspberrypi/libcamera.git && \
 sudo find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
 cd libcamera && \
 sudo meson setup build --buildtype=release \

@@ -62,7 +62,7 @@ CINEMATE_REPO_REF="${CINEMATE_REPO_REF:-}"
 CINEPI_RAW_REPO_URL="${CINEPI_RAW_REPO_URL:-https://github.com/Tiramisioux/cinepi-raw.git}"
 CINEPI_RAW_REPO_REF="${CINEPI_RAW_REPO_REF:-}"
 LIBCAMERA_REPO_URL="${LIBCAMERA_REPO_URL:-https://github.com/raspberrypi/libcamera.git}"
-LIBCAMERA_REPO_REF="${LIBCAMERA_REPO_REF:-}"
+LIBCAMERA_REPO_REF="${LIBCAMERA_REPO_REF:-v0.7.0+rpt20260205}"
 CPP_MJPEG_STREAMER_REPO_URL="${CPP_MJPEG_STREAMER_REPO_URL:-https://github.com/nadjieb/cpp-mjpeg-streamer.git}"
 CPP_MJPEG_STREAMER_REPO_REF="${CPP_MJPEG_STREAMER_REPO_REF:-}"
 REDIS_PLUS_PLUS_REPO_URL="${REDIS_PLUS_PLUS_REPO_URL:-https://github.com/sewenew/redis-plus-plus.git}"
@@ -251,6 +251,7 @@ ensure_repo() {
     local dir="$1"
     local url="$2"
     local ref="${3:-}"
+    local ref_kind="branch"
 
     if [[ -d "$dir/.git" ]]; then
         log "Using existing repo: $dir"
@@ -258,9 +259,21 @@ ensure_repo() {
             detail "Fetching latest refs for $dir"
             run_as_pi git -C "$dir" fetch --tags --prune
             if [[ -n "$ref" ]]; then
+                if run_as_pi git -C "$dir" rev-parse -q --verify "refs/tags/$ref^{tag}" >/dev/null 2>&1 || \
+                   run_as_pi git -C "$dir" rev-parse -q --verify "refs/tags/$ref^{}" >/dev/null 2>&1; then
+                    ref_kind="tag"
+                elif run_as_pi git -C "$dir" show-ref --verify --quiet "refs/remotes/origin/$ref"; then
+                    ref_kind="branch"
+                else
+                    ref_kind="commitish"
+                fi
                 detail "Checking out $ref in $dir"
                 run_as_pi git -C "$dir" checkout "$ref"
-                run_as_pi git -C "$dir" pull --ff-only origin "$ref"
+                if [[ "$ref_kind" == "branch" ]]; then
+                    run_as_pi git -C "$dir" pull --ff-only origin "$ref"
+                else
+                    detail "Pinned $dir to $ref ($ref_kind); skipping pull"
+                fi
             else
                 detail "Fast-forwarding current branch in $dir when possible"
                 run_as_pi git -C "$dir" pull --ff-only || warn "Could not fast-forward $dir; leaving current checkout as-is"

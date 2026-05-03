@@ -131,6 +131,9 @@ ENV/
 # mkdocs documentation
 /site
 
+# Generated docs output
+docs/renders/*.pdf
+
 # VS Code
 .vscode
 
@@ -163,6 +166,12 @@ $RECYCLE.BIN/
 .DS_Store
 .AppleDouble
 .LSOverride
+
+# Frontend dependencies and generated app assets
+src/module/app/node_modules/
+src/module/app/dist/
+src/module/app/build/
+src/module/app/.vite/
 
 # Directories
 __pycache__/

@@ -164,6 +164,10 @@ validate_supported_os() {
     fi
 }
 
+current_tty() {
+    tty 2>/dev/null || true
+}
+
 write_root_file() {
     local path="$1"
     local mode="$2"
@@ -1020,8 +1024,16 @@ install_cinemate_services() {
         sudo make -C "$CINEMATE_SOURCE_DIR" install
         sudo make -C "$CINEMATE_SOURCE_DIR" enable
         if is_true "$START_AUTOSTART_NOW"; then
-            detail "Starting cinemate-autostart.service now"
-            sudo make -C "$CINEMATE_SOURCE_DIR" start
+            local active_tty
+            active_tty="$(current_tty)"
+            if [[ "$active_tty" == "/dev/tty1" ]]; then
+                warn "Skipping immediate cinemate-autostart start because the installer is running on tty1 and the service takes over tty1. Reboot or run 'sudo systemctl start cinemate-autostart' from SSH after the installer exits."
+            else
+                detail "Starting cinemate-autostart.service now"
+                if ! sudo make -C "$CINEMATE_SOURCE_DIR" start; then
+                    warn "Could not start cinemate-autostart.service immediately. The service is still installed and enabled for next boot."
+                fi
+            fi
         else
             detail "Autostart enabled but not started immediately"
         fi

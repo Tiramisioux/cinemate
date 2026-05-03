@@ -141,6 +141,25 @@ bootstrap_sudo() {
     sudo -v
 }
 
+package_exists() {
+    apt-cache show "$1" >/dev/null 2>&1
+}
+
+resolve_first_available_package() {
+    local description="$1"
+    shift
+
+    local package_name
+    for package_name in "$@"; do
+        if package_exists "$package_name"; then
+            printf '%s\n' "$package_name"
+            return 0
+        fi
+    done
+
+    die "Could not find a package for $description. Tried: $*"
+}
+
 write_root_file() {
     local path="$1"
     local mode="$2"
@@ -288,35 +307,77 @@ bootstrap_base_tools() {
 }
 
 install_apt_packages() {
-    local packages=(
+    local qt_core_pkg
+    local avdevice_runtime_pkg
+    local gpiod_runtime_pkg
+    local -a camera_stack_packages
+    local -a libcamera_packages
+    local -a cpp_mjpeg_streamer_packages
+    local -a cinemate_packages
+    local -a optional_packages=()
+
+    qt_core_pkg="$(resolve_first_available_package "Qt5 core runtime" libqt5core5t64 libqt5core5a)"
+    avdevice_runtime_pkg="$(resolve_first_available_package "FFmpeg libavdevice runtime" libavdevice61 libavdevice59)"
+    gpiod_runtime_pkg="$(resolve_first_available_package "libgpiod runtime" libgpiod3 libgpiod2 libgpiod2t64)"
+    detail "Resolved runtime package names: $qt_core_pkg, $avdevice_runtime_pkg, $gpiod_runtime_pkg"
+
+    camera_stack_packages=(
         python3-jinja2 python3-ply python3-yaml ffmpeg
         cmake build-essential meson ninja-build
         libboost-dev libboost-program-options-dev libdrm-dev libepoxy-dev libexif-dev
         libcamera-dev libjpeg-dev libtiff5-dev libpng-dev libhiredis-dev libasound2-dev
         libjsoncpp-dev libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev
-        libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a
-        libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libavdevice59
-        redis-server libspdlog-dev
-        python3-dev i2c-tools python3-smbus python3-pyudev
-        libgpiod-dev libgpiod2 python3-libgpiod gpiod
+        redis-server
+    )
+
+    libcamera_packages=(
+        libgnutls28-dev openssl pybind11-dev qtbase5-dev "$qt_core_pkg"
+        libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev "$avdevice_runtime_pkg"
+    )
+
+    cpp_mjpeg_streamer_packages=(
+        libspdlog-dev libjsoncpp-dev
+    )
+
+    cinemate_packages=(
+        build-essential python3-dev python3-pip python3-venv
+        i2c-tools python3-smbus python3-pyudev
+        libgpiod-dev "$gpiod_runtime_pkg" python3-libgpiod gpiod
         portaudio19-dev python3-systemd
-        e2fsprogs ntfs-3g exfatprogs console-terminus
-        swig
+        e2fsprogs ntfs-3g exfatprogs
+        console-terminus swig
     )
 
     if should_install_imx585_driver; then
-        packages+=(linux-headers dkms)
+        optional_packages+=(linux-headers dkms)
     fi
     if is_true "$INSTALL_CONSOLE_FONT"; then
-        packages+=(console-setup kbd)
+        optional_packages+=(console-setup kbd)
     fi
     if is_true "$INSTALL_PLYMOUTH"; then
-        packages+=(plymouth plymouth-themes plymouth-label)
+        optional_packages+=(plymouth plymouth-themes plymouth-label)
     fi
 
-    log "Installing apt dependencies"
-    detail "Installing ${#packages[@]} packages"
-    sudo apt install -y "${packages[@]}"
+    log "Installing apt dependencies to match the manual guide"
+
+    detail "Manual step: shared camera stack dependencies"
+    sudo apt install -y "${camera_stack_packages[@]}"
+
+    detail "Manual step: libcamera build dependencies"
+    sudo apt install -y "${libcamera_packages[@]}"
+
+    detail "Manual step: cpp-mjpeg-streamer dependencies"
+    sudo apt install -y "${cpp_mjpeg_streamer_packages[@]}"
+
+    detail "Manual step: Cinemate system packages"
+    sudo apt install -y "${cinemate_packages[@]}"
+
+    if ((${#optional_packages[@]} > 0)); then
+        detail "Optional manual-step packages"
+        sudo apt install -y "${optional_packages[@]}"
+    else
+        detail "No optional apt packages requested"
+    fi
 }
 
 should_install_imx585_driver() {

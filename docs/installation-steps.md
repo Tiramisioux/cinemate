@@ -25,7 +25,7 @@ chmod +x cinemate-install.sh
 
 The default installer profile is `imx477` on `cam0` with the boot framebuffer pinned to `HDMI-A-1`.
 
-The script applies the full manual flow from this guide in the same order, including `storage-automount`, `wifi-hotspot`, and `redis-log-maintenance`, plus the optional console-font, PiShrink, Plymouth, and IMX585 helper steps. It is intended for Raspberry Pi OS Lite (Bookworm), stops early on unsupported releases such as Trixie, and pins `libcamera` to Raspberry Pi release tag `v0.7.0+rpt20260205` instead of building the moving repository tip. Set `SENSOR_MODEL`, `CAM_PORT`, and `HDMI_BOOT_PORT` at the top of the script or override them inline, for example:
+The script applies the full manual flow from this guide in the same order, including `storage-automount`, `wifi-hotspot`, and `redis-log-maintenance`, plus the optional console-font, PiShrink, Plymouth, and IMX585 helper steps. It is intended for Raspberry Pi OS Lite (Bookworm), stops early on unsupported releases such as Trixie, and pins `libcamera` to Raspberry Pi release tag `v0.5.0+rpt20250429` so it stays aligned with the `cinepi-raw` / `rpicam-apps 1.7` code generation instead of building the moving repository tip. Set `SENSOR_MODEL`, `CAM_PORT`, and `HDMI_BOOT_PORT` at the top of the script or override them inline, for example:
 
 ```bash
 SENSOR_MODEL=imx585_mono CAM_PORT=cam1 HDMI_BOOT_PORT=1 ./cinemate-install.sh
@@ -50,7 +50,7 @@ sudo apt-get install python3-jinja2 python3-ply python3-yaml ffmpeg
 sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev ffmpeg && sudo apt-get install libjsoncpp-dev && cd ~ && git clone https://github.com/sewenew/redis-plus-plus.git && cd redis-plus-plus && mkdir build && cd build && cmake .. && make && sudo make install && cd ~
 ```
 
-### libcamera 1.7.0 <img src="https://img.shields.io/badge/raspberry pi-fork-red" height="12" >
+### libcamera (pinned to `v0.5.0+rpt20250429`) <img src="https://img.shields.io/badge/raspberry pi-fork-red" height="12" >
 
 ```shell
 sudo apt install -y python3-pip python3-jinja2 libboost-dev libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a meson cmake python3-yaml python3-ply libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libavdevice59
@@ -61,7 +61,7 @@ sudo apt-get install --reinstall libtiff5-dev && sudo ln -sf $(find /usr/lib -na
 ```
 
 ```shell
-git clone --branch v0.7.0+rpt20260205 https://github.com/raspberrypi/libcamera.git && \
+git clone --branch v0.5.0+rpt20250429 https://github.com/raspberrypi/libcamera.git && \
 sudo find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
 cd libcamera && \
 sudo meson setup build --buildtype=release \

@@ -56,7 +56,7 @@ chmod +x cinemate-install.sh
 ./cinemate-install.sh
 ```
 
-The installer defaults to an `imx477` on camera port `cam0`. You can easily change this later by editing the file `boot/firmware/config.txt`.
+The installer defaults to an `imx477` on camera port `cam0`. It follows the same order as the manual guide and auto-picks the right `libavdevice` and `libgpiod` runtime package names for the Pi's Debian release.
 
 3. Follow the manual install guide
 

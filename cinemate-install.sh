@@ -137,6 +137,28 @@ run_as_pi() {
     fi
 }
 
+run_as_pi_clean_shell() {
+    local script="$1"
+    local path_env="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+    if [[ "$(id -un)" == "$PI_USER" ]]; then
+        env -i \
+            HOME="$PI_HOME" \
+            USER="$PI_USER" \
+            LOGNAME="$PI_USER" \
+            PATH="$path_env" \
+            bash --noprofile --norc -ec "$script"
+    else
+        detail "Running clean shell as $PI_USER: $script"
+        sudo -H -u "$PI_USER" env -i \
+            HOME="$PI_HOME" \
+            USER="$PI_USER" \
+            LOGNAME="$PI_USER" \
+            PATH="$path_env" \
+            bash --noprofile --norc -ec "$script"
+    fi
+}
+
 bootstrap_sudo() {
     detail "Validating sudo access"
     command -v sudo >/dev/null 2>&1 || die "sudo is required"
@@ -425,7 +447,7 @@ build_redis_plus_plus() {
 
     log "Building redis-plus-plus"
     detail "Source: $REDIS_PLUS_PLUS_DIR"
-    run_as_pi bash -lc "cd '$REDIS_PLUS_PLUS_DIR' && cmake -S . -B build && cmake --build build -j '$BUILD_JOBS'"
+    run_as_pi_clean_shell "cd '$REDIS_PLUS_PLUS_DIR' && cmake -S . -B build && cmake --build build -j '$BUILD_JOBS'"
     sudo cmake --build "$REDIS_PLUS_PLUS_DIR/build" --target install
     sudo ldconfig
 }
@@ -437,7 +459,7 @@ build_libcamera() {
     detail "Source: $LIBCAMERA_DIR"
     run_as_pi find "$LIBCAMERA_DIR" -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} +
     run_as_pi chmod +x "$LIBCAMERA_DIR/src/ipa/ipa-sign.sh"
-    run_as_pi bash -lc "cd '$LIBCAMERA_DIR' && meson setup build --wipe --buildtype=release \
+    run_as_pi_clean_shell "cd '$LIBCAMERA_DIR' && meson setup build --wipe --buildtype=release \
         -Dpipelines=rpi/vc4,rpi/pisp \
         -Dipas=rpi/vc4,rpi/pisp \
         -Dv4l2=true \
@@ -458,7 +480,7 @@ build_cpp_mjpeg_streamer() {
 
     log "Building cpp-mjpeg-streamer"
     detail "Source: $CPP_MJPEG_STREAMER_DIR"
-    run_as_pi bash -lc "cd '$CPP_MJPEG_STREAMER_DIR' && cmake -S . -B build && cmake --build build -j '$BUILD_JOBS'"
+    run_as_pi_clean_shell "cd '$CPP_MJPEG_STREAMER_DIR' && cmake -S . -B build && cmake --build build -j '$BUILD_JOBS'"
     sudo cmake --build "$CPP_MJPEG_STREAMER_DIR/build" --target install
     sudo ldconfig
 }
@@ -858,7 +880,7 @@ install_imx585_support() {
 
     ensure_repo "$IMX585_DRIVER_DIR" "$IMX585_DRIVER_REPO_URL" "$IMX585_DRIVER_REPO_REF"
     log "Installing IMX585 driver"
-    run_as_pi bash -lc "cd '$IMX585_DRIVER_DIR' && ./setup.sh"
+    run_as_pi_clean_shell "cd '$IMX585_DRIVER_DIR' && ./setup.sh"
 
     local local_tuning_dir="$CINEMATE_SOURCE_DIR/resources/tuning_files"
     local libcamera_tuning_dir="$LIBCAMERA_DIR/src/ipa/rpi/pisp/data"

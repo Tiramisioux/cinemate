@@ -477,6 +477,13 @@ build_cinepi_raw() {
     sudo ldconfig
 }
 
+seed_cinepi_raw_white_balance() {
+    log "Seeding initial CinePi-RAW white-balance defaults"
+    detail "Setting cg_rb to 3.5,1.5 so CLI camera tests start with the same baseline as the manual flow"
+    run_as_pi redis-cli SET cg_rb 3.5,1.5 >/dev/null
+    run_as_pi redis-cli PUBLISH cp_controls cg_rb >/dev/null || true
+}
+
 install_lgpio_backend() {
     if ! is_true "$INSTALL_ALT_GPIO_BACKEND"; then
         detail "Skipping lgpio backend"
@@ -916,6 +923,7 @@ configure_bashrc() {
 
 $MANAGED_BEGIN
 source "$VENV_DIR/bin/activate"
+alias cinemate-env='source "$VENV_DIR/bin/activate"'
 alias cinemate='$PI_HOME/run_cinemate.sh'
 alias editboot='sudo nano /boot/firmware/config.txt'
 alias editcmdline='sudo nano /boot/firmware/cmdline.txt'
@@ -925,6 +933,15 @@ EOF
 
     sudo install -o "$PI_USER" -g "$PI_GROUP" -m 644 "$temp" "$bashrc"
     rm -f "$temp"
+}
+
+print_post_install_notes() {
+    section "Post-install notes"
+    log "Cinemate virtualenv: $VENV_DIR"
+    detail "New interactive shells will auto-activate the Cinemate virtualenv from $PI_HOME/.bashrc"
+    detail "If you are staying in this shell, run 'source ~/.bashrc' once to load the aliases now"
+    detail "If you ever run 'deactivate', use 'cinemate-env' to reactivate the virtualenv in the current shell"
+    detail "Use 'cinemate' to launch the runtime wrapper manually"
 }
 
 configure_settings_json() {
@@ -1012,6 +1029,8 @@ install_cinemate_services() {
         if is_true "$ENABLE_REDIS_LOG_MAINTENANCE_SERVICE"; then
             log "Installing and enabling redis-log-maintenance.timer"
             sudo make -C "$CINEMATE_SOURCE_DIR/services" enable-redis-log-maintenance
+            detail "Running one redis-log-maintenance pass now to match the manual service flow"
+            sudo make -C "$CINEMATE_SOURCE_DIR/services" start-redis-log-maintenance
         else
             detail "Skipping redis-log-maintenance.timer"
         fi
@@ -1083,6 +1102,8 @@ main() {
     build_cpp_mjpeg_streamer
     section "Building cinepi-raw"
     build_cinepi_raw
+    section "Seeding initial cinepi-raw Redis defaults"
+    seed_cinepi_raw_white_balance
     section "Installing sensor-specific support"
     install_imx585_support
     install_ir_filter_helper
@@ -1115,6 +1136,8 @@ main() {
     seed_redis_defaults
     section "Installing Cinemate services"
     install_cinemate_services
+
+    print_post_install_notes
 
     section "Finishing up"
     log "Install complete"

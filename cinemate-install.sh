@@ -470,7 +470,7 @@ build_libcamera() {
         -Dqcam=disabled \
         -Ddocumentation=disabled \
         -Dpycamera=enabled"
-    run_as_pi ninja -C "$LIBCAMERA_DIR/build" -j "$BUILD_JOBS"
+    run_as_pi_clean_shell "ninja -C '$LIBCAMERA_DIR/build' -j '$BUILD_JOBS'"
     sudo ninja -C "$LIBCAMERA_DIR/build" install
     sudo ldconfig
 }

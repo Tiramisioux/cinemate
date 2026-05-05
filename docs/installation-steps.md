@@ -25,7 +25,7 @@ chmod +x cinemate-install.sh
 
 The default installer profile is `imx477` on `cam0` with the boot framebuffer pinned to `HDMI-A-1`.
 
-The script applies the full manual flow from this guide in the same order, including `storage-automount`, `wifi-hotspot`, and `redis-log-maintenance`, plus the optional console-font, PiShrink, Plymouth, and IMX585 helper steps. It is intended for Raspberry Pi OS Lite (Bookworm), stops early on unsupported releases such as Trixie, and pins `libcamera` to Raspberry Pi release tag `v0.5.0+rpt20250429` so it stays aligned with the `cinepi-raw` / `rpicam-apps 1.7` code generation instead of building the moving repository tip. It installs the required stack libraries on top of a Lite system, not a full desktop image. Set `SENSOR_MODEL`, `CAM_PORT`, and `HDMI_BOOT_PORT` at the top of the script or override them inline, for example:
+The script applies the full manual flow from this guide in the same order, including `storage-automount`, `wifi-hotspot`, and `redis-log-maintenance`, plus the optional console-font, PiShrink, Plymouth, and IMX585 helper steps. It is intended for Raspberry Pi OS Lite (Bookworm), stops early on unsupported releases such as Trixie, and pins `libcamera` to Raspberry Pi release tag `v0.5.0+rpt20250429` so it stays aligned with the `cinepi-raw` / `rpicam-apps 1.7` code generation instead of building the moving repository tip. It installs the required stack libraries on top of a Lite system, not a full desktop image, creates `~/.cinemate-env`, auto-activates it from `.bashrc`, and adds a `cinemate-env` helper alias so you can reactivate it after `deactivate`. If you stay in the same shell after the installer finishes, run `source ~/.bashrc` once to load the aliases right away. If you want the script to perform the manual reboot steps automatically too, run it as `RUN_REBOOT=1 ./cinemate-install.sh`. Set `SENSOR_MODEL`, `CAM_PORT`, and `HDMI_BOOT_PORT` at the top of the script or override them inline, for example:
 
 ```bash
 SENSOR_MODEL=imx585_mono CAM_PORT=cam1 HDMI_BOOT_PORT=1 ./cinemate-install.sh
@@ -107,7 +107,7 @@ sudo ldconfig
 
 ```
 redis-cli <<EOF
-SET cg_rb 2.5,2.2
+SET cg_rb 3.5,1.5
 PUBLISH cp_controls cg_rb
 EOF
 ```
@@ -317,33 +317,32 @@ sudo systemctl start console-setup.service
 
 Paste this into the terminal and hit enter:
 ```shell
-sudo bash -c 'cat > post-processing.json << EOF
+cat > /home/pi/post-processing.json <<'EOF'
 {
     "sharedContext": {},
     "mjpegPreview": {
         "port": 8000
     }
 }
-EOF' && \
-sudo chmod +x post-processing.json && \
-sudo bash -c 'cat > post-processing0.json << EOF
+EOF
+
+cat > /home/pi/post-processing0.json <<'EOF'
 {
     "sharedContext": {},
     "mjpegPreview": {
         "port": 8000
     }
 }
-EOF' && \
-sudo chmod +x post-processing0.json && \
-sudo bash -c 'cat > post-processing1.json << EOF
+EOF
+
+cat > /home/pi/post-processing1.json <<'EOF'
 {
     "sharedContext": {},
     "mjpegPreview": {
         "port": 8001
     }
 }
-EOF' && \
-sudo chmod +x post-processing1.json
+EOF
 ```
 
 ### Install PiShrink
@@ -409,7 +408,6 @@ sudo chown -R pi:pi /home/pi/.cinemate-env
 sudo chown -R pi:pi /media && chmod 755 /media
 sudo usermod -aG i2c pi
 sudo modprobe i2c-dev && echo i2c-dev | sudo tee -a /etc/modules
-echo "pi ALL=(ALL) NOPASSWD: /home/pi/run_cinemate.sh" | sudo tee -a /etc/sudoers.d/pi_cinemate
 ```
 Reboot so the group changes take effect:
 
@@ -450,20 +448,17 @@ git clone https://github.com/Tiramisioux/cinemate.git
 
 ### Allow Cinemate to run with sudo
 
-Edit the sudoers file:
+Write the `pi_cinemate` sudoers drop-in and validate it:
 
 ```shell
-sudo visudo
-```
-
-add this to the end of the file:
-```text
+sudo tee /etc/sudoers.d/pi_cinemate <<'EOF'
+pi ALL=(ALL) NOPASSWD: /home/pi/run_cinemate.sh
 pi ALL=(ALL) NOPASSWD: /home/pi/cinemate/src/main.py
 pi ALL=(ALL) NOPASSWD: /bin/mount, /bin/umount, /usr/bin/ntfs-3g
-pi ALL=(ALL) NOPASSWD: /home/pi/cinemate/src/logs/system.log
 pi ALL=(ALL) NOPASSWD: /sbin/mount.ext4
+EOF
+sudo visudo -cf /etc/sudoers.d/pi_cinemate
 ```
-Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.
 
 ### Enable NetworkManager
 
@@ -513,7 +508,8 @@ nano ~/.bashrc
 Add to the end of the file:
 
 ```shell
-alias cinemate='python3 /home/pi/cinemate/src/main.py'
+alias cinemate-env='source /home/pi/.cinemate-env/bin/activate'
+alias cinemate='/home/pi/run_cinemate.sh'
 alias editboot='sudo nano /boot/firmware/config.txt'
 alias editcmdline='sudo nano /boot/firmware/cmdline.txt'
 alias editsettings='sudo nano /home/pi/cinemate/src/settings.json'

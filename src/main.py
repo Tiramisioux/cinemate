@@ -272,26 +272,34 @@ def start_splash(text="THIS IS A COOL MACHINE"):
         subprocess.run([setfont, "-O", backup], check=False)
         subprocess.run([setfont, big_font],      check=False)  # load larger font
 
+    def _draw_centered_line(tty, row: int, text_line: str, columns: int) -> None:
+        col = max(1, ((columns - len(text_line)) // 2) + 1)
+        tty.write(f"\033[{row};{col}H{text_line}")
+
     def _animate():
         frame = 0
         try:
             with open(tty_path, "w") as tty:
+                try:
+                    rows, columns = os.get_terminal_size(tty.fileno())
+                except OSError:
+                    rows, columns = (24, 80)
+
+                title_row = max(1, rows // 2 - 1)
+                status_row = min(rows, title_row + 2)
+                status_template = "Starting CineMate ..."
+
                 tty.write("\033[2J\033[H")          # clear screen
-                tty.write("\033#6")                 # double-WIDTH for this row
-                tty.write("\033#3")                 # double-HEIGHT top half
-                tty.write(text + "\n")
+                _draw_centered_line(tty, title_row, text, columns)
                 tty.flush()
 
                 while not stop_event.is_set():
                     dots = "." * (frame % 4)
-                    tty.write(f"\rStarting CineMate {dots:<3}")
+                    _draw_centered_line(tty, status_row, f"{' ' * len(status_template)}", columns)
+                    _draw_centered_line(tty, status_row, f"Starting CineMate {dots:<3}", columns)
                     tty.flush()
                     frame += 1
                     time.sleep(0.4)
-
-                # back to normal size
-                tty.write("\033#5")                 # single width/height
-                tty.flush()
         finally:
             # restore the original console font
             if setfont and os.path.exists(backup):

@@ -572,7 +572,7 @@ Use HDMI port `0` for `HDMI-A-1` and port `1` for `HDMI-A-2`.
 
 ### Optional: install Plymouth for the boot spinner
 
-If you want the same boot spinner and clean spinner-to-Cinemate handoff as the prebuilt image, install Plymouth before enabling `cinemate-autostart.service`.
+If you want the same boot spinner and clean spinner-to-Cinemate handoff as the prebuilt image, install Plymouth before enabling `cinemate-autostart.service`. The Cinemate theme below keeps the spinner centered on the HDMI framebuffer instead of relying on the distro's stock spinner layout.
 
 Install the required packages:
 
@@ -581,12 +581,20 @@ sudo apt update
 sudo apt install -y plymouth plymouth-themes plymouth-label
 ```
 
-Set the theme to the stock spinner and scale it up for the Pi display:
+Install the Cinemate-owned Plymouth theme from this repo and set it as the default:
+
+```bash
+sudo install -d -m 755 /usr/share/plymouth/themes/cinemate
+sudo install -m 644 resources/plymouth/cinemate/cinemate.plymouth /usr/share/plymouth/themes/cinemate/cinemate.plymouth
+sudo install -m 644 resources/plymouth/cinemate/cinemate.script /usr/share/plymouth/themes/cinemate/cinemate.script
+```
+
+Then point Plymouth at that theme and scale it up for the Pi display:
 
 ```bash
 sudo tee /etc/plymouth/plymouthd.conf <<'EOF'
 [Daemon]
-Theme=spinner
+Theme=cinemate
 DeviceScale=4
 EOF
 ```
@@ -602,7 +610,7 @@ Keep the `video=HDMI-A-1:1920x1080M@60D` or `video=HDMI-A-2:1920x1080M@60D` over
 Apply the Plymouth theme and rebuild the initramfs:
 
 ```bash
-sudo plymouth-set-default-theme spinner
+sudo plymouth-set-default-theme cinemate
 sudo update-initramfs -u
 ```
 

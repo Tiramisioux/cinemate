@@ -862,13 +862,25 @@ configure_plymouth() {
     fi
 
     log "Configuring Plymouth boot spinner"
+    local theme_name="cinemate"
+    local theme_source_dir="$CINEMATE_SOURCE_DIR/resources/plymouth/$theme_name"
+    local theme_target_dir="/usr/share/plymouth/themes/$theme_name"
+
+    [[ -f "$theme_source_dir/$theme_name.plymouth" ]] || die "Missing Plymouth theme file: $theme_source_dir/$theme_name.plymouth"
+    [[ -f "$theme_source_dir/$theme_name.script" ]] || die "Missing Plymouth theme script: $theme_source_dir/$theme_name.script"
+
+    detail "Installing Cinemate Plymouth theme to $theme_target_dir"
+    sudo install -d -m 755 "$theme_target_dir"
+    sudo install -m 644 "$theme_source_dir/$theme_name.plymouth" "$theme_target_dir/$theme_name.plymouth"
+    sudo install -m 644 "$theme_source_dir/$theme_name.script" "$theme_target_dir/$theme_name.script"
+
     backup_file /etc/plymouth/plymouthd.conf
-    write_root_file /etc/plymouth/plymouthd.conf 644 <<'EOF'
+    write_root_file /etc/plymouth/plymouthd.conf 644 <<EOF
 [Daemon]
-Theme=spinner
+Theme=$theme_name
 DeviceScale=4
 EOF
-    sudo plymouth-set-default-theme spinner
+    sudo plymouth-set-default-theme "$theme_name"
     sudo update-initramfs -u
 }
 

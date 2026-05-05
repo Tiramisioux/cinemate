@@ -8,6 +8,11 @@ Conflicts=getty@tty1.service
 Type=notify
 NotifyAccess=main
 Environment=CINEMATE_STARTUP_FAILURE_FILE=/home/pi/.cache/cinemate/startup-failure.ansi
+StandardInput=tty-force
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=no
 ExecStartPre=/usr/local/bin/camera-ready.sh
 ExecStartPre=/bin/sleep 5
 ExecStart=/home/pi/.cinemate-env/bin/python3 /home/pi/cinemate/src/main.py

@@ -38,6 +38,7 @@ from module.i2c.i2c_oled import I2cOled
 from module.i2c.quad_rotary_controller import QuadRotaryController
 from module.console_display import (
     claim_console_for_framebuffer,
+    get_console_tty_path,
     hide_cursor,
     release_console_to_text,
 )
@@ -257,6 +258,10 @@ def wait_for_plymouth_to_quit(timeout: float = 5.0, poll_interval: float = 0.05)
     return False
 def start_splash(text="THIS IS A COOL MACHINE"):
     stop_event = threading.Event()
+    tty_path = get_console_tty_path()
+    if tty_path is None:
+        logging.info("No writable console TTY available; skipping text splash")
+        return None, None
 
     big_font = "Lat15-TerminusBold16x32"        # ← choose from your list
     setfont  = shutil.which("setfont")          # /usr/bin/setfont (None if missing)
@@ -270,7 +275,7 @@ def start_splash(text="THIS IS A COOL MACHINE"):
     def _animate():
         frame = 0
         try:
-            with open("/dev/tty1", "w") as tty:
+            with open(tty_path, "w") as tty:
                 tty.write("\033[2J\033[H")          # clear screen
                 tty.write("\033#6")                 # double-WIDTH for this row
                 tty.write("\033#3")                 # double-HEIGHT top half
@@ -495,7 +500,8 @@ def run_application(args, log_queue):
         fb_splash = graphic_splash(welcome_text, welcome_image)
         if fb_splash is None:
             splash_thread, splash_stop = start_splash(welcome_text)
-            systemd_status("Cinemate text splash active")
+            if splash_thread is not None:
+                systemd_status("Cinemate text splash active")
         else:
             claim_console_for_framebuffer()
             systemd_status("Cinemate splash active")

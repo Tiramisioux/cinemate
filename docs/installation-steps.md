@@ -25,7 +25,7 @@ chmod +x cinemate-install.sh
 
 The default installer profile is `imx477` on `cam0` with the boot framebuffer pinned to `HDMI-A-1`.
 
-The script applies the full manual flow from this guide in the same order, including `storage-automount`, `wifi-hotspot`, and `redis-log-maintenance`, plus the optional console-font, PiShrink, Plymouth, and IMX585 helper steps. It is intended for Raspberry Pi OS Lite (Bookworm), stops early on unsupported releases such as Trixie, and pins `libcamera` to Raspberry Pi release tag `v0.5.0+rpt20250429` so it stays aligned with the `cinepi-raw` / `rpicam-apps 1.7` code generation instead of building the moving repository tip. It installs the required stack libraries on top of a Lite system, not a full desktop image, creates `~/.cinemate-env`, auto-activates it from `.bashrc`, and adds a `cinemate-env` helper alias so you can reactivate it after `deactivate`. If you stay in the same shell after the installer finishes, run `source ~/.bashrc` once to load the aliases right away. If you want the script to perform the manual reboot steps automatically too, run it as `RUN_REBOOT=1 ./cinemate-install.sh`. Set `SENSOR_MODEL`, `CAM_PORT`, and `HDMI_BOOT_PORT` at the top of the script or override them inline, for example:
+The script applies the full manual flow from this guide in the same order, including `storage-automount`, `wifi-hotspot`, and `redis-log-maintenance`, plus the optional console-font, PiShrink, Plymouth, and IMX585 helper steps. It is intended for Raspberry Pi OS Lite (Bookworm), stops early on unsupported releases such as Trixie, and pins `libcamera` to Raspberry Pi release tag `v0.5.0+rpt20250429` so it stays aligned with the `cinepi-raw` / `rpicam-apps 1.7` code generation instead of building the moving repository tip. It installs the required stack libraries on top of a Lite system, not a full desktop image, creates `~/.cinemate-env`, auto-activates it from `.bashrc`, adds a `cinemate-env` helper alias so you can reactivate it after `deactivate`, and writes `/home/pi/compile-raw.sh` as a reusable cinepi-raw rebuild helper. If you stay in the same shell after the installer finishes, run `source ~/.bashrc` once to load the aliases right away. If you want the script to perform the manual reboot steps automatically too, run it as `RUN_REBOOT=1 ./cinemate-install.sh`. Set `SENSOR_MODEL`, `CAM_PORT`, and `HDMI_BOOT_PORT` at the top of the script or override them inline, for example:
 
 ```bash
 SENSOR_MODEL=imx585_mono CAM_PORT=cam1 HDMI_BOOT_PORT=1 ./cinemate-install.sh
@@ -94,14 +94,34 @@ WAV BEXT/iXML timecode metadata requires the `ffmpeg` package from the dependenc
 
 ```bash
 git clone https://github.com/Tiramisioux/cinepi-raw.git
-cd cinepi-raw
-sudo rm -rf build
-sudo meson setup build
-sudo ninja -C build
-sudo meson install -C build
-cd
+cat > /home/pi/compile-raw.sh <<'EOF'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+CINEPI_RAW_DIR="${CINEPI_RAW_DIR:-/home/pi/cinepi-raw}"
+CPP_MJPEG_STREAMER_DIR="${CPP_MJPEG_STREAMER_DIR:-/home/pi/cpp-mjpeg-streamer}"
+BUILD_JOBS="${BUILD_JOBS:-$(nproc 2>/dev/null || printf '4')}"
+BUILD_DIR="${BUILD_DIR:-$CINEPI_RAW_DIR/build}"
+PKG_CONFIG_PATH="$CPP_MJPEG_STREAMER_DIR/build:${PKG_CONFIG_PATH:-}"
+export PKG_CONFIG_PATH
+
+printf '[compile-raw] Source: %s\n' "$CINEPI_RAW_DIR"
+printf '[compile-raw] Build directory: %s\n' "$BUILD_DIR"
+printf '[compile-raw] Using PKG_CONFIG_PATH=%s\n' "$PKG_CONFIG_PATH"
+printf '[compile-raw] Running meson setup --wipe\n'
+meson setup "$BUILD_DIR" "$CINEPI_RAW_DIR" --wipe
+printf '[compile-raw] Building with ninja (%s jobs)\n' "$BUILD_JOBS"
+ninja -C "$BUILD_DIR" -j "$BUILD_JOBS"
+printf '[compile-raw] Installing cinepi-raw\n'
+sudo env PKG_CONFIG_PATH="$PKG_CONFIG_PATH" meson install -C "$BUILD_DIR"
+printf '[compile-raw] Refreshing linker cache\n'
 sudo ldconfig
+EOF
+chmod +x /home/pi/compile-raw.sh
+/home/pi/compile-raw.sh
 ```
+
+You can rerun `/home/pi/compile-raw.sh` later whenever you need to rebuild `cinepi-raw`.
 
 ### Seed Redis with white balance default keys
 

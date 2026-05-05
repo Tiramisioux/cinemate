@@ -463,18 +463,44 @@ build_cpp_mjpeg_streamer() {
     sudo ldconfig
 }
 
+write_compile_raw_script() {
+    log "Writing $PI_HOME/compile-raw.sh"
+    write_user_file "$PI_HOME/compile-raw.sh" 755 <<EOF
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+CINEPI_RAW_DIR="\${CINEPI_RAW_DIR:-$CINEPI_RAW_DIR}"
+CPP_MJPEG_STREAMER_DIR="\${CPP_MJPEG_STREAMER_DIR:-$CPP_MJPEG_STREAMER_DIR}"
+BUILD_JOBS="\${BUILD_JOBS:-\$(nproc 2>/dev/null || printf '4')}"
+BUILD_DIR="\${BUILD_DIR:-\$CINEPI_RAW_DIR/build}"
+PKG_CONFIG_PATH="\$CPP_MJPEG_STREAMER_DIR/build:\${PKG_CONFIG_PATH:-}"
+export PKG_CONFIG_PATH
+
+printf '[compile-raw] Source: %s\n' "\$CINEPI_RAW_DIR"
+printf '[compile-raw] Build directory: %s\n' "\$BUILD_DIR"
+printf '[compile-raw] Using PKG_CONFIG_PATH=%s\n' "\$PKG_CONFIG_PATH"
+printf '[compile-raw] Running meson setup --wipe\n'
+meson setup "\$BUILD_DIR" "\$CINEPI_RAW_DIR" --wipe
+printf '[compile-raw] Building with ninja (%s jobs)\n' "\$BUILD_JOBS"
+ninja -C "\$BUILD_DIR" -j "\$BUILD_JOBS"
+printf '[compile-raw] Installing cinepi-raw\n'
+sudo env PKG_CONFIG_PATH="\$PKG_CONFIG_PATH" meson install -C "\$BUILD_DIR"
+printf '[compile-raw] Refreshing linker cache\n'
+sudo ldconfig
+EOF
+}
+
 build_cinepi_raw() {
     ensure_repo "$CINEPI_RAW_DIR" "$CINEPI_RAW_REPO_URL" "$CINEPI_RAW_REPO_REF"
+    write_compile_raw_script
 
     log "Building cinepi-raw"
     detail "Source: $CINEPI_RAW_DIR"
-    run_as_pi env PKG_CONFIG_PATH="$CPP_MJPEG_STREAMER_DIR/build:${PKG_CONFIG_PATH:-}" \
-        meson setup "$CINEPI_RAW_DIR/build" "$CINEPI_RAW_DIR" --wipe
-    run_as_pi env PKG_CONFIG_PATH="$CPP_MJPEG_STREAMER_DIR/build:${PKG_CONFIG_PATH:-}" \
-        ninja -C "$CINEPI_RAW_DIR/build" -j "$BUILD_JOBS"
-    sudo env PKG_CONFIG_PATH="$CPP_MJPEG_STREAMER_DIR/build:${PKG_CONFIG_PATH:-}" \
-        meson install -C "$CINEPI_RAW_DIR/build"
-    sudo ldconfig
+    detail "Using helper script: $PI_HOME/compile-raw.sh"
+    run_as_pi env BUILD_JOBS="$BUILD_JOBS" \
+        CINEPI_RAW_DIR="$CINEPI_RAW_DIR" \
+        CPP_MJPEG_STREAMER_DIR="$CPP_MJPEG_STREAMER_DIR" \
+        "$PI_HOME/compile-raw.sh"
 }
 
 seed_cinepi_raw_white_balance() {
@@ -938,6 +964,7 @@ EOF
 print_post_install_notes() {
     section "Post-install notes"
     log "Cinemate virtualenv: $VENV_DIR"
+    detail "cinepi-raw rebuild helper: $PI_HOME/compile-raw.sh"
     detail "New interactive shells will auto-activate the Cinemate virtualenv from $PI_HOME/.bashrc"
     detail "If you are staying in this shell, run 'source ~/.bashrc' once to load the aliases now"
     detail "If you ever run 'deactivate', use 'cinemate-env' to reactivate the virtualenv in the current shell"

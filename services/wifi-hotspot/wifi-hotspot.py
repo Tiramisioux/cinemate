@@ -1,71 +1,13 @@
 #!/usr/bin/env python3
-"""Simple watchdog service for a Wi-Fi hotspot.
+"""Keep the Cinemate hotspot alive outside the main app process."""
 
-This script keeps a NetworkManager hotspot active even when the main
-``cinemate`` application is not running.  The SSID and password are
-read from ``/home/pi/cinemate/src/settings.json`` so multiple cameras
-can use different networks.
-"""
-import json
 import logging
-import subprocess
+import sys
 import time
-from pathlib import Path
 
-SETTINGS_PATH = Path("/home/pi/cinemate/src/settings.json")
-DEFAULT_SSID = "CinePi"
-DEFAULT_PASS = "11111111"  # nmcli minimum
+sys.path.insert(0, "/home/pi/cinemate/src")
 
-
-def load_credentials(path: Path = SETTINGS_PATH) -> tuple[str, str, bool]:
-    """Return (ssid, password, enabled) from *settings.json* with fallbacks."""
-    try:
-        with path.open("r", encoding="utf-8") as fh:
-            cfg = json.load(fh)
-        wifi_cfg = cfg.get("system", {}).get("wifi_hotspot", {})
-        ssid = wifi_cfg.get("name", DEFAULT_SSID) or DEFAULT_SSID
-        pw = wifi_cfg.get("password", DEFAULT_PASS) or DEFAULT_PASS
-        enabled = bool(wifi_cfg.get("enabled", True))
-        if len(pw) < 8:
-            logging.warning("Password in settings <8 chars – using default")
-            pw = DEFAULT_PASS
-        return ssid, pw, enabled
-    except Exception as exc:  # pragma: no cover - best effort
-        logging.error("Failed to load %s: %s", path, exc)
-        return DEFAULT_SSID, DEFAULT_PASS, True
-
-
-def is_hotspot_active() -> bool:
-    """Return ``True`` if an nmcli hotspot connection is active."""
-    try:
-        res = subprocess.run(
-            ["nmcli", "con", "show", "--active"],
-            capture_output=True, text=True, check=True
-        )
-        return any(
-            "wifi" in line and "Hotspot" in line
-            for line in res.stdout.splitlines()
-        )
-    except subprocess.CalledProcessError as exc:
-        logging.error("Error checking hotspot status: %s", exc)
-        return False
-
-
-def create_hotspot(ssid: str, password: str, iface: str = "wlan0") -> None:
-    """Create a Wi‑Fi hotspot via ``nmcli``."""
-    cmd = [
-        "nmcli", "device", "wifi", "hotspot",
-        "ifname", iface,
-        "ssid", ssid,
-        "password", password,
-    ]
-    try:
-        subprocess.run(cmd, check=True, capture_output=True, text=True)
-        logging.info("Hotspot '%s' started on %s", ssid, iface)
-    except subprocess.CalledProcessError as exc:
-        logging.error("Failed to create hotspot: %s", exc)
-        if exc.stderr:
-            logging.error("nmcli stderr: %s", exc.stderr.strip())
+from module.wifi_hotspot import WiFiHotspotManager
 
 
 def main() -> None:
@@ -75,9 +17,9 @@ def main() -> None:
     )
 
     while True:
-        ssid, pw, enabled = load_credentials()
-        if enabled and not is_hotspot_active():
-            create_hotspot(ssid, pw)
+        mgr = WiFiHotspotManager()
+        if mgr.enabled and not mgr.is_hotspot_active():
+            mgr.create_hotspot()
         time.sleep(60)
 
 

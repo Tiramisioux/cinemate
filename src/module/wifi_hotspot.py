@@ -17,7 +17,9 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import subprocess
+import time
 from pathlib import Path
 from typing import Final, Optional
 
@@ -31,6 +33,7 @@ __all__ = ["WiFiHotspotManager"]
 DEFAULT_SSID:  Final[str] = "CinePi"
 DEFAULT_PASS:  Final[str] = "11111111"  # 8 chars → nmcli minimum
 SETTINGS_PATH: Final[Path] = Path("/home/pi/cinemate/src/settings.json")
+READY_STATES: Final[set[str]] = {"connected", "connected (externally)", "disconnected"}
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -93,6 +96,86 @@ class WiFiHotspotManager:
                 _load_settings(settings_path)
             )
 
+    def _sudo_prefix(self) -> list[str]:
+        """Run privileged commands directly when already root, otherwise via sudo."""
+        return [] if os.geteuid() == 0 else ["sudo"]
+
+    def _run(
+        self,
+        cmd: list[str],
+        *,
+        check: bool = True,
+        capture_output: bool = True,
+    ) -> subprocess.CompletedProcess[str]:
+        """Run a command with the right privilege prefix."""
+        full_cmd = self._sudo_prefix() + cmd
+        return subprocess.run(
+            full_cmd,
+            capture_output=capture_output,
+            text=True,
+            check=check,
+        )
+
+    def _device_state(self) -> str | None:
+        """Return the current nmcli state string for the Wi-Fi interface."""
+        try:
+            res = self._run(
+                ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device", "status"]
+            )
+        except subprocess.CalledProcessError as exc:
+            logger.error("Error checking Wi-Fi device state: %s", exc)
+            return None
+
+        for line in res.stdout.splitlines():
+            parts = line.split(":", 2)
+            if len(parts) != 3:
+                continue
+            device, devtype, state = parts
+            if device == self.iface and devtype == "wifi":
+                return state
+        return None
+
+    def ensure_wifi_ready(self, timeout_s: float = 20.0) -> bool:
+        """Best-effort unblocks Wi-Fi and waits for the interface to become usable."""
+        commands = (
+            ["rfkill", "unblock", "wifi"],
+            ["nmcli", "radio", "wifi", "on"],
+            ["nmcli", "general", "reload"],
+            ["nmcli", "device", "set", self.iface, "managed", "yes"],
+            ["ip", "link", "set", self.iface, "up"],
+        )
+
+        deadline = time.monotonic() + timeout_s
+        last_prep = 0.0
+        last_state = None
+        while time.monotonic() < deadline:
+            now = time.monotonic()
+            if now - last_prep >= 5.0:
+                for cmd in commands:
+                    try:
+                        self._run(cmd)
+                    except subprocess.CalledProcessError as exc:
+                        logger.warning("Wi-Fi prep command failed (%s): %s", " ".join(cmd), exc)
+                        if exc.stderr:
+                            logger.warning("Command stderr: %s", exc.stderr.strip())
+                last_prep = now
+
+            state = self._device_state()
+            if state in READY_STATES:
+                if state != last_state:
+                    logger.info("Wi-Fi interface %s is %s", self.iface, state)
+                return True
+            last_state = state
+            time.sleep(1)
+
+        logger.error(
+            "Wi-Fi interface %s did not become ready within %.0fs (last state: %s)",
+            self.iface,
+            timeout_s,
+            last_state or "unknown",
+        )
+        return False
+
     # ------------------------------------------------------------------ utils
 
     def is_hotspot_active(self) -> bool:
@@ -140,15 +223,19 @@ class WiFiHotspotManager:
             logger.warning("Provided password < 8 chars – using default.")
             pw_final = DEFAULT_PASS
 
+        if not self.ensure_wifi_ready():
+            logger.error("Wi-Fi interface %s is not ready for hotspot creation", self.iface)
+            return
+
         cmd = [
-            "sudo", "nmcli", "d", "wifi", "hotspot",
+            "nmcli", "d", "wifi", "hotspot",
             "ifname", self.iface,
             "ssid", ssid_final,
             "password", pw_final,
         ]
 
         try:
-            res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            res = self._run(cmd)
             logger.info(
                 "Wi‑Fi hotspot '%s' created on %s (pwd: %s)",
                 ssid_final, self.iface, pw_final,

@@ -572,7 +572,7 @@ Use HDMI port `0` for `HDMI-A-1` and port `1` for `HDMI-A-2`.
 
 ### Optional: install Plymouth for the boot spinner
 
-If you want the same boot spinner and clean spinner-to-Cinemate handoff as the prebuilt image, install Plymouth before enabling `cinemate-autostart.service`. The Cinemate theme below keeps the spinner centered on the HDMI framebuffer instead of relying on the distro's stock spinner layout.
+If you want the same boot spinner and clean spinner-to-Cinemate handoff as the prebuilt image, install Plymouth before enabling `cinemate-autostart.service`. The Cinemate theme below keeps the spinner centered on the HDMI framebuffer, shows the boot welcome message itself, and lets Cinemate skip its own duplicate startup splash.
 
 Install the required packages:
 

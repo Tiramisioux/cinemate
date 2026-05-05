@@ -58,6 +58,7 @@ STARTUP_FAILURE_FILE = os.environ.get(
     "CINEMATE_STARTUP_FAILURE_FILE",
     "/home/pi/.cache/cinemate/startup-failure.ansi",
 )
+REPO_PLYMOUTH_THEME_NAME = "cinemate"
 STARTUP_READY_SENT = False
 APP_RUNTIME_READY = False
 
@@ -245,6 +246,28 @@ def plymouth_is_running() -> bool:
         return False
 
     return result.returncode == 0
+
+
+def configured_plymouth_theme() -> str | None:
+    plymouthd_conf = "/etc/plymouth/plymouthd.conf"
+    if not os.path.exists(plymouthd_conf):
+        return None
+
+    try:
+        with open(plymouthd_conf, "r", encoding="utf-8", errors="replace") as handle:
+            for raw_line in handle:
+                line = raw_line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if line.lower().startswith("theme="):
+                    return line.split("=", 1)[1].strip()
+    except OSError as exc:
+        logging.debug("Failed to read %s: %s", plymouthd_conf, exc)
+    return None
+
+
+def repo_plymouth_theme_active() -> bool:
+    return configured_plymouth_theme() == REPO_PLYMOUTH_THEME_NAME
 
 
 def wait_for_plymouth_to_quit(timeout: float = 5.0, poll_interval: float = 0.05) -> bool:
@@ -493,6 +516,9 @@ def run_application(args, log_queue):
     plymouth_active_at_startup = plymouth_is_running()
     launched_by_systemd = bool(os.environ.get("INVOCATION_ID") or os.environ.get("JOURNAL_STREAM"))
     show_welcome_message = configured_show_welcome_message
+    if launched_by_systemd and repo_plymouth_theme_active():
+        logging.info("Repo-managed Plymouth theme is active; using Plymouth for the boot welcome message")
+        show_welcome_message = False
     defer_preview_until_after_welcome = launched_by_systemd and show_welcome_message
     defer_startup_message_until_after_plymouth = show_welcome_message and plymouth_active_at_startup
     restart_camera_after_startup_handoff = plymouth_active_at_startup or launched_by_systemd

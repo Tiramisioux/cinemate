@@ -1,0 +1,164 @@
+Window.SetBackgroundTopColor(0, 0, 0);
+Window.SetBackgroundBottomColor(0, 0, 0);
+
+screen.w = Window.GetWidth(0);
+screen.h = Window.GetHeight(0);
+screen.half.w = screen.w / 2;
+screen.half.h = screen.h / 2;
+
+spinner.center.x = screen.half.w;
+spinner.center.y = screen.half.h;
+spinner.radius = screen.h * 0.05;
+if (screen.w < screen.h) {
+    spinner.radius = screen.w * 0.05;
+}
+spinner.diag = spinner.radius * 0.7071;
+spinner.font = "Sans Bold 28";
+spinner.inactive.alpha = 0.18;
+spinner.active.alpha = 1.0;
+spinner.frame = 0;
+stop_animation = 0;
+
+prompt = null;
+response = null;
+message = null;
+
+fun make_spinner_image(alpha) {
+    return Image.Text("o", 1, 1, 1, alpha, spinner.font);
+}
+
+spinner.inactive.image = make_spinner_image(spinner.inactive.alpha);
+spinner.active.image = make_spinner_image(spinner.active.alpha);
+
+offsets.x = [
+    0,
+    spinner.diag,
+    spinner.radius,
+    spinner.diag,
+    0,
+    -spinner.diag,
+    -spinner.radius,
+    -spinner.diag
+];
+
+offsets.y = [
+    -spinner.radius,
+    -spinner.diag,
+    0,
+    spinner.diag,
+    spinner.radius,
+    spinner.diag,
+    0,
+    -spinner.diag
+];
+
+for (i = 0; i < 8; i++) {
+    spinner.sprites[i] = Sprite(spinner.inactive.image);
+}
+
+fun set_centered_sprite(sprite, image, center_x, center_y) {
+    sprite.SetImage(image);
+    sprite.SetX(center_x - image.GetWidth() / 2);
+    sprite.SetY(center_y - image.GetHeight() / 2);
+}
+
+fun update_spinner() {
+    for (i = 0; i < 8; i++) {
+        local.image = spinner.inactive.image;
+        if (i == spinner.frame) {
+            local.image = spinner.active.image;
+        }
+        set_centered_sprite(
+            spinner.sprites[i],
+            local.image,
+            spinner.center.x + offsets.x[i],
+            spinner.center.y + offsets.y[i]
+        );
+    }
+}
+
+fun refresh_callback() {
+    if (stop_animation == 0) {
+        spinner.frame++;
+        if (spinner.frame >= 8) {
+            spinner.frame = 0;
+        }
+        update_spinner();
+    }
+}
+Plymouth.SetRefreshFunction(refresh_callback);
+
+text_line_height = Image.Text("Dummy text abcxyz", 1, 1, 1, 1.0, "Sans 18").GetHeight();
+prompt_y = spinner.center.y + spinner.radius + 40;
+response_y = prompt_y + text_line_height * 2;
+message_y = response_y + text_line_height * 2;
+bullet.image = Image.Text("*", 1, 1, 1, 1.0, "Sans Bold 18");
+
+fun display_prompt(prompt_text) {
+    prompt.image = Image.Text(prompt_text, 1, 1, 1, 1.0, "Sans 18");
+    prompt.sprite = Sprite(prompt.image);
+    set_centered_sprite(prompt.sprite, prompt.image, screen.half.w, prompt_y);
+}
+
+fun display_question_callback(prompt_text, entry) {
+    stop_animation = 1;
+    display_prompt(prompt_text);
+
+    local.entry_config.alpha = 1.0;
+    local.entry_config.font = "Sans Bold 18";
+    if (entry == "") {
+        entry = "Type your response";
+        local.entry_config.alpha = 0.5;
+        local.entry_config.font = "Sans 18";
+    }
+
+    response = null;
+    response.image = Image.Text(
+        entry,
+        1,
+        1,
+        1,
+        local.entry_config.alpha,
+        local.entry_config.font
+    );
+    response.sprite = Sprite(response.image);
+    set_centered_sprite(response.sprite, response.image, screen.half.w, response_y);
+}
+Plymouth.SetDisplayQuestionFunction(display_question_callback);
+
+fun display_password_callback(prompt_text, dot_count) {
+    stop_animation = 1;
+    display_prompt(prompt_text);
+
+    response = null;
+    if (dot_count > 0) {
+        dot_start_position = screen.half.w - (dot_count * bullet.image.GetWidth()) / 2;
+        for (i = 0; i < dot_count; i++) {
+            response[i].sprite = Sprite(bullet.image);
+            response[i].sprite.SetX(dot_start_position + i * bullet.image.GetWidth());
+            response[i].sprite.SetY(response_y + (text_line_height - bullet.image.GetHeight()) / 2);
+        }
+    } else {
+        response.image = Image.Text("Enter passphrase", 1, 1, 1, 0.5, "Sans 18");
+        response.sprite = Sprite(response.image);
+        set_centered_sprite(response.sprite, response.image, screen.half.w, response_y);
+    }
+}
+Plymouth.SetDisplayPasswordFunction(display_password_callback);
+
+fun display_normal_callback() {
+    prompt = null;
+    response = null;
+    message = null;
+    stop_animation = 0;
+}
+Plymouth.SetDisplayNormalFunction(display_normal_callback);
+
+fun message_callback(text) {
+    message.image = Image.Text(text, 1, 1, 1, 0.75, "Sans 14");
+    message.sprite = Sprite(message.image);
+    set_centered_sprite(message.sprite, message.image, screen.half.w, message_y);
+}
+Plymouth.SetMessageFunction(message_callback);
+
+update_spinner();

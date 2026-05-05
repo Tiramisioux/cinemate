@@ -1,0 +1,9 @@
+[Plymouth Theme]
+Name=Cinemate
+Description=Centered Cinemate boot spinner
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/cinemate
+ScriptFile=/usr/share/plymouth/themes/cinemate/cinemate.script
+UseFirmwareBackground=false

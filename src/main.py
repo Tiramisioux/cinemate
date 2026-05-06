@@ -176,6 +176,22 @@ def current_stderr_tty_path() -> str | None:
         return None
 
 
+def nudge_local_console_prompt() -> bool:
+    """Prompt tty1/getty to redraw after an SSH-launched HDMI GUI stop."""
+    if current_stderr_tty_path() in LOCAL_FAILURE_TTY_PATHS:
+        return False
+
+    for tty_path in LOCAL_FAILURE_TTY_PATHS:
+        try:
+            with open(tty_path, "w", encoding="utf-8", errors="replace") as tty:
+                tty.write("\r\n")
+                tty.flush()
+            return True
+        except OSError:
+            continue
+    return False
+
+
 def should_mirror_failure_to_local_console() -> bool:
     if APP_RUNTIME_READY:
         return False
@@ -789,10 +805,11 @@ def run_application(args, log_queue):
         cleanup_called = True
         logging.info("Shutting down components...")
         shutdown_in_progress = system_shutdown_in_progress()
+        join_timeout = 0.25 if not shutdown_in_progress else 2.0
         if shutdown_in_progress:
             logging.info("System shutdown detected; skipping CLI handoff on tty1")
 
-        def join_thread(thread, name, timeout=2.0):
+        def join_thread(thread, name, timeout=join_timeout):
             if not thread:
                 return True
             thread.join(timeout=timeout)
@@ -817,9 +834,13 @@ def run_application(args, log_queue):
         gui_stopped = False
         if simple_gui:
             gui_stopped = simple_gui.stop(
-                clear_framebuffer=True,
+                clear_framebuffer=shutdown_in_progress,
                 release_console=not shutdown_in_progress,
+                join_timeout=join_timeout,
+                teardown_before_join=not shutdown_in_progress,
             )
+        if not shutdown_in_progress:
+            nudge_local_console_prompt()
         join_thread(dmesg_monitor, "DmesgMonitor")
         join_thread(command_executor, "CommandExecutor")
         if hasattr(cinepi, "shutdown"):
@@ -856,10 +877,10 @@ def run_application(args, log_queue):
     
     def handle_exit(sig, frame):
         logging.info("Graceful shutdown initiated.")
-        cleanup()                 # stop your threads, join them if you like
-        # restore default handler and re-raise
         signal.signal(signal.SIGINT, signal.SIG_DFL)
-        os.kill(os.getpid(), signal.SIGINT)
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        cleanup()                 # stop your threads, join them if you like
+        os.kill(os.getpid(), sig)
 
     signal.signal(signal.SIGINT, handle_exit)
     signal.signal(signal.SIGTERM, handle_exit)

@@ -573,7 +573,9 @@ class CinePiManager:
         for p in self.processes:
             p.stop()
         for p in self.processes:
-            p.join()
+            p.join(timeout=1.0)
+            if p.is_alive():
+                logging.warning("[%s] cinepi-raw wrapper thread did not stop within 1.0s", p.cam)
         self.processes.clear()
         
         # ── tidy up “ready” flags ──────────────────────────────────

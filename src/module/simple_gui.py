@@ -1509,14 +1509,25 @@ class SimpleGUI(threading.Thread):
                 return
             self._display_teardown_done = True
 
-        if clear_framebuffer:
-            self.clear_framebuffer()
+        fb = self.fb
+        self.fb = None
+        self.disp_width = 0
+        self.disp_height = 0
 
+        released_console = False
         if release_console:
             try:
                 release_console_to_text()
+                released_console = True
             except Exception as exc:
                 logging.warning("Failed to release console to text during GUI shutdown: %s", exc)
+
+        if clear_framebuffer and not released_console and fb:
+            blank_image = Image.new("RGBA", fb.size, "black")
+            try:
+                fb.show(blank_image)
+            except (OSError, RuntimeError, ValueError) as exc:
+                logging.warning("Failed to blank framebuffer cleanly during GUI shutdown: %s", exc)
 
     def request_stop(self, clear_framebuffer=False, release_console=False):
         """Ask the GUI thread to exit without waiting for teardown."""
@@ -1526,12 +1537,23 @@ class SimpleGUI(threading.Thread):
             self._release_console_on_exit = self._release_console_on_exit or release_console
         self._redraw_event.set()
 
-    def stop(self, clear_framebuffer=True, release_console=False, join_timeout=2.0):
+    def stop(
+        self,
+        clear_framebuffer=True,
+        release_console=False,
+        join_timeout=2.0,
+        teardown_before_join=False,
+    ):
         """Ask the GUI thread to exit, wait for it, and optionally restore tty1."""
         self.request_stop(
             clear_framebuffer=clear_framebuffer,
             release_console=release_console,
         )
+        if teardown_before_join:
+            self._teardown_display(
+                clear_framebuffer=clear_framebuffer,
+                release_console=release_console,
+            )
         if self.is_alive():
             self.join(timeout=join_timeout)
             if self.is_alive():

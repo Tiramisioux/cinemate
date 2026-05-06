@@ -14,8 +14,6 @@ if (screen.w < screen.h) {
 }
 spinner.diag = spinner.radius * 0.7071;
 spinner.font = "Sans Bold 28";
-welcome.text = "THIS IS A COOL MACHINE";
-welcome.font = "Sans Bold 32";
 spinner.inactive.alpha = 0.18;
 spinner.active.alpha = 1.0;
 spinner.frame = 0;
@@ -26,7 +24,7 @@ response = null;
 message = null;
 
 fun make_spinner_image(alpha) {
-    return Image.Text("o", 1, 1, 1, alpha, spinner.font);
+    return Image.Text("•", 1, 1, 1, alpha, spinner.font);
 }
 
 spinner.inactive.image = make_spinner_image(spinner.inactive.alpha);
@@ -63,15 +61,6 @@ fun set_centered_sprite(sprite, image, center_x, center_y) {
     sprite.SetX(center_x - image.GetWidth() / 2);
     sprite.SetY(center_y - image.GetHeight() / 2);
 }
-
-welcome.image = Image.Text(welcome.text, 1, 1, 1, 1.0, welcome.font);
-welcome.sprite = Sprite(welcome.image);
-set_centered_sprite(
-    welcome.sprite,
-    welcome.image,
-    screen.half.w,
-    spinner.center.y - spinner.radius - welcome.image.GetHeight()
-);
 
 fun update_spinner() {
     for (i = 0; i < 8; i++) {

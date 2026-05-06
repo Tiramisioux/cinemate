@@ -176,10 +176,22 @@ def current_stderr_tty_path() -> str | None:
         return None
 
 
-def nudge_local_console_prompt() -> bool:
-    """Prompt tty1/getty to redraw after an SSH-launched HDMI GUI stop."""
+def restore_local_console_prompt() -> bool:
+    """Restore a visible tty1 prompt after an SSH-launched HDMI GUI stop."""
     if current_stderr_tty_path() in LOCAL_FAILURE_TTY_PATHS:
         return False
+
+    systemctl = shutil.which("systemctl")
+    if systemctl:
+        try:
+            subprocess.run(
+                [systemctl, "--no-block", "start", "getty@tty1.service"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except OSError as exc:
+            logging.debug("Failed to start getty@tty1 during SSH console restore: %s", exc)
 
     for tty_path in LOCAL_FAILURE_TTY_PATHS:
         try:
@@ -840,7 +852,7 @@ def run_application(args, log_queue):
                 teardown_before_join=not shutdown_in_progress,
             )
         if not shutdown_in_progress:
-            nudge_local_console_prompt()
+            restore_local_console_prompt()
         join_thread(dmesg_monitor, "DmesgMonitor")
         join_thread(command_executor, "CommandExecutor")
         if hasattr(cinepi, "shutdown"):

@@ -60,6 +60,15 @@ STARTUP_FAILURE_FILE = os.environ.get(
 )
 STARTUP_READY_SENT = False
 APP_RUNTIME_READY = False
+SYSTEM_SHUTDOWN_TARGETS = frozenset(
+    {
+        "halt.target",
+        "kexec.target",
+        "poweroff.target",
+        "reboot.target",
+        "shutdown.target",
+    }
+)
 
 def _systemd_notify(message: str) -> bool:
     notify_socket = os.environ.get("NOTIFY_SOCKET")
@@ -256,6 +265,74 @@ def wait_for_plymouth_to_quit(timeout: float = 5.0, poll_interval: float = 0.05)
 
     logging.warning("Timed out waiting for Plymouth to quit")
     return False
+
+
+def system_shutdown_in_progress() -> bool:
+    systemctl = shutil.which("systemctl")
+    if not systemctl:
+        return False
+
+    try:
+        result = subprocess.run(
+            [systemctl, "list-jobs", "--no-legend", "--no-pager"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=1.5,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        logging.debug("Failed to inspect systemd jobs during shutdown detection: %s", exc)
+        return False
+
+    for line in result.stdout.splitlines():
+        fields = line.split()
+        if len(fields) >= 2 and fields[1] in SYSTEM_SHUTDOWN_TARGETS:
+            return True
+
+    return False
+
+
+def run_privileged_quietly(command: list[str], timeout: float = 2.0) -> bool:
+    full_command = command if os.geteuid() == 0 else ["sudo", "-n", *command]
+
+    try:
+        result = subprocess.run(
+            full_command,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=timeout,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        logging.debug("Failed to run privileged command %s: %s", full_command, exc)
+        return False
+
+    return result.returncode == 0
+
+
+def request_plymouth_shutdown_handoff() -> bool:
+    if not system_shutdown_in_progress():
+        return False
+
+    systemctl = shutil.which("systemctl")
+    plymouth = shutil.which("plymouth")
+    if not systemctl and not plymouth:
+        return False
+
+    if systemctl:
+        run_privileged_quietly([systemctl, "start", "plymouth-start.service"])
+
+    if plymouth:
+        time.sleep(0.05)
+        run_privileged_quietly([plymouth, "change-mode", "--shutdown"])
+        run_privileged_quietly([plymouth, "show-splash"])
+        if plymouth_is_running():
+            logging.info("Requested Plymouth shutdown handoff")
+            return True
+
+    return False
+
+
 def start_splash(text="THIS IS A COOL MACHINE"):
     stop_event = threading.Event()
     tty_path = get_console_tty_path()
@@ -724,12 +801,20 @@ def run_application(args, log_queue):
             return
         cleanup_called = True
         logging.info("Shutting down components...")
+        shutdown_in_progress = system_shutdown_in_progress()
+        if shutdown_in_progress:
+            logging.info("System shutdown detected; reserving tty1 for Plymouth handoff")
+            request_plymouth_shutdown_handoff()
+
         redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         redis_controller.set_value(ParameterKey.IS_WRITING.value, 0)
         redis_controller.set_value(
             ParameterKey.FPS_LAST.value,
             redis_controller.get_value(ParameterKey.FPS.value)
         )
+
+        if simple_gui:
+            simple_gui.stop(clear_framebuffer=not shutdown_in_progress)
 
         # Stop peripherals
 
@@ -749,12 +834,9 @@ def run_application(args, log_queue):
         if quad_rotary:
             quad_rotary.join()
 
-        if simple_gui:
-            simple_gui.stop()              # <— new: quit the thread
-            simple_gui.clear_framebuffer() # <— new: blank fb0
-
         if fb_splash:
-            blank_framebuffer(fb_splash)
+            if not shutdown_in_progress:
+                blank_framebuffer(fb_splash)
         elif splash_stop:
             splash_stop.set()
             splash_thread.join()
@@ -762,7 +844,8 @@ def run_application(args, log_queue):
         if timekeeper and hasattr(timekeeper, "stop"):
             timekeeper.stop()
 
-        release_console_to_text()
+        if not shutdown_in_progress:
+            release_console_to_text()
         
     atexit.register(cleanup)
     

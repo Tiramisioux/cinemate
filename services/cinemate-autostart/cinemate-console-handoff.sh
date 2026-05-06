@@ -10,7 +10,13 @@ shutdown_targets=(
     shutdown.target
 )
 
-system_shutdown_in_progress() {
+systemd_manager_stopping() {
+    local state
+    state=$(/bin/systemctl is-system-running 2>/dev/null || true)
+    [[ "${state}" == "stopping" || "${state}" == "offline" ]]
+}
+
+shutdown_job_in_progress() {
     local unit
 
     while read -r _job_id unit _job_type _job_state _rest; do
@@ -26,8 +32,8 @@ system_shutdown_in_progress() {
     return 1
 }
 
-if system_shutdown_in_progress; then
-    /bin/systemctl start plymouth-start.service >/dev/null 2>&1 || true
+if systemd_manager_stopping || shutdown_job_in_progress; then
+    /bin/systemctl --no-block start plymouth-start.service >/dev/null 2>&1 || true
     if command -v plymouth >/dev/null 2>&1; then
         plymouth change-mode --shutdown >/dev/null 2>&1 || true
         plymouth show-splash >/dev/null 2>&1 || true

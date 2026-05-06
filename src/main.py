@@ -267,7 +267,32 @@ def wait_for_plymouth_to_quit(timeout: float = 5.0, poll_interval: float = 0.05)
     return False
 
 
+def systemd_manager_state() -> str | None:
+    systemctl = shutil.which("systemctl")
+    if not systemctl:
+        return None
+
+    try:
+        result = subprocess.run(
+            [systemctl, "is-system-running"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=1.5,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        logging.debug("Failed to inspect systemd manager state: %s", exc)
+        return None
+
+    state = result.stdout.strip()
+    return state or None
+
+
 def system_shutdown_in_progress() -> bool:
+    state = systemd_manager_state()
+    if state in {"stopping", "offline"}:
+        return True
+
     systemctl = shutil.which("systemctl")
     if not systemctl:
         return False
@@ -290,48 +315,6 @@ def system_shutdown_in_progress() -> bool:
             return True
 
     return False
-
-
-def run_privileged_quietly(command: list[str], timeout: float = 2.0) -> bool:
-    full_command = command if os.geteuid() == 0 else ["sudo", "-n", *command]
-
-    try:
-        result = subprocess.run(
-            full_command,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-            timeout=timeout,
-        )
-    except (OSError, subprocess.SubprocessError) as exc:
-        logging.debug("Failed to run privileged command %s: %s", full_command, exc)
-        return False
-
-    return result.returncode == 0
-
-
-def request_plymouth_shutdown_handoff() -> bool:
-    if not system_shutdown_in_progress():
-        return False
-
-    systemctl = shutil.which("systemctl")
-    plymouth = shutil.which("plymouth")
-    if not systemctl and not plymouth:
-        return False
-
-    if systemctl:
-        run_privileged_quietly([systemctl, "start", "plymouth-start.service"])
-
-    if plymouth:
-        time.sleep(0.05)
-        run_privileged_quietly([plymouth, "change-mode", "--shutdown"])
-        run_privileged_quietly([plymouth, "show-splash"])
-        if plymouth_is_running():
-            logging.info("Requested Plymouth shutdown handoff")
-            return True
-
-    return False
-
 
 def start_splash(text="THIS IS A COOL MACHINE"):
     stop_event = threading.Event()
@@ -803,8 +786,7 @@ def run_application(args, log_queue):
         logging.info("Shutting down components...")
         shutdown_in_progress = system_shutdown_in_progress()
         if shutdown_in_progress:
-            logging.info("System shutdown detected; reserving tty1 for Plymouth handoff")
-            request_plymouth_shutdown_handoff()
+            logging.info("System shutdown detected; skipping CLI handoff on tty1")
 
         redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         redis_controller.set_value(ParameterKey.IS_WRITING.value, 0)
@@ -812,9 +794,6 @@ def run_application(args, log_queue):
             ParameterKey.FPS_LAST.value,
             redis_controller.get_value(ParameterKey.FPS.value)
         )
-
-        if simple_gui:
-            simple_gui.stop(clear_framebuffer=not shutdown_in_progress)
 
         # Stop peripherals
 
@@ -826,6 +805,8 @@ def run_application(args, log_queue):
         command_executor.join()
         if hasattr(cinepi, "shutdown"):
             cinepi.shutdown()
+        if simple_gui:
+            simple_gui.stop(clear_framebuffer=True)
         serial_handler.running = False
         serial_handler.join()
 

@@ -58,9 +58,17 @@ STARTUP_FAILURE_FILE = os.environ.get(
     "CINEMATE_STARTUP_FAILURE_FILE",
     "/home/pi/.cache/cinemate/startup-failure.ansi",
 )
-REPO_PLYMOUTH_THEME_NAME = "cinemate"
 STARTUP_READY_SENT = False
 APP_RUNTIME_READY = False
+SYSTEM_SHUTDOWN_TARGETS = frozenset(
+    {
+        "halt.target",
+        "kexec.target",
+        "poweroff.target",
+        "reboot.target",
+        "shutdown.target",
+    }
+)
 
 def _systemd_notify(message: str) -> bool:
     notify_socket = os.environ.get("NOTIFY_SOCKET")
@@ -248,28 +256,6 @@ def plymouth_is_running() -> bool:
     return result.returncode == 0
 
 
-def configured_plymouth_theme() -> str | None:
-    plymouthd_conf = "/etc/plymouth/plymouthd.conf"
-    if not os.path.exists(plymouthd_conf):
-        return None
-
-    try:
-        with open(plymouthd_conf, "r", encoding="utf-8", errors="replace") as handle:
-            for raw_line in handle:
-                line = raw_line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                if line.lower().startswith("theme="):
-                    return line.split("=", 1)[1].strip()
-    except OSError as exc:
-        logging.debug("Failed to read %s: %s", plymouthd_conf, exc)
-    return None
-
-
-def repo_plymouth_theme_active() -> bool:
-    return configured_plymouth_theme() == REPO_PLYMOUTH_THEME_NAME
-
-
 def wait_for_plymouth_to_quit(timeout: float = 5.0, poll_interval: float = 0.05) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -279,6 +265,57 @@ def wait_for_plymouth_to_quit(timeout: float = 5.0, poll_interval: float = 0.05)
 
     logging.warning("Timed out waiting for Plymouth to quit")
     return False
+
+
+def systemd_manager_state() -> str | None:
+    systemctl = shutil.which("systemctl")
+    if not systemctl:
+        return None
+
+    try:
+        result = subprocess.run(
+            [systemctl, "is-system-running"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=1.5,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        logging.debug("Failed to inspect systemd manager state: %s", exc)
+        return None
+
+    state = result.stdout.strip()
+    return state or None
+
+
+def system_shutdown_in_progress() -> bool:
+    state = systemd_manager_state()
+    if state in {"stopping", "offline"}:
+        return True
+
+    systemctl = shutil.which("systemctl")
+    if not systemctl:
+        return False
+
+    try:
+        result = subprocess.run(
+            [systemctl, "list-jobs", "--no-legend", "--no-pager"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=1.5,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        logging.debug("Failed to inspect systemd jobs during shutdown detection: %s", exc)
+        return False
+
+    for line in result.stdout.splitlines():
+        fields = line.split()
+        if len(fields) >= 2 and fields[1] in SYSTEM_SHUTDOWN_TARGETS:
+            return True
+
+    return False
+
 def start_splash(text="THIS IS A COOL MACHINE"):
     stop_event = threading.Event()
     tty_path = get_console_tty_path()
@@ -337,6 +374,8 @@ def graphic_splash(text="THIS IS A COOL MACHINE", image_path=None):
     if fb is None:
         logging.info("Framebuffer not ready. Skipping graphic splash")
         return None
+
+    claim_console_for_framebuffer()
 
     W, H = fb.size
 
@@ -509,25 +548,15 @@ def run_application(args, log_queue):
     timekeeper = None
 
     welcome_text = settings.get("welcome_message", "THIS IS A COOL MACHINE")
-    configured_show_welcome_message = bool(
+    show_welcome_message = bool(
         settings.get("show_welcome_message", settings.get("show_startup_message", True))
     )
     welcome_image = settings.get("welcome_image")
     plymouth_active_at_startup = plymouth_is_running()
-    launched_by_systemd = bool(os.environ.get("INVOCATION_ID") or os.environ.get("JOURNAL_STREAM"))
-    show_welcome_message = configured_show_welcome_message
-    if launched_by_systemd and repo_plymouth_theme_active():
-        logging.info("Repo-managed Plymouth theme is active; using Plymouth for the boot welcome message")
-        show_welcome_message = False
-    defer_preview_until_after_welcome = launched_by_systemd and show_welcome_message
     defer_startup_message_until_after_plymouth = show_welcome_message and plymouth_active_at_startup
-    restart_camera_after_startup_handoff = plymouth_active_at_startup or launched_by_systemd
+    restart_camera_after_startup_handoff = plymouth_active_at_startup
     if defer_startup_message_until_after_plymouth:
         logging.info("Deferring startup message until after Plymouth quits")
-    elif launched_by_systemd:
-        if defer_preview_until_after_welcome:
-            logging.info("Systemd launch detected; deferring preview until welcome message completes")
-        logging.info("Systemd launch detected; forcing preview rebind after startup handoff")
 
     fb_splash = None
     if show_welcome_message and not defer_startup_message_until_after_plymouth:
@@ -537,7 +566,6 @@ def run_application(args, log_queue):
             if splash_thread is not None:
                 systemd_status("Cinemate text splash active")
         else:
-            claim_console_for_framebuffer()
             systemd_status("Cinemate splash active")
         splash_visible_started_at = time.monotonic()
         startup_ready_notified = True
@@ -574,7 +602,7 @@ def run_application(args, log_queue):
     # Initialize CinePi application
     cinepi = CinePi(redis_controller, sensor_detect)
     
-    cinepi.start_all(preview_enabled=not defer_preview_until_after_welcome)
+    cinepi.start_all()
 
     # cinepi.set_log_level('INFO')
     # cinepi.message.subscribe(handle_vu_output)
@@ -669,7 +697,11 @@ def run_application(args, log_queue):
         if remaining_splash_time > 0:
             time.sleep(remaining_splash_time)
 
-    systemd_status("Cinemate GUI starting")
+    if startup_ready_notified:
+        systemd_status("Cinemate GUI starting")
+    else:
+        systemd_ready("Cinemate GUI starting")
+        startup_ready_notified = True
 
     if restart_camera_after_startup_handoff and not defer_startup_message_until_after_plymouth:
         wait_for_plymouth_to_quit()
@@ -680,23 +712,19 @@ def run_application(args, log_queue):
         fb_splash = graphic_splash(welcome_text, welcome_image)
         if fb_splash is None:
             splash_thread, splash_stop = start_splash(welcome_text)
-        else:
-            claim_console_for_framebuffer()
         splash_visible_started_at = time.monotonic()
         remaining_splash_time = STARTUP_MESSAGE_MIN_DURATION - (time.monotonic() - splash_visible_started_at)
         if remaining_splash_time > 0:
             time.sleep(remaining_splash_time)
 
-    # Stop splash screen and clear framebuffer/tty
-    if fb_splash:
-        blank_framebuffer(fb_splash)
-    elif splash_stop:
+    # Stop any text-based splash. Keep the framebuffer welcome message visible
+    # until the GUI paints over it so the handoff stays seamless.
+    if splash_stop:
         splash_stop.set()
         splash_thread.join()
-    claim_console_for_framebuffer()
+        claim_console_for_framebuffer()
 
     if restart_camera_after_startup_handoff:
-        time.sleep(0.75)
         logging.info("Restarting cinepi-raw after startup handoff so preview binds above Cinemate")
         cinepi_controller.restart_camera(preview_enabled=True)
 
@@ -756,6 +784,10 @@ def run_application(args, log_queue):
             return
         cleanup_called = True
         logging.info("Shutting down components...")
+        shutdown_in_progress = system_shutdown_in_progress()
+        if shutdown_in_progress:
+            logging.info("System shutdown detected; skipping CLI handoff on tty1")
+
         redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         redis_controller.set_value(ParameterKey.IS_WRITING.value, 0)
         redis_controller.set_value(
@@ -771,8 +803,12 @@ def run_application(args, log_queue):
             command_executor.stop()
         dmesg_monitor.join()
         command_executor.join()
+        if simple_gui:
+            simple_gui.request_stop()
         if hasattr(cinepi, "shutdown"):
             cinepi.shutdown()
+        if simple_gui:
+            simple_gui.stop(clear_framebuffer=True)
         serial_handler.running = False
         serial_handler.join()
 
@@ -781,12 +817,9 @@ def run_application(args, log_queue):
         if quad_rotary:
             quad_rotary.join()
 
-        if simple_gui:
-            simple_gui.stop()              # <— new: quit the thread
-            simple_gui.clear_framebuffer() # <— new: blank fb0
-
         if fb_splash:
-            blank_framebuffer(fb_splash)
+            if not shutdown_in_progress:
+                blank_framebuffer(fb_splash)
         elif splash_stop:
             splash_stop.set()
             splash_thread.join()
@@ -794,7 +827,8 @@ def run_application(args, log_queue):
         if timekeeper and hasattr(timekeeper, "stop"):
             timekeeper.stop()
 
-        release_console_to_text()
+        if not shutdown_in_progress:
+            release_console_to_text()
         
     atexit.register(cleanup)
     

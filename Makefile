@@ -8,6 +8,7 @@ SYSTEMD_DIR         := /etc/systemd/system
 SERVICE_FILE_PATH   := $(SYSTEMD_DIR)/$(SERVICE_NAME).service
 SCRIPT_PATH         := /usr/local/bin/camera-ready.sh
 FAILURE_DISPLAY_SCRIPT_PATH := /usr/local/bin/cinemate-startup-failure-display.sh
+CONSOLE_HANDOFF_SCRIPT_PATH := /usr/local/bin/cinemate-console-handoff.sh
 PROFILE_HOOK_PATH   := /etc/profile.d/cinemate-startup-failure.sh
 
 # where the service file lives inside the repo
@@ -15,6 +16,7 @@ SERVICE_DIR         := services/$(SERVICE_NAME)
 LOCAL_SERVICE_FILE  := $(SERVICE_DIR)/$(SERVICE_NAME).service
 LOCAL_SCRIPT_FILE   := $(SERVICE_DIR)/camera-ready.sh
 LOCAL_FAILURE_DISPLAY_SCRIPT := $(SERVICE_DIR)/cinemate-startup-failure-display.sh
+LOCAL_CONSOLE_HANDOFF_SCRIPT := $(SERVICE_DIR)/cinemate-console-handoff.sh
 LOCAL_PROFILE_HOOK  := $(SERVICE_DIR)/cinemate-startup-failure.sh
 
 .PHONY: all install enable disable start stop restart status clean help
@@ -30,12 +32,14 @@ all: help
 install:
 	sudo install -m 755 $(LOCAL_SCRIPT_FILE) $(SCRIPT_PATH)
 	sudo install -m 755 $(LOCAL_FAILURE_DISPLAY_SCRIPT) $(FAILURE_DISPLAY_SCRIPT_PATH)
+	sudo install -m 755 $(LOCAL_CONSOLE_HANDOFF_SCRIPT) $(CONSOLE_HANDOFF_SCRIPT_PATH)
 	sudo install -m 644 $(LOCAL_PROFILE_HOOK) $(PROFILE_HOOK_PATH)
 	sudo install -m 644 $(LOCAL_SERVICE_FILE) $(SERVICE_FILE_PATH)
 	sudo systemctl daemon-reload
 	@echo "Installed $(SERVICE_FILE_PATH)"
 	@echo "Installed $(SCRIPT_PATH)"
 	@echo "Installed $(FAILURE_DISPLAY_SCRIPT_PATH)"
+	@echo "Installed $(CONSOLE_HANDOFF_SCRIPT_PATH)"
 	@echo "Installed $(PROFILE_HOOK_PATH)"
 
 # -------------------------------------------------------------------
@@ -73,6 +77,7 @@ clean:
 	- sudo rm -f             $(SERVICE_FILE_PATH)
 	- sudo rm -f             $(SCRIPT_PATH)
 	- sudo rm -f             $(FAILURE_DISPLAY_SCRIPT_PATH)
+	- sudo rm -f             $(CONSOLE_HANDOFF_SCRIPT_PATH)
 	- sudo rm -f             $(PROFILE_HOOK_PATH)
 	 sudo systemctl daemon-reload
 	@echo "Removed $(SERVICE_NAME)"

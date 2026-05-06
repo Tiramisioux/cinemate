@@ -1453,11 +1453,17 @@ class SimpleGUI(threading.Thread):
                 self.disp_width = 0
                 self.disp_height = 0
             
-    def stop(self):
-        """Ask the GUI thread to exit, wait for it, then blank fb0."""
+    def request_stop(self):
+        """Ask the GUI thread to exit without waiting for teardown."""
         self._running = False
-        self.join()                     # wait for run() to finish
-        self.clear_framebuffer()        # black screen
+
+    def stop(self, clear_framebuffer=True):
+        """Ask the GUI thread to exit, wait for it, and optionally blank fb0."""
+        self.request_stop()
+        if self.is_alive():
+            self.join()                 # wait for run() to finish
+        if clear_framebuffer:
+            self.clear_framebuffer()
 
 
     def run(self):

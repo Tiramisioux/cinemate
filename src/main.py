@@ -807,12 +807,19 @@ def run_application(args, log_queue):
             command_executor.stop()
         dmesg_monitor.join()
         command_executor.join()
+        gui_stopped = False
         if simple_gui:
-            simple_gui.request_stop()
+            simple_gui.request_stop(
+                clear_framebuffer=True,
+                release_console=not shutdown_in_progress,
+            )
         if hasattr(cinepi, "shutdown"):
             cinepi.shutdown()
         if simple_gui:
-            simple_gui.stop(clear_framebuffer=True)
+            gui_stopped = simple_gui.stop(
+                clear_framebuffer=True,
+                release_console=not shutdown_in_progress,
+            )
         serial_handler.running = False
         serial_handler.join()
 
@@ -831,7 +838,7 @@ def run_application(args, log_queue):
         if timekeeper and hasattr(timekeeper, "stop"):
             timekeeper.stop()
 
-        if not shutdown_in_progress:
+        if not shutdown_in_progress and not gui_stopped:
             release_console_to_text()
         
     atexit.register(cleanup)

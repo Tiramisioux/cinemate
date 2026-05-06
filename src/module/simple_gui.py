@@ -2,7 +2,7 @@ import os
 import threading
 import time
 from PIL import Image, ImageDraw, ImageFont
-from module.console_display import claim_console_for_framebuffer
+from module.console_display import claim_console_for_framebuffer, release_console_to_text
 from module.framebuffer import Framebuffer, acquire_framebuffer
 from module.config_loader import load_settings
 import subprocess
@@ -106,6 +106,10 @@ class SimpleGUI(threading.Thread):
         self._cached_cams_json = None
         self._cached_cams = []
         self._slow_values = {}
+        self._clear_framebuffer_on_exit = False
+        self._release_console_on_exit = False
+        self._display_teardown_done = False
+        self._stop_lock = threading.Lock()
         
         # Load sensor values from Redis upon instantiation
         self.load_sensor_values_from_redis()
@@ -1499,17 +1503,48 @@ class SimpleGUI(threading.Thread):
                 self.disp_width = 0
                 self.disp_height = 0
             
-    def request_stop(self):
-        """Ask the GUI thread to exit without waiting for teardown."""
-        self._running = False
+    def _teardown_display(self, clear_framebuffer=False, release_console=False):
+        with self._stop_lock:
+            if self._display_teardown_done:
+                return
+            self._display_teardown_done = True
 
-    def stop(self, clear_framebuffer=True):
-        """Ask the GUI thread to exit, wait for it, and optionally blank fb0."""
-        self.request_stop()
-        if self.is_alive():
-            self.join()                 # wait for run() to finish
         if clear_framebuffer:
             self.clear_framebuffer()
+
+        if release_console:
+            try:
+                release_console_to_text()
+            except Exception as exc:
+                logging.warning("Failed to release console to text during GUI shutdown: %s", exc)
+
+    def request_stop(self, clear_framebuffer=False, release_console=False):
+        """Ask the GUI thread to exit without waiting for teardown."""
+        with self._stop_lock:
+            self._running = False
+            self._clear_framebuffer_on_exit = self._clear_framebuffer_on_exit or clear_framebuffer
+            self._release_console_on_exit = self._release_console_on_exit or release_console
+        self._redraw_event.set()
+
+    def stop(self, clear_framebuffer=True, release_console=False, join_timeout=2.0):
+        """Ask the GUI thread to exit, wait for it, and optionally restore tty1."""
+        self.request_stop(
+            clear_framebuffer=clear_framebuffer,
+            release_console=release_console,
+        )
+        if self.is_alive():
+            self.join(timeout=join_timeout)
+            if self.is_alive():
+                logging.warning(
+                    "SimpleGUI thread did not stop within %.1fs; display teardown will be deferred",
+                    join_timeout,
+                )
+                return False
+        self._teardown_display(
+            clear_framebuffer=clear_framebuffer,
+            release_console=release_console,
+        )
+        return True
 
 
     def run(self):
@@ -1554,7 +1589,10 @@ class SimpleGUI(threading.Thread):
                 self._slow_dirty = False
                 self._last_draw_ts = time.monotonic()
         finally:
-            pass
+            self._teardown_display(
+                clear_framebuffer=self._clear_framebuffer_on_exit,
+                release_console=self._release_console_on_exit,
+            )
  
     # def emit_gui_data_change(self, changed_data):
     #     self.socketio.emit('gui_data_change', changed_data)

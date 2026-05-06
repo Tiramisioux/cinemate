@@ -5,7 +5,7 @@ import os
 
 
 TTY_PATH = "/dev/tty1"
-TTY_CANDIDATES = ("/dev/tty", TTY_PATH, "/dev/console")
+TTY_CANDIDATES = (TTY_PATH, "/dev/console", "/dev/tty")
 KDSETMODE = 0x4B3A
 KD_TEXT = 0x00
 KD_GRAPHICS = 0x01
@@ -40,6 +40,7 @@ def _write_tty(text: str):
 
 def _set_console_mode(mode: int, label: str) -> bool:
     open_errors: list[tuple[str, OSError]] = []
+    ioctl_errors: list[tuple[str, OSError]] = []
     for tty_path in TTY_CANDIDATES:
         try:
             fd = os.open(tty_path, os.O_RDWR | os.O_CLOEXEC)
@@ -51,6 +52,7 @@ def _set_console_mode(mode: int, label: str) -> bool:
             fcntl.ioctl(fd, KDSETMODE, mode)
             return True
         except OSError as exc:
+            ioctl_errors.append((tty_path, exc))
             if exc.errno == errno.EPERM:
                 logging.debug(
                     "Could not set %s to %s mode without elevated privileges: %s",
@@ -59,10 +61,17 @@ def _set_console_mode(mode: int, label: str) -> bool:
                     exc,
                 )
             else:
-                logging.warning("Could not set %s to %s mode: %s", tty_path, label, exc)
-            return False
+                logging.debug("Could not set %s to %s mode: %s", tty_path, label, exc)
         finally:
             os.close(fd)
+
+    if ioctl_errors:
+        logging.warning(
+            "Could not set a console TTY to %s mode: %s",
+            label,
+            _describe_tty_errors(ioctl_errors),
+        )
+        return False
 
     logging.warning(
         "Could not open a console TTY to set %s mode: %s",

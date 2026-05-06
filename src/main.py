@@ -792,6 +792,15 @@ def run_application(args, log_queue):
         if shutdown_in_progress:
             logging.info("System shutdown detected; skipping CLI handoff on tty1")
 
+        def join_thread(thread, name, timeout=2.0):
+            if not thread:
+                return True
+            thread.join(timeout=timeout)
+            if thread.is_alive():
+                logging.warning("%s did not stop within %.1fs", name, timeout)
+                return False
+            return True
+
         redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         redis_controller.set_value(ParameterKey.IS_WRITING.value, 0)
         redis_controller.set_value(
@@ -805,28 +814,30 @@ def run_application(args, log_queue):
             dmesg_monitor.stop() 
         if hasattr(command_executor, "stop"):
             command_executor.stop()
-        dmesg_monitor.join()
-        command_executor.join()
         gui_stopped = False
-        if simple_gui:
-            simple_gui.request_stop(
-                clear_framebuffer=True,
-                release_console=not shutdown_in_progress,
-            )
-        if hasattr(cinepi, "shutdown"):
-            cinepi.shutdown()
         if simple_gui:
             gui_stopped = simple_gui.stop(
                 clear_framebuffer=True,
                 release_console=not shutdown_in_progress,
             )
-        serial_handler.running = False
-        serial_handler.join()
+        join_thread(dmesg_monitor, "DmesgMonitor")
+        join_thread(command_executor, "CommandExecutor")
+        if hasattr(cinepi, "shutdown"):
+            cinepi.shutdown()
+        if hasattr(serial_handler, "stop"):
+            serial_handler.stop()
+        else:
+            serial_handler.running = False
+        join_thread(serial_handler, "SerialHandler")
 
         if i2c_oled:
-            i2c_oled.join()
+            if hasattr(i2c_oled, "stop"):
+                i2c_oled.stop()
+            join_thread(i2c_oled, "I2cOled")
         if quad_rotary:
-            quad_rotary.join()
+            if hasattr(quad_rotary, "stop"):
+                quad_rotary.stop()
+            join_thread(quad_rotary, "QuadRotaryController")
 
         if fb_splash:
             if not shutdown_in_progress:

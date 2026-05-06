@@ -146,6 +146,7 @@ class QuadRotaryController(threading.Thread):
         self.button_states = [False, False, False, False]
         self.connected = False
         self._last_reconnect = 0
+        self._stop_event = threading.Event()
 
         if self.enabled:
             self._initialize_device()
@@ -241,8 +242,13 @@ class QuadRotaryController(threading.Thread):
             logging.error("Failed to update %s: %s", name, exc)
 
     # ------------------------------------------------------------------
+    def stop(self):
+        self._stop_event.set()
+        for button in self.buttons.values():
+            button.reset_state()
+
     def run(self):
-        while True:
+        while not self._stop_event.is_set():
             self.update()
             time.sleep(0.1)
 

@@ -474,28 +474,27 @@ class AudioMonitor:
         finally:
             process.terminate()
 
-    def start(self):
-        if self.running:
-            return False
-
+    def prepare(self):
+        """Probe the current microphone and apply gain without owning the capture device."""
         self._refresh_capture_gain_from_redis()
 
         if not self.detect_recording_devices():
-            logging.warning("AudioMonitor start aborted: no recording device present.")
+            logging.warning("AudioMonitor prepare aborted: no recording device present.")
             return False
 
         self.parse_hardware_params()
         if not self.can_record_audio:
-            logging.warning("AudioMonitor start aborted: unable to determine usable mic alias.")
+            logging.warning("AudioMonitor prepare aborted: unable to determine usable mic alias.")
             return False
 
         self.apply_capture_gain()
-
-        self.running = True
-        self.thread = threading.Thread(target=self.vu_monitor_loop, daemon=True)
-        self.thread.start()
-        logging.info("AudioMonitor started.")
+        logging.info("AudioMonitor prepared hardware params; VU is expected from cinepi-raw Redis.")
         return True
+
+    def start(self):
+        if self.running:
+            return False
+        return self.prepare()
 
     def stop(self):
         self.running = False
@@ -594,15 +593,15 @@ class USBMonitor():
             self.audio_monitor = AudioMonitor(settings=self.settings)
             self.audio_monitor.set_model_info(model, serial, card_num=card_num, card_name=card_name)
             self.current_mic_id = mic_id
-            # Let ALSA settle briefly, then start the *current* monitor
-            threading.Timer(0.5, self.audio_monitor.start).start()
+            # Let ALSA settle briefly, then probe the current monitor config without owning capture.
+            threading.Timer(0.5, self.audio_monitor.prepare).start()
             if trigger_event:
                 self.usb_event.emit('mic_changed', chosen_device, model, serial, card_name)
         else:
-            # First detection or unchanged mic: ensure monitor is running
-            if not self.audio_monitor.running:
+            # First detection or unchanged mic: ensure monitor config is populated
+            if not self.audio_monitor.can_record_audio:
                 self.audio_monitor.set_model_info(model, serial, card_num=card_num, card_name=card_name)
-                threading.Timer(0.5, self.audio_monitor.start).start()
+                threading.Timer(0.5, self.audio_monitor.prepare).start()
 
         logging.info(f'USB Microphone connected: Model={model}, Serial={serial}, Name={card_name}')
         self.usb_event.emit('add', chosen_device, model, serial, card_name)

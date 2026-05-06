@@ -553,10 +553,7 @@ class SimpleGUI(threading.Thread):
         self._redraw_event.set()
 
     def _vu_active(self):
-        if self._get_recorder_vu_levels() is not None:
-            return True
-        monitor = getattr(self.usb_monitor, "audio_monitor", None)
-        return bool(monitor and getattr(monitor, "running", False))
+        return self._get_recorder_vu_levels() is not None
 
     def _get_font(self, kind: str, size):
         font_size = max(1, int(round(size)))
@@ -944,22 +941,11 @@ class SimpleGUI(threading.Thread):
 
         return self._normalise_vu_levels(str(raw).split("|"))
 
-    def _get_monitor_vu_levels(self):
-        if not self.usb_monitor or not hasattr(self.usb_monitor, "audio_monitor"):
-            return None
-
-        audio_monitor = self.usb_monitor.audio_monitor
-        levels = getattr(audio_monitor, "vu_levels", None)
-        if not levels:
-            return None
-
-        return self._normalise_vu_levels(levels)
-
     def update_smoothed_vu_levels(self):
         levels = self._get_recorder_vu_levels()
-        if levels is None:
-            levels = self._get_monitor_vu_levels()
         if not levels:
+            self.vu_smoothed = []
+            self.vu_peaks = []
             return
 
         if len(levels) != len(self.vu_smoothed):
@@ -1140,18 +1126,12 @@ class SimpleGUI(threading.Thread):
             y += SECTION_GAP
 
     def draw_right_vu_meter(self, draw):
-        if not self.usb_monitor or not hasattr(self.usb_monitor, "audio_monitor"):
-            if self._get_recorder_vu_levels() is None:
-                return
-            monitor = None
-        else:
-            monitor = self.usb_monitor.audio_monitor
+        if self._get_recorder_vu_levels() is None:
+            return
         vu_levels = self.vu_smoothed
         vu_peaks = self.vu_peaks
 
         if not vu_levels:
-            return
-        if monitor is not None and not monitor.running and self._get_recorder_vu_levels() is None:
             return
 
         n_channels = len(vu_levels)

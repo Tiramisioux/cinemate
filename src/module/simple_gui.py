@@ -1342,12 +1342,16 @@ class SimpleGUI(threading.Thread):
                     pass
         self.previous_values = current_values.copy()
 
-        if not self.fb:
+        fb = self.fb
+        if not fb:
             return
 
-        image = Image.new("RGBA", self.fb.size)
+        disp_width = self.disp_width or fb.size[0]
+        disp_height = self.disp_height or fb.size[1]
+
+        image = Image.new("RGBA", fb.size)
         draw = ImageDraw.Draw(image)
-        draw.rectangle(((0, 0), self.fb.size), fill=self.current_background_color)
+        draw.rectangle(((0, 0), fb.size), fill=self.current_background_color)
 
         # Draw left-hand labels and boxes dynamically
         self.draw_left_sections(draw, values)
@@ -1360,10 +1364,10 @@ class SimpleGUI(threading.Thread):
         lores_width = int(self.redis_controller.get_value(ParameterKey.LORES_WIDTH.value))
         lores_height = int(self.redis_controller.get_value(ParameterKey.LORES_HEIGHT.value))
 
-        frame_width = self.disp_width
-        frame_height = self.disp_height
-        shrink_x = self.disp_width / 1920
-        shrink_y = self.disp_height / 1080
+        frame_width = disp_width
+        frame_height = disp_height
+        shrink_x = disp_width / 1920
+        shrink_y = disp_height / 1080
         
         padding_x = 92
         padding_y = 46
@@ -1447,12 +1451,13 @@ class SimpleGUI(threading.Thread):
 
 
         try:
-            self.fb.show(image)
+            fb.show(image)
         except (OSError, RuntimeError, ValueError) as exc:
             logging.warning("Framebuffer write failed; detaching HDMI GUI until it returns: %s", exc)
-            self.fb = None
-            self.disp_width = 0
-            self.disp_height = 0
+            if self.fb is fb:
+                self.fb = None
+                self.disp_width = 0
+                self.disp_height = 0
         
     def draw_rounded_box(self, draw, text, position, font_size, padding, text_color, fill_color, image, extra_height=-17, reduce_top=12):
         font = self._get_font("bold", font_size)

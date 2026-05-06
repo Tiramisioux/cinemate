@@ -183,15 +183,29 @@ def restore_local_console_prompt() -> bool:
 
     systemctl = shutil.which("systemctl")
     if systemctl:
-        try:
-            subprocess.run(
-                [systemctl, "--no-block", "start", "getty@tty1.service"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=False,
+        commands = []
+        sudo = shutil.which("sudo")
+        if sudo:
+            commands.append(
+                [sudo, "-n", systemctl, "--no-block", "--no-ask-password", "start", "getty@tty1.service"]
             )
-        except OSError as exc:
-            logging.debug("Failed to start getty@tty1 during SSH console restore: %s", exc)
+        commands.append(
+            [systemctl, "--no-block", "--no-ask-password", "start", "getty@tty1.service"]
+        )
+
+        for command in commands:
+            try:
+                result = subprocess.run(
+                    command,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                )
+            except OSError as exc:
+                logging.debug("Failed to run %s during SSH console restore: %s", command[0], exc)
+                continue
+            if result.returncode == 0:
+                break
 
     for tty_path in LOCAL_FAILURE_TTY_PATHS:
         try:

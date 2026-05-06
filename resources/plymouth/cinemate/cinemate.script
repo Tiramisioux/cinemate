@@ -10,6 +10,8 @@ spinner.center.x = screen.half.w;
 spinner.center.y = screen.half.h;
 spinner.frame = 0;
 spinner.frame_count = 30;
+spinner.tick = 0;
+spinner.frame_hold = 2;
 stop_animation = 0;
 
 prompt = null;
@@ -74,11 +76,15 @@ fun update_spinner() {
 
 fun refresh_callback() {
     if (stop_animation == 0) {
-        spinner.frame++;
-        if (spinner.frame >= spinner.frame_count) {
-            spinner.frame = 0;
+        spinner.tick++;
+        if (spinner.tick >= spinner.frame_hold) {
+            spinner.tick = 0;
+            spinner.frame++;
+            if (spinner.frame >= spinner.frame_count) {
+                spinner.frame = 0;
+            }
+            update_spinner();
         }
-        update_spinner();
     }
 }
 Plymouth.SetRefreshFunction(refresh_callback);

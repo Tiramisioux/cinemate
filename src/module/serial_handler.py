@@ -1,4 +1,5 @@
 # module/serial_handler.py
+import os
 import time
 import select
 import threading
@@ -38,6 +39,10 @@ class SerialHandler(threading.Thread):
         self._backoff_max = 5.0
 
         self.running = True
+        self._stop_event = threading.Event()
+        self._wake_r, self._wake_w = os.pipe()
+        os.set_blocking(self._wake_r, False)
+        os.set_blocking(self._wake_w, False)
 
     # ───────────────────────── private helpers ──────────────────────────
     def _open_port(self, port):
@@ -208,6 +213,11 @@ class SerialHandler(threading.Thread):
 
     def stop(self):
         self.running = False
+        self._stop_event.set()
+        try:
+            os.write(self._wake_w, b"\0")
+        except OSError:
+            pass
         for ser in self.serials[:]:
             try:
                 ser.close()
@@ -220,29 +230,43 @@ class SerialHandler(threading.Thread):
     def run(self):
         next_port_refresh = 0  # force initial scan
 
-        while self.running:
-            now = time.time()
-
-            # Refresh ports either on cadence (when some are open) or when a
-            # retry/backoff window has elapsed (when none are available).
-            if now >= next_port_refresh:
-                self.update_available_ports()
+        try:
+            while self.running:
                 now = time.time()
-                if self.serials:
-                    next_port_refresh = now + 0.5
+
+                # Refresh ports either on cadence (when some are open) or when a
+                # retry/backoff window has elapsed (when none are available).
+                if now >= next_port_refresh:
+                    self.update_available_ports()
+                    now = time.time()
+                    if self.serials:
+                        next_port_refresh = now + 0.5
+                    else:
+                        next_retry = min(self._next_try.values(), default=now + 1.0)
+                        next_port_refresh = max(now + 0.05, next_retry)
+
+                pollable = [ser for ser in self.serials if ser.is_open]
+
+                # Wait for input (or until the next port refresh) to avoid busy
+                # polling when idle/no ports.
+                timeout = max(0.0, next_port_refresh - time.time())
+                if pollable:
+                    fd_map = {ser.fileno(): ser for ser in pollable}
+                    wait_fds = [self._wake_r, *fd_map.keys()]
+                    readable, _, _ = select.select(wait_fds, [], [], timeout)
+                    if self._wake_r in readable:
+                        try:
+                            os.read(self._wake_r, 4096)
+                        except OSError:
+                            pass
+                        continue
+                    if readable:
+                        self.read_from_ports()
                 else:
-                    next_retry = min(self._next_try.values(), default=now + 1.0)
-                    next_port_refresh = max(now + 0.05, next_retry)
-
-            pollable = [ser for ser in self.serials if ser.is_open]
-
-            # Wait for input (or until the next port refresh) to avoid busy
-            # polling when idle/no ports.
-            timeout = max(0.0, next_port_refresh - time.time())
-            if pollable:
-                fd_map = {ser.fileno(): ser for ser in pollable}
-                readable, _, _ = select.select(fd_map.keys(), [], [], timeout)
-                if readable:
-                    self.read_from_ports()
-            else:
-                time.sleep(timeout if timeout > 0 else 0.05)
+                    self._stop_event.wait(timeout if timeout > 0 else 0.05)
+        finally:
+            for fd in (self._wake_r, self._wake_w):
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass

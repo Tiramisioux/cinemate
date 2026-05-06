@@ -315,6 +315,8 @@ def graphic_splash(text="THIS IS A COOL MACHINE", image_path=None):
         logging.info("Framebuffer not ready. Skipping graphic splash")
         return None
 
+    claim_console_for_framebuffer()
+
     W, H = fb.size
 
     img = Image.new("RGB", (W, H), "black")
@@ -504,7 +506,6 @@ def run_application(args, log_queue):
             if splash_thread is not None:
                 systemd_status("Cinemate text splash active")
         else:
-            claim_console_for_framebuffer()
             systemd_status("Cinemate splash active")
         splash_visible_started_at = time.monotonic()
         startup_ready_notified = True
@@ -651,20 +652,17 @@ def run_application(args, log_queue):
         fb_splash = graphic_splash(welcome_text, welcome_image)
         if fb_splash is None:
             splash_thread, splash_stop = start_splash(welcome_text)
-        else:
-            claim_console_for_framebuffer()
         splash_visible_started_at = time.monotonic()
         remaining_splash_time = STARTUP_MESSAGE_MIN_DURATION - (time.monotonic() - splash_visible_started_at)
         if remaining_splash_time > 0:
             time.sleep(remaining_splash_time)
 
-    # Stop splash screen and clear framebuffer/tty
-    if fb_splash:
-        blank_framebuffer(fb_splash)
-    elif splash_stop:
+    # Stop any text-based splash. Keep the framebuffer welcome message visible
+    # until the GUI paints over it so the handoff stays seamless.
+    if splash_stop:
         splash_stop.set()
         splash_thread.join()
-    claim_console_for_framebuffer()
+        claim_console_for_framebuffer()
 
     if restart_camera_after_startup_handoff:
         logging.info("Restarting cinepi-raw after startup handoff so preview binds above Cinemate")

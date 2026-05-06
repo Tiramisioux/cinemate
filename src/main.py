@@ -803,6 +803,8 @@ def run_application(args, log_queue):
             command_executor.stop()
         dmesg_monitor.join()
         command_executor.join()
+        if simple_gui:
+            simple_gui.request_stop()
         if hasattr(cinepi, "shutdown"):
             cinepi.shutdown()
         if simple_gui:

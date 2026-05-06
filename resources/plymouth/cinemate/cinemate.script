@@ -8,53 +8,53 @@ screen.half.h = screen.h / 2;
 
 spinner.center.x = screen.half.w;
 spinner.center.y = screen.half.h;
-spinner.radius = screen.h * 0.05;
-if (screen.w < screen.h) {
-    spinner.radius = screen.w * 0.05;
-}
-spinner.diag = spinner.radius * 0.7071;
-spinner.font = "Sans Bold 28";
-spinner.inactive.alpha = 0.18;
-spinner.active.alpha = 1.0;
 spinner.frame = 0;
+spinner.frame_count = 30;
 stop_animation = 0;
 
 prompt = null;
 response = null;
 message = null;
 
-fun make_spinner_image(alpha) {
-    return Image.Text("•", 1, 1, 1, alpha, spinner.font);
-}
-
-spinner.inactive.image = make_spinner_image(spinner.inactive.alpha);
-spinner.active.image = make_spinner_image(spinner.active.alpha);
-
-offsets.x = [
-    0,
-    spinner.diag,
-    spinner.radius,
-    spinner.diag,
-    0,
-    -spinner.diag,
-    -spinner.radius,
-    -spinner.diag
+spinner.files = [
+    "throbber-0001.png",
+    "throbber-0002.png",
+    "throbber-0003.png",
+    "throbber-0004.png",
+    "throbber-0005.png",
+    "throbber-0006.png",
+    "throbber-0007.png",
+    "throbber-0008.png",
+    "throbber-0009.png",
+    "throbber-0010.png",
+    "throbber-0011.png",
+    "throbber-0012.png",
+    "throbber-0013.png",
+    "throbber-0014.png",
+    "throbber-0015.png",
+    "throbber-0016.png",
+    "throbber-0017.png",
+    "throbber-0018.png",
+    "throbber-0019.png",
+    "throbber-0020.png",
+    "throbber-0021.png",
+    "throbber-0022.png",
+    "throbber-0023.png",
+    "throbber-0024.png",
+    "throbber-0025.png",
+    "throbber-0026.png",
+    "throbber-0027.png",
+    "throbber-0028.png",
+    "throbber-0029.png",
+    "throbber-0030.png"
 ];
 
-offsets.y = [
-    -spinner.radius,
-    -spinner.diag,
-    0,
-    spinner.diag,
-    spinner.radius,
-    spinner.diag,
-    0,
-    -spinner.diag
-];
-
-for (i = 0; i < 8; i++) {
-    spinner.sprites[i] = Sprite(spinner.inactive.image);
+for (i = 0; i < spinner.frame_count; i++) {
+    spinner.images[i] = Image(spinner.files[i]);
 }
+
+spinner.sprite = Sprite();
+spinner.image = spinner.images[0];
 
 fun set_centered_sprite(sprite, image, center_x, center_y) {
     sprite.SetImage(image);
@@ -63,24 +63,19 @@ fun set_centered_sprite(sprite, image, center_x, center_y) {
 }
 
 fun update_spinner() {
-    for (i = 0; i < 8; i++) {
-        local.image = spinner.inactive.image;
-        if (i == spinner.frame) {
-            local.image = spinner.active.image;
-        }
-        set_centered_sprite(
-            spinner.sprites[i],
-            local.image,
-            spinner.center.x + offsets.x[i],
-            spinner.center.y + offsets.y[i]
-        );
-    }
+    spinner.image = spinner.images[spinner.frame];
+    set_centered_sprite(
+        spinner.sprite,
+        spinner.image,
+        spinner.center.x,
+        spinner.center.y
+    );
 }
 
 fun refresh_callback() {
     if (stop_animation == 0) {
         spinner.frame++;
-        if (spinner.frame >= 8) {
+        if (spinner.frame >= spinner.frame_count) {
             spinner.frame = 0;
         }
         update_spinner();
@@ -89,7 +84,7 @@ fun refresh_callback() {
 Plymouth.SetRefreshFunction(refresh_callback);
 
 text_line_height = Image.Text("Dummy text abcxyz", 1, 1, 1, 1.0, "Sans 18").GetHeight();
-prompt_y = spinner.center.y + spinner.radius + 40;
+prompt_y = spinner.center.y + spinner.image.GetHeight() / 2 + 40;
 response_y = prompt_y + text_line_height * 2;
 message_y = response_y + text_line_height * 2;
 bullet.image = Image.Text("*", 1, 1, 1, 1.0, "Sans Bold 18");

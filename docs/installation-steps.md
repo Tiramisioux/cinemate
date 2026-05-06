@@ -572,7 +572,7 @@ Use HDMI port `0` for `HDMI-A-1` and port `1` for `HDMI-A-2`.
 
 ### Optional: install Plymouth for the boot spinner
 
-If you want the same boot spinner and clean spinner-to-Cinemate handoff as the prebuilt image, install Plymouth before enabling `cinemate-autostart.service`. The Cinemate theme below keeps the spinner centered on the HDMI framebuffer, shows the boot welcome message itself, and lets Cinemate skip its own duplicate startup splash.
+If you want the same boot spinner and clean spinner-to-Cinemate handoff as the prebuilt image, install Plymouth before enabling `cinemate-autostart.service`. The Cinemate theme below keeps the spinner centered on the HDMI framebuffer during Pi startup and shutdown, while Cinemate itself shows the welcome message after Plymouth hands off to the app.
 
 Install the required packages:
 
@@ -614,7 +614,7 @@ sudo plymouth-set-default-theme cinemate
 sudo update-initramfs -u
 ```
 
-After that, reinstall the Cinemate autostart service so the latest Plymouth and `tty1` ordering is installed:
+After that, reinstall the Cinemate autostart service so the latest `tty1` handoff scripts and Plymouth ordering are installed:
 
 ```bash
 cd /home/pi/cinemate
@@ -736,6 +736,6 @@ make start          # launch now
 
 After enabling the service, Cinemate should autostart on boot.
 
-> **Tip:** `sudo make install` also places `/usr/local/bin/camera-ready.sh` on the system. The script waits for `cinepi-raw` to report a camera before systemd launches Cinemate, and the installed unit starts after `plymouth-quit-wait.service` so the boot splash can finish before Cinemate binds its preview layer.
+> **Tip:** `sudo make install` also places `/usr/local/bin/camera-ready.sh`, `/usr/local/bin/cinemate-startup-failure-display.sh`, and `/usr/local/bin/cinemate-console-handoff.sh` on the system. The camera-ready helper waits for `cinepi-raw` to report a camera before systemd launches Cinemate, the startup-failure helper preserves early crash diagnostics on `tty1`, and the console-handoff helper restores the CLI on a normal Cinemate stop while leaving `tty1` available for Plymouth during full system shutdown.
 
 You now have a 12 bit RAW image capturing system on your Raspberry Pi!

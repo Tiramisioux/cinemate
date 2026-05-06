@@ -8,11 +8,11 @@ Responsible for autostart of Cinemate on boot. By default, it is turned off on t
 
 Starting in v3.2 the service now waits for the camera sensor to come online before launching the UI. The helper script `/usr/local/bin/camera-ready.sh` polls `cinepi-raw --list-cameras` for up to 30 seconds and logs progress to the systemd journal so Cinemate does not start with a black screen if the IMX sensor is still initialising.
 
-When Plymouth is enabled on the Pi image, the service is ordered after `plymouth-quit-wait.service` and before `getty@tty1.service`. That lets the boot spinner finish cleanly before Cinemate starts, while still preventing the autologin CLI on `tty1` from flashing up before the GUI takes over.
+When Plymouth is enabled on the Pi image, the service is attached to `tty1` and ordered around the Plymouth quit units so the boot spinner stays visible until Cinemate is ready to take over, without flashing the autologin CLI in between.
 
 Plymouth is optional. Cinemate still starts correctly if Plymouth is not installed; you simply will not get the boot spinner or the smoother spinner-to-Cinemate handoff used on the image.
 
-While `cinemate-autostart.service` is running, `tty1` is reserved for Plymouth and the Cinemate GUI. The local login prompt is therefore suppressed on `tty1` during runtime and restored when the service stops. Use SSH or switch to `tty2` if you need a shell while Cinemate is active.
+While `cinemate-autostart.service` is running, `tty1` is reserved for Plymouth and the Cinemate GUI. The local login prompt is therefore suppressed on `tty1` during runtime. On a normal Cinemate stop, the service restores the `tty1` CLI; during a full Pi reboot or shutdown, the service leaves `tty1` available for Plymouth so the shutdown spinner can stay visible instead. Use SSH or switch to `tty2` if you need a shell while Cinemate is active.
 
 The service now uses `Type=notify`, so systemd can track Cinemate's boot progress through status messages such as the splash becoming active and the GUI starting.
 To keep `journalctl -fu cinemate-autostart` readable when ALSA reports noisy underruns, the unit rate-limits log output (see `LogRateLimitIntervalSec` and `LogRateLimitBurst` in the service file). Adjust those values if you need more or less verbosity.
@@ -33,11 +33,11 @@ make disable   # disable autostart
 make clean     # remove the service
 ```
 
-The `make install` step also copies `camera-ready.sh` into `/usr/local/bin/` with execute permissions so that the systemd unit can call it from `ExecStartPre`.
+The `make install` step also copies `camera-ready.sh`, `cinemate-startup-failure-display.sh`, and `cinemate-console-handoff.sh` into `/usr/local/bin/` with execute permissions so that the systemd unit can call them during startup, failure replay, and shutdown handoff.
 
 If Cinemate exits before it reaches its real ready state, the service now preserves the colored startup-failure block and the `tty1` login shell replays it before showing the prompt. That makes invalid `settings.json` errors and other early-start crashes visible on the HDMI console without losing the normal shell afterward.
 
-If you want the same clean boot handoff as the prebuilt image, install Plymouth separately as described in the manual install guide and then reinstall `cinemate-autostart.service` so the latest `tty1` and `plymouth-quit-wait.service` ordering is in place.
+If you want the same clean boot and shutdown handoff as the prebuilt image, install Plymouth separately as described in the manual install guide and then reinstall `cinemate-autostart.service` so the latest `tty1` handoff logic is in place.
 
 To start Cinemate manually, anywhere in the cli, type `cinemate`.
 

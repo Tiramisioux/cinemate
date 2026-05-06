@@ -16,6 +16,8 @@ from module.redis_controller import ParameterKey
 import json
 import re
 
+RECORDER_VU_REDIS_KEY = "audio_vu"
+
 
 def _to_bool(value) -> bool:
     """Return *value* as bool, accepting common string variants."""
@@ -547,6 +549,8 @@ class SimpleGUI(threading.Thread):
         self._redraw_event.set()
 
     def _vu_active(self):
+        if self._get_recorder_vu_levels() is not None:
+            return True
         monitor = getattr(self.usb_monitor, "audio_monitor", None)
         return bool(monitor and getattr(monitor, "running", False))
 
@@ -898,32 +902,72 @@ class SimpleGUI(threading.Thread):
 
         return stem
 
-    def update_smoothed_vu_levels(self):
+    def _normalise_vu_levels(self, levels):
+        cleaned = []
+        for level in levels:
+            try:
+                cleaned.append(max(0, min(100, int(round(float(level))))))
+            except (TypeError, ValueError):
+                continue
+
+        if not cleaned:
+            return None
+
+        if len(cleaned) >= 4 and cleaned[:2] == cleaned[2:4]:
+            cleaned = cleaned[:2]
+        elif len(cleaned) > 2:
+            cleaned = cleaned[:2]
+        elif len(cleaned) == 1:
+            cleaned *= 2
+
+        return cleaned
+
+    def _get_recorder_vu_levels(self):
+        client = getattr(self.redis_controller, "r", None)
+        if client is None:
+            return None
+
+        try:
+            raw = client.get(RECORDER_VU_REDIS_KEY)
+        except Exception:
+            return None
+
+        if raw in (None, b"", ""):
+            return None
+
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8", errors="replace")
+
+        return self._normalise_vu_levels(str(raw).split("|"))
+
+    def _get_monitor_vu_levels(self):
         if not self.usb_monitor or not hasattr(self.usb_monitor, "audio_monitor"):
-            return
+            return None
 
         audio_monitor = self.usb_monitor.audio_monitor
-        vu_history = getattr(audio_monitor, "vu_history", None)
-        if not vu_history:
+        levels = getattr(audio_monitor, "vu_levels", None)
+        if not levels:
+            return None
+
+        return self._normalise_vu_levels(levels)
+
+    def update_smoothed_vu_levels(self):
+        levels = self._get_recorder_vu_levels()
+        if levels is None:
+            levels = self._get_monitor_vu_levels()
+        if not levels:
             return
 
-        # Transpose history to group per-channel values: [(L1, L2, ...), (R1, R2, ...)]
-        vu_transposed = list(zip(*vu_history))
+        if len(levels) != len(self.vu_smoothed):
+            self.vu_smoothed = [0.0] * len(levels)
+            self.vu_peaks = [0.0] * len(levels)
 
-        # Initialize smoothed and peak lists if needed
-        if len(vu_transposed) != len(self.vu_smoothed):
-            self.vu_smoothed = [0.0] * len(vu_transposed)
-            self.vu_peaks = [0.0] * len(vu_transposed)
-
-        for i, channel_history in enumerate(vu_transposed):
-            max_level = max(channel_history)
-            # Decay smoothing: keep some inertia when values drop
-            if max_level < self.vu_smoothed[i]:
+        for i, level in enumerate(levels):
+            if level < self.vu_smoothed[i]:
                 self.vu_smoothed[i] *= (1 - self.vu_decay_factor)
             else:
-                self.vu_smoothed[i] = max_level
+                self.vu_smoothed[i] = level
 
-            # Peak hold
             self.vu_peaks[i] = max(self.vu_peaks[i] * 0.98, self.vu_smoothed[i])
 
     # ─────────────────────────────────────────────────────────────
@@ -1091,15 +1135,19 @@ class SimpleGUI(threading.Thread):
                 y += BOX_H + BOX_GAP
             y += SECTION_GAP
 
-    def draw_right_vu_meter(self, draw, amplification_factor=4):
+    def draw_right_vu_meter(self, draw):
         if not self.usb_monitor or not hasattr(self.usb_monitor, "audio_monitor"):
-            return
-
-        monitor = self.usb_monitor.audio_monitor
+            if self._get_recorder_vu_levels() is None:
+                return
+            monitor = None
+        else:
+            monitor = self.usb_monitor.audio_monitor
         vu_levels = self.vu_smoothed
         vu_peaks = self.vu_peaks
 
-        if not monitor.running or not vu_levels:
+        if not vu_levels:
+            return
+        if monitor is not None and not monitor.running and self._get_recorder_vu_levels() is None:
             return
 
         n_channels = len(vu_levels)
@@ -1114,10 +1162,8 @@ class SimpleGUI(threading.Thread):
         base_x = self.disp_width - margin_right - total_width
 
         def level_to_height(level):
-            import math
-            amplified_level = min(level * amplification_factor, 100)
-            scaled = math.log10(1 + 9 * (amplified_level / 100))
-            return int(scaled * bar_height)
+            clamped_level = max(0.0, min(100.0, float(level)))
+            return int((clamped_level / 100.0) * bar_height)
 
         def draw_bar(x, width, level, peak):
             h = level_to_height(level)

@@ -12,6 +12,26 @@ In practice this means a RODE VideoMic NTG can use the 24-bit alias, while simpl
 
 If `arecord` is missing or no recording device can be probed successfully, Cinemate disables audio capture for that run.
 
+## Capture gain from `settings.json`
+
+You can ask Cinemate to apply a capture-side gain to the detected microphone input:
+
+```json
+"audio": {
+  "capture_gain_db": 0.0
+}
+```
+
+- `0.0` leaves the input at unity gain
+- positive values boost the captured signal
+- negative values attenuate it
+
+Because this is applied on the capture side, it is the right place to make the idle mic monitor, the on-screen VU, and the recorded WAV agree more closely.
+
+Cinemate also mirrors this startup value into Redis as `audio_capture_gain_db` so you can later add runtime controls around the same setting.
+
+Not every USB mic exposes a writable ALSA capture control. When a microphone does not, Cinemate leaves the input untouched and logs that no compatible capture control was found.
+
 ## `/etc/asound.conf` setup
 
 For `dsnoop` support, create `/etc/asound.conf`:

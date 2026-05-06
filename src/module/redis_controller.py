@@ -16,6 +16,7 @@ import time, math
 
 # ───────────────────────── parameter keys ────────────────────────────
 class ParameterKey(Enum):
+    AUDIO_CAPTURE_GAIN_DB = "audio_capture_gain_db"
     ANAMORPHIC_FACTOR = "anamorphic_factor"
     BIT_DEPTH         = "bit_depth"
     BUFFER            = "buffer"      # number of raw frames in RAM

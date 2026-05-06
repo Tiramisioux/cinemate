@@ -11,6 +11,8 @@ import shlex
 from collections import deque
 from typing import Optional
 
+CAPTURE_GAIN_REDIS_KEY = "audio_capture_gain_db"
+
 
 class Event:
     def __init__(self):
@@ -96,7 +98,8 @@ class USBDriveMonitor:
                 self.ssd_monitor.on_ssd_removed()
 
 class AudioMonitor:
-    def __init__(self):
+    def __init__(self, settings: Optional[dict] = None):
+        self.settings = settings or {}
         self.format: Optional[str] = None
         self.channels: Optional[int] = None
         self.sample_rate: Optional[int] = None
@@ -113,10 +116,157 @@ class AudioMonitor:
         self.vu_history = deque(maxlen=10)
         self.audio_sample_rate = 48000
         self.can_record_audio = False
+        self.card_num: Optional[str] = None
+        self.card_name: Optional[str] = None
+        self.capture_gain_control: Optional[str] = None
+        self.capture_gain_db = self._parse_capture_gain_db(
+            self.settings.get("audio", {}).get("capture_gain_db", 0.0)
+        )
 
-    def set_model_info(self, model, serial):
+    @staticmethod
+    def _parse_capture_gain_db(value) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            logging.warning("Invalid audio.capture_gain_db value %r; using 0.0 dB", value)
+            return 0.0
+
+    def _refresh_capture_gain_from_redis(self) -> None:
+        try:
+            import redis  # type: ignore
+        except ModuleNotFoundError:
+            return
+
+        try:
+            client = redis.StrictRedis(host="localhost", port=6379, db=0)
+            value = client.get(CAPTURE_GAIN_REDIS_KEY)
+        except Exception as exc:
+            logging.debug("Could not read %s from Redis: %s", CAPTURE_GAIN_REDIS_KEY, exc)
+            return
+
+        if value in (None, b"", ""):
+            return
+
+        if isinstance(value, bytes):
+            value = value.decode("utf-8", errors="replace")
+
+        self.capture_gain_db = self._parse_capture_gain_db(value)
+
+    def set_model_info(
+        self,
+        model,
+        serial,
+        card_num: Optional[str] = None,
+        card_name: Optional[str] = None,
+    ):
         self.model = model.strip().lower() if model else "unknown"
         self.serial = serial
+        self.card_num = str(card_num) if card_num not in (None, "") else None
+        self.card_name = card_name.strip() if isinstance(card_name, str) else card_name
+
+    def _capture_control_score(self, name: str) -> int:
+        lowered = name.lower()
+        if any(token in lowered for token in ("playback", "speaker", "headphone", "output", "monitor")):
+            return -100
+
+        score = 0
+        if "capture" in lowered:
+            score += 50
+        if "mic" in lowered:
+            score += 40
+        if "input" in lowered:
+            score += 30
+        if "boost" in lowered:
+            score += 20
+        if "gain" in lowered:
+            score += 20
+        if "auto gain" in lowered or lowered == "agc":
+            score -= 50
+        return score
+
+    def _capture_controls(self) -> list[str]:
+        if not self.card_num:
+            return []
+
+        try:
+            output = subprocess.check_output(
+                ["amixer", "-c", self.card_num, "scontrols"],
+                stderr=subprocess.DEVNULL,
+                text=True,
+            )
+        except FileNotFoundError:
+            logging.error("amixer not found; cannot apply audio.capture_gain_db.")
+            return []
+        except subprocess.CalledProcessError:
+            logging.warning("amixer scontrols failed for capture card %s", self.card_num)
+            return []
+
+        controls = re.findall(r"Simple mixer control '([^']+)'", output)
+        ranked = []
+        for control in controls:
+            score = self._capture_control_score(control)
+            if score > 0:
+                ranked.append((-score, len(control), control))
+
+        ranked.sort()
+        return [control for _, _, control in ranked]
+
+    def apply_capture_gain(self) -> bool:
+        if not self.card_num:
+            if abs(self.capture_gain_db) > 1e-6:
+                logging.warning(
+                    "audio.capture_gain_db is set to %.1f dB, but no ALSA card number is available.",
+                    self.capture_gain_db,
+                )
+            return False
+
+        controls = self._capture_controls()
+        if not controls:
+            if abs(self.capture_gain_db) > 1e-6:
+                logging.warning(
+                    "audio.capture_gain_db is set to %.1f dB, but no capture-like ALSA controls were found on card %s.",
+                    self.capture_gain_db,
+                    self.card_num,
+                )
+            return False
+
+        gain_db_arg = f"{self.capture_gain_db:g}dB"
+        for control in controls:
+            for command in (
+                ["amixer", "-q", "-c", self.card_num, "sset", control, gain_db_arg, "cap"],
+                ["amixer", "-q", "-c", self.card_num, "sset", control, gain_db_arg],
+            ):
+                result = subprocess.run(
+                    command,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                )
+                if result.returncode == 0:
+                    self.capture_gain_control = control
+                    logging.info(
+                        "Applied audio.capture_gain_db %.1f dB using ALSA control '%s' on card %s%s",
+                        self.capture_gain_db,
+                        control,
+                        self.card_num,
+                        f" ({self.card_name})" if self.card_name else "",
+                    )
+                    return True
+
+        if abs(self.capture_gain_db) > 1e-6:
+            logging.warning(
+                "Failed to apply audio.capture_gain_db %.1f dB on card %s%s. Compatible capture controls may not be exposed by this microphone.",
+                self.capture_gain_db,
+                self.card_num,
+                f" ({self.card_name})" if self.card_name else "",
+            )
+        else:
+            logging.debug(
+                "No writable 0 dB capture control found on card %s%s; leaving hardware gain unchanged.",
+                self.card_num,
+                f" ({self.card_name})" if self.card_name else "",
+            )
+        return False
 
     @staticmethod
     def run_with_stderr_capture(cmd: str) -> tuple[int, str]:
@@ -328,6 +478,8 @@ class AudioMonitor:
         if self.running:
             return False
 
+        self._refresh_capture_gain_from_redis()
+
         if not self.detect_recording_devices():
             logging.warning("AudioMonitor start aborted: no recording device present.")
             return False
@@ -336,6 +488,8 @@ class AudioMonitor:
         if not self.can_record_audio:
             logging.warning("AudioMonitor start aborted: unable to determine usable mic alias.")
             return False
+
+        self.apply_capture_gain()
 
         self.running = True
         self.thread = threading.Thread(target=self.vu_monitor_loop, daemon=True)
@@ -354,11 +508,12 @@ class AudioMonitor:
         return self.vu_levels[0], self.vu_levels[1] if len(self.vu_levels) >= 2 else 0
 
 class USBMonitor():
-    def __init__(self, ssd_monitor):
+    def __init__(self, ssd_monitor, settings: Optional[dict] = None):
         self.context = pyudev.Context()
         self.monitor = pyudev.Monitor.from_netlink(self.context)
 
         self.ssd_monitor = ssd_monitor
+        self.settings = settings or {}
 
         self.temp_sound_devices = []
         self.sound_timer = None
@@ -380,7 +535,7 @@ class USBMonitor():
         
         self.current_mic_id = None
         
-        self.audio_monitor = AudioMonitor()
+        self.audio_monitor = AudioMonitor(settings=self.settings)
         
         self.monitor.filter_by(subsystem='usb_storage')
         self.monitor_devices()
@@ -416,6 +571,7 @@ class USBMonitor():
 
         # Always initialize to prevent UnboundLocalError
         card_name = "Unknown"
+        card_num = None
         card_match = re.search(r'card(\d+)', chosen_device.device_path)
         if card_match:
             card_num = card_match.group(1)
@@ -435,8 +591,8 @@ class USBMonitor():
                 self.audio_monitor.stop()
             except Exception:
                 pass
-            self.audio_monitor = AudioMonitor()
-            self.audio_monitor.set_model_info(model, serial)
+            self.audio_monitor = AudioMonitor(settings=self.settings)
+            self.audio_monitor.set_model_info(model, serial, card_num=card_num, card_name=card_name)
             self.current_mic_id = mic_id
             # Let ALSA settle briefly, then start the *current* monitor
             threading.Timer(0.5, self.audio_monitor.start).start()
@@ -445,7 +601,7 @@ class USBMonitor():
         else:
             # First detection or unchanged mic: ensure monitor is running
             if not self.audio_monitor.running:
-                self.audio_monitor.set_model_info(model, serial)
+                self.audio_monitor.set_model_info(model, serial, card_num=card_num, card_name=card_name)
                 threading.Timer(0.5, self.audio_monitor.start).start()
 
         logging.info(f'USB Microphone connected: Model={model}, Serial={serial}, Name={card_name}')

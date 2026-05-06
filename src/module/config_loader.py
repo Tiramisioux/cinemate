@@ -177,6 +177,15 @@ def _apply_settings_defaults(settings: dict) -> dict:
         preview_cfg["default_zoom"] = preview_cfg["zoom_steps"][0]
     settings["preview"] = preview_cfg
 
+    # Audio capture defaults.
+    audio_defaults = {
+        "capture_gain_db": 0.0,
+    }
+    audio_cfg = settings.setdefault("audio", {})
+    for k, v in audio_defaults.items():
+        audio_cfg.setdefault(k, v)
+    settings["audio"] = audio_cfg
+
     # Anamorphic preview defaults (used by CinePiController).
     ana_defaults = {
         "anamorphic_steps": [1.00, 1.33, 2.00],

@@ -61,6 +61,16 @@
       "anyOf": [{"type": "string"}, {"type": "null"}],
       "default": null
     },
+    "audio": {
+      "type": "object",
+      "properties": {
+        "capture_gain_db": {
+          "type": "number",
+          "default": 0.0
+        }
+      },
+      "additionalProperties": true
+    },
     "additionalProperties": true
   }
 }

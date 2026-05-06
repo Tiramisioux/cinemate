@@ -50,6 +50,10 @@
     "zoom_steps":   [1.1, 2.0]
   },
 
+  "audio": {
+    "capture_gain_db": 0.0
+  },
+
   "anamorphic_preview": {
       "default_anamorphic_factor": 1,
     "anamorphic_steps": [1, 1.33, 2.0]

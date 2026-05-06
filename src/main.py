@@ -498,7 +498,7 @@ def initialize_system(settings, pi_model="unknown"):
     redis_controller = RedisController(conform_frame_rate=conf_rate)
     sensor_detect = SensorDetect(settings)
     ssd_monitor = SSDMonitor(redis_controller=redis_controller)
-    usb_monitor = USBMonitor(ssd_monitor)
+    usb_monitor = USBMonitor(ssd_monitor, settings=settings)
 
     gpio_cfg = settings["gpio_output"]
     rec_tone_pins = gpio_cfg.get("rec_tone_pin")
@@ -589,6 +589,10 @@ def run_application(args, log_queue):
 
     # Set redis anamorphic factor to default value
     redis_controller.set_value(ParameterKey.ANAMORPHIC_FACTOR.value, settings["anamorphic_preview"]["default_anamorphic_factor"])
+    redis_controller.set_value(
+        ParameterKey.AUDIO_CAPTURE_GAIN_DB.value,
+        settings.get("audio", {}).get("capture_gain_db", 0.0),
+    )
     
     # Default zoom factor
     redis_controller.set_value(

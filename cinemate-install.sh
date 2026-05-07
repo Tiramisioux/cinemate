@@ -424,10 +424,7 @@ align_pi5_kernel_baseline() {
     fi
 
     detail "Refreshing initramfs and copying Pi 5 boot files into /boot/firmware"
-    sudo update-initramfs -u -k "$KERNEL_BASELINE_ABI_2712"
-    sudo cp "/boot/vmlinuz-$KERNEL_BASELINE_ABI_2712" /boot/firmware/kernel_2712.img
-    sudo cp "/boot/initrd.img-$KERNEL_BASELINE_ABI_2712" /boot/firmware/initramfs_2712
-    sync
+    refresh_pi5_boot_handoff
 
     detail "Holding Pi 5 baseline kernel packages so apt upgrade does not move them forward"
     sudo apt-mark hold \
@@ -439,6 +436,17 @@ align_pi5_kernel_baseline() {
         "$KERNEL_BASELINE_HEADERS_META_PKG_2712" >/dev/null
 
     KERNEL_ALIGNMENT_REQUIRED_REBOOT=1
+}
+
+refresh_pi5_boot_handoff() {
+    if ! is_rpi2712_platform; then
+        return 0
+    fi
+
+    sudo update-initramfs -u -k "$KERNEL_BASELINE_ABI_2712"
+    sudo cp "/boot/vmlinuz-$KERNEL_BASELINE_ABI_2712" /boot/firmware/kernel_2712.img
+    sudo cp "/boot/initrd.img-$KERNEL_BASELINE_ABI_2712" /boot/firmware/initramfs_2712
+    sync
 }
 
 install_apt_packages() {
@@ -985,6 +993,10 @@ install_imx585_support() {
     ensure_repo "$IMX585_DRIVER_DIR" "$IMX585_DRIVER_REPO_URL" "$IMX585_DRIVER_REPO_REF"
     log "Installing IMX585 driver"
     run_as_pi_clean_shell "cd '$IMX585_DRIVER_DIR' && ./setup.sh"
+    if is_rpi2712_platform; then
+        detail "Ensuring DKMS builds IMX585 for the pinned Pi 5 kernel baseline"
+        sudo dkms autoinstall -k "$KERNEL_BASELINE_ABI_2712"
+    fi
 
     local local_tuning_dir="$CINEMATE_SOURCE_DIR/resources/tuning_files"
     local -a libcamera_tuning_dirs=(
@@ -1297,6 +1309,8 @@ main() {
     configure_console_font
     configure_pishrink
     configure_plymouth
+    section "Refreshing Pi 5 boot handoff"
+    refresh_pi5_boot_handoff
     section "Preparing runtime wrappers and permissions"
     configure_media_permissions
     configure_run_wrapper

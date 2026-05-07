@@ -254,6 +254,7 @@ sudo apt install dkms -y
 git clone https://github.com/will127534/imx585-v4l2-driver.git --branch 6.12.y
 cd imx585-v4l2-driver/
 ./setup.sh
+sudo dkms autoinstall -k 6.12.25+rpt-rpi-2712
 cd
 
 ```

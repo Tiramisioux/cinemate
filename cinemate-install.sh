@@ -61,8 +61,8 @@ CINEMATE_REPO_URL="${CINEMATE_REPO_URL:-https://github.com/Tiramisioux/cinemate.
 CINEMATE_REPO_REF="${CINEMATE_REPO_REF:-}"
 CINEPI_RAW_REPO_URL="${CINEPI_RAW_REPO_URL:-https://github.com/Tiramisioux/cinepi-raw.git}"
 CINEPI_RAW_REPO_REF="${CINEPI_RAW_REPO_REF:-}"
-LIBCAMERA_REPO_URL="${LIBCAMERA_REPO_URL:-https://github.com/raspberrypi/libcamera.git}"
-LIBCAMERA_REPO_REF="${LIBCAMERA_REPO_REF:-v0.5.0+rpt20250429}"
+LIBCAMERA_REPO_URL="${LIBCAMERA_REPO_URL:-https://github.com/will127534/libcamera.git}"
+LIBCAMERA_REPO_REF="${LIBCAMERA_REPO_REF:-9d0cdfe5}"
 CPP_MJPEG_STREAMER_REPO_URL="${CPP_MJPEG_STREAMER_REPO_URL:-https://github.com/nadjieb/cpp-mjpeg-streamer.git}"
 CPP_MJPEG_STREAMER_REPO_REF="${CPP_MJPEG_STREAMER_REPO_REF:-}"
 REDIS_PLUS_PLUS_REPO_URL="${REDIS_PLUS_PLUS_REPO_URL:-https://github.com/sewenew/redis-plus-plus.git}"
@@ -73,6 +73,15 @@ IMX585_DRIVER_REPO_URL="${IMX585_DRIVER_REPO_URL:-https://github.com/will127534/
 IMX585_DRIVER_REPO_REF="${IMX585_DRIVER_REPO_REF:-6.12.y}"
 IR_FILTER_URL="${IR_FILTER_URL:-https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter}"
 PISHRINK_URL="${PISHRINK_URL:-https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh}"
+KERNEL_BASELINE_ABI_2712="${KERNEL_BASELINE_ABI_2712:-6.12.25+rpt-rpi-2712}"
+KERNEL_BASELINE_DEB_VERSION_2712="${KERNEL_BASELINE_DEB_VERSION_2712:-6.12.25-1+rpt1}"
+KERNEL_BASELINE_SUPPORT_PKG_2712="${KERNEL_BASELINE_SUPPORT_PKG_2712:-linux-support-6.12.25+rpt}"
+KERNEL_BASELINE_IMAGE_REAL_PKG_2712="${KERNEL_BASELINE_IMAGE_REAL_PKG_2712:-linux-image-6.12.25+rpt-rpi-2712}"
+KERNEL_BASELINE_IMAGE_META_PKG_2712="${KERNEL_BASELINE_IMAGE_META_PKG_2712:-linux-image-rpi-2712}"
+KERNEL_BASELINE_HEADERS_REAL_PKG_2712="${KERNEL_BASELINE_HEADERS_REAL_PKG_2712:-linux-headers-6.12.25+rpt-rpi-2712}"
+KERNEL_BASELINE_HEADERS_META_PKG_2712="${KERNEL_BASELINE_HEADERS_META_PKG_2712:-linux-headers-rpi-2712}"
+RASPI_FIRMWARE_VERSION_2712="${RASPI_FIRMWARE_VERSION_2712:-1.20250430-1}"
+KERNEL_ROLLBACK_DIR="${KERNEL_ROLLBACK_DIR:-/var/tmp/cinemate-kernel-baseline}"
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly MANAGED_BEGIN="# >>> cinemate-install >>>"
@@ -82,6 +91,7 @@ readonly BUILD_JOBS="$(nproc 2>/dev/null || printf '4')"
 BACKUP_DIR=""
 CINEMATE_SOURCE_DIR=""
 STEP_COUNTER=0
+KERNEL_ALIGNMENT_REQUIRED_REBOOT=0
 
 log() {
     printf '[cinemate-install] %s\n' "$*"
@@ -268,9 +278,14 @@ print_configuration_summary() {
     detail "Sensor: $SENSOR_MODEL on $CAM_PORT"
     detail "Boot HDMI: HDMI-A-$((HDMI_BOOT_PORT + 1)) at $HDMI_MODE"
     detail "Runtime HDMI ports: cam0->$HDMI_PORT_CAM0 cam1->$HDMI_PORT_CAM1"
+    detail "Libcamera: $LIBCAMERA_REPO_URL @ $LIBCAMERA_REPO_REF"
     detail "Hotspot: $HOTSPOT_NAME (enabled=$HOTSPOT_ENABLED)"
     detail "Optional features: lgpio=$INSTALL_ALT_GPIO_BACKEND console_font=$INSTALL_CONSOLE_FONT pishrink=$INSTALL_PISHRINK plymouth=$INSTALL_PLYMOUTH imx585_driver=$INSTALL_IMX585_DRIVER ir_filter=$INSTALL_IR_FILTER_HELPER"
     detail "Services: support=$ENABLE_SUPPORT_SERVICES storage=$ENABLE_STORAGE_AUTOMOUNT_SERVICE wifi=$ENABLE_WIFI_HOTSPOT_SERVICE redis_log=$ENABLE_REDIS_LOG_MAINTENANCE_SERVICE autostart=$ENABLE_AUTOSTART start_now=$START_AUTOSTART_NOW"
+}
+
+is_commitish_ref() {
+    [[ "$1" =~ ^[0-9a-fA-F]{7,40}$ ]]
 }
 
 ensure_repo() {
@@ -313,7 +328,13 @@ ensure_repo() {
     run_as_pi mkdir -p "$(dirname "$dir")"
     detail "Cloning $url into $dir"
     if [[ -n "$ref" ]]; then
-        run_as_pi git clone --branch "$ref" "$url" "$dir"
+        if is_commitish_ref "$ref"; then
+            run_as_pi git clone "$url" "$dir"
+            detail "Checking out $ref in $dir"
+            run_as_pi git -C "$dir" checkout "$ref"
+        else
+            run_as_pi git clone --branch "$ref" "$url" "$dir"
+        fi
     else
         run_as_pi git clone "$url" "$dir"
     fi
@@ -347,6 +368,77 @@ bootstrap_base_tools() {
     sudo apt upgrade -y
     detail "Installing base shell/bootstrap tools"
     sudo apt install -y git curl wget python3 python3-pip python3-venv rsync
+}
+
+is_rpi2712_platform() {
+    grep -aq "bcm2712" /proc/device-tree/compatible 2>/dev/null
+}
+
+align_pi5_kernel_baseline() {
+    if ! is_rpi2712_platform; then
+        detail "Skipping Pi 5 kernel alignment on non-2712 hardware"
+        return 0
+    fi
+
+    log "Aligning Raspberry Pi 5 kernel baseline"
+    detail "Target kernel: $KERNEL_BASELINE_ABI_2712 with raspi-firmware $RASPI_FIRMWARE_VERSION_2712"
+
+    local current_image_version
+    local current_fw_version
+    current_image_version="$(dpkg-query -W -f='${Version}' "$KERNEL_BASELINE_IMAGE_META_PKG_2712" 2>/dev/null || true)"
+    current_fw_version="$(dpkg-query -W -f='${Version}' raspi-firmware 2>/dev/null || true)"
+
+    local kernel_pool_url="https://archive.raspberrypi.com/debian/pool/main/l/linux"
+    local firmware_pool_url="https://archive.raspberrypi.com/debian/pool/untested/r/raspi-firmware"
+    local -a urls=(
+        "$kernel_pool_url/${KERNEL_BASELINE_SUPPORT_PKG_2712}_${KERNEL_BASELINE_DEB_VERSION_2712}_all.deb"
+        "$kernel_pool_url/${KERNEL_BASELINE_IMAGE_REAL_PKG_2712}_${KERNEL_BASELINE_DEB_VERSION_2712}_arm64.deb"
+        "$kernel_pool_url/${KERNEL_BASELINE_IMAGE_META_PKG_2712}_${KERNEL_BASELINE_DEB_VERSION_2712}_arm64.deb"
+        "$kernel_pool_url/${KERNEL_BASELINE_HEADERS_REAL_PKG_2712}_${KERNEL_BASELINE_DEB_VERSION_2712}_arm64.deb"
+        "$kernel_pool_url/${KERNEL_BASELINE_HEADERS_META_PKG_2712}_${KERNEL_BASELINE_DEB_VERSION_2712}_arm64.deb"
+        "$firmware_pool_url/raspi-firmware_${RASPI_FIRMWARE_VERSION_2712}_all.deb"
+    )
+    local -a debs=()
+    local url=""
+    local file=""
+
+    sudo install -d -m 755 "$KERNEL_ROLLBACK_DIR"
+
+    for url in "${urls[@]}"; do
+        file="$KERNEL_ROLLBACK_DIR/${url##*/}"
+        debs+=("$file")
+        if [[ -f "$file" ]]; then
+            detail "Reusing cached $(basename "$file")"
+            continue
+        fi
+        detail "Downloading $(basename "$file")"
+        sudo curl -fsSL "$url" -o "$file"
+        sudo chmod 644 "$file"
+    done
+
+    if [[ "$current_image_version" != "1:$KERNEL_BASELINE_DEB_VERSION_2712" || "$current_fw_version" != "1:$RASPI_FIRMWARE_VERSION_2712" ]]; then
+        detail "Installing pinned Pi 5 kernel packages from the Raspberry Pi archive"
+        sudo apt install -y --allow-downgrades "${debs[@]}"
+    else
+        detail "Pinned Pi 5 kernel packages already installed"
+    fi
+
+    detail "Refreshing initramfs and copying Pi 5 boot files into /boot/firmware"
+    sudo update-initramfs -u -k "$KERNEL_BASELINE_ABI_2712"
+    sudo cp "/boot/vmlinuz-$KERNEL_BASELINE_ABI_2712" /boot/firmware/kernel_2712.img
+    sudo cp "/boot/initrd.img-$KERNEL_BASELINE_ABI_2712" /boot/firmware/initramfs_2712
+    sync
+
+    detail "Holding Pi 5 baseline kernel packages so apt upgrade does not move them forward"
+    sudo apt-mark hold \
+        raspi-firmware \
+        "$KERNEL_BASELINE_SUPPORT_PKG_2712" \
+        "$KERNEL_BASELINE_IMAGE_REAL_PKG_2712" \
+        "$KERNEL_BASELINE_IMAGE_META_PKG_2712" \
+        "$KERNEL_BASELINE_HEADERS_REAL_PKG_2712" \
+        "$KERNEL_BASELINE_HEADERS_META_PKG_2712" >/dev/null
+
+    KERNEL_ALIGNMENT_REQUIRED_REBOOT=1
 }
 
 install_apt_packages() {
@@ -384,7 +476,7 @@ install_apt_packages() {
     )
 
     if should_install_imx585_driver; then
-        optional_packages+=(linux-headers dkms)
+        optional_packages+=(dkms)
     fi
     if is_true "$INSTALL_CONSOLE_FONT"; then
         optional_packages+=(console-setup kbd)
@@ -895,14 +987,27 @@ install_imx585_support() {
     run_as_pi_clean_shell "cd '$IMX585_DRIVER_DIR' && ./setup.sh"
 
     local local_tuning_dir="$CINEMATE_SOURCE_DIR/resources/tuning_files"
-    local libcamera_tuning_dir="$LIBCAMERA_DIR/src/ipa/rpi/pisp/data"
-    local install_tuning_dir="/usr/local/share/libcamera/ipa/rpi/pisp"
+    local -a libcamera_tuning_dirs=(
+        "$LIBCAMERA_DIR/src/ipa/rpi/pisp/data"
+        "$LIBCAMERA_DIR/src/ipa/rpi/vc4/data"
+    )
+    local -a install_tuning_dirs=(
+        "/usr/local/share/libcamera/ipa/rpi/pisp"
+        "/usr/local/share/libcamera/ipa/rpi/vc4"
+    )
+    local tuning_dir=""
 
     [[ -d "$local_tuning_dir" ]] || die "Missing tuning files in $local_tuning_dir"
-    run_as_pi install -m 644 "$local_tuning_dir/imx585.json" "$libcamera_tuning_dir/imx585.json"
-    run_as_pi install -m 644 "$local_tuning_dir/imx585_mono.json" "$libcamera_tuning_dir/imx585_mono.json"
-    sudo install -m 644 "$local_tuning_dir/imx585.json" "$install_tuning_dir/imx585.json"
-    sudo install -m 644 "$local_tuning_dir/imx585_mono.json" "$install_tuning_dir/imx585_mono.json"
+    for tuning_dir in "${libcamera_tuning_dirs[@]}"; do
+        run_as_pi install -d -m 755 "$tuning_dir"
+        run_as_pi install -m 644 "$local_tuning_dir/imx585.json" "$tuning_dir/imx585.json"
+        run_as_pi install -m 644 "$local_tuning_dir/imx585_mono.json" "$tuning_dir/imx585_mono.json"
+    done
+    for tuning_dir in "${install_tuning_dirs[@]}"; do
+        sudo install -d -m 755 "$tuning_dir"
+        sudo install -m 644 "$local_tuning_dir/imx585.json" "$tuning_dir/imx585.json"
+        sudo install -m 644 "$local_tuning_dir/imx585_mono.json" "$tuning_dir/imx585_mono.json"
+    done
 }
 
 install_ir_filter_helper() {
@@ -999,9 +1104,13 @@ print_post_install_notes() {
     section "Post-install notes"
     log "Cinemate virtualenv: $VENV_DIR"
     detail "cinepi-raw rebuild helper: $PI_HOME/compile-raw.sh"
+    detail "Matching rpicam utilities are installed via the cinepi-raw build under /usr/local/bin"
     detail "New interactive shells will auto-activate the Cinemate virtualenv from $PI_HOME/.bashrc"
     detail "If you are staying in this shell, run 'source ~/.bashrc' once to load the aliases now"
     detail "If you ever run 'deactivate', use 'cinemate-env' to reactivate the virtualenv in the current shell"
+    if ((KERNEL_ALIGNMENT_REQUIRED_REBOOT)); then
+        detail "Pi 5 kernel baseline was aligned to $KERNEL_BASELINE_ABI_2712; reboot once before camera testing if you did not run the installer with RUN_REBOOT=1"
+    fi
     detail "Use 'cinemate' to launch the runtime wrapper manually"
 }
 
@@ -1140,6 +1249,8 @@ main() {
 
     section "Installing bootstrap tools"
     bootstrap_base_tools
+    section "Aligning the Pi 5 kernel baseline"
+    align_pi5_kernel_baseline
 
     section "Locating the Cinemate source tree"
     configure_repo_source

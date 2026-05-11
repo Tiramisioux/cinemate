@@ -46,12 +46,23 @@ jobs:
       - name: Restore coverpage
         run: git restore docs/coverpage.md
 
+      - name: Detect rendered PDF
+        id: rendered_pdf
+        run: |
+          if [ -f site/renders/Cinemate-Docs.pdf ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "No rendered PDF found at site/renders/Cinemate-Docs.pdf; skipping PDF publish steps."
+          fi
+
       - name: Upload PDF artifact
-        if: always()
+        if: always() && steps.rendered_pdf.outputs.exists == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: cinemate-docs-pdf
           path: site/renders/*.pdf
+          if-no-files-found: ignore
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -64,6 +75,7 @@ jobs:
           allow_empty_commit: true
 
       - name: Copy PDF to docs/renders and push
+        if: steps.rendered_pdf.outputs.exists == 'true'
         run: |
           cp site/renders/Cinemate-Docs.pdf docs/renders/
           git config user.name "CI"

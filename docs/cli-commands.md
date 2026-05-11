@@ -69,7 +69,7 @@ corresponding controller methods.
 The `rec` command now accepts timed modes so you can walk away from the camera while it captures a precisely bounded take.
 
 - `rec s <seconds>` stops the recording after the requested duration. Short forms such as `sec`, `secs` and `seconds` are also accepted.
-- `rec f <frames>` converts the requested frame count to seconds using the current FPS and schedules the stop for you. You can type `frame` or `frames` instead of `f`.
+- `rec f <frames>` stops after the requested number of frame slots at the locked record-start FPS. Dropped frames still count toward that limit, so the take ends when that many frames should have been recorded, not when that many DNGs were successfully written. You can type `frame` or `frames` instead of `f`.
 
 If recording is not already running, the CLI starts it automatically before arming the timer. An invalid or zero value is ignored so you cannot accidentally stop a clip immediately.【F:src/module/cli_commands.py†L205-L237】【F:src/module/cinepi_controller.py†L533-L591】
 
@@ -87,4 +87,3 @@ Both actions require the RAW drive to be mounted; otherwise the CLI reports an e
 `storage preroll` triggers the automatic warm-up clip that Cinemate normally runs on startup or when you mount new storage. During the pre-roll, Cinemate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take.【F:src/module/storage_preroll.py†L40-L175】
 
 See [Storage pre-roll warm-up](storage-preroll.md) for a detailed walkthrough of the workflow and tips on when to run it manually.
-

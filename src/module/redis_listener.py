@@ -107,9 +107,43 @@ class RedisListener:
         self.fps_correction_factor_at_rec_start: float | None = None
 
         self.recording_was_preroll = False
+        self.frame_limit_target_slots: int | None = None
+        self.frame_limit_anchor_time: datetime.datetime | None = None
+        self.frame_limit_stop_requested = False
+        self.recording_stop_callback = None
 
 
         self.start_listeners()
+
+    def set_recording_stop_callback(self, callback) -> None:
+        self.recording_stop_callback = callback
+
+    def disarm_frame_limited_stop(self) -> None:
+        self.frame_limit_target_slots = None
+        self.frame_limit_stop_requested = False
+
+    def arm_frame_limited_stop(self, frames_target: int, *, fresh_take: bool = False) -> None:
+        if frames_target <= 0:
+            raise ValueError("Frame-limited recording target must be greater than zero.")
+
+        if fresh_take:
+            baseline_slots = 0
+            self.frame_limit_anchor_time = None
+        else:
+            baseline_slots = self._current_expected_frame_slots()
+            if baseline_slots is None:
+                baseline_slots = 0
+
+        self.frame_limit_target_slots = baseline_slots + frames_target
+        self.frame_limit_stop_requested = False
+
+        logging.info(
+            "Armed exact frame-limited stop: %d additional frame slots (stop at slot %d).",
+            frames_target,
+            self.frame_limit_target_slots,
+        )
+
+        self._maybe_stop_for_frame_limit()
 
     def start_listeners(self):
         self.pubsub_stats.subscribe(self.channel_name_stats)
@@ -300,6 +334,47 @@ class RedisListener:
             1 if in_sync else 0,
         )
 
+    def _current_expected_frame_slots(
+        self, now: datetime.datetime | None = None
+    ) -> int | None:
+        if self.frame_limit_anchor_time is None:
+            return None
+
+        fps_expected = self._determine_expected_fps()
+        if fps_expected is None or fps_expected <= 0:
+            return None
+
+        if now is None:
+            now = datetime.datetime.now()
+
+        duration = (now - self.frame_limit_anchor_time).total_seconds()
+        if duration < 0:
+            duration = 0.0
+
+        return 1 + math.floor(duration * fps_expected)
+
+    def _maybe_stop_for_frame_limit(self, now: datetime.datetime | None = None) -> None:
+        if self.frame_limit_target_slots is None or self.frame_limit_stop_requested:
+            return
+        if not self.is_recording:
+            return
+
+        current_slots = self._current_expected_frame_slots(now)
+        if current_slots is None or current_slots < self.frame_limit_target_slots:
+            return
+
+        self.frame_limit_stop_requested = True
+        logging.info(
+            "Exact frame-limited stop reached: slot %d/%d; stopping recording.",
+            current_slots,
+            self.frame_limit_target_slots,
+        )
+
+        if self.recording_stop_callback is not None:
+            self.recording_stop_callback()
+        else:
+            self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
+
     def listen_stats(self):
         for message in self.pubsub_stats.listen():
             if message['type'] == 'message':
@@ -356,6 +431,7 @@ class RedisListener:
 
                         # Update framecount in Redis (only if it has changed, and doesnt report a lower number than before, except 0
                         self._maybe_publish_framecount(self.frame_count)
+                        self._maybe_stop_for_frame_limit()
                         self._update_frames_in_sync(stats_data)
 
                         # Check and set buffering status if changed
@@ -496,9 +572,12 @@ class RedisListener:
                 self.framecount_changing = True
                 self.redis_controller.set_value("rec", "1")
                 logging.info("Framecount rising → rec=1")
+                if self.frame_limit_anchor_time is None:
+                    self.frame_limit_anchor_time = now
 
             self.last_rise_time = now             # remember when we last rose
             self.last_framecount = new
+            self._maybe_stop_for_frame_limit(now)
             return
 
         # ----------------------------------------------------------- 3) equal →
@@ -555,6 +634,8 @@ class RedisListener:
                     logging.info(f"Recording started at: {self.recording_start_time}")
 
                     self.recording_was_preroll = self._storage_preroll_active()
+                    self.frame_limit_anchor_time = None
+                    self.frame_limit_stop_requested = False
 
                     self.fps_correction_factor_at_rec_start = self._current_correction_factor()
                     initial_correction = self.fps_correction_factor_at_rec_start or 1.0
@@ -598,6 +679,8 @@ class RedisListener:
                             logging.warning("Recording stopped, but no recording start time was registered.")
                             self.recording_was_preroll = False
                     self.allow_initial_zero = True
+                    self.frame_limit_anchor_time = None
+                    self.frame_limit_stop_requested = False
                     
             elif changed_key == "fps":
                 try:

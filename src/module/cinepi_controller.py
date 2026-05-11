@@ -74,6 +74,7 @@ class CinePiController:
         self._preroll_active    = threading.Event()
         self._timed_rec_timer   = None
         self._timed_rec_description = None
+        self.redis_listener = None
         
         # Set startup flag
         self.startup = True
@@ -527,6 +528,21 @@ class CinePiController:
         self._timed_rec_timer.start()
         logging.info(f"Recording will stop in {seconds:.3f}s ({description}).")
 
+    def attach_redis_listener(self, redis_listener) -> None:
+        self.redis_listener = redis_listener
+
+    def _clear_frame_limited_recording_stop(self) -> None:
+        if self.redis_listener and hasattr(self.redis_listener, "disarm_frame_limited_stop"):
+            self.redis_listener.disarm_frame_limited_stop()
+
+    def _arm_frame_limited_recording_stop(self, frames_target: int, *, fresh_take: bool = False) -> bool:
+        if not self.redis_listener or not hasattr(self.redis_listener, "arm_frame_limited_stop"):
+            logging.warning("RedisListener unavailable; cannot arm exact frame-limited recording.")
+            return False
+
+        self.redis_listener.arm_frame_limited_stop(frames_target, fresh_take=fresh_take)
+        return True
+
     def _get_current_fps(self) -> float:
         candidates = [
             self.redis_controller.get_value(ParameterKey.FPS_ACTUAL.value),
@@ -588,6 +604,7 @@ class CinePiController:
                     logging.warning("Unable to start recording; timed stop not scheduled.")
                     return
 
+            self._clear_frame_limited_recording_stop()
             self._schedule_timed_recording_stop(duration_seconds, f"{duration_seconds:.3f} seconds")
             return
 
@@ -601,24 +618,22 @@ class CinePiController:
                 logging.warning("Timed recording frame count must be greater than zero.")
                 return
 
-            fps = self._get_current_fps()
-            if fps <= 0:
-                logging.warning("Current FPS unavailable; cannot schedule frame-limited recording.")
-                return
-
-            duration_seconds = frames_target / fps
-
             recording_state = self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)
             is_recording = str(recording_state) == "1"
+            started_fresh = not is_recording
             if not is_recording:
                 self.start_recording()
                 is_recording = str(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)) == "1"
                 if not is_recording:
-                    logging.warning("Unable to start recording; timed stop not scheduled.")
+                    logging.warning("Unable to start recording; frame-limited stop not scheduled.")
                     return
 
-            description = f"{frames_target} frames (~{duration_seconds:.3f} seconds)"
-            self._schedule_timed_recording_stop(duration_seconds, description)
+            self._cancel_timed_recording_stop()
+            if self._arm_frame_limited_recording_stop(frames_target, fresh_take=started_fresh):
+                logging.info(
+                    "Recording will stop after %d frame slots (counting dropped frames toward the limit).",
+                    frames_target,
+                )
             return
 
         logging.warning(f"Unknown recording mode '{mode}'. Expected 's' for seconds or 'f' for frames.")
@@ -633,6 +648,8 @@ class CinePiController:
         return self._preroll_active.is_set()
 
     def start_recording(self):
+        self._cancel_timed_recording_stop()
+        self._clear_frame_limited_recording_stop()
         self.redis_controller.set_value(ParameterKey.MEMORY_ALERT.value, 0)
         if self.ssd_monitor.is_mounted == True and self.ssd_monitor.get_space_left:
             self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 1)
@@ -642,6 +659,7 @@ class CinePiController:
             
     def stop_recording(self):
         self._cancel_timed_recording_stop()
+        self._clear_frame_limited_recording_stop()
         self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         logging.info(f"Stopped recording")
 

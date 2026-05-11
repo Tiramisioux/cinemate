@@ -775,6 +775,8 @@ def run_application(args, log_queue):
         cinepi_controller.restart_camera(preview_enabled=True)
 
     redis_listener = RedisListener(redis_controller, ssd_monitor)
+    redis_listener.set_recording_stop_callback(cinepi_controller.stop_recording)
+    cinepi_controller.attach_redis_listener(redis_listener)
     battery_monitor = BatteryMonitor()
     i2c_oled = None
 

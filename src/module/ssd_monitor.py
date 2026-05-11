@@ -275,6 +275,8 @@ class SSDMonitor:
         self._device_name = self._get_device_name()
         self._device_type = self._detect_device_type()
         self._update_space_left(force=True)
+        if not self._is_mounted or self._space_left is None:
+            return
 
         self._redis_set_many({
             ParameterKey.STORAGE_TYPE.value: self._device_type.lower(),
@@ -328,8 +330,12 @@ class SSDMonitor:
         logging.info("RAW drive unmounted from %s", self._mount_path)
         self._is_mounted   = False
         self._space_left   = None
+        self._last_space   = 0.0
+        self._last_space_ts = 0.0
+        self._write_speed  = 0.0
         self._device_name  = None
         self._device_type  = None
+        self._last_recording_log.clear()
         self.unmount_event.emit(self._mount_path)
 
 
@@ -430,6 +436,29 @@ class SSDMonitor:
             time.sleep(0.2)
         return False
 
+    def _handle_storage_error(self, exc: OSError, *, action: str) -> bool:
+        """
+        Convert media-removal filesystem errors into one clean unmount flow.
+
+        Returns True when the error was recognized as lost storage and the
+        monitor state was transitioned to "unmounted".
+        """
+        if exc.errno not in (errno.EIO, errno.ENOENT):
+            return False
+
+        logging.warning(
+            "RAW drive became unavailable while trying to %s %s: %s",
+            action,
+            self._mount_path,
+            exc,
+        )
+
+        if self._is_mounted:
+            self._force_lazy_unmount(self._mount_path)
+            self._handle_unmount()
+
+        return True
+
     # ---------- free-space tracking -----------------------------------
     def _update_space_left(self, *, force: bool = False) -> None:
         """
@@ -469,13 +498,8 @@ class SSDMonitor:
 
         except OSError as exc:
             logging.error("statvfs failed: %s", exc)
-
-            if exc.errno in (errno.EIO, errno.ENOENT):
-                # EIO = I/O error (card yanked)
-                # ENOENT = path vanished while we were looking
-                logging.warning("Lost storage – forcing lazy unmount")
-                self._force_lazy_unmount(self._mount_path)
-                self._handle_unmount()            # update state & GUI
+            if self._handle_storage_error(exc, action="check free space on"):
+                return
             return
 
         # ── normal path: update cached value & emit event ────────────
@@ -708,14 +732,21 @@ class SSDMonitor:
         try:
             subdirs = [p for p in self._mount_path.iterdir() if p.is_dir()]
         except OSError as exc:
-            logging.warning("Unable to scan %s: %s", self._mount_path, exc)
+            if not self._handle_storage_error(exc, action="scan"):
+                logging.warning("Unable to scan %s: %s", self._mount_path, exc)
             return []
         if not subdirs:
             return []
-        latest_ts = max(p.stat().st_mtime for p in subdirs)
+        try:
+            stamped_subdirs = [(p, p.stat().st_mtime) for p in subdirs]
+        except OSError as exc:
+            if not self._handle_storage_error(exc, action="inspect recordings on"):
+                logging.warning("Unable to inspect recordings on %s: %s", self._mount_path, exc)
+            return []
+        latest_ts = max(mtime for _, mtime in stamped_subdirs)
         cutoff = latest_ts - window_seconds
-        candidates = [p for p in subdirs if p.stat().st_mtime >= cutoff]
-        candidates.sort(key=lambda p: p.stat().st_mtime)
+        candidates = [(p, mtime) for p, mtime in stamped_subdirs if mtime >= cutoff]
+        candidates.sort(key=lambda item: item[1])
         preroll_active = False
         if self._redis:
             try:
@@ -727,16 +758,21 @@ class SSDMonitor:
             except (TypeError, ValueError, AttributeError):
                 preroll_active = False
         infos = []
-        for d in candidates:
+        for d, _mtime in candidates:
             dng = wav = 0
-            for f in d.rglob("*"):
-                if not f.is_file():
-                    continue
-                suf = f.suffix.lower()
-                if suf == ".dng":
-                    dng += 1
-                elif suf == ".wav":
-                    wav += 1
+            try:
+                for f in d.rglob("*"):
+                    if not f.is_file():
+                        continue
+                    suf = f.suffix.lower()
+                    if suf == ".dng":
+                        dng += 1
+                    elif suf == ".wav":
+                        wav += 1
+            except OSError as exc:
+                if not self._handle_storage_error(exc, action="count files on"):
+                    logging.warning("Unable to count files on %s: %s", d, exc)
+                return []
             last_logged = self._last_recording_log.get(d.name)
             if not preroll_active and last_logged != (dng, wav):
                 logging.info("Latest recording “%s”: %d DNG | %d WAV",

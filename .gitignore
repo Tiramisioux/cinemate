@@ -1,0 +1,11 @@
+.DS_Store
+
+# Local Codex staging scratch
+.codex-skill-staging/
+
+# Local branch worktrees created under this workspace
+branches/
+
+# Local copied camera media and benchmarks
+pi-test-takes/
+pi-test-takes-speed-bench/

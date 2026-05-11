@@ -1,0 +1,106 @@
+#!/usr/bin/expect -f
+
+if {$argc < 1} {
+    puts stderr {Usage: pi_manual_cinemate_take.exp <password> [frames]}
+    exit 2
+}
+
+set timeout 120
+set password [lindex $argv 0]
+set frames 100
+if {$argc >= 2} {
+    set frames [lindex $argv 1]
+}
+
+proc wait_for_shell_prompt {} {
+    expect {
+        -re {(?i)are you sure you want to continue connecting.*} {
+            send -- "yes\r"
+            exp_continue
+        }
+        -re {(?i)(?:^|\n).*password:\s*$} {
+            send -- "$::password\r"
+            exp_continue
+        }
+        -re {[\$#] $} {
+            return
+        }
+        timeout {
+            puts stderr {Timed out waiting for shell prompt}
+            exit 1
+        }
+        eof {
+            puts stderr {SSH session closed before shell prompt}
+            exit 1
+        }
+    }
+}
+
+spawn ssh -tt -o StrictHostKeyChecking=accept-new pi@cinepi.local
+wait_for_shell_prompt
+
+send -- "pkill -f 'tail -n0 -f /tmp/cinemate_cli.in | bash -lic cinemate' || true\r"
+wait_for_shell_prompt
+send -- "pkill -f '/home/pi/cinemate/src/main.py' || true\r"
+wait_for_shell_prompt
+send -- "pkill -f 'cinepi-raw' || true\r"
+wait_for_shell_prompt
+send -- "sleep 2\r"
+wait_for_shell_prompt
+
+set timeout 180
+send -- "cinemate\r"
+expect {
+    -re {Storage pre-roll complete} {
+    }
+    timeout {
+        puts stderr {Timed out waiting for storage pre-roll completion}
+        exit 1
+    }
+    eof {
+        puts stderr {Cinemate exited before storage pre-roll completed}
+        exit 1
+    }
+}
+
+send -- "rec f $frames\r"
+
+set timeout 40
+set saw_stop 0
+while {!$saw_stop} {
+    expect {
+        -re {Stopped recording} {
+            set saw_stop 1
+        }
+        -re {Storage pre-roll complete} {
+        }
+        -re {Retiming WAV:} {
+        }
+        -re {ffmpeg WAV retime failed} {
+        }
+        -re {temp\.wav} {
+        }
+        -re {bwfmetaedit: not found} {
+        }
+        timeout {
+            break
+        }
+        eof {
+            break
+        }
+    }
+}
+
+after 5000
+send -- "\003"
+set timeout 15
+expect {
+    -re {[\$#] $} {
+        send -- "exit\r"
+        exp_continue
+    }
+    eof {
+    }
+    timeout {
+    }
+}

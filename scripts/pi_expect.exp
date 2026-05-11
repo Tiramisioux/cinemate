@@ -1,0 +1,28 @@
+#!/usr/bin/expect -f
+
+if {$argc < 2} {
+    puts stderr {Usage: pi_expect.exp <password> <command> [args...]}
+    exit 2
+}
+
+set timeout -1
+set password [lindex $argv 0]
+set command [lrange $argv 1 end]
+
+eval spawn $command
+
+expect {
+    -re "(?i)are you sure you want to continue connecting.*" {
+        send -- "yes\r"
+        exp_continue
+    }
+    -re "(?i)(?:^|\\n).*password:\\s*$" {
+        send -- "$password\r"
+        exp_continue
+    }
+    eof
+}
+
+catch wait result
+set exit_code [lindex $result 3]
+exit $exit_code

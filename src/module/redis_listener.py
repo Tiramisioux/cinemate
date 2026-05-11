@@ -108,6 +108,7 @@ class RedisListener:
 
         self.recording_was_preroll = False
         self.frame_limit_target_slots: int | None = None
+        self.frame_limit_requested_slots: int | None = None
         self.frame_limit_anchor_time: datetime.datetime | None = None
         self.frame_limit_stop_requested = False
         self.recording_stop_callback = None
@@ -120,6 +121,7 @@ class RedisListener:
 
     def disarm_frame_limited_stop(self) -> None:
         self.frame_limit_target_slots = None
+        self.frame_limit_requested_slots = None
         self.frame_limit_stop_requested = False
 
     def arm_frame_limited_stop(self, frames_target: int, *, fresh_take: bool = False) -> None:
@@ -134,13 +136,23 @@ class RedisListener:
             if baseline_slots is None:
                 baseline_slots = 0
 
-        self.frame_limit_target_slots = baseline_slots + frames_target
+        # By the time the Redis stop flag propagates, the capture/encode pipeline
+        # has already accepted roughly two more frame slots. Stop a small
+        # number of frame slots early so the on-disk DNG count lands on the
+        # requested value.
+        stop_lead_slots = min(2, max(frames_target - 1, 0))
+        effective_slots = max(frames_target - stop_lead_slots, 1)
+
+        self.frame_limit_requested_slots = baseline_slots + frames_target
+        self.frame_limit_target_slots = baseline_slots + effective_slots
         self.frame_limit_stop_requested = False
 
         logging.info(
-            "Armed exact frame-limited stop: %d additional frame slots (stop at slot %d).",
+            "Armed exact frame-limited stop: %d additional frame slots "
+            "(threshold slot %d, pipeline lead compensation %d).",
             frames_target,
             self.frame_limit_target_slots,
+            stop_lead_slots,
         )
 
         self._maybe_stop_for_frame_limit()
@@ -337,6 +349,14 @@ class RedisListener:
     def _current_expected_frame_slots(
         self, now: datetime.datetime | None = None
     ) -> int | None:
+        try:
+            if self.frame_count is not None:
+                frame_slots = int(self.frame_count)
+                if frame_slots >= 0:
+                    return frame_slots + int(self.drop_frame_count_current_take)
+        except (TypeError, ValueError):
+            pass
+
         if self.frame_limit_anchor_time is None:
             return None
 
@@ -367,7 +387,7 @@ class RedisListener:
         logging.info(
             "Exact frame-limited stop reached: slot %d/%d; stopping recording.",
             current_slots,
-            self.frame_limit_target_slots,
+            self.frame_limit_requested_slots or self.frame_limit_target_slots,
         )
 
         if self.recording_stop_callback is not None:
@@ -634,6 +654,9 @@ class RedisListener:
                     logging.info(f"Recording started at: {self.recording_start_time}")
 
                     self.recording_was_preroll = self._storage_preroll_active()
+                    # Preserve any freshly armed frame limit across the async
+                    # is_recording transition. The controller may arm the stop
+                    # immediately after setting is_recording=1.
                     self.frame_limit_anchor_time = None
                     self.frame_limit_stop_requested = False
 
@@ -679,6 +702,8 @@ class RedisListener:
                             logging.warning("Recording stopped, but no recording start time was registered.")
                             self.recording_was_preroll = False
                     self.allow_initial_zero = True
+                    self.frame_limit_target_slots = None
+                    self.frame_limit_requested_slots = None
                     self.frame_limit_anchor_time = None
                     self.frame_limit_stop_requested = False
                     

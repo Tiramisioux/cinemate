@@ -34,7 +34,7 @@ INSTALL_ALT_GPIO_BACKEND="${INSTALL_ALT_GPIO_BACKEND:-1}"
 INSTALL_CONSOLE_FONT="${INSTALL_CONSOLE_FONT:-1}"
 INSTALL_PISHRINK="${INSTALL_PISHRINK:-1}"
 INSTALL_PLYMOUTH="${INSTALL_PLYMOUTH:-1}"
-INSTALL_IMX585_DRIVER="${INSTALL_IMX585_DRIVER:-auto}"
+INSTALL_IMX585_DRIVER="${INSTALL_IMX585_DRIVER:-1}"
 INSTALL_IR_FILTER_HELPER="${INSTALL_IR_FILTER_HELPER:-auto}"
 
 ENABLE_SUPPORT_SERVICES="${ENABLE_SUPPORT_SERVICES:-1}"
@@ -597,12 +597,39 @@ BUILD_JOBS="\${BUILD_JOBS:-\$(nproc 2>/dev/null || printf '4')}"
 BUILD_DIR="\${BUILD_DIR:-\$CINEPI_RAW_DIR/build}"
 PKG_CONFIG_PATH="\$CPP_MJPEG_STREAMER_DIR/build:\${PKG_CONFIG_PATH:-}"
 export PKG_CONFIG_PATH
+FORCE_WIPE="\${FORCE_WIPE:-0}"
+
+is_true() {
+    case "\${1,,}" in
+        1|true|yes|on) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+build_dir_has_entries() {
+    [[ -d "\$1" ]] || return 1
+    find "\$1" -mindepth 1 -maxdepth 1 -print -quit | grep -q .
+}
 
 printf '[compile-raw] Source: %s\n' "\$CINEPI_RAW_DIR"
 printf '[compile-raw] Build directory: %s\n' "\$BUILD_DIR"
 printf '[compile-raw] Using PKG_CONFIG_PATH=%s\n' "\$PKG_CONFIG_PATH"
-printf '[compile-raw] Running meson setup --wipe\n'
-meson setup "\$BUILD_DIR" "\$CINEPI_RAW_DIR" --wipe
+if is_true "\$FORCE_WIPE"; then
+    printf '[compile-raw] FORCE_WIPE requested; running meson setup --wipe\n'
+    meson setup "\$BUILD_DIR" "\$CINEPI_RAW_DIR" --wipe
+elif [[ -f "\$BUILD_DIR/build.ninja" || -f "\$BUILD_DIR/meson-private/coredata.dat" ]]; then
+    printf '[compile-raw] Reusing existing Meson build directory with --reconfigure\n'
+    if ! meson setup "\$BUILD_DIR" "\$CINEPI_RAW_DIR" --reconfigure; then
+        printf '[compile-raw] Reconfigure failed; retrying with --wipe\n'
+        meson setup "\$BUILD_DIR" "\$CINEPI_RAW_DIR" --wipe
+    fi
+elif build_dir_has_entries "\$BUILD_DIR"; then
+    printf '[compile-raw] Build directory is non-empty but not reusable; running meson setup --wipe\n'
+    meson setup "\$BUILD_DIR" "\$CINEPI_RAW_DIR" --wipe
+else
+    printf '[compile-raw] Running initial meson setup\n'
+    meson setup "\$BUILD_DIR" "\$CINEPI_RAW_DIR"
+fi
 printf '[compile-raw] Building with ninja (%s jobs)\n' "\$BUILD_JOBS"
 ninja -C "\$BUILD_DIR" -j "\$BUILD_JOBS"
 printf '[compile-raw] Installing cinepi-raw\n'
@@ -997,8 +1024,16 @@ install_imx585_support() {
         detail "Ensuring DKMS builds IMX585 for the pinned Pi 5 kernel baseline"
         sudo dkms autoinstall -k "$KERNEL_BASELINE_ABI_2712"
     fi
+}
 
+install_sensor_tuning_overrides() {
+    log "Installing Cinemate sensor tuning overrides"
     local local_tuning_dir="$CINEMATE_SOURCE_DIR/resources/tuning_files"
+    local -a tuning_files=(
+        imx283.json
+        imx585.json
+        imx585_mono.json
+    )
     local -a libcamera_tuning_dirs=(
         "$LIBCAMERA_DIR/src/ipa/rpi/pisp/data"
         "$LIBCAMERA_DIR/src/ipa/rpi/vc4/data"
@@ -1008,17 +1043,20 @@ install_imx585_support() {
         "/usr/local/share/libcamera/ipa/rpi/vc4"
     )
     local tuning_dir=""
+    local tuning_file=""
 
     [[ -d "$local_tuning_dir" ]] || die "Missing tuning files in $local_tuning_dir"
     for tuning_dir in "${libcamera_tuning_dirs[@]}"; do
         run_as_pi install -d -m 755 "$tuning_dir"
-        run_as_pi install -m 644 "$local_tuning_dir/imx585.json" "$tuning_dir/imx585.json"
-        run_as_pi install -m 644 "$local_tuning_dir/imx585_mono.json" "$tuning_dir/imx585_mono.json"
+        for tuning_file in "${tuning_files[@]}"; do
+            run_as_pi install -m 644 "$local_tuning_dir/$tuning_file" "$tuning_dir/$tuning_file"
+        done
     done
     for tuning_dir in "${install_tuning_dirs[@]}"; do
         sudo install -d -m 755 "$tuning_dir"
-        sudo install -m 644 "$local_tuning_dir/imx585.json" "$tuning_dir/imx585.json"
-        sudo install -m 644 "$local_tuning_dir/imx585_mono.json" "$tuning_dir/imx585_mono.json"
+        for tuning_file in "${tuning_files[@]}"; do
+            sudo install -m 644 "$local_tuning_dir/$tuning_file" "$tuning_dir/$tuning_file"
+        done
     done
 }
 
@@ -1290,6 +1328,7 @@ main() {
     seed_cinepi_raw_white_balance
     section "Installing sensor-specific support"
     install_imx585_support
+    install_sensor_tuning_overrides
     install_ir_filter_helper
     section "Installing optional GPIO backend"
     install_lgpio_backend

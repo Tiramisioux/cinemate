@@ -4,6 +4,8 @@ import time
 import datetime 
 import os  
 import logging  
+import select
+import sys
 
 class CommandExecutor(threading.Thread):
     def __init__(self, cinepi_controller, cinepi_app, storage_preroll=None):
@@ -240,18 +242,47 @@ class CommandExecutor(threading.Thread):
 
     def run(self):
             """Thread run function to continuously process input commands."""
+            stdin = sys.stdin
+            if stdin is None:
+                logging.info("CLI input unavailable; CommandExecutor thread idling")
+                while self.running:
+                    time.sleep(0.1)
+                return
+
+            prompt_shown = False
             while self.running:
-                time.sleep(0.1)  # Pause for 100 ms
+                if not prompt_shown and stdin.isatty():
+                    try:
+                        sys.stdout.write("\n> ")
+                        sys.stdout.flush()
+                    except Exception:
+                        pass
+                    prompt_shown = True
+
                 try:
-                    data = input("\n> ")  # Read the input as a single string
-                except EOFError as e:
+                    ready, _, _ = select.select([stdin], [], [], 0.1)
+                except (OSError, ValueError) as e:
                     logging.info(f"CLI input interrupted: {e}")
                     self.running = False
                     break
+
+                if not self.running:
+                    break
+                if not ready:
+                    continue
+
+                try:
+                    data = stdin.readline()
                 except KeyboardInterrupt as e:
                     logging.info(f"CLI input interrupted: {e}")
                     self.running = False
                     break
 
+                if data == "":
+                    logging.info("CLI input closed")
+                    self.running = False
+                    break
+
+                prompt_shown = False
                 if data.strip():  # Proceed only if there is some non-whitespace input
                     self.handle_received_data(data)  # Directly handle the received data

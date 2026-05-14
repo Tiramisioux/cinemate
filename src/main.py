@@ -176,6 +176,48 @@ def current_stderr_tty_path() -> str | None:
         return None
 
 
+def restore_local_console_prompt() -> bool:
+    """Restore a visible tty1 prompt after an SSH-launched HDMI GUI stop."""
+    if current_stderr_tty_path() in LOCAL_FAILURE_TTY_PATHS:
+        return False
+
+    systemctl = shutil.which("systemctl")
+    if systemctl:
+        commands = []
+        sudo = shutil.which("sudo")
+        if sudo:
+            commands.append(
+                [sudo, "-n", systemctl, "--no-block", "--no-ask-password", "start", "getty@tty1.service"]
+            )
+        commands.append(
+            [systemctl, "--no-block", "--no-ask-password", "start", "getty@tty1.service"]
+        )
+
+        for command in commands:
+            try:
+                result = subprocess.run(
+                    command,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                )
+            except OSError as exc:
+                logging.debug("Failed to run %s during SSH console restore: %s", command[0], exc)
+                continue
+            if result.returncode == 0:
+                break
+
+    for tty_path in LOCAL_FAILURE_TTY_PATHS:
+        try:
+            with open(tty_path, "w", encoding="utf-8", errors="replace") as tty:
+                tty.write("\r\n")
+                tty.flush()
+            return True
+        except OSError:
+            continue
+    return False
+
+
 def should_mirror_failure_to_local_console() -> bool:
     if APP_RUNTIME_READY:
         return False
@@ -498,7 +540,7 @@ def initialize_system(settings, pi_model="unknown"):
     redis_controller = RedisController(conform_frame_rate=conf_rate)
     sensor_detect = SensorDetect(settings)
     ssd_monitor = SSDMonitor(redis_controller=redis_controller)
-    usb_monitor = USBMonitor(ssd_monitor)
+    usb_monitor = USBMonitor(ssd_monitor, settings=settings)
 
     gpio_cfg = settings["gpio_output"]
     rec_tone_pins = gpio_cfg.get("rec_tone_pin")
@@ -589,6 +631,10 @@ def run_application(args, log_queue):
 
     # Set redis anamorphic factor to default value
     redis_controller.set_value(ParameterKey.ANAMORPHIC_FACTOR.value, settings["anamorphic_preview"]["default_anamorphic_factor"])
+    redis_controller.set_value(
+        ParameterKey.AUDIO_CAPTURE_GAIN_DB.value,
+        settings.get("audio", {}).get("capture_gain_db", 0.0),
+    )
     
     # Default zoom factor
     redis_controller.set_value(
@@ -729,6 +775,8 @@ def run_application(args, log_queue):
         cinepi_controller.restart_camera(preview_enabled=True)
 
     redis_listener = RedisListener(redis_controller, ssd_monitor)
+    redis_listener.set_recording_stop_callback(cinepi_controller.stop_recording)
+    cinepi_controller.attach_redis_listener(redis_listener)
     battery_monitor = BatteryMonitor()
     i2c_oled = None
 
@@ -785,8 +833,18 @@ def run_application(args, log_queue):
         cleanup_called = True
         logging.info("Shutting down components...")
         shutdown_in_progress = system_shutdown_in_progress()
+        join_timeout = 0.25 if not shutdown_in_progress else 2.0
         if shutdown_in_progress:
             logging.info("System shutdown detected; skipping CLI handoff on tty1")
+
+        def join_thread(thread, name, timeout=join_timeout):
+            if not thread:
+                return True
+            thread.join(timeout=timeout)
+            if thread.is_alive():
+                logging.warning("%s did not stop within %.1fs", name, timeout)
+                return False
+            return True
 
         redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         redis_controller.set_value(ParameterKey.IS_WRITING.value, 0)
@@ -801,21 +859,34 @@ def run_application(args, log_queue):
             dmesg_monitor.stop() 
         if hasattr(command_executor, "stop"):
             command_executor.stop()
-        dmesg_monitor.join()
-        command_executor.join()
+        gui_stopped = False
         if simple_gui:
-            simple_gui.request_stop()
+            gui_stopped = simple_gui.stop(
+                clear_framebuffer=shutdown_in_progress,
+                release_console=not shutdown_in_progress,
+                join_timeout=join_timeout,
+                teardown_before_join=not shutdown_in_progress,
+            )
+        if not shutdown_in_progress:
+            restore_local_console_prompt()
+        join_thread(dmesg_monitor, "DmesgMonitor")
+        join_thread(command_executor, "CommandExecutor")
         if hasattr(cinepi, "shutdown"):
             cinepi.shutdown()
-        if simple_gui:
-            simple_gui.stop(clear_framebuffer=True)
-        serial_handler.running = False
-        serial_handler.join()
+        if hasattr(serial_handler, "stop"):
+            serial_handler.stop()
+        else:
+            serial_handler.running = False
+        join_thread(serial_handler, "SerialHandler")
 
         if i2c_oled:
-            i2c_oled.join()
+            if hasattr(i2c_oled, "stop"):
+                i2c_oled.stop()
+            join_thread(i2c_oled, "I2cOled")
         if quad_rotary:
-            quad_rotary.join()
+            if hasattr(quad_rotary, "stop"):
+                quad_rotary.stop()
+            join_thread(quad_rotary, "QuadRotaryController")
 
         if fb_splash:
             if not shutdown_in_progress:
@@ -827,17 +898,17 @@ def run_application(args, log_queue):
         if timekeeper and hasattr(timekeeper, "stop"):
             timekeeper.stop()
 
-        if not shutdown_in_progress:
+        if not shutdown_in_progress and not gui_stopped:
             release_console_to_text()
         
     atexit.register(cleanup)
     
     def handle_exit(sig, frame):
         logging.info("Graceful shutdown initiated.")
-        cleanup()                 # stop your threads, join them if you like
-        # restore default handler and re-raise
         signal.signal(signal.SIGINT, signal.SIG_DFL)
-        os.kill(os.getpid(), signal.SIGINT)
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        cleanup()                 # stop your threads, join them if you like
+        os.kill(os.getpid(), sig)
 
     signal.signal(signal.SIGINT, handle_exit)
     signal.signal(signal.SIGTERM, handle_exit)

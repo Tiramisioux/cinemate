@@ -2,7 +2,7 @@ import os
 import threading
 import time
 from PIL import Image, ImageDraw, ImageFont
-from module.console_display import claim_console_for_framebuffer
+from module.console_display import claim_console_for_framebuffer, release_console_to_text
 from module.framebuffer import Framebuffer, acquire_framebuffer
 from module.config_loader import load_settings
 import subprocess
@@ -15,6 +15,8 @@ from module.utils import Utils
 from module.redis_controller import ParameterKey
 import json
 import re
+
+RECORDER_VU_REDIS_KEY = "audio_vu"
 
 
 def _to_bool(value) -> bool:
@@ -104,6 +106,10 @@ class SimpleGUI(threading.Thread):
         self._cached_cams_json = None
         self._cached_cams = []
         self._slow_values = {}
+        self._clear_framebuffer_on_exit = False
+        self._release_console_on_exit = False
+        self._display_teardown_done = False
+        self._stop_lock = threading.Lock()
         
         # Load sensor values from Redis upon instantiation
         self.load_sensor_values_from_redis()
@@ -547,8 +553,7 @@ class SimpleGUI(threading.Thread):
         self._redraw_event.set()
 
     def _vu_active(self):
-        monitor = getattr(self.usb_monitor, "audio_monitor", None)
-        return bool(monitor and getattr(monitor, "running", False))
+        return self._get_recorder_vu_levels() is not None
 
     def _get_font(self, kind: str, size):
         font_size = max(1, int(round(size)))
@@ -898,32 +903,61 @@ class SimpleGUI(threading.Thread):
 
         return stem
 
+    def _normalise_vu_levels(self, levels):
+        cleaned = []
+        for level in levels:
+            try:
+                cleaned.append(max(0, min(100, int(round(float(level))))))
+            except (TypeError, ValueError):
+                continue
+
+        if not cleaned:
+            return None
+
+        if len(cleaned) >= 4 and cleaned[:2] == cleaned[2:4]:
+            cleaned = cleaned[:2]
+        elif len(cleaned) > 2:
+            cleaned = cleaned[:2]
+        elif len(cleaned) == 1:
+            cleaned *= 2
+
+        return cleaned
+
+    def _get_recorder_vu_levels(self):
+        client = getattr(self.redis_controller, "r", None)
+        if client is None:
+            return None
+
+        try:
+            raw = client.get(RECORDER_VU_REDIS_KEY)
+        except Exception:
+            return None
+
+        if raw in (None, b"", ""):
+            return None
+
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8", errors="replace")
+
+        return self._normalise_vu_levels(str(raw).split("|"))
+
     def update_smoothed_vu_levels(self):
-        if not self.usb_monitor or not hasattr(self.usb_monitor, "audio_monitor"):
+        levels = self._get_recorder_vu_levels()
+        if not levels:
+            self.vu_smoothed = []
+            self.vu_peaks = []
             return
 
-        audio_monitor = self.usb_monitor.audio_monitor
-        vu_history = getattr(audio_monitor, "vu_history", None)
-        if not vu_history:
-            return
+        if len(levels) != len(self.vu_smoothed):
+            self.vu_smoothed = [0.0] * len(levels)
+            self.vu_peaks = [0.0] * len(levels)
 
-        # Transpose history to group per-channel values: [(L1, L2, ...), (R1, R2, ...)]
-        vu_transposed = list(zip(*vu_history))
-
-        # Initialize smoothed and peak lists if needed
-        if len(vu_transposed) != len(self.vu_smoothed):
-            self.vu_smoothed = [0.0] * len(vu_transposed)
-            self.vu_peaks = [0.0] * len(vu_transposed)
-
-        for i, channel_history in enumerate(vu_transposed):
-            max_level = max(channel_history)
-            # Decay smoothing: keep some inertia when values drop
-            if max_level < self.vu_smoothed[i]:
+        for i, level in enumerate(levels):
+            if level < self.vu_smoothed[i]:
                 self.vu_smoothed[i] *= (1 - self.vu_decay_factor)
             else:
-                self.vu_smoothed[i] = max_level
+                self.vu_smoothed[i] = level
 
-            # Peak hold
             self.vu_peaks[i] = max(self.vu_peaks[i] * 0.98, self.vu_smoothed[i])
 
     # ─────────────────────────────────────────────────────────────
@@ -1091,15 +1125,13 @@ class SimpleGUI(threading.Thread):
                 y += BOX_H + BOX_GAP
             y += SECTION_GAP
 
-    def draw_right_vu_meter(self, draw, amplification_factor=4):
-        if not self.usb_monitor or not hasattr(self.usb_monitor, "audio_monitor"):
+    def draw_right_vu_meter(self, draw):
+        if self._get_recorder_vu_levels() is None:
             return
-
-        monitor = self.usb_monitor.audio_monitor
         vu_levels = self.vu_smoothed
         vu_peaks = self.vu_peaks
 
-        if not monitor.running or not vu_levels:
+        if not vu_levels:
             return
 
         n_channels = len(vu_levels)
@@ -1114,10 +1146,8 @@ class SimpleGUI(threading.Thread):
         base_x = self.disp_width - margin_right - total_width
 
         def level_to_height(level):
-            import math
-            amplified_level = min(level * amplification_factor, 100)
-            scaled = math.log10(1 + 9 * (amplified_level / 100))
-            return int(scaled * bar_height)
+            clamped_level = max(0.0, min(100.0, float(level)))
+            return int((clamped_level / 100.0) * bar_height)
 
         def draw_bar(x, width, level, peak):
             h = level_to_height(level)
@@ -1292,12 +1322,16 @@ class SimpleGUI(threading.Thread):
                     pass
         self.previous_values = current_values.copy()
 
-        if not self.fb:
+        fb = self.fb
+        if not fb:
             return
 
-        image = Image.new("RGBA", self.fb.size)
+        disp_width = self.disp_width or fb.size[0]
+        disp_height = self.disp_height or fb.size[1]
+
+        image = Image.new("RGBA", fb.size)
         draw = ImageDraw.Draw(image)
-        draw.rectangle(((0, 0), self.fb.size), fill=self.current_background_color)
+        draw.rectangle(((0, 0), fb.size), fill=self.current_background_color)
 
         # Draw left-hand labels and boxes dynamically
         self.draw_left_sections(draw, values)
@@ -1310,10 +1344,10 @@ class SimpleGUI(threading.Thread):
         lores_width = int(self.redis_controller.get_value(ParameterKey.LORES_WIDTH.value))
         lores_height = int(self.redis_controller.get_value(ParameterKey.LORES_HEIGHT.value))
 
-        frame_width = self.disp_width
-        frame_height = self.disp_height
-        shrink_x = self.disp_width / 1920
-        shrink_y = self.disp_height / 1080
+        frame_width = disp_width
+        frame_height = disp_height
+        shrink_x = disp_width / 1920
+        shrink_y = disp_height / 1080
         
         padding_x = 92
         padding_y = 46
@@ -1397,12 +1431,13 @@ class SimpleGUI(threading.Thread):
 
 
         try:
-            self.fb.show(image)
+            fb.show(image)
         except (OSError, RuntimeError, ValueError) as exc:
             logging.warning("Framebuffer write failed; detaching HDMI GUI until it returns: %s", exc)
-            self.fb = None
-            self.disp_width = 0
-            self.disp_height = 0
+            if self.fb is fb:
+                self.fb = None
+                self.disp_width = 0
+                self.disp_height = 0
         
     def draw_rounded_box(self, draw, text, position, font_size, padding, text_color, fill_color, image, extra_height=-17, reduce_top=12):
         font = self._get_font("bold", font_size)
@@ -1453,17 +1488,70 @@ class SimpleGUI(threading.Thread):
                 self.disp_width = 0
                 self.disp_height = 0
             
-    def request_stop(self):
-        """Ask the GUI thread to exit without waiting for teardown."""
-        self._running = False
+    def _teardown_display(self, clear_framebuffer=False, release_console=False):
+        with self._stop_lock:
+            if self._display_teardown_done:
+                return
+            self._display_teardown_done = True
 
-    def stop(self, clear_framebuffer=True):
-        """Ask the GUI thread to exit, wait for it, and optionally blank fb0."""
-        self.request_stop()
+        fb = self.fb
+        self.fb = None
+        self.disp_width = 0
+        self.disp_height = 0
+
+        released_console = False
+        if release_console:
+            try:
+                release_console_to_text()
+                released_console = True
+            except Exception as exc:
+                logging.warning("Failed to release console to text during GUI shutdown: %s", exc)
+
+        if clear_framebuffer and not released_console and fb:
+            blank_image = Image.new("RGBA", fb.size, "black")
+            try:
+                fb.show(blank_image)
+            except (OSError, RuntimeError, ValueError) as exc:
+                logging.warning("Failed to blank framebuffer cleanly during GUI shutdown: %s", exc)
+
+    def request_stop(self, clear_framebuffer=False, release_console=False):
+        """Ask the GUI thread to exit without waiting for teardown."""
+        with self._stop_lock:
+            self._running = False
+            self._clear_framebuffer_on_exit = self._clear_framebuffer_on_exit or clear_framebuffer
+            self._release_console_on_exit = self._release_console_on_exit or release_console
+        self._redraw_event.set()
+
+    def stop(
+        self,
+        clear_framebuffer=True,
+        release_console=False,
+        join_timeout=2.0,
+        teardown_before_join=False,
+    ):
+        """Ask the GUI thread to exit, wait for it, and optionally restore tty1."""
+        self.request_stop(
+            clear_framebuffer=clear_framebuffer,
+            release_console=release_console,
+        )
+        if teardown_before_join:
+            self._teardown_display(
+                clear_framebuffer=clear_framebuffer,
+                release_console=release_console,
+            )
         if self.is_alive():
-            self.join()                 # wait for run() to finish
-        if clear_framebuffer:
-            self.clear_framebuffer()
+            self.join(timeout=join_timeout)
+            if self.is_alive():
+                logging.warning(
+                    "SimpleGUI thread did not stop within %.1fs; display teardown will be deferred",
+                    join_timeout,
+                )
+                return False
+        self._teardown_display(
+            clear_framebuffer=clear_framebuffer,
+            release_console=release_console,
+        )
+        return True
 
 
     def run(self):
@@ -1508,7 +1596,10 @@ class SimpleGUI(threading.Thread):
                 self._slow_dirty = False
                 self._last_draw_ts = time.monotonic()
         finally:
-            pass
+            self._teardown_display(
+                clear_framebuffer=self._clear_framebuffer_on_exit,
+                release_console=self._release_console_on_exit,
+            )
  
     # def emit_gui_data_change(self, changed_data):
     #     self.socketio.emit('gui_data_change', changed_data)

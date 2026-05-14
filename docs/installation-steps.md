@@ -25,7 +25,7 @@ chmod +x cinemate-install.sh
 
 The default installer profile is `imx477` on `cam0` with the boot framebuffer pinned to `HDMI-A-1`.
 
-The script applies the full manual flow from this guide in the same order, including `storage-automount`, `wifi-hotspot`, and `redis-log-maintenance`, plus the optional console-font, PiShrink, Plymouth, and IMX585 helper steps. It is intended for Raspberry Pi OS Lite (Bookworm), stops early on unsupported releases such as Trixie, and pins `libcamera` to Raspberry Pi release tag `v0.5.0+rpt20250429` so it stays aligned with the `cinepi-raw` / `rpicam-apps 1.7` code generation instead of building the moving repository tip. It installs the required stack libraries on top of a Lite system, not a full desktop image, creates `~/.cinemate-env`, auto-activates it from `.bashrc`, adds a `cinemate-env` helper alias so you can reactivate it after `deactivate`, and writes `/home/pi/compile-raw.sh` as a reusable cinepi-raw rebuild helper. If you stay in the same shell after the installer finishes, run `source ~/.bashrc` once to load the aliases right away. If you want the script to perform the manual reboot steps automatically too, run it as `RUN_REBOOT=1 ./cinemate-install.sh`. Set `SENSOR_MODEL`, `CAM_PORT`, and `HDMI_BOOT_PORT` at the top of the script or override them inline, for example:
+The script applies the full manual flow from this guide in the same order, including `storage-automount`, `wifi-hotspot`, and `redis-log-maintenance`, plus the optional console-font, PiShrink, Plymouth, and IR filter helper steps. It is intended for Raspberry Pi OS Lite (Bookworm), stops early on unsupported releases such as Trixie, aligns Raspberry Pi 5 / CM5 installs to the known-good `6.12.25+rpt-rpi-2712` kernel baseline, builds Will Whang's `libcamera` fork at commit `9d0cdfe5`, installs IMX585 DKMS support, installs Cinemate's IMX283 and IMX585 tuning files so both sensors are ready even if another sensor is your current default, and then builds `cinepi-raw` with the matching local `rpicam-*` utilities under `/usr/local/bin`. It installs the required stack libraries on top of a Lite system, not a full desktop image, creates `~/.cinemate-env`, auto-activates it from `.bashrc`, adds a `cinemate-env` helper alias so you can reactivate it after `deactivate`, and writes `/home/pi/compile-raw.sh` as a reusable cinepi-raw rebuild helper that reuses the existing Meson build by default and only wipes when needed. If you stay in the same shell after the installer finishes, run `source ~/.bashrc` once to load the aliases right away. If you want the script to perform the manual reboot steps automatically too, run it as `RUN_REBOOT=1 ./cinemate-install.sh`. Set `SENSOR_MODEL`, `CAM_PORT`, and `HDMI_BOOT_PORT` at the top of the script or override them inline, for example:
 
 ```bash
 SENSOR_MODEL=imx585_mono CAM_PORT=cam1 HDMI_BOOT_PORT=1 ./cinemate-install.sh
@@ -42,6 +42,49 @@ sudo apt update -y
 sudo apt upgrade -y
 ```
 
+### Kernel baseline (Raspberry Pi 5 / CM5)
+
+Fresh Bookworm Pi 5 images currently boot a newer kernel than the one Cinemate is validated against. Before building `libcamera`, `cinepi-raw`, or the IMX585 driver, roll the Pi 5 kernel and firmware back to the known-good baseline and make the new boot files stick in `/boot/firmware`.
+
+Skip this section on Pi 4.
+
+```bash
+mkdir -p ~/kernel-rollback-6.12.25
+cd ~/kernel-rollback-6.12.25
+
+curl -LO https://archive.raspberrypi.com/debian/pool/main/l/linux/linux-support-6.12.25+rpt_6.12.25-1+rpt1_all.deb
+curl -LO https://archive.raspberrypi.com/debian/pool/main/l/linux/linux-image-6.12.25+rpt-rpi-2712_6.12.25-1+rpt1_arm64.deb
+curl -LO https://archive.raspberrypi.com/debian/pool/main/l/linux/linux-image-rpi-2712_6.12.25-1+rpt1_arm64.deb
+curl -LO https://archive.raspberrypi.com/debian/pool/main/l/linux/linux-headers-6.12.25+rpt-rpi-2712_6.12.25-1+rpt1_arm64.deb
+curl -LO https://archive.raspberrypi.com/debian/pool/main/l/linux/linux-headers-rpi-2712_6.12.25-1+rpt1_arm64.deb
+curl -LO https://archive.raspberrypi.com/debian/pool/untested/r/raspi-firmware/raspi-firmware_1.20250430-1_all.deb
+
+sudo apt install -y --allow-downgrades ./*.deb
+sudo update-initramfs -u -k 6.12.25+rpt-rpi-2712
+sudo cp /boot/vmlinuz-6.12.25+rpt-rpi-2712 /boot/firmware/kernel_2712.img
+sudo cp /boot/initrd.img-6.12.25+rpt-rpi-2712 /boot/firmware/initramfs_2712
+sudo apt-mark hold \
+  raspi-firmware \
+  linux-support-6.12.25+rpt \
+  linux-image-6.12.25+rpt-rpi-2712 \
+  linux-image-rpi-2712 \
+  linux-headers-6.12.25+rpt-rpi-2712 \
+  linux-headers-rpi-2712
+sudo reboot
+```
+
+After the reboot, verify the rollback before continuing:
+
+```bash
+uname -r
+```
+
+Expected output on Pi 5:
+
+```text
+6.12.25+rpt-rpi-2712
+```
+
 ```bash
 sudo apt-get install python3-jinja2 python3-ply python3-yaml ffmpeg
 ```
@@ -50,7 +93,9 @@ sudo apt-get install python3-jinja2 python3-ply python3-yaml ffmpeg
 sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev ffmpeg && sudo apt-get install libjsoncpp-dev && cd ~ && git clone https://github.com/sewenew/redis-plus-plus.git && cd redis-plus-plus && mkdir build && cd build && cmake .. && make && sudo make install && cd ~
 ```
 
-### libcamera (pinned to `v0.5.0+rpt20250429`) <img src="https://img.shields.io/badge/raspberry pi-fork-red" height="12" >
+### libcamera (Will Whang fork pinned to `9d0cdfe5`) <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
+
+If you are already inside `~/.cinemate-env`, either run `deactivate` before building `libcamera` or install the Python helpers into that environment with `pip install PyYAML ply Jinja2` first.
 
 ```shell
 sudo apt install -y python3-pip python3-jinja2 libboost-dev libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a meson cmake python3-yaml python3-ply libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libavdevice59
@@ -61,10 +106,12 @@ sudo apt-get install --reinstall libtiff5-dev && sudo ln -sf $(find /usr/lib -na
 ```
 
 ```shell
-git clone --branch v0.5.0+rpt20250429 https://github.com/raspberrypi/libcamera.git && \
-sudo find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
+git clone https://github.com/will127534/libcamera.git && \
 cd libcamera && \
-sudo meson setup build --buildtype=release \
+git checkout 9d0cdfe5 && \
+find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
+chmod +x ~/libcamera/src/ipa/ipa-sign.sh && \
+meson setup build --buildtype=release \
   -Dpipelines=rpi/vc4,rpi/pisp \
   -Dipas=rpi/vc4,rpi/pisp \
   -Dv4l2=true \
@@ -75,11 +122,21 @@ sudo meson setup build --buildtype=release \
   -Dqcam=disabled \
   -Ddocumentation=disabled \
   -Dpycamera=enabled && \
-sudo ninja -C build install
+ninja -C build && \
+sudo ninja -C build install && \
+sudo ldconfig
 ```
 
 ```shell
-cd ~/libcamera/utils && sudo chmod +x *.py *.sh && sudo chmod +x ~/libcamera/src/ipa/ipa-sign.sh && cd ~/libcamera && sudo ninja -C build install
+git -C ~/libcamera rev-parse --short HEAD
+find ~/libcamera/src/ipa/rpi/cam_helper -name '*imx585*'
+```
+
+Expected output:
+
+```text
+9d0cdfe5
+/home/pi/libcamera/src/ipa/rpi/cam_helper/cam_helper_imx585.cpp
 ```
 
 ### cpp-mjpeg-streamer
@@ -104,12 +161,39 @@ BUILD_JOBS="${BUILD_JOBS:-$(nproc 2>/dev/null || printf '4')}"
 BUILD_DIR="${BUILD_DIR:-$CINEPI_RAW_DIR/build}"
 PKG_CONFIG_PATH="$CPP_MJPEG_STREAMER_DIR/build:${PKG_CONFIG_PATH:-}"
 export PKG_CONFIG_PATH
+FORCE_WIPE="${FORCE_WIPE:-0}"
+
+is_true() {
+    case "${1,,}" in
+        1|true|yes|on) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+build_dir_has_entries() {
+    [[ -d "$1" ]] || return 1
+    find "$1" -mindepth 1 -maxdepth 1 -print -quit | grep -q .
+}
 
 printf '[compile-raw] Source: %s\n' "$CINEPI_RAW_DIR"
 printf '[compile-raw] Build directory: %s\n' "$BUILD_DIR"
 printf '[compile-raw] Using PKG_CONFIG_PATH=%s\n' "$PKG_CONFIG_PATH"
-printf '[compile-raw] Running meson setup --wipe\n'
-meson setup "$BUILD_DIR" "$CINEPI_RAW_DIR" --wipe
+if is_true "$FORCE_WIPE"; then
+  printf '[compile-raw] FORCE_WIPE requested; running meson setup --wipe\n'
+  meson setup "$BUILD_DIR" "$CINEPI_RAW_DIR" --wipe
+elif [[ -f "$BUILD_DIR/build.ninja" || -f "$BUILD_DIR/meson-private/coredata.dat" ]]; then
+  printf '[compile-raw] Reusing existing Meson build directory with --reconfigure\n'
+  if ! meson setup "$BUILD_DIR" "$CINEPI_RAW_DIR" --reconfigure; then
+    printf '[compile-raw] Reconfigure failed; retrying with --wipe\n'
+    meson setup "$BUILD_DIR" "$CINEPI_RAW_DIR" --wipe
+  fi
+elif build_dir_has_entries "$BUILD_DIR"; then
+  printf '[compile-raw] Build directory is non-empty but not reusable; running meson setup --wipe\n'
+  meson setup "$BUILD_DIR" "$CINEPI_RAW_DIR" --wipe
+else
+  printf '[compile-raw] Running initial meson setup\n'
+  meson setup "$BUILD_DIR" "$CINEPI_RAW_DIR"
+fi
 printf '[compile-raw] Building with ninja (%s jobs)\n' "$BUILD_JOBS"
 ninja -C "$BUILD_DIR" -j "$BUILD_JOBS"
 printf '[compile-raw] Installing cinepi-raw\n'
@@ -121,7 +205,14 @@ chmod +x /home/pi/compile-raw.sh
 /home/pi/compile-raw.sh
 ```
 
-You can rerun `/home/pi/compile-raw.sh` later whenever you need to rebuild `cinepi-raw`.
+You can rerun `/home/pi/compile-raw.sh` later whenever you need to rebuild `cinepi-raw`. If you really do want a clean Meson reconfigure, run `FORCE_WIPE=1 /home/pi/compile-raw.sh`.
+
+The `cinepi-raw` build now also installs the matching `rpicam-*` utilities into `/usr/local/bin`. Verify that the local binary wins over the distro one:
+
+```bash
+command -v rpicam-hello
+/usr/local/bin/rpicam-hello --version
+```
 
 ### Seed Redis with white balance default keys
 
@@ -180,33 +271,44 @@ EOF
 
 Exit nano editor using ctrl+x.
 
-### IMX585 driver (optional)
+### IMX283 and IMX585 sensor support
+
+Install both now even if your current default sensor is `imx477` or `imx296`, so later sensor swaps only need a `config.txt` change instead of another driver pass.
 
 ```shell
-sudo apt install linux-headers dkms -y
+sudo apt install dkms -y
 ```
 
 ```
 git clone https://github.com/will127534/imx585-v4l2-driver.git --branch 6.12.y
 cd imx585-v4l2-driver/
 ./setup.sh
+sudo dkms autoinstall -k 6.12.25+rpt-rpi-2712
 cd
 
 ```
 
 !!! note ""
-    The imx585 is written by Will Whang. For original drivers and startup guides, visit https://github.com/will127534/StarlightEye
+    The IMX585 and IMX283 support used here is based on Will Whang's work. For the original drivers and startup guides, visit https://github.com/will127534/StarlightEye
 
-#### Add IMX585 tuning files 
+#### Install Cinemate IMX283 and IMX585 tuning overrides
+
+Will Whang's `libcamera` fork already contains the IMX283 helper and the base IMX283/IMX585 tuning support. These commands overlay Cinemate's local IMX283, IMX585 and IMX585 mono tuning files into both the `libcamera` source tree and the installed IPA directories so the runtime stays aligned with Cinemate's defaults and both sensors stay ready for later swaps.
 
 ```bash
-curl -L -o /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json \
-  https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585.json
-sed -i '8s/"black_level": *[0-9]\+/"black_level": 0/' /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json
-sudo cp /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json /usr/local/share/libcamera/ipa/rpi/pisp/
-```
-```
-curl -L -o /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585_mono.json https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585_mono.json && sudo cp /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585_mono.json /usr/local/share/libcamera/ipa/rpi/pisp/
+for dir in /home/pi/libcamera/src/ipa/rpi/pisp/data /home/pi/libcamera/src/ipa/rpi/vc4/data; do
+  install -d -m 755 "$dir"
+  install -m 644 /home/pi/cinemate/resources/tuning_files/imx283.json "$dir/imx283.json"
+  install -m 644 /home/pi/cinemate/resources/tuning_files/imx585.json "$dir/imx585.json"
+  install -m 644 /home/pi/cinemate/resources/tuning_files/imx585_mono.json "$dir/imx585_mono.json"
+done
+
+for dir in /usr/local/share/libcamera/ipa/rpi/pisp /usr/local/share/libcamera/ipa/rpi/vc4; do
+  sudo install -d -m 755 "$dir"
+  sudo install -m 644 /home/pi/cinemate/resources/tuning_files/imx283.json "$dir/imx283.json"
+  sudo install -m 644 /home/pi/cinemate/resources/tuning_files/imx585.json "$dir/imx585.json"
+  sudo install -m 644 /home/pi/cinemate/resources/tuning_files/imx585_mono.json "$dir/imx585_mono.json"
+done
 ```
  
 #### IR filter switch script

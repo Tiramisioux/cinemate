@@ -100,7 +100,7 @@ cd imx585-v4l2-driver/
 ```bash
 curl -L -o /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json \
   https://raw.githubusercontent.com/will127534/libcamera/master/src/ipa/rpi/pisp/data/imx585.json
-sed -i '8s/"black_level": *[0-9]\+/"black_level": 0/' /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json
+sed -i '8s/"black_level": *[0-9]\+/"black_level": 3200/' /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json
 cp /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json /usr/local/share/libcamera/ipa/rpi/pisp/
 ```
 ```
@@ -518,5 +518,4 @@ After enabling the service, Cinemate should autostart on boot.
     If you plug in an Ethernet cable you can keep the hotspot active while the wired
     connection provides internet access. See [Hotspot logic](hotspot-logic.md) for
     more details on how the hotspot works.
-
 

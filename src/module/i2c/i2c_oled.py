@@ -35,6 +35,7 @@ class I2cOled(threading.Thread):
         self.i2c, self.oled   = None, None
         self.connected        = False
         self._last_reconnect  = 0
+        self._stop_event      = threading.Event()
 
         self.font = self._load_font()
         self._initialize_display()
@@ -143,7 +144,10 @@ class I2cOled(threading.Thread):
     # ──────────────────────────────────────────────────────────────────────
     # Thread loop
     # ──────────────────────────────────────────────────────────────────────
+    def stop(self):
+        self._stop_event.set()
+
     def run(self):
-        while True:
+        while not self._stop_event.is_set():
             self.update()
             time.sleep(0.01)

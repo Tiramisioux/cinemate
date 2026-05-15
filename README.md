@@ -7,13 +7,14 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
 
 ## New features in version 3.3
 
-- synchronous sound recording via attached USB microphones
-- audio gain setting in `settings.json`
-- proper WAV timecode - automatically merges WAV with DNG clips in DaVinci Resolve
+- synchronous sound recording via attached USB microphone
+- audio gain setting in `settings.json` 
+- proper wav timecode – automatically merges with dng clips in DaVinci Resolve
 - rec tone output
 - HDMI hotplugging – display doesn't have to be connected on startup
 - clearer drop frame indication
-- service clearing Redis logs on startup
+- exfat support
+- new service clearing redis logs
 - updated documentation
 - improvements to startup/shutdown sequence and general boot performance – Cinemate now exits to the CLI and also guides on syntax errors in `settings.json`
 
@@ -42,13 +43,13 @@ For a basic Cinemate setup you need:
 - HDMI monitor or a phone/tablet connected to the Pi hotspot for preview
 
 ## Installation
-Choose the install path that fits your setup:
+There are three options for installing Cinemate:
 
-1. Use the prebuilt image file
+### 1. Use the prebuilt image file
 
 See the [releases section](https://github.com/Tiramisioux/cinemate/releases) for the preinstalled image and Quick Start Guide.
 
-2. Clone the repo and run the one-click installer
+### 2. Clone the repo and run the one-click installer
 
 ```bash
 sudo apt update
@@ -59,11 +60,13 @@ chmod +x cinemate-install.sh
 ./cinemate-install.sh
 ```
 
-Use Raspberry Pi OS Lite (Bookworm) for this path. The installer defaults to an `imx477` on camera port `cam0`, follows the same order as the manual guide, stops on non-Bookworm releases such as Trixie, pins `libcamera` to Raspberry Pi release tag `v0.5.0+rpt20250429` so it stays aligned with the `cinepi-raw` / `rpicam-apps 1.7` code generation instead of tracking the moving repo tip, installs IMX585 DKMS support plus Cinemate's IMX283 and IMX585 tuning files even when another sensor is your current default, and writes `/home/pi/compile-raw.sh` for future `cinepi-raw` rebuilds without wiping the Meson build unless it is needed. It installs the libraries needed by the camera stack on top of a Lite system, not a full desktop image, creates `~/.cinemate-env`, auto-activates it from `.bashrc`, and adds a `cinemate-env` helper alias so you can reactivate it after `deactivate`. If you stay in the same shell after install, run `source ~/.bashrc` once to load the aliases immediately. If you want the script to perform the manual reboot steps automatically too, run it as `RUN_REBOOT=1 ./cinemate-install.sh`.
+This assumes Raspberry Pi OS Lite (Bookworm) is installed. 
 
-3. Follow the manual install guide
+The installer defaults to an `imx477` on camera port `cam0` (you can change this later) and installs all scripts, services and drivers needed for running Cinemate. After installing reboot the system and Cinemate should be starting automaically.
 
-For the full manual install, configuration steps, and CLI reference, use the [documentation](https://tiramisioux.github.io/cinemate/installation-steps/). The manual section begins after the installer instructions on that page and assumes Raspberry Pi OS Lite (Bookworm).
+### 3. Manual install
+
+For the full manual install, configuration steps, and CLI reference, please see the [documentation](https://tiramisioux.github.io/cinemate/installation-steps/). The manual section begins after the installer instructions on that page and assumes Raspberry Pi OS Lite (Bookworm).
 
 ## Customization
 GPIO buttons and switches, rotary encoders and oled display for controlling camera settings such as recording, iso etc. are configured in the `~/cinemate/src/settings.json` file.

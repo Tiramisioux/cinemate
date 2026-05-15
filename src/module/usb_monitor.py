@@ -533,11 +533,70 @@ class USBMonitor():
         self.recently_processed = []
         
         self.current_mic_id = None
+        self.audio_prepare_timer: Optional[threading.Timer] = None
+        self.audio_prepare_lock = threading.Lock()
+        self.audio_prepare_deferred = False
         
         self.audio_monitor = AudioMonitor(settings=self.settings)
         
         self.monitor.filter_by(subsystem='usb_storage')
         self.monitor_devices()
+
+    def _is_recording_active(self) -> bool:
+        try:
+            import redis  # type: ignore
+        except ModuleNotFoundError:
+            return False
+
+        try:
+            client = redis.StrictRedis(host="localhost", port=6379, db=0)
+            value = client.get("is_recording")
+        except Exception as exc:
+            logging.debug("Could not read is_recording from Redis while preparing audio monitor: %s", exc)
+            return False
+
+        if isinstance(value, bytes):
+            value = value.decode("utf-8", errors="replace")
+
+        text = str(value or "").strip().lower()
+        if text in ("1", "true", "yes", "on"):
+            return True
+        try:
+            return bool(int(text))
+        except (TypeError, ValueError):
+            return False
+
+    def _cancel_audio_prepare_timer(self) -> None:
+        with self.audio_prepare_lock:
+            if self.audio_prepare_timer is not None:
+                self.audio_prepare_timer.cancel()
+                self.audio_prepare_timer = None
+
+    def _schedule_audio_prepare(self, delay_seconds: float = 0.5) -> None:
+        def run() -> None:
+            with self.audio_prepare_lock:
+                self.audio_prepare_timer = None
+
+            if self._is_recording_active():
+                if not self.audio_prepare_deferred:
+                    logging.info(
+                        "Deferring microphone probe until recording stops so the USB mic path is not touched mid-take."
+                    )
+                    self.audio_prepare_deferred = True
+                self._schedule_audio_prepare(delay_seconds=1.0)
+                return
+
+            self.audio_prepare_deferred = False
+            self.audio_monitor.prepare()
+
+        with self.audio_prepare_lock:
+            if self.audio_prepare_timer is not None:
+                self.audio_prepare_timer.cancel()
+
+            timer = threading.Timer(delay_seconds, run)
+            timer.daemon = True
+            self.audio_prepare_timer = timer
+            timer.start()
 
     def filter_sound_device(self, devices_list):
         sound_devices = [dev[0].device_path for dev in devices_list if re.search(r'/sound/card\\d+', dev[0].device_path)]
@@ -594,14 +653,14 @@ class USBMonitor():
             self.audio_monitor.set_model_info(model, serial, card_num=card_num, card_name=card_name)
             self.current_mic_id = mic_id
             # Let ALSA settle briefly, then probe the current monitor config without owning capture.
-            threading.Timer(0.5, self.audio_monitor.prepare).start()
+            self._schedule_audio_prepare(0.5)
             if trigger_event:
                 self.usb_event.emit('mic_changed', chosen_device, model, serial, card_name)
         else:
             # First detection or unchanged mic: ensure monitor config is populated
             if not self.audio_monitor.can_record_audio:
                 self.audio_monitor.set_model_info(model, serial, card_num=card_num, card_name=card_name)
-                threading.Timer(0.5, self.audio_monitor.prepare).start()
+                self._schedule_audio_prepare(0.5)
 
         logging.info(f'USB Microphone connected: Model={model}, Serial={serial}, Name={card_name}')
         self.usb_event.emit('add', chosen_device, model, serial, card_name)
@@ -668,6 +727,8 @@ class USBMonitor():
                 self.usb_mic = None
                 self.usb_mic_path = None
                 self.current_mic_id = None
+                self.audio_prepare_deferred = False
+                self._cancel_audio_prepare_timer()
                 self.usb_event.emit('mic_removed', device, model, serial)  # <-- Added this line
                 self.audio_monitor.stop()
 

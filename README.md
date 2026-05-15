@@ -5,14 +5,17 @@ Cinemate provides a minimal starting point that you can extend with your own con
 
 The project combines a Python UI with a custom fork of [cinepi-raw](https://github.com/Tiramisioux/cinepi-raw/tree/rpicam-apps_1.7_custom_encoder).
 
-## New features in version 3.2
+## New features in version 3.3
 
-- improved mounting mechanics for NVME and SSD drives with less drop frames
-- erase and format drives via Cinemate CLI (ext4/NTFS)
-- storage preroll to "warm up" the recording media, improving writing stability
-- improved audio sync with correction of effective fps (different resolutions/frame rates due to sensor VBLANK), available for fine tuning in `src/module/sensor_correction_factors.py`
-- option to record a fixed number of frames or seconds for user calibration of fps correction factors (run Cinemate manually for this calibration as feedback is supplied in the terminal)
-- improved recognition of attached microphones
+- synchronous sound recording via attached USB microphones
+- audio gain setting in `settings.json`
+- proper WAV timecode - automatically merges WAV with DNG clips in DaVinci Resolve
+- rec tone output
+- HDMI hotplugging – display doesn't have to be connected on startup
+- clearer drop frame indication
+- service clearing Redis logs on startup
+- updated documentation
+- improvements to startup/shutdown sequence and general boot performance – Cinemate now exits to the CLI and also guides on syntax errors in `settings.json`
 
 ## Compatible sensors
 

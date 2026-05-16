@@ -48,9 +48,9 @@ You can limit which modes appear inside CineMate by editing the `resolutions` se
 
     The bit-depth column above describes the sensor mode reported by the camera stack. The IMX296 sensor mode is 10 bit. Cinemate's CinePi-RAW DNG writer may still save captures through its 12 bit DNG output path, so a correctly saved IMX296 DNG does not mean the sensor itself has a 12 bit mode.
 
-!!! note ""
+!!! info "Raspberry Pi 4 raw packing"
 
-    On Raspberry Pi 4 / Pi 400 / CM4, Cinemate launches IMX296 as `1456:1088:10:P` so CinePi-RAW receives the Pi 4 VC4 packed raw stream. On Raspberry Pi 5 / CM5 it uses `1456:1088:10:U`.
+    Cinemate handles the CinePi-RAW packing choice automatically. On Raspberry Pi 4 / Pi 400 / CM4, IMX296 and IMX477 use packed raw mode (`P`). On Raspberry Pi 5 / CM5 they stay on unpacked mode (`U`). For IMX296 this means `1456:1088:10:P` on Raspberry Pi 4-family boards and `1456:1088:10:U` on Raspberry Pi 5 / CM5.
 
 ## Sustainable frame rates
 

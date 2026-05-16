@@ -36,7 +36,13 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
 ## Installation
 See the [releases section](https://github.com/Tiramisioux/cinemate/releases) for preinstalled image file and [Quick Start Guide](https://tiramisioux.github.io/cinemate/getting-started/). 
 
-For manual install of the camera stack on Raspberry Pi Bookworm, see the [here](https://tiramisioux.github.io/cinemate/installation-steps/).
+For a repo-root one-click install or a manual install of the camera stack on Raspberry Pi OS Lite (Bookworm), see the [installation guide](https://tiramisioux.github.io/cinemate/installation-steps/). The one-click installer defaults to IMX477 on `cam0`; override it inline for other sensors:
+
+```bash
+SENSOR_MODEL=imx296 CAM_PORT=cam0 ./cinemate-install.sh
+SENSOR_MODEL=imx283 CAM_PORT=cam0 ./cinemate-install.sh
+SENSOR_MODEL=imx585 CAM_PORT=cam0 ./cinemate-install.sh
+```
 
 ## Compatible sensors
 

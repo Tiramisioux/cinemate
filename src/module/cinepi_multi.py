@@ -28,6 +28,26 @@ def _settings() -> dict:
 
 _READY_RX   = re.compile(r"Encoder configured")      # line printed by DngEncoder
 _READY_WAIT = 2.0                                   # seconds to wait for all cams
+_PI4_MODEL_MARKERS = (
+    "Raspberry Pi 4",
+    "Raspberry Pi 400",
+    "Compute Module 4",
+)
+_PI4_PACKED_MODE_SENSORS = {"imx296", "imx296_mono", "imx477"}
+
+
+def _read_pi_model() -> str:
+    try:
+        with open("/proc/device-tree/model", "r") as f:
+            return f.read()
+    except FileNotFoundError:
+        return ""
+
+
+def _is_pi4_family() -> bool:
+    model = _read_pi_model()
+    return any(marker in model for marker in _PI4_MODEL_MARKERS)
+
 
 def _rt_permitted():
     if shutil.which("chrt") is None:
@@ -265,11 +285,7 @@ class CinePiProcess(Thread):
 
     def _is_pi4(self) -> bool:
         """Return True on any Raspberry Pi 4/400/CM4‐lite platform."""
-        try:
-            with open("/proc/device-tree/model") as f:
-                return "Raspberry Pi 4" in f.read()
-        except FileNotFoundError:
-            return False
+        return _is_pi4_family()
 
     def _build_args(self):
         # base resolution
@@ -280,11 +296,14 @@ class CinePiProcess(Thread):
         height = res.get('height', 1080)
         bit_depth = res.get('bit_depth', 12)
         packing = res.get('packing', 'U')
-        
-        # # packing override
-        # pi_model = self.redis_controller.get_value('pi_model') or ''
-        # if self.cam.is_mono or (pi_model == 'pi4' and model_key == 'imx477'):
-        #     packing = 'P'
+
+        if self._is_pi4() and model_key in _PI4_PACKED_MODE_SENSORS:
+            logging.info(
+                "[%s] Pi 4-family raw path detected for %s; using packed mode",
+                self.cam.port,
+                model_key,
+            )
+            packing = 'P'
         
         # lores & preview
         aspect = width / height
@@ -453,13 +472,7 @@ class CinePiManager:
 
 
         # ── Pi 4 sanity check ────────────────────────────────────────────
-        try:
-            with open("/proc/device-tree/model", "r") as f:
-                model_str = f.read()
-        except FileNotFoundError:
-            model_str = ""
-
-        if "Raspberry Pi 4" in model_str:
+        if _is_pi4_family():
             for cam in cams:
                 if cam.port != "cam0":          # Pi 4 has only CSI-0
                     logging.warning(

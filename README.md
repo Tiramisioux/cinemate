@@ -13,7 +13,6 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
 - rec tone output
 - HDMI hotplugging – display doesn't have to be connected on startup
 - clearer drop frame indication
-- exfat support
 - new service clearing redis logs
 - updated documentation
 - improvements to startup/shutdown sequence and general boot performance – Cinemate now exits to the CLI and also guides on syntax errors in `settings.json`

@@ -25,8 +25,6 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
 
 - clearer drop frame indication
 
-- exfat support
-
 - new service clearing redis logs
 
 - updated documentation

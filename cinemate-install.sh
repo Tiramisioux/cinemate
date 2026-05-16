@@ -39,6 +39,7 @@ INSTALL_PISHRINK="${INSTALL_PISHRINK:-1}"
 INSTALL_PLYMOUTH="${INSTALL_PLYMOUTH:-1}"
 INSTALL_IMX585_DRIVER="${INSTALL_IMX585_DRIVER:-1}"
 INSTALL_IR_FILTER_HELPER="${INSTALL_IR_FILTER_HELPER:-auto}"
+ENABLE_CONSOLE_AUTOLOGIN="${ENABLE_CONSOLE_AUTOLOGIN:-1}"
 
 ENABLE_SUPPORT_SERVICES="${ENABLE_SUPPORT_SERVICES:-1}"
 ENABLE_STORAGE_AUTOMOUNT_SERVICE="${ENABLE_STORAGE_AUTOMOUNT_SERVICE:-1}"
@@ -294,7 +295,7 @@ print_configuration_summary() {
     detail "Runtime HDMI ports: cam0->$HDMI_PORT_CAM0 cam1->$HDMI_PORT_CAM1"
     detail "Libcamera: $LIBCAMERA_REPO_URL @ $LIBCAMERA_REPO_REF"
     detail "Hotspot: $HOTSPOT_NAME (enabled=$HOTSPOT_ENABLED)"
-    detail "Optional features: lgpio=$INSTALL_ALT_GPIO_BACKEND console_font=$INSTALL_CONSOLE_FONT pishrink=$INSTALL_PISHRINK plymouth=$INSTALL_PLYMOUTH imx585_driver=$INSTALL_IMX585_DRIVER ir_filter=$INSTALL_IR_FILTER_HELPER"
+    detail "Optional features: lgpio=$INSTALL_ALT_GPIO_BACKEND console_font=$INSTALL_CONSOLE_FONT console_autologin=$ENABLE_CONSOLE_AUTOLOGIN pishrink=$INSTALL_PISHRINK plymouth=$INSTALL_PLYMOUTH imx585_driver=$INSTALL_IMX585_DRIVER ir_filter=$INSTALL_IR_FILTER_HELPER"
     detail "Services: support=$ENABLE_SUPPORT_SERVICES storage=$ENABLE_STORAGE_AUTOMOUNT_SERVICE wifi=$ENABLE_WIFI_HOTSPOT_SERVICE redis_log=$ENABLE_REDIS_LOG_MAINTENANCE_SERVICE autostart=$ENABLE_AUTOSTART start_now=$START_AUTOSTART_NOW"
 }
 
@@ -1070,6 +1071,28 @@ configure_console_font() {
     sudo systemctl start console-setup.service
 }
 
+configure_console_autologin() {
+    if ! is_true "$ENABLE_CONSOLE_AUTOLOGIN"; then
+        detail "Skipping console auto-login setup"
+        return 0
+    fi
+
+    local dropin_dir="/etc/systemd/system/getty@tty1.service.d"
+    local override="$dropin_dir/autologin.conf"
+
+    log "Configuring tty1 console auto-login"
+    detail "Auto-login user: $PI_USER"
+    sudo install -d -m 755 "$dropin_dir"
+    backup_file "$override"
+    write_root_file "$override" 644 <<EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin $PI_USER --noclear %I \$TERM
+EOF
+    sudo systemctl daemon-reload
+    detail "Console auto-login will apply on the next tty1 restart or reboot"
+}
+
 configure_pishrink() {
     if ! is_true "$INSTALL_PISHRINK"; then
         detail "Skipping PiShrink install"
@@ -1445,6 +1468,7 @@ main() {
     configure_post_processing
     section "Applying optional UI and boot helpers"
     configure_console_font
+    configure_console_autologin
     configure_pishrink
     configure_plymouth
     section "Refreshing Pi 5 boot handoff"

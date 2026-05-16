@@ -849,19 +849,8 @@ sudo reboot
 ```
 
 If you skip Plymouth, Cinemate still works. You just will not get the boot spinner or the same CLI-suppressed boot handoff.
+
 ## Cinemate services
-
-#### storage-automount
-
-Mounts and unmounts removable drives such as SSDs, NVMe enclosures and the CFE HAT. 
-
-#### wifi-hotspot
-
-Keeps a simple Wi‑Fi hotspot running via NetworkManager so you can reach the web UI while in the field. The SSID and password come from the `system.wifi_hotspot` section of `settings.json`.
-
-#### redis-log-maintenance
-
-Enables the `redis-log-maintenance.timer`, which periodically trims `/var/log/redis/redis-server.log` and removes old Redis log rotations so the Pi root filesystem does not slowly fill up.
 
 Install and enable the support services with:
 
@@ -874,7 +863,39 @@ sudo make install
 sudo make start  # starts storage-automount and wifi-hotspot now, and runs one redis cleanup pass
 sudo make enable # enables storage-automount, wifi-hotspot, and redis-log-maintenance.timer on boot
 ```
+
 You can also start and enable the service individually, by entering their respective folders and issuing the `sudo make` command
+
+#### storage-automount
+
+Mounts and unmounts removable drives such as SSDs, NVMe enclosures and the CFE HAT.
+
+#### wifi-hotspot
+
+Keeps a simple Wi‑Fi hotspot running via NetworkManager so you can reach the web UI while in the field. The SSID and password come from the `system.wifi_hotspot` section of `settings.json`.
+
+#### redis-log-maintenance
+
+Enables the `redis-log-maintenance.timer`, which periodically trims `/var/log/redis/redis-server.log` and removes old Redis log rotations so the Pi root filesystem does not slowly fill up.
+
+#### cinemate-autostart.service
+
+Starts Cinemate automatically on boot. After you have tested Cinemate manually in the Starting Cinemate section below and confirmed that it runs smoothly, enable the service with:
+
+```shell
+cd /home/pi/cinemate/
+```
+
+```
+sudo make install   # copy service file
+sudo make enable    # start on boot
+```
+
+After enabling the service, reboot the Pi. Cinemate should autostart on the next boot. If you deliberately want to test the service immediately from SSH, run `sudo systemctl start cinemate-autostart`, but the normal install path is to reboot.
+
+!!! tip ""
+
+    `sudo make install` also places `/usr/local/bin/camera-ready.sh`, `/usr/local/bin/cinemate-startup-failure-display.sh`, and `/usr/local/bin/cinemate-console-handoff.sh` on the system. The camera-ready helper waits for `cinepi-raw` to report a camera before systemd launches Cinemate, the startup-failure helper preserves early crash diagnostics on `tty1`, and the console-handoff helper restores the CLI on a normal Cinemate stop while leaving `tty1` available for Plymouth during full system shutdown.
 
 Note that if you were connected to the Pi via wifi, this connection is now broken due to the Pi setting up its own hotspot.
 
@@ -938,21 +959,6 @@ Now, back on the Pi, anywhere in the terminal, type:
 cinemate
 ```
 
-Make sure things are running smoothly and then you can move on to enabling the cinemate-autostart service:
-
-#### cinemate-autostart.service
-
-```shell
-cd /home/pi/cinemate/
-```
-
-```
-sudo make install   # copy service file
-sudo make enable    # start on boot
-```
-
-After enabling the service, reboot the Pi. Cinemate should autostart on the next boot. If you deliberately want to test the service immediately from SSH, run `sudo systemctl start cinemate-autostart`, but the normal install path is to reboot.
-
-> **Tip:** `sudo make install` also places `/usr/local/bin/camera-ready.sh`, `/usr/local/bin/cinemate-startup-failure-display.sh`, and `/usr/local/bin/cinemate-console-handoff.sh` on the system. The camera-ready helper waits for `cinepi-raw` to report a camera before systemd launches Cinemate, the startup-failure helper preserves early crash diagnostics on `tty1`, and the console-handoff helper restores the CLI on a normal Cinemate stop while leaving `tty1` available for Plymouth during full system shutdown.
+Make sure things are running smoothly before enabling `cinemate-autostart.service` in the Cinemate services section above.
 
 You now have a 12 bit RAW image capturing system on your Raspberry Pi!

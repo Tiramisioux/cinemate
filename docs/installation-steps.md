@@ -878,6 +878,13 @@ Keeps a simple Wi‑Fi hotspot running via NetworkManager so you can reach the w
 
 Enables the `redis-log-maintenance.timer`, which periodically trims `/var/log/redis/redis-server.log` and removes old Redis log rotations so the Pi root filesystem does not slowly fill up.
 
+To inspect the Redis log maintenance timer later:
+
+```bash
+systemctl status redis-log-maintenance.timer
+journalctl -u redis-log-maintenance.service
+```
+
 #### cinemate-autostart.service
 
 Starts Cinemate automatically on boot. After you have tested Cinemate manually in the Running cinemate manually section at the end of this guide and confirmed that it runs smoothly, enable the service with:
@@ -937,13 +944,6 @@ sudo systemctl disable wifi-hotspot
 ```
 
 See [Hotspot logic](hotspot-logic.md) for more details on how the hotspot works.
-
-To inspect the Redis log maintenance timer later:
-
-```bash
-systemctl status redis-log-maintenance.timer
-journalctl -u redis-log-maintenance.service
-```
 
 ### Connect to the Pi (if not already connected):
 

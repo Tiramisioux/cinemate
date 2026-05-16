@@ -92,14 +92,14 @@ After installing, reboot the system and Cinemate should start automatically. The
 
 ### 3. Manual install
 
-For the full manual install, configuration steps, and CLI reference, please see the [documentation](https://tiramisioux.github.io/cinemate/installation-steps/). The manual section begins after the installer instructions on that page and assumes Raspberry Pi OS Lite (Bookworm).
+For the full manual install, configuration steps, and CLI reference, please see the [documentation](https://tiramisioux.github.io/cinemate/installation-steps/).
 
 ## Customization
-GPIO buttons and switches, rotary encoders and oled display for controlling camera settings such as recording, iso etc. are configured in the `~/cinemate/src/settings.json` file.
+GPIO buttons and switches, rotary encoders and oled display for controlling camera settings such as recording, iso etc. are configured in the `~/cinemate/src/settings.json` file. On the Pi, type `editsettings` in the terminal to open this file.
 
 ### Resolution defaults
 
-Cinemate starts by showing only 1.5K and 2K recording-size choices. 2K is the standard Cinemate working size, and the default list is kept to modes that are suitable for 25 fps recording. Higher sensor modes such as 4K are supported, but they are hidden until you opt in. On the Pi, type `editsettings` in the terminal to open the settings file, then add `4` to `resolutions.k_steps` in `settings.json`.
+The same settings file also controls which recording sizes appear in Cinemate. By default, Cinemate shows 1.5K and 2K choices only. 2K is the standard Cinemate working size, and the default list is kept to modes that are suitable for 25 fps recording. Higher sensor modes such as 4K are supported, but they stay hidden until you opt in by adding `4` to `resolutions.k_steps`.
 
 ## Documentation
 Full manual installation instructions, configuration guides and CLI reference live [here](https://tiramisioux.github.io/cinemate/).

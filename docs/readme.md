@@ -58,11 +58,11 @@ The installer enables console auto-login for the configured `PI_USER` on `tty1`.
 - [Adafruit I2C Quad Rotary Encoder](https://www.adafruit.com/product/5752)
 
 ## Customization
-GPIO buttons and switches, rotary encoders and oled display are optional and configured via [the settings file](https://tiramisioux.github.io/cinemate/settings-json/).
+GPIO buttons and switches, rotary encoders and oled display are optional and configured via [the settings file](https://tiramisioux.github.io/cinemate/settings-json/). On the Pi, type `editsettings` in the terminal to open this file.
 
 ### Resolution defaults
 
-Cinemate starts by showing only 1.5K and 2K recording-size choices. 2K is the standard Cinemate working size, and the default list is kept to modes that are suitable for 25 fps recording. Higher sensor modes such as 4K are supported, but they are hidden until you opt in. On the Pi, type `editsettings` in the terminal to open the settings file, then add `4` to `resolutions.k_steps` in `settings.json`.
+The same settings file also controls which recording sizes appear in Cinemate. By default, Cinemate shows 1.5K and 2K choices only. 2K is the standard Cinemate working size, and the default list is kept to modes that are suitable for 25 fps recording. Higher sensor modes such as 4K are supported, but they stay hidden until you opt in by adding `4` to `resolutions.k_steps`.
 
 <!-- ## Documentation
 Full manual installation instructions, configuration guides and CLI reference live [here](https://tiramisioux.github.io/cinemate/). -->

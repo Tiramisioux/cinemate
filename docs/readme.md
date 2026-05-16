@@ -11,19 +11,27 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
 </div>
 
 !!! tip ""
-    ## New features in version 3.2
+    ## New features in version 3.3
 
-- improved mounting mechanics for NVME and SSD drives with less drop frames
+- synchronous sound recording via attached USB microphone
 
-- storage preroll to "warm up" the recording media, improving writing stability
+- audio gain setting in `settings.json`
 
-- improved audio sync with correction of effective fps (different resolutions/frame rates due to sensor VBLANK), available for fine tuning in `src/module/sensor_correction_factors.py`
+- proper wav timecode - automatically merges with dng clips in DaVinci Resolve
 
-- option to record a fixed number of frames or seconds for user calibration of fps correction factors (run Cinemate manually for this calibration as feedback is supplied in the terminal)
+- rec tone output
 
-- system startup fix to have Cinemate wait for sensor to be loaded properly by the system (contribution from user Yabbo01)
+- HDMI hotplugging - display doesn't have to be connected on startup
 
-- simple GUI now supports different resolutions defined by the user in `setting.json` (contribution from user 0point)
+- clearer drop frame indication
+
+- exfat support
+
+- new service clearing redis logs
+
+- updated documentation
+
+- improvements to startup/shutdown sequence and general boot performance - Cinemate now exits to the CLI and also guides on syntax errors in `settings.json`
 
 ## Installation
 See the [releases section](https://github.com/Tiramisioux/cinemate/releases) for preinstalled image file and [Quick Start Guide](https://tiramisioux.github.io/cinemate/getting-started/). 

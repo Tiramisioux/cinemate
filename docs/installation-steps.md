@@ -23,11 +23,12 @@ chmod +x cinemate-install.sh
 ./cinemate-install.sh
 ```
 
-The default installer profile is `imx477` on `cam0` with the boot framebuffer pinned to `HDMI-A-1`.
+The default installer profile is `imx477` on `cam0` with the boot framebuffer pinned to `HDMI-A-1`. For a StarlightEye color camera, run the installer with `SENSOR_MODEL=imx585 CAM_PORT=cam0` or edit the values at the top of `cinemate-install.sh`.
 
 The script applies the full manual flow from this guide in the same order, including `storage-automount`, `wifi-hotspot`, and `redis-log-maintenance`, plus the optional console-font, PiShrink, Plymouth, and IR filter helper steps. It is intended for Raspberry Pi OS Lite (Bookworm), stops early on unsupported releases such as Trixie, aligns Raspberry Pi 5 / CM5 installs to the known-good `6.12.25+rpt-rpi-2712` kernel baseline, builds Will Whang's `libcamera` fork at commit `9d0cdfe5`, installs IMX585 DKMS support, installs Cinemate's IMX283 and IMX585 tuning files so both sensors are ready even if another sensor is your current default, and then builds `cinepi-raw` with the matching local `rpicam-*` utilities under `/usr/local/bin`. It installs the required stack libraries on top of a Lite system, not a full desktop image, creates `~/.cinemate-env`, auto-activates it from `.bashrc`, adds a `cinemate-env` helper alias so you can reactivate it after `deactivate`, and writes `/home/pi/compile-raw.sh` as a reusable cinepi-raw rebuild helper that reuses the existing Meson build by default and only wipes when needed. If you stay in the same shell after the installer finishes, run `source ~/.bashrc` once to load the aliases right away. If you want the script to perform the manual reboot steps automatically too, run it as `RUN_REBOOT=1 ./cinemate-install.sh`. Set `SENSOR_MODEL`, `CAM_PORT`, and `HDMI_BOOT_PORT` at the top of the script or override them inline, for example:
 
 ```bash
+SENSOR_MODEL=imx585 CAM_PORT=cam0 ./cinemate-install.sh
 SENSOR_MODEL=imx585_mono CAM_PORT=cam1 HDMI_BOOT_PORT=1 ./cinemate-install.sh
 ```
 
@@ -345,42 +346,87 @@ sudo nano /boot/firmware/config.txt
 
 Paste this into your file, and uncomment the sensor you are using.
 
-Also specify which physical camera port you have connected your sensor to (example shows imx477 activated)
+Also specify which physical camera port you have connected your sensor to. A clean install should use the IMX477 section on `cam0`; a StarlightEye color setup should use the IMX585 section on the camera port where the sensor is connected.
 
 ```bash
-# Raspberry Pi HQ camera
+# For more options and information see
+# http://rptl.io/configtxt
+# Some settings may impact device functionality. See link above for details
+
+# Uncomment some or all of these to enable the optional hardware interfaces
+dtparam=i2c_arm=on
+#dtparam=i2s=on
+#dtparam=spi=on
+
+# Enable audio (loads snd_bcm2835)
+dtparam=audio=on
+
+# ---- Camera section ----
+
+# Raspberry Pi HQ camera (IMX477, clean-install default on cam0)
 camera_auto_detect=1
 dtoverlay=imx477,cam0
 
-# Raspberry Pi GS camera
+# Raspberry Pi GS camera (IMX296)
 #camera_auto_detect=1
 #dtoverlay=imx296,cam0
 
-# OneInchEye
+# OneInchEye (IMX283)
 #camera_auto_detect=0
 #dtoverlay=imx283,cam0
 
-# StarlightEye
+# StarlightEye color (IMX585)
 #camera_auto_detect=0
 #dtoverlay=imx585,cam0
 
-# StarlightEye Mono
+# StarlightEye Mono (IMX585 mono)
 #camera_auto_detect=0
 #dtoverlay=imx585,cam1,mono
 
-# CFE Hat (pi 5 only)
+# ---- End camera section ----
+
+# Automatically load overlays for detected DSI displays
+display_auto_detect=1
+
+# Automatically load initramfs files, if found
+auto_initramfs=1
+
+# Enable DRM VC4 V3D driver
+dtoverlay=vc4-kms-v3d
+max_framebuffers=2
+
+# Don't have the firmware create an initial video= setting in cmdline.txt.
+# Use the kernel's default instead.
+disable_fw_kms_setup=1
+
+# Run in 64-bit mode
+arm_64bit=1
+
+# Disable compensation for displays with overscan
+disable_overscan=1
+
+# Run as fast as firmware / board allows
+arm_boost=1
+
+[cm4]
+# Enable host mode on the 2711 built-in XHCI USB controller.
+# This line should be removed if the legacy DWC2 controller is required
+# (e.g. for USB device mode) or if USB support is not required.
+otg_mode=1
+
+[cm5]
+dtoverlay=dwc2,dr_mode=host
+
+# CFE Hat PCIe 3.0
 dtparam=pciex1
 dtparam=pciex1_gen=3
 
-dtoverlay=disable-bt
-```
-
-And at the very bottom of the file:
-
-```bash
 [all]
+auto_initramfs=1
 avoid_warnings=1
 disable_splash=1
+dtparam=i2c1=on
+dtoverlay=disable-bt
 ```
 
 Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.

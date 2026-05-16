@@ -382,13 +382,15 @@ sudo hostnamectl set-hostname cinepi
 sudo nano /boot/firmware/config.txt
 ```
 
-Paste this into your file, and uncomment the sensor you are using.
+Replace the file contents with this managed-format block, and uncomment the sensor you are using.
 
 Also specify which physical camera port you have connected your sensor to. A clean install should use the IMX477 section on `cam0`; a StarlightEye color setup should use the IMX585 section on the camera port where the sensor is connected.
 
-The one-click installer writes this as a fully managed Cinemate `config.txt` and backs up the previous file under `/home/pi/.cinemate-install-backups/`.
+The one-click installer writes the same fully managed Cinemate `config.txt` block and backs up the previous file under `/home/pi/.cinemate-install-backups/`.
 
 ```bash
+# >>> cinemate-install >>>
+# Managed by cinemate-install.sh
 # For more options and information see
 # http://rptl.io/configtxt
 # Some settings may impact device functionality. See link above for details
@@ -467,6 +469,7 @@ avoid_warnings=1
 disable_splash=1
 dtparam=i2c1=on
 dtoverlay=disable-bt
+# <<< cinemate-install <<<
 ```
 
 Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.
@@ -872,8 +875,6 @@ sudo make start  # starts storage-automount and wifi-hotspot now, and runs one r
 sudo make enable # enables storage-automount, wifi-hotspot, and redis-log-maintenance.timer on boot
 ```
 You can also start and enable the service individually, by entering their respective folders and issuing the `sudo make` command
-
-When you install `storage-automount`, it should replace the older `cfe-hat-automount.service`. Do not leave both enabled at the same time, or `/media/RAW` can be mounted and then immediately unmounted again during boot.
 
 Note that if you were connected to the Pi via wifi, this connection is now broken due to the Pi setting up its own hotspot.
 

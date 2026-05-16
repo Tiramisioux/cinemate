@@ -13,7 +13,7 @@ sudo nano /boot/firmware/config.txt
 
 For headless HDMI installs on Raspberry Pi Bookworm, also edit `/boot/firmware/cmdline.txt` and append a single-line KMS video override such as `video=HDMI-A-1:1920x1080M@60D` or `video=HDMI-A-2:1920x1080M@60D`. This pins the boot framebuffer to 1080p so hotplugged HDMI does not fall back to `1024x768`.
 
-The one-click installer writes `/boot/firmware/config.txt` as a fully managed Cinemate file and stores a backup of the previous file under `/home/pi/.cinemate-install-backups/`. That avoids leftover stock comments whose matching settings were moved into the Cinemate-managed block.
+The one-click installer writes `/boot/firmware/config.txt` as a fully managed Cinemate file and stores a backup of the previous file under `/home/pi/.cinemate-install-backups/`. Manual installs should use the same managed-format block below. That avoids leftover stock comments whose matching settings were moved into the Cinemate-managed block.
 
 Uncomment the section for the sensor being used, and make sure to comment out the others. The clean-install default is `imx477` on `cam0`. For IMX296, IMX283, or StarlightEye color, uncomment that sensor section and set the camera port to the physical connector you are using. Reboot the Pi for changes to take effect.
 
@@ -22,6 +22,8 @@ The raw `P`/`U` packing choice is not set in `config.txt`. Cinemate applies that
 ### Example config.txt
 
 ```shell
+# >>> cinemate-install >>>
+# Managed by cinemate-install.sh
 # For more options and information see
 # http://rptl.io/configtxt
 # Some settings may impact device functionality. See link above for details
@@ -99,7 +101,8 @@ auto_initramfs=1
 avoid_warnings=1
 disable_splash=1
 dtparam=i2c1=on
-dtoverlay=miniuart-bt
+dtoverlay=disable-bt
+# <<< cinemate-install <<<
 ```
 
 Exit the editor by pressing Ctrl+X.

@@ -5,7 +5,8 @@ trap 'printf "[cinemate-install] ERROR: line %s while running: %s\n" "$LINENO" "
 
 # Edit these defaults once, or override them inline:
 # Default hardware profile: IMX477 on cam0 and HDMI-A-1.
-#   SENSOR_MODEL=imx585 CAM_PORT=cam1 ./cinemate-install.sh
+#   SENSOR_MODEL=imx585 CAM_PORT=cam0 ./cinemate-install.sh
+#   SENSOR_MODEL=imx585_mono CAM_PORT=cam1 ./cinemate-install.sh
 
 PI_USER="${PI_USER:-pi}"
 PI_GROUP="${PI_GROUP:-$PI_USER}"
@@ -742,7 +743,7 @@ configure_boot_config() {
     backup_file "$config_txt"
     temp="$(mktemp)"
 
-    python3 - "$config_txt" "$temp" "$MANAGED_BEGIN" "$MANAGED_END" "$DTO_OVERLAY" "$CAMERA_AUTO_DETECT" "$BT_OVERLAY" "$ENABLE_CFE_HAT_PCIE" <<'PY'
+    python3 - "$config_txt" "$temp" "$MANAGED_BEGIN" "$MANAGED_END" "$DTO_OVERLAY" "$CAMERA_AUTO_DETECT" "$BT_OVERLAY" "$ENABLE_CFE_HAT_PCIE" "$SENSOR_MODEL" <<'PY'
 import pathlib
 import re
 import sys
@@ -755,6 +756,7 @@ overlay = sys.argv[5]
 camera_auto_detect = sys.argv[6]
 bt_overlay = sys.argv[7]
 enable_pcie = sys.argv[8].lower() in {"1", "true", "yes", "on"}
+sensor_model = sys.argv[9]
 
 text = src.read_text() if src.exists() else ""
 out = []
@@ -796,31 +798,115 @@ for line in text.splitlines():
         continue
     out.append(line)
 
+def camera_section(label, key, default_auto_detect, default_overlay):
+    active = key == sensor_model
+    line_prefix = "" if active else "#"
+    auto_detect = camera_auto_detect if active else default_auto_detect
+    dtoverlay = overlay if active else default_overlay
+    return [
+        f"# {label}",
+        f"{line_prefix}camera_auto_detect={auto_detect}",
+        f"{line_prefix}dtoverlay={dtoverlay}",
+        "",
+    ]
+
+
 block = [
     begin,
     "# Managed by cinemate-install.sh",
+    "# For more options and information see",
+    "# http://rptl.io/configtxt",
+    "# Some settings may impact device functionality. See link above for details",
+    "",
+    "# Uncomment some or all of these to enable the optional hardware interfaces",
     "dtparam=i2c_arm=on",
+    "#dtparam=i2s=on",
+    "#dtparam=spi=on",
+    "",
+    "# Enable audio (loads snd_bcm2835)",
     "dtparam=audio=on",
-    f"camera_auto_detect={camera_auto_detect}",
-    f"dtoverlay={overlay}",
+    "",
+    "# ---- Camera section ----",
+    "",
+]
+
+block += camera_section(
+    "Raspberry Pi HQ camera (IMX477, clean-install default on cam0)",
+    "imx477",
+    "1",
+    "imx477,cam0",
+)
+block += camera_section(
+    "Raspberry Pi GS camera (IMX296)",
+    "imx296",
+    "1",
+    "imx296,cam0",
+)
+block += camera_section(
+    "OneInchEye (IMX283)",
+    "imx283",
+    "0",
+    "imx283,cam0",
+)
+block += camera_section(
+    "StarlightEye color (IMX585)",
+    "imx585",
+    "0",
+    "imx585,cam0",
+)
+block += camera_section(
+    "StarlightEye Mono (IMX585 mono)",
+    "imx585_mono",
+    "0",
+    "imx585,cam1,mono",
+)
+
+block += [
+    "# ---- End camera section ----",
+    "",
+    "# Automatically load overlays for detected DSI displays",
     "display_auto_detect=1",
+    "",
+    "# Automatically load initramfs files, if found",
     "auto_initramfs=1",
+    "",
+    "# Enable DRM VC4 V3D driver",
     "dtoverlay=vc4-kms-v3d",
     "max_framebuffers=2",
+    "",
+    "# Don't have the firmware create an initial video= setting in cmdline.txt.",
+    "# Use the kernel's default instead.",
     "disable_fw_kms_setup=1",
+    "",
+    "# Run in 64-bit mode",
     "arm_64bit=1",
+    "",
+    "# Disable compensation for displays with overscan",
     "disable_overscan=1",
+    "",
+    "# Run as fast as firmware / board allows",
     "arm_boost=1",
+    "",
     "[cm4]",
+    "# Enable host mode on the 2711 built-in XHCI USB controller.",
+    "# This line should be removed if the legacy DWC2 controller is required",
+    "# (e.g. for USB device mode) or if USB support is not required.",
     "otg_mode=1",
+    "",
     "[cm5]",
     "dtoverlay=dwc2,dr_mode=host",
 ]
 
 if enable_pcie:
-    block += ["dtparam=pciex1", "dtparam=pciex1_gen=3"]
+    block += [
+        "",
+        "# CFE Hat PCIe 3.0",
+        "dtparam=pciex1",
+        "dtparam=pciex1_gen=3",
+    ]
 
 block += [
+    "",
     "[all]",
     "auto_initramfs=1",
     "avoid_warnings=1",

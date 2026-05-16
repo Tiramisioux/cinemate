@@ -1,156 +1,277 @@
 {
-  "welcome_message": "THIS IS A COOL MACHINE",
+  "$schema": "./settings.schema.json",
+  "show_startup_message": true,
   "show_welcome_message": true,
+  "welcome_message": "THIS IS A COOL MACHINE",
   "welcome_image": null,
-
+  "system": {
+    "wifi_hotspot": {
+      "name": "CinePi",
+      "password": "11111111",
+      "enabled": true
+    }
+  },
+  "geometry": {
+    "cam0": {
+      "rotate_180": false,
+      "horizontal_flip": false,
+      "vertical_flip": false
+    },
+    "cam1": {
+      "rotate_180": false,
+      "horizontal_flip": false,
+      "vertical_flip": false
+    }
+  },
+  "output": {
+    "cam0": {
+      "hdmi_port": 0
+    },
+    "cam1": {
+      "hdmi_port": 1
+    }
+  },
+  "hdmi_gui": {
+    "buffer_vu_meter": false,
+    "vu_meter_hatch_lines": true
+  },
+  "hdmi_display": {
+    "width": 1920,
+    "height": 1080
+  },
+  "preview": {
+    "default_zoom": 1.0,
+    "zoom_steps": [
+      1.0,
+      2.0
+    ]
+  },
+  "audio": {
+    "capture_gain_db": 0.0
+  },
+  "anamorphic_preview": {
+    "default_anamorphic_factor": 1,
+    "anamorphic_steps": [
+      1,
+      1.33,
+      2.0
+    ]
+  },
   "gpio_output": {
-    "pwm_pin": 19,
-    "rec_out_pin": [6, 21],
-    "rec_tone_pin": [],
+    "rec_out_pin": [
+      21
+    ],
+    "rec_tone_pin": [
+      18
+    ],
     "rec_tone_frequency_hz": 1000,
     "rec_tone_duty_cycle": 50,
     "rec_tone_relay_drop_frames": false
-    },
-
+  },
   "arrays": {
-    "iso_steps": [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200],
-    "additional_shutter_a_steps": [172.8, 346.6],
-    "fps_steps": null
+    "iso_steps": [
+      100,
+      200,
+      400,
+      640,
+      800,
+      1200,
+      1600,
+      2500,
+      3200
+    ],
+    "shutter_a_steps": [
+      1,
+      45,
+      90,
+      135,
+      172.8,
+      180,
+      225,
+      270,
+      315,
+      346.6,
+      360
+    ],
+    "fps_steps": [
+      1,
+      2,
+      4,
+      8,
+      12,
+      16,
+      18,
+      24,
+      25,
+      33,
+      40,
+      50
+    ],
+    "wb_steps": [
+      3200,
+      4400,
+      5600
+    ]
   },
-
+  "settings": {
+    "light_hz": [
+      50,
+      60
+    ],
+    "conform_frame_rate": 25
+  },
   "analog_controls": {
-    "iso_pot": 0,
-    "shutter_a_pot": 2,
-    "fps_pot": 4
+    "iso_pot": "None",
+    "shutter_a_pot": "None",
+    "fps_pot": "None",
+    "wb_pot": "None"
   },
-
+  "free_mode": {
+    "iso_free": false,
+    "shutter_a_free": false,
+    "fps_free": true,
+    "wb_free": false
+  },
+  "resolutions": {
+    "k_steps": [
+      1.5,
+      2,
+      4
+    ],
+    "bit_depths": [
+      10,
+      12
+    ],
+    "custom_modes": {}
+  },
   "buttons": [
     {
-      "pin": 5,
-      "pull_up": "False",
-      "debounce_time": "0.1",
-      "press_action": {"method": "rec"}
+      "pin": 7,
+      "pull_up": true,
+      "debounce_time": 0.1,
+      "press_action": {
+        "method": "rec"
+      }
     },
     {
-      "pin": 17,
-      "pull_up": "False",
-      "debounce_time": "0.1",
-      "press_action": {"method": "inc_iso"}
+      "pin": 10,
+      "pull_up": true,
+      "debounce_time": 0.1,
+      "press_action": {
+        "method": "rec"
+      }
     },
     {
-      "pin": 14,
-      "pull_up": "False",
-      "debounce_time": "0.1",
-      "press_action": {"method": "dec_iso"}
-    },
-    {
-      "pin": 12,
-      "pull_up": "False",
-      "debounce_time": "0.1",
-      "press_action": {"method": "set_fps_double"}
-    },
-    {
-      "pin": 26,
+      "pin": 13,
       "pull_up": "False",
       "debounce_time": "0.1",
       "press_action": "None",
-      "single_click_action": {"method": "set_resolution"},
-      "double_click_action": {"method": "reboot"},
-      "triple_click_action": {"method": "safe_shutdown"},
-      "hold_action": {"method": "unmount"}
+      "single_click_action": {
+        "method": "set_resolution"
+      },
+      "double_click_action": {
+        "method": "restart_cinemate"
+      },
+      "triple_click_action": {
+        "method": "reboot"
+      },
+      "hold_action": {
+        "method": "toggle_mount"
+      }
     }
   ],
-
-  "rotary_encoders": [
-      {
-        "clk_pin": 9,
-        "dt_pin": 11,
-        "button_pin": 10,
-        "pull_up": "False",
-        "debounce_time": "0.05",
-        "button_actions": {
-          "press_action": "None",
-          "single_click_action": {"method": "set_iso_lock"},
-          "double_click_action": "None",
-          "hold_action": "None"
-        },
-        "encoder_actions": {
-          "rotate_clockwise": {"method": "inc_iso", "args": []},
-          "rotate_counterclockwise": {"method": "dec_iso", "args": []}
-        }
-      },
-      {
-        "clk_pin": 23,
-        "dt_pin": 25,
-        "button_pin": 13,
-        "pull_up": "False",
-        "debounce_time": "0.05",
-        "button_actions": {
-          "press_action": "None",
-          "single_click_action": {"method": "set_shutter_a_nom_lock"},
-          "double_click_action": "None",
-          "hold_action": "None"
-        },
-        "encoder_actions": {
-          "rotate_clockwise": {"method": "inc_shutter_a_nom", "args": []},
-          "rotate_counterclockwise": {"method": "dec_shutter_a_nom", "args": []}
-        }
-      },
-      {
-        "clk_pin": 7,
-        "dt_pin": 8,
-        "button_pin": 20,
-        "pull_up": "False",
-        "debounce_time": "0.05",
-        "button_actions": {
-          "press_action": "None",
-          "single_click_action": {"method": "set_fps_lock"},
-          "double_click_action": "None",
-          "hold_action": "None"
-        },
-        "encoder_actions": {
-          "rotate_clockwise": {"method": "inc_fps", "args": []},
-          "rotate_counterclockwise": {"method": "dec_fps", "args": []}
-        }
-      }
-    ],
-
-    "two_way_switches": [
-      {
-          "pin": 24,
-          "state_on_action": {"method": "set_shutter_a_nom_fps_lock", "args": [false]},
-          "state_off_action": {"method": "set_shutter_a_nom_fps_lock", "args": [true]}
-      },
-      {
-        "pin": 16,
-        "state_on_action": {"method": "set_shutter_a_sync", "args": [false]},
-        "state_off_action": {"method": "set_shutter_a_sync", "args": [true]}
-      },
-      {
-        "pin": 22,
-        "state_on_action": {"method": "set_pwm_mode", "args": [false]},
-        "state_off_action": {"method": "set_pwm_mode", "args": [true]}
-      }
-    ],
-
-  "combined_actions": [
+  "two_way_switches": [
     {
-      "hold_button_pin": 10,
-      "action_button_pin": 26,
-      "action_type": "press",
-      "action": {"method": "set_pwm_mode"}
+      "pin": 24,
+      "state_on_action": {
+        "method": "set_zoom",
+        "args": [
+          2
+        ]
+      },
+      "state_off_action": {
+        "method": "set_zoom",
+        "args": [
+          1
+        ]
+      }
     },
     {
-      "hold_button_pin": 13,
-      "action_button_pin": 26,
-      "action_type": "press",
-      "action": {"method": "set_shutter_a_sync"}
-    },
-    {
-      "hold_button_pin": 20,
-      "action_button_pin": 26,
-      "action_type": "press",
-      "action": {"method": "set_fps_double"}
+      "pin": 22,
+      "state_on_action": {
+        "method": "set_shutter_a_sync_mode",
+        "args": [
+          1
+        ]
+      },
+      "state_off_action": {
+        "method": "set_shutter_a_sync_mode",
+        "args": [
+          0
+        ]
+      }
     }
-  ]
+  ],
+  "rotary_encoders": [],
+  "quad_rotary_controller": {
+    "enabled": false,
+    "encoders": {
+      "3": {
+        "setting_name": "iso",
+        "button": {
+          "press_action": {
+            "method": "set_zoom"
+          },
+          "hold_action": {
+            "method": "safe_shutdown"
+          }
+        }
+      },
+      "2": {
+        "setting_name": "shutter_a",
+        "button": {
+          "press_action": {
+            "method": "set_shutter_a_sync_mode"
+          }
+        }
+      },
+      "1": {
+        "setting_name": "fps",
+        "button": {
+          "press_action": {
+            "method": "set_fps_double"
+          }
+        }
+      },
+      "0": {
+        "setting_name": "wb",
+        "button": {
+          "press_action": "None",
+          "single_click_action": {
+            "method": "set_resolution"
+          },
+          "double_click_action": {
+            "method": "restart_cinemate"
+          },
+          "triple_click_action": {
+            "method": "reboot"
+          },
+          "hold_action": {
+            "method": "toggle_mount"
+          }
+        }
+      }
+    }
+  },
+  "i2c_oled": {
+    "enabled": false,
+    "width": 128,
+    "height": 64,
+    "font_size": 20,
+    "values": [
+      "iso",
+      "tc_cam0",
+      "RECORDING_TC"
+    ]
+  }
 }

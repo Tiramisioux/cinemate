@@ -13,7 +13,7 @@ sudo nano /boot/firmware/config.txt
 
 For headless HDMI installs on Raspberry Pi Bookworm, also edit `/boot/firmware/cmdline.txt` and append a single-line KMS video override such as `video=HDMI-A-1:1920x1080M@60D` or `video=HDMI-A-2:1920x1080M@60D`. This pins the boot framebuffer to 1080p so hotplugged HDMI does not fall back to `1024x768`.
 
-Uncomment the section for the sensor being used, and make sure to comment out the others. Reboot the Pi for changes to take effect.
+Uncomment the section for the sensor being used, and make sure to comment out the others. The clean-install default is `imx477` on `cam0`. For StarlightEye color, uncomment the IMX585 section and set the camera port to the physical connector you are using. Reboot the Pi for changes to take effect.
 
 ### Example config.txt
 
@@ -30,29 +30,29 @@ dtparam=i2c_arm=on
 # Enable audio (loads snd_bcm2835)
 dtparam=audio=on
 
-# ---- Camera section
+# ---- Camera section ----
 
-# Raspberry Pi HQ camera
+# Raspberry Pi HQ camera (IMX477, clean-install default on cam0)
 camera_auto_detect=1
 dtoverlay=imx477,cam0
 
-# Raspberry Pi GS camera
+# Raspberry Pi GS camera (IMX296)
 #camera_auto_detect=1
-#dtoverlay=imx296
+#dtoverlay=imx296,cam0
 
-# OneInchEye
+# OneInchEye (IMX283)
 #camera_auto_detect=0
-#dtoverlay=imx283
+#dtoverlay=imx283,cam0
 
-# Starlight Eye
+# StarlightEye color (IMX585)
 #camera_auto_detect=0
 #dtoverlay=imx585,cam0
 
-# Starlight Eye Mono
+# StarlightEye Mono (IMX585 mono)
 #camera_auto_detect=0
 #dtoverlay=imx585,cam1,mono
 
-# -----
+# ---- End camera section ----
 
 # Automatically load overlays for detected DSI displays
 display_auto_detect=1
@@ -86,14 +86,19 @@ otg_mode=1
 [cm5]
 dtoverlay=dwc2,dr_mode=host
 
+# CFE Hat PCIe 3.0
+dtparam=pciex1
+dtparam=pciex1_gen=3
+
 [all]
 auto_initramfs=1
+avoid_warnings=1
 disable_splash=1
 dtparam=i2c1=on
 dtoverlay=miniuart-bt
 ```
 
-Exit the editor by pressing Ctrl+C
+Exit the editor by pressing Ctrl+X.
 
 !!! note ""
 

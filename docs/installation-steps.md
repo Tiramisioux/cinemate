@@ -893,9 +893,11 @@ sudo make enable    # start on boot
 
 After enabling the service, reboot the Pi. Cinemate should autostart on the next boot. If you deliberately want to test the service immediately from SSH, run `sudo systemctl start cinemate-autostart`, but the normal install path is to reboot.
 
-!!! tip ""
+!!! tip "Further notes"
 
     `sudo make install` also places `/usr/local/bin/camera-ready.sh`, `/usr/local/bin/cinemate-startup-failure-display.sh`, and `/usr/local/bin/cinemate-console-handoff.sh` on the system. The camera-ready helper waits for `cinepi-raw` to report a camera before systemd launches Cinemate, the startup-failure helper preserves early crash diagnostics on `tty1`, and the console-handoff helper restores the CLI on a normal Cinemate stop while leaving `tty1` available for Plymouth during full system shutdown.
+
+You now have a 12 bit RAW image capturing system on your Raspberry Pi!
 
 Note that if you were connected to the Pi via wifi, this connection is now broken due to the Pi setting up its own hotspot.
 
@@ -948,8 +950,6 @@ ssh pi@10.42.0.1
 ```
 
 password: 1
-
-You now have a 12 bit RAW image capturing system on your Raspberry Pi!
 
 ## Running cinemate manually
 

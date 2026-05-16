@@ -1,5 +1,5 @@
 # What is it?
-**Cinemate** is a boilerplate cinema camera system for Raspberry Pi 5 building on [CinePi‑RAW recorder by Csaba Nagy](https://github.com/cinepi) for enabling 12 bit (or even 16 bit) Cinema DNG recordings using off-the-shelf components.  
+**Cinemate** is a boilerplate cinema camera system for Raspberry Pi 4 or 5 building on [CinePi‑RAW recorder by Csaba Nagy](https://github.com/cinepi) for enabling 12 bit (or even 16 bit) Cinema DNG recordings using off-the-shelf components.
 
 Cinemate provides a minimal starting point that you can extend with your own controls and accessories. 
 

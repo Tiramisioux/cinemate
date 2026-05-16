@@ -1,13 +1,13 @@
 # Quick start
 
 ## Hardware requirements
-- Raspberry Pi 5 or 4
+- Raspberry Pi 4 or 5 (2GB RAM version would be sufficient)
 - Official HQ or Global Shutter camera
 - HDMI monitor or a phone/tablet for monitoring
 
 !!! tip ""
 
-    For most users the 4GB or even 2GB models are sufficient. More RAM gives you a larger frame buffer. But ideally you don’t want to have to use the framebuffer anyway, as realtime writing to storage is preferred.
+    More RAM gives you a larger frame buffer. But ideally you don’t want to have to use the framebuffer anyway, as realtime writing to storage is preferred.
     
     There could be some rare high speed slomo cases you would want faster frame capture for short bursts but in most cases, the 4GB models will do fine.
 

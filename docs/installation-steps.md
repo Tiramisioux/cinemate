@@ -3,7 +3,7 @@ This page starts with the repo-root one-click installer and then continues with 
 
 !!! Note ""
 
-     Stack works on Raspberry Pi 4 and 5 models. 2 GB RAM is sufficient, while more RAM will give you a larger framebuffer. Useful at high frame rates.
+     Stack works on Raspberry Pi 4 and 5 models. The 2GB RAM version would be sufficient, while more RAM will give you a larger framebuffer. Useful at high frame rates.
 
 !!! Note ""
 

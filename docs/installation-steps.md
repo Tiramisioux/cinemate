@@ -338,19 +338,18 @@ for dir in /usr/local/share/libcamera/ipa/rpi/pisp /usr/local/share/libcamera/ip
 done
 ```
 
-!!! note ""
-    Cinemate's stock `settings.json` shows only 1.5K and 2K recording-size choices by default. 2K is the standard Cinemate working size, and the default mode list is kept to modes that are suitable for 25 fps recording. Higher sensor modes such as 4K are supported, but they are hidden until you opt in. To show 4K in the UI, type `editsettings` in the Pi terminal, or edit `/home/pi/cinemate/src/settings.json` directly, and add `4` to `resolutions.k_steps`, for example:
+Cinemate's stock `settings.json` shows only 1.5K and 2K recording-size choices by default. 2K is the standard Cinemate working size, and the default mode list is kept to modes that are suitable for 25 fps recording. Higher sensor modes such as 4K are supported, but they are hidden until you opt in. To show 4K in the UI, type `editsettings` in the Pi terminal, or edit `/home/pi/cinemate/src/settings.json` directly, and add `4` to `resolutions.k_steps`, for example:
 
-    ```json
-    "resolutions": {
-      "k_steps": [1.5, 2, 4],
-      "bit_depths": [10, 12],
-      "custom_modes": {}
-    }
-    ```
+```json
+"resolutions": {
+  "k_steps": [1.5, 2, 4],
+  "bit_depths": [10, 12],
+  "custom_modes": {}
+}
+```
 
-    Restart Cinemate after changing `settings.json`.
- 
+Restart Cinemate after changing `settings.json`.
+
 #### IR filter switch script
 
 ```bash

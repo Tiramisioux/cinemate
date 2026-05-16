@@ -11,36 +11,27 @@ This page starts with the repo-root one-click installer and then continues with 
 
 ### One-click installer
 
-If you want the automated path, install `git`, clone the repo, and run the repo-root installer instead of stepping through the whole page by hand:
-
 ```bash
 sudo apt update
 sudo apt install -y git
-cd /home/pi
 git clone https://github.com/Tiramisioux/cinemate.git
-cd /home/pi/cinemate
+cd cinemate
 chmod +x cinemate-install.sh
 ./cinemate-install.sh
 ```
 
-The default installer profile is `imx477` on `cam0` with the boot framebuffer pinned to `HDMI-A-1`. For another sensor, run the installer with `SENSOR_MODEL` and `CAM_PORT` set inline or edit the values at the top of `cinemate-install.sh`.
+This assumes Raspberry Pi OS Lite (Bookworm) is installed.
 
-The script applies the full manual flow from this guide in the same order, including `storage-automount`, `wifi-hotspot`, and `redis-log-maintenance`, plus the optional console auto-login, console-font, PiShrink, Plymouth, and IR filter helper steps. It is intended for Raspberry Pi OS Lite (Bookworm), stops early on unsupported releases such as Trixie, aligns Raspberry Pi 5 / CM5 installs to the known-good `6.12.25+rpt-rpi-2712` kernel baseline, builds Will Whang's `libcamera` fork at commit `9d0cdfe5`, installs IMX585 DKMS support, installs Cinemate's IMX283 and IMX585 tuning files so both sensors are ready even if another sensor is your current default, and then builds `cinepi-raw` with the matching local `rpicam-*` utilities under `/usr/local/bin`. It installs the required stack libraries on top of a Lite system, not a full desktop image, creates `~/.cinemate-env`, auto-activates it from `.bashrc`, adds a `cinemate-env` helper alias so you can reactivate it after `deactivate`, and writes `/home/pi/compile-raw.sh` as a reusable cinepi-raw rebuild helper that reuses the existing Meson build by default and only wipes when needed. If you stay in the same shell after the installer finishes, run `source ~/.bashrc` once to load the aliases right away. If you want the script to perform the manual reboot steps automatically too, run it as `RUN_REBOOT=1 ./cinemate-install.sh`. Set `SENSOR_MODEL`, `CAM_PORT`, and `HDMI_BOOT_PORT` at the top of the script or override them inline, for example:
+The installer defaults to an `imx477` on camera port `cam0` and writes a stock-style managed `/boot/firmware/config.txt` section with camera options for IMX477, IMX296, IMX283, IMX585 color, and IMX585 mono. To install directly for another sensor, pass `SENSOR_MODEL` and `CAM_PORT` inline:
 
 ```bash
 SENSOR_MODEL=imx296 CAM_PORT=cam0 ./cinemate-install.sh
 SENSOR_MODEL=imx283 CAM_PORT=cam0 ./cinemate-install.sh
 SENSOR_MODEL=imx585 CAM_PORT=cam0 ./cinemate-install.sh
-SENSOR_MODEL=imx585_mono CAM_PORT=cam1 HDMI_BOOT_PORT=1 ./cinemate-install.sh
+SENSOR_MODEL=imx585_mono CAM_PORT=cam1 ./cinemate-install.sh
 ```
 
-On Raspberry Pi 4-family boards, Cinemate launches IMX296 and IMX477 with packed CinePi-RAW mode strings (`P`) because the Pi 4 VC4 raw path uses CSI-2 packing. Raspberry Pi 5 / CM5 stays on unpacked mode strings (`U`) for those sensors. The installer still writes the same `config.txt` camera overlay section; the `P`/`U` choice is applied when Cinemate starts `cinepi-raw`.
-
-The installer enables console auto-login for the configured `PI_USER` on `tty1` by default. To keep the normal login prompt, run:
-
-```bash
-ENABLE_CONSOLE_AUTOLOGIN=0 ./cinemate-install.sh
-```
+After installing, reboot the system and Cinemate should start automatically. The installer also enables console auto-login for the configured `PI_USER` on `tty1`; set `ENABLE_CONSOLE_AUTOLOGIN=0` if you want to keep the normal login prompt. On Raspberry Pi 4-family boards, Cinemate launches IMX296 and IMX477 with packed CinePi-RAW modes; Raspberry Pi 5 stays on unpacked modes.
 
 ### Manual install starts here
 

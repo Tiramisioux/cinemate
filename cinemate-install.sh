@@ -769,60 +769,18 @@ configure_boot_config() {
     backup_file "$config_txt"
     temp="$(mktemp)"
 
-    python3 - "$config_txt" "$temp" "$MANAGED_BEGIN" "$MANAGED_END" "$DTO_OVERLAY" "$CAMERA_AUTO_DETECT" "$BT_OVERLAY" "$ENABLE_CFE_HAT_PCIE" "$SENSOR_MODEL" <<'PY'
+    python3 - "$temp" "$MANAGED_BEGIN" "$MANAGED_END" "$DTO_OVERLAY" "$CAMERA_AUTO_DETECT" "$BT_OVERLAY" "$ENABLE_CFE_HAT_PCIE" "$SENSOR_MODEL" <<'PY'
 import pathlib
-import re
 import sys
 
-src = pathlib.Path(sys.argv[1])
-dst = pathlib.Path(sys.argv[2])
-begin = sys.argv[3]
-end = sys.argv[4]
-overlay = sys.argv[5]
-camera_auto_detect = sys.argv[6]
-bt_overlay = sys.argv[7]
-enable_pcie = sys.argv[8].lower() in {"1", "true", "yes", "on"}
-sensor_model = sys.argv[9]
-
-text = src.read_text() if src.exists() else ""
-out = []
-inside = False
-regexes = [
-    re.compile(r"^\s*camera_auto_detect="),
-    re.compile(r"^\s*dtoverlay=imx(296|283|477|585)(,.*)?$"),
-    re.compile(r"^\s*display_auto_detect=1$"),
-    re.compile(r"^\s*auto_initramfs=1$"),
-    re.compile(r"^\s*dtoverlay=vc4-kms-v3d$"),
-    re.compile(r"^\s*max_framebuffers=2$"),
-    re.compile(r"^\s*disable_fw_kms_setup=1$"),
-    re.compile(r"^\s*arm_64bit=1$"),
-    re.compile(r"^\s*disable_overscan=1$"),
-    re.compile(r"^\s*arm_boost=1$"),
-    re.compile(r"^\s*dtparam=i2c_arm=on$"),
-    re.compile(r"^\s*dtparam=i2c1=on$"),
-    re.compile(r"^\s*dtparam=audio=on$"),
-    re.compile(r"^\s*dtparam=pciex1$"),
-    re.compile(r"^\s*dtparam=pciex1_gen=3$"),
-    re.compile(r"^\s*dtoverlay=disable-bt$"),
-    re.compile(r"^\s*dtoverlay=miniuart-bt$"),
-    re.compile(r"^\s*avoid_warnings=1$"),
-    re.compile(r"^\s*disable_splash=1$"),
-    re.compile(r"^\s*otg_mode=1$"),
-    re.compile(r"^\s*dtoverlay=dwc2,dr_mode=host$"),
-]
-
-for line in text.splitlines():
-    stripped = line.strip()
-    if stripped == begin:
-        inside = True
-        continue
-    if inside:
-        if stripped == end:
-            inside = False
-        continue
-    if any(rx.match(stripped) for rx in regexes):
-        continue
-    out.append(line)
+dst = pathlib.Path(sys.argv[1])
+begin = sys.argv[2]
+end = sys.argv[3]
+overlay = sys.argv[4]
+camera_auto_detect = sys.argv[5]
+bt_overlay = sys.argv[6]
+enable_pcie = sys.argv[7].lower() in {"1", "true", "yes", "on"}
+sensor_model = sys.argv[8]
 
 def camera_section(label, key, default_auto_detect, default_overlay):
     active = key == sensor_model
@@ -942,11 +900,7 @@ block += [
     end,
 ]
 
-payload = "\n".join(out).rstrip()
-if payload:
-    payload += "\n\n"
-payload += "\n".join(block) + "\n"
-dst.write_text(payload)
+dst.write_text("\n".join(block) + "\n")
 PY
 
     sudo install -m 644 "$temp" "$config_txt"

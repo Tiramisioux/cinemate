@@ -356,6 +356,8 @@ Paste this into your file, and uncomment the sensor you are using.
 
 Also specify which physical camera port you have connected your sensor to. A clean install should use the IMX477 section on `cam0`; a StarlightEye color setup should use the IMX585 section on the camera port where the sensor is connected.
 
+The one-click installer writes this as a fully managed Cinemate `config.txt` and backs up the previous file under `/home/pi/.cinemate-install-backups/`.
+
 ```bash
 # For more options and information see
 # http://rptl.io/configtxt

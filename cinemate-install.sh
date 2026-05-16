@@ -37,6 +37,7 @@ INSTALL_ALT_GPIO_BACKEND="${INSTALL_ALT_GPIO_BACKEND:-1}"
 INSTALL_CONSOLE_FONT="${INSTALL_CONSOLE_FONT:-1}"
 INSTALL_PISHRINK="${INSTALL_PISHRINK:-1}"
 INSTALL_PLYMOUTH="${INSTALL_PLYMOUTH:-1}"
+INSTALL_IMX283_DRIVER="${INSTALL_IMX283_DRIVER:-1}"
 INSTALL_IMX585_DRIVER="${INSTALL_IMX585_DRIVER:-1}"
 INSTALL_IR_FILTER_HELPER="${INSTALL_IR_FILTER_HELPER:-auto}"
 ENABLE_CONSOLE_AUTOLOGIN="${ENABLE_CONSOLE_AUTOLOGIN:-1}"
@@ -46,7 +47,7 @@ ENABLE_STORAGE_AUTOMOUNT_SERVICE="${ENABLE_STORAGE_AUTOMOUNT_SERVICE:-1}"
 ENABLE_WIFI_HOTSPOT_SERVICE="${ENABLE_WIFI_HOTSPOT_SERVICE:-1}"
 ENABLE_REDIS_LOG_MAINTENANCE_SERVICE="${ENABLE_REDIS_LOG_MAINTENANCE_SERVICE:-1}"
 ENABLE_AUTOSTART="${ENABLE_AUTOSTART:-1}"
-START_AUTOSTART_NOW="${START_AUTOSTART_NOW:-1}"
+START_AUTOSTART_NOW="${START_AUTOSTART_NOW:-0}"
 RUN_REBOOT="${RUN_REBOOT:-0}"
 UPDATE_EXISTING_REPOS="${UPDATE_EXISTING_REPOS:-1}"
 SUPPORTED_OS_CODENAME="${SUPPORTED_OS_CODENAME:-bookworm}"
@@ -58,6 +59,7 @@ LIBCAMERA_DIR="${LIBCAMERA_DIR:-$PI_HOME/libcamera}"
 CPP_MJPEG_STREAMER_DIR="${CPP_MJPEG_STREAMER_DIR:-$PI_HOME/cpp-mjpeg-streamer}"
 REDIS_PLUS_PLUS_DIR="${REDIS_PLUS_PLUS_DIR:-$PI_HOME/redis-plus-plus}"
 LGPIO_DIR="${LGPIO_DIR:-$PI_HOME/lg}"
+IMX283_DRIVER_DIR="${IMX283_DRIVER_DIR:-$PI_HOME/imx283-v4l2-driver}"
 IMX585_DRIVER_DIR="${IMX585_DRIVER_DIR:-$PI_HOME/imx585-v4l2-driver}"
 VENV_DIR="${VENV_DIR:-$PI_HOME/.cinemate-env}"
 
@@ -73,6 +75,8 @@ REDIS_PLUS_PLUS_REPO_URL="${REDIS_PLUS_PLUS_REPO_URL:-https://github.com/sewenew
 REDIS_PLUS_PLUS_REPO_REF="${REDIS_PLUS_PLUS_REPO_REF:-}"
 LGPIO_REPO_URL="${LGPIO_REPO_URL:-https://github.com/joan2937/lg.git}"
 LGPIO_REPO_REF="${LGPIO_REPO_REF:-}"
+IMX283_DRIVER_REPO_URL="${IMX283_DRIVER_REPO_URL:-https://github.com/will127534/imx283-v4l2-driver.git}"
+IMX283_DRIVER_REPO_REF="${IMX283_DRIVER_REPO_REF:-6.12.y}"
 IMX585_DRIVER_REPO_URL="${IMX585_DRIVER_REPO_URL:-https://github.com/will127534/imx585-v4l2-driver.git}"
 IMX585_DRIVER_REPO_REF="${IMX585_DRIVER_REPO_REF:-6.12.y}"
 IR_FILTER_URL="${IR_FILTER_URL:-https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter}"
@@ -285,7 +289,7 @@ print_configuration_summary() {
             detail "One-click profile: Raspberry Pi GS camera; no extra DKMS sensor driver required"
             ;;
         imx283)
-            detail "One-click profile: OneInchEye; Cinemate installs the IMX283 tuning override automatically"
+            detail "One-click profile: OneInchEye; Cinemate installs the IMX283 DKMS driver and tuning override automatically"
             ;;
     esac
     if [[ "$SENSOR_MODEL" == "imx296" || "$SENSOR_MODEL" == "imx477" ]]; then
@@ -295,7 +299,7 @@ print_configuration_summary() {
     detail "Runtime HDMI ports: cam0->$HDMI_PORT_CAM0 cam1->$HDMI_PORT_CAM1"
     detail "Libcamera: $LIBCAMERA_REPO_URL @ $LIBCAMERA_REPO_REF"
     detail "Hotspot: $HOTSPOT_NAME (enabled=$HOTSPOT_ENABLED)"
-    detail "Optional features: lgpio=$INSTALL_ALT_GPIO_BACKEND console_font=$INSTALL_CONSOLE_FONT console_autologin=$ENABLE_CONSOLE_AUTOLOGIN pishrink=$INSTALL_PISHRINK plymouth=$INSTALL_PLYMOUTH imx585_driver=$INSTALL_IMX585_DRIVER ir_filter=$INSTALL_IR_FILTER_HELPER"
+    detail "Optional features: lgpio=$INSTALL_ALT_GPIO_BACKEND console_font=$INSTALL_CONSOLE_FONT console_autologin=$ENABLE_CONSOLE_AUTOLOGIN pishrink=$INSTALL_PISHRINK plymouth=$INSTALL_PLYMOUTH imx283_driver=$INSTALL_IMX283_DRIVER imx585_driver=$INSTALL_IMX585_DRIVER ir_filter=$INSTALL_IR_FILTER_HELPER"
     detail "Services: support=$ENABLE_SUPPORT_SERVICES storage=$ENABLE_STORAGE_AUTOMOUNT_SERVICE wifi=$ENABLE_WIFI_HOTSPOT_SERVICE redis_log=$ENABLE_REDIS_LOG_MAINTENANCE_SERVICE autostart=$ENABLE_AUTOSTART start_now=$START_AUTOSTART_NOW"
 }
 
@@ -498,7 +502,7 @@ install_apt_packages() {
         console-terminus swig
     )
 
-    if should_install_imx585_driver; then
+    if should_install_imx283_driver || should_install_imx585_driver; then
         optional_packages+=(dkms)
     fi
     if is_true "$INSTALL_CONSOLE_FONT"; then
@@ -536,6 +540,14 @@ should_install_imx585_driver() {
         return
     fi
     is_true "$INSTALL_IMX585_DRIVER"
+}
+
+should_install_imx283_driver() {
+    if [[ "${INSTALL_IMX283_DRIVER,,}" == "auto" ]]; then
+        [[ "$SENSOR_MODEL" == "imx283" ]]
+        return
+    fi
+    is_true "$INSTALL_IMX283_DRIVER"
 }
 
 should_install_ir_filter_helper() {
@@ -1148,6 +1160,21 @@ install_imx585_support() {
     fi
 }
 
+install_imx283_support() {
+    if ! should_install_imx283_driver; then
+        detail "Skipping IMX283 driver support"
+        return 0
+    fi
+
+    ensure_repo "$IMX283_DRIVER_DIR" "$IMX283_DRIVER_REPO_URL" "$IMX283_DRIVER_REPO_REF"
+    log "Installing IMX283 driver"
+    run_as_pi_clean_shell "cd '$IMX283_DRIVER_DIR' && ./setup.sh"
+    if is_rpi2712_platform; then
+        detail "Ensuring DKMS builds IMX283 for the pinned Pi 5 kernel baseline"
+        sudo dkms autoinstall -k "$KERNEL_BASELINE_ABI_2712"
+    fi
+}
+
 install_sensor_tuning_overrides() {
     log "Installing Cinemate sensor tuning overrides"
     local local_tuning_dir="$CINEMATE_SOURCE_DIR/resources/tuning_files"
@@ -1396,7 +1423,7 @@ install_cinemate_services() {
                 fi
             fi
         else
-            detail "Autostart enabled but not started immediately"
+            detail "Autostart enabled for next boot; not starting during installer"
         fi
     else
         detail "Skipping Cinemate autostart service"
@@ -1449,6 +1476,7 @@ main() {
     section "Seeding initial cinepi-raw Redis defaults"
     seed_cinepi_raw_white_balance
     section "Installing sensor-specific support"
+    install_imx283_support
     install_imx585_support
     install_sensor_tuning_overrides
     install_ir_filter_helper

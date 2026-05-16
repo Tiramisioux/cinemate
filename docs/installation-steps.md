@@ -281,21 +281,28 @@ Install both now even if your current default sensor is `imx477` or `imx296`, so
 sudo apt install dkms -y
 ```
 
+```shell
+git clone https://github.com/will127534/imx283-v4l2-driver.git --branch 6.12.y
+cd imx283-v4l2-driver/
+./setup.sh
+sudo dkms autoinstall -k 6.12.25+rpt-rpi-2712
+cd
 ```
+
+```shell
 git clone https://github.com/will127534/imx585-v4l2-driver.git --branch 6.12.y
 cd imx585-v4l2-driver/
 ./setup.sh
 sudo dkms autoinstall -k 6.12.25+rpt-rpi-2712
 cd
-
 ```
 
 !!! note ""
-    The IMX585 and IMX283 support used here is based on Will Whang's work. For the original drivers and startup guides, visit https://github.com/will127534/StarlightEye
+    The IMX283 and IMX585 DKMS drivers used here are based on Will Whang's work. For the original drivers and startup guides, visit https://github.com/will127534/imx283-v4l2-driver and https://github.com/will127534/imx585-v4l2-driver
 
 #### Install Cinemate IMX283 and IMX585 tuning overrides
 
-Will Whang's `libcamera` fork already contains the IMX283 helper and the base IMX283/IMX585 tuning support. These commands overlay Cinemate's local IMX283, IMX585 and IMX585 mono tuning files into both the `libcamera` source tree and the installed IPA directories so the runtime stays aligned with Cinemate's defaults and both sensors stay ready for later swaps.
+These commands overlay Cinemate's local IMX283, IMX585 and IMX585 mono tuning files into both the `libcamera` source tree and the installed IPA directories so the runtime stays aligned with Cinemate's defaults and both sensors stay ready for later swaps.
 
 ```bash
 for dir in /home/pi/libcamera/src/ipa/rpi/pisp/data /home/pi/libcamera/src/ipa/rpi/vc4/data; do
@@ -906,10 +913,9 @@ cd /home/pi/cinemate/
 ```
 sudo make install   # copy service file
 sudo make enable    # start on boot
-make start          # launch now
 ```
 
-After enabling the service, Cinemate should autostart on boot.
+After enabling the service, reboot the Pi. Cinemate should autostart on the next boot. If you deliberately want to test the service immediately from SSH, run `sudo systemctl start cinemate-autostart`, but the normal install path is to reboot.
 
 > **Tip:** `sudo make install` also places `/usr/local/bin/camera-ready.sh`, `/usr/local/bin/cinemate-startup-failure-display.sh`, and `/usr/local/bin/cinemate-console-handoff.sh` on the system. The camera-ready helper waits for `cinepi-raw` to report a camera before systemd launches Cinemate, the startup-failure helper preserves early crash diagnostics on `tty1`, and the console-handoff helper restores the CLI on a normal Cinemate stop while leaving `tty1` available for Plymouth during full system shutdown.
 

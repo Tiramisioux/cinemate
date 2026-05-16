@@ -30,7 +30,7 @@
 
 Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames.
 
-You can limit which modes appear inside CineMate by editing the `resolutions` section in `settings.json`. `k_steps` are approximate resolution steps. Custom driver modes can also be added here.
+You can limit which modes appear inside CineMate by editing the `resolutions` section in `settings.json`. `k_steps` are approximate resolution steps. The stock Cinemate defaults expose 1.5K and 2K groups only because 2K is the standard working resolution and the default list is kept to modes suitable for 25 fps recording. Higher modes are supported when the user opts in.
 
 ```json
 "resolutions": {

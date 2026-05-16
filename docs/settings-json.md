@@ -233,7 +233,7 @@ Limit which sensor modes appear when cycling resolutions.
 
 ```json
 "resolutions": {
-  "k_steps": [1.5, 2, 4],
+  "k_steps": [1.5, 2],
   "bit_depths": [10, 12],
   "custom_modes": {
     "imx283": [
@@ -246,6 +246,10 @@ Limit which sensor modes appear when cycling resolutions.
 `k_steps` – K‑style categories for allowed widths. Modes are grouped to the nearest half‑K. Example: 1332×990 counts as **1.5 K**.
 <br>`bit_depths` – list of bit depths to expose.
 <br>`custom_modes` – optional extra modes per sensor if the driver advertises none.
+
+!!! note ""
+
+    The stock Cinemate setting is `[1.5, 2]` because 2K is the standard working resolution and the default mode list is kept to modes that can reasonably support 25 fps recording. Higher sensor modes are still supported. Add `4` to `k_steps`, for example `[1.5, 2, 4]`, when you intentionally want to expose 4K-class modes in the UI.
 
 ## buttons
 

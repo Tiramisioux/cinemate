@@ -24,6 +24,10 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
 - IMX283 ([OneInchEye](https://www.tindie.com/products/will123321/oneincheye-v20/) by Will Whang)
 - IMX585 ([Starlight Eye](https://www.tindie.com/products/will123321/starlighteye/) by Will Whang)
 
+## Resolution defaults
+
+Cinemate defaults to 1.5K and 2K resolution groups because 2K is the standard working resolution and the default modes are kept to options suitable for 25 fps recording. Higher sensor modes such as 4K are supported, but users enable them intentionally by adding `4` to `resolutions.k_steps` in `settings.json`. On the Pi, type `editsettings` in the terminal to open the settings file.
+
 ## Preinstalled hardware
 
 - [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/)

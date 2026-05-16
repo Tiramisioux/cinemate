@@ -321,7 +321,7 @@ done
 ```
 
 !!! note ""
-    Cinemate's stock `settings.json` exposes the 1.5K and 2K resolution groups by default. 2K is the standard Cinemate working resolution, and the default mode list is kept to modes that are suitable for 25 fps recording. Higher sensor modes such as 4K are supported, but they are user opt-in. To expose them in the UI, edit `/home/pi/cinemate/src/settings.json` and add `4` to `resolutions.k_steps`, for example:
+    Cinemate's stock `settings.json` exposes the 1.5K and 2K resolution groups by default. 2K is the standard Cinemate working resolution, and the default mode list is kept to modes that are suitable for 25 fps recording. Higher sensor modes such as 4K are supported, but they are user opt-in. To expose them in the UI, type `editsettings` in the Pi terminal, or edit `/home/pi/cinemate/src/settings.json` directly, and add `4` to `resolutions.k_steps`, for example:
 
     ```json
     "resolutions": {

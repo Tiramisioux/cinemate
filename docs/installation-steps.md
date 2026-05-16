@@ -23,14 +23,18 @@ chmod +x cinemate-install.sh
 ./cinemate-install.sh
 ```
 
-The default installer profile is `imx477` on `cam0` with the boot framebuffer pinned to `HDMI-A-1`. For a StarlightEye color camera, run the installer with `SENSOR_MODEL=imx585 CAM_PORT=cam0` or edit the values at the top of `cinemate-install.sh`.
+The default installer profile is `imx477` on `cam0` with the boot framebuffer pinned to `HDMI-A-1`. For another sensor, run the installer with `SENSOR_MODEL` and `CAM_PORT` set inline or edit the values at the top of `cinemate-install.sh`.
 
 The script applies the full manual flow from this guide in the same order, including `storage-automount`, `wifi-hotspot`, and `redis-log-maintenance`, plus the optional console-font, PiShrink, Plymouth, and IR filter helper steps. It is intended for Raspberry Pi OS Lite (Bookworm), stops early on unsupported releases such as Trixie, aligns Raspberry Pi 5 / CM5 installs to the known-good `6.12.25+rpt-rpi-2712` kernel baseline, builds Will Whang's `libcamera` fork at commit `9d0cdfe5`, installs IMX585 DKMS support, installs Cinemate's IMX283 and IMX585 tuning files so both sensors are ready even if another sensor is your current default, and then builds `cinepi-raw` with the matching local `rpicam-*` utilities under `/usr/local/bin`. It installs the required stack libraries on top of a Lite system, not a full desktop image, creates `~/.cinemate-env`, auto-activates it from `.bashrc`, adds a `cinemate-env` helper alias so you can reactivate it after `deactivate`, and writes `/home/pi/compile-raw.sh` as a reusable cinepi-raw rebuild helper that reuses the existing Meson build by default and only wipes when needed. If you stay in the same shell after the installer finishes, run `source ~/.bashrc` once to load the aliases right away. If you want the script to perform the manual reboot steps automatically too, run it as `RUN_REBOOT=1 ./cinemate-install.sh`. Set `SENSOR_MODEL`, `CAM_PORT`, and `HDMI_BOOT_PORT` at the top of the script or override them inline, for example:
 
 ```bash
+SENSOR_MODEL=imx296 CAM_PORT=cam0 ./cinemate-install.sh
+SENSOR_MODEL=imx283 CAM_PORT=cam0 ./cinemate-install.sh
 SENSOR_MODEL=imx585 CAM_PORT=cam0 ./cinemate-install.sh
 SENSOR_MODEL=imx585_mono CAM_PORT=cam1 HDMI_BOOT_PORT=1 ./cinemate-install.sh
 ```
+
+On Raspberry Pi 4-family boards, Cinemate launches IMX296 and IMX477 with packed CinePi-RAW mode strings (`P`) because the Pi 4 VC4 raw path uses CSI-2 packing. Raspberry Pi 5 / CM5 stays on unpacked mode strings (`U`) for those sensors. The installer still writes the same `config.txt` camera overlay section; the `P`/`U` choice is applied when Cinemate starts `cinepi-raw`.
 
 ### Manual install starts here
 
@@ -367,7 +371,7 @@ dtparam=audio=on
 camera_auto_detect=1
 dtoverlay=imx477,cam0
 
-# Raspberry Pi GS camera (IMX296)
+# Raspberry Pi GS camera (IMX296, 10-bit RAW)
 #camera_auto_detect=1
 #dtoverlay=imx296,cam0
 
@@ -541,6 +545,16 @@ Try it out with a simple cli command:
 
 ```shell
 cinepi-raw --mode 2028:1080:12:U --width 2028 --height 1080 --lores-width 1280 --lores-height 720
+```
+
+Use the packing suffix that matches your Pi generation and sensor. For IMX296, the sensor mode is 10-bit:
+
+```shell
+# IMX296 on Raspberry Pi 5 / CM5
+cinepi-raw --mode 1456:1088:10:U --width 1456 --height 1088 --lores-width 1280 --lores-height 720
+
+# IMX296 on Raspberry Pi 4 / Pi 400 / CM4
+cinepi-raw --mode 1456:1088:10:P --width 1456 --height 1088 --lores-width 1280 --lores-height 720
 ```
 
 For more details on running CinePi-raw from the command line, see [this section](/cli-user-guide.md). 

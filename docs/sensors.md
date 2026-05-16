@@ -12,7 +12,7 @@
 
 | Mode | Resolution       | Aspect Ratio | Bit Depth | Max FPS | DNG Frame File Size (MB) |
 |------|------------------|--------------|-----------|---------|----------------|
-| 0    | 1456 x 1088      | 1.33         | 12        | 60      | 3.1            |
+| 0    | 1456 x 1088      | 1.33         | 10        | 60      | 3.1            |
 
 ### IMX585 (Starlight Eye)
 
@@ -46,7 +46,11 @@ You can limit which modes appear inside CineMate by editing the `resolutions` se
 
 !!! note ""
 
-    The dng_encoder in Cinemate fork of Cinepi-RAW currently outputs all modes as 12 bit DNG.
+    The bit-depth column above describes the sensor mode reported by the camera stack. The IMX296 sensor mode is 10 bit. Cinemate's CinePi-RAW DNG writer may still save captures through its 12 bit DNG output path, so a correctly saved IMX296 DNG does not mean the sensor itself has a 12 bit mode.
+
+!!! note ""
+
+    On Raspberry Pi 4 / Pi 400 / CM4, Cinemate launches IMX296 as `1456:1088:10:P` so CinePi-RAW receives the Pi 4 VC4 packed raw stream. On Raspberry Pi 5 / CM5 it uses `1456:1088:10:U`.
 
 ## Sustainable frame rates
 

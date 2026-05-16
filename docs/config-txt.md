@@ -13,7 +13,9 @@ sudo nano /boot/firmware/config.txt
 
 For headless HDMI installs on Raspberry Pi Bookworm, also edit `/boot/firmware/cmdline.txt` and append a single-line KMS video override such as `video=HDMI-A-1:1920x1080M@60D` or `video=HDMI-A-2:1920x1080M@60D`. This pins the boot framebuffer to 1080p so hotplugged HDMI does not fall back to `1024x768`.
 
-Uncomment the section for the sensor being used, and make sure to comment out the others. The clean-install default is `imx477` on `cam0`. For StarlightEye color, uncomment the IMX585 section and set the camera port to the physical connector you are using. Reboot the Pi for changes to take effect.
+Uncomment the section for the sensor being used, and make sure to comment out the others. The clean-install default is `imx477` on `cam0`. For IMX296, IMX283, or StarlightEye color, uncomment that sensor section and set the camera port to the physical connector you are using. Reboot the Pi for changes to take effect.
+
+The raw `P`/`U` packing choice is not set in `config.txt`. Cinemate applies that when launching CinePi-RAW: IMX296 and IMX477 use packed mode on Raspberry Pi 4-family boards and unpacked mode on Raspberry Pi 5 / CM5.
 
 ### Example config.txt
 
@@ -36,7 +38,7 @@ dtparam=audio=on
 camera_auto_detect=1
 dtoverlay=imx477,cam0
 
-# Raspberry Pi GS camera (IMX296)
+# Raspberry Pi GS camera (IMX296, 10-bit RAW)
 #camera_auto_detect=1
 #dtoverlay=imx296,cam0
 

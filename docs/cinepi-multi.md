@@ -17,6 +17,7 @@ Before any process is launched, Cinemate also seeds the preview `zoom` key from 
 For each detected camera, the manager creates a `CinePiProcess`. `_build_args()` assembles flags for:
 
 - the selected sensor mode, width, height, and bit depth
+- the raw packing suffix for the selected Pi generation
 - per-camera geometry from `geometry.cam0`, `geometry.cam1`, and so on
 - per-camera HDMI output mapping from the `output` section
 - the low-resolution preview size used by CinePi-raw
@@ -34,6 +35,8 @@ cinepi-raw --mode 2028:1080:12:U \
            --tuning-file /home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json
 ```
 
+On Raspberry Pi 4 / Pi 400 / CM4, Cinemate switches IMX296 and IMX477 launches to packed raw mode (`P`), for example `1456:1088:10:P` for IMX296. On Raspberry Pi 5 / CM5 it leaves those sensors on unpacked raw mode (`U`). Pi 4-family launches also skip the PiSP tuning-file argument and use the VC4 camera stack.
+
 ## Multi-camera startup details
 
 In multi-camera mode, the first process is launched with `--sync server` and the rest use `--sync client`. Only the primary process gets the on-screen preview rectangle; secondary cameras run with `--nopreview`.
@@ -47,5 +50,4 @@ Once all cameras are up, Cinemate republishes `zoom` if the startup zoom is not 
 Each `CinePiProcess` forwards log output and watches for `DNG written:` lines from the encoder. Those log lines are used to keep `last_dng_cam0` and `last_dng_cam1` up to date in Redis.
 
 On shutdown, the manager stops all child processes and removes any leftover `cinepi_ready_*` keys from Redis so the next boot starts cleanly.
-
 

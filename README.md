@@ -62,7 +62,16 @@ chmod +x cinemate-install.sh
 
 This assumes Raspberry Pi OS Lite (Bookworm) is installed. 
 
-The installer defaults to an `imx477` on camera port `cam0` and writes a stock-style managed `/boot/firmware/config.txt` section with camera options for IMX477, IMX283, IMX585 color, and IMX585 mono. To install directly for a StarlightEye color camera, run `SENSOR_MODEL=imx585 CAM_PORT=cam0 ./cinemate-install.sh`. After installing, reboot the system and Cinemate should start automatically.
+The installer defaults to an `imx477` on camera port `cam0` and writes a stock-style managed `/boot/firmware/config.txt` section with camera options for IMX477, IMX296, IMX283, IMX585 color, and IMX585 mono. To install directly for another sensor, pass `SENSOR_MODEL` and `CAM_PORT` inline:
+
+```bash
+SENSOR_MODEL=imx296 CAM_PORT=cam0 ./cinemate-install.sh
+SENSOR_MODEL=imx283 CAM_PORT=cam0 ./cinemate-install.sh
+SENSOR_MODEL=imx585 CAM_PORT=cam0 ./cinemate-install.sh
+SENSOR_MODEL=imx585_mono CAM_PORT=cam1 ./cinemate-install.sh
+```
+
+After installing, reboot the system and Cinemate should start automatically. On Raspberry Pi 4-family boards, Cinemate launches IMX296 and IMX477 with packed CinePi-RAW modes; Raspberry Pi 5 stays on unpacked modes.
 
 ### 3. Manual install
 

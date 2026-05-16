@@ -5,6 +5,8 @@ trap 'printf "[cinemate-install] ERROR: line %s while running: %s\n" "$LINENO" "
 
 # Edit these defaults once, or override them inline:
 # Default hardware profile: IMX477 on cam0 and HDMI-A-1.
+#   SENSOR_MODEL=imx296 CAM_PORT=cam0 ./cinemate-install.sh
+#   SENSOR_MODEL=imx283 CAM_PORT=cam0 ./cinemate-install.sh
 #   SENSOR_MODEL=imx585 CAM_PORT=cam0 ./cinemate-install.sh
 #   SENSOR_MODEL=imx585_mono CAM_PORT=cam1 ./cinemate-install.sh
 
@@ -277,6 +279,17 @@ print_configuration_summary() {
     log "Install profile summary:"
     detail "User: $PI_USER ($PI_HOME)"
     detail "Sensor: $SENSOR_MODEL on $CAM_PORT"
+    case "$SENSOR_MODEL" in
+        imx296)
+            detail "One-click profile: Raspberry Pi GS camera; no extra DKMS sensor driver required"
+            ;;
+        imx283)
+            detail "One-click profile: OneInchEye; Cinemate installs the IMX283 tuning override automatically"
+            ;;
+    esac
+    if [[ "$SENSOR_MODEL" == "imx296" || "$SENSOR_MODEL" == "imx477" ]]; then
+        detail "Pi 4 raw mode: Cinemate will use packed cinepi-raw modes for this sensor; Pi 5 stays unpacked"
+    fi
     detail "Boot HDMI: HDMI-A-$((HDMI_BOOT_PORT + 1)) at $HDMI_MODE"
     detail "Runtime HDMI ports: cam0->$HDMI_PORT_CAM0 cam1->$HDMI_PORT_CAM1"
     detail "Libcamera: $LIBCAMERA_REPO_URL @ $LIBCAMERA_REPO_REF"
@@ -837,7 +850,7 @@ block += camera_section(
     "imx477,cam0",
 )
 block += camera_section(
-    "Raspberry Pi GS camera (IMX296)",
+    "Raspberry Pi GS camera (IMX296, 10-bit RAW)",
     "imx296",
     "1",
     "imx296,cam0",

@@ -339,7 +339,7 @@ done
 ```
 
 !!! note ""
-    Cinemate's stock `settings.json` exposes the 1.5K and 2K resolution groups by default. 2K is the standard Cinemate working resolution, and the default mode list is kept to modes that are suitable for 25 fps recording. Higher sensor modes such as 4K are supported, but they are user opt-in. To expose them in the UI, type `editsettings` in the Pi terminal, or edit `/home/pi/cinemate/src/settings.json` directly, and add `4` to `resolutions.k_steps`, for example:
+    Cinemate's stock `settings.json` shows only 1.5K and 2K recording-size choices by default. 2K is the standard Cinemate working size, and the default mode list is kept to modes that are suitable for 25 fps recording. Higher sensor modes such as 4K are supported, but they are hidden until you opt in. To show 4K in the UI, type `editsettings` in the Pi terminal, or edit `/home/pi/cinemate/src/settings.json` directly, and add `4` to `resolutions.k_steps`, for example:
 
     ```json
     "resolutions": {
@@ -725,12 +725,15 @@ anamorphic_factor 0 bit_depth 0 buffer 0 buffer_size 0 cam_init 0 cameras 0 cg_r
 file_size 0 fps 24 fps_actual 24 fps_last 24 fps_max 1 fps_user 24 framecount 0 \
 gui_layout 0 height 0 ir_filter 0 is_buffering 0 is_mounted 0 is_recording 0 \
 is_writing 0 is_writing_buf 0 tc_cam0 0 tc_cam1 0 iso 100 lores_height 0 lores_width 0 \
-pi_model 0 rec 0 sensor 0 sensor_mode 0 shutter_a 0 space_left 0 storage_type 0 \
+pi_model 0 rec 0 sensor 0 shutter_a 0 space_left 0 storage_type 0 \
 wb 5600 wb_user 5600 width 0 memory_alert 0 \
 shutter_a_sync_mode 0 shutter_angle_nom 0 shutter_angle_actual 0 shutter_angle_transient 0 \
 exposure_time 0 last_dng_cam1 0 last_dng_cam0 0 \
 zoom 0 write_speed_to_drive 0 recording_time 0
+redis-cli SETNX sensor_mode 0
 ```
+
+`sensor_mode` is initialized to `0` only when Redis does not already contain a value.
 
 (See the settings guide for the full list.)
 

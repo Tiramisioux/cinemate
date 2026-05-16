@@ -1316,11 +1316,12 @@ seed_redis_defaults() {
         file_size 0 fps 24 fps_actual 24 fps_last 24 fps_max 1 fps_user 24 framecount 0 \
         gui_layout 0 height 0 ir_filter 0 is_buffering 0 is_mounted 0 is_recording 0 \
         is_writing 0 is_writing_buf 0 tc_cam0 0 tc_cam1 0 iso 100 lores_height 0 lores_width 0 \
-        pi_model 0 rec 0 sensor 0 sensor_mode 0 shutter_a 0 space_left 0 storage_type 0 \
+        pi_model 0 rec 0 sensor 0 shutter_a 0 space_left 0 storage_type 0 \
         wb 5600 wb_user 5600 width 0 memory_alert 0 \
         shutter_a_sync_mode 0 shutter_angle_nom 0 shutter_angle_actual 0 shutter_angle_transient 0 \
         exposure_time 0 last_dng_cam1 0 last_dng_cam0 0 \
         zoom 0 write_speed_to_drive 0 recording_time 0 >/dev/null
+    run_as_pi redis-cli SETNX sensor_mode 0 >/dev/null
     run_as_pi redis-cli SET cg_rb 3.5,1.5 >/dev/null
     run_as_pi redis-cli PUBLISH cp_controls cg_rb >/dev/null || true
 }

@@ -169,6 +169,23 @@ class RedisListener:
         self.listener_thread_controls.daemon = True
         self.listener_thread_controls.start()
 
+    @staticmethod
+    def _coerce_float(value) -> float | None:
+        if value is None:
+            return None
+        if isinstance(value, bytes):
+            value = value.decode("utf-8", errors="ignore")
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return None
+        return number if math.isfinite(number) else None
+
+    @classmethod
+    def _coerce_int(cls, value) -> int | None:
+        number = cls._coerce_float(value)
+        return int(number) if number is not None else None
+
     def set_frame_count_increase_tolerance(self):
         if self.framerate > 0:
             frame_interval = 1 / self.framerate
@@ -402,14 +419,14 @@ class RedisListener:
                 if message_data.startswith("{") and message_data.endswith("}"):
                     try:
                         stats_data = json.loads(message_data)
-                        buffer_size = stats_data.get('bufferSize', None)
-                        self.frame_count = stats_data.get('frameCount', None)
+                        buffer_size = self._coerce_int(stats_data.get('bufferSize', None))
+                        self.frame_count = self._coerce_int(stats_data.get('frameCount', None))
                         color_temp = stats_data.get('colorTemp', None)
                         sensor_timestamp = stats_data.get('sensorTimestamp', None)
                         timestamp = stats_data.get('timestamp')
                         timestamp_cam0 = stats_data.get('timestamp_cam0')
                         timestamp_cam1 = stats_data.get('timestamp_cam1')
-                        self.current_framerate = stats_data.get('framerate', None)
+                        self.current_framerate = self._coerce_float(stats_data.get('framerate', None))
 
                         if color_temp:
                             self.colorTemp = color_temp
@@ -435,7 +452,7 @@ class RedisListener:
                         if buffer_size is not None:
                             current_buffer = self.redis_controller.get_value(ParameterKey.BUFFER.value)
                             # Redis returns bytes or None → normalise to int or None
-                            current_buffer = int(current_buffer) if current_buffer is not None else None
+                            current_buffer = self._coerce_int(current_buffer)
 
                             if current_buffer != buffer_size:
                                 self.redis_controller.set_value(ParameterKey.BUFFER.value, buffer_size)
@@ -467,8 +484,8 @@ class RedisListener:
                             self.framerate_values.append(self.current_framerate)
                             
                         # Check for framerate deviation
-                        expected_fps = float(self.redis_controller.get_value('fps'))
-                        if self.current_framerate is not None:
+                        expected_fps = self._coerce_float(self.redis_controller.get_value('fps'))
+                        if self.current_framerate is not None and expected_fps is not None:
                             fps_difference = abs((self.current_framerate) - expected_fps)
                             # print(f"Expected FPS: {expected_fps}, Actual FPS: {self.current_framerate*1000}")
                             # print(f"FPS difference: {fps_difference}")
@@ -491,10 +508,10 @@ class RedisListener:
                                 self.drop_frame_timer.start()
 
                             # Update framecount check interval based on current FPS
-                            if self.current_framerate == 0 or None:
-                                framecount_fps = 1
-                            else:
+                            if self.current_framerate > 0:
                                 framecount_fps = self.current_framerate
+                            else:
+                                framecount_fps = 1
                             self.framecount_check_interval = max(0.5, 2 / framecount_fps)
 
                         # Check if framecount is changing
@@ -512,7 +529,7 @@ class RedisListener:
 
                     except json.JSONDecodeError as e:
                         logging.error(f"Failed to parse JSON data: {e}")
-                    except TypeError as e:
+                    except (TypeError, ValueError) as e:
                         logging.error(f"Type error in stats data: {e}")
                 else:
                     logging.warning(f"Received unexpected data format: {message_data}")
@@ -573,8 +590,12 @@ class RedisListener:
         Any lower-but-non-zero values are ignored entirely.
         """
         now = datetime.datetime.now()
-        new = self.frame_count
-        old = self.last_framecount               # last *accepted* count
+        new = self._coerce_int(self.frame_count)
+        if new is None:
+            return
+        old = self._coerce_int(self.last_framecount)
+        if old is None:
+            old = 0                              # last *accepted* count
 
         # ----------------------------------------------------------- 1) reset to 0
         if new == 0:

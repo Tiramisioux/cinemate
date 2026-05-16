@@ -249,7 +249,7 @@ Limit which sensor modes appear when cycling resolutions.
 
 !!! note ""
 
-    The stock Cinemate setting is `[1.5, 2]` because 2K is the standard working resolution and the default mode list is kept to modes that can reasonably support 25 fps recording. Higher sensor modes are still supported. Add `4` to `k_steps`, for example `[1.5, 2, 4]`, when you intentionally want to expose 4K-class modes in the UI.
+    The stock Cinemate setting is `[1.5, 2]`, so the UI starts by showing only 1.5K and 2K recording-size choices. 2K is the standard working size, and the default mode list is kept to modes that can reasonably support 25 fps recording. Higher sensor modes are still supported. Add `4` to `k_steps`, for example `[1.5, 2, 4]`, when you intentionally want to expose 4K-class modes in the UI.
 
 ## buttons
 

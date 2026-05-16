@@ -42,8 +42,6 @@ SENSOR_MODEL=imx283 CAM_PORT=cam0 ./cinemate-install.sh
 SENSOR_MODEL=imx585 CAM_PORT=cam0 ./cinemate-install.sh
 ```
 
-The installer enables console auto-login for the configured `PI_USER` on `tty1`. Set `ENABLE_CONSOLE_AUTOLOGIN=0` before running it if you want to keep the normal login prompt.
-
 ## Compatible sensors
 
 - IMX477 (official Raspberry Pi HQ camera)

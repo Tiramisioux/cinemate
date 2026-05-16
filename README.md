@@ -88,7 +88,7 @@ SENSOR_MODEL=imx585 CAM_PORT=cam0 ./cinemate-install.sh
 SENSOR_MODEL=imx585_mono CAM_PORT=cam1 ./cinemate-install.sh
 ```
 
-After installing, reboot the system and Cinemate should start automatically. The installer also enables console auto-login for the configured `PI_USER` on `tty1`; set `ENABLE_CONSOLE_AUTOLOGIN=0` if you want to keep the normal login prompt. On Raspberry Pi 4-family boards, Cinemate launches IMX296 and IMX477 with packed CinePi-RAW modes; Raspberry Pi 5 stays on unpacked modes.
+After installing, reboot the system and Cinemate should start automatically.
 
 ### 3. Manual install
 

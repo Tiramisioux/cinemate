@@ -54,6 +54,26 @@ See the [releases section](https://github.com/Tiramisioux/cinemate/releases) for
 
 ### 2. Clone the repo and run the one-click installer
 
+Start from a fresh Raspberry Pi OS Lite Bookworm image. SSH to the Pi:
+
+On macOS, open Terminal and run:
+
+```bash
+ssh pi@raspberrypi.local
+```
+
+On Windows, open PowerShell or Command Prompt and run:
+
+```powershell
+ssh pi@raspberrypi.local
+```
+
+Replace `pi` with the username configured in Raspberry Pi Imager if you used a different user. If `raspberrypi.local` does not resolve, use the Pi's IP address instead:
+
+```bash
+ssh pi@<pi-ip-address>
+```
+
 ```bash
 sudo apt update
 sudo apt install -y git
@@ -62,8 +82,6 @@ cd cinemate
 chmod +x cinemate-install.sh
 ./cinemate-install.sh
 ```
-
-This assumes Raspberry Pi OS Lite (Bookworm) is installed. 
 
 The installer defaults to an `imx477` on camera port `cam0` and writes a stock-style managed `/boot/firmware/config.txt` section with camera options for IMX477, IMX296, IMX283, IMX585 color, and IMX585 mono. To install directly for another sensor, pass `SENSOR_MODEL` and `CAM_PORT` inline:
 

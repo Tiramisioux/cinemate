@@ -880,7 +880,7 @@ Enables the `redis-log-maintenance.timer`, which periodically trims `/var/log/re
 
 #### cinemate-autostart.service
 
-Starts Cinemate automatically on boot. After you have tested Cinemate manually in the Starting Cinemate section below and confirmed that it runs smoothly, enable the service with:
+Starts Cinemate automatically on boot. After you have tested Cinemate manually in the Running cinemate manually section at the end of this guide and confirmed that it runs smoothly, enable the service with:
 
 ```shell
 cd /home/pi/cinemate/
@@ -949,16 +949,43 @@ ssh pi@10.42.0.1
 
 password: 1
 
+You now have a 12 bit RAW image capturing system on your Raspberry Pi!
 
+## Running cinemate manually
 
-### Starting Cinemate
+Running Cinemate manually is recommended while you are trying out the system, testing GPIO buttons, checking rotary encoder actions, changing `settings.json`, or doing maintenance and development. When Cinemate is started from a terminal, that terminal also becomes the Cinemate CLI. You can type commands such as `get`, `rec`, `stop`, `set iso 800`, `set resolution`, or `restart camera`. See [Cinemate terminal commands](cli-commands.md) for the full command list.
 
-Now, back on the Pi, anywhere in the terminal, type:
+If `cinemate-autostart.service` is already running, stop it before launching Cinemate manually:
 
 ```shell
+sudo systemctl stop cinemate-autostart
+```
+
+Then start Cinemate manually:
+
+```shell
+cd /home/pi/cinemate
 cinemate
 ```
 
-Make sure things are running smoothly before enabling `cinemate-autostart.service` in the Cinemate services section above.
+Press Ctrl+C in that terminal to stop the manually started Cinemate process.
 
-You now have a 12 bit RAW image capturing system on your Raspberry Pi!
+During maintenance or development, stopping the service only stops it for the current boot. Disable it if you do not want Cinemate to autostart after the next reboot:
+
+```shell
+sudo systemctl disable cinemate-autostart
+```
+
+When you want the normal camera boot behavior again, enable it and either reboot or start it directly:
+
+```shell
+sudo systemctl enable cinemate-autostart
+sudo systemctl start cinemate-autostart
+```
+
+To check what the service is doing:
+
+```shell
+systemctl status cinemate-autostart
+journalctl -fu cinemate-autostart
+```

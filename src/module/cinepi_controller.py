@@ -179,7 +179,7 @@ class CinePiController:
         self.fps_steps_dynamic = [v for v in self.fps_steps if v <= self.fps_max]
 
     def _rebuild_wb_steps(self):
-        self.wb_steps = (list(range(1000, 10001, 100))
+        self.wb_steps = (list(range(2800, 6501, 100))
                         if self.wb_free
                         else list(self.settings['arrays']['wb_steps']))
     

@@ -60,7 +60,7 @@ corresponding controller methods.
 | `set iso free [0/1]`                       | 0/1 or none       | `set iso free 1`                        | Allow any ISO instead of presets                |
 | `set shutter a free [0/1]`                 | 0/1 or none       | `set shutter a free 0`                  | Allow any shutter angle                         |
 | `set fps free [0/1]`                       | 0/1 or none       | `set fps free 1`                        | Allow any FPS                                   |
-| `set wb free [0/1]`                        | 0/1 or none       | `set wb free`                           | Use 100 K WB steps from 1000 K to 10000 K       |
+| `set wb free [0/1]`                        | 0/1 or none       | `set wb free`                           | Use 100 K WB steps from 2800 K to 6500 K        |
 | `set filter <0/1>`                         | 0/1               | `set filter 1`                          | Toggle IR-cut filter (IMX585)                   |
 
 

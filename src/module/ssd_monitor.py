@@ -41,6 +41,7 @@ from module.storage_profiles import (
 # ----------------------------------------------------------------------
 REDIS_KEY_IS_RECORDING = ParameterKey.IS_RECORDING.value     # "1" while cinepi-raw is running
 REDIS_KEY_FSCK_STATUS  = "FSCK_STATUS"      # "OK …"  |  "FAIL …"
+EXT4_MOUNT_OPTIONS = "rw,noatime,nodiratime,commit=60"
 YANK_ERRNOS = {
     errno.EIO,
     errno.ENOENT,
@@ -104,6 +105,7 @@ class SSDMonitor:
         self._device_name = None        # "sda1" | "nvme0n1p1" | …
         self._device_type = None        # "SSD" | "NVMe" | "CFE" | "Unknown"
         self._filesystem_type = NO_STORAGE_FILESYSTEM
+        self._mount_options = ""
         self._recorder_profile = DEFAULT_RECORDER_PROFILE
         self._space_left  = None        # float (GB)
         self._last_space  = 0.0
@@ -164,6 +166,10 @@ class SSDMonitor:
     @property
     def filesystem_type(self) -> str:
         return self._filesystem_type
+
+    @property
+    def mount_options(self) -> str:
+        return self._mount_options
 
     @property
     def recorder_profile(self) -> str:
@@ -241,6 +247,7 @@ class SSDMonitor:
             return
         self._redis.set_value(ParameterKey.STORAGE_TYPE.value, "none")
         self._redis.set_value(ParameterKey.STORAGE_FILESYSTEM.value, NO_STORAGE_FILESYSTEM)
+        self._redis.set_value(ParameterKey.STORAGE_MOUNT_OPTIONS.value, "")
         self._redis.set_value(ParameterKey.STORAGE_RECORDER_PROFILE.value, DEFAULT_RECORDER_PROFILE)
         self._redis.set_value(ParameterKey.IS_MOUNTED.value,   "0")
         self._redis.set_value(ParameterKey.SPACE_LEFT.value,   "0")
@@ -302,6 +309,7 @@ class SSDMonitor:
         self._device_name = self._get_device_name()
         self._device_type = self._detect_device_type()
         self._filesystem_type = self._detect_filesystem_type()
+        self._mount_options = self._detect_mount_options()
         self._recorder_profile = recorder_profile_name_for_filesystem(
             self._filesystem_type
         )
@@ -312,6 +320,7 @@ class SSDMonitor:
         self._redis_set_many({
             ParameterKey.STORAGE_TYPE.value: self._device_type.lower(),
             ParameterKey.STORAGE_FILESYSTEM.value: self._filesystem_type,
+            ParameterKey.STORAGE_MOUNT_OPTIONS.value: self._mount_options,
             ParameterKey.STORAGE_RECORDER_PROFILE.value: self._recorder_profile,
             ParameterKey.IS_MOUNTED.value:    "1",
             ParameterKey.SPACE_LEFT.value:    f"{self._space_left:.2f}",
@@ -320,10 +329,11 @@ class SSDMonitor:
             self._redis.set_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value, "0")
 
         logging.info(
-            "RAW drive mounted at %s (%s, %s, recorder profile %s)",
+            "RAW drive mounted at %s (%s, %s, opts %s, recorder profile %s)",
             self._mount_path,
             self._device_type,
             self._filesystem_type,
+            self._mount_options,
             self._recorder_profile,
         )
         self.mount_event.emit(
@@ -342,6 +352,7 @@ class SSDMonitor:
         self._redis_set_many({
             ParameterKey.STORAGE_TYPE.value: "none",
             ParameterKey.STORAGE_FILESYSTEM.value: NO_STORAGE_FILESYSTEM,
+            ParameterKey.STORAGE_MOUNT_OPTIONS.value: "",
             ParameterKey.STORAGE_RECORDER_PROFILE.value: DEFAULT_RECORDER_PROFILE,
             ParameterKey.IS_MOUNTED.value:   "0",
             ParameterKey.SPACE_LEFT.value:   "0",
@@ -370,6 +381,7 @@ class SSDMonitor:
         self._device_name  = None
         self._device_type  = None
         self._filesystem_type = NO_STORAGE_FILESYSTEM
+        self._mount_options = ""
         self._recorder_profile = DEFAULT_RECORDER_PROFILE
         self._last_recording_log.clear()
         self.unmount_event.emit(self._mount_path)
@@ -414,6 +426,17 @@ class SSDMonitor:
                 logging.warning("blkid fstype failed for /dev/%s", self._device_name)
 
         return "unknown"
+
+    def _detect_mount_options(self) -> str:
+        try:
+            return subprocess.check_output(
+                ["findmnt", "--noheadings", "--output", "OPTIONS", str(self._mount_path)],
+                text=True,
+                timeout=1.0,
+            ).strip()
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            logging.warning("findmnt mount options failed for %s", self._mount_path)
+            return ""
 
    # ------------------------------------------------------------------
     # device-type classification  (SSD / CFE / NVMe / Unknown)
@@ -701,7 +724,7 @@ class SSDMonitor:
             return False
 
         opts = {
-            "ext4":  "rw,noatime,nodiratime,commit=60",
+            "ext4":  EXT4_MOUNT_OPTIONS,
             "ntfs":  f"uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
             "ntfs3": f"uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
             "exfat": f"uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",

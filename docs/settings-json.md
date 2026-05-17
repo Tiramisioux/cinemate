@@ -216,7 +216,7 @@ Maps Grove Base HAT ADC channels to analogue dials (potentiometers). Use `null` 
 
 ## free_mode
 
-When enabled, ignores the preset arrays and exposes the full range supported by the sensor.
+When enabled, ignores the preset arrays and exposes the expanded runtime step tables used by potentiometers, rotary encoders, CLI commands, and the web GUI. White balance free mode uses 100 K steps from 1000 K through 10000 K.
 
 ```json
 "free_mode": {

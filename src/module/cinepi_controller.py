@@ -129,18 +129,17 @@ class CinePiController:
         
         self.initialize_fps_steps(self.fps_steps)
         self.initialize_shutter_angle_steps()
-        self.initialize_wb_cg_rb_array()  # Initialize the white balance array
 
-        settings = self.load_settings()
-
-        self.iso_free = settings['free_mode'].get('iso_free', False)
-        self.shutter_a_free = settings['free_mode'].get('shutter_a_free', False)
-        self.fps_free = settings['free_mode'].get('fps_free', False)
-        self.wb_free = settings['free_mode'].get('wb_free', False)
+        free_mode = self.settings.get('free_mode', {})
+        self.iso_free = free_mode.get('iso_free', False)
+        self.shutter_a_free = free_mode.get('shutter_a_free', False)
+        self.fps_free = free_mode.get('fps_free', False)
+        self.wb_free = free_mode.get('wb_free', False)
         
         self.RAM_LIMIT_PERCENT = 80
 
         self.update_steps()
+        self.initialize_wb_cg_rb_array()  # Initialize after free-mode expands WB steps.
 
         # Set a timer to clear the startup flag after a short period
         threading.Timer(5.0, self.clear_startup_flag).start()
@@ -180,7 +179,7 @@ class CinePiController:
         self.fps_steps_dynamic = [v for v in self.fps_steps if v <= self.fps_max]
 
     def _rebuild_wb_steps(self):
-        self.wb_steps = (list(range(1000, 10001, 50))
+        self.wb_steps = (list(range(1000, 10001, 100))
                         if self.wb_free
                         else list(self.settings['arrays']['wb_steps']))
     
@@ -275,16 +274,6 @@ class CinePiController:
         shutter_a_nom = self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)
         return float(shutter_a_nom) / 360.0 / float(fps)
 
-    def update_steps(self):
-        if self.iso_free:
-            self.iso_steps = list(range(100, 3201, 50))
-        if self.shutter_a_free:
-            self.shutter_a_steps = [round(i * 0.1, 1) for i in range(10, 3601)]
-        if self.fps_free:
-            self.fps_steps = list(range(1, self.fps_max + 1))
-        if self.wb_free:
-            self.wb_steps = list(range(1, 6501, 100))
-        
     def set_iso_free(self, value=None):
         if value is None:
             self.iso_free = not self.iso_free
@@ -315,6 +304,7 @@ class CinePiController:
         else:
             self.wb_free = value
         self.update_steps()
+        self.initialize_wb_cg_rb_array()
         logging.info(f"WB Free Mode set to {self.wb_free}")
 
     def load_settings(self):
@@ -354,12 +344,18 @@ class CinePiController:
         self.settings['free_mode']['shutter_a_free'] = shutter_a_free
         self.settings['free_mode']['fps_free'] = fps_free
         self.settings['free_mode']['wb_free'] = wb_free
+        self.iso_free = iso_free
+        self.shutter_a_free = shutter_a_free
+        self.fps_free = fps_free
+        self.wb_free = wb_free
         self.redis_controller.mset({
             'iso_free': iso_free,
             'shutter_a_free': shutter_a_free,
             'fps_free': fps_free,
             'wb_free': wb_free
         })
+        self.update_steps()
+        self.initialize_wb_cg_rb_array()
 
         # Update shutter angle steps immediately if changed
         if shutter_a_free:
@@ -1107,7 +1103,9 @@ class CinePiController:
         
     def initialize_wb_cg_rb_array(self):
         """Initialize the white balance cg_rb array based on the sensor model."""
-        if self.current_sensor == 'imx283':
+        sensor_key = self.current_sensor.replace('_mono', '')
+
+        if sensor_key == 'imx283':
             default_ct_curve = [
                     2213.0, 0.9607, 0.2593,
                     2255.0, 0.9309, 0.2521,
@@ -1115,7 +1113,7 @@ class CinePiController:
                     5313.0, 0.4822, 0.5909,
                     6237.0, 0.4726, 0.6376
                 ]
-        if self.current_sensor == 'imx585':
+        elif sensor_key == 'imx585':
             default_ct_curve = [
                     2187.0, 1.1114, 0.1026,
                     2258.0, 1.1063, 0.1147,
@@ -1180,8 +1178,13 @@ class CinePiController:
             logging.info(f"Parsed b_values: {b_values}")
 
             for wb in self.wb_steps:
-                lower_idx = max(i for i, temp in enumerate(temperatures) if temp <= wb)
-                upper_idx = min(i for i, temp in enumerate(temperatures) if temp >= wb)
+                if wb <= temperatures[0]:
+                    lower_idx = upper_idx = 0
+                elif wb >= temperatures[-1]:
+                    lower_idx = upper_idx = len(temperatures) - 1
+                else:
+                    lower_idx = max(i for i, temp in enumerate(temperatures) if temp <= wb)
+                    upper_idx = min(i for i, temp in enumerate(temperatures) if temp >= wb)
 
                 logging.info(f"Interpolating for wb step: {wb}K, lower index: {lower_idx}, upper index: {upper_idx}")
 

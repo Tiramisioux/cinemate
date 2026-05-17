@@ -13,6 +13,7 @@ def index():
     iso_value = redis_controller.get_value(ParameterKey.ISO.value)
     shutter_a_value = redis_controller.get_value(ParameterKey.SHUTTER_A.value)
     fps_value = redis_controller.get_value(ParameterKey.FPS_ACTUAL.value)
+    wb_value = redis_controller.get_value(ParameterKey.WB_USER.value)
     background_color_value = simple_gui.get_background_color()
     
     dynamic_data = simple_gui.populate_values()
@@ -29,6 +30,9 @@ def index():
                            iso_values=cinepi_controller.iso_steps, 
                            shutter_speed_values=cinepi_controller.shutter_a_steps_dynamic,
                            fps_values=cinepi_controller.fps_steps_dynamic,
+                           wb_steps=cinepi_controller.wb_steps,
+                           current_wb=wb_value,
+                           resolution_values=sensor_detect.get_available_resolutions(),
                            current_iso=iso_value,
                            current_shutter_a=shutter_a_value,
                            current_fps=fps_value,

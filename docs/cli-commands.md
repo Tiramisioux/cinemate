@@ -32,8 +32,8 @@ corresponding controller methods.
 | `inc shutter a nom` / `dec shutter a nom`  | -              |                      | Step the nominal shutter angle                  |
 | `set fps <value>`                          | float             | `set fps 24`                            | Change frame rate (snaps unless free)           |
 | `inc fps` / `dec fps`                      | -              |                                | Step through FPS list                           |
-| `set wb [<Kelvin>]`                        | int or none       | `set wb 5600`                           | Set white balance or cycle presets              |
-| `inc wb` / `dec wb`                        | -              |                                 | Cycle white balance steps                       |
+| `set wb [<Kelvin>]`                        | int or none       | `set wb 5600`                           | Set white balance or cycle active WB steps      |
+| `inc wb` / `dec wb`                        | -              |                                 | Step white balance; 100 K steps in free mode    |
 | `set resolution [<mode>]`                  | int or none       | `set resolution 2`                      | Apply or cycle sensor mode                      |
 | `set anamorphic factor [<float>]`          | float or none     | `set anamorphic factor 1.33`            | Set or toggle anamorphic stretch                |
 | `set zoom [<float>]`                       | float or none     | `set zoom 2`                            | Change digital zoom; omit to cycle              |
@@ -60,7 +60,7 @@ corresponding controller methods.
 | `set iso free [0/1]`                       | 0/1 or none       | `set iso free 1`                        | Allow any ISO instead of presets                |
 | `set shutter a free [0/1]`                 | 0/1 or none       | `set shutter a free 0`                  | Allow any shutter angle                         |
 | `set fps free [0/1]`                       | 0/1 or none       | `set fps free 1`                        | Allow any FPS                                   |
-| `set wb free [0/1]`                        | 0/1 or none       | `set wb free`                           | Allow any white balance                         |
+| `set wb free [0/1]`                        | 0/1 or none       | `set wb free`                           | Use 100 K WB steps from 1000 K to 10000 K       |
 | `set filter <0/1>`                         | 0/1               | `set filter 1`                          | Toggle IR-cut filter (IMX585)                   |
 
 

@@ -14,7 +14,7 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
             'shutter_a_steps': cinepi_controller.shutter_a_steps_dynamic,
             'fps_steps': cinepi_controller.fps_steps_dynamic,
             'wb_steps': cinepi_controller.wb_steps,
-            'wb': redis_controller.get_value(ParameterKey.WB.value) or (cinepi_controller.wb_steps[0] if cinepi_controller.wb_steps else None)
+            'wb': redis_controller.get_value(ParameterKey.WB_USER.value) or (cinepi_controller.wb_steps[0] if cinepi_controller.wb_steps else None)
         }
 
         initial_values.update(simple_gui.populate_values())
@@ -30,6 +30,9 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
         value = data['value']
         if key in [ParameterKey.ISO.value, ParameterKey.SHUTTER_A.value, ParameterKey.FPS_ACTUAL.value, ParameterKey.WB.value, ParameterKey.FRAMECOUNT.value, ParameterKey.BUFFER.value]:
             socketio.emit('parameter_change', {key: value})
+
+        if key == ParameterKey.WB_USER.value:
+            socketio.emit('parameter_change', {'wb': value})
 
         if key == ParameterKey.FPS_ACTUAL.value:
             # Emit the updated shutter_a_steps array and the current shutter speed

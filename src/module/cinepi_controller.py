@@ -14,6 +14,7 @@ import sys
 from module.redis_controller import ParameterKey
 from module.ir_filter import IRFilter
 from module.config_loader import load_settings as _load_settings
+from module.storage_profiles import recorder_profile_name_for_filesystem
 
 SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
 
@@ -75,6 +76,17 @@ class CinePiController:
         self._timed_rec_timer   = None
         self._timed_rec_description = None
         self.redis_listener = None
+        self._storage_profile_restart_lock = threading.Lock()
+        self._storage_profile_restart_active = False
+        self._storage_profile_restart_pending = False
+        self._active_storage_recorder_profile = self._current_storage_recorder_profile()
+        try:
+            self.ssd_monitor.mount_event.subscribe(self._handle_storage_mount_event)
+            self.redis_controller.redis_parameter_changed.subscribe(
+                self._handle_storage_restart_redis_event
+            )
+        except Exception as exc:
+            logging.warning("Unable to subscribe to storage profile changes: %s", exc)
         
         # Set startup flag
         self.startup = True
@@ -648,6 +660,91 @@ class CinePiController:
 
     def is_preroll_active(self) -> bool:
         return self._preroll_active.is_set()
+
+    def _current_storage_recorder_profile(self) -> str:
+        filesystem = self.redis_controller.get_value(
+            ParameterKey.STORAGE_FILESYSTEM.value,
+            "none",
+        )
+        return recorder_profile_name_for_filesystem(filesystem)
+
+    def _storage_profile_restart_allowed(self) -> bool:
+        if str(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)) == "1":
+            return False
+        if str(self.redis_controller.get_value(ParameterKey.STORAGE_PREROLL_ACTIVE.value)) == "1":
+            return False
+        return not self.is_preroll_active()
+
+    def _handle_storage_mount_event(self, *_args) -> None:
+        self._maybe_schedule_storage_profile_restart("storage mount")
+
+    def _handle_storage_restart_redis_event(self, data=None) -> None:
+        if not isinstance(data, dict):
+            return
+        key = data.get("key")
+        if key not in (
+            ParameterKey.IS_RECORDING.value,
+            ParameterKey.STORAGE_PREROLL_ACTIVE.value,
+        ):
+            return
+        if self._storage_profile_restart_pending and self._storage_profile_restart_allowed():
+            self._maybe_schedule_storage_profile_restart("deferred storage profile change")
+
+    def _maybe_schedule_storage_profile_restart(self, reason: str) -> None:
+        target_profile = self._current_storage_recorder_profile()
+        with self._storage_profile_restart_lock:
+            if target_profile == self._active_storage_recorder_profile:
+                self._storage_profile_restart_pending = False
+                return
+
+            if not self._storage_profile_restart_allowed():
+                self._storage_profile_restart_pending = True
+                logging.info(
+                    "Deferring cinepi-raw restart for storage profile %s -> %s (%s)",
+                    self._active_storage_recorder_profile,
+                    target_profile,
+                    reason,
+                )
+                return
+
+            if self._storage_profile_restart_active:
+                self._storage_profile_restart_pending = True
+                return
+
+            self._storage_profile_restart_active = True
+            self._storage_profile_restart_pending = False
+
+        thread = threading.Thread(
+            target=self._restart_camera_for_storage_profile,
+            args=(target_profile, reason),
+            name="StorageProfileRestart",
+            daemon=True,
+        )
+        thread.start()
+
+    def _restart_camera_for_storage_profile(self, target_profile: str, reason: str) -> None:
+        try:
+            if not self._storage_profile_restart_allowed():
+                with self._storage_profile_restart_lock:
+                    self._storage_profile_restart_pending = True
+                return
+
+            logging.info(
+                "Restarting cinepi-raw for storage profile change %s -> %s (%s)",
+                self._active_storage_recorder_profile,
+                target_profile,
+                reason,
+            )
+            self.restart_camera(preview_enabled=True)
+            with self._storage_profile_restart_lock:
+                self._active_storage_recorder_profile = target_profile
+        finally:
+            rerun = False
+            with self._storage_profile_restart_lock:
+                self._storage_profile_restart_active = False
+                rerun = self._storage_profile_restart_pending
+            if rerun and self._storage_profile_restart_allowed():
+                self._maybe_schedule_storage_profile_restart("queued storage profile change")
 
     def start_recording(self):
         self._cancel_timed_recording_stop()
@@ -1276,6 +1373,7 @@ class CinePiController:
         
     def restart_camera(self, preview_enabled=None):
         self.cinepi.restart(preview_enabled=preview_enabled)
+        self._active_storage_recorder_profile = self._current_storage_recorder_profile()
 
     def restart_cinemate(self):
         """Restart the entire CineMate application."""

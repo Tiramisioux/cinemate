@@ -27,12 +27,27 @@ except ImportError:
 # project-local imports
 # ----------------------------------------------------------------------
 from module.redis_controller import ParameterKey
+from module.storage_profiles import (
+    DEFAULT_RECORDER_PROFILE,
+    NO_STORAGE_FILESYSTEM,
+    normalize_filesystem,
+    normalize_storage_filesystem,
+    recorder_profile_name_for_filesystem,
+    supported_filesystem_text,
+)
 
 # ----------------------------------------------------------------------
 # If your recorder uses a different Redis flag, change it here.
 # ----------------------------------------------------------------------
-REDIS_KEY_IS_RECORDING = "IS_RECORDING"     # "1" while cinepi-raw is running
+REDIS_KEY_IS_RECORDING = ParameterKey.IS_RECORDING.value     # "1" while cinepi-raw is running
 REDIS_KEY_FSCK_STATUS  = "FSCK_STATUS"      # "OK …"  |  "FAIL …"
+YANK_ERRNOS = {
+    errno.EIO,
+    errno.ENOENT,
+    errno.ENODEV,
+    getattr(errno, "ENOTCONN", errno.EIO),
+    getattr(errno, "ESTALE", errno.EIO),
+}
 
 
 # ----------------------------------------------------------------------
@@ -88,6 +103,8 @@ class SSDMonitor:
         self._is_mounted  = False
         self._device_name = None        # "sda1" | "nvme0n1p1" | …
         self._device_type = None        # "SSD" | "NVMe" | "CFE" | "Unknown"
+        self._filesystem_type = NO_STORAGE_FILESYSTEM
+        self._recorder_profile = DEFAULT_RECORDER_PROFILE
         self._space_left  = None        # float (GB)
         self._last_space  = 0.0
         self._last_space_ts = 0.0
@@ -143,6 +160,14 @@ class SSDMonitor:
     @property
     def device_type(self) -> Optional[str]:
         return self._device_type
+
+    @property
+    def filesystem_type(self) -> str:
+        return self._filesystem_type
+
+    @property
+    def recorder_profile(self) -> str:
+        return self._recorder_profile
     
     @property
     def space_left(self) -> Optional[float]:
@@ -215,6 +240,8 @@ class SSDMonitor:
         if not self._redis:
             return
         self._redis.set_value(ParameterKey.STORAGE_TYPE.value, "none")
+        self._redis.set_value(ParameterKey.STORAGE_FILESYSTEM.value, NO_STORAGE_FILESYSTEM)
+        self._redis.set_value(ParameterKey.STORAGE_RECORDER_PROFILE.value, DEFAULT_RECORDER_PROFILE)
         self._redis.set_value(ParameterKey.IS_MOUNTED.value,   "0")
         self._redis.set_value(ParameterKey.SPACE_LEFT.value,   "0")
         self._redis.set_value(REDIS_KEY_FSCK_STATUS,           "unknown")
@@ -274,32 +301,37 @@ class SSDMonitor:
         self._is_mounted  = True
         self._device_name = self._get_device_name()
         self._device_type = self._detect_device_type()
+        self._filesystem_type = self._detect_filesystem_type()
+        self._recorder_profile = recorder_profile_name_for_filesystem(
+            self._filesystem_type
+        )
         self._update_space_left(force=True)
         if not self._is_mounted or self._space_left is None:
             return
 
         self._redis_set_many({
             ParameterKey.STORAGE_TYPE.value: self._device_type.lower(),
+            ParameterKey.STORAGE_FILESYSTEM.value: self._filesystem_type,
+            ParameterKey.STORAGE_RECORDER_PROFILE.value: self._recorder_profile,
             ParameterKey.IS_MOUNTED.value:    "1",
             ParameterKey.SPACE_LEFT.value:    f"{self._space_left:.2f}",
         })
         if self._redis:
             self._redis.set_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value, "0")
 
-        logging.info("RAW drive mounted at %s (%s)",
-                     self._mount_path, self._device_type)
-        self.mount_event.emit(self._mount_path, self._device_type)
-
-        # kick off chown (detached)
-        try:
-            subprocess.Popen(
-                ["sudo", "nice", "-n", "19", "chown", "-R", "pi:pi",
-                str(self._mount_path)],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
-            logging.info("Started chown -R pi:pi on %s", self._mount_path)
-        except Exception as exc:
-            logging.warning("Unable to launch chown: %s", exc)
+        logging.info(
+            "RAW drive mounted at %s (%s, %s, recorder profile %s)",
+            self._mount_path,
+            self._device_type,
+            self._filesystem_type,
+            self._recorder_profile,
+        )
+        self.mount_event.emit(
+            self._mount_path,
+            self._device_type,
+            self._filesystem_type,
+            self._recorder_profile,
+        )
 
 
         # run fsck once right after mount
@@ -309,6 +341,8 @@ class SSDMonitor:
         # … Redis clean-up stays unchanged …
         self._redis_set_many({
             ParameterKey.STORAGE_TYPE.value: "none",
+            ParameterKey.STORAGE_FILESYSTEM.value: NO_STORAGE_FILESYSTEM,
+            ParameterKey.STORAGE_RECORDER_PROFILE.value: DEFAULT_RECORDER_PROFILE,
             ParameterKey.IS_MOUNTED.value:   "0",
             ParameterKey.SPACE_LEFT.value:   "0",
         })
@@ -335,6 +369,8 @@ class SSDMonitor:
         self._write_speed  = 0.0
         self._device_name  = None
         self._device_type  = None
+        self._filesystem_type = NO_STORAGE_FILESYSTEM
+        self._recorder_profile = DEFAULT_RECORDER_PROFILE
         self._last_recording_log.clear()
         self.unmount_event.emit(self._mount_path)
 
@@ -352,6 +388,32 @@ class SSDMonitor:
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
             logging.warning("findmnt failed for %s", self._mount_path)
             return None
+
+    def _detect_filesystem_type(self) -> str:
+        try:
+            out = subprocess.check_output(
+                ["findmnt", "--noheadings", "--output", "FSTYPE", str(self._mount_path)],
+                text=True,
+                timeout=1.0,
+            ).strip()
+            if out:
+                return normalize_storage_filesystem(out)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            logging.warning("findmnt fstype failed for %s", self._mount_path)
+
+        if self._device_name:
+            try:
+                out = subprocess.check_output(
+                    ["blkid", "-s", "TYPE", "-o", "value", f"/dev/{self._device_name}"],
+                    text=True,
+                    timeout=1.0,
+                ).strip()
+                if out:
+                    return normalize_storage_filesystem(out)
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                logging.warning("blkid fstype failed for /dev/%s", self._device_name)
+
+        return "unknown"
 
    # ------------------------------------------------------------------
     # device-type classification  (SSD / CFE / NVMe / Unknown)
@@ -443,7 +505,7 @@ class SSDMonitor:
         Returns True when the error was recognized as lost storage and the
         monitor state was transitioned to "unmounted".
         """
-        if exc.errno not in (errno.EIO, errno.ENOENT):
+        if exc.errno not in YANK_ERRNOS:
             return False
 
         logging.warning(
@@ -569,6 +631,11 @@ class SSDMonitor:
             if not self.mount_drive():
                 logging.warning("toggle_mount(): mount attempt failed")
 
+    def refresh(self) -> bool:
+        """Synchronously refresh mount, filesystem and free-space state."""
+        self._check_mount_status()
+        return self._is_mounted
+
     def unmount_drive(self) -> None:
         if not self._is_mounted:
             return
@@ -634,9 +701,10 @@ class SSDMonitor:
             return False
 
         opts = {
-            "ext4":  "rw,noatime",
-            "ntfs":  f"uid=1000,gid=1000,rw,noatime,umask=000",
-            "exfat": f"uid=1000,gid=1000,rw,noatime",
+            "ext4":  "rw,noatime,nodiratime,commit=60",
+            "ntfs":  f"uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
+            "ntfs3": f"uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
+            "exfat": f"uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
         }.get(fstype, "rw,noatime")
 
         cmd = ["sudo", "mount", "-t", fstype, "-o", opts, raw_dev, str(mount_path)]
@@ -677,12 +745,14 @@ class SSDMonitor:
             logging.error("format_drive(): RAW drive is not mounted")
             return False
 
-        fs = (filesystem or "ext4").lower()
-        if fs == "ex4":  # tolerate typo
-            fs = "ext4"
+        fs = normalize_filesystem(filesystem or "ext4")
 
-        if fs not in {"ext4", "ntfs"}:
-            logging.error("format_drive(): unsupported filesystem '%s'", filesystem)
+        if fs not in {"ext4", "exfat", "ntfs"}:
+            logging.error(
+                "format_drive(): unsupported filesystem '%s' (expected %s)",
+                filesystem,
+                supported_filesystem_text(),
+            )
             return False
 
         dev_name = self._device_name or self._get_device_name()
@@ -703,6 +773,8 @@ class SSDMonitor:
 
         if fs == "ext4":
             mkfs_cmd = ["sudo", "mkfs.ext4", "-F", "-L", "RAW", device]
+        elif fs == "exfat":
+            mkfs_cmd = ["sudo", "mkfs.exfat", "-n", "RAW", device]
         else:
             mkfs_cmd = ["sudo", "mkfs.ntfs", "-F", "-L", "RAW", device]
 

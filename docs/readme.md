@@ -10,8 +10,7 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
   <p><em>Figure 1: Camera stack exploded view. Apps change settings by updating Redis keys. CinePi-RAW listens for those updates and captures frames accordingly while Cinemate provides the camera user interface.</em></p>
 </div>
 
-!!! tip ""
-    ## New features in version 3.3
+## New features in version 3.3
 
 - synchronous sound recording via attached USB microphone
 

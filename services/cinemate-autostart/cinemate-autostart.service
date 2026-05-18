@@ -1,0 +1,33 @@
+[Unit]
+Description=Cinemate Application Service
+After=network.target plymouth-start.service
+Before=plymouth-quit.service plymouth-quit-wait.service getty@tty1.service
+Conflicts=getty@tty1.service
+
+[Service]
+Type=notify
+NotifyAccess=main
+Environment=CINEMATE_STARTUP_FAILURE_FILE=/home/pi/.cache/cinemate/startup-failure.ansi
+StandardInput=tty-force
+StandardOutput=journal
+StandardError=journal
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=no
+ExecStartPre=/usr/local/bin/camera-ready.sh
+ExecStartPre=/bin/sleep 5
+ExecStart=/home/pi/.cinemate-env/bin/python3 /home/pi/cinemate/src/main.py
+ExecStopPost=-+/usr/local/bin/cinemate-startup-failure-display.sh
+ExecStopPost=-+/usr/local/bin/cinemate-console-handoff.sh
+WorkingDirectory=/home/pi/cinemate
+User=pi
+Group=pi
+SyslogIdentifier=cinemate-autostart
+LogRateLimitIntervalSec=30s
+LogRateLimitBurst=20
+TimeoutStopSec=5
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target

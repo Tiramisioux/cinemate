@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MJPEG Stream with Overlay</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif; /* Set custom font family */
+            background-color: {{ simple_gui_color }}; /* Default background color */
+        }
+        .top-bar, .bottom-bar {
+            background-color: black;
+            color: #fff;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .top-bar select, .bottom-bar select {
+            margin-left: 10px;
+            padding: 8px;
+            font-size: 16px;
+            border: none;
+            background-color: #111;
+            color: #fff;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .top-bar select:focus, .bottom-bar select:focus {
+            outline: none;
+        }
+        #stream-container {
+            background-color: black;
+            position: relative;
+            width: 100%; /* Adjust width as needed */
+            height: 0;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            overflow: hidden;
+            margin: auto;
+        }
+        #stream {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Ensure the stream fits within its container */
+        }
+        #overlay {
+            display: none; /* Hide the overlay initially */
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #fff;
+            font-size: 24px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 10px;
+            cursor: pointer; /* Change cursor to pointer for better UX */
+        }
+        #iso-dropdown, #shutter-dropdown, #fps-dropdown {
+            display: none;
+            position: absolute;
+            top: 50px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+        }
+        #iso-dropdown.show, #shutter-dropdown.show, #fps-dropdown.show {
+            display: block;
+        }
+        #iso-dropdown select, #shutter-dropdown select, #fps-dropdown select {
+            width: 100%;
+            padding: 8px;
+            font-size: 16px;
+            border: none;
+            background-color: #333;
+            color: #fff;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body style="background-color: {{ simple_gui_background_color }};">
+    <div class="top-bar">
+        <div>ISO:
+            <select id="iso-select">
+                {% for iso_value in iso_values %}
+                    <option value="{{ iso_value }}">{{ iso_value }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>Shutter Angle:
+            <select id="shutter-speed-select">
+                {% for shutter_speed_value in shutter_speed_values %}
+                    <option value="{{ shutter_speed_value }}">{{ shutter_speed_value }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>FPS:
+            <select id="fps-select">
+                {% for fps_value in fps_values %}
+                    <option value="{{ fps_value }}">{{ fps_value }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div id="stream-container">
+        <img id="stream" src="{{ stream_url }}" alt="Stream">
+    </div>
+    <div class="bottom-bar">
+        <div>Static Number 1: 1234</div>
+        <div>Static Number 2: 5678</div>
+        <div>Dropdown 1:
+            <select id="dropdown1">
+                <option value="option1">Option 1</option>
+                <option value="option2">Option 2</option>
+                <option value="option3">Option 3</option>
+            </select>
+        </div>
+        <div>Dropdown 2:
+            <select id="dropdown2">
+                <option value="optionA">Option A</option>
+                <option value="optionB">Option B</option>
+                <option value="optionC">Option C</option>
+            </select>
+        </div>
+        <button id="fullscreen-btn">Enter Fullscreen</button>
+    </div>
+    <div id="overlay">ISO: {{ dynamic_data.iso }} | Shutter Angle: {{ dynamic_data.shutter_a }} | FPS: {{ dynamic_data.fps }}</div>
+    <div id="iso-dropdown">
+        <select>
+            {% for iso_value in iso_values %}
+                <option value="{{ iso_value }}">{{ iso_value }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div id="shutter-dropdown">
+        <select>
+            {% for shutter_speed_value in shutter_speed_values %}
+                <option value="{{ shutter_speed_value }}">{{ shutter_speed_value }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div id="fps-dropdown">
+        <select>
+            {% for fps_value in fps_values %}
+                <option value="{{ fps_value }}">{{ fps_value }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <script>
+        function fetchISO() {
+            fetch('/iso_value')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('iso-select').value = data.iso;
+                    updateOverlayText();
+                })
+                .catch(error => console.error('Error fetching ISO value:', error));
+        }
+    
+        function fetchShutterSpeed() {
+            fetch('/shutter_a_value')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('shutter-speed-select').value = data.shutter_a;
+                    updateOverlayText();
+                })
+                .catch(error => console.error('Error fetching Shutter Angle value:', error));
+        }
+    
+        function fetchFPS() {
+            fetch('/fps_value')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('fps-select').value = data.fps;
+                    updateOverlayText();
+                })
+                .catch(error => console.error('Error fetching FPS value:', error));
+        }
+
+        function fetchBackgroundColor() {
+            fetch('/background_color_value')
+                .then(response => response.json())
+                .then(data => {
+                    updateBackgroundColor(data.background_color);
+                })
+                .catch(error => console.error('Error fetching background color:', error));
+        }
+    
+        function updateOverlayText() {
+            const iso = document.getElementById('iso-select').value;
+            const shutterAngle = document.getElementById('shutter-speed-select').value;
+            const fps = document.getElementById('fps-select').value;
+            document.getElementById('overlay').innerText = `ISO: ${iso} | Shutter Angle: ${shutterAngle} | FPS: ${fps}`;
+        }
+        
+        let previousBackgroundColor = '';
+
+        function updateBackgroundColor(color) {
+            if (color !== previousBackgroundColor) {
+                document.querySelectorAll('*').forEach(element => {
+                    element.style.backgroundColor = color;
+                });
+                previousBackgroundColor = color;
+            }
+        }
+
+        function containerTap() {
+            fetch('/handle_container_tap', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data.status);
+            })
+            .catch(error => console.error('Error toggling container_tap color:', error));
+        }
+
+        // Example: Toggle background color on click
+        document.getElementById('stream-container').addEventListener('click', function() {
+            containerTap();
+        });
+    
+        // Initial fetch and update
+        fetchISO();
+        fetchShutterSpeed();
+        fetchFPS();
+        fetchBackgroundColor();
+    
+        // Set intervals for regular updates
+        setInterval(fetchISO, 1000); // Update ISO every 1 second
+        setInterval(fetchShutterSpeed, 1000); // Update Shutter Angle every 1 second
+        setInterval(fetchFPS, 1000); // Update FPS every 1 second
+        setInterval(fetchBackgroundColor, 200); // Update Background Color every 1 second
+    
+        // Event listeners for dropdown changes
+        document.getElementById('iso-select').addEventListener('change', function() {
+            const iso = this.value;
+            fetch('/set_iso', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ iso }),
+            })
+            .then(response => response.json())
+            .then(data => console.log('ISO set successfully:', data))
+            .catch(error => console.error('Error setting ISO:', error));
+        });
+    
+        document.getElementById('shutter-speed-select').addEventListener('change', function() {
+            const shutterAngle = this.value;
+            fetch('/set_shutter_a', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ shutter_a: shutterAngle }),
+            })
+            .then(response => response.json())
+            .then(data => console.log('Shutter Angle set successfully:', data))
+            .catch(error => console.error('Error setting Shutter Angle:', error));
+        });
+    
+        document.getElementById('fps-select').addEventListener('change', function() {
+            const fps = this.value;
+            fetch('/set_fps', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ fps }),
+            })
+            .then(response => response.json())
+            .then(data => console.log('FPS set successfully:', data))
+            .catch(error => console.error('Error setting FPS:', error));
+        });
+    
+        // Function to toggle full-screen mode
+        function toggleFullScreen() {
+            const elem = document.documentElement;
+    
+            if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+                // Enter full-screen mode
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen().catch(err => {
+                        console.error('Error attempting to enable full-screen mode:', err.message);
+                    });
+                } else if (elem.webkitRequestFullscreen) { /* Safari */
+                    elem.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT).catch(err => {
+                        console.error('Error attempting to enable full-screen mode:', err.message);
+                    });
+                } else if (elem.msRequestFullscreen) { /* IE11 */
+                    elem.msRequestFullscreen().catch(err => {
+                        console.error('Error attempting to enable full-screen mode:', err.message);
+                    });
+                }
+            } else {
+                // Exit full-screen mode
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().catch(err => {
+                        console.error('Error attempting to exit full-screen mode:', err.message);
+                    });
+                } else if (document.webkitExitFullscreen) { /* Safari */
+                    document.webkitExitFullscreen().catch(err => {
+                        console.error('Error attempting to exit full-screen mode:', err.message);
+                    });
+                } else if (document.msExitFullscreen) { /* IE11 */
+                    document.msExitFullscreen().catch(err => {
+                        console.error('Error attempting to exit full-screen mode:', err.message);
+                    });
+                }
+            }
+        }
+    
+        // Add event listener for full-screen button
+        document.getElementById('fullscreen-btn').addEventListener('click', function() {
+            toggleFullScreen();
+            updateFullscreenButton(); // Update button text immediately after click
+        });
+    
+        // Detect changes in full-screen state and update button text accordingly
+        document.addEventListener('fullscreenchange', updateFullscreenButton);
+        document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+        document.addEventListener('msfullscreenchange', updateFullscreenButton);
+    
+        function updateFullscreenButton() {
+            const isInFullScreen = (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) !== null;
+            const fullscreenBtn = document.getElementById('fullscreen-btn');
+    
+            if (isInFullScreen) {
+                fullscreenBtn.textContent = 'Exit Fullscreen';
+            } else {
+                fullscreenBtn.textContent = 'Enter Fullscreen';
+            }
+        }
+        
+        // Detect touchstart to initiate full-screen on iOS
+        document.getElementById('fullscreen-btn').addEventListener('touchstart', function(event) {
+            event.preventDefault(); // Prevent the default behavior
+            toggleFullScreen();
+            updateFullscreenButton(); // Update button text immediately after touch
+        });
+    </script>
+    
+</body>
+</html>

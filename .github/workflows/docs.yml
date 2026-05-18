@@ -1,0 +1,89 @@
+name: build-and-deploy-doc
+
+# grant the job permission to push and deploy Pages
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  mkdocs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install MkDocs toolchain
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            mkdocs \
+            mkdocs-material \
+            mkdocs-pdf-export-plugin \
+            mkdocs-git-revision-date-localized-plugin \
+            mkdocs-macros-plugin \
+            "mkdocs-with-pdf==0.9.3"
+
+      - name: Generate dynamic cover page
+        run: bash docs/scripts/generate_coverpage.sh  
+
+      - name: Build site
+        run: python -m mkdocs build --clean
+
+      - name: Restore coverpage
+        run: git restore docs/coverpage.md
+
+      - name: Detect rendered PDF
+        id: rendered_pdf
+        run: |
+          if [ -f site/renders/Cinemate-Docs.pdf ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "No rendered PDF found at site/renders/Cinemate-Docs.pdf; skipping PDF publish steps."
+          fi
+
+      - name: Upload PDF artifact
+        if: always() && steps.rendered_pdf.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cinemate-docs-pdf
+          path: site/renders/*.pdf
+          if-no-files-found: ignore
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./site
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com
+          allow_empty_commit: true
+
+      - name: Copy PDF to docs/renders and push
+        if: steps.rendered_pdf.outputs.exists == 'true'
+        run: |
+          cp site/renders/Cinemate-Docs.pdf docs/renders/
+          git config user.name "CI"
+          git config user.email "ci@users.noreply.github.com"
+          git add docs/renders/Cinemate-Docs.pdf
+          if ! git diff --cached --quiet; then
+            git commit -m "CI: update rendered PDF"
+            git push
+          else
+            echo "PDF unchanged, skipping commit"
+          fi

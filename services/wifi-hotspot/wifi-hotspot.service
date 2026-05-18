@@ -1,0 +1,14 @@
+[Unit]
+Description=Cinemate Wi-Fi Hotspot Service
+Wants=NetworkManager.service systemd-rfkill.service
+After=NetworkManager.service network-online.target systemd-rfkill.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/bin/wifi-hotspot.py
+Restart=always
+RestartSec=10
+User=root
+
+[Install]
+WantedBy=multi-user.target

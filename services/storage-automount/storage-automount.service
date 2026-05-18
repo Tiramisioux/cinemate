@@ -1,0 +1,34 @@
+[Unit]
+Description=Unified Storage Auto-Mount with Media-Aware Tuning
+Documentation=https://github.com/Tiramisioux/RPI5-CFE-Hat
+After=local-fs.target
+Before=cinemate-autostart.service
+Conflicts=cfe-hat-automount.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/bin/storage-automount.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+User=root
+
+# Environment variables (optional overrides)
+#Environment="STORAGE_AUTOMOUNT_LOG=DEBUG"
+#Environment="PI_UID=1000"
+#Environment="PI_GID=1000"
+
+# Security hardening (optional)
+#NoNewPrivileges=true
+#PrivateTmp=true
+#ProtectSystem=strict
+#ReadWritePaths=/media /proc/sys/vm
+
+# Resource limits for safety
+LimitNOFILE=65536
+Nice=-10
+
+[Install]
+WantedBy=multi-user.target
+    

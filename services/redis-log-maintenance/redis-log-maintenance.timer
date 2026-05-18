@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Cinemate Redis log maintenance periodically
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=1h
+RandomizedDelaySec=2min
+Persistent=true
+Unit=redis-log-maintenance.service
+
+[Install]
+WantedBy=timers.target

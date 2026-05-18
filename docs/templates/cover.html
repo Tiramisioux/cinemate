@@ -1,0 +1,9 @@
+{% extends "basic_cover.html" %}
+
+{% block title     %}{{ cover_title     }}{% endblock %}
+{% block subtitle  %}{{ cover_subtitle  }}{% endblock %}
+{% block author    %}{{ author or "Cinemate Team" }}{% endblock %}
+
+{% block extra %}
+  <img src="{{ cover_logo or 'assets/images/CINEMATE.jpg' }}" style="height:40mm; margin-top:10mm">
+{% endblock %}

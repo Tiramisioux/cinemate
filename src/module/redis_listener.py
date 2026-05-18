@@ -119,6 +119,8 @@ class RedisListener:
         self.frame_limit_requested_slots: int | None = None
         self.frame_limit_anchor_time: datetime.datetime | None = None
         self.frame_limit_stop_requested = False
+        self.awaiting_fresh_framecount = False
+        self.initial_framecount_guard_seconds = 0.25
         self.recording_stop_callback = None
 
 
@@ -126,6 +128,39 @@ class RedisListener:
 
     def set_recording_stop_callback(self, callback) -> None:
         self.recording_stop_callback = callback
+
+    def _filter_initial_recording_framecount(self, new_count: int | None) -> int | None:
+        if new_count is None:
+            return None
+
+        try:
+            normalized = int(new_count)
+        except (TypeError, ValueError):
+            return None
+
+        if not self.awaiting_fresh_framecount:
+            return normalized
+
+        if normalized == 0:
+            return 0
+
+        age_seconds = 0.0
+        if self.recording_start_time is not None:
+            age_seconds = (datetime.datetime.now() - self.recording_start_time).total_seconds()
+
+        # Right after is_recording=1, cinepi-raw can still publish one stale
+        # frame counter from the previous take. Ignore that brief spike until
+        # the new take's counter has reset or begun counting from the start.
+        if age_seconds < self.initial_framecount_guard_seconds and normalized > 1:
+            logging.debug(
+                "Ignoring stale initial framecount %d %.3fs after record start",
+                normalized,
+                age_seconds,
+            )
+            return None
+
+        self.awaiting_fresh_framecount = False
+        return normalized
 
     def disarm_frame_limited_stop(self) -> None:
         self.frame_limit_target_slots = None
@@ -207,37 +242,38 @@ class RedisListener:
             unless the encoder reports 0.  This eliminates flicker when two
             sensors finish a take a frame apart.
             """
-            if new_count is None:
+            normalized_count = self._filter_initial_recording_framecount(new_count)
+            if normalized_count is None:
                 return
 
             # ── not recording → freeze counter ───────────────────────────────────
             if not self.is_recording:
-                if new_count == 0 and self.framecount != 0:
+                if normalized_count == 0 and self.framecount != 0:
                     self.framecount = 0
                     self.redis_controller.set_value("framecount", 0)
                 return
             # ─────────────────────────────────────────────────────────────────────
 
             # one allowed 0 right after Record (CinePi resets its counter once)
-            if new_count == 0 and self.allow_initial_zero:
+            if normalized_count == 0 and self.allow_initial_zero:
                 self.framecount = 0
                 self.redis_controller.set_value("framecount", 0)
                 self.allow_initial_zero = False
                 return
 
             # ── 1) strictly higher → accept & publish ───────────────────────────
-            if new_count > self.framecount:
-                self.framecount = new_count
-                self.redis_controller.set_value("framecount", new_count)
+            if normalized_count > self.framecount:
+                self.framecount = normalized_count
+                self.redis_controller.set_value("framecount", normalized_count)
                 return
 
             # ── 2) equal → nothing to do ────────────────────────────────────────
-            if new_count == self.framecount:
+            if normalized_count == self.framecount:
                 return
 
             # ── 3) lower but *non-zero*  → IGNORE  (mitigates flicker) ──────────
             #     Only a real zero (encoder reset) is considered significant.
-            if new_count < self.framecount and new_count != 0:
+            if normalized_count < self.framecount and normalized_count != 0:
                 # keep the higher value; do not publish
                 return
 
@@ -459,6 +495,9 @@ class RedisListener:
     def _current_expected_frame_slots(
         self, now: datetime.datetime | None = None
     ) -> int | None:
+        if self.awaiting_fresh_framecount and self.frame_limit_anchor_time is None:
+            return None
+
         try:
             if self.frame_count is not None:
                 frame_slots = int(self.frame_count)
@@ -780,7 +819,7 @@ class RedisListener:
         Any lower-but-non-zero values are ignored entirely.
         """
         now = datetime.datetime.now()
-        new = self._coerce_int(self.frame_count)
+        new = self._filter_initial_recording_framecount(self.frame_count)
         if new is None:
             return
         old = self._coerce_int(self.last_framecount)
@@ -830,6 +869,9 @@ class RedisListener:
     def reset_framecount(self):
         self.framecount = 0
         self.frame_count = 0
+        self.last_framecount = 0
+        self.last_rise_time = None
+        self.framecount_changing = False
         self.bufferSize = 0
         self.redis_controller.set_value('framecount', 0)
         self.active_sensor_labels.clear()
@@ -859,6 +901,7 @@ class RedisListener:
                     self.take_sequence += 1
                     self.reset_framecount()
                     self.recording_start_time = datetime.datetime.now()
+                    self.awaiting_fresh_framecount = True
                     self.drop_frame_count_current_take = 0
                     self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, 0)
                     self.redis_controller.set_value(ParameterKey.DROP_FRAME_RELAY.value, 0)

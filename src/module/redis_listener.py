@@ -643,8 +643,14 @@ class RedisListener:
                             # print(f"Expected FPS: {expected_fps}, Actual FPS: {self.current_framerate*1000}")
                             # print(f"FPS difference: {fps_difference}")
                             
+                            drop_alerts_enabled = (
+                                self.is_recording
+                                and not self.recording_was_preroll
+                                and not self._storage_preroll_active()
+                            )
+
                             # do NOT raise drop-frame while the user is changing fps
-                            if fps_difference > 1 and not self.user_changing_fps:
+                            if fps_difference > 1 and not self.user_changing_fps and drop_alerts_enabled:
                                 self.drop_frame_count_current_take += 1
                                 self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, self.drop_frame_count_current_take)
                                 self._pulse_drop_frame_relay(expected_fps)
@@ -748,6 +754,35 @@ class RedisListener:
                 pass
         return self.bufferSize > 0
 
+    def _clear_frame_warning_state(self) -> None:
+        self.drop_frame_count_current_take = 0
+        self.drop_frame = False
+        if self.drop_frame_timer:
+            self.drop_frame_timer.cancel()
+            self.drop_frame_timer = None
+        if self.drop_frame_relay_timer:
+            self.drop_frame_relay_timer.cancel()
+            self.drop_frame_relay_timer = None
+        self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 0)
+        self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, 0)
+        self.redis_controller.set_value(ParameterKey.DROP_FRAME_RELAY.value, 0)
+        self.redis_controller.set_value(ParameterKey.DROP_FRAME_DURING_LAST_TAKE.value, 0)
+        self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 1)
+
+    def _clear_post_recording_state(self) -> None:
+        self.recording_was_preroll = False
+        self.framerate_values = []
+        self.frame_limit_target_slots = None
+        self.frame_limit_requested_slots = None
+        self.frame_limit_anchor_time = None
+        self.frame_limit_stop_requested = False
+        self.fps_correction_factor_at_rec_start = None
+        self.fps_at_rec_start = None
+        self.fps_timeline = []
+        with self.final_analysis_lock:
+            self.final_analysis_pending = False
+            self.final_analysis_sequence = None
+
     def _schedule_final_analysis(self) -> None:
         take_sequence = self.take_sequence
         with self.final_analysis_lock:
@@ -800,15 +835,7 @@ class RedisListener:
                 self.analyze_frames()
         finally:
             if take_sequence == self.take_sequence:
-                self.recording_was_preroll = False
-                self.framerate_values = []
-                self.frame_limit_target_slots = None
-                self.frame_limit_requested_slots = None
-                self.frame_limit_anchor_time = None
-                self.frame_limit_stop_requested = False
-                with self.final_analysis_lock:
-                    self.final_analysis_pending = False
-                    self.final_analysis_sequence = None
+                self._clear_post_recording_state()
 
         
     def check_framecount_changing(self):
@@ -955,7 +982,12 @@ class RedisListener:
                             logging.info(f"Recording stopped at: {self.recording_end_time}")
                             if self.bufferSize > 0:
                                 self.redis_controller.set_value(ParameterKey.IS_WRITING_BUF.value, 1)
-                            self._schedule_final_analysis()
+                            if self.recording_was_preroll:
+                                logging.debug("Skipping frame-sync analysis for storage pre-roll.")
+                                self._clear_frame_warning_state()
+                                self._clear_post_recording_state()
+                            else:
+                                self._schedule_final_analysis()
                         else:
                             logging.warning("Recording stopped, but no recording start time was registered.")
                             self.recording_was_preroll = False
@@ -1128,6 +1160,11 @@ class RedisListener:
         Compare the actual number of DNGs on disk with the theoretical count.
         Robust against path ambiguities, in-flight files, and off-by-one rounding.
         """
+        if self.recording_was_preroll or self._storage_preroll_active():
+            logging.debug("Skipping frame-sync analysis for storage pre-roll.")
+            self._clear_frame_warning_state()
+            return
+
         quiet_summary = self.recording_was_preroll
 
         # --------------------------- 1) collect candidate dirs -----------------

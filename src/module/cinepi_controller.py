@@ -711,7 +711,7 @@ class CinePiController:
         except ValueError as error:
             logging.error(f"Error switching resolution: {error}")
 
-    def set_resolution(self, value=None, *, restart_process=False, restore_recording=True):
+    def set_resolution(self, value=None, *, restart_process=False):
         if value is not None:
             try:
                 self.redis_controller.get_value(ParameterKey.FPS_LAST.value, self.redis_controller.get_value(ParameterKey.FPS.value))
@@ -719,11 +719,9 @@ class CinePiController:
                     logging.info(f"Couldn't find sensor mode {value}. Trying with sensor_mode 0.")
                     value = 0
 
-                was_recording = self._is_recording()
-                if was_recording:
-                    logging.info("Stopping recording before sensor-mode reconfigure.")
-                    self.stop_recording()
-                    time.sleep(0.25)
+                if self._is_recording():
+                    logging.warning("Ignoring resolution change while recording. Stop recording before changing sensor mode.")
+                    return False
 
                 self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, str(value))
                 try:
@@ -797,12 +795,11 @@ class CinePiController:
                     requested_fps = self.redis_controller.get_value(ParameterKey.FPS_LAST.value, self.redis_controller.get_value(ParameterKey.FPS.value))
                 self.set_fps(float(requested_fps), update_user_target=False)
 
-                if was_recording and restore_recording:
-                    logging.info("Resuming recording after sensor-mode reconfigure.")
-                    self.start_recording()
+                return True
 
             except ValueError as error:
                 logging.error(f"Error setting resolution: {error}")
+                return False
 
         else:
             self.switch_resolution()
@@ -1338,28 +1335,35 @@ class CinePiController:
                 target_fps = self.fps * 2
                 target_mode = self._select_resolution_mode_for_fps(target_fps)
                 if target_mode != self.sensor_mode:
+                    if was_recording:
+                        logging.warning(
+                            "FPS double needs sensor mode %s, but resolution changes are disabled while recording.",
+                            target_mode,
+                        )
+                        return
                     logging.info(
                         "FPS double requested %.3f fps above current mode limit %s; switching to sensor mode %s.",
                         target_fps,
                         self.fps_max,
                         target_mode,
                     )
-                    self.set_resolution(target_mode, restart_process=False, restore_recording=False)
+                    if not self.set_resolution(target_mode, restart_process=False):
+                        return
                     self.fps_max = int(self.redis_controller.get_value(ParameterKey.FPS_MAX.value))
                 target_fps = min(target_fps, self.fps_max)
                 self.set_fps(target_fps)
-                if was_recording:
-                    self.start_recording()
         else:
             if self.fps_double:
-                if was_recording:
-                    self.stop_recording()
-                self.set_fps(self.fps_saved)
                 if self.sensor_mode_saved != self.sensor_mode:
-                    self.set_resolution(self.sensor_mode_saved, restart_process=False, restore_recording=False)
-                    self.set_fps(self.fps_saved)
-                if was_recording:
-                    self.start_recording()
+                    if was_recording:
+                        logging.warning(
+                            "FPS double restore needs sensor mode %s, but resolution changes are disabled while recording.",
+                            self.sensor_mode_saved,
+                        )
+                        return
+                    if not self.set_resolution(self.sensor_mode_saved, restart_process=False):
+                        return
+                self.set_fps(self.fps_saved)
         
         self.fps_double = target_double_state
 

@@ -121,6 +121,7 @@ class RedisListener:
         self.frame_limit_stop_requested = False
         self.awaiting_fresh_framecount = False
         self.initial_framecount_guard_seconds = 0.25
+        self.fresh_framecount_guard_start_time: datetime.datetime | None = None
         self.recording_stop_callback = None
 
 
@@ -145,21 +146,30 @@ class RedisListener:
             return 0
 
         age_seconds = 0.0
-        if self.recording_start_time is not None:
-            age_seconds = (datetime.datetime.now() - self.recording_start_time).total_seconds()
+        guard_start_time = self.fresh_framecount_guard_start_time or self.recording_start_time
+        if guard_start_time is not None:
+            age_seconds = (datetime.datetime.now() - guard_start_time).total_seconds()
+
+        fps_expected = self._determine_expected_fps()
+        if fps_expected is not None and fps_expected > 0:
+            max_plausible = max(2, int(math.ceil(age_seconds * fps_expected)) + 3)
+        else:
+            max_plausible = 1 if age_seconds < self.initial_framecount_guard_seconds else normalized
 
         # Right after is_recording=1, cinepi-raw can still publish one stale
-        # frame counter from the previous take. Ignore that brief spike until
-        # the new take's counter has reset or begun counting from the start.
-        if age_seconds < self.initial_framecount_guard_seconds and normalized > 1:
+        # frame counter from the previous take. Ignore values that are too far
+        # ahead of what the new take could plausibly have produced.
+        if normalized > max_plausible:
             logging.debug(
-                "Ignoring stale initial framecount %d %.3fs after record start",
+                "Ignoring stale initial framecount %d %.3fs after record start (max plausible %d)",
                 normalized,
                 age_seconds,
+                max_plausible,
             )
             return None
 
         self.awaiting_fresh_framecount = False
+        self.fresh_framecount_guard_start_time = None
         return normalized
 
     def disarm_frame_limited_stop(self) -> None:
@@ -174,6 +184,13 @@ class RedisListener:
         if fresh_take:
             baseline_slots = 0
             self.frame_limit_anchor_time = None
+            self.frame_count = 0
+            self.framecount = 0
+            self.last_framecount = 0
+            self.last_rise_time = None
+            self.framecount_changing = False
+            self.awaiting_fresh_framecount = True
+            self.fresh_framecount_guard_start_time = datetime.datetime.now()
         else:
             baseline_slots = self._current_expected_frame_slots()
             if baseline_slots is None:
@@ -495,12 +512,12 @@ class RedisListener:
     def _current_expected_frame_slots(
         self, now: datetime.datetime | None = None
     ) -> int | None:
-        if self.awaiting_fresh_framecount and self.frame_limit_anchor_time is None:
+        if self.awaiting_fresh_framecount:
             return None
 
         try:
-            if self.frame_count is not None:
-                frame_slots = int(self.frame_count)
+            if self.framecount is not None:
+                frame_slots = int(self.framecount)
                 if frame_slots >= 0:
                     return frame_slots + int(self.drop_frame_count_current_take)
         except (TypeError, ValueError):
@@ -776,6 +793,8 @@ class RedisListener:
         self.frame_limit_requested_slots = None
         self.frame_limit_anchor_time = None
         self.frame_limit_stop_requested = False
+        self.awaiting_fresh_framecount = False
+        self.fresh_framecount_guard_start_time = None
         self.fps_correction_factor_at_rec_start = None
         self.fps_at_rec_start = None
         self.fps_timeline = []
@@ -929,6 +948,7 @@ class RedisListener:
                     self.reset_framecount()
                     self.recording_start_time = datetime.datetime.now()
                     self.awaiting_fresh_framecount = True
+                    self.fresh_framecount_guard_start_time = self.recording_start_time
                     self.drop_frame_count_current_take = 0
                     self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, 0)
                     self.redis_controller.set_value(ParameterKey.DROP_FRAME_RELAY.value, 0)

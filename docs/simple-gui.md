@@ -12,7 +12,7 @@ Simple GUI is available both on the attached HDMI output and through the browser
 - **Blue:** storage pre-roll warm-up is running
 - **Yellow:** RAM load has passed the safety threshold; the GUI asks the controller to stop recording
 
-The separate `DROP` tile latches after a drop-frame event and stays visible until a new take starts. A crossed magenta `SYNC` tile latches when the final expected-vs-recorded frame count is outside the +/- one-frame tolerance.
+The separate `DROP` tile latches after a drop-frame event and stays visible until a new take starts. A crossed magenta `SYNC` tile latches when the final expected-vs-recorded frame count is outside the +/- one-frame tolerance after buffered frames have flushed. Dropped-frame holes do not trigger the `SYNC` tile by themselves; they are shown by `DROP`.
 
 ## What the GUI shows
 

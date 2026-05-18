@@ -8,10 +8,11 @@ Simple GUI is available both on the attached HDMI output and through the browser
 - **Red:** at least one camera is actively writing frames to disk (`is_writing=1`)
 - **Green:** RAM buffer is filling or buffered frames are still flushing after stop (`is_buffering` or `is_writing_buf`)
 - **Purple:** live drop-frame alert
+- **Magenta:** final frame-count sync mismatch after buffered frames have flushed
 - **Blue:** storage pre-roll warm-up is running
 - **Yellow:** RAM load has passed the safety threshold; the GUI asks the controller to stop recording
 
-The separate `DROP` tile can also stay visible after a take if the previous non-preroll recording had drop frames.
+The separate `DROP` tile latches after a drop-frame event and stays visible until a new take starts. A crossed magenta `SYNC` tile latches when the final expected-vs-recorded frame count is outside the +/- one-frame tolerance.
 
 ## What the GUI shows
 

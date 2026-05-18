@@ -17,6 +17,9 @@ import json
 import re
 
 RECORDER_VU_REDIS_KEY = "audio_vu"
+DROP_WARNING_COLOR = (120, 40, 180)
+SYNC_WARNING_COLOR = (255, 0, 255)
+SYNC_FLASH_COLOR = "magenta"
 
 
 def _to_bool(value) -> bool:
@@ -110,6 +113,8 @@ class SimpleGUI(threading.Thread):
         self._release_console_on_exit = False
         self._display_teardown_done = False
         self._stop_lock = threading.Lock()
+        self._frames_off_sync_prev = False
+        self._sync_flash_until = 0.0
         
         # Load sensor values from Redis upon instantiation
         self.load_sensor_values_from_redis()
@@ -671,9 +676,21 @@ class SimpleGUI(threading.Thread):
             "cpu_label": "CPU", "cpu_temp_label": "TEMP",
             "media_label": "MEDIA", "mon": "MON",
             "drop_frame_live": int(self.redis_controller.get_value(ParameterKey.DROP_FRAME.value) or 0) == 1,
+            "drop_frame_count": int(self.redis_controller.get_value(ParameterKey.DROP_FRAME_COUNT.value) or 0),
             "drop_frame_during_last_take": int(self.redis_controller.get_value(ParameterKey.DROP_FRAME_DURING_LAST_TAKE.value) or 0) == 1,
 
         }
+        values["drop_frame_latched"] = (
+            values["drop_frame_live"]
+            or values["drop_frame_count"] > 0
+            or values["drop_frame_during_last_take"]
+        )
+        try:
+            values["frames_in_sync"] = int(self.redis_controller.get_value(ParameterKey.FRAMES_IN_SYNC.value) or 1) == 1
+        except (TypeError, ValueError):
+            values["frames_in_sync"] = True
+        values["frames_off_sync"] = not values["frames_in_sync"]
+
         # ── audio stats ─────────────────────────────────────────────────
         if values["mic_connected"]:
             monitor = getattr(self.usb_monitor, "audio_monitor", None)
@@ -691,11 +708,6 @@ class SimpleGUI(threading.Thread):
                         values["mic_sample_rate"] = f"{sr_khz:.1f}".rstrip("0").rstrip(".")
                 except (TypeError, ValueError):
                     pass
-
-            try:
-                values["frames_in_sync"] = int(self.redis_controller.get_value(ParameterKey.FRAMES_IN_SYNC.value) or 0) == 1
-            except (TypeError, ValueError):
-                values["frames_in_sync"] = False
 
             if self.ssd_monitor:
                 try:
@@ -963,6 +975,20 @@ class SimpleGUI(threading.Thread):
     # ─────────────────────────────────────────────────────────────
     # LEFT-HAND COLUMN  (CAM / MON / SYS …)
     # ─────────────────────────────────────────────────────────────
+    def _draw_status_box(self, draw, box, text, fill, font, text_color, *, crossed=False):
+        x0, y0, x1, y1 = box
+        draw.rectangle(box, fill=fill)
+        text_font = font
+        tw, th = draw.textbbox((0, 0), text, font=text_font)[2:]
+        if tw > (x1 - x0 - 4):
+            text_font = self._get_font("bold", 20)
+            tw, th = draw.textbbox((0, 0), text, font=text_font)[2:]
+        tx = x0 + ((x1 - x0) - tw) // 2
+        ty = y0 + ((y1 - y0) - th) // 2
+        draw.text((tx, ty), text, font=text_font, fill=text_color)
+        if crossed:
+            draw.line([(x0 + 5, y0 + 5), (x1 - 5, y1 - 5)], fill=text_color, width=3)
+
     def draw_left_sections(self, draw, values):
         label_font = self._get_font("regular", 26)
         box_font   = self._get_font("bold", 26)
@@ -1018,12 +1044,27 @@ class SimpleGUI(threading.Thread):
 
                     y += BOX_H + BOX_GAP
 
-            if section == self.left_section_layout[0] and (values.get("drop_frame_live") or values.get("drop_frame_during_last_take")):
-                draw.rectangle([box_x, y, box_x + BOX_W, y + BOX_H], fill=(180, 40, 255))
-                tw, th = draw.textbbox((0, 0), "DROP", font=box_font)[2:]
-                tx = box_x + (BOX_W - tw) // 2
-                ty = y + (BOX_H - th) // 2
-                draw.text((tx, ty), "DROP", font=box_font, fill=TEXT_COLOR)
+            if section == self.left_section_layout[0] and values.get("drop_frame_latched"):
+                self._draw_status_box(
+                    draw,
+                    [box_x, y, box_x + BOX_W, y + BOX_H],
+                    "DROP",
+                    DROP_WARNING_COLOR,
+                    box_font,
+                    TEXT_COLOR,
+                )
+                y += BOX_H + BOX_GAP
+
+            if section == self.left_section_layout[0] and values.get("frames_off_sync"):
+                self._draw_status_box(
+                    draw,
+                    [box_x, y, box_x + BOX_W, y + BOX_H],
+                    "SYNC",
+                    SYNC_WARNING_COLOR,
+                    box_font,
+                    TEXT_COLOR,
+                    crossed=True,
+                )
                 y += BOX_H + BOX_GAP
 
             y += SECTION_GAP
@@ -1116,12 +1157,27 @@ class SimpleGUI(threading.Thread):
                     draw.text((tx, ty), part, font=box_font, fill=TEXT_COLOR)
                     y += BOX_H + BOX_GAP
 
-            if (values.get("drop_frame_live") or values.get("drop_frame_during_last_take")):
-                draw.rectangle([box_pad_x, y, box_pad_x + BOX_W, y + BOX_H], fill=(180, 40, 255))
-                tw, th = draw.textbbox((0, 0), "DROP", font=box_font)[2:]
-                tx = box_pad_x + (BOX_W - tw) // 2
-                ty = y + (BOX_H - th) // 2
-                draw.text((tx, ty), "DROP", font=box_font, fill=TEXT_COLOR)
+            if values.get("drop_frame_latched"):
+                self._draw_status_box(
+                    draw,
+                    [box_pad_x, y, box_pad_x + BOX_W, y + BOX_H],
+                    "DROP",
+                    DROP_WARNING_COLOR,
+                    box_font,
+                    TEXT_COLOR,
+                )
+                y += BOX_H + BOX_GAP
+
+            if values.get("frames_off_sync"):
+                self._draw_status_box(
+                    draw,
+                    [box_pad_x, y, box_pad_x + BOX_W, y + BOX_H],
+                    "SYNC",
+                    SYNC_WARNING_COLOR,
+                    box_font,
+                    TEXT_COLOR,
+                    crossed=True,
+                )
                 y += BOX_H + BOX_GAP
             y += SECTION_GAP
 
@@ -1265,15 +1321,24 @@ class SimpleGUI(threading.Thread):
             preroll_active = 0
 
         drop_frame_live = int(self.redis_controller.get_value(ParameterKey.DROP_FRAME.value) or 0) == 1
+        frames_off_sync = bool(values.get("frames_off_sync"))
+        now = time.time()
+        if frames_off_sync and not self._frames_off_sync_prev:
+            self._sync_flash_until = now + 0.6
+        self._frames_off_sync_prev = frames_off_sync
+        sync_flash_live = now < self._sync_flash_until
 
-        if drop_frame_live:
+        if sync_flash_live:
+            self.current_background_color = SYNC_FLASH_COLOR
+            self.color_mode = "inverse"
+        elif drop_frame_live:
             self.current_background_color = "purple"
             self.color_mode = "inverse"
         elif preroll_active:
             self.current_background_color = "blue"
             self.color_mode = "inverse"
 
-        if not preroll_active and not drop_frame_live:
+        if not preroll_active and not drop_frame_live and not sync_flash_live:
             if int(self.redis_controller.get_value(ParameterKey.IS_WRITING.value) or 0) == 1:
                 # at least one camera is actively writing frames to disk
                 self.current_background_color = "red"

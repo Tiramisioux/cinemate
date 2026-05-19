@@ -26,7 +26,9 @@ After the recording finishes, Cinemate compares the expected frame count with th
 
 ### Frame-count sync status
 
-Cinemate stores the final frame-count result in Redis as `frames_in_sync`. A value of `1` means the take ended within the +/- one-frame tolerance. A value of `0` means the final on-disk frame count is outside that tolerance and the Simple GUI shows the magenta `SYNC` warning.
+Cinemate stores the frame-count sync warning state in Redis as `frames_in_sync`. A value of `1` means the active or latest take is still within the +/- one-frame tolerance. A value of `0` means Cinemate has seen the take drift outside that tolerance and the Simple GUI shows the magenta `SYNC` warning.
+
+During recording, Cinemate compares the live accepted frame-slot count against the expected slot count from the FPS timeline. If the difference grows beyond +/- one frame, the magenta `SYNC` warning flashes immediately and then latches until the next take starts.
 
 The final check waits until buffered frames have finished flushing to storage. While the RAM buffer is still draining after stop, Cinemate raises `is_writing_buf=1` and the Simple GUI stays green. The DNG count is checked only after that buffered write phase has gone idle, so frames that were still in RAM at stop time are included in the result.
 
@@ -36,7 +38,7 @@ For free-running takes, the expected-frame calculation follows FPS changes made 
 
 Dropped frames and frame-count sync are reported separately. A dropped-frame event means the clip has a hole at a known frame slot. That lights the purple `DROP` warning and increments `drop_frame_count`, but it does not by itself trigger the magenta `SYNC` warning. For sync analysis, those dropped-frame holes count as intentional timeline slots, because a later conform/export step can represent the hole explicitly.
 
-The magenta `SYNC` warning is for a different problem: the final number of recorded frame slots does not match the expected take length after buffered writes have flushed.
+The magenta `SYNC` warning is for a different problem: the live or final number of recorded frame slots does not match the expected take length after dropped-frame holes are accounted for.
 
 ### Storage pre-roll and startup guards
 

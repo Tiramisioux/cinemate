@@ -67,6 +67,7 @@ class RedisListener:
         self.drop_frame_timer = None
         self.drop_frame_count_current_take = 0
         self.drop_frame_relay_timer = None
+        self.frames_off_sync_latched_current_take = False
 
 
         self.cinepi_running = True
@@ -431,10 +432,11 @@ class RedisListener:
         start_time: datetime.datetime,
         end_time: datetime.datetime,
         sensor_count: int,
+        honor_frame_limit: bool = True,
     ) -> tuple[int, float]:
         sensor_effective = max(1, sensor_count)
 
-        if self.frame_limit_requested_slots is not None:
+        if honor_frame_limit and self.frame_limit_requested_slots is not None:
             expected_float = float(self.frame_limit_requested_slots * sensor_effective)
             return int(self.frame_limit_requested_slots * sensor_effective), expected_float
 
@@ -475,6 +477,46 @@ class RedisListener:
 
         expected_int = int(math.floor(expected_float + 1e-6))
         return expected_int, expected_float
+
+    def _update_live_frames_in_sync(self, now: datetime.datetime | None = None) -> None:
+        if not self.is_recording:
+            return
+        if self.recording_was_preroll or self._storage_preroll_active():
+            return
+        if self.frames_off_sync_latched_current_take:
+            return
+        if self.awaiting_fresh_framecount or not self.recording_start_time:
+            return
+
+        now = now or datetime.datetime.now()
+        expected_slots, expected_float = self._expected_frame_counts_for_recording(
+            self.recording_start_time,
+            now,
+            1,
+            honor_frame_limit=False,
+        )
+
+        # Avoid false warnings while the first few frame slots are still
+        # settling after record start. After that, any >1 slot drift latches.
+        if expected_float < 3:
+            return
+
+        recorded_slots = int(self.framecount or 0)
+        sync_slots = recorded_slots + int(self.drop_frame_count_current_take)
+        diff = expected_slots - sync_slots
+        if abs(diff) <= 1:
+            return
+
+        self.frames_off_sync_latched_current_take = True
+        self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 0)
+        logging.warning(
+            "Live frame sync warning: %+d frame slot difference "
+            "(expected=%d, recorded=%d, dropped-hole compensation=%d).",
+            diff,
+            expected_slots,
+            recorded_slots,
+            self.drop_frame_count_current_take,
+        )
 
     def _update_frames_in_sync(self, stats_data: dict[str, object] | None = None) -> None:
         if stats_data is not None:
@@ -692,6 +734,7 @@ class RedisListener:
 
                         # Check if framecount is changing
                         self.check_framecount_changing()
+                        self._update_live_frames_in_sync()
                         
                         # # Calculate average framerate of last 100 frames
                         # avg_framerate = self.calculate_average_framerate_last_100_frames()
@@ -774,6 +817,7 @@ class RedisListener:
     def _clear_frame_warning_state(self) -> None:
         self.drop_frame_count_current_take = 0
         self.drop_frame = False
+        self.frames_off_sync_latched_current_take = False
         if self.drop_frame_timer:
             self.drop_frame_timer.cancel()
             self.drop_frame_timer = None
@@ -919,6 +963,7 @@ class RedisListener:
         self.last_rise_time = None
         self.framecount_changing = False
         self.bufferSize = 0
+        self.frames_off_sync_latched_current_take = False
         self.redis_controller.set_value('framecount', 0)
         self.active_sensor_labels.clear()
         self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 1)
@@ -950,6 +995,7 @@ class RedisListener:
                     self.awaiting_fresh_framecount = True
                     self.fresh_framecount_guard_start_time = self.recording_start_time
                     self.drop_frame_count_current_take = 0
+                    self.frames_off_sync_latched_current_take = False
                     self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, 0)
                     self.redis_controller.set_value(ParameterKey.DROP_FRAME_RELAY.value, 0)
                     self.redis_controller.set_value(ParameterKey.DROP_FRAME_DURING_LAST_TAKE.value, 0)
@@ -1356,11 +1402,17 @@ class RedisListener:
                 f"Discrepancy detected: {diff:+d} frames difference between expected and recorded counts."
             )
 
+        live_sync_warning_latched = self.frames_off_sync_latched_current_take
+        if not frames_in_sync:
+            self.frames_off_sync_latched_current_take = True
+
         all_frames_accounted = frames_in_sync
         self.redis_controller.set_value(
             ParameterKey.FRAMES_IN_SYNC.value,
-            1 if frames_in_sync else 0,
+            1 if frames_in_sync and not live_sync_warning_latched else 0,
         )
+        if frames_in_sync and live_sync_warning_latched and not quiet_summary:
+            logging.info("Keeping live frame-sync warning latched until the next take.")
 
         current_correction_factor = self.fps_correction_factor_at_rec_start
         if not current_correction_factor or current_correction_factor <= 0:

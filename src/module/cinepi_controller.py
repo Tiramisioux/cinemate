@@ -14,6 +14,7 @@ import sys
 from module.redis_controller import ParameterKey
 from module.ir_filter import IRFilter
 from module.config_loader import load_settings as _load_settings
+from module.storage_profiles import recorder_profile_name_for_filesystem
 
 SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
 
@@ -75,6 +76,17 @@ class CinePiController:
         self._timed_rec_timer   = None
         self._timed_rec_description = None
         self.redis_listener = None
+        self._storage_profile_restart_lock = threading.Lock()
+        self._storage_profile_restart_active = False
+        self._storage_profile_restart_pending = False
+        self._active_storage_recorder_profile = self._current_storage_recorder_profile()
+        try:
+            self.ssd_monitor.mount_event.subscribe(self._handle_storage_mount_event)
+            self.redis_controller.redis_parameter_changed.subscribe(
+                self._handle_storage_restart_redis_event
+            )
+        except Exception as exc:
+            logging.warning("Unable to subscribe to storage profile changes: %s", exc)
         
         # Set startup flag
         self.startup = True
@@ -105,7 +117,7 @@ class CinePiController:
         self.current_sensor = self.sensor_detect.camera_model
         self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)
         
-        self.sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
+        self.sensor_mode = self._get_startup_sensor_mode()
         self.sensor_mode_saved = self.sensor_mode
         self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
             self.current_sensor,
@@ -130,18 +142,17 @@ class CinePiController:
         
         self.initialize_fps_steps(self.fps_steps)
         self.initialize_shutter_angle_steps()
-        self.initialize_wb_cg_rb_array()  # Initialize the white balance array
 
-        settings = self.load_settings()
-
-        self.iso_free = settings['free_mode'].get('iso_free', False)
-        self.shutter_a_free = settings['free_mode'].get('shutter_a_free', False)
-        self.fps_free = settings['free_mode'].get('fps_free', False)
-        self.wb_free = settings['free_mode'].get('wb_free', False)
+        free_mode = self.settings.get('free_mode', {})
+        self.iso_free = free_mode.get('iso_free', False)
+        self.shutter_a_free = free_mode.get('shutter_a_free', False)
+        self.fps_free = free_mode.get('fps_free', False)
+        self.wb_free = free_mode.get('wb_free', False)
         
         self.RAM_LIMIT_PERCENT = 80
 
         self.update_steps()
+        self.initialize_wb_cg_rb_array()  # Initialize after free-mode expands WB steps.
 
         # Set a timer to clear the startup flag after a short period
         threading.Timer(5.0, self.clear_startup_flag).start()
@@ -150,7 +161,13 @@ class CinePiController:
         self.set_fps(self.fps)
         logging.info(f"Initialized fps: {self.fps}")
         
-        #self.set_resolution(int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value)))
+    def _get_startup_sensor_mode(self) -> int:
+        value = self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value)
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, 0)
+            return 0
         
     # ─── step-table helpers ────────────────────────────────────────────────
     def _rebuild_iso_steps(self):
@@ -175,7 +192,7 @@ class CinePiController:
         self.fps_steps_dynamic = [v for v in self.fps_steps if v <= self.fps_max]
 
     def _rebuild_wb_steps(self):
-        self.wb_steps = (list(range(1000, 10001, 50))
+        self.wb_steps = (list(range(2800, 6501, 100))
                         if self.wb_free
                         else list(self.settings['arrays']['wb_steps']))
     
@@ -270,16 +287,6 @@ class CinePiController:
         shutter_a_nom = self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)
         return float(shutter_a_nom) / 360.0 / float(fps)
 
-    def update_steps(self):
-        if self.iso_free:
-            self.iso_steps = list(range(100, 3201, 50))
-        if self.shutter_a_free:
-            self.shutter_a_steps = [round(i * 0.1, 1) for i in range(10, 3601)]
-        if self.fps_free:
-            self.fps_steps = list(range(1, self.fps_max + 1))
-        if self.wb_free:
-            self.wb_steps = list(range(1, 6501, 100))
-        
     def set_iso_free(self, value=None):
         if value is None:
             self.iso_free = not self.iso_free
@@ -310,6 +317,7 @@ class CinePiController:
         else:
             self.wb_free = value
         self.update_steps()
+        self.initialize_wb_cg_rb_array()
         logging.info(f"WB Free Mode set to {self.wb_free}")
 
     def load_settings(self):
@@ -349,12 +357,18 @@ class CinePiController:
         self.settings['free_mode']['shutter_a_free'] = shutter_a_free
         self.settings['free_mode']['fps_free'] = fps_free
         self.settings['free_mode']['wb_free'] = wb_free
+        self.iso_free = iso_free
+        self.shutter_a_free = shutter_a_free
+        self.fps_free = fps_free
+        self.wb_free = wb_free
         self.redis_controller.mset({
             'iso_free': iso_free,
             'shutter_a_free': shutter_a_free,
             'fps_free': fps_free,
             'wb_free': wb_free
         })
+        self.update_steps()
+        self.initialize_wb_cg_rb_array()
 
         # Update shutter angle steps immediately if changed
         if shutter_a_free:
@@ -648,6 +662,91 @@ class CinePiController:
 
     def is_preroll_active(self) -> bool:
         return self._preroll_active.is_set()
+
+    def _current_storage_recorder_profile(self) -> str:
+        filesystem = self.redis_controller.get_value(
+            ParameterKey.STORAGE_FILESYSTEM.value,
+            "none",
+        )
+        return recorder_profile_name_for_filesystem(filesystem)
+
+    def _storage_profile_restart_allowed(self) -> bool:
+        if str(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)) == "1":
+            return False
+        if str(self.redis_controller.get_value(ParameterKey.STORAGE_PREROLL_ACTIVE.value)) == "1":
+            return False
+        return not self.is_preroll_active()
+
+    def _handle_storage_mount_event(self, *_args) -> None:
+        self._maybe_schedule_storage_profile_restart("storage mount")
+
+    def _handle_storage_restart_redis_event(self, data=None) -> None:
+        if not isinstance(data, dict):
+            return
+        key = data.get("key")
+        if key not in (
+            ParameterKey.IS_RECORDING.value,
+            ParameterKey.STORAGE_PREROLL_ACTIVE.value,
+        ):
+            return
+        if self._storage_profile_restart_pending and self._storage_profile_restart_allowed():
+            self._maybe_schedule_storage_profile_restart("deferred storage profile change")
+
+    def _maybe_schedule_storage_profile_restart(self, reason: str) -> None:
+        target_profile = self._current_storage_recorder_profile()
+        with self._storage_profile_restart_lock:
+            if target_profile == self._active_storage_recorder_profile:
+                self._storage_profile_restart_pending = False
+                return
+
+            if not self._storage_profile_restart_allowed():
+                self._storage_profile_restart_pending = True
+                logging.info(
+                    "Deferring cinepi-raw restart for storage profile %s -> %s (%s)",
+                    self._active_storage_recorder_profile,
+                    target_profile,
+                    reason,
+                )
+                return
+
+            if self._storage_profile_restart_active:
+                self._storage_profile_restart_pending = True
+                return
+
+            self._storage_profile_restart_active = True
+            self._storage_profile_restart_pending = False
+
+        thread = threading.Thread(
+            target=self._restart_camera_for_storage_profile,
+            args=(target_profile, reason),
+            name="StorageProfileRestart",
+            daemon=True,
+        )
+        thread.start()
+
+    def _restart_camera_for_storage_profile(self, target_profile: str, reason: str) -> None:
+        try:
+            if not self._storage_profile_restart_allowed():
+                with self._storage_profile_restart_lock:
+                    self._storage_profile_restart_pending = True
+                return
+
+            logging.info(
+                "Restarting cinepi-raw for storage profile change %s -> %s (%s)",
+                self._active_storage_recorder_profile,
+                target_profile,
+                reason,
+            )
+            self.restart_camera(preview_enabled=True)
+            with self._storage_profile_restart_lock:
+                self._active_storage_recorder_profile = target_profile
+        finally:
+            rerun = False
+            with self._storage_profile_restart_lock:
+                self._storage_profile_restart_active = False
+                rerun = self._storage_profile_restart_pending
+            if rerun and self._storage_profile_restart_allowed():
+                self._maybe_schedule_storage_profile_restart("queued storage profile change")
 
     def start_recording(self):
         self._cancel_timed_recording_stop()
@@ -1150,7 +1249,9 @@ class CinePiController:
         
     def initialize_wb_cg_rb_array(self):
         """Initialize the white balance cg_rb array based on the sensor model."""
-        if self.current_sensor == 'imx283':
+        sensor_key = self.current_sensor.replace('_mono', '')
+
+        if sensor_key == 'imx283':
             default_ct_curve = [
                     2213.0, 0.9607, 0.2593,
                     2255.0, 0.9309, 0.2521,
@@ -1158,7 +1259,7 @@ class CinePiController:
                     5313.0, 0.4822, 0.5909,
                     6237.0, 0.4726, 0.6376
                 ]
-        if self.current_sensor == 'imx585':
+        elif sensor_key == 'imx585':
             default_ct_curve = [
                     2187.0, 1.1114, 0.1026,
                     2258.0, 1.1063, 0.1147,
@@ -1223,8 +1324,13 @@ class CinePiController:
             logging.info(f"Parsed b_values: {b_values}")
 
             for wb in self.wb_steps:
-                lower_idx = max(i for i, temp in enumerate(temperatures) if temp <= wb)
-                upper_idx = min(i for i, temp in enumerate(temperatures) if temp >= wb)
+                if wb <= temperatures[0]:
+                    lower_idx = upper_idx = 0
+                elif wb >= temperatures[-1]:
+                    lower_idx = upper_idx = len(temperatures) - 1
+                else:
+                    lower_idx = max(i for i, temp in enumerate(temperatures) if temp <= wb)
+                    upper_idx = min(i for i, temp in enumerate(temperatures) if temp >= wb)
 
                 logging.info(f"Interpolating for wb step: {wb}K, lower index: {lower_idx}, upper index: {upper_idx}")
 
@@ -1316,6 +1422,7 @@ class CinePiController:
         
     def restart_camera(self, preview_enabled=None):
         self.cinepi.restart(preview_enabled=preview_enabled)
+        self._active_storage_recorder_profile = self._current_storage_recorder_profile()
 
     def restart_cinemate(self):
         """Restart the entire CineMate application."""

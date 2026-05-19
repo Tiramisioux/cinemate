@@ -5,7 +5,10 @@ trap 'printf "[cinemate-install] ERROR: line %s while running: %s\n" "$LINENO" "
 
 # Edit these defaults once, or override them inline:
 # Default hardware profile: IMX477 on cam0 and HDMI-A-1.
-#   SENSOR_MODEL=imx585 CAM_PORT=cam1 ./cinemate-install.sh
+#   SENSOR_MODEL=imx296 CAM_PORT=cam0 ./cinemate-install.sh
+#   SENSOR_MODEL=imx283 CAM_PORT=cam0 ./cinemate-install.sh
+#   SENSOR_MODEL=imx585 CAM_PORT=cam0 ./cinemate-install.sh
+#   SENSOR_MODEL=imx585_mono CAM_PORT=cam1 ./cinemate-install.sh
 
 PI_USER="${PI_USER:-pi}"
 PI_GROUP="${PI_GROUP:-$PI_USER}"
@@ -34,15 +37,17 @@ INSTALL_ALT_GPIO_BACKEND="${INSTALL_ALT_GPIO_BACKEND:-1}"
 INSTALL_CONSOLE_FONT="${INSTALL_CONSOLE_FONT:-1}"
 INSTALL_PISHRINK="${INSTALL_PISHRINK:-1}"
 INSTALL_PLYMOUTH="${INSTALL_PLYMOUTH:-1}"
+INSTALL_IMX283_DRIVER="${INSTALL_IMX283_DRIVER:-1}"
 INSTALL_IMX585_DRIVER="${INSTALL_IMX585_DRIVER:-1}"
 INSTALL_IR_FILTER_HELPER="${INSTALL_IR_FILTER_HELPER:-auto}"
+ENABLE_CONSOLE_AUTOLOGIN="${ENABLE_CONSOLE_AUTOLOGIN:-1}"
 
 ENABLE_SUPPORT_SERVICES="${ENABLE_SUPPORT_SERVICES:-1}"
 ENABLE_STORAGE_AUTOMOUNT_SERVICE="${ENABLE_STORAGE_AUTOMOUNT_SERVICE:-1}"
 ENABLE_WIFI_HOTSPOT_SERVICE="${ENABLE_WIFI_HOTSPOT_SERVICE:-1}"
 ENABLE_REDIS_LOG_MAINTENANCE_SERVICE="${ENABLE_REDIS_LOG_MAINTENANCE_SERVICE:-1}"
 ENABLE_AUTOSTART="${ENABLE_AUTOSTART:-1}"
-START_AUTOSTART_NOW="${START_AUTOSTART_NOW:-1}"
+START_AUTOSTART_NOW="${START_AUTOSTART_NOW:-0}"
 RUN_REBOOT="${RUN_REBOOT:-0}"
 UPDATE_EXISTING_REPOS="${UPDATE_EXISTING_REPOS:-1}"
 SUPPORTED_OS_CODENAME="${SUPPORTED_OS_CODENAME:-bookworm}"
@@ -54,6 +59,7 @@ LIBCAMERA_DIR="${LIBCAMERA_DIR:-$PI_HOME/libcamera}"
 CPP_MJPEG_STREAMER_DIR="${CPP_MJPEG_STREAMER_DIR:-$PI_HOME/cpp-mjpeg-streamer}"
 REDIS_PLUS_PLUS_DIR="${REDIS_PLUS_PLUS_DIR:-$PI_HOME/redis-plus-plus}"
 LGPIO_DIR="${LGPIO_DIR:-$PI_HOME/lg}"
+IMX283_DRIVER_DIR="${IMX283_DRIVER_DIR:-$PI_HOME/imx283-v4l2-driver}"
 IMX585_DRIVER_DIR="${IMX585_DRIVER_DIR:-$PI_HOME/imx585-v4l2-driver}"
 VENV_DIR="${VENV_DIR:-$PI_HOME/.cinemate-env}"
 
@@ -69,6 +75,8 @@ REDIS_PLUS_PLUS_REPO_URL="${REDIS_PLUS_PLUS_REPO_URL:-https://github.com/sewenew
 REDIS_PLUS_PLUS_REPO_REF="${REDIS_PLUS_PLUS_REPO_REF:-}"
 LGPIO_REPO_URL="${LGPIO_REPO_URL:-https://github.com/joan2937/lg.git}"
 LGPIO_REPO_REF="${LGPIO_REPO_REF:-}"
+IMX283_DRIVER_REPO_URL="${IMX283_DRIVER_REPO_URL:-https://github.com/will127534/imx283-v4l2-driver.git}"
+IMX283_DRIVER_REPO_REF="${IMX283_DRIVER_REPO_REF:-6.12.y}"
 IMX585_DRIVER_REPO_URL="${IMX585_DRIVER_REPO_URL:-https://github.com/will127534/imx585-v4l2-driver.git}"
 IMX585_DRIVER_REPO_REF="${IMX585_DRIVER_REPO_REF:-6.12.y}"
 IR_FILTER_URL="${IR_FILTER_URL:-https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter}"
@@ -276,11 +284,22 @@ print_configuration_summary() {
     log "Install profile summary:"
     detail "User: $PI_USER ($PI_HOME)"
     detail "Sensor: $SENSOR_MODEL on $CAM_PORT"
+    case "$SENSOR_MODEL" in
+        imx296)
+            detail "One-click profile: Raspberry Pi GS camera; no extra DKMS sensor driver required"
+            ;;
+        imx283)
+            detail "One-click profile: OneInchEye; Cinemate installs the IMX283 DKMS driver and tuning override automatically"
+            ;;
+    esac
+    if [[ "$SENSOR_MODEL" == "imx296" || "$SENSOR_MODEL" == "imx477" ]]; then
+        detail "Pi 4 raw mode: Cinemate will use packed cinepi-raw modes for this sensor; Pi 5 stays unpacked"
+    fi
     detail "Boot HDMI: HDMI-A-$((HDMI_BOOT_PORT + 1)) at $HDMI_MODE"
     detail "Runtime HDMI ports: cam0->$HDMI_PORT_CAM0 cam1->$HDMI_PORT_CAM1"
     detail "Libcamera: $LIBCAMERA_REPO_URL @ $LIBCAMERA_REPO_REF"
     detail "Hotspot: $HOTSPOT_NAME (enabled=$HOTSPOT_ENABLED)"
-    detail "Optional features: lgpio=$INSTALL_ALT_GPIO_BACKEND console_font=$INSTALL_CONSOLE_FONT pishrink=$INSTALL_PISHRINK plymouth=$INSTALL_PLYMOUTH imx585_driver=$INSTALL_IMX585_DRIVER ir_filter=$INSTALL_IR_FILTER_HELPER"
+    detail "Optional features: lgpio=$INSTALL_ALT_GPIO_BACKEND console_font=$INSTALL_CONSOLE_FONT console_autologin=$ENABLE_CONSOLE_AUTOLOGIN pishrink=$INSTALL_PISHRINK plymouth=$INSTALL_PLYMOUTH imx283_driver=$INSTALL_IMX283_DRIVER imx585_driver=$INSTALL_IMX585_DRIVER ir_filter=$INSTALL_IR_FILTER_HELPER"
     detail "Services: support=$ENABLE_SUPPORT_SERVICES storage=$ENABLE_STORAGE_AUTOMOUNT_SERVICE wifi=$ENABLE_WIFI_HOTSPOT_SERVICE redis_log=$ENABLE_REDIS_LOG_MAINTENANCE_SERVICE autostart=$ENABLE_AUTOSTART start_now=$START_AUTOSTART_NOW"
 }
 
@@ -483,7 +502,7 @@ install_apt_packages() {
         console-terminus swig
     )
 
-    if should_install_imx585_driver; then
+    if should_install_imx283_driver || should_install_imx585_driver; then
         optional_packages+=(dkms)
     fi
     if is_true "$INSTALL_CONSOLE_FONT"; then
@@ -521,6 +540,14 @@ should_install_imx585_driver() {
         return
     fi
     is_true "$INSTALL_IMX585_DRIVER"
+}
+
+should_install_imx283_driver() {
+    if [[ "${INSTALL_IMX283_DRIVER,,}" == "auto" ]]; then
+        [[ "$SENSOR_MODEL" == "imx283" ]]
+        return
+    fi
+    is_true "$INSTALL_IMX283_DRIVER"
 }
 
 should_install_ir_filter_helper() {
@@ -742,85 +769,128 @@ configure_boot_config() {
     backup_file "$config_txt"
     temp="$(mktemp)"
 
-    python3 - "$config_txt" "$temp" "$MANAGED_BEGIN" "$MANAGED_END" "$DTO_OVERLAY" "$CAMERA_AUTO_DETECT" "$BT_OVERLAY" "$ENABLE_CFE_HAT_PCIE" <<'PY'
+    python3 - "$temp" "$MANAGED_BEGIN" "$MANAGED_END" "$DTO_OVERLAY" "$CAMERA_AUTO_DETECT" "$BT_OVERLAY" "$ENABLE_CFE_HAT_PCIE" "$SENSOR_MODEL" <<'PY'
 import pathlib
-import re
 import sys
 
-src = pathlib.Path(sys.argv[1])
-dst = pathlib.Path(sys.argv[2])
-begin = sys.argv[3]
-end = sys.argv[4]
-overlay = sys.argv[5]
-camera_auto_detect = sys.argv[6]
-bt_overlay = sys.argv[7]
-enable_pcie = sys.argv[8].lower() in {"1", "true", "yes", "on"}
+dst = pathlib.Path(sys.argv[1])
+begin = sys.argv[2]
+end = sys.argv[3]
+overlay = sys.argv[4]
+camera_auto_detect = sys.argv[5]
+bt_overlay = sys.argv[6]
+enable_pcie = sys.argv[7].lower() in {"1", "true", "yes", "on"}
+sensor_model = sys.argv[8]
 
-text = src.read_text() if src.exists() else ""
-out = []
-inside = False
-regexes = [
-    re.compile(r"^\s*camera_auto_detect="),
-    re.compile(r"^\s*dtoverlay=imx(296|283|477|585)(,.*)?$"),
-    re.compile(r"^\s*display_auto_detect=1$"),
-    re.compile(r"^\s*auto_initramfs=1$"),
-    re.compile(r"^\s*dtoverlay=vc4-kms-v3d$"),
-    re.compile(r"^\s*max_framebuffers=2$"),
-    re.compile(r"^\s*disable_fw_kms_setup=1$"),
-    re.compile(r"^\s*arm_64bit=1$"),
-    re.compile(r"^\s*disable_overscan=1$"),
-    re.compile(r"^\s*arm_boost=1$"),
-    re.compile(r"^\s*dtparam=i2c_arm=on$"),
-    re.compile(r"^\s*dtparam=i2c1=on$"),
-    re.compile(r"^\s*dtparam=audio=on$"),
-    re.compile(r"^\s*dtparam=pciex1$"),
-    re.compile(r"^\s*dtparam=pciex1_gen=3$"),
-    re.compile(r"^\s*dtoverlay=disable-bt$"),
-    re.compile(r"^\s*dtoverlay=miniuart-bt$"),
-    re.compile(r"^\s*avoid_warnings=1$"),
-    re.compile(r"^\s*disable_splash=1$"),
-    re.compile(r"^\s*otg_mode=1$"),
-    re.compile(r"^\s*dtoverlay=dwc2,dr_mode=host$"),
-]
+def camera_section(label, key, default_auto_detect, default_overlay):
+    active = key == sensor_model
+    line_prefix = "" if active else "#"
+    auto_detect = camera_auto_detect if active else default_auto_detect
+    dtoverlay = overlay if active else default_overlay
+    return [
+        f"# {label}",
+        f"{line_prefix}camera_auto_detect={auto_detect}",
+        f"{line_prefix}dtoverlay={dtoverlay}",
+        "",
+    ]
 
-for line in text.splitlines():
-    stripped = line.strip()
-    if stripped == begin:
-        inside = True
-        continue
-    if inside:
-        if stripped == end:
-            inside = False
-        continue
-    if any(rx.match(stripped) for rx in regexes):
-        continue
-    out.append(line)
 
 block = [
     begin,
     "# Managed by cinemate-install.sh",
+    "# For more options and information see",
+    "# http://rptl.io/configtxt",
+    "# Some settings may impact device functionality. See link above for details",
+    "",
+    "# Uncomment some or all of these to enable the optional hardware interfaces",
     "dtparam=i2c_arm=on",
+    "#dtparam=i2s=on",
+    "#dtparam=spi=on",
+    "",
+    "# Enable audio (loads snd_bcm2835)",
     "dtparam=audio=on",
-    f"camera_auto_detect={camera_auto_detect}",
-    f"dtoverlay={overlay}",
+    "",
+    "# ---- Camera section ----",
+    "",
+]
+
+block += camera_section(
+    "Raspberry Pi HQ camera (IMX477, clean-install default on cam0)",
+    "imx477",
+    "1",
+    "imx477,cam0",
+)
+block += camera_section(
+    "Raspberry Pi GS camera (IMX296, 10-bit RAW)",
+    "imx296",
+    "1",
+    "imx296,cam0",
+)
+block += camera_section(
+    "OneInchEye (IMX283)",
+    "imx283",
+    "0",
+    "imx283,cam0",
+)
+block += camera_section(
+    "StarlightEye color (IMX585)",
+    "imx585",
+    "0",
+    "imx585,cam0",
+)
+block += camera_section(
+    "StarlightEye Mono (IMX585 mono)",
+    "imx585_mono",
+    "0",
+    "imx585,cam1,mono",
+)
+
+block += [
+    "# ---- End camera section ----",
+    "",
+    "# Automatically load overlays for detected DSI displays",
     "display_auto_detect=1",
+    "",
+    "# Automatically load initramfs files, if found",
     "auto_initramfs=1",
+    "",
+    "# Enable DRM VC4 V3D driver",
     "dtoverlay=vc4-kms-v3d",
     "max_framebuffers=2",
+    "",
+    "# Don't have the firmware create an initial video= setting in cmdline.txt.",
+    "# Use the kernel's default instead.",
     "disable_fw_kms_setup=1",
+    "",
+    "# Run in 64-bit mode",
     "arm_64bit=1",
+    "",
+    "# Disable compensation for displays with overscan",
     "disable_overscan=1",
+    "",
+    "# Run as fast as firmware / board allows",
     "arm_boost=1",
+    "",
     "[cm4]",
+    "# Enable host mode on the 2711 built-in XHCI USB controller.",
+    "# This line should be removed if the legacy DWC2 controller is required",
+    "# (e.g. for USB device mode) or if USB support is not required.",
     "otg_mode=1",
+    "",
     "[cm5]",
     "dtoverlay=dwc2,dr_mode=host",
 ]
 
 if enable_pcie:
-    block += ["dtparam=pciex1", "dtparam=pciex1_gen=3"]
+    block += [
+        "",
+        "# CFE Hat PCIe 3.0",
+        "dtparam=pciex1",
+        "dtparam=pciex1_gen=3",
+    ]
 
 block += [
+    "",
     "[all]",
     "auto_initramfs=1",
     "avoid_warnings=1",
@@ -830,11 +900,7 @@ block += [
     end,
 ]
 
-payload = "\n".join(out).rstrip()
-if payload:
-    payload += "\n\n"
-payload += "\n".join(block) + "\n"
-dst.write_text(payload)
+dst.write_text("\n".join(block) + "\n")
 PY
 
     sudo install -m 644 "$temp" "$config_txt"
@@ -971,6 +1037,28 @@ configure_console_font() {
     sudo systemctl start console-setup.service
 }
 
+configure_console_autologin() {
+    if ! is_true "$ENABLE_CONSOLE_AUTOLOGIN"; then
+        detail "Skipping console auto-login setup"
+        return 0
+    fi
+
+    local dropin_dir="/etc/systemd/system/getty@tty1.service.d"
+    local override="$dropin_dir/autologin.conf"
+
+    log "Configuring tty1 console auto-login"
+    detail "Auto-login user: $PI_USER"
+    sudo install -d -m 755 "$dropin_dir"
+    backup_file "$override"
+    write_root_file "$override" 644 <<EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin $PI_USER --noclear %I \$TERM
+EOF
+    sudo systemctl daemon-reload
+    detail "Console auto-login will apply on the next tty1 restart or reboot"
+}
+
 configure_pishrink() {
     if ! is_true "$INSTALL_PISHRINK"; then
         detail "Skipping PiShrink install"
@@ -1022,6 +1110,21 @@ install_imx585_support() {
     run_as_pi_clean_shell "cd '$IMX585_DRIVER_DIR' && ./setup.sh"
     if is_rpi2712_platform; then
         detail "Ensuring DKMS builds IMX585 for the pinned Pi 5 kernel baseline"
+        sudo dkms autoinstall -k "$KERNEL_BASELINE_ABI_2712"
+    fi
+}
+
+install_imx283_support() {
+    if ! should_install_imx283_driver; then
+        detail "Skipping IMX283 driver support"
+        return 0
+    fi
+
+    ensure_repo "$IMX283_DRIVER_DIR" "$IMX283_DRIVER_REPO_URL" "$IMX283_DRIVER_REPO_REF"
+    log "Installing IMX283 driver"
+    run_as_pi_clean_shell "cd '$IMX283_DRIVER_DIR' && ./setup.sh"
+    if is_rpi2712_platform; then
+        detail "Ensuring DKMS builds IMX283 for the pinned Pi 5 kernel baseline"
         sudo dkms autoinstall -k "$KERNEL_BASELINE_ABI_2712"
     fi
 }
@@ -1213,11 +1316,12 @@ seed_redis_defaults() {
         file_size 0 fps 24 fps_actual 24 fps_last 24 fps_max 1 fps_user 24 framecount 0 \
         gui_layout 0 height 0 ir_filter 0 is_buffering 0 is_mounted 0 is_recording 0 \
         is_writing 0 is_writing_buf 0 tc_cam0 0 tc_cam1 0 iso 100 lores_height 0 lores_width 0 \
-        pi_model 0 rec 0 sensor 0 sensor_mode 0 shutter_a 0 space_left 0 storage_type 0 \
+        pi_model 0 rec 0 sensor 0 shutter_a 0 space_left 0 storage_type 0 \
         wb 5600 wb_user 5600 width 0 memory_alert 0 \
         shutter_a_sync_mode 0 shutter_angle_nom 0 shutter_angle_actual 0 shutter_angle_transient 0 \
         exposure_time 0 last_dng_cam1 0 last_dng_cam0 0 \
         zoom 0 write_speed_to_drive 0 recording_time 0 >/dev/null
+    run_as_pi redis-cli SETNX sensor_mode 0 >/dev/null
     run_as_pi redis-cli SET cg_rb 3.5,1.5 >/dev/null
     run_as_pi redis-cli PUBLISH cp_controls cg_rb >/dev/null || true
 }
@@ -1274,7 +1378,7 @@ install_cinemate_services() {
                 fi
             fi
         else
-            detail "Autostart enabled but not started immediately"
+            detail "Autostart enabled for next boot; not starting during installer"
         fi
     else
         detail "Skipping Cinemate autostart service"
@@ -1327,6 +1431,7 @@ main() {
     section "Seeding initial cinepi-raw Redis defaults"
     seed_cinepi_raw_white_balance
     section "Installing sensor-specific support"
+    install_imx283_support
     install_imx585_support
     install_sensor_tuning_overrides
     install_ir_filter_helper
@@ -1346,6 +1451,7 @@ main() {
     configure_post_processing
     section "Applying optional UI and boot helpers"
     configure_console_font
+    configure_console_autologin
     configure_pishrink
     configure_plymouth
     section "Refreshing Pi 5 boot handoff"

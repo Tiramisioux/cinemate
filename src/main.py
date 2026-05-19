@@ -644,6 +644,10 @@ def run_application(args, log_queue):
 
     # Reset recording time
     redis_controller.set_value(ParameterKey.RECORDING_TIME.value, 0)
+
+    # Detect already-mounted RAW media before cinepi-raw is launched so the
+    # recorder starts with the filesystem-specific storage profile.
+    ssd_monitor.refresh()
     
     # Initialize CinePi application
     cinepi = CinePi(redis_controller, sensor_detect)

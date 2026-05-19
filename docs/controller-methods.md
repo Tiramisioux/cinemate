@@ -23,8 +23,8 @@ These methods adjust ISO, shutter angle and frame rate. Increment/decrement help
 
 ## White balance
 
-- `set_wb(kelvin=None, direction='next')` – Set white balance to a specific Kelvin temperature or cycle through presets if no value is given.
-- `inc_wb()` / `dec_wb()` – Move to the next or previous white balance preset.
+- `set_wb(kelvin=None, direction='next')` – Set white balance to a specific Kelvin temperature or cycle through the active WB step table if no value is given.
+- `inc_wb()` / `dec_wb()` – Move to the next or previous white balance step. In WB free mode this is 100 K per step.
 
 ## Resolution and preview
 
@@ -70,4 +70,3 @@ When free mode is enabled, the preset arrays from `settings.json` are ignored an
 ## Sensor‑specific tools
 
 - `set_filter(value=None)` – Enable or disable the StarlightEye IR cut filter (IMX585 sensors only).
-

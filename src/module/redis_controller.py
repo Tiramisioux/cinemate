@@ -61,6 +61,9 @@ class ParameterKey(Enum):
 
     SPACE_LEFT        = "space_left"
     STORAGE_TYPE      = "storage_type"
+    STORAGE_FILESYSTEM = "storage_filesystem"
+    STORAGE_MOUNT_OPTIONS = "storage_mount_options"
+    STORAGE_RECORDER_PROFILE = "storage_recorder_profile"
     TRIGGER_MODE      = "trigger_mode"
     WB                = "wb"
     WB_USER           = "wb_user"

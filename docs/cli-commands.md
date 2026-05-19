@@ -32,8 +32,8 @@ corresponding controller methods.
 | `inc shutter a nom` / `dec shutter a nom`  | -              |                      | Step the nominal shutter angle                  |
 | `set fps <value>`                          | float             | `set fps 24`                            | Change frame rate (snaps unless free)           |
 | `inc fps` / `dec fps`                      | -              |                                | Step through FPS list                           |
-| `set wb [<Kelvin>]`                        | int or none       | `set wb 5600`                           | Set white balance or cycle presets              |
-| `inc wb` / `dec wb`                        | -              |                                 | Cycle white balance steps                       |
+| `set wb [<Kelvin>]`                        | int or none       | `set wb 5600`                           | Set white balance or cycle active WB steps      |
+| `inc wb` / `dec wb`                        | -              |                                 | Step white balance; 100 K steps in free mode    |
 | `set resolution [<mode>]`                  | int or none       | `set resolution 2`                      | Apply or cycle sensor mode                      |
 | `set anamorphic factor [<float>]`          | float or none     | `set anamorphic factor 1.33`            | Set or toggle anamorphic stretch                |
 | `set zoom [<float>]`                       | float or none     | `set zoom 2`                            | Change digital zoom; omit to cycle              |
@@ -41,7 +41,7 @@ corresponding controller methods.
 | `mount` / `unmount`                        | -              |                                  | Mount or unmount external storage               |
 | `toggle mount`                             | -              |                           | Mount if not mounted, otherwise unmount         |
 | `erase`                                    | -              | `erase`                                | Delete every clip on the mounted RAW volume without reformatting |
-| `format`                                   | `[ext4\|ntfs]` | `format ntfs`                          | Reformat the RAW drive (defaults to ext4) and remount it |
+| `format`                                   | `[ext4\|exfat\|ntfs]` | `format ext4`                          | Reformat the RAW drive (defaults to ext4) and remount it |
 | `storage preroll`                          | -              | `storage preroll`                       | Run the storage warm-up recording that prepares the media |
 | `time`                                     | -              |                                   | Show system and RTC time                        |
 | `set rtc time`                             | -              |                           | Copy system time to the RTC                     |
@@ -60,7 +60,7 @@ corresponding controller methods.
 | `set iso free [0/1]`                       | 0/1 or none       | `set iso free 1`                        | Allow any ISO instead of presets                |
 | `set shutter a free [0/1]`                 | 0/1 or none       | `set shutter a free 0`                  | Allow any shutter angle                         |
 | `set fps free [0/1]`                       | 0/1 or none       | `set fps free 1`                        | Allow any FPS                                   |
-| `set wb free [0/1]`                        | 0/1 or none       | `set wb free`                           | Allow any white balance                         |
+| `set wb free [0/1]`                        | 0/1 or none       | `set wb free`                           | Use 100 K WB steps from 2800 K to 6500 K        |
 | `set filter <0/1>`                         | 0/1               | `set filter 1`                          | Toggle IR-cut filter (IMX585)                   |
 
 
@@ -78,7 +78,7 @@ If recording is not already running, the CLI starts it automatically before armi
 Two new commands simplify preparing removable media directly from the Cinemate CLI:
 
 - `erase` empties the mounted RAW volume without touching the filesystem structure so you can clear cards quickly between takes.
-- `format [ext4|ntfs]` reformats the drive with the chosen filesystem (`ext4` by default), remounts it and refreshes the free-space monitor. The helper tolerates the common `ex4` typo and refuses unsupported targets so you do not accidentally create an unusable volume.
+- `format [ext4|exfat|ntfs]` reformats the drive with the chosen filesystem (`ext4` by default), remounts it and refreshes the free-space monitor. The helper tolerates the common `ex4` typo and refuses unsupported targets so you do not accidentally create an unusable volume.
 
 Both actions require the RAW drive to be mounted; otherwise the CLI reports an error and leaves the media untouched.
 

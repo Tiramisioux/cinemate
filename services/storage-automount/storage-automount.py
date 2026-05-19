@@ -71,6 +71,13 @@ _active_raw: str | None = None
 _raw_lock = threading.RLock()  # Reentrant lock to allow nested acquisition
 _sysctl_saved: dict[str, str | None] = {}
 _udev_ctx = pyudev.Context()
+YANK_ERRNOS = {
+    errno.EIO,
+    errno.ENOENT,
+    errno.ENODEV,
+    getattr(errno, "ENOTCONN", errno.EIO),
+    getattr(errno, "ESTALE", errno.EIO),
+}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Media Profiles (tuning per connection type)
@@ -121,11 +128,13 @@ PROFILES = {
     },
 }
 
-# Non-ext4 filesystem options
-FS_OPTS_BASE = {
-    "ntfs": f"uid={PI_UID},gid={PI_GID},dmask=022,fmask=133,rw,noatime",
-    "exfat": f"uid={PI_UID},gid={PI_GID},dmask=022,fmask=133,rw,noatime",
-    "vfat": f"uid={PI_UID},gid={PI_GID},dmask=022,fmask=133,rw,noatime",
+# Filesystem mount profiles. ext4 uses the media profile above so faster media
+# can get deeper dirty/writeback cushions while sharing one filesystem contract.
+FS_MOUNT_PROFILES = {
+    "ntfs": {"opts": f"uid={PI_UID},gid={PI_GID},dmask=022,fmask=133,rw,noatime"},
+    "ntfs3": {"opts": f"uid={PI_UID},gid={PI_GID},dmask=022,fmask=133,rw,noatime"},
+    "exfat": {"opts": f"uid={PI_UID},gid={PI_GID},dmask=022,fmask=133,rw,noatime"},
+    "vfat": {"opts": f"uid={PI_UID},gid={PI_GID},dmask=022,fmask=133,rw,noatime"},
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -287,6 +296,14 @@ def _apply_sysctl_cushions(kind: str):
     log.info("Applied sysctl for %s: dirty=%d MB, bg=%d MB",
              kind, prof["dirty_bytes"] // 1024**2, prof["dirty_bg_bytes"] // 1024**2)
 
+def _mount_options(fstype: str, kind: str) -> str:
+    if fstype == "ext4":
+        return PROFILES.get(kind, PROFILES["other"])["ext4_opts"]
+    profile = FS_MOUNT_PROFILES.get(fstype)
+    if profile:
+        return profile["opts"]
+    return "rw,noatime"
+
 def _restore_sysctls():
     """Restore original sysctl values when no mounts remain."""
     log.debug("_restore_sysctls called, checking if restore needed...")
@@ -373,10 +390,7 @@ def _mount(dev: str):
     mount_path.mkdir(parents=True, exist_ok=True)
 
     # Determine mount options
-    if fstype == "ext4":
-        opts = PROFILES.get(kind, PROFILES["other"])["ext4_opts"]
-    else:
-        opts = FS_OPTS_BASE.get(fstype, "rw,noatime")
+    opts = _mount_options(fstype, kind)
 
     # Check if already mounted elsewhere
     if _is_device_mounted(dev):
@@ -391,7 +405,7 @@ def _mount(dev: str):
 
     # Attempt mount
     cmd = ["mount", "-t", fstype, "-o", opts, dev, str(mount_path)]
-    log.info("Mounting %s (%s, %s) → %s", dev, fstype, kind, mount_path)
+    log.info("Mounting %s (%s, %s) → %s with opts=%s", dev, fstype, kind, mount_path, opts)
 
     if subprocess.call(cmd, stderr=subprocess.DEVNULL) == 0:
         _mounts[dev] = mount_path
@@ -453,13 +467,8 @@ def _unmount(dev: str):
     # Use Popen for non-blocking unmount (umount can block for 30+ seconds)
     subprocess.Popen(["umount", "-l", str(mount_path)], stderr=subprocess.DEVNULL)
 
-    # Clean up mount point (may fail if still mounted, that's OK)
-    try:
-        if not any(mount_path.iterdir()):
-            mount_path.rmdir()
-            log.debug("Removed mount point: %s", mount_path)
-    except OSError:
-        pass
+    # Leave mount point cleanup to startup purge. Directory scans can block on
+    # yanked or erroring media, exactly when we need unmount handling to stay fast.
 
     # Restore sysctls if no mounts remain
     log.debug("Calling _restore_sysctls...")
@@ -527,11 +536,11 @@ def _sanity_watchdog():
             try:
                 os.statvfs(mp)
             except OSError as exc:
-                if exc.errno in (errno.EIO, errno.ENOENT):
+                if exc.errno in YANK_ERRNOS:
                     log.warning("I/O error on %s (%s) - device yanked, unmounting",
                               dev, os.strerror(exc.errno))
-                    subprocess.call(["umount", "-l", str(mp)],
-                                  stderr=subprocess.DEVNULL)
+                    subprocess.Popen(["umount", "-l", str(mp)],
+                                     stderr=subprocess.DEVNULL)
                     _mounts.pop(dev, None)
                     _active_mount_kinds.pop(dev, None)
 

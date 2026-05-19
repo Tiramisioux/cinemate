@@ -12,7 +12,7 @@
 
 | Mode | Resolution       | Aspect Ratio | Bit Depth | Max FPS | DNG Frame File Size (MB) |
 |------|------------------|--------------|-----------|---------|----------------|
-| 0    | 1456 x 1088      | 1.33         | 12        | 60      | 3.1            |
+| 0    | 1456 x 1088      | 1.33         | 10        | 60      | 3.1            |
 
 ### IMX585 (Starlight Eye)
 
@@ -30,7 +30,7 @@
 
 Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames.
 
-You can limit which modes appear inside CineMate by editing the `resolutions` section in `settings.json`. `k_steps` are approximate resolution steps. Custom driver modes can also be added here.
+You can limit which modes appear inside CineMate by editing the `resolutions` section in `settings.json`. `k_steps` are the approximate recording-size choices shown in the UI. The stock Cinemate defaults show only 1.5K and 2K because 2K is the standard working size and the default list is kept to modes suitable for 25 fps recording. Higher modes are supported when the user opts in.
 
 ```json
 "resolutions": {
@@ -46,7 +46,11 @@ You can limit which modes appear inside CineMate by editing the `resolutions` se
 
 !!! note ""
 
-    The dng_encoder in Cinemate fork of Cinepi-RAW currently outputs all modes as 12 bit DNG.
+    The bit-depth column above describes the sensor mode reported by the camera stack. The IMX296 sensor mode is 10 bit. Cinemate's CinePi-RAW DNG writer may still save captures through its 12 bit DNG output path, so a correctly saved IMX296 DNG does not mean the sensor itself has a 12 bit mode.
+
+!!! info "Raspberry Pi 4 raw packing"
+
+    Cinemate handles the CinePi-RAW packing choice automatically. On Raspberry Pi 4 / Pi 400 / CM4, IMX296 and IMX477 use packed raw mode (`P`). On Raspberry Pi 5 / CM5 they stay on unpacked mode (`U`). For IMX296 this means `1456:1088:10:P` on Raspberry Pi 4-family boards and `1456:1088:10:U` on Raspberry Pi 5 / CM5.
 
 ## Sustainable frame rates
 

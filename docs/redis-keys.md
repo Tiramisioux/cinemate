@@ -42,7 +42,7 @@ Each entry explains which component normally writes the key and whether it makes
 | drop_frame_count | Cinemate (RedisListener) | Number of drop-frame detections in the current/last take | No |
 | drop_frame_relay | Cinemate (RedisListener) | Short pulse used to mute REC tone for one frame on drop-frame events | No |
 | drop_frame_during_last_take | Cinemate (RedisListener) | `1` if the previous non-preroll take had drop frames | No |
-| frames_in_sync | Cinemate (RedisListener) | `1` if expected vs recorded frame counts ended within tolerance | No |
+| frames_in_sync | Cinemate (RedisListener) | `1` if final expected vs on-disk recorded frame counts ended within tolerance after buffered writes flushed | No |
 | recording_time | Cinemate (RedisController timer) | Elapsed record time in seconds | No |
 | recording_tc_rec | Cinemate (RedisController timer) | Elapsed record timecode | No |
 | recording_time_tod | Cinemate (RedisController timer) | Time-of-day timecode updated during recording | No |
@@ -50,6 +50,9 @@ Each entry explains which component normally writes the key and whether it makes
 | last_dng_cam0 / last_dng_cam1 | Cinemate (cinepi_multi log watcher) | Full path to the most recently written DNG for each camera | No |
 | is_mounted | Cinemate (SSD monitor) | `1` when storage is mounted | No |
 | storage_type | Cinemate (SSD monitor) | Drive type such as NVME, USB, or SD | No |
+| storage_filesystem | Cinemate (SSD monitor) | Current filesystem type such as `ext4`, `exfat`, or `ntfs` | No |
+| storage_mount_options | Cinemate (SSD monitor) | Actual mount options reported by the kernel for `/media/RAW` | No |
+| storage_recorder_profile | Cinemate (SSD monitor) | Recorder worker profile selected from the current filesystem | No |
 | space_left | Cinemate (SSD monitor) | Remaining free space in GB | No |
 | write_speed_to_drive | Cinemate (SSD monitor) | Current write speed in MB/s | No |
 | file_size | Cinemate | Bytes per frame for the current mode | No |

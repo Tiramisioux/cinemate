@@ -24,5 +24,27 @@ Cinemate knows exactly how many frames *should* have landed over the elapsed dur
 
 After the recording finishes, Cinemate compares the expected frame count with the actual frames captured. When there is a mismatch, it derives a suggested correction factor and suggests it to the user. If the frame count lands on the expected number of frames (with the tolerance of +/- 1 frame), it suggests to keep the existing correction factor.
 
+### Frame-count sync status
+
+Cinemate stores the frame-count sync warning state in Redis as `frames_in_sync`. A value of `1` means the active or latest take is still within the +/- one-frame tolerance. A value of `0` means Cinemate has seen the take drift outside that tolerance and the Simple GUI shows the magenta `SYNC` warning.
+
+During recording, Cinemate compares the live accepted frame-slot count against the expected slot count from the FPS timeline. If the difference grows beyond +/- one frame, the magenta `SYNC` warning flashes immediately and then latches until the next take starts.
+
+The final check waits until buffered frames have finished flushing to storage. While the RAM buffer is still draining after stop, Cinemate raises `is_writing_buf=1` and the Simple GUI stays green. The DNG count is checked only after that buffered write phase has gone idle, so frames that were still in RAM at stop time are included in the result.
+
+For free-running takes, the expected-frame calculation follows FPS changes made during the take. This means speed ramps are counted from the FPS timeline rather than from only the FPS at the start of the take. For fixed-frame takes such as `rec f 100`, the requested frame count remains the expected target.
+
+### Dropped frames vs sync mismatch
+
+Dropped frames and frame-count sync are reported separately. A dropped-frame event means the clip has a hole at a known frame slot. That lights the purple `DROP` warning and increments `drop_frame_count`, but it does not by itself trigger the magenta `SYNC` warning. For sync analysis, those dropped-frame holes count as intentional timeline slots, because a later conform/export step can represent the hole explicitly.
+
+The magenta `SYNC` warning is for a different problem: the live or final number of recorded frame slots does not match the expected take length after dropped-frame holes are accounted for.
+
+### Storage pre-roll and startup guards
+
+Storage pre-roll is excluded from sync analysis and warning state. The warm-up clip is deleted and should not latch `DROP`, `SYNC`, `frames_in_sync=0`, or an FPS correction suggestion.
+
+Immediately after startup or storage pre-roll, cinepi-raw can briefly publish the last frame counter from the warm-up take. Cinemate ignores impossible early frame counts when arming `rec f <frames>`, so a fixed-frame recording starts counting from the new take instead of stopping on a stale pre-roll count.
+
 !!! note ""
      See [here](cli-commands.md) how to run Cinemate manually.

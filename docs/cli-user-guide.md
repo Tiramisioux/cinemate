@@ -19,13 +19,13 @@ CinePi-Raw uses **Libcamera** to talk to your Raspberry Pi camera module. Each s
 ```
 
 - `width` and `height` select the active pixel area of the sensor.
-- `bit-depth` is usually 12 or 16 bits per pixel.
+- `bit-depth` is usually 10, 12 or 16 bits per pixel.
 - `packing` can be `P` for packed or `U` for unpacked data. 
 
 The mode must match the sensor you are using. For example, an IMX477 camera can run at `4056:3040:12` (full sensor) or at smaller cropped resolutions. When specifying a mode you typically also set the output `--width` and `--height` which control the size of the image written to disk. These can be equal to the mode values or smaller when scaling is applied.
 
 !!! note ""
-     On the Pi 5, the cinepi-raw flag for HQ sensor is `--mode 2028:1080:12:U`. On the Pi 4 it should read `--mode 2028:1080:12:P`.
+     On Raspberry Pi 5 / CM5, the cinepi-raw flag for the HQ sensor is `--mode 2028:1080:12:U`. On Raspberry Pi 4 / Pi 400 / CM4 it should read `--mode 2028:1080:12:P`. IMX296 follows the same packing rule, but with its 10-bit sensor mode: `1456:1088:10:U` on Pi 5 and `1456:1088:10:P` on Pi 4.
 
 
 ## Low‑resolution (lores) stream
@@ -85,24 +85,53 @@ The CineMate fork introduces several extra options:
 
 Below are sample commands for different sensors and modes. 
 
-### IMX477 (12‑bit, full width)
+### IMX477 (12-bit, full width)
 
 ```bash
-cinepi-raw --mode 4056:2160:12 --width 4056 --height 2160 \
+cinepi-raw --mode 4056:2160:12:U --width 4056 --height 2160 \
            --lores-width 1280 --lores-height 720 \
            -p 0,30,1920,1020 \
            --post-process-file /home/pi/post-processing.json \
-           --tuning-file /home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json \
+           --tuning-file /home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json
 ```
 
-### IMX585 (12‑bit unpacked)
+On Raspberry Pi 4 / Pi 400 / CM4, use `--mode 4056:2160:12:P` and omit the PiSP tuning file path.
+
+### IMX296 (10-bit)
+
+```bash
+# Raspberry Pi 5 / CM5
+cinepi-raw --mode 1456:1088:10:U --width 1456 --height 1088 \
+           --lores-width 1280 --lores-height 720 \
+           -p 0,30,1920,1020 \
+           --post-process-file /home/pi/post-processing.json \
+           --tuning-file /home/pi/libcamera/src/ipa/rpi/pisp/data/imx296.json
+
+# Raspberry Pi 4 / Pi 400 / CM4
+cinepi-raw --mode 1456:1088:10:P --width 1456 --height 1088 \
+           --lores-width 1280 --lores-height 720 \
+           -p 0,30,1920,1020 \
+           --post-process-file /home/pi/post-processing.json
+```
+
+### IMX283 (12-bit unpacked)
+
+```bash
+cinepi-raw --mode 2736:1538:12:U --width 2736 --height 1538 \
+           --lores-width 1280 --lores-height 720 \
+           -p 0,30,1920,1020 \
+           --post-process-file /home/pi/post-processing.json \
+           --tuning-file /home/pi/libcamera/src/ipa/rpi/pisp/data/imx283.json
+```
+
+### IMX585 (12-bit unpacked)
 
 ```bash
 cinepi-raw --mode 1928:1090:12:U --width 1928 --height 1090 \
            --lores-width 1280 --lores-height 720 \
            -p 0,30,1920,1020 \
            --post-process-file /home/pi/post-processing.json \
-           --tuning-file /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json \
+           --tuning-file /home/pi/libcamera/src/ipa/rpi/pisp/data/imx585.json
 ```
 
 Now, with an SSH shell running redis-cli you should be able to capture RAW footage from the command line!

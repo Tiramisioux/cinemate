@@ -14,6 +14,12 @@ import shutil
 from module.config_loader import load_settings
 from module.redis_controller import ParameterKey
 from module.framebuffer import Framebuffer
+from module.storage_profiles import (
+    DEFAULT_RECORDER_PROFILE,
+    recorder_profile_args,
+    recorder_profile_for_filesystem,
+    recorder_profile_name_for_filesystem,
+)
 
 # Path to settings file
 SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
@@ -28,6 +34,26 @@ def _settings() -> dict:
 
 _READY_RX   = re.compile(r"Encoder configured")      # line printed by DngEncoder
 _READY_WAIT = 2.0                                   # seconds to wait for all cams
+_PI4_MODEL_MARKERS = (
+    "Raspberry Pi 4",
+    "Raspberry Pi 400",
+    "Compute Module 4",
+)
+_PI4_PACKED_MODE_SENSORS = {"imx296", "imx296_mono", "imx477"}
+
+
+def _read_pi_model() -> str:
+    try:
+        with open("/proc/device-tree/model", "r") as f:
+            return f.read()
+    except FileNotFoundError:
+        return ""
+
+
+def _is_pi4_family() -> bool:
+    model = _read_pi_model()
+    return any(marker in model for marker in _PI4_MODEL_MARKERS)
+
 
 def _rt_permitted():
     if shutil.which("chrt") is None:
@@ -265,11 +291,7 @@ class CinePiProcess(Thread):
 
     def _is_pi4(self) -> bool:
         """Return True on any Raspberry Pi 4/400/CM4‐lite platform."""
-        try:
-            with open("/proc/device-tree/model") as f:
-                return "Raspberry Pi 4" in f.read()
-        except FileNotFoundError:
-            return False
+        return _is_pi4_family()
 
     def _build_args(self):
         # base resolution
@@ -280,11 +302,14 @@ class CinePiProcess(Thread):
         height = res.get('height', 1080)
         bit_depth = res.get('bit_depth', 12)
         packing = res.get('packing', 'U')
-        
-        # # packing override
-        # pi_model = self.redis_controller.get_value('pi_model') or ''
-        # if self.cam.is_mono or (pi_model == 'pi4' and model_key == 'imx477'):
-        #     packing = 'P'
+
+        if self._is_pi4() and model_key in _PI4_PACKED_MODE_SENSORS:
+            logging.info(
+                "[%s] Pi 4-family raw path detected for %s; using packed mode",
+                self.cam.port,
+                model_key,
+            )
+            packing = 'P'
         
         # lores & preview
         aspect = width / height
@@ -389,15 +414,28 @@ class CinePiProcess(Thread):
         else:
             args += ['--nopreview']
             
-        # ───── Option A: Stable 24p (3 enc, 1 writer; keep CPU3 mostly free for capture) ─────
-        args += [
-            "--encode-workers",  "4",
-            "--disk-workers",    "2",
-            "--encode-affinity", "1-2",   # encoders on CPUs 1–2
-            "--disk-affinity",   "2",     # writer on CPU 2 (near NVMe IRQs you’ll pin)
-            "--encode-nice",     "-10",
-            "--disk-nice",       "-5",
-        ]
+        storage_fs = self.redis_controller.get_value(
+            ParameterKey.STORAGE_FILESYSTEM.value,
+            "none",
+        )
+        profile_name = recorder_profile_name_for_filesystem(storage_fs)
+        profile = recorder_profile_for_filesystem(storage_fs)
+        if self.redis_controller.get_value(ParameterKey.STORAGE_RECORDER_PROFILE.value) != profile_name:
+            self.redis_controller.set_value(
+                ParameterKey.STORAGE_RECORDER_PROFILE.value,
+                profile_name if profile_name != DEFAULT_RECORDER_PROFILE else "default",
+            )
+        logging.info(
+            "[%s] Storage recorder profile: filesystem=%s profile=%s label=%s "
+            "encode_workers=%s disk_workers=%s",
+            self.cam.port,
+            storage_fs,
+            profile_name,
+            profile["label"],
+            profile["encode_workers"],
+            profile["disk_workers"],
+        )
+        args += recorder_profile_args(storage_fs)
         
         return args
 
@@ -453,13 +491,7 @@ class CinePiManager:
 
 
         # ── Pi 4 sanity check ────────────────────────────────────────────
-        try:
-            with open("/proc/device-tree/model", "r") as f:
-                model_str = f.read()
-        except FileNotFoundError:
-            model_str = ""
-
-        if "Raspberry Pi 4" in model_str:
+        if _is_pi4_family():
             for cam in cams:
                 if cam.port != "cam0":          # Pi 4 has only CSI-0
                     logging.warning(

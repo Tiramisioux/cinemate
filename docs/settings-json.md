@@ -216,7 +216,7 @@ Maps Grove Base HAT ADC channels to analogue dials (potentiometers). Use `null` 
 
 ## free_mode
 
-When enabled, ignores the preset arrays and exposes the full range supported by the sensor.
+When enabled, ignores the preset arrays and exposes the expanded runtime step tables used by potentiometers, rotary encoders, CLI commands, and the web GUI. White balance free mode uses 100 K steps from 2800 K through 6500 K.
 
 ```json
 "free_mode": {
@@ -233,7 +233,7 @@ Limit which sensor modes appear when cycling resolutions.
 
 ```json
 "resolutions": {
-  "k_steps": [1.5, 2, 4],
+  "k_steps": [1.5, 2],
   "bit_depths": [10, 12],
   "custom_modes": {
     "imx283": [
@@ -246,6 +246,10 @@ Limit which sensor modes appear when cycling resolutions.
 `k_steps` – K‑style categories for allowed widths. Modes are grouped to the nearest half‑K. Example: 1332×990 counts as **1.5 K**.
 <br>`bit_depths` – list of bit depths to expose.
 <br>`custom_modes` – optional extra modes per sensor if the driver advertises none.
+
+!!! note ""
+
+    The stock Cinemate setting is `[1.5, 2]`, so the UI starts by showing only 1.5K and 2K recording-size choices. 2K is the standard working size, and the default mode list is kept to modes that can reasonably support 25 fps recording. Higher sensor modes are still supported. Add `4` to `k_steps`, for example `[1.5, 2, 4]`, when you intentionally want to expose 4K-class modes in the UI.
 
 ## buttons
 
@@ -321,12 +325,20 @@ Combined actions only fire while the hold button is still held down. If the modi
 
 ## rotary_encoders
 
-Rotary encoders used for fine adjustment of settings. These can be wired straight to the GPIO pins of the Pi.
+Rotary encoders used for fine adjustment of settings. These can be wired straight to the GPIO pins of the Pi. The optional `button_pin` uses the same action grammar as the `buttons` section.
 
 ```json
 {
+  "enabled": true,
   "clk_pin": 9,
   "dt_pin": 11,
+  "button_pin": 10,
+  "pull_up": true,
+  "debounce_time": 0.05,
+  "button_actions": {
+    "press_action": {"method": "set_iso_lock"},
+    "hold_action": "None"
+  },
   "encoder_actions": {
     "rotate_clockwise":        {"method": "inc_iso"},
     "rotate_counterclockwise": {"method": "dec_iso"}
@@ -334,11 +346,15 @@ Rotary encoders used for fine adjustment of settings. These can be wired straigh
 }
 ```
 
-<br>`clk_pin` and `dt_pin` – the two pins of the encoder.<br>`encoder_actions` – commands to run when turning the dial.
+<br>`enabled` – optional per-encoder switch; set `false` to keep an example in the file without claiming pins at startup.
+<br>`clk_pin` and `dt_pin` – the two pins of the encoder.
+<br>`button_pin` – optional BCM pin for the encoder push button.
+<br>`button_actions` – optional press/click/hold actions for the encoder push button.
+<br>`encoder_actions` – commands to run when turning the dial.
 
 ## quad_rotary_controller
 
-Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry maps one of the four dials to a setting and defines the push button actions similar to the `buttons` section.
+Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry maps one of the four dials to a setting and defines the push button actions similar to the `buttons` section. The stock settings include this mapping with `enabled` set to `false`; set it to `true` only when the board is connected.
 
 ```json
 "quad_rotary_controller": {

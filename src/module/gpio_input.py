@@ -51,7 +51,7 @@ class ComponentInitializer:
             smart_button = SmartButton(
                 cinepi_controller=self.cinepi_controller,
                 pin=pin,
-                pull_up=bool(button_config['pull_up']),
+                pull_up=self._as_bool(button_config.get('pull_up'), default=True),
                 debounce_time=float(button_config['debounce_time']),
                 actions=button_config,
                 identifier=str(pin),
@@ -98,6 +98,10 @@ class ComponentInitializer:
         
         # Initialize Rotary Encoders with Buttons
         for encoder_config in self.settings.get('rotary_encoders', []):
+            if not self._as_bool(encoder_config.get('enabled', True), default=True):
+                self.logger.info("Skipping disabled rotary encoder config: %s", encoder_config)
+                continue
+
             encoder_actions = encoder_config.get('encoder_actions', {})
             rotate_cw_action_method = self.extract_action_method(encoder_actions.get('rotate_clockwise'))
             rotate_ccw_action_method = self.extract_action_method(encoder_actions.get('rotate_counterclockwise'))
@@ -111,6 +115,31 @@ class ComponentInitializer:
                 dt_pin=encoder_config['dt_pin'],
                 actions=encoder_config['encoder_actions']
             )
+
+            button_pin = encoder_config.get('button_pin')
+            if self._is_noop_action(button_pin):
+                continue
+
+            button_pin = int(button_pin)
+            if button_pin in self.reserved_output_pins:
+                self.logger.warning(
+                    "Skipping rotary encoder button on pin %s because it is reserved for GPIO output",
+                    button_pin,
+                )
+                continue
+
+            button_actions = encoder_config.get('button_actions', {})
+            self.logger.info(f"  Button pin: {button_pin}")
+            smart_button = SmartButton(
+                cinepi_controller=self.cinepi_controller,
+                pin=button_pin,
+                pull_up=self._as_bool(encoder_config.get('pull_up'), default=True),
+                debounce_time=float(encoder_config.get('debounce_time', 0.05)),
+                actions=button_actions,
+                identifier=str(button_pin),
+                combined_actions=combined_actions
+            )
+            self.smart_buttons_list.append(smart_button)
         
 
     def get_smart_button_by_pin(self, pin):
@@ -128,6 +157,26 @@ class ComponentInitializer:
             return action_config.get('method')
         else:
             return None
+
+    @staticmethod
+    def _as_bool(value, default=False):
+        if isinstance(value, bool):
+            return value
+        if value is None:
+            return default
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            return value.strip().lower() in {"1", "true", "yes", "on"}
+        return bool(value)
+
+    @staticmethod
+    def _is_noop_action(action):
+        if action is None:
+            return True
+        if isinstance(action, str):
+            return action.strip().lower() in {"", "none", "null"}
+        return False
 
     def _describe_actions(self, config):
         """
@@ -194,6 +243,13 @@ class SmartButton:
     def trigger_hold_action(self):
         with self.lock:
             action_dict = self.actions.get('hold_action')
+
+            if self._is_noop_action(action_dict):
+                self.logger.debug("No hold action defined or action marked as 'none'.")
+                return
+
+            if isinstance(action_dict, str):
+                action_dict = {"method": action_dict.strip(), "args": []}
             
             # Check if action_dict is a dictionary, log an error if not
             if not isinstance(action_dict, dict):
@@ -389,13 +445,13 @@ class SmartButton:
     def trigger_action(self, action):
         if SmartButton._currently_held == self.identifier or SmartButton._currently_held == None:
         # Handle 'none' or missing action as a no-operation
-            if not action or action == "none":
+            if self._is_noop_action(action):
                 self.logger.debug("No action defined or action marked as 'none'.")
                 return
 
             # Check if action is a string and not 'none', then convert to expected dictionary format
             if isinstance(action, str):
-                action = {"method": action, "args": []}
+                action = {"method": action.strip(), "args": []}
 
             # Extract method name and args with defaults
             method_name = action.get('method')
@@ -421,6 +477,20 @@ class SmartButton:
                 
         else:
             logging.info(f"Button {self.identifier} individual action ignored. Button {SmartButton._currently_held} is currently held.")
+
+    @staticmethod
+    def _is_noop_action(action):
+        if not action:
+            return True
+        if isinstance(action, str):
+            return action.strip().lower() in {"", "none", "null"}
+
+        method_name = action.get("method")
+        if method_name is None:
+            return True
+        if isinstance(method_name, str):
+            return method_name.strip().lower() in {"", "none", "null"}
+        return False
 
 class SimpleSwitch:
     def __init__(self, cinepi_controller, pin, actions, pull_up=True, debounce_time=0.1):

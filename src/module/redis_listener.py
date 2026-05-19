@@ -67,6 +67,7 @@ class RedisListener:
         self.drop_frame_timer = None
         self.drop_frame_count_current_take = 0
         self.drop_frame_relay_timer = None
+        self.frames_off_sync_latched_current_take = False
 
 
         self.cinepi_running = True
@@ -105,12 +106,23 @@ class RedisListener:
 
         self.fps_at_rec_start = None
         self.fps_correction_factor_at_rec_start: float | None = None
+        self.fps_timeline: list[tuple[datetime.datetime, float]] = []
+        self.final_analysis_thread = None
+        self.final_analysis_lock = threading.Lock()
+        self.final_analysis_pending = False
+        self.final_analysis_timeout_s = 30.0
+        self.final_analysis_poll_s = 0.2
+        self.take_sequence = 0
+        self.final_analysis_sequence: int | None = None
 
         self.recording_was_preroll = False
         self.frame_limit_target_slots: int | None = None
         self.frame_limit_requested_slots: int | None = None
         self.frame_limit_anchor_time: datetime.datetime | None = None
         self.frame_limit_stop_requested = False
+        self.awaiting_fresh_framecount = False
+        self.initial_framecount_guard_seconds = 0.25
+        self.fresh_framecount_guard_start_time: datetime.datetime | None = None
         self.recording_stop_callback = None
 
 
@@ -118,6 +130,48 @@ class RedisListener:
 
     def set_recording_stop_callback(self, callback) -> None:
         self.recording_stop_callback = callback
+
+    def _filter_initial_recording_framecount(self, new_count: int | None) -> int | None:
+        if new_count is None:
+            return None
+
+        try:
+            normalized = int(new_count)
+        except (TypeError, ValueError):
+            return None
+
+        if not self.awaiting_fresh_framecount:
+            return normalized
+
+        if normalized == 0:
+            return 0
+
+        age_seconds = 0.0
+        guard_start_time = self.fresh_framecount_guard_start_time or self.recording_start_time
+        if guard_start_time is not None:
+            age_seconds = (datetime.datetime.now() - guard_start_time).total_seconds()
+
+        fps_expected = self._determine_expected_fps()
+        if fps_expected is not None and fps_expected > 0:
+            max_plausible = max(2, int(math.ceil(age_seconds * fps_expected)) + 3)
+        else:
+            max_plausible = 1 if age_seconds < self.initial_framecount_guard_seconds else normalized
+
+        # Right after is_recording=1, cinepi-raw can still publish one stale
+        # frame counter from the previous take. Ignore values that are too far
+        # ahead of what the new take could plausibly have produced.
+        if normalized > max_plausible:
+            logging.debug(
+                "Ignoring stale initial framecount %d %.3fs after record start (max plausible %d)",
+                normalized,
+                age_seconds,
+                max_plausible,
+            )
+            return None
+
+        self.awaiting_fresh_framecount = False
+        self.fresh_framecount_guard_start_time = None
+        return normalized
 
     def disarm_frame_limited_stop(self) -> None:
         self.frame_limit_target_slots = None
@@ -131,6 +185,13 @@ class RedisListener:
         if fresh_take:
             baseline_slots = 0
             self.frame_limit_anchor_time = None
+            self.frame_count = 0
+            self.framecount = 0
+            self.last_framecount = 0
+            self.last_rise_time = None
+            self.framecount_changing = False
+            self.awaiting_fresh_framecount = True
+            self.fresh_framecount_guard_start_time = datetime.datetime.now()
         else:
             baseline_slots = self._current_expected_frame_slots()
             if baseline_slots is None:
@@ -169,6 +230,23 @@ class RedisListener:
         self.listener_thread_controls.daemon = True
         self.listener_thread_controls.start()
 
+    @staticmethod
+    def _coerce_float(value) -> float | None:
+        if value is None:
+            return None
+        if isinstance(value, bytes):
+            value = value.decode("utf-8", errors="ignore")
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return None
+        return number if math.isfinite(number) else None
+
+    @classmethod
+    def _coerce_int(cls, value) -> int | None:
+        number = cls._coerce_float(value)
+        return int(number) if number is not None else None
+
     def set_frame_count_increase_tolerance(self):
         if self.framerate > 0:
             frame_interval = 1 / self.framerate
@@ -182,37 +260,38 @@ class RedisListener:
             unless the encoder reports 0.  This eliminates flicker when two
             sensors finish a take a frame apart.
             """
-            if new_count is None:
+            normalized_count = self._filter_initial_recording_framecount(new_count)
+            if normalized_count is None:
                 return
 
             # ── not recording → freeze counter ───────────────────────────────────
             if not self.is_recording:
-                if new_count == 0 and self.framecount != 0:
+                if normalized_count == 0 and self.framecount != 0:
                     self.framecount = 0
                     self.redis_controller.set_value("framecount", 0)
                 return
             # ─────────────────────────────────────────────────────────────────────
 
             # one allowed 0 right after Record (CinePi resets its counter once)
-            if new_count == 0 and self.allow_initial_zero:
+            if normalized_count == 0 and self.allow_initial_zero:
                 self.framecount = 0
                 self.redis_controller.set_value("framecount", 0)
                 self.allow_initial_zero = False
                 return
 
             # ── 1) strictly higher → accept & publish ───────────────────────────
-            if new_count > self.framecount:
-                self.framecount = new_count
-                self.redis_controller.set_value("framecount", new_count)
+            if normalized_count > self.framecount:
+                self.framecount = normalized_count
+                self.redis_controller.set_value("framecount", normalized_count)
                 return
 
             # ── 2) equal → nothing to do ────────────────────────────────────────
-            if new_count == self.framecount:
+            if normalized_count == self.framecount:
                 return
 
             # ── 3) lower but *non-zero*  → IGNORE  (mitigates flicker) ──────────
             #     Only a real zero (encoder reset) is considered significant.
-            if new_count < self.framecount and new_count != 0:
+            if normalized_count < self.framecount and normalized_count != 0:
                 # keep the higher value; do not publish
                 return
 
@@ -301,6 +380,43 @@ class RedisListener:
         except (TypeError, ValueError):
             return None
 
+    def _current_user_fps(self) -> float | None:
+        for key in (ParameterKey.FPS_USER.value, ParameterKey.FPS.value):
+            try:
+                value = self.redis_controller.get_value(key)
+                fps = float(value) if value is not None else None
+            except (TypeError, ValueError):
+                fps = None
+            if fps is not None and fps > 0:
+                return fps
+        return None
+
+    def _reset_fps_timeline(self) -> None:
+        self.fps_timeline = []
+        if not self.recording_start_time:
+            return
+        fps = self._current_user_fps()
+        if fps is not None:
+            self.fps_timeline.append((self.recording_start_time, fps))
+
+    def _note_expected_fps_change(self, new_fps: float | None = None) -> None:
+        if not self.is_recording or not self.recording_start_time:
+            return
+        fps = new_fps if new_fps and new_fps > 0 else self._current_user_fps()
+        if fps is None or fps <= 0:
+            return
+        now = datetime.datetime.now()
+        if not self.fps_timeline:
+            self.fps_timeline.append((self.recording_start_time, fps))
+            return
+        last_time, last_fps = self.fps_timeline[-1]
+        if abs(last_fps - fps) < 1e-6:
+            return
+        if now < last_time:
+            now = last_time
+        self.fps_timeline.append((now, fps))
+        logging.info("Recording FPS segment changed to %.6f at %s", fps, now.isoformat())
+
     @staticmethod
     def _expected_frame_counts(fps_expected: float | None, duration: float, sensor_count: int) -> tuple[int, float]:
         if fps_expected is None or fps_expected <= 0 or duration <= 0:
@@ -311,36 +427,125 @@ class RedisListener:
         expected_int = int(math.floor(expected_float + 1e-6))
         return expected_int, expected_float
 
+    def _expected_frame_counts_for_recording(
+        self,
+        start_time: datetime.datetime,
+        end_time: datetime.datetime,
+        sensor_count: int,
+        honor_frame_limit: bool = True,
+    ) -> tuple[int, float]:
+        sensor_effective = max(1, sensor_count)
+
+        if honor_frame_limit and self.frame_limit_requested_slots is not None:
+            expected_float = float(self.frame_limit_requested_slots * sensor_effective)
+            return int(self.frame_limit_requested_slots * sensor_effective), expected_float
+
+        if end_time < start_time:
+            end_time = start_time
+
+        timeline = [
+            (ts, fps)
+            for ts, fps in self.fps_timeline
+            if fps is not None and fps > 0 and ts <= end_time
+        ]
+        if not timeline:
+            fps_expected = self._determine_expected_fps()
+            duration = (end_time - start_time).total_seconds()
+            return self._expected_frame_counts(fps_expected, duration, sensor_effective)
+
+        if timeline[0][0] > start_time:
+            timeline.insert(0, (start_time, timeline[0][1]))
+        elif timeline[0][0] < start_time:
+            first_fps = timeline[0][1]
+            for ts, fps in timeline:
+                if ts <= start_time:
+                    first_fps = fps
+                else:
+                    break
+            timeline = [(start_time, first_fps)] + [(ts, fps) for ts, fps in timeline if ts > start_time]
+
+        expected_float = 0.0
+        for idx, (segment_start, fps) in enumerate(timeline):
+            next_start = timeline[idx + 1][0] if idx + 1 < len(timeline) else end_time
+            if next_start <= start_time:
+                continue
+            segment_start = max(segment_start, start_time)
+            segment_end = min(next_start, end_time)
+            if segment_end <= segment_start:
+                continue
+            expected_float += (segment_end - segment_start).total_seconds() * fps * sensor_effective
+
+        expected_int = int(math.floor(expected_float + 1e-6))
+        return expected_int, expected_float
+
+    def _update_live_frames_in_sync(self, now: datetime.datetime | None = None) -> None:
+        if not self.is_recording:
+            return
+        if self.recording_was_preroll or self._storage_preroll_active():
+            return
+        if self.frames_off_sync_latched_current_take:
+            return
+        if self.awaiting_fresh_framecount or not self.recording_start_time:
+            return
+
+        now = now or datetime.datetime.now()
+        expected_slots, expected_float = self._expected_frame_counts_for_recording(
+            self.recording_start_time,
+            now,
+            1,
+            honor_frame_limit=False,
+        )
+
+        # Avoid false warnings while the first few frame slots are still
+        # settling after record start. After that, any >1 slot drift latches.
+        if expected_float < 3:
+            return
+
+        recorded_slots = int(self.framecount or 0)
+        sync_slots = recorded_slots + int(self.drop_frame_count_current_take)
+        diff = expected_slots - sync_slots
+        if abs(diff) <= 1:
+            return
+
+        self.frames_off_sync_latched_current_take = True
+        self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 0)
+        logging.warning(
+            "Live frame sync warning: %+d frame slot difference "
+            "(expected=%d, recorded=%d, dropped-hole compensation=%d).",
+            diff,
+            expected_slots,
+            recorded_slots,
+            self.drop_frame_count_current_take,
+        )
+
     def _update_frames_in_sync(self, stats_data: dict[str, object] | None = None) -> None:
         if stats_data is not None:
             self._update_active_sensors(stats_data)
+
+        if self.is_recording or self.final_analysis_pending:
+            return
 
         if not self.recording_start_time:
             # No reference point – assume healthy until a recording starts.
             self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 1)
             return
 
-        fps_expected = self._determine_expected_fps()
-        if fps_expected is None or fps_expected <= 0:
-            return
-
-        if self.is_recording:
-            end_for_calc = datetime.datetime.now()
-        elif self.recording_end_time:
+        if self.recording_end_time:
             end_for_calc = self.recording_end_time
         else:
             # Recording hasn’t officially started or stopped; keep the last known value.
             return
 
-        duration = (end_for_calc - self.recording_start_time).total_seconds()
-        if duration < 0:
-            duration = 0.0
-
         sensor_count = self._current_sensor_count()
-        expected_int, _ = self._expected_frame_counts(fps_expected, duration, sensor_count)
+        expected_int, _ = self._expected_frame_counts_for_recording(
+            self.recording_start_time,
+            end_for_calc,
+            sensor_count,
+        )
         recorded_frames = int(self.framecount or 0)
+        dropped_frame_slots = self.drop_frame_count_current_take * max(1, sensor_count)
 
-        in_sync = abs(expected_int - recorded_frames) <= 1
+        in_sync = abs(expected_int - (recorded_frames + dropped_frame_slots)) <= 1
         self.redis_controller.set_value(
             ParameterKey.FRAMES_IN_SYNC.value,
             1 if in_sync else 0,
@@ -349,9 +554,12 @@ class RedisListener:
     def _current_expected_frame_slots(
         self, now: datetime.datetime | None = None
     ) -> int | None:
+        if self.awaiting_fresh_framecount:
+            return None
+
         try:
-            if self.frame_count is not None:
-                frame_slots = int(self.frame_count)
+            if self.framecount is not None:
+                frame_slots = int(self.framecount)
                 if frame_slots >= 0:
                     return frame_slots + int(self.drop_frame_count_current_take)
         except (TypeError, ValueError):
@@ -402,14 +610,14 @@ class RedisListener:
                 if message_data.startswith("{") and message_data.endswith("}"):
                     try:
                         stats_data = json.loads(message_data)
-                        buffer_size = stats_data.get('bufferSize', None)
-                        self.frame_count = stats_data.get('frameCount', None)
+                        buffer_size = self._coerce_int(stats_data.get('bufferSize', None))
+                        self.frame_count = self._coerce_int(stats_data.get('frameCount', None))
                         color_temp = stats_data.get('colorTemp', None)
                         sensor_timestamp = stats_data.get('sensorTimestamp', None)
                         timestamp = stats_data.get('timestamp')
                         timestamp_cam0 = stats_data.get('timestamp_cam0')
                         timestamp_cam1 = stats_data.get('timestamp_cam1')
-                        self.current_framerate = stats_data.get('framerate', None)
+                        self.current_framerate = self._coerce_float(stats_data.get('framerate', None))
 
                         if color_temp:
                             self.colorTemp = color_temp
@@ -433,9 +641,10 @@ class RedisListener:
 
                         # Update Redis key for current buffer size if changed
                         if buffer_size is not None:
+                            self.bufferSize = buffer_size
                             current_buffer = self.redis_controller.get_value(ParameterKey.BUFFER.value)
                             # Redis returns bytes or None → normalise to int or None
-                            current_buffer = int(current_buffer) if current_buffer is not None else None
+                            current_buffer = self._coerce_int(current_buffer)
 
                             if current_buffer != buffer_size:
                                 self.redis_controller.set_value(ParameterKey.BUFFER.value, buffer_size)
@@ -452,7 +661,6 @@ class RedisListener:
                         # Update framecount in Redis (only if it has changed, and doesnt report a lower number than before, except 0
                         self._maybe_publish_framecount(self.frame_count)
                         self._maybe_stop_for_frame_limit()
-                        self._update_frames_in_sync(stats_data)
 
                         # Check and set buffering status if changed
                         is_buffering = buffer_size > 0 if buffer_size is not None else False
@@ -462,19 +670,46 @@ class RedisListener:
                             logging.debug(f"Updating is_buffering to {new_buffering_status}")
                             self.redis_controller.set_value('is_buffering', new_buffering_status)
 
+                        buffered_write_active = (
+                            buffer_size is not None
+                            and buffer_size > 0
+                            and not self.is_recording
+                        )
+                        current_buf_write_status = self.redis_controller.get_value(
+                            ParameterKey.IS_WRITING_BUF.value
+                        )
+                        current_buf_write_status = self._coerce_int(current_buf_write_status) or 0
+                        new_buf_write_status = 1 if buffered_write_active else 0
+                        if current_buf_write_status != new_buf_write_status:
+                            logging.info(
+                                "Buffered frame write status: %s (buffer=%s)",
+                                "active" if new_buf_write_status else "idle",
+                                buffer_size,
+                            )
+                            self.redis_controller.set_value(
+                                ParameterKey.IS_WRITING_BUF.value,
+                                new_buf_write_status,
+                            )
+
                         # Add current framerate value to the list
                         if self.current_framerate is not None:
                             self.framerate_values.append(self.current_framerate)
                             
                         # Check for framerate deviation
-                        expected_fps = float(self.redis_controller.get_value('fps'))
-                        if self.current_framerate is not None:
+                        expected_fps = self._coerce_float(self.redis_controller.get_value('fps'))
+                        if self.current_framerate is not None and expected_fps is not None:
                             fps_difference = abs((self.current_framerate) - expected_fps)
                             # print(f"Expected FPS: {expected_fps}, Actual FPS: {self.current_framerate*1000}")
                             # print(f"FPS difference: {fps_difference}")
                             
+                            drop_alerts_enabled = (
+                                self.is_recording
+                                and not self.recording_was_preroll
+                                and not self._storage_preroll_active()
+                            )
+
                             # do NOT raise drop-frame while the user is changing fps
-                            if fps_difference > 1 and not self.user_changing_fps:
+                            if fps_difference > 1 and not self.user_changing_fps and drop_alerts_enabled:
                                 self.drop_frame_count_current_take += 1
                                 self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, self.drop_frame_count_current_take)
                                 self._pulse_drop_frame_relay(expected_fps)
@@ -491,14 +726,15 @@ class RedisListener:
                                 self.drop_frame_timer.start()
 
                             # Update framecount check interval based on current FPS
-                            if self.current_framerate == 0 or None:
-                                framecount_fps = 1
-                            else:
+                            if self.current_framerate > 0:
                                 framecount_fps = self.current_framerate
+                            else:
+                                framecount_fps = 1
                             self.framecount_check_interval = max(0.5, 2 / framecount_fps)
 
                         # Check if framecount is changing
                         self.check_framecount_changing()
+                        self._update_live_frames_in_sync()
                         
                         # # Calculate average framerate of last 100 frames
                         # avg_framerate = self.calculate_average_framerate_last_100_frames()
@@ -512,7 +748,7 @@ class RedisListener:
 
                     except json.JSONDecodeError as e:
                         logging.error(f"Failed to parse JSON data: {e}")
-                    except TypeError as e:
+                    except (TypeError, ValueError) as e:
                         logging.error(f"Type error in stats data: {e}")
                 else:
                     logging.warning(f"Received unexpected data format: {message_data}")
@@ -564,6 +800,106 @@ class RedisListener:
         self.fps_change_timer = threading.Timer(leeway, self._reset_user_changing_fps)
         self.fps_change_timer.start()
 
+    def _storage_is_still_flushing(self) -> bool:
+        keys = (
+            ParameterKey.IS_WRITING_BUF.value,
+            ParameterKey.IS_BUFFERING.value,
+            ParameterKey.IS_WRITING.value,
+        )
+        for key in keys:
+            try:
+                if self._coerce_int(self.redis_controller.get_value(key)) == 1:
+                    return True
+            except Exception:
+                pass
+        return self.bufferSize > 0
+
+    def _clear_frame_warning_state(self) -> None:
+        self.drop_frame_count_current_take = 0
+        self.drop_frame = False
+        self.frames_off_sync_latched_current_take = False
+        if self.drop_frame_timer:
+            self.drop_frame_timer.cancel()
+            self.drop_frame_timer = None
+        if self.drop_frame_relay_timer:
+            self.drop_frame_relay_timer.cancel()
+            self.drop_frame_relay_timer = None
+        self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 0)
+        self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, 0)
+        self.redis_controller.set_value(ParameterKey.DROP_FRAME_RELAY.value, 0)
+        self.redis_controller.set_value(ParameterKey.DROP_FRAME_DURING_LAST_TAKE.value, 0)
+        self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 1)
+
+    def _clear_post_recording_state(self) -> None:
+        self.recording_was_preroll = False
+        self.framerate_values = []
+        self.frame_limit_target_slots = None
+        self.frame_limit_requested_slots = None
+        self.frame_limit_anchor_time = None
+        self.frame_limit_stop_requested = False
+        self.awaiting_fresh_framecount = False
+        self.fresh_framecount_guard_start_time = None
+        self.fps_correction_factor_at_rec_start = None
+        self.fps_at_rec_start = None
+        self.fps_timeline = []
+        with self.final_analysis_lock:
+            self.final_analysis_pending = False
+            self.final_analysis_sequence = None
+
+    def _schedule_final_analysis(self) -> None:
+        take_sequence = self.take_sequence
+        with self.final_analysis_lock:
+            self.final_analysis_pending = True
+            if (
+                self.final_analysis_thread
+                and self.final_analysis_thread.is_alive()
+                and self.final_analysis_sequence == take_sequence
+            ):
+                return
+
+            self.final_analysis_sequence = take_sequence
+            self.final_analysis_thread = threading.Thread(
+                target=self._final_analysis_worker,
+                args=(take_sequence,),
+                name="FinalFrameAnalysis",
+                daemon=True,
+            )
+            self.final_analysis_thread.start()
+
+    def _final_analysis_worker(self, take_sequence: int) -> None:
+        start_wait = time.time()
+        logged_wait = False
+        flush_timed_out = False
+        while (time.time() - start_wait) < self.final_analysis_timeout_s:
+            if take_sequence != self.take_sequence:
+                with self.final_analysis_lock:
+                    if self.final_analysis_sequence == take_sequence:
+                        self.final_analysis_pending = False
+                        self.final_analysis_sequence = None
+                return
+            if not self._storage_is_still_flushing():
+                break
+            if not logged_wait:
+                logging.info("Waiting for buffered frames to finish writing before frame-sync analysis.")
+                logged_wait = True
+            time.sleep(self.final_analysis_poll_s)
+        else:
+            logging.warning(
+                "Buffered frame flush did not go idle within %.1fs; analyzing with stable on-disk count.",
+                self.final_analysis_timeout_s,
+            )
+            flush_timed_out = True
+
+        if logged_wait and not flush_timed_out:
+            logging.info("Buffered frame write complete; running final frame-sync analysis.")
+
+        try:
+            if take_sequence == self.take_sequence:
+                self.analyze_frames()
+        finally:
+            if take_sequence == self.take_sequence:
+                self._clear_post_recording_state()
+
         
     def check_framecount_changing(self):
         """
@@ -573,8 +909,12 @@ class RedisListener:
         Any lower-but-non-zero values are ignored entirely.
         """
         now = datetime.datetime.now()
-        new = self.frame_count
-        old = self.last_framecount               # last *accepted* count
+        new = self._filter_initial_recording_framecount(self.frame_count)
+        if new is None:
+            return
+        old = self._coerce_int(self.last_framecount)
+        if old is None:
+            old = 0                              # last *accepted* count
 
         # ----------------------------------------------------------- 1) reset to 0
         if new == 0:
@@ -619,6 +959,11 @@ class RedisListener:
     def reset_framecount(self):
         self.framecount = 0
         self.frame_count = 0
+        self.last_framecount = 0
+        self.last_rise_time = None
+        self.framecount_changing = False
+        self.bufferSize = 0
+        self.frames_off_sync_latched_current_take = False
         self.redis_controller.set_value('framecount', 0)
         self.active_sensor_labels.clear()
         self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 1)
@@ -644,13 +989,21 @@ class RedisListener:
 
                 if value_str == '1':
                     self.is_recording = True
+                    self.take_sequence += 1
                     self.reset_framecount()
                     self.recording_start_time = datetime.datetime.now()
+                    self.awaiting_fresh_framecount = True
+                    self.fresh_framecount_guard_start_time = self.recording_start_time
                     self.drop_frame_count_current_take = 0
+                    self.frames_off_sync_latched_current_take = False
                     self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, 0)
                     self.redis_controller.set_value(ParameterKey.DROP_FRAME_RELAY.value, 0)
                     self.redis_controller.set_value(ParameterKey.DROP_FRAME_DURING_LAST_TAKE.value, 0)
+                    self.redis_controller.set_value(ParameterKey.IS_WRITING_BUF.value, 0)
                     self.recording_end_time = None
+                    with self.final_analysis_lock:
+                        self.final_analysis_pending = False
+                        self.final_analysis_sequence = None
                     logging.info(f"Recording started at: {self.recording_start_time}")
 
                     self.recording_was_preroll = self._storage_preroll_active()
@@ -673,6 +1026,7 @@ class RedisListener:
                         self.fps_at_rec_start = float(self.redis_controller.get_value('fps_user'))
                     except (TypeError, ValueError):
                         self.fps_at_rec_start = None
+                    self._reset_fps_timeline()
 
                     self.framerate = float(self.redis_controller.get_value('fps_user'))  # keep if you still use it elsewhere
                     self.allow_initial_zero = True
@@ -692,26 +1046,31 @@ class RedisListener:
                         if self.recording_start_time:
                             self.recording_end_time = datetime.datetime.now()
                             logging.info(f"Recording stopped at: {self.recording_end_time}")
-                            self._update_frames_in_sync()
-                            try:
-                                self.analyze_frames()
-                            finally:
-                                self.recording_was_preroll = False
-                            self.framerate_values = []
+                            if self.bufferSize > 0:
+                                self.redis_controller.set_value(ParameterKey.IS_WRITING_BUF.value, 1)
+                            if self.recording_was_preroll:
+                                logging.debug("Skipping frame-sync analysis for storage pre-roll.")
+                                self._clear_frame_warning_state()
+                                self._clear_post_recording_state()
+                            else:
+                                self._schedule_final_analysis()
                         else:
                             logging.warning("Recording stopped, but no recording start time was registered.")
                             self.recording_was_preroll = False
                     self.allow_initial_zero = True
-                    self.frame_limit_target_slots = None
-                    self.frame_limit_requested_slots = None
-                    self.frame_limit_anchor_time = None
-                    self.frame_limit_stop_requested = False
                     
             elif changed_key == "fps":
                 try:
                     self._note_fps_change(float(value_str))
+                    self._note_expected_fps_change()
                 except ValueError:
                     logging.warning(f"Ignoring invalid fps value {value_str!r}")
+                continue
+            elif changed_key == ParameterKey.FPS_USER.value:
+                try:
+                    self._note_expected_fps_change(float(value_str))
+                except ValueError:
+                    logging.warning(f"Ignoring invalid fps_user value {value_str!r}")
                 continue
 
 
@@ -867,6 +1226,11 @@ class RedisListener:
         Compare the actual number of DNGs on disk with the theoretical count.
         Robust against path ambiguities, in-flight files, and off-by-one rounding.
         """
+        if self.recording_was_preroll or self._storage_preroll_active():
+            logging.debug("Skipping frame-sync analysis for storage pre-roll.")
+            self._clear_frame_warning_state()
+            return
+
         quiet_summary = self.recording_was_preroll
 
         # --------------------------- 1) collect candidate dirs -----------------
@@ -956,37 +1320,55 @@ class RedisListener:
         if not quiet_summary:
             logging.info(f"Recording duration in seconds (start→end): {duration:.6f}")
 
-        # ------------------------- expected FPS (locked) ----------------------
-        if self.fps_at_rec_start is not None and self.fps_at_rec_start > 0:
-            fps_expected = self.fps_at_rec_start
-            if not quiet_summary:
-                logging.info(f"Using FPS locked at record start: {fps_expected:.6f}")
-        else:
-            # hard fallback if start FPS was missing
-            try:
-                fps_expected = float(self.redis_controller.get_value('fps'))
-                if not quiet_summary:
-                    logging.info(f"Using configured FPS (fallback): {fps_expected:.6f}")
-            except (TypeError, ValueError):
-                logging.error("Expected FPS missing/invalid; aborting expected-frame calc.")
-                return
-
         # ----------------------- expected frames (per sensor) -----------------
-        # Discrete sampling: frames are whole numbers; floor avoids the +1 overshoot at the stop edge.
-        expected_frames_total, expected_frames_float = self._expected_frame_counts(
-            fps_expected,
-            duration,
-            sensor_count_effective,
-        )
+        # Exact frame-limited takes use the requested slot count. Free-running
+        # takes integrate the user FPS timeline so speed ramps are counted.
+        if self.frame_limit_requested_slots is not None:
+            expected_frames_total, expected_frames_float = self._expected_frame_counts_for_recording(
+                self.recording_start_time,
+                end_for_calc,
+                sensor_count_effective,
+            )
+            if not quiet_summary:
+                logging.info(
+                    "Using requested frame-limited target: %d frame slot(s) × %d sensor(s)",
+                    self.frame_limit_requested_slots,
+                    max(1, sensor_count_effective),
+                )
+        else:
+            expected_frames_total, expected_frames_float = self._expected_frame_counts_for_recording(
+                self.recording_start_time,
+                end_for_calc,
+                sensor_count_effective,
+            )
+            if not quiet_summary:
+                if len(self.fps_timeline) > 1:
+                    logging.info(
+                        "Using integrated FPS timeline with %d segment(s) for expected-frame calculation.",
+                        len(self.fps_timeline),
+                    )
+                elif self.fps_timeline:
+                    logging.info(
+                        "Using FPS %.6f for expected-frame calculation.",
+                        self.fps_timeline[-1][1],
+                    )
+                else:
+                    logging.info("Using configured FPS fallback for expected-frame calculation.")
 
         if not quiet_summary:
             logging.info(f"Calculated expected number of frames: {expected_frames_total}")
             logging.info(f"Actual number of recorded frames: {recorded_frames_total}")
 
-        diff = expected_frames_total - recorded_frames_total
+        drop_detected_this_take = self.drop_frame_count_current_take > 0
+        dropped_frame_slots_total = (
+            self.drop_frame_count_current_take * max(1, sensor_count_effective)
+            if drop_detected_this_take
+            else 0
+        )
+        sync_recorded_frames_total = recorded_frames_total + dropped_frame_slots_total
+        diff = expected_frames_total - sync_recorded_frames_total
         frames_in_sync = abs(diff) <= 1
 
-        drop_detected_this_take = self.drop_frame_count_current_take > 0
         drop_during_last_take = (not self.recording_was_preroll) and drop_detected_this_take
         self.redis_controller.set_value(
             ParameterKey.DROP_FRAME_DURING_LAST_TAKE.value,
@@ -1000,6 +1382,11 @@ class RedisListener:
             logging.info(
                 f"Drop frames detected this take: {self.drop_frame_count_current_take}"
             )
+            if dropped_frame_slots_total:
+                logging.info(
+                    "Counting %d dropped-frame hole(s) as intentional sync slot(s).",
+                    dropped_frame_slots_total,
+                )
 
         if frames_in_sync:
             if not quiet_summary:
@@ -1015,11 +1402,17 @@ class RedisListener:
                 f"Discrepancy detected: {diff:+d} frames difference between expected and recorded counts."
             )
 
+        live_sync_warning_latched = self.frames_off_sync_latched_current_take
+        if not frames_in_sync:
+            self.frames_off_sync_latched_current_take = True
+
         all_frames_accounted = frames_in_sync
         self.redis_controller.set_value(
             ParameterKey.FRAMES_IN_SYNC.value,
-            1 if frames_in_sync else 0,
+            1 if frames_in_sync and not live_sync_warning_latched else 0,
         )
+        if frames_in_sync and live_sync_warning_latched and not quiet_summary:
+            logging.info("Keeping live frame-sync warning latched until the next take.")
 
         current_correction_factor = self.fps_correction_factor_at_rec_start
         if not current_correction_factor or current_correction_factor <= 0:
@@ -1059,6 +1452,8 @@ class RedisListener:
         )
 
         self.fps_correction_factor_at_rec_start = None
+        self.fps_at_rec_start = None
+        self.fps_timeline = []
 
 
     def calculate_average_framerate_last_100_frames(self):

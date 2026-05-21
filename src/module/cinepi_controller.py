@@ -187,8 +187,29 @@ class CinePiController:
             self.fps_steps = list(range(1, self.fps_max + 1))
         else:
             self.fps_steps = list(self.settings['arrays']['fps_steps'])
-        # dynamic list is always the legal subset ≤ fps_max
-        self.fps_steps_dynamic = [v for v in self.fps_steps if v <= self.fps_max]
+        self.fps_steps_dynamic = self._fps_steps_capped_at_max(self.fps_steps)
+
+    def _fps_steps_capped_at_max(self, fps_steps):
+        """Return configured FPS steps, replacing above-max choices with fps_max."""
+        values = []
+        has_above_max = False
+        for fps in fps_steps:
+            try:
+                value = float(fps)
+            except (TypeError, ValueError):
+                continue
+            if value <= self.fps_max:
+                values.append(value)
+            else:
+                has_above_max = True
+
+        if has_above_max or not values:
+            values.append(float(self.fps_max))
+
+        return [
+            int(value) if value.is_integer() else value
+            for value in sorted(set(values))
+        ]
 
     def _rebuild_wb_steps(self):
         self.wb_steps = (list(range(2800, 6501, 100))
@@ -348,7 +369,7 @@ class CinePiController:
         self.redis_controller.set_value(ParameterKey.FPS_MAX.value, self.fps_max)
 
         """Initialize fps_steps based on the provided list and capped by fps_max."""
-        self.fps_steps_dynamic = [fps for fps in self.fps_steps if fps <= self.fps_max]
+        self.fps_steps_dynamic = self._fps_steps_capped_at_max(fps_steps)
         logging.info(f"Initialized fps_steps: {self.fps_steps_dynamic}")
 
     def set_free_mode(self, iso_free, shutter_a_free, fps_free, wb_free):
@@ -425,30 +446,41 @@ class CinePiController:
             • correction factor for fractional clocking
             • optional locks
         """
-        self.user_fps = float(value)
-        self.redis_controller.set_value(ParameterKey.FPS_USER.value, self.user_fps)
+        requested_user_fps = float(value)
 
         self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
             self.current_sensor,
             self.sensor_mode,
-            self.user_fps,
+            requested_user_fps,
         )
 
-        corrected = self.user_fps * self.fps_correction_factor
+        corrected = requested_user_fps * self.fps_correction_factor
         fps_max   = int(self.redis_controller.get_value(ParameterKey.FPS_MAX.value))
 
         # ── choose the final fps value ──────────────────────────────────────
         if self.shutter_a_sync_mode == 1 or self.fps_free:
             safe_value = max(1, min(fps_max, corrected))           # “free”
+            if safe_value == corrected:
+                safe_user_fps = requested_user_fps
+            else:
+                safe_user_fps = (
+                    safe_value / self.fps_correction_factor
+                    if self.fps_correction_factor
+                    else safe_value
+                )
         else:
             # make sure the table is current (free-mode may be toggled at run-time)
             self._rebuild_fps_steps()
             safe_value = min(self.fps_steps_dynamic,
                             key=lambda x: abs(x - corrected))     # “snapped”
+            safe_user_fps = safe_value
 
         if self.fps_lock and not self.lock_override:
             logging.debug("FPS locked – request ignored")
             return
+
+        self.user_fps = safe_user_fps
+        self.redis_controller.set_value(ParameterKey.FPS_USER.value, self.user_fps)
 
         self.current_fps = safe_value
         self.redis_controller.set_value(ParameterKey.FPS.value, safe_value)

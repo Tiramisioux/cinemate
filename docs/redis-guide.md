@@ -67,7 +67,7 @@ Cinemate's `RedisListener` parses these messages and updates keys such as:
 - `framecount`, `buffer`, `buffer_size`, and `fps_actual`
 - `tc_cam0` and `tc_cam1`, derived from the nanosecond timestamps
 - drop-frame keys such as `drop_frame`, `drop_frame_count`, and `drop_frame_during_last_take`
-- `frames_in_sync` and `fps_correction_suggestion` after a real take finishes and buffered frames have flushed. Storage pre-roll clips are excluded from this analysis.
+- `frames_in_sync`, which flips to `0` during a real take as soon as live frame-slot sync drifts outside the +/- one-frame tolerance, and `fps_correction_suggestion` after the take finishes and buffered frames have flushed. Storage pre-roll clips are excluded from this analysis.
 
 Separately, the Redis controller starts a recording timer whenever `rec=1`. That timer updates:
 
@@ -93,4 +93,3 @@ r.publish('cp_controls', 'is_recording')
 !!! info
 
     This is basically what Cinemate does: it keeps track of values coming from CinePi-raw, adds higher-level state of its own, and republishes control changes through Redis.
-

@@ -1,7 +1,7 @@
 # Quick start
 
 ## Hardware requirements
-- Raspberry Pi 4 or 5 (2GB RAM version would be sufficient)
+- Raspberry Pi 4 or 5. The 2GB RAM version works with the prebuilt image, but 4GB is recommended if you plan to compile `cinepi-raw` on the Pi.
 - Official HQ or Global Shutter camera
 - HDMI monitor or a phone/tablet for monitoring
 
@@ -9,7 +9,7 @@
 
     More RAM gives you a larger frame buffer. But ideally you don’t want to have to use the framebuffer anyway, as realtime writing to storage is preferred.
     
-    There could be some rare high speed slomo cases you would want faster frame capture for short bursts but in most cases, the 4GB models will do fine.
+    There could be some rare high speed slomo cases you would want faster frame capture for short bursts. In most cases, the 4GB models will do fine and are a better development target.
 
 ## Installation
 

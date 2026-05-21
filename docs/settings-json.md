@@ -190,12 +190,16 @@ General options for runtime behaviour.
 ```json
 "settings": {
   "light_hz": [50, 60],
-  "conform_frame_rate": 24
+  "conform_frame_rate": 24,
+  "live_sync_warning_tolerance_frames": 2,
+  "final_sync_analysis_tolerance_frames": 1
 }
 ```
 
 `light_hz` – list of mains frequencies used to calculate flicker‑free shutter angles. These are added to the shutter angle array and also dynamically calculated upon each fps change. This way, there is always a flicker free shutter angle value close by, when toggling through shutter angles, either via the cli or using buttons/pots/rotary encoder.
 <br>`conform_frame_rate` – frame rate intendend for project conforming in post. This setting is not really used by CineMate except for calculating the recording timecode tracker in redis but might be used in future updates.
+<br>`live_sync_warning_tolerance_frames` – frame-slot tolerance for the live magenta `SYNC` warning during a take. The default is `2`, so brief +/- 2 frame live drift is allowed before the warning latches.
+<br>`final_sync_analysis_tolerance_frames` – frame tolerance for the end-of-take DNG count analysis after buffered frames have flushed. The default is `1`, keeping the final result stricter than the live warning.
 
 ## analog_controls
 

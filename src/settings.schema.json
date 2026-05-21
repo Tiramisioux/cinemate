@@ -71,6 +71,32 @@
       },
       "additionalProperties": true
     },
-    "additionalProperties": true
-  }
+    "settings": {
+      "type": "object",
+      "properties": {
+        "light_hz": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "conform_frame_rate": {
+          "type": "number",
+          "default": 24
+        },
+        "live_sync_warning_tolerance_frames": {
+          "type": "number",
+          "minimum": 0,
+          "default": 2
+        },
+        "final_sync_analysis_tolerance_frames": {
+          "type": "number",
+          "minimum": 0,
+          "default": 1
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
 }

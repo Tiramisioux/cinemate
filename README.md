@@ -36,7 +36,7 @@ Apps change settings by updating Redis keys. CinePi-RAW listens for those update
 
 ## Hardware
 For a basic Cinemate setup you need:
-- Raspberry Pi 4 or 5 (2GB RAM version would be sufficient)
+- Raspberry Pi 4 or 5. The 2GB RAM version works with the prebuilt image, but 4GB is recommended if you plan to compile `cinepi-raw` on the Pi.
 - Official HQ or GS camera module
 - SSD drive such as a Samsung T7 formatted `ext4` and labelled `RAW`
 - HDMI monitor or a phone/tablet connected to the Pi hotspot for preview

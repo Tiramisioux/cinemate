@@ -42,7 +42,7 @@ Each entry explains which component normally writes the key and whether it makes
 | drop_frame_count | Cinemate (RedisListener) | Number of drop-frame detections in the current/last take | No |
 | drop_frame_relay | Cinemate (RedisListener) | Short pulse used to mute REC tone for one frame on drop-frame events | No |
 | drop_frame_during_last_take | Cinemate (RedisListener) | `1` if the previous non-preroll take had drop frames | No |
-| frames_in_sync | Cinemate (RedisListener) | `1` if final expected vs on-disk recorded frame counts ended within tolerance after buffered writes flushed | No |
+| frames_in_sync | Cinemate (RedisListener) | `1` if live/final expected vs recorded frame counts are within configured sync tolerance; defaults are +/- 2 frames live and +/- 1 frame after buffered writes flush | No |
 | recording_time | Cinemate (RedisController timer) | Elapsed record time in seconds | No |
 | recording_tc_rec | Cinemate (RedisController timer) | Elapsed record timecode | No |
 | recording_time_tod | Cinemate (RedisController timer) | Time-of-day timecode updated during recording | No |

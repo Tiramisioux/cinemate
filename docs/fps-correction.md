@@ -22,15 +22,17 @@ Cinemate knows exactly how many frames *should* have landed over the elapsed dur
 
 ### How Cinemate analyzes the results
 
-After the recording finishes, Cinemate compares the expected frame count with the actual frames captured. When there is a mismatch, it derives a suggested correction factor and suggests it to the user. If the frame count lands on the expected number of frames (with the tolerance of +/- 1 frame), it suggests to keep the existing correction factor.
+After the recording finishes, Cinemate compares the expected frame count with the actual frames captured. When there is a mismatch, it derives a suggested correction factor and suggests it to the user. If the frame count lands on the expected number of frames (with the default final tolerance of +/- 1 frame), it suggests to keep the existing correction factor.
 
 ### Frame-count sync status
 
-Cinemate stores the frame-count sync warning state in Redis as `frames_in_sync`. A value of `1` means the active or latest take is still within the +/- one-frame tolerance. A value of `0` means Cinemate has seen the take drift outside that tolerance and the Simple GUI shows the magenta `SYNC` warning.
+Cinemate stores the frame-count sync warning state in Redis as `frames_in_sync`. A value of `1` means the active or latest take is still within tolerance. A value of `0` means Cinemate has seen the take drift outside tolerance and the Simple GUI shows the magenta `SYNC` warning.
 
-During recording, Cinemate compares the live accepted frame-slot count against the expected slot count from the FPS timeline. If the difference grows beyond +/- one frame, the magenta `SYNC` warning flashes immediately and then latches until the next take starts.
+During recording, Cinemate compares the live accepted frame-slot count against the expected slot count from the FPS timeline. If the difference grows beyond the default live tolerance of +/- 2 frames, the magenta `SYNC` warning flashes immediately and then latches until the next take starts.
 
-The final check waits until buffered frames have finished flushing to storage. While the RAM buffer is still draining after stop, Cinemate raises `is_writing_buf=1` and the Simple GUI stays green. The DNG count is checked only after that buffered write phase has gone idle, so frames that were still in RAM at stop time are included in the result.
+The final check waits until buffered frames have finished flushing to storage. While the RAM buffer is still draining after stop, Cinemate raises `is_writing_buf=1` and the Simple GUI stays green. The DNG count is checked only after that buffered write phase has gone idle, so frames that were still in RAM at stop time are included in the result. The default final analysis tolerance is stricter at +/- 1 frame.
+
+The two tolerances are configurable in `settings.json` as `settings.live_sync_warning_tolerance_frames` and `settings.final_sync_analysis_tolerance_frames`.
 
 For free-running takes, the expected-frame calculation follows FPS changes made during the take. This means speed ramps are counted from the FPS timeline rather than from only the FPS at the start of the take. For fixed-frame takes such as `rec f 100`, the requested frame count remains the expected target.
 

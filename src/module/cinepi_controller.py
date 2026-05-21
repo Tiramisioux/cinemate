@@ -187,8 +187,29 @@ class CinePiController:
             self.fps_steps = list(range(1, self.fps_max + 1))
         else:
             self.fps_steps = list(self.settings['arrays']['fps_steps'])
-        # dynamic list is always the legal subset ≤ fps_max
-        self.fps_steps_dynamic = [v for v in self.fps_steps if v <= self.fps_max]
+        self.fps_steps_dynamic = self._fps_steps_capped_at_max(self.fps_steps)
+
+    def _fps_steps_capped_at_max(self, fps_steps):
+        """Return configured FPS steps, replacing above-max choices with fps_max."""
+        values = []
+        has_above_max = False
+        for fps in fps_steps:
+            try:
+                value = float(fps)
+            except (TypeError, ValueError):
+                continue
+            if value <= self.fps_max:
+                values.append(value)
+            else:
+                has_above_max = True
+
+        if has_above_max or not values:
+            values.append(float(self.fps_max))
+
+        return [
+            int(value) if value.is_integer() else value
+            for value in sorted(set(values))
+        ]
 
     def _rebuild_wb_steps(self):
         self.wb_steps = (list(range(2800, 6501, 100))
@@ -348,7 +369,7 @@ class CinePiController:
         self.redis_controller.set_value(ParameterKey.FPS_MAX.value, self.fps_max)
 
         """Initialize fps_steps based on the provided list and capped by fps_max."""
-        self.fps_steps_dynamic = [fps for fps in self.fps_steps if fps <= self.fps_max]
+        self.fps_steps_dynamic = self._fps_steps_capped_at_max(fps_steps)
         logging.info(f"Initialized fps_steps: {self.fps_steps_dynamic}")
 
     def set_free_mode(self, iso_free, shutter_a_free, fps_free, wb_free):

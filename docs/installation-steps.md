@@ -3,7 +3,7 @@ This page starts with the repo-root one-click installer and then continues with 
 
 !!! Note ""
 
-     Stack works on Raspberry Pi 4 and 5 models. The 2GB RAM version would be sufficient, while more RAM will give you a larger framebuffer. Useful at high frame rates.
+     Stack works on Raspberry Pi 4 and 5 models. The 2GB RAM version works with the prebuilt image, while 4GB is recommended if you plan to compile `cinepi-raw` on the Pi. More RAM also gives you a larger framebuffer, which can be useful at high frame rates.
 
 !!! Note ""
 

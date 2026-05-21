@@ -414,16 +414,10 @@ class SSDMonitor:
             logging.warning("findmnt fstype failed for %s", self._mount_path)
 
         if self._device_name:
-            try:
-                out = subprocess.check_output(
-                    ["blkid", "-s", "TYPE", "-o", "value", f"/dev/{self._device_name}"],
-                    text=True,
-                    timeout=1.0,
-                ).strip()
-                if out:
-                    return normalize_storage_filesystem(out)
-            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-                logging.warning("blkid fstype failed for /dev/%s", self._device_name)
+            out = self._blkid_value(f"/dev/{self._device_name}", "TYPE", fresh=True)
+            if out:
+                return normalize_storage_filesystem(out)
+            logging.warning("blkid fstype failed for /dev/%s", self._device_name)
 
         return "unknown"
 
@@ -519,6 +513,136 @@ class SSDMonitor:
                             stdout=subprocess.DEVNULL,
                             stderr=subprocess.DEVNULL)
             time.sleep(0.2)
+        return False
+
+    @staticmethod
+    def _blkid_value(dev: str, tag: str, *, fresh: bool = False) -> str:
+        """
+        Return one blkid tag value.
+
+        The normal blkid path can briefly report cached pre-format metadata.
+        Fresh probes first ask blkid to read the device directly and then fall
+        back to the cache-backed query used elsewhere.
+        """
+        commands = []
+        if fresh:
+            commands.extend([
+                ["blkid", "-p", "-s", tag, "-o", "value", dev],
+                ["blkid", "-c", "/dev/null", "-s", tag, "-o", "value", dev],
+            ])
+        commands.append(["blkid", "-s", tag, "-o", "value", dev])
+
+        for cmd in commands:
+            try:
+                return subprocess.check_output(
+                    cmd,
+                    text=True,
+                    stderr=subprocess.DEVNULL,
+                    timeout=1.0,
+                ).strip()
+            except (
+                FileNotFoundError,
+                subprocess.CalledProcessError,
+                subprocess.TimeoutExpired,
+            ):
+                continue
+        return ""
+
+    @staticmethod
+    def _settle_device_metadata(device: str) -> None:
+        """Give the kernel and udev a moment to forget pre-format metadata."""
+        for cmd in (
+            ["sync"],
+            ["udevadm", "settle", "--timeout=5"],
+            ["blkid", "-g"],
+        ):
+            try:
+                subprocess.run(
+                    cmd,
+                    check=False,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=6.0,
+                )
+            except (
+                FileNotFoundError,
+                subprocess.SubprocessError,
+            ) as exc:
+                logging.debug("Device metadata settle command failed (%s): %s", cmd, exc)
+
+    @staticmethod
+    def _mount_options_for_filesystem(fstype: str) -> str:
+        return {
+            "ext4":  EXT4_MOUNT_OPTIONS,
+            "ntfs":  f"uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
+            "ntfs3": f"uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
+            "exfat": f"uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
+        }.get(fstype, "rw,noatime")
+
+    def _detect_device_filesystem(self, device: str) -> str:
+        return self._blkid_value(device, "TYPE", fresh=True)
+
+    def _find_raw_device(self) -> Optional[str]:
+        def _blkid_lines():
+            try:
+                out = subprocess.check_output(
+                    ["blkid", "-s", "LABEL", "-o", "device"],
+                    text=True,
+                    stderr=subprocess.DEVNULL,
+                    timeout=1.0,
+                )
+                return [ln.strip() for ln in out.splitlines()]
+            except (
+                FileNotFoundError,
+                subprocess.CalledProcessError,
+                subprocess.TimeoutExpired,
+            ):
+                return []
+
+        candidates = [d for d in _blkid_lines() if Path(d).exists()]
+        nvme = [d for d in candidates if "/nvme" in d]
+        sdas = [d for d in candidates if "/sd" in d]
+        others = [d for d in candidates if d not in nvme + sdas]
+        ordered = nvme + sdas + others
+
+        for dev in ordered:
+            label = self._blkid_value(dev, "LABEL", fresh=True)
+            if label == "RAW":
+                return dev
+        return None
+
+    def _mount_raw_device(self, raw_dev: str, fstype: str, *, retries: int = 3) -> bool:
+        mount_path = self._mount_path
+        try:
+            mount_path.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            logging.error("mount_drive(): cannot create %s (%s)", mount_path, exc)
+            return False
+
+        opts = self._mount_options_for_filesystem(fstype)
+        cmd = ["sudo", "mount", "-t", fstype, "-o", opts, raw_dev, str(mount_path)]
+
+        for attempt in range(1, retries + 1):
+            res = subprocess.call(cmd)
+            if res == 0:
+                subprocess.call(["sudo", "chown", "pi:pi", str(mount_path)])
+                logging.info("mount_drive(): mounted %s (%s) at %s", raw_dev, fstype, mount_path)
+                self._handle_mount()
+                return True
+
+            if attempt < retries:
+                logging.warning(
+                    "mount_drive(): mount attempt %d/%d failed for %s as %s, exit=%d",
+                    attempt,
+                    retries,
+                    raw_dev,
+                    fstype,
+                    res,
+                )
+                self._settle_device_metadata(raw_dev)
+                time.sleep(0.2)
+
+        logging.error("mount_drive(): mount failed for %s as %s", raw_dev, fstype)
         return False
 
     def _handle_storage_error(self, exc: OSError, *, action: str) -> bool:
@@ -671,7 +795,7 @@ class SSDMonitor:
             logging.error("Failed to unmount: %s", exc)
             return
         
-    def mount_drive(self) -> bool:
+    def mount_drive(self, filesystem: Optional[str] = None, device: Optional[str] = None) -> bool:
         """
         Mount the first partition whose LABEL is 'RAW'.
         Returns True if the mount succeeds or if it is already mounted.
@@ -680,70 +804,28 @@ class SSDMonitor:
             logging.info("mount_drive(): already mounted")
             return True
 
-        # 1 — build a list of candidate device nodes, prioritised
-        def _blkid_lines():
-            try:
-                out = subprocess.check_output(["blkid", "-s", "LABEL", "-o", "device"], text=True)
-                return [ln.strip() for ln in out.splitlines()]
-            except subprocess.CalledProcessError:
-                return []
-
-        candidates = [d for d in _blkid_lines() if Path(d).exists()]
-        nvme = [d for d in candidates if "/nvme" in d]
-        sdas = [d for d in candidates if "/sd" in d]
-        others = [d for d in candidates if d not in nvme + sdas]
-        ordered = nvme + sdas + others
-
-        raw_dev = None
-        for dev in ordered:
-            try:
-                label = subprocess.check_output(["blkid", "-s", "LABEL", "-o", "value", dev], text=True).strip()
-                if label == "RAW":
-                    raw_dev = dev
-                    break
-            except subprocess.CalledProcessError:
-                continue
+        fs_hint = normalize_filesystem(filesystem) if filesystem else None
+        raw_dev = device or self._find_raw_device()
 
         if not raw_dev:
             logging.warning("mount_drive(): no partition labelled RAW found")
             return False
 
-        # 2 — discover filesystem type
-        try:
-            fstype = subprocess.check_output(["blkid", "-s", "TYPE", "-o", "value", raw_dev], text=True).strip()
-        except subprocess.CalledProcessError:
+        probed_fstype = self._detect_device_filesystem(raw_dev)
+        fstype = fs_hint or probed_fstype
+        if not fstype:
             logging.error("mount_drive(): blkid failed for %s", raw_dev)
             return False
 
-        # 3 — create mountpoint and mount
-        mount_path = self._mount_path
-        try:
-            mount_path.mkdir(parents=True, exist_ok=True)
-        except OSError as exc:
-            logging.error("mount_drive(): cannot create %s (%s)", mount_path, exc)
-            return False
+        if fs_hint and probed_fstype and probed_fstype != fs_hint:
+            logging.warning(
+                "mount_drive(): blkid reports %s for %s after requested %s; using requested filesystem",
+                probed_fstype,
+                raw_dev,
+                fs_hint,
+            )
 
-        opts = {
-            "ext4":  EXT4_MOUNT_OPTIONS,
-            "ntfs":  f"uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
-            "ntfs3": f"uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
-            "exfat": f"uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
-        }.get(fstype, "rw,noatime")
-
-        cmd = ["sudo", "mount", "-t", fstype, "-o", opts, raw_dev, str(mount_path)]
-        res = subprocess.call(cmd)
-        if res != 0:
-            logging.error("mount_drive(): mount failed, exit=%d", res)
-            return False
-
-        # 4 — ownership fix
-        subprocess.call(["sudo", "chown", "pi:pi", str(mount_path)])
-
-        logging.info("mount_drive(): mounted %s (%s) at %s", raw_dev, fstype, mount_path)
-
-        # 5 — sync SSDMonitor state & emit events
-        self._handle_mount()
-        return True
+        return self._mount_raw_device(raw_dev, fstype)
 
     def erase_drive(self) -> bool:
         """Erase all files from the mounted RAW volume."""
@@ -808,8 +890,9 @@ class SSDMonitor:
             return False
 
         logging.info("format_drive(): formatted %s as %s", device, fs)
+        self._settle_device_metadata(device)
 
-        if not self.mount_drive():
+        if not self.mount_drive(filesystem=fs, device=device):
             logging.error("format_drive(): failed to remount RAW after formatting")
             return False
 

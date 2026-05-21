@@ -2,6 +2,8 @@
 
 For easy later rebuilding and installation of `cinepi-raw` you can create a reusable `compile-raw.sh` helper. It reuses the existing Meson build directory by default, falls back to `--wipe` only when the build directory is not reusable, and still lets you force a clean setup when you need one.
 
+The prebuilt Cinemate image can run on a Raspberry Pi with 2GB RAM, but compiling `cinepi-raw` on the Pi is more comfortable on a 4GB model.
+
 ```shell
 cat > /home/pi/compile-raw.sh <<'EOF'
 #!/usr/bin/env bash

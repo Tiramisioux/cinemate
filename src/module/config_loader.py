@@ -129,7 +129,16 @@ def _apply_settings_defaults(settings: dict) -> dict:
         gpio_cfg.setdefault(k, v)
     settings["gpio_output"] = gpio_cfg
     settings.setdefault("arrays", {})
-    settings.setdefault("settings", {"light_hz": [50, 60], "conform_frame_rate": 24})
+    settings_cfg = settings.setdefault("settings", {})
+    settings_defaults = {
+        "light_hz": [50, 60],
+        "conform_frame_rate": 24,
+        "live_sync_warning_tolerance_frames": 2,
+        "final_sync_analysis_tolerance_frames": 1,
+    }
+    for k, v in settings_defaults.items():
+        settings_cfg.setdefault(k, v)
+    settings["settings"] = settings_cfg
     system_cfg = settings.setdefault("system", {})
     wifi_defaults = {
         "name": "CinePi",

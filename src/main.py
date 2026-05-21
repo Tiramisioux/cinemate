@@ -778,7 +778,13 @@ def run_application(args, log_queue):
         logging.info("Restarting cinepi-raw after startup handoff so preview binds above Cinemate")
         cinepi_controller.restart_camera(preview_enabled=True)
 
-    redis_listener = RedisListener(redis_controller, ssd_monitor)
+    settings_cfg = settings.get("settings", {})
+    redis_listener = RedisListener(
+        redis_controller,
+        ssd_monitor,
+        live_sync_warning_tolerance_frames=settings_cfg.get("live_sync_warning_tolerance_frames", 2),
+        final_sync_analysis_tolerance_frames=settings_cfg.get("final_sync_analysis_tolerance_frames", 1),
+    )
     redis_listener.set_recording_stop_callback(cinepi_controller.stop_recording)
     cinepi_controller.attach_redis_listener(redis_listener)
     battery_monitor = BatteryMonitor()

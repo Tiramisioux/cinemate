@@ -13,7 +13,18 @@ import math
 import statistics
 
 class RedisListener:
-    def __init__(self, redis_controller, ssd_monitor, framerate_callback=None, host='localhost', port=6379, db=0):
+    def __init__(
+        self,
+        redis_controller,
+        ssd_monitor,
+        framerate_callback=None,
+        host='localhost',
+        port=6379,
+        db=0,
+        *,
+        live_sync_warning_tolerance_frames: int | float = 2,
+        final_sync_analysis_tolerance_frames: int | float = 1,
+    ):
         self.redis_client = redis.StrictRedis(host=host, port=port, db=db)
         
         self.pubsub_stats = self.redis_client.pubsub()
@@ -68,6 +79,14 @@ class RedisListener:
         self.drop_frame_count_current_take = 0
         self.drop_frame_relay_timer = None
         self.frames_off_sync_latched_current_take = False
+        self.live_sync_warning_tolerance_frames = self._coerce_frame_tolerance(
+            live_sync_warning_tolerance_frames,
+            default=2,
+        )
+        self.final_sync_analysis_tolerance_frames = self._coerce_frame_tolerance(
+            final_sync_analysis_tolerance_frames,
+            default=1,
+        )
 
 
         self.cinepi_running = True
@@ -246,6 +265,13 @@ class RedisListener:
     def _coerce_int(cls, value) -> int | None:
         number = cls._coerce_float(value)
         return int(number) if number is not None else None
+
+    @classmethod
+    def _coerce_frame_tolerance(cls, value, *, default: int | float) -> float:
+        number = cls._coerce_float(value)
+        if number is None:
+            number = float(default)
+        return max(0.0, number)
 
     def set_frame_count_increase_tolerance(self):
         if self.framerate > 0:
@@ -497,22 +523,25 @@ class RedisListener:
         )
 
         # Avoid false warnings while the first few frame slots are still
-        # settling after record start. After that, any >1 slot drift latches.
+        # settling after record start. After that, drift beyond the configured
+        # live tolerance latches.
         if expected_float < 3:
             return
 
         recorded_slots = int(self.framecount or 0)
         sync_slots = recorded_slots + int(self.drop_frame_count_current_take)
         diff = expected_slots - sync_slots
-        if abs(diff) <= 1:
+        if abs(diff) <= self.live_sync_warning_tolerance_frames:
             return
 
         self.frames_off_sync_latched_current_take = True
         self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 0)
         logging.warning(
-            "Live frame sync warning: %+d frame slot difference "
+            "Live frame sync warning: %+d frame slot difference exceeds "
+            "+/- %g frame tolerance "
             "(expected=%d, recorded=%d, dropped-hole compensation=%d).",
             diff,
+            self.live_sync_warning_tolerance_frames,
             expected_slots,
             recorded_slots,
             self.drop_frame_count_current_take,
@@ -545,7 +574,10 @@ class RedisListener:
         recorded_frames = int(self.framecount or 0)
         dropped_frame_slots = self.drop_frame_count_current_take * max(1, sensor_count)
 
-        in_sync = abs(expected_int - (recorded_frames + dropped_frame_slots)) <= 1
+        in_sync = (
+            abs(expected_int - (recorded_frames + dropped_frame_slots))
+            <= self.final_sync_analysis_tolerance_frames
+        )
         self.redis_controller.set_value(
             ParameterKey.FRAMES_IN_SYNC.value,
             1 if in_sync else 0,
@@ -1367,7 +1399,7 @@ class RedisListener:
         )
         sync_recorded_frames_total = recorded_frames_total + dropped_frame_slots_total
         diff = expected_frames_total - sync_recorded_frames_total
-        frames_in_sync = abs(diff) <= 1
+        frames_in_sync = abs(diff) <= self.final_sync_analysis_tolerance_frames
 
         drop_during_last_take = (not self.recording_was_preroll) and drop_detected_this_take
         self.redis_controller.set_value(
@@ -1394,12 +1426,15 @@ class RedisListener:
                     logging.info("✓ All frames accounted for.")
                 else:
                     logging.info(
-                        "Frames within tolerance: %+d frame difference between expected and recorded counts.",
+                        "Frames within final tolerance: %+d frame difference between expected and recorded counts.",
                         diff,
                     )
         elif not quiet_summary:
             logging.warning(
-                f"Discrepancy detected: {diff:+d} frames difference between expected and recorded counts."
+                "Discrepancy detected: %+d frames difference between expected and recorded "
+                "counts exceeds +/- %g frame final tolerance.",
+                diff,
+                self.final_sync_analysis_tolerance_frames,
             )
 
         live_sync_warning_latched = self.frames_off_sync_latched_current_take

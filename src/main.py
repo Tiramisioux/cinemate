@@ -818,7 +818,6 @@ def run_application(args, log_queue):
     stream = None
     if network_available():
         app, socketio = create_app(redis_controller, cinepi_controller, simple_gui, sensor_detect)
-        simple_gui.socketio = socketio
         stream = threading.Thread(target=socketio.run, args=(app,), kwargs={'host': '0.0.0.0', 'port': 5000, 'allow_unsafe_werkzeug': True})
         stream.start()
         logging.info("Stream module loaded")

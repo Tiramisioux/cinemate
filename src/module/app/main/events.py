@@ -103,8 +103,6 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
         if sensor_mode is not None:
             if not cinepi_controller.set_resolution(int(sensor_mode)):
                 return
-            socketio.emit('resolution_change', {'sensor_mode': sensor_mode})
-            socketio.emit('reload_stream')
             # Emit the current values and steps immediately before reloading
             shutter_a_steps = cinepi_controller.calculate_dynamic_shutter_angles(
                 int(float(redis_controller.get_value(ParameterKey.FPS_ACTUAL.value)))

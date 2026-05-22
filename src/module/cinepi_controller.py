@@ -78,6 +78,7 @@ class CinePiController:
         self.redis_listener = None
         self._storage_profile_restart_lock = threading.Lock()
         self._storage_profile_restart_active = False
+        self._resolution_change_callbacks = []
         self._storage_profile_restart_pending = False
         self._active_storage_recorder_profile = self._current_storage_recorder_profile()
         try:
@@ -579,6 +580,19 @@ class CinePiController:
     def attach_redis_listener(self, redis_listener) -> None:
         self.redis_listener = redis_listener
 
+    def add_resolution_change_callback(self, callback) -> None:
+        if not callable(callback):
+            logging.warning("Ignoring non-callable resolution change callback.")
+            return
+        self._resolution_change_callbacks.append(callback)
+
+    def _notify_resolution_change(self, sensor_mode) -> None:
+        for callback in list(self._resolution_change_callbacks):
+            try:
+                callback(sensor_mode)
+            except Exception:
+                logging.exception("Resolution change callback failed.")
+
     def _clear_frame_limited_recording_stop(self) -> None:
         if self.redis_listener and hasattr(self.redis_listener, "disarm_frame_limited_stop"):
             self.redis_listener.disarm_frame_limited_stop()
@@ -925,6 +939,8 @@ class CinePiController:
                 if requested_fps is None:
                     requested_fps = self.redis_controller.get_value(ParameterKey.FPS_LAST.value, self.redis_controller.get_value(ParameterKey.FPS.value))
                 self.set_fps(float(requested_fps), update_user_target=False)
+
+                self._notify_resolution_change(value)
 
                 return True
 

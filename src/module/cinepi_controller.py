@@ -839,22 +839,51 @@ class CinePiController:
 
     def switch_resolution(self):
         try:
-            current_sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
-            sensor_modes = list(self.sensor_detect.res_modes.keys())
+            sensor_modes = sorted(
+                self.sensor_detect.res_modes.keys(),
+                key=lambda mode: int(mode),
+            )
             num_sensor_modes = len(sensor_modes)
 
             if num_sensor_modes <= 1:
                 logging.info("Only one sensor mode available. Cannot switch resolution.")
-                return
+                return False
 
-            current_index = sensor_modes.index(current_sensor_mode)
-            next_index = (current_index + 1) % num_sensor_modes
-            next_sensor_mode = sensor_modes[next_index]
+            current_sensor_mode = self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value)
+            if current_sensor_mode is None:
+                current_sensor_mode = self.sensor_mode
 
-            self.set_resolution(next_sensor_mode)
+            try:
+                current_sensor_mode = int(current_sensor_mode)
+            except (TypeError, ValueError):
+                current_sensor_mode = self.sensor_mode
 
-        except ValueError as error:
+            current_index = next(
+                (
+                    index
+                    for index, sensor_mode in enumerate(sensor_modes)
+                    if int(sensor_mode) == int(current_sensor_mode)
+                ),
+                None,
+            )
+
+            if current_index is None:
+                logging.warning(
+                    "Current sensor mode %s not found in available modes %s. Switching to first mode.",
+                    current_sensor_mode,
+                    sensor_modes,
+                )
+                next_sensor_mode = sensor_modes[0]
+            else:
+                next_index = (current_index + 1) % num_sensor_modes
+                next_sensor_mode = sensor_modes[next_index]
+
+            logging.info("Switching resolution from mode %s to mode %s", current_sensor_mode, next_sensor_mode)
+            return self.set_resolution(next_sensor_mode)
+
+        except (TypeError, ValueError) as error:
             logging.error(f"Error switching resolution: {error}")
+            return False
 
     def set_resolution(self, value=None, *, restart_process=False):
         if value is not None:
@@ -949,7 +978,7 @@ class CinePiController:
                 return False
 
         else:
-            self.switch_resolution()
+            return self.switch_resolution()
         
     def get_current_sensor_mode(self):
         current_height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value))

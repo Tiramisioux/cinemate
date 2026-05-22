@@ -143,6 +143,15 @@ class RedisListener:
         self.initial_framecount_guard_seconds = 0.25
         self.fresh_framecount_guard_start_time: datetime.datetime | None = None
         self.recording_stop_callback = None
+        self.raw_framecount_last: int | None = None
+        self.framecount_segment_base = 0
+        self.recording_reconfigure_pending = False
+        self.recording_reconfigure_requested_at: datetime.datetime | None = None
+        self.recording_reconfigure_grace_until: datetime.datetime | None = None
+        self.recording_pause_intervals: list[tuple[datetime.datetime, datetime.datetime]] = []
+        self.last_stats_message_time: datetime.datetime | None = None
+        self.recording_folder_hints: list[str] = []
+        self.recording_folder_hint_set: set[str] = set()
 
 
         self.start_listeners()
@@ -272,6 +281,172 @@ class RedisListener:
         if number is None:
             number = float(default)
         return max(0.0, number)
+
+    @staticmethod
+    def _seconds_between(start: datetime.datetime, end: datetime.datetime) -> float:
+        if end < start:
+            return 0.0
+        return (end - start).total_seconds()
+
+    def _pause_intervals_for_range(
+        self,
+        start_time: datetime.datetime,
+        end_time: datetime.datetime,
+    ) -> list[tuple[datetime.datetime, datetime.datetime]]:
+        self._expire_recording_reconfigure_if_needed(end_time)
+        intervals = list(self.recording_pause_intervals)
+        if self.recording_reconfigure_pending:
+            pause_start = (
+                self.last_stats_message_time
+                or self.recording_reconfigure_requested_at
+                or start_time
+            )
+            intervals.append((pause_start, end_time))
+
+        clipped: list[tuple[datetime.datetime, datetime.datetime]] = []
+        for pause_start, pause_end in intervals:
+            if pause_end <= start_time or pause_start >= end_time:
+                continue
+            clipped.append((max(pause_start, start_time), min(pause_end, end_time)))
+        return clipped
+
+    def _active_seconds_between(
+        self,
+        start_time: datetime.datetime,
+        end_time: datetime.datetime,
+    ) -> float:
+        if end_time <= start_time:
+            return 0.0
+
+        active_seconds = self._seconds_between(start_time, end_time)
+        for pause_start, pause_end in self._pause_intervals_for_range(start_time, end_time):
+            active_seconds -= self._seconds_between(pause_start, pause_end)
+        return max(0.0, active_seconds)
+
+    def _recording_reconfigure_grace_active(
+        self,
+        now: datetime.datetime | None = None,
+    ) -> bool:
+        now = now or datetime.datetime.now()
+        self._expire_recording_reconfigure_if_needed(now)
+        if self.recording_reconfigure_pending:
+            return True
+        if self.recording_reconfigure_grace_until is None:
+            return False
+        return now <= self.recording_reconfigure_grace_until
+
+    def _expire_recording_reconfigure_if_needed(self, now: datetime.datetime) -> None:
+        if not self.recording_reconfigure_pending:
+            return
+        if self.recording_reconfigure_grace_until is None:
+            return
+        if now <= self.recording_reconfigure_grace_until:
+            return
+
+        logging.warning(
+            "Recording reconfigure did not produce a framecount reset within the grace window; "
+            "resuming frame sync/drop warnings."
+        )
+        self.recording_reconfigure_pending = False
+        self.recording_reconfigure_requested_at = None
+        self.recording_reconfigure_grace_until = None
+
+    def _begin_recording_reconfigure(self) -> None:
+        if not self.is_recording:
+            return
+
+        now = datetime.datetime.now()
+        if not self.recording_reconfigure_pending:
+            self.recording_reconfigure_requested_at = now
+            logging.info("Recording resolution reconfigure started; suspending frame sync/drop warnings.")
+        self.recording_reconfigure_pending = True
+        self.recording_reconfigure_grace_until = now + datetime.timedelta(seconds=5)
+        self.sensor_timestamps.clear()
+        self.current_framerate = None
+
+    def _finish_recording_reconfigure_split(self, raw_count: int, now: datetime.datetime) -> None:
+        previous_raw = self.raw_framecount_last
+        previous_logical = int(self.framecount or 0)
+        previous_segment_end = self.framecount_segment_base + max(previous_raw or 0, 0)
+        self.framecount_segment_base = max(
+            self.framecount_segment_base,
+            previous_logical,
+            previous_segment_end,
+        )
+
+        pause_start = (
+            self.last_stats_message_time
+            or self.recording_reconfigure_requested_at
+            or now
+        )
+        if pause_start < now:
+            self.recording_pause_intervals.append((pause_start, now))
+
+        self.recording_reconfigure_pending = False
+        self.recording_reconfigure_requested_at = None
+        self.recording_reconfigure_grace_until = now + datetime.timedelta(seconds=1)
+        self.sensor_timestamps.clear()
+        self.current_framerate = None
+        self.last_framecount = self.framecount_segment_base + raw_count
+        logging.info(
+            "Recording continued in a new clip segment: raw framecount reset from %s to %s, "
+            "logical framecount continues at %s.",
+            previous_raw,
+            raw_count,
+            self.last_framecount,
+        )
+
+    def _logical_framecount_from_raw(
+        self,
+        raw_count: int | None,
+        now: datetime.datetime,
+    ) -> int | None:
+        if raw_count is None:
+            return None
+
+        try:
+            raw_count = int(raw_count)
+        except (TypeError, ValueError):
+            return None
+
+        if not self.is_recording:
+            self.raw_framecount_last = raw_count
+            return raw_count
+
+        if (
+            self.recording_reconfigure_pending
+            and self.raw_framecount_last is not None
+            and (raw_count == 0 or raw_count < self.raw_framecount_last)
+        ):
+            self._finish_recording_reconfigure_split(raw_count, now)
+
+        logical_count = self.framecount_segment_base + raw_count
+        self.raw_framecount_last = raw_count
+        return logical_count
+
+    @staticmethod
+    def _sensor_label_from_recording_label(label: str | None) -> str:
+        text = str(label or "")
+        match = re.search(r'(cam\d+)$', text, re.IGNORECASE)
+        if match:
+            return match.group(1).lower()
+        return "cam0"
+
+    def _remember_recording_folder_from_dng(self, dng_path: str | None) -> None:
+        if not self.is_recording or not dng_path:
+            return
+        text = str(dng_path)
+        if text.lower() == "none":
+            return
+        folder = os.path.dirname(text)
+        if not folder:
+            return
+        key = os.path.abspath(folder) if os.path.isabs(folder) else folder
+        if key in self.recording_folder_hint_set:
+            return
+        self.recording_folder_hint_set.add(key)
+        self.recording_folder_hints.append(folder)
+        logging.debug("Tracking recording segment folder for final analysis: %s", folder)
 
     def set_frame_count_increase_tolerance(self):
         if self.framerate > 0:
@@ -476,7 +651,7 @@ class RedisListener:
         ]
         if not timeline:
             fps_expected = self._determine_expected_fps()
-            duration = (end_time - start_time).total_seconds()
+            duration = self._active_seconds_between(start_time, end_time)
             return self._expected_frame_counts(fps_expected, duration, sensor_effective)
 
         if timeline[0][0] > start_time:
@@ -499,7 +674,7 @@ class RedisListener:
             segment_end = min(next_start, end_time)
             if segment_end <= segment_start:
                 continue
-            expected_float += (segment_end - segment_start).total_seconds() * fps * sensor_effective
+            expected_float += self._active_seconds_between(segment_start, segment_end) * fps * sensor_effective
 
         expected_int = int(math.floor(expected_float + 1e-6))
         return expected_int, expected_float
@@ -515,6 +690,9 @@ class RedisListener:
             return
 
         now = now or datetime.datetime.now()
+        if self._recording_reconfigure_grace_active(now):
+            return
+
         expected_slots, expected_float = self._expected_frame_counts_for_recording(
             self.recording_start_time,
             now,
@@ -641,9 +819,11 @@ class RedisListener:
                 message_data = message['data'].decode('utf-8').strip()
                 if message_data.startswith("{") and message_data.endswith("}"):
                     try:
+                        now = datetime.datetime.now()
                         stats_data = json.loads(message_data)
                         buffer_size = self._coerce_int(stats_data.get('bufferSize', None))
-                        self.frame_count = self._coerce_int(stats_data.get('frameCount', None))
+                        raw_frame_count = self._coerce_int(stats_data.get('frameCount', None))
+                        self.frame_count = self._logical_framecount_from_raw(raw_frame_count, now)
                         color_temp = stats_data.get('colorTemp', None)
                         sensor_timestamp = stats_data.get('sensorTimestamp', None)
                         timestamp = stats_data.get('timestamp')
@@ -738,6 +918,7 @@ class RedisListener:
                                 self.is_recording
                                 and not self.recording_was_preroll
                                 and not self._storage_preroll_active()
+                                and not self._recording_reconfigure_grace_active(now)
                             )
 
                             # do NOT raise drop-frame while the user is changing fps
@@ -767,6 +948,7 @@ class RedisListener:
                         # Check if framecount is changing
                         self.check_framecount_changing()
                         self._update_live_frames_in_sync()
+                        self.last_stats_message_time = now
                         
                         # # Calculate average framerate of last 100 frames
                         # avg_framerate = self.calculate_average_framerate_last_100_frames()
@@ -874,6 +1056,15 @@ class RedisListener:
         self.fps_correction_factor_at_rec_start = None
         self.fps_at_rec_start = None
         self.fps_timeline = []
+        self.raw_framecount_last = None
+        self.framecount_segment_base = 0
+        self.recording_reconfigure_pending = False
+        self.recording_reconfigure_requested_at = None
+        self.recording_reconfigure_grace_until = None
+        self.recording_pause_intervals = []
+        self.last_stats_message_time = None
+        self.recording_folder_hints = []
+        self.recording_folder_hint_set.clear()
         with self.final_analysis_lock:
             self.final_analysis_pending = False
             self.final_analysis_sequence = None
@@ -992,6 +1183,8 @@ class RedisListener:
         self.framecount = 0
         self.frame_count = 0
         self.last_framecount = 0
+        self.raw_framecount_last = None
+        self.framecount_segment_base = 0
         self.last_rise_time = None
         self.framecount_changing = False
         self.bufferSize = 0
@@ -1024,6 +1217,13 @@ class RedisListener:
                     self.take_sequence += 1
                     self.reset_framecount()
                     self.recording_start_time = datetime.datetime.now()
+                    self.recording_pause_intervals = []
+                    self.recording_reconfigure_pending = False
+                    self.recording_reconfigure_requested_at = None
+                    self.recording_reconfigure_grace_until = None
+                    self.last_stats_message_time = None
+                    self.recording_folder_hints = []
+                    self.recording_folder_hint_set.clear()
                     self.awaiting_fresh_framecount = True
                     self.fresh_framecount_guard_start_time = self.recording_start_time
                     self.drop_frame_count_current_take = 0
@@ -1103,6 +1303,15 @@ class RedisListener:
                     self._note_expected_fps_change(float(value_str))
                 except ValueError:
                     logging.warning(f"Ignoring invalid fps_user value {value_str!r}")
+                continue
+            elif changed_key == ParameterKey.CAM_INIT.value:
+                self._begin_recording_reconfigure()
+                continue
+            elif changed_key in (
+                ParameterKey.LAST_DNG_CAM0.value,
+                ParameterKey.LAST_DNG_CAM1.value,
+            ):
+                self._remember_recording_folder_from_dng(value_str)
                 continue
 
 
@@ -1268,6 +1477,7 @@ class RedisListener:
         # --------------------------- 1) collect candidate dirs -----------------
         folders = self.ssd_monitor.get_latest_recording_infos()
         per_sensor = []   # (label, fs_count|None, monitor_count|None, last_idx|None, last_name|None)
+        seen_resolved: set[str] = set()
 
         if folders:
             for info in folders:
@@ -1287,12 +1497,25 @@ class RedisListener:
                 last_idx = None
                 last_name = None
                 if resolved:
+                    seen_resolved.add(os.path.abspath(resolved))
                     c, li, ln = self._stable_dng_count(resolved)
                     fs_count, last_idx, last_name = c, li, ln
                     if fs_count is None:
                         fs_count = 0
 
                 per_sensor.append((label, fs_count, monitor_count, last_idx, last_name))
+
+        for hint_path in self.recording_folder_hints:
+            resolved = self._resolve_folder_path(hint_path)
+            if not resolved:
+                continue
+            resolved_abs = os.path.abspath(resolved)
+            if resolved_abs in seen_resolved:
+                continue
+            seen_resolved.add(resolved_abs)
+            label = os.path.basename(resolved_abs)
+            c, li, ln = self._stable_dng_count(resolved_abs)
+            per_sensor.append((label, c, None, li, ln))
 
         # If we found nothing, also try the parents of last_dng_cam0/1 directly
         if not per_sensor:
@@ -1321,7 +1544,12 @@ class RedisListener:
                 use_c = fs_c if (fs_c is not None and fs_c > 0) else (mon_c or 0)
                 final_counts.append((label, use_c, li, ln))
 
-            sensor_count_effective = sum(1 for _, c, _, _ in final_counts if c > 0)
+            sensor_labels = {
+                self._sensor_label_from_recording_label(label)
+                for label, c, _, _ in final_counts
+                if c > 0
+            }
+            sensor_count_effective = len(sensor_labels)
             recorded_frames_total = sum(c for _, c, _, _ in final_counts)
 
             # Diagnostics
@@ -1351,6 +1579,15 @@ class RedisListener:
             duration = 0.0
         if not quiet_summary:
             logging.info(f"Recording duration in seconds (start→end): {duration:.6f}")
+            paused_seconds = duration - self._active_seconds_between(
+                self.recording_start_time,
+                end_for_calc,
+            )
+            if paused_seconds > 0:
+                logging.info(
+                    "Excluded %.6fs of in-recording reconfigure pause time from frame-sync analysis.",
+                    paused_seconds,
+                )
 
         # ----------------------- expected frames (per sensor) -----------------
         # Exact frame-limited takes use the requested slot count. Free-running

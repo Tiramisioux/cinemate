@@ -82,6 +82,7 @@ class SimpleGUI(threading.Thread):
         self.vu_decay_factor = 0.1     # Fall factor (0.0–1.0, lower = slower)
 
         self.socketio = socketio  # Add socketio reference
+        self._socketio_deferred_events = set()
         
         self.usb_monitor = usb_monitor
         
@@ -167,17 +168,28 @@ class SimpleGUI(threading.Thread):
     def get_background_color(self):
         return self.current_background_color
 
+    def set_socketio(self, socketio: SocketIO):
+        self.socketio = socketio
+        self._socketio_deferred_events.clear()
+
+    def _emit_socketio_event(self, event_name, payload):
+        if self.socketio is None:
+            if event_name not in self._socketio_deferred_events:
+                logging.debug("SocketIO not initialized; skipping %s until stream startup.", event_name)
+                self._socketio_deferred_events.add(event_name)
+            return False
+
+        self.socketio.emit(event_name, payload)
+        return True
+
     def emit_background_color_change(self):
-        if self.socketio is not None:
-            self.socketio.emit('background_color_change', {'background_color': self.current_background_color})
-        else:
-            logging.warning("SocketIO not initialized. Unable to emit background_color_change.")
+        return self._emit_socketio_event(
+            'background_color_change',
+            {'background_color': self.current_background_color},
+        )
 
     def emit_gui_data_change(self, changed_data):
-        if self.socketio is not None:
-            self.socketio.emit('gui_data_change', changed_data)
-        else:
-            logging.warning("SocketIO not initialized. Unable to emit gui_data_change.")
+        return self._emit_socketio_event('gui_data_change', changed_data)
 
     def _configured_display_size(self, fb: Framebuffer):
         hdmi_config = self.settings.get("hdmi_display", {})

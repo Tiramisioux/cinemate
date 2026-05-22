@@ -894,8 +894,10 @@ class CinePiController:
                     value = 0
 
                 if self._is_recording():
-                    logging.warning("Ignoring resolution change while recording. Stop recording before changing sensor mode.")
-                    return False
+                    logging.warning(
+                        "Resolution change requested while recording. "
+                        "cinepi-raw will split the recording around the camera reconfigure."
+                    )
 
                 self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, str(value))
                 try:

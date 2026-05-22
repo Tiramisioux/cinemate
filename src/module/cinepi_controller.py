@@ -81,8 +81,8 @@ class CinePiController:
         self._resolution_change_callbacks = []
         self._resolution_change_pace_lock = threading.Lock()
         self._last_resolution_change_started_at = 0.0
-        self._resolution_change_min_interval_s = 1.0
-        self._recording_resolution_change_min_interval_s = 3.5
+        self._resolution_change_min_interval_s = 0.25
+        self._recording_resolution_change_min_interval_s = 2.0
         self._storage_profile_restart_pending = False
         self._active_storage_recorder_profile = self._current_storage_recorder_profile()
         try:

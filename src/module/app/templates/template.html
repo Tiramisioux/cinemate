@@ -292,7 +292,12 @@
             reloadStream();
         });
 
-        let streamReloadTimer = null;
+        let streamReloadTimers = [];
+
+        function clearStreamReloadTimers() {
+            streamReloadTimers.forEach((timer) => clearTimeout(timer));
+            streamReloadTimers = [];
+        }
 
         function reloadStream() {
             const streamElement = document.getElementById('stream');
@@ -306,13 +311,15 @@
             }
 
             streamElement.dataset.streamBase = baseSrc;
-            if (streamReloadTimer) {
-                clearTimeout(streamReloadTimer);
-            }
+            clearStreamReloadTimers();
+            streamElement.onload = clearStreamReloadTimers;
             streamElement.src = '';
-            streamReloadTimer = setTimeout(() => {
-                streamElement.src = `${baseSrc}?reload=${Date.now()}`;
-            }, 2000);
+            [350, 1200, 2500].forEach((delay) => {
+                const timer = setTimeout(() => {
+                    streamElement.src = `${baseSrc}?reload=${Date.now()}`;
+                }, delay);
+                streamReloadTimers.push(timer);
+            });
         }
 
         socket.on('reload_browser', () => {

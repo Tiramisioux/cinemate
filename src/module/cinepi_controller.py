@@ -79,6 +79,10 @@ class CinePiController:
         self._storage_profile_restart_lock = threading.Lock()
         self._storage_profile_restart_active = False
         self._resolution_change_callbacks = []
+        self._resolution_change_pace_lock = threading.Lock()
+        self._last_resolution_change_started_at = 0.0
+        self._resolution_change_min_interval_s = 1.0
+        self._recording_resolution_change_min_interval_s = 3.5
         self._storage_profile_restart_pending = False
         self._active_storage_recorder_profile = self._current_storage_recorder_profile()
         try:
@@ -593,6 +597,26 @@ class CinePiController:
             except Exception:
                 logging.exception("Resolution change callback failed.")
 
+    def _pace_resolution_change(self, recording: bool) -> None:
+        min_interval = (
+            self._recording_resolution_change_min_interval_s
+            if recording
+            else self._resolution_change_min_interval_s
+        )
+
+        with self._resolution_change_pace_lock:
+            now = time.monotonic()
+            elapsed = now - self._last_resolution_change_started_at
+            wait_time = min_interval - elapsed
+            if wait_time > 0:
+                logging.info(
+                    "Waiting %.2fs for the previous resolution reconfigure to settle.",
+                    wait_time,
+                )
+                time.sleep(wait_time)
+                now = time.monotonic()
+            self._last_resolution_change_started_at = now
+
     def _clear_frame_limited_recording_stop(self) -> None:
         if self.redis_listener and hasattr(self.redis_listener, "disarm_frame_limited_stop"):
             self.redis_listener.disarm_frame_limited_stop()
@@ -893,11 +917,13 @@ class CinePiController:
                     logging.info(f"Couldn't find sensor mode {value}. Trying with sensor_mode 0.")
                     value = 0
 
-                if self._is_recording():
+                recording = self._is_recording()
+                if recording:
                     logging.warning(
                         "Resolution change requested while recording. "
                         "cinepi-raw will split the recording around the camera reconfigure."
                     )
+                self._pace_resolution_change(recording)
 
                 self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, str(value))
                 try:

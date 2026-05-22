@@ -1336,7 +1336,7 @@ class RedisListener:
         
     # ------------------------ DNG enumeration helpers ------------------------
     _DNG_SUFFIX = ('.dng', '.DNG')
-    _IDX_RE = re.compile(r'C(\d{5,})', re.IGNORECASE)
+    _IDX_RE = re.compile(r'_(\d+)\.dng$', re.IGNORECASE)
 
     def _resolve_folder_path(self, folder_hint: str | os.PathLike) -> str | None:
         """
@@ -1398,7 +1398,7 @@ class RedisListener:
 
     def _scan_dngs_once(self, folder_path: str):
         """
-        Single pass: count valid DNG files and find the highest C##### index.
+        Single pass: count valid DNG files and find the highest frame index.
         Skips non-files and zero-length/in-flight files.
         Returns (count, last_idx:int|None, last_name:str|None, latest_mtime:float|None).
         """
@@ -1478,6 +1478,9 @@ class RedisListener:
         folders = self.ssd_monitor.get_latest_recording_infos()
         per_sensor = []   # (label, fs_count|None, monitor_count|None, last_idx|None, last_name|None)
         seen_resolved: set[str] = set()
+        segmented_recording = False
+        segment_folder_count = 0
+        segment_index_hole_frames_total = 0
 
         if folders:
             for info in folders:
@@ -1549,6 +1552,18 @@ class RedisListener:
                 for label, c, _, _ in final_counts
                 if c > 0
             }
+            sensor_folder_counts: dict[str, int] = {}
+            for label, c, li, _ in final_counts:
+                if c <= 0:
+                    continue
+
+                sensor_label = self._sensor_label_from_recording_label(label)
+                sensor_folder_counts[sensor_label] = sensor_folder_counts.get(sensor_label, 0) + 1
+                if li is not None and li + 1 > c:
+                    segment_index_hole_frames_total += li + 1 - c
+
+            segmented_recording = any(count > 1 for count in sensor_folder_counts.values())
+            segment_folder_count = sum(sensor_folder_counts.values())
             sensor_count_effective = len(sensor_labels)
             recorded_frames_total = sum(c for _, c, _, _ in final_counts)
 
@@ -1559,6 +1574,16 @@ class RedisListener:
                         logging.info(f"{label}: {c} DNGs (last={ln}, idx={li})")
                     else:
                         logging.info(f"{label}: {c} DNGs")
+                    if li is not None and c > 0 and li + 1 > c:
+                        missing = li + 1 - c
+                        logging.warning(
+                            "%s appears to be missing %d DNG index slot(s) "
+                            "(count=%d, last idx=%d).",
+                            label,
+                            missing,
+                            c,
+                            li,
+                        )
 
                 logging.info(f"Total frames on disk: {recorded_frames_total} from {sensor_count_effective} sensor(s)")
 
@@ -1579,20 +1604,51 @@ class RedisListener:
             duration = 0.0
         if not quiet_summary:
             logging.info(f"Recording duration in seconds (start→end): {duration:.6f}")
-            paused_seconds = duration - self._active_seconds_between(
-                self.recording_start_time,
-                end_for_calc,
-            )
-            if paused_seconds > 0:
+            if segmented_recording:
                 logging.info(
-                    "Excluded %.6fs of in-recording reconfigure pause time from frame-sync analysis.",
-                    paused_seconds,
+                    "Segmented recording detected (%d clip folder(s) across %d sensor(s)); "
+                    "using on-disk segment totals for final sync analysis.",
+                    segment_folder_count,
+                    max(1, sensor_count_effective),
                 )
+            else:
+                paused_seconds = duration - self._active_seconds_between(
+                    self.recording_start_time,
+                    end_for_calc,
+                )
+                if paused_seconds > 0:
+                    logging.info(
+                        "Excluded %.6fs of in-recording reconfigure pause time from frame-sync analysis.",
+                        paused_seconds,
+                    )
+
+        drop_detected_this_take = (
+            self.drop_frame_count_current_take > 0
+            or segment_index_hole_frames_total > 0
+        )
+        live_drop_holes_total = (
+            self.drop_frame_count_current_take * max(1, sensor_count_effective)
+            if self.drop_frame_count_current_take > 0
+            else 0
+        )
+        dropped_frame_slots_total = max(
+            live_drop_holes_total,
+            segment_index_hole_frames_total,
+        )
+        drop_frame_count_for_reporting = max(
+            self.drop_frame_count_current_take,
+            int(math.ceil(segment_index_hole_frames_total / max(1, sensor_count_effective))),
+        )
 
         # ----------------------- expected frames (per sensor) -----------------
         # Exact frame-limited takes use the requested slot count. Free-running
         # takes integrate the user FPS timeline so speed ramps are counted.
-        if self.frame_limit_requested_slots is not None:
+        if segmented_recording and self.frame_limit_requested_slots is None:
+            expected_frames_total = recorded_frames_total + dropped_frame_slots_total
+            expected_frames_float = float(expected_frames_total)
+            if not quiet_summary:
+                logging.info("Using segmented on-disk frame total for expected-frame calculation.")
+        elif self.frame_limit_requested_slots is not None:
             expected_frames_total, expected_frames_float = self._expected_frame_counts_for_recording(
                 self.recording_start_time,
                 end_for_calc,
@@ -1628,12 +1684,6 @@ class RedisListener:
             logging.info(f"Calculated expected number of frames: {expected_frames_total}")
             logging.info(f"Actual number of recorded frames: {recorded_frames_total}")
 
-        drop_detected_this_take = self.drop_frame_count_current_take > 0
-        dropped_frame_slots_total = (
-            self.drop_frame_count_current_take * max(1, sensor_count_effective)
-            if drop_detected_this_take
-            else 0
-        )
         sync_recorded_frames_total = recorded_frames_total + dropped_frame_slots_total
         diff = expected_frames_total - sync_recorded_frames_total
         frames_in_sync = abs(diff) <= self.final_sync_analysis_tolerance_frames
@@ -1645,12 +1695,17 @@ class RedisListener:
         )
         self.redis_controller.set_value(
             ParameterKey.DROP_FRAME_COUNT.value,
-            self.drop_frame_count_current_take,
+            drop_frame_count_for_reporting,
         )
         if not quiet_summary:
             logging.info(
-                f"Drop frames detected this take: {self.drop_frame_count_current_take}"
+                f"Drop frames detected this take: {drop_frame_count_for_reporting}"
             )
+            if segment_index_hole_frames_total > live_drop_holes_total:
+                logging.info(
+                    "On-disk segment scan found %d dropped-frame hole(s) not seen by live stats.",
+                    segment_index_hole_frames_total,
+                )
             if dropped_frame_slots_total:
                 logging.info(
                     "Counting %d dropped-frame hole(s) as intentional sync slot(s).",
@@ -1675,6 +1730,13 @@ class RedisListener:
             )
 
         live_sync_warning_latched = self.frames_off_sync_latched_current_take
+        if segmented_recording and frames_in_sync and live_sync_warning_latched:
+            live_sync_warning_latched = False
+            self.frames_off_sync_latched_current_take = False
+            if not quiet_summary:
+                logging.info(
+                    "Clearing live frame-sync warning after segmented final analysis accounted for all frames."
+                )
         if not frames_in_sync:
             self.frames_off_sync_latched_current_take = True
 
@@ -1695,7 +1757,12 @@ class RedisListener:
         if self.recording_was_preroll:
             pass
         elif all_frames_accounted:
-            if current_correction_factor:
+            if segmented_recording:
+                logging.info(
+                    "No FPS correction suggestion from segmented recording; "
+                    "wall-clock duration includes reconfigure gaps."
+                )
+            elif current_correction_factor:
                 logging.info(
                     "No FPS correction adjustment needed; existing factor %.6f matches the capture.",
                     current_correction_factor,

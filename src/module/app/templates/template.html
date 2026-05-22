@@ -292,12 +292,26 @@
             reloadStream();
         });
 
+        let streamReloadTimer = null;
+
         function reloadStream() {
             const streamElement = document.getElementById('stream');
-            const currentSrc = streamElement.src;
+            if (!streamElement) {
+                return;
+            }
+
+            const baseSrc = streamElement.dataset.streamBase || streamElement.src.split('?')[0];
+            if (!baseSrc) {
+                return;
+            }
+
+            streamElement.dataset.streamBase = baseSrc;
+            if (streamReloadTimer) {
+                clearTimeout(streamReloadTimer);
+            }
             streamElement.src = '';
-            setTimeout(() => {
-                streamElement.src = currentSrc;
+            streamReloadTimer = setTimeout(() => {
+                streamElement.src = `${baseSrc}?reload=${Date.now()}`;
             }, 2000);
         }
 

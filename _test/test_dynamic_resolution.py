@@ -21,6 +21,11 @@ IMX585_MODES = {
     1: {"width": 3840, "height": 2160, "bit_depth": 12, "fps_max": 40},
 }
 
+IMX585_DETECTED_ORDER_MODES = {
+    0: {"width": 3856, "height": 2180, "bit_depth": 12, "fps_max": 43},
+    1: {"width": 1928, "height": 1090, "bit_depth": 12, "fps_max": 50},
+}
+
 IMX585_TABLE = [
     {
         "sensor": "imx585",
@@ -164,6 +169,53 @@ class DynamicResolutionTests(unittest.TestCase):
         self.assertEqual(choice.desired_row.max_fps, 25)
         self.assertIsNotNone(restored_choice)
         self.assertEqual(restored_choice.mode, 1)
+        self.assertFalse(restored_choice.dynamic_active)
+
+    def test_stock_profile_handles_live_imx585_detected_mode_order(self):
+        rows = load_profile_rows(
+            {
+                "profiles_file": "resources/dynamic_resolution_profiles.json",
+                "profile": "default",
+            },
+            settings_file=ROOT / "src" / "settings.json",
+        )
+
+        fps_max = max_fps_for_context(
+            sensor_modes=IMX585_DETECTED_ORDER_MODES,
+            desired_mode=0,
+            sensor="imx585",
+            storage_type="ssd",
+            filesystem="exfat",
+            performance_table=rows,
+            tolerance_px=32,
+        )
+        high_fps_choice = choose_resolution(
+            sensor_modes=IMX585_DETECTED_ORDER_MODES,
+            desired_mode=0,
+            requested_fps=43,
+            sensor="imx585",
+            storage_type="ssd",
+            filesystem="exfat",
+            performance_table=rows,
+            tolerance_px=32,
+        )
+        restored_choice = choose_resolution(
+            sensor_modes=IMX585_DETECTED_ORDER_MODES,
+            desired_mode=0,
+            requested_fps=25,
+            sensor="imx585",
+            storage_type="ssd",
+            filesystem="exfat",
+            performance_table=rows,
+            tolerance_px=32,
+        )
+
+        self.assertEqual(fps_max, 50)
+        self.assertIsNotNone(high_fps_choice)
+        self.assertEqual(high_fps_choice.mode, 1)
+        self.assertTrue(high_fps_choice.dynamic_active)
+        self.assertIsNotNone(restored_choice)
+        self.assertEqual(restored_choice.mode, 0)
         self.assertFalse(restored_choice.dynamic_active)
 
     def test_dynamic_max_fps_stays_unset_when_desired_mode_has_no_data(self):

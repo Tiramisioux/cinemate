@@ -85,6 +85,8 @@ Example: with IMX585, CFE Hat, ext4, and desired 3856 x 2180, the table limit is
 
 While dynamic resolution is enabled, Cinemate also uses the measured profile to set the maximum FPS exposed to controls and free-mode stepping. If the desired mode has no matching measured row, Cinemate keeps the normal sensor-readout FPS maximum instead. When dynamic resolution is disabled, the maximum FPS always comes from the sensor readout reported by `cinepi-raw`.
 
+Storage pre-roll is intentionally different: it uses the live sensor maximum for the currently selected mode and temporarily suspends dynamic resolution so the mounted media is stress-tested before Cinemate restores the user's FPS and applies the dynamic-resolution choice.
+
 The active resolution numbers turn green in the simple GUI when Cinemate is currently using a lower measured mode than the user's desired mode.
 
 ### Measuring your own rows

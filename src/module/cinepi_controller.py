@@ -82,6 +82,7 @@ class CinePiController:
         )
         self.dynamic_resolution_desired_mode = None
         self.dynamic_resolution_active = False
+        self.dynamic_resolution_suspended = False
         learning_cfg = dynamic_resolution_cfg.get("learning", {})
         self.dynamic_resolution_learning_enabled = bool(learning_cfg.get("enabled", False))
         self.dynamic_resolution_learning_min_duration = float(
@@ -197,8 +198,15 @@ class CinePiController:
         # Set a timer to clear the startup flag after a short period
         threading.Timer(5.0, self.clear_startup_flag).start()
 
-        # Communicate the initial fps to the web app
-        self.set_fps(self.fps)
+        # Communicate the initial fps without changing resolution. Storage
+        # pre-roll should stress the selected mode before dynamic resolution
+        # restores the user's FPS and chooses a sustainable mode.
+        prev_dynamic_suspended = self.dynamic_resolution_suspended
+        self.dynamic_resolution_suspended = True
+        try:
+            self.set_fps(self.fps)
+        finally:
+            self.dynamic_resolution_suspended = prev_dynamic_suspended
         logging.info(f"Initialized fps: {self.fps}")
         
     def _get_startup_sensor_mode(self) -> int:
@@ -298,6 +306,8 @@ class CinePiController:
         if not self.dynamic_resolution_enabled:
             self.dynamic_resolution_active = False
             self._publish_dynamic_resolution_state()
+            return None
+        if self.dynamic_resolution_suspended:
             return None
 
         if self.dynamic_resolution_desired_mode is None:
@@ -894,9 +904,6 @@ class CinePiController:
     def _handle_storage_mount_event(self, *_args) -> None:
         self._refresh_fps_max()
         self.update_steps()
-        current_user_fps = self._current_user_fps_value()
-        if current_user_fps is not None:
-            self._maybe_apply_dynamic_resolution_for_fps(current_user_fps)
         self._maybe_schedule_storage_profile_restart("storage mount")
 
     def _handle_storage_restart_redis_event(self, data=None) -> None:

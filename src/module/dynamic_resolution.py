@@ -139,6 +139,29 @@ def _as_float(value: Any) -> float | None:
     return result
 
 
+def dynamic_resolution_indicator_active(
+    *,
+    enabled: Any,
+    active: Any,
+    current_mode: Any,
+    desired_mode: Any,
+) -> bool:
+    """Return True only while showing a dynamic-resolution substitute mode."""
+    if not _as_bool(enabled) or not _as_bool(active):
+        return False
+    current = _as_int(current_mode)
+    desired = _as_int(desired_mode)
+    if current is None or desired is None:
+        return False
+    return current != desired
+
+
+def _as_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in ("1", "true", "yes", "on")
+
+
 def resolve_profiles_path(profiles_file: str, settings_file: str | Path | None = None) -> Path:
     path = Path(profiles_file or DEFAULT_PROFILES_FILE)
     if path.is_absolute():

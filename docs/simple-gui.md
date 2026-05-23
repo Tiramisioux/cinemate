@@ -19,7 +19,7 @@ The separate `DROP` tile latches after a drop-frame event and stays visible unti
 - The buffer meter in the lower-left corner shows used vs total frame buffer. Optional hatch lines can be enabled in `settings.json` under `hdmi_gui`.
 - During storage pre-roll, the GUI intentionally hides recording time and clip names so the deleted warm-up clip does not appear to be the latest take.
 - If zoom is anything other than the configured default, the zoom box is highlighted.
-- If dynamic resolution has switched away from the user's desired resolution, the resolution numbers turn green.
+- If dynamic resolution has switched away from the user's desired resolution, the resolution numbers turn green. They stay white when Cinemate is showing the user's desired resolution, even if dynamic resolution is enabled.
 - When a compatible USB microphone is connected, the right side shows VU meters plus sample rate, bit depth, and a `WAV` badge once the latest take contains both DNG frames and a WAV sidecar.
 
 For redraw timing and performance tuning, see `docs/simple-gui-refresh-tuning.md`.

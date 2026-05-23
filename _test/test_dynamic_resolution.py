@@ -10,6 +10,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from module.dynamic_resolution import (
     choose_resolution,
+    dynamic_resolution_indicator_active,
     load_profile_rows,
     max_fps_for_context,
     update_observed_profile,
@@ -49,6 +50,40 @@ IMX585_TABLE = [
 
 
 class DynamicResolutionTests(unittest.TestCase):
+    def test_resolution_indicator_only_when_substitute_mode_is_active(self):
+        self.assertFalse(
+            dynamic_resolution_indicator_active(
+                enabled=True,
+                active=True,
+                current_mode=0,
+                desired_mode=0,
+            )
+        )
+        self.assertTrue(
+            dynamic_resolution_indicator_active(
+                enabled=True,
+                active=True,
+                current_mode=1,
+                desired_mode=0,
+            )
+        )
+        self.assertFalse(
+            dynamic_resolution_indicator_active(
+                enabled=True,
+                active=False,
+                current_mode=1,
+                desired_mode=0,
+            )
+        )
+        self.assertFalse(
+            dynamic_resolution_indicator_active(
+                enabled=False,
+                active=True,
+                current_mode=1,
+                desired_mode=0,
+            )
+        )
+
     def test_switches_down_when_requested_fps_exceeds_desired_mode(self):
         choice = choose_resolution(
             sensor_modes=IMX585_MODES,

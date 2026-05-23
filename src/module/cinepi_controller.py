@@ -162,6 +162,16 @@ class CinePiController:
         
         self.sensor_mode = self._get_startup_sensor_mode()
         self.dynamic_resolution_desired_mode = self._get_startup_dynamic_resolution_desired_mode()
+        self.dynamic_resolution_active = (
+            self.dynamic_resolution_enabled
+            and self._as_bool(
+                self.redis_controller.get_value(
+                    ParameterKey.DYNAMIC_RESOLUTION_ACTIVE.value,
+                    0,
+                )
+            )
+            and self.sensor_mode != self.dynamic_resolution_desired_mode
+        )
         self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
             self.current_sensor,
             self.sensor_mode,
@@ -259,6 +269,25 @@ class CinePiController:
             return value
         return str(value).strip().lower() in ("1", "true", "yes", "on")
 
+    def _realign_dynamic_resolution_desired_mode(self) -> None:
+        if (
+            self.dynamic_resolution_desired_mode is None
+            or (
+                not self.dynamic_resolution_active
+                and self.dynamic_resolution_desired_mode != self.sensor_mode
+            )
+        ):
+            if self.dynamic_resolution_desired_mode != self.sensor_mode:
+                logging.info(
+                    "Dynamic resolution desired mode realigned to current mode %s "
+                    "(was %s, active=%s)",
+                    self.sensor_mode,
+                    self.dynamic_resolution_desired_mode,
+                    self.dynamic_resolution_active,
+                )
+            self.dynamic_resolution_desired_mode = self.sensor_mode
+            self._publish_dynamic_resolution_state()
+
     @staticmethod
     def _safe_int(value, default=0):
         try:
@@ -302,7 +331,12 @@ class CinePiController:
         self.redis_controller.set_value(ParameterKey.FPS_MAX.value, self.fps_max)
         return self.fps_max
 
-    def _dynamic_resolution_choice_for_fps(self, requested_user_fps):
+    def _dynamic_resolution_choice_for_fps(
+        self,
+        requested_user_fps,
+        *,
+        realign_desired: bool = True,
+    ):
         if not self.dynamic_resolution_enabled:
             self.dynamic_resolution_active = False
             self._publish_dynamic_resolution_state()
@@ -310,7 +344,9 @@ class CinePiController:
         if self.dynamic_resolution_suspended:
             return None
 
-        if self.dynamic_resolution_desired_mode is None:
+        if realign_desired:
+            self._realign_dynamic_resolution_desired_mode()
+        elif self.dynamic_resolution_desired_mode is None:
             self.dynamic_resolution_desired_mode = self.sensor_mode
 
         storage_type = self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value, "none")
@@ -1261,7 +1297,10 @@ class CinePiController:
                 self._publish_dynamic_resolution_state()
                 current_user_fps = self._current_user_fps_value()
                 if current_user_fps is not None:
-                    choice = self._dynamic_resolution_choice_for_fps(current_user_fps)
+                    choice = self._dynamic_resolution_choice_for_fps(
+                        current_user_fps,
+                        realign_desired=False,
+                    )
                     if choice is not None:
                         value = choice.mode
 

@@ -976,13 +976,10 @@ class CinePiController:
                 
                 # Initialize fps_steps based on the provided list and capped by fps_max
                 self.initialize_fps_steps(self.fps_steps)
-                self.shutter_a_steps_dynamic = self.calculate_dynamic_shutter_angles(self.current_fps)
                 
                 self.fps_max = int(self.redis_controller.get_value(ParameterKey.FPS_MAX.value))
                 if self.fps_free:
                     self.fps_steps = list(range(1, self.fps_max + 1))
-                
-                self.update_steps()
                 
                 self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
                     self.current_sensor,
@@ -996,6 +993,7 @@ class CinePiController:
                 if requested_fps is None:
                     requested_fps = self.redis_controller.get_value(ParameterKey.FPS_LAST.value, self.redis_controller.get_value(ParameterKey.FPS.value))
                 self.set_fps(float(requested_fps), update_user_target=False)
+                self.update_steps()
 
                 self._notify_resolution_change(value)
 

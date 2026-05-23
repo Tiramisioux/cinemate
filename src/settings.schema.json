@@ -96,6 +96,133 @@
         }
       },
       "additionalProperties": true
+    },
+    "dynamic_resolution": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "profile": {
+          "type": "string",
+          "default": "default"
+        },
+        "profiles_file": {
+          "type": "string",
+          "default": "resources/dynamic_resolution_profiles.json"
+        },
+        "use_observed_profile": {
+          "type": "boolean",
+          "default": false
+        },
+        "observed_profile": {
+          "type": "string",
+          "default": "observed"
+        },
+        "observed_profiles_file": {
+          "type": "string",
+          "default": "src/dynamic_resolution_observed_profiles.json"
+        },
+        "policy": {
+          "type": "string",
+          "enum": ["highest_sustainable_resolution"],
+          "default": "highest_sustainable_resolution"
+        },
+        "safety_margin_fps": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0
+        },
+        "match_tolerance_px": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 32
+        },
+        "learning": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "minimum_duration_seconds": {
+              "type": "number",
+              "minimum": 0,
+              "default": 10
+            },
+            "buffer_tolerance_frames": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "failure_backoff_fps": {
+              "type": "number",
+              "minimum": 0,
+              "default": 1
+            }
+          },
+          "additionalProperties": true
+        },
+        "performance_table": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sensor": {"type": "string"},
+              "sensor_aliases": {
+                "anyOf": [
+                  {"type": "string"},
+                  {"type": "array", "items": {"type": "string"}}
+                ]
+              },
+              "storage_type": {
+                "anyOf": [
+                  {"type": "string"},
+                  {"type": "array", "items": {"type": "string"}}
+                ]
+              },
+              "filesystem": {"type": "string"},
+              "media_model": {"type": "string"},
+              "width": {"type": "integer"},
+              "height": {"type": "integer"},
+              "bit_depth": {
+                "anyOf": [
+                  {"type": "integer"},
+                  {"type": "null"}
+                ]
+              },
+              "max_fps_no_buffer": {"type": "number"},
+              "max_fps": {"type": "number"},
+              "sustainable_fps": {"type": "number"},
+              "test_duration_seconds": {
+                "anyOf": [
+                  {"type": "number"},
+                  {"type": "null"}
+                ]
+              },
+              "buffer_peak_frames": {"type": "integer"},
+              "drop_frames": {"type": "integer"},
+              "confidence": {"type": "string"},
+              "notes": {"type": "string"}
+            },
+            "required": ["sensor", "storage_type", "filesystem", "width", "height"],
+            "additionalProperties": true
+          },
+          "default": []
+        }
+      },
+      "additionalProperties": true
+    },
+    "sensors": {
+      "type": "object",
+      "properties": {
+        "database_file": {
+          "type": "string",
+          "default": "resources/sensors.json"
+        }
+      },
+      "additionalProperties": true
     }
   },
   "additionalProperties": true

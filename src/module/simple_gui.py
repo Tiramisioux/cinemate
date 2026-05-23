@@ -857,6 +857,11 @@ class SimpleGUI(threading.Thread):
             self.colors["shutter_speed"]["normal"] = (249,249,249)
             self.colors["fps"]["normal"] = (249,249,249)
 
+        if getattr(self.cinepi_controller, "dynamic_resolution_active", False):
+            self.colors["res"]["normal"] = "lightgreen"
+        else:
+            self.colors["res"]["normal"] = (249, 249, 249)
+
         values["lock"]        = "LOCK"    if self.cinepi_controller.parameters_lock else ""
         values["low_voltage"] = "VOLTAGE" if self.dmesg_monitor.undervoltage_flag  else ""
 

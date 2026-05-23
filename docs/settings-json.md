@@ -255,6 +255,88 @@ Limit which sensor modes appear when cycling resolutions.
 
     The stock Cinemate setting is `[1.5, 2]`, so the UI starts by showing only 1.5K and 2K recording-size choices. 2K is the standard working size, and the default mode list is kept to modes that can reasonably support 25 fps recording. Higher sensor modes are still supported. Add `4` to `k_steps`, for example `[1.5, 2, 4]`, when you intentionally want to expose 4K-class modes in the UI.
 
+## sensors
+
+Points Cinemate at the sensor metadata database used for known packing modes, documentation metadata, and sustainable FPS annotations.
+
+```json
+"sensors": {
+  "database_file": "resources/sensors.json"
+}
+```
+
+`database_file` – JSON file containing compatible sensor metadata. The default file is `resources/sensors.json`.
+
+## dynamic_resolution
+
+Automatically chooses the highest measured sustainable resolution for the user-selected frame rate, detected sensor, storage type, and storage filesystem.
+
+```json
+"dynamic_resolution": {
+  "enabled": false,
+  "profile": "default",
+  "profiles_file": "resources/dynamic_resolution_profiles.json",
+  "use_observed_profile": false,
+  "observed_profile": "observed",
+  "observed_profiles_file": "src/dynamic_resolution_observed_profiles.json",
+  "policy": "highest_sustainable_resolution",
+  "safety_margin_fps": 0,
+  "match_tolerance_px": 32,
+  "learning": {
+    "enabled": false,
+    "minimum_duration_seconds": 10,
+    "buffer_tolerance_frames": 0,
+    "failure_backoff_fps": 1
+  }
+}
+```
+
+`enabled` – set to `true` to allow Cinemate to switch resolution automatically when the current desired resolution cannot sustain the selected FPS.
+<br>`profile` – named standard measurement profile to load from `profiles_file`. The stock profile is `default`.
+<br>`profiles_file` – JSON file containing measured sustainable-FPS rows. The stock file is `resources/dynamic_resolution_profiles.json`.
+<br>`use_observed_profile` – set to `true` to let locally learned rows override the standard profile.
+<br>`observed_profile` – named local profile inside `observed_profiles_file`.
+<br>`observed_profiles_file` – JSON file where Cinemate writes self-corrected local observations. The default path is intentionally separate from the standard profile.
+<br>`policy` – selection strategy. The current policy, `highest_sustainable_resolution`, chooses the largest measured mode that can sustain the requested FPS.
+<br>`safety_margin_fps` – subtract this many FPS from every measured row before deciding whether it is safe.
+<br>`match_tolerance_px` – pixel tolerance used when matching measured rows to driver modes. This lets a measured `3856 x 2180` row match a nearby driver mode such as `3840 x 2160`.
+<br>`learning.enabled` – when `true`, Cinemate observes takes while recording and writes local corrections after the take stops. Learned rows are not used unless `use_observed_profile` is also `true`.
+<br>`learning.minimum_duration_seconds` – shortest take length that can update the observed profile.
+<br>`learning.buffer_tolerance_frames` – maximum buffer peak still considered stable.
+<br>`learning.failure_backoff_fps` – how far below a buffering or dropped-frame FPS Cinemate should place the learned limit.
+
+Cinemate remembers the user's desired resolution. If you select a 4K mode and then raise FPS above that mode's measured sustainable limit, Cinemate switches to the highest measured mode that can sustain the FPS. When FPS returns to the desired mode's measured limit or below, Cinemate switches back. If no matching profile row exists for the detected sensor, storage type, filesystem, desired mode, and requested FPS, Cinemate leaves the current resolution unchanged.
+
+When dynamic resolution is enabled, the maximum FPS shown by Cinemate comes from the measured dynamic-resolution profile for the current sensor, storage type, and filesystem, but only when the desired mode itself has a measured row. When dynamic resolution is disabled, maximum FPS comes from the sensor readout reported by `cinepi-raw`, as before.
+
+The storage type comes from the mounted RAW device and is usually `ssd`, `cfe`, `nvme`, or `unknown`. The filesystem comes from the mounted RAW volume and is usually `ext4`, `exfat`, or `ntfs`.
+
+Each profile row has this shape:
+
+```json
+{
+  "sensor": "imx585",
+  "sensor_aliases": ["imx585_mono"],
+  "storage_type": "cfe",
+  "filesystem": "ext4",
+  "media_model": "CFE Hat / NVMe",
+  "width": 3856,
+  "height": 2180,
+  "bit_depth": 12,
+  "sustainable_fps": 40,
+  "max_fps_no_buffer": 40,
+  "test_duration_seconds": null,
+  "buffer_peak_frames": 0,
+  "drop_frames": 0,
+  "confidence": "empirical",
+  "notes": "4K desired-mode threshold for dynamic resolution."
+}
+```
+
+`sustainable_fps` is the preferred field for new rows and means recording without dropped frames. `max_fps_no_buffer` is still accepted for older rows and for rows where you have verified no buffer growth as well.
+
+The older inline `performance_table` setting still works for compatibility, but new measurements should go into the profile file instead.
+
 ## buttons
 
 Defines GPIO push buttons. Each entry describes one button and the actions it triggers.

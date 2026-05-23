@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "sustainable_fps_definition": "Empirically observed recording frame rate without dropped frames.",
+  "sensors": {
+    "imx477": {
+      "display_name": "IMX477",
+      "common_name": "Raspberry Pi HQ Camera",
+      "packing": "U",
+      "aliases": [],
+      "modes": [
+        {
+          "mode": 0,
+          "width": 2028,
+          "height": 1080,
+          "aspect": 1.87,
+          "bit_depth": 12,
+          "max_fps": 50,
+          "file_size_mb": 4.3,
+          "sustainable_fps": []
+        },
+        {
+          "mode": 1,
+          "width": 2028,
+          "height": 1520,
+          "aspect": 1.33,
+          "bit_depth": 12,
+          "max_fps": 40,
+          "file_size_mb": 5.3,
+          "sustainable_fps": []
+        },
+        {
+          "mode": 2,
+          "width": 1332,
+          "height": 990,
+          "aspect": 1.34,
+          "bit_depth": 10,
+          "max_fps": 120,
+          "file_size_mb": 2.7,
+          "sustainable_fps": []
+        }
+      ]
+    },
+    "imx296": {
+      "display_name": "IMX296",
+      "common_name": "Raspberry Pi Global Shutter Camera",
+      "packing": "U",
+      "aliases": ["imx296_mono"],
+      "modes": [
+        {
+          "mode": 0,
+          "width": 1456,
+          "height": 1088,
+          "aspect": 1.33,
+          "bit_depth": 10,
+          "max_fps": 60,
+          "file_size_mb": 3.1,
+          "sustainable_fps": []
+        }
+      ]
+    },
+    "imx585": {
+      "display_name": "IMX585",
+      "common_name": "Starlight Eye",
+      "packing": "U",
+      "aliases": ["imx585_mono"],
+      "modes": [
+        {
+          "mode": 0,
+          "width": 1928,
+          "height": 1090,
+          "aspect": 1.77,
+          "bit_depth": 12,
+          "max_fps": 87,
+          "file_size_mb": 4.0,
+          "sustainable_fps": [
+            {
+              "storage_type": ["cfe", "nvme"],
+              "filesystem": "exfat",
+              "fps": 50,
+              "source": "Cinemate nya cinepi-raw fps-tester.xlsx"
+            },
+            {
+              "storage_type": ["cfe", "nvme"],
+              "filesystem": "ext4",
+              "fps": 50,
+              "source": "Cinemate nya cinepi-raw fps-tester.xlsx"
+            },
+            {
+              "storage_type": "ssd",
+              "filesystem": "exfat",
+              "fps": 50,
+              "source": "Cinemate nya cinepi-raw fps-tester.xlsx"
+            },
+            {
+              "storage_type": "ssd",
+              "filesystem": "ext4",
+              "fps": 50,
+              "source": "Cinemate nya cinepi-raw fps-tester.xlsx"
+            }
+          ]
+        },
+        {
+          "mode": 1,
+          "width": 3856,
+          "height": 2180,
+          "aspect": 1.77,
+          "bit_depth": 12,
+          "max_fps": 40,
+          "file_size_mb": 10.0,
+          "sustainable_fps": [
+            {
+              "storage_type": ["cfe", "nvme"],
+              "filesystem": "exfat",
+              "fps": 38,
+              "source": "Cinemate nya cinepi-raw fps-tester.xlsx"
+            },
+            {
+              "storage_type": ["cfe", "nvme"],
+              "filesystem": "ext4",
+              "fps": 40,
+              "source": "Cinemate nya cinepi-raw fps-tester.xlsx"
+            },
+            {
+              "storage_type": "ssd",
+              "filesystem": "exfat",
+              "fps": 25,
+              "source": "Cinemate nya cinepi-raw fps-tester.xlsx",
+              "notes": "Workbook notes occasional buffering but sustainable recording with the 4 GB version."
+            },
+            {
+              "storage_type": "ssd",
+              "filesystem": "ext4",
+              "fps": 25,
+              "source": "Cinemate nya cinepi-raw fps-tester.xlsx"
+            }
+          ]
+        }
+      ]
+    },
+    "imx283": {
+      "display_name": "IMX283",
+      "common_name": "OneInchEye",
+      "packing": "U",
+      "aliases": [],
+      "modes": [
+        {
+          "mode": 0,
+          "width": 2736,
+          "height": 1538,
+          "aspect": 1.8,
+          "bit_depth": 12,
+          "max_fps": 40,
+          "file_size_mb": 7.1,
+          "sustainable_fps": []
+        },
+        {
+          "mode": 1,
+          "width": 2736,
+          "height": 1824,
+          "aspect": 1.53,
+          "bit_depth": 12,
+          "max_fps": 34,
+          "file_size_mb": 8.2,
+          "sustainable_fps": []
+        }
+      ]
+    },
+    "imx519": {
+      "display_name": "IMX519",
+      "common_name": "IMX519",
+      "packing": "P",
+      "aliases": [],
+      "modes": []
+    }
+  }
+}

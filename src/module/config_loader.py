@@ -245,12 +245,6 @@ def _apply_settings_defaults(settings: dict) -> dict:
     dynamic_resolution_defaults = default_dynamic_resolution_config()
     for k, v in dynamic_resolution_defaults.items():
         dynamic_resolution_cfg.setdefault(k, v)
-    learning_cfg = dynamic_resolution_cfg.setdefault(
-        "learning",
-        dynamic_resolution_defaults["learning"],
-    )
-    for k, v in dynamic_resolution_defaults["learning"].items():
-        learning_cfg.setdefault(k, v)
     settings["dynamic_resolution"] = dynamic_resolution_cfg
 
     return settings

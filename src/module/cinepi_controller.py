@@ -20,7 +20,6 @@ from module.dynamic_resolution import (
     choose_resolution,
     load_profile_rows,
     max_fps_for_context,
-    update_observed_profile,
 )
 
 SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
@@ -83,18 +82,6 @@ class CinePiController:
         self.dynamic_resolution_desired_mode = None
         self.dynamic_resolution_active = False
         self.dynamic_resolution_suspended = False
-        learning_cfg = dynamic_resolution_cfg.get("learning", {})
-        self.dynamic_resolution_learning_enabled = bool(learning_cfg.get("enabled", False))
-        self.dynamic_resolution_learning_min_duration = float(
-            learning_cfg.get("minimum_duration_seconds", 10) or 10
-        )
-        self.dynamic_resolution_buffer_tolerance = int(
-            learning_cfg.get("buffer_tolerance_frames", 0) or 0
-        )
-        self.dynamic_resolution_failure_backoff_fps = float(
-            learning_cfg.get("failure_backoff_fps", 1) or 1
-        )
-        self._dynamic_resolution_observation = None
         
         self.wb_cg_rb_array = {}  # Initialize as an empty dictionary
         
@@ -124,9 +111,6 @@ class CinePiController:
             self.ssd_monitor.mount_event.subscribe(self._handle_storage_mount_event)
             self.redis_controller.redis_parameter_changed.subscribe(
                 self._handle_storage_restart_redis_event
-            )
-            self.redis_controller.redis_parameter_changed.subscribe(
-                self._handle_dynamic_resolution_observation_event
             )
         except Exception as exc:
             logging.warning("Unable to subscribe to storage profile changes: %s", exc)
@@ -287,13 +271,6 @@ class CinePiController:
                 )
             self.dynamic_resolution_desired_mode = self.sensor_mode
             self._publish_dynamic_resolution_state()
-
-    @staticmethod
-    def _safe_int(value, default=0):
-        try:
-            return int(float(value))
-        except (TypeError, ValueError):
-            return default
 
     def _sensor_readout_fps_max(self, mode=None):
         mode = self.sensor_mode if mode is None else mode
@@ -953,168 +930,6 @@ class CinePiController:
             return
         if self._storage_profile_restart_pending and self._storage_profile_restart_allowed():
             self._maybe_schedule_storage_profile_restart("deferred storage profile change")
-
-    def _handle_dynamic_resolution_observation_event(self, data=None) -> None:
-        if not (
-            self.dynamic_resolution_enabled
-            and self.dynamic_resolution_learning_enabled
-            and isinstance(data, dict)
-        ):
-            return
-
-        key = data.get("key")
-        value = data.get("value")
-        if key == ParameterKey.IS_RECORDING.value:
-            if self._as_bool(value):
-                self._start_dynamic_resolution_observation()
-            else:
-                self._finish_dynamic_resolution_observation()
-            return
-
-        if self._dynamic_resolution_observation is None:
-            return
-
-        if key in (
-            ParameterKey.WIDTH.value,
-            ParameterKey.HEIGHT.value,
-            ParameterKey.SENSOR_MODE.value,
-            ParameterKey.FPS_USER.value,
-        ):
-            self._dynamic_resolution_observation["invalid_reason"] = "setting changed during recording"
-            return
-
-        if key == ParameterKey.BUFFER.value:
-            self._dynamic_resolution_observation["buffer_peak_frames"] = max(
-                self._dynamic_resolution_observation["buffer_peak_frames"],
-                self._safe_int(value),
-            )
-            return
-
-        if key == ParameterKey.IS_BUFFERING.value and self._as_bool(value):
-            self._dynamic_resolution_observation["buffer_peak_frames"] = max(
-                self._dynamic_resolution_observation["buffer_peak_frames"],
-                1,
-            )
-            return
-
-        if key == ParameterKey.DROP_FRAME_COUNT.value:
-            self._dynamic_resolution_observation["drop_frames"] = max(
-                self._dynamic_resolution_observation["drop_frames"],
-                self._safe_int(value),
-            )
-            return
-
-        if key == ParameterKey.DROP_FRAME.value and self._as_bool(value):
-            self._dynamic_resolution_observation["drop_frames"] = max(
-                self._dynamic_resolution_observation["drop_frames"],
-                1,
-            )
-
-    def _start_dynamic_resolution_observation(self) -> None:
-        storage_type = str(
-            self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value, "none") or "none"
-        ).strip().lower()
-        filesystem = str(
-            self.redis_controller.get_value(ParameterKey.STORAGE_FILESYSTEM.value, "none") or "none"
-        ).strip().lower()
-        if storage_type in ("", "none", "unknown") or filesystem in ("", "none", "unknown"):
-            self._dynamic_resolution_observation = None
-            return
-
-        fps = self._current_user_fps_value()
-        if fps is None:
-            self._dynamic_resolution_observation = None
-            return
-
-        width = self._safe_int(self.redis_controller.get_value(ParameterKey.WIDTH.value))
-        height = self._safe_int(self.redis_controller.get_value(ParameterKey.HEIGHT.value))
-        bit_depth = self._safe_int(self.redis_controller.get_value(ParameterKey.BIT_DEPTH.value), None)
-        if width <= 0 or height <= 0:
-            self._dynamic_resolution_observation = None
-            return
-
-        self._dynamic_resolution_observation = {
-            "started_at": time.monotonic(),
-            "sensor": self.current_sensor,
-            "storage_type": storage_type,
-            "filesystem": filesystem,
-            "media_model": getattr(self.ssd_monitor, "device_name", None)
-            or getattr(self.ssd_monitor, "device_type", "")
-            or "",
-            "width": width,
-            "height": height,
-            "bit_depth": bit_depth,
-            "observed_fps": fps,
-            "buffer_peak_frames": self._safe_int(
-                self.redis_controller.get_value(ParameterKey.BUFFER.value)
-            ),
-            "drop_frames": self._safe_int(
-                self.redis_controller.get_value(ParameterKey.DROP_FRAME_COUNT.value)
-            ),
-            "sensor_mode": self.sensor_mode,
-        }
-
-    def _finish_dynamic_resolution_observation(self) -> None:
-        observation = self._dynamic_resolution_observation
-        self._dynamic_resolution_observation = None
-        if not observation:
-            return
-
-        duration = time.monotonic() - observation["started_at"]
-        if duration < self.dynamic_resolution_learning_min_duration:
-            logging.info(
-                "Skipping dynamic resolution observation shorter than %.1fs",
-                self.dynamic_resolution_learning_min_duration,
-            )
-            return
-
-        invalid_reason = observation.get("invalid_reason")
-        if invalid_reason:
-            logging.info("Skipping dynamic resolution observation: %s", invalid_reason)
-            return
-
-        buffer_peak = int(observation.get("buffer_peak_frames", 0) or 0)
-        drop_frames = int(observation.get("drop_frames", 0) or 0)
-        stable = (
-            buffer_peak <= self.dynamic_resolution_buffer_tolerance
-            and drop_frames == 0
-        )
-        observed_fps = float(observation["observed_fps"])
-        candidate_max_fps = (
-            observed_fps
-            if stable
-            else max(1.0, observed_fps - self.dynamic_resolution_failure_backoff_fps)
-        )
-
-        row = {
-            **observation,
-            "duration_seconds": round(duration, 3),
-            "result": "stable" if stable else "buffer_or_drop",
-            "max_fps_no_buffer": candidate_max_fps,
-            "observed_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-        }
-        if update_observed_profile(
-            self.dynamic_resolution_cfg,
-            row,
-            settings_file=SETTINGS_FILE,
-        ):
-            logging.info(
-                "Updated dynamic resolution observed profile for %s %sx%s %s/%s at %.3ffps (%s)",
-                row["sensor"],
-                row["width"],
-                row["height"],
-                row["storage_type"],
-                row["filesystem"],
-                observed_fps,
-                row["result"],
-            )
-            if self.dynamic_resolution_cfg.get("use_observed_profile", False):
-                self.dynamic_resolution_table = load_profile_rows(
-                    self.dynamic_resolution_cfg,
-                    settings_file=SETTINGS_FILE,
-                )
-                self._refresh_fps_max()
-                self.update_steps()
 
     def _maybe_schedule_storage_profile_restart(self, reason: str) -> None:
         target_profile = self._current_storage_recorder_profile()

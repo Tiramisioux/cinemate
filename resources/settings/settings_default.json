@@ -152,18 +152,9 @@
     "enabled": false,
     "profile": "default",
     "profiles_file": "resources/dynamic_resolution_profiles.json",
-    "use_observed_profile": false,
-    "observed_profile": "observed",
-    "observed_profiles_file": "src/dynamic_resolution_observed_profiles.json",
     "policy": "highest_sustainable_resolution",
     "safety_margin_fps": 0,
-    "match_tolerance_px": 32,
-    "learning": {
-      "enabled": false,
-      "minimum_duration_seconds": 10,
-      "buffer_tolerance_frames": 0,
-      "failure_backoff_fps": 1
-    }
+    "match_tolerance_px": 32
   },
   "buttons": [
     {

@@ -112,26 +112,10 @@ Each row should include:
 | `max_fps_no_buffer` | Optional stricter value for rows where you have also verified no buffer growth. |
 | `test_duration_seconds` | Test duration, if recorded. |
 | `buffer_peak_frames`, `drop_frames` | Evidence from the test run. |
-| `confidence` | Suggested values are `empirical`, `documented`, or `observed`. |
+| `confidence` | Suggested values are `empirical` or `documented`. |
 | `notes` | Short context for future users. |
 
-### Self-correcting observations
-
-Cinemate can also learn local limits from real takes. Set `dynamic_resolution.learning.enabled` to `true` to let Cinemate observe buffer and drop-frame behavior while recording. After a take stops, Cinemate writes stable or failed observations to `src/dynamic_resolution_observed_profiles.json`.
-
-Observed rows do not affect resolution switching until you opt in:
-
-```json
-"dynamic_resolution": {
-  "enabled": true,
-  "use_observed_profile": true,
-  "learning": {
-    "enabled": true
-  }
-}
-```
-
-This keeps the standard profile as the default and lets the operator decide when the locally learned rows should override it.
+Dynamic resolution uses the stock JSON profile only. Cinemate does not update this table during recording, so empirical values should be added intentionally after you have tested the sensor and storage setup.
 
 !!! note ""
 

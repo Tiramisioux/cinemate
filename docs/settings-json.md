@@ -276,34 +276,18 @@ Automatically chooses the highest measured sustainable resolution for the user-s
   "enabled": false,
   "profile": "default",
   "profiles_file": "resources/dynamic_resolution_profiles.json",
-  "use_observed_profile": false,
-  "observed_profile": "observed",
-  "observed_profiles_file": "src/dynamic_resolution_observed_profiles.json",
   "policy": "highest_sustainable_resolution",
   "safety_margin_fps": 0,
-  "match_tolerance_px": 32,
-  "learning": {
-    "enabled": false,
-    "minimum_duration_seconds": 10,
-    "buffer_tolerance_frames": 0,
-    "failure_backoff_fps": 1
-  }
+  "match_tolerance_px": 32
 }
 ```
 
 `enabled` – set to `true` to allow Cinemate to switch resolution automatically when the current desired resolution cannot sustain the selected FPS.
 <br>`profile` – named standard measurement profile to load from `profiles_file`. The stock profile is `default`.
 <br>`profiles_file` – JSON file containing measured sustainable-FPS rows. The stock file is `resources/dynamic_resolution_profiles.json`.
-<br>`use_observed_profile` – set to `true` to let locally learned rows override the standard profile.
-<br>`observed_profile` – named local profile inside `observed_profiles_file`.
-<br>`observed_profiles_file` – JSON file where Cinemate writes self-corrected local observations. The default path is intentionally separate from the standard profile.
 <br>`policy` – selection strategy. The current policy, `highest_sustainable_resolution`, chooses the largest measured mode that can sustain the requested FPS.
 <br>`safety_margin_fps` – subtract this many FPS from every measured row before deciding whether it is safe.
 <br>`match_tolerance_px` – pixel tolerance used when matching measured rows to driver modes. This lets a measured `3856 x 2180` row match a nearby driver mode such as `3840 x 2160`.
-<br>`learning.enabled` – when `true`, Cinemate observes takes while recording and writes local corrections after the take stops. Learned rows are not used unless `use_observed_profile` is also `true`.
-<br>`learning.minimum_duration_seconds` – shortest take length that can update the observed profile.
-<br>`learning.buffer_tolerance_frames` – maximum buffer peak still considered stable.
-<br>`learning.failure_backoff_fps` – how far below a buffering or dropped-frame FPS Cinemate should place the learned limit.
 
 Cinemate remembers the user's desired resolution. If you select a 4K mode and then raise FPS above that mode's measured sustainable limit, Cinemate switches to the highest measured mode that can sustain the FPS. When FPS returns to the desired mode's measured limit or below, Cinemate switches back. If no matching profile row exists for the detected sensor, storage type, filesystem, desired mode, and requested FPS, Cinemate leaves the current resolution unchanged.
 
@@ -335,7 +319,7 @@ Each profile row has this shape:
 
 `sustainable_fps` is the preferred field for new rows and means recording without dropped frames. `max_fps_no_buffer` is still accepted for older rows and for rows where you have verified no buffer growth as well.
 
-The older inline `performance_table` setting still works for compatibility. Inline rows are merged into the selected JSON profile and override matching rows only; they do not replace the whole stock database. New measurements should still go into the profile file, or into the observed profile when using the self-correcting workflow.
+Dynamic-resolution limits are determined by the selected stock JSON profile only. To change the lookup table, update `resources/dynamic_resolution_profiles.json`.
 
 ## buttons
 

@@ -292,13 +292,34 @@
             reloadStream();
         });
 
+        let streamReloadTimers = [];
+
+        function clearStreamReloadTimers() {
+            streamReloadTimers.forEach((timer) => clearTimeout(timer));
+            streamReloadTimers = [];
+        }
+
         function reloadStream() {
             const streamElement = document.getElementById('stream');
-            const currentSrc = streamElement.src;
+            if (!streamElement) {
+                return;
+            }
+
+            const baseSrc = streamElement.dataset.streamBase || streamElement.src.split('?')[0];
+            if (!baseSrc) {
+                return;
+            }
+
+            streamElement.dataset.streamBase = baseSrc;
+            clearStreamReloadTimers();
+            streamElement.onload = clearStreamReloadTimers;
             streamElement.src = '';
-            setTimeout(() => {
-                streamElement.src = currentSrc;
-            }, 2000);
+            [350, 1200, 2500].forEach((delay) => {
+                const timer = setTimeout(() => {
+                    streamElement.src = `${baseSrc}?reload=${Date.now()}`;
+                }, delay);
+                streamReloadTimers.push(timer);
+            });
         }
 
         socket.on('reload_browser', () => {

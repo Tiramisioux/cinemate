@@ -53,6 +53,7 @@ class ParameterKey(Enum):
     LORES_HEIGHT      = "lores_height"
     LORES_WIDTH       = "lores_width"
     PI_MODEL          = "pi_model"
+    PACKING           = "packing"
     REC               = "rec"
     SENSOR            = "sensor"
     SENSOR_MODE       = "sensor_mode"
@@ -68,6 +69,7 @@ class ParameterKey(Enum):
     WB_USER           = "wb_user"
     WIDTH             = "width"
     MEMORY_ALERT      = "memory_alert"
+    MODE              = "mode"
     SHUTTER_A_SYNC_MODE = 'shutter_a_sync_mode'
     SHUTTER_A_NOM       = 'shutter_angle_nom'
     SHUTTER_A_ACTUAL    = 'shutter_angle_actual'

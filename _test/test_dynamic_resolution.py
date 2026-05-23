@@ -118,6 +118,54 @@ class DynamicResolutionTests(unittest.TestCase):
 
         self.assertEqual(fps_max, 50)
 
+    def test_stock_profile_exposes_ssd_exfat_lower_mode_max(self):
+        rows = load_profile_rows(
+            {
+                "profiles_file": "resources/dynamic_resolution_profiles.json",
+                "profile": "default",
+            },
+            settings_file=ROOT / "src" / "settings.json",
+        )
+
+        fps_max = max_fps_for_context(
+            sensor_modes=IMX585_MODES,
+            desired_mode=1,
+            sensor="imx585_mono",
+            storage_type="SSD",
+            filesystem="exFAT",
+            performance_table=rows,
+            tolerance_px=32,
+        )
+        choice = choose_resolution(
+            sensor_modes=IMX585_MODES,
+            desired_mode=1,
+            requested_fps=26,
+            sensor="imx585_mono",
+            storage_type="USB SSD",
+            filesystem="exfat",
+            performance_table=rows,
+            tolerance_px=32,
+        )
+        restored_choice = choose_resolution(
+            sensor_modes=IMX585_MODES,
+            desired_mode=1,
+            requested_fps=25,
+            sensor="imx585_mono",
+            storage_type="ssd",
+            filesystem="exfat",
+            performance_table=rows,
+            tolerance_px=32,
+        )
+
+        self.assertEqual(fps_max, 50)
+        self.assertIsNotNone(choice)
+        self.assertEqual(choice.mode, 0)
+        self.assertTrue(choice.dynamic_active)
+        self.assertEqual(choice.desired_row.max_fps, 25)
+        self.assertIsNotNone(restored_choice)
+        self.assertEqual(restored_choice.mode, 1)
+        self.assertFalse(restored_choice.dynamic_active)
+
     def test_dynamic_max_fps_stays_unset_when_desired_mode_has_no_data(self):
         table_without_4k = [IMX585_TABLE[0]]
         fps_max = max_fps_for_context(
@@ -246,9 +294,6 @@ class DynamicResolutionTests(unittest.TestCase):
                 "sustainable_fps": 38,
             }
         ]
-
-        rows = load_profile_rows({"performance_table": standard_rows})
-        self.assertEqual(rows[0]["storage_type"], ["cfe", "nvme"])
 
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

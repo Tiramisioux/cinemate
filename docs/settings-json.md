@@ -335,7 +335,7 @@ Each profile row has this shape:
 
 `sustainable_fps` is the preferred field for new rows and means recording without dropped frames. `max_fps_no_buffer` is still accepted for older rows and for rows where you have verified no buffer growth as well.
 
-The older inline `performance_table` setting still works for compatibility, but new measurements should go into the profile file instead.
+The older inline `performance_table` setting still works for compatibility. Inline rows are merged into the selected JSON profile and override matching rows only; they do not replace the whole stock database. New measurements should still go into the profile file, or into the observed profile when using the self-correcting workflow.
 
 ## buttons
 

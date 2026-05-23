@@ -15,6 +15,16 @@ DEFAULT_OBSERVED_PROFILES_FILE = "src/dynamic_resolution_observed_profiles.json"
 DEFAULT_PROFILE_NAME = "default"
 DEFAULT_OBSERVED_PROFILE_NAME = "observed"
 DEFAULT_POLICY = "highest_sustainable_resolution"
+STORAGE_TYPE_ALIASES = {
+    "cf express": "cfe",
+    "cfexpress": "cfe",
+    "cfe hat": "cfe",
+    "cfehat": "cfe",
+    "usb": "ssd",
+    "usb ssd": "ssd",
+    "usb disk": "ssd",
+    "usb storage": "ssd",
+}
 
 
 @dataclass(frozen=True)
@@ -71,6 +81,23 @@ def _normalize_text(value: Any) -> str:
     return str(value or "").strip().lower()
 
 
+def _normalize_storage_type(value: Any) -> str:
+    text = _normalize_text(value).replace("_", " ").replace("-", " ")
+    text = " ".join(text.split())
+    compact = text.replace(" ", "")
+    if text in STORAGE_TYPE_ALIASES:
+        return STORAGE_TYPE_ALIASES[text]
+    if compact in STORAGE_TYPE_ALIASES:
+        return STORAGE_TYPE_ALIASES[compact]
+    if "cfe" in compact or "cfexpress" in compact:
+        return "cfe"
+    if "nvme" in compact:
+        return "nvme"
+    if "ssd" in compact:
+        return "ssd"
+    return compact or text
+
+
 def _sensor_candidates(sensor: Any) -> set[str]:
     text = _normalize_text(sensor)
     candidates = {text}
@@ -91,8 +118,8 @@ def _row_sensor_values(row: dict[str, Any]) -> frozenset[str]:
 
 def _as_storage_values(value: Any) -> set[str]:
     if isinstance(value, (list, tuple, set)):
-        return {_normalize_text(item) for item in value}
-    return {_normalize_text(value)}
+        return {_normalize_storage_type(item) for item in value}
+    return {_normalize_storage_type(value)}
 
 
 def _as_int(value: Any) -> int | None:
@@ -135,19 +162,25 @@ def resolve_profiles_path(profiles_file: str, settings_file: str | Path | None =
 def load_profile_rows(config: dict[str, Any], *, settings_file: str | Path | None = None) -> list[dict[str, Any]]:
     """Load measurement rows for the selected profile.
 
-    Inline ``performance_table`` is kept as a backward-compatible override, but
-    new configs should use named profiles in ``resources/dynamic_resolution_profiles.json``.
+    Inline ``performance_table`` is kept as a backward-compatible augmentation.
+    Matching inline rows override profile-file rows, but they no longer replace
+    the whole stock database because that can hide newer storage/filesystem rows
+    from older settings files.
     """
-    inline_rows = config.get("performance_table")
-    if inline_rows:
-        return list(inline_rows)
-
     profile = str(config.get("profile") or DEFAULT_PROFILE_NAME)
     rows = _load_rows_from_profile_file(
         config.get("profiles_file") or DEFAULT_PROFILES_FILE,
         profile,
         settings_file=settings_file,
     )
+    inline_rows = [
+        dict(row)
+        for row in (config.get("performance_table") or [])
+        if isinstance(row, dict)
+    ]
+    if inline_rows:
+        rows = merge_observed_rows(rows, inline_rows) if rows else inline_rows
+
     if config.get("use_observed_profile", False):
         observed_rows = _load_rows_from_profile_file(
             config.get("observed_profiles_file") or DEFAULT_OBSERVED_PROFILES_FILE,
@@ -489,7 +522,7 @@ def choose_resolution(
         if _row_matches_context(
             row,
             sensor=sensor,
-            storage_type=_normalize_text(storage_type),
+            storage_type=_normalize_storage_type(storage_type),
             filesystem=_normalize_text(filesystem),
         )
     ]
@@ -560,7 +593,7 @@ def max_fps_for_context(
         if _row_matches_context(
             row,
             sensor=sensor,
-            storage_type=_normalize_text(storage_type),
+            storage_type=_normalize_storage_type(storage_type),
             filesystem=_normalize_text(filesystem),
         )
     ]

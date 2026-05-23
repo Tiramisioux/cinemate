@@ -65,7 +65,7 @@ class CinePiController:
         self.settings = self.load_settings()
         dynamic_resolution_cfg = self.settings.get("dynamic_resolution", {})
         self.dynamic_resolution_cfg = dynamic_resolution_cfg
-        self.dynamic_resolution_enabled = bool(dynamic_resolution_cfg.get("enabled", False))
+        self.dynamic_resolution_enabled = self._as_bool(dynamic_resolution_cfg.get("enabled", False))
         self.dynamic_resolution_match_tolerance_px = int(
             dynamic_resolution_cfg.get("match_tolerance_px", DEFAULT_MATCH_TOLERANCE_PX)
             or DEFAULT_MATCH_TOLERANCE_PX

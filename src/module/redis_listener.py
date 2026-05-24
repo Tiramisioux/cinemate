@@ -79,6 +79,7 @@ class RedisListener:
         self.drop_frame_count_current_take = 0
         self.drop_frame_relay_timer = None
         self.frames_off_sync_latched_current_take = False
+        self.live_sync_suppressed_current_take = False
         self.live_sync_warning_tolerance_frames = self._coerce_frame_tolerance(
             live_sync_warning_tolerance_frames,
             default=2,
@@ -616,7 +617,17 @@ class RedisListener:
         if now < last_time:
             now = last_time
         self.fps_timeline.append((now, fps))
+        self._suppress_live_sync_for_current_take("FPS changed during recording")
         logging.info("Recording FPS segment changed to %.6f at %s", fps, now.isoformat())
+
+    def _suppress_live_sync_for_current_take(self, reason: str) -> None:
+        if not self.is_recording:
+            return
+        if not self.live_sync_suppressed_current_take:
+            logging.info("Suppressing live frame-sync warning: %s", reason)
+        self.live_sync_suppressed_current_take = True
+        self.frames_off_sync_latched_current_take = False
+        self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 1)
 
     @staticmethod
     def _expected_frame_counts(fps_expected: float | None, duration: float, sensor_count: int) -> tuple[int, float]:
@@ -685,6 +696,8 @@ class RedisListener:
         if self.recording_was_preroll or self._storage_preroll_active():
             return
         if self.frames_off_sync_latched_current_take:
+            return
+        if self.live_sync_suppressed_current_take:
             return
         if self.awaiting_fresh_framecount or not self.recording_start_time:
             return
@@ -1228,6 +1241,7 @@ class RedisListener:
                     self.fresh_framecount_guard_start_time = self.recording_start_time
                     self.drop_frame_count_current_take = 0
                     self.frames_off_sync_latched_current_take = False
+                    self.live_sync_suppressed_current_take = False
                     self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, 0)
                     self.redis_controller.set_value(ParameterKey.DROP_FRAME_RELAY.value, 0)
                     self.redis_controller.set_value(ParameterKey.DROP_FRAME_DURING_LAST_TAKE.value, 0)
@@ -1312,6 +1326,15 @@ class RedisListener:
                 ParameterKey.LAST_DNG_CAM1.value,
             ):
                 self._remember_recording_folder_from_dng(value_str)
+                continue
+            elif changed_key in (
+                ParameterKey.SENSOR_MODE.value,
+                ParameterKey.WIDTH.value,
+                ParameterKey.HEIGHT.value,
+            ):
+                self._suppress_live_sync_for_current_take(
+                    f"{changed_key} changed during recording"
+                )
                 continue
 
 
@@ -1686,7 +1709,11 @@ class RedisListener:
 
         sync_recorded_frames_total = recorded_frames_total + dropped_frame_slots_total
         diff = expected_frames_total - sync_recorded_frames_total
-        frames_in_sync = abs(diff) <= self.final_sync_analysis_tolerance_frames
+        sync_warning_suppressed = self.live_sync_suppressed_current_take
+        frames_in_sync = (
+            abs(diff) <= self.final_sync_analysis_tolerance_frames
+            or sync_warning_suppressed
+        )
 
         drop_during_last_take = (not self.recording_was_preroll) and drop_detected_this_take
         self.redis_controller.set_value(
@@ -1712,7 +1739,12 @@ class RedisListener:
                     dropped_frame_slots_total,
                 )
 
-        if frames_in_sync:
+        if sync_warning_suppressed:
+            if not quiet_summary:
+                logging.info(
+                    "Skipping frame-sync warning because FPS or resolution changed during this take."
+                )
+        elif frames_in_sync:
             if not quiet_summary:
                 if diff == 0:
                     logging.info("✓ All frames accounted for.")
@@ -1729,7 +1761,10 @@ class RedisListener:
                 self.final_sync_analysis_tolerance_frames,
             )
 
-        live_sync_warning_latched = self.frames_off_sync_latched_current_take
+        live_sync_warning_latched = (
+            self.frames_off_sync_latched_current_take
+            and not sync_warning_suppressed
+        )
         if segmented_recording and frames_in_sync and live_sync_warning_latched:
             live_sync_warning_latched = False
             self.frames_off_sync_latched_current_take = False
@@ -1737,7 +1772,7 @@ class RedisListener:
                 logging.info(
                     "Clearing live frame-sync warning after segmented final analysis accounted for all frames."
                 )
-        if not frames_in_sync:
+        if not frames_in_sync and not sync_warning_suppressed:
             self.frames_off_sync_latched_current_take = True
 
         all_frames_accounted = frames_in_sync

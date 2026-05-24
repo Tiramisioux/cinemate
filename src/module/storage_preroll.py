@@ -201,7 +201,7 @@ class StoragePreroll:
 
         try:
             if fps_target is not None:
-                self._apply_fps(fps_target)
+                self._apply_fps(fps_target, allow_dynamic_resolution=False)
 
             # Initiate recording.
             self.cinepi_controller.start_recording()
@@ -297,14 +297,22 @@ class StoragePreroll:
             fps_max = self._get_float(ParameterKey.FPS_MAX.value)
         return float(fps_max) if fps_max is not None else None
 
-    def _apply_fps(self, value: float) -> None:
+    def _apply_fps(self, value: float, *, allow_dynamic_resolution: bool = True) -> None:
         prev_override = getattr(self.cinepi_controller, "lock_override", False)
+        prev_dynamic_suspended = getattr(
+            self.cinepi_controller,
+            "dynamic_resolution_suspended",
+            False,
+        )
         try:
             self.cinepi_controller.lock_override = True
+            if not allow_dynamic_resolution:
+                self.cinepi_controller.dynamic_resolution_suspended = True
             self.cinepi_controller.set_fps(float(value))
         except Exception as exc:
             logging.warning("Failed to set FPS to %.2f during pre-roll: %s", value, exc)
         finally:
+            self.cinepi_controller.dynamic_resolution_suspended = prev_dynamic_suspended
             self.cinepi_controller.lock_override = prev_override
 
     def _restore_preroll_state(

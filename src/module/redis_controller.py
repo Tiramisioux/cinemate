@@ -45,6 +45,9 @@ class ParameterKey(Enum):
     DROP_FRAME_DURING_LAST_TAKE = "drop_frame_during_last_take"
     DROP_FRAME_COUNT = "drop_frame_count"
     DROP_FRAME_RELAY = "drop_frame_relay"
+    DYNAMIC_RESOLUTION_ENABLED = "dynamic_resolution_enabled"
+    DYNAMIC_RESOLUTION_ACTIVE = "dynamic_resolution_active"
+    DYNAMIC_RESOLUTION_DESIRED_MODE = "dynamic_resolution_desired_mode"
 
     TC_CAM0           = "tc_cam0"
     TC_CAM1           = "tc_cam1"

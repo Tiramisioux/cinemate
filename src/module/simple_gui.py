@@ -13,6 +13,7 @@ import re
 from statistics import mean
 from module.utils import Utils
 from module.redis_controller import ParameterKey
+from module.dynamic_resolution import dynamic_resolution_indicator_active
 import json
 import re
 
@@ -126,6 +127,27 @@ class SimpleGUI(threading.Thread):
     # ───────────────── helper: do we have two non-empty clip names? ────────────────
     def _has_two_clips(self, values) -> bool:
         return bool(values.get("clip_name") and values.get("clip_name_cam1"))
+
+    def _dynamic_resolution_indicator_active(self) -> bool:
+        controller = self.cinepi_controller
+        return dynamic_resolution_indicator_active(
+            enabled=self.redis_controller.get_value(
+                ParameterKey.DYNAMIC_RESOLUTION_ENABLED.value,
+                getattr(controller, "dynamic_resolution_enabled", False),
+            ),
+            active=self.redis_controller.get_value(
+                ParameterKey.DYNAMIC_RESOLUTION_ACTIVE.value,
+                getattr(controller, "dynamic_resolution_active", False),
+            ),
+            current_mode=self.redis_controller.get_value(
+                ParameterKey.SENSOR_MODE.value,
+                getattr(controller, "sensor_mode", None),
+            ),
+            desired_mode=self.redis_controller.get_value(
+                ParameterKey.DYNAMIC_RESOLUTION_DESIRED_MODE.value,
+                getattr(controller, "dynamic_resolution_desired_mode", None),
+            ),
+        )
 
     # ───────────────── helper: tweak GUI layout for clip lines ────────────────────
     def _adjust_clip_layout(self, two_clips: bool):
@@ -856,6 +878,11 @@ class SimpleGUI(threading.Thread):
         else:
             self.colors["shutter_speed"]["normal"] = (249,249,249)
             self.colors["fps"]["normal"] = (249,249,249)
+
+        if self._dynamic_resolution_indicator_active():
+            self.colors["res"]["normal"] = "lightgreen"
+        else:
+            self.colors["res"]["normal"] = (249, 249, 249)
 
         values["lock"]        = "LOCK"    if self.cinepi_controller.parameters_lock else ""
         values["low_voltage"] = "VOLTAGE" if self.dmesg_monitor.undervoltage_flag  else ""

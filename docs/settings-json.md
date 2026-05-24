@@ -255,6 +255,72 @@ Limit which sensor modes appear when cycling resolutions.
 
     The stock Cinemate setting is `[1.5, 2]`, so the UI starts by showing only 1.5K and 2K recording-size choices. 2K is the standard working size, and the default mode list is kept to modes that can reasonably support 25 fps recording. Higher sensor modes are still supported. Add `4` to `k_steps`, for example `[1.5, 2, 4]`, when you intentionally want to expose 4K-class modes in the UI.
 
+## sensors
+
+Points Cinemate at the sensor metadata database used for known packing modes, documentation metadata, and sustainable FPS annotations.
+
+```json
+"sensors": {
+  "database_file": "resources/sensors.json"
+}
+```
+
+`database_file` – JSON file containing compatible sensor metadata. The default file is `resources/sensors.json`.
+
+## dynamic_resolution
+
+Automatically chooses the highest measured sustainable resolution for the user-selected frame rate, detected sensor, storage type, and storage filesystem.
+
+```json
+"dynamic_resolution": {
+  "enabled": false,
+  "profile": "default",
+  "profiles_file": "resources/dynamic_resolution_profiles.json",
+  "policy": "highest_sustainable_resolution",
+  "safety_margin_fps": 0,
+  "match_tolerance_px": 32
+}
+```
+
+`enabled` – set to `true` to allow Cinemate to switch resolution automatically when the current desired resolution cannot sustain the selected FPS.
+<br>`profile` – named standard measurement profile to load from `profiles_file`. The stock profile is `default`.
+<br>`profiles_file` – JSON file containing measured sustainable-FPS rows. The stock file is `resources/dynamic_resolution_profiles.json`.
+<br>`policy` – selection strategy. The current policy, `highest_sustainable_resolution`, chooses the largest measured mode that can sustain the requested FPS.
+<br>`safety_margin_fps` – subtract this many FPS from every measured row before deciding whether it is safe.
+<br>`match_tolerance_px` – pixel tolerance used when matching measured rows to driver modes. This lets a measured `3856 x 2180` row match a nearby driver mode such as `3840 x 2160`.
+
+Cinemate remembers the user's desired resolution. If you select a 4K mode and then raise FPS above that mode's measured sustainable limit, Cinemate switches to the highest measured mode that can sustain the FPS. When FPS returns to the desired mode's measured limit or below, Cinemate switches back. If no matching profile row exists for the detected sensor, storage type, filesystem, desired mode, and requested FPS, Cinemate leaves the current resolution unchanged.
+
+When dynamic resolution is enabled, the maximum FPS shown by Cinemate comes from the measured dynamic-resolution profile for the current sensor, storage type, and filesystem, but only when the desired mode itself has a measured row. When dynamic resolution is disabled, maximum FPS comes from the sensor readout reported by `cinepi-raw`, as before.
+
+The storage type comes from the mounted RAW device and is usually `ssd`, `cfe`, `nvme`, or `unknown`. The filesystem comes from the mounted RAW volume and is usually `ext4`, `exfat`, or `ntfs`.
+
+Each profile row has this shape:
+
+```json
+{
+  "sensor": "imx585",
+  "sensor_aliases": ["imx585_mono"],
+  "storage_type": "cfe",
+  "filesystem": "ext4",
+  "media_model": "CFE Hat / NVMe",
+  "width": 3856,
+  "height": 2180,
+  "bit_depth": 12,
+  "sustainable_fps": 40,
+  "max_fps_no_buffer": 40,
+  "test_duration_seconds": null,
+  "buffer_peak_frames": 0,
+  "drop_frames": 0,
+  "confidence": "empirical",
+  "notes": "4K desired-mode threshold for dynamic resolution."
+}
+```
+
+`sustainable_fps` is the preferred field for new rows and means recording without dropped frames. `max_fps_no_buffer` is still accepted for older rows and for rows where you have verified no buffer growth as well.
+
+Dynamic-resolution limits are determined by the selected stock JSON profile only. To change the lookup table, update `resources/dynamic_resolution_profiles.json`.
+
 ## buttons
 
 Defines GPIO push buttons. Each entry describes one button and the actions it triggers.

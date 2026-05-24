@@ -134,6 +134,9 @@ ENV/
 # Generated docs output
 docs/renders/*.pdf
 
+# Local dynamic-resolution learning output
+src/dynamic_resolution_observed_profiles.json
+
 # VS Code
 .vscode
 

@@ -23,6 +23,7 @@ from module.dynamic_resolution import (
 )
 
 SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
+GUI_RESOLUTION_PREVIEW_DELAY_SECONDS = 0.12
 
 class CinePiController:
     def __init__(self,
@@ -1028,38 +1029,53 @@ class CinePiController:
         try:
             value = self._normalize_sensor_mode_value(value)
 
-            self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, str(value))
             self.sensor_mode = int(value)
 
             resolution_info = self.sensor_detect.res_modes[value]
             height_new = resolution_info.get('height', None)
             width_new = resolution_info.get('width', None)
             bit_depth_new = resolution_info.get('bit_depth', None)
-            fps_max_new = resolution_info.get('fps_max', None)
             gui_layout_new = resolution_info.get('gui_layout', None)
             file_size_new = resolution_info.get('file_size', None)
 
             if height_new is None or width_new is None or gui_layout_new is None:
                 raise ValueError("Invalid height, width, or gui_layout value.")
 
+            self.gui_layout = gui_layout_new
+            self.file_size = file_size_new
+
+            # Publish all operator-visible resolution metadata before asking
+            # cinepi-raw to reconfigure. This gives the GUI a chance to show
+            # the newly selected mode while the preview stream catches up.
+            self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, str(value))
             self.redis_controller.set_value(ParameterKey.HEIGHT.value, str(height_new))
             self.redis_controller.set_value(ParameterKey.WIDTH.value, str(width_new))
             self.redis_controller.set_value(ParameterKey.BIT_DEPTH.value, str(bit_depth_new))
-            self.redis_controller.set_value(ParameterKey.FPS_MAX.value, str(fps_max_new))
             self.redis_controller.set_value(ParameterKey.GUI_LAYOUT.value, str(gui_layout_new))
             self.redis_controller.set_value(ParameterKey.FILE_SIZE.value, str(file_size_new))
-            self._refresh_fps_max()
+            self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)
+            self.fps_max = self._refresh_fps_max()
+            self.dynamic_resolution_active = (
+                self.dynamic_resolution_enabled
+                and self.sensor_mode != self.dynamic_resolution_desired_mode
+            )
+            self._publish_dynamic_resolution_state()
+
+            logging.info(
+                "Resolution GUI state set to mode %s, height: %s, width: %s, gui_layout: %s",
+                value,
+                height_new,
+                width_new,
+                gui_layout_new,
+            )
+            time.sleep(GUI_RESOLUTION_PREVIEW_DELAY_SECONDS)
 
             self.redis_controller.set_value(ParameterKey.CAM_INIT.value, 1)
             # CAM_INIT is a command edge for cinepi-raw. It may already be "1"
             # in Redis, so force the publish even when set_value no-ops.
             self.redis_controller.r.publish("cp_controls", ParameterKey.CAM_INIT.value)
 
-            self.gui_layout = gui_layout_new
-
             logging.info(f"Resolution set to mode {value}, height: {height_new}, width: {width_new}, gui_layout: {gui_layout_new}")
-
-            self.file_size = file_size_new
 
             # Initialize fps_steps based on the provided list and capped by fps_max
             self.initialize_fps_steps(self.fps_steps)
@@ -1077,16 +1093,8 @@ class CinePiController:
                 self.current_fps,
             )
 
-            self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)
-
             if restore_user_fps is not None:
                 self.set_fps(float(restore_user_fps))
-
-            self.dynamic_resolution_active = (
-                self.dynamic_resolution_enabled
-                and self.sensor_mode != self.dynamic_resolution_desired_mode
-            )
-            self._publish_dynamic_resolution_state()
             return True
 
         except ValueError as error:

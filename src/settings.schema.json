@@ -67,6 +67,10 @@
         "capture_gain_db": {
           "type": "number",
           "default": 0.0
+        },
+        "plain_arecord_timecode_offset_frames": {
+          "type": "integer",
+          "default": 2
         }
       },
       "additionalProperties": true

@@ -120,11 +120,14 @@ Audio capture options shared by idle monitoring and recorded WAV input level.
 
 ```json
 "audio": {
-  "capture_gain_db": 0.0
+  "capture_gain_db": 0.0,
+  "plain_arecord_timecode_offset_frames": 2
 }
 ```
 
 `capture_gain_db` – target ALSA capture gain in decibels for the detected microphone input. `0.0` means unity gain. Positive values boost the capture level, negative values attenuate it.
+
+`plain_arecord_timecode_offset_frames` – frame offset passed to `cinepi-raw` for the 16-bit plain `arecord` fallback WAV metadata path. `2` corrects the current 16-bit USB mic calibration, `0` disables the correction, and negative values are allowed for future calibration. This changes only WAV timecode metadata; recorded PCM is not shifted.
 
 Use this when the Pi is hearing the mic too quietly or too hot and you want the idle VU, recording VU, and recorded WAV to move together. Cinemate mirrors this value into the Redis key `audio_capture_gain_db` at startup so future runtime controls can target the same setting.
 

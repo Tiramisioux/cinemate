@@ -437,6 +437,20 @@ class AudioMonitor:
         except Exception as exc:  # pragma: no cover - redis optional
             logging.debug("Failed to publish MIC_* to Redis: %s", exc)
 
+    @staticmethod
+    def clear_mic_selection(reason: str = "") -> None:
+        try:
+            import redis  # type: ignore
+
+            client = redis.StrictRedis(host="localhost", port=6379, db=0)
+            client.delete("MIC_PCM_ALIAS", "MIC_FORMAT", "MIC_CHANNELS", "MIC_RATE")
+            if reason:
+                logging.debug("Cleared MIC_* from Redis: %s", reason)
+        except ModuleNotFoundError:
+            logging.debug("Redis module not available; skipping MIC_* clear.")
+        except Exception as exc:  # pragma: no cover - redis optional
+            logging.debug("Failed to clear MIC_* from Redis: %s", exc)
+
     def vu_monitor_loop(self):
         if not self.device_alias or not self.format or not self.channels or not self.sample_rate:
             logging.warning("VU monitor loop requested without a valid audio configuration.")
@@ -480,11 +494,13 @@ class AudioMonitor:
 
         if not self.detect_recording_devices():
             logging.warning("AudioMonitor prepare aborted: no recording device present.")
+            self.clear_mic_selection("no recording device present")
             return False
 
         self.parse_hardware_params()
         if not self.can_record_audio:
             logging.warning("AudioMonitor prepare aborted: unable to determine usable mic alias.")
+            self.clear_mic_selection("no usable mic alias")
             return False
 
         self.apply_capture_gain()
@@ -649,6 +665,7 @@ class USBMonitor():
                 self.audio_monitor.stop()
             except Exception:
                 pass
+            AudioMonitor.clear_mic_selection("microphone changed; waiting for re-probe")
             self.audio_monitor = AudioMonitor(settings=self.settings)
             self.audio_monitor.set_model_info(model, serial, card_num=card_num, card_name=card_name)
             self.current_mic_id = mic_id
@@ -731,6 +748,7 @@ class USBMonitor():
                 self._cancel_audio_prepare_timer()
                 self.usb_event.emit('mic_removed', device, model, serial)  # <-- Added this line
                 self.audio_monitor.stop()
+                AudioMonitor.clear_mic_selection("microphone removed")
 
 
             elif self.usb_keyboard and self.usb_keyboard == device:

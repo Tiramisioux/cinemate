@@ -15,8 +15,15 @@ from module.redis_controller import ParameterKey
 from module.ir_filter import IRFilter
 from module.config_loader import load_settings as _load_settings
 from module.storage_profiles import recorder_profile_name_for_filesystem
+from module.dynamic_resolution import (
+    DEFAULT_MATCH_TOLERANCE_PX,
+    choose_resolution,
+    load_profile_rows,
+    max_fps_for_context,
+)
 
 SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
+GUI_RESOLUTION_PREVIEW_DELAY_SECONDS = 0.12
 
 class CinePiController:
     def __init__(self,
@@ -55,6 +62,27 @@ class CinePiController:
         
         self.anamorphic_steps = anamorphic_steps
         self.default_anamorphic_factor = default_anamorphic_factor
+        self.settings = self.load_settings()
+        dynamic_resolution_cfg = self.settings.get("dynamic_resolution", {})
+        self.dynamic_resolution_cfg = dynamic_resolution_cfg
+        self.dynamic_resolution_enabled = self._as_bool(dynamic_resolution_cfg.get("enabled", False))
+        self.dynamic_resolution_match_tolerance_px = int(
+            dynamic_resolution_cfg.get("match_tolerance_px", DEFAULT_MATCH_TOLERANCE_PX)
+            or DEFAULT_MATCH_TOLERANCE_PX
+        )
+        self.dynamic_resolution_policy = str(
+            dynamic_resolution_cfg.get("policy", "highest_sustainable_resolution")
+        )
+        self.dynamic_resolution_safety_margin_fps = float(
+            dynamic_resolution_cfg.get("safety_margin_fps", 0) or 0
+        )
+        self.dynamic_resolution_table = load_profile_rows(
+            dynamic_resolution_cfg,
+            settings_file=SETTINGS_FILE,
+        )
+        self.dynamic_resolution_desired_mode = None
+        self.dynamic_resolution_active = False
+        self.dynamic_resolution_suspended = False
         
         self.wb_cg_rb_array = {}  # Initialize as an empty dictionary
         
@@ -78,6 +106,11 @@ class CinePiController:
         self.redis_listener = None
         self._storage_profile_restart_lock = threading.Lock()
         self._storage_profile_restart_active = False
+        self._resolution_change_callbacks = []
+        self._resolution_change_pace_lock = threading.Lock()
+        self._last_resolution_change_started_at = 0.0
+        self._resolution_change_min_interval_s = 0.25
+        self._recording_resolution_change_min_interval_s = 2.0
         self._storage_profile_restart_pending = False
         self._active_storage_recorder_profile = self._current_storage_recorder_profile()
         try:
@@ -118,20 +151,42 @@ class CinePiController:
         self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)
         
         self.sensor_mode = self._get_startup_sensor_mode()
+        self.sensor_mode_saved = self.sensor_mode
+        self.dynamic_resolution_desired_mode = self._get_startup_dynamic_resolution_desired_mode()
+        self.dynamic_resolution_active = (
+            self.dynamic_resolution_enabled
+            and self._as_bool(
+                self.redis_controller.get_value(
+                    ParameterKey.DYNAMIC_RESOLUTION_ACTIVE.value,
+                    0,
+                )
+            )
+            and self.sensor_mode != self.dynamic_resolution_desired_mode
+        )
+        if (
+            self.dynamic_resolution_enabled
+            and not self.dynamic_resolution_active
+            and self.dynamic_resolution_desired_mode != self.sensor_mode
+        ):
+            logging.info(
+                "Dynamic resolution desired mode reset to startup mode %s "
+                "(stored desired mode %s was not active)",
+                self.sensor_mode,
+                self.dynamic_resolution_desired_mode,
+            )
+            self.dynamic_resolution_desired_mode = self.sensor_mode
         self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
             self.current_sensor,
             self.sensor_mode,
             self.fps,
         )
-        self.fps_max = int(self.sensor_detect.get_fps_max(self.current_sensor, self.sensor_mode))
-        
-        self.redis_controller.set_value(ParameterKey.FPS_MAX.value, self.fps_max)
+        self.fps_max = self._refresh_fps_max()
         self.gui_layout = self.sensor_detect.get_gui_layout(self.current_sensor, self.sensor_mode)
         self.exposure_time_s = float(self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)) / 360 * (1 / self.fps) 
         self.exposure_time_saved = self.exposure_time_s
         self.file_size = self.sensor_detect.get_file_size(self.current_sensor, self.sensor_mode)
         
-        self.settings = self.load_settings()  # Load other settings, if needed
+        self._publish_dynamic_resolution_state()
         
         # ── put default zoom into Redis if nothing stored yet ─────────────
         if self.redis_controller.get_value(ParameterKey.ZOOM.value) is None:
@@ -156,8 +211,15 @@ class CinePiController:
         # Set a timer to clear the startup flag after a short period
         threading.Timer(5.0, self.clear_startup_flag).start()
 
-        # Communicate the initial fps to the web app
-        self.set_fps(self.fps)
+        # Communicate the initial fps without changing resolution. Storage
+        # pre-roll should stress the selected mode before dynamic resolution
+        # restores the user's FPS and chooses a sustainable mode.
+        prev_dynamic_suspended = self.dynamic_resolution_suspended
+        self.dynamic_resolution_suspended = True
+        try:
+            self.set_fps(self.fps)
+        finally:
+            self.dynamic_resolution_suspended = prev_dynamic_suspended
         logging.info(f"Initialized fps: {self.fps}")
         
     def _get_startup_sensor_mode(self) -> int:
@@ -167,6 +229,143 @@ class CinePiController:
         except (TypeError, ValueError):
             self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, 0)
             return 0
+
+    def _get_startup_dynamic_resolution_desired_mode(self) -> int:
+        value = self.redis_controller.get_value(
+            ParameterKey.DYNAMIC_RESOLUTION_DESIRED_MODE.value
+        )
+        try:
+            desired_mode = int(value)
+        except (TypeError, ValueError):
+            return self.sensor_mode
+        if desired_mode not in self.sensor_detect.res_modes:
+            return self.sensor_mode
+        return desired_mode
+
+    def _publish_dynamic_resolution_state(self):
+        self.redis_controller.set_value(
+            ParameterKey.DYNAMIC_RESOLUTION_ENABLED.value,
+            1 if self.dynamic_resolution_enabled else 0,
+        )
+        self.redis_controller.set_value(
+            ParameterKey.DYNAMIC_RESOLUTION_ACTIVE.value,
+            1 if self.dynamic_resolution_active else 0,
+        )
+        if self.dynamic_resolution_desired_mode is not None:
+            self.redis_controller.set_value(
+                ParameterKey.DYNAMIC_RESOLUTION_DESIRED_MODE.value,
+                self.dynamic_resolution_desired_mode,
+            )
+
+    def _current_user_fps_value(self):
+        value = self.redis_controller.get_value(ParameterKey.FPS_USER.value)
+        if value is None:
+            value = self.redis_controller.get_value(ParameterKey.FPS.value)
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _as_bool(value):
+        if isinstance(value, bool):
+            return value
+        return str(value).strip().lower() in ("1", "true", "yes", "on")
+
+    def _sensor_readout_fps_max(self, mode=None):
+        mode = self.sensor_mode if mode is None else mode
+        try:
+            return int(self.sensor_detect.get_fps_max(self.current_sensor, mode))
+        except (TypeError, ValueError):
+            return 1
+
+    def _dynamic_context_fps_max(self):
+        if not self.dynamic_resolution_enabled:
+            return None
+        storage_type = self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value, "none")
+        filesystem = self.redis_controller.get_value(ParameterKey.STORAGE_FILESYSTEM.value, "none")
+        if str(storage_type or "").strip().lower() in ("", "none", "unknown"):
+            return None
+        if str(filesystem or "").strip().lower() in ("", "none", "unknown"):
+            return None
+        return max_fps_for_context(
+            sensor_modes=self.sensor_detect.res_modes,
+            sensor=self.current_sensor,
+            storage_type=storage_type,
+            filesystem=filesystem,
+            performance_table=self.dynamic_resolution_table,
+            desired_mode=self.dynamic_resolution_desired_mode,
+            tolerance_px=self.dynamic_resolution_match_tolerance_px,
+            safety_margin_fps=self.dynamic_resolution_safety_margin_fps,
+            policy=self.dynamic_resolution_policy,
+        )
+
+    def _refresh_fps_max(self):
+        sensor_max = self._sensor_readout_fps_max()
+        dynamic_max = self._dynamic_context_fps_max()
+        fps_max = int(dynamic_max) if dynamic_max is not None else sensor_max
+        self.fps_max = max(1, fps_max)
+        self.redis_controller.set_value(ParameterKey.FPS_MAX.value, self.fps_max)
+        return self.fps_max
+
+    def _dynamic_resolution_choice_for_fps(self, requested_user_fps):
+        if not self.dynamic_resolution_enabled:
+            self.dynamic_resolution_active = False
+            self._publish_dynamic_resolution_state()
+            return None
+        if self.dynamic_resolution_suspended:
+            return None
+
+        if self.dynamic_resolution_desired_mode is None:
+            self.dynamic_resolution_desired_mode = self.sensor_mode
+
+        storage_type = self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value, "none")
+        filesystem = self.redis_controller.get_value(ParameterKey.STORAGE_FILESYSTEM.value, "none")
+        if str(storage_type or "").strip().lower() in ("", "none", "unknown"):
+            return None
+        if str(filesystem or "").strip().lower() in ("", "none", "unknown"):
+            return None
+
+        return choose_resolution(
+            sensor_modes=self.sensor_detect.res_modes,
+            desired_mode=self.dynamic_resolution_desired_mode,
+            requested_fps=requested_user_fps,
+            sensor=self.current_sensor,
+            storage_type=storage_type,
+            filesystem=filesystem,
+            performance_table=self.dynamic_resolution_table,
+            tolerance_px=self.dynamic_resolution_match_tolerance_px,
+            safety_margin_fps=self.dynamic_resolution_safety_margin_fps,
+            policy=self.dynamic_resolution_policy,
+        )
+
+    def _maybe_apply_dynamic_resolution_for_fps(self, requested_user_fps):
+        choice = self._dynamic_resolution_choice_for_fps(requested_user_fps)
+        if choice is None:
+            self.dynamic_resolution_active = (
+                self.dynamic_resolution_enabled
+                and self.sensor_mode != self.dynamic_resolution_desired_mode
+            )
+            self._publish_dynamic_resolution_state()
+            return False
+
+        self.dynamic_resolution_active = choice.dynamic_active
+        self._publish_dynamic_resolution_state()
+
+        if choice.mode == self.sensor_mode:
+            return False
+
+        logging.info(
+            "Dynamic resolution selecting mode %s for %.3ffps "
+            "(desired mode %s supports %.3ffps on measured %sx%s)",
+            choice.mode,
+            float(requested_user_fps),
+            choice.desired_mode,
+            choice.desired_row.max_fps,
+            choice.desired_row.width,
+            choice.desired_row.height,
+        )
+        return self._apply_resolution_mode(choice.mode, restore_user_fps=None)
         
     # ─── step-table helpers ────────────────────────────────────────────────
     def _rebuild_iso_steps(self):
@@ -437,7 +636,7 @@ class CinePiController:
             adjusted_fps = (self.shutter_angle_nom / 360) / self.exposure_time_nominal
             self.update_fps(round(adjusted_fps, 1))
 
-    def set_fps(self, value):
+    def set_fps(self, value, update_user_target=True):
         """
         Apply a new FPS, observing:
             • hardware limit (fps_max)
@@ -447,6 +646,17 @@ class CinePiController:
             • optional locks
         """
         requested_user_fps = float(value)
+        if self.fps_lock and not self.lock_override:
+            logging.debug("FPS locked – request ignored")
+            return
+
+        # Give the UI immediate feedback for the operator's requested FPS.
+        # The actual stream may still need a resolution reconfigure before the
+        # corrected hardware FPS can be applied.
+        self.user_fps = requested_user_fps
+        self.redis_controller.set_value(ParameterKey.FPS_USER.value, self.user_fps)
+
+        self._maybe_apply_dynamic_resolution_for_fps(requested_user_fps)
 
         self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
             self.current_sensor,
@@ -475,12 +685,9 @@ class CinePiController:
                             key=lambda x: abs(x - corrected))     # “snapped”
             safe_user_fps = safe_value
 
-        if self.fps_lock and not self.lock_override:
-            logging.debug("FPS locked – request ignored")
-            return
-
         self.user_fps = safe_user_fps
-        self.redis_controller.set_value(ParameterKey.FPS_USER.value, self.user_fps)
+        if update_user_target:
+            self.redis_controller.set_value(ParameterKey.FPS_USER.value, self.user_fps)
 
         self.current_fps = safe_value
         self.redis_controller.set_value(ParameterKey.FPS.value, safe_value)
@@ -576,6 +783,39 @@ class CinePiController:
 
     def attach_redis_listener(self, redis_listener) -> None:
         self.redis_listener = redis_listener
+
+    def add_resolution_change_callback(self, callback) -> None:
+        if not callable(callback):
+            logging.warning("Ignoring non-callable resolution change callback.")
+            return
+        self._resolution_change_callbacks.append(callback)
+
+    def _notify_resolution_change(self, sensor_mode) -> None:
+        for callback in list(self._resolution_change_callbacks):
+            try:
+                callback(sensor_mode)
+            except Exception:
+                logging.exception("Resolution change callback failed.")
+
+    def _pace_resolution_change(self, recording: bool) -> None:
+        min_interval = (
+            self._recording_resolution_change_min_interval_s
+            if recording
+            else self._resolution_change_min_interval_s
+        )
+
+        with self._resolution_change_pace_lock:
+            now = time.monotonic()
+            elapsed = now - self._last_resolution_change_started_at
+            wait_time = min_interval - elapsed
+            if wait_time > 0:
+                logging.info(
+                    "Waiting %.2fs for the previous resolution reconfigure to settle.",
+                    wait_time,
+                )
+                time.sleep(wait_time)
+                now = time.monotonic()
+            self._last_resolution_change_started_at = now
 
     def _clear_frame_limited_recording_stop(self) -> None:
         if self.redis_listener and hasattr(self.redis_listener, "disarm_frame_limited_stop"):
@@ -708,6 +948,8 @@ class CinePiController:
         return not self.is_preroll_active()
 
     def _handle_storage_mount_event(self, *_args) -> None:
+        self._refresh_fps_max()
+        self.update_steps()
         self._maybe_schedule_storage_profile_restart("storage mount")
 
     def _handle_storage_restart_redis_event(self, data=None) -> None:
@@ -794,97 +1036,211 @@ class CinePiController:
         self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         logging.info(f"Stopped recording")
 
+    def _is_recording(self) -> bool:
+        return str(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)) == "1"
+
+    def _mode_string(self, info: dict) -> str:
+        width = int(info.get("width") or 0)
+        height = int(info.get("height") or 0)
+        bit_depth = int(info.get("bit_depth") or 12)
+        packing = str(info.get("packing") or "U").upper()[0]
+        return f"{width}:{height}:{bit_depth}:{packing}"
+
+    def _select_resolution_mode_for_fps(self, target_fps: float):
+        candidates = []
+        for mode, info in self.sensor_detect.res_modes.items():
+            try:
+                fps_max = float(info.get("fps_max") or 0)
+                area = int(info.get("width") or 0) * int(info.get("height") or 0)
+            except (TypeError, ValueError):
+                continue
+            if fps_max >= target_fps:
+                candidates.append((area, mode))
+
+        if not candidates:
+            return self.sensor_mode
+
+        candidates.sort(reverse=True)
+        return candidates[0][1]
+
     def switch_resolution(self):
         try:
-            current_sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
-            sensor_modes = list(self.sensor_detect.res_modes.keys())
+            sensor_modes = sorted(
+                self.sensor_detect.res_modes.keys(),
+                key=lambda mode: int(mode),
+            )
             num_sensor_modes = len(sensor_modes)
 
             if num_sensor_modes <= 1:
                 logging.info("Only one sensor mode available. Cannot switch resolution.")
-                return
+                return False
 
-            current_index = sensor_modes.index(current_sensor_mode)
-            next_index = (current_index + 1) % num_sensor_modes
-            next_sensor_mode = sensor_modes[next_index]
+            current_sensor_mode = self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value)
+            if current_sensor_mode is None:
+                current_sensor_mode = self.sensor_mode
 
-            self.set_resolution(next_sensor_mode)
+            try:
+                current_sensor_mode = int(current_sensor_mode)
+            except (TypeError, ValueError):
+                current_sensor_mode = self.sensor_mode
+
+            current_index = next(
+                (
+                    index
+                    for index, sensor_mode in enumerate(sensor_modes)
+                    if int(sensor_mode) == int(current_sensor_mode)
+                ),
+                None,
+            )
+
+            if current_index is None:
+                logging.warning(
+                    "Current sensor mode %s not found in available modes %s. Switching to first mode.",
+                    current_sensor_mode,
+                    sensor_modes,
+                )
+                next_sensor_mode = sensor_modes[0]
+            else:
+                next_index = (current_index + 1) % num_sensor_modes
+                next_sensor_mode = sensor_modes[next_index]
+
+            logging.info("Switching resolution from mode %s to mode %s", current_sensor_mode, next_sensor_mode)
+            return self.set_resolution(next_sensor_mode)
+
+        except (TypeError, ValueError) as error:
+            logging.error(f"Error switching resolution: {error}")
+            return False
+
+    def _normalize_sensor_mode_value(self, value):
+        try:
+            value = int(value)
+        except (TypeError, ValueError):
+            value = 0
+        if value not in self.sensor_detect.res_modes:
+            logging.info(f"Couldn't find sensor mode {value}. Trying with sensor_mode 0.")
+            value = 0
+        return value
+
+    def _apply_resolution_mode(self, value, restore_user_fps=None, *, restart_process=False):
+        try:
+            value = self._normalize_sensor_mode_value(value)
+            recording = self._is_recording()
+            if recording:
+                logging.warning(
+                    "Resolution change requested while recording. "
+                    "cinepi-raw will split the recording around the camera reconfigure."
+                )
+            self._pace_resolution_change(recording)
+
+            self.sensor_mode = int(value)
+
+            resolution_info = self.sensor_detect.res_modes[value]
+            height_new = resolution_info.get('height', None)
+            width_new = resolution_info.get('width', None)
+            bit_depth_new = resolution_info.get('bit_depth', None)
+            packing_new = resolution_info.get('packing', 'U')
+            gui_layout_new = resolution_info.get('gui_layout', None)
+            file_size_new = resolution_info.get('file_size', None)
+
+            if height_new is None or width_new is None or gui_layout_new is None:
+                raise ValueError("Invalid height, width, or gui_layout value.")
+
+            self.gui_layout = gui_layout_new
+            self.file_size = file_size_new
+
+            # Publish all operator-visible resolution metadata before asking
+            # cinepi-raw to reconfigure. This gives the GUI a chance to show
+            # the newly selected mode while the preview stream catches up.
+            self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, str(value))
+            self.redis_controller.set_value(ParameterKey.HEIGHT.value, str(height_new))
+            self.redis_controller.set_value(ParameterKey.WIDTH.value, str(width_new))
+            self.redis_controller.set_value(ParameterKey.BIT_DEPTH.value, str(bit_depth_new))
+            self.redis_controller.set_value(ParameterKey.PACKING.value, str(packing_new))
+            self.redis_controller.set_value(ParameterKey.GUI_LAYOUT.value, str(gui_layout_new))
+            self.redis_controller.set_value(ParameterKey.FILE_SIZE.value, str(file_size_new))
+            self.redis_controller.set_value(
+                ParameterKey.LORES_WIDTH.value,
+                str(self.sensor_detect.get_lores_width(self.current_sensor, self.sensor_mode)),
+            )
+            self.redis_controller.set_value(
+                ParameterKey.LORES_HEIGHT.value,
+                str(self.sensor_detect.get_lores_height(self.current_sensor, self.sensor_mode)),
+            )
+            self.redis_controller.set_value(ParameterKey.MODE.value, self._mode_string(resolution_info))
+            self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)
+            self.fps_max = self._refresh_fps_max()
+            self.dynamic_resolution_active = (
+                self.dynamic_resolution_enabled
+                and self.sensor_mode != self.dynamic_resolution_desired_mode
+            )
+            self._publish_dynamic_resolution_state()
+
+            logging.info(
+                "Resolution GUI state set to mode %s, height: %s, width: %s, gui_layout: %s",
+                value,
+                height_new,
+                width_new,
+                gui_layout_new,
+            )
+            time.sleep(GUI_RESOLUTION_PREVIEW_DELAY_SECONDS)
+
+            self.redis_controller.set_value(ParameterKey.CAM_INIT.value, str(time.time_ns()))
+
+            logging.info(f"Resolution set to mode {value}, height: {height_new}, width: {width_new}, gui_layout: {gui_layout_new}")
+
+            if restart_process:
+                self.cinepi.restart()
+                time.sleep(0.5)
+
+            # Initialize fps_steps based on the provided list and capped by fps_max
+            self.initialize_fps_steps(self.fps_steps)
+            self.shutter_a_steps_dynamic = self.calculate_dynamic_shutter_angles(self.current_fps)
+
+            self.fps_max = self._refresh_fps_max()
+            if self.fps_free:
+                self.fps_steps = list(range(1, self.fps_max + 1))
+
+            self.update_steps()
+
+            self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
+                self.current_sensor,
+                self.sensor_mode,
+                self.current_fps,
+            )
+
+            if restore_user_fps is not None:
+                self.set_fps(float(restore_user_fps), update_user_target=False)
+
+            self._notify_resolution_change(value)
+            return True
 
         except ValueError as error:
-            logging.error(f"Error switching resolution: {error}")
+            logging.error(f"Error setting resolution: {error}")
+            return False
 
-    def set_resolution(self, value=None):
+    def set_resolution(self, value=None, *, restart_process=False):
         if value is not None:
-            try:
-                self.redis_controller.get_value(ParameterKey.FPS_LAST.value, self.redis_controller.get_value(ParameterKey.FPS.value))
-                if value not in self.sensor_detect.res_modes:
-                    logging.info(f"Couldn't find sensor mode {value}. Trying with sensor_mode 0.")
-                    value = 0
+            value = self._normalize_sensor_mode_value(value)
+            if self.dynamic_resolution_enabled:
+                self.dynamic_resolution_desired_mode = value
+                self._publish_dynamic_resolution_state()
+                current_user_fps = self._current_user_fps_value()
+                if current_user_fps is not None:
+                    choice = self._dynamic_resolution_choice_for_fps(
+                        current_user_fps,
+                    )
+                    if choice is not None:
+                        value = choice.mode
 
-                self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, str(value))
-                try:
-                    self.sensor_mode = int(value)
-                except (TypeError, ValueError):
-                    self.sensor_mode = value
-
-                resolution_info = self.sensor_detect.res_modes[value]
-                height_new = resolution_info.get('height', None)
-                width_new = resolution_info.get('width', None)
-                bit_depth_new = resolution_info.get('bit_depth', None)
-                fps_max_new = resolution_info.get('fps_max', None)
-                gui_layout_new = resolution_info.get('gui_layout', None)
-                file_size_new = resolution_info.get('file_size', None)
-                
-                if height_new is None or width_new is None or gui_layout_new is None:
-                    raise ValueError("Invalid height, width, or gui_layout value.")
-
-                self.redis_controller.set_value(ParameterKey.HEIGHT.value, str(height_new))
-                self.redis_controller.set_value(ParameterKey.WIDTH.value, str(width_new))
-                self.redis_controller.set_value(ParameterKey.BIT_DEPTH.value, str(bit_depth_new))
-                self.redis_controller.set_value(ParameterKey.FPS_MAX.value, str(fps_max_new))
-                self.redis_controller.set_value(ParameterKey.GUI_LAYOUT.value, str(gui_layout_new))
-                self.redis_controller.set_value(ParameterKey.FILE_SIZE.value, str(file_size_new))
-
-                self.redis_controller.set_value(ParameterKey.CAM_INIT.value, 1)
-
-                self.gui_layout = gui_layout_new
-                
-                logging.info(f"Resolution set to mode {value}, height: {height_new}, width: {width_new}, gui_layout: {gui_layout_new}")
-                
-                fps_current = int(float(self.redis_controller.get_value(ParameterKey.FPS.value)))
-                time.sleep(0.5)
-                
-                self.cinepi.restart()
-                
-                self.set_fps(float(self.redis_controller.get_value(ParameterKey.FPS_LAST.value)))
-                
-                self.file_size = file_size_new
-                
-                # Initialize fps_steps based on the provided list and capped by fps_max
-                self.initialize_fps_steps(self.fps_steps)
-                self.shutter_a_steps_dynamic = self.calculate_dynamic_shutter_angles(self.current_fps)
-                
-                self.fps_max = int(self.redis_controller.get_value(ParameterKey.FPS_MAX.value))
-                if self.fps_free:
-                    self.fps_steps = list(range(1, self.fps_max + 1))
-                
-                self.update_steps()
-                
-                self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
-                    self.current_sensor,
-                    self.sensor_mode,
-                    self.current_fps,
-                )
-
-                self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)
-                time.sleep(1)
-                self.redis_controller.set_value(ParameterKey.FPS.value, float(self.redis_controller.get_value(ParameterKey.FPS_LAST.value)))
-
-            except ValueError as error:
-                logging.error(f"Error setting resolution: {error}")
+            restore_user_fps = self._current_user_fps_value()
+            return self._apply_resolution_mode(
+                value,
+                restore_user_fps=restore_user_fps,
+                restart_process=restart_process,
+            )
 
         else:
-            self.switch_resolution()
+            return self.switch_resolution()
         
     def get_current_sensor_mode(self):
         current_height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value))
@@ -1416,14 +1772,43 @@ class CinePiController:
 
     def set_fps_double(self, value=None):
         target_double_state = not self.fps_double if value is None else value in (1, True)
+        was_recording = self._is_recording()
 
         if target_double_state:
             if not self.fps_double:
                 self.fps_saved = self.fps
-                target_fps = min(self.fps * 2, self.fps_max)
+                self.sensor_mode_saved = self.sensor_mode
+                target_fps = self.fps * 2
+                target_mode = self._select_resolution_mode_for_fps(target_fps)
+                if target_mode != self.sensor_mode:
+                    if was_recording:
+                        logging.warning(
+                            "FPS double needs sensor mode %s, but resolution changes are disabled while recording.",
+                            target_mode,
+                        )
+                        return
+                    logging.info(
+                        "FPS double requested %.3f fps above current mode limit %s; switching to sensor mode %s.",
+                        target_fps,
+                        self.fps_max,
+                        target_mode,
+                    )
+                    if not self.set_resolution(target_mode, restart_process=False):
+                        return
+                    self.fps_max = int(self.redis_controller.get_value(ParameterKey.FPS_MAX.value))
+                target_fps = min(target_fps, self.fps_max)
                 self.set_fps(target_fps)
         else:
             if self.fps_double:
+                if self.sensor_mode_saved != self.sensor_mode:
+                    if was_recording:
+                        logging.warning(
+                            "FPS double restore needs sensor mode %s, but resolution changes are disabled while recording.",
+                            self.sensor_mode_saved,
+                        )
+                        return
+                    if not self.set_resolution(self.sensor_mode_saved, restart_process=False):
+                        return
                 self.set_fps(self.fps_saved)
         
         self.fps_double = target_double_state

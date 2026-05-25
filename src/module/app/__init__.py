@@ -11,6 +11,17 @@ def create_app(redis_controller, cinepi_controller, simple_gui, sensor_detect):
     log.setLevel(logging.ERROR)  # Set to ERROR to mute INFO messages
 
     socketio = SocketIO(app)
+    if hasattr(simple_gui, 'set_socketio'):
+        simple_gui.set_socketio(socketio)
+    else:
+        simple_gui.socketio = socketio
+
+    if hasattr(cinepi_controller, 'add_resolution_change_callback'):
+        def emit_resolution_change(sensor_mode):
+            socketio.emit('resolution_change', {'sensor_mode': sensor_mode})
+            socketio.emit('reload_stream')
+
+        cinepi_controller.add_resolution_change_callback(emit_resolution_change)
 
     app.config['REDIS_CONTROLLER'] = redis_controller
     app.config['CINEPI_CONTROLLER'] = cinepi_controller

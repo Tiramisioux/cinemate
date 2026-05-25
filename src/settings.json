@@ -32,7 +32,7 @@
     }
   },
   "hdmi_gui": {
-    "buffer_vu_meter": false,
+    "buffer_vu_meter": true,
     "vu_meter_hatch_lines": true
   },
   "hdmi_display": {
@@ -47,7 +47,8 @@
     ]
   },
   "audio": {
-    "capture_gain_db": 0.0
+    "capture_gain_db": 0.0,
+    "plain_arecord_timecode_offset_frames": 2
   },
   "anamorphic_preview": {
     "default_anamorphic_factor": 1,
@@ -94,17 +95,8 @@
       360
     ],
     "fps_steps": [
-      1,
-      2,
-      4,
-      8,
-      12,
-      16,
-      18,
-      24,
       25,
       33,
-      40,
       50
     ],
     "wb_steps": [
@@ -131,19 +123,31 @@
   "free_mode": {
     "iso_free": false,
     "shutter_a_free": false,
-    "fps_free": true,
-    "wb_free": false
+    "fps_free": false,
+    "wb_free": true
   },
   "resolutions": {
     "k_steps": [
       1.5,
-      2
+      2,
+      4
     ],
     "bit_depths": [
       10,
       12
     ],
     "custom_modes": {}
+  },
+  "sensors": {
+    "database_file": "resources/sensors.json"
+  },
+  "dynamic_resolution": {
+    "enabled": true,
+    "profile": "default",
+    "profiles_file": "resources/dynamic_resolution_profiles.json",
+    "policy": "highest_sustainable_resolution",
+    "safety_margin_fps": 0,
+    "match_tolerance_px": 32
   },
   "buttons": [
     {
@@ -215,7 +219,7 @@
   ],
   "rotary_encoders": [],
   "quad_rotary_controller": {
-    "enabled": false,
+    "enabled": true,
     "encoders": {
       "3": {
         "setting_name": "iso",

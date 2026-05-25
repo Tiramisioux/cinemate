@@ -87,6 +87,19 @@ def _seed_default_zoom(redis_ctl):
         # wake cinepi-raw controller
         redis_ctl.r.publish("cp_controls", ParameterKey.ZOOM.value)
         logging.info("[init] preview zoom defaulted to %.1f×", default_zoom)
+
+
+def _plain_arecord_timecode_offset_frames(settings: dict | None = None) -> int:
+    audio_cfg = (settings if settings is not None else _settings()).get("audio", {})
+    raw_value = audio_cfg.get("plain_arecord_timecode_offset_frames", 0)
+    try:
+        return int(raw_value)
+    except (TypeError, ValueError):
+        logging.warning(
+            "Invalid audio.plain_arecord_timecode_offset_frames=%r; using 0",
+            raw_value,
+        )
+        return 0
         
 # ───────────────────────── Event ─────────────────────────
 class Event:
@@ -392,6 +405,18 @@ class CinePiProcess(Thread):
             "--awbgains", cg_rb,
         ]
 
+        plain_arecord_timecode_offset = _plain_arecord_timecode_offset_frames()
+        if plain_arecord_timecode_offset != 0:
+            logging.info(
+                "[%s] Plain arecord WAV timecode offset: %+d frames",
+                self.cam.port,
+                plain_arecord_timecode_offset,
+            )
+            args += [
+                "--plain-arecord-timecode-offset-frames",
+                str(plain_arecord_timecode_offset),
+            ]
+
         # * Skip --tuning-file on Pi 4.  All other models keep it. *
         if not self._is_pi4():
             args += ["--tuning-file", tune]
@@ -528,10 +553,15 @@ class CinePiManager:
             ParameterKey.WIDTH.value,
             ParameterKey.HEIGHT.value,
             ParameterKey.BIT_DEPTH.value,
+            ParameterKey.PACKING.value,
             ParameterKey.FPS_MAX.value,
             ParameterKey.GUI_LAYOUT.value,
         ):
             self.redis_controller.set_value(k, res.get(k))
+        self.redis_controller.set_value(
+            ParameterKey.MODE.value,
+            f"{res.get('width')}:{res.get('height')}:{res.get('bit_depth')}:{res.get('packing', 'U')}",
+        )
 
         # ── 3. launch all cinepi-raw instances ───────────────────────────
         multi = len(cams) > 1

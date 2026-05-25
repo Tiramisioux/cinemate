@@ -45,6 +45,9 @@ class ParameterKey(Enum):
     DROP_FRAME_DURING_LAST_TAKE = "drop_frame_during_last_take"
     DROP_FRAME_COUNT = "drop_frame_count"
     DROP_FRAME_RELAY = "drop_frame_relay"
+    DYNAMIC_RESOLUTION_ENABLED = "dynamic_resolution_enabled"
+    DYNAMIC_RESOLUTION_ACTIVE = "dynamic_resolution_active"
+    DYNAMIC_RESOLUTION_DESIRED_MODE = "dynamic_resolution_desired_mode"
 
     TC_CAM0           = "tc_cam0"
     TC_CAM1           = "tc_cam1"
@@ -53,6 +56,7 @@ class ParameterKey(Enum):
     LORES_HEIGHT      = "lores_height"
     LORES_WIDTH       = "lores_width"
     PI_MODEL          = "pi_model"
+    PACKING           = "packing"
     REC               = "rec"
     SENSOR            = "sensor"
     SENSOR_MODE       = "sensor_mode"
@@ -68,6 +72,7 @@ class ParameterKey(Enum):
     WB_USER           = "wb_user"
     WIDTH             = "width"
     MEMORY_ALERT      = "memory_alert"
+    MODE              = "mode"
     SHUTTER_A_SYNC_MODE = 'shutter_a_sync_mode'
     SHUTTER_A_NOM       = 'shutter_angle_nom'
     SHUTTER_A_ACTUAL    = 'shutter_angle_actual'

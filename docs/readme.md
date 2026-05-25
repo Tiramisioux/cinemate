@@ -61,6 +61,8 @@ GPIO buttons and switches, rotary encoders and oled display are optional and con
 
 The same settings file also controls which recording sizes appear in Cinemate. By default, Cinemate shows 1.5K and 2K choices only. 2K is the standard Cinemate working size, and the default list is kept to modes that are suitable for 25 fps recording. Higher sensor modes such as 4K are supported, but they stay hidden until you opt in by adding `4` to `resolutions.k_steps`.
 
+Cinemate can also switch resolution automatically when `dynamic_resolution.enabled` is set to `true`. The dynamic system uses measured sustainable-FPS profiles from `resources/dynamic_resolution_profiles.json`, scoped by sensor, storage type, and filesystem. When active it also exposes the measured dynamic FPS maximum; when disabled, max FPS still comes from the sensor readout reported by `cinepi-raw`.
+
 <!-- ## Documentation
 Full manual installation instructions, configuration guides and CLI reference live [here](https://tiramisioux.github.io/cinemate/). -->
 

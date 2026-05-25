@@ -67,6 +67,10 @@
         "capture_gain_db": {
           "type": "number",
           "default": 0.0
+        },
+        "plain_arecord_timecode_offset_frames": {
+          "type": "integer",
+          "default": 2
         }
       },
       "additionalProperties": true
@@ -93,6 +97,49 @@
           "type": "number",
           "minimum": 0,
           "default": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "dynamic_resolution": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "profile": {
+          "type": "string",
+          "default": "default"
+        },
+        "profiles_file": {
+          "type": "string",
+          "default": "resources/dynamic_resolution_profiles.json"
+        },
+        "policy": {
+          "type": "string",
+          "enum": ["highest_sustainable_resolution"],
+          "default": "highest_sustainable_resolution"
+        },
+        "safety_margin_fps": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0
+        },
+        "match_tolerance_px": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 32
+        }
+      },
+      "additionalProperties": true
+    },
+    "sensors": {
+      "type": "object",
+      "properties": {
+        "database_file": {
+          "type": "string",
+          "default": "resources/sensors.json"
         }
       },
       "additionalProperties": true

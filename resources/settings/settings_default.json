@@ -47,7 +47,8 @@
     ]
   },
   "audio": {
-    "capture_gain_db": 0.0
+    "capture_gain_db": 0.0,
+    "plain_arecord_timecode_offset_frames": 2
   },
   "anamorphic_preview": {
     "default_anamorphic_factor": 1,
@@ -144,6 +145,17 @@
       12
     ],
     "custom_modes": {}
+  },
+  "sensors": {
+    "database_file": "resources/sensors.json"
+  },
+  "dynamic_resolution": {
+    "enabled": false,
+    "profile": "default",
+    "profiles_file": "resources/dynamic_resolution_profiles.json",
+    "policy": "highest_sustainable_resolution",
+    "safety_margin_fps": 0,
+    "match_tolerance_px": 32
   },
   "buttons": [
     {

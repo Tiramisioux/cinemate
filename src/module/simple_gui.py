@@ -13,6 +13,7 @@ import re
 from statistics import mean
 from module.utils import Utils
 from module.redis_controller import ParameterKey
+from module.dynamic_resolution import dynamic_resolution_indicator_active
 import json
 import re
 
@@ -82,6 +83,7 @@ class SimpleGUI(threading.Thread):
         self.vu_decay_factor = 0.1     # Fall factor (0.0–1.0, lower = slower)
 
         self.socketio = socketio  # Add socketio reference
+        self._socketio_deferred_events = set()
         
         self.usb_monitor = usb_monitor
         
@@ -126,6 +128,27 @@ class SimpleGUI(threading.Thread):
     def _has_two_clips(self, values) -> bool:
         return bool(values.get("clip_name") and values.get("clip_name_cam1"))
 
+    def _dynamic_resolution_indicator_active(self) -> bool:
+        controller = self.cinepi_controller
+        return dynamic_resolution_indicator_active(
+            enabled=self.redis_controller.get_value(
+                ParameterKey.DYNAMIC_RESOLUTION_ENABLED.value,
+                getattr(controller, "dynamic_resolution_enabled", False),
+            ),
+            active=self.redis_controller.get_value(
+                ParameterKey.DYNAMIC_RESOLUTION_ACTIVE.value,
+                getattr(controller, "dynamic_resolution_active", False),
+            ),
+            current_mode=self.redis_controller.get_value(
+                ParameterKey.SENSOR_MODE.value,
+                getattr(controller, "sensor_mode", None),
+            ),
+            desired_mode=self.redis_controller.get_value(
+                ParameterKey.DYNAMIC_RESOLUTION_DESIRED_MODE.value,
+                getattr(controller, "dynamic_resolution_desired_mode", None),
+            ),
+        )
+
     # ───────────────── helper: tweak GUI layout for clip lines ────────────────────
     def _adjust_clip_layout(self, two_clips: bool):
         """Shrink/enlarge the font & Y-positions of the clip-name fields."""
@@ -167,17 +190,28 @@ class SimpleGUI(threading.Thread):
     def get_background_color(self):
         return self.current_background_color
 
+    def set_socketio(self, socketio: SocketIO):
+        self.socketio = socketio
+        self._socketio_deferred_events.clear()
+
+    def _emit_socketio_event(self, event_name, payload):
+        if self.socketio is None:
+            if event_name not in self._socketio_deferred_events:
+                logging.debug("SocketIO not initialized; skipping %s until stream startup.", event_name)
+                self._socketio_deferred_events.add(event_name)
+            return False
+
+        self.socketio.emit(event_name, payload)
+        return True
+
     def emit_background_color_change(self):
-        if self.socketio is not None:
-            self.socketio.emit('background_color_change', {'background_color': self.current_background_color})
-        else:
-            logging.warning("SocketIO not initialized. Unable to emit background_color_change.")
+        return self._emit_socketio_event(
+            'background_color_change',
+            {'background_color': self.current_background_color},
+        )
 
     def emit_gui_data_change(self, changed_data):
-        if self.socketio is not None:
-            self.socketio.emit('gui_data_change', changed_data)
-        else:
-            logging.warning("SocketIO not initialized. Unable to emit gui_data_change.")
+        return self._emit_socketio_event('gui_data_change', changed_data)
 
     def _configured_display_size(self, fb: Framebuffer):
         hdmi_config = self.settings.get("hdmi_display", {})
@@ -844,6 +878,11 @@ class SimpleGUI(threading.Thread):
         else:
             self.colors["shutter_speed"]["normal"] = (249,249,249)
             self.colors["fps"]["normal"] = (249,249,249)
+
+        if self._dynamic_resolution_indicator_active():
+            self.colors["res"]["normal"] = "lightgreen"
+        else:
+            self.colors["res"]["normal"] = (249, 249, 249)
 
         values["lock"]        = "LOCK"    if self.cinepi_controller.parameters_lock else ""
         values["low_voltage"] = "VOLTAGE" if self.dmesg_monitor.undervoltage_flag  else ""

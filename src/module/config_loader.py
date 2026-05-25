@@ -2,6 +2,8 @@ import json
 import logging
 from pathlib import Path
 
+from module.dynamic_resolution import default_dynamic_resolution_config
+
 ANSI_RESET = "\033[0m"
 ANSI_RED = "\033[1;31m"
 ANSI_YELLOW = "\033[1;33m"
@@ -189,6 +191,7 @@ def _apply_settings_defaults(settings: dict) -> dict:
     # Audio capture defaults.
     audio_defaults = {
         "capture_gain_db": 0.0,
+        "plain_arecord_timecode_offset_frames": 2,
     }
     audio_cfg = settings.setdefault("audio", {})
     for k, v in audio_defaults.items():
@@ -227,6 +230,23 @@ def _apply_settings_defaults(settings: dict) -> dict:
     for k, v in resolution_defaults.items():
         res_cfg.setdefault(k, v)
     settings["resolutions"] = res_cfg
+
+    sensor_defaults = {
+        "database_file": "resources/sensors.json",
+    }
+    sensor_cfg = settings.setdefault("sensors", {})
+    for k, v in sensor_defaults.items():
+        sensor_cfg.setdefault(k, v)
+    settings["sensors"] = sensor_cfg
+
+    dynamic_resolution_cfg = settings.setdefault(
+        "dynamic_resolution",
+        default_dynamic_resolution_config(),
+    )
+    dynamic_resolution_defaults = default_dynamic_resolution_config()
+    for k, v in dynamic_resolution_defaults.items():
+        dynamic_resolution_cfg.setdefault(k, v)
+    settings["dynamic_resolution"] = dynamic_resolution_cfg
 
     return settings
 

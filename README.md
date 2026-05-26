@@ -101,12 +101,6 @@ For the full manual install, configuration steps, and CLI reference, please see 
 ## Customization
 GPIO buttons and switches, rotary encoders and oled display for controlling camera settings such as recording, iso etc. are configured in the `~/cinemate/src/settings.json` file. On the Pi, type `editsettings` in the terminal to open this file.
 
-### Resolution defaults
-
-The same settings file also controls which recording sizes appear in Cinemate. The stock 3.3.1 defaults show 1.5K, 2K, and 4K-class choices through `resolutions.k_steps: [1.5, 2, 4]`, so IMX585 4K stays visible by default. Remove `4` from `resolutions.k_steps` only if you intentionally want to hide 4K-class modes.
-
-Cinemate can also switch resolution automatically when `dynamic_resolution.enabled` is set to `true`. The dynamic system uses measured sustainable-FPS profiles from `resources/dynamic_resolution_profiles.json`, scoped by sensor, storage type, and filesystem. When active it also exposes the measured dynamic FPS maximum; when disabled, max FPS still comes from the sensor readout reported by `cinepi-raw`.
-
 ## Documentation
 Full manual installation instructions, configuration guides and CLI reference live [here](https://tiramisioux.github.io/cinemate/).
 

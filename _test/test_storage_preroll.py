@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.modules.setdefault("redis", types.SimpleNamespace(StrictRedis=object))
 
-from module.config_loader import _apply_settings_defaults, storage_preroll_enabled
+from module.config_loader import _apply_settings_defaults, auto_storage_preroll_enabled
 from module.storage_preroll import StoragePreroll
 
 
@@ -53,28 +53,51 @@ class StoragePrerollTests(unittest.TestCase):
     def test_settings_default_to_enabled(self):
         settings = _apply_settings_defaults({})
 
-        self.assertTrue(settings["storage_preroll"])
-        self.assertTrue(storage_preroll_enabled(settings))
+        self.assertTrue(settings["settings"]["auto_storage_preroll"])
+        self.assertTrue(auto_storage_preroll_enabled(settings))
 
-    def test_settings_can_disable_preroll(self):
+    def test_settings_can_disable_auto_preroll(self):
+        settings = _apply_settings_defaults({"settings": {"auto_storage_preroll": False}})
+
+        self.assertFalse(settings["settings"]["auto_storage_preroll"])
+        self.assertFalse(auto_storage_preroll_enabled(settings))
+
+    def test_legacy_top_level_setting_still_disables_auto_preroll(self):
         settings = _apply_settings_defaults({"storage_preroll": False})
 
-        self.assertFalse(settings["storage_preroll"])
-        self.assertFalse(storage_preroll_enabled(settings))
+        self.assertNotIn("storage_preroll", settings)
+        self.assertFalse(settings["settings"]["auto_storage_preroll"])
+        self.assertFalse(auto_storage_preroll_enabled(settings))
 
-    def test_disabled_preroll_does_not_subscribe_or_schedule(self):
+    def test_auto_disabled_preroll_does_not_subscribe_or_schedule(self):
         ssd_monitor = FakeSsdMonitor()
         preroll = StoragePreroll(
             cinepi_controller=FakeController(),
             redis_controller=FakeRedis(),
             ssd_monitor=ssd_monitor,
             sensor_detect=object(),
-            enabled=False,
+            auto_enabled=False,
         )
 
         self.assertEqual(ssd_monitor.mount_event.subscribers, [])
         self.assertFalse(preroll.mark_startup_ready())
         self.assertFalse(preroll.trigger(reason="test", delay=0.0))
+
+    def test_manual_preroll_can_bypass_auto_disabled(self):
+        ssd_monitor = FakeSsdMonitor()
+        preroll = StoragePreroll(
+            cinepi_controller=FakeController(),
+            redis_controller=FakeRedis(),
+            ssd_monitor=ssd_monitor,
+            sensor_detect=object(),
+            auto_enabled=False,
+        )
+        calls = []
+        preroll.trigger = lambda **kwargs: calls.append(kwargs) or True
+
+        preroll.trigger_manual()
+
+        self.assertEqual(calls, [{"reason": "cli", "force": True}])
 
     def test_max_capacity_step_suspends_dynamic_resolution_only_temporarily(self):
         controller = FakeController()

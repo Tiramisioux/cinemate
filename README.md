@@ -19,7 +19,7 @@ Cinemate workflow updates:
 - dynamic resolution switching to match the observed sustainable frame rate for the attached sensor and storage media; for example, IMX585 automatically switches to HD above 25 fps when SSD is used for storage
 - hot-swapping between 16-bit and 24-bit USB microphones
 - 4K-class recording modes are visible by default
-- storage pre-roll can be disabled in `settings.json`
+- automatic storage pre-roll can be disabled in `settings.json`
 
 ## Compatible sensors
 

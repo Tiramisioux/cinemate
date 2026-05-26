@@ -13,7 +13,7 @@ import socket
 from PIL import Image, ImageDraw, ImageFont
 import glob
 
-from module.config_loader import SettingsLoadError, load_settings, storage_preroll_enabled
+from module.config_loader import SettingsLoadError, auto_storage_preroll_enabled, load_settings
 from module.logger import configure_logging
 from module.redis_controller import RedisController, ParameterKey
 from module.ssd_monitor import SSDMonitor
@@ -673,7 +673,7 @@ def run_application(args, log_queue):
         redis_controller=redis_controller,
         ssd_monitor=ssd_monitor,
         sensor_detect=sensor_detect,
-        enabled=storage_preroll_enabled(settings),
+        auto_enabled=auto_storage_preroll_enabled(settings),
     )
 
     gpio_cfg = settings.get("gpio_output", {})

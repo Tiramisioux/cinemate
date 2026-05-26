@@ -30,7 +30,7 @@ Cinemate workflow updates:
 
 - 4K-class recording modes are visible by default
 
-- storage pre-roll can be disabled in `settings.json`
+- automatic storage pre-roll can be disabled in `settings.json`
 
 ## Installation
 See the [releases section](https://github.com/Tiramisioux/cinemate/releases) for preinstalled image file and [Quick Start Guide](https://tiramisioux.github.io/cinemate/getting-started/). 

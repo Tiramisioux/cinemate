@@ -84,6 +84,6 @@ Both actions require the RAW drive to be mounted; otherwise the CLI reports an e
 
 ## Storage pre-roll warm-up
 
-`storage preroll` triggers the automatic warm-up clip that Cinemate normally runs on startup or when you mount new storage. During the pre-roll, Cinemate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take. If `storage_preroll` is set to `false` in `settings.json`, the command is accepted but ignored without starting a warm-up recording.【F:src/module/storage_preroll.py†L40-L175】
+`storage preroll` triggers the same warm-up clip that Cinemate can run automatically on startup or when you mount new storage. During the pre-roll, Cinemate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take. The manual command remains available even when `settings.auto_storage_preroll` is set to `false` in `settings.json`.【F:src/module/storage_preroll.py†L40-L175】
 
 See [Storage pre-roll warm-up](storage-preroll.md) for a detailed walkthrough of the workflow and tips on when to run it manually.

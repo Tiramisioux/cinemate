@@ -10,25 +10,17 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
   <p><em>Figure 1: Camera stack exploded view. Apps change settings by updating Redis keys. CinePi-RAW listens for those updates and captures frames accordingly while Cinemate provides the camera user interface.</em></p>
 </div>
 
-## New features in version 3.3
+## New features in version 3.3.1
 
-- synchronous sound recording via attached USB microphone
+- new Cinemate fork of `cinepi-raw`, reducing CPU load and temperature dramatically and reducing dropped frames
 
-- audio gain setting in `settings.json`
+- exFAT support and filesystem-aware storage profiles for efficient media writes, including IMX585 25 fps at 4K to SSD without frame drops
 
-- proper wav timecode - automatically merges with dng clips in DaVinci Resolve
+- dynamic resolution switching to match the observed sustainable frame rate for the attached sensor and storage media; for example, IMX585 automatically switches to HD above 25 fps when SSD is used for storage
 
-- rec tone output
+- better USB microphone sync
 
-- HDMI hotplugging - display doesn't have to be connected on startup
-
-- clearer drop frame indication
-
-- new service clearing redis logs
-
-- updated documentation
-
-- improvements to startup/shutdown sequence and general boot performance - Cinemate now exits to the CLI and also guides on syntax errors in `settings.json`
+- hot-swapping between 16-bit and 24-bit USB microphones
 
 ## Installation
 See the [releases section](https://github.com/Tiramisioux/cinemate/releases) for preinstalled image file and [Quick Start Guide](https://tiramisioux.github.io/cinemate/getting-started/). 
@@ -59,7 +51,7 @@ GPIO buttons and switches, rotary encoders and oled display are optional and con
 
 ### Resolution defaults
 
-The same settings file also controls which recording sizes appear in Cinemate. By default, Cinemate shows 1.5K and 2K choices only. 2K is the standard Cinemate working size, and the default list is kept to modes that are suitable for 25 fps recording. Higher sensor modes such as 4K are supported, but they stay hidden until you opt in by adding `4` to `resolutions.k_steps`.
+The same settings file also controls which recording sizes appear in Cinemate. The stock 3.3.1 defaults show 1.5K, 2K, and 4K-class choices through `resolutions.k_steps: [1.5, 2, 4]`, so IMX585 4K stays visible by default. Remove `4` from `resolutions.k_steps` only if you intentionally want to hide 4K-class modes.
 
 Cinemate can also switch resolution automatically when `dynamic_resolution.enabled` is set to `true`. The dynamic system uses measured sustainable-FPS profiles from `resources/dynamic_resolution_profiles.json`, scoped by sensor, storage type, and filesystem. When active it also exposes the measured dynamic FPS maximum; when disabled, max FPS still comes from the sensor readout reported by `cinepi-raw`.
 

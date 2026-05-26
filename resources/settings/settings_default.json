@@ -4,6 +4,7 @@
   "show_welcome_message": true,
   "welcome_message": "THIS IS A COOL MACHINE",
   "welcome_image": null,
+  "storage_preroll": true,
   "system": {
     "wifi_hotspot": {
       "name": "CinePi",

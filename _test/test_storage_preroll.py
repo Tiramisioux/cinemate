@@ -1,11 +1,14 @@
 import sys
+import types
 import unittest
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.modules.setdefault("redis", types.SimpleNamespace(StrictRedis=object))
 
+from module.config_loader import _apply_settings_defaults, storage_preroll_enabled
 from module.storage_preroll import StoragePreroll
 
 
@@ -25,7 +28,54 @@ class FakeController:
         )
 
 
+class FakeRedis:
+    def __init__(self):
+        self.values = {}
+
+    def set_value(self, key, value):
+        self.values[key] = value
+
+
+class FakeMountEvent:
+    def __init__(self):
+        self.subscribers = []
+
+    def subscribe(self, callback):
+        self.subscribers.append(callback)
+
+
+class FakeSsdMonitor:
+    def __init__(self):
+        self.mount_event = FakeMountEvent()
+
+
 class StoragePrerollTests(unittest.TestCase):
+    def test_settings_default_to_enabled(self):
+        settings = _apply_settings_defaults({})
+
+        self.assertTrue(settings["storage_preroll"])
+        self.assertTrue(storage_preroll_enabled(settings))
+
+    def test_settings_can_disable_preroll(self):
+        settings = _apply_settings_defaults({"storage_preroll": False})
+
+        self.assertFalse(settings["storage_preroll"])
+        self.assertFalse(storage_preroll_enabled(settings))
+
+    def test_disabled_preroll_does_not_subscribe_or_schedule(self):
+        ssd_monitor = FakeSsdMonitor()
+        preroll = StoragePreroll(
+            cinepi_controller=FakeController(),
+            redis_controller=FakeRedis(),
+            ssd_monitor=ssd_monitor,
+            sensor_detect=object(),
+            enabled=False,
+        )
+
+        self.assertEqual(ssd_monitor.mount_event.subscribers, [])
+        self.assertFalse(preroll.mark_startup_ready())
+        self.assertFalse(preroll.trigger(reason="test", delay=0.0))
+
     def test_max_capacity_step_suspends_dynamic_resolution_only_temporarily(self):
         controller = FakeController()
         preroll = StoragePreroll.__new__(StoragePreroll)

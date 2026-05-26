@@ -61,6 +61,10 @@
       "anyOf": [{"type": "string"}, {"type": "null"}],
       "default": null
     },
+    "storage_preroll": {
+      "type": "boolean",
+      "default": true
+    },
     "audio": {
       "type": "object",
       "properties": {

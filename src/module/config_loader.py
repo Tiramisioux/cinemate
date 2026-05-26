@@ -9,6 +9,9 @@ ANSI_RED = "\033[1;31m"
 ANSI_YELLOW = "\033[1;33m"
 ANSI_CYAN = "\033[1;36m"
 
+_TRUE_VALUES = {"1", "true", "yes", "on"}
+_FALSE_VALUES = {"0", "false", "no", "off"}
+
 
 class SettingsLoadError(RuntimeError):
     def __init__(
@@ -116,6 +119,28 @@ def _format_error_context(path: Path, line: int, column: int, radius: int = 1) -
     return "\n".join(snippet)
 
 
+def _coerce_bool_setting(value, default: bool) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in _TRUE_VALUES:
+            return True
+        if normalized in _FALSE_VALUES:
+            return False
+    return default
+
+
+def storage_preroll_enabled(settings: dict) -> bool:
+    """Return whether storage pre-roll should run for this settings dict."""
+
+    return _coerce_bool_setting(settings.get("storage_preroll"), True)
+
+
 def _apply_settings_defaults(settings: dict) -> dict:
     # Top-level placeholders.
     gpio_defaults = {
@@ -173,6 +198,7 @@ def _apply_settings_defaults(settings: dict) -> dict:
     if "show_welcome_message" not in settings:
         settings["show_welcome_message"] = settings.get("show_startup_message", True)
     settings.setdefault("welcome_image", None)
+    settings["storage_preroll"] = storage_preroll_enabled(settings)
 
     # Preview / zoom defaults.
     preview_defaults = {

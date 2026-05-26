@@ -2,6 +2,8 @@
 
 Cinemate includes an automatic "storage pre-roll" that records and discards a short clip to make sure new media can keep up. The warm-up runs the recorder at full speed so SSDs spin up, controllers cache their write tables, and the rest of the pipeline has a chance to stabilise before the first real take.
 
+Set `"storage_preroll": false` in `settings.json` to disable this warm-up. When disabled, Cinemate does not schedule startup or mount-triggered pre-rolls, and the `storage preroll` CLI command is ignored without starting a recording. The rest of the recording path remains normal because Cinemate still clears the `storage_preroll_active` Redis flag during startup.
+
 ## When the pre-roll runs
 
 - **On startup:** the warm-up no longer arms immediately in `StoragePreroll.__init__()`. Instead, `main.py` calls `mark_startup_ready()` after the welcome-message/Plymouth handoff, GUI startup, and preview rebind are finished. This keeps the warm-up clip from racing the boot splash or the first camera restart.

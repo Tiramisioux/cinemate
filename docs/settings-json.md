@@ -26,6 +26,16 @@ Example path: `/home/pi/welcome_image.bmp`.
 
 If `welcome_image` is set, it overrides the text message.
 
+## storage_preroll
+
+Controls the short automatic warm-up recording that prepares mounted media before the first real take.
+
+```json
+"storage_preroll": true
+```
+
+Set `storage_preroll` to `true` to run the warm-up on startup and when RAW storage mounts. Set it to `false` to skip the automatic and manual storage pre-roll entirely. When disabled, Cinemate still resets `storage_preroll_active` to `0` at startup so the GUI, recorder state, REC light, REC tone, and frame-sync checks continue to treat the next recording as a normal take.
+
 ## system
 
 ```json

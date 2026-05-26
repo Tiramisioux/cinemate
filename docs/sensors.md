@@ -87,7 +87,7 @@ While dynamic resolution is enabled, Cinemate also uses the measured profile to 
 
 Storage pre-roll is intentionally different: it uses the live sensor maximum for the currently selected mode and temporarily suspends dynamic resolution so the mounted media is stress-tested before Cinemate restores the user's FPS and applies the dynamic-resolution choice.
 
-The active resolution numbers turn green in the simple GUI only while Cinemate is currently using a measured substitute mode instead of the user's desired mode. They stay white when the active mode is the user's desired resolution.
+The active resolution numbers turn green in the simple GUI only while dynamic resolution is actively using a measured substitute mode for the current FPS instead of the user's desired mode. They stay white when the active mode is the user's desired resolution.
 
 ### Measuring your own rows
 

@@ -153,16 +153,24 @@ class CinePiController:
         self.sensor_mode = self._get_startup_sensor_mode()
         self.sensor_mode_saved = self.sensor_mode
         self.dynamic_resolution_desired_mode = self._get_startup_dynamic_resolution_desired_mode()
-        self.dynamic_resolution_active = (
-            self.dynamic_resolution_enabled
-            and self._as_bool(
-                self.redis_controller.get_value(
-                    ParameterKey.DYNAMIC_RESOLUTION_ACTIVE.value,
-                    0,
-                )
+        stored_dynamic_resolution_active = self._as_bool(
+            self.redis_controller.get_value(
+                ParameterKey.DYNAMIC_RESOLUTION_ACTIVE.value,
+                0,
             )
-            and self.sensor_mode != self.dynamic_resolution_desired_mode
         )
+        self.dynamic_resolution_active = False
+        if (
+            self.dynamic_resolution_enabled
+            and stored_dynamic_resolution_active
+            and self.sensor_mode != self.dynamic_resolution_desired_mode
+        ):
+            logging.info(
+                "Clearing stored dynamic resolution active flag at startup "
+                "(sensor mode %s, desired mode %s)",
+                self.sensor_mode,
+                self.dynamic_resolution_desired_mode,
+            )
         if (
             self.dynamic_resolution_enabled
             and not self.dynamic_resolution_active
@@ -342,10 +350,7 @@ class CinePiController:
     def _maybe_apply_dynamic_resolution_for_fps(self, requested_user_fps):
         choice = self._dynamic_resolution_choice_for_fps(requested_user_fps)
         if choice is None:
-            self.dynamic_resolution_active = (
-                self.dynamic_resolution_enabled
-                and self.sensor_mode != self.dynamic_resolution_desired_mode
-            )
+            self.dynamic_resolution_active = False
             self._publish_dynamic_resolution_state()
             return False
 

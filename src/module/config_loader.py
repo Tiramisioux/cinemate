@@ -135,10 +135,22 @@ def _coerce_bool_setting(value, default: bool) -> bool:
     return default
 
 
-def storage_preroll_enabled(settings: dict) -> bool:
-    """Return whether storage pre-roll should run for this settings dict."""
+def auto_storage_preroll_enabled(settings: dict) -> bool:
+    """Return whether automatic storage pre-roll should run."""
 
+    settings_cfg = settings.get("settings", {})
+    if isinstance(settings_cfg, dict):
+        if "auto_storage_preroll" in settings_cfg:
+            return _coerce_bool_setting(settings_cfg.get("auto_storage_preroll"), True)
+        if "storage_preroll" in settings_cfg:
+            return _coerce_bool_setting(settings_cfg.get("storage_preroll"), True)
     return _coerce_bool_setting(settings.get("storage_preroll"), True)
+
+
+def storage_preroll_enabled(settings: dict) -> bool:
+    """Backward-compatible alias for automatic storage pre-roll."""
+
+    return auto_storage_preroll_enabled(settings)
 
 
 def _apply_settings_defaults(settings: dict) -> dict:
@@ -157,7 +169,10 @@ def _apply_settings_defaults(settings: dict) -> dict:
     settings["gpio_output"] = gpio_cfg
     settings.setdefault("arrays", {})
     settings_cfg = settings.setdefault("settings", {})
+    auto_storage_preroll = auto_storage_preroll_enabled(settings)
+    settings_cfg.pop("storage_preroll", None)
     settings_defaults = {
+        "auto_storage_preroll": auto_storage_preroll,
         "light_hz": [50, 60],
         "conform_frame_rate": 24,
         "live_sync_warning_tolerance_frames": 2,
@@ -165,7 +180,11 @@ def _apply_settings_defaults(settings: dict) -> dict:
     }
     for k, v in settings_defaults.items():
         settings_cfg.setdefault(k, v)
+    settings_cfg["auto_storage_preroll"] = _coerce_bool_setting(
+        settings_cfg.get("auto_storage_preroll"), True
+    )
     settings["settings"] = settings_cfg
+    settings.pop("storage_preroll", None)
     system_cfg = settings.setdefault("system", {})
     wifi_defaults = {
         "name": "CinePi",
@@ -198,7 +217,6 @@ def _apply_settings_defaults(settings: dict) -> dict:
     if "show_welcome_message" not in settings:
         settings["show_welcome_message"] = settings.get("show_startup_message", True)
     settings.setdefault("welcome_image", None)
-    settings["storage_preroll"] = storage_preroll_enabled(settings)
 
     # Preview / zoom defaults.
     preview_defaults = {

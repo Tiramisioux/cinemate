@@ -18,7 +18,7 @@ from module.redis_controller import ParameterKey
 
 
 class StoragePreroll:
-    """Handle automatic storage pre-roll recording."""
+    """Handle storage pre-roll recording."""
 
     def __init__(
         self,
@@ -29,7 +29,7 @@ class StoragePreroll:
         duration: float = 2.0,
         settle_delay: float = 3.0,
         startup_delay: float = 1.0,
-        enabled: bool = True,
+        auto_enabled: bool = True,
     ) -> None:
         self.cinepi_controller = cinepi_controller
         self.redis_controller = redis_controller
@@ -38,7 +38,7 @@ class StoragePreroll:
         self.duration = max(0.0, float(duration))
         self.settle_delay = max(0.0, float(settle_delay))
         self.startup_delay = max(0.0, float(startup_delay))
-        self.enabled = bool(enabled)
+        self.auto_enabled = bool(auto_enabled)
 
         self._active_lock = threading.Lock()
         self._active = False
@@ -54,21 +54,18 @@ class StoragePreroll:
         except Exception as exc:  # pragma: no cover - defensive
             logging.debug("Unable to reset storage preroll flag: %s", exc)
 
-        # React to storage events when storage pre-roll is enabled.
-        if self.enabled:
+        # React to storage events when automatic storage pre-roll is enabled.
+        if self.auto_enabled:
             self.ssd_monitor.mount_event.subscribe(self._handle_mount_event)
         else:
-            logging.info("Storage pre-roll disabled by settings.json")
+            logging.info("Automatic storage pre-roll disabled by settings.json")
 
     # ------------------------------------------------------------------
     # public API
     # ------------------------------------------------------------------
     def trigger_manual(self) -> None:
         """Trigger a manual pre-roll via CLI."""
-        if not self.enabled:
-            logging.info("Storage pre-roll disabled; CLI request ignored")
-            return
-        if self.trigger(reason="cli"):
+        if self.trigger(reason="cli", force=True):
             logging.info("Storage pre-roll started (CLI request)")
         else:
             logging.info("Storage pre-roll already in progress; CLI request ignored")
@@ -76,7 +73,7 @@ class StoragePreroll:
     def mark_startup_ready(self, delay: Optional[float] = None) -> bool:
         """Allow automatic startup warmup once the app handoff is complete."""
 
-        if not self.enabled:
+        if not self.auto_enabled:
             self._startup_ready.set()
             return False
 
@@ -97,15 +94,23 @@ class StoragePreroll:
         thread.start()
         return True
 
-    def trigger(self, reason: str, delay: Optional[float] = None) -> bool:
+    def trigger(
+        self,
+        reason: str,
+        delay: Optional[float] = None,
+        *,
+        force: bool = False,
+    ) -> bool:
         """Schedule a pre-roll run.
 
         Returns ``True`` if a new run was scheduled, ``False`` if one is
         already active.
         """
 
-        if not self.enabled:
-            logging.info("Storage pre-roll disabled; %s request ignored", reason)
+        if not self.auto_enabled and not force:
+            logging.info(
+                "Automatic storage pre-roll disabled; %s request ignored", reason
+            )
             return False
 
         with self._active_lock:
@@ -151,7 +156,7 @@ class StoragePreroll:
         self.trigger(reason=reason, delay=0.0)
 
     def _handle_mount_event(self, *_args) -> None:
-        if not self.enabled:
+        if not self.auto_enabled:
             return
 
         if not self._startup_ready.is_set():

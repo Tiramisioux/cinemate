@@ -69,6 +69,16 @@
     "rec_tone_duty_cycle": 50,
     "rec_tone_relay_drop_frames": false
   },
+  "settings": {
+    "auto_storage_preroll": true,
+    "light_hz": [
+      50,
+      60
+    ],
+    "conform_frame_rate": 25,
+    "live_sync_warning_tolerance_frames": 2,
+    "final_sync_analysis_tolerance_frames": 1
+  },
   "arrays": {
     "iso_steps": [
       100,
@@ -104,15 +114,6 @@
       4400,
       5600
     ]
-  },
-  "settings": {
-    "light_hz": [
-      50,
-      60
-    ],
-    "conform_frame_rate": 25,
-    "live_sync_warning_tolerance_frames": 2,
-    "final_sync_analysis_tolerance_frames": 1
   },
   "analog_controls": {
     "iso_pot": "None",

@@ -37,7 +37,7 @@ Each entry explains which component normally writes the key and whether it makes
 | is_buffering | CinePi-raw -> Cinemate | `1` while the RAM buffer is pre-filling | No |
 | is_writing | CinePi-raw -> Cinemate | `1` while at least one camera is actively writing frames to disk | No |
 | is_writing_buf | Cinemate | `1` while buffered frames are still flushing after stop | No |
-| storage_preroll_active | Cinemate (StoragePreroll) | `1` during the automatic storage warm-up clip | No |
+| storage_preroll_active | Cinemate (StoragePreroll) | `1` during a storage warm-up clip | No |
 | drop_frame | Cinemate (RedisListener) | Live drop-frame pulse while the alert is active | No |
 | drop_frame_count | Cinemate (RedisListener) | Number of drop-frame detections in the current/last take | No |
 | drop_frame_relay | Cinemate (RedisListener) | Short pulse used to mute REC tone for one frame on drop-frame events | No |

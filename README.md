@@ -7,11 +7,19 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
 
 ## New features in version 3.3.1
 
+`cinepi-raw` recorder updates:
+
 - new Cinemate fork of `cinepi-raw`, reducing CPU load and temperature dramatically and reducing dropped frames
+- resolution can now be changed in `cinepi-raw` without restarting the recorder process, enabling faster mode changes and dynamic resolution switching
+- better USB microphone sync
+
+Cinemate workflow updates:
+
 - exFAT support and filesystem-aware storage profiles for efficient media writes, including IMX585 25 fps at 4K to SSD without frame drops
 - dynamic resolution switching to match the observed sustainable frame rate for the attached sensor and storage media; for example, IMX585 automatically switches to HD above 25 fps when SSD is used for storage
-- better USB microphone sync
 - hot-swapping between 16-bit and 24-bit USB microphones
+- 4K-class recording modes are visible by default
+- storage pre-roll can be disabled in `settings.json`
 
 ## Compatible sensors
 

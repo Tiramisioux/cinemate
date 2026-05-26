@@ -47,7 +47,7 @@ IMX585_TABLE = [
 
 
 class DynamicResolutionTests(unittest.TestCase):
-    def test_resolution_indicator_only_when_current_mode_differs_from_desired_mode(self):
+    def test_resolution_indicator_only_when_dynamic_substitute_is_active(self):
         self.assertFalse(
             dynamic_resolution_indicator_active(
                 enabled=True,
@@ -64,7 +64,7 @@ class DynamicResolutionTests(unittest.TestCase):
                 desired_mode=0,
             )
         )
-        self.assertTrue(
+        self.assertFalse(
             dynamic_resolution_indicator_active(
                 enabled=True,
                 active=False,

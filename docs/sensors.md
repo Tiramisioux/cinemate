@@ -32,7 +32,7 @@
 
 Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames.
 
-You can limit which modes appear inside CineMate by editing the `resolutions` section in `settings.json`. `k_steps` are the approximate recording-size choices shown in the UI. The stock Cinemate defaults show only 1.5K and 2K because 2K is the standard working size and the default list is kept to modes suitable for 25 fps recording. Higher modes are supported when the user opts in.
+You can limit which modes appear inside CineMate by editing the `resolutions` section in `settings.json`. `k_steps` are the approximate recording-size choices shown in the UI. The stock Cinemate 3.3.1 defaults show 1.5K, 2K, and 4K-class choices, so IMX585 4K stays visible by default. Remove `4` only if you intentionally want to hide 4K-class modes.
 
 ```json
 "resolutions": {

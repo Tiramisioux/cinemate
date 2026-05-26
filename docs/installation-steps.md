@@ -338,7 +338,7 @@ for dir in /usr/local/share/libcamera/ipa/rpi/pisp /usr/local/share/libcamera/ip
 done
 ```
 
-Cinemate's stock `settings.json` shows only 1.5K and 2K recording-size choices by default. 2K is the standard Cinemate working size, and the default mode list is kept to modes that are suitable for 25 fps recording. Higher sensor modes such as 4K are supported, but they are hidden until you opt in. To show 4K in the UI, type `editsettings` in the Pi terminal, or edit `/home/pi/cinemate/src/settings.json` directly, and add `4` to `resolutions.k_steps`, for example:
+Cinemate's stock `settings.json` shows 1.5K, 2K, and 4K-class recording-size choices by default. Keep `4` in `resolutions.k_steps` to expose 4K in the UI; remove it only if you intentionally want to hide 4K-class modes. To check or edit the list, type `editsettings` in the Pi terminal, or edit `/home/pi/cinemate/src/settings.json` directly:
 
 ```json
 "resolutions": {

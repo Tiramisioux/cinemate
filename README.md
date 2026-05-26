@@ -7,10 +7,10 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
 
 ## New features in version 3.3.1
 
-`cinepi-raw` recorder updates:
+CinePi-RAW recorder updates:
 
-- new Cinemate fork of `cinepi-raw`, reducing CPU load and temperature dramatically and reducing dropped frames
-- resolution can now be changed in `cinepi-raw` without restarting the recorder process, enabling faster mode changes and dynamic resolution switching
+- new Cinemate fork, reducing CPU load and temperature dramatically and reducing dropped frames
+- resolution can now be changed without restarting the recorder process, enabling faster mode changes and dynamic resolution switching
 - better USB microphone sync
 
 Cinemate workflow updates:

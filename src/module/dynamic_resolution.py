@@ -135,8 +135,8 @@ def dynamic_resolution_indicator_active(
     current_mode: Any,
     desired_mode: Any,
 ) -> bool:
-    """Return True while showing a dynamic-resolution substitute mode."""
-    if not _as_bool(enabled):
+    """Return True while dynamic resolution is actively showing a substitute mode."""
+    if not _as_bool(enabled) or not _as_bool(active):
         return False
     current = _as_int(current_mode)
     desired = _as_int(desired_mode)

@@ -1453,8 +1453,10 @@ class SimpleGUI(threading.Thread):
         shrink_x = disp_width / 1920
         shrink_y = disp_height / 1080
         
-        padding_x = 92
-        padding_y = 46
+        # Match CinePi._build_args() preview-plane margins. The camera preview can
+        # cover pixels drawn exactly on its edge, so draw the guide just outside it.
+        padding_x = 94
+        padding_y = 50
         max_draw_width = frame_width - (2 * padding_x)
         max_draw_height = frame_height - (2 * padding_y)
 
@@ -1480,11 +1482,14 @@ class SimpleGUI(threading.Thread):
 
         line_color = (249, 249, 249) if values.get("zoom_is_default", True) else (255, 221, 0)
 
-        draw.rectangle(
-            [preview_x, preview_y, preview_x + preview_w, preview_y + preview_h],
-            outline=line_color,
-            width=2
-        )
+        outline_width = 2
+        outline_rect = [
+            max(0, preview_x - outline_width),
+            max(0, preview_y - outline_width),
+            min(frame_width - 1, preview_x + preview_w + outline_width - 1),
+            min(frame_height - 1, preview_y + preview_h + outline_width - 1),
+        ]
+        draw.rectangle(outline_rect, outline=line_color, width=outline_width)
 
         current_layout = self.layout
 

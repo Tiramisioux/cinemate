@@ -858,7 +858,7 @@ class SSDMonitor:
             logging.error("format_drive(): RAW drive is not mounted")
             return False
 
-        fs = normalize_filesystem(filesystem or "ext4")
+        fs = normalize_filesystem(filesystem or "exfat")
 
         if fs not in {"ext4", "exfat", "ntfs"}:
             logging.error(

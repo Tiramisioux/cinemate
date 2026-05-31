@@ -69,6 +69,59 @@ SYSTEM_SHUTDOWN_TARGETS = frozenset(
         "shutdown.target",
     }
 )
+CINEMATE_LOCKFILE = "/tmp/cinemate.lock"
+
+
+def _release_run_lock() -> None:
+    try:
+        os.remove(CINEMATE_LOCKFILE)
+    except OSError:
+        pass
+
+
+def _acquire_run_lock() -> None:
+    """Exit early with a friendly message if another cinemate instance is already running."""
+    existing_pid: int | None = None
+    if os.path.exists(CINEMATE_LOCKFILE):
+        try:
+            with open(CINEMATE_LOCKFILE) as fh:
+                existing_pid = int(fh.read().strip())
+        except (OSError, ValueError):
+            existing_pid = None
+
+    if existing_pid is not None:
+        alive = False
+        try:
+            os.kill(existing_pid, 0)
+            alive = True
+        except ProcessLookupError:
+            pass  # stale lock — process no longer exists
+        except PermissionError:
+            alive = True  # process exists but owned by another user
+
+        if alive:
+            sys.stderr.write(
+                f"\n"
+                f"{CLI_COLOR_RED}Cinemate is already running (PID {existing_pid}).{CLI_COLOR_RESET}\n"
+                f"\n"
+                f"To stop it:\n"
+                f"  {CLI_COLOR_YELLOW}Service (normal boot):{CLI_COLOR_RESET}  "
+                f"cd /home/pi/cinemate && sudo make stop\n"
+                f"  {CLI_COLOR_YELLOW}Manual SSH session:   {CLI_COLOR_RESET}  "
+                f"kill {existing_pid}   (or press Ctrl+C in that terminal)\n"
+                f"\n"
+            )
+            sys.stderr.flush()
+            sys.exit(1)
+
+    try:
+        with open(CINEMATE_LOCKFILE, "w") as fh:
+            fh.write(str(os.getpid()))
+    except OSError:
+        pass  # non-fatal if /tmp is not writable
+
+    atexit.register(_release_run_lock)
+
 
 def _systemd_notify(message: str) -> bool:
     notify_socket = os.environ.get("NOTIFY_SOCKET")
@@ -935,6 +988,8 @@ def main():
     parser = argparse.ArgumentParser(description="Run the CinePi application.")
     parser.add_argument("-debug", action="store_true", help="Enable debug logging level.")
     args = parser.parse_args()
+
+    _acquire_run_lock()
 
     _, log_queue = setup_logging(args.debug)
     clear_persisted_startup_failure()

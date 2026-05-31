@@ -203,8 +203,20 @@
             if (data.wb !== undefined) {
                 document.getElementById('wb-select').value = data.wb;
             }
+            if (data.selected_resolution_mode !== undefined) {
+                document.getElementById('resolution-select').value = data.selected_resolution_mode;
+            }
+            if (data.sensor_mode !== undefined) {
+                document.getElementById('resolution-select').value = data.sensor_mode;
+            }
             if (data.buffer !== undefined) {
                 document.getElementById('buffer-used').innerText = data.buffer;
+            }
+        });
+
+        socket.on('resolution_change', data => {
+            if (data.sensor_mode !== undefined) {
+                document.getElementById('resolution-select').value = data.sensor_mode;
             }
         });
 

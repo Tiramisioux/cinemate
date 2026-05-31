@@ -42,6 +42,12 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
             current_shutter_a = redis_controller.get_value(ParameterKey.SHUTTER_A.value)
             socketio.emit('shutter_a_update', {'shutter_a_steps': shutter_a_steps, 'current_shutter_a': current_shutter_a})
 
+        if key == ParameterKey.SENSOR_MODE.value:
+            socketio.emit('parameter_change', {
+                ParameterKey.SENSOR_MODE.value: value,
+                'selected_resolution_mode': value,
+            })
+
         if key in [ParameterKey.SENSOR_MODE.value, ParameterKey.WB.value]:
             time.sleep(2)  # Add a 2-second pause
             socketio.emit('reload_browser')  # Emit event to reload the browser

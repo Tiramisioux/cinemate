@@ -69,6 +69,69 @@ SYSTEM_SHUTDOWN_TARGETS = frozenset(
         "shutdown.target",
     }
 )
+CINEMATE_LOCKFILE = "/tmp/cinemate.lock"
+
+
+def _release_run_lock() -> None:
+    try:
+        os.remove(CINEMATE_LOCKFILE)
+    except OSError:
+        pass
+
+
+def _acquire_run_lock() -> None:
+    """Stop any running cinemate instance, then acquire the startup lock."""
+    existing_pid: int | None = None
+    if os.path.exists(CINEMATE_LOCKFILE):
+        try:
+            with open(CINEMATE_LOCKFILE) as fh:
+                existing_pid = int(fh.read().strip())
+        except (OSError, ValueError):
+            existing_pid = None
+
+    if existing_pid is not None and existing_pid != os.getpid():
+        alive = False
+        try:
+            os.kill(existing_pid, 0)
+            alive = True
+        except ProcessLookupError:
+            pass  # stale lock — process already gone
+        except PermissionError:
+            alive = True  # process exists but owned by another user
+
+        if alive:
+            logging.info("Stopping existing cinemate instance (PID %d) ...", existing_pid)
+            try:
+                os.kill(existing_pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
+            else:
+                deadline = time.monotonic() + 5.0
+                while time.monotonic() < deadline:
+                    try:
+                        os.kill(existing_pid, 0)
+                    except ProcessLookupError:
+                        break
+                    time.sleep(0.1)
+                else:
+                    logging.warning(
+                        "PID %d did not exit after SIGTERM; sending SIGKILL", existing_pid
+                    )
+                    try:
+                        os.kill(existing_pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                    time.sleep(0.5)
+            logging.info("Previous cinemate instance stopped.")
+
+    try:
+        with open(CINEMATE_LOCKFILE, "w") as fh:
+            fh.write(str(os.getpid()))
+    except OSError:
+        pass  # non-fatal if /tmp is not writable
+
+    atexit.register(_release_run_lock)
+
 
 def _systemd_notify(message: str) -> bool:
     notify_socket = os.environ.get("NOTIFY_SOCKET")
@@ -937,6 +1000,7 @@ def main():
     args = parser.parse_args()
 
     _, log_queue = setup_logging(args.debug)
+    _acquire_run_lock()
     clear_persisted_startup_failure()
 
     try:

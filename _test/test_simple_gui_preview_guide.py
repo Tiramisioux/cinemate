@@ -23,7 +23,19 @@ class PreviewGuideGeometryTests(unittest.TestCase):
                 sensor_width=3856,
                 sensor_height=2180,
             ),
-            [92, 48, 1827, 1030],
+            [93, 48, 1825, 1030],
+        )
+
+    def test_preview_guide_adapts_to_anamorphic_preview_height(self):
+        self.assertEqual(
+            _calculate_preview_guide_rect(
+                frame_width=1920,
+                frame_height=1080,
+                sensor_width=1928,
+                sensor_height=1090,
+                anamorphic_factor=1.33,
+            ),
+            [92, 169, 1827, 909],
         )
 
 

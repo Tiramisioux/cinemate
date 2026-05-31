@@ -787,13 +787,21 @@ class SSDMonitor:
         if not self._is_mounted:
             return
 
-        cmd = ["sudo", "umount", str(self._mount_path)]
+        # flush pending write-back pages before detaching
+        subprocess.call(["sync"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        try:
-            subprocess.run(cmd, check=True)
-        except subprocess.CalledProcessError as exc:
-            logging.error("Failed to unmount: %s", exc)
+        res = subprocess.call(["sudo", "umount", str(self._mount_path)])
+        if res == 0:
             return
+
+        # mount point still busy (e.g. exFAT background I/O, open handle) —
+        # detach lazily so the kernel can drain cleanly
+        logging.warning(
+            "unmount_drive(): umount busy (exit %d) — retrying with lazy unmount", res
+        )
+        res = subprocess.call(["sudo", "umount", "-l", str(self._mount_path)])
+        if res != 0:
+            logging.error("unmount_drive(): lazy umount also failed (exit %d)", res)
         
     def mount_drive(self, filesystem: Optional[str] = None, device: Optional[str] = None) -> bool:
         """
@@ -850,7 +858,7 @@ class SSDMonitor:
             logging.error("format_drive(): RAW drive is not mounted")
             return False
 
-        fs = normalize_filesystem(filesystem or "ext4")
+        fs = normalize_filesystem(filesystem or "exfat")
 
         if fs not in {"ext4", "exfat", "ntfs"}:
             logging.error(

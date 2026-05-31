@@ -22,6 +22,9 @@ DROP_WARNING_COLOR = (120, 40, 180)
 SYNC_WARNING_COLOR = (255, 0, 255)
 SYNC_FLASH_COLOR = "magenta"
 RESOLUTION_SWITCHING_COLOR = (176, 176, 176)
+PREVIEW_PADDING_X = 94
+PREVIEW_PADDING_Y = 50
+PREVIEW_GUIDE_OUTLINE_WIDTH = 2
 
 
 def _to_bool(value) -> bool:
@@ -36,6 +39,35 @@ def _to_int(value, default=None):
         return int(float(value))
     except (TypeError, ValueError):
         return default
+
+
+def _calculate_preview_guide_rect(
+    frame_width,
+    frame_height,
+    sensor_width,
+    sensor_height,
+    outline_width=PREVIEW_GUIDE_OUTLINE_WIDTH,
+):
+    preview_aspect_ratio = sensor_width / sensor_height
+    max_draw_width = frame_width - (2 * PREVIEW_PADDING_X)
+    max_draw_height = frame_height - (2 * PREVIEW_PADDING_Y)
+
+    if (max_draw_width / max_draw_height) > preview_aspect_ratio:
+        preview_h = max_draw_height
+        preview_w = int(preview_h * preview_aspect_ratio)
+    else:
+        preview_w = max_draw_width
+        preview_h = int(preview_w / preview_aspect_ratio)
+
+    preview_x = (frame_width - preview_w) // 2
+    preview_y = (frame_height - preview_h) // 2
+
+    return [
+        max(0, preview_x - outline_width),
+        max(0, preview_y - outline_width),
+        min(frame_width - 1, preview_x + preview_w + outline_width - 1),
+        min(frame_height - 1, preview_y + preview_h + outline_width - 1),
+    ]
 
 
 class SimpleGUI(threading.Thread):
@@ -1473,53 +1505,25 @@ class SimpleGUI(threading.Thread):
         # Get sensor resolution
         self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value))
         self.height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value))
-        self.aspect_ratio = self.width / self.height
-        self.anamorphic_factor = float(self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value))
-        lores_width = int(self.redis_controller.get_value(ParameterKey.LORES_WIDTH.value))
-        lores_height = int(self.redis_controller.get_value(ParameterKey.LORES_HEIGHT.value))
 
         frame_width = disp_width
         frame_height = disp_height
         shrink_x = disp_width / 1920
         shrink_y = disp_height / 1080
         
-        # Match CinePi._build_args() preview-plane margins. The camera preview can
-        # cover pixels drawn exactly on its edge, so draw the guide just outside it.
-        padding_x = 94
-        padding_y = 50
-        max_draw_width = frame_width - (2 * padding_x)
-        max_draw_height = frame_height - (2 * padding_y)
-
-        adjusted_lores_width = lores_width * self.anamorphic_factor
-        adjusted_lores_height = lores_height * self.anamorphic_factor
-        adjusted_aspect_ratio = adjusted_lores_width / adjusted_lores_height
-
-        if adjusted_aspect_ratio >= 1:
-            preview_w = max_draw_width
-            preview_h = int(preview_w / adjusted_aspect_ratio)
-            if preview_h > max_draw_height:
-                preview_h = max_draw_height
-                preview_w = int(preview_h * adjusted_aspect_ratio)
-        else:
-            preview_h = max_draw_height
-            preview_w = int(preview_h * adjusted_aspect_ratio)
-            if preview_w > max_draw_width:
-                preview_w = max_draw_width
-                preview_h = int(preview_w / adjusted_aspect_ratio)
-
-        preview_x = (frame_width - preview_w) // 2
-        preview_y = (frame_height - preview_h) // 2
-
         line_color = (249, 249, 249) if values.get("zoom_is_default", True) else (255, 221, 0)
 
-        outline_width = 2
-        outline_rect = [
-            max(0, preview_x - outline_width),
-            max(0, preview_y - outline_width),
-            min(frame_width - 1, preview_x + preview_w + outline_width - 1),
-            min(frame_height - 1, preview_y + preview_h + outline_width - 1),
-        ]
-        draw.rectangle(outline_rect, outline=line_color, width=outline_width)
+        # Match CinePi._build_args() preview-plane geometry from the raw
+        # sensor aspect. Redis lores dimensions can be briefly stale during a
+        # mode switch. Draw just outside that plane so the preview cannot cover
+        # the guide's top edge.
+        outline_rect = _calculate_preview_guide_rect(
+            frame_width,
+            frame_height,
+            self.width,
+            self.height,
+        )
+        draw.rectangle(outline_rect, outline=line_color, width=PREVIEW_GUIDE_OUTLINE_WIDTH)
 
         current_layout = self.layout
 

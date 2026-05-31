@@ -41,6 +41,12 @@ If you want the same clean boot and shutdown handoff as the prebuilt image, inst
 
 To start Cinemate manually, anywhere in the cli, type `cinemate`.
 
+### Single-instance enforcement
+
+Only one instance of Cinemate can run at a time. If you start `cinemate` while the service (or a previous manual session) is already running, the new instance automatically sends a graceful stop signal to the existing one, waits up to 5 seconds for it to exit cleanly, then proceeds with its own startup. No manual intervention is needed.
+
+This means you can type `cinemate` in an SSH session at any time to restart the app — even if it is already running via the autostart service.
+
 ## storage-automount.service
 
 Storage-automount is a systemd service that watches for removable drives and mounts them automatically. The accompanying Python script reacts to udev events and the CFE-HAT eject button so drives can be attached or detached safely.

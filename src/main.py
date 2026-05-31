@@ -80,7 +80,7 @@ def _release_run_lock() -> None:
 
 
 def _acquire_run_lock() -> None:
-    """Exit early with a friendly message if another cinemate instance is already running."""
+    """Stop any running cinemate instance, then acquire the startup lock."""
     existing_pid: int | None = None
     if os.path.exists(CINEMATE_LOCKFILE):
         try:
@@ -89,30 +89,40 @@ def _acquire_run_lock() -> None:
         except (OSError, ValueError):
             existing_pid = None
 
-    if existing_pid is not None:
+    if existing_pid is not None and existing_pid != os.getpid():
         alive = False
         try:
             os.kill(existing_pid, 0)
             alive = True
         except ProcessLookupError:
-            pass  # stale lock — process no longer exists
+            pass  # stale lock — process already gone
         except PermissionError:
             alive = True  # process exists but owned by another user
 
         if alive:
-            sys.stderr.write(
-                f"\n"
-                f"{CLI_COLOR_RED}Cinemate is already running (PID {existing_pid}).{CLI_COLOR_RESET}\n"
-                f"\n"
-                f"To stop it:\n"
-                f"  {CLI_COLOR_YELLOW}Service (normal boot):{CLI_COLOR_RESET}  "
-                f"cd /home/pi/cinemate && sudo make stop\n"
-                f"  {CLI_COLOR_YELLOW}Manual SSH session:   {CLI_COLOR_RESET}  "
-                f"kill {existing_pid}   (or press Ctrl+C in that terminal)\n"
-                f"\n"
-            )
-            sys.stderr.flush()
-            sys.exit(1)
+            logging.info("Stopping existing cinemate instance (PID %d) ...", existing_pid)
+            try:
+                os.kill(existing_pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
+            else:
+                deadline = time.monotonic() + 5.0
+                while time.monotonic() < deadline:
+                    try:
+                        os.kill(existing_pid, 0)
+                    except ProcessLookupError:
+                        break
+                    time.sleep(0.1)
+                else:
+                    logging.warning(
+                        "PID %d did not exit after SIGTERM; sending SIGKILL", existing_pid
+                    )
+                    try:
+                        os.kill(existing_pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                    time.sleep(0.5)
+            logging.info("Previous cinemate instance stopped.")
 
     try:
         with open(CINEMATE_LOCKFILE, "w") as fh:
@@ -989,9 +999,8 @@ def main():
     parser.add_argument("-debug", action="store_true", help="Enable debug logging level.")
     args = parser.parse_args()
 
-    _acquire_run_lock()
-
     _, log_queue = setup_logging(args.debug)
+    _acquire_run_lock()
     clear_persisted_startup_failure()
 
     try:

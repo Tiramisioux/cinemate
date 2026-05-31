@@ -24,6 +24,7 @@ from module.dynamic_resolution import (
 
 SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
 GUI_RESOLUTION_PREVIEW_DELAY_SECONDS = 0.12
+GUI_RESOLUTION_SWITCHING_HOLD_SECONDS = 2.5
 
 class CinePiController:
     def __init__(self,
@@ -111,6 +112,7 @@ class CinePiController:
         self._last_resolution_change_started_at = 0.0
         self._resolution_change_min_interval_s = 0.25
         self._recording_resolution_change_min_interval_s = 2.0
+        self._resolution_switching_timer = None
         self._storage_profile_restart_pending = False
         self._active_storage_recorder_profile = self._current_storage_recorder_profile()
         try:
@@ -1080,7 +1082,12 @@ class CinePiController:
                 logging.info("Only one sensor mode available. Cannot switch resolution.")
                 return False
 
-            current_sensor_mode = self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value)
+            current_sensor_mode = (
+                self.dynamic_resolution_desired_mode
+                if self.dynamic_resolution_enabled
+                and self.dynamic_resolution_desired_mode is not None
+                else self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value)
+            )
             if current_sensor_mode is None:
                 current_sensor_mode = self.sensor_mode
 
@@ -1126,72 +1133,128 @@ class CinePiController:
             value = 0
         return value
 
+    def _publish_resolution_gui_state(self, value, resolution_info):
+        self.sensor_mode = int(value)
+        height_new = resolution_info.get('height', None)
+        width_new = resolution_info.get('width', None)
+        bit_depth_new = resolution_info.get('bit_depth', None)
+        packing_new = resolution_info.get('packing', 'U')
+        gui_layout_new = resolution_info.get('gui_layout', None)
+        file_size_new = resolution_info.get('file_size', None)
+
+        if height_new is None or width_new is None or gui_layout_new is None:
+            raise ValueError("Invalid height, width, or gui_layout value.")
+
+        self.gui_layout = gui_layout_new
+        self.file_size = file_size_new
+
+        self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, str(value))
+        self.redis_controller.set_value(ParameterKey.HEIGHT.value, str(height_new))
+        self.redis_controller.set_value(ParameterKey.WIDTH.value, str(width_new))
+        self.redis_controller.set_value(ParameterKey.BIT_DEPTH.value, str(bit_depth_new))
+        self.redis_controller.set_value(ParameterKey.PACKING.value, str(packing_new))
+        self.redis_controller.set_value(ParameterKey.GUI_LAYOUT.value, str(gui_layout_new))
+        self.redis_controller.set_value(ParameterKey.FILE_SIZE.value, str(file_size_new))
+        self.redis_controller.set_value(
+            ParameterKey.LORES_WIDTH.value,
+            str(self.sensor_detect.get_lores_width(self.current_sensor, self.sensor_mode)),
+        )
+        self.redis_controller.set_value(
+            ParameterKey.LORES_HEIGHT.value,
+            str(self.sensor_detect.get_lores_height(self.current_sensor, self.sensor_mode)),
+        )
+        self.redis_controller.set_value(ParameterKey.MODE.value, self._mode_string(resolution_info))
+        self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)
+        self.fps_max = self._refresh_fps_max()
+        self.dynamic_resolution_active = (
+            self.dynamic_resolution_enabled
+            and self.sensor_mode != self.dynamic_resolution_desired_mode
+        )
+        self._publish_dynamic_resolution_state()
+
+        logging.info(
+            "Resolution GUI state set to mode %s, height: %s, width: %s, gui_layout: %s",
+            value,
+            height_new,
+            width_new,
+            gui_layout_new,
+        )
+
+    def _publish_resolution_target_state(self, value, resolution_info, *, switching):
+        self.redis_controller.set_value(ParameterKey.RESOLUTION_TARGET_MODE.value, str(value))
+        self.redis_controller.set_value(
+            ParameterKey.RESOLUTION_TARGET_WIDTH.value,
+            str(resolution_info.get('width')),
+        )
+        self.redis_controller.set_value(
+            ParameterKey.RESOLUTION_TARGET_HEIGHT.value,
+            str(resolution_info.get('height')),
+        )
+        self.redis_controller.set_value(
+            ParameterKey.RESOLUTION_TARGET_BIT_DEPTH.value,
+            str(resolution_info.get('bit_depth')),
+        )
+        self.redis_controller.set_value(
+            ParameterKey.RESOLUTION_SWITCHING.value,
+            1 if switching else 0,
+        )
+
+    def _cancel_resolution_switching_timer(self):
+        timer = getattr(self, "_resolution_switching_timer", None)
+        if timer is not None:
+            timer.cancel()
+            self._resolution_switching_timer = None
+
+    def _schedule_resolution_switch_complete(self, value, resolution_info):
+        self._cancel_resolution_switching_timer()
+
+        def complete():
+            try:
+                self._publish_resolution_target_state(
+                    value,
+                    resolution_info,
+                    switching=False,
+                )
+            except Exception:
+                logging.exception("Failed to clear resolution switching state.")
+
+        timer = threading.Timer(GUI_RESOLUTION_SWITCHING_HOLD_SECONDS, complete)
+        timer.daemon = True
+        self._resolution_switching_timer = timer
+        timer.start()
+
     def _apply_resolution_mode(self, value, restore_user_fps=None, *, restart_process=False):
         try:
             value = self._normalize_sensor_mode_value(value)
+            resolution_info = self.sensor_detect.res_modes[value]
             recording = self._is_recording()
             if recording:
                 logging.warning(
                     "Resolution change requested while recording. "
                     "cinepi-raw will split the recording around the camera reconfigure."
                 )
-            self._pace_resolution_change(recording)
 
-            self.sensor_mode = int(value)
-
-            resolution_info = self.sensor_detect.res_modes[value]
-            height_new = resolution_info.get('height', None)
-            width_new = resolution_info.get('width', None)
-            bit_depth_new = resolution_info.get('bit_depth', None)
-            packing_new = resolution_info.get('packing', 'U')
-            gui_layout_new = resolution_info.get('gui_layout', None)
-            file_size_new = resolution_info.get('file_size', None)
-
-            if height_new is None or width_new is None or gui_layout_new is None:
-                raise ValueError("Invalid height, width, or gui_layout value.")
-
-            self.gui_layout = gui_layout_new
-            self.file_size = file_size_new
-
-            # Publish all operator-visible resolution metadata before asking
-            # cinepi-raw to reconfigure. This gives the GUI a chance to show
-            # the newly selected mode while the preview stream catches up.
-            self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, str(value))
-            self.redis_controller.set_value(ParameterKey.HEIGHT.value, str(height_new))
-            self.redis_controller.set_value(ParameterKey.WIDTH.value, str(width_new))
-            self.redis_controller.set_value(ParameterKey.BIT_DEPTH.value, str(bit_depth_new))
-            self.redis_controller.set_value(ParameterKey.PACKING.value, str(packing_new))
-            self.redis_controller.set_value(ParameterKey.GUI_LAYOUT.value, str(gui_layout_new))
-            self.redis_controller.set_value(ParameterKey.FILE_SIZE.value, str(file_size_new))
-            self.redis_controller.set_value(
-                ParameterKey.LORES_WIDTH.value,
-                str(self.sensor_detect.get_lores_width(self.current_sensor, self.sensor_mode)),
-            )
-            self.redis_controller.set_value(
-                ParameterKey.LORES_HEIGHT.value,
-                str(self.sensor_detect.get_lores_height(self.current_sensor, self.sensor_mode)),
-            )
-            self.redis_controller.set_value(ParameterKey.MODE.value, self._mode_string(resolution_info))
-            self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)
-            self.fps_max = self._refresh_fps_max()
-            self.dynamic_resolution_active = (
-                self.dynamic_resolution_enabled
-                and self.sensor_mode != self.dynamic_resolution_desired_mode
-            )
-            self._publish_dynamic_resolution_state()
-
-            logging.info(
-                "Resolution GUI state set to mode %s, height: %s, width: %s, gui_layout: %s",
+            # Dynamic FPS changes should update the operator-facing resolution
+            # selection immediately, even while preview reconfigure is pending.
+            self._cancel_resolution_switching_timer()
+            self._publish_resolution_target_state(
                 value,
-                height_new,
-                width_new,
-                gui_layout_new,
+                resolution_info,
+                switching=True,
             )
+            self._publish_resolution_gui_state(value, resolution_info)
+            self._pace_resolution_change(recording)
             time.sleep(GUI_RESOLUTION_PREVIEW_DELAY_SECONDS)
 
             self.redis_controller.set_value(ParameterKey.CAM_INIT.value, str(time.time_ns()))
 
-            logging.info(f"Resolution set to mode {value}, height: {height_new}, width: {width_new}, gui_layout: {gui_layout_new}")
+            logging.info(
+                "Resolution set to mode %s, height: %s, width: %s, gui_layout: %s",
+                value,
+                resolution_info.get('height'),
+                resolution_info.get('width'),
+                resolution_info.get('gui_layout'),
+            )
 
             if restart_process:
                 self.cinepi.restart()
@@ -1217,9 +1280,11 @@ class CinePiController:
                 self.set_fps(float(restore_user_fps), update_user_target=False)
 
             self._notify_resolution_change(value)
+            self._schedule_resolution_switch_complete(value, resolution_info)
             return True
 
         except ValueError as error:
+            self.redis_controller.set_value(ParameterKey.RESOLUTION_SWITCHING.value, 0)
             logging.error(f"Error setting resolution: {error}")
             return False
 

@@ -41,6 +41,12 @@
         .top-bar select:focus, .bottom-bar select:focus {
             outline: none;
         }
+        #resolution-select.resolution-switching {
+            color: #aaa;
+        }
+        #resolution-select.resolution-switching option {
+            color: #fff;
+        }
         #stream-container {
             background-color: black;
             position: relative;
@@ -160,6 +166,22 @@
             });
         }
 
+        function isSwitching(value) {
+            const normalized = String(value).trim().toLowerCase();
+            return value === true || normalized === '1' || normalized === 'true';
+        }
+
+        function updateResolutionSelection(mode, switching) {
+            const resolutionSelect = document.getElementById('resolution-select');
+            if (!resolutionSelect) {
+                return;
+            }
+            if (mode !== undefined && mode !== null) {
+                resolutionSelect.value = mode;
+            }
+            resolutionSelect.classList.toggle('resolution-switching', isSwitching(switching));
+        }
+
         socket.on('initial_values', data => {
             document.getElementById('iso-select').value = data.iso;
             updateShutterSpeedOptions(data.shutter_a_steps, data.shutter_a);
@@ -183,7 +205,7 @@
                 option.textContent = res.resolution;
                 resolutionSelect.appendChild(option);
             });
-            resolutionSelect.value = data.selected_resolution_mode;
+            updateResolutionSelection(data.selected_resolution_mode, data.resolution_switching);
         });
 
         socket.on('parameter_change', data => {
@@ -203,8 +225,23 @@
             if (data.wb !== undefined) {
                 document.getElementById('wb-select').value = data.wb;
             }
+            if (data.selected_resolution_mode !== undefined) {
+                updateResolutionSelection(data.selected_resolution_mode, data.resolution_switching);
+            }
+            if (data.sensor_mode !== undefined) {
+                updateResolutionSelection(data.sensor_mode, data.resolution_switching);
+            }
+            if (data.resolution_switching !== undefined) {
+                updateResolutionSelection(data.selected_resolution_mode, data.resolution_switching);
+            }
             if (data.buffer !== undefined) {
                 document.getElementById('buffer-used').innerText = data.buffer;
+            }
+        });
+
+        socket.on('resolution_change', data => {
+            if (data.sensor_mode !== undefined) {
+                updateResolutionSelection(data.sensor_mode, data.resolution_switching);
             }
         });
 

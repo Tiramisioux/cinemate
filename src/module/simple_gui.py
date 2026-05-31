@@ -21,6 +21,7 @@ RECORDER_VU_REDIS_KEY = "audio_vu"
 DROP_WARNING_COLOR = (120, 40, 180)
 SYNC_WARNING_COLOR = (255, 0, 255)
 SYNC_FLASH_COLOR = "magenta"
+RESOLUTION_SWITCHING_COLOR = (176, 176, 176)
 
 
 def _to_bool(value) -> bool:
@@ -28,6 +29,13 @@ def _to_bool(value) -> bool:
     if isinstance(value, str):
         return value.strip().lower() in {"1", "true", "yes", "on"}
     return bool(value)
+
+
+def _to_int(value, default=None):
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return default
 
 
 class SimpleGUI(threading.Thread):
@@ -611,6 +619,25 @@ class SimpleGUI(threading.Thread):
         self._maybe_refresh_slow_values()
         self.load_sensor_values_from_redis()
         resolution_value = self.estimate_resolution_in_k()
+        resolution_switching = _to_bool(
+            self.redis_controller.get_value(ParameterKey.RESOLUTION_SWITCHING.value, 0)
+        )
+        display_width = self.width
+        display_height = self.height
+        display_bit_depth = self.bit_depth
+        if resolution_switching:
+            display_width = _to_int(
+                self.redis_controller.get_value(ParameterKey.RESOLUTION_TARGET_WIDTH.value),
+                display_width,
+            )
+            display_height = _to_int(
+                self.redis_controller.get_value(ParameterKey.RESOLUTION_TARGET_HEIGHT.value),
+                display_height,
+            )
+            display_bit_depth = _to_int(
+                self.redis_controller.get_value(ParameterKey.RESOLUTION_TARGET_BIT_DEPTH.value),
+                display_bit_depth,
+            )
 
         sensor_left  = ""   
         sensor_right = ""
@@ -679,7 +706,8 @@ class SimpleGUI(threading.Thread):
             "color_temp":     f"{self.redis_controller.get_value(ParameterKey.WB_USER.value)} K",
             "color_temp_libcamera": f"/ {self.redis_listener.colorTemp}K",
             "res_label":      "RES",
-            "res":            f"{self.width}×{self.height} :{self.bit_depth}b",
+            "res":            f"{display_width}×{display_height} :{display_bit_depth}b",
+            "resolution_switching": resolution_switching,
 
             # left column (CAM0)
             "sensor":         sensor_left,
@@ -879,7 +907,9 @@ class SimpleGUI(threading.Thread):
             self.colors["shutter_speed"]["normal"] = (249,249,249)
             self.colors["fps"]["normal"] = (249,249,249)
 
-        if self._dynamic_resolution_indicator_active():
+        if values["resolution_switching"]:
+            self.colors["res"]["normal"] = RESOLUTION_SWITCHING_COLOR
+        elif self._dynamic_resolution_indicator_active():
             self.colors["res"]["normal"] = "lightgreen"
         else:
             self.colors["res"]["normal"] = (249, 249, 249)
@@ -1480,7 +1510,7 @@ class SimpleGUI(threading.Thread):
         preview_x = (frame_width - preview_w) // 2
         preview_y = (frame_height - preview_h) // 2
 
-        line_color = (249, 249, 249) if values.get("zoom_is_default", True) else (255, 221, 0)
+        line_color = (70, 70, 70) if values.get("zoom_is_default", True) else (255, 221, 0)
 
         outline_width = 2
         outline_rect = [

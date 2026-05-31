@@ -19,6 +19,7 @@ from module.storage_profiles import recorder_profile_name_for_filesystem
 from module.dynamic_resolution import (
     DEFAULT_MATCH_TOLERANCE_PX,
     choose_resolution,
+    dynamic_resolution_is_lower_substitute,
     load_profile_rows,
     max_fps_for_context,
 )
@@ -1178,7 +1179,11 @@ class CinePiController:
         self.fps_max = self._refresh_fps_max()
         self.dynamic_resolution_active = (
             self.dynamic_resolution_enabled
-            and self.sensor_mode != self.dynamic_resolution_desired_mode
+            and dynamic_resolution_is_lower_substitute(
+                sensor_modes=self.sensor_detect.res_modes,
+                current_mode=self.sensor_mode,
+                desired_mode=self.dynamic_resolution_desired_mode,
+            )
         )
         self._publish_dynamic_resolution_state()
 

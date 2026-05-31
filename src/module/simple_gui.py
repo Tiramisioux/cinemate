@@ -210,6 +210,7 @@ class SimpleGUI(threading.Thread):
                 ParameterKey.DYNAMIC_RESOLUTION_DESIRED_MODE.value,
                 getattr(controller, "dynamic_resolution_desired_mode", None),
             ),
+            sensor_modes=getattr(self.sensor_detect, "res_modes", None),
         )
 
     # ───────────────── helper: tweak GUI layout for clip lines ────────────────────

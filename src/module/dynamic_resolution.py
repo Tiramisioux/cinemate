@@ -128,21 +128,56 @@ def _as_float(value: Any) -> float | None:
     return result
 
 
+def _mode_area(sensor_modes: dict[int, dict[str, Any]] | None, mode: Any) -> int | None:
+    mode_int = _as_int(mode)
+    if mode_int is None:
+        return None
+    for key, info in (sensor_modes or {}).items():
+        key_int = _as_int(key)
+        if key_int != mode_int or not isinstance(info, dict):
+            continue
+        width = _as_int(info.get("width"))
+        height = _as_int(info.get("height"))
+        if width is None or height is None:
+            return None
+        return width * height
+    return None
+
+
+def dynamic_resolution_is_lower_substitute(
+    *,
+    sensor_modes: dict[int, dict[str, Any]] | None,
+    current_mode: Any,
+    desired_mode: Any,
+) -> bool:
+    current = _as_int(current_mode)
+    desired = _as_int(desired_mode)
+    if current is None or desired is None or current == desired:
+        return False
+
+    current_area = _mode_area(sensor_modes, current)
+    desired_area = _mode_area(sensor_modes, desired)
+    if current_area is None or desired_area is None:
+        return current != desired
+    return current_area < desired_area
+
+
 def dynamic_resolution_indicator_active(
     *,
     enabled: Any,
     active: Any,
     current_mode: Any,
     desired_mode: Any,
+    sensor_modes: dict[int, dict[str, Any]] | None = None,
 ) -> bool:
     """Return True while dynamic resolution is actively showing a substitute mode."""
     if not _as_bool(enabled) or not _as_bool(active):
         return False
-    current = _as_int(current_mode)
-    desired = _as_int(desired_mode)
-    if current is None or desired is None:
-        return False
-    return current != desired
+    return dynamic_resolution_is_lower_substitute(
+        sensor_modes=sensor_modes,
+        current_mode=current_mode,
+        desired_mode=desired_mode,
+    )
 
 
 def _as_bool(value: Any) -> bool:
@@ -380,7 +415,7 @@ def choose_resolution(
         row=selected_row,
         desired_mode=desired_mode,
         desired_row=desired_row,
-        dynamic_active=selected_mode != desired_mode,
+        dynamic_active=selected_mode != desired_mode and selected_row.area < desired_row.area,
     )
 
 

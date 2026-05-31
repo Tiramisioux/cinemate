@@ -9,6 +9,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from module.dynamic_resolution import (
     choose_resolution,
     dynamic_resolution_indicator_active,
+    dynamic_resolution_is_lower_substitute,
     load_profile_rows,
     max_fps_for_context,
 )
@@ -81,6 +82,33 @@ class DynamicResolutionTests(unittest.TestCase):
             )
         )
 
+    def test_resolution_indicator_only_when_current_mode_is_lower_than_desired(self):
+        self.assertTrue(
+            dynamic_resolution_indicator_active(
+                enabled=True,
+                active=True,
+                current_mode=0,
+                desired_mode=1,
+                sensor_modes=IMX585_MODES,
+            )
+        )
+        self.assertFalse(
+            dynamic_resolution_indicator_active(
+                enabled=True,
+                active=True,
+                current_mode=1,
+                desired_mode=0,
+                sensor_modes=IMX585_MODES,
+            )
+        )
+        self.assertFalse(
+            dynamic_resolution_is_lower_substitute(
+                sensor_modes=IMX585_MODES,
+                current_mode=1,
+                desired_mode=0,
+            )
+        )
+
     def test_switches_down_when_requested_fps_exceeds_desired_mode(self):
         choice = choose_resolution(
             sensor_modes=IMX585_MODES,
@@ -102,6 +130,22 @@ class DynamicResolutionTests(unittest.TestCase):
             sensor_modes=IMX585_MODES,
             desired_mode=1,
             requested_fps=40,
+            sensor="imx585",
+            storage_type="cfe",
+            filesystem="ext4",
+            performance_table=IMX585_TABLE,
+            tolerance_px=32,
+        )
+
+        self.assertIsNotNone(choice)
+        self.assertEqual(choice.mode, 1)
+        self.assertFalse(choice.dynamic_active)
+
+    def test_higher_sustainable_mode_is_not_marked_dynamic_active(self):
+        choice = choose_resolution(
+            sensor_modes=IMX585_MODES,
+            desired_mode=0,
+            requested_fps=24,
             sensor="imx585",
             storage_type="cfe",
             filesystem="ext4",

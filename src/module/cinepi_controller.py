@@ -1,4 +1,5 @@
 import logging
+import re
 import threading
 import os
 import time
@@ -25,6 +26,15 @@ from module.dynamic_resolution import (
 SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
 GUI_RESOLUTION_PREVIEW_DELAY_SECONDS = 0.12
 GUI_RESOLUTION_SWITCHING_HOLD_SECONDS = 2.5
+RAW_STREAM_READY_RE = re.compile(r"\bRaw stream:\s*(\d+)x(\d+)\b", re.IGNORECASE)
+
+
+def _safe_int(value):
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
+
 
 class CinePiController:
     def __init__(self,
@@ -1222,6 +1232,31 @@ class CinePiController:
         timer.daemon = True
         self._resolution_switching_timer = timer
         timer.start()
+
+    def handle_cinepi_raw_message(self, message):
+        if not isinstance(message, str):
+            return
+
+        match = RAW_STREAM_READY_RE.search(message)
+        if not match:
+            return
+
+        target_width = _safe_int(
+            self.redis_controller.get_value(ParameterKey.RESOLUTION_TARGET_WIDTH.value)
+        )
+        target_height = _safe_int(
+            self.redis_controller.get_value(ParameterKey.RESOLUTION_TARGET_HEIGHT.value)
+        )
+        if target_width is None or target_height is None:
+            return
+
+        raw_width = int(match.group(1))
+        raw_height = int(match.group(2))
+        if raw_width != target_width or raw_height != target_height:
+            return
+
+        self._cancel_resolution_switching_timer()
+        self.redis_controller.set_value(ParameterKey.RESOLUTION_SWITCHING.value, 0)
 
     def _apply_resolution_mode(self, value, restore_user_fps=None, *, restart_process=False):
         try:

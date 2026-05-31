@@ -46,27 +46,50 @@ def _calculate_preview_guide_rect(
     frame_height,
     sensor_width,
     sensor_height,
+    anamorphic_factor=1.0,
     outline_width=PREVIEW_GUIDE_OUTLINE_WIDTH,
 ):
-    preview_aspect_ratio = sensor_width / sensor_height
+    window_aspect_ratio = sensor_width / sensor_height
     max_draw_width = frame_width - (2 * PREVIEW_PADDING_X)
     max_draw_height = frame_height - (2 * PREVIEW_PADDING_Y)
 
-    if (max_draw_width / max_draw_height) > preview_aspect_ratio:
-        preview_h = max_draw_height
-        preview_w = int(preview_h * preview_aspect_ratio)
+    if (max_draw_width / max_draw_height) > window_aspect_ratio:
+        window_h = max_draw_height
+        window_w = int(window_h * window_aspect_ratio)
     else:
-        preview_w = max_draw_width
-        preview_h = int(preview_w / preview_aspect_ratio)
+        window_w = max_draw_width
+        window_h = int(window_w / window_aspect_ratio)
 
-    preview_x = (frame_width - preview_w) // 2
-    preview_y = (frame_height - preview_h) // 2
+    window_x = (frame_width - window_w) // 2
+    window_y = (frame_height - window_h) // 2
+
+    stream_h = min(720, max_draw_height)
+    stream_w = int(stream_h * window_aspect_ratio * anamorphic_factor)
+    if stream_w > max_draw_width:
+        stream_w = max_draw_width
+        stream_h = int(round(max_draw_width / (window_aspect_ratio * anamorphic_factor)))
+    stream_w -= stream_w % 2
+    stream_h -= stream_h % 2
+
+    image_x_offset = 0
+    image_y_offset = 0
+    image_w = window_w
+    image_h = window_h
+    if stream_w * window_h > window_w * stream_h:
+        image_h = window_w * stream_h // stream_w
+        image_y_offset = (window_h - image_h) // 2
+    else:
+        image_w = window_h * stream_w // stream_h
+        image_x_offset = (window_w - image_w) // 2
+
+    preview_x = window_x + image_x_offset
+    preview_y = window_y + image_y_offset
 
     return [
         max(0, preview_x - outline_width),
         max(0, preview_y - outline_width),
-        min(frame_width - 1, preview_x + preview_w + outline_width - 1),
-        min(frame_height - 1, preview_y + preview_h + outline_width - 1),
+        min(frame_width - 1, preview_x + image_w + outline_width - 1),
+        min(frame_height - 1, preview_y + image_h + outline_width - 1),
     ]
 
 
@@ -1505,6 +1528,12 @@ class SimpleGUI(threading.Thread):
         # Get sensor resolution
         self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value))
         self.height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value))
+        try:
+            anamorphic_factor = float(
+                self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value) or 1.0
+            )
+        except (TypeError, ValueError):
+            anamorphic_factor = 1.0
 
         frame_width = disp_width
         frame_height = disp_height
@@ -1513,15 +1542,16 @@ class SimpleGUI(threading.Thread):
         
         line_color = (249, 249, 249) if values.get("zoom_is_default", True) else (255, 221, 0)
 
-        # Match CinePi._build_args() preview-plane geometry from the raw
-        # sensor aspect. Redis lores dimensions can be briefly stale during a
-        # mode switch. Draw just outside that plane so the preview cannot cover
-        # the guide's top edge.
+        # Match CinePi._build_args() and DrmPreview::Show(): place the preview
+        # window from the raw aspect, then fit the visible lores/anamorphic
+        # stream inside it. Redis lores dimensions can be briefly stale during
+        # a mode switch, so calculate them here from the same source values.
         outline_rect = _calculate_preview_guide_rect(
             frame_width,
             frame_height,
             self.width,
             self.height,
+            anamorphic_factor,
         )
         draw.rectangle(outline_rect, outline=line_color, width=PREVIEW_GUIDE_OUTLINE_WIDTH)
 

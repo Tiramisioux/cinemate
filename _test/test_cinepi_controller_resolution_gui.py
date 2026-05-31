@@ -94,6 +94,7 @@ class ResolutionGuiStateTests(unittest.TestCase):
         controller.initialize_fps_steps = lambda _steps: None
         controller.update_steps = lambda: None
         controller._notify_resolution_change = controller.notifications.append
+        controller._resolution_switching_timer = None
 
         def refresh_fps_max():
             controller.fps_max = 50
@@ -160,6 +161,40 @@ class ResolutionGuiStateTests(unittest.TestCase):
         self.assertIn(
             "Switching resolution from mode 1 to mode 0",
             "\n".join(logs.output),
+        )
+
+    def test_raw_stream_ready_log_clears_resolution_switching(self):
+        controller = self.controller()
+        resolution_info = controller.sensor_detect.res_modes[1]
+        controller._publish_resolution_target_state(1, resolution_info, switching=True)
+        timer = mock.Mock()
+        controller._resolution_switching_timer = timer
+
+        controller.handle_cinepi_raw_message(
+            "[2026-05-31 18:00:31.405] [event_loop] [info] Raw stream: 3856x2180 : 7712 : SRGGB16"
+        )
+
+        timer.cancel.assert_called_once()
+        self.assertEqual(
+            controller.redis_controller.get_value(ParameterKey.RESOLUTION_SWITCHING.value),
+            0,
+        )
+
+    def test_nonmatching_raw_stream_log_does_not_clear_resolution_switching(self):
+        controller = self.controller()
+        resolution_info = controller.sensor_detect.res_modes[1]
+        controller._publish_resolution_target_state(1, resolution_info, switching=True)
+        timer = mock.Mock()
+        controller._resolution_switching_timer = timer
+
+        controller.handle_cinepi_raw_message(
+            "[2026-05-31 18:00:31.405] [event_loop] [info] Raw stream: 1928x1090 : 3904 : SRGGB16"
+        )
+
+        timer.cancel.assert_not_called()
+        self.assertEqual(
+            controller.redis_controller.get_value(ParameterKey.RESOLUTION_SWITCHING.value),
+            1,
         )
 
 

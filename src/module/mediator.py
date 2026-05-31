@@ -42,8 +42,8 @@ class Mediator:
             return []
     
     def handle_cinepi_message(self, message):
-        # Handle CinePi app messages (currently not logging)
-        pass  
+        if hasattr(self.cinepi_controller, "handle_cinepi_raw_message"):
+            self.cinepi_controller.handle_cinepi_raw_message(message)
 
     def handle_ssd_event(self, action, message):
         # Handle SSD events

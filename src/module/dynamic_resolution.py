@@ -397,7 +397,8 @@ def choose_resolution(
         mode_rows = [
             row
             for row in context_rows
-            if row.effective_max_fps(safety_margin_fps) >= fps
+            if row.area <= desired_row.area
+            and row.effective_max_fps(safety_margin_fps) >= fps
             and _mode_matches_row(mode_info, row, tolerance_px=tolerance_px)
         ]
         if mode_rows:

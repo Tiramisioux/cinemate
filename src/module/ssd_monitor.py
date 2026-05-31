@@ -879,7 +879,11 @@ class SSDMonitor:
         if fs == "ext4":
             mkfs_cmd = ["sudo", "mkfs.ext4", "-F", "-L", "RAW", device]
         elif fs == "exfat":
-            mkfs_cmd = ["sudo", "mkfs.exfat", "-n", "RAW", device]
+            # exfatprogs uses -L for the label (not -n) and -c for cluster size.
+            # 1 MB clusters cut allocation-bitmap/FAT bookkeeping for the large
+            # (~12 MB) DNG files written ~25×/s, reducing the write-latency
+            # spikes that drop frames on exFAT.
+            mkfs_cmd = ["sudo", "mkfs.exfat", "-L", "RAW", "-c", "1M", device]
         else:
             mkfs_cmd = ["sudo", "mkfs.ntfs", "-F", "-L", "RAW", device]
 

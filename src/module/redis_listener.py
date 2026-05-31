@@ -78,6 +78,7 @@ class RedisListener:
         self.drop_frame_timer = None
         self.drop_frame_count_current_take = 0
         self.drop_frame_relay_timer = None
+        self.tc_frame_count: int | None = None
         self.frames_off_sync_latched_current_take = False
         self.live_sync_suppressed_current_take = False
         self.live_sync_warning_tolerance_frames = self._coerce_frame_tolerance(
@@ -837,6 +838,9 @@ class RedisListener:
                         buffer_size = self._coerce_int(stats_data.get('bufferSize', None))
                         raw_frame_count = self._coerce_int(stats_data.get('frameCount', None))
                         self.frame_count = self._logical_framecount_from_raw(raw_frame_count, now)
+                        raw_tc_frame_count = self._coerce_int(stats_data.get('tcFrameCount', None))
+                        if raw_tc_frame_count is not None:
+                            self.tc_frame_count = raw_tc_frame_count
                         color_temp = stats_data.get('colorTemp', None)
                         sensor_timestamp = stats_data.get('sensorTimestamp', None)
                         timestamp = stats_data.get('timestamp')
@@ -920,43 +924,59 @@ class RedisListener:
                         if self.current_framerate is not None:
                             self.framerate_values.append(self.current_framerate)
                             
-                        # Check for framerate deviation
                         expected_fps = self._coerce_float(self.redis_controller.get_value('fps'))
-                        if self.current_framerate is not None and expected_fps is not None:
-                            fps_difference = abs((self.current_framerate) - expected_fps)
-                            # print(f"Expected FPS: {expected_fps}, Actual FPS: {self.current_framerate*1000}")
-                            # print(f"FPS difference: {fps_difference}")
-                            
-                            drop_alerts_enabled = (
-                                self.is_recording
-                                and not self.recording_was_preroll
-                                and not self._storage_preroll_active()
-                                and not self._recording_reconfigure_grace_active(now)
-                            )
 
-                            # do NOT raise drop-frame while the user is changing fps
-                            if fps_difference > 1 and not self.user_changing_fps and drop_alerts_enabled:
-                                self.drop_frame_count_current_take += 1
-                                self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, self.drop_frame_count_current_take)
-                                self._pulse_drop_frame_relay(expected_fps)
+                        drop_alerts_enabled = (
+                            self.is_recording
+                            and not self.recording_was_preroll
+                            and not self._storage_preroll_active()
+                            and not self._recording_reconfigure_grace_active(now)
+                            and not self.user_changing_fps
+                        )
 
-                                if not self.drop_frame:
-                                    self.drop_frame = True
-                                    self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 1)
-                                    logging.info(f"Drop frame detected (count={self.drop_frame_count_current_take})")
+                        if drop_alerts_enabled:
+                            if self.tc_frame_count is not None and raw_frame_count is not None:
+                                # TC-based: exact dropped slot count from inter-frame timestamp deltas.
+                                # tcFrameCount advances by >1 when a frame is dropped; the difference
+                                # with frameCount is the precise number of dropped slots this clip.
+                                dropped_slots = max(0, self.tc_frame_count - raw_frame_count)
+                                if dropped_slots > self.drop_frame_count_current_take:
+                                    new_slots = dropped_slots - self.drop_frame_count_current_take
+                                    self.drop_frame_count_current_take = dropped_slots
+                                    self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, dropped_slots)
+                                    self._pulse_drop_frame_relay(expected_fps)
+                                    if not self.drop_frame:
+                                        self.drop_frame = True
+                                        self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 1)
+                                    logging.info(
+                                        "Drop frame detected: %d slot(s) dropped (total this take: %d).",
+                                        new_slots,
+                                        dropped_slots,
+                                    )
+                                    if self.drop_frame_timer:
+                                        self.drop_frame_timer.cancel()
+                                    self.drop_frame_timer = threading.Timer(0.5, self.reset_drop_frame)
+                                    self.drop_frame_timer.start()
 
-                                # Keep the GUI drop-frame indicator alive for 0.5 seconds.
-                                if self.drop_frame_timer:
-                                    self.drop_frame_timer.cancel()
-                                self.drop_frame_timer = threading.Timer(0.5, self.reset_drop_frame)
-                                self.drop_frame_timer.start()
+                            elif self.current_framerate is not None and expected_fps is not None:
+                                # FPS-deviation fallback for firmware without tcFrameCount.
+                                if abs(self.current_framerate - expected_fps) > 1:
+                                    self.drop_frame_count_current_take += 1
+                                    self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, self.drop_frame_count_current_take)
+                                    self._pulse_drop_frame_relay(expected_fps)
+                                    if not self.drop_frame:
+                                        self.drop_frame = True
+                                        self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 1)
+                                    logging.info("Drop frame detected (count=%d, FPS-deviation fallback).", self.drop_frame_count_current_take)
+                                    if self.drop_frame_timer:
+                                        self.drop_frame_timer.cancel()
+                                    self.drop_frame_timer = threading.Timer(0.5, self.reset_drop_frame)
+                                    self.drop_frame_timer.start()
 
-                            # Update framecount check interval based on current FPS
-                            if self.current_framerate > 0:
-                                framecount_fps = self.current_framerate
-                            else:
-                                framecount_fps = 1
-                            self.framecount_check_interval = max(0.5, 2 / framecount_fps)
+                        if self.current_framerate is not None and self.current_framerate > 0:
+                            self.framecount_check_interval = max(0.5, 2 / self.current_framerate)
+                        else:
+                            self.framecount_check_interval = max(0.5, 2 / 1)
 
                         # Check if framecount is changing
                         self.check_framecount_changing()
@@ -1043,6 +1063,7 @@ class RedisListener:
 
     def _clear_frame_warning_state(self) -> None:
         self.drop_frame_count_current_take = 0
+        self.tc_frame_count = None
         self.drop_frame = False
         self.frames_off_sync_latched_current_take = False
         if self.drop_frame_timer:

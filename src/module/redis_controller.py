@@ -145,11 +145,15 @@ class RedisController:
                 value = (self.r.get(key) or b"").decode()
                 self.cache[key] = value
 
-            if key == ParameterKey.REC.value:
-                if value == "1":
-                    self._start_recording_timer()
-                else:
+            if key == ParameterKey.IS_RECORDING.value:
+                if value == "0":
                     self._stop_recording_timer()
+            elif key == ParameterKey.REC.value:
+                if value == "1":
+                    # Start timer on first frame of take; don't restart if already running
+                    # (rec can bounce 0→1 during pipeline stalls without ending the take)
+                    if not (self._rec_timer_thread and self._rec_timer_thread.is_alive()):
+                        self._start_recording_timer()
             # notify subscribers – no log spam here
             if key != ParameterKey.FPS_ACTUAL.value:
                 self.redis_parameter_changed.emit({"key": key, "value": value})

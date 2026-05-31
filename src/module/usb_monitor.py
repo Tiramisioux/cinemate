@@ -746,7 +746,14 @@ class USBMonitor():
                 self.current_mic_id = None
                 self.audio_prepare_deferred = False
                 self._cancel_audio_prepare_timer()
-                self.usb_event.emit('mic_removed', device, model, serial)  # <-- Added this line
+                # Reset the dedup guard so a replacement mic plugged in immediately
+                # is not silently ignored by the 10-second cooldown window.
+                self.mic_processed = False
+                if self.sound_timer is not None:
+                    self.sound_timer.cancel()
+                    self.sound_timer = None
+                self.temp_sound_devices.clear()
+                self.usb_event.emit('mic_removed', device, model, serial)
                 self.audio_monitor.stop()
                 AudioMonitor.clear_mic_selection("microphone removed")
 

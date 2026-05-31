@@ -463,17 +463,18 @@ class CinePiProcess(Thread):
         args += recorder_profile_args(storage_fs)
 
         # ── Camera raw-buffer headroom ────────────────────────────────────
-        # More in-flight camera buffers absorb transient disk/encode stalls
-        # that would otherwise starve the sensor and drop a single frame
-        # (visible as a one-tick hole in the DNG timecode). libcamera's base
-        # for this video+raw path is 6 buffers; we lift it modestly.
-        #
-        # COST: each extra buffer is ~25 MB of CMA at 4K (full-res raw +
-        # video streams share the count). Too high exhausts CMA and the
-        # camera fails to start. Default 8 (+2, ~+50 MB) is safe on any
-        # reasonable config; raise via settings.json camera.raw_buffer_count
-        # after checking headroom with `grep Cma /proc/meminfo`.
-        buffer_count = 8
+        # More in-flight camera buffers absorb transient disk-write latency
+        # spikes that would otherwise starve the sensor and drop a single frame
+        # (visible as a one-tick hole in the DNG timecode). The base value is
+        # per storage profile — slower/spikier filesystems (exFAT, NTFS) get
+        # more headroom than ext4 — and can be overridden globally via
+        # settings.json camera.raw_buffer_count. Each extra buffer is ~25 MB of
+        # CMA at 4K; too high exhausts CMA and the camera fails to start, so
+        # confirm headroom with `grep Cma /proc/meminfo` before raising.
+        try:
+            buffer_count = int(profile.get("buffer_count", 8))
+        except (TypeError, ValueError):
+            buffer_count = 8
         try:
             override = int(
                 (_settings().get("camera", {}) or {}).get("raw_buffer_count", 0) or 0
@@ -482,10 +483,16 @@ class CinePiProcess(Thread):
                 buffer_count = override
         except (TypeError, ValueError):
             logging.warning(
-                "[%s] Invalid camera.raw_buffer_count in settings; using default %d",
+                "[%s] Invalid camera.raw_buffer_count in settings; using profile default %d",
                 self.cam.port,
                 buffer_count,
             )
+        logging.info(
+            "[%s] Camera raw-buffer headroom: --buffer-count %d (profile %s)",
+            self.cam.port,
+            buffer_count,
+            profile_name,
+        )
         args += ["--buffer-count", str(buffer_count)]
 
         return args

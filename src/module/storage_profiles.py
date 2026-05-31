@@ -19,6 +19,14 @@ FILESYSTEM_ALIASES = {
     "fuseblk": "ntfs",
 }
 
+# buffer_count: camera in-flight raw buffers passed to cinepi-raw as
+# --buffer-count. libcamera's base for the video+raw path is 6. More buffers
+# absorb transient disk-write latency spikes that would otherwise starve the
+# sensor and drop a frame. Slower / spikier filesystems (exFAT, NTFS) get more
+# headroom than ext4, which has flatter write latency. Each extra buffer costs
+# ~25 MB of CMA at 4K (raw + video streams share the count), so values stay
+# conservative; raise per profile (or via settings.json camera.raw_buffer_count)
+# only after confirming CMA headroom with `grep Cma /proc/meminfo`.
 RECORDER_PROFILES: Dict[str, Dict[str, str]] = {
     DEFAULT_RECORDER_PROFILE: {
         "label": "default-safe",
@@ -28,6 +36,7 @@ RECORDER_PROFILES: Dict[str, Dict[str, str]] = {
         "disk_affinity": "2",
         "encode_nice": "-10",
         "disk_nice": "-5",
+        "buffer_count": "8",
     },
     "ext4": {
         "label": "ext4-throughput",
@@ -37,6 +46,7 @@ RECORDER_PROFILES: Dict[str, Dict[str, str]] = {
         "disk_affinity": "2-3",
         "encode_nice": "-10",
         "disk_nice": "-5",
+        "buffer_count": "8",
     },
     "exfat": {
         "label": "exfat-conservative",
@@ -46,6 +56,7 @@ RECORDER_PROFILES: Dict[str, Dict[str, str]] = {
         "disk_affinity": "2",
         "encode_nice": "-10",
         "disk_nice": "-5",
+        "buffer_count": "10",
     },
     "ntfs": {
         "label": "ntfs-conservative",
@@ -55,6 +66,7 @@ RECORDER_PROFILES: Dict[str, Dict[str, str]] = {
         "disk_affinity": "2-3",
         "encode_nice": "-10",
         "disk_nice": "-5",
+        "buffer_count": "10",
     },
 }
 

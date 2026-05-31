@@ -836,6 +836,7 @@ class RedisListener:
                         now = datetime.datetime.now()
                         stats_data = json.loads(message_data)
                         buffer_size = self._coerce_int(stats_data.get('bufferSize', None))
+                        buffer_size_max = self._coerce_int(stats_data.get('bufferSizeMax', None))
                         raw_frame_count = self._coerce_int(stats_data.get('frameCount', None))
                         self.frame_count = self._logical_framecount_from_raw(raw_frame_count, now)
                         raw_tc_frame_count = self._coerce_int(stats_data.get('tcFrameCount', None))
@@ -868,16 +869,25 @@ class RedisListener:
                             self.redis_controller.set_value(ParameterKey.TC_CAM1.value, tc1)
                             self.last_timestamp_cam1 = timestamp_cam1
 
-                        # Update Redis key for current buffer size if changed
+                        # Update Redis key for current buffer size if changed.
+                        # Drive the GUI buffer VU from the peak backlog
+                        # (bufferSizeMax) cinepi-raw saw since the last stats
+                        # message, so a transient disk-write spike between two
+                        # delivered frames is visible instead of being missed by
+                        # instantaneous sampling. Falls back to bufferSize when
+                        # the running cinepi-raw build does not publish the peak.
                         if buffer_size is not None:
                             self.bufferSize = buffer_size
+                            display_buffer = buffer_size
+                            if buffer_size_max is not None and buffer_size_max > display_buffer:
+                                display_buffer = buffer_size_max
                             current_buffer = self.redis_controller.get_value(ParameterKey.BUFFER.value)
                             # Redis returns bytes or None → normalise to int or None
                             current_buffer = self._coerce_int(current_buffer)
 
-                            if current_buffer != buffer_size:
-                                self.redis_controller.set_value(ParameterKey.BUFFER.value, buffer_size)
-                                #logging.info(f"Buffer size changed to {buffer_size}")
+                            if current_buffer != display_buffer:
+                                self.redis_controller.set_value(ParameterKey.BUFFER.value, display_buffer)
+                                #logging.info(f"Buffer size changed to {display_buffer}")
 
                         # Update sensor timestamps
                         if sensor_timestamp is not None:

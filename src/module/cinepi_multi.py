@@ -461,7 +461,33 @@ class CinePiProcess(Thread):
             profile["disk_workers"],
         )
         args += recorder_profile_args(storage_fs)
-        
+
+        # ── Camera raw-buffer headroom ────────────────────────────────────
+        # More in-flight camera buffers absorb transient disk/encode stalls
+        # that would otherwise starve the sensor and drop a single frame
+        # (visible as a one-tick hole in the DNG timecode). libcamera's base
+        # for this video+raw path is 6 buffers; we lift it modestly.
+        #
+        # COST: each extra buffer is ~25 MB of CMA at 4K (full-res raw +
+        # video streams share the count). Too high exhausts CMA and the
+        # camera fails to start. Default 8 (+2, ~+50 MB) is safe on any
+        # reasonable config; raise via settings.json camera.raw_buffer_count
+        # after checking headroom with `grep Cma /proc/meminfo`.
+        buffer_count = 8
+        try:
+            override = int(
+                (_settings().get("camera", {}) or {}).get("raw_buffer_count", 0) or 0
+            )
+            if override > 0:
+                buffer_count = override
+        except (TypeError, ValueError):
+            logging.warning(
+                "[%s] Invalid camera.raw_buffer_count in settings; using default %d",
+                self.cam.port,
+                buffer_count,
+            )
+        args += ["--buffer-count", str(buffer_count)]
+
         return args
 
     def stop(self):

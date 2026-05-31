@@ -3,6 +3,30 @@ import time
 from module.redis_controller import ParameterKey
 
 def register_events(socketio, redis_controller, cinepi_controller, simple_gui, sensor_detect):
+    def resolution_switching_active():
+        return str(
+            redis_controller.get_value(ParameterKey.RESOLUTION_SWITCHING.value, "0")
+            or "0"
+        ).strip().lower() in ("1", "true", "yes", "on")
+
+    def selected_resolution_mode():
+        target_mode = redis_controller.get_value(ParameterKey.RESOLUTION_TARGET_MODE.value)
+        if resolution_switching_active() and target_mode is not None:
+            return target_mode
+        return redis_controller.get_value(ParameterKey.SENSOR_MODE.value)
+
+    def emit_resolution_selection(selected_mode=None):
+        socketio.emit('parameter_change', {
+            'selected_resolution_mode': (
+                selected_mode
+                if selected_mode is not None
+                else selected_resolution_mode()
+            ),
+            'resolution_switching': redis_controller.get_value(
+                ParameterKey.RESOLUTION_SWITCHING.value,
+                "0",
+            ),
+        })
     
     @socketio.on('connect')
     def handle_connect():
@@ -21,7 +45,11 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
 
         initial_values['sensor_resolutions'] = sensor_detect.get_available_resolutions()
         initial_values['current_sensor'] = sensor_detect.camera_model
-        initial_values['selected_resolution_mode'] = redis_controller.get_value(ParameterKey.SENSOR_MODE.value)
+        initial_values['selected_resolution_mode'] = selected_resolution_mode()
+        initial_values['resolution_switching'] = redis_controller.get_value(
+            ParameterKey.RESOLUTION_SWITCHING.value,
+            "0",
+        )
 
         emit('initial_values', initial_values)
 
@@ -42,13 +70,13 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
             current_shutter_a = redis_controller.get_value(ParameterKey.SHUTTER_A.value)
             socketio.emit('shutter_a_update', {'shutter_a_steps': shutter_a_steps, 'current_shutter_a': current_shutter_a})
 
-        if key == ParameterKey.SENSOR_MODE.value:
-            socketio.emit('parameter_change', {
-                ParameterKey.SENSOR_MODE.value: value,
-                'selected_resolution_mode': value,
-            })
+        if key == ParameterKey.RESOLUTION_TARGET_MODE.value:
+            emit_resolution_selection(value)
 
-        if key in [ParameterKey.SENSOR_MODE.value, ParameterKey.WB.value]:
+        if key in (ParameterKey.SENSOR_MODE.value, ParameterKey.RESOLUTION_SWITCHING.value):
+            emit_resolution_selection()
+
+        if key == ParameterKey.WB.value:
             time.sleep(2)  # Add a 2-second pause
             socketio.emit('reload_browser')  # Emit event to reload the browser
 
@@ -107,7 +135,12 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
     def handle_change_resolution(data):
         sensor_mode = data.get('mode')
         if sensor_mode is not None:
+            socketio.emit('parameter_change', {
+                'selected_resolution_mode': sensor_mode,
+                'resolution_switching': "1",
+            })
             if not cinepi_controller.set_resolution(int(sensor_mode)):
+                emit_resolution_selection()
                 return
             # Emit the current values and steps immediately before reloading
             shutter_a_steps = cinepi_controller.calculate_dynamic_shutter_angles(
@@ -124,8 +157,7 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
                 'current_fps': current_fps
             })
 
-            time.sleep(2)  # Add a 2-second pause
-            socketio.emit('reload_browser')  # Emit event to reload the browser
+            socketio.emit('reload_stream')
 
     @socketio.on('container_tap')
     def handle_container_tap():

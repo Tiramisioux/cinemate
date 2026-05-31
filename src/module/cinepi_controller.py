@@ -24,6 +24,7 @@ from module.dynamic_resolution import (
 
 SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
 GUI_RESOLUTION_PREVIEW_DELAY_SECONDS = 0.12
+GUI_RESOLUTION_SWITCHING_HOLD_SECONDS = 2.5
 
 class CinePiController:
     def __init__(self,
@@ -111,6 +112,7 @@ class CinePiController:
         self._last_resolution_change_started_at = 0.0
         self._resolution_change_min_interval_s = 0.25
         self._recording_resolution_change_min_interval_s = 2.0
+        self._resolution_switching_timer = None
         self._storage_profile_restart_pending = False
         self._active_storage_recorder_profile = self._current_storage_recorder_profile()
         try:
@@ -1178,6 +1180,49 @@ class CinePiController:
             gui_layout_new,
         )
 
+    def _publish_resolution_target_state(self, value, resolution_info, *, switching):
+        self.redis_controller.set_value(ParameterKey.RESOLUTION_TARGET_MODE.value, str(value))
+        self.redis_controller.set_value(
+            ParameterKey.RESOLUTION_TARGET_WIDTH.value,
+            str(resolution_info.get('width')),
+        )
+        self.redis_controller.set_value(
+            ParameterKey.RESOLUTION_TARGET_HEIGHT.value,
+            str(resolution_info.get('height')),
+        )
+        self.redis_controller.set_value(
+            ParameterKey.RESOLUTION_TARGET_BIT_DEPTH.value,
+            str(resolution_info.get('bit_depth')),
+        )
+        self.redis_controller.set_value(
+            ParameterKey.RESOLUTION_SWITCHING.value,
+            1 if switching else 0,
+        )
+
+    def _cancel_resolution_switching_timer(self):
+        timer = getattr(self, "_resolution_switching_timer", None)
+        if timer is not None:
+            timer.cancel()
+            self._resolution_switching_timer = None
+
+    def _schedule_resolution_switch_complete(self, value, resolution_info):
+        self._cancel_resolution_switching_timer()
+
+        def complete():
+            try:
+                self._publish_resolution_target_state(
+                    value,
+                    resolution_info,
+                    switching=False,
+                )
+            except Exception:
+                logging.exception("Failed to clear resolution switching state.")
+
+        timer = threading.Timer(GUI_RESOLUTION_SWITCHING_HOLD_SECONDS, complete)
+        timer.daemon = True
+        self._resolution_switching_timer = timer
+        timer.start()
+
     def _apply_resolution_mode(self, value, restore_user_fps=None, *, restart_process=False):
         try:
             value = self._normalize_sensor_mode_value(value)
@@ -1191,6 +1236,12 @@ class CinePiController:
 
             # Dynamic FPS changes should update the operator-facing resolution
             # selection immediately, even while preview reconfigure is pending.
+            self._cancel_resolution_switching_timer()
+            self._publish_resolution_target_state(
+                value,
+                resolution_info,
+                switching=True,
+            )
             self._publish_resolution_gui_state(value, resolution_info)
             self._pace_resolution_change(recording)
             time.sleep(GUI_RESOLUTION_PREVIEW_DELAY_SECONDS)
@@ -1229,9 +1280,11 @@ class CinePiController:
                 self.set_fps(float(restore_user_fps), update_user_target=False)
 
             self._notify_resolution_change(value)
+            self._schedule_resolution_switch_complete(value, resolution_info)
             return True
 
         except ValueError as error:
+            self.redis_controller.set_value(ParameterKey.RESOLUTION_SWITCHING.value, 0)
             logging.error(f"Error setting resolution: {error}")
             return False
 

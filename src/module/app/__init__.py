@@ -18,7 +18,13 @@ def create_app(redis_controller, cinepi_controller, simple_gui, sensor_detect):
 
     if hasattr(cinepi_controller, 'add_resolution_change_callback'):
         def emit_resolution_change(sensor_mode):
-            socketio.emit('resolution_change', {'sensor_mode': sensor_mode})
+            socketio.emit('resolution_change', {
+                'sensor_mode': sensor_mode,
+                'resolution_switching': redis_controller.get_value(
+                    'resolution_switching',
+                    "0",
+                ),
+            })
             socketio.emit('reload_stream')
 
         cinepi_controller.add_resolution_change_callback(emit_resolution_change)

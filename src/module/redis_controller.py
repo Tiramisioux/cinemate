@@ -48,6 +48,11 @@ class ParameterKey(Enum):
     DYNAMIC_RESOLUTION_ENABLED = "dynamic_resolution_enabled"
     DYNAMIC_RESOLUTION_ACTIVE = "dynamic_resolution_active"
     DYNAMIC_RESOLUTION_DESIRED_MODE = "dynamic_resolution_desired_mode"
+    RESOLUTION_TARGET_MODE = "resolution_target_mode"
+    RESOLUTION_TARGET_WIDTH = "resolution_target_width"
+    RESOLUTION_TARGET_HEIGHT = "resolution_target_height"
+    RESOLUTION_TARGET_BIT_DEPTH = "resolution_target_bit_depth"
+    RESOLUTION_SWITCHING = "resolution_switching"
 
     TC_CAM0           = "tc_cam0"
     TC_CAM1           = "tc_cam1"

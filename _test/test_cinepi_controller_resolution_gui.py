@@ -111,9 +111,12 @@ class ResolutionGuiStateTests(unittest.TestCase):
             observed_during_pace.append(
                 {
                     "sensor_mode": controller.redis_controller.get_value(ParameterKey.SENSOR_MODE.value),
+                    "target_mode": controller.redis_controller.get_value(ParameterKey.RESOLUTION_TARGET_MODE.value),
                     "width": controller.redis_controller.get_value(ParameterKey.WIDTH.value),
+                    "target_width": controller.redis_controller.get_value(ParameterKey.RESOLUTION_TARGET_WIDTH.value),
                     "gui_layout": controller.redis_controller.get_value(ParameterKey.GUI_LAYOUT.value),
                     "controller_mode": controller.sensor_mode,
+                    "switching": controller.redis_controller.get_value(ParameterKey.RESOLUTION_SWITCHING.value),
                 }
             )
 
@@ -131,13 +134,17 @@ class ResolutionGuiStateTests(unittest.TestCase):
             [
                 {
                     "sensor_mode": "1",
+                    "target_mode": "1",
                     "width": "3856",
+                    "target_width": "3856",
                     "gui_layout": "1",
                     "controller_mode": 1,
+                    "switching": 1,
                 }
             ],
         )
         self.assertEqual(controller.notifications, [1])
+        controller._cancel_resolution_switching_timer()
 
     def test_switch_resolution_logs_and_toggles_from_desired_mode_when_dynamic_active(self):
         controller = self.controller()

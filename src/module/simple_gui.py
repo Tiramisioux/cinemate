@@ -1510,7 +1510,7 @@ class SimpleGUI(threading.Thread):
         preview_x = (frame_width - preview_w) // 2
         preview_y = (frame_height - preview_h) // 2
 
-        line_color = (70, 70, 70) if values.get("zoom_is_default", True) else (255, 221, 0)
+        line_color = (249, 249, 249) if values.get("zoom_is_default", True) else (255, 221, 0)
 
         outline_width = 2
         outline_rect = [

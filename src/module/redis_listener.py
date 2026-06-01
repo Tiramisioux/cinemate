@@ -22,7 +22,8 @@ class RedisListener:
         port=6379,
         db=0,
         *,
-        live_sync_warning_tolerance_frames: int | float = 2,
+        live_sync_warning_tolerance_frames: int | float = 5,
+        live_sync_startup_guard_frames: int | float = 10,
         final_sync_analysis_tolerance_frames: int | float = 1,
         tc_drop_jitter_tolerance_frames: int | float = 1,
     ):
@@ -100,6 +101,10 @@ class RedisListener:
             tc_drop_jitter_tolerance_frames,
             default=1,
         )
+        # How many expected frames must have elapsed before the live sync check
+        # activates. Covers cinepi-raw startup latency after is_recording=1.
+        # At 25fps, 10 frames = 400ms. Configurable via live_sync_startup_guard_frames.
+        self.live_sync_startup_guard_frames = max(1.0, float(live_sync_startup_guard_frames))
 
 
         self.cinepi_running = True
@@ -725,10 +730,10 @@ class RedisListener:
             honor_frame_limit=False,
         )
 
-        # Avoid false warnings while the first few frame slots are still
+        # Avoid false warnings while the first frame slots are still
         # settling after record start. After that, drift beyond the configured
         # live tolerance latches.
-        if expected_float < 3:
+        if expected_float < self.live_sync_startup_guard_frames:
             return
 
         recorded_slots = int(self.framecount or 0)

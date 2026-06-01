@@ -1795,7 +1795,12 @@ class RedisListener:
             logging.info(f"Calculated expected number of frames: {expected_frames_total}")
             logging.info(f"Actual number of recorded frames: {recorded_frames_total}")
 
-        sync_recorded_frames_total = recorded_frames_total + dropped_frame_slots_total
+        # Only credit dropped-frame holes that explain a genuine shortfall.
+        # If the disk count already meets or exceeds expected, compensation
+        # would push the difference further negative and trigger a false warning.
+        shortfall_total = max(0, expected_frames_total - recorded_frames_total)
+        dropped_frame_slots_compensated = min(dropped_frame_slots_total, shortfall_total)
+        sync_recorded_frames_total = recorded_frames_total + dropped_frame_slots_compensated
         diff = expected_frames_total - sync_recorded_frames_total
         sync_warning_suppressed = self.live_sync_suppressed_current_take
         frames_in_sync = (
@@ -1803,28 +1808,61 @@ class RedisListener:
             or sync_warning_suppressed
         )
 
-        drop_during_last_take = (not self.recording_was_preroll) and drop_detected_this_take
+        # ── Option 3: split TC holes from genuinely missing files ────────────
+        # tc_hole_count  = gap events during recording (frame arrived late enough
+        #                  to round to ≥2 frame periods; file may still be present)
+        # missing_frame_count = raw shortfall on disk vs wall-clock expectation
+        #                       (max(0, expected − recorded), confirmed absent files)
+        missing_frames_count = max(0, expected_frames_total - recorded_frames_total)
+
+        # ── Option 2: drop_frame_during_last_take only fires on genuine shortfall
+        # A take that produced the right number of files doesn't carry a persistent
+        # drop warning into the next take, even if TC holes were observed live.
+        drop_during_last_take = (
+            (not self.recording_was_preroll)
+            and missing_frames_count > 0
+        )
         self.redis_controller.set_value(
             ParameterKey.DROP_FRAME_DURING_LAST_TAKE.value,
             1 if drop_during_last_take else 0,
         )
+        # drop_frame_count keeps its existing meaning (tc_hole_count) for
+        # backward compatibility; tc_hole_count is the explicit named alias.
         self.redis_controller.set_value(
             ParameterKey.DROP_FRAME_COUNT.value,
             drop_frame_count_for_reporting,
         )
+        self.redis_controller.set_value(
+            ParameterKey.TC_HOLE_COUNT.value,
+            drop_frame_count_for_reporting,
+        )
+        self.redis_controller.set_value(
+            ParameterKey.MISSING_FRAME_COUNT.value,
+            missing_frames_count,
+        )
         if not quiet_summary:
-            logging.info(
-                f"Drop frames detected this take: {drop_frame_count_for_reporting}"
-            )
+            if drop_frame_count_for_reporting:
+                logging.info(
+                    "TC hole events this take: %d (frame(s) arrived late enough to "
+                    "create a timecode gap; may still be present on disk).",
+                    drop_frame_count_for_reporting,
+                )
+            if missing_frames_count:
+                logging.warning(
+                    "Missing frames (not on disk): %d.",
+                    missing_frames_count,
+                )
+            else:
+                logging.info("Missing frames (not on disk): 0 — all files present.")
             if segment_index_hole_frames_total > live_drop_holes_total:
                 logging.info(
                     "On-disk segment scan found %d dropped-frame hole(s) not seen by live stats.",
                     segment_index_hole_frames_total,
                 )
-            if dropped_frame_slots_total:
+            if dropped_frame_slots_compensated:
                 logging.info(
-                    "Counting %d dropped-frame hole(s) as intentional sync slot(s).",
-                    dropped_frame_slots_total,
+                    "Counting %d hole(s) as sync slot(s) to reconcile shortfall.",
+                    dropped_frame_slots_compensated,
                 )
 
         if sync_warning_suppressed:

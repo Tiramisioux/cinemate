@@ -1851,24 +1851,44 @@ class RedisListener:
             missing_frames_count,
         )
         if not quiet_summary:
-            if drop_frame_count_for_reporting:
+            # Report TC timing and file integrity as a single precise verdict.
+            #
+            # Three distinct states:
+            #  A) all files present + consecutive indices + TC has late-arrival
+            #     events → timing irregularity only, no data loss.
+            #  B) files missing (missing_frames_count > 0) or index gaps
+            #     (segment_index_hole_frames_total > 0) → genuine data loss.
+            #  C) no TC events, no missing files → clean take (covered by ✓).
+            all_files_present = (missing_frames_count == 0)
+            no_index_gaps = (segment_index_hole_frames_total == 0)
+
+            if drop_frame_count_for_reporting > 0 and all_files_present and no_index_gaps:
+                # Every frame is on disk and the DNG index is contiguous.
+                # The TC values are not perfectly consecutive — some frames
+                # arrived late (inter-frame gap ≥ 1.5× frame period) causing
+                # the timecode counter to skip forward — but no data was lost.
                 logging.info(
-                    "TC hole events this take: %d (frame(s) arrived late enough to "
-                    "create a timecode gap; may still be present on disk).",
+                    "TC timing: %d late-arrival event(s) created timecode "
+                    "discontinuity/discontinuities in the DNG metadata. "
+                    "All %d files present with contiguous indices — no data lost.",
+                    drop_frame_count_for_reporting,
+                    recorded_frames_total,
+                )
+            elif missing_frames_count > 0:
+                logging.warning(
+                    "Missing frames: %d frame(s) not written to disk "
+                    "(%d TC gap event(s) during recording).",
+                    missing_frames_count,
                     drop_frame_count_for_reporting,
                 )
-            if missing_frames_count:
+            elif segment_index_hole_frames_total > 0:
                 logging.warning(
-                    "Missing frames (not on disk): %d.",
-                    missing_frames_count,
-                )
-            else:
-                logging.info("Missing frames (not on disk): 0 — all files present.")
-            if segment_index_hole_frames_total > live_drop_holes_total:
-                logging.info(
-                    "On-disk segment scan found %d dropped-frame hole(s) not seen by live stats.",
+                    "DNG index gaps: %d missing file slot(s) in sequence "
+                    "(%d TC gap event(s) during recording).",
                     segment_index_hole_frames_total,
+                    drop_frame_count_for_reporting,
                 )
+
             if dropped_frame_slots_compensated:
                 logging.info(
                     "Counting %d hole(s) as sync slot(s) to reconcile shortfall.",

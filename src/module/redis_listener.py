@@ -1891,13 +1891,22 @@ class RedisListener:
             self.frames_off_sync_latched_current_take
             and not sync_warning_suppressed
         )
-        if segmented_recording and frames_in_sync and live_sync_warning_latched:
+        if frames_in_sync and live_sync_warning_latched:
+            # Final analysis is clean — clear the latch regardless of whether
+            # this was a segmented or normal recording. The live check fires
+            # conservatively early; the final disk count is the authoritative
+            # verdict. A clean final analysis always unlatches.
             live_sync_warning_latched = False
             self.frames_off_sync_latched_current_take = False
             if not quiet_summary:
-                logging.info(
-                    "Clearing live frame-sync warning after segmented final analysis accounted for all frames."
-                )
+                if segmented_recording:
+                    logging.info(
+                        "Clearing live frame-sync warning after segmented final analysis accounted for all frames."
+                    )
+                else:
+                    logging.info(
+                        "Clearing live frame-sync warning: final analysis confirmed all frames present."
+                    )
         if not frames_in_sync and not sync_warning_suppressed:
             self.frames_off_sync_latched_current_take = True
 
@@ -1906,8 +1915,6 @@ class RedisListener:
             ParameterKey.FRAMES_IN_SYNC.value,
             1 if frames_in_sync and not live_sync_warning_latched else 0,
         )
-        if frames_in_sync and live_sync_warning_latched and not quiet_summary:
-            logging.info("Keeping live frame-sync warning latched until the next take.")
 
         current_correction_factor = self.fps_correction_factor_at_rec_start
         if not current_correction_factor or current_correction_factor <= 0:

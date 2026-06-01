@@ -870,11 +870,15 @@ class RedisListener:
                         if raw_tc_frame_count is not None:
                             self.tc_frame_count = raw_tc_frame_count
                         # droppedFrames: unbiased hole count from cinepi-raw.
-                        # When present, use it directly. When absent (older
-                        # firmware), the drop-detection block falls back to
-                        # tcFrameCount − frameCount with the jitter deadband.
+                        # Guard against the startup race: cinepi-raw's
+                        # resetFrameCount() is called during encoder setup, but
+                        # the first process() call can fire before the reset
+                        # completes and publish the *previous* clip's counter.
+                        # Only accept the value once awaiting_fresh_framecount
+                        # is cleared (i.e. the first valid frame count has
+                        # been seen), by which point the reset has taken effect.
                         raw_dropped_frames = self._coerce_int(stats_data.get('droppedFrames', None))
-                        if raw_dropped_frames is not None:
+                        if raw_dropped_frames is not None and not self.awaiting_fresh_framecount:
                             self.hw_dropped_frames = raw_dropped_frames
                         color_temp = stats_data.get('colorTemp', None)
                         sensor_timestamp = stats_data.get('sensorTimestamp', None)
@@ -972,6 +976,7 @@ class RedisListener:
 
                         drop_alerts_enabled = (
                             self.is_recording
+                            and not self.awaiting_fresh_framecount
                             and not self.recording_was_preroll
                             and not self._storage_preroll_active()
                             and not self._recording_reconfigure_grace_active(now)

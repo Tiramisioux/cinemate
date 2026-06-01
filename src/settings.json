@@ -77,7 +77,8 @@
     ],
     "conform_frame_rate": 25,
     "live_sync_warning_tolerance_frames": 2,
-    "final_sync_analysis_tolerance_frames": 1
+    "final_sync_analysis_tolerance_frames": 1,
+    "tc_drop_jitter_tolerance_frames": 1
   },
   "arrays": {
     "iso_steps": [

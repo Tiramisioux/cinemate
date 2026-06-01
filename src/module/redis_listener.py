@@ -24,6 +24,7 @@ class RedisListener:
         *,
         live_sync_warning_tolerance_frames: int | float = 2,
         final_sync_analysis_tolerance_frames: int | float = 1,
+        tc_drop_jitter_tolerance_frames: int | float = 1,
     ):
         self.redis_client = redis.StrictRedis(host=host, port=port, db=db)
         
@@ -79,6 +80,7 @@ class RedisListener:
         self.drop_frame_count_current_take = 0
         self.drop_frame_relay_timer = None
         self.tc_frame_count: int | None = None
+        self.hw_dropped_frames: int | None = None  # unbiased count from cinepi-raw droppedFrames
         self.frames_off_sync_latched_current_take = False
         self.live_sync_suppressed_current_take = False
         self.live_sync_warning_tolerance_frames = self._coerce_frame_tolerance(
@@ -87,6 +89,15 @@ class RedisListener:
         )
         self.final_sync_analysis_tolerance_frames = self._coerce_frame_tolerance(
             final_sync_analysis_tolerance_frames,
+            default=1,
+        )
+        # The cinepi-raw timecode counter (tcFrameCount) advances by rounding
+        # each inter-frame µs delta with a +1 floor, so it can lead frameCount
+        # by ~1 slot from ordinary timing jitter (a late frame followed by an
+        # early one) without any frame actually being lost. Ignore a lead at or
+        # below this tolerance so jitter does not raise a phantom drop alert.
+        self.tc_drop_jitter_tolerance_frames = self._coerce_frame_tolerance(
+            tc_drop_jitter_tolerance_frames,
             default=1,
         )
 
@@ -721,7 +732,13 @@ class RedisListener:
             return
 
         recorded_slots = int(self.framecount or 0)
-        sync_slots = recorded_slots + int(self.drop_frame_count_current_take)
+        # Drop compensation may only recover frames that are genuinely missing
+        # from the recorded count. Clamping to the shortfall stops a phantom
+        # (jitter-inflated) timecode drop count from pushing a complete take
+        # past the tolerance and latching a false warning.
+        shortfall = max(0, expected_slots - recorded_slots)
+        drop_compensation = min(int(self.drop_frame_count_current_take), shortfall)
+        sync_slots = recorded_slots + drop_compensation
         diff = expected_slots - sync_slots
         if abs(diff) <= self.live_sync_warning_tolerance_frames:
             return
@@ -736,7 +753,7 @@ class RedisListener:
             self.live_sync_warning_tolerance_frames,
             expected_slots,
             recorded_slots,
-            self.drop_frame_count_current_take,
+            drop_compensation,
         )
 
     def _update_frames_in_sync(self, stats_data: dict[str, object] | None = None) -> None:
@@ -764,7 +781,12 @@ class RedisListener:
             sensor_count,
         )
         recorded_frames = int(self.framecount or 0)
-        dropped_frame_slots = self.drop_frame_count_current_take * max(1, sensor_count)
+        # See _update_live_frames_in_sync: only credit dropped slots that
+        # actually explain a shortfall vs expected, so a jitter-inflated
+        # timecode drop count cannot flag a complete take as out of sync.
+        raw_dropped_slots = self.drop_frame_count_current_take * max(1, sensor_count)
+        shortfall = max(0, expected_int - recorded_frames)
+        dropped_frame_slots = min(raw_dropped_slots, shortfall)
 
         in_sync = (
             abs(expected_int - (recorded_frames + dropped_frame_slots))
@@ -842,6 +864,13 @@ class RedisListener:
                         raw_tc_frame_count = self._coerce_int(stats_data.get('tcFrameCount', None))
                         if raw_tc_frame_count is not None:
                             self.tc_frame_count = raw_tc_frame_count
+                        # droppedFrames: unbiased hole count from cinepi-raw.
+                        # When present, use it directly. When absent (older
+                        # firmware), the drop-detection block falls back to
+                        # tcFrameCount − frameCount with the jitter deadband.
+                        raw_dropped_frames = self._coerce_int(stats_data.get('droppedFrames', None))
+                        if raw_dropped_frames is not None:
+                            self.hw_dropped_frames = raw_dropped_frames
                         color_temp = stats_data.get('colorTemp', None)
                         sensor_timestamp = stats_data.get('sensorTimestamp', None)
                         timestamp = stats_data.get('timestamp')
@@ -945,11 +974,11 @@ class RedisListener:
                         )
 
                         if drop_alerts_enabled:
-                            if self.tc_frame_count is not None and raw_frame_count is not None:
-                                # TC-based: exact dropped slot count from inter-frame timestamp deltas.
-                                # tcFrameCount advances by >1 when a frame is dropped; the difference
-                                # with frameCount is the precise number of dropped slots this clip.
-                                dropped_slots = max(0, self.tc_frame_count - raw_frame_count)
+                            if self.hw_dropped_frames is not None:
+                                # Tier 1 – unbiased hw counter (cinepi-raw ≥ droppedFrames build).
+                                # Each unit is exactly one frame that was not written to disk
+                                # (inter-frame gap rounded to ≥2 frame periods). No jitter bias.
+                                dropped_slots = self.hw_dropped_frames
                                 if dropped_slots > self.drop_frame_count_current_take:
                                     new_slots = dropped_slots - self.drop_frame_count_current_take
                                     self.drop_frame_count_current_take = dropped_slots
@@ -959,7 +988,34 @@ class RedisListener:
                                         self.drop_frame = True
                                         self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 1)
                                     logging.info(
-                                        "Drop frame detected: %d slot(s) dropped (total this take: %d).",
+                                        "Drop frame detected (hw): %d hole(s) (total this take: %d).",
+                                        new_slots,
+                                        dropped_slots,
+                                    )
+                                    if self.drop_frame_timer:
+                                        self.drop_frame_timer.cancel()
+                                    self.drop_frame_timer = threading.Timer(0.5, self.reset_drop_frame)
+                                    self.drop_frame_timer.start()
+
+                            elif self.tc_frame_count is not None and raw_frame_count is not None:
+                                # Tier 2 – TC-diff fallback (firmware with tcFrameCount but not
+                                # droppedFrames). The TC counter has a +1 floor bias; the deadband
+                                # absorbs single-slot jitter so ordinary timing noise does not
+                                # trigger a false drop alert.
+                                dropped_slots = max(0, self.tc_frame_count - raw_frame_count)
+                                if (
+                                    dropped_slots > self.tc_drop_jitter_tolerance_frames
+                                    and dropped_slots > self.drop_frame_count_current_take
+                                ):
+                                    new_slots = dropped_slots - self.drop_frame_count_current_take
+                                    self.drop_frame_count_current_take = dropped_slots
+                                    self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, dropped_slots)
+                                    self._pulse_drop_frame_relay(expected_fps)
+                                    if not self.drop_frame:
+                                        self.drop_frame = True
+                                        self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 1)
+                                    logging.info(
+                                        "Drop frame detected (tc-diff): %d slot(s) (total this take: %d).",
                                         new_slots,
                                         dropped_slots,
                                     )
@@ -969,7 +1025,7 @@ class RedisListener:
                                     self.drop_frame_timer.start()
 
                             elif self.current_framerate is not None and expected_fps is not None:
-                                # FPS-deviation fallback for firmware without tcFrameCount.
+                                # Tier 3 – FPS-deviation fallback (oldest firmware, no TC support).
                                 if abs(self.current_framerate - expected_fps) > 1:
                                     self.drop_frame_count_current_take += 1
                                     self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, self.drop_frame_count_current_take)
@@ -977,7 +1033,7 @@ class RedisListener:
                                     if not self.drop_frame:
                                         self.drop_frame = True
                                         self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 1)
-                                    logging.info("Drop frame detected (count=%d, FPS-deviation fallback).", self.drop_frame_count_current_take)
+                                    logging.info("Drop frame detected (fps-dev fallback, count=%d).", self.drop_frame_count_current_take)
                                     if self.drop_frame_timer:
                                         self.drop_frame_timer.cancel()
                                     self.drop_frame_timer = threading.Timer(0.5, self.reset_drop_frame)
@@ -1074,6 +1130,7 @@ class RedisListener:
     def _clear_frame_warning_state(self) -> None:
         self.drop_frame_count_current_take = 0
         self.tc_frame_count = None
+        self.hw_dropped_frames = None
         self.drop_frame = False
         self.frames_off_sync_latched_current_take = False
         if self.drop_frame_timer:

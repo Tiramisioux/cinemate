@@ -848,6 +848,7 @@ def run_application(args, log_queue):
         ssd_monitor,
         live_sync_warning_tolerance_frames=settings_cfg.get("live_sync_warning_tolerance_frames", 2),
         final_sync_analysis_tolerance_frames=settings_cfg.get("final_sync_analysis_tolerance_frames", 1),
+        tc_drop_jitter_tolerance_frames=settings_cfg.get("tc_drop_jitter_tolerance_frames", 1),
     )
     redis_listener.set_recording_stop_callback(cinepi_controller.stop_recording)
     cinepi_controller.attach_redis_listener(redis_listener)

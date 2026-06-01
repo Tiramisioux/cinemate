@@ -1204,6 +1204,26 @@ exec "$VENV_DIR/bin/python3" "$CINEMATE_DIR/src/main.py" "\$@"
 EOF
 }
 
+configure_audio_rtprio() {
+    log "Granting real-time scheduling priority to @audio group"
+    # cinepi-audio-capture uses SCHED_FIFO to stay ahead of DNG-writer I/O.
+    # Without this, sched_setscheduler(SCHED_FIFO) returns EPERM for the pi
+    # user when cinemate runs outside of systemd (manual / dev runs).
+    # The cinemate-autostart.service unit already carries LimitRTPRIO=30,
+    # but this limits.d drop-in extends the same right to shell sessions so
+    # that manual cinemate runs benefit from the same drift protection.
+    backup_file /etc/security/limits.d/cinemate-audio.conf
+    write_root_file /etc/security/limits.d/cinemate-audio.conf 644 <<EOF
+# Allow the audio group to use real-time scheduling (SCHED_FIFO).
+# Required by cinepi-audio-capture (cinepi-raw) for xrun-resistant
+# 24-bit audio capture alongside heavy DNG write I/O.
+@audio - rtprio 30
+@audio - memlock unlimited
+EOF
+    sudo usermod -aG audio "$PI_USER"
+    detail "Added $PI_USER to audio group; re-login required for limits to take effect"
+}
+
 configure_sudoers() {
     log "Writing sudoers drop-ins"
     backup_file /etc/sudoers.d/cinemate-env
@@ -1460,6 +1480,7 @@ main() {
     configure_media_permissions
     configure_run_wrapper
     configure_sudoers
+    configure_audio_rtprio
     configure_logrotate
     configure_bashrc
     configure_settings_json

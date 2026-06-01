@@ -209,14 +209,13 @@ class SSDMonitor:
     def _redis_set_many(self, kv: dict) -> None:
         if not self._redis:
             return
-        if hasattr(self._redis, "pipeline"):
-            pipe = self._redis.pipeline()
-            for k, v in kv.items():
-                pipe.set(k, v)
-            pipe.execute()
-        else:
-            for k, v in kv.items():
-                self._redis.set_value(k, v)
+        # Always go through set_value() so the RedisController local cache
+        # stays coherent. The pipeline path (pipe.set / pipe.execute) bypasses
+        # set_value() and leaves the cache stale, causing _build_args() to read
+        # the old "none" value for STORAGE_FILESYSTEM and select the wrong
+        # recorder profile at cinepi-raw launch time.
+        for k, v in kv.items():
+            self._redis.set_value(k, v)
 
     # ------------------------------------------------------------------
     # internals

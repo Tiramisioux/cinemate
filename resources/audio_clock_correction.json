@@ -64,8 +64,8 @@
 
   "devices": {
     "RØDE VideoMic NTG": {
-      "ppm": 1130,
-      "note": "Measured 2026-06-02, 4K NVMe exFAT, two 6-minute takes under cinemate-autostart. Consistent 1117–1145 ppm across both takes, zero xruns. ADC runs at ~47 946 Hz instead of 48 000 Hz nominal."
+      "ppm": 1797,
+      "note": "Recalibrated 2026-06-02. Initial measurement (1130 ppm, two 6-min NVMe exFAT takes) left 6 frames of residual drift at the end of a 6-min take after applying correction. Residual: 6 frames / (360 s × 25 fps) = 667 ppm added → 1797 ppm total. Implied ADC rate ~47 914 Hz. Re-verify with a 6-min take; first clap must be in sync, last clap must be within ±1 frame."
     }
   }
 }

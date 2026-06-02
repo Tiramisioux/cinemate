@@ -63,7 +63,7 @@
   "schema_version": 1,
 
   "devices": {
-    "RODE VideoMic GO II": {
+    "RØDE VideoMic NTG": {
       "ppm": 1130,
       "note": "Measured 2026-06-02, 4K NVMe exFAT, two 6-minute takes under cinemate-autostart. Consistent 1117–1145 ppm across both takes, zero xruns. ADC runs at ~47 946 Hz instead of 48 000 Hz nominal."
     }

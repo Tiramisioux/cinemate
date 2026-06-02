@@ -139,15 +139,30 @@ def _audio_clock_ppm(settings: dict | None = None) -> int:
         logging.info("Audio clock correction: database contains no device entries — no correction applied")
         return 0
 
+    # Prefer the card name already detected and published to Redis by usb_monitor.
+    # Fall back to querying arecord -l directly if Redis is unavailable.
+    card_name = ""
     try:
-        result = subprocess.run(["arecord", "-l"], capture_output=True, text=True, timeout=3)
-        arecord_output = (result.stdout + result.stderr).lower()
+        import redis as _redis
+        _r = _redis.StrictRedis(host="localhost", port=6379, db=0)
+        raw = _r.get("MIC_CARD_NAME")
+        if raw:
+            card_name = raw.decode("utf-8", errors="replace").strip()
     except Exception as exc:
-        logging.warning("Audio clock correction: could not query arecord -l: %s — no correction applied", exc)
-        return 0
+        logging.debug("Audio clock correction: could not read MIC_CARD_NAME from Redis (%s); falling back to arecord -l", exc)
+
+    if not card_name:
+        try:
+            result = subprocess.run(["arecord", "-l"], capture_output=True, text=True, timeout=3)
+            card_name = result.stdout + result.stderr
+        except Exception as exc:
+            logging.warning("Audio clock correction: could not query arecord -l: %s — no correction applied", exc)
+            return 0
+
+    card_name_lower = card_name.lower()
 
     for device_name, entry in devices.items():
-        if device_name.lower() in arecord_output:
+        if device_name.lower() in card_name_lower:
             try:
                 raw_ppm = entry["ppm"] if isinstance(entry, dict) else entry
                 ppm = int(raw_ppm)
@@ -159,7 +174,7 @@ def _audio_clock_ppm(settings: dict | None = None) -> int:
                 continue
             note = entry.get("note", "") if isinstance(entry, dict) else ""
             logging.info(
-                "Audio clock correction: '%s' matched — applying %+d ppm resampling after each take "
+                "Audio clock correction: '%s' detected — applying %+d ppm resampling after each take "
                 "(WAV duration corrected, BWF timecode anchor unchanged)%s",
                 device_name,
                 ppm,
@@ -167,11 +182,10 @@ def _audio_clock_ppm(settings: dict | None = None) -> int:
             )
             return ppm
 
-    connected = [line.strip() for line in arecord_output.splitlines() if "card" in line]
     logging.info(
-        "Audio clock correction: enabled but no database match for connected device(s): %s — no correction applied. "
-        "To add a new device, see resources/audio_clock_correction.json",
-        connected or ["(none detected)"],
+        "Audio clock correction: enabled but '%s' has no entry in database — no correction applied. "
+        "To add this device, see resources/audio_clock_correction.json",
+        card_name.strip() or "(no device detected)",
     )
     return 0
         

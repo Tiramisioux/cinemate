@@ -430,6 +430,7 @@ class AudioMonitor:
                 "MIC_FORMAT": self.format or "",
                 "MIC_CHANNELS": str(self.channels or ""),
                 "MIC_RATE": str(self.sample_rate or ""),
+                "MIC_CARD_NAME": self.card_name or "",
             })
             logging.debug("Published MIC_* to Redis")
         except ModuleNotFoundError:
@@ -443,7 +444,7 @@ class AudioMonitor:
             import redis  # type: ignore
 
             client = redis.StrictRedis(host="localhost", port=6379, db=0)
-            client.delete("MIC_PCM_ALIAS", "MIC_FORMAT", "MIC_CHANNELS", "MIC_RATE")
+            client.delete("MIC_PCM_ALIAS", "MIC_FORMAT", "MIC_CHANNELS", "MIC_RATE", "MIC_CARD_NAME")
             if reason:
                 logging.debug("Cleared MIC_* from Redis: %s", reason)
         except ModuleNotFoundError:

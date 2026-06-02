@@ -225,6 +225,10 @@ class CinePiController:
         self.wb_free = free_mode.get('wb_free', False)
         
         self.RAM_LIMIT_PERCENT = 80
+        # Stop recording when the cinepi-raw RAM frame buffer is this full
+        # (used slots / total slots). This is the direct "about to drop
+        # frames" signal; the system-RAM limit above is a coarser backstop.
+        self.BUFFER_LIMIT_PERCENT = 90
 
         self.update_steps()
         self.initialize_wb_cg_rb_array()  # Initialize after free-mode expands WB steps.
@@ -1045,12 +1049,16 @@ class CinePiController:
         if self.ssd_monitor.is_mounted == True and self.ssd_monitor.get_space_left:
             self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 1)
             logging.info(f"Started recording")
+            # Arm the RAM-buffer / system-RAM watchdog so a full buffer auto-stops
+            # the take instead of stalling the clock with the GUI stuck on red.
+            self.start_recording_worker()
         else:
             logging.info(f"No disk.")
-            
+
     def stop_recording(self):
         self._cancel_timed_recording_stop()
         self._clear_frame_limited_recording_stop()
+        self.stop_recording_worker()
         self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         logging.info(f"Stopped recording")
 
@@ -2019,6 +2027,18 @@ class CinePiController:
 
 
 # ────────────────────────── recording helper thread ────────────────────
+    def _buffer_fill_percent(self):
+        """Return the cinepi-raw RAM buffer fill as a percent (used/total),
+        or None when the capacity has not been published yet."""
+        try:
+            total = int(self.redis_controller.get_value(ParameterKey.BUFFER_SIZE.value) or 0)
+            if total <= 0:
+                return None
+            used = int(self.redis_controller.get_value(ParameterKey.BUFFER.value) or 0)
+        except (TypeError, ValueError):
+            return None
+        return max(0.0, (used / total) * 100.0)
+
     def _recording_worker(self):
         logging.info("CinePiController worker thread started")
         try:
@@ -2027,23 +2047,46 @@ class CinePiController:
                 if self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "0":
                     break
 
-                # ─── Watch RAM ───────────────────────────────────────────────
+                # ─── Primary: watch the cinepi-raw RAM frame buffer ──────────
+                # This is the real "backlog about to overflow → frames will
+                # drop" signal. When it trips we stop so the buffer can flush.
+                buffer_pct = self._buffer_fill_percent()
+                if buffer_pct is not None and buffer_pct >= self.BUFFER_LIMIT_PERCENT:
+                    logging.warning(
+                        f"RAM frame buffer {buffer_pct:.0f}% ≥ "
+                        f"{self.BUFFER_LIMIT_PERCENT}%! Stopping recording.")
+                    self._auto_stop_recording(int(buffer_pct))
+                    break
+
+                # ─── Backstop: watch overall system RAM ──────────────────────
                 ram_pct = psutil.virtual_memory().percent
                 if ram_pct >= self.RAM_LIMIT_PERCENT:
                     logging.warning(f"RAM {ram_pct:.1f}% ≥ {self.RAM_LIMIT_PERCENT}%! "
                                     "Stopping recording.")
-                    # tell the UI / mediator
-                    self.redis_controller.set_value(ParameterKey.MEMORY_ALERT.value,
-                                                    int(ram_pct))
-                    # flip the master flag – everything else reacts automatically
-                    self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
+                    self._auto_stop_recording(int(ram_pct))
                     break
-
-                # …your other per-frame / per-second work here …
 
                 time.sleep(0.25)   # 4 Hz polling is plenty
         finally:
             logging.info("CinePiController worker thread exiting")
+
+    def _auto_stop_recording(self, alert_value):
+        """Stop recording from inside the watchdog thread.
+
+        We must not call stop_recording() here: it calls stop_recording_worker()
+        which joins this very thread (RuntimeError: cannot join current thread).
+        Instead replicate the cleanup and flip is_recording directly – the redis
+        publish drives the mediator (clears the red write state) and the
+        redis_listener (raises is_writing_buf for the green buffer flush), and
+        the rec light / GPIO follow automatically.
+        """
+        # tell the UI / mediator how full we were when we tripped
+        self.redis_controller.set_value(ParameterKey.MEMORY_ALERT.value, alert_value)
+        self._cancel_timed_recording_stop()
+        self._clear_frame_limited_recording_stop()
+        # flip the master flag – everything else reacts automatically
+        self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
+        logging.info("Stopped recording")
 
     def start_recording_worker(self):
         if self._rec_thread and self._rec_thread.is_alive():
@@ -2055,6 +2098,6 @@ class CinePiController:
 
     def stop_recording_worker(self):
         self._rec_thread_stop.set()
-        if self._rec_thread:
+        if self._rec_thread and self._rec_thread is not threading.current_thread():
             self._rec_thread.join(timeout=2)                # be gentle
             self._rec_thread = None

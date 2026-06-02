@@ -20,6 +20,7 @@ import re
 
 RECORDER_VU_REDIS_KEY    = "audio_vu"
 AUDIO_RESAMPLING_REDIS_KEY = "audio_resampling"
+WAV_RECORDING_COLOR      = (230, 230, 230)   # bright grey while WAV is actively recording
 WAV_RESAMPLING_COLOR     = (190, 190, 190)   # lighter grey while WAV is being post-processed
 DROP_WARNING_COLOR = (120, 40, 180)
 SYNC_WARNING_COLOR = (255, 0, 255)
@@ -544,7 +545,7 @@ class SimpleGUI(threading.Thread):
                 "items": [
                     {"key": "mic_sample_rate", "text": lambda v: v.get("mic_sample_rate", "")},
                     {"key": "mic_bit_depth", "text": lambda v: v.get("mic_bit_depth", "")},
-                    {"key": "mic_wav_saved", "text": lambda v: "WAV" if v.get("mic_wav_saved") else ""},
+                    {"key": "mic_wav_saved", "text": lambda v: "WAV" if (v.get("mic_wav_saved") or v.get("mic_wav_recording")) else ""},
 
                     # {"key": "frames_in_sync", "text": lambda v: "SYNC" if v.get("frames_in_sync") else ""},
                 ],
@@ -795,6 +796,7 @@ class SimpleGUI(threading.Thread):
             "usb_connected":  bool(self.serial_handler.serial_connected),
             "mic_connected":  self.usb_monitor.usb_mic is not None,
             "mic_wav_saved":  False,
+            "mic_wav_recording": False,
             "keyboard_connected": bool(self.usb_monitor and self.usb_monitor.usb_keyboard),
             "storage_type":   self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value),
             "write_speed":    self.redis_controller.get_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value) or "0 MB/s",
@@ -856,6 +858,7 @@ class SimpleGUI(threading.Thread):
                     ])
                     if rec_active:
                         values["mic_wav_saved"] = False
+                        values["mic_wav_recording"] = True
                     else:
                         _, dng_count, wav_count, *_ = self._slow_values.get(
                             "latest_recording_info",
@@ -1200,8 +1203,10 @@ class SimpleGUI(threading.Thread):
                     # choose box colour depending on item
                     if item["key"] == "zoom_factor":
                         box_fill = BOX_COLOR if values.get("zoom_is_default") else ZOOM_HIGHLIGHT_COLOR
+                    elif item["key"] == "mic_wav_saved" and values.get("mic_wav_recording"):
+                        box_fill = WAV_RECORDING_COLOR
                     elif item["key"] == "mic_wav_saved" and values.get("mic_wav_resampling"):
-                        box_fill = WAV_RESAMPLING_COLOR   # light grey while WAV is being resampled
+                        box_fill = WAV_RESAMPLING_COLOR
                     else:
                         box_fill = BOX_COLOR         # default grey
                     draw.rectangle([box_x, y, box_x + BOX_W, y + BOX_H],
@@ -1324,7 +1329,9 @@ class SimpleGUI(threading.Thread):
                 if not val:
                     continue
                 for part in str(val).split('\n'):
-                    if item["key"] == "mic_wav_saved" and values.get("mic_wav_resampling"):
+                    if item["key"] == "mic_wav_saved" and values.get("mic_wav_recording"):
+                        _box_fill = WAV_RECORDING_COLOR
+                    elif item["key"] == "mic_wav_saved" and values.get("mic_wav_resampling"):
                         _box_fill = WAV_RESAMPLING_COLOR
                     else:
                         _box_fill = BOX_COLOR

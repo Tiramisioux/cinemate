@@ -1563,7 +1563,7 @@ class CinePiController:
     def erase_drive(self):
         self.ssd_monitor.erase_drive()
 
-    def format_drive(self, filesystem: str = "ext4"):
+    def format_drive(self, filesystem: str = "exfat"):
         self.ssd_monitor.format_drive(filesystem)
     
     def calculate_dynamic_shutter_angles(self, fps):

@@ -100,6 +100,19 @@ def _plain_arecord_timecode_offset_frames(settings: dict | None = None) -> int:
             raw_value,
         )
         return 0
+
+
+def _audio_clock_ppm(settings: dict | None = None) -> int:
+    audio_cfg = (settings if settings is not None else _settings()).get("audio", {})
+    raw_value = audio_cfg.get("audio_clock_ppm", 0)
+    try:
+        return int(raw_value)
+    except (TypeError, ValueError):
+        logging.warning(
+            "Invalid audio.audio_clock_ppm=%r; using 0",
+            raw_value,
+        )
+        return 0
         
 # ───────────────────────── Event ─────────────────────────
 class Event:
@@ -415,6 +428,18 @@ class CinePiProcess(Thread):
             args += [
                 "--plain-arecord-timecode-offset-frames",
                 str(plain_arecord_timecode_offset),
+            ]
+
+        clock_ppm = _audio_clock_ppm()
+        if clock_ppm != 0:
+            logging.info(
+                "[%s] ADC clock correction: %+d ppm",
+                self.cam.port,
+                clock_ppm,
+            )
+            args += [
+                "--audio-clock-ppm",
+                str(clock_ppm),
             ]
 
         # * Skip --tuning-file on Pi 4.  All other models keep it. *

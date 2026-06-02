@@ -48,7 +48,8 @@
   },
   "audio": {
     "capture_gain_db": 0.0,
-    "plain_arecord_timecode_offset_frames": 2
+    "plain_arecord_timecode_offset_frames": 2,
+    "audio_clock_ppm": 0
   },
   "anamorphic_preview": {
     "default_anamorphic_factor": 1,

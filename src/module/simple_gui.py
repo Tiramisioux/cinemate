@@ -796,12 +796,19 @@ class SimpleGUI(threading.Thread):
             "drop_frame_live": int(self.redis_controller.get_value(ParameterKey.DROP_FRAME.value) or 0) == 1,
             "drop_frame_count": int(self.redis_controller.get_value(ParameterKey.DROP_FRAME_COUNT.value) or 0),
             "drop_frame_during_last_take": int(self.redis_controller.get_value(ParameterKey.DROP_FRAME_DURING_LAST_TAKE.value) or 0) == 1,
+            "tc_hole_count": int(self.redis_controller.get_value(ParameterKey.TC_HOLE_COUNT.value) or 0),
+            "missing_frame_count": int(self.redis_controller.get_value(ParameterKey.MISSING_FRAME_COUNT.value) or 0),
 
         }
+        # drop_frame_latched drives the persistent UI warning overlay.
+        # Option 1: live drop_frame pulse = TC hole advisory (flashes during recording).
+        # Option 2: drop_frame_during_last_take = only set when files are genuinely
+        #           missing, so a complete take never latches the post-take indicator.
+        # Option 3: missing_frame_count is the authoritative shortfall count;
+        #           tc_hole_count is available for display but does not latch on its own.
         values["drop_frame_latched"] = (
-            values["drop_frame_live"]
-            or values["drop_frame_count"] > 0
-            or values["drop_frame_during_last_take"]
+            values["drop_frame_live"]             # real-time TC hole pulse (advisory)
+            or values["drop_frame_during_last_take"]  # genuine missing files last take
         )
         try:
             values["frames_in_sync"] = int(self.redis_controller.get_value(ParameterKey.FRAMES_IN_SYNC.value) or 1) == 1

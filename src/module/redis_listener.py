@@ -22,8 +22,10 @@ class RedisListener:
         port=6379,
         db=0,
         *,
-        live_sync_warning_tolerance_frames: int | float = 2,
+        live_sync_warning_tolerance_frames: int | float = 5,
+        live_sync_startup_guard_frames: int | float = 10,
         final_sync_analysis_tolerance_frames: int | float = 1,
+        tc_drop_jitter_tolerance_frames: int | float = 1,
     ):
         self.redis_client = redis.StrictRedis(host=host, port=port, db=db)
         
@@ -79,6 +81,7 @@ class RedisListener:
         self.drop_frame_count_current_take = 0
         self.drop_frame_relay_timer = None
         self.tc_frame_count: int | None = None
+        self.hw_dropped_frames: int | None = None  # unbiased count from cinepi-raw droppedFrames
         self.frames_off_sync_latched_current_take = False
         self.live_sync_suppressed_current_take = False
         self.live_sync_warning_tolerance_frames = self._coerce_frame_tolerance(
@@ -89,6 +92,19 @@ class RedisListener:
             final_sync_analysis_tolerance_frames,
             default=1,
         )
+        # The cinepi-raw timecode counter (tcFrameCount) advances by rounding
+        # each inter-frame µs delta with a +1 floor, so it can lead frameCount
+        # by ~1 slot from ordinary timing jitter (a late frame followed by an
+        # early one) without any frame actually being lost. Ignore a lead at or
+        # below this tolerance so jitter does not raise a phantom drop alert.
+        self.tc_drop_jitter_tolerance_frames = self._coerce_frame_tolerance(
+            tc_drop_jitter_tolerance_frames,
+            default=1,
+        )
+        # How many expected frames must have elapsed before the live sync check
+        # activates. Covers cinepi-raw startup latency after is_recording=1.
+        # At 25fps, 10 frames = 400ms. Configurable via live_sync_startup_guard_frames.
+        self.live_sync_startup_guard_frames = max(1.0, float(live_sync_startup_guard_frames))
 
 
         self.cinepi_running = True
@@ -714,14 +730,20 @@ class RedisListener:
             honor_frame_limit=False,
         )
 
-        # Avoid false warnings while the first few frame slots are still
+        # Avoid false warnings while the first frame slots are still
         # settling after record start. After that, drift beyond the configured
         # live tolerance latches.
-        if expected_float < 3:
+        if expected_float < self.live_sync_startup_guard_frames:
             return
 
         recorded_slots = int(self.framecount or 0)
-        sync_slots = recorded_slots + int(self.drop_frame_count_current_take)
+        # Drop compensation may only recover frames that are genuinely missing
+        # from the recorded count. Clamping to the shortfall stops a phantom
+        # (jitter-inflated) timecode drop count from pushing a complete take
+        # past the tolerance and latching a false warning.
+        shortfall = max(0, expected_slots - recorded_slots)
+        drop_compensation = min(int(self.drop_frame_count_current_take), shortfall)
+        sync_slots = recorded_slots + drop_compensation
         diff = expected_slots - sync_slots
         if abs(diff) <= self.live_sync_warning_tolerance_frames:
             return
@@ -736,7 +758,7 @@ class RedisListener:
             self.live_sync_warning_tolerance_frames,
             expected_slots,
             recorded_slots,
-            self.drop_frame_count_current_take,
+            drop_compensation,
         )
 
     def _update_frames_in_sync(self, stats_data: dict[str, object] | None = None) -> None:
@@ -764,7 +786,12 @@ class RedisListener:
             sensor_count,
         )
         recorded_frames = int(self.framecount or 0)
-        dropped_frame_slots = self.drop_frame_count_current_take * max(1, sensor_count)
+        # See _update_live_frames_in_sync: only credit dropped slots that
+        # actually explain a shortfall vs expected, so a jitter-inflated
+        # timecode drop count cannot flag a complete take as out of sync.
+        raw_dropped_slots = self.drop_frame_count_current_take * max(1, sensor_count)
+        shortfall = max(0, expected_int - recorded_frames)
+        dropped_frame_slots = min(raw_dropped_slots, shortfall)
 
         in_sync = (
             abs(expected_int - (recorded_frames + dropped_frame_slots))
@@ -842,6 +869,17 @@ class RedisListener:
                         raw_tc_frame_count = self._coerce_int(stats_data.get('tcFrameCount', None))
                         if raw_tc_frame_count is not None:
                             self.tc_frame_count = raw_tc_frame_count
+                        # droppedFrames: unbiased hole count from cinepi-raw.
+                        # Guard against the startup race: cinepi-raw's
+                        # resetFrameCount() is called during encoder setup, but
+                        # the first process() call can fire before the reset
+                        # completes and publish the *previous* clip's counter.
+                        # Only accept the value once awaiting_fresh_framecount
+                        # is cleared (i.e. the first valid frame count has
+                        # been seen), by which point the reset has taken effect.
+                        raw_dropped_frames = self._coerce_int(stats_data.get('droppedFrames', None))
+                        if raw_dropped_frames is not None and not self.awaiting_fresh_framecount:
+                            self.hw_dropped_frames = raw_dropped_frames
                         color_temp = stats_data.get('colorTemp', None)
                         sensor_timestamp = stats_data.get('sensorTimestamp', None)
                         timestamp = stats_data.get('timestamp')
@@ -938,6 +976,7 @@ class RedisListener:
 
                         drop_alerts_enabled = (
                             self.is_recording
+                            and not self.awaiting_fresh_framecount
                             and not self.recording_was_preroll
                             and not self._storage_preroll_active()
                             and not self._recording_reconfigure_grace_active(now)
@@ -945,11 +984,11 @@ class RedisListener:
                         )
 
                         if drop_alerts_enabled:
-                            if self.tc_frame_count is not None and raw_frame_count is not None:
-                                # TC-based: exact dropped slot count from inter-frame timestamp deltas.
-                                # tcFrameCount advances by >1 when a frame is dropped; the difference
-                                # with frameCount is the precise number of dropped slots this clip.
-                                dropped_slots = max(0, self.tc_frame_count - raw_frame_count)
+                            if self.hw_dropped_frames is not None:
+                                # Tier 1 – unbiased hw counter (cinepi-raw ≥ droppedFrames build).
+                                # Each unit is exactly one frame that was not written to disk
+                                # (inter-frame gap rounded to ≥2 frame periods). No jitter bias.
+                                dropped_slots = self.hw_dropped_frames
                                 if dropped_slots > self.drop_frame_count_current_take:
                                     new_slots = dropped_slots - self.drop_frame_count_current_take
                                     self.drop_frame_count_current_take = dropped_slots
@@ -959,7 +998,34 @@ class RedisListener:
                                         self.drop_frame = True
                                         self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 1)
                                     logging.info(
-                                        "Drop frame detected: %d slot(s) dropped (total this take: %d).",
+                                        "Drop frame detected (hw): %d hole(s) (total this take: %d).",
+                                        new_slots,
+                                        dropped_slots,
+                                    )
+                                    if self.drop_frame_timer:
+                                        self.drop_frame_timer.cancel()
+                                    self.drop_frame_timer = threading.Timer(0.5, self.reset_drop_frame)
+                                    self.drop_frame_timer.start()
+
+                            elif self.tc_frame_count is not None and raw_frame_count is not None:
+                                # Tier 2 – TC-diff fallback (firmware with tcFrameCount but not
+                                # droppedFrames). The TC counter has a +1 floor bias; the deadband
+                                # absorbs single-slot jitter so ordinary timing noise does not
+                                # trigger a false drop alert.
+                                dropped_slots = max(0, self.tc_frame_count - raw_frame_count)
+                                if (
+                                    dropped_slots > self.tc_drop_jitter_tolerance_frames
+                                    and dropped_slots > self.drop_frame_count_current_take
+                                ):
+                                    new_slots = dropped_slots - self.drop_frame_count_current_take
+                                    self.drop_frame_count_current_take = dropped_slots
+                                    self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, dropped_slots)
+                                    self._pulse_drop_frame_relay(expected_fps)
+                                    if not self.drop_frame:
+                                        self.drop_frame = True
+                                        self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 1)
+                                    logging.info(
+                                        "Drop frame detected (tc-diff): %d slot(s) (total this take: %d).",
                                         new_slots,
                                         dropped_slots,
                                     )
@@ -969,7 +1035,7 @@ class RedisListener:
                                     self.drop_frame_timer.start()
 
                             elif self.current_framerate is not None and expected_fps is not None:
-                                # FPS-deviation fallback for firmware without tcFrameCount.
+                                # Tier 3 – FPS-deviation fallback (oldest firmware, no TC support).
                                 if abs(self.current_framerate - expected_fps) > 1:
                                     self.drop_frame_count_current_take += 1
                                     self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, self.drop_frame_count_current_take)
@@ -977,7 +1043,7 @@ class RedisListener:
                                     if not self.drop_frame:
                                         self.drop_frame = True
                                         self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 1)
-                                    logging.info("Drop frame detected (count=%d, FPS-deviation fallback).", self.drop_frame_count_current_take)
+                                    logging.info("Drop frame detected (fps-dev fallback, count=%d).", self.drop_frame_count_current_take)
                                     if self.drop_frame_timer:
                                         self.drop_frame_timer.cancel()
                                     self.drop_frame_timer = threading.Timer(0.5, self.reset_drop_frame)
@@ -1074,6 +1140,7 @@ class RedisListener:
     def _clear_frame_warning_state(self) -> None:
         self.drop_frame_count_current_take = 0
         self.tc_frame_count = None
+        self.hw_dropped_frames = None
         self.drop_frame = False
         self.frames_off_sync_latched_current_take = False
         if self.drop_frame_timer:
@@ -1738,7 +1805,12 @@ class RedisListener:
             logging.info(f"Calculated expected number of frames: {expected_frames_total}")
             logging.info(f"Actual number of recorded frames: {recorded_frames_total}")
 
-        sync_recorded_frames_total = recorded_frames_total + dropped_frame_slots_total
+        # Only credit dropped-frame holes that explain a genuine shortfall.
+        # If the disk count already meets or exceeds expected, compensation
+        # would push the difference further negative and trigger a false warning.
+        shortfall_total = max(0, expected_frames_total - recorded_frames_total)
+        dropped_frame_slots_compensated = min(dropped_frame_slots_total, shortfall_total)
+        sync_recorded_frames_total = recorded_frames_total + dropped_frame_slots_compensated
         diff = expected_frames_total - sync_recorded_frames_total
         sync_warning_suppressed = self.live_sync_suppressed_current_take
         frames_in_sync = (
@@ -1746,28 +1818,81 @@ class RedisListener:
             or sync_warning_suppressed
         )
 
-        drop_during_last_take = (not self.recording_was_preroll) and drop_detected_this_take
+        # ── Option 3: split TC holes from genuinely missing files ────────────
+        # tc_hole_count  = gap events during recording (frame arrived late enough
+        #                  to round to ≥2 frame periods; file may still be present)
+        # missing_frame_count = raw shortfall on disk vs wall-clock expectation
+        #                       (max(0, expected − recorded), confirmed absent files)
+        missing_frames_count = max(0, expected_frames_total - recorded_frames_total)
+
+        # ── Option 2: drop_frame_during_last_take only fires on genuine shortfall
+        # A take that produced the right number of files doesn't carry a persistent
+        # drop warning into the next take, even if TC holes were observed live.
+        drop_during_last_take = (
+            (not self.recording_was_preroll)
+            and missing_frames_count > 0
+        )
         self.redis_controller.set_value(
             ParameterKey.DROP_FRAME_DURING_LAST_TAKE.value,
             1 if drop_during_last_take else 0,
         )
+        # drop_frame_count keeps its existing meaning (tc_hole_count) for
+        # backward compatibility; tc_hole_count is the explicit named alias.
         self.redis_controller.set_value(
             ParameterKey.DROP_FRAME_COUNT.value,
             drop_frame_count_for_reporting,
         )
+        self.redis_controller.set_value(
+            ParameterKey.TC_HOLE_COUNT.value,
+            drop_frame_count_for_reporting,
+        )
+        self.redis_controller.set_value(
+            ParameterKey.MISSING_FRAME_COUNT.value,
+            missing_frames_count,
+        )
         if not quiet_summary:
-            logging.info(
-                f"Drop frames detected this take: {drop_frame_count_for_reporting}"
-            )
-            if segment_index_hole_frames_total > live_drop_holes_total:
+            # Report TC timing and file integrity as a single precise verdict.
+            #
+            # Three distinct states:
+            #  A) all files present + consecutive indices + TC has late-arrival
+            #     events → timing irregularity only, no data loss.
+            #  B) files missing (missing_frames_count > 0) or index gaps
+            #     (segment_index_hole_frames_total > 0) → genuine data loss.
+            #  C) no TC events, no missing files → clean take (covered by ✓).
+            all_files_present = (missing_frames_count == 0)
+            no_index_gaps = (segment_index_hole_frames_total == 0)
+
+            if drop_frame_count_for_reporting > 0 and all_files_present and no_index_gaps:
+                # Every frame is on disk and the DNG index is contiguous.
+                # The TC values are not perfectly consecutive — some frames
+                # arrived late (inter-frame gap ≥ 1.5× frame period) causing
+                # the timecode counter to skip forward — but no data was lost.
                 logging.info(
-                    "On-disk segment scan found %d dropped-frame hole(s) not seen by live stats.",
-                    segment_index_hole_frames_total,
+                    "TC timing: %d late-arrival event(s) created timecode "
+                    "discontinuity/discontinuities in the DNG metadata. "
+                    "All %d files present with contiguous indices — no data lost.",
+                    drop_frame_count_for_reporting,
+                    recorded_frames_total,
                 )
-            if dropped_frame_slots_total:
+            elif missing_frames_count > 0:
+                logging.warning(
+                    "Missing frames: %d frame(s) not written to disk "
+                    "(%d TC gap event(s) during recording).",
+                    missing_frames_count,
+                    drop_frame_count_for_reporting,
+                )
+            elif segment_index_hole_frames_total > 0:
+                logging.warning(
+                    "DNG index gaps: %d missing file slot(s) in sequence "
+                    "(%d TC gap event(s) during recording).",
+                    segment_index_hole_frames_total,
+                    drop_frame_count_for_reporting,
+                )
+
+            if dropped_frame_slots_compensated:
                 logging.info(
-                    "Counting %d dropped-frame hole(s) as intentional sync slot(s).",
-                    dropped_frame_slots_total,
+                    "Counting %d hole(s) as sync slot(s) to reconcile shortfall.",
+                    dropped_frame_slots_compensated,
                 )
 
         if sync_warning_suppressed:
@@ -1796,13 +1921,22 @@ class RedisListener:
             self.frames_off_sync_latched_current_take
             and not sync_warning_suppressed
         )
-        if segmented_recording and frames_in_sync and live_sync_warning_latched:
+        if frames_in_sync and live_sync_warning_latched:
+            # Final analysis is clean — clear the latch regardless of whether
+            # this was a segmented or normal recording. The live check fires
+            # conservatively early; the final disk count is the authoritative
+            # verdict. A clean final analysis always unlatches.
             live_sync_warning_latched = False
             self.frames_off_sync_latched_current_take = False
             if not quiet_summary:
-                logging.info(
-                    "Clearing live frame-sync warning after segmented final analysis accounted for all frames."
-                )
+                if segmented_recording:
+                    logging.info(
+                        "Clearing live frame-sync warning after segmented final analysis accounted for all frames."
+                    )
+                else:
+                    logging.info(
+                        "Clearing live frame-sync warning: final analysis confirmed all frames present."
+                    )
         if not frames_in_sync and not sync_warning_suppressed:
             self.frames_off_sync_latched_current_take = True
 
@@ -1811,8 +1945,6 @@ class RedisListener:
             ParameterKey.FRAMES_IN_SYNC.value,
             1 if frames_in_sync and not live_sync_warning_latched else 0,
         )
-        if frames_in_sync and live_sync_warning_latched and not quiet_summary:
-            logging.info("Keeping live frame-sync warning latched until the next take.")
 
         current_correction_factor = self.fps_correction_factor_at_rec_start
         if not current_correction_factor or current_correction_factor <= 0:

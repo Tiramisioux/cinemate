@@ -240,7 +240,7 @@ def _apply_settings_defaults(settings: dict) -> dict:
         "plain_arecord_timecode_offset_frames": 2,
         "clock_correction": {
             "enabled": False,
-            "devices": {},
+            "database": "resources/audio_clock_correction.json",
         },
     }
     audio_cfg = settings.setdefault("audio", {})

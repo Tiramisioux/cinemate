@@ -116,12 +116,16 @@ Adjusts zoom levels for the HDMI/browser preview.
 
 ## audio
 
-Audio capture options shared by idle monitoring and recorded WAV input level.
+Audio capture options shared by idle monitoring, recorded WAV input level, and ADC clock correction.
 
 ```json
 "audio": {
   "capture_gain_db": 0.0,
-  "plain_arecord_timecode_offset_frames": 2
+  "plain_arecord_timecode_offset_frames": 2,
+  "clock_correction": {
+    "enabled": false,
+    "database": "resources/audio_clock_correction.json"
+  }
 }
 ```
 
@@ -132,6 +136,18 @@ Audio capture options shared by idle monitoring and recorded WAV input level.
 Use this when the Pi is hearing the mic too quietly or too hot and you want the idle VU, recording VU, and recorded WAV to move together. Cinemate mirrors this value into the Redis key `audio_capture_gain_db` at startup so future runtime controls can target the same setting.
 
 Some USB microphones expose a writable capture control and some do not. When the mic does support it, Cinemate applies this gain when the microphone is detected. If the device exposes no compatible capture control, the setting stays harmlessly ignored and the log will tell you that the mic likely has fixed gain.
+
+### ADC clock correction
+
+Some USB audio devices run their internal ADC clock slightly off the nominal 48 000 Hz sample rate. A mic that captures 47 946 Hz instead of 48 000 Hz will produce a WAV that drifts ahead of video by roughly 10 frames over a 6-minute take, with no xruns and no other symptoms.
+
+`clock_correction.enabled` – set to `true` to activate correction. Correction is only applied when this is `true` **and** the connected mic matches an entry in the database file. Default is `false` — no resampling occurs.
+
+`clock_correction.database` – path to the device database file, relative to the Cinemate repo root. Default is `resources/audio_clock_correction.json`.
+
+When enabled, Cinemate queries `arecord -l` at each `cinepi-raw` launch and passes the matched ppm value to `cinepi-raw` as `--audio-clock-ppm`. After each take, `cinepi-raw` resamples the finished WAV using `ffmpeg` to correct the duration without altering the BWF timecode anchor. The 16-bit plain-arecord path is never resampled regardless of this setting.
+
+To add a new microphone, see the instructions at the top of `resources/audio_clock_correction.json`. To disable correction globally without editing the database, set `enabled` to `false` here.
 
 ## anamorphic_preview
 

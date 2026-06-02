@@ -51,9 +51,7 @@
     "plain_arecord_timecode_offset_frames": 2,
     "clock_correction": {
       "enabled": true,
-      "devices": {
-        "RODE VideoMic GO II": 1130
-      }
+      "database": "resources/audio_clock_correction.json"
     }
   },
   "anamorphic_preview": {

@@ -3,6 +3,7 @@ import logging
 import re
 import json
 import time
+from pathlib import Path
 from queue import Queue
 from threading import Thread
 from typing import List, Optional
@@ -105,40 +106,73 @@ def _plain_arecord_timecode_offset_frames(settings: dict | None = None) -> int:
 def _audio_clock_ppm(settings: dict | None = None) -> int:
     """Return the ADC clock correction in ppm for the currently connected USB mic.
 
-    Reads audio.clock_correction.enabled and audio.clock_correction.devices from
-    settings.json.  When enabled, queries ``arecord -l`` and returns the ppm value
-    for the first device name that appears as a case-insensitive substring of the
-    arecord output.  Returns 0 (no correction) when disabled, no match, or on error.
+    Correction is only applied when BOTH conditions are met:
+      1. audio.clock_correction.enabled is true in settings.json
+      2. The connected mic matches an entry in the clock correction database file
+
+    When enabled, queries ``arecord -l`` and returns the ppm for the first device
+    name in the database that appears as a case-insensitive substring of the output.
+    Returns 0 (no correction) when disabled, no database match, or on any error.
     """
     audio_cfg = (settings if settings is not None else _settings()).get("audio", {})
     correction = audio_cfg.get("clock_correction", {})
+
     if not correction.get("enabled", False):
+        logging.info("Audio clock correction: disabled in settings (audio.clock_correction.enabled=false)")
         return 0
-    devices = correction.get("devices", {})
-    if not devices:
-        return 0
+
+    db_path_str = correction.get("database", "resources/audio_clock_correction.json")
+    db_path = Path(db_path_str) if Path(db_path_str).is_absolute() else \
+        Path(__file__).resolve().parents[2] / db_path_str
+
     try:
-        result = subprocess.run(
-            ["arecord", "-l"],
-            capture_output=True,
-            text=True,
-            timeout=3,
-        )
+        db = json.loads(db_path.read_text(encoding="utf-8"))
+        devices = db.get("devices", {})
+    except OSError as exc:
+        logging.warning("Audio clock correction: database file not found (%s): %s — no correction applied", db_path, exc)
+        return 0
+    except json.JSONDecodeError as exc:
+        logging.warning("Audio clock correction: database file is not valid JSON (%s): %s — no correction applied", db_path, exc)
+        return 0
+
+    if not devices:
+        logging.info("Audio clock correction: database contains no device entries — no correction applied")
+        return 0
+
+    try:
+        result = subprocess.run(["arecord", "-l"], capture_output=True, text=True, timeout=3)
         arecord_output = (result.stdout + result.stderr).lower()
     except Exception as exc:
-        logging.warning("Could not query arecord for clock correction device match: %s", exc)
+        logging.warning("Audio clock correction: could not query arecord -l: %s — no correction applied", exc)
         return 0
-    for device_name, raw_ppm in devices.items():
+
+    for device_name, entry in devices.items():
         if device_name.lower() in arecord_output:
             try:
+                raw_ppm = entry["ppm"] if isinstance(entry, dict) else entry
                 ppm = int(raw_ppm)
-                return ppm
-            except (TypeError, ValueError):
+            except (TypeError, ValueError, KeyError):
                 logging.warning(
-                    "Invalid clock_correction ppm %r for device %r; skipping",
-                    raw_ppm,
+                    "Audio clock correction: invalid ppm value for '%s' in database — skipping",
                     device_name,
                 )
+                continue
+            note = entry.get("note", "") if isinstance(entry, dict) else ""
+            logging.info(
+                "Audio clock correction: '%s' matched — applying %+d ppm resampling after each take "
+                "(WAV duration corrected, BWF timecode anchor unchanged)%s",
+                device_name,
+                ppm,
+                f" [{note}]" if note else "",
+            )
+            return ppm
+
+    connected = [line.strip() for line in arecord_output.splitlines() if "card" in line]
+    logging.info(
+        "Audio clock correction: enabled but no database match for connected device(s): %s — no correction applied. "
+        "To add a new device, see resources/audio_clock_correction.json",
+        connected or ["(none detected)"],
+    )
     return 0
         
 # ───────────────────────── Event ─────────────────────────

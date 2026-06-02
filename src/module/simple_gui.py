@@ -20,7 +20,7 @@ import re
 
 RECORDER_VU_REDIS_KEY    = "audio_vu"
 AUDIO_RESAMPLING_REDIS_KEY = "audio_resampling"
-WAV_RECORDING_COLOR      = (230, 230, 230)   # bright grey while WAV is actively recording
+WAV_RECORDING_COLOR      = (210, 210, 210)   # bright grey while WAV is actively recording
 WAV_RESAMPLING_COLOR     = (190, 190, 190)   # lighter grey while WAV is being post-processed
 DROP_WARNING_COLOR = (120, 40, 180)
 SYNC_WARNING_COLOR = (255, 0, 255)

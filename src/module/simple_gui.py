@@ -17,7 +17,9 @@ from module.dynamic_resolution import dynamic_resolution_indicator_active
 import json
 import re
 
-RECORDER_VU_REDIS_KEY = "audio_vu"
+RECORDER_VU_REDIS_KEY    = "audio_vu"
+AUDIO_RESAMPLING_REDIS_KEY = "audio_resampling"
+WAV_RESAMPLING_COLOR     = (190, 190, 190)   # lighter grey while WAV is being post-processed
 DROP_WARNING_COLOR = (120, 40, 180)
 SYNC_WARNING_COLOR = (255, 0, 255)
 SYNC_FLASH_COLOR = "magenta"
@@ -852,6 +854,10 @@ class SimpleGUI(threading.Thread):
                 except (TypeError, ValueError):
                     values["mic_wav_saved"] = False
 
+            values["mic_wav_resampling"] = (
+                self.redis_controller.get_value(AUDIO_RESAMPLING_REDIS_KEY) == "1"
+            )
+
         # ── Zoom factor (preview punch-in) ────────────────────────────────
         default_zoom = float(self.settings.get("preview", {}).get("default_zoom", 1.0))
         try:
@@ -1158,6 +1164,8 @@ class SimpleGUI(threading.Thread):
                     # choose box colour depending on item
                     if item["key"] == "zoom_factor":
                         box_fill = BOX_COLOR if values.get("zoom_is_default") else ZOOM_HIGHLIGHT_COLOR
+                    elif item["key"] == "mic_wav_saved" and values.get("mic_wav_resampling"):
+                        box_fill = WAV_RESAMPLING_COLOR   # light grey while WAV is being resampled
                     else:
                         box_fill = BOX_COLOR         # default grey
                     draw.rectangle([box_x, y, box_x + BOX_W, y + BOX_H],
@@ -1280,9 +1288,13 @@ class SimpleGUI(threading.Thread):
                 if not val:
                     continue
                 for part in str(val).split('\n'):
+                    if item["key"] == "mic_wav_saved" and values.get("mic_wav_resampling"):
+                        _box_fill = WAV_RESAMPLING_COLOR
+                    else:
+                        _box_fill = BOX_COLOR
                     draw.rectangle([box_pad_x, y,
                                     box_pad_x + BOX_W, y + BOX_H],
-                                   fill=BOX_COLOR)
+                                   fill=_box_fill)
                     tw, th = draw.textbbox((0,0), part, font=box_font)[2:]
                     tx = box_pad_x + (BOX_W - tw)//2
                     ty = y         + (BOX_H - th)//2

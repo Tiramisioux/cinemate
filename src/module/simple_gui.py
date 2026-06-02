@@ -1,6 +1,7 @@
 import os
 import threading
 import time
+import wave
 from PIL import Image, ImageDraw, ImageFont
 from module.console_display import claim_console_for_framebuffer, release_console_to_text
 from module.framebuffer import Framebuffer, acquire_framebuffer
@@ -619,7 +620,8 @@ class SimpleGUI(threading.Thread):
         return self._cached_cams
 
     def _refresh_slow_values(self):
-        latest_recording_info = self._slow_values.get("latest_recording_info", (None, 0, 0))
+        latest_recording_info = self._slow_values.get("latest_recording_info", (None, 0, 0, -1))
+        wav_duration_valid = False
         cpu_load = self._slow_values.get("cpu_load", "0%")
         cpu_temp = self._slow_values.get("cpu_temp", "--")
 
@@ -639,10 +641,19 @@ class SimpleGUI(threading.Thread):
             except Exception:
                 pass
 
+        try:
+            folder_path = latest_recording_info[0] if latest_recording_info else None
+            max_frame_idx = latest_recording_info[3] if latest_recording_info and len(latest_recording_info) > 3 else -1
+            fps = float(self.redis_controller.get_value(ParameterKey.FPS.value) or 0)
+            wav_duration_valid = self._validate_wav_length(folder_path, max_frame_idx, fps)
+        except Exception:
+            wav_duration_valid = False
+
         self._slow_values.update({
             "cpu_load": cpu_load,
             "cpu_temp": cpu_temp,
             "latest_recording_info": latest_recording_info,
+            "wav_duration_valid": wav_duration_valid,
         })
         self._last_slow_refresh_ts = time.monotonic()
 
@@ -846,11 +857,14 @@ class SimpleGUI(threading.Thread):
                     if rec_active:
                         values["mic_wav_saved"] = False
                     else:
-                        _, dng_count, wav_count = self._slow_values.get(
+                        _, dng_count, wav_count, *_ = self._slow_values.get(
                             "latest_recording_info",
-                            (None, 0, 0),
+                            (None, 0, 0, -1),
                         )
-                        values["mic_wav_saved"] = dng_count > 0 and wav_count > 0
+                        values["mic_wav_saved"] = (
+                            dng_count > 0
+                            and self._slow_values.get("wav_duration_valid", False)
+                        )
                 except (TypeError, ValueError):
                     values["mic_wav_saved"] = False
 
@@ -1003,6 +1017,28 @@ class SimpleGUI(threading.Thread):
             values["write_speed"] = f"{self.ssd_monitor.write_speed_mb_s:.0f} MB/s"
         
         return values
+
+    def _validate_wav_length(self, folder_path, max_frame_idx, fps, tolerance=0.15) -> bool:
+        if not folder_path or max_frame_idx < 0 or fps <= 0:
+            return False
+        from pathlib import Path
+        folder = Path(folder_path)
+        wav_files = list(folder.glob("*.wav"))
+        if not wav_files:
+            return False
+        try:
+            with wave.open(str(wav_files[0]), "rb") as wf:
+                n_frames = wf.getnframes()
+                frame_rate = wf.getframerate()
+            if frame_rate <= 0:
+                return False
+            wav_duration = n_frames / frame_rate
+        except Exception:
+            return False
+        expected_duration = (max_frame_idx + 1) / fps
+        if expected_duration <= 0:
+            return False
+        return abs(wav_duration - expected_duration) / expected_duration < tolerance
 
     def _format_sensor_name(self, name: str, is_mono: bool) -> str:
         """

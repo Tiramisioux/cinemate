@@ -941,6 +941,7 @@ class SSDMonitor:
         infos = []
         for d, _mtime in candidates:
             dng = wav = 0
+            max_frame_idx = -1
             try:
                 for f in d.rglob("*"):
                     if not f.is_file():
@@ -948,6 +949,15 @@ class SSDMonitor:
                     suf = f.suffix.lower()
                     if suf == ".dng":
                         dng += 1
+                        stem = f.stem
+                        underscore = stem.rfind("_")
+                        if underscore >= 0:
+                            try:
+                                idx = int(stem[underscore + 1:])
+                                if idx > max_frame_idx:
+                                    max_frame_idx = idx
+                            except ValueError:
+                                pass
                     elif suf == ".wav":
                         wav += 1
             except OSError as exc:
@@ -959,12 +969,12 @@ class SSDMonitor:
                 logging.info("Latest recording “%s”: %d DNG | %d WAV",
                              d.name, dng, wav)
                 self._last_recording_log[d.name] = (dng, wav)
-            infos.append((d.name, dng, wav))
+            infos.append((str(d), dng, wav, max_frame_idx))
         return infos
 
-    def get_latest_recording_info(self) -> Tuple[Optional[str], int, int]:
+    def get_latest_recording_info(self) -> Tuple[Optional[str], int, int, int]:
         multi = self.get_latest_recording_infos()
-        return multi[-1] if multi else (None, 0, 0)
+        return multi[-1] if multi else (None, 0, 0, -1)
 
     # ------------------------------------------------------------------
     # legacy helpers still referenced by cinepi_controller

@@ -20,6 +20,6 @@ The separate `DROP` tile latches after a drop-frame event and stays visible unti
 - During storage pre-roll, the GUI intentionally hides recording time and clip names so the deleted warm-up clip does not appear to be the latest take.
 - If zoom is anything other than the configured default, the zoom box is highlighted.
 - If dynamic resolution is actively substituting a measured sustainable mode for the current FPS, the resolution numbers turn green. They stay white when Cinemate is showing the user's desired resolution, even if dynamic resolution is enabled.
-- When a compatible USB microphone is connected, the right side shows VU meters plus sample rate, bit depth, and a `WAV` badge once the latest take contains both DNG frames and a WAV sidecar.
+- When a compatible USB microphone is connected, the right side shows VU meters plus sample rate, bit depth, and a `WAV` badge once the latest take contains both DNG frames and a WAV sidecar. The `WAV` badge dims to **light grey** while the previous take's WAV is being resampled for ADC clock correction (typically a few seconds); it returns to normal grey once the correction is complete. See `docs/audio-recording.md` for details on ADC clock correction.
 
 For redraw timing and performance tuning, see `docs/simple-gui-refresh-tuning.md`.

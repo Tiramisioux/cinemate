@@ -1498,12 +1498,6 @@ class SimpleGUI(threading.Thread):
                 self.current_background_color = "green"
                 self.color_mode = "inverse"
 
-            elif int(values["ram_load"].rstrip('%')) > 95:
-                # safety: RAM nearly full – warn & auto-stop
-                self.current_background_color = "yellow"
-                self.color_mode = "inverse"
-                self.cinepi_controller.rec()        # stop recording
-
             else:
                 # idle
                 self.current_background_color = "black"

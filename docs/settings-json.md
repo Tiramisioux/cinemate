@@ -122,6 +122,7 @@ Audio capture options shared by idle monitoring, recorded WAV input level, and A
 "audio": {
   "capture_gain_db": 0.0,
   "plain_arecord_timecode_offset_frames": 2,
+  "timecode_offset_frames": 2,
   "clock_correction": {
     "enabled": false,
     "database": "resources/audio_clock_correction.json"
@@ -132,6 +133,8 @@ Audio capture options shared by idle monitoring, recorded WAV input level, and A
 `capture_gain_db` – target ALSA capture gain in decibels for the detected microphone input. `0.0` means unity gain. Positive values boost the capture level, negative values attenuate it.
 
 `plain_arecord_timecode_offset_frames` – frame offset passed to `cinepi-raw` for the 16-bit plain `arecord` fallback WAV metadata path. `2` corrects the current 16-bit USB mic calibration, `0` disables the correction, and negative values are allowed for future calibration. This changes only WAV timecode metadata; recorded PCM is not shifted.
+
+`timecode_offset_frames` – the same kind of frame offset for the **24-bit USB capture path** (the default for most USB mics, including the clock-correction path). Use it to nudge audio that lands a fixed number of frames early or late relative to video. A **positive** value moves the WAV timecode later (use it when the sound is *early*); a negative value moves it earlier. `2` is the current calibration, `0` disables it. Like the 16-bit knob, this changes only WAV timecode metadata — the PCM is never shifted — and it is independent of (and stacks with) clock correction. Passed to `cinepi-raw` as `--audio-timecode-offset-frames`.
 
 Use this when the Pi is hearing the mic too quietly or too hot and you want the idle VU, recording VU, and recorded WAV to move together. Cinemate mirrors this value into the Redis key `audio_capture_gain_db` at startup so future runtime controls can target the same setting.
 

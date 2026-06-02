@@ -71,6 +71,10 @@
         "plain_arecord_timecode_offset_frames": {
           "type": "integer",
           "default": 2
+        },
+        "timecode_offset_frames": {
+          "type": "integer",
+          "default": 2
         }
       },
       "additionalProperties": true

@@ -49,6 +49,7 @@
   "audio": {
     "capture_gain_db": 0.0,
     "plain_arecord_timecode_offset_frames": 2,
+    "timecode_offset_frames": 2,
     "clock_correction": {
       "enabled": true,
       "database": "resources/audio_clock_correction.json"

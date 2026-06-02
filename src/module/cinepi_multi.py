@@ -103,6 +103,19 @@ def _plain_arecord_timecode_offset_frames(settings: dict | None = None) -> int:
         return 0
 
 
+def _audio_timecode_offset_frames(settings: dict | None = None) -> int:
+    audio_cfg = (settings if settings is not None else _settings()).get("audio", {})
+    raw_value = audio_cfg.get("timecode_offset_frames", 0)
+    try:
+        return int(raw_value)
+    except (TypeError, ValueError):
+        logging.warning(
+            "Invalid audio.timecode_offset_frames=%r; using 0",
+            raw_value,
+        )
+        return 0
+
+
 def _audio_clock_ppm(settings: dict | None = None) -> int:
     """Return the ADC clock correction in ppm for the currently connected USB mic.
 
@@ -503,6 +516,18 @@ class CinePiProcess(Thread):
             args += [
                 "--plain-arecord-timecode-offset-frames",
                 str(plain_arecord_timecode_offset),
+            ]
+
+        audio_timecode_offset = _audio_timecode_offset_frames()
+        if audio_timecode_offset != 0:
+            logging.info(
+                "[%s] Audio WAV timecode offset (24-bit path): %+d frames",
+                self.cam.port,
+                audio_timecode_offset,
+            )
+            args += [
+                "--audio-timecode-offset-frames",
+                str(audio_timecode_offset),
             ]
 
         clock_ppm = _audio_clock_ppm()

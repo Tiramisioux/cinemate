@@ -103,6 +103,18 @@ Correction is only applied when **both** conditions are met:
 
 The first verified entry is the RØDE VideoMic NTG at +1130 ppm (ADC runs ~54 Hz slow). The 16-bit plain-arecord path is never resampled regardless of this setting, because the 16-bit capture path is already in sync.
 
+### Fine timecode offset
+
+Clock correction fixes *progressive* drift. A USB mic can also sit a fixed couple of frames early or late relative to video (constant analog/buffering latency). Correct that residual offset with `audio.timecode_offset_frames` in `src/settings.json`:
+
+```json
+"audio": {
+  "timecode_offset_frames": 2
+}
+```
+
+A **positive** value moves the WAV's metadata timecode later, so the audio lands later on the timeline — use a positive value when the sound is *early*; use a negative value when it is late. This shifts only the embedded BWF/iXML timecode; the PCM is never moved, and it stacks with clock correction. It covers the 24-bit USB capture path; the 16-bit plain-`arecord` path has its own `plain_arecord_timecode_offset_frames`. The shipped value `2` corrects the current calibration.
+
 ### CLI log output
 
 At each `cinepi-raw` launch, Cinemate logs one of:

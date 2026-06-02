@@ -103,16 +103,43 @@ def _plain_arecord_timecode_offset_frames(settings: dict | None = None) -> int:
 
 
 def _audio_clock_ppm(settings: dict | None = None) -> int:
+    """Return the ADC clock correction in ppm for the currently connected USB mic.
+
+    Reads audio.clock_correction.enabled and audio.clock_correction.devices from
+    settings.json.  When enabled, queries ``arecord -l`` and returns the ppm value
+    for the first device name that appears as a case-insensitive substring of the
+    arecord output.  Returns 0 (no correction) when disabled, no match, or on error.
+    """
     audio_cfg = (settings if settings is not None else _settings()).get("audio", {})
-    raw_value = audio_cfg.get("audio_clock_ppm", 0)
-    try:
-        return int(raw_value)
-    except (TypeError, ValueError):
-        logging.warning(
-            "Invalid audio.audio_clock_ppm=%r; using 0",
-            raw_value,
-        )
+    correction = audio_cfg.get("clock_correction", {})
+    if not correction.get("enabled", False):
         return 0
+    devices = correction.get("devices", {})
+    if not devices:
+        return 0
+    try:
+        result = subprocess.run(
+            ["arecord", "-l"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+        arecord_output = (result.stdout + result.stderr).lower()
+    except Exception as exc:
+        logging.warning("Could not query arecord for clock correction device match: %s", exc)
+        return 0
+    for device_name, raw_ppm in devices.items():
+        if device_name.lower() in arecord_output:
+            try:
+                ppm = int(raw_ppm)
+                return ppm
+            except (TypeError, ValueError):
+                logging.warning(
+                    "Invalid clock_correction ppm %r for device %r; skipping",
+                    raw_ppm,
+                    device_name,
+                )
+    return 0
         
 # ───────────────────────── Event ─────────────────────────
 class Event:

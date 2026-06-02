@@ -238,6 +238,10 @@ def _apply_settings_defaults(settings: dict) -> dict:
     audio_defaults = {
         "capture_gain_db": 0.0,
         "plain_arecord_timecode_offset_frames": 2,
+        "clock_correction": {
+            "enabled": False,
+            "devices": {},
+        },
     }
     audio_cfg = settings.setdefault("audio", {})
     for k, v in audio_defaults.items():

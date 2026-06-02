@@ -145,7 +145,7 @@ Some USB audio devices run their internal ADC clock slightly off the nominal 48 
 
 `clock_correction.database` – path to the device database file, relative to the Cinemate repo root. Default is `resources/audio_clock_correction.json`.
 
-When enabled, Cinemate queries `arecord -l` at each `cinepi-raw` launch and passes the matched ppm value to `cinepi-raw` as `--audio-clock-ppm`. After each take, `cinepi-raw` resamples the finished WAV using `ffmpeg` to correct the duration without altering the BWF timecode anchor. The 16-bit plain-arecord path is never resampled regardless of this setting.
+When enabled, Cinemate queries `arecord -l` at each `cinepi-raw` launch and passes the matched ppm value to `cinepi-raw` as `--audio-clock-ppm`. After each take, `cinepi-raw` applies the correction within the single post-take `ffmpeg` metadata pass — correcting the duration without altering the BWF timecode anchor and without writing an intermediate WAV. The 16-bit plain-arecord path is never resampled regardless of this setting.
 
 To add a new microphone, see the instructions at the top of `resources/audio_clock_correction.json`. To disable correction globally without editing the database, set `enabled` to `false` here.
 

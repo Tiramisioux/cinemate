@@ -78,7 +78,7 @@ EOF
 
 Some USB audio devices run their internal ADC clock slightly off the nominal 48 000 Hz sample rate. A mic running at 47 946 Hz instead of 48 000 Hz produces a WAV that accumulates ~10 frames of audio-video drift over a 6-minute take with no xruns and no other visible symptoms.
 
-Cinemate corrects this after each take by resampling the finished WAV with `ffmpeg`. The resampling step happens between "Stopped recording" and the next take, so capture performance is unaffected.
+Cinemate corrects this after each take: `cinepi-raw` folds the resampling into the single post-take `ffmpeg` pass that writes the WAV's BWF/iXML metadata. It runs between "Stopped recording" and the next take, so capture performance is unaffected, and because it is one pass with no intermediate file, no stray WAV is ever written into the take folder.
 
 ### Enabling correction
 

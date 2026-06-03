@@ -1068,10 +1068,10 @@ class SimpleGUI(threading.Thread):
                  ───────────────────────────────┬─────────────────
                  becomes:   CINEPI_25-07-01_220547_F10_C00000
 
-        • Removes the trailing frame counter (“_000000009”)
-        • Removes the camera suffix (“_cam0” / “_cam1”)
+        • Removes the trailing frame counter ("_000000009")
+        • Removes the camera suffix ("_cam0" / "_cam1")
         • Returns **None** if the input is falsy _or_ literally contains
-          the string “None”.
+          the string "None".
         """
         if not path or "None" in str(path):
             return None
@@ -1080,10 +1080,10 @@ class SimpleGUI(threading.Thread):
 
         stem = os.path.splitext(os.path.basename(path))[0]  # filename w/out .dng
 
-        # Strip “…_000000009”
+        # Strip "…_000000009"
         #stem = re.sub(r'_\d+$', '', stem)
 
-        # Strip camera suffix “…_cam0 / …_cam1”
+        # Strip camera suffix "…_cam0 / …_cam1"
         stem = re.sub(r'_cam[01]$', '', stem, flags=re.IGNORECASE)
 
         return stem
@@ -1421,16 +1421,16 @@ class SimpleGUI(threading.Thread):
             draw.text((text_x, text_y), label, font=label_font, fill=(249,249,249))
 
     # ─────────────────────────────────────────────────────────────
-    # FRAME-BUFFER “VU”  (queued frames vs. capacity)
+    # FRAME-BUFFER "VU"  (queued frames vs. capacity)
     # ─────────────────────────────────────────────────────────────
     def draw_framebuffer_vu_meter(self, draw, bar_height=200):
-        “””
+        """
         Visualises the RAM-buffer usage:
             • height  = used / total
             • colour  = green <70 %, yellow <90 %, red ≥90 %
             • ticks   = 25 / 50 / 75 / 100 %
-            • caption = “used / total”
-        “””
+            • caption = "used / total"
+        """
         # ── fetch numbers from Redis safely ─────────────────────────────
         try:
             raw_used  = self.redis_controller.get_value(ParameterKey.BUFFER.value)

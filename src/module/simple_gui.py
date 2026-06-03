@@ -1305,6 +1305,8 @@ class SimpleGUI(threading.Thread):
             #     draw.text((tx, ty), text, font=box_font, fill=TEXT_COLOR)
             #     y += BOX_H + BOX_GAP
 
+        return y   # caller uses this to avoid VU-meter collision
+
 
     # ─────────────────────────────────────────────────────────────
     # RIGHT-HAND MIRROR COLUMN
@@ -1421,14 +1423,14 @@ class SimpleGUI(threading.Thread):
     # ─────────────────────────────────────────────────────────────
     # FRAME-BUFFER “VU”  (queued frames vs. capacity)
     # ─────────────────────────────────────────────────────────────
-    def draw_framebuffer_vu_meter(self, draw):
-        """
+    def draw_framebuffer_vu_meter(self, draw, bar_height=200):
+        “””
         Visualises the RAM-buffer usage:
             • height  = used / total
             • colour  = green <70 %, yellow <90 %, red ≥90 %
             • ticks   = 25 / 50 / 75 / 100 %
             • caption = “used / total”
-        """
+        “””
         # ── fetch numbers from Redis safely ─────────────────────────────
         try:
             raw_used  = self.redis_controller.get_value(ParameterKey.BUFFER.value)
@@ -1455,7 +1457,7 @@ class SimpleGUI(threading.Thread):
         else:              fill_colour = (255,   0,   0)
 
         # ── geometry constants (match existing GUI) ───────────────────
-        BAR_H      = 200
+        BAR_H      = bar_height
         BAR_W      = 28
         BASE_X     = 30
         GAP_BOTTOM = 80
@@ -1586,7 +1588,7 @@ class SimpleGUI(threading.Thread):
         draw.rectangle(((0, 0), fb.size), fill=self.current_background_color)
 
         # Draw left-hand labels and boxes dynamically
-        self.draw_left_sections(draw, values)
+        left_bottom_y = self.draw_left_sections(draw, values)
 
         # Get sensor resolution
         self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value))
@@ -1679,7 +1681,14 @@ class SimpleGUI(threading.Thread):
 
         self.draw_right_vu_meter(draw)
         if self.show_buffer_vu:
-            self.draw_framebuffer_vu_meter(draw)
+            # Shrink the VU bar if left-column sections have grown down into it
+            # (e.g. DROP/SYNC warning boxes push the format-label close to the bar).
+            _GAP_BOTTOM = 80
+            _MAX_BAR_H  = 200
+            _MIN_BAR_H  = 40
+            available = self.disp_height - _GAP_BOTTOM - (left_bottom_y + 5)
+            vu_bar_h = max(_MIN_BAR_H, min(_MAX_BAR_H, available))
+            self.draw_framebuffer_vu_meter(draw, bar_height=vu_bar_h)
 
         vu = self.vu_smoothed  # Or .usb_monitor.audio_monitor.vu_levels if you want raw
         # if vu:

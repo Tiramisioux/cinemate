@@ -804,7 +804,8 @@ class SimpleGUI(threading.Thread):
             "mic_wav_saved":  False,
             "mic_wav_recording": False,
             "keyboard_connected": bool(self.usb_monitor and self.usb_monitor.usb_keyboard),
-            "storage_type":   self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value),
+            "storage_type":        self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value),
+            "storage_filesystem":  self.redis_controller.get_value(ParameterKey.STORAGE_FILESYSTEM.value) or "",
             "write_speed":    self.redis_controller.get_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value) or "0 MB/s",
 
             # "clip_label": "CLIP",
@@ -838,6 +839,30 @@ class SimpleGUI(threading.Thread):
         values["frames_off_sync"] = not values["frames_in_sync"]
 
         # ── audio stats ─────────────────────────────────────────────────
+        # WAV recording/saved state is checked independently of mic connection:
+        # mic_wav_recording requires the mic to be present right now, but
+        # mic_wav_saved (grey post-take label) persists even if the mic was
+        # unplugged after the take, as long as a valid WAV file exists.
+        if self.ssd_monitor:
+            try:
+                rec_active = any([
+                    int(self.redis_controller.get_value(ParameterKey.REC.value) or 0) == 1,
+                    int(self.redis_controller.get_value(ParameterKey.IS_WRITING_BUF.value) or 0) == 1,
+                    int(self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value) or 0) == 1,
+                ])
+            except (TypeError, ValueError):
+                rec_active = False
+
+            if values["mic_connected"] and rec_active:
+                values["mic_wav_recording"] = True
+            elif not rec_active:
+                _, dng_count, wav_count, *_ = self._slow_values.get(
+                    "latest_recording_info", (None, 0, 0, -1))
+                values["mic_wav_saved"] = (
+                    dng_count > 0
+                    and self._slow_values.get("wav_duration_valid", False)
+                )
+
         if values["mic_connected"]:
             monitor = getattr(self.usb_monitor, "audio_monitor", None)
             bit_depth = getattr(monitor, "bit_depth", None)
@@ -854,28 +879,6 @@ class SimpleGUI(threading.Thread):
                         values["mic_sample_rate"] = f"{sr_khz:.1f}".rstrip("0").rstrip(".")
                 except (TypeError, ValueError):
                     pass
-
-            if self.ssd_monitor:
-                try:
-                    rec_active = any([
-                        int(self.redis_controller.get_value(ParameterKey.REC.value) or 0) == 1,
-                        int(self.redis_controller.get_value(ParameterKey.IS_WRITING_BUF.value) or 0) == 1,
-                        int(self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value) or 0) == 1,
-                    ])
-                    if rec_active:
-                        values["mic_wav_saved"] = False
-                        values["mic_wav_recording"] = True
-                    else:
-                        _, dng_count, wav_count, *_ = self._slow_values.get(
-                            "latest_recording_info",
-                            (None, 0, 0, -1),
-                        )
-                        values["mic_wav_saved"] = (
-                            dng_count > 0
-                            and self._slow_values.get("wav_duration_valid", False)
-                        )
-                except (TypeError, ValueError):
-                    values["mic_wav_saved"] = False
 
         # ── Zoom factor (preview punch-in) ────────────────────────────────
         default_zoom = float(self.settings.get("preview", {}).get("default_zoom", 1.0))
@@ -1285,6 +1288,13 @@ class SimpleGUI(threading.Thread):
                 tx = box_x + (BOX_W - tw) // 2
                 ty = y      + (BOX_H - th) // 2
                 draw.text((tx, ty), storage, font=box_font, fill=TEXT_COLOR)
+                fs_raw = str(values.get("storage_filesystem", "")).lower()
+                if fs_raw and fs_raw not in ("none", "unknown", ""):
+                    fs_label = {"exfat": "exFAT", "ntfs": "NTFS"}.get(fs_raw, fs_raw)
+                    fs_font = self._get_font("regular", 15)
+                    fs_tw = draw.textbbox((0, 0), fs_label, font=fs_font)[2]
+                    draw.text((box_x + (BOX_W - fs_tw) // 2, y + BOX_H + 2),
+                              fs_label, font=fs_font, fill=(136, 136, 136))
                 y += BOX_H + BOX_GAP
             
             # write_speed = values.get("write_speed", "")

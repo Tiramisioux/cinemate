@@ -279,12 +279,12 @@
   },
   "camera": {
     "cam0": {
-      "override_camera_name": false,
-      "camera_name": "A"
+      "override_camera_name": true,
+      "camera_name": "Blackmagic Pocket Cinema Camera 4K"
     },
     "cam1": {
-      "override_camera_name": false,
-      "camera_name": "B"
+      "override_camera_name": true,
+      "camera_name": "Blackmagic Pocket Cinema Camera 4K"
     }
   },
   "i2c_oled": {

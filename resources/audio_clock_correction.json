@@ -64,8 +64,8 @@
 
   "devices": {
     "RØDE VideoMic NTG": {
-      "ppm": 1797,
-      "note": "Recalibrated 2026-06-02. Initial measurement (1130 ppm, two 6-min NVMe exFAT takes) left 6 frames of residual drift at the end of a 6-min take after applying correction. Residual: 6 frames / (360 s × 25 fps) = 667 ppm added → 1797 ppm total. Implied ADC rate ~47 914 Hz. Re-verify with a 6-min take; first clap must be in sync, last clap must be within ±1 frame."
+      "ppm": 0,
+      "note": "Set to 0 on 2026-06-03. Clap-delta measurement (correction OFF, two 6-min 2K/NVMe/exFAT takes) showed the RØDE ADC clock holds within ±2 frames over 6 min = ~0 ppm: it needs no correction. The earlier 1130/1797 values were fitting bracketing noise from a whole-file duration ratio, and the +1797 resample was itself the source of the late drift it was meant to fix. Residual sync error seen on high-data-rate cells (4K) is storage-contention sample loss, NOT clock — that is fixed in the capture helper's wall-clock reconciliation, not here."
     }
   }
 }

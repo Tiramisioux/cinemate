@@ -786,13 +786,21 @@ class SSDMonitor:
         if not self._is_mounted:
             return
 
-        cmd = ["sudo", "umount", str(self._mount_path)]
-
+        # Try a clean unmount first; if the mount-point is busy (EBUSY = exit 32)
+        # fall back to lazy unmount so the kernel detaches it once all file
+        # handles are released. This handles the case where cinepi-raw or ffmpeg
+        # still has a file open on the drive at the moment of the request.
         try:
-            subprocess.run(cmd, check=True)
+            subprocess.run(["sudo", "umount", str(self._mount_path)], check=True)
         except subprocess.CalledProcessError as exc:
-            logging.error("Failed to unmount: %s", exc)
-            return
+            logging.warning(
+                "umount failed (%s), retrying with lazy unmount", exc
+            )
+            if not self._force_lazy_unmount(self._mount_path):
+                logging.error(
+                    "Failed to unmount %s even with lazy unmount", self._mount_path
+                )
+                return
         
     def mount_drive(self, filesystem: Optional[str] = None, device: Optional[str] = None) -> bool:
         """
@@ -866,11 +874,40 @@ class SSDMonitor:
 
         device = f"/dev/{dev_name}"
 
+        # Unmount robustly: clean first, lazy fallback on EBUSY, then kill
+        # processes holding the device as a last resort so mkfs never hits
+        # "Device or resource busy".
+        clean_unmount = False
         try:
             subprocess.run(["sudo", "umount", str(self._mount_path)], check=True)
-        except subprocess.CalledProcessError as exc:
-            logging.error("format_drive(): failed to unmount %s (%s)", self._mount_path, exc)
-            return False
+            clean_unmount = True
+        except subprocess.CalledProcessError:
+            logging.warning(
+                "format_drive(): umount busy, trying lazy unmount of %s", self._mount_path
+            )
+            clean_unmount = self._force_lazy_unmount(self._mount_path)
+
+        if not clean_unmount:
+            # Last resort: fuser -km evicts all processes holding the device,
+            # then attempt one final lazy unmount.
+            logging.warning(
+                "format_drive(): lazy unmount failed, evicting processes from %s", device
+            )
+            subprocess.call(
+                ["sudo", "fuser", "-km", device],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+            time.sleep(0.5)
+            if not self._force_lazy_unmount(self._mount_path):
+                logging.error(
+                    "format_drive(): could not unmount %s after eviction; aborting format",
+                    self._mount_path,
+                )
+                return False
+
+        # Brief settle so the kernel releases all block-layer references before
+        # mkfs opens the device.
+        time.sleep(0.5)
 
         # refresh monitor state after unmount
         self._check_mount_status()

@@ -1668,12 +1668,13 @@ class SimpleGUI(threading.Thread):
                 pad_y = max(2, int(3 * shrink_y))
                 radius = max(2, int(3 * min(shrink_x, shrink_y)))
                 box_x0 = int(clip_pos_x + clip_tw + int(8 * shrink_x))
-                box_y0 = int(clip_pos_y) - pad_y
+                lower  = int(4 * shrink_y)   # nudge box down to sit next to clip name
+                box_y0 = int(clip_pos_y) + lower
                 box_x1 = box_x0 + wav_tw + 2 * pad_x
                 box_y1 = box_y0 + wav_th + 2 * pad_y
                 box_fill = WAV_RECORDING_COLOR if values.get("mic_wav_recording") else (136, 136, 136)
                 draw.rounded_rectangle([(box_x0, box_y0), (box_x1, box_y1)], radius=radius, fill=box_fill)
-                draw.text((box_x0 + pad_x, int(clip_pos_y)), "WAV", font=wav_font, fill=(0, 0, 0))
+                draw.text((box_x0 + pad_x, box_y0 + pad_y), "WAV", font=wav_font, fill=(0, 0, 0))
 
         self.draw_right_vu_meter(draw)
         if self.show_buffer_vu:

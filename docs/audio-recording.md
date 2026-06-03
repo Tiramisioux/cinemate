@@ -116,7 +116,12 @@ Clock correction fixes *progressive* drift. A USB mic can also sit a fixed coupl
 }
 ```
 
-A **positive** value moves the WAV's metadata timecode later, so the audio lands later on the timeline — use a positive value when the sound is *early*; use a negative value when it is late. This shifts only the embedded BWF/iXML timecode; the PCM is never moved, and it stacks with clock correction.
+| Symptom | Value |
+|---------|-------|
+| Sound arrives **early** (before the visual) | positive — e.g. `1` |
+| Sound arrives **late** (after the visual) | negative — e.g. `-1` |
+
+This shifts only the embedded BWF/iXML timecode metadata; the PCM samples are never moved. It stacks on top of ADC clock correction.
 
 ### CLI log output
 

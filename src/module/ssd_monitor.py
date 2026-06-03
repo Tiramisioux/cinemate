@@ -912,6 +912,56 @@ class SSDMonitor:
         # refresh monitor state after unmount
         self._check_mount_status()
 
+        # If the partition is significantly smaller than its parent disk
+        # (e.g. only 190 MB on a 500 GB drive because a previous external
+        # format left a tiny partition), repartition first so mkfs uses the
+        # full available capacity.
+        root = dev_name
+        if root.startswith("nvme"):
+            if "p" in root:
+                root = root.rsplit("p", 1)[0]
+        else:
+            root = root.rstrip("0123456789")
+            if root.endswith("p"):
+                root = root[:-1]
+        disk_dev = f"/dev/{root}"
+        if disk_dev != device:
+            try:
+                part_bytes = int(subprocess.check_output(
+                    ["sudo", "blockdev", "--getsize64", device],
+                    text=True, timeout=5).strip())
+                disk_bytes = int(subprocess.check_output(
+                    ["sudo", "blockdev", "--getsize64", disk_dev],
+                    text=True, timeout=5).strip())
+                fill_ratio = part_bytes / disk_bytes if disk_bytes else 1.0
+            except Exception as exc:
+                logging.warning("format_drive(): could not compare partition/disk sizes (%s)", exc)
+                fill_ratio = 1.0
+            if fill_ratio < 0.9:
+                logging.info(
+                    "format_drive(): %s uses only %.1f%% of %s (%.2f GB / %.2f GB) — repartitioning",
+                    device, fill_ratio * 100, disk_dev,
+                    part_bytes / 1e9, disk_bytes / 1e9,
+                )
+                try:
+                    subprocess.run(
+                        ["sudo", "parted", "-s", disk_dev, "mklabel", "gpt"],
+                        check=True, timeout=30)
+                    subprocess.run(
+                        ["sudo", "parted", "-s", disk_dev, "mkpart", "RAW", "0%", "100%"],
+                        check=True, timeout=30)
+                    subprocess.run(
+                        ["sudo", "partprobe", disk_dev],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
+                    time.sleep(1.5)
+                    logging.info(
+                        "format_drive(): repartitioned %s; %s now covers full disk",
+                        disk_dev, device)
+                except subprocess.CalledProcessError as exc:
+                    logging.error(
+                        "format_drive(): repartition failed for %s (%s) — proceeding with mkfs on existing partition",
+                        disk_dev, exc)
+
         if fs == "ext4":
             mkfs_cmd = ["sudo", "mkfs.ext4", "-F", "-L", "RAW", device]
         elif fs == "exfat":

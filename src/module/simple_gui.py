@@ -1285,10 +1285,11 @@ class SimpleGUI(threading.Thread):
                 fs_raw = str(values.get("storage_filesystem", "")).lower()
                 if fs_raw and fs_raw not in ("none", "unknown", ""):
                     fs_label = {"exfat": "exFAT", "ntfs": "NTFS"}.get(fs_raw, fs_raw)
+                    fs_font = self._get_font("bold", 20)
                     draw.rectangle([box_x, y, box_x + BOX_W, y + BOX_H], fill=BOX_COLOR)
-                    fs_tw, fs_th = draw.textbbox((0, 0), fs_label, font=box_font)[2:]
+                    fs_tw, fs_th = draw.textbbox((0, 0), fs_label, font=fs_font)[2:]
                     draw.text((box_x + (BOX_W - fs_tw) // 2, y + (BOX_H - fs_th) // 2),
-                              fs_label, font=box_font, fill=TEXT_COLOR)
+                              fs_label, font=fs_font, fill=TEXT_COLOR)
                     y += BOX_H + BOX_GAP
                 else:
                     y += BOX_GAP

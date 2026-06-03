@@ -226,6 +226,11 @@ Preset lists for exposure and frame‑rate settings. Cinemate will step through 
 }
 ```
 
+!!! note "How to think about ISO"
+    At capture, ISO is real analog gain on the sensor — it changes the raw pixel values written to disk. Setting it too high introduces noise that is baked in and cannot be removed later.
+
+    Once your DNGs are in Resolve's Camera RAW tab, the pixel values are fixed. ISO there is a decode-time parameter: in Gen 4 color science it selects a different log curve that shifts contrast as well as brightness; in Gen 5 it acts as a linear gain equivalent to the Exposure slider. Either way, correcting a wrong ISO in Resolve costs no additional quality — provided the sensor data was not catastrophically over- or underexposed at capture.
+
 ## analog_controls
 
 Maps Grove Base HAT ADC channels to analogue dials (potentiometers). Use `null` to disable a dial.

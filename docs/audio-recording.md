@@ -14,26 +14,21 @@ If `arecord` is missing or no recording device can be probed successfully, Cinem
 
 ## `settings.json` audio section
 
-The `audio` block groups shared settings and per-toolchain offsets:
-
 ```json
 "audio": {
   "capture_gain_db": 0.0,
-  "24bit": {
-    "timecode_offset_frames": 0
-  },
-  "16bit": {
-    "timecode_offset_frames": 0
-  }
+  "timecode_offset_frames": 0,
+  "plain_arecord_timecode_offset_frames": 0
 }
 ```
 
-- **`24bit`** — settings for the 24-bit USB dsnoop path (`mic_24bit` alias, e.g. RØDE VideoMic NTG).
-- **`16bit`** — settings for the 16-bit plain-`arecord` fallback path (generic USB PnP mics).
+| Key | Toolchain | Notes |
+|-----|-----------|-------|
+| `capture_gain_db` | both | dB gain applied at capture; `0.0` = unity |
+| `timecode_offset_frames` | **24-bit** (USB dsnoop, `mic_24bit` alias — e.g. RØDE NTG) | shifts BWF/iXML timecode only, not PCM |
+| `plain_arecord_timecode_offset_frames` | **16-bit** (plain `arecord` fallback — generic USB PnP mics) | same semantic, different path |
 
-`capture_gain_db` applies to whichever path is active. `0.0` leaves the input at unity gain; positive values boost, negative attenuate. Cinemate mirrors this into Redis as `audio_capture_gain_db` on startup.
-
-Not every USB mic exposes a writable ALSA capture control. When a microphone does not, Cinemate leaves the input untouched and logs that no compatible capture control was found.
+`capture_gain_db` applies to whichever path is active. Cinemate mirrors this into Redis as `audio_capture_gain_db` on startup. Not every USB mic exposes a writable ALSA capture control; when a microphone does not, Cinemate leaves the input untouched and logs that no compatible capture control was found.
 
 ## `/etc/asound.conf` setup
 
@@ -108,18 +103,17 @@ The first verified entry is the RØDE VideoMic NTG at +1130 ppm (ADC runs ~54 Hz
 
 ### Fine timecode offset
 
-Clock correction fixes *progressive* drift. A USB mic can also sit a fixed couple of frames early or late relative to video (constant analog/buffering latency). Correct that residual offset per toolchain in `src/settings.json`:
+Clock correction fixes *progressive* drift. A USB mic can also sit a fixed couple of frames early or late relative to video (constant analog/buffering latency). Correct that residual offset in `src/settings.json`:
 
 ```json
 "audio": {
-  "24bit": {
-    "timecode_offset_frames": 2
-  },
-  "16bit": {
-    "timecode_offset_frames": 0
-  }
+  "timecode_offset_frames": 2,
+  "plain_arecord_timecode_offset_frames": 0
 }
 ```
+
+- `timecode_offset_frames` — **24-bit path** (RØDE NTG, `mic_24bit` dsnoop alias)
+- `plain_arecord_timecode_offset_frames` — **16-bit path** (generic USB PnP, plain `arecord` fallback)
 
 A **positive** value moves the WAV's metadata timecode later, so the audio lands later on the timeline — use a positive value when the sound is *early*; use a negative value when it is late. This shifts only the embedded BWF/iXML timecode; the PCM is never moved, and it stacks with clock correction.
 

@@ -91,44 +91,28 @@ def _seed_default_zoom(redis_ctl):
 
 
 def _plain_arecord_timecode_offset_frames(settings: dict | None = None) -> int:
-    """Return the timecode offset for the 16-bit plain-arecord fallback path."""
+    """Timecode offset for the 16-bit plain-arecord fallback path (audio.plain_arecord_timecode_offset_frames)."""
     audio_cfg = (settings if settings is not None else _settings()).get("audio", {})
-    # New nested format: audio.16bit.timecode_offset_frames
-    # Fallback: old flat key plain_arecord_timecode_offset_frames
-    raw_value = (
-        audio_cfg.get("16bit", {}).get("timecode_offset_frames")
-        if "16bit" in audio_cfg
-        else audio_cfg.get("plain_arecord_timecode_offset_frames", 0)
-    )
-    if raw_value is None:
-        raw_value = 0
+    raw_value = audio_cfg.get("plain_arecord_timecode_offset_frames", 0)
     try:
         return int(raw_value)
     except (TypeError, ValueError):
         logging.warning(
-            "Invalid audio.16bit.timecode_offset_frames=%r; using 0",
+            "Invalid audio.plain_arecord_timecode_offset_frames=%r; using 0",
             raw_value,
         )
         return 0
 
 
 def _audio_timecode_offset_frames(settings: dict | None = None) -> int:
-    """Return the timecode offset for the 24-bit USB dsnoop capture path."""
+    """Timecode offset for the 24-bit USB dsnoop capture path (audio.timecode_offset_frames)."""
     audio_cfg = (settings if settings is not None else _settings()).get("audio", {})
-    # New nested format: audio.24bit.timecode_offset_frames
-    # Fallback: old flat key timecode_offset_frames
-    raw_value = (
-        audio_cfg.get("24bit", {}).get("timecode_offset_frames")
-        if "24bit" in audio_cfg
-        else audio_cfg.get("timecode_offset_frames", 0)
-    )
-    if raw_value is None:
-        raw_value = 0
+    raw_value = audio_cfg.get("timecode_offset_frames", 0)
     try:
         return int(raw_value)
     except (TypeError, ValueError):
         logging.warning(
-            "Invalid audio.24bit.timecode_offset_frames=%r; using 0",
+            "Invalid audio.timecode_offset_frames=%r; using 0",
             raw_value,
         )
         return 0

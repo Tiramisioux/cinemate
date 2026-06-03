@@ -1175,8 +1175,10 @@ class SimpleGUI(threading.Thread):
         box_x         = 15
         y             = 97
         LABEL_SPACING = -4
-        BOX_GAP       = 14
-        SECTION_GAP   = 60
+        # Tighten spacing when the buffer VU bar is present so sections don't
+        # overwrite it (VU bar occupies the lower-left corner at the same x).
+        BOX_GAP     = 10 if self.show_buffer_vu else 14
+        SECTION_GAP = 20 if self.show_buffer_vu else 60
 
         # ── CAM / MON sections ───────────────────────────────────
         for section in self.left_section_layout:
@@ -1279,14 +1281,19 @@ class SimpleGUI(threading.Thread):
                 tx = box_x + (BOX_W - tw) // 2
                 ty = y      + (BOX_H - th) // 2
                 draw.text((tx, ty), storage, font=box_font, fill=TEXT_COLOR)
+                y += BOX_H + 4
                 fs_raw = str(values.get("storage_filesystem", "")).lower()
                 if fs_raw and fs_raw not in ("none", "unknown", ""):
                     fs_label = {"exfat": "exFAT", "ntfs": "NTFS"}.get(fs_raw, fs_raw)
-                    fs_font = self._get_font("regular", 15)
-                    fs_tw = draw.textbbox((0, 0), fs_label, font=fs_font)[2]
-                    draw.text((box_x + (BOX_W - fs_tw) // 2, y + BOX_H + 2),
-                              fs_label, font=fs_font, fill=(136, 136, 136))
-                y += BOX_H + BOX_GAP
+                    FS_BOX_H = 28
+                    fs_font = self._get_font("regular", 16)
+                    draw.rectangle([box_x, y, box_x + BOX_W, y + FS_BOX_H], fill=BOX_COLOR)
+                    fs_tw, fs_th = draw.textbbox((0, 0), fs_label, font=fs_font)[2:]
+                    draw.text((box_x + (BOX_W - fs_tw) // 2, y + (FS_BOX_H - fs_th) // 2),
+                              fs_label, font=fs_font, fill=TEXT_COLOR)
+                    y += FS_BOX_H + BOX_GAP
+                else:
+                    y += BOX_GAP
             
             # write_speed = values.get("write_speed", "")
             # if write_speed:

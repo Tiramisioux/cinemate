@@ -694,9 +694,11 @@ def run_application(args, log_queue):
 
     # Set redis anamorphic factor to default value
     redis_controller.set_value(ParameterKey.ANAMORPHIC_FACTOR.value, settings["anamorphic_preview"]["default_anamorphic_factor"])
+    _audio_cfg = settings.get("audio", {})
     redis_controller.set_value(
         ParameterKey.AUDIO_CAPTURE_GAIN_DB.value,
-        settings.get("audio", {}).get("capture_gain_db", 0.0),
+        (_audio_cfg.get("16bit") or {}).get("capture_gain_db",
+            _audio_cfg.get("capture_gain_db", 0.0)),
     )
     
     # Default zoom factor

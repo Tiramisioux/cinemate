@@ -91,7 +91,7 @@ def _seed_default_zoom(redis_ctl):
 
 
 def _plain_arecord_timecode_offset_frames(settings: dict | None = None) -> int:
-    """Timecode offset for the 16-bit plain-arecord fallback path (audio.16bit.timecode_offset_frames)."""
+    """Timecode offset for the 16-bit mic path (audio.16bit.timecode_offset_frames)."""
     audio_cfg = (settings if settings is not None else _settings()).get("audio", {})
     raw_value = (
         audio_cfg["16bit"].get("timecode_offset_frames", 0)

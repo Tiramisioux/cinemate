@@ -234,15 +234,25 @@ def _apply_settings_defaults(settings: dict) -> dict:
         preview_cfg["default_zoom"] = preview_cfg["zoom_steps"][0]
     settings["preview"] = preview_cfg
 
-    # Audio capture defaults.
-    audio_defaults = {
-        "capture_gain_db": 0.0,
-        "plain_arecord_timecode_offset_frames": 0,
-        "timecode_offset_frames": 0,
-    }
+    # Audio capture: migrate old flat keys to nested per-toolchain objects.
     audio_cfg = settings.setdefault("audio", {})
-    for k, v in audio_defaults.items():
-        audio_cfg.setdefault(k, v)
+    old_gain = audio_cfg.pop("capture_gain_db", 0.0)
+    if "timecode_offset_frames" in audio_cfg and "24bit" not in audio_cfg:
+        audio_cfg["24bit"] = {
+            "capture_gain_db": old_gain,
+            "timecode_offset_frames": audio_cfg.pop("timecode_offset_frames"),
+        }
+    if "plain_arecord_timecode_offset_frames" in audio_cfg and "16bit" not in audio_cfg:
+        audio_cfg["16bit"] = {
+            "capture_gain_db": old_gain,
+            "timecode_offset_frames": audio_cfg.pop("plain_arecord_timecode_offset_frames"),
+        }
+    audio_cfg.setdefault("24bit", {})
+    audio_cfg["24bit"].setdefault("capture_gain_db", 0.0)
+    audio_cfg["24bit"].setdefault("timecode_offset_frames", 0)
+    audio_cfg.setdefault("16bit", {})
+    audio_cfg["16bit"].setdefault("capture_gain_db", 0.0)
+    audio_cfg["16bit"].setdefault("timecode_offset_frames", 0)
     settings["audio"] = audio_cfg
 
     # Anamorphic preview defaults (used by CinePiController).

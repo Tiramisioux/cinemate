@@ -64,19 +64,21 @@
     "audio": {
       "type": "object",
       "properties": {
-        "capture_gain_db": {
-          "type": "number",
-          "default": 0.0
+        "24bit": {
+          "type": "object",
+          "description": "Settings for the 24-bit USB dsnoop path (RØDE NTG, mic_24bit alias)",
+          "properties": {
+            "capture_gain_db": { "type": "number", "default": 0.0 },
+            "timecode_offset_frames": { "type": "integer", "default": 0 }
+          }
         },
-        "timecode_offset_frames": {
-          "type": "integer",
-          "default": 0,
-          "description": "Timecode offset for the 24-bit USB dsnoop path (RØDE NTG, mic_24bit alias)"
-        },
-        "plain_arecord_timecode_offset_frames": {
-          "type": "integer",
-          "default": 0,
-          "description": "Timecode offset for the 16-bit plain-arecord fallback path (generic USB PnP mics)"
+        "16bit": {
+          "type": "object",
+          "description": "Settings for the 16-bit plain-arecord fallback path (generic USB PnP mics)",
+          "properties": {
+            "capture_gain_db": { "type": "number", "default": 0.0 },
+            "timecode_offset_frames": { "type": "integer", "default": 0 }
+          }
         }
       },
       "additionalProperties": true

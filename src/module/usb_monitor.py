@@ -212,6 +212,18 @@ class AudioMonitor:
         return [control for _, _, control in ranked]
 
     def apply_capture_gain(self) -> bool:
+        # Re-read gain from the per-toolchain sub-object now that bit_depth is known.
+        # Falls back to the legacy flat key for Pi-local settings files that haven't
+        # been updated yet.
+        audio_cfg = self.settings.get("audio", {})
+        toolchain_key = "24bit" if self.bit_depth == 24 else "16bit"
+        if toolchain_key in audio_cfg and "capture_gain_db" in audio_cfg[toolchain_key]:
+            self.capture_gain_db = self._parse_capture_gain_db(
+                audio_cfg[toolchain_key]["capture_gain_db"]
+            )
+        elif "capture_gain_db" in audio_cfg:
+            self.capture_gain_db = self._parse_capture_gain_db(audio_cfg["capture_gain_db"])
+
         if not self.card_num:
             if abs(self.capture_gain_db) > 1e-6:
                 logging.warning(

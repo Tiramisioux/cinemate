@@ -239,10 +239,6 @@ def _apply_settings_defaults(settings: dict) -> dict:
         "capture_gain_db": 0.0,
         "plain_arecord_timecode_offset_frames": 0,
         "timecode_offset_frames": 0,
-        "clock_correction": {
-            "enabled": False,
-            "database": "resources/audio_clock_correction.json",
-        },
     }
     audio_cfg = settings.setdefault("audio", {})
     for k, v in audio_defaults.items():

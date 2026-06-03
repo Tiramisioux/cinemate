@@ -116,92 +116,6 @@ def _audio_timecode_offset_frames(settings: dict | None = None) -> int:
         return 0
 
 
-def _audio_clock_ppm(settings: dict | None = None) -> int:
-    """Return the ADC clock correction in ppm for the currently connected USB mic.
-
-    Correction is only applied when BOTH conditions are met:
-      1. audio.clock_correction.enabled is true in settings.json
-      2. The connected mic matches an entry in the clock correction database file
-
-    When enabled, queries ``arecord -l`` and returns the ppm for the first device
-    name in the database that appears as a case-insensitive substring of the output.
-    Returns 0 (no correction) when disabled, no database match, or on any error.
-    """
-    audio_cfg = (settings if settings is not None else _settings()).get("audio", {})
-    correction = audio_cfg.get("clock_correction", {})
-
-    if not correction.get("enabled", False):
-        logging.info("Audio clock correction: disabled in settings (audio.clock_correction.enabled=false)")
-        return 0
-
-    db_path_str = correction.get("database", "resources/audio_clock_correction.json")
-    db_path = Path(db_path_str) if Path(db_path_str).is_absolute() else \
-        Path(__file__).resolve().parents[2] / db_path_str
-
-    try:
-        db = json.loads(db_path.read_text(encoding="utf-8"))
-        devices = db.get("devices", {})
-    except OSError as exc:
-        logging.warning("Audio clock correction: database file not found (%s): %s — no correction applied", db_path, exc)
-        return 0
-    except json.JSONDecodeError as exc:
-        logging.warning("Audio clock correction: database file is not valid JSON (%s): %s — no correction applied", db_path, exc)
-        return 0
-
-    if not devices:
-        logging.info("Audio clock correction: database contains no device entries — no correction applied")
-        return 0
-
-    # Prefer the card name already detected and published to Redis by usb_monitor.
-    # Fall back to querying arecord -l directly if Redis is unavailable.
-    card_name = ""
-    try:
-        import redis as _redis
-        _r = _redis.StrictRedis(host="localhost", port=6379, db=0)
-        raw = _r.get("MIC_CARD_NAME")
-        if raw:
-            card_name = raw.decode("utf-8", errors="replace").strip()
-    except Exception as exc:
-        logging.debug("Audio clock correction: could not read MIC_CARD_NAME from Redis (%s); falling back to arecord -l", exc)
-
-    if not card_name:
-        try:
-            result = subprocess.run(["arecord", "-l"], capture_output=True, text=True, timeout=3)
-            card_name = result.stdout + result.stderr
-        except Exception as exc:
-            logging.warning("Audio clock correction: could not query arecord -l: %s — no correction applied", exc)
-            return 0
-
-    card_name_lower = card_name.lower()
-
-    for device_name, entry in devices.items():
-        if device_name.lower() in card_name_lower:
-            try:
-                raw_ppm = entry["ppm"] if isinstance(entry, dict) else entry
-                ppm = int(raw_ppm)
-            except (TypeError, ValueError, KeyError):
-                logging.warning(
-                    "Audio clock correction: invalid ppm value for '%s' in database — skipping",
-                    device_name,
-                )
-                continue
-            note = entry.get("note", "") if isinstance(entry, dict) else ""
-            logging.info(
-                "Audio clock correction: '%s' detected — applying %+d ppm resampling after each take "
-                "(WAV duration corrected, BWF timecode anchor unchanged)%s",
-                device_name,
-                ppm,
-                f" [{note}]" if note else "",
-            )
-            return ppm
-
-    logging.info(
-        "Audio clock correction: enabled but '%s' has no entry in database — no correction applied. "
-        "To add this device, see resources/audio_clock_correction.json",
-        card_name.strip() or "(no device detected)",
-    )
-    return 0
-        
 # ───────────────────────── Event ─────────────────────────
 class Event:
     def __init__(self):
@@ -528,18 +442,6 @@ class CinePiProcess(Thread):
             args += [
                 "--audio-timecode-offset-frames",
                 str(audio_timecode_offset),
-            ]
-
-        clock_ppm = _audio_clock_ppm()
-        if clock_ppm != 0:
-            logging.info(
-                "[%s] ADC clock correction: %+d ppm",
-                self.cam.port,
-                clock_ppm,
-            )
-            args += [
-                "--audio-clock-ppm",
-                str(clock_ppm),
             ]
 
         # * Skip --tuning-file on Pi 4.  All other models keep it. *

@@ -49,11 +49,7 @@
   "audio": {
     "capture_gain_db": 0.0,
     "plain_arecord_timecode_offset_frames": 0,
-    "timecode_offset_frames": 0,
-    "clock_correction": {
-      "enabled": true,
-      "database": "resources/audio_clock_correction.json"
-    }
+    "timecode_offset_frames": 0
   },
   "anamorphic_preview": {
     "default_anamorphic_factor": 1,

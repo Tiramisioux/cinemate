@@ -120,9 +120,14 @@ Audio capture options shared by idle monitoring, recorded WAV input level, and A
 
 ```json
 "audio": {
-  "capture_gain_db": 0.0,
-  "plain_arecord_timecode_offset_frames": 2,
-  "timecode_offset_frames": 2,
+  "24bit": {
+    "capture_gain_db": 0.0,
+    "timecode_offset_frames": 1
+  },
+  "16bit": {
+    "capture_gain_db": 6.0,
+    "timecode_offset_frames": -3
+  },
   "clock_correction": {
     "enabled": false,
     "database": "resources/audio_clock_correction.json"
@@ -130,15 +135,13 @@ Audio capture options shared by idle monitoring, recorded WAV input level, and A
 }
 ```
 
-`capture_gain_db` – target ALSA capture gain in decibels for the detected microphone input. `0.0` means unity gain. Positive values boost the capture level, negative values attenuate it.
+Settings are split by the bit depth negotiated with the connected microphone. `24bit` applies when the mic supports 24-bit stereo capture (`mic_24bit` ALSA alias); `16bit` applies when only 16-bit mono is available (`mic_16bit` alias).
 
-`plain_arecord_timecode_offset_frames` – frame offset passed to `cinepi-raw` for the 16-bit plain `arecord` fallback WAV metadata path. `2` corrects the current 16-bit USB mic calibration, `0` disables the correction, and negative values are allowed for future calibration. This changes only WAV timecode metadata; recorded PCM is not shifted.
+`capture_gain_db` – target ALSA capture gain in decibels applied when the microphone is detected. `0.0` means unity gain. Positive values boost the capture level, negative values attenuate it. For 16-bit mics this value is also passed into `cinepi-raw` via Redis so that a post-take software gain can be applied to the WAV if the hardware exposes no writable ALSA control.
 
-`timecode_offset_frames` – the same kind of frame offset for the **24-bit USB capture path** (the default for most USB mics, including the clock-correction path). Use it to nudge audio that lands a fixed number of frames early or late relative to video. A **positive** value moves the WAV timecode later (use it when the sound is *early*); a negative value moves it earlier. `2` is the current calibration, `0` disables it. Like the 16-bit knob, this changes only WAV timecode metadata — the PCM is never shifted — and it is independent of (and stacks with) clock correction. Passed to `cinepi-raw` as `--audio-timecode-offset-frames`.
+`timecode_offset_frames` – frame offset applied to the WAV timecode metadata after each take. A **positive** value moves the WAV timecode later (use when audio arrives *early* relative to video); a negative value moves it earlier. Only the embedded timecode is shifted — the PCM is never moved. `24bit.timecode_offset_frames` is used whenever the capture helper is active (both 24-bit and 16-bit mics going through the helper). `16bit.timecode_offset_frames` applies to 16-bit mics specifically, overriding the 24-bit value for that path.
 
-Use this when the Pi is hearing the mic too quietly or too hot and you want the idle VU, recording VU, and recorded WAV to move together. Cinemate mirrors this value into the Redis key `audio_capture_gain_db` at startup so future runtime controls can target the same setting.
-
-Some USB microphones expose a writable capture control and some do not. When the mic does support it, Cinemate applies this gain when the microphone is detected. If the device exposes no compatible capture control, the setting stays harmlessly ignored and the log will tell you that the mic likely has fixed gain.
+Some USB microphones expose a writable ALSA capture control and some do not. When the mic supports it, Cinemate applies `capture_gain_db` via `amixer` when the microphone is detected. If the device exposes no compatible control, the setting is silently skipped and the log will note that the mic likely has fixed hardware gain.
 
 ### ADC clock correction
 

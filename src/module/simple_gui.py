@@ -1281,7 +1281,7 @@ class SimpleGUI(threading.Thread):
                 tx = box_x + (BOX_W - tw) // 2
                 ty = y      + (BOX_H - th) // 2
                 draw.text((tx, ty), storage, font=box_font, fill=TEXT_COLOR)
-                y += BOX_H + 4
+                y += BOX_H + BOX_GAP
                 fs_raw = str(values.get("storage_filesystem", "")).lower()
                 if fs_raw and fs_raw not in ("none", "unknown", ""):
                     fs_label = {"exfat": "exFAT", "ntfs": "NTFS"}.get(fs_raw, fs_raw)
@@ -1671,7 +1671,7 @@ class SimpleGUI(threading.Thread):
                 pad_y = max(2, int(3 * shrink_y))
                 radius = max(2, int(3 * min(shrink_x, shrink_y)))
                 box_x0 = int(clip_pos_x + clip_tw + int(8 * shrink_x))
-                lower  = int(2 * shrink_y)   # nudge box down to sit next to clip name
+                lower  = 0   # vertical alignment with clip name
                 box_y0 = int(clip_pos_y) + lower
                 box_x1 = box_x0 + wav_tw + 2 * pad_x
                 box_y1 = box_y0 + wav_th + 2 * pad_y

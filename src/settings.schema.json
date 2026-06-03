@@ -68,13 +68,25 @@
           "type": "number",
           "default": 0.0
         },
-        "plain_arecord_timecode_offset_frames": {
-          "type": "integer",
-          "default": 2
+        "24bit": {
+          "type": "object",
+          "description": "Settings for the 24-bit USB dsnoop capture path (e.g. RØDE NTG via mic_24bit alias)",
+          "properties": {
+            "timecode_offset_frames": {
+              "type": "integer",
+              "default": 0
+            }
+          }
         },
-        "timecode_offset_frames": {
-          "type": "integer",
-          "default": 2
+        "16bit": {
+          "type": "object",
+          "description": "Settings for the 16-bit plain-arecord fallback path",
+          "properties": {
+            "timecode_offset_frames": {
+              "type": "integer",
+              "default": 0
+            }
+          }
         }
       },
       "additionalProperties": true

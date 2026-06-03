@@ -227,7 +227,7 @@ class SimpleGUI(threading.Thread):
     def _adjust_clip_layout(self, two_clips: bool, show_wav: bool = False):
         """Shrink/enlarge the font & Y-positions of the clip-name fields."""
         _WAV_SHIFT = 40  # px to shift clip name left when wav label is shown
-        clip_x = 720 - (_WAV_SHIFT if show_wav else 0)
+        clip_x = 725 - (_WAV_SHIFT if show_wav else 0)
         if two_clips:
             new_size = 20               # ↓ from 41 → 24 px
             y_base   = 1053
@@ -1669,7 +1669,7 @@ class SimpleGUI(threading.Thread):
                 pad_y = max(2, int(3 * shrink_y))
                 radius = max(2, int(3 * min(shrink_x, shrink_y)))
                 box_x0 = int(clip_pos_x + clip_tw + int(8 * shrink_x))
-                lower  = int(4 * shrink_y)   # nudge box down to sit next to clip name
+                lower  = int(2 * shrink_y)   # nudge box down to sit next to clip name
                 box_y0 = int(clip_pos_y) + lower
                 box_x1 = box_x0 + wav_tw + 2 * pad_x
                 box_y1 = box_y0 + wav_th + 2 * pad_y

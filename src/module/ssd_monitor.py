@@ -950,6 +950,11 @@ class SSDMonitor:
                     subprocess.run(
                         ["sudo", "parted", "-s", disk_dev, "mkpart", "RAW", "0%", "100%"],
                         check=True, timeout=30)
+                    # Set Microsoft Basic Data GUID so macOS auto-mounts the partition.
+                    subprocess.run(
+                        ["sudo", "parted", "-s", disk_dev, "set", "1", "msftdata", "on"],
+                        check=False, timeout=10,
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     subprocess.run(
                         ["sudo", "partprobe", disk_dev],
                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
@@ -965,11 +970,11 @@ class SSDMonitor:
         if fs == "ext4":
             mkfs_cmd = ["sudo", "mkfs.ext4", "-F", "-L", "RAW", device]
         elif fs == "exfat":
-            # exfatprogs uses -L for the label (not -n) and -c for cluster size.
-            # 1 MB clusters cut allocation-bitmap/FAT bookkeeping for the large
-            # (~12 MB) DNG files written ~25×/s, reducing the write-latency
-            # spikes that drop frames on exFAT.
-            mkfs_cmd = ["sudo", "mkfs.exfat", "-L", "RAW", "-c", "1M", device]
+            # Do not pass -c (cluster size): the default chosen by mkfs.exfat
+            # (~256 KB for large drives) is compatible with macOS and Windows.
+            # Forcing 1 MB clusters was tried for write-latency but breaks
+            # the macOS exFAT driver on most versions.
+            mkfs_cmd = ["sudo", "mkfs.exfat", "-L", "RAW", device]
         else:
             mkfs_cmd = ["sudo", "mkfs.ntfs", "-F", "-L", "RAW", device]
 

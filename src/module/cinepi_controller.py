@@ -687,7 +687,7 @@ class CinePiController:
         )
 
         corrected = requested_user_fps * self.fps_correction_factor
-        fps_max   = int(self.redis_controller.get_value(ParameterKey.FPS_MAX.value))
+        fps_max   = int(float(self.redis_controller.get_value(ParameterKey.FPS_MAX.value)))
 
         # ── choose the final fps value ──────────────────────────────────────
         if self.shutter_a_sync_mode == 1 or self.fps_free:

@@ -224,21 +224,23 @@ class SimpleGUI(threading.Thread):
         )
 
     # ───────────────── helper: tweak GUI layout for clip lines ────────────────────
-    def _adjust_clip_layout(self, two_clips: bool):
+    def _adjust_clip_layout(self, two_clips: bool, show_wav: bool = False):
         """Shrink/enlarge the font & Y-positions of the clip-name fields."""
+        _WAV_SHIFT = 40  # px to shift clip name left when wav label is shown
+        clip_x = 720 - (_WAV_SHIFT if show_wav else 0)
         if two_clips:
             new_size = 20               # ↓ from 41 → 24 px
             y_base   = 1053
             self.layout["clip_name"]["size"]        = new_size
             self.layout["clip_name_cam1"]["size"]   = new_size
-            self.layout["clip_name"]["pos"]         = (720, y_base)       # lower line
-            self.layout["clip_name_cam1"]["pos"]    = (720, y_base-19)    # 19 px up
+            self.layout["clip_name"]["pos"]         = (clip_x, y_base)       # lower line
+            self.layout["clip_name_cam1"]["pos"]    = (clip_x, y_base-19)    # 19 px up
         else:
             # Fall back to the original settings
             self.layout["clip_name"]["size"]        = 20
             self.layout["clip_name_cam1"]["size"]   = 20
-            self.layout["clip_name"]["pos"]         = (720, 1050)
-            self.layout["clip_name_cam1"]["pos"]    = (720, 1050)
+            self.layout["clip_name"]["pos"]         = (clip_x, 1050)
+            self.layout["clip_name_cam1"]["pos"]    = (clip_x, 1050)
 
 
     def load_sensor_values_from_redis(self):
@@ -551,8 +553,6 @@ class SimpleGUI(threading.Thread):
                 "items": [
                     {"key": "mic_sample_rate", "text": lambda v: v.get("mic_sample_rate", "")},
                     {"key": "mic_bit_depth", "text": lambda v: v.get("mic_bit_depth", "")},
-                    {"key": "mic_wav_saved", "text": lambda v: "WAV" if (v.get("mic_wav_saved") or v.get("mic_wav_recording")) else ""},
-
                     # {"key": "frames_in_sync", "text": lambda v: "SYNC" if v.get("frames_in_sync") else ""},
                 ],
             }
@@ -1488,7 +1488,8 @@ class SimpleGUI(threading.Thread):
     def draw_gui(self, values):
         
         # ── shrink clip-name text when two cameras are active ─────────────────────────
-        self._adjust_clip_layout(self._has_two_clips(values))
+        show_wav = bool(values.get("mic_wav_recording") or values.get("mic_wav_saved"))
+        self._adjust_clip_layout(self._has_two_clips(values), show_wav=show_wav)
 
         previous_background_color = self.get_background_color()
 
@@ -1642,6 +1643,25 @@ class SimpleGUI(threading.Thread):
                 self.draw_rounded_box(draw, value, position, font_size, 5, "black", "white", image)
             else:
                 draw.text(position, value, font=font, fill=color)
+
+        # ── WAV label next to clip name ───────────────────────────────────────────
+        if show_wav and values.get("clip_name"):
+            clip_info = current_layout.get("clip_name")
+            if clip_info:
+                clip_pos_x = clip_info["pos"][0] * shrink_x
+                clip_pos_y = clip_info["pos"][1] * shrink_y
+                clip_font_size = max(1, int(round(clip_info.get("size", 20) * min(min(shrink_x, shrink_y), 1))))
+                clip_font = self._get_font(clip_info.get("font", "bold"), clip_font_size)
+                clip_tw = draw.textbbox((0, 0), str(values.get("clip_name", "")), font=clip_font)[2]
+                wav_font_size = max(1, int(round(14 * min(min(shrink_x, shrink_y), 1))))
+                wav_font = self._get_font("bold", wav_font_size)
+                wav_x = clip_pos_x + clip_tw + int(8 * shrink_x)
+                wav_y = clip_pos_y
+                if values.get("mic_wav_recording"):
+                    wav_color = (255, 255, 255)
+                else:
+                    wav_color = (136, 136, 136)
+                draw.text((wav_x, wav_y), "WAV", font=wav_font, fill=wav_color)
 
         self.draw_right_vu_meter(draw)
         if self.show_buffer_vu:

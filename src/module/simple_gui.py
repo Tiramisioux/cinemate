@@ -628,7 +628,6 @@ class SimpleGUI(threading.Thread):
 
     def _refresh_slow_values(self):
         latest_recording_info = self._slow_values.get("latest_recording_info", (None, 0, 0, -1))
-        wav_duration_valid = False
         cpu_load = self._slow_values.get("cpu_load", "0%")
         cpu_temp = self._slow_values.get("cpu_temp", "--")
 
@@ -648,19 +647,10 @@ class SimpleGUI(threading.Thread):
             except Exception:
                 pass
 
-        try:
-            folder_path = latest_recording_info[0] if latest_recording_info else None
-            max_frame_idx = latest_recording_info[3] if latest_recording_info and len(latest_recording_info) > 3 else -1
-            fps = float(self.redis_controller.get_value(ParameterKey.FPS.value) or 0)
-            wav_duration_valid = self._validate_wav_length(folder_path, max_frame_idx, fps)
-        except Exception:
-            wav_duration_valid = False
-
         self._slow_values.update({
             "cpu_load": cpu_load,
             "cpu_temp": cpu_temp,
             "latest_recording_info": latest_recording_info,
-            "wav_duration_valid": wav_duration_valid,
         })
         self._last_slow_refresh_ts = time.monotonic()
 
@@ -858,10 +848,11 @@ class SimpleGUI(threading.Thread):
             elif not rec_active:
                 _, dng_count, wav_count, *_ = self._slow_values.get(
                     "latest_recording_info", (None, 0, 0, -1))
-                values["mic_wav_saved"] = (
-                    dng_count > 0
-                    and self._slow_values.get("wav_duration_valid", False)
-                )
+                # Show the grey label whenever the last take folder contains
+                # at least one WAV file alongside DNG files.  Duration
+                # validation was too fragile (breaks when fps=0 briefly or
+                # when frame-index parsing fails on non-standard filenames).
+                values["mic_wav_saved"] = dng_count > 0 and wav_count > 0
 
         if values["mic_connected"]:
             monitor = getattr(self.usb_monitor, "audio_monitor", None)
@@ -1654,7 +1645,7 @@ class SimpleGUI(threading.Thread):
             else:
                 draw.text(position, value, font=font, fill=color)
 
-        # ── WAV label next to clip name ───────────────────────────────────────────
+        # ── WAV label next to clip name (rounded grey box) ───────────────────────
         if show_wav and values.get("clip_name"):
             clip_info = current_layout.get("clip_name")
             if clip_info:
@@ -1665,13 +1656,19 @@ class SimpleGUI(threading.Thread):
                 clip_tw = draw.textbbox((0, 0), str(values.get("clip_name", "")), font=clip_font)[2]
                 wav_font_size = max(1, int(round(14 * min(min(shrink_x, shrink_y), 1))))
                 wav_font = self._get_font("bold", wav_font_size)
-                wav_x = clip_pos_x + clip_tw + int(8 * shrink_x)
-                wav_y = clip_pos_y
-                if values.get("mic_wav_recording"):
-                    wav_color = (255, 255, 255)
-                else:
-                    wav_color = (136, 136, 136)
-                draw.text((wav_x, wav_y), "WAV", font=wav_font, fill=wav_color)
+                wav_bb = draw.textbbox((0, 0), "WAV", font=wav_font)
+                wav_tw = wav_bb[2] - wav_bb[0]
+                wav_th = wav_bb[3] - wav_bb[1]
+                pad_x = max(3, int(4 * shrink_x))
+                pad_y = max(2, int(3 * shrink_y))
+                radius = max(2, int(3 * min(shrink_x, shrink_y)))
+                box_x0 = int(clip_pos_x + clip_tw + int(8 * shrink_x))
+                box_y0 = int(clip_pos_y) - pad_y
+                box_x1 = box_x0 + wav_tw + 2 * pad_x
+                box_y1 = box_y0 + wav_th + 2 * pad_y
+                box_fill = WAV_RECORDING_COLOR if values.get("mic_wav_recording") else (136, 136, 136)
+                draw.rounded_rectangle([(box_x0, box_y0), (box_x1, box_y1)], radius=radius, fill=box_fill)
+                draw.text((box_x0 + pad_x, int(clip_pos_y)), "WAV", font=wav_font, fill=(0, 0, 0))
 
         self.draw_right_vu_meter(draw)
         if self.show_buffer_vu:

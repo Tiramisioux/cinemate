@@ -231,6 +231,8 @@ Preset lists for exposure and frame‑rate settings. Cinemate will step through 
 
     Once your DNGs are in Resolve's Camera RAW tab, the pixel values are fixed. ISO there is a decode-time parameter: in Gen 4 color science it selects a different log curve that shifts contrast as well as brightness; in Gen 5 it acts as a linear gain equivalent to the Exposure slider. Either way, correcting a wrong ISO in Resolve costs no additional quality — provided the sensor data was not catastrophically over- or underexposed at capture.
 
+    References: [BRAW decode](https://blackmagiccameraapk.pro/blackmagic-raw-explained/) · [Gen 4 vs Gen 5](https://forum.blackmagicdesign.com/viewtopic.php?f=2&t=130645&start=50) · [ISO vs Exposure](https://forum.blackmagicdesign.com/viewtopic.php?f=2&t=123096) · [Resolve Camera RAW manual](https://www.steakunderwater.com/VFXPedia/__man/Resolve18-6/DaVinciResolve18_Manual_files/part202.htm)
+
 ## analog_controls
 
 Maps Grove Base HAT ADC channels to analogue dials (potentiometers). Use `null` to disable a dial.
@@ -296,6 +298,22 @@ Points Cinemate at the sensor metadata database used for known packing modes, do
 ```
 
 `database_file` – JSON file containing compatible sensor metadata. The default file is `resources/sensors.json`.
+
+## camera
+
+Low-level camera runtime options passed directly to `cinepi-raw`.
+
+```json
+"camera": {
+  "override_camera_name": false,
+  "camera_name": "Blackmagic Pocket Cinema Camera 4K",
+  "raw_buffer_count": 0
+}
+```
+
+`override_camera_name` – when `true`, the value of `camera_name` is passed to `cinepi-raw` as `--unique-camera-model` and written into the `UniqueCameraModel` DNG tag of every recorded frame. Set to `false` (default) to use the built-in default, which is `"Blackmagic Pocket Cinema Camera 4K"`. This tag is what NLEs such as DaVinci Resolve display as the camera identifier and use for BRAW/DNG color science look-up.<br>
+`camera_name` – the string to embed when `override_camera_name` is `true`. Has no effect when `override_camera_name` is `false`.<br>
+`raw_buffer_count` – override the number of in-flight sensor buffers allocated by `cinepi-raw`. `0` (default) defers to the active storage-profile value. Raise this only when you see single-frame TC holes on a slow filesystem and `grep Cma /proc/meminfo` confirms available CMA headroom (~25 MB per extra buffer at 4K).
 
 ## dynamic_resolution
 

@@ -545,6 +545,14 @@ class CinePiProcess(Thread):
         )
         args += ["--buffer-count", str(buffer_count)]
 
+        # unique camera model override
+        cam_cfg = _settings().get("camera", {}) or {}
+        if cam_cfg.get("override_camera_name", False):
+            name = str(cam_cfg.get("camera_name", "") or "").strip()
+            if name:
+                args += ["--unique-camera-model", name]
+                logging.info("[%s] DNG UniqueCameraModel overridden: %s", self.cam.port, name)
+
         return args
 
     def stop(self):

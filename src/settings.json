@@ -278,6 +278,7 @@
     }
   },
   "camera": {
+    "raw_buffer_count": 0,
     "cam0": {
       "override_camera_name": true,
       "camera_name": "Blackmagic Pocket Cinema Camera 4K"

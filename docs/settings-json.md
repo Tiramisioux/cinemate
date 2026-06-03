@@ -305,15 +305,28 @@ Low-level camera runtime options passed directly to `cinepi-raw`.
 
 ```json
 "camera": {
-  "override_camera_name": false,
-  "camera_name": "Blackmagic Pocket Cinema Camera 4K",
-  "raw_buffer_count": 0
+  "raw_buffer_count": 0,
+  "cam0": {
+    "override_camera_name": true,
+    "camera_name": "Blackmagic Pocket Cinema Camera 4K"
+  },
+  "cam1": {
+    "override_camera_name": true,
+    "camera_name": "Blackmagic Pocket Cinema Camera 4K"
+  }
 }
 ```
 
-`override_camera_name` – when `true`, the value of `camera_name` is passed to `cinepi-raw` as `--unique-camera-model` and written into the `UniqueCameraModel` DNG tag of every recorded frame. Set to `false` (default) to use the built-in default, which is `"Blackmagic Pocket Cinema Camera 4K"`. This tag is what NLEs such as DaVinci Resolve display as the camera identifier and use for BRAW/DNG color science look-up.<br>
-`camera_name` – the string to embed when `override_camera_name` is `true`. Has no effect when `override_camera_name` is `false`.<br>
-`raw_buffer_count` – override the number of in-flight sensor buffers allocated by `cinepi-raw`. `0` (default) defers to the active storage-profile value. Raise this only when you see single-frame TC holes on a slow filesystem and `grep Cma /proc/meminfo` confirms available CMA headroom (~25 MB per extra buffer at 4K).
+`raw_buffer_count` – override the number of in-flight sensor buffers allocated by `cinepi-raw`. `0` (default) defers to the active storage-profile value. Raise this only when you see single-frame TC holes on a slow filesystem and `grep Cma /proc/meminfo` confirms available CMA headroom (~25 MB per extra buffer at 4K).<br>
+`cam0` / `cam1` – per-camera name override. Each camera instance gets its own `UniqueCameraModel` DNG tag.
+
+`override_camera_name` – when `true`, the value of `camera_name` is passed to `cinepi-raw` as `--unique-camera-model` and written into the `UniqueCameraModel` DNG tag of every recorded frame. When `false`, `cinepi-raw` uses its built-in default (`"Blackmagic Pocket Cinema Camera 4K"`).<br>
+`camera_name` – the string to embed when `override_camera_name` is `true`.
+
+!!! note "Why Blackmagic Pocket Cinema Camera 4K"
+    DaVinci Resolve uses the `UniqueCameraModel` DNG tag to identify the camera and select the matching decode pipeline. When this tag matches a known Blackmagic camera, Resolve unlocks the full Camera RAW tab — including the ISO slider, colour science selection (Gen 4 / Gen 5), and the corresponding tone curve and noise reduction presets. With an unknown or missing camera model the RAW tab is limited and ISO behaves as a simple exposure offset rather than selecting a proper decode curve.
+
+    Setting `camera_name` to `"Blackmagic Pocket Cinema Camera 4K"` is therefore not cosmetic — it is what makes Resolve treat the footage as genuine BRAW-adjacent DNG and apply the correct ISO-aware decode.
 
 ## dynamic_resolution
 

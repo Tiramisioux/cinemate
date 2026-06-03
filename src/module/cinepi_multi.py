@@ -545,8 +545,10 @@ class CinePiProcess(Thread):
         )
         args += ["--buffer-count", str(buffer_count)]
 
-        # unique camera model override
-        cam_cfg = _settings().get("camera", {}) or {}
+        # unique camera model override — per-cam (camera.cam0 / camera.cam1) with
+        # fallback to legacy flat camera section for old configs
+        camera_cfg = _settings().get("camera", {}) or {}
+        cam_cfg = camera_cfg.get(self.cam.port, camera_cfg)
         if cam_cfg.get("override_camera_name", False):
             name = str(cam_cfg.get("camera_name", "") or "").strip()
             if name:

@@ -277,6 +277,16 @@
       }
     }
   },
+  "camera": {
+    "cam0": {
+      "override_camera_name": false,
+      "camera_name": "A"
+    },
+    "cam1": {
+      "override_camera_name": false,
+      "camera_name": "B"
+    }
+  },
   "i2c_oled": {
     "enabled": false,
     "width": 128,

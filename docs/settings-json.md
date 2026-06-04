@@ -44,35 +44,78 @@ If `welcome_image` is set, it overrides the text message.
 
 Use the hotspot when you need a direct connection in the field. Disable it during development so the Pi can join your regular Wi‑Fi and reach the internet. If you are connected to the Pi via Ethernet you can keep the hotspot on.
 
-## geometry
+## camera
 
-Controls image orientation for each camera port (`cam0`, `cam1`, etc.). These settings let you mount cameras in any orientation and still get an upright preview and recording. Example:
+All per-port settings live inside a `cam0` or `cam1` block so every option for a given camera port is visible in one place. `raw_buffer_count` is the only global key.
 
 ```json
-"geometry": {
-  "cam0": { "rotate_180": false, "horizontal_flip": false, "vertical_flip": false },
-  "cam1": { "rotate_180": false, "horizontal_flip": false, "vertical_flip": false }
+"camera": {
+  "raw_buffer_count": 0,
+  "cam0": {
+    "geometry": {
+      "rotate_180": false,
+      "horizontal_flip": false,
+      "vertical_flip": false
+    },
+    "output": {
+      "hdmi_port": 0
+    },
+    "override_camera_name": true,
+    "camera_name": "Blackmagic Pocket Cinema Camera 4K",
+    "sensor_fps_correction": true
+  },
+  "cam1": {
+    "geometry": {
+      "rotate_180": false,
+      "horizontal_flip": false,
+      "vertical_flip": false
+    },
+    "output": {
+      "hdmi_port": 1
+    },
+    "override_camera_name": true,
+    "camera_name": "Blackmagic Pocket Cinema Camera 4K",
+    "sensor_fps_correction": true
+  }
 }
 ```
 
-`rotate_180` – flip the image upside‑down.<br>`horizontal_flip` – mirror the image left/right.<br>`vertical_flip` – mirror the image top/bottom.
+`raw_buffer_count` – override the number of in-flight sensor buffers allocated by `cinepi-raw`. `0` (default) defers to the active storage-profile value. Raise this only when you see single-frame TC holes on a slow filesystem and `grep Cma /proc/meminfo` confirms available CMA headroom (~25 MB per extra buffer at 4K).
 
+### geometry
 
-## output
+Controls image orientation for the camera mounted on this port. These settings let you mount cameras in any orientation and still get an upright preview and recording.
 
-Maps each camera to an HDMI connector. Use `-1` for automatic selection.
+`rotate_180` – flip the image upside-down.<br>
+`horizontal_flip` – mirror the image left/right.<br>
+`vertical_flip` – mirror the image top/bottom.
 
-```json
-"output": {
-  "cam0": { "hdmi_port": 0 },
-  "cam1": { "hdmi_port": 1 }
-}
-```
+### output
 
-Use HDMI port `0` for `HDMI-A-1` and HDMI port `1` for `HDMI-A-2`.
+Maps the camera to an HDMI connector.
+
+`hdmi_port` – `0` for `HDMI-A-1`, `1` for `HDMI-A-2`.
 
 !!! note ""
     This setting chooses which connector `cinepi-raw` uses at runtime. On Raspberry Pi Bookworm with KMS, the boot framebuffer mode still comes from `/boot/firmware/cmdline.txt`, so headless installs should also set a `video=HDMI-A-1:1920x1080M@60D` or `video=HDMI-A-2:1920x1080M@60D` override there.
+
+### Camera name
+
+`override_camera_name` – when `true`, the value of `camera_name` is passed to `cinepi-raw` as `--unique-camera-model` and written into the `UniqueCameraModel` DNG tag of every recorded frame. When `false`, `cinepi-raw` uses its built-in default.<br>
+`camera_name` – the string to embed when `override_camera_name` is `true`.
+
+!!! note "Why Blackmagic Pocket Cinema Camera 4K"
+    DaVinci Resolve uses the `UniqueCameraModel` DNG tag to identify the camera and select the matching decode pipeline. When this tag matches a known Blackmagic camera, Resolve unlocks the full Camera RAW tab — including the ISO slider, colour science selection (Gen 4 / Gen 5), and the corresponding tone curve and noise reduction presets. With an unknown or missing camera model the RAW tab is limited and ISO behaves as a simple exposure offset rather than selecting a proper decode curve.
+
+    Setting `camera_name` to `"Blackmagic Pocket Cinema Camera 4K"` is therefore not cosmetic — it is what makes Resolve treat the footage as genuine BRAW-adjacent DNG and apply the correct ISO-aware decode.
+
+### sensor_fps_correction
+
+Some sensors run their pixel clock slightly off the nominal rate, so the true frame interval differs from the requested FPS. Cinemate compensates by looking up an empirical correction factor for the detected sensor, mode, and FPS combination in `src/module/sensor_correction_factors.py` and applying it before passing the FPS value to `cinepi-raw`.
+
+`sensor_fps_correction` – `true` (default) enables the lookup and applies the correction. `false` passes the exact user-requested FPS to `cinepi-raw` with no modification (correction factor = 1.0).
+
+Set to `false` when you are using a sensor not yet in the database and want unmodified FPS, or when you are comparing corrected versus uncorrected timecode drift. See [FPS correction](fps-correction.md) for the calibration workflow.
 
 ## hdmi_gui
 
@@ -301,35 +344,6 @@ Points Cinemate at the sensor metadata database used for known packing modes, do
 ```
 
 `database_file` – JSON file containing compatible sensor metadata. The default file is `resources/sensors.json`.
-
-## camera
-
-Low-level camera runtime options passed directly to `cinepi-raw`.
-
-```json
-"camera": {
-  "raw_buffer_count": 0,
-  "cam0": {
-    "override_camera_name": true,
-    "camera_name": "Blackmagic Pocket Cinema Camera 4K"
-  },
-  "cam1": {
-    "override_camera_name": true,
-    "camera_name": "Blackmagic Pocket Cinema Camera 4K"
-  }
-}
-```
-
-`raw_buffer_count` – override the number of in-flight sensor buffers allocated by `cinepi-raw`. `0` (default) defers to the active storage-profile value. Raise this only when you see single-frame TC holes on a slow filesystem and `grep Cma /proc/meminfo` confirms available CMA headroom (~25 MB per extra buffer at 4K).<br>
-`cam0` / `cam1` – per-camera name override. Each camera instance gets its own `UniqueCameraModel` DNG tag.
-
-`override_camera_name` – when `true`, the value of `camera_name` is passed to `cinepi-raw` as `--unique-camera-model` and written into the `UniqueCameraModel` DNG tag of every recorded frame. When `false`, `cinepi-raw` uses its built-in default (`"Blackmagic Pocket Cinema Camera 4K"`).<br>
-`camera_name` – the string to embed when `override_camera_name` is `true`.
-
-!!! note "Why Blackmagic Pocket Cinema Camera 4K"
-    DaVinci Resolve uses the `UniqueCameraModel` DNG tag to identify the camera and select the matching decode pipeline. When this tag matches a known Blackmagic camera, Resolve unlocks the full Camera RAW tab — including the ISO slider, colour science selection (Gen 4 / Gen 5), and the corresponding tone curve and noise reduction presets. With an unknown or missing camera model the RAW tab is limited and ISO behaves as a simple exposure offset rather than selecting a proper decode curve.
-
-    Setting `camera_name` to `"Blackmagic Pocket Cinema Camera 4K"` is therefore not cosmetic — it is what makes Resolve treat the footage as genuine BRAW-adjacent DNG and apply the correct ISO-aware decode.
 
 ## dynamic_resolution
 

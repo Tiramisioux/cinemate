@@ -68,7 +68,9 @@ CINEMATE_REPO_REF="${CINEMATE_REPO_REF:-}"
 CINEPI_RAW_REPO_URL="${CINEPI_RAW_REPO_URL:-https://github.com/Tiramisioux/cinepi-raw.git}"
 CINEPI_RAW_REPO_REF="${CINEPI_RAW_REPO_REF:-}"
 LIBCAMERA_REPO_URL="${LIBCAMERA_REPO_URL:-https://github.com/will127534/libcamera.git}"
-LIBCAMERA_REPO_REF="${LIBCAMERA_REPO_REF:-ea5abb8b}"
+LIBCAMERA_REPO_REF="${LIBCAMERA_REPO_REF:-9d0cdfe5}"
+# Patches cherry-picked on top of LIBCAMERA_REPO_REF (space-separated commit hashes, applied in order)
+LIBCAMERA_PATCHES="${LIBCAMERA_PATCHES:-97f71626 ea5abb8b}"
 CPP_MJPEG_STREAMER_REPO_URL="${CPP_MJPEG_STREAMER_REPO_URL:-https://github.com/nadjieb/cpp-mjpeg-streamer.git}"
 CPP_MJPEG_STREAMER_REPO_REF="${CPP_MJPEG_STREAMER_REPO_REF:-}"
 REDIS_PLUS_PLUS_REPO_URL="${REDIS_PLUS_PLUS_REPO_URL:-https://github.com/sewenew/redis-plus-plus.git}"
@@ -597,6 +599,18 @@ build_libcamera() {
     # Set core.fileMode false on a fresh clone too, so the first chmod+x
     # pass below does not dirty the tree on the next installer run.
     run_as_pi git -C "$LIBCAMERA_DIR" config core.fileMode false
+
+    # Apply cherry-pick patches on top of the base ref.  A dedicated branch
+    # (cinemate-patches) is created or reset each time so this step is
+    # idempotent: re-running the installer cleanly re-applies the patches.
+    if [[ -n "${LIBCAMERA_PATCHES:-}" ]]; then
+        log "Applying libcamera patches on top of $LIBCAMERA_REPO_REF"
+        run_as_pi git -C "$LIBCAMERA_DIR" checkout -B cinemate-patches "$LIBCAMERA_REPO_REF"
+        for patch in $LIBCAMERA_PATCHES; do
+            detail "Cherry-picking $patch"
+            run_as_pi git -C "$LIBCAMERA_DIR" cherry-pick "$patch"
+        done
+    fi
 
     log "Building libcamera"
     detail "Source: $LIBCAMERA_DIR"

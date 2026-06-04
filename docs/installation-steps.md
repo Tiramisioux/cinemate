@@ -113,16 +113,14 @@ sudo apt-get install python3-jinja2 python3-ply python3-yaml ffmpeg
 sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev ffmpeg && sudo apt-get install libjsoncpp-dev && cd ~ && git clone https://github.com/sewenew/redis-plus-plus.git && cd redis-plus-plus && mkdir build && cd build && cmake .. && make && sudo make install && cd ~
 ```
 
-### libcamera (Will Whang fork pinned to `ea5abb8b`) <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
+### libcamera (Will Whang fork `9d0cdfe5` + two patches) <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
-This fork includes the following patches on top of the Raspberry Pi upstream:
+The base is `9d0cdfe5` from Will Whang's fork. Two patches are cherry-picked on top — only those two files change, nothing else:
 
-| Commit | Change |
-|--------|--------|
-| `97f71626` | IMX585: exact pinned frame rate via VMAX/HMAX lattice search — eliminates ~440 ppm quantisation drift at 25 fps |
-| `ea5abb8b` | IMX294/IMX492: same exact frame-rate algorithm (72 MHz clock) |
-
-Also included between those two commits: IMX585 AGC gain profile widened from 8× to 16×, and sensor test-pattern mode support for IMX585/IMX294/IMX492.
+| Patch | File changed | Effect |
+|-------|-------------|--------|
+| `97f71626` | `cam_helper_imx585.cpp` | IMX585: exact pinned frame rate via VMAX/HMAX lattice search — eliminates ~440 ppm quantisation drift at standard fps |
+| `ea5abb8b` | `cam_helper_imx294.cpp`, `cam_helper_imx492.cpp` | IMX294/IMX492: same algorithm (72 MHz clock) |
 
 **On the Pi, to update an existing install:**
 
@@ -139,7 +137,9 @@ cd ~/libcamera && \
 git config core.fileMode false && \
 git fetch origin && \
 git stash || true && \
-git checkout ea5abb8b && \
+git checkout -B cinemate-patches 9d0cdfe5 && \
+git cherry-pick 97f71626 && \
+git cherry-pick ea5abb8b && \
 find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
 chmod +x ~/libcamera/src/ipa/ipa-sign.sh && \
 meson setup build --wipe --buildtype=release \
@@ -159,7 +159,7 @@ sudo ldconfig && \
 sudo systemctl restart cinepi-raw
 ```
 
-`git config core.fileMode false` silences the executable-bit changes that the build leaves behind on Python files (a Linux-only git behaviour). `git stash` clears any remaining real content changes such as tuning JSONs so the checkout cannot be blocked.
+`git checkout -B cinemate-patches 9d0cdfe5` creates or resets a local branch to the exact base ref so this command is safe to re-run. `git config core.fileMode false` silences executable-bit changes left behind by the build. `git stash` clears any remaining content changes so the checkout cannot be blocked.
 
 **Fresh install:**
 
@@ -176,7 +176,10 @@ sudo apt-get install --reinstall libtiff5-dev && sudo ln -sf $(find /usr/lib -na
 ```shell
 git clone https://github.com/will127534/libcamera.git && \
 cd libcamera && \
-git checkout ea5abb8b && \
+git config core.fileMode false && \
+git checkout -B cinemate-patches 9d0cdfe5 && \
+git cherry-pick 97f71626 && \
+git cherry-pick ea5abb8b && \
 find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
 chmod +x ~/libcamera/src/ipa/ipa-sign.sh && \
 meson setup build --wipe --buildtype=release \
@@ -196,14 +199,16 @@ sudo ldconfig
 ```
 
 ```shell
-git -C ~/libcamera rev-parse --short HEAD
+git -C ~/libcamera log --oneline -3
 find ~/libcamera/src/ipa/rpi/cam_helper -name '*imx585*' -o -name '*imx294*' -o -name '*imx492*'
 ```
 
 Expected output:
 
 ```text
-ea5abb8b
+<hash> ipa: rpi: cam_helper_imx294/imx492: exact pinned frame rate via (VMAX,HMAX) search
+<hash> libcamera: imx585 exact frame-rate getBlanking
+<hash> <base commit message from 9d0cdfe5>
 /home/pi/libcamera/src/ipa/rpi/cam_helper/cam_helper_imx294.cpp
 /home/pi/libcamera/src/ipa/rpi/cam_helper/cam_helper_imx492.cpp
 /home/pi/libcamera/src/ipa/rpi/cam_helper/cam_helper_imx585.cpp

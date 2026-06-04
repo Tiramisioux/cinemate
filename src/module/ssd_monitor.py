@@ -654,6 +654,12 @@ class SSDMonitor:
         if exc.errno not in YANK_ERRNOS:
             return False
 
+        # ENOENT on a path inside the volume (e.g. a subdirectory deleted
+        # mid-scan during an erase) should not trigger a false unmount when
+        # the mount point itself is still intact.
+        if exc.errno == errno.ENOENT and os.path.ismount(self._mount_path):
+            return False
+
         logging.warning(
             "RAW drive became unavailable while trying to %s %s: %s",
             action,

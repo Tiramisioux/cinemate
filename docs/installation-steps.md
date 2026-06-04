@@ -113,14 +113,13 @@ sudo apt-get install python3-jinja2 python3-ply python3-yaml ffmpeg
 sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev ffmpeg && sudo apt-get install libjsoncpp-dev && cd ~ && git clone https://github.com/sewenew/redis-plus-plus.git && cd redis-plus-plus && mkdir build && cd build && cmake .. && make && sudo make install && cd ~
 ```
 
-### libcamera (Will Whang fork `9d0cdfe5` + two patches) <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
+### libcamera (Will Whang fork `9d0cdfe5` + one patch) <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
-The base is `9d0cdfe5` from Will Whang's fork. Two patches are cherry-picked on top — only those two files change, nothing else:
+The base is `9d0cdfe5` from Will Whang's fork. One patch is cherry-picked on top — only one file changes:
 
 | Patch | File changed | Effect |
 |-------|-------------|--------|
 | `97f71626` | `cam_helper_imx585.cpp` | IMX585: exact pinned frame rate via VMAX/HMAX lattice search — eliminates ~440 ppm quantisation drift at standard fps |
-| `ea5abb8b` | `cam_helper_imx294.cpp`, `cam_helper_imx492.cpp` | IMX294/IMX492: same algorithm (72 MHz clock) |
 
 **On the Pi, to update an existing install:**
 
@@ -138,8 +137,7 @@ git config core.fileMode false && \
 git fetch origin && \
 git stash || true && \
 git checkout -B cinemate-patches 9d0cdfe5 && \
-git cherry-pick -X theirs 97f71626 && \
-git cherry-pick -X theirs ea5abb8b && \
+git cherry-pick 97f71626 && \
 find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
 chmod +x ~/libcamera/src/ipa/ipa-sign.sh && \
 meson setup build --wipe --buildtype=release \
@@ -178,8 +176,7 @@ git clone https://github.com/will127534/libcamera.git && \
 cd libcamera && \
 git config core.fileMode false && \
 git checkout -B cinemate-patches 9d0cdfe5 && \
-git cherry-pick -X theirs 97f71626 && \
-git cherry-pick -X theirs ea5abb8b && \
+git cherry-pick 97f71626 && \
 find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
 chmod +x ~/libcamera/src/ipa/ipa-sign.sh && \
 meson setup build --wipe --buildtype=release \
@@ -199,18 +196,15 @@ sudo ldconfig
 ```
 
 ```shell
-git -C ~/libcamera log --oneline -3
-find ~/libcamera/src/ipa/rpi/cam_helper -name '*imx585*' -o -name '*imx294*' -o -name '*imx492*'
+git -C ~/libcamera log --oneline -2
+find ~/libcamera/src/ipa/rpi/cam_helper -name '*imx585*'
 ```
 
 Expected output:
 
 ```text
-<hash> ipa: rpi: cam_helper_imx294/imx492: exact pinned frame rate via (VMAX,HMAX) search
 <hash> libcamera: imx585 exact frame-rate getBlanking
 <hash> <base commit message from 9d0cdfe5>
-/home/pi/libcamera/src/ipa/rpi/cam_helper/cam_helper_imx294.cpp
-/home/pi/libcamera/src/ipa/rpi/cam_helper/cam_helper_imx492.cpp
 /home/pi/libcamera/src/ipa/rpi/cam_helper/cam_helper_imx585.cpp
 ```
 

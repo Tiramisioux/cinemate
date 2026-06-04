@@ -15,28 +15,6 @@ DEFAULT_CORRECTION_FACTOR: float = 1.0
 # Modes start with indices 0 and 1 for each sensor so that additional FPS
 # entries can be appended as measurements become available.
 SENSOR_CORRECTION_FACTORS: Dict[str, Dict[int | str, Dict[int, float] | float]] = {
-    "imx294": {
-        "_default": DEFAULT_CORRECTION_FACTOR,
-        0: {
-            24: 1.0, #exact after will127534/libcamera getBlanking patch (ea5abb8b)
-            25: 1.0, #exact after will127534/libcamera getBlanking patch (ea5abb8b)
-        },
-        1: {
-            24: 1.0, #exact after will127534/libcamera getBlanking patch (ea5abb8b)
-            25: 1.0, #exact after will127534/libcamera getBlanking patch (ea5abb8b)
-        },
-    },
-    "imx492": {
-        "_default": DEFAULT_CORRECTION_FACTOR,
-        0: {
-            24: 1.0, #exact after will127534/libcamera getBlanking patch (ea5abb8b)
-            25: 1.0, #exact after will127534/libcamera getBlanking patch (ea5abb8b)
-        },
-        1: {
-            24: 1.0, #exact after will127534/libcamera getBlanking patch (ea5abb8b)
-            25: 1.0, #exact after will127534/libcamera getBlanking patch (ea5abb8b)
-        },
-    },
     "imx296": {
         "_default": DEFAULT_CORRECTION_FACTOR,
         0: {},

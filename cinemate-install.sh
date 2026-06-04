@@ -487,6 +487,7 @@ install_apt_packages() {
     libcamera_packages=(
         libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a
         libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libavdevice59
+        libyaml-dev
     )
 
     cpp_mjpeg_streamer_packages=(

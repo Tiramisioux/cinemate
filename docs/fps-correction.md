@@ -2,6 +2,14 @@
 
 Some sensors report different effective frame rates than the requested FPS. This is typically caused by sensor timing details such as vertical blanking (vblank). Vblank changes the total line time the sensor needs per frame, which in turn shifts the *true* FPS even when the target FPS stays constant. Cinemate compensates for this by applying an FPS correction factor so the captured frame timing lines up with your intended rate.
 
+### IMX585, IMX294, IMX492 — correction factor is 1.0
+
+The Cinemate libcamera fork (will127534/libcamera, `ea5abb8b`) includes a `getBlanking()` override for the IMX585, IMX294, and IMX492 sensors. Instead of accepting the ~one-line VMAX/HMAX quantisation error from the standard blanking calculation, the override searches the integer register-pair lattice against the sensor's reference clock to find the combination that delivers the exact requested period.
+
+Effect: standard rates (24, 25, 30 fps, etc.) achieve sub-ppm accuracy on these sensors. The software correction factor for these rates is therefore `1.0` — no compensation is needed.
+
+Sensors without this patch (IMX283, IMX477, IMX296, IMX519) retain their empirical correction factors as before.
+
 With the properly fine-tuned correction factor we can achieve pretty good sync to both onboard and external audio recording
 
 ### Why the correction factor is per sensor, mode, and FPS

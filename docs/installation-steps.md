@@ -126,6 +126,14 @@ Also included between those two commits: IMX585 AGC gain profile widened from 8Ã
 
 **On the Pi, to update an existing install:**
 
+If you are inside `~/.cinemate-env`, meson will use the virtualenv Python and will fail with *"Python module yaml not found"* unless the helpers are present. Install them first:
+
+```shell
+pip install PyYAML ply Jinja2
+```
+
+Then update and rebuild:
+
 ```shell
 cd ~/libcamera && \
 git config core.fileMode false && \

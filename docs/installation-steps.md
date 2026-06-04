@@ -113,7 +113,7 @@ sudo apt-get install python3-jinja2 python3-ply python3-yaml ffmpeg
 sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev ffmpeg && sudo apt-get install libjsoncpp-dev && cd ~ && git clone https://github.com/sewenew/redis-plus-plus.git && cd redis-plus-plus && mkdir build && cd build && cmake .. && make && sudo make install && cd ~
 ```
 
-### libcamera (Will Whang fork pinned to `9d0cdfe5`) <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
+### libcamera (Will Whang fork pinned to `97f71626`) <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
 If you are already inside `~/.cinemate-env`, either run `deactivate` before building `libcamera` or install the Python helpers into that environment with `pip install PyYAML ply Jinja2` first.
 
@@ -128,7 +128,7 @@ sudo apt-get install --reinstall libtiff5-dev && sudo ln -sf $(find /usr/lib -na
 ```shell
 git clone https://github.com/will127534/libcamera.git && \
 cd libcamera && \
-git checkout 9d0cdfe5 && \
+git checkout 97f71626 && \
 find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
 chmod +x ~/libcamera/src/ipa/ipa-sign.sh && \
 meson setup build --buildtype=release \
@@ -155,7 +155,7 @@ find ~/libcamera/src/ipa/rpi/cam_helper -name '*imx585*'
 Expected output:
 
 ```text
-9d0cdfe5
+97f71626
 /home/pi/libcamera/src/ipa/rpi/cam_helper/cam_helper_imx585.cpp
 ```
 

@@ -47,22 +47,22 @@ SENSOR_CORRECTION_FACTORS: Dict[str, Dict[int | str, Dict[int, float] | float]] 
         "_default": DEFAULT_CORRECTION_FACTOR,
         0: {
             24: 0.9994, #verified 10000 frames 4K
-            25: 0.998996, #verified IMX585 4K, 12120-frame take (was 0.998721)
+            25: 1.0, #exact after will127534/libcamera getBlanking patch (97f71626); previous: 0.998996
         },
         1: {
             24: 0.9980, #verified 10000 frames
-            25: 0.9979, #verified 10000 frames
+            25: 1.0, #exact after will127534/libcamera getBlanking patch (97f71626); previous: 0.9979
         },
     },
     "imx585_mono": {
         "_default": DEFAULT_CORRECTION_FACTOR,
         0: {
             24: 0.9994, #verified 10000 frames 4K
-            25: 0.998996, #verified IMX585 4K, 12120-frame take (was 0.998721)
+            25: 1.0, #exact after will127534/libcamera getBlanking patch (97f71626); previous: 0.998996
         },
         1: {
             24: 0.9980, #verified 10000 frames
-            25: 0.9979, #verified 10000 frames
+            25: 1.0, #exact after will127534/libcamera getBlanking patch (97f71626); previous: 0.9979
         },
     },
 }

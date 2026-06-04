@@ -113,7 +113,31 @@ sudo apt-get install python3-jinja2 python3-ply python3-yaml ffmpeg
 sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev ffmpeg && sudo apt-get install libjsoncpp-dev && cd ~ && git clone https://github.com/sewenew/redis-plus-plus.git && cd redis-plus-plus && mkdir build && cd build && cmake .. && make && sudo make install && cd ~
 ```
 
-### libcamera (Will Whang fork pinned to `97f71626`) <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
+### libcamera (Will Whang fork pinned to `ea5abb8b`) <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
+
+This fork includes the following patches on top of the Raspberry Pi upstream:
+
+| Commit | Change |
+|--------|--------|
+| `97f71626` | IMX585: exact pinned frame rate via VMAX/HMAX lattice search — eliminates ~440 ppm quantisation drift at 25 fps |
+| `ea5abb8b` | IMX294/IMX492: same exact frame-rate algorithm (72 MHz clock) |
+
+Also included between those two commits: IMX585 AGC gain profile widened from 8× to 16×, and sensor test-pattern mode support for IMX585/IMX294/IMX492.
+
+**On the Pi, to update an existing install:**
+
+```shell
+cd ~/libcamera && \
+git fetch origin && \
+git checkout ea5abb8b && \
+meson setup build --reconfigure && \
+ninja -C build && \
+sudo ninja -C build install && \
+sudo ldconfig && \
+sudo systemctl restart cinepi-raw
+```
+
+**Fresh install:**
 
 If you are already inside `~/.cinemate-env`, either run `deactivate` before building `libcamera` or install the Python helpers into that environment with `pip install PyYAML ply Jinja2` first.
 
@@ -128,7 +152,7 @@ sudo apt-get install --reinstall libtiff5-dev && sudo ln -sf $(find /usr/lib -na
 ```shell
 git clone https://github.com/will127534/libcamera.git && \
 cd libcamera && \
-git checkout 97f71626 && \
+git checkout ea5abb8b && \
 find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
 chmod +x ~/libcamera/src/ipa/ipa-sign.sh && \
 meson setup build --buildtype=release \
@@ -149,13 +173,15 @@ sudo ldconfig
 
 ```shell
 git -C ~/libcamera rev-parse --short HEAD
-find ~/libcamera/src/ipa/rpi/cam_helper -name '*imx585*'
+find ~/libcamera/src/ipa/rpi/cam_helper -name '*imx585*' -o -name '*imx294*' -o -name '*imx492*'
 ```
 
 Expected output:
 
 ```text
-97f71626
+ea5abb8b
+/home/pi/libcamera/src/ipa/rpi/cam_helper/cam_helper_imx294.cpp
+/home/pi/libcamera/src/ipa/rpi/cam_helper/cam_helper_imx492.cpp
 /home/pi/libcamera/src/ipa/rpi/cam_helper/cam_helper_imx585.cpp
 ```
 

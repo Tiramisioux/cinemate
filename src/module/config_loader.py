@@ -288,6 +288,31 @@ def _apply_settings_defaults(settings: dict) -> dict:
         res_cfg.setdefault(k, v)
     settings["resolutions"] = res_cfg
 
+    # Per-camera settings: geometry, output, camera-name, sensor_fps_correction.
+    # Migrate old top-level "geometry" and "output" sections (written by older
+    # configs) into camera.cam0/cam1 so old Pi settings.json files keep working
+    # after a code update.
+    camera_cfg = settings.setdefault("camera", {})
+    camera_cfg.setdefault("raw_buffer_count", 0)
+    old_geo = settings.pop("geometry", None) or {}
+    old_out = settings.pop("output",   None) or {}
+    for port, default_hdmi in (("cam0", 0), ("cam1", 1)):
+        cam = camera_cfg.setdefault(port, {})
+        if "geometry" not in cam and port in old_geo:
+            cam["geometry"] = old_geo[port]
+        geo = cam.setdefault("geometry", {})
+        geo.setdefault("rotate_180",       False)
+        geo.setdefault("horizontal_flip",  False)
+        geo.setdefault("vertical_flip",    False)
+        if "output" not in cam and port in old_out:
+            cam["output"] = old_out[port]
+        out = cam.setdefault("output", {})
+        out.setdefault("hdmi_port", default_hdmi)
+        cam.setdefault("override_camera_name", False)
+        cam.setdefault("camera_name",          "")
+        cam.setdefault("sensor_fps_correction", True)
+    settings["camera"] = camera_cfg
+
     sensor_defaults = {
         "database_file": "resources/sensors.json",
     }

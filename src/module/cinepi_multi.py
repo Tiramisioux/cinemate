@@ -234,14 +234,13 @@ class CinePiProcess(Thread):
         self.dng_rx = re.compile(r'DNG written:\s*(\S+\.dng)')
         self.redis_channel = 'cinepi.last_dng'          # publish JSON here
         
-        # load per-camera geometry from settings
+        # load per-camera settings (geometry, output, fps-correction flag)
         settings = _settings()
-        geo = settings.get('geometry', {})
-        self.geometry = geo.get(self.cam.port, {})
-        
-        # load per-camera output settings (e.g., HDMI port)
-        out_cfg = settings.get('output', {})
-        self.output = out_cfg.get(self.cam.port, {})
+        camera_cfg = settings.get('camera', {}) or {}
+        cam_cfg = camera_cfg.get(self.cam.port, {})
+        self.geometry = cam_cfg.get('geometry', {})
+        self.output   = cam_cfg.get('output', {})
+        self.sensor_fps_correction = cam_cfg.get('sensor_fps_correction', True)
 
 
     def run(self):
@@ -545,10 +544,9 @@ class CinePiProcess(Thread):
         )
         args += ["--buffer-count", str(buffer_count)]
 
-        # unique camera model override — per-cam (camera.cam0 / camera.cam1) with
-        # fallback to legacy flat camera section for old configs
+        # unique camera model override — per-cam (camera.cam0 / camera.cam1)
         camera_cfg = _settings().get("camera", {}) or {}
-        cam_cfg = camera_cfg.get(self.cam.port, camera_cfg)
+        cam_cfg = camera_cfg.get(self.cam.port, {})
         if cam_cfg.get("override_camera_name", False):
             name = str(cam_cfg.get("camera_name", "") or "").strip()
             if name:

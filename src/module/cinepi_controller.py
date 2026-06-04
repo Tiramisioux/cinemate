@@ -680,10 +680,22 @@ class CinePiController:
 
         self._maybe_apply_dynamic_resolution_for_fps(requested_user_fps)
 
-        self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
-            self.current_sensor,
-            self.sensor_mode,
-            requested_user_fps,
+        # sensor_fps_correction flag is read from the primary camera's settings
+        # (cam0 first, then cam1); defaults to True when not configured.
+        _cam_cfg = (self.settings.get("camera") or {})
+        _correction_enabled = True
+        for _port in ("cam0", "cam1"):
+            _c = _cam_cfg.get(_port)
+            if isinstance(_c, dict):
+                _correction_enabled = bool(_c.get("sensor_fps_correction", True))
+                break
+
+        self.fps_correction_factor = (
+            self.sensor_detect.get_fps_correction_factor(
+                self.current_sensor, self.sensor_mode, requested_user_fps
+            )
+            if _correction_enabled
+            else 1.0
         )
 
         corrected = requested_user_fps * self.fps_correction_factor

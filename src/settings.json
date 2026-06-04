@@ -11,26 +11,6 @@
       "enabled": true
     }
   },
-  "geometry": {
-    "cam0": {
-      "rotate_180": false,
-      "horizontal_flip": false,
-      "vertical_flip": false
-    },
-    "cam1": {
-      "rotate_180": false,
-      "horizontal_flip": false,
-      "vertical_flip": false
-    }
-  },
-  "output": {
-    "cam0": {
-      "hdmi_port": 0
-    },
-    "cam1": {
-      "hdmi_port": 1
-    }
-  },
   "hdmi_gui": {
     "buffer_vu_meter": true,
     "vu_meter_hatch_lines": true
@@ -280,12 +260,30 @@
   "camera": {
     "raw_buffer_count": 0,
     "cam0": {
+      "geometry": {
+        "rotate_180": false,
+        "horizontal_flip": false,
+        "vertical_flip": false
+      },
+      "output": {
+        "hdmi_port": 0
+      },
       "override_camera_name": true,
-      "camera_name": "Blackmagic Pocket Cinema Camera 4K"
+      "camera_name": "Blackmagic Pocket Cinema Camera 4K",
+      "sensor_fps_correction": true
     },
     "cam1": {
+      "geometry": {
+        "rotate_180": false,
+        "horizontal_flip": false,
+        "vertical_flip": false
+      },
+      "output": {
+        "hdmi_port": 1
+      },
       "override_camera_name": true,
-      "camera_name": "Blackmagic Pocket Cinema Camera 4K"
+      "camera_name": "Blackmagic Pocket Cinema Camera 4K",
+      "sensor_fps_correction": true
     }
   },
   "i2c_oled": {

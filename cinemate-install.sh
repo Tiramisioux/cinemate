@@ -580,7 +580,22 @@ build_redis_plus_plus() {
 }
 
 build_libcamera() {
+    # The build step below runs chmod +x on every .py/.sh file.  On Linux,
+    # git tracks permission bits, so those mode changes show up as dirty and
+    # block any subsequent git checkout.  Setting core.fileMode false tells
+    # git to ignore executable-bit changes in this repo.  We also stash any
+    # remaining real content changes (e.g. tuning JSONs) so the checkout
+    # cannot be blocked on a re-run or upgrade.
+    if [[ -d "$LIBCAMERA_DIR/.git" ]]; then
+        run_as_pi git -C "$LIBCAMERA_DIR" config core.fileMode false
+        run_as_pi git -C "$LIBCAMERA_DIR" stash 2>/dev/null || true
+    fi
+
     ensure_repo "$LIBCAMERA_DIR" "$LIBCAMERA_REPO_URL" "$LIBCAMERA_REPO_REF"
+
+    # Set core.fileMode false on a fresh clone too, so the first chmod+x
+    # pass below does not dirty the tree on the next installer run.
+    run_as_pi git -C "$LIBCAMERA_DIR" config core.fileMode false
 
     log "Building libcamera"
     detail "Source: $LIBCAMERA_DIR"

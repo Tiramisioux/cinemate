@@ -128,7 +128,9 @@ Also included between those two commits: IMX585 AGC gain profile widened from 8Ã
 
 ```shell
 cd ~/libcamera && \
+git config core.fileMode false && \
 git fetch origin && \
+git stash || true && \
 git checkout ea5abb8b && \
 meson setup build --reconfigure && \
 ninja -C build && \
@@ -136,6 +138,8 @@ sudo ninja -C build install && \
 sudo ldconfig && \
 sudo systemctl restart cinepi-raw
 ```
+
+`git config core.fileMode false` silences the executable-bit changes that the build leaves behind on Python files (a Linux-only git behaviour). `git stash` clears any remaining real content changes such as tuning JSONs so the checkout cannot be blocked.
 
 **Fresh install:**
 

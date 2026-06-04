@@ -683,8 +683,7 @@ class SSDMonitor:
         try:
             st = os.statvfs(self._mount_path)
             gb = (st.f_bavail * st.f_frsize) / (1024 ** 3)
-            
-                    # calculate write speed based on change in free space
+
             if self._last_space_ts > 0:
                 delta_gb = self._last_space - gb
                 delta_t = now - self._last_space_ts
@@ -699,10 +698,8 @@ class SSDMonitor:
                 self._redis.set_value(
                     ParameterKey.WRITE_SPEED_TO_DRIVE.value,
                     f"{self._write_speed:.2f}")
-                
+
             prev_left = self._space_left if self._space_left is not None else self._last_space
-            self._last_space = gb
-            self._last_space_ts = now
 
         except OSError as exc:
             logging.error("statvfs failed: %s", exc)
@@ -710,13 +707,13 @@ class SSDMonitor:
                 return
             return
 
-        # ── normal path: update cached value & emit event ────────────
+        # Always advance the baseline so write-speed and throttle stay accurate.
+        self._last_space    = gb
+        self._last_space_ts = now
+
+        # Emit Redis / UI update when space changes significantly or when forced.
         if force or abs(gb - prev_left) >= self._space_delta:
             self._space_left = gb
-        if force or abs(gb - self._last_space) >= self._space_delta:
-            self._space_left    = gb
-            self._last_space    = gb
-            self._last_space_ts = now
             logging.info("Free space: %.2f GB", gb)
             if self._redis:
                 self._redis.set_value(ParameterKey.SPACE_LEFT.value,
@@ -840,13 +837,20 @@ class SSDMonitor:
             logging.error("erase_drive(): RAW drive is not mounted")
             return False
 
-        cmd = ["sudo", "find", str(self._mount_path), "-mindepth", "1", "-delete"]
-        try:
-            subprocess.run(cmd, check=True)
-        except subprocess.CalledProcessError as exc:
-            logging.error("erase_drive(): failed to erase %s (%s)", self._mount_path, exc)
+        if self._redis and self._redis.get_value(REDIS_KEY_IS_RECORDING) == "1":
+            logging.error("erase_drive(): cannot erase while recording is active")
             return False
 
+        cmd = ["sudo", "find", str(self._mount_path), "-mindepth", "1", "-delete"]
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, text=True)
+        except subprocess.CalledProcessError as exc:
+            stderr_msg = exc.stderr.strip() if exc.stderr else str(exc)
+            logging.error("erase_drive(): failed to erase %s: %s", self._mount_path, stderr_msg)
+            self._update_space_left(force=True)
+            return False
+
+        subprocess.call(["sync"])
         logging.info("erase_drive(): removed all files from %s", self._mount_path)
         self._update_space_left(force=True)
         return True

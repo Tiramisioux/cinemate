@@ -140,7 +140,19 @@ git config core.fileMode false && \
 git fetch origin && \
 git stash || true && \
 git checkout ea5abb8b && \
-meson setup build --reconfigure && \
+find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
+chmod +x ~/libcamera/src/ipa/ipa-sign.sh && \
+meson setup build --wipe --buildtype=release \
+  -Dpipelines=rpi/vc4,rpi/pisp \
+  -Dipas=rpi/vc4,rpi/pisp \
+  -Dv4l2=true \
+  -Dgstreamer=enabled \
+  -Dtest=false \
+  -Dlc-compliance=disabled \
+  -Dcam=disabled \
+  -Dqcam=disabled \
+  -Ddocumentation=disabled \
+  -Dpycamera=enabled && \
 ninja -C build && \
 sudo ninja -C build install && \
 sudo ldconfig && \

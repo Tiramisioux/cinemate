@@ -608,7 +608,10 @@ build_libcamera() {
         run_as_pi git -C "$LIBCAMERA_DIR" checkout -B cinemate-patches "$LIBCAMERA_REPO_REF"
         for patch in $LIBCAMERA_PATCHES; do
             detail "Cherry-picking $patch"
-            run_as_pi git -C "$LIBCAMERA_DIR" cherry-pick "$patch"
+            # -X theirs auto-resolves modify/delete conflicts (e.g. a file
+            # that was added in an intermediate commit and is absent from
+            # the base ref) by accepting the patch's version of the file.
+            run_as_pi git -C "$LIBCAMERA_DIR" cherry-pick -X theirs "$patch"
         done
     fi
 

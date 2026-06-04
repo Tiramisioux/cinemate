@@ -138,8 +138,8 @@ git config core.fileMode false && \
 git fetch origin && \
 git stash || true && \
 git checkout -B cinemate-patches 9d0cdfe5 && \
-git cherry-pick 97f71626 && \
-git cherry-pick ea5abb8b && \
+git cherry-pick -X theirs 97f71626 && \
+git cherry-pick -X theirs ea5abb8b && \
 find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
 chmod +x ~/libcamera/src/ipa/ipa-sign.sh && \
 meson setup build --wipe --buildtype=release \
@@ -178,8 +178,8 @@ git clone https://github.com/will127534/libcamera.git && \
 cd libcamera && \
 git config core.fileMode false && \
 git checkout -B cinemate-patches 9d0cdfe5 && \
-git cherry-pick 97f71626 && \
-git cherry-pick ea5abb8b && \
+git cherry-pick -X theirs 97f71626 && \
+git cherry-pick -X theirs ea5abb8b && \
 find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
 chmod +x ~/libcamera/src/ipa/ipa-sign.sh && \
 meson setup build --wipe --buildtype=release \

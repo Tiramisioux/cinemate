@@ -80,7 +80,7 @@ All per-port settings live inside a `cam0` or `cam1` block so every option for a
 }
 ```
 
-`raw_buffer_count` – override the number of in-flight sensor buffers allocated by `cinepi-raw`. `0` (default) defers to the active storage-profile value. Raise this only when you see single-frame TC holes on a slow filesystem and `grep Cma /proc/meminfo` confirms available CMA headroom (~25 MB per extra buffer at 4K).
+`raw_buffer_count` – number of in-memory sensor frame buffers `cinepi-raw` holds while encoding and writing DNGs. `0` (default) lets the active storage profile pick the right value for your sensor, filesystem, and storage type — leave it there unless you have a specific reason to change it. Raise it only when you see single-frame TC holes (`DROP` flashing) on a slow filesystem and `grep Cma /proc/meminfo` confirms spare CMA headroom (~25 MB per extra buffer at 4K).
 
 ### geometry
 

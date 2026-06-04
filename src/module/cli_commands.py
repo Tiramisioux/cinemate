@@ -14,6 +14,7 @@ class CommandExecutor(threading.Thread):
         self.cinepi_app = cinepi_app
         self.storage_preroll = storage_preroll
         self.running = True  # Flag to control the thread's execution
+        self.tui_mode = False  # Set True by main when --tui owns stdin
 
         # ---------------------------------------------------------------------------
         # CLI COMMAND TABLE
@@ -242,6 +243,12 @@ class CommandExecutor(threading.Thread):
 
     def run(self):
             """Thread run function to continuously process input commands."""
+            if self.tui_mode:
+                logging.info("CommandExecutor: TUI owns stdin; CLI loop idle")
+                while self.running:
+                    time.sleep(0.25)
+                return
+
             stdin = sys.stdin
             if stdin is None:
                 logging.info("CLI input unavailable; CommandExecutor thread idling")

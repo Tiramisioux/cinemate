@@ -25,7 +25,7 @@ User=pi
 Group=pi
 SyslogIdentifier=cinemate-autostart
 LogRateLimitIntervalSec=0
-LimitRTPRIO=30
+LimitRTPRIO=80
 TimeoutStopSec=5
 KillSignal=SIGINT
 

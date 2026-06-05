@@ -1250,7 +1250,7 @@ configure_audio_rtprio() {
 # Allow the audio group to use real-time scheduling (SCHED_FIFO).
 # Required by cinepi-audio-capture (cinepi-raw) for xrun-resistant
 # 24-bit audio capture alongside heavy DNG write I/O.
-@audio - rtprio 30
+@audio - rtprio 80
 @audio - memlock unlimited
 EOF
     sudo usermod -aG audio "$PI_USER"

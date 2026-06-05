@@ -1910,12 +1910,24 @@ class RedisListener:
                         diff,
                     )
         elif not quiet_summary:
-            logging.warning(
-                "Discrepancy detected: %+d frames difference between expected and recorded "
-                "counts exceeds +/- %g frame final tolerance.",
-                diff,
-                self.final_sync_analysis_tolerance_frames,
-            )
+            if diff < 0:
+                logging.warning(
+                    "Sensor ran fast: recorded %d extra frame(s) vs %d expected "
+                    "(diff %+d, tolerance ±%g). Sensor correction factor may be needed.",
+                    -diff,
+                    expected_frames_total,
+                    diff,
+                    self.final_sync_analysis_tolerance_frames,
+                )
+            else:
+                logging.warning(
+                    "Frame count low: %d fewer frame(s) than expected %d "
+                    "(diff %+d, tolerance ±%g). Check for dropped frames.",
+                    diff,
+                    expected_frames_total,
+                    diff,
+                    self.final_sync_analysis_tolerance_frames,
+                )
 
         live_sync_warning_latched = (
             self.frames_off_sync_latched_current_take
@@ -1962,11 +1974,11 @@ class RedisListener:
                 )
             elif current_correction_factor:
                 logging.info(
-                    "No FPS correction adjustment needed; existing factor %.6f matches the capture.",
+                    "Sensor timing OK: correction factor %.6f is active and matches the capture.",
                     current_correction_factor,
                 )
             else:
-                logging.info("No FPS correction suggestion needed: all frames accounted for.")
+                logging.info("Sensor timing OK: all frames accounted for (no correction factor active).")
         elif (
             expected_frames_float > 0
             and recorded_frames_total > 0
@@ -1974,11 +1986,22 @@ class RedisListener:
         ):
             multiplier = expected_frames_float / recorded_frames_total
             suggestion_value = current_correction_factor * multiplier
+            _sensor = self.redis_controller.get_value(ParameterKey.SENSOR.value) or "unknown"
+            try:
+                _mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
+            except (TypeError, ValueError):
+                _mode = "?"
+            _user_fps_str = f"{self.fps_at_rec_start:g}" if self.fps_at_rec_start else "?"
+            _drift_pct = (1.0 - multiplier) * 100.0
             logging.info(
-                "Suggested FPS correction factor based on recording: %.6f (multiplier %.6f × current %.6f)",
+                "Sensor correction needed: %.6f suggested for %s mode %s at %s fps "
+                "(sensor ran %.3f%% %s; update sensor_correction_factors.py).",
                 suggestion_value,
-                multiplier,
-                current_correction_factor,
+                _sensor,
+                _mode,
+                _user_fps_str,
+                abs(_drift_pct),
+                "faster" if _drift_pct > 0 else "slower",
             )
         else:
             logging.info("Insufficient data to derive FPS correction factor suggestion.")

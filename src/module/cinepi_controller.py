@@ -715,9 +715,13 @@ class CinePiController:
         else:
             # make sure the table is current (free-mode may be toggled at run-time)
             self._rebuild_fps_steps()
-            safe_value = min(self.fps_steps_dynamic,
-                            key=lambda x: abs(x - corrected))     # “snapped”
-            safe_user_fps = safe_value
+            # Snap to nearest user-facing step from the *requested* fps (not the
+            # corrected fps), then apply the correction to get the hardware rate.
+            # Snapping on corrected would round 24.975 → 25 and discard the factor.
+            snapped_user_fps = min(self.fps_steps_dynamic,
+                                   key=lambda x: abs(x - requested_user_fps))
+            safe_user_fps = snapped_user_fps
+            safe_value = snapped_user_fps * self.fps_correction_factor
 
         self.user_fps = safe_user_fps
         if update_user_target:

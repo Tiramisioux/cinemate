@@ -27,8 +27,14 @@
     ]
   },
   "audio": {
-    "capture_gain_db": 0.0,
-    "plain_arecord_timecode_offset_frames": 2
+    "24bit": {
+      "capture_gain_db": 0.0,
+      "timecode_offset_frames": 4
+    },
+    "16bit": {
+      "capture_gain_db": 0.0,
+      "timecode_offset_frames": 0
+    }
   },
   "anamorphic_preview": {
     "default_anamorphic_factor": 1,

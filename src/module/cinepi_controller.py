@@ -1073,7 +1073,10 @@ class CinePiController:
 
     def stop_recording(self):
         self._cancel_timed_recording_stop()
-        self._clear_frame_limited_recording_stop()
+        # Do not disarm the frame limit here: analyze_frames() needs
+        # frame_limit_requested_slots to compute the correct expected count.
+        # _clear_post_recording_state() clears it after analysis; start_recording()
+        # clears it before the next take begins.
         self.stop_recording_worker()
         self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         logging.info(f"Stopped recording")

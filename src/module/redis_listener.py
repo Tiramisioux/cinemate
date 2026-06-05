@@ -745,7 +745,11 @@ class RedisListener:
         drop_compensation = min(int(self.drop_frame_count_current_take), shortfall)
         sync_slots = recorded_slots + drop_compensation
         diff = expected_slots - sync_slots
-        if abs(diff) <= self.live_sync_warning_tolerance_frames:
+        # Only warn on shortfall (diff > 0). When the sensor runs slightly fast
+        # (diff < 0, recorded > expected), no data has been lost and a live
+        # latch would be a false positive. The final analysis correctly handles
+        # both directions once the take completes.
+        if diff <= self.live_sync_warning_tolerance_frames:
             return
 
         self.frames_off_sync_latched_current_take = True

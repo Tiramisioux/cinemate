@@ -275,7 +275,7 @@
       "output": {
         "hdmi_port": 0
       },
-      "override_camera_name": false,
+      "override_camera_name": true,
       "camera_name": "",
       "sensor_fps_correction": true
     },
@@ -288,7 +288,7 @@
       "output": {
         "hdmi_port": 1
       },
-      "override_camera_name": false,
+      "override_camera_name": true,
       "camera_name": "",
       "sensor_fps_correction": true
     }

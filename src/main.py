@@ -242,6 +242,7 @@ def current_stderr_tty_path() -> str | None:
 def restore_local_console_prompt() -> bool:
     """Restore a visible tty1 prompt after Cinemate stop (SSH or local launch)."""
     systemctl = shutil.which("systemctl")
+    getty_started = False
     if systemctl:
         commands = []
         sudo = shutil.which("sudo")
@@ -265,13 +266,14 @@ def restore_local_console_prompt() -> bool:
                 logging.debug("Failed to run %s during console restore: %s", command[0], exc)
                 continue
             if result.returncode == 0:
-                time.sleep(0.2)
+                getty_started = True
+                time.sleep(0.3)
                 break
 
     for tty_path in LOCAL_FAILURE_TTY_PATHS:
         try:
             with open(tty_path, "w", encoding="utf-8", errors="replace") as tty:
-                tty.write("\r\n")
+                tty.write("\r\n\r\n")
                 tty.flush()
             return True
         except OSError:

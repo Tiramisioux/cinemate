@@ -975,20 +975,17 @@ def run_application(args, log_queue):
         if timekeeper and hasattr(timekeeper, "stop"):
             timekeeper.stop()
 
-        if not shutdown_in_progress:
-            try:
-                release_console_to_text()
-            except Exception as exc:
-                logging.warning("Failed to release console on exit: %s", exc)
-
+        if not shutdown_in_progress and not gui_stopped:
+            release_console_to_text()
+        
     atexit.register(cleanup)
     
     def handle_exit(sig, frame):
         logging.info("Graceful shutdown initiated.")
         signal.signal(signal.SIGINT, signal.SIG_DFL)
         signal.signal(signal.SIGTERM, signal.SIG_DFL)
-        cleanup()
-        sys.exit(0)
+        cleanup()                 # stop your threads, join them if you like
+        os.kill(os.getpid(), sig)
 
     signal.signal(signal.SIGINT, handle_exit)
     signal.signal(signal.SIGTERM, handle_exit)

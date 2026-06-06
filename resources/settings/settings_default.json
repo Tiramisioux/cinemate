@@ -28,11 +28,11 @@
   },
   "audio": {
     "24bit": {
-      "capture_gain_db": 0.0,
-      "timecode_offset_frames": 4
+      "capture_gain_db": 6.0,
+      "timecode_offset_frames": -1
     },
     "16bit": {
-      "capture_gain_db": 0.0,
+      "capture_gain_db": 6.0,
       "timecode_offset_frames": 0
     }
   },

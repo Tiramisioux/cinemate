@@ -247,10 +247,10 @@ def restore_local_console_prompt() -> bool:
         sudo = shutil.which("sudo")
         if sudo:
             commands.append(
-                [sudo, "-n", systemctl, "--no-block", "--no-ask-password", "start", "getty@tty1.service"]
+                [sudo, "-n", systemctl, "--no-block", "--no-ask-password", "restart", "getty@tty1.service"]
             )
         commands.append(
-            [systemctl, "--no-block", "--no-ask-password", "start", "getty@tty1.service"]
+            [systemctl, "--no-block", "--no-ask-password", "restart", "getty@tty1.service"]
         )
 
         for command in commands:
@@ -265,6 +265,7 @@ def restore_local_console_prompt() -> bool:
                 logging.debug("Failed to run %s during console restore: %s", command[0], exc)
                 continue
             if result.returncode == 0:
+                time.sleep(0.2)
                 break
 
     for tty_path in LOCAL_FAILURE_TTY_PATHS:

@@ -15,6 +15,7 @@ FILESYSTEM_ALIASES = {
     "none": NO_STORAGE_FILESYSTEM,
     "no disk": NO_STORAGE_FILESYSTEM,
     "ex4": "ext4",
+    "vfat": "exfat",
     "ntfs3": "ntfs",
     "fuseblk": "ntfs",
 }

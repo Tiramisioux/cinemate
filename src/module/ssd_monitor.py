@@ -579,7 +579,8 @@ class SSDMonitor:
         }.get(fstype, "rw,noatime")
 
     def _detect_device_filesystem(self, device: str) -> str:
-        return self._blkid_value(device, "TYPE", fresh=True)
+        fstype = self._blkid_value(device, "TYPE", fresh=True)
+        return normalize_storage_filesystem(fstype) if fstype else "unknown"
 
     def _find_raw_device(self) -> Optional[str]:
         def _blkid_lines():
@@ -823,11 +824,11 @@ class SSDMonitor:
 
         probed_fstype = self._detect_device_filesystem(raw_dev)
         fstype = fs_hint or probed_fstype
-        if not fstype:
-            logging.error("mount_drive(): blkid failed for %s", raw_dev)
+        if not fstype or fstype == "unknown":
+            logging.error("mount_drive(): unable to detect filesystem for %s", raw_dev)
             return False
 
-        if fs_hint and probed_fstype and probed_fstype != fs_hint:
+        if fs_hint and probed_fstype and probed_fstype != "unknown" and probed_fstype != fs_hint:
             logging.warning(
                 "mount_drive(): blkid reports %s for %s after requested %s; using requested filesystem",
                 probed_fstype,
@@ -847,12 +848,30 @@ class SSDMonitor:
             logging.error("erase_drive(): cannot erase while recording is active")
             return False
 
-        cmd = ["sudo", "find", str(self._mount_path), "-mindepth", "1", "-delete"]
         try:
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
-        except subprocess.CalledProcessError as exc:
-            stderr_msg = exc.stderr.strip() if exc.stderr else str(exc)
-            logging.error("erase_drive(): failed to erase %s: %s", self._mount_path, stderr_msg)
+            items = list(self._mount_path.iterdir())
+        except OSError as exc:
+            logging.error("erase_drive(): cannot list %s: %s", self._mount_path, exc)
+            return False
+
+        errors = []
+
+        def _rm(path: Path) -> None:
+            result = subprocess.run(
+                ["sudo", "rm", "-rf", str(path)],
+                capture_output=True, text=True,
+            )
+            if result.returncode != 0:
+                errors.append(result.stderr.strip() or str(path))
+
+        threads = [threading.Thread(target=_rm, args=(p,), daemon=True) for p in items]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        if errors:
+            logging.error("erase_drive(): errors: %s", "; ".join(errors))
             self._update_space_left(force=True)
             return False
 

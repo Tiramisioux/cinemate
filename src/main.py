@@ -266,18 +266,20 @@ def restore_local_console_prompt() -> bool:
                 logging.debug("Failed to run %s during console restore: %s", command[0], exc)
                 continue
             if result.returncode == 0:
-                time.sleep(1.0)
+                time.sleep(1.2)
                 break
 
-    # Nudge getty by writing to tty1
+    # Nudge getty by writing to tty1 to trigger prompt rendering
     for tty_path in LOCAL_FAILURE_TTY_PATHS:
         try:
             with open(tty_path, "w", encoding="utf-8", errors="replace") as tty:
-                # Write multiple newlines with delays to ensure getty gets input events
+                # Write newlines with delays to ensure getty detects input
                 for _ in range(5):
                     tty.write("\r\n")
                     tty.flush()
                     time.sleep(0.1)
+            # Final delay to let getty fully render before cleanup completes
+            time.sleep(0.5)
             return True
         except OSError:
             continue

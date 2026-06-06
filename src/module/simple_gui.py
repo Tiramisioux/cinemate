@@ -1770,20 +1770,23 @@ class SimpleGUI(threading.Thread):
         self.disp_width = 0
         self.disp_height = 0
 
-        released_console = False
-        if release_console:
-            try:
-                release_console_to_text()
-                released_console = True
-            except Exception as exc:
-                logging.warning("Failed to release console to text during GUI shutdown: %s", exc)
-
-        if clear_framebuffer and not released_console and fb:
+        # Blank the framebuffer before any console-mode switch. Releasing the
+        # console to text only repaints the text character cells; GUI pixels
+        # outside that grid (e.g. the bottom status bar) survive underneath and
+        # hide the restored CLI. Wiping fb0 to black first guarantees the text
+        # console repaints over a clean frame.
+        if (clear_framebuffer or release_console) and fb:
             blank_image = Image.new("RGBA", fb.size, "black")
             try:
                 fb.show(blank_image)
             except (OSError, RuntimeError, ValueError) as exc:
                 logging.warning("Failed to blank framebuffer cleanly during GUI shutdown: %s", exc)
+
+        if release_console:
+            try:
+                release_console_to_text()
+            except Exception as exc:
+                logging.warning("Failed to release console to text during GUI shutdown: %s", exc)
 
     def request_stop(self, clear_framebuffer=False, release_console=False):
         """Ask the GUI thread to exit without waiting for teardown."""

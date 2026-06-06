@@ -267,13 +267,18 @@ def restore_local_console_prompt() -> bool:
                 continue
             if result.returncode == 0:
                 getty_started = True
-                time.sleep(0.3)
+                time.sleep(0.5)
                 break
 
+    # Write multiple newlines to nudge getty to display prompt
     for tty_path in LOCAL_FAILURE_TTY_PATHS:
         try:
             with open(tty_path, "w", encoding="utf-8", errors="replace") as tty:
                 tty.write("\r\n\r\n")
+                tty.flush()
+                time.sleep(0.1)
+                # Write one more to ensure getty renders
+                tty.write("\r\n")
                 tty.flush()
             return True
         except OSError:

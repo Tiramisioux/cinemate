@@ -240,10 +240,7 @@ def current_stderr_tty_path() -> str | None:
 
 
 def restore_local_console_prompt() -> bool:
-    """Restore a visible tty1 prompt after an SSH-launched HDMI GUI stop."""
-    if current_stderr_tty_path() in LOCAL_FAILURE_TTY_PATHS:
-        return False
-
+    """Restore a visible tty1 prompt after Cinemate stop (SSH or local launch)."""
     systemctl = shutil.which("systemctl")
     if systemctl:
         commands = []
@@ -265,7 +262,7 @@ def restore_local_console_prompt() -> bool:
                     check=False,
                 )
             except OSError as exc:
-                logging.debug("Failed to run %s during SSH console restore: %s", command[0], exc)
+                logging.debug("Failed to run %s during console restore: %s", command[0], exc)
                 continue
             if result.returncode == 0:
                 break

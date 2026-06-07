@@ -28,6 +28,16 @@ FILESYSTEM_ALIASES = {
 # ~25 MB of CMA at 4K (raw + video streams share the count), so values stay
 # conservative; raise per profile (or via settings.json camera.raw_buffer_count)
 # only after confirming CMA headroom with `grep Cma /proc/meminfo`.
+#
+# AUDIO-CORE INVARIANT: cinepi-audio-capture pins itself to the last CPU core
+# (N-1) at SCHED_FIFO priority 80 so USB-audio interrupts are serviced on an
+# uncontested core (see cinepi_audio_capture.cpp). No profile's encode_affinity
+# or disk_affinity may include that core, or audio capture stalls at launch and
+# the WAV loses sync (wrong/garbage start timecode, or no WAV at all). On a
+# 4-core Pi the audio core is 3, so worker affinity must stay within 0-2
+# (practically 1-2, leaving core 0 for the camera pipeline and IRQs).
+# cinepi-raw strips the audio core from any requested set as a backstop, but
+# profiles must not rely on that. test_storage_profiles.py locks this invariant.
 RECORDER_PROFILES: Dict[str, Dict[str, str]] = {
     DEFAULT_RECORDER_PROFILE: {
         "label": "default-safe",
@@ -44,7 +54,10 @@ RECORDER_PROFILES: Dict[str, Dict[str, str]] = {
         "encode_workers": "4",
         "disk_workers": "8",
         "encode_affinity": "1-2",
-        "disk_affinity": "2-3",
+        # Was "2-3" — core 3 is the audio-capture core (see invariant above).
+        # Spreading the 8 disk workers across cores 1-2 keeps ext4 throughput
+        # headroom while leaving core 3 for SCHED_FIFO audio capture.
+        "disk_affinity": "1-2",
         "encode_nice": "-10",
         "disk_nice": "-5",
         "buffer_count": "8",
@@ -64,7 +77,8 @@ RECORDER_PROFILES: Dict[str, Dict[str, str]] = {
         "encode_workers": "4",
         "disk_workers": "2",
         "encode_affinity": "1-2",
-        "disk_affinity": "2-3",
+        # Was "2-3" — core 3 is the audio-capture core (see invariant above).
+        "disk_affinity": "2",
         "encode_nice": "-10",
         "disk_nice": "-5",
         "buffer_count": "10",
@@ -98,11 +112,24 @@ def recorder_profile_for_filesystem(filesystem) -> Dict[str, str]:
     return RECORDER_PROFILES[recorder_profile_name_for_filesystem(filesystem)]
 
 
-def recorder_profile_args(filesystem) -> list[str]:
+# On Pi 4 the USB host controller (xHCI) is shared by storage and the USB
+# microphone, so many concurrent disk writers congest the bus and stall ALSA
+# capture (audio sample loss). Pi 5 routes NVMe over PCIe — a separate bus from
+# USB — so it keeps the full worker count. Cap disk workers on Pi 4 only.
+PI4_MAX_DISK_WORKERS = 4
+
+
+def recorder_profile_args(filesystem, *, is_pi4: bool = False) -> list[str]:
     profile = recorder_profile_for_filesystem(filesystem)
+    disk_workers = profile["disk_workers"]
+    if is_pi4:
+        try:
+            disk_workers = str(min(int(disk_workers), PI4_MAX_DISK_WORKERS))
+        except (TypeError, ValueError):
+            disk_workers = str(PI4_MAX_DISK_WORKERS)
     return [
         "--encode-workers", profile["encode_workers"],
-        "--disk-workers", profile["disk_workers"],
+        "--disk-workers", disk_workers,
         "--encode-affinity", profile["encode_affinity"],
         "--disk-affinity", profile["disk_affinity"],
         "--encode-nice", profile["encode_nice"],

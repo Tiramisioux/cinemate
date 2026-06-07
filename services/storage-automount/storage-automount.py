@@ -103,8 +103,13 @@ PROFILES = {
     },
     "usb_ssd": {  # USB SSD (SATA via UAS)
         "ext4_opts": "rw,noatime,nodiratime,commit=60",
-        "dirty_bytes": 512 * 1024**2,
-        "dirty_bg_bytes": 256 * 1024**2,
+        # Smaller dirty cushion than NVMe on purpose: a USB SSD's write speed
+        # falls off a cliff once its SLC cache is exhausted (~90 s into a 4K
+        # take). A large dirty buffer would then fill and block writers in one
+        # long balance_dirty_pages stall — a burst of dropped frames. A smaller
+        # cushion trades that for shorter, more frequent stalls (smoother).
+        "dirty_bytes": 256 * 1024**2,
+        "dirty_bg_bytes": 128 * 1024**2,
         "rq_affinity": "2",
         "scheduler": "none",
         "nr_requests": "256",
@@ -295,6 +300,11 @@ def _apply_sysctl_cushions(kind: str):
 
     log.info("Applied sysctl for %s: dirty=%d MB, bg=%d MB",
              kind, prof["dirty_bytes"] // 1024**2, prof["dirty_bg_bytes"] // 1024**2)
+
+    if kind == "usb_ssd":
+        log.info("usb_ssd: sustained 4K can exceed this drive's post-SLC-cache "
+                 "write rate; if frames drop ~90 s in, the SSD cannot sustain "
+                 "the data rate (check NAND type, or use NVMe / a lower fps)")
 
 def _mount_options(fstype: str, kind: str) -> str:
     if fstype == "ext4":

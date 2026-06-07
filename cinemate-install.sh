@@ -951,6 +951,29 @@ configure_cmdline() {
         extra_tokens=(quiet splash loglevel=1 plymouth.ignore-serial-consoles vt.global_cursor_default=0 logo.nologo)
     fi
 
+    # ── Audio-core CPU isolation (real-time audio capture) ───────────────
+    # cinepi-audio-capture pins itself to the last core at SCHED_FIFO 80.
+    # CPU affinity alone does not stop kernel threads, the timer tick, RCU
+    # callbacks and device IRQs from sharing that core and jittering ALSA
+    # capture. On the 4-core Pi 4/5, dedicate the last core (CPU 3) to audio
+    # and keep IRQs + housekeeping on CPUs 0-2. isolcpus / rcu_nocbs /
+    # irqaffinity take effect on stock kernels; nohz_full needs a NO_HZ_FULL
+    # (RT) kernel and is harmless otherwise. Revert with `editcmdline` (delete
+    # these tokens) or restore the cmdline.txt.bak backup, then reboot.
+    local ncores audio_core house
+    ncores="$(nproc 2>/dev/null || echo 0)"
+    if [ "$ncores" = "4" ]; then
+        audio_core=$((ncores - 1))
+        house="0-$((audio_core - 1))"
+        extra_tokens+=(
+            "isolcpus=managed_irq,domain,${audio_core}"
+            "nohz_full=${audio_core}"
+            "rcu_nocbs=${audio_core}"
+            "irqaffinity=${house}"
+        )
+        detail "Audio-core isolation: reserving CPU ${audio_core} for capture (IRQs/housekeeping on ${house})"
+    fi
+
     detail "Ensuring $cmdline contains $video_token"
     backup_file "$cmdline"
     temp="$(mktemp)"
@@ -965,7 +988,13 @@ video_token = sys.argv[3]
 extra = sys.argv[4:]
 
 tokens = src.read_text().strip().split() if src.exists() else []
-tokens = [tok for tok in tokens if not tok.startswith("video=HDMI-A-")]
+# Always re-manage the video= token. Re-manage the CPU-isolation tokens only
+# when we are (re)adding them, so a changed core count can't leave a stale
+# isolcpus=...,N behind, and a non-isolation run never strips a user's own.
+managed = ["video=HDMI-A-"]
+if any(t.startswith("isolcpus=") for t in extra):
+    managed += ["isolcpus=", "nohz_full=", "rcu_nocbs=", "irqaffinity="]
+tokens = [tok for tok in tokens if not tok.startswith(tuple(managed))]
 
 for tok in extra + [video_token]:
     if tok not in tokens:

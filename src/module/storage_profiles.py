@@ -112,11 +112,24 @@ def recorder_profile_for_filesystem(filesystem) -> Dict[str, str]:
     return RECORDER_PROFILES[recorder_profile_name_for_filesystem(filesystem)]
 
 
-def recorder_profile_args(filesystem) -> list[str]:
+# On Pi 4 the USB host controller (xHCI) is shared by storage and the USB
+# microphone, so many concurrent disk writers congest the bus and stall ALSA
+# capture (audio sample loss). Pi 5 routes NVMe over PCIe — a separate bus from
+# USB — so it keeps the full worker count. Cap disk workers on Pi 4 only.
+PI4_MAX_DISK_WORKERS = 4
+
+
+def recorder_profile_args(filesystem, *, is_pi4: bool = False) -> list[str]:
     profile = recorder_profile_for_filesystem(filesystem)
+    disk_workers = profile["disk_workers"]
+    if is_pi4:
+        try:
+            disk_workers = str(min(int(disk_workers), PI4_MAX_DISK_WORKERS))
+        except (TypeError, ValueError):
+            disk_workers = str(PI4_MAX_DISK_WORKERS)
     return [
         "--encode-workers", profile["encode_workers"],
-        "--disk-workers", profile["disk_workers"],
+        "--disk-workers", disk_workers,
         "--encode-affinity", profile["encode_affinity"],
         "--disk-affinity", profile["disk_affinity"],
         "--encode-nice", profile["encode_nice"],

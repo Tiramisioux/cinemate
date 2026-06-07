@@ -447,24 +447,22 @@ class CinePiProcess(Thread):
                 str(audio_timecode_offset),
             ]
 
-        # ── DNG-writer CPU isolation ────────────────────────────────────────
+        # ── DNG-writer / audio-core isolation ───────────────────────────────
         # The audio capture helper (cinepi-audio-capture) pins itself to the
-        # last CPU core and raises to SCHED_FIFO priority 80 so USB audio
-        # interrupts are always serviced on a core that DNG writers never touch.
-        # Tell the DNG encode and disk workers to stay off that last core so
-        # the isolation is complete. On a Pi 4/5 (4 cores): audio→CPU3,
-        # DNG workers→CPUs 0-2.
+        # last CPU core at SCHED_FIFO priority 80 so USB-audio interrupts are
+        # serviced on a core DNG writers never touch. The per-filesystem
+        # recorder profile below is the single source of --encode-affinity /
+        # --disk-affinity and is audio-safe by construction (no profile pins the
+        # last core); cinepi-raw also strips the audio core as a backstop, and
+        # the installer's boot-time isolcpus/nohz_full/rcu_nocbs/irqaffinity
+        # complete the isolation. (Previously a second, always-overridden
+        # --*-affinity pair was emitted here.)
         n_cpus = os.cpu_count() or 4
-        if n_cpus > 1:
-            dng_cpus = ",".join(str(i) for i in range(n_cpus - 1))
-            args += [
-                "--encode-affinity", dng_cpus,
-                "--disk-affinity",   dng_cpus,
-            ]
-            logging.info(
-                "[%s] DNG worker affinity: CPUs %s (audio capture on CPU %d)",
-                self.cam.port, dng_cpus, n_cpus - 1,
-            )
+        logging.info(
+            "[%s] Audio-core isolation: CPU %d reserved for capture; "
+            "DNG worker affinity set by the storage recorder profile",
+            self.cam.port, n_cpus - 1,
+        )
 
         # * Skip --tuning-file on Pi 4.  All other models keep it. *
         if not self._is_pi4():
@@ -509,7 +507,7 @@ class CinePiProcess(Thread):
             profile["encode_workers"],
             profile["disk_workers"],
         )
-        args += recorder_profile_args(storage_fs)
+        args += recorder_profile_args(storage_fs, is_pi4=self._is_pi4())
 
         # ── Camera raw-buffer headroom ────────────────────────────────────
         # More in-flight camera buffers absorb transient disk-write latency

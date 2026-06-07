@@ -21,6 +21,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.modules.setdefault("redis", types.SimpleNamespace(StrictRedis=object))
 
 from module.storage_profiles import (  # noqa: E402
+    PI4_MAX_DISK_WORKERS,
     RECORDER_PROFILES,
     recorder_profile_args,
 )
@@ -74,6 +75,24 @@ class AudioCoreInvariantTest(unittest.TestCase):
         # broke sync on ext4 takes while exFAT ("2") stayed clean.
         cores = _expand_affinity(RECORDER_PROFILES["ext4"]["disk_affinity"])
         self.assertNotIn(AUDIO_CORE_PI, cores)
+
+    def test_pi4_caps_disk_workers(self):
+        # Pi 4 shares the xHCI USB controller between storage and the mic, so
+        # many disk writers congest the bus and stall audio. ext4's 8 workers
+        # are capped on Pi 4; Pi 5 (NVMe over PCIe) keeps the full count.
+        def disk_workers(fs, is_pi4):
+            args = recorder_profile_args(fs, is_pi4=is_pi4)
+            return int(args[args.index("--disk-workers") + 1])
+
+        self.assertEqual(disk_workers("ext4", is_pi4=False), 8)
+        self.assertEqual(disk_workers("ext4", is_pi4=True), PI4_MAX_DISK_WORKERS)
+        # Already-low counts are untouched by the cap.
+        self.assertEqual(disk_workers("exfat", is_pi4=True), 2)
+        # Affinity stays audio-safe on both platforms.
+        for is_pi4 in (False, True):
+            args = recorder_profile_args("ext4", is_pi4=is_pi4)
+            cores = _expand_affinity(args[args.index("--disk-affinity") + 1])
+            self.assertNotIn(AUDIO_CORE_PI, cores)
 
 
 if __name__ == "__main__":

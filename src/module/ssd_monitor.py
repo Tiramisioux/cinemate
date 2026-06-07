@@ -573,9 +573,8 @@ class SSDMonitor:
     def _mount_options_for_filesystem(fstype: str) -> str:
         return {
             "ext4":  EXT4_MOUNT_OPTIONS,
-            "ntfs":  f"uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
-            "ntfs3": f"uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
-            "exfat": f"uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
+            "ntfs":  "uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
+            "exfat": "uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
         }.get(fstype, "rw,noatime")
 
     def _detect_device_filesystem(self, device: str) -> str:

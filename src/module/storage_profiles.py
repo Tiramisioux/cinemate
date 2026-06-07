@@ -15,7 +15,9 @@ FILESYSTEM_ALIASES = {
     "none": NO_STORAGE_FILESYSTEM,
     "no disk": NO_STORAGE_FILESYSTEM,
     "ex4": "ext4",
-    "vfat": "exfat",
+    # "vfat" is FAT32 (not exFAT) — do not alias; FAT32 is unsupported for
+    # recording and should surface as "unknown" so the correct profile fallback
+    # and a clear UI label are used instead of the exFAT profile.
     "ntfs3": "ntfs",
     "fuseblk": "ntfs",
 }

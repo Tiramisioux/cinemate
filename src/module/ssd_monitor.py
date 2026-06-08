@@ -737,8 +737,20 @@ class SSDMonitor:
         if not self._fsck_lock.acquire(blocking=False):
             return  # already running
 
-        def _worker(devnode: str):
+        fstype = self._filesystem_type
+
+        def _worker(devnode: str, fstype: str):
             try:
+                # NTFS has no read-only check tool on Linux (ntfsfix is
+                # repair-only); skip the check and report OK so the UI does
+                # not show a spurious FAIL for every NTFS drive.
+                if fstype == "ntfs":
+                    msg = f"OK {datetime.datetime.now().isoformat()} | ntfs: fsck skipped (no read-only checker on Linux)"
+                    logging.info("fsck result: %s", msg)
+                    if self._redis:
+                        self._redis.set_value(REDIS_KEY_FSCK_STATUS, msg)
+                    return
+
                 cmd = ["sudo", "nice", "-n", "19", "ionice", "-c3",
                     "fsck", "-n", devnode]
 
@@ -757,7 +769,7 @@ class SSDMonitor:
 
         threading.Thread(
             target=_worker,
-            args=(f"/dev/{self._device_name}",),
+            args=(f"/dev/{self._device_name}", fstype),
             name="fsck",
             daemon=True
         ).start()

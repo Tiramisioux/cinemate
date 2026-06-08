@@ -41,7 +41,7 @@ corresponding controller methods.
 | `mount` / `unmount`                        | -              |                                  | Mount or unmount external storage               |
 | `toggle mount`                             | -              |                           | Mount if not mounted, otherwise unmount         |
 | `erase`                                    | -              | `erase`                                | Delete every clip on the mounted RAW volume without reformatting |
-| `format`                                   | `[ext4\|exfat\|ntfs]` | `format ext4`                          | Reformat the RAW drive (defaults to ext4) and remount it |
+| `format`                                   | `[ext4\|exfat\|ntfs]` | `format exfat`                         | Reformat the RAW drive (defaults to exfat) and remount it |
 | `storage preroll`                          | -              | `storage preroll`                       | Run the storage warm-up recording that prepares the media |
 | `time`                                     | -              |                                   | Show system and RTC time                        |
 | `set rtc time`                             | -              |                           | Copy system time to the RTC                     |
@@ -78,7 +78,7 @@ If recording is not already running, the CLI starts it automatically before armi
 Two new commands simplify preparing removable media directly from the Cinemate CLI:
 
 - `erase` empties the mounted RAW volume without touching the filesystem structure so you can clear cards quickly between takes.
-- `format [ext4|exfat|ntfs]` reformats the drive with the chosen filesystem (`ext4` by default), remounts it and refreshes the free-space monitor. The helper tolerates the common `ex4` typo and refuses unsupported targets so you do not accidentally create an unusable volume.
+- `format [ext4|exfat|ntfs]` reformats the drive with the chosen filesystem (`exfat` by default), remounts it and refreshes the free-space monitor. The helper tolerates the common `ex4` typo and refuses unsupported targets so you do not accidentally create an unusable volume.
 
 Both actions require the RAW drive to be mounted; otherwise the CLI reports an error and leaves the media untouched.
 

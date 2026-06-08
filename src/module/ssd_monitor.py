@@ -859,21 +859,50 @@ class SSDMonitor:
             logging.error("erase_drive(): cannot erase while recording is active")
             return False
 
+        # Refuse while buffered frames are still flushing to disk — the DNG
+        # writer has files open and rm -rf will fail with EBUSY.
+        for key in ("is_writing_buf", "is_buffering"):
+            if self._redis and str(self._redis.get_value(key) or "0").strip() == "1":
+                logging.error(
+                    "erase_drive(): refusing to erase while storage is still writing buffered frames (%s=1)",
+                    key,
+                )
+                return False
+
         try:
             items = list(self._mount_path.iterdir())
         except OSError as exc:
             logging.error("erase_drive(): cannot list %s: %s", self._mount_path, exc)
             return False
 
+        if not items:
+            logging.info("erase_drive(): %s is already empty", self._mount_path)
+            return True
+
+        # Flush dirty pages so the kernel has nothing pending on this volume.
+        subprocess.call(["sync"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        # Evict any processes that still have files open under the mount so
+        # rm -rf does not hit EBUSY on open descriptors.
+        subprocess.call(
+            ["sudo", "fuser", "-km", str(self._mount_path)],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        time.sleep(0.3)
+
         errors = []
 
         def _rm(path: Path) -> None:
-            result = subprocess.run(
-                ["sudo", "rm", "-rf", str(path)],
-                capture_output=True, text=True,
-            )
-            if result.returncode != 0:
-                errors.append(result.stderr.strip() or str(path))
+            for attempt in range(1, 3):
+                result = subprocess.run(
+                    ["sudo", "rm", "-rf", str(path)],
+                    capture_output=True, text=True,
+                )
+                if result.returncode == 0:
+                    return
+                if attempt < 2:
+                    time.sleep(0.5)
+            errors.append(result.stderr.strip() or str(path))
 
         threads = [threading.Thread(target=_rm, args=(p,), daemon=True) for p in items]
         for t in threads:
@@ -897,6 +926,16 @@ class SSDMonitor:
             logging.error("format_drive(): RAW drive is not mounted")
             return False
 
+        # Refuse while buffered frames are still flushing — the DNG writer has
+        # the device open and will prevent a clean unmount.
+        for key in ("is_writing_buf", "is_buffering"):
+            if self._redis and str(self._redis.get_value(key) or "0").strip() == "1":
+                logging.error(
+                    "format_drive(): refusing to format while storage is still writing buffered frames (%s=1)",
+                    key,
+                )
+                return False
+
         fs = normalize_filesystem(filesystem or "exfat")
 
         if fs not in {"ext4", "exfat", "ntfs"}:
@@ -914,9 +953,12 @@ class SSDMonitor:
 
         device = f"/dev/{dev_name}"
 
-        # Unmount robustly: clean first, lazy fallback on EBUSY, then kill
-        # processes holding the device as a last resort so mkfs never hits
-        # "Device or resource busy".
+        # Flush dirty pages before attempting unmount — pending writeback is the
+        # most common cause of EBUSY on a clean-unmount attempt.
+        subprocess.call(["sync"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        # Unmount sequence: clean attempt → lazy fallback → evict processes →
+        # flush block-layer buffers → final lazy attempt.
         clean_unmount = False
         try:
             subprocess.run(["sudo", "umount", str(self._mount_path)], check=True)
@@ -928,16 +970,27 @@ class SSDMonitor:
             clean_unmount = self._force_lazy_unmount(self._mount_path)
 
         if not clean_unmount:
-            # Last resort: fuser -km evicts all processes holding the device,
-            # then attempt one final lazy unmount.
+            # Kill processes holding the mount point OR the block device, then
+            # flush the block layer before the last lazy-unmount attempt.
             logging.warning(
-                "format_drive(): lazy unmount failed, evicting processes from %s", device
+                "format_drive(): lazy unmount failed, evicting processes from %s and %s",
+                self._mount_path, device,
+            )
+            subprocess.call(
+                ["sudo", "fuser", "-km", str(self._mount_path)],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             )
             subprocess.call(
                 ["sudo", "fuser", "-km", device],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             )
             time.sleep(0.5)
+            # Ask the block layer to flush any pending I/O before retrying.
+            subprocess.call(
+                ["sudo", "blockdev", "--flushbufs", device],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+            time.sleep(0.3)
             if not self._force_lazy_unmount(self._mount_path):
                 logging.error(
                     "format_drive(): could not unmount %s after eviction; aborting format",
@@ -945,7 +998,7 @@ class SSDMonitor:
                 )
                 return False
 
-        # Brief settle so the kernel releases all block-layer references before
+        # Allow the kernel time to release all block-layer references before
         # mkfs opens the device.
         time.sleep(0.5)
 
@@ -1016,10 +1069,19 @@ class SSDMonitor:
             # the macOS exFAT driver on most versions.
             mkfs_cmd = ["sudo", "mkfs.exfat", "-L", "RAW", device]
         else:
-            mkfs_cmd = ["sudo", "mkfs.ntfs", "-F", "-L", "RAW", device]
+            # -Q: quick format — writes only the NTFS metadata structures, not
+            # zeros across the entire partition.  Without -Q, mkfs.ntfs walks
+            # every sector which takes minutes on a large drive.  The resulting
+            # volume is identical from the OS perspective; only uninitialized
+            # clusters are left unzeroed, which is normal for quick-formatted
+            # NTFS (Windows itself behaves the same way).
+            mkfs_cmd = ["sudo", "mkfs.ntfs", "-Q", "-F", "-L", "RAW", device]
 
         try:
-            subprocess.run(mkfs_cmd, check=True)
+            subprocess.run(mkfs_cmd, check=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            logging.error("format_drive(): mkfs timed out for %s", device)
+            return False
         except subprocess.CalledProcessError as exc:
             logging.error("format_drive(): mkfs failed for %s (%s)", device, exc)
             return False

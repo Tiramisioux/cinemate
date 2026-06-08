@@ -267,19 +267,9 @@ def restore_local_console_prompt() -> bool:
                 continue
             if result.returncode == 0:
                 # Wait for getty to start and fully render with autologin
-                time.sleep(2.0)
-                break
+                time.sleep(2.5)
+                return True
 
-    # Nudge getty by writing to tty1 to trigger prompt rendering
-    for tty_path in LOCAL_FAILURE_TTY_PATHS:
-        try:
-            with open(tty_path, "w", encoding="utf-8", errors="replace") as tty:
-                # Single gentle nudge instead of multiple newlines
-                tty.write("\r\n")
-                tty.flush()
-            return True
-        except OSError:
-            continue
     return False
 
 
@@ -805,8 +795,6 @@ def run_application(args, log_queue):
         settings["arrays"]["wb_steps"]
     )
 
-    logging.info("--- Initialization Complete ---")
-    
     # Mount CFE card if not mounted
     cinepi_controller.mount()
 
@@ -896,6 +884,8 @@ def run_application(args, log_queue):
 
     mediator = Mediator(cinepi, cinepi_controller, redis_listener, redis_controller, ssd_monitor, gpio_output, stream, usb_monitor)
 
+    logging.info("--- Initialization Complete ---")
+
     # Wait until the welcome-message/Plymouth handoff and preview rebind are
     # finished before warming the storage media.
     storage_preroll.mark_startup_ready()
@@ -979,7 +969,10 @@ def run_application(args, log_queue):
 
         if not shutdown_in_progress and not gui_stopped:
             release_console_to_text()
-        
+
+        # Hold the screen to let getty prompt stay visible before process exit
+        if not shutdown_in_progress:
+            time.sleep(0.5)
     atexit.register(cleanup)
     
     def handle_exit(sig, frame):

@@ -574,8 +574,18 @@ def _promote_to_active(dev: str) -> bool:
     """Make `dev` the active RAW drive mounted at /media/RAW. Returns success."""
     global _active_raw
     with _raw_lock:
+        # A just-removed active drive is torn down with an async lazy umount, so
+        # /media/RAW can linger as a mountpoint for a fraction of a second. Wait
+        # briefly for it to free before promoting, so we don't have to rely on
+        # the 3 s watchdog tick to retry. A mountpoint that persists past the
+        # timeout is a legitimate foreign mount (e.g. cinemate mounted it) and
+        # must not be stolen.
+        waited = 0.0
+        while _mountpoint_in_use(RAW_ACTIVE_PATH) and waited < 2.0:
+            time.sleep(0.1)
+            waited += 0.1
         if _mountpoint_in_use(RAW_ACTIVE_PATH):
-            # Something already holds /media/RAW (e.g. cinemate mounted it).
+            log.debug("%s still occupied; not promoting %s", RAW_ACTIVE_PATH, dev)
             return False
         RAW_ACTIVE_PATH.mkdir(parents=True, exist_ok=True)
 
@@ -601,10 +611,11 @@ def _promote_to_active(dev: str) -> bool:
                 _apply_media_tuning(dev, _active_mount_kinds.get(dev, "other"), RAW_ACTIVE_PATH)
                 log.info("✓ Promoted RAW %s: %s → %s", dev, src, RAW_ACTIVE_PATH)
                 return True
-            # `mount --move` failed (e.g. a FUSE mount): drop the stale standby
-            # mount and fall back to a fresh mount at /media/RAW below.
-            log.warning("mount --move failed for %s (%s → %s); remounting",
-                        dev, src, RAW_ACTIVE_PATH)
+            # `mount --move` is unsupported for FUSE mounts such as ntfs-3g:
+            # drop the standby mount and fall back to a fresh mount at
+            # /media/RAW below. Expected for NTFS drives, not an error.
+            log.info("mount --move unsupported for %s (%s → %s, likely FUSE); remounting",
+                     dev, src, RAW_ACTIVE_PATH)
             _unmount(dev)
 
         _failed_devices.pop(dev, None)

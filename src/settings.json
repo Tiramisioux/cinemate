@@ -24,7 +24,11 @@
       },
       "override_camera_name": false,
       "camera_name": "Blackmagic Pocket Cinema Camera 4K",
-      "sensor_fps_correction": true
+      "sensor_fps_correction": true,
+      "tuning_file": {
+        "enabled": false,
+        "path": "resources/tuning_files/imx477.json"
+      }
     },
     "cam1": {
       "geometry": {
@@ -37,7 +41,11 @@
       },
       "override_camera_name": false,
       "camera_name": "Blackmagic Pocket Cinema Camera 4K",
-      "sensor_fps_correction": true
+      "sensor_fps_correction": true,
+      "tuning_file": {
+        "enabled": false,
+        "path": "resources/tuning_files/imx477.json"
+      }
     }
   },
   "hdmi_gui": {

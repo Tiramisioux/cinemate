@@ -155,6 +155,36 @@
         }
       },
       "additionalProperties": true
+    },
+    "camera": {
+      "type": "object",
+      "properties": {
+        "cam0": { "$ref": "#/definitions/cam_config" },
+        "cam1": { "$ref": "#/definitions/cam_config" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "definitions": {
+    "cam_config": {
+      "type": "object",
+      "properties": {
+        "tuning_file": {
+          "type": "object",
+          "description": "Override the libcamera tuning file for this sensor",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "path": {
+              "type": "string",
+              "default": "resources/tuning_files/imx477.json"
+            }
+          }
+        }
+      },
+      "additionalProperties": true
     }
   },
   "additionalProperties": true

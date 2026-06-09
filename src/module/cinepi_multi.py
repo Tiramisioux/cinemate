@@ -241,6 +241,7 @@ class CinePiProcess(Thread):
         self.geometry = cam_cfg.get('geometry', {})
         self.output   = cam_cfg.get('output', {})
         self.sensor_fps_correction = cam_cfg.get('sensor_fps_correction', True)
+        self.tuning_file = cam_cfg.get('tuning_file', {})
 
 
     def run(self):
@@ -386,8 +387,10 @@ class CinePiProcess(Thread):
         # gains, shutter
         cg_rb = self.redis_controller.get_value(ParameterKey.CG_RB.value) or '2.5,2.2'
         
-        # file paths\
+        # file paths
         tune = f'/home/pi/libcamera/src/ipa/rpi/pisp/data/{model_key}.json'
+        if self.tuning_file.get('enabled') and self.tuning_file.get('path'):
+            tune = str(self.tuning_file['path'])
         post = f'/home/pi/post-processing{self.cam.index}.json'
         
         # geometry flags

@@ -311,6 +311,9 @@ def _apply_settings_defaults(settings: dict) -> dict:
         cam.setdefault("override_camera_name", False)
         cam.setdefault("camera_name",          "")
         cam.setdefault("sensor_fps_correction", True)
+        tf = cam.setdefault("tuning_file", {})
+        tf.setdefault("enabled", False)
+        tf.setdefault("path", "resources/tuning_files/imx477.json")
     settings["camera"] = camera_cfg
 
     sensor_defaults = {

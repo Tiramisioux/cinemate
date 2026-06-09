@@ -341,6 +341,22 @@ def _restore_sysctls():
     log.info("Restored default sysctl values")
     log.debug("Sysctl restore complete")
 
+def _apply_media_tuning(dev: str, kind: str, mount_path: "Path"):
+    """Apply tuning for a freshly-mounted device.
+
+    Per-device block-queue tuning is applied to every drive (it only touches
+    that device's own queue). The *global* write-smoothing knobs — the VM dirty
+    cushions and the NVMe power-latency parameter — are applied ONLY for the
+    active RAW recording target (/media/RAW). Other drives (file-transfer disks,
+    standbys, anything not labelled RAW) are accepted and mounted, but must not
+    perturb the global tuning the recorder depends on.
+    """
+    _apply_block_tuning(dev, kind)
+    if mount_path == RAW_ACTIVE_PATH:
+        if dev.startswith("/dev/nvme"):
+            _apply_nvme_power_tuning(kind)
+        _apply_sysctl_cushions(kind)
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Auto-repair
 # ─────────────────────────────────────────────────────────────────────────────
@@ -428,10 +444,7 @@ def _mount(dev: str, target: "Path | None" = None, *, force: bool = False) -> bo
         log.info("%s already mounted elsewhere, tracking it", dev)
         _mounts[dev] = mount_path
         _active_mount_kinds[dev] = kind
-        _apply_block_tuning(dev, kind)
-        if dev.startswith("/dev/nvme"):
-            _apply_nvme_power_tuning(kind)
-        _apply_sysctl_cushions(kind)
+        _apply_media_tuning(dev, kind, mount_path)
         return True
 
     # Attempt mount
@@ -446,10 +459,7 @@ def _mount(dev: str, target: "Path | None" = None, *, force: bool = False) -> bo
         except OSError:
             pass
 
-        _apply_block_tuning(dev, kind)
-        if dev.startswith("/dev/nvme"):
-            _apply_nvme_power_tuning(kind)
-        _apply_sysctl_cushions(kind)
+        _apply_media_tuning(dev, kind, mount_path)
 
         log.info("✓ Mounted %s successfully at %s", dev, mount_path)
         return True
@@ -465,10 +475,7 @@ def _mount(dev: str, target: "Path | None" = None, *, force: bool = False) -> bo
                 os.chown(mount_path, PI_UID, PI_GID)
             except OSError:
                 pass
-            _apply_block_tuning(dev, kind)
-            if dev.startswith("/dev/nvme"):
-                _apply_nvme_power_tuning(kind)
-            _apply_sysctl_cushions(kind)
+            _apply_media_tuning(dev, kind, mount_path)
             log.info("✓ Mounted %s after repair at %s", dev, mount_path)
             return True
 
@@ -589,6 +596,9 @@ def _promote_to_active(dev: str) -> bool:
                         src.rmdir()
                 except OSError:
                     pass
+                # Now the active recording target — apply the global cushions
+                # (the standby mount only applied per-device block tuning).
+                _apply_media_tuning(dev, _active_mount_kinds.get(dev, "other"), RAW_ACTIVE_PATH)
                 log.info("✓ Promoted RAW %s: %s → %s", dev, src, RAW_ACTIVE_PATH)
                 return True
             # `mount --move` failed (e.g. a FUSE mount): drop the stale standby

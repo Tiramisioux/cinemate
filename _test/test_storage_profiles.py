@@ -22,7 +22,11 @@ sys.modules.setdefault("redis", types.SimpleNamespace(StrictRedis=object))
 
 from module.storage_profiles import (  # noqa: E402
     PI4_MAX_DISK_WORKERS,
+    RECOMMENDED_STORAGE_FILESYSTEMS,
     RECORDER_PROFILES,
+    SUPPORTED_STORAGE_FILESYSTEMS,
+    filesystem_is_recommended,
+    filesystem_recording_advisory,
     recorder_profile_args,
 )
 
@@ -93,6 +97,32 @@ class AudioCoreInvariantTest(unittest.TestCase):
             args = recorder_profile_args("ext4", is_pi4=is_pi4)
             cores = _expand_affinity(args[args.index("--disk-affinity") + 1])
             self.assertNotIn(AUDIO_CORE_PI, cores)
+
+
+class RecommendedFilesystemTest(unittest.TestCase):
+    def test_ntfs_supported_but_not_recommended(self):
+        # NTFS must stay supported (it mounts and records) but not recommended:
+        # the Linux NTFS drivers lose frames under sustained 4K writes.
+        self.assertIn("ntfs", SUPPORTED_STORAGE_FILESYSTEMS)
+        self.assertNotIn("ntfs", RECOMMENDED_STORAGE_FILESYSTEMS)
+        self.assertFalse(filesystem_is_recommended("ntfs"))
+
+    def test_exfat_ext4_recommended(self):
+        for fs in ("exfat", "ext4"):
+            self.assertIn(fs, RECOMMENDED_STORAGE_FILESYSTEMS)
+            self.assertTrue(filesystem_is_recommended(fs))
+
+    def test_recommended_is_subset_of_supported(self):
+        self.assertTrue(
+            set(RECOMMENDED_STORAGE_FILESYSTEMS).issubset(SUPPORTED_STORAGE_FILESYSTEMS)
+        )
+
+    def test_advisory_only_for_supported_not_recommended(self):
+        # NTFS (and its aliases) get an advisory; recommended/none/unknown do not.
+        for fs in ("ntfs", "ntfs3", "fuseblk"):
+            self.assertIsNotNone(filesystem_recording_advisory(fs))
+        for fs in ("exfat", "ext4", "none", "", "vfat", "definitely-not-a-fs"):
+            self.assertIsNone(filesystem_recording_advisory(fs))
 
 
 if __name__ == "__main__":

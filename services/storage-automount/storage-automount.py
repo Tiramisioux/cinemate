@@ -48,6 +48,8 @@ LOG_LEVEL = os.getenv("STORAGE_AUTOMOUNT_LOG", "INFO").upper()
 PI_UID = int(os.getenv("PI_UID", "1000"))
 PI_GID = int(os.getenv("PI_GID", "1000"))
 MOUNT_BASE = Path("/media")
+RAW_LABEL = "RAW"
+RAW_ACTIVE_PATH = MOUNT_BASE / RAW_LABEL  # primary recorder target (/media/RAW)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Logging
@@ -174,6 +176,17 @@ def _root_block_name(devnode: str) -> str:
     if name.startswith("nvme") and "p" in name:
         return name.split("p", 1)[0]
     return re.sub(r"\d+$", "", name)
+
+def _is_partition_of(part: str, disk: str) -> bool:
+    """True if devnode `part` is a partition of whole-disk devnode `disk`.
+
+    /dev/sda → /dev/sda1 ✓ ; /dev/nvme0n1 → /dev/nvme0n1p1 ✓ ;
+    /dev/sda → /dev/sdaa1 ✗ (avoids the naive startswith false-match).
+    """
+    if part == disk or not part.startswith(disk):
+        return False
+    rest = part[len(disk):]
+    return re.fullmatch(r"p?\d+", rest) is not None
 
 def _get_filesystem_info(dev: str, retries: int = 5, delay: float = 0.5) -> tuple[str | None, str | None]:
     """Return (LABEL, FSTYPE) with retries for udev settle."""
@@ -361,38 +374,46 @@ def _purge_stale_mountpoints():
             except OSError:
                 pass
 
-def _mount(dev: str):
-    """Mount device with label-based path and tuning."""
+def _mount(dev: str, target: "Path | None" = None, *, force: bool = False) -> bool:
+    """Mount `dev` at `target` (or a label-derived path) with media tuning.
+
+    Returns True on success (or when already mounted by us). When `force` is
+    True the failed-device cooldown is ignored — used by RAW promotion so a
+    drive that briefly failed can be retried the instant it is needed.
+    """
     global _failed_devices
 
     # Clean up failed device cooldowns (30s)
     current_time = time.time()
     _failed_devices = {k: v for k, v in _failed_devices.items() if current_time - v < 30}
 
-    # Check cooldown
-    if dev in _failed_devices:
+    # Check cooldown (skipped on a forced/promotion mount)
+    if not force and dev in _failed_devices:
         remaining = 30 - (time.time() - _failed_devices[dev])
         if remaining > 0:
             log.debug("%s in cooldown, %d seconds remaining", dev, int(remaining))
-        return
+        return False
+    _failed_devices.pop(dev, None)
 
     # Already mounted by us
     if dev in _mounts:
-        log.debug("%s already mounted", dev)
-        return
+        log.debug("%s already mounted at %s", dev, _mounts[dev])
+        return True
 
     # Get filesystem info
     label, fstype = _get_filesystem_info(dev)
     if not fstype:
         log.warning("%s: unknown filesystem, skipping", dev)
         _failed_devices[dev] = time.time()
-        return
+        return False
 
     # Classify media type
     kind = _classify_media(dev)
 
     # Determine mount path
-    if label:
+    if target is not None:
+        mount_path = target
+    elif label:
         mount_path = MOUNT_BASE / _sanitize(label)
     else:
         mount_path = MOUNT_BASE / Path(dev).name
@@ -411,7 +432,7 @@ def _mount(dev: str):
         if dev.startswith("/dev/nvme"):
             _apply_nvme_power_tuning(kind)
         _apply_sysctl_cushions(kind)
-        return
+        return True
 
     # Attempt mount
     cmd = ["mount", "-t", fstype, "-o", opts, dev, str(mount_path)]
@@ -430,8 +451,8 @@ def _mount(dev: str):
             _apply_nvme_power_tuning(kind)
         _apply_sysctl_cushions(kind)
 
-        log.info("✓ Mounted %s successfully", dev)
-        return
+        log.info("✓ Mounted %s successfully at %s", dev, mount_path)
+        return True
 
     # Mount failed - try repair
     log.error("Mount failed for %s, attempting repair", dev)
@@ -448,17 +469,18 @@ def _mount(dev: str):
             if dev.startswith("/dev/nvme"):
                 _apply_nvme_power_tuning(kind)
             _apply_sysctl_cushions(kind)
-            log.info("✓ Mounted %s after repair", dev)
-            return
+            log.info("✓ Mounted %s after repair at %s", dev, mount_path)
+            return True
 
-    # Failed - cleanup and cooldown
+    # Failed - cleanup and cooldown (never remove the primary /media/RAW dir)
     try:
-        if not any(mount_path.iterdir()):
+        if mount_path != RAW_ACTIVE_PATH and not any(mount_path.iterdir()):
             mount_path.rmdir()
     except OSError:
         pass
     _failed_devices[dev] = time.time()
     log.error("✗ Failed to mount %s", dev)
+    return False
 
 def _unmount(dev: str):
     """Unmount device and clean up."""
@@ -488,8 +510,18 @@ def _unmount(dev: str):
 # ─────────────────────────────────────────────────────────────────────────────
 # RAW Arbitration
 # ─────────────────────────────────────────────────────────────────────────────
+# Exactly one RAW drive is "active" (mounted at /media/RAW, the recorder
+# target). Any additional RAW drives are mounted as standbys at /media/RAW1,
+# /media/RAW2, … When the active drive is removed, ejected or yanked, the
+# oldest mounted standby is promoted to /media/RAW so recording can continue.
+#
+# Mounting is event/promotion driven: a RAW device is only mounted in response
+# to a udev add/change (or the initial scan), and only ever becomes active via
+# promotion. The service never spontaneously re-grabs a device a user unmounted
+# out-of-band (a GUI eject or a cinemate format) — that device is left alone
+# until it produces a fresh add event.
 def _register_raw_add(dev: str):
-    """Register a device with LABEL=RAW."""
+    """Register a device with LABEL=RAW (append to the arrival-ordered pool)."""
     with _raw_lock:
         if dev not in _raw_pool:
             _raw_pool.append(dev)
@@ -500,17 +532,160 @@ def _register_raw_remove(dev: str):
         if dev in _raw_pool:
             _raw_pool.remove(dev)
 
-def _switch_to_raw(dev: str | None):
-    """Mount dev (LABEL=RAW) and unmount previous RAW."""
+def _mountpoint_in_use(path: "Path") -> bool:
+    """True if `path` is currently a mountpoint. Reads /proc, never blocks on I/O."""
+    target = str(path)
+    try:
+        with open("/proc/self/mountinfo") as f:
+            for line in f:
+                fields = line.split()
+                if len(fields) >= 5 and fields[4] == target:
+                    return True
+    except Exception:
+        pass
+    return False
+
+def _next_standby_path() -> "Path":
+    """Return the first free /media/RAW<n> standby mountpoint."""
+    used = {str(p) for p in _mounts.values()}
+    n = 1
+    while True:
+        candidate = MOUNT_BASE / f"{RAW_LABEL}{n}"
+        if str(candidate) not in used and not _mountpoint_in_use(candidate):
+            return candidate
+        n += 1
+
+def _mount_standby(dev: str):
+    """Mount a RAW device at a free standby path (never touches /media/RAW)."""
+    if dev in _mounts:
+        return
+    target = _next_standby_path()
+    if _mount(dev, target):
+        log.info("RAW standby %s mounted at %s", dev, target)
+
+def _promote_to_active(dev: str) -> bool:
+    """Make `dev` the active RAW drive mounted at /media/RAW. Returns success."""
     global _active_raw
+    with _raw_lock:
+        if _mountpoint_in_use(RAW_ACTIVE_PATH):
+            # Something already holds /media/RAW (e.g. cinemate mounted it).
+            return False
+        RAW_ACTIVE_PATH.mkdir(parents=True, exist_ok=True)
+
+        # Fast path: relocate an already-mounted standby with `mount --move`,
+        # preserving the open filesystem (no unmount/remount cycle).
+        src = _mounts.get(dev)
+        if src is not None and src != RAW_ACTIVE_PATH:
+            if subprocess.call(["mount", "--move", str(src), str(RAW_ACTIVE_PATH)],
+                               stderr=subprocess.DEVNULL) == 0:
+                _mounts[dev] = RAW_ACTIVE_PATH
+                _active_raw = dev
+                try:
+                    os.chown(RAW_ACTIVE_PATH, PI_UID, PI_GID)
+                except OSError:
+                    pass
+                try:
+                    if not any(src.iterdir()):
+                        src.rmdir()
+                except OSError:
+                    pass
+                log.info("✓ Promoted RAW %s: %s → %s", dev, src, RAW_ACTIVE_PATH)
+                return True
+            # `mount --move` failed (e.g. a FUSE mount): drop the stale standby
+            # mount and fall back to a fresh mount at /media/RAW below.
+            log.warning("mount --move failed for %s (%s → %s); remounting",
+                        dev, src, RAW_ACTIVE_PATH)
+            _unmount(dev)
+
+        _failed_devices.pop(dev, None)
+        if _mount(dev, RAW_ACTIVE_PATH, force=True):
+            _active_raw = dev
+            log.info("✓ Promoted RAW %s to %s", dev, RAW_ACTIVE_PATH)
+            return True
+        return False
+
+def _promote_next() -> bool:
+    """Promote the best available RAW device to active. Caller holds _raw_lock.
+
+    Prefers already-mounted standbys (proven mountable, ordered by mountpoint),
+    then falls back to any unmounted pool member.
+    """
+    if _active_raw is not None:
+        return True
+    standbys = sorted(
+        ((str(p), d) for d, p in _mounts.items()
+         if d in _raw_pool and p != RAW_ACTIVE_PATH),
+        key=lambda t: t[0],
+    )
+    ordered = [d for _, d in standbys] + [d for d in _raw_pool if d not in _mounts]
+    for d in ordered:
+        if _promote_to_active(d):
+            return True
+    if ordered:
+        log.warning("No RAW standby could be promoted to %s", RAW_ACTIVE_PATH)
+    return False
+
+def _add_raw(dev: str):
+    """Handle a freshly-detected RAW device: become active if none, else standby."""
+    _register_raw_add(dev)
     with _raw_lock:
         if dev == _active_raw:
             return
-        if _active_raw:
-            _unmount(_active_raw)
-        if dev:
-            _mount(dev)
-        _active_raw = dev
+        if _active_raw is None and not _mountpoint_in_use(RAW_ACTIVE_PATH):
+            if _promote_to_active(dev):
+                return
+        _mount_standby(dev)
+
+def _handle_raw_gone(dev: str):
+    """Active/standby RAW device removed, ejected or yanked → unmount + promote."""
+    global _active_raw
+    with _raw_lock:
+        was_active = (dev == _active_raw)
+        _register_raw_remove(dev)
+        _failed_devices.pop(dev, None)   # let an immediate reconnect retry
+        if dev in _mounts:
+            _unmount(dev)
+        if was_active:
+            _active_raw = None
+            _promote_next()
+
+def _on_block_removed(devnode: str):
+    """Handle removal of a partition or whole disk: unmount affected mounts and
+    promote a RAW standby if the active drive went away."""
+    affected = []
+    for d in list(_mounts) + [x for x in _raw_pool if x not in _mounts]:
+        if (d == devnode or _is_partition_of(d, devnode)) and d not in affected:
+            affected.append(d)
+    if _active_raw and (_active_raw == devnode or _is_partition_of(_active_raw, devnode)):
+        if _active_raw not in affected:
+            affected.append(_active_raw)
+    for d in affected:
+        if d in _raw_pool or d == _active_raw:
+            _handle_raw_gone(d)
+        else:
+            _unmount(d)
+
+def _safety_net_promote():
+    """Periodic reconcile (called from the sanity watchdog): cover out-of-band
+    unmounts such as a GUI eject by promoting a standby when /media/RAW is empty.
+    Never re-grabs a device the user deliberately unmounted while it is still
+    present — it only ever elevates a standby that is already mounted."""
+    global _active_raw
+    with _raw_lock:
+        if _active_raw is not None and not _mountpoint_in_use(RAW_ACTIVE_PATH):
+            # The active drive's mount disappeared without a removal event
+            # (cinemate eject/format). Release it and let a standby take over if
+            # one exists. Drop it from the promotion pool too, so we don't
+            # immediately re-grab a drive the user deliberately unmounted — a
+            # physical re-insert re-adds it via a fresh udev event.
+            log.info("Active RAW %s no longer mounted at %s; releasing (out-of-band unmount)",
+                     _active_raw, RAW_ACTIVE_PATH)
+            _mounts.pop(_active_raw, None)
+            _active_mount_kinds.pop(_active_raw, None)
+            _register_raw_remove(_active_raw)
+            _active_raw = None
+        if _active_raw is None and not _mountpoint_in_use(RAW_ACTIVE_PATH):
+            _promote_next()
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Watchdogs
@@ -529,13 +704,16 @@ def _nvme_watchdog():
                     state = state_file.read_text().strip()
                     if state == "dead":
                         log.warning("NVMe controller dead for %s, lazy unmount", dev)
-                        _unmount(dev)
+                        if dev in _raw_pool or dev == _active_raw:
+                            _handle_raw_gone(dev)
+                        else:
+                            _unmount(dev)
                 except OSError:
                     pass
         time.sleep(0.5)
 
 def _sanity_watchdog():
-    """Health check: detect yanked drives via statvfs errors."""
+    """Health check: detect yanked drives via statvfs errors and reconcile RAW."""
     while True:
         for dev, mp in list(_mounts.items()):
             # Skip SD card devices - they're not managed by this script
@@ -549,30 +727,19 @@ def _sanity_watchdog():
                 if exc.errno in YANK_ERRNOS:
                     log.warning("I/O error on %s (%s) - device yanked, unmounting",
                               dev, os.strerror(exc.errno))
-                    subprocess.Popen(["umount", "-l", str(mp)],
-                                     stderr=subprocess.DEVNULL)
-                    _mounts.pop(dev, None)
-                    _active_mount_kinds.pop(dev, None)
+                    if dev in _raw_pool or dev == _active_raw:
+                        # Unmount + promote a standby so recording can continue.
+                        _handle_raw_gone(dev)
+                    else:
+                        subprocess.Popen(["umount", "-l", str(mp)],
+                                         stderr=subprocess.DEVNULL)
+                        _mounts.pop(dev, None)
+                        _active_mount_kinds.pop(dev, None)
+                        _restore_sysctls()
 
-                    # Clean up RAW arbitration state
-                    _register_raw_remove(dev)
-                    with _raw_lock:
-                        global _active_raw
-                        if dev == _active_raw:
-                            _active_raw = None
-                            # Try to mount another RAW if available
-                            fallback = _raw_pool[-1] if _raw_pool else None
-                            if fallback:
-                                _switch_to_raw(fallback)
-
-                    _restore_sysctls()
-
-        # RAW arbitration self-heal
-        with _raw_lock:
-            if len(_raw_pool) > 1 and _raw_pool:
-                preferred = _raw_pool[-1]
-                if preferred != _active_raw:
-                    _switch_to_raw(preferred)
+        # Reconcile RAW: promote a standby if /media/RAW went empty out-of-band
+        # (e.g. a GUI eject) without a corresponding device-removal event.
+        _safety_net_promote()
 
         time.sleep(3)
 
@@ -595,9 +762,8 @@ def _udev_worker():
         # Partition added/changed
         if action in ("add", "change") and devtype == "partition":
             label, _ = _get_filesystem_info(devnode)
-            if label == "RAW":
-                _register_raw_add(devnode)
-                _switch_to_raw(devnode)
+            if label == RAW_LABEL:
+                _add_raw(devnode)
             else:
                 _mount(devnode)
 
@@ -610,44 +776,23 @@ def _udev_worker():
             label, fstype = _get_filesystem_info(devnode)
             if fstype:  # Has a filesystem on whole disk
                 log.info("Detected whole-disk filesystem on %s (%s)", devnode, fstype)
-                if label == "RAW":
-                    _register_raw_add(devnode)
-                    _switch_to_raw(devnode)
+                if label == RAW_LABEL:
+                    _add_raw(devnode)
                 else:
                     _mount(devnode)
 
-        # Partition removed
-        elif action == "remove" and devtype == "partition":
-            log.debug("Partition removed: %s", devnode)
-            _register_raw_remove(devnode)
-            log.debug("Calling _unmount for %s", devnode)
-            _unmount(devnode)
-            log.debug("Unmount call returned")
-            with _raw_lock:
-                if devnode == _active_raw:
-                    log.debug("Was active RAW, checking for fallback...")
-                    fallback = _raw_pool[-1] if _raw_pool else None
-                    log.debug("Fallback device: %s", fallback)
-                    _switch_to_raw(fallback)
-                    log.debug("RAW switch complete")
-            log.debug("Partition removal handling complete")
-
-        # Whole disk removed
-        elif action == "remove" and devtype == "disk":
-            victims = [d for d in list(_mounts) if d.startswith(devnode)]
-            for part in victims:
-                _register_raw_remove(part)
-                _unmount(part)
-            with _raw_lock:
-                if _active_raw and _active_raw.startswith(devnode):
-                    fallback = _raw_pool[-1] if _raw_pool else None
-                    _switch_to_raw(fallback)
+        # Partition or whole disk removed
+        elif action == "remove" and devtype in ("partition", "disk"):
+            log.debug("%s removed: %s", devtype, devnode)
+            _on_block_removed(devnode)
+            log.debug("Removal handling complete for %s", devnode)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CFE HAT I2C Worker
 # ─────────────────────────────────────────────────────────────────────────────
 def _cfe_hat_worker():
     """Monitor CFE HAT insert/eject buttons via I2C."""
+    global _active_raw, _failed_devices
     if not smbus:
         log.debug("smbus not available, CFE HAT disabled")
         return
@@ -725,18 +870,16 @@ def _cfe_hat_worker():
             nvme_devices = [dev for dev in list(_mounts) if dev.startswith("/dev/nvme")]
             for dev in nvme_devices:
                 log.info("Unmounting CFE device %s from %s", dev, _mounts[dev])
-                log.debug("Starting non-blocking lazy unmount...")
-                # Use Popen to not wait for umount completion (it can block for 30+ seconds)
-                subprocess.Popen(["umount", "-l", str(_mounts[dev])],
-                               stderr=subprocess.DEVNULL)
-                log.debug("Umount started, cleaning up state...")
-                _mounts.pop(dev, None)
-                _active_mount_kinds.pop(dev, None)
-                _register_raw_remove(dev)
-                with _raw_lock:
-                    global _active_raw
-                    if dev == _active_raw:
-                        _active_raw = None
+                # _handle_raw_gone promotes a surviving standby (e.g. a USB SSD)
+                # to /media/RAW so recording can continue after the card leaves.
+                # It uses a non-blocking lazy unmount internally.
+                if dev in _raw_pool or dev == _active_raw:
+                    _handle_raw_gone(dev)
+                else:
+                    subprocess.Popen(["umount", "-l", str(_mounts[dev])],
+                                   stderr=subprocess.DEVNULL)
+                    _mounts.pop(dev, None)
+                    _active_mount_kinds.pop(dev, None)
             log.debug("Powering down PCIe...")
             _pcie(False)
             log.debug("Setting LED off...")
@@ -756,7 +899,6 @@ def _cfe_hat_worker():
             _set_led(True)
 
             # Clear failed device cooldown for NVMe devices (explicit user action)
-            global _failed_devices
             _failed_devices = {k: v for k, v in _failed_devices.items()
                              if not k.startswith("/dev/nvme")}
             log.debug("Cleared NVMe device cooldowns")
@@ -791,9 +933,8 @@ def _cfe_hat_worker():
                 log.debug("Checking filesystem on %s...", devnode)
                 label, _ = _get_filesystem_info(devnode, retries=3, delay=0.3)
                 log.debug("Label: %s", label)
-                if label == "RAW":
-                    _register_raw_add(devnode)
-                    _switch_to_raw(devnode)
+                if label == RAW_LABEL:
+                    _add_raw(devnode)
                 else:
                     _mount(devnode)
 
@@ -805,9 +946,8 @@ def _cfe_hat_worker():
                     label, fstype = _get_filesystem_info(devnode, retries=3, delay=0.3)
                     if fstype:
                         log.info("Detected whole-disk filesystem on %s (%s)", devnode, fstype)
-                        if label == "RAW":
-                            _register_raw_add(devnode)
-                            _switch_to_raw(devnode)
+                        if label == RAW_LABEL:
+                            _add_raw(devnode)
                         else:
                             _mount(devnode)
             else:
@@ -819,11 +959,13 @@ def _cfe_hat_worker():
         if ej_prev == 1 and ej_now == 0:
             log.info("CFexpress card: EJECTING")
             for dev in list(_mounts):
-                subprocess.call(["umount", "-l", str(_mounts[dev])],
+                subprocess.Popen(["umount", "-l", str(_mounts[dev])],
                               stderr=subprocess.DEVNULL)
                 _mounts.pop(dev, None)
                 _active_mount_kinds.pop(dev, None)
                 _register_raw_remove(dev)
+            with _raw_lock:
+                _active_raw = None
             _pcie(False)
             _set_led(False)
             _restore_sysctls()
@@ -876,11 +1018,10 @@ def _initial_scan():
     for devnode in others:
         _mount(devnode)
 
-    # Arbitrate RAW drives
-    if raws:
-        devnode = sorted(raws)[-1]  # Use last one
-        _register_raw_add(devnode)
-        _switch_to_raw(devnode)
+    # Arbitrate RAW drives: lowest /dev path becomes the active /media/RAW, the
+    # rest are mounted as standbys (/media/RAW1, …) ready for promotion.
+    for devnode in sorted(raws):
+        _add_raw(devnode)
 
     log.info("Initial scan complete: %d mount(s)", len(_mounts))
 

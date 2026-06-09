@@ -301,7 +301,20 @@ class SSDMonitor:
         elif not mounted_now and self._is_mounted:
             self._handle_unmount()
         elif self._is_mounted:
-            self._update_space_left()
+            # The storage-automount service can swap the device behind
+            # /media/RAW in place (a standby promoted with `mount --move`)
+            # without the mount-point ever disappearing. Detect that the
+            # underlying device changed and re-sync type / filesystem /
+            # recorder profile so the profile matches the drive now in use.
+            current_dev = self._get_device_name()
+            if current_dev and current_dev != self._device_name:
+                logging.info(
+                    "RAW device changed under %s: %s → %s; re-syncing storage state",
+                    self._mount_path, self._device_name, current_dev,
+                )
+                self._handle_mount()
+            else:
+                self._update_space_left()
 
     def _handle_mount(self) -> None:
         self._is_mounted  = True

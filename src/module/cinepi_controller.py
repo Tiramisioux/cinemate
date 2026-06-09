@@ -1058,7 +1058,25 @@ class CinePiController:
             if rerun and self._storage_profile_restart_allowed():
                 self._maybe_schedule_storage_profile_restart("queued storage profile change")
 
+    def _buffered_frames_flushing(self) -> bool:
+        """True while cinepi-raw is still draining buffered frames to disk after
+        a take — the green ``is_writing_buf`` state. Mirrors the keys the GUI
+        paints green on and that ssd_monitor gates erase/format on."""
+        for key in (ParameterKey.IS_WRITING_BUF.value, ParameterKey.IS_BUFFERING.value):
+            if str(self.redis_controller.get_value(key) or "0").strip() == "1":
+                return True
+        return False
+
     def start_recording(self):
+        # Safety: refuse to start a new take while the previous take's frames are
+        # still flushing from RAM to disk (the green is_writing_buf state). Letting
+        # the buffer finish means no recorded frame is lost; the operator presses
+        # rec again once the flush completes and green clears. Storage pre-roll is
+        # exempt — it primes the disk and waits out its own flush.
+        if not self.is_preroll_active() and self._buffered_frames_flushing():
+            logging.info(
+                "rec ignored – previous take's buffered frames are still flushing to disk")
+            return
         self._cancel_timed_recording_stop()
         self._clear_frame_limited_recording_stop()
         self.redis_controller.set_value(ParameterKey.MEMORY_ALERT.value, 0)

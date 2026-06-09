@@ -115,6 +115,12 @@ class SSDMonitor:
         
         self._last_cfe_mount_try = 0.
         self._last_recording_log = {}
+        # Recording dirs that raised a localized read error (e.g. a corrupt
+        # NTFS clip dir left by a take interrupted mid-write by a hotswap).
+        # Skipped on later scans so one bad directory neither spams the log nor
+        # — via a misread EIO — triggers a false unmount/remount loop. Cleared
+        # on unmount so a re-inserted or repaired drive is scanned fresh.
+        self._unreadable_dirs: set[str] = set()
 
         # next fsck schedule (run once right after boot/mount)
         self._next_fsck_ts = time.time()
@@ -364,6 +370,9 @@ class SSDMonitor:
         self._next_fsck_ts = 0
 
     def _handle_unmount(self) -> None:
+        # Forget the per-mount bad-directory cache so a re-inserted or repaired
+        # drive is scanned fresh next time it mounts.
+        self._unreadable_dirs.clear()
         # … Redis clean-up stays unchanged …
         self._redis_set_many({
             ParameterKey.STORAGE_TYPE.value: "none",
@@ -661,6 +670,21 @@ class SSDMonitor:
         logging.error("mount_drive(): mount failed for %s as %s", raw_dev, fstype)
         return False
 
+    def _path_is_inside_mount(self, path) -> bool:
+        """True if `path` is a strict sub-path of the mount root.
+
+        Pure string comparison — no filesystem access, so it cannot hang on a
+        dead/stale mount. Used to tell a localized bad-directory error (one
+        corrupt clip dir) apart from a genuine device-level failure on the
+        mount root itself.
+        """
+        try:
+            root = os.path.normpath(str(self._mount_path))
+            target = os.path.normpath(str(path))
+        except (TypeError, ValueError):
+            return False
+        return target != root and target.startswith(root + os.sep)
+
     def _handle_storage_error(self, exc: OSError, *, action: str) -> bool:
         """
         Convert media-removal filesystem errors into one clean unmount flow.
@@ -669,6 +693,18 @@ class SSDMonitor:
         monitor state was transitioned to "unmounted".
         """
         if exc.errno not in YANK_ERRNOS:
+            return False
+
+        # An error on a path *inside* the volume — a single corrupt or
+        # half-written recording directory, common on NTFS after a take is
+        # interrupted mid-write by a hotswap — must not tear down a healthy
+        # mount. Genuine device loss surfaces as an error on the mount root
+        # itself (statvfs/iterdir of the root), which the periodic free-space
+        # check still catches, so deferring to it here is safe. Without this
+        # guard an EIO on one leftover clip dir unmounts the drive and the
+        # automounter immediately remounts it, looping indefinitely.
+        failing_path = getattr(exc, "filename", None)
+        if failing_path and self._path_is_inside_mount(failing_path):
             return False
 
         # ENOENT on a path inside the volume (e.g. a subdirectory deleted
@@ -1151,6 +1187,10 @@ class SSDMonitor:
                 preroll_active = False
         infos = []
         for d, _mtime in candidates:
+            if str(d) in self._unreadable_dirs:
+                # Known-bad directory from an earlier scan this mount — skip
+                # quietly instead of re-reading and re-logging it every cycle.
+                continue
             dng = wav = 0
             max_frame_idx = -1
             try:
@@ -1172,9 +1212,18 @@ class SSDMonitor:
                     elif suf == ".wav":
                         wav += 1
             except OSError as exc:
-                if not self._handle_storage_error(exc, action="count files on"):
-                    logging.warning("Unable to count files on %s: %s", d, exc)
-                return []
+                if self._handle_storage_error(exc, action="count files on"):
+                    # Genuine storage loss (root-level failure) — stop scanning.
+                    return []
+                # Localized failure: a corrupt/unreadable clip dir, not a lost
+                # drive. Remember it, log once, and keep scanning the rest so a
+                # single bad directory doesn't hide other valid recordings.
+                if str(d) not in self._unreadable_dirs:
+                    self._unreadable_dirs.add(str(d))
+                    logging.warning(
+                        "Skipping unreadable recording directory %s: %s", d, exc
+                    )
+                continue
             last_logged = self._last_recording_log.get(d.name)
             if not preroll_active and last_logged != (dng, wav):
                 logging.info("Latest recording “%s”: %d DNG | %d WAV",

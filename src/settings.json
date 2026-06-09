@@ -1,6 +1,5 @@
 {
   "$schema": "./settings.schema.json",
-  "show_startup_message": true,
   "show_welcome_message": true,
   "welcome_message": "THIS IS A COOL MACHINE",
   "welcome_image": null,

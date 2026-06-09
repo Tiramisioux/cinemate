@@ -1040,3 +1040,94 @@ To check what the service is doing:
 systemctl status cinemate-autostart
 journalctl -fu cinemate-autostart
 ```
+
+## Boot time optimization
+
+These changes bring typical boot-to-live-preview time down to approximately 10 seconds on both Raspberry Pi 4 and Raspberry Pi 5. The one-click installer applies all of them automatically. If you used the manual install path, apply each step separately after the rest of the install is complete.
+
+### Disable unnecessary background services
+
+The following services and timers are not used by the camera stack. Disabling them removes stall points on the boot critical path.
+
+```bash
+# Stop the network-online gate — the hotspot creates its own AP and does not need upstream internet
+sudo systemctl disable --now NetworkManager-wait-online.service
+
+# Disable swap — not needed on Pi 4/5, and saves SD card writes
+sudo systemctl disable --now dphys-swapfile.service
+
+# Background daemons the camera never uses
+sudo systemctl disable --now triggerhappy.service
+sudo systemctl disable --now ModemManager.service
+sudo systemctl disable --now systemd-rfkill.service
+
+# Background maintenance timers — not on the boot critical path
+sudo systemctl disable --now man-db.timer
+sudo systemctl disable --now apt-daily.timer
+sudo systemctl disable --now apt-daily-upgrade.timer
+sudo systemctl disable --now e2scrub_all.timer
+```
+
+!!! note ""
+    Some of these units may not be present on a minimal Bookworm Lite image. `systemctl disable` prints a warning and continues if the unit does not exist.
+
+### Skip filesystem check on boot
+
+Add `fsck.mode=skip` to `/boot/firmware/cmdline.txt`. The file must stay on a single line:
+
+```bash
+sudo nano /boot/firmware/cmdline.txt
+```
+
+Append `fsck.mode=skip` to the end of the existing line:
+
+```text
+... video=HDMI-A-1:1920x1080M@60D fsck.mode=skip
+```
+
+!!! note ""
+    `cmdline.txt` must stay on a single line. Do not add line breaks.
+
+### Skip HDMI CEC handshake
+
+Add `hdmi_ignore_cec_init=1` to the `[all]` block of `/boot/firmware/config.txt`, below `avoid_warnings=1`:
+
+```bash
+sudo nano /boot/firmware/config.txt
+```
+
+Inside the `[all]` block:
+
+```text
+[all]
+auto_initramfs=1
+avoid_warnings=1
+disable_splash=1
+hdmi_ignore_cec_init=1
+```
+
+This skips the HDMI CEC handshake during boot, removing a short delay on HDMI-connected displays.
+
+### Service changes included in this release
+
+Two service files were updated as part of the boot optimization work. Reinstall them to pick up the changes:
+
+```bash
+cd /home/pi/cinemate
+sudo make install
+sudo make enable
+```
+
+**`cinemate-autostart.service`** — the unconditional `sleep 5` that ran after `camera-ready.sh` has been removed. `camera-ready.sh` already gates on sensor readiness; the extra sleep was redundant.
+
+**`wifi-hotspot.service`** — the `After=` and `Wants=` dependencies no longer include `network-online.target` or `systemd-rfkill.service`. The hotspot creates its own AP and only needs `NetworkManager.service` to be running. Removing `network-online.target` prevents the hotspot from sitting behind the `NetworkManager-wait-online` stall on boot. The service has `Restart=always` so it recovers automatically if it races the Wi-Fi radio on a cold boot.
+
+### Verify the result
+
+After rebooting, check timing with:
+
+```bash
+systemd-analyze
+systemd-analyze blame | head -20
+systemd-analyze critical-chain cinemate-autostart.service
+```

@@ -928,6 +928,7 @@ block += [
     "auto_initramfs=1",
     "avoid_warnings=1",
     "disable_splash=1",
+    "hdmi_ignore_cec_init=1",
     "dtparam=i2c1=on",
     f"dtoverlay={bt_overlay}",
     end,
@@ -974,6 +975,9 @@ configure_cmdline() {
         detail "Audio-core isolation: reserving CPU ${audio_core} for capture (IRQs/housekeeping on ${house})"
     fi
 
+    # ── Boot time: skip redundant fsck on every clean boot ───────────────
+    extra_tokens+=("fsck.mode=skip")
+
     detail "Ensuring $cmdline contains $video_token"
     backup_file "$cmdline"
     temp="$(mktemp)"
@@ -991,7 +995,7 @@ tokens = src.read_text().strip().split() if src.exists() else []
 # Always re-manage the video= token. Re-manage the CPU-isolation tokens only
 # when we are (re)adding them, so a changed core count can't leave a stale
 # isolcpus=...,N behind, and a non-isolation run never strips a user's own.
-managed = ["video=HDMI-A-"]
+managed = ["video=HDMI-A-", "fsck.mode="]
 if any(t.startswith("isolcpus=") for t in extra):
     managed += ["isolcpus=", "nohz_full=", "rcu_nocbs=", "irqaffinity="]
 tokens = [tok for tok in tokens if not tok.startswith(tuple(managed))]
@@ -1241,6 +1245,31 @@ configure_services_base() {
     sudo systemctl enable --now redis-server
     sudo systemctl enable --now NetworkManager
     detail "redis-server and NetworkManager are enabled"
+}
+
+configure_boot_optimizations() {
+    log "Disabling unused background services and timers"
+
+    local -a boot_units=(
+        NetworkManager-wait-online.service
+        dphys-swapfile.service
+        triggerhappy.service
+        ModemManager.service
+        systemd-rfkill.service
+        man-db.timer
+        apt-daily.timer
+        apt-daily-upgrade.timer
+        e2scrub_all.timer
+    )
+
+    for unit in "${boot_units[@]}"; do
+        if sudo systemctl list-unit-files "$unit" 2>/dev/null | grep -q "$unit"; then
+            detail "Disabling $unit"
+            sudo systemctl disable --now "$unit" 2>/dev/null || true
+        else
+            detail "Skipping $unit (not installed)"
+        fi
+    done
 }
 
 configure_logrotate() {
@@ -1500,6 +1529,8 @@ main() {
     install_apt_packages
     section "Enabling base system services"
     configure_services_base
+    section "Applying boot time optimizations"
+    configure_boot_optimizations
     section "Refreshing the libtiff linker fix"
     prepare_libtiff_link
     section "Building redis-plus-plus"

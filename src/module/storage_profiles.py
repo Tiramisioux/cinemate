@@ -6,6 +6,13 @@ from typing import Dict
 
 
 SUPPORTED_STORAGE_FILESYSTEMS = ("ext4", "exfat", "ntfs")
+# NTFS is supported (it mounts and records) but NOT recommended: the Linux NTFS
+# drivers (ntfs-3g/FUSE and the in-kernel ntfs3) fail or short-write under
+# sustained 4K DNG throughput far more readily than exFAT/ext4, losing frames at
+# the write() syscall with no inter-frame timing gap. cinepi-raw now counts those
+# write failures (writeFailures stat) so they surface live, but exFAT or ext4
+# remains the right choice for sustained recording.
+RECOMMENDED_STORAGE_FILESYSTEMS = ("ext4", "exfat")
 NO_STORAGE_FILESYSTEM = "none"
 UNKNOWN_STORAGE_FILESYSTEM = "unknown"
 DEFAULT_RECORDER_PROFILE = "default"
@@ -101,6 +108,31 @@ def normalize_storage_filesystem(value) -> str:
     if fs in SUPPORTED_STORAGE_FILESYSTEMS or fs == NO_STORAGE_FILESYSTEM:
         return fs
     return UNKNOWN_STORAGE_FILESYSTEM
+
+
+def filesystem_is_recommended(filesystem) -> bool:
+    """True for filesystems recommended for sustained recording (exFAT/ext4).
+
+    A supported-but-not-recommended filesystem (NTFS) returns False so callers
+    can warn the operator without blocking the take.
+    """
+    return normalize_storage_filesystem(filesystem) in RECOMMENDED_STORAGE_FILESYSTEMS
+
+
+def filesystem_recording_advisory(filesystem) -> str | None:
+    """Operator advisory for a supported-but-not-recommended filesystem.
+
+    Returns None for recommended filesystems, no-disk, or unknown (those are
+    handled elsewhere). NTFS records but can lose frames under sustained 4K.
+    """
+    fs = normalize_storage_filesystem(filesystem)
+    if fs in SUPPORTED_STORAGE_FILESYSTEMS and fs not in RECOMMENDED_STORAGE_FILESYSTEMS:
+        return (
+            f"{fs.upper()} is supported but not recommended for recording: the "
+            "Linux NTFS drivers can drop frames under sustained 4K writes. "
+            "Use exFAT or ext4 for reliable sustained recording."
+        )
+    return None
 
 
 def recorder_profile_name_for_filesystem(filesystem) -> str:

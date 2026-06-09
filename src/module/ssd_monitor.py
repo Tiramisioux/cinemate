@@ -30,6 +30,7 @@ from module.redis_controller import ParameterKey
 from module.storage_profiles import (
     DEFAULT_RECORDER_PROFILE,
     NO_STORAGE_FILESYSTEM,
+    filesystem_recording_advisory,
     normalize_filesystem,
     normalize_storage_filesystem,
     recorder_profile_name_for_filesystem,
@@ -348,6 +349,9 @@ class SSDMonitor:
             self._mount_options,
             self._recorder_profile,
         )
+        advisory = filesystem_recording_advisory(self._filesystem_type)
+        if advisory:
+            logging.warning(advisory)
         self.mount_event.emit(
             self._mount_path,
             self._device_type,

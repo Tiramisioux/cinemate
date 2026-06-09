@@ -82,6 +82,8 @@ class RedisListener:
         self.drop_frame_relay_timer = None
         self.tc_frame_count: int | None = None
         self.hw_dropped_frames: int | None = None  # unbiased count from cinepi-raw droppedFrames
+        self.hw_write_failures: int | None = None  # disk-write failures from cinepi-raw writeFailures
+        self.write_failure_count_current_take = 0
         self.frames_off_sync_latched_current_take = False
         self.live_sync_suppressed_current_take = False
         self.live_sync_warning_tolerance_frames = self._coerce_frame_tolerance(
@@ -884,6 +886,16 @@ class RedisListener:
                         raw_dropped_frames = self._coerce_int(stats_data.get('droppedFrames', None))
                         if raw_dropped_frames is not None and not self.awaiting_fresh_framecount:
                             self.hw_dropped_frames = raw_dropped_frames
+                        # writeFailures: frames that reached the disk writer but
+                        # failed to write (open/write/close error or short write).
+                        # Unlike droppedFrames (sensor-timing holes) a write
+                        # failure has no inter-frame gap, so the timing-based drop
+                        # tiers never see it — this is the only live signal that a
+                        # storage device silently cannot keep up (e.g. NTFS under
+                        # sustained 4K). Same startup-race guard as droppedFrames.
+                        raw_write_failures = self._coerce_int(stats_data.get('writeFailures', None))
+                        if raw_write_failures is not None and not self.awaiting_fresh_framecount:
+                            self.hw_write_failures = raw_write_failures
                         color_temp = stats_data.get('colorTemp', None)
                         sensor_timestamp = stats_data.get('sensorTimestamp', None)
                         timestamp = stats_data.get('timestamp')
@@ -1053,6 +1065,37 @@ class RedisListener:
                                     self.drop_frame_timer = threading.Timer(0.5, self.reset_drop_frame)
                                     self.drop_frame_timer.start()
 
+                        # Disk-write-failure alert — independent of the timing-based
+                        # drop tiers above. A write failure means a delivered, encoded
+                        # frame never reached disk; there is no inter-frame gap, so the
+                        # drop tiers never see it. Warn live so the operator knows the
+                        # drive cannot keep up — otherwise the post-take file count is
+                        # the first and only signal that frames were lost.
+                        write_alerts_enabled = (
+                            self.is_recording
+                            and not self.awaiting_fresh_framecount
+                            and not self._storage_preroll_active()
+                        )
+                        if write_alerts_enabled and self.hw_write_failures is not None:
+                            if self.hw_write_failures > self.write_failure_count_current_take:
+                                new_failures = self.hw_write_failures - self.write_failure_count_current_take
+                                self.write_failure_count_current_take = self.hw_write_failures
+                                logging.warning(
+                                    "Disk write failure: %d frame(s) could not be written to disk "
+                                    "(total this take: %d). The drive cannot keep up — frames are "
+                                    "being lost. Use exFAT or ext4 for sustained recording.",
+                                    new_failures,
+                                    self.hw_write_failures,
+                                )
+                                if not self.drop_frame:
+                                    self.drop_frame = True
+                                    self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 1)
+                                self._pulse_drop_frame_relay(expected_fps)
+                                if self.drop_frame_timer:
+                                    self.drop_frame_timer.cancel()
+                                self.drop_frame_timer = threading.Timer(0.5, self.reset_drop_frame)
+                                self.drop_frame_timer.start()
+
                         if self.current_framerate is not None and self.current_framerate > 0:
                             self.framecount_check_interval = max(0.5, 2 / self.current_framerate)
                         else:
@@ -1145,6 +1188,8 @@ class RedisListener:
         self.drop_frame_count_current_take = 0
         self.tc_frame_count = None
         self.hw_dropped_frames = None
+        self.hw_write_failures = None
+        self.write_failure_count_current_take = 0
         self.drop_frame = False
         self.frames_off_sync_latched_current_take = False
         if self.drop_frame_timer:
@@ -1828,6 +1873,13 @@ class RedisListener:
         # missing_frame_count = raw shortfall on disk vs wall-clock expectation
         #                       (max(0, expected − recorded), confirmed absent files)
         missing_frames_count = max(0, expected_frames_total - recorded_frames_total)
+        # Confirmed disk-write failures reported live by cinepi-raw this take.
+        # These explain a shortfall that produced no TC gap (storage too slow/
+        # failing), so they are attributed in the verdict below.
+        write_failures_this_take = max(
+            int(self.write_failure_count_current_take),
+            int(self.hw_write_failures or 0),
+        )
 
         # ── Option 2: drop_frame_during_last_take only fires on genuine shortfall
         # A take that produced the right number of files doesn't carry a persistent
@@ -1878,6 +1930,16 @@ class RedisListener:
                     drop_frame_count_for_reporting,
                     recorded_frames_total,
                 )
+            elif missing_frames_count > 0 and write_failures_this_take > 0:
+                logging.warning(
+                    "Missing frames: %d frame(s) not written to disk "
+                    "(%d confirmed disk-write failure(s), %d TC gap event(s) during "
+                    "recording). Storage could not keep up — use exFAT or ext4 for "
+                    "sustained recording.",
+                    missing_frames_count,
+                    write_failures_this_take,
+                    drop_frame_count_for_reporting,
+                )
             elif missing_frames_count > 0:
                 logging.warning(
                     "Missing frames: %d frame(s) not written to disk "
@@ -1924,13 +1986,21 @@ class RedisListener:
                     self.final_sync_analysis_tolerance_frames,
                 )
             else:
+                if write_failures_this_take > 0:
+                    low_hint = (
+                        "%d confirmed disk-write failure(s) this take — storage could "
+                        "not keep up (use exFAT or ext4)." % write_failures_this_take
+                    )
+                else:
+                    low_hint = "Check for dropped frames."
                 logging.warning(
                     "Frame count low: %d fewer frame(s) than expected %d "
-                    "(diff %+d, tolerance ±%g). Check for dropped frames.",
+                    "(diff %+d, tolerance ±%g). %s",
                     diff,
                     expected_frames_total,
                     diff,
                     self.final_sync_analysis_tolerance_frames,
+                    low_hint,
                 )
 
         live_sync_warning_latched = (

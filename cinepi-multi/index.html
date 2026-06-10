@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/cinepi-multi/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>How Cinemate launches CinePi-raw - Cinemate Docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../templates/styles.scss" rel="stylesheet" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "How Cinemate launches CinePi-raw";
+        var mkdocs_page_input_path = "cinepi-multi.md";
+        var mkdocs_page_url = "/cinemate/cinepi-multi/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Cinemate Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Quick start</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Customising your build</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Using the camera</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../fps-correction/">FPS correction and audio sync</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">System management</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Cinemate Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">How Cinemate launches CinePi-raw</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/cinepi-multi.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+<div class="markdown-body">
+  <h1 id="how-cinemate-launches-cinepi-raw">How Cinemate launches CinePi-raw<a class="headerlink" href="#how-cinemate-launches-cinepi-raw" title="Permanent link">#</a></h1>
+<p><code>src/module/cinepi_multi.py</code> starts one <code>cinepi-raw</code> process per detected camera. It combines camera discovery from <code>sensor_detect.py</code>, Redis state, and user settings from <code>settings.json</code> to build the command line for each process.</p>
+<h2 id="detecting-cameras">Detecting cameras<a class="headerlink" href="#detecting-cameras" title="Permanent link">#</a></h2>
+<p>At startup, <code>CinePiManager.start_all()</code> runs <code>cinepi-raw --list-cameras</code> and retries until a camera list is returned or the discovery timeout expires. Each detected camera is classified onto <code>cam0</code> or <code>cam1</code>, then published to Redis as the <code>cameras</code> JSON blob.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>You can narrow down the list of selectable modes via the <code>resolutions</code> section in <code>settings.json</code>. Only modes whose width falls into one of your chosen <em>K</em> categories and whose bit depth matches will be shown. Custom driver modes not reported by <code>cinepi-raw</code> can also be added there.</p>
+</div>
+<p>Before any process is launched, Cinemate also seeds the preview <code>zoom</code> key from <code>preview.default_zoom</code> if Redis does not already contain a zoom value.</p>
+<h2 id="building-the-cinepi-raw-command">Building the <code>cinepi-raw</code> command<a class="headerlink" href="#building-the-cinepi-raw-command" title="Permanent link">#</a></h2>
+<p>For each detected camera, the manager creates a <code>CinePiProcess</code>. <code>_build_args()</code> assembles flags for:</p>
+<ul>
+<li>the selected sensor mode, width, height, and bit depth</li>
+<li>the raw packing suffix for the selected Pi generation</li>
+<li>per-camera geometry from <code>geometry.cam0</code>, <code>geometry.cam1</code>, and so on</li>
+<li>per-camera HDMI output mapping from the <code>output</code> section</li>
+<li>the low-resolution preview size used by CinePi-raw</li>
+</ul>
+<p>The preview size is based on <code>hdmi_display.width</code> and <code>hdmi_display.height</code>, but if a framebuffer is already active, Cinemate prefers the real framebuffer size instead of forcing the configured canvas. That avoids drawing a clipped <code>1920x1080</code> preview into a smaller active mode.</p>
+<p>Here is a simplified example of the resulting command:</p>
+<div class="codehilite"><pre><span></span><code>cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">2028</span>:1080:12:U<span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--width<span class="w"> </span><span class="m">2028</span><span class="w"> </span>--height<span class="w"> </span><span class="m">1080</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--lores-width<span class="w"> </span><span class="m">1280</span><span class="w"> </span>--lores-height<span class="w"> </span><span class="m">720</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--hdmi-port<span class="w"> </span><span class="m">0</span><span class="w"> </span>--rotation<span class="w"> </span><span class="m">0</span><span class="w"> </span>--hflip<span class="w"> </span><span class="m">0</span><span class="w"> </span>--vflip<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--post-process-file<span class="w"> </span>/home/pi/post-processing0.json<span class="w"> </span><span class="se">\</span>
+<span class="w">           </span>--tuning-file<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json
+</code></pre></div>
+
+<p>On Raspberry Pi 4 / Pi 400 / CM4, Cinemate switches IMX296 and IMX477 launches to packed raw mode (<code>P</code>), for example <code>1456:1088:10:P</code> for IMX296. On Raspberry Pi 5 / CM5 it leaves those sensors on unpacked raw mode (<code>U</code>). Pi 4-family launches also skip the PiSP tuning-file argument and use the VC4 camera stack.</p>
+<h2 id="multi-camera-startup-details">Multi-camera startup details<a class="headerlink" href="#multi-camera-startup-details" title="Permanent link">#</a></h2>
+<p>In multi-camera mode, the first process is launched with <code>--sync server</code> and the rest use <code>--sync client</code>. Only the primary process gets the on-screen preview rectangle; secondary cameras run with <code>--nopreview</code>.</p>
+<p>After launch, Cinemate waits for all expected <code>cinepi_ready_*</code> Redis keys before it considers the camera stack ready. This is important because it makes sure the first REC edge reaches every camera instead of only the process that happened to finish booting first.</p>
+<p>Once all cameras are up, Cinemate republishes <code>zoom</code> if the startup zoom is not <code>1.0</code> so the running CinePi-raw processes apply the initial crop immediately.</p>
+<h2 id="log-forwarding-and-last-frame-tracking">Log forwarding and last-frame tracking<a class="headerlink" href="#log-forwarding-and-last-frame-tracking" title="Permanent link">#</a></h2>
+<p>Each <code>CinePiProcess</code> forwards log output and watches for <code>DNG written:</code> lines from the encoder. Those log lines are used to keep <code>last_dng_cam0</code> and <code>last_dng_cam1</code> up to date in Redis.</p>
+<p>On shutdown, the manager stops all child processes and removes any leftover <code>cinepi_ready_*</code> keys from Redis so the next boot starts cleanly.</p>
+</div>
+
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tiramisioux/cinemate" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
+      <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

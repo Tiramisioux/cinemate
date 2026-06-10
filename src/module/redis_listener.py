@@ -57,6 +57,7 @@ class RedisListener:
         self.set_frame_count_increase_tolerance()
         
         self.bufferSize = 0
+        self.framesInFlight: int | None = None  # None until first stats from a build that publishes it
         self.colorTemp = 0
         self.focus = 0
         self.framecount = 0
@@ -870,6 +871,9 @@ class RedisListener:
                         stats_data = json.loads(message_data)
                         buffer_size = self._coerce_int(stats_data.get('bufferSize', None))
                         buffer_size_max = self._coerce_int(stats_data.get('bufferSizeMax', None))
+                        frames_in_flight = self._coerce_int(stats_data.get('framesInFlight', None))
+                        if frames_in_flight is not None:
+                            self.framesInFlight = frames_in_flight
                         raw_frame_count = self._coerce_int(stats_data.get('frameCount', None))
                         self.frame_count = self._logical_framecount_from_raw(raw_frame_count, now)
                         raw_tc_frame_count = self._coerce_int(stats_data.get('tcFrameCount', None))
@@ -955,19 +959,28 @@ class RedisListener:
                         self._maybe_publish_framecount(self.frame_count)
                         self._maybe_stop_for_frame_limit()
 
-                        # Check and set buffering status if changed
-                        is_buffering = buffer_size > 0 if buffer_size is not None else False
+                        # Check and set buffering status if changed.
+                        # Prefer framesInFlight (covers encode_queue_ + disk_buffer_) when
+                        # the running cinepi-raw publishes it; fall back to bufferSize (disk
+                        # backlog only) for older builds.
+                        if frames_in_flight is not None:
+                            is_buffering = frames_in_flight > 0
+                        else:
+                            is_buffering = buffer_size > 0 if buffer_size is not None else False
                         current_buffering_status = self.redis_controller.get_value('is_buffering')
                         new_buffering_status = 1 if is_buffering else 0
                         if current_buffering_status is None or int(current_buffering_status) != new_buffering_status:
                             logging.debug(f"Updating is_buffering to {new_buffering_status}")
                             self.redis_controller.set_value('is_buffering', new_buffering_status)
 
-                        buffered_write_active = (
-                            buffer_size is not None
-                            and buffer_size > 0
-                            and not self.is_recording
-                        )
+                        if frames_in_flight is not None:
+                            buffered_write_active = frames_in_flight > 0 and not self.is_recording
+                        else:
+                            buffered_write_active = (
+                                buffer_size is not None
+                                and buffer_size > 0
+                                and not self.is_recording
+                            )
                         current_buf_write_status = self.redis_controller.get_value(
                             ParameterKey.IS_WRITING_BUF.value
                         )
@@ -975,8 +988,9 @@ class RedisListener:
                         new_buf_write_status = 1 if buffered_write_active else 0
                         if current_buf_write_status != new_buf_write_status:
                             logging.info(
-                                "Buffered frame write status: %s (buffer=%s)",
+                                "Buffered frame write status: %s (framesInFlight=%s buffer=%s)",
                                 "active" if new_buf_write_status else "idle",
+                                frames_in_flight,
                                 buffer_size,
                             )
                             self.redis_controller.set_value(
@@ -1182,6 +1196,12 @@ class RedisListener:
                     return True
             except Exception:
                 pass
+        # Fallback when the redis flags are momentarily unset: prefer the
+        # framesInFlight gauge (encode_queue_ + disk_buffer_) so a still-draining
+        # compression backlog keeps this True even when bufferSize (disk-only)
+        # has already hit 0. Falls back to bufferSize for pre-framesInFlight builds.
+        if self.framesInFlight is not None:
+            return self.framesInFlight > 0
         return self.bufferSize > 0
 
     def _clear_frame_warning_state(self) -> None:
@@ -1348,6 +1368,7 @@ class RedisListener:
         self.last_rise_time = None
         self.framecount_changing = False
         self.bufferSize = 0
+        self.framesInFlight = None
         self.frames_off_sync_latched_current_take = False
         self.redis_controller.set_value('framecount', 0)
         self.active_sensor_labels.clear()
@@ -1439,7 +1460,7 @@ class RedisListener:
                         if self.recording_start_time:
                             self.recording_end_time = datetime.datetime.now()
                             logging.info(f"Recording stopped at: {self.recording_end_time}")
-                            if self.bufferSize > 0:
+                            if (self.framesInFlight is not None and self.framesInFlight > 0) or self.bufferSize > 0:
                                 self.redis_controller.set_value(ParameterKey.IS_WRITING_BUF.value, 1)
                             if self.recording_was_preroll:
                                 logging.debug("Skipping frame-sync analysis for storage pre-roll.")

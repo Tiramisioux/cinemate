@@ -121,12 +121,12 @@ Set to `false` when you are using a sensor not yet in the database and want unmo
 
 ### phase_lock
 
-`phase_lock` – `true` (default) enables `cinepi-raw`'s closed-loop **frame-rate phase lock** for this sensor. Where `sensor_fps_correction` applies a single fixed factor, the phase lock is a per-frame servo: it measures the accumulated frame phase against the nominal FPS (using the monotonic sensor timestamp) and continuously trims `FrameDurationLimits`, dithering the integer line-blanking so the *average* recorded cadence is exact. The result is that the video tracks the Pi clock — the same clock the audio is captured against — so audio and video do not drift apart over long takes (the residual is a bounded sub-frame offset, not an accumulating drift). It pre-converges during preview, so a clip is locked from the first frame.
+`phase_lock` – `true` (default) enables `cinepi-raw`'s closed-loop **frame-rate phase lock** for this sensor. Where `sensor_fps_correction` applies a single fixed factor, the phase lock is a per-frame servo: it measures the accumulated frame phase against the nominal FPS (against the Pi wall clock — `FrameWallClock`, the same clock the audio is captured against) and continuously trims `FrameDurationLimits`, dithering the integer line-blanking so the *average* recorded cadence is exact. The result is that the video tracks the Pi clock, so audio and video do not drift apart over long takes (the residual is a bounded sub-frame offset, not an accumulating drift). It pre-converges during preview, so a clip is locked from the first frame.
 
 Cinemate writes this per-camera flag to the shared `fps_phase_lock` runtime key, which `cinepi-raw` reads (it is off by default in `cinepi-raw` itself when run standalone). The loop is VBLANK-only and supersedes the static correction factor while active, so the `sensor_fps_correction` table no longer needs precise per-sensor calibration when the phase lock is on.
 
-!!! warning "Multi-camera genlock"
-    Set `phase_lock` to `false` on the sensors of a multi-camera `--sync` (beam-splitter / genlock) rig. The phase lock's dither conflicts with libcamera's `rpi.sync` constant-rate assumption — for synced rigs the Pi-clock discipline belongs on the sync *server's* rate, not on each sensor's phase lock. See [Dual sensors](dual-sensors.md).
+!!! note "Multi-camera genlock"
+    `phase_lock` can stay `true` on a multi-camera `--sync` (beam-splitter / genlock) rig. `cinepi-raw` infers its role from `--sync`: the master (`--sync server`) runs the phase lock and disciplines the pair to the Pi clock, while the `--sync client` automatically suppresses its own phase lock and lets libcamera's `rpi.sync` hold the relative camera-to-camera (A→B) alignment. One setting works for single and dual — no per-camera differentiation. See [Dual sensors](dual-sensors.md).
 
 ## hdmi_gui
 

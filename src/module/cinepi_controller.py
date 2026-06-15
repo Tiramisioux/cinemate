@@ -80,8 +80,10 @@ class CinePiController:
         # True) to the shared cinepi-raw `fps_phase_lock` flag. Reads the primary
         # camera (cam0, then cam1). set_value publishes on cp_controls so cinepi-raw
         # picks it up live; the value also persists for cinepi-raw to read at start.
-        # NOTE: leave phase_lock False on multi-camera --sync genlock rigs — the
-        # dither conflicts with libcamera rpi.sync (discipline the server instead).
+        # Safe to leave True for dual --sync genlock rigs: cinepi-raw infers its role
+        # from --sync and only disciplines the master (--sync off/server) to the Pi
+        # clock; the --sync client self-suppresses the lock and lets rpi.sync own its
+        # VBLANK. So the same shared flag is correct for both single and dual.
         try:
             _cam_cfg = (self.settings.get("camera") or {})
             _phase_lock = True

@@ -31,6 +31,7 @@ class ParameterKey(Enum):
     FPS_MAX           = "fps_max"
     FPS_USER          = "fps_user"
     FPS_CORRECTION_SUGGESTION = "fps_correction_suggestion"
+    FPS_PHASE_LOCK    = "fps_phase_lock"
     FRAMECOUNT        = "framecount"
     GUI_LAYOUT        = "gui_layout"
     HEIGHT            = "height"

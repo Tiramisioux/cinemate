@@ -62,7 +62,8 @@ All per-port settings live inside a `cam0` or `cam1` block so every option for a
     },
     "override_camera_name": true,
     "camera_name": "Blackmagic Pocket Cinema Camera 4K",
-    "sensor_fps_correction": true
+    "sensor_fps_correction": true,
+    "phase_lock": true
   },
   "cam1": {
     "geometry": {
@@ -75,7 +76,8 @@ All per-port settings live inside a `cam0` or `cam1` block so every option for a
     },
     "override_camera_name": true,
     "camera_name": "Blackmagic Pocket Cinema Camera 4K",
-    "sensor_fps_correction": true
+    "sensor_fps_correction": true,
+    "phase_lock": true
   }
 }
 ```
@@ -116,6 +118,15 @@ Some sensors run their pixel clock slightly off the nominal rate, so the true fr
 `sensor_fps_correction` – `true` (default) enables the lookup and applies the correction. `false` passes the exact user-requested FPS to `cinepi-raw` with no modification (correction factor = 1.0).
 
 Set to `false` when you are using a sensor not yet in the database and want unmodified FPS, or when you are comparing corrected versus uncorrected timecode drift. See [FPS correction](fps-correction.md) for the calibration workflow.
+
+### phase_lock
+
+`phase_lock` – `true` (default) enables `cinepi-raw`'s closed-loop **frame-rate phase lock** for this sensor. Where `sensor_fps_correction` applies a single fixed factor, the phase lock is a per-frame servo: it measures the accumulated frame phase against the nominal FPS (using the monotonic sensor timestamp) and continuously trims `FrameDurationLimits`, dithering the integer line-blanking so the *average* recorded cadence is exact. The result is that the video tracks the Pi clock — the same clock the audio is captured against — so audio and video do not drift apart over long takes (the residual is a bounded sub-frame offset, not an accumulating drift). It pre-converges during preview, so a clip is locked from the first frame.
+
+Cinemate writes this per-camera flag to the shared `fps_phase_lock` runtime key, which `cinepi-raw` reads (it is off by default in `cinepi-raw` itself when run standalone). The loop is VBLANK-only and supersedes the static correction factor while active, so the `sensor_fps_correction` table no longer needs precise per-sensor calibration when the phase lock is on.
+
+!!! warning "Multi-camera genlock"
+    Set `phase_lock` to `false` on the sensors of a multi-camera `--sync` (beam-splitter / genlock) rig. The phase lock's dither conflicts with libcamera's `rpi.sync` constant-rate assumption — for synced rigs the Pi-clock discipline belongs on the sync *server's* rate, not on each sensor's phase lock. See [Dual sensors](dual-sensors.md).
 
 ## hdmi_gui
 

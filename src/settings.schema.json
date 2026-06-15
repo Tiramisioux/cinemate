@@ -169,6 +169,11 @@
     "cam_config": {
       "type": "object",
       "properties": {
+        "phase_lock": {
+          "type": "boolean",
+          "description": "Enable the cinepi-raw frame-rate phase lock for this sensor (holds the recorded cadence on the nominal fps for stable A/V sync). Disable for multi-camera --sync genlock rigs.",
+          "default": true
+        },
         "tuning_file": {
           "type": "object",
           "description": "Override the libcamera tuning file for this sensor",

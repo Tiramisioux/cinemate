@@ -75,6 +75,31 @@ class CinePiController:
         self.anamorphic_steps = anamorphic_steps
         self.default_anamorphic_factor = default_anamorphic_factor
         self.settings = self.load_settings()
+
+        # Frame-rate phase lock: apply the per-camera `phase_lock` setting (default
+        # True) to the shared cinepi-raw `fps_phase_lock` flag. Reads the primary
+        # camera (cam0, then cam1). set_value publishes on cp_controls so cinepi-raw
+        # picks it up live; the value also persists for cinepi-raw to read at start.
+        # NOTE: leave phase_lock False on multi-camera --sync genlock rigs — the
+        # dither conflicts with libcamera rpi.sync (discipline the server instead).
+        try:
+            _cam_cfg = (self.settings.get("camera") or {})
+            _phase_lock = True
+            for _port in ("cam0", "cam1"):
+                _c = _cam_cfg.get(_port)
+                if isinstance(_c, dict):
+                    _phase_lock = bool(_c.get("phase_lock", True))
+                    break
+            self.redis_controller.set_value(
+                ParameterKey.FPS_PHASE_LOCK.value, 1 if _phase_lock else 0
+            )
+            logging.info(
+                "Frame-rate phase lock %s (cinepi-raw fps_phase_lock)",
+                "enabled" if _phase_lock else "disabled",
+            )
+        except Exception as exc:
+            logging.warning("Could not apply phase_lock setting: %s", exc)
+
         dynamic_resolution_cfg = self.settings.get("dynamic_resolution", {})
         self.dynamic_resolution_cfg = dynamic_resolution_cfg
         self.dynamic_resolution_enabled = self._as_bool(dynamic_resolution_cfg.get("enabled", False))

@@ -197,18 +197,6 @@ Settings are split by the bit depth negotiated with the connected microphone. `2
 
 Some USB microphones expose a writable ALSA capture control and some do not. When the mic supports it, Cinemate applies `capture_gain_db` via `amixer` when the microphone is detected. If the device exposes no compatible control, the setting is silently skipped and the log will note that the mic likely has fixed hardware gain.
 
-### ADC clock correction
-
-Some USB audio devices run their internal ADC clock slightly off the nominal 48 000 Hz sample rate. A mic that captures 47 946 Hz instead of 48 000 Hz will produce a WAV that drifts ahead of video by roughly 10 frames over a 6-minute take, with no xruns and no other symptoms.
-
-`clock_correction.enabled` – set to `true` to activate correction. Correction is only applied when this is `true` **and** the connected mic matches an entry in the database file. Default is `false` — no resampling occurs.
-
-`clock_correction.database` – path to the device database file, relative to the Cinemate repo root. Default is `resources/audio_clock_correction.json`.
-
-When enabled, Cinemate queries `arecord -l` at each `cinepi-raw` launch and passes the matched ppm value to `cinepi-raw` as `--audio-clock-ppm`. After each take, `cinepi-raw` applies the correction within the single post-take `ffmpeg` metadata pass — correcting the duration without altering the BWF timecode anchor and without writing an intermediate WAV. The 16-bit plain-arecord path is never resampled regardless of this setting.
-
-To add a new microphone, see the instructions at the top of `resources/audio_clock_correction.json`. To disable correction globally without editing the database, set `enabled` to `false` here.
-
 ## anamorphic_preview
 
 For stretching the preview when using anamorphic lenses.

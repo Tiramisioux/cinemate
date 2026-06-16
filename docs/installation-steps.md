@@ -661,7 +661,7 @@ cinepi-raw --mode 1456:1088:10:U --width 1456 --height 1088 --lores-width 1280 -
 cinepi-raw --mode 1456:1088:10:P --width 1456 --height 1088 --lores-width 1280 --lores-height 720
 ```
 
-For more details on running CinePi-raw from the command line, see [this section](/cli-user-guide.md). 
+For more details on running CinePi-raw from the command line, see [this section](cli-user-guide.md). 
 
 ## Cinemate
 

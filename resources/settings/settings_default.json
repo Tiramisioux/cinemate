@@ -275,9 +275,8 @@
       "output": {
         "hdmi_port": 0
       },
-      "override_camera_name": true,
-      "camera_name": "",
-      "sensor_fps_correction": true
+      "override_camera_name": false,
+      "camera_name": ""
     },
     "cam1": {
       "geometry": {
@@ -288,9 +287,8 @@
       "output": {
         "hdmi_port": 1
       },
-      "override_camera_name": true,
-      "camera_name": "",
-      "sensor_fps_correction": true
+      "override_camera_name": false,
+      "camera_name": ""
     }
   },
   "i2c_oled": {

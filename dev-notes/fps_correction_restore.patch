@@ -1,0 +1,525 @@
+diff --git a/_test/test_sensor_correction_factors.py b/_test/test_sensor_correction_factors.py
+new file mode 100644
+index 0000000..549f44c
+--- /dev/null
++++ b/_test/test_sensor_correction_factors.py
+@@ -0,0 +1,29 @@
++import sys
++import unittest
++from pathlib import Path
++
++
++ROOT = Path(__file__).resolve().parents[1]
++sys.path.insert(0, str(ROOT / "src"))
++
++from module.sensor_correction_factors import SENSOR_CORRECTION_FACTORS
++from module.sensor_detect import SensorDetect
++
++
++class SensorCorrectionFactorTests(unittest.TestCase):
++    def test_stock_imx585_4k_25fps_uses_exfat_ssd_calibration(self):
++        detector = SensorDetect.__new__(SensorDetect)
++        detector.fps_correction_factor = SENSOR_CORRECTION_FACTORS
++
++        self.assertEqual(
++            detector.get_fps_correction_factor("imx585", 0, 25),
++            0.998721,
++        )
++        self.assertEqual(
++            detector.get_fps_correction_factor("imx585_mono", 0, 25),
++            0.998721,
++        )
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/docs/fps-correction.md b/docs/fps-correction.md
+new file mode 100644
+index 0000000..ee7b281
+--- /dev/null
++++ b/docs/fps-correction.md
+@@ -0,0 +1,60 @@
++## FPS correction factors and audio sync
++
++Some sensors report different effective frame rates than the requested FPS. This is typically caused by sensor timing details such as vertical blanking (vblank). Vblank changes the total line time the sensor needs per frame, which in turn shifts the *true* FPS even when the target FPS stays constant. Cinemate compensates for this by applying an FPS correction factor so the captured frame timing lines up with your intended rate.
++
++### IMX585, IMX294, IMX492 — correction factor is 1.0
++
++The Cinemate libcamera fork (will127534/libcamera, `ea5abb8b`) includes a `getBlanking()` override for the IMX585, IMX294, and IMX492 sensors. Instead of accepting the ~one-line VMAX/HMAX quantisation error from the standard blanking calculation, the override searches the integer register-pair lattice against the sensor's reference clock to find the combination that delivers the exact requested period.
++
++Effect: standard rates (24, 25, 30 fps, etc.) achieve sub-ppm accuracy on these sensors. The software correction factor for these rates is therefore `1.0` — no compensation is needed.
++
++Sensors without this patch (IMX283, IMX477, IMX296, IMX519) retain their empirical correction factors as before.
++
++With the properly fine-tuned correction factor we can achieve pretty good sync to both onboard and external audio recording
++
++### Why the correction factor is per sensor, mode, and FPS
++
++Each sensor model exposes its own timing characteristics. On top of that, every sensor mode (resolution/bit depth) has different blanking and pixel-clock constraints. The requested FPS also changes how the sensor clocks out frames. Because of these combined dependencies, Cinemate stores a correction factor for every **sensor type + resolution/mode + FPS** triplet in the file `src/module/sensor_correction_factors.py`.
++
++
++### Running a fixed‑frame calibration clip
++
++To validate or tune the correction factor, you can record a clip with a fixed frame count:
++
++```
++rec f 1000
++```
++
++This records exactly 1000 frames (based on the current FPS) and stops automatically. 
++Cinemate knows exactly how many frames *should* have landed over the elapsed duration and when recording stops it performs an analysis and proposes an fps correction factor
++
++### How Cinemate analyzes the results
++
++After the recording finishes, Cinemate compares the expected frame count with the actual frames captured. When there is a mismatch, it derives a suggested correction factor and suggests it to the user. If the frame count lands on the expected number of frames (with the default final tolerance of +/- 1 frame), it suggests to keep the existing correction factor.
++
++### Frame-count sync status
++
++Cinemate stores the frame-count sync warning state in Redis as `frames_in_sync`. A value of `1` means the active or latest take is still within tolerance. A value of `0` means Cinemate has seen the take drift outside tolerance and the Simple GUI shows the magenta `SYNC` warning.
++
++During recording, Cinemate compares the live accepted frame-slot count against the expected slot count from the FPS timeline. If the difference grows beyond the default live tolerance of +/- 2 frames, the magenta `SYNC` warning flashes immediately and then latches until the next take starts.
++
++The final check waits until buffered frames have finished flushing to storage. While the RAM buffer is still draining after stop, Cinemate raises `is_writing_buf=1` and the Simple GUI stays green. The DNG count is checked only after that buffered write phase has gone idle, so frames that were still in RAM at stop time are included in the result. The default final analysis tolerance is stricter at +/- 1 frame.
++
++The two tolerances are configurable in `settings.json` as `settings.live_sync_warning_tolerance_frames` and `settings.final_sync_analysis_tolerance_frames`.
++
++For free-running takes, the expected-frame calculation follows FPS changes made during the take. This means speed ramps are counted from the FPS timeline rather than from only the FPS at the start of the take. For fixed-frame takes such as `rec f 100`, the requested frame count remains the expected target.
++
++### Dropped frames vs sync mismatch
++
++Dropped frames and frame-count sync are reported separately. A dropped-frame event means the clip has a hole at a known frame slot. That lights the purple `DROP` warning and increments `drop_frame_count`, but it does not by itself trigger the magenta `SYNC` warning. For sync analysis, those dropped-frame holes count as intentional timeline slots, because a later conform/export step can represent the hole explicitly.
++
++The magenta `SYNC` warning is for a different problem: the live or final number of recorded frame slots does not match the expected take length after dropped-frame holes are accounted for.
++
++### Storage pre-roll and startup guards
++
++Storage pre-roll is excluded from sync analysis and warning state. The warm-up clip is deleted and should not latch `DROP`, `SYNC`, `frames_in_sync=0`, or an FPS correction suggestion.
++
++Immediately after startup or storage pre-roll, cinepi-raw can briefly publish the last frame counter from the warm-up take. Cinemate ignores impossible early frame counts when arming `rec f <frames>`, so a fixed-frame recording starts counting from the new take instead of stopping on a stale pre-roll count.
++
++!!! note ""
++     See [here](cli-commands.md) how to run Cinemate manually.
+diff --git a/docs/redis-guide.md b/docs/redis-guide.md
+index 09b44c6..65dd093 100644
+--- a/docs/redis-guide.md
++++ b/docs/redis-guide.md
+@@ -67,7 +67,7 @@ Cinemate's `RedisListener` parses these messages and updates keys such as:
+ - `framecount`, `buffer`, `buffer_size`, and `fps_actual`
+ - `tc_cam0` and `tc_cam1`, derived from the nanosecond timestamps
+ - drop-frame keys such as `drop_frame`, `drop_frame_count`, and `drop_frame_during_last_take`
+-- `frames_in_sync`, which flips to `0` during a real take as soon as live frame-slot sync drifts outside the configured live tolerance (default +/- 2 frames), then re-confirms after the take finishes and buffered frames have flushed. The final analysis uses the configured final tolerance (default +/- 1 frame). Storage pre-roll clips are excluded from this analysis.
++- `frames_in_sync`, which flips to `0` during a real take as soon as live frame-slot sync drifts outside the configured live tolerance (default +/- 2 frames), and `fps_correction_suggestion` after the take finishes and buffered frames have flushed. The final analysis uses the configured final tolerance (default +/- 1 frame). Storage pre-roll clips are excluded from this analysis.
+ 
+ Separately, the Redis controller starts a recording timer whenever `rec=1`. That timer updates:
+ 
+diff --git a/docs/redis-keys.md b/docs/redis-keys.md
+index af63ad8..118ae17 100644
+--- a/docs/redis-keys.md
++++ b/docs/redis-keys.md
+@@ -19,6 +19,7 @@ Each entry explains which component normally writes the key and whether it makes
+ | fps_actual | CinePi-raw -> Cinemate | Measured FPS from the running pipeline | No |
+ | fps_last | Cinemate | Previous stable FPS value from stats | No |
+ | fps_max | Cinemate startup | Maximum FPS supported by the current sensor mode | No |
++| fps_correction_suggestion | Cinemate (RedisListener) | Suggested correction factor after comparing expected vs recorded frame counts | No |
+ | sensor_mode | Cinemate -> CinePi-raw startup | Active sensor resolution/mode index | Yes (causes pipeline restart) |
+ | bit_depth | Cinemate startup | Sensor bit depth (10 or 12) for the selected mode | No |
+ | width / height | Cinemate startup | Active sensor resolution | No |
+diff --git a/mkdocs.yml b/mkdocs.yml
+index 414ed79..34061e0 100644
+--- a/mkdocs.yml
++++ b/mkdocs.yml
+@@ -28,6 +28,7 @@ nav:
+       - Simple GUI refresh tuning: simple-gui-refresh-tuning.md
+       - Camera sensors and frame rates: sensors.md
+       - Audio recording: audio-recording.md
++      - FPS correction and audio sync: fps-correction.md
+       - Digital zoom: digital-zoom.md
+       - Speed ramping & shutter angle synchronization: speed-ramping.md
+       - Dual sensors: dual-sensors.md
+diff --git a/src/module/cinepi_controller.py b/src/module/cinepi_controller.py
+index bc4b1ac..4e072d5 100644
+--- a/src/module/cinepi_controller.py
++++ b/src/module/cinepi_controller.py
+@@ -223,6 +223,11 @@ class CinePiController:
+                 self.dynamic_resolution_desired_mode,
+             )
+             self.dynamic_resolution_desired_mode = self.sensor_mode
++        self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
++            self.current_sensor,
++            self.sensor_mode,
++            self.fps,
++        )
+         self.fps_max = self._refresh_fps_max()
+         self.gui_layout = self.sensor_detect.get_gui_layout(self.current_sensor, self.sensor_mode)
+         self.exposure_time_s = float(self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)) / 360 * (1 / self.fps) 
+@@ -686,6 +691,7 @@ class CinePiController:
+             • hardware limit (fps_max)
+             • fps_free flag
+             • shutter-sync flag
++            • correction factor for fractional clocking
+             • optional locks
+         """
+         requested_user_fps = float(value)
+@@ -701,21 +707,48 @@ class CinePiController:
+ 
+         self._maybe_apply_dynamic_resolution_for_fps(requested_user_fps)
+ 
+-        # No per-sensor fps correction factor: the cinepi-raw phase lock drives the
+-        # recorded cadence onto the nominal fps, so the hardware fps == the user fps.
+-        fps_max = int(float(self.redis_controller.get_value(ParameterKey.FPS_MAX.value)))
++        # sensor_fps_correction flag is read from the primary camera's settings
++        # (cam0 first, then cam1); defaults to True when not configured.
++        _cam_cfg = (self.settings.get("camera") or {})
++        _correction_enabled = True
++        for _port in ("cam0", "cam1"):
++            _c = _cam_cfg.get(_port)
++            if isinstance(_c, dict):
++                _correction_enabled = bool(_c.get("sensor_fps_correction", True))
++                break
++
++        self.fps_correction_factor = (
++            self.sensor_detect.get_fps_correction_factor(
++                self.current_sensor, self.sensor_mode, requested_user_fps
++            )
++            if _correction_enabled
++            else 1.0
++        )
++
++        corrected = requested_user_fps * self.fps_correction_factor
++        fps_max   = int(float(self.redis_controller.get_value(ParameterKey.FPS_MAX.value)))
+ 
+         # ── choose the final fps value ──────────────────────────────────────
+         if self.shutter_a_sync_mode == 1 or self.fps_free:
+-            safe_value = max(1, min(fps_max, requested_user_fps))   # “free”
+-            safe_user_fps = safe_value
++            safe_value = max(1, min(fps_max, corrected))           # “free”
++            if safe_value == corrected:
++                safe_user_fps = requested_user_fps
++            else:
++                safe_user_fps = (
++                    safe_value / self.fps_correction_factor
++                    if self.fps_correction_factor
++                    else safe_value
++                )
+         else:
+             # make sure the table is current (free-mode may be toggled at run-time)
+             self._rebuild_fps_steps()
++            # Snap to nearest user-facing step from the *requested* fps (not the
++            # corrected fps), then apply the correction to get the hardware rate.
++            # Snapping on corrected would round 24.975 → 25 and discard the factor.
+             snapped_user_fps = min(self.fps_steps_dynamic,
+                                    key=lambda x: abs(x - requested_user_fps))
+             safe_user_fps = snapped_user_fps
+-            safe_value = snapped_user_fps
++            safe_value = snapped_user_fps * self.fps_correction_factor
+ 
+         self.user_fps = safe_user_fps
+         if update_user_target:
+@@ -1349,6 +1382,12 @@ class CinePiController:
+ 
+             self.update_steps()
+ 
++            self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
++                self.current_sensor,
++                self.sensor_mode,
++                self.current_fps,
++            )
++
+             if restore_user_fps is not None:
+                 self.set_fps(float(restore_user_fps), update_user_target=False)
+ 
+diff --git a/src/module/redis_controller.py b/src/module/redis_controller.py
+index 2e81131..4c21754 100644
+--- a/src/module/redis_controller.py
++++ b/src/module/redis_controller.py
+@@ -30,6 +30,7 @@ class ParameterKey(Enum):
+     FPS_LAST          = "fps_last"
+     FPS_MAX           = "fps_max"
+     FPS_USER          = "fps_user"
++    FPS_CORRECTION_SUGGESTION = "fps_correction_suggestion"
+     FPS_PHASE_LOCK    = "fps_phase_lock"
+     FRAMECOUNT        = "framecount"
+     GUI_LAYOUT        = "gui_layout"
+diff --git a/src/module/redis_listener.py b/src/module/redis_listener.py
+index b03c56a..71dfaf9 100644
+--- a/src/module/redis_listener.py
++++ b/src/module/redis_listener.py
+@@ -121,6 +121,7 @@ class RedisListener:
+ 
+         self.active_sensor_labels: set[str] = set()
+         self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 1)
++        self.redis_controller.set_value(ParameterKey.FPS_CORRECTION_SUGGESTION.value, 1.0)
+         self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 0)
+         self.redis_controller.set_value(ParameterKey.DROP_FRAME_DURING_LAST_TAKE.value, 0)
+         self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, 0)
+@@ -144,6 +145,7 @@ class RedisListener:
+         self.last_timestamp_cam1 = None
+ 
+         self.fps_at_rec_start = None
++        self.fps_correction_factor_at_rec_start: float | None = None
+         self.fps_timeline: list[tuple[datetime.datetime, float]] = []
+         self.final_analysis_thread = None
+         self.final_analysis_lock = threading.Lock()
+@@ -554,6 +556,22 @@ class RedisListener:
+ 
+         return 1
+ 
++    def _current_correction_factor(self) -> float | None:
++        try:
++            fps_user_raw = self.redis_controller.get_value(ParameterKey.FPS_USER.value)
++            fps_effective_raw = self.redis_controller.get_value(ParameterKey.FPS.value)
++            if fps_user_raw is None or fps_effective_raw is None:
++                return None
++            fps_user = float(fps_user_raw)
++            fps_effective = float(fps_effective_raw)
++        except (TypeError, ValueError):
++            return None
++
++        if fps_user == 0:
++            return None
++
++        return fps_effective / fps_user
++
+     def _storage_preroll_active(self) -> bool:
+         try:
+             value = self.redis_controller.get_value(
+@@ -1215,6 +1233,7 @@ class RedisListener:
+         self.frame_limit_stop_requested = False
+         self.awaiting_fresh_framecount = False
+         self.fresh_framecount_guard_start_time = None
++        self.fps_correction_factor_at_rec_start = None
+         self.fps_at_rec_start = None
+         self.fps_timeline = []
+         self.raw_framecount_last = None
+@@ -1408,6 +1427,14 @@ class RedisListener:
+                     self.frame_limit_anchor_time = None
+                     self.frame_limit_stop_requested = False
+ 
++                    self.fps_correction_factor_at_rec_start = self._current_correction_factor()
++                    initial_correction = self.fps_correction_factor_at_rec_start or 1.0
++
++                    self.redis_controller.set_value(
++                        ParameterKey.FPS_CORRECTION_SUGGESTION.value,
++                        f"{initial_correction:.6f}",
++                    )
++
+                     # Lock the FPS at start (configured value)
+                     try:
+                         self.fps_at_rec_start = float(self.redis_controller.get_value('fps_user'))
+@@ -2020,11 +2047,66 @@ class RedisListener:
+         if not frames_in_sync and not sync_warning_suppressed:
+             self.frames_off_sync_latched_current_take = True
+ 
++        all_frames_accounted = frames_in_sync
+         self.redis_controller.set_value(
+             ParameterKey.FRAMES_IN_SYNC.value,
+             1 if frames_in_sync and not live_sync_warning_latched else 0,
+         )
+ 
++        current_correction_factor = self.fps_correction_factor_at_rec_start
++        if not current_correction_factor or current_correction_factor <= 0:
++            current_correction_factor = self._current_correction_factor()
++
++        suggestion_value = current_correction_factor or 1.0
++
++        if self.recording_was_preroll:
++            pass
++        elif all_frames_accounted:
++            if segmented_recording:
++                logging.info(
++                    "No FPS correction suggestion from segmented recording; "
++                    "wall-clock duration includes reconfigure gaps."
++                )
++            elif current_correction_factor:
++                logging.info(
++                    "Sensor timing OK: correction factor %.6f is active and matches the capture.",
++                    current_correction_factor,
++                )
++            else:
++                logging.info("Sensor timing OK: all frames accounted for (no correction factor active).")
++        elif (
++            expected_frames_float > 0
++            and recorded_frames_total > 0
++            and current_correction_factor
++        ):
++            multiplier = expected_frames_float / recorded_frames_total
++            suggestion_value = current_correction_factor * multiplier
++            _sensor = self.redis_controller.get_value(ParameterKey.SENSOR.value) or "unknown"
++            try:
++                _mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
++            except (TypeError, ValueError):
++                _mode = "?"
++            _user_fps_str = f"{self.fps_at_rec_start:g}" if self.fps_at_rec_start else "?"
++            _drift_pct = (1.0 - multiplier) * 100.0
++            logging.info(
++                "Sensor correction needed: %.6f suggested for %s mode %s at %s fps "
++                "(sensor ran %.3f%% %s; update sensor_correction_factors.py).",
++                suggestion_value,
++                _sensor,
++                _mode,
++                _user_fps_str,
++                abs(_drift_pct),
++                "faster" if _drift_pct > 0 else "slower",
++            )
++        else:
++            logging.info("Insufficient data to derive FPS correction factor suggestion.")
++
++        self.redis_controller.set_value(
++            ParameterKey.FPS_CORRECTION_SUGGESTION.value,
++            f"{suggestion_value:.6f}",
++        )
++
++        self.fps_correction_factor_at_rec_start = None
+         self.fps_at_rec_start = None
+         self.fps_timeline = []
+ 
+diff --git a/src/module/sensor_correction_factors.py b/src/module/sensor_correction_factors.py
+new file mode 100644
+index 0000000..4d25d62
+--- /dev/null
++++ b/src/module/sensor_correction_factors.py
+@@ -0,0 +1,70 @@
++"""Static FPS correction-factor tables per sensor/mode/FPS.
++
++Each sensor exposes one table per sensor mode.  FPS entries can be added
++incrementally as calibration data becomes available.  If a specific FPS is not
++present for a given mode the lookup falls back to the optional per-mode default
++(`"_default"`) and finally to ``DEFAULT_CORRECTION_FACTOR``.
++"""
++from __future__ import annotations
++
++from typing import Dict
++
++DEFAULT_CORRECTION_FACTOR: float = 1.0
++
++# Mapping: sensor -> sensor_mode -> {fps -> correction factor}
++# Modes start with indices 0 and 1 for each sensor so that additional FPS
++# entries can be appended as measurements become available.
++SENSOR_CORRECTION_FACTORS: Dict[str, Dict[int | str, Dict[int, float] | float]] = {
++    "imx296": {
++        "_default": DEFAULT_CORRECTION_FACTOR,
++        0: {},
++        1: {},
++    },
++    "imx286": {
++        "_default": DEFAULT_CORRECTION_FACTOR,
++        0: {},
++        1: {},
++    },
++    "imx283": {
++        "_default": DEFAULT_CORRECTION_FACTOR,
++        0: {},
++        1: {
++	    24: 1.0,
++            25: 0.9990 #verified 10000 frames 2.7K
++    	},
++    },
++    "imx477": {
++        "_default": DEFAULT_CORRECTION_FACTOR,
++        0: {},
++        1: {},
++    },
++    "imx519": {
++        "_default": DEFAULT_CORRECTION_FACTOR,
++        0: {},
++        1: {},
++    },
++    "imx585": {
++        "_default": DEFAULT_CORRECTION_FACTOR,
++        0: {
++            24: 0.9994, #verified 10000 frames 4K
++            25: 1.0, #exact after will127534/libcamera getBlanking patch (97f71626); previous: 0.998996
++        },
++        1: {
++            24: 0.9980, #verified 10000 frames
++            25: 1.0, #exact after will127534/libcamera getBlanking patch (97f71626); previous: 0.9979
++        },
++    },
++    "imx585_mono": {
++        "_default": DEFAULT_CORRECTION_FACTOR,
++        0: {
++            24: 0.9994, #verified 10000 frames 4K
++            25: 1.0, #exact after will127534/libcamera getBlanking patch (97f71626); previous: 0.998996
++        },
++        1: {
++            24: 0.9980, #verified 10000 frames
++            25: 1.0, #exact after will127534/libcamera getBlanking patch (97f71626); previous: 0.9979
++        },
++    },
++}
++
++__all__ = ["DEFAULT_CORRECTION_FACTOR", "SENSOR_CORRECTION_FACTORS"]
+diff --git a/src/module/sensor_detect.py b/src/module/sensor_detect.py
+index d3bf254..5b8b25d 100644
+--- a/src/module/sensor_detect.py
++++ b/src/module/sensor_detect.py
+@@ -5,6 +5,12 @@ import json
+ from pathlib import Path
+ from typing import Any, Dict, List
+ 
++from .sensor_correction_factors import (
++    DEFAULT_CORRECTION_FACTOR,
++    SENSOR_CORRECTION_FACTORS,
++)
++
++
+ DEFAULT_SENSOR_DATABASE_FILE = "resources/sensors.json"
+ FALLBACK_PACKING_INFO = {
+     "imx296": "U",
+@@ -37,6 +43,19 @@ class SensorDetect:
+         # Packing information per sensor (U = unpacked, P = packed).
+         self.packing_info = self._packing_info_from_database()
+ 
++        # Optional fps correction factors per sensor/mode/fps triplet
++        self.fps_correction_factor = SENSOR_CORRECTION_FACTORS
++
++        # # Optional fps correction factors per sensor and sensor mode
++        # self.fps_correction_factor = {
++        #     "imx296": {0: 1.0, 1: 1.0, 2: 1.0},
++        #     "imx286": {0: 1.0, 1: 1.0, 2: 1.0},
++        #     "imx477": {0: 1.0, 1: 1.0, 2: 1.0},
++        #     "imx519": {0: 1.0, 1: 1.0, 2: 1.0},
++        #     "imx585": {0: 1.0, 1: 1.0, 2: 1.0},
++        #     "imx585_mono": {0: 0.9994, 1: 0.9980, 2: 1.0},
++        # }
++
+         # Populate camera model and modes on startup
+         self.detect_camera_model()
+ 
+@@ -404,3 +423,36 @@ class SensorDetect:
+             resolution = f"{info['width']} : {info['height']} : {info['bit_depth']}b"
+             resolutions.append({'mode': mode, 'resolution': resolution})
+         return resolutions
++    
++    def get_fps_correction_factor(self, camera_name, sensor_mode, fps=None):
++        try:
++            mode = int(sensor_mode)
++        except (TypeError, ValueError):
++            mode = sensor_mode
++
++        try:
++            fps_value = int(round(float(fps))) if fps is not None else None
++        except (TypeError, ValueError):
++            fps_value = None
++
++        sensor_table = self.fps_correction_factor.get(camera_name)
++
++        # Numeric fallback if a scalar is stored for the sensor (legacy support)
++        if isinstance(sensor_table, (int, float)):
++            return float(sensor_table)
++
++        if not isinstance(sensor_table, dict):
++            return DEFAULT_CORRECTION_FACTOR
++
++        mode_table = sensor_table.get(mode)
++        mode_default = sensor_table.get("_default", DEFAULT_CORRECTION_FACTOR)
++
++        if isinstance(mode_table, (int, float)):
++            return float(mode_table)
++
++        if isinstance(mode_table, dict):
++            if fps_value is not None and fps_value in mode_table:
++                return float(mode_table[fps_value])
++            return float(mode_table.get("_default", mode_default))
++
++        return float(mode_default)

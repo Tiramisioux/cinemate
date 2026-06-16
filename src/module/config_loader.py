@@ -288,7 +288,7 @@ def _apply_settings_defaults(settings: dict) -> dict:
         res_cfg.setdefault(k, v)
     settings["resolutions"] = res_cfg
 
-    # Per-camera settings: geometry, output, camera-name, sensor_fps_correction.
+    # Per-camera settings: geometry, output, camera-name, tuning-file override.
     # Migrate old top-level "geometry" and "output" sections (written by older
     # configs) into camera.cam0/cam1 so old Pi settings.json files keep working
     # after a code update.
@@ -310,9 +310,8 @@ def _apply_settings_defaults(settings: dict) -> dict:
         out.setdefault("hdmi_port", default_hdmi)
         cam.setdefault("override_camera_name", False)
         cam.setdefault("camera_name",          "")
-        cam.setdefault("sensor_fps_correction", True)
         cam.setdefault("phase_lock", True)
-        tf = cam.setdefault("tuning_file", {})
+        tf = cam.setdefault("tuning_file_override", {})
         tf.setdefault("enabled", False)
         tf.setdefault("path", "resources/tuning_files/imx477.json")
     settings["camera"] = camera_cfg

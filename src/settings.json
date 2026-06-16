@@ -23,9 +23,8 @@
       },
       "override_camera_name": false,
       "camera_name": "Blackmagic Pocket Cinema Camera 4K",
-      "sensor_fps_correction": true,
       "phase_lock": true,
-      "tuning_file": {
+      "tuning_file_override": {
         "enabled": false,
         "path": "resources/tuning_files/imx477.json"
       }
@@ -41,9 +40,8 @@
       },
       "override_camera_name": false,
       "camera_name": "Blackmagic Pocket Cinema Camera 4K",
-      "sensor_fps_correction": true,
       "phase_lock": true,
-      "tuning_file": {
+      "tuning_file_override": {
         "enabled": false,
         "path": "resources/tuning_files/imx477.json"
       }

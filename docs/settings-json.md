@@ -60,9 +60,8 @@ All per-port settings live inside a `cam0` or `cam1` block so every option for a
     "output": {
       "hdmi_port": 0
     },
-    "override_camera_name": true,
+    "override_camera_name": false,
     "camera_name": "Blackmagic Pocket Cinema Camera 4K",
-    "sensor_fps_correction": true,
     "phase_lock": true
   },
   "cam1": {
@@ -74,9 +73,8 @@ All per-port settings live inside a `cam0` or `cam1` block so every option for a
     "output": {
       "hdmi_port": 1
     },
-    "override_camera_name": true,
+    "override_camera_name": false,
     "camera_name": "Blackmagic Pocket Cinema Camera 4K",
-    "sensor_fps_correction": true,
     "phase_lock": true
   }
 }
@@ -111,19 +109,11 @@ Maps the camera to an HDMI connector.
 
     Setting `camera_name` to `"Blackmagic Pocket Cinema Camera 4K"` is therefore not cosmetic — it is what makes Resolve treat the footage as genuine BRAW-adjacent DNG and apply the correct ISO-aware decode.
 
-### sensor_fps_correction
-
-Some sensors run their pixel clock slightly off the nominal rate, so the true frame interval differs from the requested FPS. Cinemate compensates by looking up an empirical correction factor for the detected sensor, mode, and FPS combination in `src/module/sensor_correction_factors.py` and applying it before passing the FPS value to `cinepi-raw`.
-
-`sensor_fps_correction` – `true` (default) enables the lookup and applies the correction. `false` passes the exact user-requested FPS to `cinepi-raw` with no modification (correction factor = 1.0).
-
-Set to `false` when you are using a sensor not yet in the database and want unmodified FPS, or when you are comparing corrected versus uncorrected timecode drift. See [FPS correction](fps-correction.md) for the calibration workflow.
-
 ### phase_lock
 
-`phase_lock` – `true` (default) enables `cinepi-raw`'s closed-loop **frame-rate phase lock** for this sensor. Where `sensor_fps_correction` applies a single fixed factor, the phase lock is a per-frame servo: it measures the accumulated frame phase against the nominal FPS (against the Pi wall clock — `FrameWallClock`, the same clock the audio is captured against) and continuously trims `FrameDurationLimits`, dithering the integer line-blanking so the *average* recorded cadence is exact. The result is that the video tracks the Pi clock, so audio and video do not drift apart over long takes (the residual is a bounded sub-frame offset, not an accumulating drift). It pre-converges during preview, so a clip is locked from the first frame.
+`phase_lock` – `true` (default) enables `cinepi-raw`'s closed-loop **frame-rate phase lock** for this sensor. The phase lock is a per-frame servo: it measures the accumulated frame phase against the nominal FPS (against the Pi wall clock — `FrameWallClock`, the same clock the audio is captured against) and continuously trims `FrameDurationLimits`, dithering the integer line-blanking so the *average* recorded cadence is exact. The result is that the video tracks the Pi clock, so audio and video do not drift apart over long takes (the residual is a bounded sub-frame offset, not an accumulating drift). It pre-converges during preview, so a clip is locked from the first frame.
 
-Cinemate writes this per-camera flag to the shared `fps_phase_lock` runtime key, which `cinepi-raw` reads (it is off by default in `cinepi-raw` itself when run standalone). The loop is VBLANK-only and supersedes the static correction factor while active, so the `sensor_fps_correction` table no longer needs precise per-sensor calibration when the phase lock is on.
+Cinemate writes this per-camera flag to the shared `fps_phase_lock` runtime key, which `cinepi-raw` reads (it is off by default in `cinepi-raw` itself when run standalone). The loop is VBLANK-only and holds the recorded cadence on the nominal FPS directly, so no per-sensor FPS-correction table is needed.
 
 !!! note "Multi-camera genlock"
     `phase_lock` can stay `true` on a multi-camera `--sync` (beam-splitter / genlock) rig. `cinepi-raw` infers its role from `--sync`: the master (`--sync server`) runs the phase lock and disciplines the pair to the Pi clock, while the `--sync client` automatically suppresses its own phase lock and lets libcamera's `rpi.sync` hold the relative camera-to-camera (A→B) alignment. One setting works for single and dual — no per-camera differentiation. See [Dual sensors](dual-sensors.md).

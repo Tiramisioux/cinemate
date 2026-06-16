@@ -223,11 +223,6 @@ class CinePiController:
                 self.dynamic_resolution_desired_mode,
             )
             self.dynamic_resolution_desired_mode = self.sensor_mode
-        self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
-            self.current_sensor,
-            self.sensor_mode,
-            self.fps,
-        )
         self.fps_max = self._refresh_fps_max()
         self.gui_layout = self.sensor_detect.get_gui_layout(self.current_sensor, self.sensor_mode)
         self.exposure_time_s = float(self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)) / 360 * (1 / self.fps) 
@@ -691,7 +686,6 @@ class CinePiController:
             • hardware limit (fps_max)
             • fps_free flag
             • shutter-sync flag
-            • correction factor for fractional clocking
             • optional locks
         """
         requested_user_fps = float(value)
@@ -707,48 +701,21 @@ class CinePiController:
 
         self._maybe_apply_dynamic_resolution_for_fps(requested_user_fps)
 
-        # sensor_fps_correction flag is read from the primary camera's settings
-        # (cam0 first, then cam1); defaults to True when not configured.
-        _cam_cfg = (self.settings.get("camera") or {})
-        _correction_enabled = True
-        for _port in ("cam0", "cam1"):
-            _c = _cam_cfg.get(_port)
-            if isinstance(_c, dict):
-                _correction_enabled = bool(_c.get("sensor_fps_correction", True))
-                break
-
-        self.fps_correction_factor = (
-            self.sensor_detect.get_fps_correction_factor(
-                self.current_sensor, self.sensor_mode, requested_user_fps
-            )
-            if _correction_enabled
-            else 1.0
-        )
-
-        corrected = requested_user_fps * self.fps_correction_factor
-        fps_max   = int(float(self.redis_controller.get_value(ParameterKey.FPS_MAX.value)))
+        # No per-sensor fps correction factor: the cinepi-raw phase lock drives the
+        # recorded cadence onto the nominal fps, so the hardware fps == the user fps.
+        fps_max = int(float(self.redis_controller.get_value(ParameterKey.FPS_MAX.value)))
 
         # ── choose the final fps value ──────────────────────────────────────
         if self.shutter_a_sync_mode == 1 or self.fps_free:
-            safe_value = max(1, min(fps_max, corrected))           # “free”
-            if safe_value == corrected:
-                safe_user_fps = requested_user_fps
-            else:
-                safe_user_fps = (
-                    safe_value / self.fps_correction_factor
-                    if self.fps_correction_factor
-                    else safe_value
-                )
+            safe_value = max(1, min(fps_max, requested_user_fps))   # “free”
+            safe_user_fps = safe_value
         else:
             # make sure the table is current (free-mode may be toggled at run-time)
             self._rebuild_fps_steps()
-            # Snap to nearest user-facing step from the *requested* fps (not the
-            # corrected fps), then apply the correction to get the hardware rate.
-            # Snapping on corrected would round 24.975 → 25 and discard the factor.
             snapped_user_fps = min(self.fps_steps_dynamic,
                                    key=lambda x: abs(x - requested_user_fps))
             safe_user_fps = snapped_user_fps
-            safe_value = snapped_user_fps * self.fps_correction_factor
+            safe_value = snapped_user_fps
 
         self.user_fps = safe_user_fps
         if update_user_target:
@@ -1381,12 +1348,6 @@ class CinePiController:
                 self.fps_steps = list(range(1, self.fps_max + 1))
 
             self.update_steps()
-
-            self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
-                self.current_sensor,
-                self.sensor_mode,
-                self.current_fps,
-            )
 
             if restore_user_fps is not None:
                 self.set_fps(float(restore_user_fps), update_user_target=False)

@@ -121,7 +121,6 @@ class RedisListener:
 
         self.active_sensor_labels: set[str] = set()
         self.redis_controller.set_value(ParameterKey.FRAMES_IN_SYNC.value, 1)
-        self.redis_controller.set_value(ParameterKey.FPS_CORRECTION_SUGGESTION.value, 1.0)
         self.redis_controller.set_value(ParameterKey.DROP_FRAME.value, 0)
         self.redis_controller.set_value(ParameterKey.DROP_FRAME_DURING_LAST_TAKE.value, 0)
         self.redis_controller.set_value(ParameterKey.DROP_FRAME_COUNT.value, 0)
@@ -145,7 +144,6 @@ class RedisListener:
         self.last_timestamp_cam1 = None
 
         self.fps_at_rec_start = None
-        self.fps_correction_factor_at_rec_start: float | None = None
         self.fps_timeline: list[tuple[datetime.datetime, float]] = []
         self.final_analysis_thread = None
         self.final_analysis_lock = threading.Lock()
@@ -555,22 +553,6 @@ class RedisListener:
             pass
 
         return 1
-
-    def _current_correction_factor(self) -> float | None:
-        try:
-            fps_user_raw = self.redis_controller.get_value(ParameterKey.FPS_USER.value)
-            fps_effective_raw = self.redis_controller.get_value(ParameterKey.FPS.value)
-            if fps_user_raw is None or fps_effective_raw is None:
-                return None
-            fps_user = float(fps_user_raw)
-            fps_effective = float(fps_effective_raw)
-        except (TypeError, ValueError):
-            return None
-
-        if fps_user == 0:
-            return None
-
-        return fps_effective / fps_user
 
     def _storage_preroll_active(self) -> bool:
         try:
@@ -1233,7 +1215,6 @@ class RedisListener:
         self.frame_limit_stop_requested = False
         self.awaiting_fresh_framecount = False
         self.fresh_framecount_guard_start_time = None
-        self.fps_correction_factor_at_rec_start = None
         self.fps_at_rec_start = None
         self.fps_timeline = []
         self.raw_framecount_last = None
@@ -1426,14 +1407,6 @@ class RedisListener:
                     # immediately after setting is_recording=1.
                     self.frame_limit_anchor_time = None
                     self.frame_limit_stop_requested = False
-
-                    self.fps_correction_factor_at_rec_start = self._current_correction_factor()
-                    initial_correction = self.fps_correction_factor_at_rec_start or 1.0
-
-                    self.redis_controller.set_value(
-                        ParameterKey.FPS_CORRECTION_SUGGESTION.value,
-                        f"{initial_correction:.6f}",
-                    )
 
                     # Lock the FPS at start (configured value)
                     try:
@@ -2047,66 +2020,11 @@ class RedisListener:
         if not frames_in_sync and not sync_warning_suppressed:
             self.frames_off_sync_latched_current_take = True
 
-        all_frames_accounted = frames_in_sync
         self.redis_controller.set_value(
             ParameterKey.FRAMES_IN_SYNC.value,
             1 if frames_in_sync and not live_sync_warning_latched else 0,
         )
 
-        current_correction_factor = self.fps_correction_factor_at_rec_start
-        if not current_correction_factor or current_correction_factor <= 0:
-            current_correction_factor = self._current_correction_factor()
-
-        suggestion_value = current_correction_factor or 1.0
-
-        if self.recording_was_preroll:
-            pass
-        elif all_frames_accounted:
-            if segmented_recording:
-                logging.info(
-                    "No FPS correction suggestion from segmented recording; "
-                    "wall-clock duration includes reconfigure gaps."
-                )
-            elif current_correction_factor:
-                logging.info(
-                    "Sensor timing OK: correction factor %.6f is active and matches the capture.",
-                    current_correction_factor,
-                )
-            else:
-                logging.info("Sensor timing OK: all frames accounted for (no correction factor active).")
-        elif (
-            expected_frames_float > 0
-            and recorded_frames_total > 0
-            and current_correction_factor
-        ):
-            multiplier = expected_frames_float / recorded_frames_total
-            suggestion_value = current_correction_factor * multiplier
-            _sensor = self.redis_controller.get_value(ParameterKey.SENSOR.value) or "unknown"
-            try:
-                _mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value))
-            except (TypeError, ValueError):
-                _mode = "?"
-            _user_fps_str = f"{self.fps_at_rec_start:g}" if self.fps_at_rec_start else "?"
-            _drift_pct = (1.0 - multiplier) * 100.0
-            logging.info(
-                "Sensor correction needed: %.6f suggested for %s mode %s at %s fps "
-                "(sensor ran %.3f%% %s; update sensor_correction_factors.py).",
-                suggestion_value,
-                _sensor,
-                _mode,
-                _user_fps_str,
-                abs(_drift_pct),
-                "faster" if _drift_pct > 0 else "slower",
-            )
-        else:
-            logging.info("Insufficient data to derive FPS correction factor suggestion.")
-
-        self.redis_controller.set_value(
-            ParameterKey.FPS_CORRECTION_SUGGESTION.value,
-            f"{suggestion_value:.6f}",
-        )
-
-        self.fps_correction_factor_at_rec_start = None
         self.fps_at_rec_start = None
         self.fps_timeline = []
 

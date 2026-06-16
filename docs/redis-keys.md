@@ -19,7 +19,6 @@ Each entry explains which component normally writes the key and whether it makes
 | fps_actual | CinePi-raw -> Cinemate | Measured FPS from the running pipeline | No |
 | fps_last | Cinemate | Previous stable FPS value from stats | No |
 | fps_max | Cinemate startup | Maximum FPS supported by the current sensor mode | No |
-| fps_correction_suggestion | Cinemate (RedisListener) | Suggested correction factor after comparing expected vs recorded frame counts | No |
 | sensor_mode | Cinemate -> CinePi-raw startup | Active sensor resolution/mode index | Yes (causes pipeline restart) |
 | bit_depth | Cinemate startup | Sensor bit depth (10 or 12) for the selected mode | No |
 | width / height | Cinemate startup | Active sensor resolution | No |

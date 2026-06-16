@@ -171,7 +171,7 @@
       "properties": {
         "phase_lock": {
           "type": "boolean",
-          "description": "Enable the cinepi-raw frame-rate phase lock for this sensor (holds the recorded cadence on the nominal fps for stable A/V sync). Disable for multi-camera --sync genlock rigs.",
+          "description": "Enable the cinepi-raw frame-rate phase lock for this sensor (holds the recorded cadence on the nominal fps for stable A/V sync). Safe to leave enabled on multi-camera --sync genlock rigs: cinepi-raw runs the lock only on the master (--sync off/server) and the --sync client self-suppresses so libcamera's rpi.sync owns that sensor's VBLANK.",
           "default": true
         },
         "tuning_file_override": {

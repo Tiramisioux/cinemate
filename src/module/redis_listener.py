@@ -885,8 +885,14 @@ class RedisListener:
                         color_temp = stats_data.get('colorTemp', None)
                         sensor_timestamp = stats_data.get('sensorTimestamp', None)
                         timestamp = stats_data.get('timestamp')
-                        timestamp_cam0 = stats_data.get('timestamp_cam0')
-                        timestamp_cam1 = stats_data.get('timestamp_cam1')
+                        # The cp_stats channel is shared by every cinepi-raw
+                        # process (cam0 and cam1), and the payload's `timestamp`
+                        # carries no camera identity. `cameraPort` tells us which
+                        # camera published this message so its timestamp is
+                        # routed to the matching tc_cam* key. Older cinepi-raw
+                        # builds omit it; default to cam0 to preserve the
+                        # single-camera behaviour.
+                        camera_port = stats_data.get('cameraPort', 'cam0')
                         self.current_framerate = self._coerce_float(stats_data.get('framerate', None))
 
                         if color_temp:
@@ -896,18 +902,17 @@ class RedisListener:
                             self.redis_controller.get_value(ParameterKey.FPS_USER.value) or 24
                         )
 
-                        if timestamp is not None and timestamp != self.last_timestamp_cam0:
-                            tc = self.redis_controller.nanoseconds_to_timecode(int(timestamp), fps_user)
-                            self.redis_controller.set_value(ParameterKey.TC_CAM0.value, tc)
-                            self.last_timestamp_cam0 = timestamp
-                        if timestamp_cam0 is not None and timestamp_cam0 != self.last_timestamp_cam0:
-                            tc0 = self.redis_controller.nanoseconds_to_timecode(int(timestamp_cam0), fps_user)
-                            self.redis_controller.set_value(ParameterKey.TC_CAM0.value, tc0)
-                            self.last_timestamp_cam0 = timestamp_cam0
-                        if timestamp_cam1 is not None and timestamp_cam1 != self.last_timestamp_cam1:
-                            tc1 = self.redis_controller.nanoseconds_to_timecode(int(timestamp_cam1), fps_user)
-                            self.redis_controller.set_value(ParameterKey.TC_CAM1.value, tc1)
-                            self.last_timestamp_cam1 = timestamp_cam1
+                        if timestamp is not None:
+                            if camera_port == 'cam1':
+                                if timestamp != self.last_timestamp_cam1:
+                                    tc1 = self.redis_controller.nanoseconds_to_timecode(int(timestamp), fps_user)
+                                    self.redis_controller.set_value(ParameterKey.TC_CAM1.value, tc1)
+                                    self.last_timestamp_cam1 = timestamp
+                            else:
+                                if timestamp != self.last_timestamp_cam0:
+                                    tc0 = self.redis_controller.nanoseconds_to_timecode(int(timestamp), fps_user)
+                                    self.redis_controller.set_value(ParameterKey.TC_CAM0.value, tc0)
+                                    self.last_timestamp_cam0 = timestamp
 
                         # Update Redis key for current buffer size if changed.
                         # Drive the GUI buffer VU from the peak backlog

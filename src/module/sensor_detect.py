@@ -390,13 +390,31 @@ class SensorDetect:
         resolution_info = self.get_resolution_info(camera_name, sensor_mode)
         return resolution_info.get('sustainable_fps', [])
     
+    def _calc_lores(self, sensor_w: int, sensor_h: int) -> tuple[int, int]:
+        """Return (lores_width, lores_height) preserving sensor aspect ratio within the preview area."""
+        fw, fh = 1920, 1080
+        px, py = 94, 50
+        aw, ah = fw - 2 * px, fh - 2 * py
+        aspect = sensor_w / sensor_h
+        lh = min(720, ah)
+        lw = int(lh * aspect)
+        if lw > aw:
+            lw, lh = aw, int(round(aw / aspect))
+        lw &= ~1
+        lh &= ~1
+        return lw, lh
+
     def get_lores_width(self, camera_name, sensor_mode):
-        # Placeholder method, replace with actual implementation
-        return 1280
-    
+        res = self.get_resolution_info(camera_name, sensor_mode)
+        w = res.get('width') or 1920
+        h = res.get('height') or 1080
+        return self._calc_lores(w, h)[0]
+
     def get_lores_height(self, camera_name, sensor_mode):
-        # Placeholder method, replace with actual implementation
-        return 720
+        res = self.get_resolution_info(camera_name, sensor_mode)
+        w = res.get('width') or 1920
+        h = res.get('height') or 1080
+        return self._calc_lores(w, h)[1]
     
     def get_available_resolutions(self):
         resolutions = []

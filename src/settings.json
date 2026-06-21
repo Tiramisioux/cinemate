@@ -21,7 +21,7 @@
       "output": {
         "hdmi_port": 0
       },
-      "override_camera_name": false,
+      "override_camera_name": true,
       "camera_name": "Blackmagic Pocket Cinema Camera 4K",
       "phase_lock": true,
       "tuning_file_override": {
@@ -38,7 +38,7 @@
       "output": {
         "hdmi_port": 1
       },
-      "override_camera_name": false,
+      "override_camera_name": true,
       "camera_name": "Blackmagic Pocket Cinema Camera 4K",
       "phase_lock": true,
       "tuning_file_override": {
@@ -65,11 +65,11 @@
   "audio": {
     "24bit": {
       "capture_gain_db": 0.0,
-      "timecode_offset_frames": 0
+      "timecode_offset_frames": 2
     },
     "16bit": {
       "capture_gain_db": 6.0,
-      "timecode_offset_frames": 0
+      "timecode_offset_frames": 2
     }
   },
   "anamorphic_preview": {

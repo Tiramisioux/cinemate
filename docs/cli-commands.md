@@ -1,24 +1,14 @@
 # Commands reference
 
-Cinemate doesn’t use a real shell parser. Instead, a background thread
-reads simple text commands from SSH or the serial port and calls the
-corresponding controller methods.
+Type these commands over SSH or the serial port to drive the camera. Cinemate reads each line and runs the matching action.
 
 !!! note ""
 
-     Note if you have Cinemate already running, for example by running the preinstalled image file, you first need to stop the autostarted instance in order and manually start Cinemate in order to use the Cinemate CLI:
-
-     cd cinemate    # change directory to cinemate folder
-     make stop      # stop the autostarted instance
-     cinemate       # start cinemate manually
-
-!!! note ""
-     
-     Commands without an explicit argument will toggle the current state when possible (e.g. `set fps lock` flips the lock; `set fps lock 1` forces it on).
+     Commands without an explicit argument toggle the current state when possible (e.g. `set fps lock` flips the lock; `set fps lock 1` forces it on).
 
 !!! note ""
 
-     All of the commands below can be easily mapped to GPIO buttons rotary encoders and other input devices. See [this section](settings-json.md) for how to configure the settings file.
+     All of the commands below can be mapped to GPIO buttons, rotary encoders and other input devices. See [this section](settings-json.md) for how to configure the settings file.
 
 
 | Command                                    | Argument        | Example                                 |  Function                                      |
@@ -64,26 +54,35 @@ corresponding controller methods.
 | `set filter <0/1>`                         | 0/1               | `set filter 1`                          | Toggle IR-cut filter (IMX585)                   |
 
 
+??? note "Stopping or restarting the Cinemate service"
+
+    The preinstalled image autostarts Cinemate. To use the CLI by hand, stop the autostarted instance first, then start Cinemate yourself:
+
+    ```
+    cd cinemate    # change directory to cinemate folder
+    make stop      # stop the autostarted instance
+    cinemate       # start cinemate manually
+    ```
+
+
 ## Timed recording shortcuts
 
-The `rec` command now accepts timed modes so you can walk away from the camera while it captures a precisely bounded take.
+Use the timed modes to walk away from the camera while it captures a precisely bounded take.
 
-- `rec s <seconds>` stops the recording after the requested duration. Short forms such as `sec`, `secs` and `seconds` are also accepted.
+- `rec s <seconds>` stops after the requested duration. Short forms such as `sec`, `secs` and `seconds` also work.
 - `rec f <frames>` stops after the requested number of frame slots at the locked record-start FPS. Dropped frames still count toward that limit, so the take ends when that many frames should have been recorded, not when that many DNGs were successfully written. You can type `frame` or `frames` instead of `f`.
 
-If recording is not already running, the CLI starts it automatically before arming the timer. An invalid or zero value is ignored so you cannot accidentally stop a clip immediately.【F:src/module/cli_commands.py†L205-L237】【F:src/module/cinepi_controller.py†L533-L591】
+If recording is not already running, the CLI starts it before arming the timer. An invalid or zero value is ignored so you cannot accidentally stop a clip immediately.
 
 ## Storage maintenance commands
 
-Two new commands simplify preparing removable media directly from the Cinemate CLI:
+`erase` and `format` prepare removable media directly from the CLI. Both require the RAW drive to be mounted; otherwise the CLI reports an error and leaves the media untouched.
 
-- `erase` empties the mounted RAW volume without touching the filesystem structure so you can clear cards quickly between takes.
-- `format [ext4|exfat|ntfs]` reformats the drive with the chosen filesystem (`exfat` by default), remounts it and refreshes the free-space monitor. The helper tolerates the common `ex4` typo and refuses unsupported targets so you do not accidentally create an unusable volume.
-
-Both actions require the RAW drive to be mounted; otherwise the CLI reports an error and leaves the media untouched.
+- `erase` empties the mounted RAW volume without touching the filesystem structure, so you can clear cards quickly between takes.
+- `format [ext4|exfat|ntfs]` reformats the drive with the chosen filesystem (`exfat` by default), remounts it and refreshes the free-space monitor. It tolerates the common `ex4` typo and refuses unsupported targets so you do not accidentally create an unusable volume.
 
 ## Storage pre-roll warm-up
 
-`storage preroll` triggers the same warm-up clip that Cinemate can run automatically on startup or when you mount new storage. During the pre-roll, Cinemate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take. The manual command remains available even when `settings.auto_storage_preroll` is set to `false` in `settings.json`.【F:src/module/storage_preroll.py†L40-L175】
+`storage preroll` triggers the same warm-up clip that Cinemate can run automatically on startup or when you mount new storage. During the pre-roll, Cinemate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take. The manual command stays available even when `settings.auto_storage_preroll` is set to `false` in `settings.json`.
 
 See [Storage pre-roll warm-up](storage-preroll.md) for a detailed walkthrough of the workflow and tips on when to run it manually.

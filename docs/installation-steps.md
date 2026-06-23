@@ -1,4 +1,11 @@
-# Installation
+# Installation & building from source
+
+!!! warning "Most builders should flash the prebuilt image"
+
+    The easiest path is to flash the prebuilt Cinemate image to your SD card. It boots ready to run, with no compiling. See the [Quick start](getting-started.md) to get going.
+
+    This page is only for two cases: running the **one-click installer**, or **building the whole stack from source** on a clean Raspberry Pi OS Lite. If you just want a working camera, you do not need anything below.
+
 This page starts with the repo-root one-click installer and then continues with the full step-by-step manual install for libcamera, cinepi-raw, cinemate and accompanying software on the Raspberry Pi.
 
 !!! Note ""
@@ -9,7 +16,11 @@ This page starts with the repo-root one-click installer and then continues with 
 
      Cinemate is using Linux kernel version 6.12.25. Supported install target is Raspberry Pi OS Lite (Bookworm).
 
-### One-click installer
+### One-click installer (easy scripted path)
+
+!!! tip "This is the easy path on this page"
+
+    The one-click installer is a single script that builds and configures the whole stack for you. Use it if you want a fresh-from-source install without running every manual step by hand. The from-source steps further down are for advanced builders who want full control.
 
 Start from a fresh Raspberry Pi OS Lite Bookworm image. SSH to the Pi:
 

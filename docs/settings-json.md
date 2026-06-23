@@ -1,5 +1,8 @@
 # Settings file
 
+!!! note
+    The prebuilt image works out of the box. You do **not** need to edit `settings.json` to start shooting. This page is a reference for when you want to customise hardware controls and behaviour.
+
 This file controls how the camera behaves and how your buttons, switches and displays are mapped. It lives in `~/cinemate/src/settings.json`. You can edit it with any text editor; the settings take effect the next time you start Cinemate.
 
 !!! tip ""
@@ -80,7 +83,10 @@ All per-port settings live inside a `cam0` or `cam1` block so every option for a
 }
 ```
 
-`raw_buffer_count` – how many frames `cinepi-raw` keeps in RAM as a write-burst absorber. The sensor produces frames at a fixed rate but storage write speed is uneven — exFAT can stall during cluster allocation or directory updates. Frames that land during a stall are held in the RAM ring until the disk catches up; no frames are dropped as long as the stall is shorter than the buffer depth. More buffers = more RAM used, but more tolerance for storage hiccups. `0` (default) lets the active storage profile pick the right depth for your sensor, filesystem, and storage type — this is almost always correct. Raise it only if you see single-frame TC holes (`DROP` flashing) and `grep Cma /proc/meminfo` confirms spare CMA headroom (~25 MB per extra buffer at 4K).
+`raw_buffer_count` – how many frames `cinepi-raw` keeps in RAM as a write-burst absorber. Leave it at `0` (default); the active storage profile picks the right depth automatically.
+
+??? note "raw_buffer_count / CMA buffer tuning"
+    The sensor produces frames at a fixed rate but storage write speed is uneven — exFAT can stall during cluster allocation or directory updates. Frames that land during a stall are held in the RAM ring until the disk catches up; no frames are dropped as long as the stall is shorter than the buffer depth. More buffers = more RAM used, but more tolerance for storage hiccups. `0` (default) lets the active storage profile pick the right depth for your sensor, filesystem, and storage type — this is almost always correct. Raise it only if you see single-frame TC holes (`DROP` flashing) and `grep Cma /proc/meminfo` confirms spare CMA headroom (~25 MB per extra buffer at 4K).
 
 ### geometry
 
@@ -104,19 +110,21 @@ Maps the camera to an HDMI connector.
 `override_camera_name` – when `true`, the value of `camera_name` is passed to `cinepi-raw` as `--unique-camera-model` and written into the `UniqueCameraModel` DNG tag of every recorded frame. When `false`, `cinepi-raw` uses its built-in default.<br>
 `camera_name` – the string to embed when `override_camera_name` is `true`.
 
-!!! note "Why Blackmagic Pocket Cinema Camera 4K"
+??? note "Why Blackmagic Pocket Cinema Camera 4K"
     DaVinci Resolve uses the `UniqueCameraModel` DNG tag to identify the camera and select the matching decode pipeline. When this tag matches a known Blackmagic camera, Resolve unlocks the full Camera RAW tab — including the ISO slider, colour science selection (Gen 4 / Gen 5), and the corresponding tone curve and noise reduction presets. With an unknown or missing camera model the RAW tab is limited and ISO behaves as a simple exposure offset rather than selecting a proper decode curve.
 
     Setting `camera_name` to `"Blackmagic Pocket Cinema Camera 4K"` is therefore not cosmetic — it is what makes Resolve treat the footage as genuine BRAW-adjacent DNG and apply the correct ISO-aware decode.
 
 ### phase_lock
 
-`phase_lock` – `true` (default) enables `cinepi-raw`'s closed-loop **frame-rate phase lock** for this sensor. The phase lock is a per-frame servo: it measures the accumulated frame phase against the nominal FPS (against the Pi wall clock — `FrameWallClock`, the same clock the audio is captured against) and continuously trims `FrameDurationLimits`, dithering the integer line-blanking so the *average* recorded cadence is exact. The result is that the video tracks the Pi clock, so audio and video do not drift apart over long takes (the residual is a bounded sub-frame offset, not an accumulating drift). It pre-converges during preview, so a clip is locked from the first frame.
+`phase_lock` – `true` (default) keeps audio and video aligned over long takes by locking the recorded frame cadence to the Pi clock. Leave it on.
 
-Cinemate writes this per-camera flag to the shared `fps_phase_lock` runtime key, which `cinepi-raw` reads (it is off by default in `cinepi-raw` itself when run standalone). The loop is VBLANK-only and holds the recorded cadence on the nominal FPS directly, so no per-sensor FPS-correction table is needed.
+??? note "phase_lock internals and multi-camera genlock"
+    The phase lock is a per-frame servo: it measures the accumulated frame phase against the nominal FPS (against the Pi wall clock — `FrameWallClock`, the same clock the audio is captured against) and continuously trims `FrameDurationLimits`, dithering the integer line-blanking so the *average* recorded cadence is exact. The result is that the video tracks the Pi clock, so audio and video do not drift apart over long takes (the residual is a bounded sub-frame offset, not an accumulating drift). It pre-converges during preview, so a clip is locked from the first frame.
 
-!!! note "Multi-camera genlock"
-    `phase_lock` can stay `true` on a multi-camera `--sync` (beam-splitter / genlock) rig. `cinepi-raw` infers its role from `--sync`: the master (`--sync server`) runs the phase lock and disciplines the pair to the Pi clock, while the `--sync client` automatically suppresses its own phase lock and lets libcamera's `rpi.sync` hold the relative camera-to-camera (A→B) alignment. One setting works for single and dual — no per-camera differentiation. See [Dual sensors](dual-sensors.md).
+    Cinemate writes this per-camera flag to the shared `fps_phase_lock` runtime key, which `cinepi-raw` reads (it is off by default in `cinepi-raw` itself when run standalone). The loop is VBLANK-only and holds the recorded cadence on the nominal FPS directly, so no per-sensor FPS-correction table is needed.
+
+    **Multi-camera genlock.** `phase_lock` can stay `true` on a multi-camera `--sync` (beam-splitter / genlock) rig. `cinepi-raw` infers its role from `--sync`: the master (`--sync server`) runs the phase lock and disciplines the pair to the Pi clock, while the `--sync client` automatically suppresses its own phase lock and lets libcamera's `rpi.sync` hold the relative camera-to-camera (A→B) alignment. One setting works for single and dual — no per-camera differentiation. See [Dual sensors](dual-sensors.md).
 
 ## hdmi_gui
 
@@ -261,7 +269,7 @@ Preset lists for exposure and frame‑rate settings. Cinemate will step through 
 }
 ```
 
-!!! note "How to think about ISO"
+??? note "How to think about ISO"
     At capture, ISO is real analog gain on the sensor — it changes the raw pixel values written to disk. Setting it too high introduces noise that is baked in and cannot be removed later.
 
     Once your DNGs are in Resolve's Camera RAW tab, the pixel values are fixed. ISO there is a decode-time parameter: in Gen 4 color science it selects a different log curve that shifts contrast as well as brightness; in Gen 5 it acts as a linear gain equivalent to the Exposure slider. Either way, correcting a wrong ISO in Resolve costs no additional quality — provided the sensor data was not catastrophically over- or underexposed at capture.
@@ -356,37 +364,38 @@ Automatically chooses the highest measured sustainable resolution for the user-s
 <br>`safety_margin_fps` – subtract this many FPS from every measured row before deciding whether it is safe.
 <br>`match_tolerance_px` – pixel tolerance used when matching measured rows to driver modes. This lets a measured `3856 x 2180` row match a nearby driver mode such as `3840 x 2160`.
 
-Cinemate remembers the user's desired resolution. If you select a 4K mode and then raise FPS above that mode's measured sustainable limit, Cinemate switches to the highest measured mode that can sustain the FPS. When FPS returns to the desired mode's measured limit or below, Cinemate switches back. If no matching profile row exists for the detected sensor, storage type, filesystem, desired mode, and requested FPS, Cinemate leaves the current resolution unchanged.
+??? note "How dynamic resolution decides, and the profile-row schema"
+    Cinemate remembers the user's desired resolution. If you select a 4K mode and then raise FPS above that mode's measured sustainable limit, Cinemate switches to the highest measured mode that can sustain the FPS. When FPS returns to the desired mode's measured limit or below, Cinemate switches back. If no matching profile row exists for the detected sensor, storage type, filesystem, desired mode, and requested FPS, Cinemate leaves the current resolution unchanged.
 
-When dynamic resolution is enabled, the maximum FPS shown by Cinemate comes from the measured dynamic-resolution profile for the current sensor, storage type, and filesystem, but only when the desired mode itself has a measured row. When dynamic resolution is disabled, maximum FPS comes from the sensor readout reported by `cinepi-raw`, as before.
+    When dynamic resolution is enabled, the maximum FPS shown by Cinemate comes from the measured dynamic-resolution profile for the current sensor, storage type, and filesystem, but only when the desired mode itself has a measured row. When dynamic resolution is disabled, maximum FPS comes from the sensor readout reported by `cinepi-raw`, as before.
 
-The storage type comes from the mounted RAW device and is usually `ssd`, `cfe`, `nvme`, or `unknown`. The filesystem comes from the mounted RAW volume and is usually `ext4`, `exfat`, or `ntfs`.
+    The storage type comes from the mounted RAW device and is usually `ssd`, `cfe`, `nvme`, or `unknown`. The filesystem comes from the mounted RAW volume and is usually `ext4`, `exfat`, or `ntfs`.
 
-Each profile row has this shape:
+    Each profile row has this shape:
 
-```json
-{
-  "sensor": "imx585",
-  "sensor_aliases": ["imx585_mono"],
-  "storage_type": "cfe",
-  "filesystem": "ext4",
-  "media_model": "CFE Hat / NVMe",
-  "width": 3856,
-  "height": 2180,
-  "bit_depth": 12,
-  "sustainable_fps": 40,
-  "max_fps_no_buffer": 40,
-  "test_duration_seconds": null,
-  "buffer_peak_frames": 0,
-  "drop_frames": 0,
-  "confidence": "empirical",
-  "notes": "4K desired-mode threshold for dynamic resolution."
-}
-```
+    ```json
+    {
+      "sensor": "imx585",
+      "sensor_aliases": ["imx585_mono"],
+      "storage_type": "cfe",
+      "filesystem": "ext4",
+      "media_model": "CFE Hat / NVMe",
+      "width": 3856,
+      "height": 2180,
+      "bit_depth": 12,
+      "sustainable_fps": 40,
+      "max_fps_no_buffer": 40,
+      "test_duration_seconds": null,
+      "buffer_peak_frames": 0,
+      "drop_frames": 0,
+      "confidence": "empirical",
+      "notes": "4K desired-mode threshold for dynamic resolution."
+    }
+    ```
 
-`sustainable_fps` is the preferred field for new rows and means recording without dropped frames. `max_fps_no_buffer` is still accepted for older rows and for rows where you have verified no buffer growth as well.
+    `sustainable_fps` is the preferred field for new rows and means recording without dropped frames. `max_fps_no_buffer` is still accepted for older rows and for rows where you have verified no buffer growth as well.
 
-Dynamic-resolution limits are determined by the selected stock JSON profile only. To change the lookup table, update `resources/dynamic_resolution_profiles.json`.
+    Dynamic-resolution limits are determined by the selected stock JSON profile only. To change the lookup table, update `resources/dynamic_resolution_profiles.json`.
 
 ## buttons
 

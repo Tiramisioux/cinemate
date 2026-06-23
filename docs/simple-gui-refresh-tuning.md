@@ -1,5 +1,8 @@
 # Simple GUI Refresh Tuning
 
+!!! note "Advanced / developer topic"
+    This page documents source-level tuning of the on-screen GUI refresh, done by editing Python constants in `src/module/simple_gui.py`. It is not needed for a normal camera build or normal use.
+
 This page explains the timing-related settings in `src/module/simple_gui.py` that control how responsive the HDMI Simple GUI feels and how much work it asks the Pi to do.
 
 The current redraw model is event-driven:
@@ -76,86 +79,28 @@ Practical examples:
 - `0.2`: current behavior
 - `0.3`: faster, more reactive falloff
 
-### `self.vu_smoothing_alpha = 0.4`
-
-This value is defined in `__init__()`, but the current `update_smoothed_vu_levels()` implementation does not use it.
-
-Right now:
-
-- changing `vu_smoothing_alpha` does not change GUI behavior
-- only `vu_decay_factor` affects the displayed smoothing/decay feel
-
-If the VU algorithm is expanded later, this would be the likely place to control how quickly rising levels are smoothed.
-
 ## Advanced timing knob
 
 ### `self._redraw_event.wait(timeout=0.1)`
 
-Inside `run()`, the GUI waits up to `0.1` seconds when there is no work queued.
+Inside `run()`, the GUI waits up to `0.1` seconds when no work is queued. Redis changes wake the loop immediately, so this is mostly a fallback sleep while idle.
 
-In normal use, Redis changes wake the loop immediately, so this timeout is mostly just a fallback sleep while idle.
+- Lower: slightly tighter idle polling
+- Higher: a little less background wake activity
 
-- Lowering it can make idle polling a little tighter
-- raising it can reduce tiny amounts of background wake activity
-
-This is usually not the first thing to tune. `target_fps` and `slow_refresh_interval` matter much more.
-
-## What to change for common goals
-
-### Make the GUI feel more live
-
-Try:
-
-```python
-self.target_fps = 15
-self.slow_refresh_interval = 1.0
-```
-
-Use this if framecount, buffer, and timecode updates still feel a little too stepped.
-
-### Reduce CPU and framebuffer pressure
-
-Try:
-
-```python
-self.target_fps = 8
-self.slow_refresh_interval = 1.5
-```
-
-Use this if the Pi is busy and the GUI does not need to feel as immediate.
-
-### Keep camera-state updates fast, but make system stats more live
-
-Try:
-
-```python
-self.target_fps = 12
-self.slow_refresh_interval = 0.5
-```
-
-Use this if you want CPU temp/load and recording-info updates more often without pushing the redraw cap much higher.
-
-## Suggested workflow when tuning
-
-1. Change `target_fps` first.
-2. Test for a few minutes while watching CPU load and overall UI smoothness.
-3. Adjust `slow_refresh_interval` only if the system-stat freshness is not where you want it.
-4. Adjust `vu_decay_factor` only if the audio meter feel needs changing.
+Tune `target_fps` and `slow_refresh_interval` first; they matter much more.
 
 ## Where to edit
 
-File:
+All of these live in `src/module/simple_gui.py`:
 
-- `src/module/simple_gui.py`
-
-Primary timing lines:
-
-- `self.target_fps = 12`
-- `self.min_frame_interval = 1 / self.target_fps`
+- `self.target_fps = 12` (in `__init__()`)
+- `self.min_frame_interval = 1 / self.target_fps` (derived; change `target_fps` instead)
 - `self.slow_refresh_interval = 1.0`
-- `self.vu_smoothing_alpha = 0.4`
-- `self.vu_decay_factor = 0.2` inside `run()`
+- `self.vu_decay_factor = 0.2` (set in `run()`)
+- `self._redraw_event.wait(timeout=0.1)` (in `run()`)
 
-## Important note
+Workflow: change `target_fps` first and test for a few minutes while watching CPU load and smoothness. Tune `slow_refresh_interval` only if system-stat freshness is off, and `vu_decay_factor` only if the meter feel is off.
 
-The current GUI still redraws the whole PIL image and writes the whole framebuffer for each draw. Because of that, increasing `target_fps` always has a real cost. Small increases are usually fine, but very high values are likely to give diminishing returns on the Pi.
+!!! warning "Cost of high `target_fps`"
+    The GUI still redraws the whole PIL image and writes the whole framebuffer on every draw, so each FPS increase has a real cost. Small increases are usually fine; very high values give diminishing returns on the Pi.

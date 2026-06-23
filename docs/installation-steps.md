@@ -442,97 +442,11 @@ sudo hostnamectl set-hostname cinepi
 sudo nano /boot/firmware/config.txt
 ```
 
-Replace the file contents with this managed-format block, and uncomment the sensor you are using.
+Replace the file contents with the single managed-format Cinemate block documented on **[Modifying config.txt](config-txt.md)** — that page is the canonical copy of the block. Uncomment the section for the sensor you are using (comment out the others) and set the physical camera port (`cam0` by default) to the connector your sensor is on. A clean install uses the IMX477 section on `cam0`.
 
-Also specify which physical camera port you have connected your sensor to. A clean install should use the IMX477 section on `cam0`; a StarlightEye color setup should use the IMX585 section on the camera port where the sensor is connected.
+The one-click installer writes this same managed block automatically and backs up the previous file under `/home/pi/.cinemate-install-backups/`.
 
-The one-click installer writes the same fully managed Cinemate `config.txt` block and backs up the previous file under `/home/pi/.cinemate-install-backups/`.
-
-```bash
-# >>> cinemate-install >>>
-# Managed by cinemate-install.sh
-# For more options and information see
-# http://rptl.io/configtxt
-# Some settings may impact device functionality. See link above for details
-
-# Uncomment some or all of these to enable the optional hardware interfaces
-dtparam=i2c_arm=on
-#dtparam=i2s=on
-#dtparam=spi=on
-
-# Enable audio (loads snd_bcm2835)
-dtparam=audio=on
-
-# ---- Camera section ----
-
-# Raspberry Pi HQ camera (IMX477, clean-install default on cam0)
-camera_auto_detect=1
-dtoverlay=imx477,cam0
-
-# Raspberry Pi GS camera (IMX296, 10-bit RAW)
-#camera_auto_detect=1
-#dtoverlay=imx296,cam0
-
-# OneInchEye (IMX283)
-#camera_auto_detect=0
-#dtoverlay=imx283,cam0
-
-# StarlightEye color (IMX585)
-#camera_auto_detect=0
-#dtoverlay=imx585,cam0
-
-# StarlightEye Mono (IMX585 mono)
-#camera_auto_detect=0
-#dtoverlay=imx585,cam1,mono
-
-# ---- End camera section ----
-
-# Automatically load overlays for detected DSI displays
-display_auto_detect=1
-
-# Automatically load initramfs files, if found
-auto_initramfs=1
-
-# Enable DRM VC4 V3D driver
-dtoverlay=vc4-kms-v3d
-max_framebuffers=2
-
-# Don't have the firmware create an initial video= setting in cmdline.txt.
-# Use the kernel's default instead.
-disable_fw_kms_setup=1
-
-# Run in 64-bit mode
-arm_64bit=1
-
-# Disable compensation for displays with overscan
-disable_overscan=1
-
-# Run as fast as firmware / board allows
-arm_boost=1
-
-[cm4]
-# Enable host mode on the 2711 built-in XHCI USB controller.
-# This line should be removed if the legacy DWC2 controller is required
-# (e.g. for USB device mode) or if USB support is not required.
-otg_mode=1
-
-[cm5]
-dtoverlay=dwc2,dr_mode=host
-
-# CFE Hat PCIe 3.0
-dtparam=pciex1
-dtparam=pciex1_gen=3
-
-[all]
-auto_initramfs=1
-avoid_warnings=1
-disable_splash=1
-dtparam=i2c1=on
-dtoverlay=disable-bt
-# <<< cinemate-install <<<
-```
-
-Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.
+Exit with Ctrl+X, press "y", then Enter to save.
 
 ### Pin the HDMI boot mode for headless startup
 

@@ -18,8 +18,8 @@ In practice this means a RODE VideoMic NTG can use the 24-bit alias, while simpl
 
 If `arecord` is missing or no recording device can be probed successfully, Cinemate disables audio capture for that run.
 
-!!! info "asound.conf and drift correction"
-    The 24-bit `dsnoop` path needs a one-time `/etc/asound.conf` setup, and some USB mics drift over long takes. See [Audio sync & drift](audio-sync.md) for the asound.conf blob and ADC clock-correction setup.
+!!! info "asound.conf and timecode offset"
+    The 24-bit `dsnoop` path needs a one-time `/etc/asound.conf` setup. See [Audio sync & drift](audio-sync.md) for the asound.conf blob and the fixed timecode offset.
 
 ## `settings.json` audio section
 
@@ -53,4 +53,3 @@ When a compatible microphone is connected, the Simple GUI shows:
 - the detected sample rate in kHz
 - the detected bit depth
 - a `WAV` badge once the latest take contains both DNG frames and a WAV sidecar
-- the `WAV` badge dims to **light grey** while the previous take's WAV is being resampled for ADC clock correction; it returns to normal grey once the correction is complete

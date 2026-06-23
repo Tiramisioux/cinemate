@@ -168,7 +168,7 @@ Adjusts zoom levels for the HDMI/browser preview.
 
 ## audio
 
-Audio capture options shared by idle monitoring, recorded WAV input level, and ADC clock correction.
+Audio capture options shared by idle monitoring and recorded WAV input level.
 
 ```json
 "audio": {
@@ -179,10 +179,6 @@ Audio capture options shared by idle monitoring, recorded WAV input level, and A
   "16bit": {
     "capture_gain_db": 6.0,
     "timecode_offset_frames": -3
-  },
-  "clock_correction": {
-    "enabled": false,
-    "database": "resources/audio_clock_correction.json"
   }
 }
 ```

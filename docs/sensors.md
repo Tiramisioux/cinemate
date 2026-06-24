@@ -1,5 +1,7 @@
 ## Compatible sensors 
 
+Higher frame rates need faster storage. If you see a purple/magenta `DROP` indicator while recording, lower the FPS or switch to faster media.
+
 ### IMX477 (Raspberry Pi HQ Camera)
 
 | Mode | Resolution       | Aspect Ratio | Bit Depth | Max FPS | Sustainable FPS* | DNG Frame File Size (MB) |
@@ -56,26 +58,30 @@ You can limit which modes appear inside CineMate by editing the `resolutions` se
 
 ## Sustainable frame rates
 
-These rows are measured sustainable limits: continuous recording without dropped frames. Performance depends on the sensor, storage device, and filesystem. Cinemate loads the stock dynamic-resolution rows from `resources/dynamic_resolution_profiles.json`, and the sensor compatibility metadata lives in `resources/sensors.json`.
+These rows are measured sustainable limits: continuous recording without dropped frames. Performance depends on the sensor, storage device, and filesystem.
 
-| Sensor | Resolution | Bit Depth | Storage | Filesystem | Sustainable FPS |
-|--------|------------|-----------|---------|------------|-----------------|
-| IMX477 | 2028 x 1080 | 12 bit | SSD (Samsung T7) | ext4 | 34 |
-| IMX477 | 2028 x 1520 | 12 bit | SSD (Samsung T7) | ext4 | 24 |
-| IMX477 | 1332 x 990 | 12 bit | SSD (Samsung T7) | ext4 | 71 |
-| IMX477 | 2028 x 1080 | 12 bit | CFE Hat / NVMe | ext4 | 50 |
-| IMX477 | 2028 x 1520 | 12 bit | CFE Hat / NVMe | ext4 | 40 |
-| IMX477 | 1332 x 990 | 12 bit | CFE Hat / NVMe | ext4 | 119 |
-| IMX585 | 1928 x 1090 | 12 bit | CFE Hat / NVMe | exFAT | 50 |
-| IMX585 | 1928 x 1090 | 12 bit | CFE Hat / NVMe | ext4 | 50 |
-| IMX585 | 3856 x 2180 | 12 bit | CFE Hat / NVMe | exFAT | 38 |
-| IMX585 | 3856 x 2180 | 12 bit | CFE Hat / NVMe | ext4 | 40 |
-| IMX585 | 1928 x 1090 | 12 bit | SSD | exFAT | 50 |
-| IMX585 | 1928 x 1090 | 12 bit | SSD | ext4 | 50 |
-| IMX585 | 3856 x 2180 | 12 bit | SSD | exFAT | 25 |
-| IMX585 | 3856 x 2180 | 12 bit | SSD | ext4 | 25 |
+??? note "Storage benchmark matrix"
 
-Missing rows are intentionally inert in dynamic resolution mode: if the detected sensor, storage type, filesystem, desired resolution, or requested FPS is not represented by measured data, Cinemate leaves the current resolution unchanged.
+    Cinemate loads the stock dynamic-resolution rows from `resources/dynamic_resolution_profiles.json`, and the sensor compatibility metadata lives in `resources/sensors.json`.
+
+    | Sensor | Resolution | Bit Depth | Storage | Filesystem | Sustainable FPS |
+    |--------|------------|-----------|---------|------------|-----------------|
+    | IMX477 | 2028 x 1080 | 12 bit | SSD (Samsung T7) | ext4 | 34 |
+    | IMX477 | 2028 x 1520 | 12 bit | SSD (Samsung T7) | ext4 | 24 |
+    | IMX477 | 1332 x 990 | 12 bit | SSD (Samsung T7) | ext4 | 71 |
+    | IMX477 | 2028 x 1080 | 12 bit | CFE Hat / NVMe | ext4 | 50 |
+    | IMX477 | 2028 x 1520 | 12 bit | CFE Hat / NVMe | ext4 | 40 |
+    | IMX477 | 1332 x 990 | 12 bit | CFE Hat / NVMe | ext4 | 119 |
+    | IMX585 | 1928 x 1090 | 12 bit | CFE Hat / NVMe | exFAT | 50 |
+    | IMX585 | 1928 x 1090 | 12 bit | CFE Hat / NVMe | ext4 | 50 |
+    | IMX585 | 3856 x 2180 | 12 bit | CFE Hat / NVMe | exFAT | 38 |
+    | IMX585 | 3856 x 2180 | 12 bit | CFE Hat / NVMe | ext4 | 40 |
+    | IMX585 | 1928 x 1090 | 12 bit | SSD | exFAT | 50 |
+    | IMX585 | 1928 x 1090 | 12 bit | SSD | ext4 | 50 |
+    | IMX585 | 3856 x 2180 | 12 bit | SSD | exFAT | 25 |
+    | IMX585 | 3856 x 2180 | 12 bit | SSD | ext4 | 25 |
+
+    Missing rows are intentionally inert in dynamic resolution mode: if the detected sensor, storage type, filesystem, desired resolution, or requested FPS is not represented by measured data, Cinemate leaves the current resolution unchanged.
 
 ### Dynamic resolution
 
@@ -89,34 +95,32 @@ Storage pre-roll is intentionally different: it uses the live sensor maximum for
 
 The active resolution numbers turn green in the simple GUI only while dynamic resolution is actively using a measured substitute mode for the current FPS instead of the user's desired mode. They stay white when the active mode is the user's desired resolution.
 
-### Measuring your own rows
+??? note "Advanced: measuring your own sensor rows"
 
-1. Format the RAW media with the filesystem you want to test, for example `ext4` or `exfat`, and mount it as the normal RAW drive.
-2. Select one sensor mode and one FPS value.
-3. Record a long enough take to expose sustained write behavior, not just startup behavior.
-4. Watch the HDMI/browser GUI and logs. A purple `DROP` alert means the FPS is above the sustainable limit for that setup.
-5. Repeat until you find the highest FPS that records continuously with no dropped frames. If the buffer fills temporarily but catches up, note that in the row.
-6. Add or update one row in `resources/dynamic_resolution_profiles.json` with the sensor, storage type, filesystem, resolution, bit depth, and sustainable FPS.
+    1. Format the RAW media with the filesystem you want to test, for example `ext4` or `exfat`, and mount it as the normal RAW drive.
+    2. Select one sensor mode and one FPS value.
+    3. Record a long enough take to expose sustained write behavior, not just startup behavior.
+    4. Watch the HDMI/browser GUI and logs. A purple `DROP` alert means the FPS is above the sustainable limit for that setup.
+    5. Repeat until you find the highest FPS that records continuously with no dropped frames. If the buffer fills temporarily but catches up, note that in the row.
+    6. Add or update one row in `resources/dynamic_resolution_profiles.json` with the sensor, storage type, filesystem, resolution, bit depth, and sustainable FPS.
 
-Each row should include:
+    Each row should include:
 
-| Field | Meaning |
-|-------|---------|
-| `sensor` | Sensor id, for example `imx585`. |
-| `sensor_aliases` | Optional compatible sensor names, for example `["imx585_mono"]`. |
-| `storage_type` | Storage class detected by Cinemate, for example `ssd`, `cfe`, or `nvme`. |
-| `filesystem` | Filesystem of the mounted RAW media, for example `ext4` or `exfat`. |
-| `media_model` | Human-readable device name used for documentation. |
-| `width`, `height`, `bit_depth` | Measured recording mode. Nearby driver modes are matched using `match_tolerance_px`. |
-| `sustainable_fps` | Highest FPS that recorded without dropped frames. |
-| `max_fps_no_buffer` | Optional stricter value for rows where you have also verified no buffer growth. |
-| `test_duration_seconds` | Test duration, if recorded. |
-| `buffer_peak_frames`, `drop_frames` | Evidence from the test run. |
-| `confidence` | Suggested values are `empirical` or `documented`. |
-| `notes` | Short context for future users. |
+    | Field | Meaning |
+    |-------|---------|
+    | `sensor` | Sensor id, for example `imx585`. |
+    | `sensor_aliases` | Optional compatible sensor names, for example `["imx585_mono"]`. |
+    | `storage_type` | Storage class detected by Cinemate, for example `ssd`, `cfe`, or `nvme`. |
+    | `filesystem` | Filesystem of the mounted RAW media, for example `ext4` or `exfat`. |
+    | `media_model` | Human-readable device name used for documentation. |
+    | `width`, `height`, `bit_depth` | Measured recording mode. Nearby driver modes are matched using `match_tolerance_px`. |
+    | `sustainable_fps` | Highest FPS that recorded without dropped frames. |
+    | `max_fps_no_buffer` | Optional stricter value for rows where you have also verified no buffer growth. |
+    | `test_duration_seconds` | Test duration, if recorded. |
+    | `buffer_peak_frames`, `drop_frames` | Evidence from the test run. |
+    | `confidence` | Suggested values are `empirical` or `documented`. |
+    | `notes` | Short context for future users. |
 
-Dynamic resolution uses the stock JSON profile only. Cinemate does not update this table during recording, so empirical values should be added intentionally after you have tested the sensor and storage setup.
-
-!!! note ""
+    Dynamic resolution uses the stock JSON profile only. Cinemate does not update this table during recording, so empirical values should be added intentionally after you have tested the sensor and storage setup.
 
     Occasional write-speed dips are most common on SSDs. Use conservative values in the lookup table; dynamic resolution is meant to prevent buffering, not to chase best-case burst performance.

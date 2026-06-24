@@ -1,9 +1,11 @@
 # Settings file
 
+This file controls how the camera behaves and how your buttons, switches and displays are mapped. It lives in `~/cinemate/src/settings.json`. You can edit it with any text editor; the settings take effect the next time you start Cinemate.
+
 !!! note
     The prebuilt image works out of the box. You do **not** need to edit `settings.json` to start shooting. This page is a reference for when you want to customise hardware controls and behaviour.
 
-This file controls how the camera behaves and how your buttons, switches and displays are mapped. It lives in `~/cinemate/src/settings.json`. You can edit it with any text editor; the settings take effect the next time you start Cinemate.
+The image ships with a stock `settings.json` that already holds working defaults for every section below — button and switch mappings, preview, and audio (for example, a 2-frame audio timecode offset on both microphone paths). Edit it only to change a mapping or tune behaviour.
 
 !!! tip ""
     For easy editing of settings on the preinstalled image file, type `editsettings` anywhere in Raspberry Pi terminal.
@@ -168,17 +170,17 @@ Adjusts zoom levels for the HDMI/browser preview.
 
 ## audio
 
-Audio capture options shared by idle monitoring and recorded WAV input level.
+Audio capture options shared by idle monitoring and recorded WAV input level. The stock file applies a 2-frame timecode offset on both paths.
 
 ```json
 "audio": {
   "24bit": {
     "capture_gain_db": 0.0,
-    "timecode_offset_frames": 1
+    "timecode_offset_frames": 2
   },
   "16bit": {
     "capture_gain_db": 6.0,
-    "timecode_offset_frames": -3
+    "timecode_offset_frames": 2
   }
 }
 ```

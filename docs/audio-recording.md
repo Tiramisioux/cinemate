@@ -43,8 +43,6 @@ If `arecord` is missing or no recording device can be probed successfully, Cinem
 
 `timecode_offset_frames` shifts the embedded timecode to fix a constant audio/video offset — see [Audio sync & drift](audio-sync.md).
 
-Pi-local `settings.json` files that still use the old flat keys (`capture_gain_db`, `timecode_offset_frames`, `plain_arecord_timecode_offset_frames`) are migrated automatically on first load.
-
 ## GUI indicators
 
 When a compatible microphone is connected, the Simple GUI shows:

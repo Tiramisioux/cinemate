@@ -124,13 +124,9 @@ sudo apt-get install python3-jinja2 python3-ply python3-yaml ffmpeg
 sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev ffmpeg && sudo apt-get install libjsoncpp-dev && cd ~ && git clone https://github.com/sewenew/redis-plus-plus.git && cd redis-plus-plus && mkdir build && cd build && cmake .. && make && sudo make install && cd ~
 ```
 
-### libcamera (Will Whang fork `9d0cdfe5` + one patch) <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
+### libcamera (Will Whang fork `9d0cdfe5`) <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
-The base is `9d0cdfe5` from Will Whang's fork. One patch is cherry-picked on top — only one file changes:
-
-| Patch | File changed | Effect |
-|-------|-------------|--------|
-| `97f71626` | `cam_helper_imx585.cpp` | IMX585: exact pinned frame rate via VMAX/HMAX lattice search — eliminates ~440 ppm quantisation drift at standard fps |
+The base is `9d0cdfe5` from Will Whang's fork, built as-is with no extra patches.
 
 **On the Pi, to update an existing install:**
 
@@ -147,8 +143,7 @@ cd ~/libcamera && \
 git config core.fileMode false && \
 git fetch origin && \
 git stash || true && \
-git checkout -B cinemate-patches 9d0cdfe5 && \
-git cherry-pick 97f71626 && \
+git checkout 9d0cdfe5 && \
 find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
 chmod +x ~/libcamera/src/ipa/ipa-sign.sh && \
 meson setup build --wipe --buildtype=release \
@@ -168,7 +163,7 @@ sudo ldconfig && \
 sudo systemctl restart cinepi-raw
 ```
 
-`git checkout -B cinemate-patches 9d0cdfe5` creates or resets a local branch to the exact base ref so this command is safe to re-run. `git config core.fileMode false` silences executable-bit changes left behind by the build. `git stash` clears any remaining content changes so the checkout cannot be blocked.
+`git checkout 9d0cdfe5` checks out the exact base ref so this command is safe to re-run. `git config core.fileMode false` silences executable-bit changes left behind by the build. `git stash` clears any remaining content changes so the checkout cannot be blocked.
 
 **Fresh install:**
 
@@ -186,8 +181,7 @@ sudo apt-get install --reinstall libtiff5-dev && sudo ln -sf $(find /usr/lib -na
 git clone https://github.com/will127534/libcamera.git && \
 cd libcamera && \
 git config core.fileMode false && \
-git checkout -B cinemate-patches 9d0cdfe5 && \
-git cherry-pick 97f71626 && \
+git checkout 9d0cdfe5 && \
 find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
 chmod +x ~/libcamera/src/ipa/ipa-sign.sh && \
 meson setup build --wipe --buildtype=release \
@@ -214,8 +208,7 @@ find ~/libcamera/src/ipa/rpi/cam_helper -name '*imx585*'
 Expected output:
 
 ```text
-<hash> libcamera: imx585 exact frame-rate getBlanking
-<hash> <base commit message from 9d0cdfe5>
+<hash> <HEAD commit message from 9d0cdfe5>
 /home/pi/libcamera/src/ipa/rpi/cam_helper/cam_helper_imx585.cpp
 ```
 

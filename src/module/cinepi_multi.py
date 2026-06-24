@@ -15,6 +15,7 @@ import shutil
 from module.config_loader import load_settings
 from module.redis_controller import ParameterKey
 from module.framebuffer import Framebuffer
+from module.sensor_detect import is_pi4_family
 from module.storage_profiles import (
     DEFAULT_RECORDER_PROFILE,
     recorder_profile_args,
@@ -35,25 +36,13 @@ def _settings() -> dict:
 
 _READY_RX   = re.compile(r"Encoder configured")      # line printed by DngEncoder
 _READY_WAIT = 2.0                                   # seconds to wait for all cams
-_PI4_MODEL_MARKERS = (
-    "Raspberry Pi 4",
-    "Raspberry Pi 400",
-    "Compute Module 4",
-)
-_PI4_PACKED_MODE_SENSORS = {"imx296", "imx296_mono", "imx477"}
-
-
-def _read_pi_model() -> str:
-    try:
-        with open("/proc/device-tree/model", "r") as f:
-            return f.read()
-    except FileNotFoundError:
-        return ""
-
-
+# Pi-4-family (VC4/Unicam) detection lives in sensor_detect as the single
+# canonical implementation; alias it here so existing call sites keep working.
+# Per-sensor packed-vs-unpacked is data-driven from sensors.json
+# (packing_by_platform) via SensorDetect.get_packing_for_platform — there is no
+# longer a hardcoded packed-mode sensor set.
 def _is_pi4_family() -> bool:
-    model = _read_pi_model()
-    return any(marker in model for marker in _PI4_MODEL_MARKERS)
+    return is_pi4_family()
 
 
 def _rt_permitted():
@@ -332,16 +321,19 @@ class CinePiProcess(Thread):
         width = res.get('width', 1920)
         height = res.get('height', 1080)
         bit_depth = res.get('bit_depth', 12)
-        packing = res.get('packing', 'U')
+        # Packed (P) vs unpacked (U) is data-driven from sensors.json
+        # (packing_by_platform) and depends on the Pi model: VC4/Unicam (Pi 4
+        # family) prefers packed CSI2 to save DMA/CMA; Pi 5 / PiSP keeps the
+        # sensor default (usually unpacked).
+        packing = self.sensor_detect.get_packing_for_platform(
+            model_key, sensor_mode, self._is_pi4()
+        )
+        logging.info(
+            "[%s] %dx%d %dbit packing=%s (platform=%s, sensor=%s)",
+            self.cam.port, width, height, bit_depth, packing,
+            'pi4' if self._is_pi4() else 'pi5', model_key,
+        )
 
-        if self._is_pi4() and model_key in _PI4_PACKED_MODE_SENSORS:
-            logging.info(
-                "[%s] Pi 4-family raw path detected for %s; using packed mode",
-                self.cam.port,
-                model_key,
-            )
-            packing = 'P'
-        
         # lores & preview
         aspect = width / height
         anam = float(self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value) or 1.0)
@@ -640,18 +632,20 @@ class CinePiManager:
         self.redis_controller.set_value(ParameterKey.SENSOR.value, pk)
 
         res = self.sensor_detect.get_resolution_info(pk, sensor_mode)
+        # Platform-aware packing (matches what CinePiProcess._build_args launches)
+        packing = self.sensor_detect.get_packing_for_platform(pk, sensor_mode)
         for k in (
             ParameterKey.WIDTH.value,
             ParameterKey.HEIGHT.value,
             ParameterKey.BIT_DEPTH.value,
-            ParameterKey.PACKING.value,
             ParameterKey.FPS_MAX.value,
             ParameterKey.GUI_LAYOUT.value,
         ):
             self.redis_controller.set_value(k, res.get(k))
+        self.redis_controller.set_value(ParameterKey.PACKING.value, packing)
         self.redis_controller.set_value(
             ParameterKey.MODE.value,
-            f"{res.get('width')}:{res.get('height')}:{res.get('bit_depth')}:{res.get('packing', 'U')}",
+            f"{res.get('width')}:{res.get('height')}:{res.get('bit_depth')}:{packing}",
         )
 
         # ── 3. launch all cinepi-raw instances ───────────────────────────

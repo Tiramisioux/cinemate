@@ -1096,11 +1096,13 @@ class CinePiController:
     def _is_recording(self) -> bool:
         return str(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)) == "1"
 
-    def _mode_string(self, info: dict) -> str:
+    def _mode_string(self, info: dict, packing: str | None = None) -> str:
         width = int(info.get("width") or 0)
         height = int(info.get("height") or 0)
         bit_depth = int(info.get("bit_depth") or 12)
-        packing = str(info.get("packing") or "U").upper()[0]
+        # Prefer an explicit platform-aware packing token; fall back to the
+        # mode's default only when none is supplied.
+        packing = str(packing or info.get("packing") or "U").upper()[0]
         return f"{width}:{height}:{bit_depth}:{packing}"
 
     def _select_resolution_mode_for_fps(self, target_fps: float):
@@ -1188,7 +1190,9 @@ class CinePiController:
         height_new = resolution_info.get('height', None)
         width_new = resolution_info.get('width', None)
         bit_depth_new = resolution_info.get('bit_depth', None)
-        packing_new = resolution_info.get('packing', 'U')
+        # Platform-aware packing (data-driven from sensors.json) so the GUI/HUD
+        # report the same P/U token that cinepi-raw is actually launched with.
+        packing_new = self.sensor_detect.get_packing_for_platform(self.current_sensor, int(value))
         gui_layout_new = resolution_info.get('gui_layout', None)
         file_size_new = resolution_info.get('file_size', None)
 
@@ -1213,7 +1217,7 @@ class CinePiController:
             ParameterKey.LORES_HEIGHT.value,
             str(self.sensor_detect.get_lores_height(self.current_sensor, self.sensor_mode)),
         )
-        self.redis_controller.set_value(ParameterKey.MODE.value, self._mode_string(resolution_info))
+        self.redis_controller.set_value(ParameterKey.MODE.value, self._mode_string(resolution_info, packing_new))
         self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)
         self.fps_max = self._refresh_fps_max()
         self.dynamic_resolution_active = (

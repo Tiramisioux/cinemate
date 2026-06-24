@@ -6,6 +6,7 @@
       "display_name": "IMX477",
       "common_name": "Raspberry Pi HQ Camera",
       "packing": "U",
+      "packing_by_platform": { "pi4": "P" },
       "aliases": [],
       "modes": [
         {
@@ -44,6 +45,7 @@
       "display_name": "IMX296",
       "common_name": "Raspberry Pi Global Shutter Camera",
       "packing": "U",
+      "packing_by_platform": { "pi4": "P" },
       "aliases": ["imx296_mono"],
       "modes": [
         {

@@ -61,6 +61,9 @@ class FakeSensorDetect:
             },
         }
 
+    def get_packing_for_platform(self, _sensor, mode, is_pi4=None):
+        return self.res_modes[int(mode)].get("packing", "U")
+
     def get_lores_width(self, _sensor, mode):
         return 960 if int(mode) == 1 else 640
 

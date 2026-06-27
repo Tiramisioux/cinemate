@@ -76,5 +76,64 @@ class SensorDatabaseTests(unittest.TestCase):
         )
 
 
+    IMX477_LISTCAMERAS = """0 : imx477 [4056x3040 12-bit RGGB] (/base/soc/i2c0mux/i2c@1/imx477@1a)
+    Modes: 'SRGGB10_CSI2P' : 1332x990 [120.50 fps - (696, 528)/2664x1980 crop]
+                             2028x1080 [74.74 fps - (0, 440)/4056x2160 crop]
+                             2028x1520 [53.77 fps - (0, 0)/4056x3040 crop]
+                             4056x2160 [19.58 fps - (0, 440)/4056x2160 crop]
+                             4056x3040 [14.00 fps - (0, 0)/4056x3040 crop]
+           'SRGGB12_CSI2P' : 1332x990 [101.68 fps - (696, 528)/2664x1980 crop]
+                             2028x1080 [62.81 fps - (0, 440)/4056x2160 crop]
+                             2028x1520 [45.19 fps - (0, 0)/4056x3040 crop]
+                             4056x2160 [16.39 fps - (0, 440)/4056x2160 crop]
+                             4056x3040 [11.72 fps - (0, 0)/4056x3040 crop]
+           'SRGGB8' : 1332x990 [147.91 fps - (696, 528)/2664x1980 crop]
+                      2028x1080 [92.27 fps - (0, 440)/4056x2160 crop]
+                      2028x1520 [66.38 fps - (0, 0)/4056x3040 crop]
+                      4056x2160 [24.32 fps - (0, 440)/4056x2160 crop]
+                      4056x3040 [17.39 fps - (0, 0)/4056x3040 crop]
+"""
+
+    IMX585_LISTCAMERAS = """0 : imx585 [3840x2160 12-bit RGGB] (/base/axi/pcie@1000120000/rp1/i2c@70000/imx585@1a)
+    Modes: 'SRGGB12_CSI2P' : 1928x1090 [50.00 fps - (0, 0)/3840x2160 crop]
+                             3856x2180 [43.80 fps - (0, 0)/3840x2160 crop]
+"""
+
+    def _detector_for_parse(self):
+        import json
+        detector = self._detector_without_probe()
+        settings = json.loads((ROOT / "src" / "settings.json").read_text())
+        rc = settings.get("resolutions", {})
+        detector.settings = settings
+        detector.k_steps = rc.get("k_steps", [])
+        detector.bit_depths = rc.get("bit_depths", [])
+        detector.custom_modes = rc.get("custom_modes", {})
+        detector.sensor_resolutions = {}
+        return detector
+
+    def test_imx585_mode_table_is_stable(self):
+        """Regression guard: imx585's driver reports a single bit depth, so its
+        parsed table must stay at exactly two 12-bit modes — unaffected by any
+        handling added for multi-bit-depth sensors like imx477."""
+        d = self._detector_for_parse()
+        parsed = d._parse_cinepi_output(self.IMX585_LISTCAMERAS)["imx585"]
+        table = {(m["width"], m["height"], m["bit_depth"]) for m in parsed.values()}
+        self.assertEqual(len(parsed), 2)
+        self.assertEqual(table, {(3856, 2180, 12), (1928, 1090, 12)})
+
+    def test_imx477_multi_bitdepth_modes_are_parsed(self):
+        """imx477 reports SRGGB8/10/12; the bit_depths=[10,12] filter keeps both
+        the 10- and 12-bit copies of all five resolutions (8-bit dropped), so a
+        resolution exists at two bit depths and the operator can reach either."""
+        d = self._detector_for_parse()
+        parsed = d._parse_cinepi_output(self.IMX477_LISTCAMERAS)["imx477"]
+        depths = sorted({m["bit_depth"] for m in parsed.values()})
+        self.assertEqual(depths, [10, 12])            # 8-bit filtered out
+        self.assertEqual(len(parsed), 10)             # 5 resolutions x 2 depths
+        twins = {m["bit_depth"] for m in parsed.values()
+                 if (m["width"], m["height"]) == (2028, 1080)}
+        self.assertEqual(twins, {10, 12})
+
+
 if __name__ == "__main__":
     unittest.main()

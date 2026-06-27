@@ -256,7 +256,7 @@ class SimpleGUI(threading.Thread):
             logging.error("Failed to load sensor values from Redis, using default values.")
             self.width = 1920
             self.height = 1080
-        self.bit_depth = 12
+            self.bit_depth = 12
 
     # Method to set the current background color
     def set_background_color(self, color):

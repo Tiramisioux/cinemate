@@ -718,7 +718,12 @@ class CinePiController:
             safe_value = snapped_user_fps
 
         self.user_fps = safe_user_fps
-        if update_user_target:
+        # Always reconcile the operator-facing fps_user when the request had to be
+        # clamped DOWN (e.g. restoring 25 fps into a 4k mode whose fps_max is 16).
+        # Without this the GUI keeps showing the stale higher number even though
+        # the actual recording fps was correctly clamped. The upward "remember the
+        # user's target" intent is preserved: we only force-write on a downward clamp.
+        if update_user_target or safe_user_fps < requested_user_fps:
             self.redis_controller.set_value(ParameterKey.FPS_USER.value, self.user_fps)
 
         self.current_fps = safe_value

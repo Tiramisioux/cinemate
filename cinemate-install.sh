@@ -67,10 +67,12 @@ CINEMATE_REPO_URL="${CINEMATE_REPO_URL:-https://github.com/Tiramisioux/cinemate.
 CINEMATE_REPO_REF="${CINEMATE_REPO_REF:-}"
 CINEPI_RAW_REPO_URL="${CINEPI_RAW_REPO_URL:-https://github.com/Tiramisioux/cinepi-raw.git}"
 CINEPI_RAW_REPO_REF="${CINEPI_RAW_REPO_REF:-}"
-LIBCAMERA_REPO_URL="${LIBCAMERA_REPO_URL:-https://github.com/will127534/libcamera.git}"
+LIBCAMERA_REPO_URL="${LIBCAMERA_REPO_URL:-https://github.com/Tiramisioux/libcamera.git}"
 LIBCAMERA_REPO_REF="${LIBCAMERA_REPO_REF:-9d0cdfe5}"
 # Patches cherry-picked on top of LIBCAMERA_REPO_REF (space-separated commit hashes, applied in order)
-# Default: none — build Will Whang's fork as-is.
+# Default: none — build the pinned libcamera as-is. 9d0cdfe5 is Will Whang's
+# IMX585 fork, mirrored to Tiramisioux/libcamera (cinemate branch) so the build
+# does not depend on the upstream commit staying available.
 LIBCAMERA_PATCHES="${LIBCAMERA_PATCHES:-}"
 CPP_MJPEG_STREAMER_REPO_URL="${CPP_MJPEG_STREAMER_REPO_URL:-https://github.com/nadjieb/cpp-mjpeg-streamer.git}"
 CPP_MJPEG_STREAMER_REPO_REF="${CPP_MJPEG_STREAMER_REPO_REF:-}"

@@ -124,9 +124,9 @@ sudo apt-get install python3-jinja2 python3-ply python3-yaml ffmpeg
 sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev ffmpeg && sudo apt-get install libjsoncpp-dev && cd ~ && git clone https://github.com/sewenew/redis-plus-plus.git && cd redis-plus-plus && mkdir build && cd build && cmake .. && make && sudo make install && cd ~
 ```
 
-### libcamera (Will Whang fork `9d0cdfe5`) <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
+### libcamera (Tiramisioux/libcamera `cinemate` — Will Whang's IMX585 fork @ `9d0cdfe5`) <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
-The base is `9d0cdfe5` from Will Whang's fork, built as-is with no extra patches.
+The base is Will Whang's IMX585 fork at `9d0cdfe5`, mirrored to [Tiramisioux/libcamera](https://github.com/Tiramisioux/libcamera) (`cinemate` branch) so the build no longer depends on the upstream commit staying available. Built as-is with no extra patches.
 
 **On the Pi, to update an existing install:**
 
@@ -141,6 +141,7 @@ Then update and rebuild:
 ```shell
 cd ~/libcamera && \
 git config core.fileMode false && \
+git remote set-url origin https://github.com/Tiramisioux/libcamera.git && \
 git fetch origin && \
 git stash || true && \
 git checkout 9d0cdfe5 && \
@@ -178,7 +179,7 @@ sudo apt-get install --reinstall libtiff5-dev && sudo ln -sf $(find /usr/lib -na
 ```
 
 ```shell
-git clone https://github.com/will127534/libcamera.git && \
+git clone https://github.com/Tiramisioux/libcamera.git && \
 cd libcamera && \
 git config core.fileMode false && \
 git checkout 9d0cdfe5 && \

@@ -1370,6 +1370,42 @@ class CinePiController:
             logging.error(f"Error setting resolution: {error}")
             return False
 
+    @staticmethod
+    def _aspect_ratio(width, height):
+        try:
+            w = float(width)
+            h = float(height)
+        except (TypeError, ValueError):
+            return None
+        return (w / h) if h > 0 else None
+
+    def _resolution_change_needs_restart(self, target_mode):
+        """Whether switching to *target_mode* must relaunch cinepi-raw.
+
+        cinepi-raw bakes the preview window (-p) and lores geometry into its
+        launch args from the mode's aspect ratio, so a live "record-through"
+        reconfigure keeps the OLD geometry — it only stays correct when the
+        aspect ratio is unchanged. When the aspect ratio changes we must restart
+        cinepi-raw to rebuild the preview (otherwise it stays letterboxed/
+        undersized until the next restart). Recording is deliberately left
+        seamless: a same-aspect change is the only kind wanted mid-take, so we
+        never split a running take just to fix the preview shape.
+        """
+        if self._is_recording():
+            return False
+        try:
+            target_info = self.sensor_detect.res_modes.get(int(target_mode), {})
+        except (TypeError, ValueError):
+            return False
+        new_ar = self._aspect_ratio(target_info.get("width"), target_info.get("height"))
+        cur_ar = self._aspect_ratio(
+            self.redis_controller.get_value(ParameterKey.WIDTH.value),
+            self.redis_controller.get_value(ParameterKey.HEIGHT.value),
+        )
+        if new_ar is None or cur_ar is None:
+            return False
+        return abs(new_ar - cur_ar) > 0.01
+
     def set_resolution(self, value=None, *, restart_process=False):
         if value is not None:
             value = self._normalize_sensor_mode_value(value)
@@ -1383,6 +1419,12 @@ class CinePiController:
                     )
                     if choice is not None:
                         value = choice.mode
+
+            # Relaunch cinepi-raw when the aspect ratio changes so the preview
+            # window is rebuilt for the new shape; same-aspect changes stay
+            # seamless (record-through). See _resolution_change_needs_restart.
+            if not restart_process and self._resolution_change_needs_restart(value):
+                restart_process = True
 
             restore_user_fps = self._current_user_fps_value()
             return self._apply_resolution_mode(

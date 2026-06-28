@@ -373,17 +373,17 @@ cd
 
 #### Install Cinemate IMX283 and IMX585 tuning overrides
 
-These commands overlay Cinemate's local IMX283, IMX585 and IMX585 mono tuning files into both the `libcamera` source tree and the installed IPA directories so the runtime stays aligned with Cinemate's defaults and both sensors stay ready for later swaps.
+These commands overlay Cinemate's local IMX283, IMX585 and IMX585 mono tuning files into the `libcamera` source tree and the installed IPA directories so the runtime stays aligned with Cinemate's defaults. All three override files are `pisp`-target (Pi 5 / PiSP ISP), so they are installed only into the `pisp` dirs — copying them into the `vc4` (Pi 4) dirs would apply the wrong hardware config and overwrite the stock `bcm2835`-target `imx283.json` that Pi 4 needs.
 
 ```bash
-for dir in /home/pi/libcamera/src/ipa/rpi/pisp/data /home/pi/libcamera/src/ipa/rpi/vc4/data; do
+for dir in /home/pi/libcamera/src/ipa/rpi/pisp/data; do
   install -d -m 755 "$dir"
   install -m 644 /home/pi/cinemate/resources/tuning_files/imx283.json "$dir/imx283.json"
   install -m 644 /home/pi/cinemate/resources/tuning_files/imx585.json "$dir/imx585.json"
   install -m 644 /home/pi/cinemate/resources/tuning_files/imx585_mono.json "$dir/imx585_mono.json"
 done
 
-for dir in /usr/local/share/libcamera/ipa/rpi/pisp /usr/local/share/libcamera/ipa/rpi/vc4; do
+for dir in /usr/local/share/libcamera/ipa/rpi/pisp; do
   sudo install -d -m 755 "$dir"
   sudo install -m 644 /home/pi/cinemate/resources/tuning_files/imx283.json "$dir/imx283.json"
   sudo install -m 644 /home/pi/cinemate/resources/tuning_files/imx585.json "$dir/imx585.json"

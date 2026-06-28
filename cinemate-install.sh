@@ -1199,34 +1199,28 @@ install_imx283_support() {
 install_sensor_tuning_overrides() {
     log "Installing Cinemate sensor tuning overrides"
     local local_tuning_dir="$CINEMATE_SOURCE_DIR/resources/tuning_files"
+    # All current Cinemate tuning overrides are pisp-target (Pi 5 / PiSP ISP),
+    # so they are installed ONLY into the pisp data dirs. libcamera matches a
+    # tuning file's "target" against the active pipeline; dropping a pisp tuning
+    # into the vc4 (Pi 4) data dir applies the wrong hardware config and also
+    # clobbers the stock bcm2835-target imx283.json that Pi 4 needs. (imx585 has
+    # no vc4 cam_helper either, so it never runs on Pi 4 regardless.) If a
+    # bcm2835-target override is added later, install it into the vc4 dirs here.
     local -a tuning_files=(
         imx283.json
         imx585.json
         imx585_mono.json
     )
-    local -a libcamera_tuning_dirs=(
-        "$LIBCAMERA_DIR/src/ipa/rpi/pisp/data"
-        "$LIBCAMERA_DIR/src/ipa/rpi/vc4/data"
-    )
-    local -a install_tuning_dirs=(
-        "/usr/local/share/libcamera/ipa/rpi/pisp"
-        "/usr/local/share/libcamera/ipa/rpi/vc4"
-    )
-    local tuning_dir=""
+    local source_pisp_dir="$LIBCAMERA_DIR/src/ipa/rpi/pisp/data"
+    local install_pisp_dir="/usr/local/share/libcamera/ipa/rpi/pisp"
     local tuning_file=""
 
     [[ -d "$local_tuning_dir" ]] || die "Missing tuning files in $local_tuning_dir"
-    for tuning_dir in "${libcamera_tuning_dirs[@]}"; do
-        run_as_pi install -d -m 755 "$tuning_dir"
-        for tuning_file in "${tuning_files[@]}"; do
-            run_as_pi install -m 644 "$local_tuning_dir/$tuning_file" "$tuning_dir/$tuning_file"
-        done
-    done
-    for tuning_dir in "${install_tuning_dirs[@]}"; do
-        sudo install -d -m 755 "$tuning_dir"
-        for tuning_file in "${tuning_files[@]}"; do
-            sudo install -m 644 "$local_tuning_dir/$tuning_file" "$tuning_dir/$tuning_file"
-        done
+    run_as_pi install -d -m 755 "$source_pisp_dir"
+    sudo install -d -m 755 "$install_pisp_dir"
+    for tuning_file in "${tuning_files[@]}"; do
+        run_as_pi install -m 644 "$local_tuning_dir/$tuning_file" "$source_pisp_dir/$tuning_file"
+        sudo install -m 644 "$local_tuning_dir/$tuning_file" "$install_pisp_dir/$tuning_file"
     done
 }
 

@@ -2,7 +2,7 @@
 
 For easy later rebuilding and installation of `cinepi-raw` you can create a reusable `compile-raw.sh` helper. It reuses the existing Meson build directory by default, falls back to `--wipe` only when the build directory is not reusable, and still lets you force a clean setup when you need one.
 
-The prebuilt Cinemate image can run on a Raspberry Pi with 2GB RAM, but compiling `cinepi-raw` on the Pi is more comfortable on a 4GB model.
+On boards with less than 4 GB RAM (1 GB / 2 GB models) the script automatically adds a temporary compressed-RAM (zram) swap for the build and removes it afterwards, so `cinepi_raw.cpp` doesn't run the compiler out of memory. It's still faster on a 4 GB+ model.
 
 ```shell
 cat > /home/pi/compile-raw.sh <<'EOF'
@@ -11,7 +11,7 @@ set -Eeuo pipefail
 
 CINEPI_RAW_DIR="${CINEPI_RAW_DIR:-/home/pi/cinepi-raw}"
 CPP_MJPEG_STREAMER_DIR="${CPP_MJPEG_STREAMER_DIR:-/home/pi/cpp-mjpeg-streamer}"
-BUILD_JOBS="${BUILD_JOBS:-$(nproc 2>/dev/null || printf '4')}"
+BUILD_JOBS="${BUILD_JOBS:-$(c=$(nproc 2>/dev/null || echo 4); mb=$(awk '/^MemTotal:/{print int($2/1024); exit}' /proc/meminfo 2>/dev/null || echo 0); j=$c; if [ "$mb" -gt 0 ] && [ "$mb" -lt 3000 ]; then j=$(( mb / 1536 )); if [ "$j" -lt 1 ]; then j=1; fi; if [ "$j" -gt "$c" ]; then j=$c; fi; fi; echo "$j")}"
 BUILD_DIR="${BUILD_DIR:-$CINEPI_RAW_DIR/build}"
 PKG_CONFIG_PATH="$CPP_MJPEG_STREAMER_DIR/build:${PKG_CONFIG_PATH:-}"
 export PKG_CONFIG_PATH
@@ -28,6 +28,32 @@ build_dir_has_entries() {
     [[ -d "$1" ]] || return 1
     find "$1" -mindepth 1 -maxdepth 1 -print -quit | grep -q .
 }
+
+# Temporary build swap for 1-2 GB boards: cinepi_raw.cpp needs ~2 GB at -O3 and
+# OOM-kills cc1plus. Use compressed RAM (zram) -- no SD/eMMC writes -- removed on
+# exit, so the running camera never swaps. Skipped when swap is already active
+# or on boards with 4 GB+ RAM (>= 3000 MB).
+CR_ZRAM_DEV=""
+cr_cleanup_zram() {
+    [[ -n "${CR_ZRAM_DEV:-}" ]] || return 0
+    sudo swapoff "$CR_ZRAM_DEV" 2>/dev/null || true
+    sudo zramctl --reset "$CR_ZRAM_DEV" 2>/dev/null || true
+    CR_ZRAM_DEV=""
+}
+trap cr_cleanup_zram EXIT
+cr_mem_mb=$(awk '/^MemTotal:/{print int($2/1024); exit}' /proc/meminfo 2>/dev/null || echo 0)
+cr_swap_lines=$(wc -l < /proc/swaps 2>/dev/null || echo 1)
+if [[ "$cr_mem_mb" -gt 0 && "$cr_mem_mb" -lt 3000 && "$cr_swap_lines" -le 1 ]]; then
+    sudo modprobe zram 2>/dev/null || true
+    CR_ZRAM_DEV=$(sudo zramctl --find --size 4G --algorithm zstd 2>/dev/null || sudo zramctl --find --size 4G 2>/dev/null || true)
+    if [[ -n "$CR_ZRAM_DEV" ]] && sudo mkswap "$CR_ZRAM_DEV" >/dev/null 2>&1 && sudo swapon -p 100 "$CR_ZRAM_DEV" 2>/dev/null; then
+        printf '[compile-raw] Low-RAM board (%s MB): added 4 GB zram build swap on %s (removed on exit)\n' "$cr_mem_mb" "$CR_ZRAM_DEV"
+    else
+        [[ -n "$CR_ZRAM_DEV" ]] && sudo zramctl --reset "$CR_ZRAM_DEV" 2>/dev/null || true
+        CR_ZRAM_DEV=""
+        printf '[compile-raw] WARNING: could not set up zram build swap; low-RAM build may OOM\n'
+    fi
+fi
 
 printf '[compile-raw] Source: %s\n' "$CINEPI_RAW_DIR"
 printf '[compile-raw] Build directory: %s\n' "$BUILD_DIR"

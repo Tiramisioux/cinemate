@@ -68,14 +68,13 @@ CINEMATE_REPO_REF="${CINEMATE_REPO_REF:-}"
 CINEPI_RAW_REPO_URL="${CINEPI_RAW_REPO_URL:-https://github.com/Tiramisioux/cinepi-raw.git}"
 CINEPI_RAW_REPO_REF="${CINEPI_RAW_REPO_REF:-}"
 LIBCAMERA_REPO_URL="${LIBCAMERA_REPO_URL:-https://github.com/Tiramisioux/libcamera.git}"
-LIBCAMERA_REPO_REF="${LIBCAMERA_REPO_REF:-ff24737b6}"
+LIBCAMERA_REPO_REF="${LIBCAMERA_REPO_REF:-cinemate}"
 # Patches cherry-picked on top of LIBCAMERA_REPO_REF (space-separated commit hashes, applied in order)
-# Default: none — build the pinned libcamera as-is. ff24737b6 is the cinemate
-# branch tip: Will Whang's IMX585 fork (9d0cdfe5), mirrored to
-# Tiramisioux/libcamera so the build does not depend on the upstream commit
-# staying available, plus gcc-12 build fixes (Pi 4 / Bookworm -Werror=restrict
-# in the apps). Verified to build clean on Pi 4 (251/251). Use REF=cinemate to
-# track the branch tip instead of pinning this commit.
+# Default: none — build as-is. Tracks the Tiramisioux/libcamera `cinemate`
+# branch tip: Will Whang's IMX585 fork (9d0cdfe5), mirrored here so the build
+# does not depend on the upstream commit staying available, plus gcc-12 build
+# fixes (Pi 4 / Bookworm -Werror=restrict in the apps; verified 251/251 on Pi 4).
+# Set REF to a commit SHA instead (e.g. ff24737b6) for a pinned, reproducible build.
 LIBCAMERA_PATCHES="${LIBCAMERA_PATCHES:-}"
 CPP_MJPEG_STREAMER_REPO_URL="${CPP_MJPEG_STREAMER_REPO_URL:-https://github.com/nadjieb/cpp-mjpeg-streamer.git}"
 CPP_MJPEG_STREAMER_REPO_REF="${CPP_MJPEG_STREAMER_REPO_REF:-}"

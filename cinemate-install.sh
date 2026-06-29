@@ -101,7 +101,10 @@ KERNEL_ROLLBACK_DIR="${KERNEL_ROLLBACK_DIR:-/var/tmp/cinemate-kernel-baseline}"
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly MANAGED_BEGIN="# >>> cinemate-install >>>"
 readonly MANAGED_END="# <<< cinemate-install <<<"
-readonly BUILD_JOBS="$(nproc 2>/dev/null || printf '4')"
+# Parallel build jobs. Defaults to the CPU count; override with BUILD_JOBS=N on
+# a very low-memory board if a compile is OOM-killed ("Killed signal terminated
+# program cc1plus").
+readonly BUILD_JOBS="${BUILD_JOBS:-$(nproc 2>/dev/null || printf '4')}"
 
 BACKUP_DIR=""
 CINEMATE_SOURCE_DIR=""
@@ -624,6 +627,10 @@ build_libcamera() {
     detail "Source: $LIBCAMERA_DIR"
     run_as_pi find "$LIBCAMERA_DIR" -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} +
     run_as_pi chmod +x "$LIBCAMERA_DIR/src/ipa/ipa-sign.sh"
+    # pycamera (the libcamera Python bindings) is disabled: nothing in the
+    # CineMate stack imports it, and its generated py_controls_generated.cpp is a
+    # pybind11 unit needing >1.5 GB to compile at -O3, which OOM-kills cc1plus on
+    # 2 GB boards (e.g. a CM5). Disabling it also speeds the build up everywhere.
     run_as_pi_clean_shell "cd '$LIBCAMERA_DIR' && meson setup build --wipe --buildtype=release \
         -Dpipelines=rpi/vc4,rpi/pisp \
         -Dipas=rpi/vc4,rpi/pisp \
@@ -634,7 +641,7 @@ build_libcamera() {
         -Dcam=disabled \
         -Dqcam=disabled \
         -Ddocumentation=disabled \
-        -Dpycamera=enabled"
+        -Dpycamera=disabled"
     run_as_pi_clean_shell "ninja -C '$LIBCAMERA_DIR/build' -j '$BUILD_JOBS'"
     sudo ninja -C "$LIBCAMERA_DIR/build" install
     sudo ldconfig

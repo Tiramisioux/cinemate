@@ -157,7 +157,7 @@ meson setup build --wipe --buildtype=release \
   -Dcam=disabled \
   -Dqcam=disabled \
   -Ddocumentation=disabled \
-  -Dpycamera=enabled && \
+  -Dpycamera=disabled && \
 ninja -C build && \
 sudo ninja -C build install && \
 sudo ldconfig && \
@@ -195,7 +195,7 @@ meson setup build --wipe --buildtype=release \
   -Dcam=disabled \
   -Dqcam=disabled \
   -Ddocumentation=disabled \
-  -Dpycamera=enabled && \
+  -Dpycamera=disabled && \
 ninja -C build && \
 sudo ninja -C build install && \
 sudo ldconfig

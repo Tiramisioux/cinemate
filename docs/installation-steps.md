@@ -124,9 +124,9 @@ sudo apt-get install python3-jinja2 python3-ply python3-yaml ffmpeg
 sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev ffmpeg && sudo apt-get install libjsoncpp-dev && cd ~ && git clone https://github.com/sewenew/redis-plus-plus.git && cd redis-plus-plus && mkdir build && cd build && cmake .. && make && sudo make install && cd ~
 ```
 
-### libcamera (Tiramisioux/libcamera `cinemate` — Will Whang's IMX585 fork @ `9d0cdfe5`) <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
+### libcamera (Tiramisioux/libcamera `cinemate` branch) <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
-The base is Will Whang's IMX585 fork at `9d0cdfe5`, mirrored to [Tiramisioux/libcamera](https://github.com/Tiramisioux/libcamera) (`cinemate` branch) so the build no longer depends on the upstream commit staying available. Built as-is with no extra patches.
+These steps build the [Tiramisioux/libcamera](https://github.com/Tiramisioux/libcamera) `cinemate` branch tip — Will Whang's IMX585 fork (base `9d0cdfe5`) mirrored here so the build no longer depends on the upstream commit staying available, plus gcc-12 build fixes for the apps. Built as-is with no extra patches. (`cinemate-install.sh` tracks this same branch.)
 
 **On the Pi, to update an existing install:**
 
@@ -144,7 +144,7 @@ git config core.fileMode false && \
 git remote set-url origin https://github.com/Tiramisioux/libcamera.git && \
 git fetch origin && \
 git stash || true && \
-git checkout 9d0cdfe5 && \
+git checkout -B cinemate origin/cinemate && \
 find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
 chmod +x ~/libcamera/src/ipa/ipa-sign.sh && \
 meson setup build --wipe --buildtype=release \
@@ -164,7 +164,7 @@ sudo ldconfig && \
 sudo systemctl restart cinepi-raw
 ```
 
-`git checkout 9d0cdfe5` checks out the exact base ref so this command is safe to re-run. `git config core.fileMode false` silences executable-bit changes left behind by the build. `git stash` clears any remaining content changes so the checkout cannot be blocked.
+`git checkout -B cinemate origin/cinemate` resets to the latest `cinemate` tip so this command is safe to re-run. `git config core.fileMode false` silences executable-bit changes left behind by the build. `git stash` clears any remaining content changes so the checkout cannot be blocked.
 
 **Fresh install:**
 
@@ -182,7 +182,7 @@ sudo apt-get install --reinstall libtiff5-dev && sudo ln -sf $(find /usr/lib -na
 git clone https://github.com/Tiramisioux/libcamera.git && \
 cd libcamera && \
 git config core.fileMode false && \
-git checkout 9d0cdfe5 && \
+git checkout cinemate && \
 find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
 chmod +x ~/libcamera/src/ipa/ipa-sign.sh && \
 meson setup build --wipe --buildtype=release \
@@ -209,7 +209,7 @@ find ~/libcamera/src/ipa/rpi/cam_helper -name '*imx585*'
 Expected output:
 
 ```text
-<hash> <HEAD commit message from 9d0cdfe5>
+<hash> <HEAD commit message of the cinemate tip>
 /home/pi/libcamera/src/ipa/rpi/cam_helper/cam_helper_imx585.cpp
 ```
 

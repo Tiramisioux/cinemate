@@ -101,10 +101,12 @@ KERNEL_ROLLBACK_DIR="${KERNEL_ROLLBACK_DIR:-/var/tmp/cinemate-kernel-baseline}"
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly MANAGED_BEGIN="# >>> cinemate-install >>>"
 readonly MANAGED_END="# <<< cinemate-install <<<"
-# Parallel build jobs. Defaults to the CPU count; override with BUILD_JOBS=N on
-# a very low-memory board if a compile is OOM-killed ("Killed signal terminated
-# program cc1plus").
-readonly BUILD_JOBS="${BUILD_JOBS:-$(nproc 2>/dev/null || printf '4')}"
+# Parallel build jobs. On boards with < 4 GB RAM (1 GB / 2 GB models) heavy
+# translation units (cinepi_raw.cpp, the IPAs) can use >1.5 GB each at -O3 and
+# OOM-kill cc1plus ("Killed signal terminated program cc1plus"), so cap to ~1 job
+# per 1.5 GB (i.e. -j1 on 2 GB) — these boards also get a build-time zram swap
+# (see ensure_build_zram). Boards with >= 4 GB RAM use all CPUs. Override: BUILD_JOBS=N.
+readonly BUILD_JOBS="${BUILD_JOBS:-$(c=$(nproc 2>/dev/null || echo 4); mb=$(awk '/^MemTotal:/{print int($2/1024); exit}' /proc/meminfo 2>/dev/null || echo 0); j=$c; if [ "$mb" -gt 0 ] && [ "$mb" -lt 3000 ]; then j=$(( mb / 1536 )); if [ "$j" -lt 1 ]; then j=1; fi; if [ "$j" -gt "$c" ]; then j=$c; fi; fi; echo "$j")}"
 
 BACKUP_DIR=""
 CINEMATE_SOURCE_DIR=""
@@ -590,6 +592,55 @@ build_redis_plus_plus() {
     sudo ldconfig
 }
 
+# --- build-time zram swap (low-RAM boards only) -----------------------------
+# Heavy translation units (cinepi_raw.cpp at -O3 needs ~2 GB) OOM-kill cc1plus
+# and can freeze a 2 GB board. On boards with < 4 GB RAM we add a *compressed
+# RAM* swap device (zram) for the build only — no writes to the SD/eMMC — and
+# remove it afterwards, so the running camera never swaps (swapping during a
+# recording would drop frames). ENABLE_BUILD_ZRAM: auto (default; < 4 GB only),
+# or 1/0 to force on/off.
+ENABLE_BUILD_ZRAM="${ENABLE_BUILD_ZRAM:-auto}"
+BUILD_ZRAM_DEV=""
+
+ensure_build_zram() {
+    if [[ -n "${BUILD_ZRAM_DEV:-}" ]]; then return 0; fi
+    local mb dev
+    mb="$(awk '/^MemTotal:/{print int($2/1024); exit}' /proc/meminfo 2>/dev/null || echo 0)"
+    case "${ENABLE_BUILD_ZRAM,,}" in
+        auto)
+            # Only boards with < 4 GB RAM (they report < 3 GB MemTotal).
+            if [[ "$mb" -le 0 || "$mb" -ge 3000 ]]; then return 0; fi
+            ;;
+        1|true|yes|on) : ;;
+        *) return 0 ;;
+    esac
+    sudo modprobe zram 2>/dev/null || true
+    dev="$(sudo zramctl --find --size 4G --algorithm zstd 2>/dev/null || true)"
+    if [[ -z "$dev" ]]; then
+        dev="$(sudo zramctl --find --size 4G 2>/dev/null || true)"
+    fi
+    if [[ -z "$dev" ]]; then
+        warn "Could not create a zram device (zram/zramctl missing?); low-RAM build may OOM-kill cc1plus"
+        return 0
+    fi
+    if ! sudo mkswap "$dev" >/dev/null 2>&1 || ! sudo swapon -p 100 "$dev" 2>/dev/null; then
+        sudo zramctl --reset "$dev" 2>/dev/null || true
+        warn "Could not enable zram swap on $dev; low-RAM build may OOM"
+        return 0
+    fi
+    BUILD_ZRAM_DEV="$dev"
+    log "Low-RAM board (${mb} MB): added 4 GB zram build swap on $dev (compressed RAM, removed after build)"
+}
+
+remove_build_zram() {
+    if [[ -z "${BUILD_ZRAM_DEV:-}" ]]; then return 0; fi
+    sudo swapoff "$BUILD_ZRAM_DEV" 2>/dev/null || true
+    sudo zramctl --reset "$BUILD_ZRAM_DEV" 2>/dev/null || true
+    detail "Removed build zram swap ($BUILD_ZRAM_DEV)"
+    BUILD_ZRAM_DEV=""
+}
+trap remove_build_zram EXIT
+
 build_libcamera() {
     # The build step below runs chmod +x on every .py/.sh file.  On Linux,
     # git tracks permission bits, so those mode changes show up as dirty and
@@ -665,7 +716,7 @@ set -Eeuo pipefail
 
 CINEPI_RAW_DIR="\${CINEPI_RAW_DIR:-$CINEPI_RAW_DIR}"
 CPP_MJPEG_STREAMER_DIR="\${CPP_MJPEG_STREAMER_DIR:-$CPP_MJPEG_STREAMER_DIR}"
-BUILD_JOBS="\${BUILD_JOBS:-\$(nproc 2>/dev/null || printf '4')}"
+BUILD_JOBS="\${BUILD_JOBS:-$BUILD_JOBS}"
 BUILD_DIR="\${BUILD_DIR:-\$CINEPI_RAW_DIR/build}"
 PKG_CONFIG_PATH="\$CPP_MJPEG_STREAMER_DIR/build:\${PKG_CONFIG_PATH:-}"
 export PKG_CONFIG_PATH
@@ -1541,12 +1592,14 @@ main() {
     prepare_libtiff_link
     section "Building redis-plus-plus"
     build_redis_plus_plus
+    ensure_build_zram   # compressed-RAM build swap on < 4 GB boards; removed after
     section "Building libcamera"
     build_libcamera
     section "Building cpp-mjpeg-streamer"
     build_cpp_mjpeg_streamer
     section "Building cinepi-raw"
     build_cinepi_raw
+    remove_build_zram
     section "Seeding initial cinepi-raw Redis defaults"
     seed_cinepi_raw_white_balance
     section "Installing sensor-specific support"

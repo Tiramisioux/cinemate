@@ -380,7 +380,7 @@ sudo apt install dkms -y
 ```
 
 ```shell
-git clone https://github.com/will127534/imx283-v4l2-driver.git --branch 6.12.y
+git clone https://github.com/Tiramisioux/imx283-v4l2-driver.git --branch 6.12.y
 cd imx283-v4l2-driver/
 ./setup.sh
 sudo dkms autoinstall -k 6.12.25+rpt-rpi-2712
@@ -396,7 +396,7 @@ cd
 ```
 
 !!! note ""
-    The IMX283 and IMX585 DKMS drivers used here are based on Will Whang's work. For the original drivers and startup guides, visit https://github.com/will127534/imx283-v4l2-driver and https://github.com/will127534/imx585-v4l2-driver
+    The IMX283 and IMX585 DKMS drivers used here are based on Will Whang's work. The IMX283 driver is the [Tiramisioux fork](https://github.com/Tiramisioux/imx283-v4l2-driver) (`6.12.y` branch), which adds UHD 4K (3840×2160, 10-bit, 60 fps) and 2.7K 16:9 (2736×1538, 12-bit, 60 fps) readout modes on top of the upstream `6.12.y` base. For the original drivers and startup guides, visit https://github.com/will127534/imx283-v4l2-driver and https://github.com/will127534/imx585-v4l2-driver
 
 #### Install Cinemate IMX283 and IMX585 tuning overrides
 

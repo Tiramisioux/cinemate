@@ -82,7 +82,9 @@ REDIS_PLUS_PLUS_REPO_URL="${REDIS_PLUS_PLUS_REPO_URL:-https://github.com/sewenew
 REDIS_PLUS_PLUS_REPO_REF="${REDIS_PLUS_PLUS_REPO_REF:-}"
 LGPIO_REPO_URL="${LGPIO_REPO_URL:-https://github.com/joan2937/lg.git}"
 LGPIO_REPO_REF="${LGPIO_REPO_REF:-}"
-IMX283_DRIVER_REPO_URL="${IMX283_DRIVER_REPO_URL:-https://github.com/will127534/imx283-v4l2-driver.git}"
+# Tiramisioux fork of Will Whang's driver; 6.12.y branch adds the UHD 4K (mode 1C)
+# and 2.7K 16:9 (mode 2A) readout modes on top of the upstream 6.12.y base.
+IMX283_DRIVER_REPO_URL="${IMX283_DRIVER_REPO_URL:-https://github.com/Tiramisioux/imx283-v4l2-driver.git}"
 IMX283_DRIVER_REPO_REF="${IMX283_DRIVER_REPO_REF:-6.12.y}"
 IMX585_DRIVER_REPO_URL="${IMX585_DRIVER_REPO_URL:-https://github.com/will127534/imx585-v4l2-driver.git}"
 IMX585_DRIVER_REPO_REF="${IMX585_DRIVER_REPO_REF:-6.12.y}"

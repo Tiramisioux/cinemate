@@ -27,26 +27,32 @@ Higher frame rates need faster storage. If you see a purple/magenta `DROP` indic
 
 | Mode | Resolution       | Aspect Ratio | Bit Depth | Max FPS | Sustainable FPS* | DNG Frame File Size (MB) |
 |------|------------------|--------------|-----------|---------|------------------|--------------------------|
-| 0    | 2736 x 1538      | 1.80         | 12        | 40      | -                | 7.1                      |
-| 1    | 2736 x 1824      | 1.53         | 12        | 34      | -                | 8.2                      |
+| 0    | 5472 x 3648      | 1.50         | 12        | 18      | -                | 28.6                     |
+| 1    | 2736 x 1824      | 1.50         | 12        | 36      | -                | 7.1                      |
+| 2    | 2736 x 1538      | 1.78         | 12        | 41      | -                | 6.0                      |
+| 3    | 5472 x 3648      | 1.50         | 10        | 18      | -                | 23.8                     |
+| 4    | 5472 x 3078      | 1.78         | 10        | 21      | -                | 20.1                     |
+| 5    | 3840 x 2160      | 1.78         | 10        | 44      | -                | 9.9                      |
+
+Modes 2 (2.7K 16:9) and 5 (4K UHD) are added by the [Tiramisioux IMX283 fork](https://github.com/Tiramisioux/imx283-v4l2-driver) (`6.12.y` branch). Their 60 fps target is not reached at the sensor's current MIPI link — the driver reports ~44 fps (4K) and ~41 fps (2.7K 16:9). Cinemate and `cinepi-raw --list-cameras` report the optical-black-inclusive readout size (e.g. `3936 x 2176` for the 4K mode: 3840 + 96 columns, 2160 + 16 lines); the effective recorded image is the cropped resolution shown above.
 
 *Sustainable FPS means the empirically observed frame rate that records without dropped frames on the listed storage and filesystem.*
 
 Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames.
 
-You can limit which modes appear inside CineMate by editing the `resolutions` section in `settings.json`. `k_steps` are the approximate recording-size choices shown in the UI. The stock Cinemate 3.3.1 defaults show 1.5K, 2K, and 4K-class choices, so IMX585 4K stays visible by default. Remove `4` only if you intentionally want to hide 4K-class modes.
+You can control which modes appear inside CineMate by editing the `resolutions` section in `settings.json`. `k_steps` are the approximate recording-size (K) choices shown in the UI: a sensor mode is listed only if its width rounds to one of these values (`round(width / 1000 * 2) / 2`). The defaults cover 1.5K/2K (IMX477), 4K (IMX585 and the IMX283 UHD crop), and 3K/5.5K (the IMX283 2.7K and 5K modes). Remove a step to hide that size class, or add one to reveal it.
 
 ```json
 "resolutions": {
-  "k_steps": [1.5, 2, 4],
+  "k_steps": [1.5, 2, 3, 4, 5.5],
   "bit_depths": [10, 12],
-  "custom_modes": {
-    "imx283": [
-      {"width": 3936, "height": 2176, "bit_depth": 12, "fps_max": 24}
-    ]
-  }
+  "custom_modes": {}
 }
 ```
+
+!!! warning "If only one IMX283 mode shows up"
+
+    `cinepi-raw --list-cameras` may list every mode while CineMate shows only one. That means the mode widths do not match `k_steps`. The IMX283 reports 3.0K (2736-class), 4.0K (3840) and 5.5K (5472) widths, so `k_steps` must include `3`, `4` and `5.5` for all its modes to appear.
 
 !!! note ""
 

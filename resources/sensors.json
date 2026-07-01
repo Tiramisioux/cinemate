@@ -147,22 +147,62 @@
       "modes": [
         {
           "mode": 0,
-          "width": 2736,
-          "height": 1538,
-          "aspect": 1.8,
+          "width": 5568,
+          "height": 3664,
+          "aspect": 1.5,
           "bit_depth": 12,
-          "max_fps": 40,
-          "file_size_mb": 7.1,
+          "max_fps": 18,
+          "file_size_mb": 29.2,
           "sustainable_fps": []
         },
         {
           "mode": 1,
-          "width": 2736,
-          "height": 1824,
-          "aspect": 1.53,
+          "width": 2784,
+          "height": 1828,
+          "aspect": 1.5,
           "bit_depth": 12,
-          "max_fps": 34,
-          "file_size_mb": 8.2,
+          "max_fps": 36,
+          "file_size_mb": 7.3,
+          "sustainable_fps": []
+        },
+        {
+          "mode": 2,
+          "width": 2784,
+          "height": 1542,
+          "aspect": 1.78,
+          "bit_depth": 12,
+          "max_fps": 41,
+          "file_size_mb": 6.1,
+          "sustainable_fps": []
+        },
+        {
+          "mode": 3,
+          "width": 5568,
+          "height": 3664,
+          "aspect": 1.5,
+          "bit_depth": 10,
+          "max_fps": 18,
+          "file_size_mb": 24.3,
+          "sustainable_fps": []
+        },
+        {
+          "mode": 4,
+          "width": 5568,
+          "height": 3094,
+          "aspect": 1.78,
+          "bit_depth": 10,
+          "max_fps": 21,
+          "file_size_mb": 20.5,
+          "sustainable_fps": []
+        },
+        {
+          "mode": 5,
+          "width": 3936,
+          "height": 2176,
+          "aspect": 1.78,
+          "bit_depth": 10,
+          "max_fps": 44,
+          "file_size_mb": 10.2,
           "sustainable_fps": []
         }
       ]

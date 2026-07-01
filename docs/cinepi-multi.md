@@ -8,7 +8,7 @@ At startup, `CinePiManager.start_all()` runs `cinepi-raw --list-cameras` and ret
 
 !!! tip
 
-    You can narrow down the list of selectable modes via the `resolutions` section in `settings.json`. Only modes whose width falls into one of your chosen *K* categories and whose bit depth matches will be shown. Custom driver modes not reported by `cinepi-raw` can also be added there.
+    You can narrow down the list of selectable modes via the `resolutions` section in `settings.json`. Only modes whose width falls into one of your chosen *K* categories and whose bit depth matches will be shown. Custom driver modes not reported by `cinepi-raw` can also be added there. The full set of modes each sensor supports lives in `resources/sensors.json` (all of them available to the system); `resolutions` only chooses which are exposed in the UI.
 
 Before any process is launched, Cinemate also seeds the preview `zoom` key from `preview.default_zoom` if Redis does not already contain a zoom value.
 

@@ -153,11 +153,8 @@
   },
   "resolutions": {
     "k_steps": [
-      1.5,
-      2,
       3,
-      4,
-      5.5
+      4
     ],
     "bit_depths": [
       10,

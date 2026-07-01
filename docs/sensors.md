@@ -27,32 +27,33 @@ Higher frame rates need faster storage. If you see a purple/magenta `DROP` indic
 
 | Mode | Resolution       | Aspect Ratio | Bit Depth | Max FPS | Sustainable FPS* | DNG Frame File Size (MB) |
 |------|------------------|--------------|-----------|---------|------------------|--------------------------|
-| 0    | 5472 x 3648      | 1.50         | 12        | 18      | -                | 28.6                     |
-| 1    | 2736 x 1824      | 1.50         | 12        | 36      | -                | 7.1                      |
-| 2    | 2736 x 1538      | 1.78         | 12        | 41      | -                | 6.0                      |
-| 3    | 5472 x 3648      | 1.50         | 10        | 18      | -                | 23.8                     |
-| 4    | 5472 x 3078      | 1.78         | 10        | 21      | -                | 20.1                     |
-| 5    | 3840 x 2160      | 1.78         | 10        | 44      | -                | 9.9                      |
+| 0    | 2736 x 1824      | 1.50         | 12        | 36      | -                | 7.1                      |
+| 1    | 2736 x 1538      | 1.78         | 12        | 41      | -                | 6.0                      |
+| 2    | 3840 x 2160      | 1.78         | 10        | 44      | -                | 9.9                      |
 
-Modes 2 (2.7K 16:9) and 5 (4K UHD) are added by the [Tiramisioux IMX283 fork](https://github.com/Tiramisioux/imx283-v4l2-driver) (`6.12.y` branch). Their 60 fps target is not reached at the sensor's current MIPI link — the driver reports ~44 fps (4K) and ~41 fps (2.7K 16:9). Cinemate and `cinepi-raw --list-cameras` report the optical-black-inclusive readout size (e.g. `3936 x 2176` for the 4K mode: 3840 + 96 columns, 2160 + 16 lines); the effective recorded image is the cropped resolution shown above.
+Only IMX283 modes that sustain **25 fps or more** are exposed by default (`k_steps: [3, 4]` in `settings.json`). The full-frame 5K modes are hidden because they top out below 25 fps — 5472×3648 at ~18 fps (12- and 10-bit) and 5472×3078 16:9 at ~21 fps. To bring them back, add `5.5` to `k_steps`.
+
+Modes 1 (2.7K 16:9) and 2 (4K UHD) are added by the [Tiramisioux IMX283 fork](https://github.com/Tiramisioux/imx283-v4l2-driver) (`6.12.y` branch). Their 60 fps target is not reached at the sensor's current MIPI link — the driver reports ~44 fps (4K) and ~41 fps (2.7K 16:9). Cinemate and `cinepi-raw --list-cameras` report the optical-black-inclusive readout size (e.g. `3936 x 2176` for the 4K mode: 3840 + 96 columns, 2160 + 16 lines); the effective recorded image is the cropped resolution shown above.
 
 *Sustainable FPS means the empirically observed frame rate that records without dropped frames on the listed storage and filesystem.*
 
 Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames.
 
-You can control which modes appear inside CineMate by editing the `resolutions` section in `settings.json`. `k_steps` are the approximate recording-size (K) choices shown in the UI: a sensor mode is listed only if its width rounds to one of these values (`round(width / 1000 * 2) / 2`). The defaults cover 1.5K/2K (IMX477), 4K (IMX585 and the IMX283 UHD crop), and 3K/5.5K (the IMX283 2.7K and 5K modes). Remove a step to hide that size class, or add one to reveal it.
+By design, every mode the IMX283 supports is listed in `resources/sensors.json`, so all of them stay available to the system; the `resolutions` section in `settings.json` then exposes only the practical subset in the UI. A sensor mode is shown only if its width rounds to a value in `k_steps` (`round(width / 1000 * 2) / 2`) **and** its bit depth is in `bit_depths`. These are **global** settings — they apply to every sensor.
+
+The default `k_steps` `[3, 4]` is tuned to the IMX283's ≥25 fps modes: the 2.7K crops round to 3K and the 4K UHD crop rounds to 4K. This also limits other sensors to their 3K/4K-class modes, so if you run a different sensor set `k_steps` to its sizes — for example `[1.5, 2, 4]` for IMX477, or add `5.5` to also expose the IMX283 5K modes.
 
 ```json
 "resolutions": {
-  "k_steps": [1.5, 2, 3, 4, 5.5],
+  "k_steps": [3, 4],
   "bit_depths": [10, 12],
   "custom_modes": {}
 }
 ```
 
-!!! warning "If only one IMX283 mode shows up"
+!!! warning "Not seeing the mode you expect?"
 
-    `cinepi-raw --list-cameras` may list every mode while CineMate shows only one. That means the mode widths do not match `k_steps`. The IMX283 reports 3.0K (2736-class), 4.0K (3840) and 5.5K (5472) widths, so `k_steps` must include `3`, `4` and `5.5` for all its modes to appear.
+    `cinepi-raw --list-cameras` may list a mode that CineMate does not show. That means its width does not round to a value in `k_steps`, or its bit depth is not in `bit_depths`. IMX283 widths round to 3.0K (2.7K modes), 4.0K (4K UHD) and 5.5K (5K modes); the default `[3, 4]` deliberately hides the sub-25 fps 5K modes. Add `5.5` to reveal them.
 
 !!! note ""
 

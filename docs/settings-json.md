@@ -306,17 +306,13 @@ When enabled, ignores the preset arrays and exposes the expanded runtime step ta
 
 ## resolutions
 
-Limit which sensor modes appear when cycling resolutions.
+Choose which sensor modes are practical to expose in the UI when cycling resolutions. This is a filter, not the mode list itself: every mode a sensor supports lives in the sensor database (`resources/sensors.json`, see [sensors](#sensors) below), and `resolutions` selects the useful subset to show. Hidden modes stay technically available to the system.
 
 ```json
 "resolutions": {
-  "k_steps": [1.5, 2, 4],
+  "k_steps": [3, 4],
   "bit_depths": [10, 12],
-  "custom_modes": {
-    "imx283": [
-      {"width": 3936, "height": 2176, "bit_depth": 12, "fps_max": 24}
-    ]
-  }
+  "custom_modes": {}
 }
 ```
 
@@ -324,13 +320,13 @@ Limit which sensor modes appear when cycling resolutions.
 <br>`bit_depths` – list of bit depths to expose.
 <br>`custom_modes` – optional extra modes per sensor if the driver advertises none.
 
-!!! note ""
+!!! note "Design: full capability vs practical exposure"
 
-    The stock Cinemate 3.3.1 setting is `[1.5, 2, 4]`, so 4K-class modes are visible by default when the sensor reports them. Remove `4` from `k_steps`, for example `[1.5, 2]`, when you intentionally want to hide 4K-class modes in the UI.
+    `resources/sensors.json` lists **every** mode each sensor supports, so all of them are technically available to the system. `resolutions` then exposes only the **practical** subset in the UI. Example: the IMX283 default `k_steps: [3, 4]` shows its ≥25 fps modes (2.7K and 4K) and hides the 5K modes (~18–21 fps); those 5K modes stay in `sensors.json` and reappear if you add `5.5`. `k_steps`/`bit_depths` are global across all sensors.
 
 ## sensors
 
-Points Cinemate at the sensor metadata database used for known packing modes, documentation metadata, and sustainable FPS annotations.
+Points Cinemate at the sensor metadata database. It lists the **full** set of modes each sensor supports — every mode stays available to the system — alongside known packing modes, documentation metadata, and sustainable FPS annotations. The [resolutions](#resolutions) filter selects which of those modes appear in the UI.
 
 ```json
 "sensors": {

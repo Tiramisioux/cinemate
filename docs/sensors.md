@@ -65,6 +65,8 @@ The default `k_steps` `[3, 4]` is tuned to the IMX283's ≥25 fps modes: the 2.7
 
 ## Sensor size, crop factor and film-format equivalents
 
+**TL;DR:** The Cinemate sensor family spans the classic small film gauges almost perfectly: IMX296 ≈ Standard 8mm, IMX477 ≈ Super 8, IMX585 ≈ 16mm, IMX283 ≈ Super 16 — and the IMX283 UHD mode drops back down to roughly 2/3-inch (between Super 8 and 16mm) because it's a native crop.
+
 Each mode reads out a physical area of the sensor. Binned modes keep the full field of view. Cropped modes use a smaller area, so the same lens frames tighter. Dimensions below are computed from the driver crop rectangles and each sensor's pixel pitch.
 
 | Sensor | Mode | Active area (mm) | Diagonal (mm) | Crop factor* | Closest film format |

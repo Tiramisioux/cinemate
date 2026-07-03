@@ -7,15 +7,11 @@
 
 ## Installation
 
-Burn the latest [Cinemate image](https://github.com/Tiramisioux/cinemate/releases/latest) to an SD card (8 GB or larger).
+Burn the latest [Cinemate image](https://github.com/Tiramisioux/cinemate/releases/latest) to an SD card.
 
 Connect the Pi and the camera sensor board, connect power and boot the Pi. Cinemate autostarts on boot.
 
-!!! tip "Already running Raspberry Pi OS Lite?"
-
-    You can skip the image and install the stack with a single script instead — see [Installation & building from source](installation-steps.md).
-    
-!!! danger ""   
+!!! danger ""
 
     Ensure the Pi is powered off before attaching the camera ribbon cable. Hot-swapping may damage the hardware.
 

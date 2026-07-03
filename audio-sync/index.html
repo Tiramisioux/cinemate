@@ -3,9 +3,9 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/cinepi-multi/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/audio-sync/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>How Cinemate launches CinePi-raw - Cinemate Docs</title>
+    <title>Audio sync & drift - Cinemate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -15,9 +15,9 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "How Cinemate launches CinePi-raw";
-        var mkdocs_page_input_path = "cinepi-multi.md";
-        var mkdocs_page_url = "/cinemate/cinepi-multi/";
+        var mkdocs_page_name = "Audio sync \u0026 drift";
+        var mkdocs_page_input_path = "audio-sync.md";
+        var mkdocs_page_url = "/cinemate/audio-sync/";
       </script>
     
     <!--[if lt IE 9]>
@@ -109,12 +109,16 @@
                 </li>
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
-              <ul>
+              <ul class="current">
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Installation & building from source</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Audio sync & drift</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#fine-timecode-offset">Fine timecode offset</a>
+    </li>
+    </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
                   </li>
@@ -138,9 +142,10 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
-      <li class="breadcrumb-item active">How Cinemate launches CinePi-raw</li>
+          <li class="breadcrumb-item">Advanced</li>
+      <li class="breadcrumb-item active">Audio sync & drift</li>
     <li class="wy-breadcrumbs-aside">
-          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/cinepi-multi.md" class="icon icon-github"> Edit on GitHub</a>
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/audio-sync.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
   </ul>
   <hr/>
@@ -149,33 +154,41 @@
             <div class="section" itemprop="articleBody">
               
 <div class="markdown-body">
-  <h1 id="how-cinemate-launches-cinepi-raw">How Cinemate launches CinePi-raw<a class="headerlink" href="#how-cinemate-launches-cinepi-raw" title="Permanent link">#</a></h1>
-<p><code>src/module/cinepi_multi.py</code> starts one <code>cinepi-raw</code> process per detected camera. It combines camera discovery from <code>sensor_detect.py</code>, Redis state, and user settings from <code>settings.json</code> to build the command line for each process.</p>
-<h2 id="building-the-cinepi-raw-command">Building the <code>cinepi-raw</code> command<a class="headerlink" href="#building-the-cinepi-raw-command" title="Permanent link">#</a></h2>
-<p>For each detected camera, the manager creates a <code>CinePiProcess</code>. <code>_build_args()</code> assembles flags for:</p>
-<ul>
-<li>the selected sensor mode, width, height, and bit depth</li>
-<li>the raw packing suffix for the selected Pi generation</li>
-<li>per-camera geometry from <code>geometry.cam0</code>, <code>geometry.cam1</code>, and so on</li>
-<li>per-camera HDMI output mapping from the <code>output</code> section</li>
-<li>the low-resolution preview size used by CinePi-raw</li>
-</ul>
-<p>The preview size is based on <code>hdmi_display.width</code> and <code>hdmi_display.height</code>, but if a framebuffer is already active, Cinemate prefers the real framebuffer size instead of forcing the configured canvas. That avoids drawing a clipped <code>1920x1080</code> preview into a smaller active mode.</p>
-<p>Here is a simplified example of the resulting command:</p>
-<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">2028</span>:1080:12:U<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--width<span class="w"> </span><span class="m">2028</span><span class="w"> </span>--height<span class="w"> </span><span class="m">1080</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--lores-width<span class="w"> </span><span class="m">1280</span><span class="w"> </span>--lores-height<span class="w"> </span><span class="m">720</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--hdmi-port<span class="w"> </span><span class="m">0</span><span class="w"> </span>--rotation<span class="w"> </span><span class="m">0</span><span class="w"> </span>--hflip<span class="w"> </span><span class="m">0</span><span class="w"> </span>--vflip<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--post-process-file<span class="w"> </span>/home/pi/post-processing0.json<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--tuning-file<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json
+  <h1 id="audio-sync-drift">Audio sync &amp; drift<a class="headerlink" href="#audio-sync-drift" title="Permanent link">#</a></h1>
+<h2 id="fine-timecode-offset">Fine timecode offset<a class="headerlink" href="#fine-timecode-offset" title="Permanent link">#</a></h2>
+<p>A USB mic can sit a fixed couple of frames early or late relative to video (constant analog/buffering latency). Correct that offset per toolchain in <code>src/settings.json</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;audio&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;24bit&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;timecode_offset_frames&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;16bit&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;timecode_offset_frames&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">}</span>
+<span class="p">}</span>
 </code></pre></div>
-<p>On Raspberry Pi 4 / Pi 400 / CM4, Cinemate switches IMX296 and IMX477 launches to packed raw mode (<code>P</code>), for example <code>1456:1088:10:P</code> for IMX296. On Raspberry Pi 5 / CM5 it leaves those sensors on unpacked raw mode (<code>U</code>). Pi 4-family launches also skip the PiSP tuning-file argument and use the VC4 camera stack.</p>
-<h2 id="multi-camera-startup-details">Multi-camera startup details<a class="headerlink" href="#multi-camera-startup-details" title="Permanent link">#</a></h2>
-<p>In multi-camera mode, the sensors are synced. The first process is launched with <code>--sync server</code> and the rest use <code>--sync client</code>. Only the primary process gets the on-screen preview rectangle; secondary cameras run with <code>--nopreview</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sound arrives <strong>early</strong> (before the visual)</td>
+<td>positive — e.g. <code>1</code></td>
+</tr>
+<tr>
+<td>Sound arrives <strong>late</strong> (after the visual)</td>
+<td>negative — e.g. <code>-1</code></td>
+</tr>
+</tbody>
+</table>
+<p>This shifts only the embedded BWF/iXML timecode metadata; the PCM samples are never moved.</p>
 </div>
 
             </div>
           </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../compiling-cinepi-raw/" class="btn btn-neutral float-left" title="Recompiling cinepi-raw"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../simple-gui-refresh-tuning/" class="btn btn-neutral float-right" title="Simple GUI refresh tuning">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
 
   <hr/>
 
@@ -201,6 +214,10 @@
         </span>
     
     
+      <span><a href="../compiling-cinepi-raw/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../simple-gui-refresh-tuning/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

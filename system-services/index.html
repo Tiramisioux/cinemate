@@ -47,36 +47,22 @@
                 </li>
               </ul>
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Overview</a>
                 </li>
               </ul>
-              <p class="caption"><span class="caption-text">Quick start</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
-                  </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Customising your build</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
-                  </li>
+                <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Quick start</a>
+                </li>
               </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Reading the camera screen</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../fps-correction/">FPS correction and audio sync</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
                   </li>
@@ -84,16 +70,27 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
-              </ul>
-              <p class="caption"><span class="caption-text">System management</span></p>
-              <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Configuring</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Switching sensors (config.txt)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Install & maintenance</span></p>
+              <ul class="current">
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">System services</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#cinemate-autostartservice">cinemate-autostart.service</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#starting-stopping-enabling-and-disabling-the-service">Starting, stopping, enabling and disabling the service</a>
+    <li class="toctree-l3"><a class="reference internal" href="#single-instance-enforcement">Single-instance enforcement</a>
     </li>
         </ul>
     </li>
@@ -101,18 +98,16 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#wifi-hotspotservice">wifi-hotspot.service</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#redis-log-maintenancetimer">redis-log-maintenance.timer</a>
+    </li>
     </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
@@ -120,8 +115,25 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
+                  </li>
               </ul>
-              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Advanced</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Installation & building from source</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Contributing</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -140,7 +152,7 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
-          <li class="breadcrumb-item">System management</li>
+          <li class="breadcrumb-item">Install & maintenance</li>
       <li class="breadcrumb-item active">System services</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/system-services.md" class="icon icon-github"> Edit on GitHub</a>
@@ -155,94 +167,23 @@
   <h1 id="system-services">System services<a class="headerlink" href="#system-services" title="Permanent link">#</a></h1>
 <p>Cinemate uses three long-running services and one maintenance timer for its operation.</p>
 <h2 id="cinemate-autostartservice">cinemate-autostart.service<a class="headerlink" href="#cinemate-autostartservice" title="Permanent link">#</a></h2>
-<p>Responsible for autostart of Cinemate on boot. By default, it is turned off on the <a href="https://github.com/Tiramisioux/cinemate/releases/tag/3.2">downloadable image file</a>.</p>
-<p>Starting in v3.2 the service now waits for the camera sensor to come online before launching the UI. The helper script <code>/usr/local/bin/camera-ready.sh</code> polls <code>cinepi-raw --list-cameras</code> for up to 30 seconds and logs progress to the systemd journal so Cinemate does not start with a black screen if the IMX sensor is still initialising.</p>
-<p>When Plymouth is enabled on the Pi image, the service is attached to <code>tty1</code> and ordered around the Plymouth quit units so the boot spinner stays visible until Cinemate is ready to take over, without flashing the autologin CLI in between.</p>
-<p>Plymouth is optional. Cinemate still starts correctly if Plymouth is not installed; you simply will not get the boot spinner or the smoother spinner-to-Cinemate handoff used on the image.</p>
-<p>While <code>cinemate-autostart.service</code> is running, <code>tty1</code> is reserved for Plymouth and the Cinemate GUI. The local login prompt is therefore suppressed on <code>tty1</code> during runtime. On a normal Cinemate stop, the service restores the <code>tty1</code> CLI; during a full Pi reboot or shutdown, the service leaves <code>tty1</code> available for Plymouth so the shutdown spinner can stay visible instead. Use SSH or switch to <code>tty2</code> if you need a shell while Cinemate is active.</p>
-<p>The service now uses <code>Type=notify</code>, so systemd can track Cinemate's boot progress through status messages such as the splash becoming active and the GUI starting.
-To keep <code>journalctl -fu cinemate-autostart</code> readable when ALSA reports noisy underruns, the unit rate-limits log output (see <code>LogRateLimitIntervalSec</code> and <code>LogRateLimitBurst</code> in the service file). Adjust those values if you need more or less verbosity.</p>
-<h3 id="starting-stopping-enabling-and-disabling-the-service">Starting, stopping, enabling and disabling the service<a class="headerlink" href="#starting-stopping-enabling-and-disabling-the-service" title="Permanent link">#</a></h3>
-<p>Go to the Cinemate folder:</p>
-<div class="codehilite"><pre><span></span><code>cd cinemate
-
-make install   # copy service file
-make enable    # start on boot
-make start     # launch now
-make stop      # stop it
-make status    # check status
-make disable   # disable autostart
-make clean     # remove the service
-</code></pre></div>
-
-<p>The <code>make install</code> step also copies <code>camera-ready.sh</code>, <code>cinemate-startup-failure-display.sh</code>, and <code>cinemate-console-handoff.sh</code> into <code>/usr/local/bin/</code> with execute permissions so that the systemd unit can call them during startup, failure replay, and shutdown handoff.</p>
-<p>If Cinemate exits before it reaches its real ready state, the service now preserves the colored startup-failure block and the <code>tty1</code> login shell replays it before showing the prompt. That makes invalid <code>settings.json</code> errors and other early-start crashes visible on the HDMI console without losing the normal shell afterward.</p>
-<p>If you want the same clean boot and shutdown handoff as the prebuilt image, install Plymouth separately as described in the manual install guide and then reinstall <code>cinemate-autostart.service</code> so the latest <code>tty1</code> handoff logic is in place.</p>
-<p>To start Cinemate manually, anywhere in the cli, type <code>cinemate</code>.</p>
+<p>Autostarts Cinemate on boot.</p>
+<h3 id="single-instance-enforcement">Single-instance enforcement<a class="headerlink" href="#single-instance-enforcement" title="Permanent link">#</a></h3>
+<p>Only one instance of Cinemate can run at a time. If you start <code>cinemate</code> while the service (or a previous manual session) is already running, the new instance automatically sends a graceful stop signal to the existing one, waits up to 5 seconds for it to exit cleanly, then proceeds with its own startup. No manual intervention is needed.</p>
+<p>This means you can type <code>cinemate</code> in an SSH session at any time to restart the app — even if it is already running via the autostart service.</p>
 <h2 id="storage-automountservice">storage-automount.service<a class="headerlink" href="#storage-automountservice" title="Permanent link">#</a></h2>
-<p>Storage-automount is a systemd service that watches for removable drives and mounts them automatically. The accompanying Python script reacts to udev events and the CFE-HAT eject button so drives can be attached or detached safely.</p>
+<p>Watches for removable drives and mounts them automatically. The accompanying Python script reacts to udev events and the CFE-HAT eject button so drives can be attached or detached safely.</p>
 <p>It understands <code>ext4</code>, <code>ntfs</code> and <code>exfat</code> filesystems. Partitions labelled <code>RAW</code> are mounted at <code>/media/RAW</code>; any other label is mounted under <code>/media/&lt;LABEL&gt;</code> after sanitising the name. This applies to USB SSDs, NVMe drives and the CFE-HAT slot.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>On the image file, the storage-automount.service is activated by default.</p>
-</div>
-<p>To manually install and enable the service:</p>
-<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>cinemate/services/storage-automount
-
-sudo<span class="w"> </span>make<span class="w"> </span>install
-sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable</span>
-</code></pre></div>
-
-<p>The install step also disables the older <code>cfe-hat-automount.service</code> if it is present. Both services try to manage the same NVMe/CFE storage, and leaving them enabled together can cause <code>/media/RAW</code> to be mounted by <code>storage-automount</code> and then immediately unmounted again by the legacy service.</p>
-<p>You can stop or disable it later with:</p>
-<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>make<span class="w"> </span>stop
-sudo<span class="w"> </span>make<span class="w"> </span>disable
-</code></pre></div>
-
 <h2 id="wifi-hotspotservice">wifi-hotspot.service<a class="headerlink" href="#wifi-hotspotservice" title="Permanent link">#</a></h2>
-<p>Wifi-hotspot keeps a small access point running with the help of NetworkManager so you can always reach the web interface. The SSID and password are read from <code>/home/pi/cinemate/src/settings.json</code> under <code>system.wifi_hotspot</code>.</p>
-<p>This service is a watchdog, not the only hotspot entry point. The main Cinemate app can also create the hotspot during startup when hotspot mode is enabled in <code>settings.json</code>. The service simply keeps that network alive even if the main app is not running.</p>
-<p>Install and enable it with:</p>
-<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>cinemate/services/wifi-hotspot
-
-sudo<span class="w"> </span>make<span class="w"> </span>install
-sudo<span class="w"> </span>make<span class="w"> </span><span class="nb">enable</span>
-</code></pre></div>
-
-<p>As with <strong>storage-automount</strong>, you can stop or disable the hotspot with </p>
-<p>````
-make stop
-make disable</p>
-<div class="codehilite"><pre><span></span><code><span class="o">!!!</span><span class="w"> </span><span class="n">note</span>
-
-<span class="w">      </span><span class="k">While</span><span class="w"> </span><span class="n">evaluating</span><span class="p">,</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="n">might</span><span class="w"> </span><span class="n">be</span><span class="w"> </span><span class="n">practical</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">have</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">Pi</span><span class="w"> </span><span class="n">connect</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">your</span><span class="w"> </span><span class="k">local</span><span class="w"> </span><span class="n">wifi</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">easy</span><span class="w"> </span><span class="n">access</span><span class="w"> </span><span class="p">(</span><span class="n n-Quoted">`sudo raspi-config`</span><span class="p">).</span><span class="w"> </span><span class="n">Therefore</span><span class="p">,</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">image</span><span class="w"> </span><span class="k">file</span><span class="p">,</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">wifi</span><span class="o">-</span><span class="n">hotspot</span><span class="p">.</span><span class="n">service</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="o">**</span><span class="k">not</span><span class="o">**</span><span class="w"> </span><span class="n">activated</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="k">default</span><span class="p">.</span><span class="w"> </span><span class="n">Cinemate</span><span class="w"> </span><span class="n">will</span><span class="w"> </span><span class="n">still</span><span class="w"> </span><span class="n">serve</span><span class="w"> </span><span class="n">its</span><span class="w"> </span><span class="n">web</span><span class="w"> </span><span class="n">interface</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">available</span><span class="w"> </span><span class="n">network</span><span class="p">,</span><span class="w"> </span><span class="n">but</span><span class="w"> </span><span class="k">only</span><span class="w"> </span><span class="k">after</span><span class="w"> </span><span class="n n-Quoted">`wlan0`</span><span class="w"> </span><span class="k">or</span><span class="w"> </span><span class="n n-Quoted">`eth0`</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="n">an</span><span class="w"> </span><span class="n">IP</span><span class="w"> </span><span class="n">address</span><span class="p">.</span><span class="w"> </span><span class="n">You</span><span class="w"> </span><span class="n">can</span><span class="w"> </span><span class="k">read</span><span class="w"> </span><span class="n">more</span><span class="w"> </span><span class="err">[</span><span class="n">here</span><span class="err">]</span><span class="p">(</span><span class="n">hotspot</span><span class="o">-</span><span class="n">logic</span><span class="p">.</span><span class="n">md</span><span class="p">)</span>
-
-<span class="c1">## redis-log-maintenance.timer</span>
-
-<span class="n">Redis</span><span class="w"> </span><span class="k">log</span><span class="w"> </span><span class="n">maintenance</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">lightweight</span><span class="w"> </span><span class="n">timer</span><span class="o">-</span><span class="n">backed</span><span class="w"> </span><span class="n">helper</span><span class="w"> </span><span class="n">that</span><span class="w"> </span><span class="n">keeps</span><span class="w"> </span><span class="n n-Quoted">`/var/log/redis/redis-server.log`</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">silently</span><span class="w"> </span><span class="n">filling</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">Pi</span><span class="w"> </span><span class="n">root</span><span class="w"> </span><span class="n">filesystem</span><span class="w"> </span><span class="k">over</span><span class="w"> </span><span class="kt">time</span><span class="p">.</span>
-
-<span class="n">The</span><span class="w"> </span><span class="n">companion</span><span class="w"> </span><span class="n n-Quoted">`redis-log-maintenance.service`</span><span class="w"> </span><span class="n">runs</span><span class="w"> </span><span class="n">once</span><span class="w"> </span><span class="n">per</span><span class="w"> </span><span class="n">timer</span><span class="w"> </span><span class="k">trigger</span><span class="p">.</span><span class="w"> </span><span class="n">It</span><span class="w"> </span><span class="n">trims</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="k">active</span><span class="w"> </span><span class="n">Redis</span><span class="w"> </span><span class="k">log</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">place</span><span class="w"> </span><span class="k">when</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="n">grows</span><span class="w"> </span><span class="n">too</span><span class="w"> </span><span class="n">large</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">removes</span><span class="w"> </span><span class="n">older</span><span class="w"> </span><span class="n">Redis</span><span class="w"> </span><span class="k">log</span><span class="w"> </span><span class="n">rotations</span><span class="w"> </span><span class="n">beyond</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">most</span><span class="w"> </span><span class="n">recent</span><span class="w"> </span><span class="n">few</span><span class="w"> </span><span class="k">files</span><span class="p">.</span>
-
-<span class="k">Install</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="k">enable</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="k">with</span><span class="o">:</span>
-
-<span class="n n-Quoted">`</span><span class="n n-Quoted n-Quoted-Escape">``</span><span class="n n-Quoted">bash</span>
-<span class="n n-Quoted">cd cinemate/services/redis-log-maintenance</span>
-
-<span class="n n-Quoted">sudo make install</span>
-<span class="n n-Quoted">sudo make enable</span>
-</code></pre></div>
-
-<p>The default timer waits a short time after boot and then runs hourly. This is intentionally conservative so it does not interfere with normal Redis logging while still keeping the SD card healthy.</p>
-<p>You can inspect it with:</p>
-<div class="codehilite"><pre><span></span><code>systemctl<span class="w"> </span>status<span class="w"> </span>redis-log-maintenance.timer
-journalctl<span class="w"> </span>-u<span class="w"> </span>redis-log-maintenance.service
-</code></pre></div>
+<p>Keeps a small access point running with the help of NetworkManager so you can always reach the web interface. The SSID and password are read from <code>/home/pi/cinemate/src/settings.json</code> under <code>system.wifi_hotspot</code>.</p>
+<h2 id="redis-log-maintenancetimer">redis-log-maintenance.timer<a class="headerlink" href="#redis-log-maintenancetimer" title="Permanent link">#</a></h2>
+<p>Lightweight timer-backed helper that keeps <code>/var/log/redis/redis-server.log</code> from silently filling the Pi root filesystem over time.</p>
 </div>
 
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../config-txt/" class="btn btn-neutral float-left" title="Modifying config.txt"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../hotspot-logic/" class="btn btn-neutral float-left" title="Configuring the Wi-Fi hotspot"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../storage-preroll/" class="btn btn-neutral float-right" title="Storage pre-roll warm-up">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -270,7 +211,7 @@ journalctl<span class="w"> </span>-u<span class="w"> </span>redis-log-maintenanc
         </span>
     
     
-      <span><a href="../config-txt/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../hotspot-logic/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../storage-preroll/" style="color: #fcfcfc">Next &raquo;</a></span>

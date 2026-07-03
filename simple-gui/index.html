@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/simple-gui/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Simple GUI - Cinemate Docs</title>
+    <title>Reading the camera screen - Cinemate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -15,7 +15,7 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Simple GUI";
+        var mkdocs_page_name = "Reading the camera screen";
         var mkdocs_page_input_path = "simple-gui.md";
         var mkdocs_page_url = "/cinemate/simple-gui/";
       </script>
@@ -47,42 +47,30 @@
                 </li>
               </ul>
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Overview</a>
                 </li>
               </ul>
-              <p class="caption"><span class="caption-text">Quick start</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
-                  </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Customising your build</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
-                  </li>
+                <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Quick start</a>
+                </li>
               </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
               <ul class="current">
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Simple GUI</a>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Reading the camera screen</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#background-colours">Background colours</a>
+    <li class="toctree-l2"><a class="reference internal" href="#indicators">Indicators</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#background-colors">Background colors</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#what-the-gui-shows">What the GUI shows</a>
+        </ul>
     </li>
     </ul>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../fps-correction/">FPS correction and audio sync</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
                   </li>
@@ -90,23 +78,30 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
-              </ul>
-              <p class="caption"><span class="caption-text">System management</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Configuring</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Switching sensors (config.txt)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Install & maintenance</span></p>
+              <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
@@ -114,8 +109,25 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
+                  </li>
               </ul>
-              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Advanced</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Installation & building from source</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Contributing</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -135,7 +147,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
           <li class="breadcrumb-item">Using the camera</li>
-      <li class="breadcrumb-item active">Simple GUI</li>
+      <li class="breadcrumb-item active">Reading the camera screen</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/simple-gui.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
@@ -147,34 +159,66 @@
               
 <div class="markdown-body">
   <h1 id="simple-gui">Simple GUI<a class="headerlink" href="#simple-gui" title="Permanent link">#</a></h1>
-<p>Simple GUI is available both on the attached HDMI output and through the browser-based web UI.</p>
-<h2 id="background-colours">Background colours<a class="headerlink" href="#background-colours" title="Permanent link">#</a></h2>
-<ul>
-<li><strong>Black:</strong> idle</li>
-<li><strong>Red:</strong> at least one camera is actively writing frames to disk (<code>is_writing=1</code>)</li>
-<li><strong>Green:</strong> RAM buffer is filling or buffered frames are still flushing after stop (<code>is_buffering</code> or <code>is_writing_buf</code>)</li>
-<li><strong>Purple:</strong> live drop-frame alert</li>
-<li><strong>Magenta:</strong> live frame-count sync mismatch</li>
-<li><strong>Blue:</strong> storage pre-roll warm-up is running</li>
-<li><strong>Yellow:</strong> RAM load has passed the safety threshold; the GUI asks the controller to stop recording</li>
-</ul>
-<p>The separate <code>DROP</code> tile latches after a drop-frame event and stays visible until a new take starts. A crossed magenta <code>SYNC</code> tile latches as soon as the live expected-vs-recorded frame slot count is outside the configured live tolerance (default +/- 2 frames), then stays visible through the end of the take and until the next take starts. Dropped-frame holes do not trigger the <code>SYNC</code> tile by themselves; they are shown by <code>DROP</code>.</p>
-<h2 id="what-the-gui-shows">What the GUI shows<a class="headerlink" href="#what-the-gui-shows" title="Permanent link">#</a></h2>
+<p>Simple GUI is available both on the attached HDMI. </p>
+<p>The browser-based web UI featurer basic settings and interactive controls.</p>
+<h2 id="indicators">Indicators<a class="headerlink" href="#indicators" title="Permanent link">#</a></h2>
 <ul>
 <li>The buffer meter in the lower-left corner shows used vs total frame buffer. Optional hatch lines can be enabled in <code>settings.json</code> under <code>hdmi_gui</code>.</li>
-<li>During storage pre-roll, the GUI intentionally hides recording time and clip names so the deleted warm-up clip does not appear to be the latest take.</li>
-<li>If zoom is anything other than the configured default, the zoom box is highlighted.</li>
-<li>If dynamic resolution is actively substituting a measured sustainable mode for the current FPS, the resolution numbers turn green. They stay white when Cinemate is showing the user's desired resolution, even if dynamic resolution is enabled.</li>
+<li>During storage pre-roll, the GUI hides recording time and clip names.</li>
+<li>If zoom is anything other than the configured default, the zoom box is highlighted yellow.</li>
+<li>If dynamic resolution is substituting a measured sustainable mode for the current FPS, the resolution numbers turn green.</li>
+<li>If shutter angle sync is activated, the shutter value is green.</li>
+<li>If fps is modified by double fps being activated, the number turns green.</li>
 <li>When a compatible USB microphone is connected, the right side shows VU meters plus sample rate, bit depth, and a <code>WAV</code> badge once the latest take contains both DNG frames and a WAV sidecar.</li>
 </ul>
-<p>For redraw timing and performance tuning, see <code>docs/simple-gui-refresh-tuning.md</code>.</p>
+<h3 id="background-colors">Background colors<a class="headerlink" href="#background-colors" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Colour</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Black</strong></td>
+<td>Idle.</td>
+</tr>
+<tr>
+<td><strong>Red</strong></td>
+<td>At least one camera is actively writing frames to disk.</td>
+</tr>
+<tr>
+<td><strong>Green</strong></td>
+<td>RAM buffer is filling, or buffered frames are still flushing after stop.</td>
+</tr>
+<tr>
+<td><strong>Purple</strong></td>
+<td>Live drop-frame alert.</td>
+</tr>
+<tr>
+<td><strong>Magenta</strong></td>
+<td>Live frame-count sync mismatch.</td>
+</tr>
+<tr>
+<td><strong>Blue</strong></td>
+<td>Storage pre-roll warm-up is running.</td>
+</tr>
+<tr>
+<td><strong>Yellow</strong></td>
+<td>RAM load has passed the safety threshold; the GUI asks the controller to stop recording.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Latching tiles.</strong> The <code>DROP</code> tile latches after a drop-frame event and stays visible until a new take starts. A crossed magenta <code>SYNC</code> tile latches as soon as the live expected-vs-recorded frame slot count is outside the configured live tolerance (default +/- 2 frames), then stays visible through the end of the take and until the next take starts. Dropped-frame holes do not trigger the <code>SYNC</code> tile by themselves; they are shown by <code>DROP</code>.</p>
+<p>For redraw timing and performance tuning, see <a href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>.</p>
 </div>
 
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../hotspot-logic/" class="btn btn-neutral float-left" title="Configuring the Wi-Fi hotspot"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../simple-gui-refresh-tuning/" class="btn btn-neutral float-right" title="Simple GUI refresh tuning">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../getting-started/" class="btn btn-neutral float-left" title="Quick start"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../web-gui/" class="btn btn-neutral float-right" title="Web GUI">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -201,10 +245,10 @@
         </span>
     
     
-      <span><a href="../hotspot-logic/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../getting-started/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../simple-gui-refresh-tuning/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../web-gui/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

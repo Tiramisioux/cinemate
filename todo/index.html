@@ -47,36 +47,22 @@
                 </li>
               </ul>
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Overview</a>
                 </li>
               </ul>
-              <p class="caption"><span class="caption-text">Quick start</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
-                  </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Customising your build</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
-                  </li>
+                <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Quick start</a>
+                </li>
               </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Reading the camera screen</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../fps-correction/">FPS correction and audio sync</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
                   </li>
@@ -84,23 +70,30 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
-              </ul>
-              <p class="caption"><span class="caption-text">System management</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Configuring</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Switching sensors (config.txt)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Install & maintenance</span></p>
+              <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
@@ -108,8 +101,25 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
+                  </li>
               </ul>
-              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Advanced</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Installation & building from source</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Contributing</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -140,16 +150,13 @@
               
 <div class="markdown-body">
   <h2 id="todo">Todo<a class="headerlink" href="#todo" title="Permanent link">#</a></h2>
-<div class="codehilite"><pre><span></span><code><span class="o">-</span><span class="w"> </span><span class="nx">simple_gui</span><span class="p">.</span><span class="nx">py</span><span class="w"> </span><span class="nx">adaptive</span><span class="w"> </span><span class="nx">layout</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nx">non</span><span class="w"> </span><span class="mi">1920</span><span class="nx">x1080</span><span class="w"> </span><span class="nx">screens</span>
-<span class="o">-</span><span class="w"> </span><span class="mi">16</span><span class="w"> </span><span class="nx">bit</span><span class="w"> </span><span class="nx">modes</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nx">imx585</span>
-<span class="o">-</span><span class="w"> </span><span class="nx">support</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nx">imx294</span>
-<span class="o">-</span><span class="w"> </span><span class="nx">overclocking</span><span class="w"> </span><span class="nx">of</span><span class="w"> </span><span class="nx">ISP</span>
-<span class="o">-</span><span class="w"> </span><span class="nx">optional</span><span class="w"> </span><span class="kt">auto</span><span class="o">-</span><span class="nx">exposure</span>
-<span class="o">-</span><span class="w"> </span><span class="nx">hardware</span><span class="w"> </span><span class="nx">sync</span><span class="w"> </span><span class="nx">of</span><span class="w"> </span><span class="nx">sensor</span><span class="w"> </span><span class="nx">frame</span><span class="w"> </span><span class="nx">capture</span><span class="p">,</span><span class="w"> </span><span class="nx">perhaps</span><span class="w"> </span><span class="nx">via</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">pico</span>
-<span class="o">-</span><span class="w"> </span><span class="nx">rendering</span><span class="w"> </span><span class="nx">mode</span><span class="p">,</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nx">creating</span><span class="w"> </span><span class="nx">proxy</span><span class="w"> </span><span class="nx">files</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="nx">camera</span><span class="w"> </span><span class="p">(</span><span class="nx">using</span><span class="w"> </span><span class="nx">https</span><span class="p">:</span><span class="c1">//github.com/mrjulesfletcher/dng_to_video)</span>
-<span class="o">-</span><span class="w"> </span><span class="nx">automatic</span><span class="w"> </span><span class="nx">detection</span><span class="w"> </span><span class="nx">of</span><span class="w"> </span><span class="nx">attached</span><span class="w"> </span><span class="nx">sensor</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="nx">dynamic</span><span class="w"> </span><span class="nx">dtoverlay</span>
+<div class="highlight"><pre><span></span><code>- 16 bit modes for imx585
+- support for imx294
+- overclocking of ISP
+- optional auto-exposure
+- rendering mode, for creating proxy files in camera (using https://github.com/mrjulesfletcher/dng_to_video)
+- automatic detection of attached sensor and dynamic dtoverlay
 </code></pre></div>
-
 <!-- ::schemdraw:: alt="Raspberry Pi 40-pin header (colour-coded)"
     += elm.Dot(color='#ff9800', radius=0.09).at((0,  0.00)).label('3V3',  'left')
     += elm.Dot(color='#f44336', radius=0.09).at((1,  0.00)).label('5V',   'right')

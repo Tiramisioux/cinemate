@@ -49,36 +49,22 @@
                 </li>
               </ul>
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="readme/">Introduction</a>
+                <li class="toctree-l1"><a class="reference internal" href="readme/">Overview</a>
                 </li>
               </ul>
-              <p class="caption"><span class="caption-text">Quick start</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="getting-started/">Getting started with a minimal build</a>
-                  </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Customising your build</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="ssh/">Connecting via SSH</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="cli-commands/">Cinemate terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="settings-json/">Custom settings</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="hotspot-logic/">Configuring the Wi-Fi hotspot</a>
-                  </li>
+                <li class="toctree-l1"><a class="reference internal" href="getting-started/">Quick start</a>
+                </li>
               </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="simple-gui/">Simple GUI</a>
+                  <li class="toctree-l1"><a class="reference internal" href="simple-gui/">Reading the camera screen</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  <li class="toctree-l1"><a class="reference internal" href="web-gui/">Web GUI</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="sensors/">Camera sensors and frame rates</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="audio-recording/">Audio recording</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="fps-correction/">FPS correction and audio sync</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="digital-zoom/">Digital zoom</a>
                   </li>
@@ -86,23 +72,30 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="dual-sensors/">Dual sensors</a>
                   </li>
-              </ul>
-              <p class="caption"><span class="caption-text">System management</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="config-txt/">Modifying config.txt</a>
+                  <li class="toctree-l1"><a class="reference internal" href="cli-commands/">Cinemate terminal commands</a>
                   </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Configuring</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="settings-json/">Custom settings</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="config-txt/">Switching sensors (config.txt)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Install & maintenance</span></p>
+              <ul>
                   <li class="toctree-l1"><a class="reference internal" href="system-services/">System services</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="storage-preroll/">Storage pre-roll warm-up</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="installation-steps/">Manual installation</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="compiling-cinepi-raw/">Recompiling cinepi-raw</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="backing-up-sd-card/">Backing up the SD card</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
@@ -110,8 +103,25 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="redis-keys/">Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="changelog/">Changelog</a>
+                  </li>
               </ul>
-              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="troubleshooting/">Troubleshooting</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Advanced</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="installation-steps/">Installation & building from source</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="audio-sync/">Audio sync & drift</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Contributing</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="acknowledgments/">Acknowledgements</a>
                   </li>
@@ -142,15 +152,15 @@
               
 <div class="markdown-body">
   <h1 id="cinemate-docs">Cinemate Docs<a class="headerlink" href="#cinemate-docs" title="Permanent link">#</a></h1>
-<p>Welcome to the <strong>Cinemate</strong> project - an open-source boiler plate for building your own digital cinema camera using a Raspberry Pi 4 or 5. It combines a lightweight Python interface with the <a href="https://github.com/cinepi">CinePi‑raw recorder by Csaba Nagy</a> for capturing 12‑bit CinemaDNG footage.</p>
-<p>To begin, follow the steps in <a href="getting-started/">Quick start</a>. Later chapters explain how to customise the system to tailor Cinemate to your needs.</p>
+<p>Welcome to the <strong>Cinemate</strong> project — an open-source boilerplate for building your own digital cinema camera using a Raspberry Pi 4 or 5. It combines a lightweight Python interface with the <a href="https://github.com/cinepi">CinePi‑raw recorder by Csaba Nagy</a> for capturing 12‑bit CinemaDNG footage.</p>
+<p>To begin, follow the steps in <a href="getting-started/">Quick start</a>. Later sections cover customising your build. For more background, see the <a href="readme/">Overview</a>.</p>
 <p>For sharing your build with others, inspiration and discussion, make sure to join the <a href="https://discord.gg/Hr4dfhuK">CinePi Discord</a>.</p>
 </div>
 
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="readme/" class="btn btn-neutral float-right" title="Introduction">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="readme/" class="btn btn-neutral float-right" title="Overview">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -201,5 +211,5 @@
 
 <!--
 MkDocs version : 1.6.1
-Build Date UTC : 2026-06-10 21:22:54.295329+00:00
+Build Date UTC : 2026-07-03 20:52:04.275488+00:00
 -->

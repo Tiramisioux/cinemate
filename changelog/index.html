@@ -3,9 +3,9 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/cinepi-multi/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/changelog/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>How Cinemate launches CinePi-raw - Cinemate Docs</title>
+    <title>Changelog - Cinemate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -15,9 +15,9 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "How Cinemate launches CinePi-raw";
-        var mkdocs_page_input_path = "cinepi-multi.md";
-        var mkdocs_page_url = "/cinemate/cinepi-multi/";
+        var mkdocs_page_name = "Changelog";
+        var mkdocs_page_input_path = "changelog.md";
+        var mkdocs_page_url = "/cinemate/changelog/";
       </script>
     
     <!--[if lt IE 9]>
@@ -94,14 +94,40 @@
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
-              <ul>
+              <ul class="current">
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Changelog</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#version-332">Version 3.3.2</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#libcamera">libcamera</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#imx283-driver">imx283 driver</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#imx585-driver">imx585 driver</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#cinepi-raw-recorder">CinePi-RAW recorder</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#cinemate">Cinemate</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#raspberry-pi-bookworm">Raspberry Pi / Bookworm**</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#version-331">Version 3.3.1</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#cinepi-raw-recorder_1">CinePi-RAW recorder</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#cinemate-workflow">Cinemate workflow</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
                   </li>
               </ul>
               <ul>
@@ -138,9 +164,10 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
-      <li class="breadcrumb-item active">How Cinemate launches CinePi-raw</li>
+          <li class="breadcrumb-item">Reference</li>
+      <li class="breadcrumb-item active">Changelog</li>
     <li class="wy-breadcrumbs-aside">
-          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/cinepi-multi.md" class="icon icon-github"> Edit on GitHub</a>
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/changelog.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
   </ul>
   <hr/>
@@ -149,33 +176,61 @@
             <div class="section" itemprop="articleBody">
               
 <div class="markdown-body">
-  <h1 id="how-cinemate-launches-cinepi-raw">How Cinemate launches CinePi-raw<a class="headerlink" href="#how-cinemate-launches-cinepi-raw" title="Permanent link">#</a></h1>
-<p><code>src/module/cinepi_multi.py</code> starts one <code>cinepi-raw</code> process per detected camera. It combines camera discovery from <code>sensor_detect.py</code>, Redis state, and user settings from <code>settings.json</code> to build the command line for each process.</p>
-<h2 id="building-the-cinepi-raw-command">Building the <code>cinepi-raw</code> command<a class="headerlink" href="#building-the-cinepi-raw-command" title="Permanent link">#</a></h2>
-<p>For each detected camera, the manager creates a <code>CinePiProcess</code>. <code>_build_args()</code> assembles flags for:</p>
+  <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h1>
+<p>Release notes for Cinemate. For downloads, see the <a href="https://github.com/Tiramisioux/cinemate/releases">releases page</a>.</p>
+<h2 id="version-332">Version 3.3.2<a class="headerlink" href="#version-332" title="Permanent link">#</a></h2>
+<h3 id="libcamera">libcamera<a class="headerlink" href="#libcamera" title="Permanent link">#</a></h3>
 <ul>
-<li>the selected sensor mode, width, height, and bit depth</li>
-<li>the raw packing suffix for the selected Pi generation</li>
-<li>per-camera geometry from <code>geometry.cam0</code>, <code>geometry.cam1</code>, and so on</li>
-<li>per-camera HDMI output mapping from the <code>output</code> section</li>
-<li>the low-resolution preview size used by CinePi-raw</li>
+<li>Cinemate now uses its own fork of libcamera.</li>
 </ul>
-<p>The preview size is based on <code>hdmi_display.width</code> and <code>hdmi_display.height</code>, but if a framebuffer is already active, Cinemate prefers the real framebuffer size instead of forcing the configured canvas. That avoids drawing a clipped <code>1920x1080</code> preview into a smaller active mode.</p>
-<p>Here is a simplified example of the resulting command:</p>
-<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">2028</span>:1080:12:U<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--width<span class="w"> </span><span class="m">2028</span><span class="w"> </span>--height<span class="w"> </span><span class="m">1080</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--lores-width<span class="w"> </span><span class="m">1280</span><span class="w"> </span>--lores-height<span class="w"> </span><span class="m">720</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--hdmi-port<span class="w"> </span><span class="m">0</span><span class="w"> </span>--rotation<span class="w"> </span><span class="m">0</span><span class="w"> </span>--hflip<span class="w"> </span><span class="m">0</span><span class="w"> </span>--vflip<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--post-process-file<span class="w"> </span>/home/pi/post-processing0.json<span class="w"> </span><span class="se">\</span>
-<span class="w">           </span>--tuning-file<span class="w"> </span>/home/pi/libcamera/src/ipa/rpi/pisp/data/imx477.json
-</code></pre></div>
-<p>On Raspberry Pi 4 / Pi 400 / CM4, Cinemate switches IMX296 and IMX477 launches to packed raw mode (<code>P</code>), for example <code>1456:1088:10:P</code> for IMX296. On Raspberry Pi 5 / CM5 it leaves those sensors on unpacked raw mode (<code>U</code>). Pi 4-family launches also skip the PiSP tuning-file argument and use the VC4 camera stack.</p>
-<h2 id="multi-camera-startup-details">Multi-camera startup details<a class="headerlink" href="#multi-camera-startup-details" title="Permanent link">#</a></h2>
-<p>In multi-camera mode, the sensors are synced. The first process is launched with <code>--sync server</code> and the rest use <code>--sync client</code>. Only the primary process gets the on-screen preview rectangle; secondary cameras run with <code>--nopreview</code>.</p>
+<h3 id="imx283-driver">imx283 driver<a class="headerlink" href="#imx283-driver" title="Permanent link">#</a></h3>
+<ul>
+<li>Cinemate now uses its own fork of imx283 driver.</li>
+<li>2 additional modes: 3840 x 2160 (4K UHD, native crop) and 2736 x 1538 (2.7K 16:9, binned) </li>
+</ul>
+<h3 id="imx585-driver">imx585 driver<a class="headerlink" href="#imx585-driver" title="Permanent link">#</a></h3>
+<ul>
+<li>Cinemate now uses its own fork of imx283 driver.</li>
+</ul>
+<h3 id="cinepi-raw-recorder">CinePi-RAW recorder<a class="headerlink" href="#cinepi-raw-recorder" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>Frame-rate phase lock</strong> — closed-loop control (sigma-delta VBLANK dither) keeps long takes locked to the Pi's wall clock and pre-converges during preview. On by default.</li>
+<li><strong>More reliable audio sync on 4K / exFAT</strong> — the capture path was reworked (protected helper, dedicated writer thread, wall-clock reconciliation, real-time scheduling) for more reliable WAV sync on demanding modes.</li>
+<li><strong>Wall clock embedded timecode</strong> — timecode is anchored to the first frame's wall-clock time and follows the Pi's real-time clock, so it reflects the actual time of day rather than a plain sequential frame count; routed per camera for dual-sensor rigs.</li>
+<li><strong>Correct Pi 4 RAW</strong> — CSI2-packed frames decode correctly on Pi 4-family boards; raw packing (P/U) is chosen per Pi model automatically.</li>
+<li><strong>Camera model</strong> — set the camera model manually for each attached sensor.</li>
+</ul>
+<h3 id="cinemate">Cinemate<a class="headerlink" href="#cinemate" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>Storage / media</strong> — multi-drive RAW hot-swap with a standby drive and automatic promotion. Default format is exFAT.</li>
+</ul>
+<h3 id="raspberry-pi-bookworm">Raspberry Pi / Bookworm**<a class="headerlink" href="#raspberry-pi-bookworm" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>Boot / install</strong> — faster boot-to-preview on Pi 4/5 (about 10-15 seconds)</li>
+</ul>
+<h2 id="version-331">Version 3.3.1<a class="headerlink" href="#version-331" title="Permanent link">#</a></h2>
+<h3 id="cinepi-raw-recorder_1">CinePi-RAW recorder<a class="headerlink" href="#cinepi-raw-recorder_1" title="Permanent link">#</a></h3>
+<ul>
+<li>New Cinemate fork, reducing CPU load and temperature dramatically and reducing dropped frames.</li>
+<li>Resolution can now be changed without restarting the recorder process, enabling faster mode changes and dynamic resolution switching.</li>
+<li>Better USB microphone sync.</li>
+</ul>
+<h3 id="cinemate-workflow">Cinemate workflow<a class="headerlink" href="#cinemate-workflow" title="Permanent link">#</a></h3>
+<ul>
+<li>exFAT support and filesystem-aware storage profiles for efficient media writes, including IMX585 25 fps at 4K to SSD without frame drops.</li>
+<li>Dynamic resolution switching to match the observed sustainable frame rate for the attached sensor and storage media — for example, IMX585 automatically switches to HD above 25 fps when an SSD is used.</li>
+<li>Hot-swapping between 16-bit and 24-bit USB microphones.</li>
+<li>4K-class recording modes are visible by default.</li>
+<li>Automatic storage pre-roll can be disabled in <code>settings.json</code>.</li>
+</ul>
 </div>
 
             </div>
           </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../redis-keys/" class="btn btn-neutral float-left" title="Key reference"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../troubleshooting/" class="btn btn-neutral float-right" title="Troubleshooting">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
 
   <hr/>
 
@@ -201,6 +256,10 @@
         </span>
     
     
+      <span><a href="../redis-keys/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../troubleshooting/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

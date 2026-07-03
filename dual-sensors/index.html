@@ -47,36 +47,22 @@
                 </li>
               </ul>
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Overview</a>
                 </li>
               </ul>
-              <p class="caption"><span class="caption-text">Quick start</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
-                  </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Customising your build</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
-                  </li>
+                <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Quick start</a>
+                </li>
               </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
               <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Reading the camera screen</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../fps-correction/">FPS correction and audio sync</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
                   </li>
@@ -86,23 +72,30 @@
     <ul class="current">
     </ul>
                   </li>
-              </ul>
-              <p class="caption"><span class="caption-text">System management</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Configuring</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Switching sensors (config.txt)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Install & maintenance</span></p>
+              <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
@@ -110,8 +103,25 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
+                  </li>
               </ul>
-              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Advanced</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Installation & building from source</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Contributing</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -147,21 +157,21 @@
 <ul>
 <li><strong>Primary camera</strong> (first detected) displays its preview on HDMI port 0.</li>
 <li><strong>Secondary cameras</strong> run with <code>--nopreview</code> and map to subsequent HDMI outputs (cam1→HDMI 1, cam2→HDMI 2, etc.).</li>
-<li>Preview windows are centered and sized according to your <code>geometry</code> settings.</li>
+<li>Preview windows are centered and sized according to the <code>geometry</code> settings for each port.</li>
 </ul>
 <p>Cameras are synchronized with cam0 being the server and cam1 being the client.</p>
 <p>On Raspberry Pi 5 Compute Model carrier boards, the second CSI connector (cam1) may appear as <code>i2c@70000</code> in <code>--list-cameras</code>. Cinemate maps this path to <strong>cam1</strong> so each sensor gets the correct port assignment.</p>
 <div class="admonition note">
 <p>When using the cam1 with the official Raspberry Pi CM carrier board, make sure to connect the JC GPIO pins as described here: <a href="https://www.raspberrypi.com/documentation/computers/compute-module.html#connect-two-cameras">https://www.raspberrypi.com/documentation/computers/compute-module.html#connect-two-cameras</a></p>
 </div>
-<p>You can override default HDMI mappings in <code>settings.json</code> under the <code>output</code> section.</p>
+<p>You can override geometry, HDMI port, camera name, and FPS correction for each port independently in <code>settings.json</code> under <code>camera.cam0</code> and <code>camera.cam1</code>. See <a href="../settings-json/#camera">settings</a>.</p>
 </div>
 
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
         <a href="../speed-ramping/" class="btn btn-neutral float-left" title="Speed ramping & shutter angle synchronization"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../config-txt/" class="btn btn-neutral float-right" title="Modifying config.txt">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../cli-commands/" class="btn btn-neutral float-right" title="Cinemate terminal commands">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -191,7 +201,7 @@
       <span><a href="../speed-ramping/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../config-txt/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../cli-commands/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

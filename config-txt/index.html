@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/config-txt/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Modifying config.txt - Cinemate Docs</title>
+    <title>Switching sensors (config.txt) - Cinemate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -15,7 +15,7 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Modifying config.txt";
+        var mkdocs_page_name = "Switching sensors (config.txt)";
         var mkdocs_page_input_path = "config-txt.md";
         var mkdocs_page_url = "/cinemate/config-txt/";
       </script>
@@ -47,36 +47,22 @@
                 </li>
               </ul>
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Overview</a>
                 </li>
               </ul>
-              <p class="caption"><span class="caption-text">Quick start</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
-                  </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Customising your build</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
-                  </li>
+                <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Quick start</a>
+                </li>
               </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Reading the camera screen</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../fps-correction/">FPS correction and audio sync</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
                   </li>
@@ -84,10 +70,16 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
               </ul>
-              <p class="caption"><span class="caption-text">System management</span></p>
+              <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul class="current">
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Modifying config.txt</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Switching sensors (config.txt)</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#adjusting-configtxt-for-different-sensors">Adjusting config.txt for different sensors:</a>
         <ul>
@@ -97,18 +89,19 @@
     </li>
     </ul>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Install & maintenance</span></p>
+              <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
@@ -116,8 +109,25 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
+                  </li>
               </ul>
-              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Advanced</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Installation & building from source</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Contributing</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -136,8 +146,8 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
-          <li class="breadcrumb-item">System management</li>
-      <li class="breadcrumb-item active">Modifying config.txt</li>
+          <li class="breadcrumb-item">Configuring</li>
+      <li class="breadcrumb-item active">Switching sensors (config.txt)</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/config-txt.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
@@ -154,15 +164,11 @@
 <p>For easy editing of <code>config.txt</code> on the preinstalled image file, type <code>editboot</code> anywhere in Raspberry Pi terminal.</p>
 </div>
 <p>If using a manual install without the above alias, type:</p>
-<div class="codehilite"><pre><span></span><code>sudo nano /boot/firmware/config.txt
+<div class="highlight"><pre><span></span><code>sudo nano /boot/firmware/config.txt
 </code></pre></div>
-
-<p>For headless HDMI installs on Raspberry Pi Bookworm, also edit <code>/boot/firmware/cmdline.txt</code> and append a single-line KMS video override such as <code>video=HDMI-A-1:1920x1080M@60D</code> or <code>video=HDMI-A-2:1920x1080M@60D</code>. This pins the boot framebuffer to 1080p so hotplugged HDMI does not fall back to <code>1024x768</code>.</p>
-<p>The one-click installer writes <code>/boot/firmware/config.txt</code> as a fully managed Cinemate file and stores a backup of the previous file under <code>/home/pi/.cinemate-install-backups/</code>. Manual installs should use the same managed-format block below. That avoids leftover stock comments whose matching settings were moved into the Cinemate-managed block.</p>
-<p>Uncomment the section for the sensor being used, and make sure to comment out the others. The clean-install default is <code>imx477</code> on <code>cam0</code>. For IMX296, IMX283, or StarlightEye color, uncomment that sensor section and set the camera port to the physical connector you are using. Reboot the Pi for changes to take effect.</p>
-<p>The raw <code>P</code>/<code>U</code> packing choice is not set in <code>config.txt</code>. Cinemate applies that when launching CinePi-RAW: IMX296 and IMX477 use packed mode on Raspberry Pi 4-family boards and unpacked mode on Raspberry Pi 5 / CM5.</p>
+<p>Uncomment the section for the sensor being used, and make sure to comment out the others. The clean-install default is <code>imx477</code> on <code>cam0</code>. For IMX296, IMX283, or IMX585, uncomment that sensor section and set the camera port to the physical connector you are using. Reboot the Pi for changes to take effect.</p>
 <h3 id="example-configtxt">Example config.txt<a class="headerlink" href="#example-configtxt" title="Permanent link">#</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1"># &gt;&gt;&gt; cinemate-install &gt;&gt;&gt;</span>
+<div class="highlight"><pre><span></span><code><span class="c1"># &gt;&gt;&gt; cinemate-install &gt;&gt;&gt;</span>
 <span class="c1"># Managed by cinemate-install.sh</span>
 <span class="c1"># For more options and information see</span>
 <span class="c1"># http://rptl.io/configtxt</span>
@@ -244,21 +250,14 @@
 <span class="nv">dtoverlay</span><span class="o">=</span>disable-bt
 <span class="c1"># &lt;&lt;&lt; cinemate-install &lt;&lt;&lt;</span>
 </code></pre></div>
-
 <p>Exit the editor by pressing Ctrl+X.</p>
-<div class="admonition note">
-<p>Note that Cinemate needs you to explicitly set the camera port, match that of the physical camera port you are using. Default is <code>cam0</code>.</p>
-</div>
-<div class="admonition tip">
-<p>The preinstalled image file comes with <strong>OneInchEye</strong> and <strong>StarlightEye</strong> preinstalled.</p>
-</div>
 </div>
 
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../dual-sensors/" class="btn btn-neutral float-left" title="Dual sensors"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../system-services/" class="btn btn-neutral float-right" title="System services">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../settings-json/" class="btn btn-neutral float-left" title="Custom settings"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../hotspot-logic/" class="btn btn-neutral float-right" title="Configuring the Wi-Fi hotspot">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -285,10 +284,10 @@
         </span>
     
     
-      <span><a href="../dual-sensors/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../settings-json/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../system-services/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../hotspot-logic/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

@@ -47,78 +47,22 @@
                 </li>
               </ul>
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Overview</a>
                 </li>
               </ul>
-              <p class="caption"><span class="caption-text">Quick start</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
-                  </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Customising your build</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
-                  </li>
+                <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Quick start</a>
+                </li>
               </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
-              <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Reading the camera screen</a>
                   </li>
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Simple GUI refresh tuning</a>
-    <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#the-main-timing-settings">The main timing settings</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#selftarget_fps-12">self.target_fps = 12</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#selfmin_frame_interval-1-selftarget_fps">self.min_frame_interval = 1 / self.target_fps</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#selfslow_refresh_interval-10">self.slow_refresh_interval = 1.0</a>
-    </li>
-        </ul>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#audio-meter-timing">Audio meter timing</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#selfvu_decay_factor-02">self.vu_decay_factor = 0.2</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#selfvu_smoothing_alpha-04">self.vu_smoothing_alpha = 0.4</a>
-    </li>
-        </ul>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#advanced-timing-knob">Advanced timing knob</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#self_redraw_eventwaittimeout01">self._redraw_event.wait(timeout=0.1)</a>
-    </li>
-        </ul>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#what-to-change-for-common-goals">What to change for common goals</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#make-the-gui-feel-more-live">Make the GUI feel more live</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#reduce-cpu-and-framebuffer-pressure">Reduce CPU and framebuffer pressure</a>
-    </li>
-    <li class="toctree-l3"><a class="reference internal" href="#keep-camera-state-updates-fast-but-make-system-stats-more-live">Keep camera-state updates fast, but make system stats more live</a>
-    </li>
-        </ul>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#suggested-workflow-when-tuning">Suggested workflow when tuning</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#where-to-edit">Where to edit</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#important-note">Important note</a>
-    </li>
-    </ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../fps-correction/">FPS correction and audio sync</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
                   </li>
@@ -126,23 +70,30 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
-              </ul>
-              <p class="caption"><span class="caption-text">System management</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Configuring</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Switching sensors (config.txt)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Install & maintenance</span></p>
+              <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
@@ -150,8 +101,33 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
+                  </li>
               </ul>
-              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Advanced</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Installation & building from source</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Simple GUI refresh tuning</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#the-main-timing-settings">The main timing settings</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#audio-meter-timing">Audio meter timing</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#advanced-timing-knob">Advanced timing knob</a>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Contributing</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -170,7 +146,7 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
-          <li class="breadcrumb-item">Using the camera</li>
+          <li class="breadcrumb-item">Advanced</li>
       <li class="breadcrumb-item active">Simple GUI refresh tuning</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/simple-gui-refresh-tuning.md" class="icon icon-github"> Edit on GitHub</a>
@@ -193,7 +169,7 @@
 <p>That means the main tuning goal is to balance responsiveness against framebuffer bandwidth and CPU use.</p>
 <h2 id="the-main-timing-settings">The main timing settings<a class="headerlink" href="#the-main-timing-settings" title="Permanent link">#</a></h2>
 <p>These values live near the top of <code>SimpleGUI.__init__()</code>.</p>
-<h3 id="selftarget_fps-12"><code>self.target_fps = 12</code><a class="headerlink" href="#selftarget_fps-12" title="Permanent link">#</a></h3>
+<p><code>self.target_fps = 12</code></p>
 <p>This is the maximum redraw rate for the GUI fast path.</p>
 <ul>
 <li>Higher values make frame count, timecode, buffer state, recording state, and VU motion feel more immediate.</li>
@@ -206,7 +182,7 @@
 <li><code>15</code>: snappier, but worth testing for thermals and CPU load</li>
 <li>above <code>15</code>: usually not recommended with the current full-screen PIL-to-framebuffer path</li>
 </ul>
-<h3 id="selfmin_frame_interval-1-selftarget_fps"><code>self.min_frame_interval = 1 / self.target_fps</code><a class="headerlink" href="#selfmin_frame_interval-1-selftarget_fps" title="Permanent link">#</a></h3>
+<p><code>self.min_frame_interval = 1 / self.target_fps</code></p>
 <p>This is the derived minimum time between redraws.</p>
 <ul>
 <li>At <code>12 FPS</code>, the minimum interval is about <code>0.083 s</code></li>
@@ -214,7 +190,7 @@
 <li>At <code>15 FPS</code>, it is <code>0.067 s</code></li>
 </ul>
 <p>You normally should not edit this directly. Change <code>target_fps</code> instead.</p>
-<h3 id="selfslow_refresh_interval-10"><code>self.slow_refresh_interval = 1.0</code><a class="headerlink" href="#selfslow_refresh_interval-10" title="Permanent link">#</a></h3>
+<p><code>self.slow_refresh_interval = 1.0</code></p>
 <p>This controls how often the GUI refreshes the heavy, slow-changing values.</p>
 <p>These currently include:</p>
 <ul>
@@ -235,7 +211,7 @@
 </ul>
 <h2 id="audio-meter-timing">Audio meter timing<a class="headerlink" href="#audio-meter-timing" title="Permanent link">#</a></h2>
 <p>These values affect how the right-side VU meter feels.</p>
-<h3 id="selfvu_decay_factor-02"><code>self.vu_decay_factor = 0.2</code><a class="headerlink" href="#selfvu_decay_factor-02" title="Permanent link">#</a></h3>
+<p><code>self.vu_decay_factor = 0.2</code></p>
 <p>The runtime loop currently sets <code>self.vu_decay_factor = 0.2</code> in <code>run()</code>, and that is the value that controls how quickly the displayed VU bars fall when the signal drops.</p>
 <ul>
 <li>Higher value: faster fall</li>
@@ -247,74 +223,21 @@
 <li><code>0.2</code>: current behavior</li>
 <li><code>0.3</code>: faster, more reactive falloff</li>
 </ul>
-<h3 id="selfvu_smoothing_alpha-04"><code>self.vu_smoothing_alpha = 0.4</code><a class="headerlink" href="#selfvu_smoothing_alpha-04" title="Permanent link">#</a></h3>
-<p>This value is defined in <code>__init__()</code>, but the current <code>update_smoothed_vu_levels()</code> implementation does not use it.</p>
-<p>Right now:</p>
-<ul>
-<li>changing <code>vu_smoothing_alpha</code> does not change GUI behavior</li>
-<li>only <code>vu_decay_factor</code> affects the displayed smoothing/decay feel</li>
-</ul>
-<p>If the VU algorithm is expanded later, this would be the likely place to control how quickly rising levels are smoothed.</p>
 <h2 id="advanced-timing-knob">Advanced timing knob<a class="headerlink" href="#advanced-timing-knob" title="Permanent link">#</a></h2>
-<h3 id="self_redraw_eventwaittimeout01"><code>self._redraw_event.wait(timeout=0.1)</code><a class="headerlink" href="#self_redraw_eventwaittimeout01" title="Permanent link">#</a></h3>
-<p>Inside <code>run()</code>, the GUI waits up to <code>0.1</code> seconds when there is no work queued.</p>
-<p>In normal use, Redis changes wake the loop immediately, so this timeout is mostly just a fallback sleep while idle.</p>
+<p><code>self._redraw_event.wait(timeout=0.1)</code></p>
+<p>Inside <code>run()</code>, the GUI waits up to <code>0.1</code> seconds when no work is queued. Redis changes wake the loop immediately, so this is mostly a fallback sleep while idle.</p>
 <ul>
-<li>Lowering it can make idle polling a little tighter</li>
-<li>raising it can reduce tiny amounts of background wake activity</li>
+<li>Lower: slightly tighter idle polling</li>
+<li>Higher: a little less background wake activity</li>
 </ul>
-<p>This is usually not the first thing to tune. <code>target_fps</code> and <code>slow_refresh_interval</code> matter much more.</p>
-<h2 id="what-to-change-for-common-goals">What to change for common goals<a class="headerlink" href="#what-to-change-for-common-goals" title="Permanent link">#</a></h2>
-<h3 id="make-the-gui-feel-more-live">Make the GUI feel more live<a class="headerlink" href="#make-the-gui-feel-more-live" title="Permanent link">#</a></h3>
-<p>Try:</p>
-<div class="codehilite"><pre><span></span><code><span class="bp">self</span><span class="o">.</span><span class="n">target_fps</span> <span class="o">=</span> <span class="mi">15</span>
-<span class="bp">self</span><span class="o">.</span><span class="n">slow_refresh_interval</span> <span class="o">=</span> <span class="mf">1.0</span>
-</code></pre></div>
-
-<p>Use this if framecount, buffer, and timecode updates still feel a little too stepped.</p>
-<h3 id="reduce-cpu-and-framebuffer-pressure">Reduce CPU and framebuffer pressure<a class="headerlink" href="#reduce-cpu-and-framebuffer-pressure" title="Permanent link">#</a></h3>
-<p>Try:</p>
-<div class="codehilite"><pre><span></span><code><span class="bp">self</span><span class="o">.</span><span class="n">target_fps</span> <span class="o">=</span> <span class="mi">8</span>
-<span class="bp">self</span><span class="o">.</span><span class="n">slow_refresh_interval</span> <span class="o">=</span> <span class="mf">1.5</span>
-</code></pre></div>
-
-<p>Use this if the Pi is busy and the GUI does not need to feel as immediate.</p>
-<h3 id="keep-camera-state-updates-fast-but-make-system-stats-more-live">Keep camera-state updates fast, but make system stats more live<a class="headerlink" href="#keep-camera-state-updates-fast-but-make-system-stats-more-live" title="Permanent link">#</a></h3>
-<p>Try:</p>
-<div class="codehilite"><pre><span></span><code><span class="bp">self</span><span class="o">.</span><span class="n">target_fps</span> <span class="o">=</span> <span class="mi">12</span>
-<span class="bp">self</span><span class="o">.</span><span class="n">slow_refresh_interval</span> <span class="o">=</span> <span class="mf">0.5</span>
-</code></pre></div>
-
-<p>Use this if you want CPU temp/load and recording-info updates more often without pushing the redraw cap much higher.</p>
-<h2 id="suggested-workflow-when-tuning">Suggested workflow when tuning<a class="headerlink" href="#suggested-workflow-when-tuning" title="Permanent link">#</a></h2>
-<ol>
-<li>Change <code>target_fps</code> first.</li>
-<li>Test for a few minutes while watching CPU load and overall UI smoothness.</li>
-<li>Adjust <code>slow_refresh_interval</code> only if the system-stat freshness is not where you want it.</li>
-<li>Adjust <code>vu_decay_factor</code> only if the audio meter feel needs changing.</li>
-</ol>
-<h2 id="where-to-edit">Where to edit<a class="headerlink" href="#where-to-edit" title="Permanent link">#</a></h2>
-<p>File:</p>
-<ul>
-<li><code>src/module/simple_gui.py</code></li>
-</ul>
-<p>Primary timing lines:</p>
-<ul>
-<li><code>self.target_fps = 12</code></li>
-<li><code>self.min_frame_interval = 1 / self.target_fps</code></li>
-<li><code>self.slow_refresh_interval = 1.0</code></li>
-<li><code>self.vu_smoothing_alpha = 0.4</code></li>
-<li><code>self.vu_decay_factor = 0.2</code> inside <code>run()</code></li>
-</ul>
-<h2 id="important-note">Important note<a class="headerlink" href="#important-note" title="Permanent link">#</a></h2>
-<p>The current GUI still redraws the whole PIL image and writes the whole framebuffer for each draw. Because of that, increasing <code>target_fps</code> always has a real cost. Small increases are usually fine, but very high values are likely to give diminishing returns on the Pi.</p>
+<p>Tune <code>target_fps</code> and <code>slow_refresh_interval</code> first; they matter much more.</p>
 </div>
 
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../simple-gui/" class="btn btn-neutral float-left" title="Simple GUI"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../sensors/" class="btn btn-neutral float-right" title="Camera sensors and frame rates">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../audio-sync/" class="btn btn-neutral float-left" title="Audio sync & drift"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../acknowledgments/" class="btn btn-neutral float-right" title="Acknowledgements">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -341,10 +264,10 @@
         </span>
     
     
-      <span><a href="../simple-gui/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../audio-sync/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../sensors/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../acknowledgments/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

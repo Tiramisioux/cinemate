@@ -47,46 +47,30 @@
                 </li>
               </ul>
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../readme/">Introduction</a>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Overview</a>
                 </li>
               </ul>
-              <p class="caption"><span class="caption-text">Quick start</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Getting started with a minimal build</a>
-                  </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Customising your build</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
-                  </li>
+                <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Quick start</a>
+                </li>
               </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
               <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Reading the camera screen</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Audio recording</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#supported-paths">Supported paths</a>
+    <li class="toctree-l2"><a class="reference internal" href="#supported-microhones">Supported microhones</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#capture-gain-from-settingsjson">Capture gain from settings.json</a>
+    <li class="toctree-l2"><a class="reference internal" href="#using-the-microphone">Using the microphone</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#etcasoundconf-setup">/etc/asound.conf setup</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#gui-indicators">GUI indicators</a>
+    <li class="toctree-l2"><a class="reference internal" href="#settingsjson-audio-section">settings.json audio section</a>
     </li>
     </ul>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../fps-correction/">FPS correction and audio sync</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
                   </li>
@@ -94,23 +78,30 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
-              </ul>
-              <p class="caption"><span class="caption-text">System management</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Modifying config.txt</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Configuring</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Switching sensors (config.txt)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Install & maintenance</span></p>
+              <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Reference & troubleshooting</span></p>
+              <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
@@ -118,8 +109,25 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
+                  </li>
               </ul>
-              <p class="caption"><span class="caption-text">Development & contributing</span></p>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Advanced</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Installation & building from source</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Contributing</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -151,84 +159,40 @@
               
 <div class="markdown-body">
   <h1 id="audio-recording">Audio recording<a class="headerlink" href="#audio-recording" title="Permanent link">#</a></h1>
-<p>Cinemate can record audio alongside the image sequence. Audio is written as <code>.wav</code> files into the same folder as the <code>.dng</code> frames. Timecode is readable by Davinci Resolve, which treats the .dng sequence and wav as one clip.</p>
-<h2 id="supported-paths">Supported paths<a class="headerlink" href="#supported-paths" title="Permanent link">#</a></h2>
-<ul>
-<li><strong>Preferred 24-bit path:</strong> <code>mic_24bit</code> at 48 kHz stereo</li>
-<li><strong>Preferred 16-bit path:</strong> <code>mic_16bit</code> at 48 kHz mono</li>
-<li><strong>Fallback path:</strong> if neither alias works, Cinemate probes <code>arecord -l</code>, builds <code>plughw:&lt;card&gt;,&lt;device&gt;</code> aliases, and tries them at 16-bit/48 kHz until one records successfully</li>
-</ul>
-<p>In practice this means a RODE VideoMic NTG can use the 24-bit alias, while simpler USB PnP microphones usually fall back to the 16-bit path.</p>
-<p>If <code>arecord</code> is missing or no recording device can be probed successfully, Cinemate disables audio capture for that run.</p>
-<h2 id="capture-gain-from-settingsjson">Capture gain from <code>settings.json</code><a class="headerlink" href="#capture-gain-from-settingsjson" title="Permanent link">#</a></h2>
-<p>You can ask Cinemate to apply a capture-side gain to the detected microphone input:</p>
-<div class="codehilite"><pre><span></span><code><span class="nt">&quot;audio&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;capture_gain_db&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span>
+<h2 id="supported-microhones">Supported microhones<a class="headerlink" href="#supported-microhones" title="Permanent link">#</a></h2>
+<p>Cinemate has been tested with RODE VideoMic NTG 24 bit microphone and simple 16 bit USB microphones</p>
+<h2 id="using-the-microphone">Using the microphone<a class="headerlink" href="#using-the-microphone" title="Permanent link">#</a></h2>
+<ol>
+<li>Plug a USB microphone into the Pi.</li>
+<li>Check for mic, bit depth and sample rate indicator on the left side of the gui. On the right side VU meters should show.</li>
+<li>When recording <code>.wav</code> is written next to the <code>.dng</code> frames in the same take folder and a white "wav" label shows up next to the clip name below the preview.</li>
+</ol>
+<p>Timecode is readable by DaVinci Resolve, which treats the <code>.dng</code> sequence and <code>.wav</code> as one clip.</p>
+<h2 id="settingsjson-audio-section"><code>settings.json</code> audio section<a class="headerlink" href="#settingsjson-audio-section" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;audio&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;24bit&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;capture_gain_db&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;timecode_offset_frames&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;16bit&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;capture_gain_db&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;timecode_offset_frames&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
-
 <ul>
-<li><code>0.0</code> leaves the input at unity gain</li>
-<li>positive values boost the captured signal</li>
-<li>negative values attenuate it</li>
+<li><strong><code>24bit</code></strong> — settings for the 24-bit USB dsnoop path (<code>mic_24bit</code> alias, e.g. RØDE VideoMic NTG).</li>
+<li><strong><code>16bit</code></strong> — settings for the 16-bit plain-<code>arecord</code> fallback path (generic USB PnP mics).</li>
 </ul>
-<p>Because this is applied on the capture side, it is the right place to make the idle mic monitor, the on-screen VU, and the recorded WAV agree more closely.</p>
-<p>Cinemate also mirrors this startup value into Redis as <code>audio_capture_gain_db</code> so you can later add runtime controls around the same setting.</p>
-<p>Not every USB mic exposes a writable ALSA capture control. When a microphone does not, Cinemate leaves the input untouched and logs that no compatible capture control was found.</p>
-<h2 id="etcasoundconf-setup"><code>/etc/asound.conf</code> setup<a class="headerlink" href="#etcasoundconf-setup" title="Permanent link">#</a></h2>
-<p>For <code>dsnoop</code> support, create <code>/etc/asound.conf</code>:</p>
-<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>tee<span class="w"> </span>/etc/asound.conf<span class="w"> </span>&gt;/dev/null<span class="w"> </span><span class="s">&lt;&lt;&#39;EOF&#39;</span>
-<span class="s"># RODE NTG path (24-bit stereo)</span>
-<span class="s">pcm.mic_dsnoop_24 {</span>
-<span class="s">  type dsnoop</span>
-<span class="s">  ipc_key 5978</span>
-<span class="s">  ipc_perm 0666</span>
-<span class="s">  ipc_key_add_uid false</span>
-<span class="s">  slave {</span>
-<span class="s">    pcm &quot;hw:CARD=NTG,DEV=0&quot;</span>
-<span class="s">    format S24_3LE</span>
-<span class="s">    rate 48000</span>
-<span class="s">    channels 2</span>
-<span class="s">  }</span>
-<span class="s">  bindings.0 0</span>
-<span class="s">  bindings.1 1</span>
-<span class="s">}</span>
-
-<span class="s"># Cheap USB path (16-bit mono)</span>
-<span class="s">pcm.mic_dsnoop_16 {</span>
-<span class="s">  type dsnoop</span>
-<span class="s">  ipc_key 5979</span>
-<span class="s">  ipc_perm 0666</span>
-<span class="s">  ipc_key_add_uid false</span>
-<span class="s">  slave {</span>
-<span class="s">    pcm &quot;hw:CARD=Device,DEV=0&quot;</span>
-<span class="s">    format S16_LE</span>
-<span class="s">    rate 48000</span>
-<span class="s">    channels 1</span>
-<span class="s">  }</span>
-<span class="s">  bindings.0 0</span>
-<span class="s">}</span>
-
-<span class="s">pcm.mic_24bit { type plug; slave.pcm &quot;mic_dsnoop_24&quot; }</span>
-<span class="s">pcm.mic_16bit { type plug; slave.pcm &quot;mic_dsnoop_16&quot; }</span>
-<span class="s">EOF</span>
-</code></pre></div>
-
-<h2 id="gui-indicators">GUI indicators<a class="headerlink" href="#gui-indicators" title="Permanent link">#</a></h2>
-<p>When a compatible microphone is connected, the Simple GUI shows:</p>
-<ul>
-<li>live VU meters on the right side</li>
-<li>the detected sample rate in kHz</li>
-<li>the detected bit depth</li>
-<li>a <code>WAV</code> badge once the latest take contains both DNG frames and a WAV sidecar</li>
-</ul>
+<p><code>capture_gain_db</code> is applied after Cinemate probes which path is active and knows the bit depth. <code>0.0</code> = unity gain; positive values boost, negative attenuate. </p>
+<p><code>timecode_offset_frames</code> enables manual offset of the embedded timecode. This can be useful if you see a constant offset in the sound. See also <a href="../audio-sync/">Audio sync &amp; drift</a>.</p>
 </div>
 
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
         <a href="../sensors/" class="btn btn-neutral float-left" title="Camera sensors and frame rates"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../fps-correction/" class="btn btn-neutral float-right" title="FPS correction and audio sync">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../digital-zoom/" class="btn btn-neutral float-right" title="Digital zoom">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -258,7 +222,7 @@
       <span><a href="../sensors/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../fps-correction/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../digital-zoom/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

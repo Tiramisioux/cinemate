@@ -1,13 +1,11 @@
 # Additional hardware
 
-Cinemate works out of the box with nothing more than a Pi, a sensor board and an HDMI monitor or a phone. Everything can be controlled from the [web GUI](web-gui.md) or the [terminal](cli-commands.md). But a camera is nicer to operate with real buttons and dials. This page describes the extra hardware Cinemate supports and what each piece does.
-
 !!! note ""
     None of the hardware on this page is required. Add what you need, when you need it.
 
-All physical controls are mapped in [the settings file](settings-json.md). On the Pi, type `editsettings` in the terminal to open it. Changes take effect the next time Cinemate starts. Every button, switch, pot and dial simply calls the same commands that the CLI and the web GUI use — see [controller methods](controller-methods.md) for the full list of available commands.
+All physical controls are mapped in [the settings file](settings-json.md). On the Pi, type `editsettings` in the terminal to open it. Changes take effect the next time Cinemate starts. Buttons, switches, pots and encoders simply calls the same commands that the CLI and the web GUI use. See [controller methods](controller-methods.md) for the full list of available commands.
 
-## At a glance
+
 
 | Hardware | Connects to | Typical use | Extra parts needed |
 | --- | --- | --- | --- |
@@ -97,7 +95,7 @@ Latching switches work like buttons, but Cinemate reacts to the *state* instead 
 
 ## Rotary encoders
 
-Standard quadrature rotary encoders (the common KY-040 modules, for example) connect straight to the GPIO header — no extra board needed. Each encoder uses two pins (`clk_pin` and `dt_pin`), plus an optional third pin if the encoder has a built-in push button. The push button uses the same action grammar as the [buttons](#push-buttons) section.
+Standard quadrature rotary encoders (the common KY-040 modules, for example) connect straight to the GPIO header. Each encoder uses two pins (`clk_pin` and `dt_pin`), plus an optional third pin if the encoder has a built-in push button. The push button uses the same action grammar as the [buttons](#push-buttons) section.
 
 No encoders are enabled in the stock settings file. A typical entry — turning the dial steps through ISO, pressing it locks the value:
 

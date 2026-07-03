@@ -63,6 +63,56 @@ The default `k_steps` `[3, 4]` is tuned to the IMX283's ≥25 fps modes: the 2.7
 
     Cinemate handles the CinePi-RAW packing choice automatically. On Raspberry Pi 4 / Pi 400 / CM4, IMX296 and IMX477 use packed raw mode (`P`). On Raspberry Pi 5 / CM5 they stay on unpacked mode (`U`). For IMX296 this means `1456:1088:10:P` on Raspberry Pi 4-family boards and `1456:1088:10:U` on Raspberry Pi 5 / CM5.
 
+## Sensor size, crop factor and film-format equivalents
+
+Each mode reads out a physical area of the sensor. Binned modes keep the full field of view. Cropped modes use a smaller area, so the same lens frames tighter. Dimensions below are computed from the driver crop rectangles and each sensor's pixel pitch.
+
+| Sensor | Mode | Active area (mm) | Diagonal (mm) | Crop factor* | Closest film format |
+|--------|------|------------------|---------------|--------------|---------------------|
+| IMX283 | 2736 x 1824 (2.7K 3:2, binned) | 13.13 x 8.76 | 15.8 | 2.7 | Super 16, slightly larger (3:2) |
+| IMX283 | 2736 x 1538 (2.7K 16:9, binned) | 13.13 x 7.38 | 15.1 | 2.9 | Super 16 (16:9) |
+| IMX283 | 3840 x 2160 (4K UHD, native crop) | 9.22 x 5.18 | 10.6 | 4.1 | Between Super 8 and 16mm (~2/3-inch broadcast) |
+| IMX283 | 5472 x 3648 (5K 3:2, hidden) | 13.13 x 8.76 | 15.8 | 2.7 | Super 16, slightly larger (3:2) |
+| IMX283 | 5472 x 3078 (5K 16:9, hidden) | 13.13 x 7.39 | 15.1 | 2.9 | Super 16 (16:9) |
+| IMX585 | 3856 x 2180 (4K) | 11.18 x 6.32 | 12.8 | 3.4 | 16mm (16:9) |
+| IMX585 | 1928 x 1090 (2K, binned) | 11.18 x 6.32 | 12.8 | 3.4 | 16mm (16:9) |
+| IMX477 | 2028 x 1080 (binned) | 6.29 x 3.35 | 7.1 | 6.1 | Super 8 (16:9) |
+| IMX477 | 2028 x 1520 (binned) | 6.29 x 4.71 | 7.9 | 5.5 | Super 8, slightly larger (4:3) |
+| IMX477 | 1332 x 990 (crop) | 4.13 x 3.07 | 5.1 | 8.4 | Standard 8mm, slightly smaller |
+| IMX296 | 1456 x 1088 | 5.02 x 3.75 | 6.3 | 6.9 | Standard 8mm, slightly larger |
+
+*Crop factor = 43.3 mm / mode diagonal, relative to 35 mm full-frame stills. Multiply the lens focal length by it for the full-frame-equivalent focal length. For depth-of-field equivalence, multiply the f-stop by the same factor.
+
+### Film formats for reference
+
+| Film format | Camera aperture (mm) | Diagonal (mm) | Crop factor |
+|-------------|----------------------|---------------|-------------|
+| Standard 8mm | 4.8 x 3.5 | 5.9 | 7.3 |
+| Super 8 | 5.79 x 4.01 | 7.0 | 6.2 |
+| 16mm | 10.26 x 7.49 | 12.7 | 3.4 |
+| Super 16 | 12.52 x 7.41 | 14.5 | 3.0 |
+| 35mm Academy | 21.95 x 16.0 | 27.2 | 1.6 |
+| Super 35 (4-perf) | 24.89 x 18.66 | 31.1 | 1.4 |
+| 35mm full frame (stills) | 36 x 24 | 43.3 | 1.0 |
+
+### Reading the table
+
+- **IMX283 is the Super 16 camera of the family.** The 2.7K 16:9 mode is a Super 16 frame within 5%: 13.13 mm wide vs 12.52 mm, same 7.4 mm height. Super 16 lens charts apply almost 1:1.
+- **IMX283 4K UHD is a crop mode.** It uses the central 3840 x 2160 photosites only. Switching from 2.7K 16:9 to 4K UHD makes the same lens frame about 1.4x tighter. The hidden 5K modes share their field of view with the 2.7K modes (they are the unbinned versions), so they never change framing.
+- **IMX585 has the diagonal of a 16mm film frame** (12.8 vs 12.7 mm), stretched to 16:9. Both modes use the full sensor, so switching resolution never changes framing.
+- **IMX477 is a Super 8 sensor.** The 2028 x 1080 mode matches the Super 8 diagonal almost exactly. The 120 fps 1332 x 990 mode crops to just below Standard 8mm size.
+- **IMX296 is a Standard 8mm-sized frame,** slightly larger.
+- Digital zoom crops further: the effective crop factor is the table value multiplied by the zoom factor.
+
+Focal-length examples:
+
+- 25 mm on IMX283 2.7K 16:9 ~ 72 mm full-frame look
+- 25 mm on IMX585 ~ 84 mm; 12.5 mm ~ 42 mm
+- 12 mm on IMX477 (2028 x 1080) ~ 73 mm
+- 8 mm on IMX296 ~ 55 mm
+
+Film gauge values follow SMPTE camera-aperture standards; other bodies differ by ~1% (e.g. ARRI quotes Super 16 as 12.35 x 7.5 mm). Sensor dimensions are derived from the V4L2 driver crop rectangles and libcamera pixel-pitch data, cross-checked against the Sony sensor flyers and Raspberry Pi camera documentation.
+
 ## Sustainable frame rates
 
 These rows are measured sustainable limits: continuous recording without dropped frames. Performance depends on the sensor, storage device, and filesystem.

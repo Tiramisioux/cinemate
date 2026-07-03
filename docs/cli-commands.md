@@ -6,11 +6,11 @@ These commands can also be sent to the Pi as serial via the Tx/Rx pins or via US
 
 !!! note ""
 
-     Commands without an explicit argument toggle the current state when possible (e.g. `set fps lock` flips the lock; `set fps lock 1` forces it on).
+    Commands without an explicit argument toggle the current state when possible (e.g. `set fps lock` flips the lock; `set fps lock 1` forces it on).
 
 !!! note ""
 
-     All of the commands below can be mapped to GPIO buttons, rotary encoders and other input devices. See [this section](settings-json.md) for how to configure the settings file.
+    All of the commands below can be mapped to GPIO buttons, rotary encoders and other input devices. See [this section](settings-json.md) for how to configure the settings file.
 
 
 | Command                                    | Argument        | Example                                 |  Function                                      |

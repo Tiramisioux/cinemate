@@ -39,11 +39,11 @@ Note that maximum fps will vary according to disk write speed. For the specific 
 
 !!! note ""
 
-        The bit-depth column above describes the sensor mode reported by the camera stack. The IMX296 sensor mode is 10 bit. Cinemate's CinePi-RAW DNG writer may still save captures through its 12 bit DNG output path, so a correctly saved IMX296 DNG does not mean the sensor itself has a 12 bit mode.
+    The bit-depth column above describes the sensor mode reported by the camera stack. The IMX296 sensor mode is 10 bit. Cinemate's CinePi-RAW DNG writer may still save captures through its 12 bit DNG output path, so a correctly saved IMX296 DNG does not mean the sensor itself has a 12 bit mode.
 
 !!! info "Raspberry Pi 4 raw packing"
 
-     Cinemate handles the CinePi-RAW packing choice automatically. On Raspberry Pi 4 / Pi 400 / CM4, IMX296 and IMX477 use packed raw mode (`P`). On Raspberry Pi 5 / CM5 they stay on unpacked mode (`U`). For IMX296 this means `1456:1088:10:P` on Raspberry Pi 4-family boards and `1456:1088:10:U` on Raspberry Pi 5 / CM5.
+    Cinemate handles the CinePi-RAW packing choice automatically. On Raspberry Pi 4 / Pi 400 / CM4, IMX296 and IMX477 use packed raw mode (`P`). On Raspberry Pi 5 / CM5 they stay on unpacked mode (`U`). For IMX296 this means `1456:1088:10:P` on Raspberry Pi 4-family boards and `1456:1088:10:U` on Raspberry Pi 5 / CM5.
 
 ## Sensor size, crop factor and film-format equivalents
 
@@ -82,7 +82,7 @@ These rows are measured sustainable limits: continuous recording without dropped
 
 !!! note "A note on storage file systems"
 
-        Note that while ext4 gives generally the best performance, exFST has been set to the default format in Cinemate.
+    Note that while ext4 gives generally the best performance, exFAT has been set to the default format in Cinemate.
 
 ### Storage benchmarks
 

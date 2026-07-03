@@ -1,12 +1,12 @@
 # Manual installation & building from source
 
-!!! Note ""
+!!! note ""
 
-     Stack works on Raspberry Pi 4 and 5 models. The 2GB RAM version works with the prebuilt image, while 4GB is recommended if you plan to compile `cinepi-raw` on the Pi. More RAM also gives you a larger framebuffer, which can be useful at high frame rates.
+    Stack works on Raspberry Pi 4 and 5 models. The 2GB RAM version works with the prebuilt image, while 4GB is recommended if you plan to compile `cinepi-raw` on the Pi. More RAM also gives you a larger framebuffer, which can be useful at high frame rates.
 
-!!! Note ""
+!!! note ""
 
-     Cinemate is using Linux kernel version 6.12.25. Supported install target is Raspberry Pi OS Lite (Bookworm).
+    Cinemate is using Linux kernel version 6.12.25. Supported install target is Raspberry Pi OS Lite (Bookworm).
 
 ## One-click installer
 
@@ -433,7 +433,9 @@ sudo chmod +x /usr/local/bin/IRFilter
 ```bash
 sudo raspi-config nonint do_i2c 0
 ```
+
 !!! note ""
+
     Enabling I2C is needed for using the camera modules.
 
 ### Setting hostname
@@ -441,7 +443,9 @@ sudo raspi-config nonint do_i2c 0
 ```bash
 sudo hostnamectl set-hostname cinepi
 ```
+
 !!! note ""
+
     You will find the pi as `cinepi.local` on the local network, or at the hotspot Cinemate creates
 
 ### Add camera modules to config.txt
@@ -636,7 +640,8 @@ sudo reboot
 
 #### Python packages
 
-!!! Note ""
+!!! note ""
+
     If you previously installed the `board` Python package, remove it with `pip3 uninstall board`.
 
 ```bash

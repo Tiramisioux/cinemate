@@ -25,7 +25,8 @@ CinePi-Raw uses **Libcamera** to talk to your Raspberry Pi camera module. Each s
 The mode must match the sensor you are using. For example, an IMX477 camera can run at `4056:3040:12` (full sensor) or at smaller cropped resolutions. When specifying a mode you typically also set the output `--width` and `--height` which control the size of the image written to disk. These can be equal to the mode values or smaller when scaling is applied.
 
 !!! note ""
-     On Raspberry Pi 5 / CM5, the cinepi-raw flag for the HQ sensor is `--mode 2028:1080:12:U`. On Raspberry Pi 4 / Pi 400 / CM4 it should read `--mode 2028:1080:12:P`. IMX296 follows the same packing rule, but with its 10-bit sensor mode: `1456:1088:10:U` on Pi 5 and `1456:1088:10:P` on Pi 4.
+
+    On Raspberry Pi 5 / CM5, the cinepi-raw flag for the HQ sensor is `--mode 2028:1080:12:U`. On Raspberry Pi 4 / Pi 400 / CM4 it should read `--mode 2028:1080:12:P`. IMX296 follows the same packing rule, but with its 10-bit sensor mode: `1456:1088:10:U` on Pi 5 and `1456:1088:10:P` on Pi 4.
 
 
 ## Low‑resolution (lores) stream
@@ -64,7 +65,7 @@ For cinepi-raw, this file defines the port used by cpp-mjpeg-streamer (default c
 
 !!! note ""
 
-     If you have more than one camera connected to the Pi, and activated in `boot/firmware/config.txt`, the camera commected to physical cam0 will use `/home/pi/post-processing0.json` and the camera connected to cam1 will use `/home/pi/post-processing1.json`.
+    If you have more than one camera connected to the Pi, and activated in `boot/firmware/config.txt`, the camera connected to physical cam0 will use `/home/pi/post-processing0.json` and the camera connected to cam1 will use `/home/pi/post-processing1.json`.
 
 ## Cinemate‑specific flags
 
@@ -79,7 +80,7 @@ The CineMate fork introduces several extra options:
 
 !!! note ""
 
-     At this moment though, Cinemate is 12bit only. The flag is for future updates of the IMX585 16bit clear HDR modes.
+    At this moment though, Cinemate is 12bit only. The flag is for future updates of the IMX585 16bit clear HDR modes.
 
 ## Example commands
 

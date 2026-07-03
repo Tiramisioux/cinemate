@@ -33,35 +33,17 @@ Higher frame rates need faster storage. If you see a purple/magenta `DROP` indic
 
 Only IMX283 modes that sustain **25 fps or more** are exposed by default (`k_steps: [3, 4]` in `settings.json`). The full-frame 5K modes are hidden because they top out below 25 fps — 5472×3648 at ~18 fps (12- and 10-bit) and 5472×3078 16:9 at ~21 fps. To bring them back, add `5.5` to `k_steps`.
 
-Modes 1 (2.7K 16:9) and 2 (4K UHD) are added by the [Tiramisioux IMX283 fork](https://github.com/Tiramisioux/imx283-v4l2-driver) (`6.12.y` branch). Their 60 fps target is not reached at the sensor's current MIPI link — the driver reports ~44 fps (4K) and ~41 fps (2.7K 16:9). Cinemate and `cinepi-raw --list-cameras` report the optical-black-inclusive readout size (e.g. `3936 x 2176` for the 4K mode: 3840 + 96 columns, 2160 + 16 lines); the effective recorded image is the cropped resolution shown above.
-
 *Sustainable FPS means the empirically observed frame rate that records without dropped frames on the listed storage and filesystem.*
 
 Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames.
 
-By design, every mode the IMX283 supports is listed in `resources/sensors.json`, so all of them stay available to the system; the `resolutions` section in `settings.json` then exposes only the practical subset in the UI. A sensor mode is shown only if its width rounds to a value in `k_steps` (`round(width / 1000 * 2) / 2`) **and** its bit depth is in `bit_depths`. These are **global** settings — they apply to every sensor.
-
-The default `k_steps` `[3, 4]` is tuned to the IMX283's ≥25 fps modes: the 2.7K crops round to 3K and the 4K UHD crop rounds to 4K. This also limits other sensors to their 3K/4K-class modes, so if you run a different sensor set `k_steps` to its sizes — for example `[1.5, 2, 4]` for IMX477, or add `5.5` to also expose the IMX283 5K modes.
-
-```json
-"resolutions": {
-  "k_steps": [3, 4],
-  "bit_depths": [10, 12],
-  "custom_modes": {}
-}
-```
-
-!!! warning "Not seeing the mode you expect?"
-
-    `cinepi-raw --list-cameras` may list a mode that CineMate does not show. That means its width does not round to a value in `k_steps`, or its bit depth is not in `bit_depths`. IMX283 widths round to 3.0K (2.7K modes), 4.0K (4K UHD) and 5.5K (5K modes); the default `[3, 4]` deliberately hides the sub-25 fps 5K modes. Add `5.5` to reveal them.
-
 !!! note ""
 
-    The bit-depth column above describes the sensor mode reported by the camera stack. The IMX296 sensor mode is 10 bit. Cinemate's CinePi-RAW DNG writer may still save captures through its 12 bit DNG output path, so a correctly saved IMX296 DNG does not mean the sensor itself has a 12 bit mode.
+        The bit-depth column above describes the sensor mode reported by the camera stack. The IMX296 sensor mode is 10 bit. Cinemate's CinePi-RAW DNG writer may still save captures through its 12 bit DNG output path, so a correctly saved IMX296 DNG does not mean the sensor itself has a 12 bit mode.
 
 !!! info "Raspberry Pi 4 raw packing"
 
-    Cinemate handles the CinePi-RAW packing choice automatically. On Raspberry Pi 4 / Pi 400 / CM4, IMX296 and IMX477 use packed raw mode (`P`). On Raspberry Pi 5 / CM5 they stay on unpacked mode (`U`). For IMX296 this means `1456:1088:10:P` on Raspberry Pi 4-family boards and `1456:1088:10:U` on Raspberry Pi 5 / CM5.
+     Cinemate handles the CinePi-RAW packing choice automatically. On Raspberry Pi 4 / Pi 400 / CM4, IMX296 and IMX477 use packed raw mode (`P`). On Raspberry Pi 5 / CM5 they stay on unpacked mode (`U`). For IMX296 this means `1456:1088:10:P` on Raspberry Pi 4-family boards and `1456:1088:10:U` on Raspberry Pi 5 / CM5.
 
 ## Sensor size, crop factor and film-format equivalents
 
@@ -85,28 +67,7 @@ Each mode reads out a physical area of the sensor. Binned modes keep the full fi
 
 *Crop factor = 43.3 mm / mode diagonal, relative to 35 mm full-frame stills. Multiply the lens focal length by it for the full-frame-equivalent focal length. For depth-of-field equivalence, multiply the f-stop by the same factor.
 
-### Film formats for reference
-
-| Film format | Camera aperture (mm) | Diagonal (mm) | Crop factor |
-|-------------|----------------------|---------------|-------------|
-| Standard 8mm | 4.8 x 3.5 | 5.9 | 7.3 |
-| Super 8 | 5.79 x 4.01 | 7.0 | 6.2 |
-| 16mm | 10.26 x 7.49 | 12.7 | 3.4 |
-| Super 16 | 12.52 x 7.41 | 14.5 | 3.0 |
-| 35mm Academy | 21.95 x 16.0 | 27.2 | 1.6 |
-| Super 35 (4-perf) | 24.89 x 18.66 | 31.1 | 1.4 |
-| 35mm full frame (stills) | 36 x 24 | 43.3 | 1.0 |
-
-### Reading the table
-
-- **IMX283 is the Super 16 camera of the family.** The 2.7K 16:9 mode is a Super 16 frame within 5%: 13.13 mm wide vs 12.52 mm, same 7.4 mm height. Super 16 lens charts apply almost 1:1.
-- **IMX283 4K UHD is a crop mode.** It uses the central 3840 x 2160 photosites only. Switching from 2.7K 16:9 to 4K UHD makes the same lens frame about 1.4x tighter. The hidden 5K modes share their field of view with the 2.7K modes (they are the unbinned versions), so they never change framing.
-- **IMX585 has the diagonal of a 16mm film frame** (12.8 vs 12.7 mm), stretched to 16:9. Both modes use the full sensor, so switching resolution never changes framing.
-- **IMX477 is a Super 8 sensor.** The 2028 x 1080 mode matches the Super 8 diagonal almost exactly. The 120 fps 1332 x 990 mode crops to just below Standard 8mm size.
-- **IMX296 is a Standard 8mm-sized frame,** slightly larger.
-- Digital zoom crops further: the effective crop factor is the table value multiplied by the zoom factor.
-
-Focal-length examples:
+### Focal-length examples:
 
 - 25 mm on IMX283 2.7K 16:9 ~ 72 mm full-frame look
 - 25 mm on IMX585 ~ 84 mm; 12.5 mm ~ 42 mm
@@ -117,30 +78,34 @@ Film gauge values follow SMPTE camera-aperture standards; other bodies differ by
 
 ## Sustainable frame rates
 
-These rows are measured sustainable limits: continuous recording without dropped frames. Performance depends on the sensor, storage device, and filesystem.
+These rows are measured sustainable limits: continuous recording without dropped frames. Performance depends on the sensor, storage device, and filesystem. 
 
-??? note "Storage benchmark matrix"
+!!! note "A note on storage file systems"
 
-    Cinemate loads the stock dynamic-resolution rows from `resources/dynamic_resolution_profiles.json`, and the sensor compatibility metadata lives in `resources/sensors.json`.
+        Note that while ext4 gives generally the best performance, exFST has been set to the default format in Cinemate.
 
-    | Sensor | Resolution | Bit Depth | Storage | Filesystem | Sustainable FPS |
-    |--------|------------|-----------|---------|------------|-----------------|
-    | IMX477 | 2028 x 1080 | 12 bit | SSD (Samsung T7) | ext4 | 34 |
-    | IMX477 | 2028 x 1520 | 12 bit | SSD (Samsung T7) | ext4 | 24 |
-    | IMX477 | 1332 x 990 | 12 bit | SSD (Samsung T7) | ext4 | 71 |
-    | IMX477 | 2028 x 1080 | 12 bit | CFE Hat / NVMe | ext4 | 50 |
-    | IMX477 | 2028 x 1520 | 12 bit | CFE Hat / NVMe | ext4 | 40 |
-    | IMX477 | 1332 x 990 | 12 bit | CFE Hat / NVMe | ext4 | 119 |
-    | IMX585 | 1928 x 1090 | 12 bit | CFE Hat / NVMe | exFAT | 50 |
-    | IMX585 | 1928 x 1090 | 12 bit | CFE Hat / NVMe | ext4 | 50 |
-    | IMX585 | 3856 x 2180 | 12 bit | CFE Hat / NVMe | exFAT | 38 |
-    | IMX585 | 3856 x 2180 | 12 bit | CFE Hat / NVMe | ext4 | 40 |
-    | IMX585 | 1928 x 1090 | 12 bit | SSD | exFAT | 50 |
-    | IMX585 | 1928 x 1090 | 12 bit | SSD | ext4 | 50 |
-    | IMX585 | 3856 x 2180 | 12 bit | SSD | exFAT | 25 |
-    | IMX585 | 3856 x 2180 | 12 bit | SSD | ext4 | 25 |
+### Storage benchmarks
 
-    Missing rows are intentionally inert in dynamic resolution mode: if the detected sensor, storage type, filesystem, desired resolution, or requested FPS is not represented by measured data, Cinemate leaves the current resolution unchanged.
+Cinemate loads the stock dynamic-resolution rows from `resources/dynamic_resolution_profiles.json`, and the sensor compatibility metadata lives in `resources/sensors.json`.
+
+| Sensor | Resolution | Bit Depth | Storage | Filesystem | Sustainable FPS |
+|--------|------------|-----------|---------|------------|-----------------|
+| IMX477 | 2028 x 1080 | 12 bit | SSD (Samsung T7) | ext4 | 34 |
+| IMX477 | 2028 x 1520 | 12 bit | SSD (Samsung T7) | ext4 | 24 |
+| IMX477 | 1332 x 990 | 12 bit | SSD (Samsung T7) | ext4 | 71 |
+| IMX477 | 2028 x 1080 | 12 bit | CFE Hat / NVMe | ext4 | 50 |
+| IMX477 | 2028 x 1520 | 12 bit | CFE Hat / NVMe | ext4 | 40 |
+| IMX477 | 1332 x 990 | 12 bit | CFE Hat / NVMe | ext4 | 119 |
+| IMX585 | 1928 x 1090 | 12 bit | CFE Hat / NVMe | exFAT | 50 |
+| IMX585 | 1928 x 1090 | 12 bit | CFE Hat / NVMe | ext4 | 50 |
+| IMX585 | 3856 x 2180 | 12 bit | CFE Hat / NVMe | exFAT | 38 |
+| IMX585 | 3856 x 2180 | 12 bit | CFE Hat / NVMe | ext4 | 40 |
+| IMX585 | 1928 x 1090 | 12 bit | SSD | exFAT | 50 |
+| IMX585 | 1928 x 1090 | 12 bit | SSD | ext4 | 50 |
+| IMX585 | 3856 x 2180 | 12 bit | SSD | exFAT | 25 |
+| IMX585 | 3856 x 2180 | 12 bit | SSD | ext4 | 25 |
+
+Missing rows are intentionally inert in dynamic resolution mode: if the detected sensor, storage type, filesystem, desired resolution, or requested FPS is not represented by measured data, Cinemate leaves the current resolution unchanged.
 
 ### Dynamic resolution
 
@@ -154,32 +119,32 @@ Storage pre-roll is intentionally different: it uses the live sensor maximum for
 
 The active resolution numbers turn green in the simple GUI only while dynamic resolution is actively using a measured substitute mode for the current FPS instead of the user's desired mode. They stay white when the active mode is the user's desired resolution.
 
-??? note "Advanced: measuring your own sensor rows"
+### Measuring your own sensor > storage media performance
 
-    1. Format the RAW media with the filesystem you want to test, for example `ext4` or `exfat`, and mount it as the normal RAW drive.
-    2. Select one sensor mode and one FPS value.
-    3. Record a long enough take to expose sustained write behavior, not just startup behavior.
-    4. Watch the HDMI/browser GUI and logs. A purple `DROP` alert means the FPS is above the sustainable limit for that setup.
-    5. Repeat until you find the highest FPS that records continuously with no dropped frames. If the buffer fills temporarily but catches up, note that in the row.
-    6. Add or update one row in `resources/dynamic_resolution_profiles.json` with the sensor, storage type, filesystem, resolution, bit depth, and sustainable FPS.
+1. Format the RAW media with the filesystem you want to test, for example `ext4` or `exfat`, and mount it as the normal RAW drive.
+2. Select one sensor mode and one FPS value.
+3. Record a long enough take to expose sustained write behavior (not just startup behavior).
+4. Watch the HDMI/browser GUI and logs. A purple `DROP` alert means the FPS is above the sustainable limit for that setup.
+5. Repeat until you find the highest FPS that records continuously with no dropped frames. If the buffer fills temporarily but catches up, note that in the row.
+6. Add or update one row in `resources/dynamic_resolution_profiles.json` with the sensor, storage type, filesystem, resolution, bit depth, and sustainable FPS.
 
-    Each row should include:
+Each row should include:
 
-    | Field | Meaning |
-    |-------|---------|
-    | `sensor` | Sensor id, for example `imx585`. |
-    | `sensor_aliases` | Optional compatible sensor names, for example `["imx585_mono"]`. |
-    | `storage_type` | Storage class detected by Cinemate, for example `ssd`, `cfe`, or `nvme`. |
-    | `filesystem` | Filesystem of the mounted RAW media, for example `ext4` or `exfat`. |
-    | `media_model` | Human-readable device name used for documentation. |
-    | `width`, `height`, `bit_depth` | Measured recording mode. Nearby driver modes are matched using `match_tolerance_px`. |
-    | `sustainable_fps` | Highest FPS that recorded without dropped frames. |
-    | `max_fps_no_buffer` | Optional stricter value for rows where you have also verified no buffer growth. |
-    | `test_duration_seconds` | Test duration, if recorded. |
-    | `buffer_peak_frames`, `drop_frames` | Evidence from the test run. |
-    | `confidence` | Suggested values are `empirical` or `documented`. |
-    | `notes` | Short context for future users. |
+| Field | Meaning |
+|-------|---------|
+| `sensor` | Sensor id, for example `imx585`. |
+| `sensor_aliases` | Optional compatible sensor names, for example `["imx585_mono"]`. |
+| `storage_type` | Storage class detected by Cinemate, for example `ssd`, `cfe`, or `nvme`. |
+| `filesystem` | Filesystem of the mounted RAW media, for example `ext4` or `exfat`. |
+| `media_model` | Human-readable device name used for documentation. |
+| `width`, `height`, `bit_depth` | Measured recording mode. Nearby driver modes are matched using `match_tolerance_px`. |
+| `sustainable_fps` | Highest FPS that recorded without dropped frames. |
+| `max_fps_no_buffer` | Optional stricter value for rows where you have also verified no buffer growth. |
+| `test_duration_seconds` | Test duration, if recorded. |
+| `buffer_peak_frames`, `drop_frames` | Evidence from the test run. |
+| `confidence` | Suggested values are `empirical` or `documented`. |
+| `notes` | Short context for future users. |
 
-    Dynamic resolution uses the stock JSON profile only. Cinemate does not update this table during recording, so empirical values should be added intentionally after you have tested the sensor and storage setup.
+Dynamic resolution uses the stock JSON profile only. Cinemate does not update this table during recording, so empirical values should be added intentionally after you have tested the sensor and storage setup.
 
-    Occasional write-speed dips are most common on SSDs. Use conservative values in the lookup table; dynamic resolution is meant to prevent buffering, not to chase best-case burst performance.
+Occasional write-speed dips are most common on SSDs. Use conservative values in the lookup table; dynamic resolution is meant to prevent buffering, not to chase best-case burst performance.

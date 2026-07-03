@@ -1,6 +1,8 @@
 # Commands reference
 
-Type these commands over SSH or the serial port to drive the camera. Cinemate reads each line and runs the matching action.
+By typing `cinemate`in the Raspberry Pi CLI we can start Cinemate manually. This will stop any autostarted instance of Cinemate, show the camera startup sequence and provide the Cinemate "pseudo CLI" where can type commands for changing the camera controls and also to start and stop recording.
+
+These commands can also be sent to the Pi as serial via the Tx/Rx pins or via USB. This can be useful for creating external controllers.
 
 !!! note ""
 
@@ -53,18 +55,6 @@ Type these commands over SSH or the serial port to drive the camera. Cinemate re
 | `set wb free [0/1]`                        | 0/1 or none       | `set wb free`                           | Use 100 K WB steps from 2800 K to 6500 K        |
 | `set filter <0/1>`                         | 0/1               | `set filter 1`                          | Toggle IR-cut filter (IMX585)                   |
 
-
-??? note "Stopping or restarting the Cinemate service"
-
-    The preinstalled image autostarts Cinemate. To use the CLI by hand, stop the autostarted instance first, then start Cinemate yourself:
-
-    ```
-    cd cinemate    # change directory to cinemate folder
-    make stop      # stop the autostarted instance
-    cinemate       # start cinemate manually
-    ```
-
-
 ## Timed recording shortcuts
 
 Use the timed modes to walk away from the camera while it captures a precisely bounded take.
@@ -79,10 +69,10 @@ If recording is not already running, the CLI starts it before arming the timer. 
 `erase` and `format` prepare removable media directly from the CLI. Both require the RAW drive to be mounted; otherwise the CLI reports an error and leaves the media untouched.
 
 - `erase` empties the mounted RAW volume without touching the filesystem structure, so you can clear cards quickly between takes.
-- `format [ext4|exfat|ntfs]` reformats the drive with the chosen filesystem (`exfat` by default), remounts it and refreshes the free-space monitor. It tolerates the common `ex4` typo and refuses unsupported targets so you do not accidentally create an unusable volume.
+- `format [ext4|exfat|ntfs]` reformats the drive with the chosen filesystem (`exfat` by default), remounts it and refreshes the free-space monitor.
 
 ## Storage pre-roll warm-up
 
-`storage preroll` triggers the same warm-up clip that Cinemate can run automatically on startup or when you mount new storage. During the pre-roll, Cinemate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take. The manual command stays available even when `settings.auto_storage_preroll` is set to `false` in `settings.json`.
+`storage preroll` triggers the same warm-up clip that Cinemate runs automatically on startup or when you mount new storage. During the pre-roll, Cinemate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take. The manual command stays available even when `settings.auto_storage_preroll` is set to `false` in `settings.json`.
 
 See [Storage pre-roll warm-up](storage-preroll.md) for a detailed walkthrough of the workflow and tips on when to run it manually.

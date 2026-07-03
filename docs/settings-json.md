@@ -1,8 +1,8 @@
-# Settings file
+# Settings.json file
 
 This file controls how the camera behaves and how your buttons, switches and displays are mapped. It lives in `~/cinemate/src/settings.json`. You can edit it with any text editor; the settings take effect the next time you start Cinemate.
 
-!!! note
+!!! note ""
     The prebuilt image works out of the box. You do **not** need to edit `settings.json` to start shooting. This page is a reference for when you want to customise hardware controls and behaviour.
 
 The image ships with a stock `settings.json` that already holds working defaults for every section below — button and switch mappings, preview, and audio (for example, a 2-frame audio timecode offset on both microphone paths). Edit it only to change a mapping or tune behaviour.
@@ -121,7 +121,8 @@ Maps the camera to an HDMI connector.
 
 `phase_lock` – `true` (default) keeps audio and video aligned over long takes by locking the recorded frame cadence to the Pi clock. Leave it on.
 
-??? note "phase_lock internals and multi-camera genlock"
+!!! note "phase_lock internals and multi-camera genlock"
+
     The phase lock is a per-frame servo: it measures the accumulated frame phase against the nominal FPS (against the Pi wall clock — `FrameWallClock`, the same clock the audio is captured against) and continuously trims `FrameDurationLimits`, dithering the integer line-blanking so the *average* recorded cadence is exact. The result is that the video tracks the Pi clock, so audio and video do not drift apart over long takes (the residual is a bounded sub-frame offset, not an accumulating drift). It pre-converges during preview, so a clip is locked from the first frame.
 
     Cinemate writes this per-camera flag to the shared `fps_phase_lock` runtime key, which `cinepi-raw` reads (it is off by default in `cinepi-raw` itself when run standalone). The loop is VBLANK-only and holds the recorded cadence on the nominal FPS directly, so no per-sensor FPS-correction table is needed.

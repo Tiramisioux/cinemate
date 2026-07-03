@@ -1,25 +1,16 @@
 # Audio recording
 
-## Quick start
+## Supported microhones
+
+Cinemate has been tested with RODE VideoMic NTG 24 bit microphone and simple 16 bit USB microphones
+
+## Using the microphone
 
 1. Plug a USB microphone into the Pi.
-2. Record as normal.
-3. A `.wav` is written next to the `.dng` frames in the same take folder.
+2. Check for mic, bit depth and sample rate indicator on the left side of the gui. On the right side VU meters should show.
+3. When recording `.wav` is written next to the `.dng` frames in the same take folder and a white "wav" label shows up next to the clip name below the preview.
 
 Timecode is readable by DaVinci Resolve, which treats the `.dng` sequence and `.wav` as one clip.
-
-## Supported paths
-
-- **Preferred 24-bit path:** `mic_24bit` at 48 kHz stereo
-- **Preferred 16-bit path:** `mic_16bit` at 48 kHz mono
-- **Fallback path:** if neither alias works, Cinemate probes `arecord -l`, builds `plughw:<card>,<device>` aliases, and tries them at 16-bit/48 kHz until one records successfully
-
-In practice this means a RODE VideoMic NTG can use the 24-bit alias, while simpler USB PnP microphones usually fall back to the 16-bit path.
-
-If `arecord` is missing or no recording device can be probed successfully, Cinemate disables audio capture for that run.
-
-!!! info "asound.conf and timecode offset"
-    The 24-bit `dsnoop` path needs a one-time `/etc/asound.conf` setup. See [Audio sync & drift](audio-sync.md) for the asound.conf blob and the fixed timecode offset.
 
 ## `settings.json` audio section
 
@@ -39,15 +30,6 @@ If `arecord` is missing or no recording device can be probed successfully, Cinem
 - **`24bit`** — settings for the 24-bit USB dsnoop path (`mic_24bit` alias, e.g. RØDE VideoMic NTG).
 - **`16bit`** — settings for the 16-bit plain-`arecord` fallback path (generic USB PnP mics).
 
-`capture_gain_db` is applied after Cinemate probes which path is active and knows the bit depth. `0.0` = unity gain; positive values boost, negative attenuate. Not every USB mic exposes a writable ALSA capture control; when a microphone does not, Cinemate leaves the input untouched and logs accordingly.
+`capture_gain_db` is applied after Cinemate probes which path is active and knows the bit depth. `0.0` = unity gain; positive values boost, negative attenuate. 
 
-`timecode_offset_frames` shifts the embedded timecode to fix a constant audio/video offset — see [Audio sync & drift](audio-sync.md).
-
-## GUI indicators
-
-When a compatible microphone is connected, the Simple GUI shows:
-
-- live VU meters on the right side
-- the detected sample rate in kHz
-- the detected bit depth
-- a `WAV` badge once the latest take contains both DNG frames and a WAV sidecar
+`timecode_offset_frames` enables manual offset of the embedded timecode. This can be useful if you see a constant offset in the sound. See also [Audio sync & drift](audio-sync.md).

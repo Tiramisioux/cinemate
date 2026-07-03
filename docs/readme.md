@@ -27,7 +27,7 @@ To build the stack yourself on Raspberry Pi OS Lite (Bookworm), or to use the on
 
 ## Customisation
 
-GPIO buttons and switches, rotary encoders, and the OLED display are optional and configured via [the settings file](settings-json.md). On the Pi, type `editsettings` in the terminal to open it.
+GPIO buttons and switches, rotary encoders, potentiometers and the OLED display are optional — see [Additional hardware](hardware-controls.md) for an overview. They are configured via [the settings file](settings-json.md). On the Pi, type `editsettings` in the terminal to open it.
 
 
 ## Compatible sensors

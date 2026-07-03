@@ -24,7 +24,7 @@ Open a browser and go to `cinepi.local:5000` to see the interface. A clean video
 ## Recording
 - Attach a high‑speed drive: an **SSD** (Samsung T7 recommended), an **NVMe drive**, or the **[CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/)**. Make sure storage media is formatted as `exFAT` and labeled `RAW`.
 
-- Connect a button between **GPIO5** and **GND** (or briefly short these pins with a paper clip). When using the phone preview, you can also start/stop recording by tapping the preview.
+- Connect a button between **GPIO7** and **GND** — physical pins 26 and 25, right next to each other, so you can also briefly short them with a paper clip. When using the phone preview, you can also start/stop recording by tapping the preview. More buttons and dials can be added later — see [Additional hardware](hardware-controls.md).
 
 That's it—your bare‑bones Cinemate build is ready!
 

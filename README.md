@@ -5,21 +5,36 @@ Cinemate provides a minimal starting point that you can extend with your own con
 
 The project combines a Python UI with a custom fork of [cinepi-raw](https://github.com/Tiramisioux/cinepi-raw/tree/rpicam-apps_1.7_custom_encoder).
 
-## New features in version 3.3.1
+## New features in version 3.3.2
+
+libcamera:
+
+- Cinemate now uses its own fork of libcamera.
+
+imx283 driver:
+
+- Cinemate now uses its own fork of the imx283 driver.
+- 2 additional modes: 3840 x 2160 (4K UHD, native crop) and 2736 x 1538 (2.7K 16:9, binned).
+
+imx585 driver:
+
+- Cinemate now uses its own fork of the imx585 driver.
 
 CinePi-RAW recorder updates:
 
-- new Cinemate fork, reducing CPU load and temperature dramatically and reducing dropped frames
-- resolution can now be changed without restarting the recorder process, enabling faster mode changes and dynamic resolution switching
-- better USB microphone sync
+- **Frame-rate phase lock** — closed-loop control (sigma-delta VBLANK dither) keeps long takes locked to the Pi's wall clock and pre-converges during preview. On by default.
+- **More reliable audio sync on 4K / exFAT** — the capture path was reworked (protected helper, dedicated writer thread, wall-clock reconciliation, real-time scheduling) for more reliable WAV sync on demanding modes.
+- **Wall clock embedded timecode** — timecode is anchored to the first frame's wall-clock time and follows the Pi's real-time clock, so it reflects the actual time of day rather than a plain sequential frame count; routed per camera for dual-sensor rigs.
+- **Correct Pi 4 RAW** — CSI2-packed frames decode correctly on Pi 4-family boards; raw packing (P/U) is chosen per Pi model automatically.
+- **Camera model** — set the camera model manually for each attached sensor.
 
 Cinemate workflow updates:
 
-- exFAT support and filesystem-aware storage profiles for efficient media writes, including IMX585 25 fps at 4K to SSD without frame drops
-- dynamic resolution switching to match the observed sustainable frame rate for the attached sensor and storage media; for example, IMX585 automatically switches to HD above 25 fps when SSD is used for storage
-- hot-swapping between 16-bit and 24-bit USB microphones
-- 4K-class recording modes are visible by default
-- automatic storage pre-roll can be disabled in `settings.json`
+- **Storage / media** — multi-drive RAW hot-swap with a standby drive and automatic promotion. Default format is exFAT.
+
+Raspberry Pi / Bookworm:
+
+- **Boot / install** — faster boot-to-preview on Pi 4/5 (about 10-15 seconds).
 
 ## Compatible sensors
 

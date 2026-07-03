@@ -11,13 +11,7 @@ If using a manual install without the above alias, type:
 sudo nano /boot/firmware/config.txt
 ```
 
-For headless HDMI installs on Raspberry Pi Bookworm, also edit `/boot/firmware/cmdline.txt` and append a single-line KMS video override such as `video=HDMI-A-1:1920x1080M@60D` or `video=HDMI-A-2:1920x1080M@60D`. This pins the boot framebuffer to 1080p so hotplugged HDMI does not fall back to `1024x768`.
-
-The one-click installer writes `/boot/firmware/config.txt` as a fully managed Cinemate file and stores a backup of the previous file under `/home/pi/.cinemate-install-backups/`. Manual installs should use the same managed-format block below. That avoids leftover stock comments whose matching settings were moved into the Cinemate-managed block.
-
-Uncomment the section for the sensor being used, and make sure to comment out the others. The clean-install default is `imx477` on `cam0`. For IMX296, IMX283, or StarlightEye color, uncomment that sensor section and set the camera port to the physical connector you are using. Reboot the Pi for changes to take effect.
-
-The raw `P`/`U` packing choice is not set in `config.txt`. Cinemate applies that when launching CinePi-RAW: IMX296 and IMX477 use packed mode on Raspberry Pi 4-family boards and unpacked mode on Raspberry Pi 5 / CM5.
+Uncomment the section for the sensor being used, and make sure to comment out the others. The clean-install default is `imx477` on `cam0`. For IMX296, IMX283, or IMX585, uncomment that sensor section and set the camera port to the physical connector you are using. Reboot the Pi for changes to take effect.
 
 ### Example config.txt
 
@@ -106,11 +100,3 @@ dtoverlay=disable-bt
 ```
 
 Exit the editor by pressing Ctrl+X.
-
-!!! note ""
-
-    Note that Cinemate needs you to explicitly set the camera port, match that of the physical camera port you are using. Default is `cam0`.
-
-!!! tip ""
-
-    The preinstalled image file comes with **OneInchEye** and **StarlightEye** preinstalled.

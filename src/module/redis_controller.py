@@ -30,7 +30,7 @@ class ParameterKey(Enum):
     FPS_LAST          = "fps_last"
     FPS_MAX           = "fps_max"
     FPS_USER          = "fps_user"
-    FPS_CORRECTION_SUGGESTION = "fps_correction_suggestion"
+    FPS_PHASE_LOCK    = "fps_phase_lock"
     FRAMECOUNT        = "framecount"
     GUI_LAYOUT        = "gui_layout"
     HEIGHT            = "height"
@@ -45,6 +45,8 @@ class ParameterKey(Enum):
     DROP_FRAME_DURING_LAST_TAKE = "drop_frame_during_last_take"
     DROP_FRAME_COUNT = "drop_frame_count"
     DROP_FRAME_RELAY = "drop_frame_relay"
+    TC_HOLE_COUNT = "tc_hole_count"        # TC gap events (late frames, advisory)
+    MISSING_FRAME_COUNT = "missing_frame_count"  # frames genuinely absent from disk
     DYNAMIC_RESOLUTION_ENABLED = "dynamic_resolution_enabled"
     DYNAMIC_RESOLUTION_ACTIVE = "dynamic_resolution_active"
     DYNAMIC_RESOLUTION_DESIRED_MODE = "dynamic_resolution_desired_mode"

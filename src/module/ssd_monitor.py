@@ -30,6 +30,7 @@ from module.redis_controller import ParameterKey
 from module.storage_profiles import (
     DEFAULT_RECORDER_PROFILE,
     NO_STORAGE_FILESYSTEM,
+    filesystem_recording_advisory,
     normalize_filesystem,
     normalize_storage_filesystem,
     recorder_profile_name_for_filesystem,
@@ -114,6 +115,12 @@ class SSDMonitor:
         
         self._last_cfe_mount_try = 0.
         self._last_recording_log = {}
+        # Recording dirs that raised a localized read error (e.g. a corrupt
+        # NTFS clip dir left by a take interrupted mid-write by a hotswap).
+        # Skipped on later scans so one bad directory neither spams the log nor
+        # — via a misread EIO — triggers a false unmount/remount loop. Cleared
+        # on unmount so a re-inserted or repaired drive is scanned fresh.
+        self._unreadable_dirs: set[str] = set()
 
         # next fsck schedule (run once right after boot/mount)
         self._next_fsck_ts = time.time()
@@ -209,14 +216,13 @@ class SSDMonitor:
     def _redis_set_many(self, kv: dict) -> None:
         if not self._redis:
             return
-        if hasattr(self._redis, "pipeline"):
-            pipe = self._redis.pipeline()
-            for k, v in kv.items():
-                pipe.set(k, v)
-            pipe.execute()
-        else:
-            for k, v in kv.items():
-                self._redis.set_value(k, v)
+        # Always go through set_value() so the RedisController local cache
+        # stays coherent. The pipeline path (pipe.set / pipe.execute) bypasses
+        # set_value() and leaves the cache stale, causing _build_args() to read
+        # the old "none" value for STORAGE_FILESYSTEM and select the wrong
+        # recorder profile at cinepi-raw launch time.
+        for k, v in kv.items():
+            self._redis.set_value(k, v)
 
     # ------------------------------------------------------------------
     # internals
@@ -302,7 +308,20 @@ class SSDMonitor:
         elif not mounted_now and self._is_mounted:
             self._handle_unmount()
         elif self._is_mounted:
-            self._update_space_left()
+            # The storage-automount service can swap the device behind
+            # /media/RAW in place (a standby promoted with `mount --move`)
+            # without the mount-point ever disappearing. Detect that the
+            # underlying device changed and re-sync type / filesystem /
+            # recorder profile so the profile matches the drive now in use.
+            current_dev = self._get_device_name()
+            if current_dev and current_dev != self._device_name:
+                logging.info(
+                    "RAW device changed under %s: %s → %s; re-syncing storage state",
+                    self._mount_path, self._device_name, current_dev,
+                )
+                self._handle_mount()
+            else:
+                self._update_space_left()
 
     def _handle_mount(self) -> None:
         self._is_mounted  = True
@@ -336,6 +355,9 @@ class SSDMonitor:
             self._mount_options,
             self._recorder_profile,
         )
+        advisory = filesystem_recording_advisory(self._filesystem_type)
+        if advisory:
+            logging.warning(advisory)
         self.mount_event.emit(
             self._mount_path,
             self._device_type,
@@ -348,6 +370,9 @@ class SSDMonitor:
         self._next_fsck_ts = 0
 
     def _handle_unmount(self) -> None:
+        # Forget the per-mount bad-directory cache so a re-inserted or repaired
+        # drive is scanned fresh next time it mounts.
+        self._unreadable_dirs.clear()
         # … Redis clean-up stays unchanged …
         self._redis_set_many({
             ParameterKey.STORAGE_TYPE.value: "none",
@@ -574,13 +599,13 @@ class SSDMonitor:
     def _mount_options_for_filesystem(fstype: str) -> str:
         return {
             "ext4":  EXT4_MOUNT_OPTIONS,
-            "ntfs":  f"uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
-            "ntfs3": f"uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
-            "exfat": f"uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
+            "ntfs":  "uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
+            "exfat": "uid=1000,gid=1000,dmask=022,fmask=133,rw,noatime",
         }.get(fstype, "rw,noatime")
 
     def _detect_device_filesystem(self, device: str) -> str:
-        return self._blkid_value(device, "TYPE", fresh=True)
+        fstype = self._blkid_value(device, "TYPE", fresh=True)
+        return normalize_storage_filesystem(fstype) if fstype else "unknown"
 
     def _find_raw_device(self) -> Optional[str]:
         def _blkid_lines():
@@ -645,6 +670,21 @@ class SSDMonitor:
         logging.error("mount_drive(): mount failed for %s as %s", raw_dev, fstype)
         return False
 
+    def _path_is_inside_mount(self, path) -> bool:
+        """True if `path` is a strict sub-path of the mount root.
+
+        Pure string comparison — no filesystem access, so it cannot hang on a
+        dead/stale mount. Used to tell a localized bad-directory error (one
+        corrupt clip dir) apart from a genuine device-level failure on the
+        mount root itself.
+        """
+        try:
+            root = os.path.normpath(str(self._mount_path))
+            target = os.path.normpath(str(path))
+        except (TypeError, ValueError):
+            return False
+        return target != root and target.startswith(root + os.sep)
+
     def _handle_storage_error(self, exc: OSError, *, action: str) -> bool:
         """
         Convert media-removal filesystem errors into one clean unmount flow.
@@ -653,6 +693,24 @@ class SSDMonitor:
         monitor state was transitioned to "unmounted".
         """
         if exc.errno not in YANK_ERRNOS:
+            return False
+
+        # An error on a path *inside* the volume — a single corrupt or
+        # half-written recording directory, common on NTFS after a take is
+        # interrupted mid-write by a hotswap — must not tear down a healthy
+        # mount. Genuine device loss surfaces as an error on the mount root
+        # itself (statvfs/iterdir of the root), which the periodic free-space
+        # check still catches, so deferring to it here is safe. Without this
+        # guard an EIO on one leftover clip dir unmounts the drive and the
+        # automounter immediately remounts it, looping indefinitely.
+        failing_path = getattr(exc, "filename", None)
+        if failing_path and self._path_is_inside_mount(failing_path):
+            return False
+
+        # ENOENT on a path inside the volume (e.g. a subdirectory deleted
+        # mid-scan during an erase) should not trigger a false unmount when
+        # the mount point itself is still intact.
+        if exc.errno == errno.ENOENT and os.path.ismount(self._mount_path):
             return False
 
         logging.warning(
@@ -684,8 +742,7 @@ class SSDMonitor:
         try:
             st = os.statvfs(self._mount_path)
             gb = (st.f_bavail * st.f_frsize) / (1024 ** 3)
-            
-                    # calculate write speed based on change in free space
+
             if self._last_space_ts > 0:
                 delta_gb = self._last_space - gb
                 delta_t = now - self._last_space_ts
@@ -700,10 +757,8 @@ class SSDMonitor:
                 self._redis.set_value(
                     ParameterKey.WRITE_SPEED_TO_DRIVE.value,
                     f"{self._write_speed:.2f}")
-                
+
             prev_left = self._space_left if self._space_left is not None else self._last_space
-            self._last_space = gb
-            self._last_space_ts = now
 
         except OSError as exc:
             logging.error("statvfs failed: %s", exc)
@@ -711,13 +766,13 @@ class SSDMonitor:
                 return
             return
 
-        # ── normal path: update cached value & emit event ────────────
+        # Always advance the baseline so write-speed and throttle stay accurate.
+        self._last_space    = gb
+        self._last_space_ts = now
+
+        # Emit Redis / UI update when space changes significantly or when forced.
         if force or abs(gb - prev_left) >= self._space_delta:
             self._space_left = gb
-        if force or abs(gb - self._last_space) >= self._space_delta:
-            self._space_left    = gb
-            self._last_space    = gb
-            self._last_space_ts = now
             logging.info("Free space: %.2f GB", gb)
             if self._redis:
                 self._redis.set_value(ParameterKey.SPACE_LEFT.value,
@@ -735,8 +790,20 @@ class SSDMonitor:
         if not self._fsck_lock.acquire(blocking=False):
             return  # already running
 
-        def _worker(devnode: str):
+        fstype = self._filesystem_type
+
+        def _worker(devnode: str, fstype: str):
             try:
+                # NTFS has no read-only check tool on Linux (ntfsfix is
+                # repair-only); skip the check and report OK so the UI does
+                # not show a spurious FAIL for every NTFS drive.
+                if fstype == "ntfs":
+                    msg = f"OK {datetime.datetime.now().isoformat()} | ntfs: fsck skipped (no read-only checker on Linux)"
+                    logging.info("fsck result: %s", msg)
+                    if self._redis:
+                        self._redis.set_value(REDIS_KEY_FSCK_STATUS, msg)
+                    return
+
                 cmd = ["sudo", "nice", "-n", "19", "ionice", "-c3",
                     "fsck", "-n", devnode]
 
@@ -755,7 +822,7 @@ class SSDMonitor:
 
         threading.Thread(
             target=_worker,
-            args=(f"/dev/{self._device_name}",),
+            args=(f"/dev/{self._device_name}", fstype),
             name="fsck",
             daemon=True
         ).start()
@@ -787,13 +854,21 @@ class SSDMonitor:
         if not self._is_mounted:
             return
 
-        cmd = ["sudo", "umount", str(self._mount_path)]
-
+        # Try a clean unmount first; if the mount-point is busy (EBUSY = exit 32)
+        # fall back to lazy unmount so the kernel detaches it once all file
+        # handles are released. This handles the case where cinepi-raw or ffmpeg
+        # still has a file open on the drive at the moment of the request.
         try:
-            subprocess.run(cmd, check=True)
+            subprocess.run(["sudo", "umount", str(self._mount_path)], check=True)
         except subprocess.CalledProcessError as exc:
-            logging.error("Failed to unmount: %s", exc)
-            return
+            logging.warning(
+                "umount failed (%s), retrying with lazy unmount", exc
+            )
+            if not self._force_lazy_unmount(self._mount_path):
+                logging.error(
+                    "Failed to unmount %s even with lazy unmount", self._mount_path
+                )
+                return
         
     def mount_drive(self, filesystem: Optional[str] = None, device: Optional[str] = None) -> bool:
         """
@@ -813,11 +888,11 @@ class SSDMonitor:
 
         probed_fstype = self._detect_device_filesystem(raw_dev)
         fstype = fs_hint or probed_fstype
-        if not fstype:
-            logging.error("mount_drive(): blkid failed for %s", raw_dev)
+        if not fstype or fstype == "unknown":
+            logging.error("mount_drive(): unable to detect filesystem for %s", raw_dev)
             return False
 
-        if fs_hint and probed_fstype and probed_fstype != fs_hint:
+        if fs_hint and probed_fstype and probed_fstype != "unknown" and probed_fstype != fs_hint:
             logging.warning(
                 "mount_drive(): blkid reports %s for %s after requested %s; using requested filesystem",
                 probed_fstype,
@@ -833,13 +908,67 @@ class SSDMonitor:
             logging.error("erase_drive(): RAW drive is not mounted")
             return False
 
-        cmd = ["sudo", "find", str(self._mount_path), "-mindepth", "1", "-delete"]
-        try:
-            subprocess.run(cmd, check=True)
-        except subprocess.CalledProcessError as exc:
-            logging.error("erase_drive(): failed to erase %s (%s)", self._mount_path, exc)
+        if self._redis and self._redis.get_value(REDIS_KEY_IS_RECORDING) == "1":
+            logging.error("erase_drive(): cannot erase while recording is active")
             return False
 
+        # Refuse while buffered frames are still flushing to disk — the DNG
+        # writer has files open and rm -rf will fail with EBUSY.
+        for key in ("is_writing_buf", "is_buffering"):
+            if self._redis and str(self._redis.get_value(key) or "0").strip() == "1":
+                logging.error(
+                    "erase_drive(): refusing to erase while storage is still writing buffered frames (%s=1)",
+                    key,
+                )
+                return False
+
+        try:
+            items = list(self._mount_path.iterdir())
+        except OSError as exc:
+            logging.error("erase_drive(): cannot list %s: %s", self._mount_path, exc)
+            return False
+
+        if not items:
+            logging.info("erase_drive(): %s is already empty", self._mount_path)
+            return True
+
+        # Flush dirty pages so the kernel has nothing pending on this volume.
+        subprocess.call(["sync"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        # Evict any processes that still have files open under the mount so
+        # rm -rf does not hit EBUSY on open descriptors.
+        subprocess.call(
+            ["sudo", "fuser", "-km", str(self._mount_path)],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        time.sleep(0.3)
+
+        errors = []
+
+        def _rm(path: Path) -> None:
+            for attempt in range(1, 3):
+                result = subprocess.run(
+                    ["sudo", "rm", "-rf", str(path)],
+                    capture_output=True, text=True,
+                )
+                if result.returncode == 0:
+                    return
+                if attempt < 2:
+                    time.sleep(0.5)
+            errors.append(result.stderr.strip() or str(path))
+
+        threads = [threading.Thread(target=_rm, args=(p,), daemon=True) for p in items]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        if errors:
+            logging.error("erase_drive(): errors: %s", "; ".join(errors))
+            self._update_space_left(force=True)
+            return False
+
+        subprocess.call(["sync"])
         logging.info("erase_drive(): removed all files from %s", self._mount_path)
         self._update_space_left(force=True)
         return True
@@ -850,7 +979,17 @@ class SSDMonitor:
             logging.error("format_drive(): RAW drive is not mounted")
             return False
 
-        fs = normalize_filesystem(filesystem or "ext4")
+        # Refuse while buffered frames are still flushing — the DNG writer has
+        # the device open and will prevent a clean unmount.
+        for key in ("is_writing_buf", "is_buffering"):
+            if self._redis and str(self._redis.get_value(key) or "0").strip() == "1":
+                logging.error(
+                    "format_drive(): refusing to format while storage is still writing buffered frames (%s=1)",
+                    key,
+                )
+                return False
+
+        fs = normalize_filesystem(filesystem or "exfat")
 
         if fs not in {"ext4", "exfat", "ntfs"}:
             logging.error(
@@ -867,24 +1006,135 @@ class SSDMonitor:
 
         device = f"/dev/{dev_name}"
 
+        # Flush dirty pages before attempting unmount — pending writeback is the
+        # most common cause of EBUSY on a clean-unmount attempt.
+        subprocess.call(["sync"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        # Unmount sequence: clean attempt → lazy fallback → evict processes →
+        # flush block-layer buffers → final lazy attempt.
+        clean_unmount = False
         try:
             subprocess.run(["sudo", "umount", str(self._mount_path)], check=True)
-        except subprocess.CalledProcessError as exc:
-            logging.error("format_drive(): failed to unmount %s (%s)", self._mount_path, exc)
-            return False
+            clean_unmount = True
+        except subprocess.CalledProcessError:
+            logging.warning(
+                "format_drive(): umount busy, trying lazy unmount of %s", self._mount_path
+            )
+            clean_unmount = self._force_lazy_unmount(self._mount_path)
+
+        if not clean_unmount:
+            # Kill processes holding the mount point OR the block device, then
+            # flush the block layer before the last lazy-unmount attempt.
+            logging.warning(
+                "format_drive(): lazy unmount failed, evicting processes from %s and %s",
+                self._mount_path, device,
+            )
+            subprocess.call(
+                ["sudo", "fuser", "-km", str(self._mount_path)],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+            subprocess.call(
+                ["sudo", "fuser", "-km", device],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+            time.sleep(0.5)
+            # Ask the block layer to flush any pending I/O before retrying.
+            subprocess.call(
+                ["sudo", "blockdev", "--flushbufs", device],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+            time.sleep(0.3)
+            if not self._force_lazy_unmount(self._mount_path):
+                logging.error(
+                    "format_drive(): could not unmount %s after eviction; aborting format",
+                    self._mount_path,
+                )
+                return False
+
+        # Allow the kernel time to release all block-layer references before
+        # mkfs opens the device.
+        time.sleep(0.5)
 
         # refresh monitor state after unmount
         self._check_mount_status()
 
+        # If the partition is significantly smaller than its parent disk
+        # (e.g. only 190 MB on a 500 GB drive because a previous external
+        # format left a tiny partition), repartition first so mkfs uses the
+        # full available capacity.
+        root = dev_name
+        if root.startswith("nvme"):
+            if "p" in root:
+                root = root.rsplit("p", 1)[0]
+        else:
+            root = root.rstrip("0123456789")
+            if root.endswith("p"):
+                root = root[:-1]
+        disk_dev = f"/dev/{root}"
+        if disk_dev != device:
+            try:
+                part_bytes = int(subprocess.check_output(
+                    ["sudo", "blockdev", "--getsize64", device],
+                    text=True, timeout=5).strip())
+                disk_bytes = int(subprocess.check_output(
+                    ["sudo", "blockdev", "--getsize64", disk_dev],
+                    text=True, timeout=5).strip())
+                fill_ratio = part_bytes / disk_bytes if disk_bytes else 1.0
+            except Exception as exc:
+                logging.warning("format_drive(): could not compare partition/disk sizes (%s)", exc)
+                fill_ratio = 1.0
+            if fill_ratio < 0.9:
+                logging.info(
+                    "format_drive(): %s uses only %.1f%% of %s (%.2f GB / %.2f GB) — repartitioning",
+                    device, fill_ratio * 100, disk_dev,
+                    part_bytes / 1e9, disk_bytes / 1e9,
+                )
+                try:
+                    subprocess.run(
+                        ["sudo", "parted", "-s", disk_dev, "mklabel", "gpt"],
+                        check=True, timeout=30)
+                    subprocess.run(
+                        ["sudo", "parted", "-s", disk_dev, "mkpart", "RAW", "0%", "100%"],
+                        check=True, timeout=30)
+                    # Set Microsoft Basic Data GUID so macOS auto-mounts the partition.
+                    subprocess.run(
+                        ["sudo", "parted", "-s", disk_dev, "set", "1", "msftdata", "on"],
+                        check=False, timeout=10,
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    subprocess.run(
+                        ["sudo", "partprobe", disk_dev],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
+                    time.sleep(1.5)
+                    logging.info(
+                        "format_drive(): repartitioned %s; %s now covers full disk",
+                        disk_dev, device)
+                except subprocess.CalledProcessError as exc:
+                    logging.error(
+                        "format_drive(): repartition failed for %s (%s) — proceeding with mkfs on existing partition",
+                        disk_dev, exc)
+
         if fs == "ext4":
             mkfs_cmd = ["sudo", "mkfs.ext4", "-F", "-L", "RAW", device]
         elif fs == "exfat":
-            mkfs_cmd = ["sudo", "mkfs.exfat", "-n", "RAW", device]
+            # Do not pass -c (cluster size): the default chosen by mkfs.exfat
+            # (~256 KB for large drives) is compatible with macOS and Windows.
+            # Forcing 1 MB clusters was tried for write-latency but breaks
+            # the macOS exFAT driver on most versions.
+            mkfs_cmd = ["sudo", "mkfs.exfat", "-L", "RAW", device]
         else:
-            mkfs_cmd = ["sudo", "mkfs.ntfs", "-F", "-L", "RAW", device]
+            # -Q: quick format — writes only the NTFS metadata structures, not
+            # zeros across the entire partition.  Without -Q, mkfs.ntfs walks
+            # every sector which takes minutes on a large drive.  The resulting
+            # volume is identical from the OS perspective; only uninitialized
+            # clusters are left unzeroed, which is normal for quick-formatted
+            # NTFS (Windows itself behaves the same way).
+            mkfs_cmd = ["sudo", "mkfs.ntfs", "-Q", "-F", "-L", "RAW", device]
 
         try:
-            subprocess.run(mkfs_cmd, check=True)
+            subprocess.run(mkfs_cmd, check=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            logging.error("format_drive(): mkfs timed out for %s", device)
+            return False
         except subprocess.CalledProcessError as exc:
             logging.error("format_drive(): mkfs failed for %s (%s)", device, exc)
             return False
@@ -937,7 +1187,12 @@ class SSDMonitor:
                 preroll_active = False
         infos = []
         for d, _mtime in candidates:
+            if str(d) in self._unreadable_dirs:
+                # Known-bad directory from an earlier scan this mount — skip
+                # quietly instead of re-reading and re-logging it every cycle.
+                continue
             dng = wav = 0
+            max_frame_idx = -1
             try:
                 for f in d.rglob("*"):
                     if not f.is_file():
@@ -945,23 +1200,41 @@ class SSDMonitor:
                     suf = f.suffix.lower()
                     if suf == ".dng":
                         dng += 1
+                        stem = f.stem
+                        underscore = stem.rfind("_")
+                        if underscore >= 0:
+                            try:
+                                idx = int(stem[underscore + 1:])
+                                if idx > max_frame_idx:
+                                    max_frame_idx = idx
+                            except ValueError:
+                                pass
                     elif suf == ".wav":
                         wav += 1
             except OSError as exc:
-                if not self._handle_storage_error(exc, action="count files on"):
-                    logging.warning("Unable to count files on %s: %s", d, exc)
-                return []
+                if self._handle_storage_error(exc, action="count files on"):
+                    # Genuine storage loss (root-level failure) — stop scanning.
+                    return []
+                # Localized failure: a corrupt/unreadable clip dir, not a lost
+                # drive. Remember it, log once, and keep scanning the rest so a
+                # single bad directory doesn't hide other valid recordings.
+                if str(d) not in self._unreadable_dirs:
+                    self._unreadable_dirs.add(str(d))
+                    logging.warning(
+                        "Skipping unreadable recording directory %s: %s", d, exc
+                    )
+                continue
             last_logged = self._last_recording_log.get(d.name)
             if not preroll_active and last_logged != (dng, wav):
                 logging.info("Latest recording “%s”: %d DNG | %d WAV",
                              d.name, dng, wav)
                 self._last_recording_log[d.name] = (dng, wav)
-            infos.append((d.name, dng, wav))
+            infos.append((str(d), dng, wav, max_frame_idx))
         return infos
 
-    def get_latest_recording_info(self) -> Tuple[Optional[str], int, int]:
+    def get_latest_recording_info(self) -> Tuple[Optional[str], int, int, int]:
         multi = self.get_latest_recording_infos()
-        return multi[-1] if multi else (None, 0, 0)
+        return multi[-1] if multi else (None, 0, 0, -1)
 
     # ------------------------------------------------------------------
     # legacy helpers still referenced by cinepi_controller

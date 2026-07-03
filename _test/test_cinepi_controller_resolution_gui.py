@@ -61,6 +61,9 @@ class FakeSensorDetect:
             },
         }
 
+    def get_packing_for_platform(self, _sensor, mode, is_pi4=None):
+        return self.res_modes[int(mode)].get("packing", "U")
+
     def get_lores_width(self, _sensor, mode):
         return 960 if int(mode) == 1 else 640
 
@@ -146,6 +149,27 @@ class ResolutionGuiStateTests(unittest.TestCase):
         )
         self.assertEqual(controller.notifications, [1])
         controller._cancel_resolution_switching_timer()
+
+    def test_resolution_change_needs_restart_only_on_aspect_change(self):
+        controller = self.controller()
+        # Currently running 1928x1090 (~1.769) — seed redis as the live mode.
+        controller.redis_controller.set_value(ParameterKey.WIDTH.value, 1928)
+        controller.redis_controller.set_value(ParameterKey.HEIGHT.value, 1090)
+        controller._is_recording = lambda: False
+
+        # Same-aspect target (mode 1 = 3856x2180, also ~1.769) → no restart.
+        self.assertFalse(controller._resolution_change_needs_restart(1))
+
+        # Different-aspect target (1.33) → restart so the preview is rebuilt.
+        controller.sensor_detect.res_modes[2] = {
+            "width": 2028, "height": 1520, "bit_depth": 12,
+            "gui_layout": 0, "file_size": 5, "fps_max": 45,
+        }
+        self.assertTrue(controller._resolution_change_needs_restart(2))
+
+        # While recording, never restart — record-through is preserved.
+        controller._is_recording = lambda: True
+        self.assertFalse(controller._resolution_change_needs_restart(2))
 
     def test_switch_resolution_logs_and_toggles_from_desired_mode_when_dynamic_active(self):
         controller = self.controller()

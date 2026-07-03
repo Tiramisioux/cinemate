@@ -1,6 +1,7 @@
 import os
 import threading
 import time
+import wave
 from PIL import Image, ImageDraw, ImageFont
 from module.console_display import claim_console_for_framebuffer, release_console_to_text
 from module.framebuffer import Framebuffer, acquire_framebuffer
@@ -17,7 +18,8 @@ from module.dynamic_resolution import dynamic_resolution_indicator_active
 import json
 import re
 
-RECORDER_VU_REDIS_KEY = "audio_vu"
+RECORDER_VU_REDIS_KEY    = "audio_vu"
+WAV_RECORDING_COLOR      = (210, 210, 210)   # bright grey while WAV is actively recording
 DROP_WARNING_COLOR = (120, 40, 180)
 SYNC_WARNING_COLOR = (255, 0, 255)
 SYNC_FLASH_COLOR = "magenta"
@@ -49,47 +51,55 @@ def _calculate_preview_guide_rect(
     anamorphic_factor=1.0,
     outline_width=PREVIEW_GUIDE_OUTLINE_WIDTH,
 ):
-    window_aspect_ratio = sensor_width / sensor_height
-    max_draw_width = frame_width - (2 * PREVIEW_PADDING_X)
-    max_draw_height = frame_height - (2 * PREVIEW_PADDING_Y)
+    """Return the outline rectangle that wraps the live DRM preview image.
 
-    if (max_draw_width / max_draw_height) > window_aspect_ratio:
-        window_h = max_draw_height
-        window_w = int(window_h * window_aspect_ratio)
+    Mirrors _build_args() for the preview-window placement and
+    DrmPreview::Show() for the lores-stream fit — without the extra
+    even-rounding that _build_args() does not apply, so the comparison
+    that decides letterbox vs pillarbox stays consistent with the C++ side.
+    """
+    aspect = sensor_width / sensor_height
+    aw = frame_width  - 2 * PREVIEW_PADDING_X
+    ah = frame_height - 2 * PREVIEW_PADDING_Y
+
+    # Preview window: raw-sensor aspect, centred in the available area
+    # (matches _build_args: pw, ph, ox, oy)
+    if (aw / ah) > aspect:
+        ph = ah
+        pw = int(ph * aspect)
     else:
-        window_w = max_draw_width
-        window_h = int(window_w / window_aspect_ratio)
+        pw = aw
+        ph = int(pw / aspect)
+    ox = (frame_width  - pw) // 2
+    oy = (frame_height - ph) // 2
 
-    window_x = (frame_width - window_w) // 2
-    window_y = (frame_height - window_h) // 2
+    # Lores-stream dimensions: same formula as _build_args, no even-rounding
+    lh = min(720, ah)
+    lw = int(lh * aspect * anamorphic_factor)
+    if lw > aw:
+        lw = aw
+        lh = int(round(aw / (aspect * anamorphic_factor)))
 
-    stream_h = min(720, max_draw_height)
-    stream_w = int(stream_h * window_aspect_ratio * anamorphic_factor)
-    if stream_w > max_draw_width:
-        stream_w = max_draw_width
-        stream_h = int(round(max_draw_width / (window_aspect_ratio * anamorphic_factor)))
-    stream_w -= stream_w % 2
-    stream_h -= stream_h % 2
+    # DrmPreview::Show() fit: place lores stream inside preview window
+    x_off = 0
+    y_off = 0
+    w = pw
+    h = ph
+    if lw * ph > pw * lh:          # lores wider than window → letterbox
+        h = pw * lh // lw
+        y_off = (ph - h) // 2
+    else:                           # lores narrower than window → pillarbox
+        w = ph * lw // lh
+        x_off = (pw - w) // 2
 
-    image_x_offset = 0
-    image_y_offset = 0
-    image_w = window_w
-    image_h = window_h
-    if stream_w * window_h > window_w * stream_h:
-        image_h = window_w * stream_h // stream_w
-        image_y_offset = (window_h - image_h) // 2
-    else:
-        image_w = window_h * stream_w // stream_h
-        image_x_offset = (window_w - image_w) // 2
-
-    preview_x = window_x + image_x_offset
-    preview_y = window_y + image_y_offset
+    image_x = ox + x_off
+    image_y = oy + y_off
 
     return [
-        max(0, preview_x - outline_width),
-        max(0, preview_y - outline_width),
-        min(frame_width - 1, preview_x + image_w + outline_width - 1),
-        min(frame_height - 1, preview_y + image_h + outline_width - 1),
+        max(0, image_x - outline_width),
+        max(0, image_y - outline_width),
+        min(frame_width  - 1, image_x + w + outline_width - 1),
+        min(frame_height - 1, image_y + h + outline_width - 1),
     ]
 
 
@@ -214,21 +224,23 @@ class SimpleGUI(threading.Thread):
         )
 
     # ───────────────── helper: tweak GUI layout for clip lines ────────────────────
-    def _adjust_clip_layout(self, two_clips: bool):
+    def _adjust_clip_layout(self, two_clips: bool, show_wav: bool = False):
         """Shrink/enlarge the font & Y-positions of the clip-name fields."""
+        _WAV_SHIFT = 40  # px to shift clip name left when wav label is shown
+        clip_x = 725 - (_WAV_SHIFT if show_wav else 0)
         if two_clips:
             new_size = 20               # ↓ from 41 → 24 px
             y_base   = 1053
             self.layout["clip_name"]["size"]        = new_size
             self.layout["clip_name_cam1"]["size"]   = new_size
-            self.layout["clip_name"]["pos"]         = (720, y_base)       # lower line
-            self.layout["clip_name_cam1"]["pos"]    = (720, y_base-19)    # 19 px up
+            self.layout["clip_name"]["pos"]         = (clip_x, y_base)       # lower line
+            self.layout["clip_name_cam1"]["pos"]    = (clip_x, y_base-19)    # 19 px up
         else:
             # Fall back to the original settings
             self.layout["clip_name"]["size"]        = 20
             self.layout["clip_name_cam1"]["size"]   = 20
-            self.layout["clip_name"]["pos"]         = (720, 1050)
-            self.layout["clip_name_cam1"]["pos"]    = (720, 1050)
+            self.layout["clip_name"]["pos"]         = (clip_x, 1050)
+            self.layout["clip_name_cam1"]["pos"]    = (clip_x, 1050)
 
 
     def load_sensor_values_from_redis(self):
@@ -244,7 +256,7 @@ class SimpleGUI(threading.Thread):
             logging.error("Failed to load sensor values from Redis, using default values.")
             self.width = 1920
             self.height = 1080
-        self.bit_depth = 12
+            self.bit_depth = 12
 
     # Method to set the current background color
     def set_background_color(self, color):
@@ -541,8 +553,6 @@ class SimpleGUI(threading.Thread):
                 "items": [
                     {"key": "mic_sample_rate", "text": lambda v: v.get("mic_sample_rate", "")},
                     {"key": "mic_bit_depth", "text": lambda v: v.get("mic_bit_depth", "")},
-                    {"key": "mic_wav_saved", "text": lambda v: "WAV" if v.get("mic_wav_saved") else ""},
-
                     # {"key": "frames_in_sync", "text": lambda v: "SYNC" if v.get("frames_in_sync") else ""},
                 ],
             }
@@ -617,7 +627,7 @@ class SimpleGUI(threading.Thread):
         return self._cached_cams
 
     def _refresh_slow_values(self):
-        latest_recording_info = self._slow_values.get("latest_recording_info", (None, 0, 0))
+        latest_recording_info = self._slow_values.get("latest_recording_info", (None, 0, 0, -1))
         cpu_load = self._slow_values.get("cpu_load", "0%")
         cpu_temp = self._slow_values.get("cpu_temp", "--")
 
@@ -782,8 +792,10 @@ class SimpleGUI(threading.Thread):
             "usb_connected":  bool(self.serial_handler.serial_connected),
             "mic_connected":  self.usb_monitor.usb_mic is not None,
             "mic_wav_saved":  False,
+            "mic_wav_recording": False,
             "keyboard_connected": bool(self.usb_monitor and self.usb_monitor.usb_keyboard),
-            "storage_type":   self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value),
+            "storage_type":        self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value),
+            "storage_filesystem":  self.redis_controller.get_value(ParameterKey.STORAGE_FILESYSTEM.value) or "",
             "write_speed":    self.redis_controller.get_value(ParameterKey.WRITE_SPEED_TO_DRIVE.value) or "0 MB/s",
 
             # "clip_label": "CLIP",
@@ -796,12 +808,19 @@ class SimpleGUI(threading.Thread):
             "drop_frame_live": int(self.redis_controller.get_value(ParameterKey.DROP_FRAME.value) or 0) == 1,
             "drop_frame_count": int(self.redis_controller.get_value(ParameterKey.DROP_FRAME_COUNT.value) or 0),
             "drop_frame_during_last_take": int(self.redis_controller.get_value(ParameterKey.DROP_FRAME_DURING_LAST_TAKE.value) or 0) == 1,
+            "tc_hole_count": int(self.redis_controller.get_value(ParameterKey.TC_HOLE_COUNT.value) or 0),
+            "missing_frame_count": int(self.redis_controller.get_value(ParameterKey.MISSING_FRAME_COUNT.value) or 0),
 
         }
+        # drop_frame_latched drives the persistent UI warning overlay.
+        # Option 1: live drop_frame pulse = TC hole advisory (flashes during recording).
+        # Option 2: drop_frame_during_last_take = only set when files are genuinely
+        #           missing, so a complete take never latches the post-take indicator.
+        # Option 3: missing_frame_count is the authoritative shortfall count;
+        #           tc_hole_count is available for display but does not latch on its own.
         values["drop_frame_latched"] = (
-            values["drop_frame_live"]
-            or values["drop_frame_count"] > 0
-            or values["drop_frame_during_last_take"]
+            values["drop_frame_live"]             # real-time TC hole pulse (advisory)
+            or values["drop_frame_during_last_take"]  # genuine missing files last take
         )
         try:
             values["frames_in_sync"] = int(self.redis_controller.get_value(ParameterKey.FRAMES_IN_SYNC.value) or 1) == 1
@@ -810,6 +829,31 @@ class SimpleGUI(threading.Thread):
         values["frames_off_sync"] = not values["frames_in_sync"]
 
         # ── audio stats ─────────────────────────────────────────────────
+        # WAV recording/saved state is checked independently of mic connection:
+        # mic_wav_recording requires the mic to be present right now, but
+        # mic_wav_saved (grey post-take label) persists even if the mic was
+        # unplugged after the take, as long as a valid WAV file exists.
+        if self.ssd_monitor:
+            try:
+                rec_active = any([
+                    int(self.redis_controller.get_value(ParameterKey.REC.value) or 0) == 1,
+                    int(self.redis_controller.get_value(ParameterKey.IS_WRITING_BUF.value) or 0) == 1,
+                    int(self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value) or 0) == 1,
+                ])
+            except (TypeError, ValueError):
+                rec_active = False
+
+            if values["mic_connected"] and rec_active:
+                values["mic_wav_recording"] = True
+            elif not rec_active:
+                _, dng_count, wav_count, *_ = self._slow_values.get(
+                    "latest_recording_info", (None, 0, 0, -1))
+                # Show the grey label whenever the last take folder contains
+                # at least one WAV file alongside DNG files.  Duration
+                # validation was too fragile (breaks when fps=0 briefly or
+                # when frame-index parsing fails on non-standard filenames).
+                values["mic_wav_saved"] = dng_count > 0 and wav_count > 0
+
         if values["mic_connected"]:
             monitor = getattr(self.usb_monitor, "audio_monitor", None)
             bit_depth = getattr(monitor, "bit_depth", None)
@@ -826,24 +870,6 @@ class SimpleGUI(threading.Thread):
                         values["mic_sample_rate"] = f"{sr_khz:.1f}".rstrip("0").rstrip(".")
                 except (TypeError, ValueError):
                     pass
-
-            if self.ssd_monitor:
-                try:
-                    rec_active = any([
-                        int(self.redis_controller.get_value(ParameterKey.REC.value) or 0) == 1,
-                        int(self.redis_controller.get_value(ParameterKey.IS_WRITING_BUF.value) or 0) == 1,
-                        int(self.redis_controller.get_value(ParameterKey.IS_BUFFERING.value) or 0) == 1,
-                    ])
-                    if rec_active:
-                        values["mic_wav_saved"] = False
-                    else:
-                        _, dng_count, wav_count = self._slow_values.get(
-                            "latest_recording_info",
-                            (None, 0, 0),
-                        )
-                        values["mic_wav_saved"] = dng_count > 0 and wav_count > 0
-                except (TypeError, ValueError):
-                    values["mic_wav_saved"] = False
 
         # ── Zoom factor (preview punch-in) ────────────────────────────────
         default_zoom = float(self.settings.get("preview", {}).get("default_zoom", 1.0))
@@ -991,6 +1017,28 @@ class SimpleGUI(threading.Thread):
         
         return values
 
+    def _validate_wav_length(self, folder_path, max_frame_idx, fps, tolerance=0.15) -> bool:
+        if not folder_path or max_frame_idx < 0 or fps <= 0:
+            return False
+        from pathlib import Path
+        folder = Path(folder_path)
+        wav_files = list(folder.glob("*.wav"))
+        if not wav_files:
+            return False
+        try:
+            with wave.open(str(wav_files[0]), "rb") as wf:
+                n_frames = wf.getnframes()
+                frame_rate = wf.getframerate()
+            if frame_rate <= 0:
+                return False
+            wav_duration = n_frames / frame_rate
+        except Exception:
+            return False
+        expected_duration = (max_frame_idx + 1) / fps
+        if expected_duration <= 0:
+            return False
+        return abs(wav_duration - expected_duration) / expected_duration < tolerance
+
     def _format_sensor_name(self, name: str, is_mono: bool) -> str:
         """
         Turn 'imx585' or 'IMX585_MONO' into:
@@ -1020,10 +1068,10 @@ class SimpleGUI(threading.Thread):
                  ───────────────────────────────┬─────────────────
                  becomes:   CINEPI_25-07-01_220547_F10_C00000
 
-        • Removes the trailing frame counter (“_000000009”)
-        • Removes the camera suffix (“_cam0” / “_cam1”)
+        • Removes the trailing frame counter ("_000000009")
+        • Removes the camera suffix ("_cam0" / "_cam1")
         • Returns **None** if the input is falsy _or_ literally contains
-          the string “None”.
+          the string "None".
         """
         if not path or "None" in str(path):
             return None
@@ -1032,10 +1080,10 @@ class SimpleGUI(threading.Thread):
 
         stem = os.path.splitext(os.path.basename(path))[0]  # filename w/out .dng
 
-        # Strip “…_000000009”
+        # Strip "…_000000009"
         #stem = re.sub(r'_\d+$', '', stem)
 
-        # Strip camera suffix “…_cam0 / …_cam1”
+        # Strip camera suffix "…_cam0 / …_cam1"
         stem = re.sub(r'_cam[01]$', '', stem, flags=re.IGNORECASE)
 
         return stem
@@ -1127,8 +1175,10 @@ class SimpleGUI(threading.Thread):
         box_x         = 15
         y             = 97
         LABEL_SPACING = -4
-        BOX_GAP       = 14
-        SECTION_GAP   = 60
+        # Tighten spacing when the buffer VU bar is present so sections don't
+        # overwrite it (VU bar occupies the lower-left corner at the same x).
+        BOX_GAP     = 10 if self.show_buffer_vu else 14
+        SECTION_GAP = 26 if self.show_buffer_vu else 66
 
         # ── CAM / MON sections ───────────────────────────────────
         for section in self.left_section_layout:
@@ -1151,6 +1201,8 @@ class SimpleGUI(threading.Thread):
                     # choose box colour depending on item
                     if item["key"] == "zoom_factor":
                         box_fill = BOX_COLOR if values.get("zoom_is_default") else ZOOM_HIGHLIGHT_COLOR
+                    elif item["key"] == "mic_wav_saved" and values.get("mic_wav_recording"):
+                        box_fill = WAV_RECORDING_COLOR
                     else:
                         box_fill = BOX_COLOR         # default grey
                     draw.rectangle([box_x, y, box_x + BOX_W, y + BOX_H],
@@ -1230,6 +1282,17 @@ class SimpleGUI(threading.Thread):
                 ty = y      + (BOX_H - th) // 2
                 draw.text((tx, ty), storage, font=box_font, fill=TEXT_COLOR)
                 y += BOX_H + BOX_GAP
+                fs_raw = str(values.get("storage_filesystem", "")).lower()
+                if fs_raw and fs_raw not in ("none", "unknown", ""):
+                    fs_label = {"exfat": "exFAT", "ntfs": "NTFS"}.get(fs_raw, fs_raw)
+                    fs_font = self._get_font("bold", 20)
+                    draw.rectangle([box_x, y, box_x + BOX_W, y + BOX_H], fill=BOX_COLOR)
+                    fs_tw, fs_th = draw.textbbox((0, 0), fs_label, font=fs_font)[2:]
+                    draw.text((box_x + (BOX_W - fs_tw) // 2, y + (BOX_H - fs_th) // 2),
+                              fs_label, font=fs_font, fill=TEXT_COLOR)
+                    y += BOX_H + BOX_GAP
+                else:
+                    y += BOX_GAP
             
             # write_speed = values.get("write_speed", "")
             # if write_speed:
@@ -1241,6 +1304,8 @@ class SimpleGUI(threading.Thread):
             #     ty = y      + (BOX_H - th) // 2
             #     draw.text((tx, ty), text, font=box_font, fill=TEXT_COLOR)
             #     y += BOX_H + BOX_GAP
+
+        return y   # caller uses this to avoid VU-meter collision
 
 
     # ─────────────────────────────────────────────────────────────
@@ -1273,9 +1338,13 @@ class SimpleGUI(threading.Thread):
                 if not val:
                     continue
                 for part in str(val).split('\n'):
+                    if item["key"] == "mic_wav_saved" and values.get("mic_wav_recording"):
+                        _box_fill = WAV_RECORDING_COLOR
+                    else:
+                        _box_fill = BOX_COLOR
                     draw.rectangle([box_pad_x, y,
                                     box_pad_x + BOX_W, y + BOX_H],
-                                   fill=BOX_COLOR)
+                                   fill=_box_fill)
                     tw, th = draw.textbbox((0,0), part, font=box_font)[2:]
                     tx = box_pad_x + (BOX_W - tw)//2
                     ty = y         + (BOX_H - th)//2
@@ -1352,15 +1421,15 @@ class SimpleGUI(threading.Thread):
             draw.text((text_x, text_y), label, font=label_font, fill=(249,249,249))
 
     # ─────────────────────────────────────────────────────────────
-    # FRAME-BUFFER “VU”  (queued frames vs. capacity)
+    # FRAME-BUFFER "VU"  (queued frames vs. capacity)
     # ─────────────────────────────────────────────────────────────
-    def draw_framebuffer_vu_meter(self, draw):
+    def draw_framebuffer_vu_meter(self, draw, bar_height=200):
         """
         Visualises the RAM-buffer usage:
             • height  = used / total
             • colour  = green <70 %, yellow <90 %, red ≥90 %
             • ticks   = 25 / 50 / 75 / 100 %
-            • caption = “used / total”
+            • caption = "used / total"
         """
         # ── fetch numbers from Redis safely ─────────────────────────────
         try:
@@ -1388,7 +1457,7 @@ class SimpleGUI(threading.Thread):
         else:              fill_colour = (255,   0,   0)
 
         # ── geometry constants (match existing GUI) ───────────────────
-        BAR_H      = 200
+        BAR_H      = bar_height
         BAR_W      = 28
         BASE_X     = 30
         GAP_BOTTOM = 80
@@ -1428,7 +1497,8 @@ class SimpleGUI(threading.Thread):
     def draw_gui(self, values):
         
         # ── shrink clip-name text when two cameras are active ─────────────────────────
-        self._adjust_clip_layout(self._has_two_clips(values))
+        show_wav = bool(values.get("mic_wav_recording") or values.get("mic_wav_saved"))
+        self._adjust_clip_layout(self._has_two_clips(values), show_wav=show_wav)
 
         previous_background_color = self.get_background_color()
 
@@ -1479,12 +1549,6 @@ class SimpleGUI(threading.Thread):
                 self.current_background_color = "green"
                 self.color_mode = "inverse"
 
-            elif int(values["ram_load"].rstrip('%')) > 95:
-                # safety: RAM nearly full – warn & auto-stop
-                self.current_background_color = "yellow"
-                self.color_mode = "inverse"
-                self.cinepi_controller.rec()        # stop recording
-
             else:
                 # idle
                 self.current_background_color = "black"
@@ -1524,7 +1588,7 @@ class SimpleGUI(threading.Thread):
         draw.rectangle(((0, 0), fb.size), fill=self.current_background_color)
 
         # Draw left-hand labels and boxes dynamically
-        self.draw_left_sections(draw, values)
+        left_bottom_y = self.draw_left_sections(draw, values)
 
         # Get sensor resolution
         self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value))
@@ -1589,9 +1653,42 @@ class SimpleGUI(threading.Thread):
             else:
                 draw.text(position, value, font=font, fill=color)
 
+        # ── WAV label next to clip name (rounded grey box) ───────────────────────
+        if show_wav and values.get("clip_name"):
+            clip_info = current_layout.get("clip_name")
+            if clip_info:
+                clip_pos_x = clip_info["pos"][0] * shrink_x
+                clip_pos_y = clip_info["pos"][1] * shrink_y
+                clip_font_size = max(1, int(round(clip_info.get("size", 20) * min(min(shrink_x, shrink_y), 1))))
+                clip_font = self._get_font(clip_info.get("font", "bold"), clip_font_size)
+                clip_tw = draw.textbbox((0, 0), str(values.get("clip_name", "")), font=clip_font)[2]
+                wav_font_size = max(1, int(round(14 * min(min(shrink_x, shrink_y), 1))))
+                wav_font = self._get_font("bold", wav_font_size)
+                wav_bb = draw.textbbox((0, 0), "WAV", font=wav_font)
+                wav_tw = wav_bb[2] - wav_bb[0]
+                wav_th = wav_bb[3] - wav_bb[1]
+                pad_x = max(3, int(4 * shrink_x))
+                pad_y = max(2, int(3 * shrink_y))
+                radius = max(2, int(3 * min(shrink_x, shrink_y)))
+                box_x0 = int(clip_pos_x + clip_tw + int(8 * shrink_x))
+                lower  = 0   # vertical alignment with clip name
+                box_y0 = int(clip_pos_y) + lower
+                box_x1 = box_x0 + wav_tw + 2 * pad_x
+                box_y1 = box_y0 + wav_th + 2 * pad_y
+                box_fill = WAV_RECORDING_COLOR if values.get("mic_wav_recording") else (136, 136, 136)
+                draw.rounded_rectangle([(box_x0, box_y0), (box_x1, box_y1)], radius=radius, fill=box_fill)
+                draw.text((box_x0 + pad_x, box_y0 + pad_y), "WAV", font=wav_font, fill=(0, 0, 0))
+
         self.draw_right_vu_meter(draw)
         if self.show_buffer_vu:
-            self.draw_framebuffer_vu_meter(draw)
+            # Shrink the VU bar if left-column sections have grown down into it
+            # (e.g. DROP/SYNC warning boxes push the format-label close to the bar).
+            _GAP_BOTTOM = 80
+            _MAX_BAR_H  = 200
+            _MIN_BAR_H  = 40
+            available = self.disp_height - _GAP_BOTTOM - (left_bottom_y + 5)
+            vu_bar_h = max(_MIN_BAR_H, min(_MAX_BAR_H, available))
+            self.draw_framebuffer_vu_meter(draw, bar_height=vu_bar_h)
 
         vu = self.vu_smoothed  # Or .usb_monitor.audio_monitor.vu_levels if you want raw
         # if vu:
@@ -1673,20 +1770,23 @@ class SimpleGUI(threading.Thread):
         self.disp_width = 0
         self.disp_height = 0
 
-        released_console = False
-        if release_console:
-            try:
-                release_console_to_text()
-                released_console = True
-            except Exception as exc:
-                logging.warning("Failed to release console to text during GUI shutdown: %s", exc)
-
-        if clear_framebuffer and not released_console and fb:
+        # Blank the framebuffer before any console-mode switch. Releasing the
+        # console to text only repaints the text character cells; GUI pixels
+        # outside that grid (e.g. the bottom status bar) survive underneath and
+        # hide the restored CLI. Wiping fb0 to black first guarantees the text
+        # console repaints over a clean frame.
+        if (clear_framebuffer or release_console) and fb:
             blank_image = Image.new("RGBA", fb.size, "black")
             try:
                 fb.show(blank_image)
             except (OSError, RuntimeError, ValueError) as exc:
                 logging.warning("Failed to blank framebuffer cleanly during GUI shutdown: %s", exc)
+
+        if release_console:
+            try:
+                release_console_to_text()
+            except Exception as exc:
+                logging.warning("Failed to release console to text during GUI shutdown: %s", exc)
 
     def request_stop(self, clear_framebuffer=False, release_console=False):
         """Ask the GUI thread to exit without waiting for teardown."""

@@ -1,22 +1,14 @@
 # Storage pre-roll warm-up
 
-Cinemate includes an automatic "storage pre-roll" that records and discards a short clip to make sure new media can keep up. The warm-up runs the recorder at full speed so SSDs spin up, controllers cache their write tables, and the rest of the pipeline has a chance to stabilise before the first real take.
+When starting up, or when storage media is attached, Cinemate records and discards a quick test clip to warm up the storage media.
 
-Set `"auto_storage_preroll": false` inside the `settings` section of `settings.json` to disable automatic startup and mount-triggered warm-ups. The manual `storage preroll` CLI command still works in this mode, so you can warm up media on demand. The rest of the recording path remains normal because Cinemate still clears the `storage_preroll_active` Redis flag during startup.
+To disable it, set `"auto_storage_preroll": false` in the `settings` section of `settings.json`.
 
-## When the pre-roll runs
+You can still warm up media on demand: type `storage preroll` in the Cinemate CLI.
 
-- **On startup:** the warm-up no longer arms immediately in `StoragePreroll.__init__()`. Instead, `main.py` calls `mark_startup_ready()` after the welcome-message/Plymouth handoff, GUI startup, and preview rebind are finished. This keeps the warm-up clip from racing the boot splash or the first camera restart.
 
-- **If storage mounts during startup:** mount-triggered warm-up is deferred until startup is marked ready. In that case the first run is scheduled as a `startup-mount` warm-up instead of firing immediately.
 
-- **Whenever storage mounts after startup:** the SSD monitor schedules another warm-up so freshly attached drives are exercised before you use them.
-
-- **On demand:** you can type `storage preroll` in the Cinemate CLI to queue a run manually. Repeated requests do not stack up while a pre-roll is already active.
-
-Only one warm-up can run at a time. While active, Cinemate raises the `storage_preroll_active` Redis key so the GUI, CLI, and recording logic can treat the temporary take as a warm-up rather than a user clip.
-
-## What happens during a run
+Each run follows a five-step snapshot/restore sequence:
 
 1. The helper aborts if no media is mounted or if a real recording is already in progress. It will try again after the next trigger.
 

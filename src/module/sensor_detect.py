@@ -5,12 +5,6 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-from .sensor_correction_factors import (
-    DEFAULT_CORRECTION_FACTOR,
-    SENSOR_CORRECTION_FACTORS,
-)
-
-
 DEFAULT_SENSOR_DATABASE_FILE = "resources/sensors.json"
 FALLBACK_PACKING_INFO = {
     "imx296": "U",
@@ -20,6 +14,30 @@ FALLBACK_PACKING_INFO = {
     "imx585": "U",
     "imx585_mono": "U",
 }
+
+# Raspberry Pi models that run the VC4/Unicam camera receiver. On these the
+# packed CSI2 modes are preferred (lower DMA/CMA than unpacked). This is the
+# single canonical platform check; cinepi_multi and cinepi_controller both reach
+# it through SensorDetect so the launch command and the GUI/telemetry agree.
+PI4_MODEL_MARKERS = (
+    "Raspberry Pi 4",
+    "Raspberry Pi 400",
+    "Compute Module 4",
+)
+
+
+def read_pi_model() -> str:
+    try:
+        with open("/proc/device-tree/model", "r") as f:
+            return f.read()
+    except (FileNotFoundError, OSError):
+        return ""
+
+
+def is_pi4_family() -> bool:
+    """True on any Raspberry Pi 4 / 400 / CM4 (VC4/Unicam) platform."""
+    model = read_pi_model()
+    return any(marker in model for marker in PI4_MODEL_MARKERS)
 
 
 class SensorDetect:
@@ -42,19 +60,6 @@ class SensorDetect:
 
         # Packing information per sensor (U = unpacked, P = packed).
         self.packing_info = self._packing_info_from_database()
-
-        # Optional fps correction factors per sensor/mode/fps triplet
-        self.fps_correction_factor = SENSOR_CORRECTION_FACTORS
-
-        # # Optional fps correction factors per sensor and sensor mode
-        # self.fps_correction_factor = {
-        #     "imx296": {0: 1.0, 1: 1.0, 2: 1.0},
-        #     "imx286": {0: 1.0, 1: 1.0, 2: 1.0},
-        #     "imx477": {0: 1.0, 1: 1.0, 2: 1.0},
-        #     "imx519": {0: 1.0, 1: 1.0, 2: 1.0},
-        #     "imx585": {0: 1.0, 1: 1.0, 2: 1.0},
-        #     "imx585_mono": {0: 0.9994, 1: 0.9980, 2: 1.0},
-        # }
 
         # Populate camera model and modes on startup
         self.detect_camera_model()
@@ -400,6 +405,42 @@ class SensorDetect:
         resolution_info = self.get_resolution_info(camera_name, sensor_mode)
         return resolution_info.get('packing', None)
 
+    def get_packing_for_platform(self, camera_name, sensor_mode, is_pi4=None):
+        """Return the packing token ('P'/'U') for *camera_name*/*sensor_mode* on
+        the current platform.
+
+        Resolution order (most specific wins):
+          1. the matching mode's ``packing_by_platform[platform]`` in sensors.json
+          2. the sensor's ``packing_by_platform[platform]`` in sensors.json
+          3. the sensor's default packing (mode/sensor ``packing`` or fallback)
+
+        ``is_pi4`` selects the platform key ('pi4' vs 'pi5'); when left as None it
+        is auto-detected with :func:`is_pi4_family`, so callers that do not track
+        the Pi model still get the right answer. Data-driving this from
+        sensors.json replaces the old hardcoded per-sensor Pi-4 override.
+        """
+        res = self.get_resolution_info(camera_name, sensor_mode)
+        base = str(res.get('packing') or 'U').upper()
+
+        if is_pi4 is None:
+            is_pi4 = is_pi4_family()
+        platform = 'pi4' if is_pi4 else 'pi5'
+
+        sensor_info = self._sensor_database_entry(camera_name) or {}
+        mode_meta = self._sensor_mode_metadata(
+            camera_name,
+            res.get('width') or 0,
+            res.get('height') or 0,
+            res.get('bit_depth'),
+        )
+        for source in (mode_meta, sensor_info):
+            overrides = source.get('packing_by_platform') if isinstance(source, dict) else None
+            if isinstance(overrides, dict):
+                value = overrides.get(platform)
+                if value:
+                    return str(value).strip().upper()
+        return base
+
     
     def get_file_size(self, camera_name, sensor_mode):
         resolution_info = self.get_resolution_info(camera_name, sensor_mode)
@@ -409,13 +450,31 @@ class SensorDetect:
         resolution_info = self.get_resolution_info(camera_name, sensor_mode)
         return resolution_info.get('sustainable_fps', [])
     
+    def _calc_lores(self, sensor_w: int, sensor_h: int) -> tuple[int, int]:
+        """Return (lores_width, lores_height) preserving sensor aspect ratio within the preview area."""
+        fw, fh = 1920, 1080
+        px, py = 94, 50
+        aw, ah = fw - 2 * px, fh - 2 * py
+        aspect = sensor_w / sensor_h
+        lh = min(720, ah)
+        lw = int(lh * aspect)
+        if lw > aw:
+            lw, lh = aw, int(round(aw / aspect))
+        lw &= ~1
+        lh &= ~1
+        return lw, lh
+
     def get_lores_width(self, camera_name, sensor_mode):
-        # Placeholder method, replace with actual implementation
-        return 1280
-    
+        res = self.get_resolution_info(camera_name, sensor_mode)
+        w = res.get('width') or 1920
+        h = res.get('height') or 1080
+        return self._calc_lores(w, h)[0]
+
     def get_lores_height(self, camera_name, sensor_mode):
-        # Placeholder method, replace with actual implementation
-        return 720
+        res = self.get_resolution_info(camera_name, sensor_mode)
+        w = res.get('width') or 1920
+        h = res.get('height') or 1080
+        return self._calc_lores(w, h)[1]
     
     def get_available_resolutions(self):
         resolutions = []
@@ -423,36 +482,3 @@ class SensorDetect:
             resolution = f"{info['width']} : {info['height']} : {info['bit_depth']}b"
             resolutions.append({'mode': mode, 'resolution': resolution})
         return resolutions
-    
-    def get_fps_correction_factor(self, camera_name, sensor_mode, fps=None):
-        try:
-            mode = int(sensor_mode)
-        except (TypeError, ValueError):
-            mode = sensor_mode
-
-        try:
-            fps_value = int(round(float(fps))) if fps is not None else None
-        except (TypeError, ValueError):
-            fps_value = None
-
-        sensor_table = self.fps_correction_factor.get(camera_name)
-
-        # Numeric fallback if a scalar is stored for the sensor (legacy support)
-        if isinstance(sensor_table, (int, float)):
-            return float(sensor_table)
-
-        if not isinstance(sensor_table, dict):
-            return DEFAULT_CORRECTION_FACTOR
-
-        mode_table = sensor_table.get(mode)
-        mode_default = sensor_table.get("_default", DEFAULT_CORRECTION_FACTOR)
-
-        if isinstance(mode_table, (int, float)):
-            return float(mode_table)
-
-        if isinstance(mode_table, dict):
-            if fps_value is not None and fps_value in mode_table:
-                return float(mode_table[fps_value])
-            return float(mode_table.get("_default", mode_default))
-
-        return float(mode_default)

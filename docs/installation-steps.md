@@ -1,12 +1,4 @@
-# Installation & building from source
-
-!!! warning "Most builders should flash the prebuilt image"
-
-    The easiest path is to flash the prebuilt Cinemate image to your SD card. It boots ready to run, with no compiling. See the [Quick start](getting-started.md) to get going.
-
-    This page is only for two cases: running the **one-click installer**, or **building the whole stack from source** on a clean Raspberry Pi OS Lite. If you just want a working camera, you do not need anything below.
-
-This page starts with the repo-root one-click installer and then continues with the full step-by-step manual install for libcamera, cinepi-raw, cinemate and accompanying software on the Raspberry Pi.
+# Manual installation & building from source
 
 !!! Note ""
 
@@ -16,13 +8,11 @@ This page starts with the repo-root one-click installer and then continues with 
 
      Cinemate is using Linux kernel version 6.12.25. Supported install target is Raspberry Pi OS Lite (Bookworm).
 
-### One-click installer (easy scripted path)
+## One-click installer
 
-!!! tip "This is the easy path on this page"
+The one-click installer is a single script that builds and configures the whole stack.
 
-    The one-click installer is a single script that builds and configures the whole stack for you. Use it if you want a fresh-from-source install without running every manual step by hand. The from-source steps further down are for advanced builders who want full control.
-
-Start from a fresh Raspberry Pi OS Lite Bookworm image. SSH to the Pi:
+Start from a fresh Raspberry Pi OS Lite Bookworm 64 bit image. SSH to the Pi:
 
 On macOS, open Terminal and run:
 
@@ -62,7 +52,7 @@ SENSOR_MODEL=imx585_mono CAM_PORT=cam1 ./cinemate-install.sh
 
 After installing, reboot the system and Cinemate should start automatically.
 
-### Manual install starts here
+## Manual install
 
 If you prefer to install everything by hand, continue with the steps below.
 
@@ -373,8 +363,6 @@ Exit nano editor using ctrl+x.
 
 ### IMX283 and IMX585 sensor support
 
-Install both now even if your current default sensor is `imx477` or `imx296`, so later sensor swaps only need a `config.txt` change instead of another driver pass.
-
 ```shell
 sudo apt install dkms -y
 ```
@@ -398,7 +386,7 @@ cd
 !!! note ""
     The IMX283 and IMX585 DKMS drivers used here are based on Will Whang's work and installed from Tiramisioux forks (`6.12.y` branch of each). The [IMX283 fork](https://github.com/Tiramisioux/imx283-v4l2-driver) adds UHD 4K (3840×2160, 10-bit) and 2.7K 16:9 (2736×1538, 12-bit) readout modes on top of the upstream `6.12.y` base; the [IMX585 fork](https://github.com/Tiramisioux/imx585-v4l2-driver) mirrors upstream `6.12.y` unchanged. For the original drivers and startup guides, visit https://github.com/will127534/imx283-v4l2-driver and https://github.com/will127534/imx585-v4l2-driver
 
-#### Install Cinemate IMX283 and IMX585 tuning overrides
+#### Cinemate IMX283 and IMX585 tuning overrides
 
 These commands overlay Cinemate's local IMX283, IMX585 and IMX585 mono tuning files into the `libcamera` source tree and the installed IPA directories so the runtime stays aligned with Cinemate's defaults. All three override files are `pisp`-target (Pi 5 / PiSP ISP), so they are installed only into the `pisp` dirs — copying them into the `vc4` (Pi 4) dirs would apply the wrong hardware config and overwrite the stock `bcm2835`-target `imx283.json` that Pi 4 needs.
 
@@ -608,9 +596,9 @@ cinepi-raw --mode 1456:1088:10:P --width 1456 --height 1088 --lores-width 1280 -
 
 For more details on running CinePi-raw from the command line, see [this section](cli-user-guide.md). 
 
-## Cinemate
+### Cinemate
 
-### System wide packages
+#### System wide packages
 
 ```shell
 sudo apt update
@@ -623,7 +611,7 @@ sudo apt install -y \
     console-terminus
 ```
 
-### Create a Python virtual environment
+#### Create a Python virtual environment
 
 ```bash
 python3 -m venv ~/.cinemate-env
@@ -631,7 +619,7 @@ source /home/pi/.cinemate-env/bin/activate
 echo "source /home/pi/.cinemate-env/bin/activate" >> ~/.bashrc
 ```
 
-### Grant sudo privileges and enable I²C
+#### Grant sudo privileges and enable I²C
 
 ```bash
 echo "pi ALL=(ALL) NOPASSWD: /home/pi/.cinemate-env/bin/*" | sudo tee /etc/sudoers.d/cinemate-env
@@ -646,7 +634,7 @@ Reboot so the group changes take effect:
 sudo reboot
 ```
 
-### Python packages
+#### Python packages
 
 !!! Note ""
     If you previously installed the `board` Python package, remove it with `pip3 uninstall board`.
@@ -660,7 +648,7 @@ pip install \
     evdev inotify_simple sysv_ipc flask_socketio sugarpie
 ```
 
-### Alternative GPIO back-end
+#### Alternative GPIO back-end
 
 ```bash
 sudo apt install -y swig python3-dev build-essential git
@@ -670,14 +658,14 @@ sudo make install
 cd .. && pip install lgpio
 ```
 
-### Clone the Cinemate repo
+#### Clone the Cinemate repo
 
 ```bash
 sudo apt install -y git
 git clone https://github.com/Tiramisioux/cinemate.git
 ```
 
-### Allow Cinemate to run with sudo
+#### Allow Cinemate to run with sudo
 
 Write the `pi_cinemate` sudoers drop-in and validate it:
 
@@ -691,13 +679,13 @@ EOF
 sudo visudo -cf /etc/sudoers.d/pi_cinemate
 ```
 
-### Enable NetworkManager
+#### Enable NetworkManager
 
 ```bash
 sudo systemctl enable NetworkManager --now
 ```
 
-### Rotate logs
+#### Rotate logs
 
 Paste this into the terminal and hit enter:
 
@@ -713,7 +701,7 @@ sudo tee /etc/logrotate.d/general_logs <<'EOP'
 EOP
 ```
 
-### Seed Redis with default keys
+#### Seed Redis with default keys
 
 ```shell
 redis-cli MSET \
@@ -733,7 +721,7 @@ redis-cli SETNX sensor_mode 0
 
 (See the settings guide for the full list.)
 
-### Add aliases
+#### Add aliases
 
 ```shell
 nano ~/.bashrc
@@ -757,7 +745,7 @@ Reload .bashrc
 source ~/.bashrc
 ```
 
-### Match `settings.json` to the HDMI output you want to use
+#### Match `settings.json` to the HDMI output you want to use
 
 Open the settings file:
 
@@ -784,7 +772,7 @@ Use HDMI port `0` for `HDMI-A-1` and port `1` for `HDMI-A-2`.
 !!! note ""
     Current Cinemate builds can start without HDMI attached and recover when HDMI is plugged in later, but the Pi still needs the `video=` entry in `cmdline.txt` above if you want the headless boot framebuffer to come up in `1920x1080` instead of a fallback 4:3 mode.
 
-### Optional: install Plymouth for the boot spinner
+#### Optional: install Plymouth for the boot spinner
 
 If you want the same boot spinner and clean spinner-to-Cinemate handoff as the prebuilt image, install Plymouth before enabling `cinemate-autostart.service`. The Cinemate theme below keeps the spinner centered on the HDMI framebuffer during Pi startup and shutdown, while Cinemate itself shows the welcome message after Plymouth hands off to the app.
 
@@ -844,7 +832,7 @@ sudo reboot
 
 If you skip Plymouth, Cinemate still works. You just will not get the boot spinner or the same CLI-suppressed boot handoff.
 
-## Cinemate services
+### Cinemate services
 
 Install and enable the support services with:
 
@@ -939,7 +927,7 @@ sudo systemctl disable wifi-hotspot
 
 See [Hotspot logic](hotspot-logic.md) for more details on how the hotspot works.
 
-### Connect to the Pi (if not already connected):
+#### Connect to the Pi (if not already connected):
 
 ```shell
 ssh pi@10.42.0.1
@@ -1052,27 +1040,3 @@ hdmi_ignore_cec_init=1
 ```
 
 This skips the HDMI CEC handshake during boot, removing a short delay on HDMI-connected displays.
-
-### Service changes included in this release
-
-Two service files were updated as part of the boot optimization work. Reinstall them to pick up the changes:
-
-```bash
-cd /home/pi/cinemate
-sudo make install
-sudo make enable
-```
-
-**`cinemate-autostart.service`** — the unconditional `sleep 5` that ran after `camera-ready.sh` has been removed. `camera-ready.sh` already gates on sensor readiness; the extra sleep was redundant.
-
-**`wifi-hotspot.service`** — the `After=` and `Wants=` dependencies no longer include `network-online.target` or `systemd-rfkill.service`. The hotspot creates its own AP and only needs `NetworkManager.service` to be running. Removing `network-online.target` prevents the hotspot from sitting behind the `NetworkManager-wait-online` stall on boot. The service has `Restart=always` so it recovers automatically if it races the Wi-Fi radio on a cold boot.
-
-### Verify the result
-
-After rebooting, check timing with:
-
-```bash
-systemd-analyze
-systemd-analyze blame | head -20
-systemd-analyze critical-chain cinemate-autostart.service
-```

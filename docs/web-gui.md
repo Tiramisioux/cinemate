@@ -16,8 +16,6 @@ Typical URLs are:
 - `http://<ip-address>:5000/`
 - `http://<ip-address>:8000/stream`
 
-## What it does
-
 The browser UI exposes:
 
 - ISO, shutter angle, FPS, white balance, and resolution selectors
@@ -28,13 +26,3 @@ The browser UI exposes:
 - live stats such as free space, write speed, buffered frames, buffer size, CPU load, RAM load, temperature, and exposure time
 
 The page background follows the same status colour changes as the Simple GUI through Socket.IO events.
-
-## Live updates and reloads
-
-On connect, the browser receives the current camera state, available resolution modes, and the current GUI values.
-
-Socket.IO then pushes:
-
-- parameter changes such as ISO, shutter angle, FPS, white balance, frame buffer, and background colour
-- updated shutter-angle and FPS option lists when those arrays change
-- browser reload requests after pipeline-affecting changes such as resolution changes

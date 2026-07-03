@@ -1,8 +1,5 @@
 # Simple GUI Refresh Tuning
 
-!!! note "Advanced / developer topic"
-    This page documents source-level tuning of the on-screen GUI refresh, done by editing Python constants in `src/module/simple_gui.py`. It is not needed for a normal camera build or normal use.
-
 This page explains the timing-related settings in `src/module/simple_gui.py` that control how responsive the HDMI Simple GUI feels and how much work it asks the Pi to do.
 
 The current redraw model is event-driven:
@@ -17,7 +14,7 @@ That means the main tuning goal is to balance responsiveness against framebuffer
 
 These values live near the top of `SimpleGUI.__init__()`.
 
-### `self.target_fps = 12`
+ `self.target_fps = 12`
 
 This is the maximum redraw rate for the GUI fast path.
 
@@ -31,7 +28,7 @@ Recommended range on the Pi:
 - `15`: snappier, but worth testing for thermals and CPU load
 - above `15`: usually not recommended with the current full-screen PIL-to-framebuffer path
 
-### `self.min_frame_interval = 1 / self.target_fps`
+`self.min_frame_interval = 1 / self.target_fps`
 
 This is the derived minimum time between redraws.
 
@@ -41,7 +38,7 @@ This is the derived minimum time between redraws.
 
 You normally should not edit this directly. Change `target_fps` instead.
 
-### `self.slow_refresh_interval = 1.0`
+`self.slow_refresh_interval = 1.0`
 
 This controls how often the GUI refreshes the heavy, slow-changing values.
 
@@ -66,7 +63,7 @@ Recommended range:
 
 These values affect how the right-side VU meter feels.
 
-### `self.vu_decay_factor = 0.2`
+`self.vu_decay_factor = 0.2`
 
 The runtime loop currently sets `self.vu_decay_factor = 0.2` in `run()`, and that is the value that controls how quickly the displayed VU bars fall when the signal drops.
 
@@ -81,7 +78,7 @@ Practical examples:
 
 ## Advanced timing knob
 
-### `self._redraw_event.wait(timeout=0.1)`
+`self._redraw_event.wait(timeout=0.1)`
 
 Inside `run()`, the GUI waits up to `0.1` seconds when no work is queued. Redis changes wake the loop immediately, so this is mostly a fallback sleep while idle.
 
@@ -89,18 +86,3 @@ Inside `run()`, the GUI waits up to `0.1` seconds when no work is queued. Redis 
 - Higher: a little less background wake activity
 
 Tune `target_fps` and `slow_refresh_interval` first; they matter much more.
-
-## Where to edit
-
-All of these live in `src/module/simple_gui.py`:
-
-- `self.target_fps = 12` (in `__init__()`)
-- `self.min_frame_interval = 1 / self.target_fps` (derived; change `target_fps` instead)
-- `self.slow_refresh_interval = 1.0`
-- `self.vu_decay_factor = 0.2` (set in `run()`)
-- `self._redraw_event.wait(timeout=0.1)` (in `run()`)
-
-Workflow: change `target_fps` first and test for a few minutes while watching CPU load and smoothness. Tune `slow_refresh_interval` only if system-stat freshness is off, and `vu_decay_factor` only if the meter feel is off.
-
-!!! warning "Cost of high `target_fps`"
-    The GUI still redraws the whole PIL image and writes the whole framebuffer on every draw, so each FPS increase has a real cost. Small increases are usually fine; very high values give diminishing returns on the Pi.

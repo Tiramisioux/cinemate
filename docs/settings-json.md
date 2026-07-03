@@ -107,7 +107,7 @@ Maps the camera to an HDMI connector.
 !!! note ""
     This setting chooses which connector `cinepi-raw` uses at runtime. On Raspberry Pi Bookworm with KMS, the boot framebuffer mode still comes from `/boot/firmware/cmdline.txt`, so headless installs should also set a `video=HDMI-A-1:1920x1080M@60D` or `video=HDMI-A-2:1920x1080M@60D` override there.
 
-### Camera name
+### camera name
 
 `override_camera_name` – when `true`, the value of `camera_name` is passed to `cinepi-raw` as `--unique-camera-model` and written into the `UniqueCameraModel` DNG tag of every recorded frame. When `false`, `cinepi-raw` uses its built-in default.<br>
 `camera_name` – the string to embed when `override_camera_name` is `true`.
@@ -242,7 +242,7 @@ General options for runtime behaviour.
 "settings": {
   "auto_storage_preroll": true,
   "light_hz": [50, 60],
-  "conform_frame_rate": 24,
+  "conform_frame_rate": 25 ,
   "live_sync_warning_tolerance_frames": 2,
   "final_sync_analysis_tolerance_frames": 1
 }

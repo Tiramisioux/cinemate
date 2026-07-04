@@ -3,7 +3,7 @@
 !!! note ""
     None of the hardware on this page is required. Add what you need, when you need it.
 
-All physical controls are mapped in [the settings file](settings-json.md). On the Pi, type `editsettings` in the terminal to open it. Changes take effect the next time Cinemate starts. Buttons, switches, pots and encoders simply calls the same commands that the CLI and the web GUI use. See [controller methods](controller-methods.md) for the full list of available commands.
+All physical controls are mapped in [the settings file](settings-json.md). On the Pi, type `editsettings` in the terminal to open it. Changes take effect the next time Cinemate starts. Buttons, switches, pots and encoders simply call the same commands that the CLI and the web GUI use. See [controller methods](controller-methods.md) for the full list of available commands.
 
 
 

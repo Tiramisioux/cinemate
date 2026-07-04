@@ -1,8 +1,8 @@
 # Simple GUI
 
-Simple GUI is available both on the attached HDMI. 
+Simple GUI is available on the attached HDMI output.
 
-The browser-based web UI featurer basic settings and interactive controls.
+The browser-based web UI features basic settings and interactive controls.
 
 
 

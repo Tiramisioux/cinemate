@@ -242,7 +242,7 @@ General options for runtime behaviour.
 "settings": {
   "auto_storage_preroll": true,
   "light_hz": [50, 60],
-  "conform_frame_rate": 25 ,
+  "conform_frame_rate": 25,
   "live_sync_warning_tolerance_frames": 2,
   "final_sync_analysis_tolerance_frames": 1
 }

@@ -198,7 +198,7 @@
 <ul>
 <li><strong>Frame-rate phase lock</strong> — closed-loop control (sigma-delta VBLANK dither) keeps long takes locked to the Pi's wall clock and pre-converges during preview. On by default.</li>
 <li><strong>More reliable audio sync on 4K / exFAT</strong> — the capture path was reworked (protected helper, dedicated writer thread, wall-clock reconciliation, real-time scheduling) for more reliable WAV sync on demanding modes.</li>
-<li><strong>Wall clock embedded timecode</strong> — timecode is anchored to the first frame's wall-clock time and follows the Pi's real-time clock, so it reflects the actual time of day rather than a plain sequential frame count; routed per camera for dual-sensor rigs.</li>
+<li><strong>Wall clock embedded timecode</strong> — timecode is anchored to the first frame's wall-clock time and follows the Pi's real-time clock.</li>
 <li><strong>Correct Pi 4 RAW</strong> — CSI2-packed frames decode correctly on Pi 4-family boards; raw packing (P/U) is chosen per Pi model automatically.</li>
 <li><strong>Camera model</strong> — set the camera model manually for each attached sensor.</li>
 </ul>

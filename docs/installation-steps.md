@@ -11,17 +11,9 @@ This page starts with the repo-root one-click installer and then continues with 
 
 ### One-click installer
 
-Start from a fresh Raspberry Pi OS Lite Bookworm image. SSH to the Pi:
-
-On macOS, open Terminal and run:
+Start from a fresh Raspberry Pi OS Lite Bookworm image. SSH to the Pi (Terminal on macOS, PowerShell on Windows):
 
 ```bash
-ssh pi@raspberrypi.local
-```
-
-On Windows, open PowerShell or Command Prompt and run:
-
-```powershell
 ssh pi@raspberrypi.local
 ```
 

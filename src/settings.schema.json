@@ -64,13 +64,21 @@
     "audio": {
       "type": "object",
       "properties": {
-        "capture_gain_db": {
-          "type": "number",
-          "default": 0.0
+        "24bit": {
+          "type": "object",
+          "description": "Settings for the 24-bit USB dsnoop path (RØDE NTG, mic_24bit alias)",
+          "properties": {
+            "capture_gain_db": { "type": "number", "default": 0.0 },
+            "timecode_offset_frames": { "type": "integer", "default": 0 }
+          }
         },
-        "plain_arecord_timecode_offset_frames": {
-          "type": "integer",
-          "default": 2
+        "16bit": {
+          "type": "object",
+          "description": "Settings for the 16-bit plain-arecord fallback path (generic USB PnP mics)",
+          "properties": {
+            "capture_gain_db": { "type": "number", "default": 0.0 },
+            "timecode_offset_frames": { "type": "integer", "default": 0 }
+          }
         }
       },
       "additionalProperties": true
@@ -144,6 +152,41 @@
         "database_file": {
           "type": "string",
           "default": "resources/sensors.json"
+        }
+      },
+      "additionalProperties": true
+    },
+    "camera": {
+      "type": "object",
+      "properties": {
+        "cam0": { "$ref": "#/definitions/cam_config" },
+        "cam1": { "$ref": "#/definitions/cam_config" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "definitions": {
+    "cam_config": {
+      "type": "object",
+      "properties": {
+        "phase_lock": {
+          "type": "boolean",
+          "description": "Enable the cinepi-raw frame-rate phase lock for this sensor (holds the recorded cadence on the nominal fps for stable A/V sync). Safe to leave enabled on multi-camera --sync genlock rigs: cinepi-raw runs the lock only on the master (--sync off/server) and the --sync client self-suppresses so libcamera's rpi.sync owns that sensor's VBLANK.",
+          "default": true
+        },
+        "tuning_file_override": {
+          "type": "object",
+          "description": "Override the libcamera tuning file for this sensor",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "path": {
+              "type": "string",
+              "default": "resources/tuning_files/imx477.json"
+            }
+          }
         }
       },
       "additionalProperties": true

@@ -141,7 +141,7 @@ class DynamicResolutionTests(unittest.TestCase):
         self.assertEqual(choice.mode, 1)
         self.assertFalse(choice.dynamic_active)
 
-    def test_higher_sustainable_mode_is_not_marked_dynamic_active(self):
+    def test_keeps_manual_desired_mode_when_higher_mode_is_sustainable(self):
         choice = choose_resolution(
             sensor_modes=IMX585_MODES,
             desired_mode=0,
@@ -154,7 +154,7 @@ class DynamicResolutionTests(unittest.TestCase):
         )
 
         self.assertIsNotNone(choice)
-        self.assertEqual(choice.mode, 1)
+        self.assertEqual(choice.mode, 0)
         self.assertFalse(choice.dynamic_active)
 
     def test_returns_none_when_storage_filesystem_has_no_data(self):

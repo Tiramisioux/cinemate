@@ -30,7 +30,7 @@ class ParameterKey(Enum):
     FPS_LAST          = "fps_last"
     FPS_MAX           = "fps_max"
     FPS_USER          = "fps_user"
-    FPS_CORRECTION_SUGGESTION = "fps_correction_suggestion"
+    FPS_PHASE_LOCK    = "fps_phase_lock"
     FRAMECOUNT        = "framecount"
     GUI_LAYOUT        = "gui_layout"
     HEIGHT            = "height"
@@ -45,6 +45,8 @@ class ParameterKey(Enum):
     DROP_FRAME_DURING_LAST_TAKE = "drop_frame_during_last_take"
     DROP_FRAME_COUNT = "drop_frame_count"
     DROP_FRAME_RELAY = "drop_frame_relay"
+    TC_HOLE_COUNT = "tc_hole_count"        # TC gap events (late frames, advisory)
+    MISSING_FRAME_COUNT = "missing_frame_count"  # frames genuinely absent from disk
     DYNAMIC_RESOLUTION_ENABLED = "dynamic_resolution_enabled"
     DYNAMIC_RESOLUTION_ACTIVE = "dynamic_resolution_active"
     DYNAMIC_RESOLUTION_DESIRED_MODE = "dynamic_resolution_desired_mode"
@@ -145,11 +147,15 @@ class RedisController:
                 value = (self.r.get(key) or b"").decode()
                 self.cache[key] = value
 
-            if key == ParameterKey.REC.value:
-                if value == "1":
-                    self._start_recording_timer()
-                else:
+            if key == ParameterKey.IS_RECORDING.value:
+                if value == "0":
                     self._stop_recording_timer()
+            elif key == ParameterKey.REC.value:
+                if value == "1":
+                    # Start timer on first frame of take; don't restart if already running
+                    # (rec can bounce 0→1 during pipeline stalls without ending the take)
+                    if not (self._rec_timer_thread and self._rec_timer_thread.is_alive()):
+                        self._start_recording_timer()
             # notify subscribers – no log spam here
             if key != ParameterKey.FPS_ACTUAL.value:
                 self.redis_parameter_changed.emit({"key": key, "value": value})

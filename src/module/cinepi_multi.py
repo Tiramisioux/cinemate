@@ -3,6 +3,7 @@ import logging
 import re
 import json
 import time
+from pathlib import Path
 from queue import Queue
 from threading import Thread
 from typing import List, Optional
@@ -14,6 +15,7 @@ import shutil
 from module.config_loader import load_settings
 from module.redis_controller import ParameterKey
 from module.framebuffer import Framebuffer
+from module.sensor_detect import is_pi4_family
 from module.storage_profiles import (
     DEFAULT_RECORDER_PROFILE,
     recorder_profile_args,
@@ -34,25 +36,13 @@ def _settings() -> dict:
 
 _READY_RX   = re.compile(r"Encoder configured")      # line printed by DngEncoder
 _READY_WAIT = 2.0                                   # seconds to wait for all cams
-_PI4_MODEL_MARKERS = (
-    "Raspberry Pi 4",
-    "Raspberry Pi 400",
-    "Compute Module 4",
-)
-_PI4_PACKED_MODE_SENSORS = {"imx296", "imx296_mono", "imx477"}
-
-
-def _read_pi_model() -> str:
-    try:
-        with open("/proc/device-tree/model", "r") as f:
-            return f.read()
-    except FileNotFoundError:
-        return ""
-
-
+# Pi-4-family (VC4/Unicam) detection lives in sensor_detect as the single
+# canonical implementation; alias it here so existing call sites keep working.
+# Per-sensor packed-vs-unpacked is data-driven from sensors.json
+# (packing_by_platform) via SensorDetect.get_packing_for_platform — there is no
+# longer a hardcoded packed-mode sensor set.
 def _is_pi4_family() -> bool:
-    model = _read_pi_model()
-    return any(marker in model for marker in _PI4_MODEL_MARKERS)
+    return is_pi4_family()
 
 
 def _rt_permitted():
@@ -90,17 +80,35 @@ def _seed_default_zoom(redis_ctl):
 
 
 def _plain_arecord_timecode_offset_frames(settings: dict | None = None) -> int:
+    """Timecode offset for the 16-bit mic path (audio.16bit.timecode_offset_frames)."""
     audio_cfg = (settings if settings is not None else _settings()).get("audio", {})
-    raw_value = audio_cfg.get("plain_arecord_timecode_offset_frames", 0)
+    raw_value = (
+        audio_cfg["16bit"].get("timecode_offset_frames", 0)
+        if "16bit" in audio_cfg
+        else audio_cfg.get("plain_arecord_timecode_offset_frames", 0)
+    )
     try:
         return int(raw_value)
     except (TypeError, ValueError):
-        logging.warning(
-            "Invalid audio.plain_arecord_timecode_offset_frames=%r; using 0",
-            raw_value,
-        )
+        logging.warning("Invalid audio.16bit.timecode_offset_frames=%r; using 0", raw_value)
         return 0
-        
+
+
+def _audio_timecode_offset_frames(settings: dict | None = None) -> int:
+    """Timecode offset for the 24-bit USB dsnoop capture path (audio.24bit.timecode_offset_frames)."""
+    audio_cfg = (settings if settings is not None else _settings()).get("audio", {})
+    raw_value = (
+        audio_cfg["24bit"].get("timecode_offset_frames", 0)
+        if "24bit" in audio_cfg
+        else audio_cfg.get("timecode_offset_frames", 0)
+    )
+    try:
+        return int(raw_value)
+    except (TypeError, ValueError):
+        logging.warning("Invalid audio.24bit.timecode_offset_frames=%r; using 0", raw_value)
+        return 0
+
+
 # ───────────────────────── Event ─────────────────────────
 class Event:
     def __init__(self):
@@ -215,14 +223,13 @@ class CinePiProcess(Thread):
         self.dng_rx = re.compile(r'DNG written:\s*(\S+\.dng)')
         self.redis_channel = 'cinepi.last_dng'          # publish JSON here
         
-        # load per-camera geometry from settings
+        # load per-camera settings (geometry, output, fps-correction flag)
         settings = _settings()
-        geo = settings.get('geometry', {})
-        self.geometry = geo.get(self.cam.port, {})
-        
-        # load per-camera output settings (e.g., HDMI port)
-        out_cfg = settings.get('output', {})
-        self.output = out_cfg.get(self.cam.port, {})
+        camera_cfg = settings.get('camera', {}) or {}
+        cam_cfg = camera_cfg.get(self.cam.port, {})
+        self.geometry = cam_cfg.get('geometry', {})
+        self.output   = cam_cfg.get('output', {})
+        self.tuning_file_override = cam_cfg.get('tuning_file_override', {})
 
 
     def run(self):
@@ -314,16 +321,19 @@ class CinePiProcess(Thread):
         width = res.get('width', 1920)
         height = res.get('height', 1080)
         bit_depth = res.get('bit_depth', 12)
-        packing = res.get('packing', 'U')
+        # Packed (P) vs unpacked (U) is data-driven from sensors.json
+        # (packing_by_platform) and depends on the Pi model: VC4/Unicam (Pi 4
+        # family) prefers packed CSI2 to save DMA/CMA; Pi 5 / PiSP keeps the
+        # sensor default (usually unpacked).
+        packing = self.sensor_detect.get_packing_for_platform(
+            model_key, sensor_mode, self._is_pi4()
+        )
+        logging.info(
+            "[%s] %dx%d %dbit packing=%s (platform=%s, sensor=%s)",
+            self.cam.port, width, height, bit_depth, packing,
+            'pi4' if self._is_pi4() else 'pi5', model_key,
+        )
 
-        if self._is_pi4() and model_key in _PI4_PACKED_MODE_SENSORS:
-            logging.info(
-                "[%s] Pi 4-family raw path detected for %s; using packed mode",
-                self.cam.port,
-                model_key,
-            )
-            packing = 'P'
-        
         # lores & preview
         aspect = width / height
         anam = float(self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value) or 1.0)
@@ -368,8 +378,10 @@ class CinePiProcess(Thread):
         # gains, shutter
         cg_rb = self.redis_controller.get_value(ParameterKey.CG_RB.value) or '2.5,2.2'
         
-        # file paths\
+        # file paths
         tune = f'/home/pi/libcamera/src/ipa/rpi/pisp/data/{model_key}.json'
+        if self.tuning_file_override.get('enabled') and self.tuning_file_override.get('path'):
+            tune = str(self.tuning_file_override['path'])
         post = f'/home/pi/post-processing{self.cam.index}.json'
         
         # geometry flags
@@ -417,6 +429,35 @@ class CinePiProcess(Thread):
                 str(plain_arecord_timecode_offset),
             ]
 
+        audio_timecode_offset = _audio_timecode_offset_frames()
+        if audio_timecode_offset != 0:
+            logging.info(
+                "[%s] Audio WAV timecode offset (24-bit path): %+d frames",
+                self.cam.port,
+                audio_timecode_offset,
+            )
+            args += [
+                "--audio-timecode-offset-frames",
+                str(audio_timecode_offset),
+            ]
+
+        # ── DNG-writer / audio-core isolation ───────────────────────────────
+        # The audio capture helper (cinepi-audio-capture) pins itself to the
+        # last CPU core at SCHED_FIFO priority 80 so USB-audio interrupts are
+        # serviced on a core DNG writers never touch. The per-filesystem
+        # recorder profile below is the single source of --encode-affinity /
+        # --disk-affinity and is audio-safe by construction (no profile pins the
+        # last core); cinepi-raw also strips the audio core as a backstop, and
+        # the installer's boot-time isolcpus/nohz_full/rcu_nocbs/irqaffinity
+        # complete the isolation. (Previously a second, always-overridden
+        # --*-affinity pair was emitted here.)
+        n_cpus = os.cpu_count() or 4
+        logging.info(
+            "[%s] Audio-core isolation: CPU %d reserved for capture; "
+            "DNG worker affinity set by the storage recorder profile",
+            self.cam.port, n_cpus - 1,
+        )
+
         # * Skip --tuning-file on Pi 4.  All other models keep it. *
         if not self._is_pi4():
             args += ["--tuning-file", tune]
@@ -460,8 +501,50 @@ class CinePiProcess(Thread):
             profile["encode_workers"],
             profile["disk_workers"],
         )
-        args += recorder_profile_args(storage_fs)
-        
+        args += recorder_profile_args(storage_fs, is_pi4=self._is_pi4())
+
+        # ── Camera raw-buffer headroom ────────────────────────────────────
+        # More in-flight camera buffers absorb transient disk-write latency
+        # spikes that would otherwise starve the sensor and drop a single frame
+        # (visible as a one-tick hole in the DNG timecode). The base value is
+        # per storage profile — slower/spikier filesystems (exFAT, NTFS) get
+        # more headroom than ext4 — and can be overridden globally via
+        # settings.json camera.raw_buffer_count. Each extra buffer is ~25 MB of
+        # CMA at 4K; too high exhausts CMA and the camera fails to start, so
+        # confirm headroom with `grep Cma /proc/meminfo` before raising.
+        try:
+            buffer_count = int(profile.get("buffer_count", 8))
+        except (TypeError, ValueError):
+            buffer_count = 8
+        try:
+            override = int(
+                (_settings().get("camera", {}) or {}).get("raw_buffer_count", 0) or 0
+            )
+            if override > 0:
+                buffer_count = override
+        except (TypeError, ValueError):
+            logging.warning(
+                "[%s] Invalid camera.raw_buffer_count in settings; using profile default %d",
+                self.cam.port,
+                buffer_count,
+            )
+        logging.info(
+            "[%s] Camera raw-buffer headroom: --buffer-count %d (profile %s)",
+            self.cam.port,
+            buffer_count,
+            profile_name,
+        )
+        args += ["--buffer-count", str(buffer_count)]
+
+        # unique camera model override — per-cam (camera.cam0 / camera.cam1)
+        camera_cfg = _settings().get("camera", {}) or {}
+        cam_cfg = camera_cfg.get(self.cam.port, {})
+        if cam_cfg.get("override_camera_name", False):
+            name = str(cam_cfg.get("camera_name", "") or "").strip()
+            if name:
+                args += ["--unique-camera-model", name]
+                logging.info("[%s] DNG UniqueCameraModel overridden: %s", self.cam.port, name)
+
         return args
 
     def stop(self):
@@ -549,18 +632,20 @@ class CinePiManager:
         self.redis_controller.set_value(ParameterKey.SENSOR.value, pk)
 
         res = self.sensor_detect.get_resolution_info(pk, sensor_mode)
+        # Platform-aware packing (matches what CinePiProcess._build_args launches)
+        packing = self.sensor_detect.get_packing_for_platform(pk, sensor_mode)
         for k in (
             ParameterKey.WIDTH.value,
             ParameterKey.HEIGHT.value,
             ParameterKey.BIT_DEPTH.value,
-            ParameterKey.PACKING.value,
             ParameterKey.FPS_MAX.value,
             ParameterKey.GUI_LAYOUT.value,
         ):
             self.redis_controller.set_value(k, res.get(k))
+        self.redis_controller.set_value(ParameterKey.PACKING.value, packing)
         self.redis_controller.set_value(
             ParameterKey.MODE.value,
-            f"{res.get('width')}:{res.get('height')}:{res.get('bit_depth')}:{res.get('packing', 'U')}",
+            f"{res.get('width')}:{res.get('height')}:{res.get('bit_depth')}:{packing}",
         )
 
         # ── 3. launch all cinepi-raw instances ───────────────────────────

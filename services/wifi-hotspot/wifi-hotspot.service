@@ -1,7 +1,7 @@
 [Unit]
 Description=Cinemate Wi-Fi Hotspot Service
-Wants=NetworkManager.service systemd-rfkill.service
-After=NetworkManager.service network-online.target systemd-rfkill.service
+Wants=NetworkManager.service
+After=NetworkManager.service
 
 [Service]
 Type=simple

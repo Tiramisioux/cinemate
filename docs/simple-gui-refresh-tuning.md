@@ -14,7 +14,7 @@ That means the main tuning goal is to balance responsiveness against framebuffer
 
 These values live near the top of `SimpleGUI.__init__()`.
 
-### `self.target_fps = 12`
+ `self.target_fps = 12`
 
 This is the maximum redraw rate for the GUI fast path.
 
@@ -28,7 +28,7 @@ Recommended range on the Pi:
 - `15`: snappier, but worth testing for thermals and CPU load
 - above `15`: usually not recommended with the current full-screen PIL-to-framebuffer path
 
-### `self.min_frame_interval = 1 / self.target_fps`
+`self.min_frame_interval = 1 / self.target_fps`
 
 This is the derived minimum time between redraws.
 
@@ -38,7 +38,7 @@ This is the derived minimum time between redraws.
 
 You normally should not edit this directly. Change `target_fps` instead.
 
-### `self.slow_refresh_interval = 1.0`
+`self.slow_refresh_interval = 1.0`
 
 This controls how often the GUI refreshes the heavy, slow-changing values.
 
@@ -63,7 +63,7 @@ Recommended range:
 
 These values affect how the right-side VU meter feels.
 
-### `self.vu_decay_factor = 0.2`
+`self.vu_decay_factor = 0.2`
 
 The runtime loop currently sets `self.vu_decay_factor = 0.2` in `run()`, and that is the value that controls how quickly the displayed VU bars fall when the signal drops.
 
@@ -76,86 +76,13 @@ Practical examples:
 - `0.2`: current behavior
 - `0.3`: faster, more reactive falloff
 
-### `self.vu_smoothing_alpha = 0.4`
-
-This value is defined in `__init__()`, but the current `update_smoothed_vu_levels()` implementation does not use it.
-
-Right now:
-
-- changing `vu_smoothing_alpha` does not change GUI behavior
-- only `vu_decay_factor` affects the displayed smoothing/decay feel
-
-If the VU algorithm is expanded later, this would be the likely place to control how quickly rising levels are smoothed.
-
 ## Advanced timing knob
 
-### `self._redraw_event.wait(timeout=0.1)`
+`self._redraw_event.wait(timeout=0.1)`
 
-Inside `run()`, the GUI waits up to `0.1` seconds when there is no work queued.
+Inside `run()`, the GUI waits up to `0.1` seconds when no work is queued. Redis changes wake the loop immediately, so this is mostly a fallback sleep while idle.
 
-In normal use, Redis changes wake the loop immediately, so this timeout is mostly just a fallback sleep while idle.
+- Lower: slightly tighter idle polling
+- Higher: a little less background wake activity
 
-- Lowering it can make idle polling a little tighter
-- raising it can reduce tiny amounts of background wake activity
-
-This is usually not the first thing to tune. `target_fps` and `slow_refresh_interval` matter much more.
-
-## What to change for common goals
-
-### Make the GUI feel more live
-
-Try:
-
-```python
-self.target_fps = 15
-self.slow_refresh_interval = 1.0
-```
-
-Use this if framecount, buffer, and timecode updates still feel a little too stepped.
-
-### Reduce CPU and framebuffer pressure
-
-Try:
-
-```python
-self.target_fps = 8
-self.slow_refresh_interval = 1.5
-```
-
-Use this if the Pi is busy and the GUI does not need to feel as immediate.
-
-### Keep camera-state updates fast, but make system stats more live
-
-Try:
-
-```python
-self.target_fps = 12
-self.slow_refresh_interval = 0.5
-```
-
-Use this if you want CPU temp/load and recording-info updates more often without pushing the redraw cap much higher.
-
-## Suggested workflow when tuning
-
-1. Change `target_fps` first.
-2. Test for a few minutes while watching CPU load and overall UI smoothness.
-3. Adjust `slow_refresh_interval` only if the system-stat freshness is not where you want it.
-4. Adjust `vu_decay_factor` only if the audio meter feel needs changing.
-
-## Where to edit
-
-File:
-
-- `src/module/simple_gui.py`
-
-Primary timing lines:
-
-- `self.target_fps = 12`
-- `self.min_frame_interval = 1 / self.target_fps`
-- `self.slow_refresh_interval = 1.0`
-- `self.vu_smoothing_alpha = 0.4`
-- `self.vu_decay_factor = 0.2` inside `run()`
-
-## Important note
-
-The current GUI still redraws the whole PIL image and writes the whole framebuffer for each draw. Because of that, increasing `target_fps` always has a real cost. Small increases are usually fine, but very high values are likely to give diminishing returns on the Pi.
+Tune `target_fps` and `slow_refresh_interval` first; they matter much more.

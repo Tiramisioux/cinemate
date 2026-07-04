@@ -215,7 +215,10 @@ class StoragePreroll:
         if prev_fps_user is None:
             prev_fps_user = self._get_float(ParameterKey.FPS.value)
 
-        fps_target = self._resolve_fps_max()
+        # Resolve the raw sensor hardware maximum, bypassing any dynamic-resolution
+        # profile cap stored in Redis FPS_MAX.
+        fps_target = self._resolve_sensor_fps_max()
+        prev_fps_max = self._get_float(ParameterKey.FPS_MAX.value)
 
         # Tell the rest of the system that we are busy.
         self.cinepi_controller.set_preroll_active(True)
@@ -225,6 +228,9 @@ class StoragePreroll:
 
         try:
             if fps_target is not None:
+                # Temporarily raise FPS_MAX so set_fps() doesn't cap the preroll
+                # to whatever the current operating profile allows.
+                self.redis_controller.set_value(ParameterKey.FPS_MAX.value, fps_target)
                 self._apply_fps(fps_target, allow_dynamic_resolution=False)
 
             # Initiate recording.
@@ -243,6 +249,10 @@ class StoragePreroll:
         except Exception as exc:
             logging.error("Storage pre-roll failed: %s", exc)
         finally:
+            # Restore the operating FPS_MAX so the dynamic-resolution profile
+            # cap comes back before the user's FPS is re-applied.
+            if prev_fps_max is not None:
+                self.redis_controller.set_value(ParameterKey.FPS_MAX.value, prev_fps_max)
             # Restore the user's FPS choice.
             if prev_fps_user is not None:
                 self._apply_fps(prev_fps_user)
@@ -302,6 +312,10 @@ class StoragePreroll:
         return False
 
     def _resolve_fps_max(self) -> Optional[float]:
+        return self._resolve_sensor_fps_max()
+
+    def _resolve_sensor_fps_max(self) -> Optional[float]:
+        """Return the raw sensor hardware FPS max, ignoring any profile-based cap."""
         camera_name = self.redis_controller.get_value(ParameterKey.SENSOR.value)
         if not camera_name:
             camera_name = self.sensor_detect.camera_model

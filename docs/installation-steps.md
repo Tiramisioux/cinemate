@@ -1,17 +1,18 @@
-# Installation
-This page starts with the repo-root one-click installer and then continues with the full step-by-step manual install for libcamera, cinepi-raw, cinemate and accompanying software on the Raspberry Pi.
+# Manual installation & building from source
 
-!!! Note ""
+!!! note ""
 
-     Stack works on Raspberry Pi 4 and 5 models. The 2GB RAM version works with the prebuilt image, while 4GB is recommended if you plan to compile `cinepi-raw` on the Pi. More RAM also gives you a larger framebuffer, which can be useful at high frame rates.
+    Stack works on Raspberry Pi 4 and 5 models. The 2GB RAM version works with the prebuilt image, while 4GB is recommended if you plan to compile `cinepi-raw` on the Pi. More RAM also gives you a larger framebuffer, which can be useful at high frame rates.
 
-!!! Note ""
+!!! note ""
 
-     Cinemate is using Linux kernel version 6.12.25. Supported install target is Raspberry Pi OS Lite (Bookworm).
+    Cinemate is using Linux kernel version 6.12.25. Supported install target is Raspberry Pi OS Lite (Bookworm).
 
-### One-click installer
+## One-click installer
 
-Start from a fresh Raspberry Pi OS Lite Bookworm image. SSH to the Pi (Terminal on macOS, PowerShell on Windows):
+The one-click installer is a single script that builds and configures the whole stack.
+
+Start from a fresh Raspberry Pi OS Lite Bookworm 64 bit image. SSH to the Pi (Terminal on macOS, PowerShell on Windows):
 
 ```bash
 ssh pi@raspberrypi.local
@@ -43,7 +44,7 @@ SENSOR_MODEL=imx585_mono CAM_PORT=cam1 ./cinemate-install.sh
 
 After installing, reboot the system and Cinemate should start automatically.
 
-### Manual install starts here
+## Manual install
 
 If you prefer to install everything by hand, continue with the steps below.
 
@@ -105,25 +106,30 @@ sudo apt-get install python3-jinja2 python3-ply python3-yaml ffmpeg
 sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev ffmpeg && sudo apt-get install libjsoncpp-dev && cd ~ && git clone https://github.com/sewenew/redis-plus-plus.git && cd redis-plus-plus && mkdir build && cd build && cmake .. && make && sudo make install && cd ~
 ```
 
-### libcamera (Will Whang fork pinned to `9d0cdfe5`) <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
+### libcamera (Tiramisioux/libcamera `cinemate` branch) <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
-If you are already inside `~/.cinemate-env`, either run `deactivate` before building `libcamera` or install the Python helpers into that environment with `pip install PyYAML ply Jinja2` first.
+These steps build the [Tiramisioux/libcamera](https://github.com/Tiramisioux/libcamera) `cinemate` branch tip — Will Whang's IMX585 fork (base `9d0cdfe5`) mirrored here so the build no longer depends on the upstream commit staying available, plus gcc-12 build fixes for the apps. Built as-is with no extra patches. (`cinemate-install.sh` tracks this same branch.)
+
+**On the Pi, to update an existing install:**
+
+If you are inside `~/.cinemate-env`, meson will use the virtualenv Python and will fail with *"Python module yaml not found"* unless the helpers are present. Install them first:
 
 ```shell
-sudo apt install -y python3-pip python3-jinja2 libboost-dev libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a meson cmake python3-yaml python3-ply libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libavdevice59
+pip install PyYAML ply Jinja2
 ```
 
-```shell
-sudo apt-get install --reinstall libtiff5-dev && sudo ln -sf $(find /usr/lib -name "libtiff.so" | head -n 1) /usr/lib/aarch64-linux-gnu/libtiff.so.5 && export LD_LIBRARY_PATH=/usr/lib/aarch64-linux-gnu:$LD_LIBRARY_PATH && sudo ldconfig
-```
+Then update and rebuild:
 
 ```shell
-git clone https://github.com/will127534/libcamera.git && \
-cd libcamera && \
-git checkout 9d0cdfe5 && \
+cd ~/libcamera && \
+git config core.fileMode false && \
+git remote set-url origin https://github.com/Tiramisioux/libcamera.git && \
+git fetch origin && \
+git stash || true && \
+git checkout -B cinemate origin/cinemate && \
 find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
 chmod +x ~/libcamera/src/ipa/ipa-sign.sh && \
-meson setup build --buildtype=release \
+meson setup build --wipe --buildtype=release \
   -Dpipelines=rpi/vc4,rpi/pisp \
   -Dipas=rpi/vc4,rpi/pisp \
   -Dv4l2=true \
@@ -133,21 +139,59 @@ meson setup build --buildtype=release \
   -Dcam=disabled \
   -Dqcam=disabled \
   -Ddocumentation=disabled \
-  -Dpycamera=enabled && \
+  -Dpycamera=disabled && \
+ninja -C build && \
+sudo ninja -C build install && \
+sudo ldconfig && \
+sudo systemctl restart cinepi-raw
+```
+
+`git checkout -B cinemate origin/cinemate` resets to the latest `cinemate` tip so this command is safe to re-run. `git config core.fileMode false` silences executable-bit changes left behind by the build. `git stash` clears any remaining content changes so the checkout cannot be blocked.
+
+**Fresh install:**
+
+If you are already inside `~/.cinemate-env`, either run `deactivate` before building `libcamera` or install the Python helpers into that environment with `pip install PyYAML ply Jinja2` first.
+
+```shell
+sudo apt install -y python3-pip python3-jinja2 libboost-dev libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a meson cmake python3-yaml python3-ply libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libavdevice59 libyaml-dev
+```
+
+```shell
+sudo apt-get install --reinstall libtiff5-dev && sudo ln -sf $(find /usr/lib -name "libtiff.so" | head -n 1) /usr/lib/aarch64-linux-gnu/libtiff.so.5 && export LD_LIBRARY_PATH=/usr/lib/aarch64-linux-gnu:$LD_LIBRARY_PATH && sudo ldconfig
+```
+
+```shell
+git clone https://github.com/Tiramisioux/libcamera.git && \
+cd libcamera && \
+git config core.fileMode false && \
+git checkout cinemate && \
+find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
+chmod +x ~/libcamera/src/ipa/ipa-sign.sh && \
+meson setup build --wipe --buildtype=release \
+  -Dpipelines=rpi/vc4,rpi/pisp \
+  -Dipas=rpi/vc4,rpi/pisp \
+  -Dv4l2=true \
+  -Dgstreamer=enabled \
+  -Dtest=false \
+  -Dlc-compliance=disabled \
+  -Dcam=disabled \
+  -Dqcam=disabled \
+  -Ddocumentation=disabled \
+  -Dpycamera=disabled && \
 ninja -C build && \
 sudo ninja -C build install && \
 sudo ldconfig
 ```
 
 ```shell
-git -C ~/libcamera rev-parse --short HEAD
+git -C ~/libcamera log --oneline -2
 find ~/libcamera/src/ipa/rpi/cam_helper -name '*imx585*'
 ```
 
 Expected output:
 
 ```text
-9d0cdfe5
+<hash> <HEAD commit message of the cinemate tip>
 /home/pi/libcamera/src/ipa/rpi/cam_helper/cam_helper_imx585.cpp
 ```
 
@@ -169,7 +213,7 @@ set -Eeuo pipefail
 
 CINEPI_RAW_DIR="${CINEPI_RAW_DIR:-/home/pi/cinepi-raw}"
 CPP_MJPEG_STREAMER_DIR="${CPP_MJPEG_STREAMER_DIR:-/home/pi/cpp-mjpeg-streamer}"
-BUILD_JOBS="${BUILD_JOBS:-$(nproc 2>/dev/null || printf '4')}"
+BUILD_JOBS="${BUILD_JOBS:-$(c=$(nproc 2>/dev/null || echo 4); mb=$(awk '/^MemTotal:/{print int($2/1024); exit}' /proc/meminfo 2>/dev/null || echo 0); j=$c; if [ "$mb" -gt 0 ] && [ "$mb" -lt 3000 ]; then j=$(( mb / 1536 )); if [ "$j" -lt 1 ]; then j=1; fi; if [ "$j" -gt "$c" ]; then j=$c; fi; fi; echo "$j")}"
 BUILD_DIR="${BUILD_DIR:-$CINEPI_RAW_DIR/build}"
 PKG_CONFIG_PATH="$CPP_MJPEG_STREAMER_DIR/build:${PKG_CONFIG_PATH:-}"
 export PKG_CONFIG_PATH
@@ -186,6 +230,32 @@ build_dir_has_entries() {
     [[ -d "$1" ]] || return 1
     find "$1" -mindepth 1 -maxdepth 1 -print -quit | grep -q .
 }
+
+# Temporary build swap for 1-2 GB boards: cinepi_raw.cpp needs ~2 GB at -O3 and
+# OOM-kills cc1plus. Use compressed RAM (zram) -- no SD/eMMC writes -- removed on
+# exit, so the running camera never swaps. Skipped when swap is already active
+# or on boards with 4 GB+ RAM (>= 3000 MB).
+CR_ZRAM_DEV=""
+cr_cleanup_zram() {
+    [[ -n "${CR_ZRAM_DEV:-}" ]] || return 0
+    sudo swapoff "$CR_ZRAM_DEV" 2>/dev/null || true
+    sudo zramctl --reset "$CR_ZRAM_DEV" 2>/dev/null || true
+    CR_ZRAM_DEV=""
+}
+trap cr_cleanup_zram EXIT
+cr_mem_mb=$(awk '/^MemTotal:/{print int($2/1024); exit}' /proc/meminfo 2>/dev/null || echo 0)
+cr_swap_lines=$(wc -l < /proc/swaps 2>/dev/null || echo 1)
+if [[ "$cr_mem_mb" -gt 0 && "$cr_mem_mb" -lt 3000 && "$cr_swap_lines" -le 1 ]]; then
+    sudo modprobe zram 2>/dev/null || true
+    CR_ZRAM_DEV=$(sudo zramctl --find --size 4G --algorithm zstd 2>/dev/null || sudo zramctl --find --size 4G 2>/dev/null || true)
+    if [[ -n "$CR_ZRAM_DEV" ]] && sudo mkswap "$CR_ZRAM_DEV" >/dev/null 2>&1 && sudo swapon -p 100 "$CR_ZRAM_DEV" 2>/dev/null; then
+        printf '[compile-raw] Low-RAM board (%s MB): added 4 GB zram build swap on %s (removed on exit)\n' "$cr_mem_mb" "$CR_ZRAM_DEV"
+    else
+        [[ -n "$CR_ZRAM_DEV" ]] && sudo zramctl --reset "$CR_ZRAM_DEV" 2>/dev/null || true
+        CR_ZRAM_DEV=""
+        printf '[compile-raw] WARNING: could not set up zram build swap; low-RAM build may OOM\n'
+    fi
+fi
 
 printf '[compile-raw] Source: %s\n' "$CINEPI_RAW_DIR"
 printf '[compile-raw] Build directory: %s\n' "$BUILD_DIR"
@@ -285,14 +355,12 @@ Exit nano editor using ctrl+x.
 
 ### IMX283 and IMX585 sensor support
 
-Install both now even if your current default sensor is `imx477` or `imx296`, so later sensor swaps only need a `config.txt` change instead of another driver pass.
-
 ```shell
 sudo apt install dkms -y
 ```
 
 ```shell
-git clone https://github.com/will127534/imx283-v4l2-driver.git --branch 6.12.y
+git clone https://github.com/Tiramisioux/imx283-v4l2-driver.git --branch 6.12.y
 cd imx283-v4l2-driver/
 ./setup.sh
 sudo dkms autoinstall -k 6.12.25+rpt-rpi-2712
@@ -300,7 +368,7 @@ cd
 ```
 
 ```shell
-git clone https://github.com/will127534/imx585-v4l2-driver.git --branch 6.12.y
+git clone https://github.com/Tiramisioux/imx585-v4l2-driver.git --branch 6.12.y
 cd imx585-v4l2-driver/
 ./setup.sh
 sudo dkms autoinstall -k 6.12.25+rpt-rpi-2712
@@ -308,21 +376,21 @@ cd
 ```
 
 !!! note ""
-    The IMX283 and IMX585 DKMS drivers used here are based on Will Whang's work. For the original drivers and startup guides, visit https://github.com/will127534/imx283-v4l2-driver and https://github.com/will127534/imx585-v4l2-driver
+    The IMX283 and IMX585 DKMS drivers used here are based on Will Whang's work and installed from Tiramisioux forks (`6.12.y` branch of each). The [IMX283 fork](https://github.com/Tiramisioux/imx283-v4l2-driver) adds UHD 4K (3840×2160, 10-bit) and 2.7K 16:9 (2736×1538, 12-bit) readout modes on top of the upstream `6.12.y` base; the [IMX585 fork](https://github.com/Tiramisioux/imx585-v4l2-driver) mirrors upstream `6.12.y` unchanged. For the original drivers and startup guides, visit https://github.com/will127534/imx283-v4l2-driver and https://github.com/will127534/imx585-v4l2-driver
 
-#### Install Cinemate IMX283 and IMX585 tuning overrides
+#### Cinemate IMX283 and IMX585 tuning overrides
 
-These commands overlay Cinemate's local IMX283, IMX585 and IMX585 mono tuning files into both the `libcamera` source tree and the installed IPA directories so the runtime stays aligned with Cinemate's defaults and both sensors stay ready for later swaps.
+These commands overlay Cinemate's local IMX283, IMX585 and IMX585 mono tuning files into the `libcamera` source tree and the installed IPA directories so the runtime stays aligned with Cinemate's defaults. All three override files are `pisp`-target (Pi 5 / PiSP ISP), so they are installed only into the `pisp` dirs — copying them into the `vc4` (Pi 4) dirs would apply the wrong hardware config and overwrite the stock `bcm2835`-target `imx283.json` that Pi 4 needs.
 
 ```bash
-for dir in /home/pi/libcamera/src/ipa/rpi/pisp/data /home/pi/libcamera/src/ipa/rpi/vc4/data; do
+for dir in /home/pi/libcamera/src/ipa/rpi/pisp/data; do
   install -d -m 755 "$dir"
   install -m 644 /home/pi/cinemate/resources/tuning_files/imx283.json "$dir/imx283.json"
   install -m 644 /home/pi/cinemate/resources/tuning_files/imx585.json "$dir/imx585.json"
   install -m 644 /home/pi/cinemate/resources/tuning_files/imx585_mono.json "$dir/imx585_mono.json"
 done
 
-for dir in /usr/local/share/libcamera/ipa/rpi/pisp /usr/local/share/libcamera/ipa/rpi/vc4; do
+for dir in /usr/local/share/libcamera/ipa/rpi/pisp; do
   sudo install -d -m 755 "$dir"
   sudo install -m 644 /home/pi/cinemate/resources/tuning_files/imx283.json "$dir/imx283.json"
   sudo install -m 644 /home/pi/cinemate/resources/tuning_files/imx585.json "$dir/imx585.json"
@@ -330,11 +398,11 @@ for dir in /usr/local/share/libcamera/ipa/rpi/pisp /usr/local/share/libcamera/ip
 done
 ```
 
-Cinemate's stock `settings.json` shows 1.5K, 2K, and 4K-class recording-size choices by default. Keep `4` in `resolutions.k_steps` to expose 4K in the UI; remove it only if you intentionally want to hide 4K-class modes. To check or edit the list, type `editsettings` in the Pi terminal, or edit `/home/pi/cinemate/src/settings.json` directly:
+Every mode a sensor supports is listed in `resources/sensors.json`, so all of them stay available to the system. Cinemate's stock `settings.json` then exposes only the practical ones in the UI — for the IMX283 that is the ≥25 fps 2.7K and 4K crops (`k_steps: [3, 4]`). Add `5.5` to also show the IMX283 5K modes, or set `k_steps` to your sensor's sizes (for example `[1.5, 2, 4]` for IMX477). To check or edit the list, type `editsettings` in the Pi terminal, or edit `/home/pi/cinemate/src/settings.json` directly:
 
 ```json
 "resolutions": {
-  "k_steps": [1.5, 2, 4],
+  "k_steps": [3, 4],
   "bit_depths": [10, 12],
   "custom_modes": {}
 }
@@ -357,7 +425,9 @@ sudo chmod +x /usr/local/bin/IRFilter
 ```bash
 sudo raspi-config nonint do_i2c 0
 ```
+
 !!! note ""
+
     Enabling I2C is needed for using the camera modules.
 
 ### Setting hostname
@@ -365,7 +435,9 @@ sudo raspi-config nonint do_i2c 0
 ```bash
 sudo hostnamectl set-hostname cinepi
 ```
+
 !!! note ""
+
     You will find the pi as `cinepi.local` on the local network, or at the hotspot Cinemate creates
 
 ### Add camera modules to config.txt
@@ -374,97 +446,11 @@ sudo hostnamectl set-hostname cinepi
 sudo nano /boot/firmware/config.txt
 ```
 
-Replace the file contents with this managed-format block, and uncomment the sensor you are using.
+Replace the file contents with the single managed-format Cinemate block documented on **[Modifying config.txt](config-txt.md)** — that page is the canonical copy of the block. Uncomment the section for the sensor you are using (comment out the others) and set the physical camera port (`cam0` by default) to the connector your sensor is on. A clean install uses the IMX477 section on `cam0`.
 
-Also specify which physical camera port you have connected your sensor to. A clean install should use the IMX477 section on `cam0`; a StarlightEye color setup should use the IMX585 section on the camera port where the sensor is connected.
+The one-click installer writes this same managed block automatically and backs up the previous file under `/home/pi/.cinemate-install-backups/`.
 
-The one-click installer writes the same fully managed Cinemate `config.txt` block and backs up the previous file under `/home/pi/.cinemate-install-backups/`.
-
-```bash
-# >>> cinemate-install >>>
-# Managed by cinemate-install.sh
-# For more options and information see
-# http://rptl.io/configtxt
-# Some settings may impact device functionality. See link above for details
-
-# Uncomment some or all of these to enable the optional hardware interfaces
-dtparam=i2c_arm=on
-#dtparam=i2s=on
-#dtparam=spi=on
-
-# Enable audio (loads snd_bcm2835)
-dtparam=audio=on
-
-# ---- Camera section ----
-
-# Raspberry Pi HQ camera (IMX477, clean-install default on cam0)
-camera_auto_detect=1
-dtoverlay=imx477,cam0
-
-# Raspberry Pi GS camera (IMX296, 10-bit RAW)
-#camera_auto_detect=1
-#dtoverlay=imx296,cam0
-
-# OneInchEye (IMX283)
-#camera_auto_detect=0
-#dtoverlay=imx283,cam0
-
-# StarlightEye color (IMX585)
-#camera_auto_detect=0
-#dtoverlay=imx585,cam0
-
-# StarlightEye Mono (IMX585 mono)
-#camera_auto_detect=0
-#dtoverlay=imx585,cam1,mono
-
-# ---- End camera section ----
-
-# Automatically load overlays for detected DSI displays
-display_auto_detect=1
-
-# Automatically load initramfs files, if found
-auto_initramfs=1
-
-# Enable DRM VC4 V3D driver
-dtoverlay=vc4-kms-v3d
-max_framebuffers=2
-
-# Don't have the firmware create an initial video= setting in cmdline.txt.
-# Use the kernel's default instead.
-disable_fw_kms_setup=1
-
-# Run in 64-bit mode
-arm_64bit=1
-
-# Disable compensation for displays with overscan
-disable_overscan=1
-
-# Run as fast as firmware / board allows
-arm_boost=1
-
-[cm4]
-# Enable host mode on the 2711 built-in XHCI USB controller.
-# This line should be removed if the legacy DWC2 controller is required
-# (e.g. for USB device mode) or if USB support is not required.
-otg_mode=1
-
-[cm5]
-dtoverlay=dwc2,dr_mode=host
-
-# CFE Hat PCIe 3.0
-dtparam=pciex1
-dtparam=pciex1_gen=3
-
-[all]
-auto_initramfs=1
-avoid_warnings=1
-disable_splash=1
-dtparam=i2c1=on
-dtoverlay=disable-bt
-# <<< cinemate-install <<<
-```
-
-Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.
+Exit with Ctrl+X, press "y", then Enter to save.
 
 ### Pin the HDMI boot mode for headless startup
 
@@ -604,11 +590,11 @@ cinepi-raw --mode 1456:1088:10:U --width 1456 --height 1088 --lores-width 1280 -
 cinepi-raw --mode 1456:1088:10:P --width 1456 --height 1088 --lores-width 1280 --lores-height 720
 ```
 
-For more details on running CinePi-raw from the command line, see [this section](/cli-user-guide.md). 
+For more details on running CinePi-raw from the command line, see [this section](cli-user-guide.md). 
 
-## Cinemate
+### Cinemate
 
-### System wide packages
+#### System wide packages
 
 ```shell
 sudo apt update
@@ -621,7 +607,7 @@ sudo apt install -y \
     console-terminus
 ```
 
-### Create a Python virtual environment
+#### Create a Python virtual environment
 
 ```bash
 python3 -m venv ~/.cinemate-env
@@ -629,7 +615,7 @@ source /home/pi/.cinemate-env/bin/activate
 echo "source /home/pi/.cinemate-env/bin/activate" >> ~/.bashrc
 ```
 
-### Grant sudo privileges and enable I²C
+#### Grant sudo privileges and enable I²C
 
 ```bash
 echo "pi ALL=(ALL) NOPASSWD: /home/pi/.cinemate-env/bin/*" | sudo tee /etc/sudoers.d/cinemate-env
@@ -644,9 +630,10 @@ Reboot so the group changes take effect:
 sudo reboot
 ```
 
-### Python packages
+#### Python packages
 
-!!! Note ""
+!!! note ""
+
     If you previously installed the `board` Python package, remove it with `pip3 uninstall board`.
 
 ```bash
@@ -658,7 +645,7 @@ pip install \
     evdev inotify_simple sysv_ipc flask_socketio sugarpie
 ```
 
-### Alternative GPIO back-end
+#### Alternative GPIO back-end
 
 ```bash
 sudo apt install -y swig python3-dev build-essential git
@@ -668,14 +655,14 @@ sudo make install
 cd .. && pip install lgpio
 ```
 
-### Clone the Cinemate repo
+#### Clone the Cinemate repo
 
 ```bash
 sudo apt install -y git
 git clone https://github.com/Tiramisioux/cinemate.git
 ```
 
-### Allow Cinemate to run with sudo
+#### Allow Cinemate to run with sudo
 
 Write the `pi_cinemate` sudoers drop-in and validate it:
 
@@ -689,13 +676,13 @@ EOF
 sudo visudo -cf /etc/sudoers.d/pi_cinemate
 ```
 
-### Enable NetworkManager
+#### Enable NetworkManager
 
 ```bash
 sudo systemctl enable NetworkManager --now
 ```
 
-### Rotate logs
+#### Rotate logs
 
 Paste this into the terminal and hit enter:
 
@@ -711,7 +698,7 @@ sudo tee /etc/logrotate.d/general_logs <<'EOP'
 EOP
 ```
 
-### Seed Redis with default keys
+#### Seed Redis with default keys
 
 ```shell
 redis-cli MSET \
@@ -731,7 +718,7 @@ redis-cli SETNX sensor_mode 0
 
 (See the settings guide for the full list.)
 
-### Add aliases
+#### Add aliases
 
 ```shell
 nano ~/.bashrc
@@ -755,7 +742,7 @@ Reload .bashrc
 source ~/.bashrc
 ```
 
-### Match `settings.json` to the HDMI output you want to use
+#### Match `settings.json` to the HDMI output you want to use
 
 Open the settings file:
 
@@ -782,7 +769,7 @@ Use HDMI port `0` for `HDMI-A-1` and port `1` for `HDMI-A-2`.
 !!! note ""
     Current Cinemate builds can start without HDMI attached and recover when HDMI is plugged in later, but the Pi still needs the `video=` entry in `cmdline.txt` above if you want the headless boot framebuffer to come up in `1920x1080` instead of a fallback 4:3 mode.
 
-### Optional: install Plymouth for the boot spinner
+#### Optional: install Plymouth for the boot spinner
 
 If you want the same boot spinner and clean spinner-to-Cinemate handoff as the prebuilt image, install Plymouth before enabling `cinemate-autostart.service`. The Cinemate theme below keeps the spinner centered on the HDMI framebuffer during Pi startup and shutdown, while Cinemate itself shows the welcome message after Plymouth hands off to the app.
 
@@ -842,7 +829,7 @@ sudo reboot
 
 If you skip Plymouth, Cinemate still works. You just will not get the boot spinner or the same CLI-suppressed boot handoff.
 
-## Cinemate services
+### Cinemate services
 
 Install and enable the support services with:
 
@@ -937,7 +924,7 @@ sudo systemctl disable wifi-hotspot
 
 See [Hotspot logic](hotspot-logic.md) for more details on how the hotspot works.
 
-### Connect to the Pi (if not already connected):
+#### Connect to the Pi (if not already connected):
 
 ```shell
 ssh pi@10.42.0.1
@@ -983,3 +970,70 @@ To check what the service is doing:
 systemctl status cinemate-autostart
 journalctl -fu cinemate-autostart
 ```
+
+## Boot time optimization
+
+These changes bring typical boot-to-live-preview time down to approximately 10 seconds on both Raspberry Pi 4 and Raspberry Pi 5. The one-click installer applies all of them automatically. If you used the manual install path, apply each step separately after the rest of the install is complete.
+
+### Disable unnecessary background services
+
+The following services and timers are not used by the camera stack. Disabling them removes stall points on the boot critical path.
+
+```bash
+# Stop the network-online gate — the hotspot creates its own AP and does not need upstream internet
+sudo systemctl disable --now NetworkManager-wait-online.service
+
+# Disable swap — not needed on Pi 4/5, and saves SD card writes
+sudo systemctl disable --now dphys-swapfile.service
+
+# Background daemons the camera never uses
+sudo systemctl disable --now triggerhappy.service
+sudo systemctl disable --now ModemManager.service
+sudo systemctl disable --now systemd-rfkill.service
+
+# Background maintenance timers — not on the boot critical path
+sudo systemctl disable --now man-db.timer
+sudo systemctl disable --now apt-daily.timer
+sudo systemctl disable --now apt-daily-upgrade.timer
+sudo systemctl disable --now e2scrub_all.timer
+```
+
+!!! note ""
+    Some of these units may not be present on a minimal Bookworm Lite image. `systemctl disable` prints a warning and continues if the unit does not exist.
+
+### Skip filesystem check on boot
+
+Add `fsck.mode=skip` to `/boot/firmware/cmdline.txt`. The file must stay on a single line:
+
+```bash
+sudo nano /boot/firmware/cmdline.txt
+```
+
+Append `fsck.mode=skip` to the end of the existing line:
+
+```text
+... video=HDMI-A-1:1920x1080M@60D fsck.mode=skip
+```
+
+!!! note ""
+    `cmdline.txt` must stay on a single line. Do not add line breaks.
+
+### Skip HDMI CEC handshake
+
+Add `hdmi_ignore_cec_init=1` to the `[all]` block of `/boot/firmware/config.txt`, below `avoid_warnings=1`:
+
+```bash
+sudo nano /boot/firmware/config.txt
+```
+
+Inside the `[all]` block:
+
+```text
+[all]
+auto_initramfs=1
+avoid_warnings=1
+disable_splash=1
+hdmi_ignore_cec_init=1
+```
+
+This skips the HDMI CEC handshake during boot, removing a short delay on HDMI-connected displays.

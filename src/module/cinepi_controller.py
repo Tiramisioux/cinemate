@@ -75,6 +75,33 @@ class CinePiController:
         self.anamorphic_steps = anamorphic_steps
         self.default_anamorphic_factor = default_anamorphic_factor
         self.settings = self.load_settings()
+
+        # Frame-rate phase lock: apply the per-camera `phase_lock` setting (default
+        # True) to the shared cinepi-raw `fps_phase_lock` flag. Reads the primary
+        # camera (cam0, then cam1). set_value publishes on cp_controls so cinepi-raw
+        # picks it up live; the value also persists for cinepi-raw to read at start.
+        # Safe to leave True for dual --sync genlock rigs: cinepi-raw infers its role
+        # from --sync and only disciplines the master (--sync off/server) to the Pi
+        # clock; the --sync client self-suppresses the lock and lets rpi.sync own its
+        # VBLANK. So the same shared flag is correct for both single and dual.
+        try:
+            _cam_cfg = (self.settings.get("camera") or {})
+            _phase_lock = True
+            for _port in ("cam0", "cam1"):
+                _c = _cam_cfg.get(_port)
+                if isinstance(_c, dict):
+                    _phase_lock = bool(_c.get("phase_lock", True))
+                    break
+            self.redis_controller.set_value(
+                ParameterKey.FPS_PHASE_LOCK.value, 1 if _phase_lock else 0
+            )
+            logging.info(
+                "Frame-rate phase lock %s (cinepi-raw fps_phase_lock)",
+                "enabled" if _phase_lock else "disabled",
+            )
+        except Exception as exc:
+            logging.warning("Could not apply phase_lock setting: %s", exc)
+
         dynamic_resolution_cfg = self.settings.get("dynamic_resolution", {})
         self.dynamic_resolution_cfg = dynamic_resolution_cfg
         self.dynamic_resolution_enabled = self._as_bool(dynamic_resolution_cfg.get("enabled", False))
@@ -196,11 +223,6 @@ class CinePiController:
                 self.dynamic_resolution_desired_mode,
             )
             self.dynamic_resolution_desired_mode = self.sensor_mode
-        self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
-            self.current_sensor,
-            self.sensor_mode,
-            self.fps,
-        )
         self.fps_max = self._refresh_fps_max()
         self.gui_layout = self.sensor_detect.get_gui_layout(self.current_sensor, self.sensor_mode)
         self.exposure_time_s = float(self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)) / 360 * (1 / self.fps) 
@@ -225,6 +247,10 @@ class CinePiController:
         self.wb_free = free_mode.get('wb_free', False)
         
         self.RAM_LIMIT_PERCENT = 80
+        # Stop recording when the cinepi-raw RAM frame buffer is this full
+        # (used slots / total slots). This is the direct "about to drop
+        # frames" signal; the system-RAM limit above is a coarser backstop.
+        self.BUFFER_LIMIT_PERCENT = 90
 
         self.update_steps()
         self.initialize_wb_cg_rb_array()  # Initialize after free-mode expands WB steps.
@@ -660,7 +686,6 @@ class CinePiController:
             • hardware limit (fps_max)
             • fps_free flag
             • shutter-sync flag
-            • correction factor for fractional clocking
             • optional locks
         """
         requested_user_fps = float(value)
@@ -676,35 +701,29 @@ class CinePiController:
 
         self._maybe_apply_dynamic_resolution_for_fps(requested_user_fps)
 
-        self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
-            self.current_sensor,
-            self.sensor_mode,
-            requested_user_fps,
-        )
-
-        corrected = requested_user_fps * self.fps_correction_factor
-        fps_max   = int(self.redis_controller.get_value(ParameterKey.FPS_MAX.value))
+        # No per-sensor fps correction factor: the cinepi-raw phase lock drives the
+        # recorded cadence onto the nominal fps, so the hardware fps == the user fps.
+        fps_max = int(float(self.redis_controller.get_value(ParameterKey.FPS_MAX.value)))
 
         # ── choose the final fps value ──────────────────────────────────────
         if self.shutter_a_sync_mode == 1 or self.fps_free:
-            safe_value = max(1, min(fps_max, corrected))           # “free”
-            if safe_value == corrected:
-                safe_user_fps = requested_user_fps
-            else:
-                safe_user_fps = (
-                    safe_value / self.fps_correction_factor
-                    if self.fps_correction_factor
-                    else safe_value
-                )
+            safe_value = max(1, min(fps_max, requested_user_fps))   # “free”
+            safe_user_fps = safe_value
         else:
             # make sure the table is current (free-mode may be toggled at run-time)
             self._rebuild_fps_steps()
-            safe_value = min(self.fps_steps_dynamic,
-                            key=lambda x: abs(x - corrected))     # “snapped”
-            safe_user_fps = safe_value
+            snapped_user_fps = min(self.fps_steps_dynamic,
+                                   key=lambda x: abs(x - requested_user_fps))
+            safe_user_fps = snapped_user_fps
+            safe_value = snapped_user_fps
 
         self.user_fps = safe_user_fps
-        if update_user_target:
+        # Always reconcile the operator-facing fps_user when the request had to be
+        # clamped DOWN (e.g. restoring 25 fps into a 4k mode whose fps_max is 16).
+        # Without this the GUI keeps showing the stale higher number even though
+        # the actual recording fps was correctly clamped. The upward "remember the
+        # user's target" intent is preserved: we only force-write on a downward clamp.
+        if update_user_target or safe_user_fps < requested_user_fps:
             self.redis_controller.set_value(ParameterKey.FPS_USER.value, self.user_fps)
 
         self.current_fps = safe_value
@@ -1038,30 +1057,57 @@ class CinePiController:
             if rerun and self._storage_profile_restart_allowed():
                 self._maybe_schedule_storage_profile_restart("queued storage profile change")
 
+    def _buffered_frames_flushing(self) -> bool:
+        """True while cinepi-raw is still draining buffered frames to disk after
+        a take — the green ``is_writing_buf`` state. Mirrors the keys the GUI
+        paints green on and that ssd_monitor gates erase/format on."""
+        for key in (ParameterKey.IS_WRITING_BUF.value, ParameterKey.IS_BUFFERING.value):
+            if str(self.redis_controller.get_value(key) or "0").strip() == "1":
+                return True
+        return False
+
     def start_recording(self):
+        # Safety: refuse to start a new take while the previous take's frames are
+        # still flushing from RAM to disk (the green is_writing_buf state). Letting
+        # the buffer finish means no recorded frame is lost; the operator presses
+        # rec again once the flush completes and green clears. Storage pre-roll is
+        # exempt — it primes the disk and waits out its own flush.
+        if not self.is_preroll_active() and self._buffered_frames_flushing():
+            logging.info(
+                "rec ignored – previous take's buffered frames are still flushing to disk")
+            return
         self._cancel_timed_recording_stop()
         self._clear_frame_limited_recording_stop()
         self.redis_controller.set_value(ParameterKey.MEMORY_ALERT.value, 0)
         if self.ssd_monitor.is_mounted == True and self.ssd_monitor.get_space_left:
             self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 1)
             logging.info(f"Started recording")
+            # Arm the RAM-buffer / system-RAM watchdog so a full buffer auto-stops
+            # the take instead of stalling the clock with the GUI stuck on red.
+            self.start_recording_worker()
         else:
             logging.info(f"No disk.")
-            
+
     def stop_recording(self):
         self._cancel_timed_recording_stop()
-        self._clear_frame_limited_recording_stop()
+        # Do not disarm the frame limit here: analyze_frames() needs
+        # frame_limit_requested_slots to compute the correct expected count.
+        # _clear_post_recording_state() clears it after analysis; start_recording()
+        # clears it before the next take begins.
+        self.stop_recording_worker()
         self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
         logging.info(f"Stopped recording")
 
     def _is_recording(self) -> bool:
         return str(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)) == "1"
 
-    def _mode_string(self, info: dict) -> str:
+    def _mode_string(self, info: dict, packing: str | None = None) -> str:
         width = int(info.get("width") or 0)
         height = int(info.get("height") or 0)
         bit_depth = int(info.get("bit_depth") or 12)
-        packing = str(info.get("packing") or "U").upper()[0]
+        # Prefer an explicit platform-aware packing token; fall back to the
+        # mode's default only when none is supplied.
+        packing = str(packing or info.get("packing") or "U").upper()[0]
         return f"{width}:{height}:{bit_depth}:{packing}"
 
     def _select_resolution_mode_for_fps(self, target_fps: float):
@@ -1149,7 +1195,9 @@ class CinePiController:
         height_new = resolution_info.get('height', None)
         width_new = resolution_info.get('width', None)
         bit_depth_new = resolution_info.get('bit_depth', None)
-        packing_new = resolution_info.get('packing', 'U')
+        # Platform-aware packing (data-driven from sensors.json) so the GUI/HUD
+        # report the same P/U token that cinepi-raw is actually launched with.
+        packing_new = self.sensor_detect.get_packing_for_platform(self.current_sensor, int(value))
         gui_layout_new = resolution_info.get('gui_layout', None)
         file_size_new = resolution_info.get('file_size', None)
 
@@ -1174,7 +1222,7 @@ class CinePiController:
             ParameterKey.LORES_HEIGHT.value,
             str(self.sensor_detect.get_lores_height(self.current_sensor, self.sensor_mode)),
         )
-        self.redis_controller.set_value(ParameterKey.MODE.value, self._mode_string(resolution_info))
+        self.redis_controller.set_value(ParameterKey.MODE.value, self._mode_string(resolution_info, packing_new))
         self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)
         self.fps_max = self._refresh_fps_max()
         self.dynamic_resolution_active = (
@@ -1310,12 +1358,6 @@ class CinePiController:
 
             self.update_steps()
 
-            self.fps_correction_factor = self.sensor_detect.get_fps_correction_factor(
-                self.current_sensor,
-                self.sensor_mode,
-                self.current_fps,
-            )
-
             if restore_user_fps is not None:
                 self.set_fps(float(restore_user_fps), update_user_target=False)
 
@@ -1327,6 +1369,42 @@ class CinePiController:
             self.redis_controller.set_value(ParameterKey.RESOLUTION_SWITCHING.value, 0)
             logging.error(f"Error setting resolution: {error}")
             return False
+
+    @staticmethod
+    def _aspect_ratio(width, height):
+        try:
+            w = float(width)
+            h = float(height)
+        except (TypeError, ValueError):
+            return None
+        return (w / h) if h > 0 else None
+
+    def _resolution_change_needs_restart(self, target_mode):
+        """Whether switching to *target_mode* must relaunch cinepi-raw.
+
+        cinepi-raw bakes the preview window (-p) and lores geometry into its
+        launch args from the mode's aspect ratio, so a live "record-through"
+        reconfigure keeps the OLD geometry — it only stays correct when the
+        aspect ratio is unchanged. When the aspect ratio changes we must restart
+        cinepi-raw to rebuild the preview (otherwise it stays letterboxed/
+        undersized until the next restart). Recording is deliberately left
+        seamless: a same-aspect change is the only kind wanted mid-take, so we
+        never split a running take just to fix the preview shape.
+        """
+        if self._is_recording():
+            return False
+        try:
+            target_info = self.sensor_detect.res_modes.get(int(target_mode), {})
+        except (TypeError, ValueError):
+            return False
+        new_ar = self._aspect_ratio(target_info.get("width"), target_info.get("height"))
+        cur_ar = self._aspect_ratio(
+            self.redis_controller.get_value(ParameterKey.WIDTH.value),
+            self.redis_controller.get_value(ParameterKey.HEIGHT.value),
+        )
+        if new_ar is None or cur_ar is None:
+            return False
+        return abs(new_ar - cur_ar) > 0.01
 
     def set_resolution(self, value=None, *, restart_process=False):
         if value is not None:
@@ -1341,6 +1419,12 @@ class CinePiController:
                     )
                     if choice is not None:
                         value = choice.mode
+
+            # Relaunch cinepi-raw when the aspect ratio changes so the preview
+            # window is rebuilt for the new shape; same-aspect changes stay
+            # seamless (record-through). See _resolution_change_needs_restart.
+            if not restart_process and self._resolution_change_needs_restart(value):
+                restart_process = True
 
             restore_user_fps = self._current_user_fps_value()
             return self._apply_resolution_mode(
@@ -1555,8 +1639,8 @@ class CinePiController:
     def erase_drive(self):
         self.ssd_monitor.erase_drive()
 
-    def format_drive(self, filesystem: str = "ext4"):
-        self.ssd_monitor.format_drive(filesystem)
+    def format_drive(self, filesystem=None):
+        self.ssd_monitor.format_drive(filesystem or "exfat")
     
     def calculate_dynamic_shutter_angles(self, fps):
         if fps <= 0:
@@ -2019,6 +2103,18 @@ class CinePiController:
 
 
 # ────────────────────────── recording helper thread ────────────────────
+    def _buffer_fill_percent(self):
+        """Return the cinepi-raw RAM buffer fill as a percent (used/total),
+        or None when the capacity has not been published yet."""
+        try:
+            total = int(self.redis_controller.get_value(ParameterKey.BUFFER_SIZE.value) or 0)
+            if total <= 0:
+                return None
+            used = int(self.redis_controller.get_value(ParameterKey.BUFFER.value) or 0)
+        except (TypeError, ValueError):
+            return None
+        return max(0.0, (used / total) * 100.0)
+
     def _recording_worker(self):
         logging.info("CinePiController worker thread started")
         try:
@@ -2027,23 +2123,46 @@ class CinePiController:
                 if self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "0":
                     break
 
-                # ─── Watch RAM ───────────────────────────────────────────────
+                # ─── Primary: watch the cinepi-raw RAM frame buffer ──────────
+                # This is the real "backlog about to overflow → frames will
+                # drop" signal. When it trips we stop so the buffer can flush.
+                buffer_pct = self._buffer_fill_percent()
+                if buffer_pct is not None and buffer_pct >= self.BUFFER_LIMIT_PERCENT:
+                    logging.warning(
+                        f"RAM frame buffer {buffer_pct:.0f}% ≥ "
+                        f"{self.BUFFER_LIMIT_PERCENT}%! Stopping recording.")
+                    self._auto_stop_recording(int(buffer_pct))
+                    break
+
+                # ─── Backstop: watch overall system RAM ──────────────────────
                 ram_pct = psutil.virtual_memory().percent
                 if ram_pct >= self.RAM_LIMIT_PERCENT:
                     logging.warning(f"RAM {ram_pct:.1f}% ≥ {self.RAM_LIMIT_PERCENT}%! "
                                     "Stopping recording.")
-                    # tell the UI / mediator
-                    self.redis_controller.set_value(ParameterKey.MEMORY_ALERT.value,
-                                                    int(ram_pct))
-                    # flip the master flag – everything else reacts automatically
-                    self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
+                    self._auto_stop_recording(int(ram_pct))
                     break
-
-                # …your other per-frame / per-second work here …
 
                 time.sleep(0.25)   # 4 Hz polling is plenty
         finally:
             logging.info("CinePiController worker thread exiting")
+
+    def _auto_stop_recording(self, alert_value):
+        """Stop recording from inside the watchdog thread.
+
+        We must not call stop_recording() here: it calls stop_recording_worker()
+        which joins this very thread (RuntimeError: cannot join current thread).
+        Instead replicate the cleanup and flip is_recording directly – the redis
+        publish drives the mediator (clears the red write state) and the
+        redis_listener (raises is_writing_buf for the green buffer flush), and
+        the rec light / GPIO follow automatically.
+        """
+        # tell the UI / mediator how full we were when we tripped
+        self.redis_controller.set_value(ParameterKey.MEMORY_ALERT.value, alert_value)
+        self._cancel_timed_recording_stop()
+        self._clear_frame_limited_recording_stop()
+        # flip the master flag – everything else reacts automatically
+        self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 0)
+        logging.info("Stopped recording")
 
     def start_recording_worker(self):
         if self._rec_thread and self._rec_thread.is_alive():
@@ -2055,6 +2174,6 @@ class CinePiController:
 
     def stop_recording_worker(self):
         self._rec_thread_stop.set()
-        if self._rec_thread:
+        if self._rec_thread and self._rec_thread is not threading.current_thread():
             self._rec_thread.join(timeout=2)                # be gentle
             self._rec_thread = None

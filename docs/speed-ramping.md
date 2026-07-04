@@ -10,7 +10,7 @@ Cinemate exposes frame rate control through the `CinePiController` class. The si
 set fps <value>
 ```
 
-For quick 2× changes Cinemate also implements `set_fps_double` which toggles between the current FPS and twice that value. This can be used for designing a slow-motion button. Here is how you would to it in the settings file, button section:
+For quick 2× changes Cinemate also implements `set_fps_double` which toggles between the current FPS and twice that value. This can be used for designing a slow-motion button. Here is how you would do it in the settings file, button section:
 
 ```json
 {
@@ -20,7 +20,7 @@ For quick 2× changes Cinemate also implements `set_fps_double` which toggles be
   "press_action": {"method": "set_fps_double"}
 }
 ```
->No argument is needed here. For methods such as `set_fps_double`, calling the method without an argument will simply toggle the control, in tis caseturning the slow motion on and off. If the user provides an argument, the control will be set explicitly to that value.
+>No argument is needed here. For methods such as `set_fps_double`, calling the method without an argument will simply toggle the control, in this case turning the slow motion on and off. If the user provides an argument, the control will be set explicitly to that value.
 
 The controller contains an experimental `_ramp_fps` helper that gradually steps the frame rate up or down using `ramp_up_speed` and `ramp_down_speed` delays. This can be adapted if smoother transitions are desired.
 

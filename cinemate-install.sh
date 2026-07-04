@@ -67,17 +67,28 @@ CINEMATE_REPO_URL="${CINEMATE_REPO_URL:-https://github.com/Tiramisioux/cinemate.
 CINEMATE_REPO_REF="${CINEMATE_REPO_REF:-}"
 CINEPI_RAW_REPO_URL="${CINEPI_RAW_REPO_URL:-https://github.com/Tiramisioux/cinepi-raw.git}"
 CINEPI_RAW_REPO_REF="${CINEPI_RAW_REPO_REF:-}"
-LIBCAMERA_REPO_URL="${LIBCAMERA_REPO_URL:-https://github.com/will127534/libcamera.git}"
-LIBCAMERA_REPO_REF="${LIBCAMERA_REPO_REF:-9d0cdfe5}"
+LIBCAMERA_REPO_URL="${LIBCAMERA_REPO_URL:-https://github.com/Tiramisioux/libcamera.git}"
+LIBCAMERA_REPO_REF="${LIBCAMERA_REPO_REF:-cinemate}"
+# Patches cherry-picked on top of LIBCAMERA_REPO_REF (space-separated commit hashes, applied in order)
+# Default: none — build as-is. Tracks the Tiramisioux/libcamera `cinemate`
+# branch tip: Will Whang's IMX585 fork (9d0cdfe5), mirrored here so the build
+# does not depend on the upstream commit staying available, plus gcc-12 build
+# fixes (Pi 4 / Bookworm -Werror=restrict in the apps; verified 251/251 on Pi 4).
+# Set REF to a commit SHA instead (e.g. ff24737b6) for a pinned, reproducible build.
+LIBCAMERA_PATCHES="${LIBCAMERA_PATCHES:-}"
 CPP_MJPEG_STREAMER_REPO_URL="${CPP_MJPEG_STREAMER_REPO_URL:-https://github.com/nadjieb/cpp-mjpeg-streamer.git}"
 CPP_MJPEG_STREAMER_REPO_REF="${CPP_MJPEG_STREAMER_REPO_REF:-}"
 REDIS_PLUS_PLUS_REPO_URL="${REDIS_PLUS_PLUS_REPO_URL:-https://github.com/sewenew/redis-plus-plus.git}"
 REDIS_PLUS_PLUS_REPO_REF="${REDIS_PLUS_PLUS_REPO_REF:-}"
 LGPIO_REPO_URL="${LGPIO_REPO_URL:-https://github.com/joan2937/lg.git}"
 LGPIO_REPO_REF="${LGPIO_REPO_REF:-}"
-IMX283_DRIVER_REPO_URL="${IMX283_DRIVER_REPO_URL:-https://github.com/will127534/imx283-v4l2-driver.git}"
+# Tiramisioux fork of Will Whang's driver; 6.12.y branch adds the UHD 4K (mode 1C)
+# and 2.7K 16:9 (mode 2A) readout modes on top of the upstream 6.12.y base.
+IMX283_DRIVER_REPO_URL="${IMX283_DRIVER_REPO_URL:-https://github.com/Tiramisioux/imx283-v4l2-driver.git}"
 IMX283_DRIVER_REPO_REF="${IMX283_DRIVER_REPO_REF:-6.12.y}"
-IMX585_DRIVER_REPO_URL="${IMX585_DRIVER_REPO_URL:-https://github.com/will127534/imx585-v4l2-driver.git}"
+# Tiramisioux fork of Will Whang's driver; 6.12.y branch mirrors the upstream
+# 6.12.y base (kept in sync as a self-hosted install source).
+IMX585_DRIVER_REPO_URL="${IMX585_DRIVER_REPO_URL:-https://github.com/Tiramisioux/imx585-v4l2-driver.git}"
 IMX585_DRIVER_REPO_REF="${IMX585_DRIVER_REPO_REF:-6.12.y}"
 IR_FILTER_URL="${IR_FILTER_URL:-https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter}"
 PISHRINK_URL="${PISHRINK_URL:-https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh}"
@@ -94,7 +105,12 @@ KERNEL_ROLLBACK_DIR="${KERNEL_ROLLBACK_DIR:-/var/tmp/cinemate-kernel-baseline}"
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly MANAGED_BEGIN="# >>> cinemate-install >>>"
 readonly MANAGED_END="# <<< cinemate-install <<<"
-readonly BUILD_JOBS="$(nproc 2>/dev/null || printf '4')"
+# Parallel build jobs. On boards with < 4 GB RAM (1 GB / 2 GB models) heavy
+# translation units (cinepi_raw.cpp, the IPAs) can use >1.5 GB each at -O3 and
+# OOM-kill cc1plus ("Killed signal terminated program cc1plus"), so cap to ~1 job
+# per 1.5 GB (i.e. -j1 on 2 GB) — these boards also get a build-time zram swap
+# (see ensure_build_zram). Boards with >= 4 GB RAM use all CPUs. Override: BUILD_JOBS=N.
+readonly BUILD_JOBS="${BUILD_JOBS:-$(c=$(nproc 2>/dev/null || echo 4); mb=$(awk '/^MemTotal:/{print int($2/1024); exit}' /proc/meminfo 2>/dev/null || echo 0); j=$c; if [ "$mb" -gt 0 ] && [ "$mb" -lt 3000 ]; then j=$(( mb / 1536 )); if [ "$j" -lt 1 ]; then j=1; fi; if [ "$j" -gt "$c" ]; then j=$c; fi; fi; echo "$j")}"
 
 BACKUP_DIR=""
 CINEMATE_SOURCE_DIR=""
@@ -487,6 +503,7 @@ install_apt_packages() {
     libcamera_packages=(
         libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a
         libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libavdevice59
+        libyaml-dev
     )
 
     cpp_mjpeg_streamer_packages=(
@@ -579,13 +596,96 @@ build_redis_plus_plus() {
     sudo ldconfig
 }
 
+# --- build-time zram swap (low-RAM boards only) -----------------------------
+# Heavy translation units (cinepi_raw.cpp at -O3 needs ~2 GB) OOM-kill cc1plus
+# and can freeze a 2 GB board. On boards with < 4 GB RAM we add a *compressed
+# RAM* swap device (zram) for the build only — no writes to the SD/eMMC — and
+# remove it afterwards, so the running camera never swaps (swapping during a
+# recording would drop frames). ENABLE_BUILD_ZRAM: auto (default; < 4 GB only),
+# or 1/0 to force on/off.
+ENABLE_BUILD_ZRAM="${ENABLE_BUILD_ZRAM:-auto}"
+BUILD_ZRAM_DEV=""
+
+ensure_build_zram() {
+    if [[ -n "${BUILD_ZRAM_DEV:-}" ]]; then return 0; fi
+    local mb dev
+    mb="$(awk '/^MemTotal:/{print int($2/1024); exit}' /proc/meminfo 2>/dev/null || echo 0)"
+    case "${ENABLE_BUILD_ZRAM,,}" in
+        auto)
+            # Only boards with < 4 GB RAM (they report < 3 GB MemTotal).
+            if [[ "$mb" -le 0 || "$mb" -ge 3000 ]]; then return 0; fi
+            ;;
+        1|true|yes|on) : ;;
+        *) return 0 ;;
+    esac
+    sudo modprobe zram 2>/dev/null || true
+    dev="$(sudo zramctl --find --size 4G --algorithm zstd 2>/dev/null || true)"
+    if [[ -z "$dev" ]]; then
+        dev="$(sudo zramctl --find --size 4G 2>/dev/null || true)"
+    fi
+    if [[ -z "$dev" ]]; then
+        warn "Could not create a zram device (zram/zramctl missing?); low-RAM build may OOM-kill cc1plus"
+        return 0
+    fi
+    if ! sudo mkswap "$dev" >/dev/null 2>&1 || ! sudo swapon -p 100 "$dev" 2>/dev/null; then
+        sudo zramctl --reset "$dev" 2>/dev/null || true
+        warn "Could not enable zram swap on $dev; low-RAM build may OOM"
+        return 0
+    fi
+    BUILD_ZRAM_DEV="$dev"
+    log "Low-RAM board (${mb} MB): added 4 GB zram build swap on $dev (compressed RAM, removed after build)"
+}
+
+remove_build_zram() {
+    if [[ -z "${BUILD_ZRAM_DEV:-}" ]]; then return 0; fi
+    sudo swapoff "$BUILD_ZRAM_DEV" 2>/dev/null || true
+    sudo zramctl --reset "$BUILD_ZRAM_DEV" 2>/dev/null || true
+    detail "Removed build zram swap ($BUILD_ZRAM_DEV)"
+    BUILD_ZRAM_DEV=""
+}
+trap remove_build_zram EXIT
+
 build_libcamera() {
+    # The build step below runs chmod +x on every .py/.sh file.  On Linux,
+    # git tracks permission bits, so those mode changes show up as dirty and
+    # block any subsequent git checkout.  Setting core.fileMode false tells
+    # git to ignore executable-bit changes in this repo.  We also stash any
+    # remaining real content changes (e.g. tuning JSONs) so the checkout
+    # cannot be blocked on a re-run or upgrade.
+    if [[ -d "$LIBCAMERA_DIR/.git" ]]; then
+        run_as_pi git -C "$LIBCAMERA_DIR" config core.fileMode false
+        run_as_pi git -C "$LIBCAMERA_DIR" stash 2>/dev/null || true
+    fi
+
     ensure_repo "$LIBCAMERA_DIR" "$LIBCAMERA_REPO_URL" "$LIBCAMERA_REPO_REF"
+
+    # Set core.fileMode false on a fresh clone too, so the first chmod+x
+    # pass below does not dirty the tree on the next installer run.
+    run_as_pi git -C "$LIBCAMERA_DIR" config core.fileMode false
+
+    # Apply cherry-pick patches on top of the base ref.  A dedicated branch
+    # (cinemate-patches) is created or reset each time so this step is
+    # idempotent: re-running the installer cleanly re-applies the patches.
+    if [[ -n "${LIBCAMERA_PATCHES:-}" ]]; then
+        log "Applying libcamera patches on top of $LIBCAMERA_REPO_REF"
+        run_as_pi git -C "$LIBCAMERA_DIR" checkout -B cinemate-patches "$LIBCAMERA_REPO_REF"
+        for patch in $LIBCAMERA_PATCHES; do
+            detail "Cherry-picking $patch"
+            # -X theirs auto-resolves modify/delete conflicts (e.g. a file
+            # that was added in an intermediate commit and is absent from
+            # the base ref) by accepting the patch's version of the file.
+            run_as_pi git -C "$LIBCAMERA_DIR" cherry-pick -X theirs "$patch"
+        done
+    fi
 
     log "Building libcamera"
     detail "Source: $LIBCAMERA_DIR"
     run_as_pi find "$LIBCAMERA_DIR" -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} +
     run_as_pi chmod +x "$LIBCAMERA_DIR/src/ipa/ipa-sign.sh"
+    # pycamera (the libcamera Python bindings) is disabled: nothing in the
+    # CineMate stack imports it, and its generated py_controls_generated.cpp is a
+    # pybind11 unit needing >1.5 GB to compile at -O3, which OOM-kills cc1plus on
+    # 2 GB boards (e.g. a CM5). Disabling it also speeds the build up everywhere.
     run_as_pi_clean_shell "cd '$LIBCAMERA_DIR' && meson setup build --wipe --buildtype=release \
         -Dpipelines=rpi/vc4,rpi/pisp \
         -Dipas=rpi/vc4,rpi/pisp \
@@ -596,7 +696,7 @@ build_libcamera() {
         -Dcam=disabled \
         -Dqcam=disabled \
         -Ddocumentation=disabled \
-        -Dpycamera=enabled"
+        -Dpycamera=disabled"
     run_as_pi_clean_shell "ninja -C '$LIBCAMERA_DIR/build' -j '$BUILD_JOBS'"
     sudo ninja -C "$LIBCAMERA_DIR/build" install
     sudo ldconfig
@@ -620,7 +720,7 @@ set -Eeuo pipefail
 
 CINEPI_RAW_DIR="\${CINEPI_RAW_DIR:-$CINEPI_RAW_DIR}"
 CPP_MJPEG_STREAMER_DIR="\${CPP_MJPEG_STREAMER_DIR:-$CPP_MJPEG_STREAMER_DIR}"
-BUILD_JOBS="\${BUILD_JOBS:-\$(nproc 2>/dev/null || printf '4')}"
+BUILD_JOBS="\${BUILD_JOBS:-$BUILD_JOBS}"
 BUILD_DIR="\${BUILD_DIR:-\$CINEPI_RAW_DIR/build}"
 PKG_CONFIG_PATH="\$CPP_MJPEG_STREAMER_DIR/build:\${PKG_CONFIG_PATH:-}"
 export PKG_CONFIG_PATH
@@ -637,6 +737,32 @@ build_dir_has_entries() {
     [[ -d "\$1" ]] || return 1
     find "\$1" -mindepth 1 -maxdepth 1 -print -quit | grep -q .
 }
+
+# Temporary build swap for 1-2 GB boards: cinepi_raw.cpp needs ~2 GB at -O3 and
+# OOM-kills cc1plus. Use compressed RAM (zram) -- no SD/eMMC writes -- removed on
+# exit, so the running camera never swaps. Skipped when swap is already active
+# (e.g. the installer set it up) or on boards with 4 GB+ RAM (>= 3000 MB).
+CR_ZRAM_DEV=""
+cr_cleanup_zram() {
+    [[ -n "\${CR_ZRAM_DEV:-}" ]] || return 0
+    sudo swapoff "\$CR_ZRAM_DEV" 2>/dev/null || true
+    sudo zramctl --reset "\$CR_ZRAM_DEV" 2>/dev/null || true
+    CR_ZRAM_DEV=""
+}
+trap cr_cleanup_zram EXIT
+cr_mem_mb=\$(awk '/^MemTotal:/{print int(\$2/1024); exit}' /proc/meminfo 2>/dev/null || echo 0)
+cr_swap_lines=\$(wc -l < /proc/swaps 2>/dev/null || echo 1)
+if [[ "\$cr_mem_mb" -gt 0 && "\$cr_mem_mb" -lt 3000 && "\$cr_swap_lines" -le 1 ]]; then
+    sudo modprobe zram 2>/dev/null || true
+    CR_ZRAM_DEV=\$(sudo zramctl --find --size 4G --algorithm zstd 2>/dev/null || sudo zramctl --find --size 4G 2>/dev/null || true)
+    if [[ -n "\$CR_ZRAM_DEV" ]] && sudo mkswap "\$CR_ZRAM_DEV" >/dev/null 2>&1 && sudo swapon -p 100 "\$CR_ZRAM_DEV" 2>/dev/null; then
+        printf '[compile-raw] Low-RAM board (%s MB): added 4 GB zram build swap on %s (removed on exit)\n' "\$cr_mem_mb" "\$CR_ZRAM_DEV"
+    else
+        [[ -n "\$CR_ZRAM_DEV" ]] && sudo zramctl --reset "\$CR_ZRAM_DEV" 2>/dev/null || true
+        CR_ZRAM_DEV=""
+        printf '[compile-raw] WARNING: could not set up zram build swap; low-RAM build may OOM\n'
+    fi
+fi
 
 printf '[compile-raw] Source: %s\n' "\$CINEPI_RAW_DIR"
 printf '[compile-raw] Build directory: %s\n' "\$BUILD_DIR"
@@ -895,6 +1021,7 @@ block += [
     "auto_initramfs=1",
     "avoid_warnings=1",
     "disable_splash=1",
+    "hdmi_ignore_cec_init=1",
     "dtparam=i2c1=on",
     f"dtoverlay={bt_overlay}",
     end,
@@ -918,6 +1045,32 @@ configure_cmdline() {
         extra_tokens=(quiet splash loglevel=1 plymouth.ignore-serial-consoles vt.global_cursor_default=0 logo.nologo)
     fi
 
+    # ── Audio-core CPU isolation (real-time audio capture) ───────────────
+    # cinepi-audio-capture pins itself to the last core at SCHED_FIFO 80.
+    # CPU affinity alone does not stop kernel threads, the timer tick, RCU
+    # callbacks and device IRQs from sharing that core and jittering ALSA
+    # capture. On the 4-core Pi 4/5, dedicate the last core (CPU 3) to audio
+    # and keep IRQs + housekeeping on CPUs 0-2. isolcpus / rcu_nocbs /
+    # irqaffinity take effect on stock kernels; nohz_full needs a NO_HZ_FULL
+    # (RT) kernel and is harmless otherwise. Revert with `editcmdline` (delete
+    # these tokens) or restore the cmdline.txt.bak backup, then reboot.
+    local ncores audio_core house
+    ncores="$(nproc 2>/dev/null || echo 0)"
+    if [ "$ncores" = "4" ]; then
+        audio_core=$((ncores - 1))
+        house="0-$((audio_core - 1))"
+        extra_tokens+=(
+            "isolcpus=managed_irq,domain,${audio_core}"
+            "nohz_full=${audio_core}"
+            "rcu_nocbs=${audio_core}"
+            "irqaffinity=${house}"
+        )
+        detail "Audio-core isolation: reserving CPU ${audio_core} for capture (IRQs/housekeeping on ${house})"
+    fi
+
+    # ── Boot time: skip redundant fsck on every clean boot ───────────────
+    extra_tokens+=("fsck.mode=skip")
+
     detail "Ensuring $cmdline contains $video_token"
     backup_file "$cmdline"
     temp="$(mktemp)"
@@ -932,7 +1085,13 @@ video_token = sys.argv[3]
 extra = sys.argv[4:]
 
 tokens = src.read_text().strip().split() if src.exists() else []
-tokens = [tok for tok in tokens if not tok.startswith("video=HDMI-A-")]
+# Always re-manage the video= token. Re-manage the CPU-isolation tokens only
+# when we are (re)adding them, so a changed core count can't leave a stale
+# isolcpus=...,N behind, and a non-isolation run never strips a user's own.
+managed = ["video=HDMI-A-", "fsck.mode="]
+if any(t.startswith("isolcpus=") for t in extra):
+    managed += ["isolcpus=", "nohz_full=", "rcu_nocbs=", "irqaffinity="]
+tokens = [tok for tok in tokens if not tok.startswith(tuple(managed))]
 
 for tok in extra + [video_token]:
     if tok not in tokens:
@@ -1132,34 +1291,28 @@ install_imx283_support() {
 install_sensor_tuning_overrides() {
     log "Installing Cinemate sensor tuning overrides"
     local local_tuning_dir="$CINEMATE_SOURCE_DIR/resources/tuning_files"
+    # All current Cinemate tuning overrides are pisp-target (Pi 5 / PiSP ISP),
+    # so they are installed ONLY into the pisp data dirs. libcamera matches a
+    # tuning file's "target" against the active pipeline; dropping a pisp tuning
+    # into the vc4 (Pi 4) data dir applies the wrong hardware config and also
+    # clobbers the stock bcm2835-target imx283.json that Pi 4 needs. (imx585 has
+    # no vc4 cam_helper either, so it never runs on Pi 4 regardless.) If a
+    # bcm2835-target override is added later, install it into the vc4 dirs here.
     local -a tuning_files=(
         imx283.json
         imx585.json
         imx585_mono.json
     )
-    local -a libcamera_tuning_dirs=(
-        "$LIBCAMERA_DIR/src/ipa/rpi/pisp/data"
-        "$LIBCAMERA_DIR/src/ipa/rpi/vc4/data"
-    )
-    local -a install_tuning_dirs=(
-        "/usr/local/share/libcamera/ipa/rpi/pisp"
-        "/usr/local/share/libcamera/ipa/rpi/vc4"
-    )
-    local tuning_dir=""
+    local source_pisp_dir="$LIBCAMERA_DIR/src/ipa/rpi/pisp/data"
+    local install_pisp_dir="/usr/local/share/libcamera/ipa/rpi/pisp"
     local tuning_file=""
 
     [[ -d "$local_tuning_dir" ]] || die "Missing tuning files in $local_tuning_dir"
-    for tuning_dir in "${libcamera_tuning_dirs[@]}"; do
-        run_as_pi install -d -m 755 "$tuning_dir"
-        for tuning_file in "${tuning_files[@]}"; do
-            run_as_pi install -m 644 "$local_tuning_dir/$tuning_file" "$tuning_dir/$tuning_file"
-        done
-    done
-    for tuning_dir in "${install_tuning_dirs[@]}"; do
-        sudo install -d -m 755 "$tuning_dir"
-        for tuning_file in "${tuning_files[@]}"; do
-            sudo install -m 644 "$local_tuning_dir/$tuning_file" "$tuning_dir/$tuning_file"
-        done
+    run_as_pi install -d -m 755 "$source_pisp_dir"
+    sudo install -d -m 755 "$install_pisp_dir"
+    for tuning_file in "${tuning_files[@]}"; do
+        run_as_pi install -m 644 "$local_tuning_dir/$tuning_file" "$source_pisp_dir/$tuning_file"
+        sudo install -m 644 "$local_tuning_dir/$tuning_file" "$install_pisp_dir/$tuning_file"
     done
 }
 
@@ -1179,6 +1332,31 @@ configure_services_base() {
     sudo systemctl enable --now redis-server
     sudo systemctl enable --now NetworkManager
     detail "redis-server and NetworkManager are enabled"
+}
+
+configure_boot_optimizations() {
+    log "Disabling unused background services and timers"
+
+    local -a boot_units=(
+        NetworkManager-wait-online.service
+        dphys-swapfile.service
+        triggerhappy.service
+        ModemManager.service
+        systemd-rfkill.service
+        man-db.timer
+        apt-daily.timer
+        apt-daily-upgrade.timer
+        e2scrub_all.timer
+    )
+
+    for unit in "${boot_units[@]}"; do
+        if sudo systemctl list-unit-files "$unit" 2>/dev/null | grep -q "$unit"; then
+            detail "Disabling $unit"
+            sudo systemctl disable --now "$unit" 2>/dev/null || true
+        else
+            detail "Skipping $unit (not installed)"
+        fi
+    done
 }
 
 configure_logrotate() {
@@ -1202,6 +1380,26 @@ configure_run_wrapper() {
 set -Eeuo pipefail
 exec "$VENV_DIR/bin/python3" "$CINEMATE_DIR/src/main.py" "\$@"
 EOF
+}
+
+configure_audio_rtprio() {
+    log "Granting real-time scheduling priority to @audio group"
+    # cinepi-audio-capture uses SCHED_FIFO to stay ahead of DNG-writer I/O.
+    # Without this, sched_setscheduler(SCHED_FIFO) returns EPERM for the pi
+    # user when cinemate runs outside of systemd (manual / dev runs).
+    # The cinemate-autostart.service unit already carries LimitRTPRIO=30,
+    # but this limits.d drop-in extends the same right to shell sessions so
+    # that manual cinemate runs benefit from the same drift protection.
+    backup_file /etc/security/limits.d/cinemate-audio.conf
+    write_root_file /etc/security/limits.d/cinemate-audio.conf 644 <<EOF
+# Allow the audio group to use real-time scheduling (SCHED_FIFO).
+# Required by cinepi-audio-capture (cinepi-raw) for xrun-resistant
+# 24-bit audio capture alongside heavy DNG write I/O.
+@audio - rtprio 80
+@audio - memlock unlimited
+EOF
+    sudo usermod -aG audio "$PI_USER"
+    detail "Added $PI_USER to audio group; re-login required for limits to take effect"
 }
 
 configure_sudoers() {
@@ -1418,16 +1616,20 @@ main() {
     install_apt_packages
     section "Enabling base system services"
     configure_services_base
+    section "Applying boot time optimizations"
+    configure_boot_optimizations
     section "Refreshing the libtiff linker fix"
     prepare_libtiff_link
     section "Building redis-plus-plus"
     build_redis_plus_plus
+    ensure_build_zram   # compressed-RAM build swap on < 4 GB boards; removed after
     section "Building libcamera"
     build_libcamera
     section "Building cpp-mjpeg-streamer"
     build_cpp_mjpeg_streamer
     section "Building cinepi-raw"
     build_cinepi_raw
+    remove_build_zram
     section "Seeding initial cinepi-raw Redis defaults"
     seed_cinepi_raw_white_balance
     section "Installing sensor-specific support"
@@ -1460,6 +1662,7 @@ main() {
     configure_media_permissions
     configure_run_wrapper
     configure_sudoers
+    configure_audio_rtprio
     configure_logrotate
     configure_bashrc
     configure_settings_json

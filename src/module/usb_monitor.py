@@ -212,6 +212,18 @@ class AudioMonitor:
         return [control for _, _, control in ranked]
 
     def apply_capture_gain(self) -> bool:
+        # Re-read gain from the per-toolchain sub-object now that bit_depth is known.
+        # Falls back to the legacy flat key for Pi-local settings files that haven't
+        # been updated yet.
+        audio_cfg = self.settings.get("audio", {})
+        toolchain_key = "24bit" if self.bit_depth == 24 else "16bit"
+        if toolchain_key in audio_cfg and "capture_gain_db" in audio_cfg[toolchain_key]:
+            self.capture_gain_db = self._parse_capture_gain_db(
+                audio_cfg[toolchain_key]["capture_gain_db"]
+            )
+        elif "capture_gain_db" in audio_cfg:
+            self.capture_gain_db = self._parse_capture_gain_db(audio_cfg["capture_gain_db"])
+
         if not self.card_num:
             if abs(self.capture_gain_db) > 1e-6:
                 logging.warning(
@@ -430,6 +442,7 @@ class AudioMonitor:
                 "MIC_FORMAT": self.format or "",
                 "MIC_CHANNELS": str(self.channels or ""),
                 "MIC_RATE": str(self.sample_rate or ""),
+                "MIC_CARD_NAME": self.card_name or "",
             })
             logging.debug("Published MIC_* to Redis")
         except ModuleNotFoundError:
@@ -443,7 +456,7 @@ class AudioMonitor:
             import redis  # type: ignore
 
             client = redis.StrictRedis(host="localhost", port=6379, db=0)
-            client.delete("MIC_PCM_ALIAS", "MIC_FORMAT", "MIC_CHANNELS", "MIC_RATE")
+            client.delete("MIC_PCM_ALIAS", "MIC_FORMAT", "MIC_CHANNELS", "MIC_RATE", "MIC_CARD_NAME")
             if reason:
                 logging.debug("Cleared MIC_* from Redis: %s", reason)
         except ModuleNotFoundError:
@@ -746,7 +759,14 @@ class USBMonitor():
                 self.current_mic_id = None
                 self.audio_prepare_deferred = False
                 self._cancel_audio_prepare_timer()
-                self.usb_event.emit('mic_removed', device, model, serial)  # <-- Added this line
+                # Reset the dedup guard so a replacement mic plugged in immediately
+                # is not silently ignored by the 10-second cooldown window.
+                self.mic_processed = False
+                if self.sound_timer is not None:
+                    self.sound_timer.cancel()
+                    self.sound_timer = None
+                self.temp_sound_devices.clear()
+                self.usb_event.emit('mic_removed', device, model, serial)
                 self.audio_monitor.stop()
                 AudioMonitor.clear_mic_selection("microphone removed")
 

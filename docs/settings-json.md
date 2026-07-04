@@ -1,6 +1,11 @@
-# Settings file
+# Settings.json file
 
 This file controls how the camera behaves and how your buttons, switches and displays are mapped. It lives in `~/cinemate/src/settings.json`. You can edit it with any text editor; the settings take effect the next time you start Cinemate.
+
+!!! note ""
+    The prebuilt image works out of the box. You do **not** need to edit `settings.json` to start shooting. This page is a reference for when you want to customise hardware controls and behaviour.
+
+The image ships with a stock `settings.json` that already holds working defaults for every section below — button and switch mappings, preview, and audio (for example, a 2-frame audio timecode offset on both microphone paths). Edit it only to change a mapping or tune behaviour.
 
 !!! tip ""
     For easy editing of settings on the preinstalled image file, type `editsettings` anywhere in Raspberry Pi terminal.
@@ -44,35 +49,85 @@ If `welcome_image` is set, it overrides the text message.
 
 Use the hotspot when you need a direct connection in the field. Disable it during development so the Pi can join your regular Wi‑Fi and reach the internet. If you are connected to the Pi via Ethernet you can keep the hotspot on.
 
-## geometry
+## camera
 
-Controls image orientation for each camera port (`cam0`, `cam1`, etc.). These settings let you mount cameras in any orientation and still get an upright preview and recording. Example:
+All per-port settings live inside a `cam0` or `cam1` block so every option for a given camera port is visible in one place. `raw_buffer_count` is the only global key.
 
 ```json
-"geometry": {
-  "cam0": { "rotate_180": false, "horizontal_flip": false, "vertical_flip": false },
-  "cam1": { "rotate_180": false, "horizontal_flip": false, "vertical_flip": false }
+"camera": {
+  "raw_buffer_count": 0,
+  "cam0": {
+    "geometry": {
+      "rotate_180": false,
+      "horizontal_flip": false,
+      "vertical_flip": false
+    },
+    "output": {
+      "hdmi_port": 0
+    },
+    "override_camera_name": false,
+    "camera_name": "Blackmagic Pocket Cinema Camera 4K",
+    "phase_lock": true
+  },
+  "cam1": {
+    "geometry": {
+      "rotate_180": false,
+      "horizontal_flip": false,
+      "vertical_flip": false
+    },
+    "output": {
+      "hdmi_port": 1
+    },
+    "override_camera_name": false,
+    "camera_name": "Blackmagic Pocket Cinema Camera 4K",
+    "phase_lock": true
+  }
 }
 ```
 
-`rotate_180` – flip the image upside‑down.<br>`horizontal_flip` – mirror the image left/right.<br>`vertical_flip` – mirror the image top/bottom.
+`raw_buffer_count` – how many frames `cinepi-raw` keeps in RAM as a write-burst absorber. Leave it at `0` (default); the active storage profile picks the right depth automatically.
 
+??? note "raw_buffer_count / CMA buffer tuning"
+    The sensor produces frames at a fixed rate but storage write speed is uneven — exFAT can stall during cluster allocation or directory updates. Frames that land during a stall are held in the RAM ring until the disk catches up; no frames are dropped as long as the stall is shorter than the buffer depth. More buffers = more RAM used, but more tolerance for storage hiccups. `0` (default) lets the active storage profile pick the right depth for your sensor, filesystem, and storage type — this is almost always correct. Raise it only if you see single-frame TC holes (`DROP` flashing) and `grep Cma /proc/meminfo` confirms spare CMA headroom (~25 MB per extra buffer at 4K).
 
-## output
+### geometry
 
-Maps each camera to an HDMI connector. Use `-1` for automatic selection.
+Controls image orientation for the camera mounted on this port. These settings let you mount cameras in any orientation and still get an upright preview and recording.
 
-```json
-"output": {
-  "cam0": { "hdmi_port": 0 },
-  "cam1": { "hdmi_port": 1 }
-}
-```
+`rotate_180` – flip the image upside-down.<br>
+`horizontal_flip` – mirror the image left/right.<br>
+`vertical_flip` – mirror the image top/bottom.
 
-Use HDMI port `0` for `HDMI-A-1` and HDMI port `1` for `HDMI-A-2`.
+### output
+
+Maps the camera to an HDMI connector.
+
+`hdmi_port` – `0` for `HDMI-A-1`, `1` for `HDMI-A-2`.
 
 !!! note ""
     This setting chooses which connector `cinepi-raw` uses at runtime. On Raspberry Pi Bookworm with KMS, the boot framebuffer mode still comes from `/boot/firmware/cmdline.txt`, so headless installs should also set a `video=HDMI-A-1:1920x1080M@60D` or `video=HDMI-A-2:1920x1080M@60D` override there.
+
+### camera name
+
+`override_camera_name` – when `true`, the value of `camera_name` is passed to `cinepi-raw` as `--unique-camera-model` and written into the `UniqueCameraModel` DNG tag of every recorded frame. When `false`, `cinepi-raw` uses its built-in default.<br>
+`camera_name` – the string to embed when `override_camera_name` is `true`.
+
+??? note "Why Blackmagic Pocket Cinema Camera 4K"
+    DaVinci Resolve uses the `UniqueCameraModel` DNG tag to identify the camera and select the matching decode pipeline. When this tag matches a known Blackmagic camera, Resolve unlocks the full Camera RAW tab — including the ISO slider, colour science selection (Gen 4 / Gen 5), and the corresponding tone curve and noise reduction presets. With an unknown or missing camera model the RAW tab is limited and ISO behaves as a simple exposure offset rather than selecting a proper decode curve.
+
+    Setting `camera_name` to `"Blackmagic Pocket Cinema Camera 4K"` is therefore not cosmetic — it is what makes Resolve treat the footage as genuine BRAW-adjacent DNG and apply the correct ISO-aware decode.
+
+### phase_lock
+
+`phase_lock` – `true` (default) keeps audio and video aligned over long takes by locking the recorded frame cadence to the Pi clock. Leave it on.
+
+!!! note "phase_lock internals and multi-camera genlock"
+
+    The phase lock is a per-frame servo: it measures the accumulated frame phase against the nominal FPS (against the Pi wall clock — `FrameWallClock`, the same clock the audio is captured against) and continuously trims `FrameDurationLimits`, dithering the integer line-blanking so the *average* recorded cadence is exact. The result is that the video tracks the Pi clock, so audio and video do not drift apart over long takes (the residual is a bounded sub-frame offset, not an accumulating drift). It pre-converges during preview, so a clip is locked from the first frame.
+
+    Cinemate writes this per-camera flag to the shared `fps_phase_lock` runtime key, which `cinepi-raw` reads (it is off by default in `cinepi-raw` itself when run standalone). The loop is VBLANK-only and holds the recorded cadence on the nominal FPS directly, so no per-sensor FPS-correction table is needed.
+
+    **Multi-camera genlock.** `phase_lock` can stay `true` on a multi-camera `--sync` (beam-splitter / genlock) rig. `cinepi-raw` infers its role from `--sync`: the master (`--sync server`) runs the phase lock and disciplines the pair to the Pi clock, while the `--sync client` automatically suppresses its own phase lock and lets libcamera's `rpi.sync` hold the relative camera-to-camera (A→B) alignment. One setting works for single and dual — no per-camera differentiation. See [Dual sensors](dual-sensors.md).
 
 ## hdmi_gui
 
@@ -116,22 +171,28 @@ Adjusts zoom levels for the HDMI/browser preview.
 
 ## audio
 
-Audio capture options shared by idle monitoring and recorded WAV input level.
+Audio capture options shared by idle monitoring and recorded WAV input level. The stock file applies a 2-frame timecode offset on both paths.
 
 ```json
 "audio": {
-  "capture_gain_db": 0.0,
-  "plain_arecord_timecode_offset_frames": 2
+  "24bit": {
+    "capture_gain_db": 0.0,
+    "timecode_offset_frames": 2
+  },
+  "16bit": {
+    "capture_gain_db": 6.0,
+    "timecode_offset_frames": 2
+  }
 }
 ```
 
-`capture_gain_db` – target ALSA capture gain in decibels for the detected microphone input. `0.0` means unity gain. Positive values boost the capture level, negative values attenuate it.
+Settings are split by the bit depth negotiated with the connected microphone. `24bit` applies when the mic supports 24-bit stereo capture (`mic_24bit` ALSA alias); `16bit` applies when only 16-bit mono is available (`mic_16bit` alias).
 
-`plain_arecord_timecode_offset_frames` – frame offset passed to `cinepi-raw` for the 16-bit plain `arecord` fallback WAV metadata path. `2` corrects the current 16-bit USB mic calibration, `0` disables the correction, and negative values are allowed for future calibration. This changes only WAV timecode metadata; recorded PCM is not shifted.
+`capture_gain_db` – target ALSA capture gain in decibels applied when the microphone is detected. `0.0` means unity gain. Positive values boost the capture level, negative values attenuate it. For 16-bit mics this value is also passed into `cinepi-raw` via Redis so that a post-take software gain can be applied to the WAV if the hardware exposes no writable ALSA control.
 
-Use this when the Pi is hearing the mic too quietly or too hot and you want the idle VU, recording VU, and recorded WAV to move together. Cinemate mirrors this value into the Redis key `audio_capture_gain_db` at startup so future runtime controls can target the same setting.
+`timecode_offset_frames` – frame offset applied to the WAV timecode metadata after each take. A **positive** value moves the WAV timecode later (use when audio arrives *early* relative to video); a negative value moves it earlier. Only the embedded timecode is shifted — the PCM is never moved. `24bit.timecode_offset_frames` is used whenever the capture helper is active (both 24-bit and 16-bit mics going through the helper). `16bit.timecode_offset_frames` applies to 16-bit mics specifically, overriding the 24-bit value for that path.
 
-Some USB microphones expose a writable capture control and some do not. When the mic does support it, Cinemate applies this gain when the microphone is detected. If the device exposes no compatible capture control, the setting stays harmlessly ignored and the log will tell you that the mic likely has fixed gain.
+Some USB microphones expose a writable ALSA capture control and some do not. When the mic supports it, Cinemate applies `capture_gain_db` via `amixer` when the microphone is detected. If the device exposes no compatible control, the setting is silently skipped and the log will note that the mic likely has fixed hardware gain.
 
 ## anamorphic_preview
 
@@ -181,7 +242,7 @@ General options for runtime behaviour.
 "settings": {
   "auto_storage_preroll": true,
   "light_hz": [50, 60],
-  "conform_frame_rate": 24,
+  "conform_frame_rate": 25,
   "live_sync_warning_tolerance_frames": 2,
   "final_sync_analysis_tolerance_frames": 1
 }
@@ -206,6 +267,13 @@ Preset lists for exposure and frame‑rate settings. Cinemate will step through 
   "wb_steps": [3200, 4400, 5600]
 }
 ```
+
+??? note "How to think about ISO"
+    At capture, ISO is real analog gain on the sensor — it changes the raw pixel values written to disk. Setting it too high introduces noise that is baked in and cannot be removed later.
+
+    Once your DNGs are in Resolve's Camera RAW tab, the pixel values are fixed. ISO there is a decode-time parameter: in Gen 4 color science it selects a different log curve that shifts contrast as well as brightness; in Gen 5 it acts as a linear gain equivalent to the Exposure slider. Either way, correcting a wrong ISO in Resolve costs no additional quality — provided the sensor data was not catastrophically over- or underexposed at capture.
+
+    References: [BRAW decode](https://blackmagiccameraapk.pro/blackmagic-raw-explained/) · [Gen 4 vs Gen 5](https://forum.blackmagicdesign.com/viewtopic.php?f=2&t=130645&start=50) · [ISO vs Exposure](https://forum.blackmagicdesign.com/viewtopic.php?f=2&t=123096) · [Resolve Camera RAW manual](https://www.steakunderwater.com/VFXPedia/__man/Resolve18-6/DaVinciResolve18_Manual_files/part202.htm)
 
 ## analog_controls
 
@@ -239,17 +307,13 @@ When enabled, ignores the preset arrays and exposes the expanded runtime step ta
 
 ## resolutions
 
-Limit which sensor modes appear when cycling resolutions.
+Choose which sensor modes are practical to expose in the UI when cycling resolutions. This is a filter, not the mode list itself: every mode a sensor supports lives in the sensor database (`resources/sensors.json`, see [sensors](#sensors) below), and `resolutions` selects the useful subset to show. Hidden modes stay technically available to the system.
 
 ```json
 "resolutions": {
-  "k_steps": [1.5, 2, 4],
+  "k_steps": [3, 4],
   "bit_depths": [10, 12],
-  "custom_modes": {
-    "imx283": [
-      {"width": 3936, "height": 2176, "bit_depth": 12, "fps_max": 24}
-    ]
-  }
+  "custom_modes": {}
 }
 ```
 
@@ -257,13 +321,13 @@ Limit which sensor modes appear when cycling resolutions.
 <br>`bit_depths` – list of bit depths to expose.
 <br>`custom_modes` – optional extra modes per sensor if the driver advertises none.
 
-!!! note ""
+!!! note "Design: full capability vs practical exposure"
 
-    The stock Cinemate 3.3.1 setting is `[1.5, 2, 4]`, so 4K-class modes are visible by default when the sensor reports them. Remove `4` from `k_steps`, for example `[1.5, 2]`, when you intentionally want to hide 4K-class modes in the UI.
+    `resources/sensors.json` lists **every** mode each sensor supports, so all of them are technically available to the system. `resolutions` then exposes only the **practical** subset in the UI. Example: the IMX283 default `k_steps: [3, 4]` shows its ≥25 fps modes (2.7K and 4K) and hides the 5K modes (~18–21 fps); those 5K modes stay in `sensors.json` and reappear if you add `5.5`. `k_steps`/`bit_depths` are global across all sensors.
 
 ## sensors
 
-Points Cinemate at the sensor metadata database used for known packing modes, documentation metadata, and sustainable FPS annotations.
+Points Cinemate at the sensor metadata database. It lists the **full** set of modes each sensor supports — every mode stays available to the system — alongside known packing modes, documentation metadata, and sustainable FPS annotations. The [resolutions](#resolutions) filter selects which of those modes appear in the UI.
 
 ```json
 "sensors": {
@@ -295,37 +359,38 @@ Automatically chooses the highest measured sustainable resolution for the user-s
 <br>`safety_margin_fps` – subtract this many FPS from every measured row before deciding whether it is safe.
 <br>`match_tolerance_px` – pixel tolerance used when matching measured rows to driver modes. This lets a measured `3856 x 2180` row match a nearby driver mode such as `3840 x 2160`.
 
-Cinemate remembers the user's desired resolution. If you select a 4K mode and then raise FPS above that mode's measured sustainable limit, Cinemate switches to the highest measured mode that can sustain the FPS. When FPS returns to the desired mode's measured limit or below, Cinemate switches back. If no matching profile row exists for the detected sensor, storage type, filesystem, desired mode, and requested FPS, Cinemate leaves the current resolution unchanged.
+??? note "How dynamic resolution decides, and the profile-row schema"
+    Cinemate remembers the user's desired resolution. If you select a 4K mode and then raise FPS above that mode's measured sustainable limit, Cinemate switches to the highest measured mode that can sustain the FPS. When FPS returns to the desired mode's measured limit or below, Cinemate switches back. If no matching profile row exists for the detected sensor, storage type, filesystem, desired mode, and requested FPS, Cinemate leaves the current resolution unchanged.
 
-When dynamic resolution is enabled, the maximum FPS shown by Cinemate comes from the measured dynamic-resolution profile for the current sensor, storage type, and filesystem, but only when the desired mode itself has a measured row. When dynamic resolution is disabled, maximum FPS comes from the sensor readout reported by `cinepi-raw`, as before.
+    When dynamic resolution is enabled, the maximum FPS shown by Cinemate comes from the measured dynamic-resolution profile for the current sensor, storage type, and filesystem, but only when the desired mode itself has a measured row. When dynamic resolution is disabled, maximum FPS comes from the sensor readout reported by `cinepi-raw`, as before.
 
-The storage type comes from the mounted RAW device and is usually `ssd`, `cfe`, `nvme`, or `unknown`. The filesystem comes from the mounted RAW volume and is usually `ext4`, `exfat`, or `ntfs`.
+    The storage type comes from the mounted RAW device and is usually `ssd`, `cfe`, `nvme`, or `unknown`. The filesystem comes from the mounted RAW volume and is usually `ext4`, `exfat`, or `ntfs`.
 
-Each profile row has this shape:
+    Each profile row has this shape:
 
-```json
-{
-  "sensor": "imx585",
-  "sensor_aliases": ["imx585_mono"],
-  "storage_type": "cfe",
-  "filesystem": "ext4",
-  "media_model": "CFE Hat / NVMe",
-  "width": 3856,
-  "height": 2180,
-  "bit_depth": 12,
-  "sustainable_fps": 40,
-  "max_fps_no_buffer": 40,
-  "test_duration_seconds": null,
-  "buffer_peak_frames": 0,
-  "drop_frames": 0,
-  "confidence": "empirical",
-  "notes": "4K desired-mode threshold for dynamic resolution."
-}
-```
+    ```json
+    {
+      "sensor": "imx585",
+      "sensor_aliases": ["imx585_mono"],
+      "storage_type": "cfe",
+      "filesystem": "ext4",
+      "media_model": "CFE Hat / NVMe",
+      "width": 3856,
+      "height": 2180,
+      "bit_depth": 12,
+      "sustainable_fps": 40,
+      "max_fps_no_buffer": 40,
+      "test_duration_seconds": null,
+      "buffer_peak_frames": 0,
+      "drop_frames": 0,
+      "confidence": "empirical",
+      "notes": "4K desired-mode threshold for dynamic resolution."
+    }
+    ```
 
-`sustainable_fps` is the preferred field for new rows and means recording without dropped frames. `max_fps_no_buffer` is still accepted for older rows and for rows where you have verified no buffer growth as well.
+    `sustainable_fps` is the preferred field for new rows and means recording without dropped frames. `max_fps_no_buffer` is still accepted for older rows and for rows where you have verified no buffer growth as well.
 
-Dynamic-resolution limits are determined by the selected stock JSON profile only. To change the lookup table, update `resources/dynamic_resolution_profiles.json`.
+    Dynamic-resolution limits are determined by the selected stock JSON profile only. To change the lookup table, update `resources/dynamic_resolution_profiles.json`.
 
 ## buttons
 

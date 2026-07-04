@@ -1,6 +1,5 @@
 {
   "$schema": "./settings.schema.json",
-  "show_startup_message": true,
   "show_welcome_message": true,
   "welcome_message": "THIS IS A COOL MACHINE",
   "welcome_image": null,
@@ -11,24 +10,41 @@
       "enabled": true
     }
   },
-  "geometry": {
+  "camera": {
+    "raw_buffer_count": 0,
     "cam0": {
-      "rotate_180": false,
-      "horizontal_flip": false,
-      "vertical_flip": false
+      "geometry": {
+        "rotate_180": false,
+        "horizontal_flip": false,
+        "vertical_flip": false
+      },
+      "output": {
+        "hdmi_port": 0
+      },
+      "override_camera_name": true,
+      "camera_name": "Blackmagic Pocket Cinema Camera 4K",
+      "phase_lock": true,
+      "tuning_file_override": {
+        "enabled": false,
+        "path": "resources/tuning_files/imx477.json"
+      }
     },
     "cam1": {
-      "rotate_180": false,
-      "horizontal_flip": false,
-      "vertical_flip": false
-    }
-  },
-  "output": {
-    "cam0": {
-      "hdmi_port": 0
-    },
-    "cam1": {
-      "hdmi_port": 1
+      "geometry": {
+        "rotate_180": false,
+        "horizontal_flip": false,
+        "vertical_flip": false
+      },
+      "output": {
+        "hdmi_port": 1
+      },
+      "override_camera_name": true,
+      "camera_name": "Blackmagic Pocket Cinema Camera 4K",
+      "phase_lock": true,
+      "tuning_file_override": {
+        "enabled": false,
+        "path": "resources/tuning_files/imx477.json"
+      }
     }
   },
   "hdmi_gui": {
@@ -47,8 +63,14 @@
     ]
   },
   "audio": {
-    "capture_gain_db": 0.0,
-    "plain_arecord_timecode_offset_frames": 2
+    "24bit": {
+      "capture_gain_db": 0.0,
+      "timecode_offset_frames": 2
+    },
+    "16bit": {
+      "capture_gain_db": 6.0,
+      "timecode_offset_frames": 2
+    }
   },
   "anamorphic_preview": {
     "default_anamorphic_factor": 1,
@@ -76,8 +98,10 @@
       60
     ],
     "conform_frame_rate": 25,
-    "live_sync_warning_tolerance_frames": 2,
-    "final_sync_analysis_tolerance_frames": 1
+    "live_sync_warning_tolerance_frames": 5,
+    "live_sync_startup_guard_frames": 10,
+    "final_sync_analysis_tolerance_frames": 1,
+    "tc_drop_jitter_tolerance_frames": 1
   },
   "arrays": {
     "iso_steps": [
@@ -129,8 +153,7 @@
   },
   "resolutions": {
     "k_steps": [
-      1.5,
-      2,
+      3,
       4
     ],
     "bit_depths": [

@@ -67,7 +67,7 @@ Cinemate's `RedisListener` parses these messages and updates keys such as:
 - `framecount`, `buffer`, `buffer_size`, and `fps_actual`
 - `tc_cam0` and `tc_cam1`, derived from the nanosecond timestamps
 - drop-frame keys such as `drop_frame`, `drop_frame_count`, and `drop_frame_during_last_take`
-- `frames_in_sync`, which flips to `0` during a real take as soon as live frame-slot sync drifts outside the configured live tolerance (default +/- 2 frames), and `fps_correction_suggestion` after the take finishes and buffered frames have flushed. The final analysis uses the configured final tolerance (default +/- 1 frame). Storage pre-roll clips are excluded from this analysis.
+- `frames_in_sync`, which flips to `0` during a real take as soon as live frame-slot sync drifts outside the configured live tolerance (default +/- 2 frames), then re-confirms after the take finishes and buffered frames have flushed. The final analysis uses the configured final tolerance (default +/- 1 frame). Storage pre-roll clips are excluded from this analysis.
 
 Separately, the Redis controller starts a recording timer whenever `rec=1`. That timer updates:
 

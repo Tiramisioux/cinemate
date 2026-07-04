@@ -7,7 +7,7 @@ pcm.dsnoop_24bit {
         rate 48000
         format S24_3LE
         period_size 1024
-        buffer_size 4096
+        buffer_size 16384
     }
 }
 

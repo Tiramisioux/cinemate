@@ -70,6 +70,69 @@ SYSTEM_SHUTDOWN_TARGETS = frozenset(
         "shutdown.target",
     }
 )
+CINEMATE_LOCKFILE = "/tmp/cinemate.lock"
+
+
+def _release_run_lock() -> None:
+    try:
+        os.remove(CINEMATE_LOCKFILE)
+    except OSError:
+        pass
+
+
+def _acquire_run_lock() -> None:
+    """Stop any running cinemate instance, then acquire the startup lock."""
+    existing_pid: int | None = None
+    if os.path.exists(CINEMATE_LOCKFILE):
+        try:
+            with open(CINEMATE_LOCKFILE) as fh:
+                existing_pid = int(fh.read().strip())
+        except (OSError, ValueError):
+            existing_pid = None
+
+    if existing_pid is not None and existing_pid != os.getpid():
+        alive = False
+        try:
+            os.kill(existing_pid, 0)
+            alive = True
+        except ProcessLookupError:
+            pass  # stale lock — process already gone
+        except PermissionError:
+            alive = True  # process exists but owned by another user
+
+        if alive:
+            logging.info("Stopping existing cinemate instance (PID %d) ...", existing_pid)
+            try:
+                os.kill(existing_pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
+            else:
+                deadline = time.monotonic() + 5.0
+                while time.monotonic() < deadline:
+                    try:
+                        os.kill(existing_pid, 0)
+                    except ProcessLookupError:
+                        break
+                    time.sleep(0.1)
+                else:
+                    logging.warning(
+                        "PID %d did not exit after SIGTERM; sending SIGKILL", existing_pid
+                    )
+                    try:
+                        os.kill(existing_pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                    time.sleep(0.5)
+            logging.info("Previous cinemate instance stopped.")
+
+    try:
+        with open(CINEMATE_LOCKFILE, "w") as fh:
+            fh.write(str(os.getpid()))
+    except OSError:
+        pass  # non-fatal if /tmp is not writable
+
+    atexit.register(_release_run_lock)
+
 
 def _systemd_notify(message: str) -> bool:
     notify_socket = os.environ.get("NOTIFY_SOCKET")
@@ -178,20 +241,18 @@ def current_stderr_tty_path() -> str | None:
 
 
 def restore_local_console_prompt() -> bool:
-    """Restore a visible tty1 prompt after an SSH-launched HDMI GUI stop."""
-    if current_stderr_tty_path() in LOCAL_FAILURE_TTY_PATHS:
-        return False
-
+    """Restore a visible tty1 prompt after Cinemate stop (SSH or local launch)."""
     systemctl = shutil.which("systemctl")
     if systemctl:
+        # Restart getty@tty1 to ensure it's running and rendering
         commands = []
         sudo = shutil.which("sudo")
         if sudo:
             commands.append(
-                [sudo, "-n", systemctl, "--no-block", "--no-ask-password", "start", "getty@tty1.service"]
+                [sudo, "-n", systemctl, "--no-block", "--no-ask-password", "restart", "getty@tty1.service"]
             )
         commands.append(
-            [systemctl, "--no-block", "--no-ask-password", "start", "getty@tty1.service"]
+            [systemctl, "--no-block", "--no-ask-password", "restart", "getty@tty1.service"]
         )
 
         for command in commands:
@@ -203,19 +264,13 @@ def restore_local_console_prompt() -> bool:
                     check=False,
                 )
             except OSError as exc:
-                logging.debug("Failed to run %s during SSH console restore: %s", command[0], exc)
+                logging.debug("Failed to run %s during console restore: %s", command[0], exc)
                 continue
             if result.returncode == 0:
-                break
+                # Wait for getty to start and fully render with autologin
+                time.sleep(2.5)
+                return True
 
-    for tty_path in LOCAL_FAILURE_TTY_PATHS:
-        try:
-            with open(tty_path, "w", encoding="utf-8", errors="replace") as tty:
-                tty.write("\r\n")
-                tty.flush()
-            return True
-        except OSError:
-            continue
     return False
 
 
@@ -632,9 +687,11 @@ def run_application(args, log_queue):
 
     # Set redis anamorphic factor to default value
     redis_controller.set_value(ParameterKey.ANAMORPHIC_FACTOR.value, settings["anamorphic_preview"]["default_anamorphic_factor"])
+    _audio_cfg = settings.get("audio", {})
     redis_controller.set_value(
         ParameterKey.AUDIO_CAPTURE_GAIN_DB.value,
-        settings.get("audio", {}).get("capture_gain_db", 0.0),
+        (_audio_cfg.get("16bit") or {}).get("capture_gain_db",
+            _audio_cfg.get("capture_gain_db", 0.0)),
     )
     
     # Default zoom factor
@@ -740,8 +797,6 @@ def run_application(args, log_queue):
         settings["arrays"]["wb_steps"]
     )
 
-    logging.info("--- Initialization Complete ---")
-    
     # Mount CFE card if not mounted
     cinepi_controller.mount()
 
@@ -785,8 +840,10 @@ def run_application(args, log_queue):
     redis_listener = RedisListener(
         redis_controller,
         ssd_monitor,
-        live_sync_warning_tolerance_frames=settings_cfg.get("live_sync_warning_tolerance_frames", 2),
+        live_sync_warning_tolerance_frames=settings_cfg.get("live_sync_warning_tolerance_frames", 5),
+        live_sync_startup_guard_frames=settings_cfg.get("live_sync_startup_guard_frames", 10),
         final_sync_analysis_tolerance_frames=settings_cfg.get("final_sync_analysis_tolerance_frames", 1),
+        tc_drop_jitter_tolerance_frames=settings_cfg.get("tc_drop_jitter_tolerance_frames", 1),
     )
     redis_listener.set_recording_stop_callback(cinepi_controller.stop_recording)
     cinepi_controller.attach_redis_listener(redis_listener)
@@ -828,6 +885,8 @@ def run_application(args, log_queue):
         logging.error("No network connection found. Stream module not loaded")
 
     mediator = Mediator(cinepi, cinepi_controller, redis_listener, redis_controller, ssd_monitor, gpio_output, stream, usb_monitor)
+
+    logging.info("--- Initialization Complete ---")
 
     # Wait until the welcome-message/Plymouth handoff and preview rebind are
     # finished before warming the storage media.
@@ -932,7 +991,10 @@ def run_application(args, log_queue):
 
         if not shutdown_in_progress and not gui_stopped:
             release_console_to_text()
-        
+
+        # Hold the screen to let getty prompt stay visible before process exit
+        if not shutdown_in_progress:
+            time.sleep(0.5)
     atexit.register(cleanup)
     
     def handle_exit(sig, frame):
@@ -961,6 +1023,7 @@ def main():
     args = parser.parse_args()
 
     _, log_queue = setup_logging(args.debug)
+    _acquire_run_lock()
     clear_persisted_startup_failure()
 
     try:

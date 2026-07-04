@@ -11,26 +11,6 @@
       "enabled": true
     }
   },
-  "geometry": {
-    "cam0": {
-      "rotate_180": false,
-      "horizontal_flip": false,
-      "vertical_flip": false
-    },
-    "cam1": {
-      "rotate_180": false,
-      "horizontal_flip": false,
-      "vertical_flip": false
-    }
-  },
-  "output": {
-    "cam0": {
-      "hdmi_port": 0
-    },
-    "cam1": {
-      "hdmi_port": 1
-    }
-  },
   "hdmi_gui": {
     "buffer_vu_meter": false,
     "vu_meter_hatch_lines": true
@@ -47,8 +27,14 @@
     ]
   },
   "audio": {
-    "capture_gain_db": 0.0,
-    "plain_arecord_timecode_offset_frames": 2
+    "24bit": {
+      "capture_gain_db": 6.0,
+      "timecode_offset_frames": -1
+    },
+    "16bit": {
+      "capture_gain_db": 6.0,
+      "timecode_offset_frames": 0
+    }
   },
   "anamorphic_preview": {
     "default_anamorphic_factor": 1,
@@ -276,6 +262,33 @@
           }
         }
       }
+    }
+  },
+  "camera": {
+    "raw_buffer_count": 0,
+    "cam0": {
+      "geometry": {
+        "rotate_180": false,
+        "horizontal_flip": false,
+        "vertical_flip": false
+      },
+      "output": {
+        "hdmi_port": 0
+      },
+      "override_camera_name": false,
+      "camera_name": ""
+    },
+    "cam1": {
+      "geometry": {
+        "rotate_180": false,
+        "horizontal_flip": false,
+        "vertical_flip": false
+      },
+      "output": {
+        "hdmi_port": 1
+      },
+      "override_camera_name": false,
+      "camera_name": ""
     }
   },
   "i2c_oled": {

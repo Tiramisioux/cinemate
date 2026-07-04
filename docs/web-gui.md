@@ -2,19 +2,8 @@
 
 Cinemate includes a small Flask + Socket.IO web interface that mirrors the live preview and exposes the main camera controls in a browser.
 
-## When it starts
-
-The web module starts only if the Pi already has an IPv4 address on `wlan0` or `eth0`. If neither interface has an address yet, Cinemate skips the web server for that boot and the HDMI GUI continues to run on its own. Because that check currently happens only during startup, bringing networking up later requires restarting Cinemate if you want the web UI to appear.
-
-When the web module is active:
-
-- the control UI listens on port `5000`
-- the clean MJPEG preview stream is available on port `8000`
-
-Typical URLs are:
-
-- `http://<ip-address>:5000/`
-- `http://<ip-address>:8000/stream`
+- the control UI listens on port `5000`, with the url `http://cinepi.local:5000/`.
+- the clean MJPEG preview stream is available on port `8000` with the url `http://cinepi.local:8000/stream`.
 
 The browser UI exposes:
 
@@ -25,4 +14,6 @@ The browser UI exposes:
 - fullscreen toggle
 - live stats such as free space, write speed, buffered frames, buffer size, CPU load, RAM load, temperature, and exposure time
 
-The page background follows the same status colour changes as the Simple GUI through Socket.IO events.
+!!! note ""
+
+    When using dual sensors, secondary gui will will be created on 5001/8001.

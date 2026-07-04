@@ -60,8 +60,6 @@
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Web GUI</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#when-it-starts">When it starts</a>
-    </li>
     </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
@@ -158,17 +156,9 @@
 <div class="markdown-body">
   <h1 id="web-gui">Web GUI<a class="headerlink" href="#web-gui" title="Permanent link">#</a></h1>
 <p>Cinemate includes a small Flask + Socket.IO web interface that mirrors the live preview and exposes the main camera controls in a browser.</p>
-<h2 id="when-it-starts">When it starts<a class="headerlink" href="#when-it-starts" title="Permanent link">#</a></h2>
-<p>The web module starts only if the Pi already has an IPv4 address on <code>wlan0</code> or <code>eth0</code>. If neither interface has an address yet, Cinemate skips the web server for that boot and the HDMI GUI continues to run on its own. Because that check currently happens only during startup, bringing networking up later requires restarting Cinemate if you want the web UI to appear.</p>
-<p>When the web module is active:</p>
 <ul>
-<li>the control UI listens on port <code>5000</code></li>
-<li>the clean MJPEG preview stream is available on port <code>8000</code></li>
-</ul>
-<p>Typical URLs are:</p>
-<ul>
-<li><code>http://&lt;ip-address&gt;:5000/</code></li>
-<li><code>http://&lt;ip-address&gt;:8000/stream</code></li>
+<li>the control UI listens on port <code>5000</code>, with the URL <code>http://cinepi.local:5000/</code>.</li>
+<li>the clean MJPEG preview stream is available on port <code>8000</code> with the URL <code>http://cinepi.local:8000/stream</code>.</li>
 </ul>
 <p>The browser UI exposes:</p>
 <ul>
@@ -179,7 +169,9 @@
 <li>fullscreen toggle</li>
 <li>live stats such as free space, write speed, buffered frames, buffer size, CPU load, RAM load, temperature, and exposure time</li>
 </ul>
-<p>The page background follows the same status colour changes as the Simple GUI through Socket.IO events.</p>
+<div class="admonition note">
+<p>When using dual sensors, the second camera's preview stream is served on port <code>8001</code>. The control UI stays on port <code>5000</code>.</p>
+</div>
 </div>
 
             </div>

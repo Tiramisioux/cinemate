@@ -1,5 +1,5 @@
 # What is it?
-**Cinemate** is a boilerplate cinema camera system for Raspberry Pi 5.  builds upon CinePi-raw, authored by Csaba Nagy for enabling 12 bit (or even 16 bit) Cinema DNG recordings using off-the-shelf components.  
+**Cinemate** is a boilerplate cinema camera system for Raspberry Pi 5. Builds upon CinePi-raw, authored by Csaba Nagy for enabling 12 bit Cinema DNG recordings using off-the-shelf components.  
 
 Cinemate provides a minimal starting point that you can extend with your own controls and accessories. 
 
@@ -24,7 +24,7 @@ CinePi-RAW recorder updates:
 
 - **Frame-rate phase lock** — closed-loop control (sigma-delta VBLANK dither) keeps long takes locked to the Pi's wall clock and pre-converges during preview. On by default.
 - **More reliable audio sync on 4K / exFAT** — the capture path was reworked (protected helper, dedicated writer thread, wall-clock reconciliation, real-time scheduling) for more reliable WAV sync on demanding modes.
-- **Wall clock embedded timecode** — timecode is anchored to the first frame's wall-clock time and follows the Pi's real-time clock, so it reflects the actual time of day rather than a plain sequential frame count; routed per camera for dual-sensor rigs.
+- **Wall clock embedded timecode** — timecode is anchored to the first frame's wall-clock time and follows the Pi's real-time clock.
 - **Correct Pi 4 RAW** — CSI2-packed frames decode correctly on Pi 4-family boards; raw packing (P/U) is chosen per Pi model automatically.
 - **Camera model** — set the camera model manually for each attached sensor.
 

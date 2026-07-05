@@ -70,6 +70,20 @@ border-radius: 0;
     border-radius: 6px;
 }
 
+/* Rounded corners for the code-block box (the border lives on div.highlight;
+   overflow keeps the pre background inside the rounded corners). */
+.rst-content div[class^=highlight] {
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* Give the copy button breathing room from the box corner. The plugin CSS
+   loads after this sheet, so two-class specificity is required. */
+.hljs-copy-wrapper .hljs-copy-container {
+  top: 6px;
+  right: 6px;
+}
+
 
 /* Float an image to the right and keep some breathing-room on mobile */
 .img-right {

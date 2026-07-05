@@ -69,7 +69,7 @@ For cinepi-raw, this file defines the port used by cpp-mjpeg-streamer (default c
 
 ## Cinemate‑specific flags
 
-The CineMate fork introduces several extra options:
+The Cinemate fork introduces several extra options:
 
 | Flag               | Argument               |Description                 |
 | ------------------ | ---------------------- | -------------------------- |

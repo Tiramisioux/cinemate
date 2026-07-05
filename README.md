@@ -7,32 +7,33 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
 
 ## New features in version 3.3.2
 
-libcamera:
+### libcamera
 
 - Cinemate now uses its own fork of libcamera.
 
-imx283 driver:
+### imx283 driver
 
 - Cinemate now uses its own fork of the imx283 driver.
 - 2 additional modes: 3840 x 2160 (4K UHD, native crop) and 2736 x 1538 (2.7K 16:9, binned).
 
-imx585 driver:
+### imx585 driver
 
 - Cinemate now uses its own fork of the imx585 driver.
 
-CinePi-RAW recorder updates:
+### CinePi-RAW recorder updates
 
-- **Frame-rate phase lock** — closed-loop control (sigma-delta VBLANK dither) keeps long takes locked to the Pi's wall clock and pre-converges during preview. On by default.
+- **Frame-rate phase lock** — DNG timecode is locked to the Pi's wall clock, making audio sync more accurate. On by default.
 - **More reliable audio sync on 4K / exFAT** — the capture path was reworked (protected helper, dedicated writer thread, wall-clock reconciliation, real-time scheduling) for more reliable WAV sync on demanding modes.
 - **Wall clock embedded timecode** — timecode is anchored to the first frame's wall-clock time and follows the Pi's real-time clock.
 - **Correct Pi 4 RAW** — CSI2-packed frames decode correctly on Pi 4-family boards; raw packing (P/U) is chosen per Pi model automatically.
+- **Compiles on 2GB version of Raspberry Pi 4/5**
 - **Camera model** — set the camera model manually for each attached sensor.
 
-Cinemate workflow updates:
+### Cinemate
 
 - **Storage / media** — multi-drive RAW hot-swap with a standby drive and automatic promotion. Default format is exFAT.
 
-Raspberry Pi / Bookworm:
+### Raspberry Pi / Bookworm
 
 - **Boot / install** — faster boot-to-preview on Pi 4/5 (about 10-15 seconds).
 
@@ -111,13 +112,15 @@ After installing, reboot the system and Cinemate should start automatically.
 
 ### 3. Manual install
 
-For the full manual install, configuration steps, and CLI reference, please see the [documentation](https://tiramisioux.github.io/cinemate/installation-steps/).
+For the full manual install, configuration steps, and CLI reference, please see the [documentation/manual installation steps](https://tiramisioux.github.io/cinemate/installation-steps/).
 
 ## Customization
 GPIO buttons and switches, rotary encoders and oled display for controlling camera settings such as recording, iso etc. are configured in the `~/cinemate/src/settings.json` file. On the Pi, type `editsettings` in the terminal to open this file.
 
 ## Documentation
-Full manual installation instructions, configuration guides and CLI reference live [here](https://tiramisioux.github.io/cinemate/).
+Full manual installation instructions, configuration guides in the [documentation](https://tiramisioux.github.io/cinemate/).
+
+## Community
 
 Join the [CinePi Discord](https://discord.gg/Hr4dfhuK) for discussions and sharing builds.
 

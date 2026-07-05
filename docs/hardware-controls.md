@@ -17,7 +17,7 @@ All physical controls are mapped in [the settings file](settings-json.md). On th
 | CFE Hat | PCIe (Raspberry Pi 5 only) | fast CFexpress recording media | [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/) + CFexpress Type B card |
 
 !!! info ""
-    Pin numbers in `settings.json` are **BCM GPIO numbers**, not physical header pin numbers. [pinout.xyz](https://pinout.xyz) shows both numbering schemes side by side.
+    Cinemate uses [BCM pin numbering](https://pinout.xyz)
 
 ## Push buttons
 

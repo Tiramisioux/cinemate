@@ -1,7 +1,7 @@
 # Quick start
 
 ## Hardware requirements
-- Raspberry Pi 4 or 5. The 2GB RAM version works with the prebuilt image, but 4GB is recommended if you plan to compile `cinepi-raw` on the Pi.
+- Raspberry Pi 4 or 5 (>2GB RAM).
 - Official HQ or Global Shutter camera
 - HDMI monitor or a phone/tablet for monitoring
 

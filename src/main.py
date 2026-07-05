@@ -43,7 +43,6 @@ from module.console_display import (
     release_console_to_text,
 )
 from module.framebuffer import acquire_framebuffer
-from module.tui import CinemateTUI
 
 # Constants
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
@@ -756,8 +755,7 @@ def run_application(args, log_queue):
     command_executor = CommandExecutor(
         cinepi_controller, cinepi, storage_preroll=storage_preroll
     )
-    command_executor.tui_mode = getattr(args, "tui", False)
-    command_executor.start()  # CLI thread (idles when --tui owns stdin)
+    command_executor.start()  # CLI thread
 
     # SerialHandler to receive serial commands and treat them as CLI
     serial_handler = SerialHandler(
@@ -893,23 +891,6 @@ def run_application(args, log_queue):
     storage_preroll.mark_startup_ready()
     mark_runtime_ready("Cinemate running")
     
-    # ── Terminal HUD (--tui mode) ────────────────────────────────────────
-    tui = None
-    if getattr(args, "tui", False):
-        tui = CinemateTUI(
-            redis_controller=redis_controller,
-            cinepi_controller=cinepi_controller,
-            ssd_monitor=ssd_monitor,
-            dmesg_monitor=dmesg_monitor,
-            usb_monitor=usb_monitor,
-            gpio_input=gpio_input,
-            gpio_output=gpio_output,
-            command_executor=command_executor,
-            settings=settings,
-        )
-        tui.start()
-        logging.info("CinemateTUI started on SSH session")
-
     # Ensure system cleanup on exit
     cleanup_called = False
 
@@ -947,9 +928,6 @@ def run_application(args, log_queue):
             dmesg_monitor.stop() 
         if hasattr(command_executor, "stop"):
             command_executor.stop()
-        if tui:
-            tui.stop()
-            join_thread(tui, "CinemateTUI")
         gui_stopped = False
         if simple_gui:
             gui_stopped = simple_gui.stop(
@@ -1018,8 +996,6 @@ def main():
 
     parser = argparse.ArgumentParser(description="Run the CinePi application.")
     parser.add_argument("-debug", action="store_true", help="Enable debug logging level.")
-    parser.add_argument("--tui", action="store_true",
-                        help="Launch a curses HUD on this SSH session (HDMI GUI unchanged).")
     args = parser.parse_args()
 
     _, log_queue = setup_logging(args.debug)

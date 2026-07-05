@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/image-circle/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Image circle - Cinemate Docs</title>
+    <title>Lenses and image circles - Cinemate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -15,7 +15,7 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Image circle";
+        var mkdocs_page_name = "Lenses and image circles";
         var mkdocs_page_input_path = "image-circle.md";
         var mkdocs_page_url = "/cinemate/image-circle/";
       </script>
@@ -55,12 +55,28 @@
                 </li>
               </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
-              <ul>
+              <ul class="current">
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Reading the camera screen</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Lenses and image circles</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#the-inch-fractions">The inch fractions</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#megapixel-ratings">Megapixel ratings</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#mounts">Mounts</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#other-markings">Other markings</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#what-each-sensor-needs">What each sensor needs</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#buying-checklist">Buying checklist</a>
+    </li>
+    </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -140,7 +156,8 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
-      <li class="breadcrumb-item active">Image circle</li>
+          <li class="breadcrumb-item">Using the camera</li>
+      <li class="breadcrumb-item active">Lenses and image circles</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/image-circle.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
@@ -151,11 +168,455 @@
             <div class="section" itemprop="articleBody">
               
 <div class="markdown-body">
-  
+  <h1 id="lenses-and-image-circles">Lenses and image circles<a class="headerlink" href="#lenses-and-image-circles" title="Permanent link">#</a></h1>
+<div class="admonition note">
+<p>A lens must draw an image circle at least as large as the sensor diagonal. The inch fraction on the lens (<code>1/2.7"</code>, <code>1"</code>) tells you the circle size. The megapixel number tells you sharpness — but only over that circle.</p>
+</div>
+<p>CCTV and machine-vision lenses are marked with a compact code. A typical label:</p>
+<p><code>3MP 2.8-12mm 1/2.7" F1.4 IR CS</code></p>
+<table>
+<thead>
+<tr>
+<th>Marking</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>1/2.7"</code></td>
+<td>Optical format. Image circle ≈ 6.7 mm across.</td>
+</tr>
+<tr>
+<td><code>3MP</code></td>
+<td>Resolving power: sharp enough for a 3-megapixel sensor of <code>1/2.7"</code> size.</td>
+</tr>
+<tr>
+<td><code>2.8-12mm</code></td>
+<td>Varifocal: focal length is adjustable, refocus after every change.</td>
+</tr>
+<tr>
+<td><code>F1.4</code></td>
+<td>Maximum aperture.</td>
+</tr>
+<tr>
+<td><code>IR</code></td>
+<td>IR-corrected: visible and infrared light focus on the same plane.</td>
+</tr>
+<tr>
+<td><code>CS</code></td>
+<td>CS-mount thread.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-inch-fractions">The inch fractions<a class="headerlink" href="#the-inch-fractions" title="Permanent link">#</a></h2>
+<p>The fraction is not the sensor diagonal. It is a 1950s TV-tube convention: a "1-inch" camera tube had a 25.4 mm glass envelope, but its usable image area was only about two thirds of that. Sensor makers kept the naming.</p>
+<p>Rule of thumb: real image circle ≈ fraction × 16 mm.</p>
+<table>
+<thead>
+<tr>
+<th>Lens marking</th>
+<th>Image circle (mm)</th>
+<th>Covers (Cinemate sensors)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>1/3"</code></td>
+<td>6.0</td>
+<td>none fully — marginal on IMX296</td>
+</tr>
+<tr>
+<td><code>1/2.9"</code></td>
+<td>6.2</td>
+<td>IMX296 (exact, no margin)</td>
+</tr>
+<tr>
+<td><code>1/2.7"</code></td>
+<td>6.7</td>
+<td>IMX296</td>
+</tr>
+<tr>
+<td><code>1/2.5"</code></td>
+<td>7.2</td>
+<td>IMX296</td>
+</tr>
+<tr>
+<td><code>1/2.3"</code></td>
+<td>7.7</td>
+<td>IMX296 — marginal on IMX477 (7.9 mm)</td>
+</tr>
+<tr>
+<td><code>1/2"</code></td>
+<td>8.0</td>
+<td>IMX296, IMX477</td>
+</tr>
+<tr>
+<td><code>1/1.8"</code></td>
+<td>8.9</td>
+<td>IMX296, IMX477</td>
+</tr>
+<tr>
+<td><code>2/3"</code></td>
+<td>11.0</td>
+<td>IMX296, IMX477</td>
+</tr>
+<tr>
+<td><code>1/1.2"</code></td>
+<td>12.8–13.3</td>
+<td>+ IMX585</td>
+</tr>
+<tr>
+<td><code>1"</code></td>
+<td>15.9–16.0</td>
+<td>+ IMX283 — all four sensors</td>
+</tr>
+<tr>
+<td><code>4/3"</code></td>
+<td>21.6</td>
+<td>all four sensors</td>
+</tr>
+</tbody>
+</table>
+<p>What happens on a mismatch:</p>
+<table>
+<thead>
+<tr>
+<th>Lens format vs sensor</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Smaller</td>
+<td>Dark or black corners (vignetting).</td>
+</tr>
+<tr>
+<td>Same</td>
+<td>Full coverage. The lens maker's field-of-view figures apply.</td>
+</tr>
+<tr>
+<td>Larger</td>
+<td>Full coverage, tighter field of view. The sensor uses the sharp center of the circle.</td>
+</tr>
+</tbody>
+</table>
+<p>A larger-format lens is always safe. The picture is cropped, never degraded — corners are usually sharper than on the lens's native format. Multiply the focal length by the crop factor in <a href="../sensors/#sensor-size-crop-factor-and-film-format-equivalents">camera sensors and frame rates</a> to see what you get.</p>
+<div class="admonition info">
+<p>The marked format is a nominal claim, not a guaranteed circle. Good datasheets state the image circle in mm (e.g. Kowa LM35HC: "Imager format 1 inch, image circle diameter 16 mm"). When the sensor sits between standard formats, compare millimetres, not fractions.</p>
+</div>
+<h2 id="megapixel-ratings">Megapixel ratings<a class="headerlink" href="#megapixel-ratings" title="Permanent link">#</a></h2>
+<p>"3MP" and "5MP" ratings are marketing shorthand, not a standard. The real spec is resolving power in line pairs per millimetre (lp/mm). The rating means: sharp enough for that many pixels <strong>spread over the lens's rated format</strong>.</p>
+<p>Two consequences:</p>
+<ul>
+<li>The same MP number on a smaller format demands a sharper lens.</li>
+<li>A high MP number does not fix a too-small image circle.</li>
+</ul>
+<p>To resolve a pixel of a given size, a lens needs (Nyquist limit):</p>
+<p><code>required lp/mm = 1000 / (2 × pixel size in µm)</code></p>
+<table>
+<thead>
+<tr>
+<th>Pixel size</th>
+<th>Lens must resolve</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5.0 µm</td>
+<td>100 lp/mm</td>
+</tr>
+<tr>
+<td>3.45 µm (IMX296)</td>
+<td>145 lp/mm</td>
+</tr>
+<tr>
+<td>2.9 µm (IMX585)</td>
+<td>172 lp/mm</td>
+</tr>
+<tr>
+<td>2.4 µm (IMX283)</td>
+<td>208 lp/mm</td>
+</tr>
+<tr>
+<td>1.55 µm (IMX477, unbinned)</td>
+<td>323 lp/mm</td>
+</tr>
+</tbody>
+</table>
+<p>To interpret an MP rating, convert it to the pixel size the lens was designed for: divide the rated format's area by the MP count.</p>
+<table>
+<thead>
+<tr>
+<th>Lens label</th>
+<th>Designed for pixels of about</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>2MP 1/3"</code></td>
+<td>2.9 µm</td>
+</tr>
+<tr>
+<td><code>3MP 1/2.7"</code></td>
+<td>2.7 µm</td>
+</tr>
+<tr>
+<td><code>5MP 1/2.7"</code></td>
+<td>2.1 µm</td>
+</tr>
+<tr>
+<td><code>5MP 1/1.8"</code></td>
+<td>2.8 µm</td>
+</tr>
+<tr>
+<td><code>8MP (4K) 1/1.8"</code></td>
+<td>2.2 µm</td>
+</tr>
+<tr>
+<td><code>10MP 2/3"</code></td>
+<td>2.4 µm</td>
+</tr>
+<tr>
+<td><code>12MP 1.1"</code></td>
+<td>3.5 µm</td>
+</tr>
+</tbody>
+</table>
+<p>If that number is equal to or smaller than your sensor's pixel size, the lens keeps up.</p>
+<div class="admonition info">
+<p>Many lenses are rated from the center of the image only. Corner resolution can be half the center figure. Machine-vision datasheets that state center and corner lp/mm (e.g. "200 lp/mm center, 160 corner") are the trustworthy ones; unbranded "5MP" CCTV lenses often are not.</p>
+</div>
+<h2 id="mounts">Mounts<a class="headerlink" href="#mounts" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Mount</th>
+<th>Thread</th>
+<th>Flange distance</th>
+<th>Used for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C</td>
+<td>1"-32 UN</td>
+<td>17.526 mm</td>
+<td>Cine/TV and machine-vision lenses, circles up to ~22 mm</td>
+</tr>
+<tr>
+<td>CS</td>
+<td>1"-32 UN</td>
+<td>12.526 mm</td>
+<td>Compact CCTV lenses, mostly small formats</td>
+</tr>
+<tr>
+<td>M12 (S-mount)</td>
+<td>M12 × 0.5</td>
+<td>none — focus by thread</td>
+<td>Board lenses, mostly small formats</td>
+</tr>
+</tbody>
+</table>
+<p>C and CS share the same thread. Only the flange distance differs:</p>
+<table>
+<thead>
+<tr>
+<th>Combination</th>
+<th>Works?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C lens on CS camera</td>
+<td>Yes, with a 5 mm C-CS adapter ring</td>
+</tr>
+<tr>
+<td>CS lens on C camera</td>
+<td>No — can never reach focus</td>
+</tr>
+</tbody>
+</table>
+<p>The HQ and Global Shutter cameras have an adjustable back-focus ring (12.5–22.4 mm). After a lens change, set the lens to infinity and turn the ring until a distant subject is sharp.</p>
+<h2 id="other-markings">Other markings<a class="headerlink" href="#other-markings" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Marking</th>
+<th>Meaning</th>
+<th>On a Cinemate rig</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>8mm</code></td>
+<td>Fixed focal length</td>
+<td>Fine</td>
+</tr>
+<tr>
+<td><code>2.8-12mm</code></td>
+<td>Varifocal — refocus after zooming</td>
+<td>Fine; not for zooming during a take</td>
+</tr>
+<tr>
+<td><code>F1.4</code></td>
+<td>Maximum aperture</td>
+<td>Lower = faster</td>
+</tr>
+<tr>
+<td><code>IR</code>, <code>IR corrected</code>, <code>day/night</code></td>
+<td>Visible and near-IR focus on the same plane</td>
+<td>Only matters with the IR-cut filter removed or switched off</td>
+</tr>
+<tr>
+<td>manual iris</td>
+<td>Aperture ring on the lens</td>
+<td>Use this</td>
+</tr>
+<tr>
+<td>fixed iris</td>
+<td>No aperture control, usually wide open</td>
+<td>Works; control exposure with shutter/ISO/ND</td>
+</tr>
+<tr>
+<td><code>DC</code> (auto iris)</td>
+<td>Camera-driven iris, 4-pin cable</td>
+<td>Avoid — stays closed without drive electronics, image goes black</td>
+</tr>
+<tr>
+<td><code>P-iris</code></td>
+<td>Stepper-motor iris, needs camera support</td>
+<td>Avoid — no P-iris support</td>
+</tr>
+</tbody>
+</table>
+<p>All four Cinemate camera boards sit behind an IR-cut filter by default, so IR correction is optional. The StarlightEye can switch its filter off electronically — for IR shooting there, an IR-corrected lens holds focus.</p>
+<h2 id="what-each-sensor-needs">What each sensor needs<a class="headerlink" href="#what-each-sensor-needs" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Sensor</th>
+<th>Board</th>
+<th>Mount</th>
+<th>Sensor diagonal</th>
+<th>Minimum lens format</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IMX296</td>
+<td>Pi Global Shutter Camera</td>
+<td>CS (C ring included)</td>
+<td>6.3 mm</td>
+<td><code>1/2.5"</code> — <code>1/3"</code> risks corner shading</td>
+</tr>
+<tr>
+<td>IMX477</td>
+<td>Pi HQ Camera</td>
+<td>CS (C ring included); M12 variant</td>
+<td>7.9 mm</td>
+<td><code>1/2"</code> — <code>1/2.3"</code> is exact, no margin</td>
+</tr>
+<tr>
+<td>IMX585</td>
+<td>StarlightEye</td>
+<td>C only — CS lenses do not fit</td>
+<td>12.8 mm</td>
+<td><code>1/1.2"</code> or <code>1"</code> — <code>2/3"</code> vignettes</td>
+</tr>
+<tr>
+<td>IMX283</td>
+<td>OneInchEye</td>
+<td>CS, C adapter included</td>
+<td>15.9 mm</td>
+<td><code>1"</code></td>
+</tr>
+</tbody>
+</table>
+<p>Cropped sensor modes read a smaller area, so smaller-format lenses can still cover them:</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Read-out diagonal</th>
+<th>Still covered by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IMX283 3840×2160 (UHD crop)</td>
+<td>10.6 mm</td>
+<td><code>2/3"</code> lens</td>
+</tr>
+<tr>
+<td>IMX477 1332×990 (crop)</td>
+<td>5.1 mm</td>
+<td><code>1/3"</code> lens</td>
+</tr>
+</tbody>
+</table>
+<p>All other modes use roughly the full sensor area — the main table applies. Read-out areas per mode are listed in <a href="../sensors/#sensor-size-crop-factor-and-film-format-equivalents">camera sensors and frame rates</a>.</p>
+<p>Sharpness needed per recording mode:</p>
+<table>
+<thead>
+<tr>
+<th>Sensor / mode</th>
+<th>Recording pixel pitch</th>
+<th>Needs</th>
+<th>Look for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IMX296</td>
+<td>3.45 µm</td>
+<td>145 lp/mm</td>
+<td>Any megapixel-class lens (<code>2MP</code>+)</td>
+</tr>
+<tr>
+<td>IMX477 binned modes</td>
+<td>3.1 µm</td>
+<td>161 lp/mm</td>
+<td><code>5MP</code>-class, rated <code>1/2"</code> or larger</td>
+</tr>
+<tr>
+<td>IMX585 4K</td>
+<td>2.9 µm</td>
+<td>172 lp/mm</td>
+<td>4K/<code>8MP</code>-class 1-inch lens; for full pixel-level sharpness, a machine-vision lens specified for ≤3 µm pixels</td>
+</tr>
+<tr>
+<td>IMX283 2.7K (binned)</td>
+<td>4.8 µm</td>
+<td>104 lp/mm</td>
+<td><code>5MP</code>-class 1-inch lens</td>
+</tr>
+<tr>
+<td>IMX283 UHD crop</td>
+<td>2.4 µm</td>
+<td>208 lp/mm</td>
+<td><code>10MP</code>-class <code>2/3"</code> machine-vision lens</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p>Vintage C-mount lenses made for 16mm film draw a circle of about 12.7 mm. That covers the IMX283 UHD crop, is borderline on the IMX585 (test your copy), and does not cover the full IMX283. Lenses made for Super 16 (~14.5 mm) get closer but still fall short of the full 1-inch sensor.</p>
+</div>
+<h2 id="buying-checklist">Buying checklist<a class="headerlink" href="#buying-checklist" title="Permanent link">#</a></h2>
+<ol>
+<li>Format first: image circle ≥ sensor diagonal (table above).</li>
+<li>Mount second: C or CS, and whether the board accepts it.</li>
+<li>Manual or fixed iris only — no <code>DC</code>/<code>P-iris</code>.</li>
+<li>MP rating last: convert to pixel size and compare with your sensor.</li>
+<li>Focal length: multiply by the crop factor in <a href="../sensors/#focal-length-examples">camera sensors and frame rates</a> for the full-frame equivalent look.</li>
+</ol>
 </div>
 
             </div>
           </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../sensors/" class="btn btn-neutral float-left" title="Camera sensors and frame rates"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../audio-recording/" class="btn btn-neutral float-right" title="Audio recording">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
 
   <hr/>
 
@@ -181,6 +642,10 @@
         </span>
     
     
+      <span><a href="../sensors/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../audio-recording/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

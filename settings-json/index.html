@@ -62,6 +62,8 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
@@ -337,7 +339,7 @@ Set <code>welcome_image</code> to the path of a bitmap file to show a logo inste
 <p>Audio capture options shared by idle monitoring and recorded WAV input level. The stock file applies a 2-frame timecode offset on both paths.</p>
 <div class="highlight"><pre><span></span><code><span class="nt">&quot;audio&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;24bit&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;capture_gain_db&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;capture_gain_db&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">6.0</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;timecode_offset_frames&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;16bit&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -443,7 +445,7 @@ Set <code>welcome_image</code> to the path of a bitmap file to show a logo inste
 <h2 id="resolutions">resolutions<a class="headerlink" href="#resolutions" title="Permanent link">#</a></h2>
 <p>Choose which sensor modes are practical to expose in the UI when cycling resolutions. This is a filter, not the mode list itself: every mode a sensor supports lives in the sensor database (<code>resources/sensors.json</code>, see <a href="#sensors">sensors</a> below), and <code>resolutions</code> selects the useful subset to show. Hidden modes stay technically available to the system.</p>
 <div class="highlight"><pre><span></span><code><span class="nt">&quot;resolutions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;k_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;k_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">1.5</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">],</span>
 <span class="w">  </span><span class="nt">&quot;bit_depths&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p">],</span>
 <span class="w">  </span><span class="nt">&quot;custom_modes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span>
 <span class="p">}</span>

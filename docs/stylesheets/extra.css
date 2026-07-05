@@ -47,13 +47,20 @@ color: #2d3135;
 
 }
 
-.rst-content pre code {
+/* Code blocks render as div.highlight > pre > code (hljs.highlightAll adds
+   .hljs to the code element). Only the outer div.highlight may draw a box:
+   the theme's inline-code border/background and the hljs theme padding must
+   not apply to the block-level code element, or every block renders as a
+   box inside a box. */
+.rst-content pre code,
+.rst-content pre code.hljs {
 white-space: pre;
 display: block;
-padding: 12px;
+padding: 0;
 font-size: 12px;
-border-radius: 5px;
-
+background: transparent;
+border: none;
+border-radius: 0;
 }
 
 .markdown-body .highlight pre,

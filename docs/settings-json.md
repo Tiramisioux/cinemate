@@ -176,7 +176,7 @@ Audio capture options shared by idle monitoring and recorded WAV input level. Th
 ```json
 "audio": {
   "24bit": {
-    "capture_gain_db": 0.0,
+    "capture_gain_db": 6.0,
     "timecode_offset_frames": 2
   },
   "16bit": {
@@ -311,7 +311,7 @@ Choose which sensor modes are practical to expose in the UI when cycling resolut
 
 ```json
 "resolutions": {
-  "k_steps": [3, 4],
+  "k_steps": [1.5, 2, 3, 4],
   "bit_depths": [10, 12],
   "custom_modes": {}
 }

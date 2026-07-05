@@ -20,7 +20,7 @@ nav:
       - Reading the camera screen: simple-gui.md
       - Web GUI: web-gui.md
       - Camera sensors and frame rates: sensors.md
-      - Lenses and image circles: image-circle.md
+      # - Lenses and image circles: image-circle.md   # hidden until manually reviewed
       - Audio recording: audio-recording.md
       - Digital zoom: digital-zoom.md
       - Speed ramping & shutter angle synchronization: speed-ramping.md

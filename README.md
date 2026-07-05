@@ -70,17 +70,9 @@ See the [releases section](https://github.com/Tiramisioux/cinemate/releases) for
 
 ### 2. Clone the repo and run the one-click installer
 
-Start from a fresh Raspberry Pi OS Lite Bookworm image. SSH to the Pi:
-
-On macOS, open Terminal and run:
+Start from a fresh Raspberry Pi OS Lite Bookworm image. SSH to the Pi (Terminal on macOS, PowerShell on Windows):
 
 ```bash
-ssh pi@raspberrypi.local
-```
-
-On Windows, open PowerShell or Command Prompt and run:
-
-```powershell
 ssh pi@raspberrypi.local
 ```
 

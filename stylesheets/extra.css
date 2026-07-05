@@ -84,6 +84,13 @@ border-radius: 0;
   right: 6px;
 }
 
+/* Bare clipboard glyph: no outline frame or fill around the button
+   (the plugin draws a bordered, rounded, filled button by default). */
+.hljs-copy-wrapper .hljs-copy-button {
+  border: none;
+  background-color: transparent;
+}
+
 
 /* Float an image to the right and keep some breathing-room on mobile */
 .img-right {

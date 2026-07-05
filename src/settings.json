@@ -64,7 +64,7 @@
   },
   "audio": {
     "24bit": {
-      "capture_gain_db": 0.0,
+      "capture_gain_db": 6.0,
       "timecode_offset_frames": 2
     },
     "16bit": {
@@ -153,6 +153,8 @@
   },
   "resolutions": {
     "k_steps": [
+      1.5,
+      2,
       3,
       4
     ],

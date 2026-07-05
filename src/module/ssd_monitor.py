@@ -854,6 +854,9 @@ class SSDMonitor:
         if not self._is_mounted:
             return
 
+        # flush pending write-back pages before detaching
+        subprocess.call(["sync"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
         # Try a clean unmount first; if the mount-point is busy (EBUSY = exit 32)
         # fall back to lazy unmount so the kernel detaches it once all file
         # handles are released. This handles the case where cinepi-raw or ffmpeg

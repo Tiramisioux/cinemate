@@ -401,16 +401,12 @@ class CinePiProcess(Thread):
         
         ox, oy = (fw-pw)//2, (fh-ph)//2
 
-        # Dual-sensor preview rectangle. The compositor canvas is two lores
-        # panes side-by-side, so its aspect is 2×(lw/lh). Fit that into the same
-        # padded area and centre it, leaving the simple_gui columns room on the
-        # left and right. simple_gui._calculate_dual_preview_rects() mirrors this.
-        dual_aspect = (2 * lw) / lh
-        if (aw / ah) > dual_aspect:
-            dph = ah; dpw = int(dph * dual_aspect)
-        else:
-            dpw = aw; dph = int(dpw / dual_aspect)
-        dox, doy = (fw - dpw)//2, (fh - dph)//2
+        # Dual-sensor preview window = the full padded area. The compositor
+        # canvas aspect changes with the live source (one pane vs two), and DRM
+        # letterboxes it inside this rect: a single selected sensor fills the
+        # area just like the single-sensor setup, while `both` centres the wide
+        # side-by-side strip. Either way the simple_gui columns keep their room.
+        dox, doy, dpw, dph = px, py, aw, ah
 
         # gains, shutter
         cg_rb = self.redis_controller.get_value(ParameterKey.CG_RB.value) or '2.5,2.2'

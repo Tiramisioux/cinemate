@@ -24,7 +24,6 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
 
 - **Frame-rate phase lock** — DNG timecode is locked to the Pi's wall clock, making audio sync more accurate. On by default.
 - **More reliable audio sync**
-- **Wall clock embedded timecode** — timecode is anchored to the first frame's wall-clock time and follows the Pi's real-time clock.
 - **Correct Pi 4 RAW** — CSI2-packed frames decode correctly on Pi 4-family boards; raw packing (P/U) is chosen per Pi model automatically.
 - **Compiles on 2GB version of Raspberry Pi 4/5**
 - **Camera model** — set the camera model manually for each attached sensor.

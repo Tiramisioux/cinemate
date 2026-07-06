@@ -19,7 +19,7 @@ Release notes for Cinemate. For downloads, see the [releases page](https://githu
 
 ### CinePi-RAW recorder
 
-- **Frame-rate phase lock** — DNG timecode and frame capture is locked to the Pi's wall clock, making audio sync more accurate; on by default
+- **Frame-rate phase lock** — DNG timecode and frame capture is locked to the Pi's wall clock, making audio sync more accurate.
 - **More reliable audio sync on 4K / exFAT** — the capture path was reworked (protected helper, dedicated writer thread, wall-clock reconciliation, real-time scheduling) for more reliable WAV sync on demanding modes.
 - **Correct Pi 4 RAW** — CSI2-packed frames decode correctly on Pi 4-family boards; raw packing (P/U) is chosen per Pi model automatically.
 - **Camera model** — set the camera model manually for each attached sensor.

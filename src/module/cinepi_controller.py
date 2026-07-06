@@ -2100,6 +2100,37 @@ class CinePiController:
 
         logging.info("Zoom factor set to %.2f×", value)
 
+    def set_preview_source(self, value=None):
+        """Select which sensor(s) the on-camera HDMI monitor shows in a
+        dual-sensor rig: ``both`` (side-by-side), ``cam0`` only, or ``cam1``
+        only. Handled live by cinepi-raw's dualHdmiPreview stage — no restart.
+
+        • Pass ``cam0`` / ``cam1`` / ``both`` (``cam0+cam1`` is an alias).
+        • Omit the argument to cycle both → cam0 → cam1 → both.
+        Has no visible effect with a single sensor.
+        """
+        order = ["both", "cam0", "cam1"]
+        aliases = {
+            "both": "both", "cam0+cam1": "both", "2": "both",
+            "cam0": "cam0", "0": "cam0", "a": "cam0",
+            "cam1": "cam1", "1": "cam1", "b": "cam1",
+        }
+
+        if value is None:
+            current = self.redis_controller.get_value(ParameterKey.HDMI_PREVIEW_SOURCE.value)
+            current = aliases.get(str(current).strip().lower(), "both")
+            target = order[(order.index(current) + 1) % len(order)]
+        else:
+            key = str(value).strip().lower()
+            if key not in aliases:
+                logging.warning("Unknown preview source %r (use cam0, cam1 or cam0+cam1)", value)
+                return
+            target = aliases[key]
+
+        self.redis_controller.set_value(ParameterKey.HDMI_PREVIEW_SOURCE.value, target)
+        self.redis_controller.r.publish("cp_controls", ParameterKey.HDMI_PREVIEW_SOURCE.value)
+        logging.info("HDMI preview source set to %s", target)
+
 
 
 # ────────────────────────── recording helper thread ────────────────────

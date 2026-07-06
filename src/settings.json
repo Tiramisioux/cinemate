@@ -60,7 +60,8 @@
     "zoom_steps": [
       1.0,
       2.0
-    ]
+    ],
+    "default_hdmi_source": "both"
   },
   "audio": {
     "24bit": {

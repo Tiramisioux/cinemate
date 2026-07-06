@@ -104,6 +104,9 @@ class CommandExecutor(threading.Thread):
             'set zoom' : (cinepi_controller.set_zoom, [float, None]),  # toggle when arg omitted
             'inc zoom' : (cinepi_controller.inc_zoom,  None),
             'dec zoom' : (cinepi_controller.dec_zoom,  None),
+
+            # ── Dual-sensor HDMI preview source ──────────────────────────────────────
+            'set preview' : (cinepi_controller.set_preview_source, [str, None]),  # cam0 | cam1 | cam0+cam1; cycle when omitted
         }
 
         # Remove commands that were conditionally set to None

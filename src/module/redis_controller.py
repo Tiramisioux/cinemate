@@ -89,6 +89,7 @@ class ParameterKey(Enum):
     LAST_DNG_CAM0       = "last_dng_cam0"
     
     ZOOM                = "zoom"  # digital zoom factor for streams 0 & 2
+    HDMI_PREVIEW_SOURCE = "hdmi_preview_source"  # dual-sensor HDMI: both / cam0 / cam1
     WRITE_SPEED_TO_DRIVE = "write_speed_to_drive"
     RECORDING_TIME         = "recording_time"      # elapsed-time in seconds   
     RECORDING_TC_REC     = "recording_tc_rec"    # elapsed-time time-code

@@ -1214,10 +1214,14 @@ class SimpleGUI(threading.Thread):
                                  box_x + BOX_W - m, y + BOX_H - m]
                         draw.rectangle(inner, outline=(0, 0, 0), width=2)
 
-                    tw, th = draw.textbbox((0,0), part, font=box_font)[2:]
+                    # "MONO" is a 4-letter word, not a sensor number; render it a
+                    # touch smaller (like the ext4/exFAT filesystem badge) so it
+                    # fits the box instead of crowding it.
+                    part_font = self._get_font("bold", 20) if part == "MONO" else box_font
+                    tw, th = draw.textbbox((0,0), part, font=part_font)[2:]
                     tx = box_x + (BOX_W - tw)//2
                     ty = y     + (BOX_H - th)//2
-                    draw.text((tx, ty), part, font=box_font, fill=TEXT_COLOR)
+                    draw.text((tx, ty), part, font=part_font, fill=TEXT_COLOR)
 
                     y += BOX_H + BOX_GAP
 
@@ -1345,10 +1349,14 @@ class SimpleGUI(threading.Thread):
                     draw.rectangle([box_pad_x, y,
                                     box_pad_x + BOX_W, y + BOX_H],
                                    fill=_box_fill)
-                    tw, th = draw.textbbox((0,0), part, font=box_font)[2:]
+                    # "MONO" is a 4-letter word, not a sensor number; render it a
+                    # touch smaller (like the ext4/exFAT filesystem badge) so it
+                    # fits the box instead of crowding it.
+                    part_font = self._get_font("bold", 20) if part == "MONO" else box_font
+                    tw, th = draw.textbbox((0,0), part, font=part_font)[2:]
                     tx = box_pad_x + (BOX_W - tw)//2
                     ty = y         + (BOX_H - th)//2
-                    draw.text((tx, ty), part, font=box_font, fill=TEXT_COLOR)
+                    draw.text((tx, ty), part, font=part_font, fill=TEXT_COLOR)
                     y += BOX_H + BOX_GAP
 
             if values.get("drop_frame_latched"):

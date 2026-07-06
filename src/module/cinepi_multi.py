@@ -441,6 +441,12 @@ class CinePiProcess(Thread):
         hd = str(self.output.get('hdmi_port', default_hd))
 
         args = [
+            # Select the physical sensor by its libcamera enumeration index.
+            # cinepi-raw picks the camera via `--camera <n>` (options_->camera);
+            # `--cam-port` is only a cosmetic label. Without this, every
+            # instance falls back to camera 0, so the second sensor fails to
+            # acquire ("Device or resource busy") and only cam0 records.
+            "--camera", str(self.cam.index),
             "--cam-port", str(self.cam.port),
             "--mode",   f"{width}:{height}:{bit_depth}:{packing}",
             "--width",  str(width),

@@ -1619,14 +1619,23 @@ class SimpleGUI(threading.Thread):
         # window from the raw aspect, then fit the visible lores/anamorphic
         # stream inside it. Redis lores dimensions can be briefly stale during
         # a mode switch, so calculate them here from the same source values.
-        outline_rect = _calculate_preview_guide_rect(
-            frame_width,
-            frame_height,
-            self.width,
-            self.height,
-            anamorphic_factor,
-        )
-        draw.rectangle(outline_rect, outline=line_color, width=PREVIEW_GUIDE_OUTLINE_WIDTH)
+        if self.draw_right_col:
+            # Dual sensor: the white frame around each pane and the centre
+            # divider are drawn *into the compositor canvas* (part of the video)
+            # by cinepi-raw's dualHdmiPreview stage, because the DRM video plane
+            # composites above this framebuffer and would occlude a divider
+            # drawn over the preview here. So we deliberately draw no guide box
+            # in dual mode; the shrunken `-p` rectangle leaves the column room.
+            pass
+        else:
+            outline_rect = _calculate_preview_guide_rect(
+                frame_width,
+                frame_height,
+                self.width,
+                self.height,
+                anamorphic_factor,
+            )
+            draw.rectangle(outline_rect, outline=line_color, width=PREVIEW_GUIDE_OUTLINE_WIDTH)
 
         current_layout = self.layout
 

@@ -400,7 +400,18 @@ class CinePiProcess(Thread):
             pw = aw; ph = int(pw / aspect)
         
         ox, oy = (fw-pw)//2, (fh-ph)//2
-        
+
+        # Dual-sensor preview rectangle. The compositor canvas is two lores
+        # panes side-by-side, so its aspect is 2×(lw/lh). Fit that into the same
+        # padded area and centre it, leaving the simple_gui columns room on the
+        # left and right. simple_gui._calculate_dual_preview_rects() mirrors this.
+        dual_aspect = (2 * lw) / lh
+        if (aw / ah) > dual_aspect:
+            dph = ah; dpw = int(dph * dual_aspect)
+        else:
+            dpw = aw; dph = int(dpw / dual_aspect)
+        dox, doy = (fw - dpw)//2, (fh - dph)//2
+
         # gains, shutter
         cg_rb = self.redis_controller.get_value(ParameterKey.CG_RB.value) or '2.5,2.2'
         
@@ -522,11 +533,13 @@ class CinePiProcess(Thread):
                 args += ['--sync', 'client']
         
         # In dual-sensor mode the on-HDMI preview is drawn by the
-        # dualHdmiPreview stage (it owns DRM and composites both feeds), so both
-        # cores run --nopreview and skip the core `-p` window. Single-sensor
-        # keeps the stock core preview.
+        # dualHdmiPreview stage (it owns DRM and composites both feeds), so the
+        # core preview is off (--nopreview). We still pass `-p` with the dual
+        # rectangle: the stage reads options->preview_* for its own DRM window,
+        # so this places the side-by-side pair in the centre and leaves the
+        # simple_gui columns room left and right (rather than fullscreen).
         if self.multi:
-            args += ['--nopreview']
+            args += ['--nopreview', '-p', f'{dox},{doy},{dpw},{dph}']
         elif self.preview_enabled:
             args += ['-p', f'{ox},{oy},{pw},{ph}']
         else:

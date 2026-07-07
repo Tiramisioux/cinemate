@@ -17,36 +17,36 @@ nav:
   - Overview: readme.md
   - Quick start: getting-started.md
   - Using the camera:
-      - Storage pre-roll warm-up: storage-preroll.md
       - Simple GUI: simple-gui.md
       - Web GUI: web-gui.md
       # - Lenses and image circles: image-circle.md   # hidden until manually reviewed
       - Audio recording: audio-recording.md
       - Digital zoom: digital-zoom.md
       - Speed ramping & shutter angle synchronization: speed-ramping.md
+      - Storage pre-roll warm-up: storage-preroll.md
   - Configuring:
       - Settings file: settings-json.md
       - Camera sensors and frame rates: sensors.md
       - Dual sensors: dual-sensors.md
       - Additional hardware: hardware-controls.md
-      - Switching sensors (config.txt): config-txt.md
+      - Bookworm config.txt: config-txt.md
       - Configuring the Wi-Fi hotspot: hotspot-logic.md
   - System maintenance:
       - Connecting via SSH: ssh.md
       - System services: system-services.md
       - Backing up the SD card: backing-up-sd-card.md
+  - Troubleshooting: troubleshooting.md
+  - Advanced:
+      - Audio sync & drift: audio-sync.md
+      - Simple GUI refresh tuning: simple-gui-refresh-tuning.md
+      - Manual installation: installation-steps.md
+      - Compiling cinepi-raw: compiling-cinepi-raw.md
   - Reference:
       - Cinemate terminal commands: cli-commands.md
       - CinePi RAW terminal commands: cli-user-guide.md
       - Redis API: redis-guide.md
       - Redis Key reference: redis-keys.md
       - Changelog: changelog.md
-  - Troubleshooting: troubleshooting.md
-  - Advanced:
-      - Audio sync & drift: audio-sync.md
-      - Simple GUI refresh tuning: simple-gui-refresh-tuning.md
-      - Building from source: installation-steps.md
-      - Compiling cinepi-raw: compiling-cinepi-raw.md
       # - Overclocking the Pi: overclocking.md
   # - Cinemate builds:
   #     - Bare bones build: bare-bones-build.md

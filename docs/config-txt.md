@@ -1,7 +1,5 @@
 # Modifying config.txt
 
-## Adjusting config.txt for different sensors:
-
 !!! tip ""
     For easy editing of `config.txt` on the preinstalled image file, type `editboot` anywhere in Raspberry Pi terminal.
 
@@ -100,3 +98,12 @@ dtoverlay=disable-bt
 ```
 
 Exit the editor by pressing Ctrl+X.
+
+!!! note ""
+    For a dual sensor setup, attach to cam0 and cam1 and add overlays for both camera ports.
+
+    ```shell
+    # Example
+    dtoverlay=imx296,cam0
+    dtoverlay=imx296,mono,cam1
+    ```

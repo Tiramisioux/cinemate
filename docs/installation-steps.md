@@ -1,12 +1,4 @@
-# Manual installation & building from source
-
-!!! note ""
-
-    Stack works on Raspberry Pi 4 and 5 models. The 2GB RAM version works with the prebuilt image, while 4GB is recommended if you plan to compile `cinepi-raw` on the Pi. More RAM also gives you a larger framebuffer, which can be useful at high frame rates.
-
-!!! note ""
-
-    Cinemate is using Linux kernel version 6.12.25. Supported install target is Raspberry Pi OS Lite (Bookworm).
+# Manual installation
 
 ## One-click installer
 
@@ -30,10 +22,13 @@ sudo apt install -y git
 git clone https://github.com/Tiramisioux/cinemate.git
 cd cinemate
 chmod +x cinemate-install.sh
+```
+
+```bash
 ./cinemate-install.sh
 ```
 
-The installer defaults to an `imx477` on camera port `cam0` and writes a stock-style managed `/boot/firmware/config.txt` section with camera options for IMX477, IMX296, IMX283, IMX585 color, and IMX585 mono. To install directly for another sensor, pass `SENSOR_MODEL` and `CAM_PORT` inline:
+The installer defaults to an `imx477` on camera port `cam0`. To install directly for another sensor, pass `SENSOR_MODEL` and `CAM_PORT` inline:
 
 ```bash
 SENSOR_MODEL=imx296 CAM_PORT=cam0 ./cinemate-install.sh
@@ -42,13 +37,15 @@ SENSOR_MODEL=imx585 CAM_PORT=cam0 ./cinemate-install.sh
 SENSOR_MODEL=imx585_mono CAM_PORT=cam1 ./cinemate-install.sh
 ```
 
+!!! note ""
+
+    You can adjust sensor and camera port later by editing `/boot/firmware/config.txt`. See [Switching sensors](config-txt.md).
+
 After installing, reboot the system and Cinemate should start automatically.
 
 ## Manual install
 
-If you prefer to install everything by hand, continue with the steps below.
-
-Start from a fresh Raspberry Pi OS Lite (Bookworm) install before continuing. If your Pi is already on Trixie, reimage with Bookworm first.
+Start from a fresh Raspberry Pi OS Lite (Bookworm) install before continuing.
 
 ```
 sudo apt update -y

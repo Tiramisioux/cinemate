@@ -15,7 +15,7 @@ These commands can also be sent to the Pi as serial via the Tx/Rx pins or via US
 
 | Command                                    | Argument        | Example                                 |  Function                                      |
 |--------------------------------------------|-------------------|-----------------------------------------|-------------------------------------------------|
-| `rec` / `stop`                             | `[s <seconds>] \| [f <frames>]` | `rec s 10`                           | Toggle recording or schedule an automatic stop after a timed duration or frame count |
+| `rec` / `stop`                             | `[cam0\|cam1\|both] [s <seconds>\|f <frames>]` | `rec cam1 f 48`                           | Toggle recording or schedule an automatic stop after a timed duration or frame count; optional leading camera token forces which sensor(s) record on a dual rig |
 | `set iso <value>`                          | int               | `set iso 800`                           | Set ISO to nearest allowed step                 |
 | `inc iso` / `dec iso`                      | -              |                                | Step ISO up or down                             |
 | `set shutter a <angle>`                    | float             | `set shutter a 180`                     | Set actual shutter angle (snaps unless free/sync)|
@@ -30,7 +30,7 @@ These commands can also be sent to the Pi as serial via the Tx/Rx pins or via US
 | `set anamorphic factor [<float>]`          | float or none     | `set anamorphic factor 1.33`            | Set or toggle anamorphic stretch                |
 | `set zoom [<float>]`                       | float or none     | `set zoom 2`                            | Change digital zoom; omit to cycle              |
 | `inc zoom` / `dec zoom`                    | -              |                              | Step preview zoom factor                        |
-| `set preview [cam0\|cam1\|cam0+cam1]`      | text or none      | `set preview cam1`                      | Dual-sensor HDMI: show one sensor full-screen or both side-by-side; omit to cycle |
+| `set preview [cam0\|cam1\|both\|pip_cam0\|pip_cam1]` | text or none      | `set preview pip_cam0`                  | Dual-sensor HDMI source: full-screen, side-by-side, or picture-in-picture (one sensor with the other as a corner inset); omit to cycle |
 | `mount` / `unmount`                        | -              |                                  | Mount or unmount external storage               |
 | `toggle mount`                             | -              |                           | Mount if not mounted, otherwise unmount         |
 | `erase`                                    | -              | `erase`                                | Delete every clip on the mounted RAW volume without reformatting |
@@ -64,6 +64,8 @@ Use the timed modes to walk away from the camera while it captures a precisely b
 - `rec f <frames>` stops after the requested number of frame slots at the locked record-start FPS. Dropped frames still count toward that limit, so the take ends when that many frames should have been recorded, not when that many DNGs were successfully written. You can type `frame` or `frames` instead of `f`.
 
 If recording is not already running, the CLI starts it before arming the timer. An invalid or zero value is ignored so you cannot accidentally stop a clip immediately.
+
+On a dual-sensor rig you can prepend a camera token — `cam0`, `cam1`, or `both` (`dual` is an alias) — to force which sensor(s) capture the take, overriding the [record policy](dual-sensors.md#recording) for that one clip. It combines with the timed modes: `rec cam1`, `rec cam0 s 10`, `rec both f 48`. With a single sensor the token has no effect.
 
 ## Storage maintenance commands
 

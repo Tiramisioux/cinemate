@@ -27,6 +27,4 @@ cinepi-raw --mode 2028:1080:12:U \
 
 On Raspberry Pi 4 / Pi 400 / CM4, Cinemate switches IMX296 and IMX477 launches to packed raw mode (`P`), for example `1456:1088:10:P` for IMX296. On Raspberry Pi 5 / CM5 it leaves those sensors on unpacked raw mode (`U`). Pi 4-family launches also skip the PiSP tuning-file argument and use the VC4 camera stack.
 
-## Multi-camera startup details
-
 In multi-camera mode, the sensors are synced. The first process is launched with `--sync server` and the rest use `--sync client`. Only the primary process gets the on-screen preview rectangle; secondary cameras run with `--nopreview`.

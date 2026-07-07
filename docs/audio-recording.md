@@ -2,7 +2,7 @@
 
 ## Supported microhones
 
-Cinemate has been tested with RODE VideoMic NTG 24 bit microphone and simple 16 bit USB microphones
+Cinemate has been tested with RODE VideoMic NTG 24 bit microphone and simple 16 bit USB microphones.
 
 ## Using the microphone
 

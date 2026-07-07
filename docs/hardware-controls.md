@@ -1,10 +1,9 @@
 # Additional hardware
 
 !!! note ""
-    None of the hardware on this page is required. Add what you need, when you need it.
+    All hardware on this page is optional. Add what you need, when you need it.
 
-All physical controls are mapped in [the settings file](settings-json.md). On the Pi, type `editsettings` in the terminal to open it. Changes take effect the next time Cinemate starts. Buttons, switches, pots and encoders simply call the same commands that the CLI and the web GUI use. See [controller methods](controller-methods.md) for the full list of available commands.
-
+Physical controls are mapped in [the settings file](settings-json.md). On the Pi, type `editsettings` in the terminal to open it. Changes take effect the next time Cinemate starts. Buttons, switches, pots and encoders simply call the same commands that the CLI and the web GUI use. See [controller methods](controller-methods.md) for the full list of available commands.
 
 
 | Hardware | Connects to | Typical use | Extra parts needed |
@@ -12,9 +11,9 @@ All physical controls are mapped in [the settings file](settings-json.md). On th
 | Push buttons | any free GPIO pin + GND | start/stop recording, change resolution | none |
 | Two- and three-way switches | GPIO pins + GND | zoom, shutter sync mode, fps presets | none |
 | Rotary encoders | two GPIO pins (+ optional button pin) | stepping through ISO, shutter angle, fps, WB | none |
-| Potentiometers | Grove Base HAT analog ports | dials for ISO, shutter angle, fps, WB | [Grove Base HAT](https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/) |
+| [Grove Base HAT](https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/) | GPIO header | dials for ISO, shutter angle, fps, WB | Potentiometers |
 | Adafruit quad rotary encoder | I²C (STEMMA QT or SDA/SCL pins) | four dials + push buttons in one module | [Adafruit #5752](https://www.adafruit.com/product/5752) |
-| CFE Hat | PCIe (Raspberry Pi 5 only) | fast CFexpress recording media | [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/) + CFexpress Type B card |
+| [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/) | PCIe (Raspberry Pi 5 only) | for fast storage| CFexpress Type B card |
 
 !!! info ""
     Cinemate uses [BCM pin numbering](https://pinout.xyz)
@@ -95,7 +94,7 @@ Latching switches work like buttons, but Cinemate reacts to the *state* instead 
 
 ## Rotary encoders
 
-Standard quadrature rotary encoders (the common KY-040 modules, for example) connect straight to the GPIO header. Each encoder uses two pins (`clk_pin` and `dt_pin`), plus an optional third pin if the encoder has a built-in push button. The push button uses the same action grammar as the [buttons](#push-buttons) section.
+Standard rotary encoders (for example KY-040, for example) connect straight to the GPIO header. Each encoder uses two pins (`clk_pin` and `dt_pin`), plus an optional third pin if the encoder has a built-in push button. The push button uses the same action grammar as the [buttons](#push-buttons) section.
 
 No encoders are enabled in the stock settings file. A typical entry — turning the dial steps through ISO, pressing it locks the value:
 
@@ -119,7 +118,7 @@ No encoders are enabled in the stock settings file. A typical entry — turning 
 
 The `inc_`/`dec_` commands step through the value arrays defined in `settings.json` — see [arrays](settings-json.md#arrays) and [free mode](settings-json.md#free_mode).
 
-## Potentiometers
+## Grove Base HAT
 
 The Pi has no analog inputs, so potentiometers need an analog-to-digital converter. Cinemate supports the [Grove Base HAT](https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/), which stacks on the GPIO header and adds analog ports. Plug in Grove rotary angle sensors (or wire any 10 kΩ linear pot to a Grove analog port) and map the channels in `settings.json`:
 
@@ -156,12 +155,9 @@ The board is hot-pluggable: if it is not found (or gets disconnected), Cinemate 
 
 ## CFE Hat
 
-The [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/) by Will Whang adds a CFexpress Type B card slot to the Raspberry Pi 5 over PCIe. CFexpress cards are essentially NVMe SSDs in a rugged shell, which makes them excellent recording media for high resolution, high frame rate shooting.
+The [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/) by Will Whang adds a CFexpress Type B card slot to the Raspberry Pi 5 over PCIe.
 
 No configuration is needed. Cinemate detects the hat automatically at startup and shows **CFE** as the media type in the GUI. The card follows the same rules as any other recording drive: format it as `exFAT` and label it `RAW` (the web GUI has a format button that does this for you).
-
-!!! note ""
-    The CFE Hat requires a Raspberry Pi 5 — it uses the Pi 5's PCIe connector. On a Pi 4, use a USB SSD instead.
 
 The [dynamic resolution](settings-json.md#dynamic_resolution) profiles include measured sustainable frame rates for CFE media, so fps limits adjust automatically to what the card can sustain.
 

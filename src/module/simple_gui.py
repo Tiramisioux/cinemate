@@ -1214,10 +1214,14 @@ class SimpleGUI(threading.Thread):
                                  box_x + BOX_W - m, y + BOX_H - m]
                         draw.rectangle(inner, outline=(0, 0, 0), width=2)
 
-                    tw, th = draw.textbbox((0,0), part, font=box_font)[2:]
+                    # "MONO" is a 4-letter word, not a sensor number; render it a
+                    # touch smaller (like the ext4/exFAT filesystem badge) so it
+                    # fits the box instead of crowding it.
+                    part_font = self._get_font("bold", 20) if part == "MONO" else box_font
+                    tw, th = draw.textbbox((0,0), part, font=part_font)[2:]
                     tx = box_x + (BOX_W - tw)//2
                     ty = y     + (BOX_H - th)//2
-                    draw.text((tx, ty), part, font=box_font, fill=TEXT_COLOR)
+                    draw.text((tx, ty), part, font=part_font, fill=TEXT_COLOR)
 
                     y += BOX_H + BOX_GAP
 
@@ -1345,10 +1349,14 @@ class SimpleGUI(threading.Thread):
                     draw.rectangle([box_pad_x, y,
                                     box_pad_x + BOX_W, y + BOX_H],
                                    fill=_box_fill)
-                    tw, th = draw.textbbox((0,0), part, font=box_font)[2:]
+                    # "MONO" is a 4-letter word, not a sensor number; render it a
+                    # touch smaller (like the ext4/exFAT filesystem badge) so it
+                    # fits the box instead of crowding it.
+                    part_font = self._get_font("bold", 20) if part == "MONO" else box_font
+                    tw, th = draw.textbbox((0,0), part, font=part_font)[2:]
                     tx = box_pad_x + (BOX_W - tw)//2
                     ty = y         + (BOX_H - th)//2
-                    draw.text((tx, ty), part, font=box_font, fill=TEXT_COLOR)
+                    draw.text((tx, ty), part, font=part_font, fill=TEXT_COLOR)
                     y += BOX_H + BOX_GAP
 
             if values.get("drop_frame_latched"):
@@ -1611,14 +1619,23 @@ class SimpleGUI(threading.Thread):
         # window from the raw aspect, then fit the visible lores/anamorphic
         # stream inside it. Redis lores dimensions can be briefly stale during
         # a mode switch, so calculate them here from the same source values.
-        outline_rect = _calculate_preview_guide_rect(
-            frame_width,
-            frame_height,
-            self.width,
-            self.height,
-            anamorphic_factor,
-        )
-        draw.rectangle(outline_rect, outline=line_color, width=PREVIEW_GUIDE_OUTLINE_WIDTH)
+        if self.draw_right_col:
+            # Dual sensor: the white frame around each pane and the centre
+            # divider are drawn *into the compositor canvas* (part of the video)
+            # by cinepi-raw's dualHdmiPreview stage, because the DRM video plane
+            # composites above this framebuffer and would occlude a divider
+            # drawn over the preview here. So we deliberately draw no guide box
+            # in dual mode; the shrunken `-p` rectangle leaves the column room.
+            pass
+        else:
+            outline_rect = _calculate_preview_guide_rect(
+                frame_width,
+                frame_height,
+                self.width,
+                self.height,
+                anamorphic_factor,
+            )
+            draw.rectangle(outline_rect, outline=line_color, width=PREVIEW_GUIDE_OUTLINE_WIDTH)
 
         current_layout = self.layout
 

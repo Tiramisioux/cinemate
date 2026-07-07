@@ -3,8 +3,6 @@
 
 ## What do “1 inch” and “1/2.3 inch” actually mean?
 
-Those fractions are legacy video‑tube designations and *not* the physical diagonal of the sensor. For example:
-
 | Marketing name | Actual diagonal | Typical crop factor* |
 |----------------|-----------------|----------------------|
 | “Full‑frame” (35 mm stills) | 43 mm | 1.0× (reference) |
@@ -14,7 +12,7 @@ Those fractions are legacy video‑tube designations and *not* the physical diag
 
 As we can see, the smaller the sensor the larger the crop factor with regards to the 35mm standard reference.
 
-C/CS Mounts
+### C/CS Mounts
 
 C and CS lenses were designed for small‑format video and security cameras, so their image circles perfectly cover the IMX477. The Raspberry Pi HQ board also has a built‑in back‑focus adjustment 
 
@@ -31,7 +29,7 @@ You have two realistic options:
 
 ---
 
-##  Buying tips for beginners
+##  Buying tips when starting out
 
 1. **Start with the stock 6 – 12 mm Raspberry Pi zoom**  
    It teaches you which focal lengths you genuinely use.  
@@ -44,21 +42,6 @@ You have two realistic options:
 
 ---
 
-## 6  Rules of thumb (bookmark these)
-
-- **Focal length math:**  
-  Effective 35 mm focal length = *Lens focal length × Crop factor*.  
-  (e.g., 12 mm × 5.6 ≈ 67 mm portrait.)  
-- **Image circle > sensor diagonal.**  
-  If the spec sheet doesn’t list it, assume C/CS lenses cover up to 11 mm and nothing larger.  
-- **Big‑sensor lenses on tiny sensors ≠ better image.**  
-  Quality comes from glass *matched* to the sensor, not size alone.
-
----
-
 ### TL;DR
 
-For the Raspberry Pi HQ camera (IMX477), **vintage C‑mount lenses are your best friends**—they cover the sensor perfectly, cost little, and keep the rig small.  
-If you crave a wider field of view or shallower depth of field that feels “cinematic,” consider upgrading the sensor itself (e.g., IMX585) before chasing exotic adapters and full‑frame glass.
-
-Happy shooting, and may your pixels always land exactly where you intend!
+For the Raspberry Pi HQ camera (IMX477), **vintage C‑mount lenses are your best friends**—they cover the sensor perfectly, cost little, and keep the rig small.   If you crave a wider field of view or shallower depth of field that feels “cinematic,” consider upgrading the sensor to IMX585 or IMX283.

@@ -885,15 +885,15 @@ class CinePiController:
                 return fps
         return 0.0
 
-    def rec(self, mode=None, amount=None):
-        logging.info(f"rec command received (mode={mode}, amount={amount})")
+    def rec(self, mode=None, amount=None, record_override=None):
+        logging.info(f"rec command received (mode={mode}, amount={amount}, record_override={record_override})")
         if self.is_preroll_active():
             logging.info("rec request ignored – storage pre-roll in progress")
             return
 
         if mode is None:
             if self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "0":
-                self.start_recording()
+                self.start_recording(record_override=record_override)
             elif self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "1":
                 self.stop_recording()
             else:
@@ -921,7 +921,7 @@ class CinePiController:
             recording_state = self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)
             is_recording = str(recording_state) == "1"
             if not is_recording:
-                self.start_recording()
+                self.start_recording(record_override=record_override)
                 is_recording = str(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)) == "1"
                 if not is_recording:
                     logging.warning("Unable to start recording; timed stop not scheduled.")
@@ -945,7 +945,7 @@ class CinePiController:
             is_recording = str(recording_state) == "1"
             started_fresh = not is_recording
             if not is_recording:
-                self.start_recording()
+                self.start_recording(record_override=record_override)
                 is_recording = str(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value)) == "1"
                 if not is_recording:
                     logging.warning("Unable to start recording; frame-limited stop not scheduled.")
@@ -1066,7 +1066,65 @@ class CinePiController:
                 return True
         return False
 
-    def start_recording(self):
+    # Preview-source token → the sensor that is "mainly" shown. `both` has no
+    # single main (both are equal). Pip modes are named after their main sensor.
+    _PREVIEW_MAIN = {
+        "cam0": "cam0", "cam1": "cam1",
+        "pip_cam0": "cam0", "pip_cam1": "cam1",
+    }
+
+    def _present_cam_ports(self):
+        """Ports of the sensors cinepi-raw actually discovered, e.g.
+        ['cam0', 'cam1']. Falls back to ['cam0'] if the list is unavailable."""
+        try:
+            raw = self.redis_controller.get_value(ParameterKey.CAMERAS.value)
+            cams = json.loads(raw) if raw else []
+            ports = sorted({c.get("port") for c in cams if c.get("port")})
+            return ports or ["cam0"]
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return ["cam0"]
+
+    def _resolve_record_cams(self, override=None):
+        """Decide which sensor(s) record the next take, returned as a
+        ``record_cams`` token (``cam0+cam1`` | ``cam0`` | ``cam1``) for
+        cinepi-raw's per-camera record gate.
+
+        Rule (single sensor is a no-op — only its own port ever records):
+          • explicit ``rec cam0/cam1/both`` override wins;
+          • else record both when the preview is side-by-side ``both`` OR
+            settings ``lock_dual_recording`` is true (force dual);
+          • else record the preview's main sensor (fullscreen or pip main).
+        Always clamped to the sensors actually present.
+        """
+        ports = self._present_cam_ports()
+        both = "cam0+cam1"
+
+        # Single sensor: nothing to gate.
+        if len(ports) < 2:
+            return ports[0]
+
+        # Explicit per-take override wins.
+        if override in ("both", "dual", "cam0+cam1"):
+            return both
+        if override in ("cam0", "cam1"):
+            return override if override in ports else ports[0]
+
+        preview = str(
+            self.redis_controller.get_value(ParameterKey.HDMI_PREVIEW_SOURCE.value)
+            or "both"
+        ).strip().lower()
+
+        lock_dual = bool(self.settings.get("lock_dual_recording", False))
+
+        # Side-by-side always records both (both are equally shown); the lock
+        # forces dual even in a single-sensor preview mode.
+        if preview == "both" or lock_dual:
+            return both
+
+        main = self._PREVIEW_MAIN.get(preview, "cam0")
+        return main if main in ports else ports[0]
+
+    def start_recording(self, record_override=None):
         # Safety: refuse to start a new take while the previous take's frames are
         # still flushing from RAM to disk (the green is_writing_buf state). Letting
         # the buffer finish means no recorded frame is lost; the operator presses
@@ -1080,6 +1138,11 @@ class CinePiController:
         self._clear_frame_limited_recording_stop()
         self.redis_controller.set_value(ParameterKey.MEMORY_ALERT.value, 0)
         if self.ssd_monitor.is_mounted == True and self.ssd_monitor.get_space_left:
+            # Publish which sensor(s) record this take BEFORE is_recording flips,
+            # so each cinepi-raw sees the gate value when it acts on the edge.
+            record_cams = self._resolve_record_cams(record_override)
+            self.redis_controller.set_value(ParameterKey.RECORD_CAMS.value, record_cams)
+            logging.info("Recording target: %s", record_cams)
             self.redis_controller.set_value(ParameterKey.IS_RECORDING.value, 1)
             logging.info(f"Started recording")
             # Arm the RAM-buffer / system-RAM watchdog so a full buffer auto-stops
@@ -2099,6 +2162,47 @@ class CinePiController:
         self.redis_controller.r.publish("cp_controls", ParameterKey.ZOOM.value)
 
         logging.info("Zoom factor set to %.2f×", value)
+
+    def set_preview_source(self, value=None):
+        """Select what the on-camera HDMI monitor shows in a dual-sensor rig.
+        Handled live by cinepi-raw's dualHdmiPreview stage — no restart.
+
+        Five sources, cycled in this order when the argument is omitted:
+          ``both`` (side-by-side) → ``cam0`` → ``cam1`` →
+          ``pip_cam0`` (cam0 main, cam1 inset) → ``pip_cam1`` (cam1 main, cam0
+          inset) → back to ``both``.
+
+        • Pass an explicit value to set it directly: ``cam0`` / ``cam1`` /
+          ``both`` (``cam0+cam1`` alias) / ``pip_cam0`` (``pip``/``pip0``) /
+          ``pip_cam1`` (``pip1``).
+        Has no visible effect with a single sensor.
+        """
+        order = ["both", "cam0", "cam1", "pip_cam0", "pip_cam1"]
+        aliases = {
+            "both": "both", "cam0+cam1": "both", "2": "both",
+            "cam0": "cam0", "0": "cam0", "a": "cam0",
+            "cam1": "cam1", "1": "cam1", "b": "cam1",
+            "pip_cam0": "pip_cam0", "pip0": "pip_cam0", "pip": "pip_cam0", "pipa": "pip_cam0",
+            "pip_cam1": "pip_cam1", "pip1": "pip_cam1", "pipb": "pip_cam1",
+        }
+
+        if value is None:
+            current = self.redis_controller.get_value(ParameterKey.HDMI_PREVIEW_SOURCE.value)
+            current = aliases.get(str(current).strip().lower(), "both")
+            target = order[(order.index(current) + 1) % len(order)]
+        else:
+            key = str(value).strip().lower()
+            if key not in aliases:
+                logging.warning(
+                    "Unknown preview source %r (use both, cam0, cam1, pip_cam0 or pip_cam1)",
+                    value,
+                )
+                return
+            target = aliases[key]
+
+        self.redis_controller.set_value(ParameterKey.HDMI_PREVIEW_SOURCE.value, target)
+        self.redis_controller.r.publish("cp_controls", ParameterKey.HDMI_PREVIEW_SOURCE.value)
+        logging.info("HDMI preview source set to %s", target)
 
 
 

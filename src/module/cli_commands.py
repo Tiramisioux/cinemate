@@ -104,6 +104,9 @@ class CommandExecutor(threading.Thread):
             'set zoom' : (cinepi_controller.set_zoom, [float, None]),  # toggle when arg omitted
             'inc zoom' : (cinepi_controller.inc_zoom,  None),
             'dec zoom' : (cinepi_controller.dec_zoom,  None),
+
+            # ── Dual-sensor HDMI preview source ──────────────────────────────────────
+            'set preview' : (cinepi_controller.set_preview_source, [str, None]),  # cam0 | cam1 | cam0+cam1; cycle when omitted
         }
 
         # Remove commands that were conditionally set to None
@@ -206,10 +209,26 @@ class CommandExecutor(threading.Thread):
         logging.info("Stopping CommandExecutor thread.")
         self.running = False
 
+    # Dual-sensor record target. An optional leading token on `rec` forces
+    # which sensor(s) capture the take, overriding the preview-follows /
+    # lock_dual_recording policy for that one take.
+    _REC_CAM_TOKENS = {
+        "cam0": "cam0", "0": "cam0", "a": "cam0",
+        "cam1": "cam1", "1": "cam1", "b": "cam1",
+        "both": "both", "dual": "both", "cam0+cam1": "both",
+    }
+
     def handle_rec_command(self, args):
-        """Handle recording command with optional timed arguments."""
+        """Handle recording command: optional leading camera target
+        (``cam0`` | ``cam1`` | ``both``/``dual``) followed by optional timed
+        arguments (``s``/``f`` <amount>)."""
+        override = None
+        if args and args[0].lower() in self._REC_CAM_TOKENS:
+            override = self._REC_CAM_TOKENS[args[0].lower()]
+            args = args[1:]
+
         if not args:
-            self.cinepi_controller.rec()
+            self.cinepi_controller.rec(record_override=override)
             return
 
         mode = args[0].lower()
@@ -223,7 +242,7 @@ class CommandExecutor(threading.Thread):
             except ValueError:
                 logging.info("Invalid seconds value for timed recording.")
                 return
-            self.cinepi_controller.rec(mode, seconds)
+            self.cinepi_controller.rec(mode, seconds, record_override=override)
             return
 
         if mode in {"f", "frame", "frames"}:
@@ -235,10 +254,10 @@ class CommandExecutor(threading.Thread):
             except ValueError:
                 logging.info("Invalid frame count for timed recording.")
                 return
-            self.cinepi_controller.rec(mode, frames)
+            self.cinepi_controller.rec(mode, frames, record_override=override)
             return
 
-        logging.info("Unknown rec mode. Use 's' for seconds or 'f' for frames.")
+        logging.info("Unknown rec argument. Use cam0/cam1/both, or 's'/'f' with a duration.")
 
     def run(self):
             """Thread run function to continuously process input commands."""

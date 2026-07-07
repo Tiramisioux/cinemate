@@ -313,6 +313,40 @@ class CinePiProcess(Thread):
         """Return True on any Raspberry Pi 4/400/CM4‐lite platform."""
         return _is_pi4_family()
 
+    def _write_dual_post_process_file(self) -> str:
+        """Write a per-instance post-process file for dual-sensor HDMI preview.
+
+        Mirrors the stock static file (sharedContext + mjpegPreview on
+        8000/8001) and adds the ``dualHdmiPreview`` stage: the primary
+        composites both feeds to HDMI, the secondary publishes its lores frame
+        to shared memory. Returns the file path for ``--post-process-file``.
+        """
+        role = 'primary' if self.primary else 'secondary'
+        # Picture-in-picture inset geometry comes from settings.json preview.pip
+        # and is baked into the post-process file the primary reads at Configure.
+        pip_cfg = (_settings().get('preview', {}) or {}).get('pip', {}) or {}
+        cfg = {
+            'sharedContext': {},
+            'mjpegPreview': {'port': 8000 + int(self.cam.index)},
+            'dualHdmiPreview': {
+                'role': role,
+                'pipScale': float(pip_cfg.get('scale', 0.28)),
+                'pipMargin': float(pip_cfg.get('margin', 0.03)),
+                'pipCorner': str(pip_cfg.get('corner', 'lower_right')),
+            },
+        }
+        path = f'/home/pi/post-processing{self.cam.index}.dual.json'
+        try:
+            with open(path, 'w') as fh:
+                json.dump(cfg, fh, indent=2)
+        except OSError as exc:
+            logging.warning("[%s] could not write dual post-process file %s: %s; "
+                            "falling back to static file", self.cam.port, path, exc)
+            return f'/home/pi/post-processing{self.cam.index}.json'
+        logging.info("[%s] Dual-sensor HDMI preview: role=%s post=%s",
+                     self.cam.port, role, path)
+        return path
+
     def _build_args(self):
         # base resolution
         sensor_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value) or 0)
@@ -374,7 +408,14 @@ class CinePiProcess(Thread):
             pw = aw; ph = int(pw / aspect)
         
         ox, oy = (fw-pw)//2, (fh-ph)//2
-        
+
+        # Dual-sensor preview window = the full padded area. The compositor
+        # canvas aspect changes with the live source (one pane vs two), and DRM
+        # letterboxes it inside this rect: a single selected sensor fills the
+        # area just like the single-sensor setup, while `both` centres the wide
+        # side-by-side strip. Either way the simple_gui columns keep their room.
+        dox, doy, dpw, dph = px, py, aw, ah
+
         # gains, shutter
         cg_rb = self.redis_controller.get_value(ParameterKey.CG_RB.value) or '2.5,2.2'
         
@@ -383,7 +424,16 @@ class CinePiProcess(Thread):
         if self.tuning_file_override.get('enabled') and self.tuning_file_override.get('path'):
             tune = str(self.tuning_file_override['path'])
         post = f'/home/pi/post-processing{self.cam.index}.json'
-        
+        # ── Dual-sensor HDMI preview ──────────────────────────────────────
+        # With two sensors, DRM master is exclusive, so the two cinepi-raw
+        # processes cannot both draw to HDMI. Instead we inject the
+        # `dualHdmiPreview` stage: the secondary publishes its lores frame to
+        # shared memory, and the primary owns DRM and composites both feeds
+        # side-by-side. Both cores run --nopreview (handled below) so nothing
+        # races for DRM master. Single-sensor keeps the stock static file.
+        if self.multi:
+            post = self._write_dual_post_process_file()
+
         # geometry flags
         rot = 180 if self.geometry.get('rotate_180', False) else 0
         hf = 1 if self.geometry.get('horizontal_flip', False) else 0
@@ -396,11 +446,22 @@ class CinePiProcess(Thread):
         else:
             self.anamorphic_factor = float(self.anamorphic_factor)
         
-        # determine HDMI port: override from settings if provided
-        default_hd = '0' if self.cam.port == 'cam0' else '1'
+        # determine HDMI port: override from settings if provided.
+        # In dual-sensor mode both feeds share the one on-camera monitor, so the
+        # secondary defaults to the primary's HDMI-0 rather than HDMI-1.
+        if self.multi:
+            default_hd = '0'
+        else:
+            default_hd = '0' if self.cam.port == 'cam0' else '1'
         hd = str(self.output.get('hdmi_port', default_hd))
 
         args = [
+            # Select the physical sensor by its libcamera enumeration index.
+            # cinepi-raw picks the camera via `--camera <n>` (options_->camera);
+            # `--cam-port` is only a cosmetic label. Without this, every
+            # instance falls back to camera 0, so the second sensor fails to
+            # acquire ("Device or resource busy") and only cam0 records.
+            "--camera", str(self.cam.index),
             "--cam-port", str(self.cam.port),
             "--mode",   f"{width}:{height}:{bit_depth}:{packing}",
             "--width",  str(width),
@@ -475,7 +536,15 @@ class CinePiProcess(Thread):
             else:
                 args += ['--sync', 'client']
         
-        if self.preview_enabled and not (self.multi and not self.primary):
+        # In dual-sensor mode the on-HDMI preview is drawn by the
+        # dualHdmiPreview stage (it owns DRM and composites both feeds), so the
+        # core preview is off (--nopreview). We still pass `-p` with the dual
+        # rectangle: the stage reads options->preview_* for its own DRM window,
+        # so this places the side-by-side pair in the centre and leaves the
+        # simple_gui columns room left and right (rather than fullscreen).
+        if self.multi:
+            args += ['--nopreview', '-p', f'{dox},{doy},{dpw},{dph}']
+        elif self.preview_enabled:
             args += ['-p', f'{ox},{oy},{pw},{ph}']
         else:
             args += ['--nopreview']

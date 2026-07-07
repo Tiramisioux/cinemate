@@ -1,6 +1,6 @@
 # Configuring the Wi-Fi hotspot
 
-The built-in hotspot ensures you can reach Cinemate even when there is no other network available.
+The built-in hotspot lets you use any device (phone/tablet/computer) for preview/controlling the camera.
 
 There are two layers involved:
 

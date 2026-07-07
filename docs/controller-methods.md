@@ -32,6 +32,7 @@ These methods adjust ISO, shutter angle and frame rate. Increment/decrement help
 - `set_anamorphic_factor(value=None)` – Change the preview’s anamorphic stretch. Omit the value to toggle between presets.
 - `set_zoom(value=None, direction="next")` – Adjust the digital zoom factor. Without a value it steps through `preview.zoom_steps`.
 - `inc_zoom()` / `dec_zoom()` – Convenience wrappers around `set_zoom()`.
+- `set_preview_source(value=None)` – Dual-sensor HDMI preview source: `cam0`, `cam1`, or `cam0+cam1` (`both`). Omit the value to cycle. No effect with a single sensor.
 
 ## Storage control
 

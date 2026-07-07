@@ -699,6 +699,12 @@ def run_application(args, log_queue):
         settings.get("preview", {}).get("default_zoom", 1.0)
 )
 
+    # Default dual-sensor HDMI preview source (both / cam0 / cam1)
+    redis_controller.set_value(
+        ParameterKey.HDMI_PREVIEW_SOURCE.value,
+        settings.get("preview", {}).get("default_hdmi_source", "both")
+)
+
     # Reset recording time
     redis_controller.set_value(ParameterKey.RECORDING_TIME.value, 0)
 

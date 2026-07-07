@@ -55,12 +55,12 @@
                 </li>
               </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
-              <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Reading the camera screen</a>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -68,8 +68,33 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
                   </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Configuring</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Switching sensors (config.txt)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">System maintenance</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference</span></p>
+              <ul class="current">
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Cinemate terminal commands</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#timed-recording-shortcuts">Timed recording shortcuts</a>
@@ -80,36 +105,11 @@
     </li>
     </ul>
                   </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Configuring</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Switching sensors (config.txt)</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
-                  </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Install & maintenance</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
-                  </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Reference</span></p>
-              <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -120,13 +120,13 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Installation & building from source</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Building from source</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Contributing</span></p>
@@ -148,7 +148,7 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
-          <li class="breadcrumb-item">Using the camera</li>
+          <li class="breadcrumb-item">Reference</li>
       <li class="breadcrumb-item active">Cinemate terminal commands</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/cli-commands.md" class="icon icon-github"> Edit on GitHub</a>
@@ -181,9 +181,9 @@
 <tbody>
 <tr>
 <td><code>rec</code> / <code>stop</code></td>
-<td><code>[s &lt;seconds&gt;] \| [f &lt;frames&gt;]</code></td>
-<td><code>rec s 10</code></td>
-<td>Toggle recording or schedule an automatic stop after a timed duration or frame count</td>
+<td><code>[cam0\|cam1\|both] [s &lt;seconds&gt;\|f &lt;frames&gt;]</code></td>
+<td><code>rec cam1 f 48</code></td>
+<td>Toggle recording or schedule an automatic stop after a timed duration or frame count; optional leading camera token forces which sensor(s) record on a dual rig</td>
 </tr>
 <tr>
 <td><code>set iso &lt;value&gt;</code></td>
@@ -268,6 +268,12 @@
 <td>-</td>
 <td></td>
 <td>Step preview zoom factor</td>
+</tr>
+<tr>
+<td><code>set preview [cam0\|cam1\|both\|pip_cam0\|pip_cam1]</code></td>
+<td>text or none</td>
+<td><code>set preview pip_cam0</code></td>
+<td>Dual-sensor HDMI source: full-screen, side-by-side, or picture-in-picture (one sensor with the other as a corner inset); omit to cycle</td>
 </tr>
 <tr>
 <td><code>mount</code> / <code>unmount</code></td>
@@ -422,6 +428,7 @@
 <li><code>rec f &lt;frames&gt;</code> stops after the requested number of frame slots at the locked record-start FPS. Dropped frames still count toward that limit, so the take ends when that many frames should have been recorded, not when that many DNGs were successfully written. You can type <code>frame</code> or <code>frames</code> instead of <code>f</code>.</li>
 </ul>
 <p>If recording is not already running, the CLI starts it before arming the timer. An invalid or zero value is ignored so you cannot accidentally stop a clip immediately.</p>
+<p>On a dual-sensor rig you can prepend a camera token — <code>cam0</code>, <code>cam1</code>, or <code>both</code> (<code>dual</code> is an alias) — to force which sensor(s) capture the take, overriding the <a href="../dual-sensors/#recording">record policy</a> for that one clip. It combines with the timed modes: <code>rec cam1</code>, <code>rec cam0 s 10</code>, <code>rec both f 48</code>. With a single sensor the token has no effect.</p>
 <h2 id="storage-maintenance-commands">Storage maintenance commands<a class="headerlink" href="#storage-maintenance-commands" title="Permanent link">#</a></h2>
 <p><code>erase</code> and <code>format</code> prepare removable media directly from the CLI. Both require the RAW drive to be mounted; otherwise the CLI reports an error and leaves the media untouched.</p>
 <ul>
@@ -436,8 +443,8 @@
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../dual-sensors/" class="btn btn-neutral float-left" title="Dual sensors"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../ssh/" class="btn btn-neutral float-right" title="Connecting via SSH">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../backing-up-sd-card/" class="btn btn-neutral float-left" title="Backing up the SD card"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../cli-user-guide/" class="btn btn-neutral float-right" title="CinePi RAW terminal commands">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -464,10 +471,10 @@
         </span>
     
     
-      <span><a href="../dual-sensors/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../backing-up-sd-card/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../ssh/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../cli-user-guide/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

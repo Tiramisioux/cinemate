@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/installation-steps/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Installation & building from source - Cinemate Docs</title>
+    <title>Building from source - Cinemate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -15,7 +15,7 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Installation \u0026 building from source";
+        var mkdocs_page_name = "Building from source";
         var mkdocs_page_input_path = "installation-steps.md";
         var mkdocs_page_url = "/cinemate/installation-steps/";
       </script>
@@ -56,11 +56,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Reading the camera screen</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -68,16 +68,14 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
                   </li>
@@ -86,22 +84,24 @@
                   <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Install & maintenance</span></p>
+              <p class="caption"><span class="caption-text">System maintenance</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -112,7 +112,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul class="current">
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Installation & building from source</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Building from source</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#one-click-installer">One-click installer</a>
     </li>
@@ -222,11 +226,7 @@
     </li>
     </ul>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Contributing</span></p>
@@ -249,7 +249,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
           <li class="breadcrumb-item">Advanced</li>
-      <li class="breadcrumb-item active">Installation & building from source</li>
+      <li class="breadcrumb-item active">Building from source</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/installation-steps.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
@@ -982,8 +982,8 @@ hdmi_ignore_cec_init=1
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../troubleshooting/" class="btn btn-neutral float-left" title="Troubleshooting"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../compiling-cinepi-raw/" class="btn btn-neutral float-right" title="Recompiling cinepi-raw">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../simple-gui-refresh-tuning/" class="btn btn-neutral float-left" title="Simple GUI refresh tuning"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../compiling-cinepi-raw/" class="btn btn-neutral float-right" title="Compiling cinepi-raw">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -1010,7 +1010,7 @@ hdmi_ignore_cec_init=1
         </span>
     
     
-      <span><a href="../troubleshooting/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../simple-gui-refresh-tuning/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../compiling-cinepi-raw/" style="color: #fcfcfc">Next &raquo;</a></span>

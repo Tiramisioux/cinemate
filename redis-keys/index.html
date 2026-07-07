@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/redis-keys/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Key reference - Cinemate Docs</title>
+    <title>Redis Key reference - Cinemate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -15,7 +15,7 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Key reference";
+        var mkdocs_page_name = "Redis Key reference";
         var mkdocs_page_input_path = "redis-keys.md";
         var mkdocs_page_url = "/cinemate/redis-keys/";
       </script>
@@ -56,11 +56,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Reading the camera screen</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -68,16 +68,14 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
                   </li>
@@ -86,22 +84,24 @@
                   <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Install & maintenance</span></p>
+              <p class="caption"><span class="caption-text">System maintenance</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Key reference</a>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Redis Key reference</a>
     <ul class="current">
     </ul>
                   </li>
@@ -114,13 +114,13 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Installation & building from source</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Building from source</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Contributing</span></p>
@@ -143,7 +143,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
           <li class="breadcrumb-item">Reference</li>
-      <li class="breadcrumb-item active">Key reference</li>
+      <li class="breadcrumb-item active">Redis Key reference</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/redis-keys.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
@@ -294,6 +294,12 @@
 <td>Yes</td>
 </tr>
 <tr>
+<td>hdmi_preview_source</td>
+<td>Cinemate -&gt; CinePi-raw</td>
+<td>Dual-sensor HDMI preview source: <code>both</code>, <code>cam0</code>, <code>cam1</code>, <code>pip_cam0</code>, or <code>pip_cam1</code>. Read live by the compositor; no restart</td>
+<td>Yes</td>
+</tr>
+<tr>
 <td>ir_filter</td>
 <td>Cinemate -&gt; CinePi-raw</td>
 <td>Toggle IR-cut filter (IMX585 only)</td>
@@ -304,6 +310,12 @@
 <td>Cinemate -&gt; CinePi-raw</td>
 <td>Requested record state. Edge-triggered: <code>0 -&gt; 1</code> starts, <code>1 -&gt; 0</code> stops</td>
 <td>Yes</td>
+</tr>
+<tr>
+<td>record_cams</td>
+<td>Cinemate -&gt; CinePi-raw</td>
+<td>Dual-sensor record gate: which sensor(s) capture this take (<code>cam0+cam1</code>, <code>cam0</code>, or <code>cam1</code>). Published before <code>is_recording</code> flips; each <code>cinepi-raw</code> records only if its <code>--cam-port</code> is selected. Absent/empty = both</td>
+<td>No</td>
 </tr>
 <tr>
 <td>rec</td>

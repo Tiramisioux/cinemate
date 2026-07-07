@@ -55,10 +55,23 @@
                 </li>
               </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
-              <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Reading the camera screen</a>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Configuring</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Camera sensors and frame rates</a>
     <ul class="current">
@@ -72,22 +85,7 @@
     </li>
     </ul>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
-                  </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Configuring</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
                   </li>
@@ -96,22 +94,24 @@
                   <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Install & maintenance</span></p>
+              <p class="caption"><span class="caption-text">System maintenance</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -122,13 +122,13 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Installation & building from source</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Building from source</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Contributing</span></p>
@@ -150,7 +150,7 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
-          <li class="breadcrumb-item">Using the camera</li>
+          <li class="breadcrumb-item">Configuring</li>
       <li class="breadcrumb-item active">Camera sensors and frame rates</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/sensors.md" class="icon icon-github"> Edit on GitHub</a>
@@ -163,7 +163,7 @@
               
 <div class="markdown-body">
   <h2 id="compatible-sensors">Compatible sensors<a class="headerlink" href="#compatible-sensors" title="Permanent link">#</a></h2>
-<p>Higher frame rates need faster storage. If you see a purple/magenta <code>DROP</code> indicator while recording, lower the FPS or switch to faster media.</p>
+<p>Higher frame rates need fast storage. If you see a purple/magenta <code>DROP</code> indicator while recording, lower the FPS or switch to faster media.</p>
 <h3 id="imx477-raspberry-pi-hq-camera">IMX477 (Raspberry Pi HQ Camera)<a class="headerlink" href="#imx477-raspberry-pi-hq-camera" title="Permanent link">#</a></h3>
 <table>
 <thead>
@@ -309,7 +309,9 @@
 </tr>
 </tbody>
 </table>
-<p>Only IMX283 modes that sustain <strong>25 fps or more</strong> are exposed by default (<code>k_steps: [3, 4]</code> in <code>settings.json</code>). The full-frame 5K modes are hidden because they top out below 25 fps — 5472×3648 at ~18 fps (12- and 10-bit) and 5472×3078 16:9 at ~21 fps. To bring them back, add <code>5.5</code> to <code>k_steps</code>.</p>
+<div class="admonition info">
+<p>Only IMX283 modes that sustain <strong>25 fps or more</strong> are exposed by default. To bring them back, add <code>5.5</code> to <code>k_steps</code>.</p>
+</div>
 <p><em>Sustainable FPS means the empirically observed frame rate that records without dropped frames on the listed storage and filesystem.</em></p>
 <p>Note that maximum fps will vary according to disk write speed. For the specific fps values for your setup, make test recordings and monitor the output. Purple background in the monitor/web browser indicates drop frames.</p>
 <div class="admonition note">
@@ -320,8 +322,7 @@
 <p>Cinemate handles the CinePi-RAW packing choice automatically. On Raspberry Pi 4 / Pi 400 / CM4, IMX296 and IMX477 use packed raw mode (<code>P</code>). On Raspberry Pi 5 / CM5 they stay on unpacked mode (<code>U</code>). For IMX296 this means <code>1456:1088:10:P</code> on Raspberry Pi 4-family boards and <code>1456:1088:10:U</code> on Raspberry Pi 5 / CM5.</p>
 </div>
 <h2 id="sensor-size-crop-factor-and-film-format-equivalents">Sensor size, crop factor and film-format equivalents<a class="headerlink" href="#sensor-size-crop-factor-and-film-format-equivalents" title="Permanent link">#</a></h2>
-<p><strong>TL;DR:</strong> The Cinemate sensor family spans the classic small film gauges almost perfectly: IMX296 ≈ Standard 8mm, IMX477 ≈ Super 8, IMX585 ≈ 16mm, IMX283 ≈ Super 16 — and the IMX283 UHD mode drops back down to roughly 2/3-inch (between Super 8 and 16mm) because it's a native crop.</p>
-<p>Each mode reads out a physical area of the sensor. Binned modes keep the full field of view. Cropped modes use a smaller area, so the same lens frames tighter. Dimensions below are computed from the driver crop rectangles and each sensor's pixel pitch.</p>
+<p>Each mode reads out a physical area of the sensor. Binned modes keep the full field of view. Cropped modes use a smaller area, so the same lens frames tighter.</p>
 <table>
 <thead>
 <tr>
@@ -432,7 +433,6 @@
 <li>12 mm on IMX477 (2028 x 1080) ~ 73 mm</li>
 <li>8 mm on IMX296 ~ 55 mm</li>
 </ul>
-<p>Film gauge values follow SMPTE camera-aperture standards; other bodies differ by ~1% (e.g. ARRI quotes Super 16 as 12.35 x 7.5 mm). Sensor dimensions are derived from the V4L2 driver crop rectangles and libcamera pixel-pitch data, cross-checked against the Sony sensor flyers and Raspberry Pi camera documentation.</p>
 <h2 id="sustainable-frame-rates">Sustainable frame rates<a class="headerlink" href="#sustainable-frame-rates" title="Permanent link">#</a></h2>
 <p>These rows are measured sustainable limits: continuous recording without dropped frames. Performance depends on the sensor, storage device, and filesystem. </p>
 <div class="admonition note">
@@ -649,8 +649,8 @@
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../web-gui/" class="btn btn-neutral float-left" title="Web GUI"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../audio-recording/" class="btn btn-neutral float-right" title="Audio recording">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../settings-json/" class="btn btn-neutral float-left" title="Settings file"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../dual-sensors/" class="btn btn-neutral float-right" title="Dual sensors">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -677,10 +677,10 @@
         </span>
     
     
-      <span><a href="../web-gui/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../settings-json/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../audio-recording/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../dual-sensors/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

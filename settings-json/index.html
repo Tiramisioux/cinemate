@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/settings-json/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Custom settings - Cinemate Docs</title>
+    <title>Settings file - Cinemate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -15,7 +15,7 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Custom settings";
+        var mkdocs_page_name = "Settings file";
         var mkdocs_page_input_path = "settings-json.md";
         var mkdocs_page_url = "/cinemate/settings-json/";
       </script>
@@ -56,11 +56,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Reading the camera screen</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -68,16 +68,10 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
-                  </li>
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Custom settings</a>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Settings file</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#welcome-message">welcome message</a>
     </li>
@@ -100,6 +94,8 @@
     <li class="toctree-l2"><a class="reference internal" href="#hdmi_display">hdmi_display</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#preview">preview</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#lock_dual_recording">lock_dual_recording</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#audio">audio</a>
     </li>
@@ -137,6 +133,10 @@
     </li>
     </ul>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Switching sensors (config.txt)</a>
@@ -144,22 +144,24 @@
                   <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Install & maintenance</span></p>
+              <p class="caption"><span class="caption-text">System maintenance</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -170,13 +172,13 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Installation & building from source</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Building from source</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Contributing</span></p>
@@ -199,7 +201,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
           <li class="breadcrumb-item">Configuring</li>
-      <li class="breadcrumb-item active">Custom settings</li>
+      <li class="breadcrumb-item active">Settings file</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/settings-json.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
@@ -329,10 +331,21 @@ Set <code>welcome_image</code> to the path of a bitmap file to show a logo inste
 <p>Adjusts zoom levels for the HDMI/browser preview.</p>
 <div class="highlight"><pre><span></span><code><span class="nt">&quot;preview&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;default_zoom&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;zoom_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.5</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">]</span>
+<span class="w">  </span><span class="nt">&quot;zoom_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.5</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;default_hdmi_source&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;both&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;pip&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;scale&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.28</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;corner&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lower_right&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;margin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.03</span>
+<span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
-<p><code>default_zoom</code> – magnification factor used at startup.<br><code>zoom_steps</code> – list of zoom factors you can cycle through with the <code>set_zoom_step</code> command.</p>
+<p><code>default_zoom</code> – magnification factor used at startup.<br><code>zoom_steps</code> – list of zoom factors you can cycle through with the <code>set_zoom_step</code> command.<br><code>default_hdmi_source</code> – dual-sensor HDMI preview source at startup: <code>both</code>, <code>cam0</code>, <code>cam1</code>, <code>pip_cam0</code>, or <code>pip_cam1</code>. Switch it live with <a href="../cli-commands/"><code>set preview</code></a>. No effect with a single sensor.</p>
+<p><code>pip</code> – picture-in-picture inset geometry for the <code>pip_cam0</code> / <code>pip_cam1</code> preview modes.<br><code>scale</code> – inset size as a fraction of the main pane (default <code>0.28</code>).<br><code>corner</code> – <code>lower_right</code>, <code>lower_left</code>, <code>upper_right</code>, or <code>upper_left</code> (default <code>lower_right</code>).<br><code>margin</code> – gap from the edge as a fraction of the pane (default <code>0.03</code>). See <a href="../dual-sensors/#picture-in-picture">Dual sensors</a>.</p>
+<h2 id="lock_dual_recording">lock_dual_recording<a class="headerlink" href="#lock_dual_recording" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;lock_dual_recording&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+</code></pre></div>
+<p>Dual-sensor record policy. <code>false</code> (default) makes recording follow the HDMI preview: a full-screen or pip-main sensor records alone, side-by-side records both. <code>true</code> forces both sensors to record every take regardless of the preview. A camera token on <code>rec</code> (<code>rec cam0</code> / <code>rec cam1</code> / <code>rec both</code>) overrides either mode for one take. No effect with a single sensor. See <a href="../dual-sensors/#recording">Dual sensors › Recording</a>.</p>
 <h2 id="audio">audio<a class="headerlink" href="#audio" title="Permanent link">#</a></h2>
 <p>Audio capture options shared by idle monitoring and recorded WAV input level. The stock file applies a 2-frame timecode offset on both paths.</p>
 <div class="highlight"><pre><span></span><code><span class="nt">&quot;audio&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -631,8 +644,8 @@ Set <code>welcome_image</code> to the path of a bitmap file to show a logo inste
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../ssh/" class="btn btn-neutral float-left" title="Connecting via SSH"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../hardware-controls/" class="btn btn-neutral float-right" title="Additional hardware">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../speed-ramping/" class="btn btn-neutral float-left" title="Speed ramping & shutter angle synchronization"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../sensors/" class="btn btn-neutral float-right" title="Camera sensors and frame rates">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -659,10 +672,10 @@ Set <code>welcome_image</code> to the path of a bitmap file to show a logo inste
         </span>
     
     
-      <span><a href="../ssh/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../speed-ramping/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../hardware-controls/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../sensors/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

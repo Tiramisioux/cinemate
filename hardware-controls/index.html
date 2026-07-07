@@ -56,11 +56,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Reading the camera screen</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -68,16 +68,14 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Additional hardware</a>
     <ul class="current">
@@ -87,7 +85,7 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#rotary-encoders">Rotary encoders</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#potentiometers">Potentiometers</a>
+    <li class="toctree-l2"><a class="reference internal" href="#grove-base-hat">Grove Base HAT</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#adafruit-quad-rotary-encoder">Adafruit quad rotary encoder</a>
     </li>
@@ -104,22 +102,24 @@
                   <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Install & maintenance</span></p>
+              <p class="caption"><span class="caption-text">System maintenance</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -130,13 +130,13 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Installation & building from source</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Building from source</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Contributing</span></p>
@@ -172,9 +172,9 @@
 <div class="markdown-body">
   <h1 id="additional-hardware">Additional hardware<a class="headerlink" href="#additional-hardware" title="Permanent link">#</a></h1>
 <div class="admonition note">
-<p>None of the hardware on this page is required. Add what you need, when you need it.</p>
+<p>All hardware on this page is optional. Add what you need, when you need it.</p>
 </div>
-<p>All physical controls are mapped in <a href="../settings-json/">the settings file</a>. On the Pi, type <code>editsettings</code> in the terminal to open it. Changes take effect the next time Cinemate starts. Buttons, switches, pots and encoders simply call the same commands that the CLI and the web GUI use. See <a href="../controller-methods/">controller methods</a> for the full list of available commands.</p>
+<p>Physical controls are mapped in <a href="../settings-json/">the settings file</a>. On the Pi, type <code>editsettings</code> in the terminal to open it. Changes take effect the next time Cinemate starts. Buttons, switches, pots and encoders simply call the same commands that the CLI and the web GUI use. See <a href="../controller-methods/">controller methods</a> for the full list of available commands.</p>
 <table>
 <thead>
 <tr>
@@ -204,10 +204,10 @@
 <td>none</td>
 </tr>
 <tr>
-<td>Potentiometers</td>
-<td>Grove Base HAT analog ports</td>
-<td>dials for ISO, shutter angle, fps, WB</td>
 <td><a href="https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/">Grove Base HAT</a></td>
+<td>GPIO header</td>
+<td>dials for ISO, shutter angle, fps, WB</td>
+<td>Potentiometers</td>
 </tr>
 <tr>
 <td>Adafruit quad rotary encoder</td>
@@ -216,10 +216,10 @@
 <td><a href="https://www.adafruit.com/product/5752">Adafruit #5752</a></td>
 </tr>
 <tr>
-<td>CFE Hat</td>
+<td><a href="https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/">CFE Hat</a></td>
 <td>PCIe (Raspberry Pi 5 only)</td>
-<td>fast CFexpress recording media</td>
-<td><a href="https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/">CFE Hat</a> + CFexpress Type B card</td>
+<td>for fast storage</td>
+<td>CFexpress Type B card</td>
 </tr>
 </tbody>
 </table>
@@ -339,7 +339,7 @@
 <span class="p">]</span>
 </code></pre></div>
 <h2 id="rotary-encoders">Rotary encoders<a class="headerlink" href="#rotary-encoders" title="Permanent link">#</a></h2>
-<p>Standard quadrature rotary encoders (the common KY-040 modules, for example) connect straight to the GPIO header. Each encoder uses two pins (<code>clk_pin</code> and <code>dt_pin</code>), plus an optional third pin if the encoder has a built-in push button. The push button uses the same action grammar as the <a href="#push-buttons">buttons</a> section.</p>
+<p>Standard rotary encoders (for example KY-040, for example) connect straight to the GPIO header. Each encoder uses two pins (<code>clk_pin</code> and <code>dt_pin</code>), plus an optional third pin if the encoder has a built-in push button. The push button uses the same action grammar as the <a href="#push-buttons">buttons</a> section.</p>
 <p>No encoders are enabled in the stock settings file. A typical entry — turning the dial steps through ISO, pressing it locks the value:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">&quot;rotary_encoders&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">  </span><span class="p">{</span>
@@ -358,7 +358,7 @@
 <span class="p">]</span>
 </code></pre></div>
 <p>The <code>inc_</code>/<code>dec_</code> commands step through the value arrays defined in <code>settings.json</code> — see <a href="../settings-json/#arrays">arrays</a> and <a href="../settings-json/#free_mode">free mode</a>.</p>
-<h2 id="potentiometers">Potentiometers<a class="headerlink" href="#potentiometers" title="Permanent link">#</a></h2>
+<h2 id="grove-base-hat">Grove Base HAT<a class="headerlink" href="#grove-base-hat" title="Permanent link">#</a></h2>
 <p>The Pi has no analog inputs, so potentiometers need an analog-to-digital converter. Cinemate supports the <a href="https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/">Grove Base HAT</a>, which stacks on the GPIO header and adds analog ports. Plug in Grove rotary angle sensors (or wire any 10 kΩ linear pot to a Grove analog port) and map the channels in <code>settings.json</code>:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">&quot;analog_controls&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;iso_pot&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
@@ -408,11 +408,8 @@
 <p>Each dial steps through the same value arrays as the CLI and GPIO encoders. The buttons use the same press/click/hold grammar as the <a href="#push-buttons">buttons</a> section, so every dial can be remapped freely — see <a href="../settings-json/#quad_rotary_controller">quad_rotary_controller</a>.</p>
 <p>The board is hot-pluggable: if it is not found (or gets disconnected), Cinemate retries every few seconds, so you can attach it while the camera is running. The LEDs light up while a button is pressed.</p>
 <h2 id="cfe-hat">CFE Hat<a class="headerlink" href="#cfe-hat" title="Permanent link">#</a></h2>
-<p>The <a href="https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/">CFE Hat</a> by Will Whang adds a CFexpress Type B card slot to the Raspberry Pi 5 over PCIe. CFexpress cards are essentially NVMe SSDs in a rugged shell, which makes them excellent recording media for high resolution, high frame rate shooting.</p>
+<p>The <a href="https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/">CFE Hat</a> by Will Whang adds a CFexpress Type B card slot to the Raspberry Pi 5 over PCIe.</p>
 <p>No configuration is needed. Cinemate detects the hat automatically at startup and shows <strong>CFE</strong> as the media type in the GUI. The card follows the same rules as any other recording drive: format it as <code>exFAT</code> and label it <code>RAW</code> (the web GUI has a format button that does this for you).</p>
-<div class="admonition note">
-<p>The CFE Hat requires a Raspberry Pi 5 — it uses the Pi 5's PCIe connector. On a Pi 4, use a USB SSD instead.</p>
-</div>
 <p>The <a href="../settings-json/#dynamic_resolution">dynamic resolution</a> profiles include measured sustainable frame rates for CFE media, so fps limits adjust automatically to what the card can sustain.</p>
 <h2 id="outputs-and-displays">Outputs and displays<a class="headerlink" href="#outputs-and-displays" title="Permanent link">#</a></h2>
 <p>Cinemate can also drive hardware in the other direction:</p>
@@ -433,7 +430,7 @@
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../settings-json/" class="btn btn-neutral float-left" title="Custom settings"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../dual-sensors/" class="btn btn-neutral float-left" title="Dual sensors"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../config-txt/" class="btn btn-neutral float-right" title="Switching sensors (config.txt)">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -461,7 +458,7 @@
         </span>
     
     
-      <span><a href="../settings-json/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../dual-sensors/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../config-txt/" style="color: #fcfcfc">Next &raquo;</a></span>

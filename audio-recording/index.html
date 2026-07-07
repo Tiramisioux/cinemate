@@ -56,11 +56,11 @@
               </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
               <ul class="current">
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Reading the camera screen</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Audio recording</a>
     <ul class="current">
@@ -76,16 +76,14 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
-                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Custom settings</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
                   </li>
@@ -94,22 +92,24 @@
                   <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Install & maintenance</span></p>
+              <p class="caption"><span class="caption-text">System maintenance</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Key reference</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
@@ -120,13 +120,13 @@
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Installation & building from source</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Recompiling cinepi-raw</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Building from source</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Contributing</span></p>
@@ -162,7 +162,7 @@
 <div class="markdown-body">
   <h1 id="audio-recording">Audio recording<a class="headerlink" href="#audio-recording" title="Permanent link">#</a></h1>
 <h2 id="supported-microhones">Supported microhones<a class="headerlink" href="#supported-microhones" title="Permanent link">#</a></h2>
-<p>Cinemate has been tested with RODE VideoMic NTG 24 bit microphone and simple 16 bit USB microphones</p>
+<p>Cinemate has been tested with RODE VideoMic NTG 24 bit microphone and simple 16 bit USB microphones.</p>
 <h2 id="using-the-microphone">Using the microphone<a class="headerlink" href="#using-the-microphone" title="Permanent link">#</a></h2>
 <ol>
 <li>Plug a USB microphone into the Pi.</li>
@@ -193,7 +193,7 @@
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../sensors/" class="btn btn-neutral float-left" title="Camera sensors and frame rates"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../web-gui/" class="btn btn-neutral float-left" title="Web GUI"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../digital-zoom/" class="btn btn-neutral float-right" title="Digital zoom">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -221,7 +221,7 @@
         </span>
     
     
-      <span><a href="../sensors/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../web-gui/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../digital-zoom/" style="color: #fcfcfc">Next &raquo;</a></span>

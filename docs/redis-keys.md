@@ -27,6 +27,7 @@ Each entry explains which component normally writes the key and whether it makes
 | wb_user | Cinemate | Kelvin value stored before conversion to `cg_rb` | No |
 | cg_rb | Cinemate -> CinePi-raw | White-balance gain pair `1/R,1/B` | Yes (advanced) |
 | zoom | Cinemate | Digital zoom factor for preview streams | Yes |
+| hdmi_preview_source | Cinemate -> CinePi-raw | Dual-sensor HDMI preview source: `both`, `cam0`, or `cam1`. Read live by the compositor; no restart | Yes |
 | ir_filter | Cinemate -> CinePi-raw | Toggle IR-cut filter (IMX585 only) | Yes |
 | is_recording | Cinemate -> CinePi-raw | Requested record state. Edge-triggered: `0 -> 1` starts, `1 -> 0` stops | Yes |
 | rec | Cinemate (RedisListener) | Derived runtime record flag based on `framecount` rising/going flat | No |

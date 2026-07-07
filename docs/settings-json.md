@@ -163,11 +163,12 @@ Adjusts zoom levels for the HDMI/browser preview.
 ```json
 "preview": {
   "default_zoom": 1.0,
-  "zoom_steps": [1.0, 1.5, 2.0]
+  "zoom_steps": [1.0, 1.5, 2.0],
+  "default_hdmi_source": "both"
 }
 ```
 
-`default_zoom` – magnification factor used at startup.<br>`zoom_steps` – list of zoom factors you can cycle through with the `set_zoom_step` command.
+`default_zoom` – magnification factor used at startup.<br>`zoom_steps` – list of zoom factors you can cycle through with the `set_zoom_step` command.<br>`default_hdmi_source` – dual-sensor HDMI preview source at startup: `both`, `cam0`, or `cam1`. Switch it live with [`set preview`](cli-commands.md). No effect with a single sensor.
 
 ## audio
 

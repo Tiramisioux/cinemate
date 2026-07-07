@@ -28,6 +28,7 @@ Release notes for Cinemate. For downloads, see the [releases page](https://githu
 ### Cinemate
 
 - **Storage / media** — multi-drive RAW hot-swap with a standby drive and automatic promotion. Default format is exFAT.
+- **Dual-sensor HDMI preview** — with two sensors, both previews show together on the on-camera monitor, side-by-side with a white frame and centre divider. `set preview cam0 | cam1 | cam0+cam1` switches the source live (no restart).
 
 ### Raspberry Pi / Bookworm**
 - **Boot / install** — faster boot-to-preview on Pi 4/5 (about 10-15 seconds)

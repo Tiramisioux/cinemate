@@ -1,12 +1,24 @@
 # Dual sensors
 
-CineMate automatically detects each camera connected to the Raspberry Pi and spawns a separate `cinepi-raw` process per sensor. By default:
+CineMate automatically detects each camera connected to the Raspberry Pi and spawns a separate `cinepi-raw` process per sensor. Cameras are synchronized with cam0 being the server and cam1 being the client.
 
-- **Primary camera** (first detected) displays its preview on HDMI port 0.
-- **Secondary cameras** run with `--nopreview` and map to subsequent HDMI outputs (cam1→HDMI 1, cam2→HDMI 2, etc.).
-- Preview windows are centered and sized according to the `geometry` settings for each port.
+## HDMI preview
 
-Cameras are synchronized with cam0 being the server and cam1 being the client.
+With two sensors, both previews appear together on the on-camera HDMI monitor (HDMI-0), side-by-side, each with a white frame and a centre divider. The simple GUI columns keep their room on the left and right.
+
+Switch which sensor(s) the monitor shows with the `set preview` command — the change is live, no restart:
+
+| Command | Shows |
+|---|---|
+| `set preview cam0` | cam0 full-screen |
+| `set preview cam1` | cam1 full-screen |
+| `set preview cam0+cam1` | both side-by-side (default) |
+| `set preview` | cycles both → cam0 → cam1 |
+
+A single selected sensor fills the preview area just like a single-sensor setup. The default source is `preview.default_hdmi_source` in [settings.json](settings-json.md); the live value is the `hdmi_preview_source` [Redis key](redis-keys.md).
+
+!!! note ""
+    One monitor, both feeds. DRM master is exclusive per GPU, so the primary `cinepi-raw` process owns the display and composites both sensors; the secondary runs with `--nopreview` and hands its frame to the primary.
 
 On Raspberry Pi 5 Compute Model carrier boards, the second CSI connector (cam1) may appear as `i2c@70000` in `--list-cameras`. Cinemate maps this path to **cam1** so each sensor gets the correct port assignment.
 

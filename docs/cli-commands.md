@@ -30,6 +30,7 @@ These commands can also be sent to the Pi as serial via the Tx/Rx pins or via US
 | `set anamorphic factor [<float>]`          | float or none     | `set anamorphic factor 1.33`            | Set or toggle anamorphic stretch                |
 | `set zoom [<float>]`                       | float or none     | `set zoom 2`                            | Change digital zoom; omit to cycle              |
 | `inc zoom` / `dec zoom`                    | -              |                              | Step preview zoom factor                        |
+| `set preview [cam0\|cam1\|cam0+cam1]`      | text or none      | `set preview cam1`                      | Dual-sensor HDMI: show one sensor full-screen or both side-by-side; omit to cycle |
 | `mount` / `unmount`                        | -              |                                  | Mount or unmount external storage               |
 | `toggle mount`                             | -              |                           | Mount if not mounted, otherwise unmount         |
 | `erase`                                    | -              | `erase`                                | Delete every clip on the mounted RAW volume without reformatting |

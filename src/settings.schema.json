@@ -61,6 +61,11 @@
       "anyOf": [{"type": "string"}, {"type": "null"}],
       "default": null
     },
+    "lock_dual_recording": {
+      "type": "boolean",
+      "default": false,
+      "description": "Dual-sensor rigs: true forces both sensors to record every take regardless of the HDMI preview (rec cam0/cam1 still overrides for one take); false makes recording follow the preview's main sensor, with side-by-side 'both' always recording both."
+    },
     "audio": {
       "type": "object",
       "properties": {

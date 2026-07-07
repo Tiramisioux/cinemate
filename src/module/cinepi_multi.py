@@ -322,10 +322,18 @@ class CinePiProcess(Thread):
         to shared memory. Returns the file path for ``--post-process-file``.
         """
         role = 'primary' if self.primary else 'secondary'
+        # Picture-in-picture inset geometry comes from settings.json preview.pip
+        # and is baked into the post-process file the primary reads at Configure.
+        pip_cfg = (_settings().get('preview', {}) or {}).get('pip', {}) or {}
         cfg = {
             'sharedContext': {},
             'mjpegPreview': {'port': 8000 + int(self.cam.index)},
-            'dualHdmiPreview': {'role': role},
+            'dualHdmiPreview': {
+                'role': role,
+                'pipScale': float(pip_cfg.get('scale', 0.28)),
+                'pipMargin': float(pip_cfg.get('margin', 0.03)),
+                'pipCorner': str(pip_cfg.get('corner', 'lower_right')),
+            },
         }
         path = f'/home/pi/post-processing{self.cam.index}.dual.json'
         try:

@@ -1,6 +1,6 @@
 ## Compatible sensors 
 
-Higher frame rates need faster storage. If you see a purple/magenta `DROP` indicator while recording, lower the FPS or switch to faster media.
+Higher frame rates need fast storage. If you see a purple/magenta `DROP` indicator while recording, lower the FPS or switch to faster media.
 
 ### IMX477 (Raspberry Pi HQ Camera)
 
@@ -31,7 +31,9 @@ Higher frame rates need faster storage. If you see a purple/magenta `DROP` indic
 | 1    | 2736 x 1538      | 1.78         | 12        | 41      | -                | 6.0                      |
 | 2    | 3840 x 2160      | 1.78         | 10        | 44      | -                | 9.9                      |
 
-Only IMX283 modes that sustain **25 fps or more** are exposed by default (`k_steps: [3, 4]` in `settings.json`). The full-frame 5K modes are hidden because they top out below 25 fps — 5472×3648 at ~18 fps (12- and 10-bit) and 5472×3078 16:9 at ~21 fps. To bring them back, add `5.5` to `k_steps`.
+!!! info ""
+
+    Only IMX283 modes that sustain **25 fps or more** are exposed by default. To bring them back, add `5.5` to `k_steps`.
 
 *Sustainable FPS means the empirically observed frame rate that records without dropped frames on the listed storage and filesystem.*
 
@@ -47,9 +49,7 @@ Note that maximum fps will vary according to disk write speed. For the specific 
 
 ## Sensor size, crop factor and film-format equivalents
 
-**TL;DR:** The Cinemate sensor family spans the classic small film gauges almost perfectly: IMX296 ≈ Standard 8mm, IMX477 ≈ Super 8, IMX585 ≈ 16mm, IMX283 ≈ Super 16 — and the IMX283 UHD mode drops back down to roughly 2/3-inch (between Super 8 and 16mm) because it's a native crop.
-
-Each mode reads out a physical area of the sensor. Binned modes keep the full field of view. Cropped modes use a smaller area, so the same lens frames tighter. Dimensions below are computed from the driver crop rectangles and each sensor's pixel pitch.
+Each mode reads out a physical area of the sensor. Binned modes keep the full field of view. Cropped modes use a smaller area, so the same lens frames tighter.
 
 | Sensor | Mode | Active area (mm) | Diagonal (mm) | Crop factor* | Closest film format |
 |--------|------|------------------|---------------|--------------|---------------------|
@@ -73,8 +73,6 @@ Each mode reads out a physical area of the sensor. Binned modes keep the full fi
 - 25 mm on IMX585 ~ 84 mm; 12.5 mm ~ 42 mm
 - 12 mm on IMX477 (2028 x 1080) ~ 73 mm
 - 8 mm on IMX296 ~ 55 mm
-
-Film gauge values follow SMPTE camera-aperture standards; other bodies differ by ~1% (e.g. ARRI quotes Super 16 as 12.35 x 7.5 mm). Sensor dimensions are derived from the V4L2 driver crop rectangles and libcamera pixel-pitch data, cross-checked against the Sony sensor flyers and Raspberry Pi camera documentation.
 
 ## Sustainable frame rates
 

@@ -27,9 +27,10 @@ Each entry explains which component normally writes the key and whether it makes
 | wb_user | Cinemate | Kelvin value stored before conversion to `cg_rb` | No |
 | cg_rb | Cinemate -> CinePi-raw | White-balance gain pair `1/R,1/B` | Yes (advanced) |
 | zoom | Cinemate | Digital zoom factor for preview streams | Yes |
-| hdmi_preview_source | Cinemate -> CinePi-raw | Dual-sensor HDMI preview source: `both`, `cam0`, or `cam1`. Read live by the compositor; no restart | Yes |
+| hdmi_preview_source | Cinemate -> CinePi-raw | Dual-sensor HDMI preview source: `both`, `cam0`, `cam1`, `pip_cam0`, or `pip_cam1`. Read live by the compositor; no restart | Yes |
 | ir_filter | Cinemate -> CinePi-raw | Toggle IR-cut filter (IMX585 only) | Yes |
 | is_recording | Cinemate -> CinePi-raw | Requested record state. Edge-triggered: `0 -> 1` starts, `1 -> 0` stops | Yes |
+| record_cams | Cinemate -> CinePi-raw | Dual-sensor record gate: which sensor(s) capture this take (`cam0+cam1`, `cam0`, or `cam1`). Published before `is_recording` flips; each `cinepi-raw` records only if its `--cam-port` is selected. Absent/empty = both | No |
 | rec | Cinemate (RedisListener) | Derived runtime record flag based on `framecount` rising/going flat | No |
 | framecount | CinePi-raw -> Cinemate | Total frames counted for the active take | No |
 | buffer | CinePi-raw -> Cinemate | Raw frames currently buffered in RAM | No |

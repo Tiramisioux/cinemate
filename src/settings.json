@@ -61,8 +61,14 @@
       1.0,
       2.0
     ],
-    "default_hdmi_source": "both"
+    "default_hdmi_source": "both",
+    "pip": {
+      "scale": 0.28,
+      "corner": "lower_right",
+      "margin": 0.03
+    }
   },
+  "lock_dual_recording": false,
   "audio": {
     "24bit": {
       "capture_gain_db": 6.0,

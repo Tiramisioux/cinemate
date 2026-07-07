@@ -4,6 +4,12 @@ Release notes for Cinemate. For downloads, see the [releases page](https://githu
 
 ## Version 3.3.2
 
+### Dual sensors
+
+- **Automatic dual-camera** — two connected sensors are each detected and driven by their own genlocked `cinepi-raw` process (cam0 server, cam1 client), both previews on one HDMI monitor.
+- **HDMI preview switching** — new command `set preview` cycles side-by-side preview → cam0 → cam1 → picture-in-picture.
+- **Per-sensor recording** — record both sensors or just the previewed one (`lock_dual_recording` can be set in settings.json), or target sensors with `rec cam0` / `rec cam1` / `rec both`. Each sensor writes its own `..._cam0` / `..._cam1` clip folder.
+
 ### libcamera
 
 - Cinemate now uses its own fork of libcamera.
@@ -27,7 +33,6 @@ Release notes for Cinemate. For downloads, see the [releases page](https://githu
 ### Cinemate
 
 - **Storage / media** — multi-drive RAW hot-swap with a standby drive and automatic promotion. Default format is exFAT.
-- **Dual-sensor HDMI preview** — with two sensors, both previews show together on the on-camera monitor, side-by-side with a white frame and centre divider. `set preview cam0 | cam1 | cam0+cam1` switches the source live (no restart).
 
 ### Raspberry Pi / Bookworm**
 - **Boot / install** — faster boot-to-preview on Pi 4/5 (about 10-15 seconds)

@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/config-txt/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Switching sensors (config.txt) - Cinemate Docs</title>
+    <title>Bookworm config.txt - Cinemate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -15,7 +15,7 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Switching sensors (config.txt)";
+        var mkdocs_page_name = "Bookworm config.txt";
         var mkdocs_page_input_path = "config-txt.md";
         var mkdocs_page_url = "/cinemate/config-txt/";
       </script>
@@ -56,8 +56,6 @@
               </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
@@ -67,6 +65,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
@@ -79,13 +79,9 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
                   </li>
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Switching sensors (config.txt)</a>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Bookworm config.txt</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#adjusting-configtxt-for-different-sensors">Adjusting config.txt for different sensors:</a>
-        <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#example-configtxt">Example config.txt</a>
-    </li>
-        </ul>
+    <li class="toctree-l2"><a class="reference internal" href="#example-configtxt">Example config.txt</a>
     </li>
     </ul>
                   </li>
@@ -101,6 +97,21 @@
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
               </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Advanced</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
+                  </li>
+              </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
@@ -112,21 +123,6 @@
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
-                  </li>
-              </ul>
-              <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
-                </li>
-              </ul>
-              <p class="caption"><span class="caption-text">Advanced</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Building from source</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Contributing</span></p>
@@ -149,7 +145,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
           <li class="breadcrumb-item">Configuring</li>
-      <li class="breadcrumb-item active">Switching sensors (config.txt)</li>
+      <li class="breadcrumb-item active">Bookworm config.txt</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/config-txt.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
@@ -161,7 +157,6 @@
               
 <div class="markdown-body">
   <h1 id="modifying-configtxt">Modifying config.txt<a class="headerlink" href="#modifying-configtxt" title="Permanent link">#</a></h1>
-<h2 id="adjusting-configtxt-for-different-sensors">Adjusting config.txt for different sensors:<a class="headerlink" href="#adjusting-configtxt-for-different-sensors" title="Permanent link">#</a></h2>
 <div class="admonition tip">
 <p>For easy editing of <code>config.txt</code> on the preinstalled image file, type <code>editboot</code> anywhere in Raspberry Pi terminal.</p>
 </div>
@@ -253,6 +248,13 @@
 <span class="c1"># &lt;&lt;&lt; cinemate-install &lt;&lt;&lt;</span>
 </code></pre></div>
 <p>Exit the editor by pressing Ctrl+X.</p>
+<div class="admonition note">
+<p>For a dual sensor setup, attach to cam0 and cam1 and add overlays for both camera ports.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Example</span>
+<span class="nv">dtoverlay</span><span class="o">=</span>imx296,cam0
+<span class="nv">dtoverlay</span><span class="o">=</span>imx296,mono,cam1
+</code></pre></div>
+</div>
 </div>
 
             </div>

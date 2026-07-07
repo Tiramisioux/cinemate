@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/installation-steps/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Building from source - Cinemate Docs</title>
+    <title>Manual installation - Cinemate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -15,7 +15,7 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Building from source";
+        var mkdocs_page_name = "Manual installation";
         var mkdocs_page_input_path = "installation-steps.md";
         var mkdocs_page_url = "/cinemate/installation-steps/";
       </script>
@@ -56,8 +56,6 @@
               </ul>
               <p class="caption"><span class="caption-text">Using the camera</span></p>
               <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
-                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
@@ -67,6 +65,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Configuring</span></p>
@@ -79,7 +79,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Switching sensors (config.txt)</a>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
                   </li>
@@ -93,19 +93,6 @@
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Reference</span></p>
-              <ul>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
-                  </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
-                  </li>
-              </ul>
               <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
                 </li>
@@ -116,7 +103,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
                   </li>
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Building from source</a>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Manual installation</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#one-click-installer">One-click installer</a>
     </li>
@@ -229,6 +216,19 @@
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
               </ul>
+              <p class="caption"><span class="caption-text">Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
+                  </li>
+              </ul>
               <p class="caption"><span class="caption-text">Contributing</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
@@ -249,7 +249,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
           <li class="breadcrumb-item">Advanced</li>
-      <li class="breadcrumb-item active">Building from source</li>
+      <li class="breadcrumb-item active">Manual installation</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/installation-steps.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
@@ -260,13 +260,7 @@
             <div class="section" itemprop="articleBody">
               
 <div class="markdown-body">
-  <h1 id="manual-installation-building-from-source">Manual installation &amp; building from source<a class="headerlink" href="#manual-installation-building-from-source" title="Permanent link">#</a></h1>
-<div class="admonition note">
-<p>Stack works on Raspberry Pi 4 and 5 models. The 2GB RAM version works with the prebuilt image, while 4GB is recommended if you plan to compile <code>cinepi-raw</code> on the Pi. More RAM also gives you a larger framebuffer, which can be useful at high frame rates.</p>
-</div>
-<div class="admonition note">
-<p>Cinemate is using Linux kernel version 6.12.25. Supported install target is Raspberry Pi OS Lite (Bookworm).</p>
-</div>
+  <h1 id="manual-installation">Manual installation<a class="headerlink" href="#manual-installation" title="Permanent link">#</a></h1>
 <h2 id="one-click-installer">One-click installer<a class="headerlink" href="#one-click-installer" title="Permanent link">#</a></h2>
 <p>The one-click installer is a single script that builds and configures the whole stack.</p>
 <p>Start from a fresh Raspberry Pi OS Lite Bookworm 64 bit image. SSH to the Pi (Terminal on macOS, PowerShell on Windows):</p>
@@ -280,18 +274,21 @@ sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> <
 git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Tiramisioux/cinemate.git
 <span class="nb">cd</span><span class="w"> </span>cinemate
 chmod<span class="w"> </span>+x<span class="w"> </span>cinemate-install.sh
-./cinemate-install.sh
 </code></pre></div>
-<p>The installer defaults to an <code>imx477</code> on camera port <code>cam0</code> and writes a stock-style managed <code>/boot/firmware/config.txt</code> section with camera options for IMX477, IMX296, IMX283, IMX585 color, and IMX585 mono. To install directly for another sensor, pass <code>SENSOR_MODEL</code> and <code>CAM_PORT</code> inline:</p>
+<div class="highlight"><pre><span></span><code>./cinemate-install.sh
+</code></pre></div>
+<p>The installer defaults to an <code>imx477</code> on camera port <code>cam0</code>. To install directly for another sensor, pass <code>SENSOR_MODEL</code> and <code>CAM_PORT</code> inline:</p>
 <div class="highlight"><pre><span></span><code><span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx296<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam0<span class="w"> </span>./cinemate-install.sh
 <span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx283<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam0<span class="w"> </span>./cinemate-install.sh
 <span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx585<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam0<span class="w"> </span>./cinemate-install.sh
 <span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx585_mono<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam1<span class="w"> </span>./cinemate-install.sh
 </code></pre></div>
+<div class="admonition note">
+<p>You can adjust sensor and camera port later by editing <code>/boot/firmware/config.txt</code>. See <a href="../config-txt/">Switching sensors</a>.</p>
+</div>
 <p>After installing, reboot the system and Cinemate should start automatically.</p>
 <h2 id="manual-install">Manual install<a class="headerlink" href="#manual-install" title="Permanent link">#</a></h2>
-<p>If you prefer to install everything by hand, continue with the steps below.</p>
-<p>Start from a fresh Raspberry Pi OS Lite (Bookworm) install before continuing. If your Pi is already on Trixie, reimage with Bookworm first.</p>
+<p>Start from a fresh Raspberry Pi OS Lite (Bookworm) install before continuing.</p>
 <div class="highlight"><pre><span></span><code>sudo apt update -y
 sudo apt upgrade -y
 </code></pre></div>

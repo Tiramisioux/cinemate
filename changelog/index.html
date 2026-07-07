@@ -107,6 +107,8 @@
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#version-332">Version 3.3.2</a>
         <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#dual-sensors">Dual sensors</a>
+    </li>
     <li class="toctree-l3"><a class="reference internal" href="#libcamera">libcamera</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#imx283-driver">imx283 driver</a>
@@ -181,6 +183,12 @@
   <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h1>
 <p>Release notes for Cinemate. For downloads, see the <a href="https://github.com/Tiramisioux/cinemate/releases">releases page</a>.</p>
 <h2 id="version-332">Version 3.3.2<a class="headerlink" href="#version-332" title="Permanent link">#</a></h2>
+<h3 id="dual-sensors">Dual sensors<a class="headerlink" href="#dual-sensors" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>Automatic dual-camera</strong> — two connected sensors are each detected and driven by their own genlocked <code>cinepi-raw</code> process (cam0 server, cam1 client), both previews on one HDMI monitor.</li>
+<li><strong>HDMI preview switching</strong> — new command <code>set preview</code> cycles side-by-side preview → cam0 → cam1 → picture-in-picture.</li>
+<li><strong>Per-sensor recording</strong> — record both sensors or just the previewed one (<code>lock_dual_recording</code> can be set in settings.json), or target sensors with <code>rec cam0</code> / <code>rec cam1</code> / <code>rec both</code>. Each sensor writes its own <code>..._cam0</code> / <code>..._cam1</code> clip folder.</li>
+</ul>
 <h3 id="libcamera">libcamera<a class="headerlink" href="#libcamera" title="Permanent link">#</a></h3>
 <ul>
 <li>Cinemate now uses its own fork of libcamera.</li>
@@ -204,7 +212,6 @@
 <h3 id="cinemate">Cinemate<a class="headerlink" href="#cinemate" title="Permanent link">#</a></h3>
 <ul>
 <li><strong>Storage / media</strong> — multi-drive RAW hot-swap with a standby drive and automatic promotion. Default format is exFAT.</li>
-<li><strong>Dual-sensor HDMI preview</strong> — with two sensors, both previews show together on the on-camera monitor, side-by-side with a white frame and centre divider. <code>set preview cam0 | cam1 | cam0+cam1</code> switches the source live (no restart).</li>
 </ul>
 <h3 id="raspberry-pi-bookworm">Raspberry Pi / Bookworm**<a class="headerlink" href="#raspberry-pi-bookworm" title="Permanent link">#</a></h3>
 <ul>

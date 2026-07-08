@@ -4,9 +4,11 @@ Release notes for Cinemate. For downloads, see the [releases page](https://githu
 
 ## Version 3.3.2
 
-### Dual sensors
+### Dual sensors improved
 
-- **Automatic dual-camera** — two connected sensors are each detected and driven by their own genlocked `cinepi-raw` process (cam0 server, cam1 client).
+- **Improved automatic dual-camera** — two connected sensors are each detected and driven by their own cinepi-raw process.  Frame capture is synchronized by libcamera (cam0 server, cam1 client).
+- **HDMI preview switching** — new command set preview cycles side-by-side preview → cam0 → cam1 → picture-in-picture.
+- **Per-sensor recording** — record both sensors or just the previewed one (lock_dual_recording can be set in settings.json), or target sensors with rec cam0 / rec cam1 / rec both. Each sensor writes its own ..._cam0 / ..._cam1 clip folder.
 - **HDMI preview switching** — new command `set preview` cycles side-by-side preview → cam0 → cam1 → picture-in-picture.
 - **Per-sensor recording** — record both sensors or just the previewed one (`lock_dual_recording` can be set in settings.json), or target sensors with `rec cam0` / `rec cam1` / `rec both`. Each sensor writes its own `..._cam0` / `..._cam1` clip folder.
 

@@ -1670,9 +1670,11 @@ class SimpleGUI(threading.Thread):
         # ── grey CAMx placeholder on whichever line hasn't recorded a clip yet ───
         if self.draw_right_col:
             placeholder_color = (175, 175, 175)
-            # Width of a typical full clip name, so the placeholder previews
-            # roughly where the real name will sit once recording starts.
-            placeholder_area_w = 350 * shrink_x
+            # Centre within the actual reserved clip-name area: from the
+            # clip-name x position to the start of the next real column
+            # (CPU), rather than an assumed filename width.
+            area_left = current_layout["clip_name"]["pos"][0] * shrink_x
+            area_right = self.layout.get("cpu_label", {}).get("pos", (1285, 0))[0] * shrink_x
             for key, label in (("clip_name_cam1", "CAM1"), ("clip_name", "CAM0")):
                 if values.get(key):
                     continue
@@ -1682,7 +1684,7 @@ class SimpleGUI(threading.Thread):
                 font_size = max(1, int(round(info.get("size", 20) * min(min(shrink_x, shrink_y), 1))))
                 font = self._get_font(info.get("font", "bold"), font_size)
                 text_w = draw.textbbox((0, 0), label, font=font)[2]
-                x = info["pos"][0] * shrink_x + (placeholder_area_w - text_w) / 2
+                x = area_left + (area_right - area_left - text_w) / 2
                 y = info["pos"][1] * shrink_y
                 draw.text((x, y), label, font=font, fill=placeholder_color)
 

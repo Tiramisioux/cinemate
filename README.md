@@ -9,36 +9,31 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
 
 ### Dual sensors
 
-- **Automatic dual-camera** — two connected sensors are each detected and driven by their own genlocked `cinepi-raw` process (cam0 server, cam1 client), both previews on one HDMI monitor.
+### Dual sensors improved
+- **Improved automatic dual-camera** — two connected sensors are each detected and driven by their own cinepi-raw process.  Frame capture is synchronized by libcamera (cam0 server, cam1 client).
 - **HDMI preview switching** — new command `set preview` cycles side-by-side preview → cam0 → cam1 → picture-in-picture.
 - **Per-sensor recording** — record both sensors or just the previewed one (`lock_dual_recording` can be set in settings.json), or target sensors with `rec cam0` / `rec cam1` / `rec both`. Each sensor writes its own `..._cam0` / `..._cam1` clip folder.
 
 ### libcamera
-
 - Cinemate now uses its own fork of libcamera.
 
 ### imx283 driver
-
 - Cinemate now uses its own fork of the imx283 driver.
 - 2 additional modes: 3840 x 2160 (4K UHD, native crop) and 2736 x 1538 (2.7K 16:9, binned).
 
 ### imx585 driver
-
 - Cinemate now uses its own fork of the imx585 driver.
 
 ### CinePi-RAW recorder updates
-
 - **Frame-rate phase lock** — DNG timecode and frame capture is locked to the Pi's wall clock, making audio sync more accurate.
 - **Correct Pi 4 RAW** — CSI2-packed frames decode correctly on Pi 4-family boards; raw packing (P/U) is chosen per Pi model automatically.
 - **Compiles on 2GB version of Raspberry Pi 4/5**
 - **Camera model** — set the camera model manually for each attached sensor.
 
 ### Cinemate
-
 - **Storage / media** — multi-drive RAW hot-swap with a standby drive and automatic promotion. Default format is exFAT.
 
 ### Raspberry Pi / Bookworm
-
 - **Boot / install** — faster boot-to-preview on Pi 4/5 (about 10-15 seconds).
 
 ## Compatible sensors

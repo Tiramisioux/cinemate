@@ -197,10 +197,6 @@ class SimpleGUI(threading.Thread):
 
         self.start()
 
-    # ───────────────── helper: do we have two non-empty clip names? ────────────────
-    def _has_two_clips(self, values) -> bool:
-        return bool(values.get("clip_name") and values.get("clip_name_cam1"))
-
     def _dynamic_resolution_indicator_active(self) -> bool:
         controller = self.cinepi_controller
         return dynamic_resolution_indicator_active(
@@ -224,17 +220,17 @@ class SimpleGUI(threading.Thread):
         )
 
     # ───────────────── helper: tweak GUI layout for clip lines ────────────────────
-    def _adjust_clip_layout(self, two_clips: bool, show_wav: bool = False):
+    def _adjust_clip_layout(self, dual_sensor: bool, show_wav: bool = False):
         """Shrink/enlarge the font & Y-positions of the clip-name fields."""
         _WAV_SHIFT = 40  # px to shift clip name left when wav label is shown
         clip_x = 725 - (_WAV_SHIFT if show_wav else 0)
-        if two_clips:
+        if dual_sensor:
             new_size = 20               # ↓ from 41 → 24 px
-            y_base   = 1053
+            y_base   = 1057
             self.layout["clip_name"]["size"]        = new_size
             self.layout["clip_name_cam1"]["size"]   = new_size
-            self.layout["clip_name"]["pos"]         = (clip_x, y_base)       # lower line
-            self.layout["clip_name_cam1"]["pos"]    = (clip_x, y_base-19)    # 19 px up
+            self.layout["clip_name"]["pos"]         = (clip_x, y_base)       # lower line (cam0), baseline-matched to the rest of the row
+            self.layout["clip_name_cam1"]["pos"]    = (clip_x, y_base-21)    # upper line (cam1), just above cam0
         else:
             # Fall back to the original settings
             self.layout["clip_name"]["size"]        = 20
@@ -944,13 +940,14 @@ class SimpleGUI(threading.Thread):
         clip_cam1 = "" if preroll_active else self._format_last_dng(last_cam1_full)
         clip_cam0 = "" if preroll_active else self._format_last_dng(last_cam0_full)
 
-        if clip_cam0 and clip_cam1:
-            # two cameras – show CAM1 on the upper line, CAM0 on the baseline
+        if self.draw_right_col:
+            # two sensors – each camera keeps its own line, even if only one
+            # of them has recorded a clip so far (the other stays blank here
+            # and gets a grey CAMx placeholder drawn over it in draw_gui)
             values["clip_name_cam1"] = clip_cam1
             values["clip_name"]      = clip_cam0
         else:
-            pass
-            #only one camera – keep it on the baseline row
+            # one sensor – keep it on the baseline row
             values["clip_name"] = clip_cam0 or clip_cam1 or ""
             
 
@@ -1506,7 +1503,7 @@ class SimpleGUI(threading.Thread):
         
         # ── shrink clip-name text when two cameras are active ─────────────────────────
         show_wav = bool(values.get("mic_wav_recording") or values.get("mic_wav_saved"))
-        self._adjust_clip_layout(self._has_two_clips(values), show_wav=show_wav)
+        self._adjust_clip_layout(self.draw_right_col, show_wav=show_wav)
 
         previous_background_color = self.get_background_color()
 
@@ -1669,6 +1666,27 @@ class SimpleGUI(threading.Thread):
                 self.draw_rounded_box(draw, value, position, font_size, 5, "black", "white", image)
             else:
                 draw.text(position, value, font=font, fill=color)
+
+        # ── grey CAMx placeholder on whichever line hasn't recorded a clip yet ───
+        if self.draw_right_col:
+            placeholder_color = (175, 175, 175)
+            # Centre within the actual reserved clip-name area: from the
+            # clip-name x position to the start of the next real column
+            # (CPU), rather than an assumed filename width.
+            area_left = current_layout["clip_name"]["pos"][0] * shrink_x
+            area_right = self.layout.get("cpu_label", {}).get("pos", (1285, 0))[0] * shrink_x
+            for key, label in (("clip_name_cam1", "CAM1"), ("clip_name", "CAM0")):
+                if values.get(key):
+                    continue
+                info = current_layout.get(key)
+                if not info:
+                    continue
+                font_size = max(1, int(round(info.get("size", 20) * min(min(shrink_x, shrink_y), 1))))
+                font = self._get_font(info.get("font", "bold"), font_size)
+                text_w = draw.textbbox((0, 0), label, font=font)[2]
+                x = area_left + (area_right - area_left - text_w) / 2
+                y = info["pos"][1] * shrink_y
+                draw.text((x, y), label, font=font, fill=placeholder_color)
 
         # ── WAV label next to clip name (rounded grey box) ───────────────────────
         if show_wav and values.get("clip_name"):

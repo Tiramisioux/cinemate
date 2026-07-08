@@ -1124,6 +1124,45 @@ class CinePiController:
         main = self._PREVIEW_MAIN.get(preview, "cam0")
         return main if main in ports else ports[0]
 
+    @staticmethod
+    def _union_gate(a, b, ports):
+        """Union two ``record_cams`` tokens into one, clamped to present ports.
+        Tokens may be ``cam0``, ``cam1``, ``cam0+cam1`` or the ``both`` alias."""
+        def cams(tok):
+            tok = str(tok or "").strip().lower()
+            if tok in ("both", "cam0+cam1", "dual"):
+                return {"cam0", "cam1"}
+            return {c for c in ("cam0", "cam1") if c in tok}
+
+        selected = (cams(a) | cams(b)) & set(ports)
+        if not selected:
+            return ""
+        if selected >= {"cam0", "cam1"}:
+            return "cam0+cam1"
+        return next(iter(selected))
+
+    def _extend_record_gate_for_preview(self, preview):
+        """Join-only live record-gate update for a preview switch during a take.
+
+        Recompute the preview-derived gate and UNION it with what is already
+        recording, so switching to the dual view starts the second sensor
+        without ever stopping a sensor that is mid-clip. cinepi-raw picks the
+        new ``record_cams`` up live and the sitting-out sensor joins back-to-back.
+        No-op on single-sensor rigs and when the gate does not grow.
+        """
+        ports = self._present_cam_ports()
+        if len(ports) < 2:
+            return
+        desired = self._resolve_record_cams()          # preview-aware target
+        current = str(
+            self.redis_controller.get_value(ParameterKey.RECORD_CAMS.value) or ""
+        )
+        merged = self._union_gate(current, desired, ports)
+        if merged and merged != current:
+            self.redis_controller.set_value(ParameterKey.RECORD_CAMS.value, merged)
+            logging.info("Live record gate extended: %s → %s (preview %s)",
+                         current or "—", merged, preview)
+
     def start_recording(self, record_override=None):
         # Safety: refuse to start a new take while the previous take's frames are
         # still flushing from RAM to disk (the green is_writing_buf state). Letting
@@ -2203,6 +2242,14 @@ class CinePiController:
         self.redis_controller.set_value(ParameterKey.HDMI_PREVIEW_SOURCE.value, target)
         self.redis_controller.r.publish("cp_controls", ParameterKey.HDMI_PREVIEW_SOURCE.value)
         logging.info("HDMI preview source set to %s", target)
+
+        # Policy B (join-only): if a take is already rolling, a preview switch may
+        # ADD sensors to the live record gate but never drop one. Switching to the
+        # side-by-side/dual view mid-take makes the second sensor join back-to-back
+        # (cinepi-raw re-reads record_cams live in triggerRec()); switching back to
+        # a single/pip view leaves the already-recording sensors running.
+        if self._is_recording():
+            self._extend_record_gate_for_preview(target)
 
 
 

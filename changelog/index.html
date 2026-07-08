@@ -186,7 +186,7 @@
 <h3 id="dual-sensors">Dual sensors<a class="headerlink" href="#dual-sensors" title="Permanent link">#</a></h3>
 <ul>
 <li><strong>Automatic dual-camera</strong> — two connected sensors are each detected and driven by their own genlocked <code>cinepi-raw</code> process (cam0 server, cam1 client).</li>
-<li><strong>HDMI preview switching</strong> — new command <code>set preview</code> toggles side-by-side preview → cam0 → cam1 → picture-in-picture.</li>
+<li><strong>HDMI preview switching</strong> — new command <code>set preview</code> cycles side-by-side preview → cam0 → cam1 → picture-in-picture.</li>
 <li><strong>Per-sensor recording</strong> — record both sensors or just the previewed one (<code>lock_dual_recording</code> can be set in settings.json), or target sensors with <code>rec cam0</code> / <code>rec cam1</code> / <code>rec both</code>. Each sensor writes its own <code>..._cam0</code> / <code>..._cam1</code> clip folder.</li>
 </ul>
 <h3 id="libcamera">libcamera<a class="headerlink" href="#libcamera" title="Permanent link">#</a></h3>

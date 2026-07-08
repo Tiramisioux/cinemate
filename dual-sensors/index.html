@@ -236,47 +236,9 @@
 </div>
 <h2 id="recording">Recording<a class="headerlink" href="#recording" title="Permanent link">#</a></h2>
 <p>Which sensor(s) record a take depends on the <code>lock_dual_recording</code> setting in <a href="../settings-json/">settings.json</a> and, when it is off, on the preview:</p>
-<table>
-<thead>
-<tr>
-<th><code>lock_dual_recording</code></th>
-<th>Preview</th>
-<th>Records</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>false</code> (default)</td>
-<td><code>both</code></td>
-<td>both sensors</td>
-</tr>
-<tr>
-<td><code>false</code></td>
-<td><code>cam0</code> / <code>pip_cam0</code></td>
-<td>cam0 only</td>
-</tr>
-<tr>
-<td><code>false</code></td>
-<td><code>cam1</code> / <code>pip_cam1</code></td>
-<td>cam1 only</td>
-</tr>
-<tr>
-<td><code>true</code></td>
-<td>any</td>
-<td>both sensors</td>
-</tr>
-</tbody>
-</table>
-<ul>
-<li><strong><code>false</code> — recording follows the preview.</strong> What you review is what you record. A single full-screen (or pip-main) sensor records alone; side-by-side records both.</li>
-<li><strong><code>true</code> — force dual.</strong> Both sensors always record, whatever the preview shows. Use this for a two-camera build (for example, each sensor on its own HDMI display).</li>
-</ul>
-<p>Either way, a leading camera token on <code>rec</code> overrides the policy for one take — <code>rec cam0</code>, <code>rec cam1</code>, or <code>rec both</code> (<code>dual</code> alias), optionally with a timed mode (<code>rec cam1 f 48</code>). See <a href="../cli-commands/#timed-recording-shortcuts">CLI commands</a>.</p>
-<p>Each sensor writes to its own clip folder (<code>..._cam0</code> / <code>..._cam1</code>), so dual takes never collide. A sensor that is not recording keeps previewing and stays genlocked; it just opens no folder. With a single sensor this is all a no-op — that sensor always records.</p>
-<div class="admonition note">
-<p>Recording is gated per sensor through the <code>record_cams</code> <a href="../redis-keys/">Redis key</a>, which Cinemate resolves and publishes at the start of every take before the shared <code>is_recording</code> flag flips.</p>
-</div>
-<p>On Raspberry Pi 5 Compute Model carrier boards, the second CSI connector (cam1) may appear as <code>i2c@70000</code> in <code>--list-cameras</code>. Cinemate maps this path to <strong>cam1</strong> so each sensor gets the correct port assignment.</p>
+<p><strong><code>false</code> — recording follows the preview.</strong> <em>Note that if preview is changed while the Pi is recording, the recording has to be stopped and commenced again in order to start recording on the previewed sensor. Side-by-side records both.</em></p>
+<p><strong><code>true</code> — force dual.</strong> Both sensors always record, whatever the preview shows. </p>
+<p>Each sensor writes to its own clip folder (<code>..._cam0</code> / <code>..._cam1</code>).</p>
 <div class="admonition note">
 <p>When using the cam1 with the official Raspberry Pi CM carrier board, make sure to connect the JC GPIO pins as described here: <a href="https://www.raspberrypi.com/documentation/computers/compute-module.html#connect-two-cameras">https://www.raspberrypi.com/documentation/computers/compute-module.html#connect-two-cameras</a></p>
 </div>

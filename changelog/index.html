@@ -122,7 +122,7 @@
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#version-332">Version 3.3.2</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#dual-sensors">Dual sensors</a>
+    <li class="toctree-l3"><a class="reference internal" href="#dual-sensors-improved">Dual sensors improved</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#libcamera">libcamera</a>
     </li>
@@ -183,9 +183,11 @@
   <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h1>
 <p>Release notes for Cinemate. For downloads, see the <a href="https://github.com/Tiramisioux/cinemate/releases">releases page</a>.</p>
 <h2 id="version-332">Version 3.3.2<a class="headerlink" href="#version-332" title="Permanent link">#</a></h2>
-<h3 id="dual-sensors">Dual sensors<a class="headerlink" href="#dual-sensors" title="Permanent link">#</a></h3>
+<h3 id="dual-sensors-improved">Dual sensors improved<a class="headerlink" href="#dual-sensors-improved" title="Permanent link">#</a></h3>
 <ul>
-<li><strong>Automatic dual-camera</strong> — two connected sensors are each detected and driven by their own genlocked <code>cinepi-raw</code> process (cam0 server, cam1 client).</li>
+<li><strong>Improved automatic dual-camera</strong> — two connected sensors are each detected and driven by their own cinepi-raw process.  Frame capture is synchronized by libcamera (cam0 server, cam1 client).</li>
+<li><strong>HDMI preview switching</strong> — new command set preview cycles side-by-side preview → cam0 → cam1 → picture-in-picture.</li>
+<li><strong>Per-sensor recording</strong> — record both sensors or just the previewed one (lock_dual_recording can be set in settings.json), or target sensors with rec cam0 / rec cam1 / rec both. Each sensor writes its own ..._cam0 / ..._cam1 clip folder.</li>
 <li><strong>HDMI preview switching</strong> — new command <code>set preview</code> cycles side-by-side preview → cam0 → cam1 → picture-in-picture.</li>
 <li><strong>Per-sensor recording</strong> — record both sensors or just the previewed one (<code>lock_dual_recording</code> can be set in settings.json), or target sensors with <code>rec cam0</code> / <code>rec cam1</code> / <code>rec both</code>. Each sensor writes its own <code>..._cam0</code> / <code>..._cam1</code> clip folder.</li>
 </ul>

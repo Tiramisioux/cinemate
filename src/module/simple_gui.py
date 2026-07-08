@@ -940,13 +940,14 @@ class SimpleGUI(threading.Thread):
         clip_cam1 = "" if preroll_active else self._format_last_dng(last_cam1_full)
         clip_cam0 = "" if preroll_active else self._format_last_dng(last_cam0_full)
 
-        if clip_cam0 and clip_cam1:
-            # two cameras – show CAM1 on the upper line, CAM0 on the baseline
+        if self.draw_right_col:
+            # two sensors – each camera keeps its own line, even if only one
+            # of them has recorded a clip so far (the other stays blank here
+            # and gets a grey CAMx placeholder drawn over it in draw_gui)
             values["clip_name_cam1"] = clip_cam1
             values["clip_name"]      = clip_cam0
         else:
-            pass
-            #only one camera – keep it on the baseline row
+            # one sensor – keep it on the baseline row
             values["clip_name"] = clip_cam0 or clip_cam1 or ""
             
 
@@ -1666,22 +1667,24 @@ class SimpleGUI(threading.Thread):
             else:
                 draw.text(position, value, font=font, fill=color)
 
-        # ── grey CAM0/CAM1 placeholder before any clip has been recorded ─────────
-        if self.draw_right_col and not values.get("clip_name") and not values.get("clip_name_cam1"):
-            cam0_info = current_layout.get("clip_name")
-            cam1_info = current_layout.get("clip_name_cam1")
-            if cam0_info and cam1_info:
-                placeholder_color = (136, 136, 136)
-                # Width of a typical full clip name, so the placeholder previews
-                # roughly where the real name will sit once recording starts.
-                placeholder_area_w = 350 * shrink_x
-                for info, label in ((cam1_info, "CAM1"), (cam0_info, "CAM0")):
-                    font_size = max(1, int(round(info.get("size", 20) * min(min(shrink_x, shrink_y), 1))))
-                    font = self._get_font(info.get("font", "bold"), font_size)
-                    text_w = draw.textbbox((0, 0), label, font=font)[2]
-                    x = info["pos"][0] * shrink_x + (placeholder_area_w - text_w) / 2
-                    y = info["pos"][1] * shrink_y
-                    draw.text((x, y), label, font=font, fill=placeholder_color)
+        # ── grey CAMx placeholder on whichever line hasn't recorded a clip yet ───
+        if self.draw_right_col:
+            placeholder_color = (175, 175, 175)
+            # Width of a typical full clip name, so the placeholder previews
+            # roughly where the real name will sit once recording starts.
+            placeholder_area_w = 350 * shrink_x
+            for key, label in (("clip_name_cam1", "CAM1"), ("clip_name", "CAM0")):
+                if values.get(key):
+                    continue
+                info = current_layout.get(key)
+                if not info:
+                    continue
+                font_size = max(1, int(round(info.get("size", 20) * min(min(shrink_x, shrink_y), 1))))
+                font = self._get_font(info.get("font", "bold"), font_size)
+                text_w = draw.textbbox((0, 0), label, font=font)[2]
+                x = info["pos"][0] * shrink_x + (placeholder_area_w - text_w) / 2
+                y = info["pos"][1] * shrink_y
+                draw.text((x, y), label, font=font, fill=placeholder_color)
 
         # ── WAV label next to clip name (rounded grey box) ───────────────────────
         if show_wav and values.get("clip_name"):

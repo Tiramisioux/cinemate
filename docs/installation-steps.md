@@ -105,49 +105,7 @@ sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake
 
 ### libcamera (Tiramisioux/libcamera `cinemate` branch) <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
 
-These steps build the [Tiramisioux/libcamera](https://github.com/Tiramisioux/libcamera) `cinemate` branch tip — Will Whang's IMX585 fork (base `9d0cdfe5`) mirrored here so the build no longer depends on the upstream commit staying available, plus gcc-12 build fixes for the apps. Built as-is with no extra patches. (`cinemate-install.sh` tracks this same branch.)
-
-**On the Pi, to update an existing install:**
-
-If you are inside `~/.cinemate-env`, meson will use the virtualenv Python and will fail with *"Python module yaml not found"* unless the helpers are present. Install them first:
-
-```shell
-pip install PyYAML ply Jinja2
-```
-
-Then update and rebuild:
-
-```shell
-cd ~/libcamera && \
-git config core.fileMode false && \
-git remote set-url origin https://github.com/Tiramisioux/libcamera.git && \
-git fetch origin && \
-git stash || true && \
-git checkout -B cinemate origin/cinemate && \
-find ~/libcamera -type f \( -name '*.py' -o -name '*.sh' \) -exec chmod +x {} \; && \
-chmod +x ~/libcamera/src/ipa/ipa-sign.sh && \
-meson setup build --wipe --buildtype=release \
-  -Dpipelines=rpi/vc4,rpi/pisp \
-  -Dipas=rpi/vc4,rpi/pisp \
-  -Dv4l2=true \
-  -Dgstreamer=enabled \
-  -Dtest=false \
-  -Dlc-compliance=disabled \
-  -Dcam=disabled \
-  -Dqcam=disabled \
-  -Ddocumentation=disabled \
-  -Dpycamera=disabled && \
-ninja -C build && \
-sudo ninja -C build install && \
-sudo ldconfig && \
-sudo systemctl restart cinepi-raw
-```
-
-`git checkout -B cinemate origin/cinemate` resets to the latest `cinemate` tip so this command is safe to re-run. `git config core.fileMode false` silences executable-bit changes left behind by the build. `git stash` clears any remaining content changes so the checkout cannot be blocked.
-
-**Fresh install:**
-
-If you are already inside `~/.cinemate-env`, either run `deactivate` before building `libcamera` or install the Python helpers into that environment with `pip install PyYAML ply Jinja2` first.
+These steps build the [Tiramisioux/libcamera](https://github.com/Tiramisioux/libcamera) `cinemate` branch tip — Will Whang's IMX585 fork (base `9d0cdfe5`) mirrored here so the build no longer depends on the upstream commit staying available, plus gcc-12 build fixes for the apps. (`cinemate-install.sh` tracks this same branch.)
 
 ```shell
 sudo apt install -y python3-pip python3-jinja2 libboost-dev libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a meson cmake python3-yaml python3-ply libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libavdevice59 libyaml-dev

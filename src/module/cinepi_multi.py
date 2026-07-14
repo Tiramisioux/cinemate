@@ -524,9 +524,16 @@ class CinePiProcess(Thread):
             args += ["--tuning-file", tune]
             
         zoom_init = self.redis_controller.get_value(ParameterKey.ZOOM.value)
-        
+
         if zoom_init and float(zoom_init) != 1.0:
             args += ['--zoom', str(zoom_init)]
+
+        # ── imx585 ClearHDR: launch with sensor HDR when the hdr state is on.
+        # wide_dynamic_range changes the sensor's mode list, so it must be a
+        # launch flag (cinepi-raw resets its camera manager around it); the
+        # live knobs (hdr_threshold/hdr_blend/hdr_gain_adder) travel via Redis.
+        if str(self.redis_controller.get_value(ParameterKey.HDR.value) or "0") == "1":
+            args += ['--hdr', 'sensor']
 
         # ── if running in multi-camera mode, pass --sync server/client ──
         if self.multi:

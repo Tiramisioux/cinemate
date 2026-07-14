@@ -48,6 +48,9 @@ class SensorDetect:
         res_cfg = self.settings.get("resolutions", {})
         self.k_steps = res_cfg.get("k_steps", [])
         self.bit_depths = res_cfg.get("bit_depths", [])
+        # Modes slower than this (max fps) are dropped from the mode table.
+        # Default 20 keeps the imx585 4K ClearHDR modes (~21.9 fps) visible.
+        self.min_frame_rate = res_cfg.get("min_frame_rate", 20)
         self.custom_modes = res_cfg.get("custom_modes", {})
         sensor_cfg = self.settings.get("sensors", {})
         self.sensor_database_file = sensor_cfg.get(
@@ -174,7 +177,15 @@ class SensorDetect:
             or self.packing_info.get(camera_name, "U")
         )
         bpp = bit_depth / 8 if bit_depth else 2
-        file_size = extra.get("file_size_mb", round(width * height * bpp / (1024 * 1024), 1))
+        if bit_depth == 16:
+            # 16-bit modes (imx585 ClearHDR) are written as unpacked DNGs:
+            # 2 bytes/pixel payload + ~100 KB header, in decimal MB so the
+            # minutes-left math matches on-disk sizes (3856×2180 → 16.9 MB).
+            file_size = extra.get(
+                "file_size_mb", round((width * height * 2 + 100_000) / 1e6, 1)
+            )
+        else:
+            file_size = extra.get("file_size_mb", round(width * height * bpp / (1024 * 1024), 1))
         fps_max_value = fps_max if fps_max is not None else extra.get("fps_max", metadata.get("max_fps"))
         mode = {
             "aspect": extra.get("aspect", metadata.get("aspect", round(width / height, 2))),
@@ -280,6 +291,12 @@ class SensorDetect:
             selected = []
             for m in modes:
                 if self.bit_depths and m["bit_depth"] not in self.bit_depths:
+                    continue
+                # settings.json → resolutions.min_frame_rate: drop modes whose
+                # max frame rate is below the floor (default 20 keeps the
+                # imx585 4K ClearHDR modes at ~21.9 fps).
+                fps_cap = m.get("fps_max")
+                if self.min_frame_rate and fps_cap and fps_cap < self.min_frame_rate:
                     continue
                 k_val = round(m["width"] / 1000 * 2) / 2
                 if self.k_steps and k_val not in self.k_steps:

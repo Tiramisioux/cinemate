@@ -500,9 +500,147 @@ class CinePiController:
             # Set the next value in Redis
             self.redis_controller.set_value(ParameterKey.ANAMORPHIC_FACTOR.value, next_value)
             logging.info(f"Anamorphic factor toggled to: {next_value}")
-        
+
         self.cinepi.restart()
-                      
+
+    # ── imx585 ClearHDR ──────────────────────────────────────────────────
+    # Live knobs (threshold / blend / gain adder) are plain sensor controls:
+    # setting the Redis key publishes on cp_controls and cinepi-raw applies
+    # them to the sensor while streaming. Toggling ClearHDR itself
+    # (wide_dynamic_range) changes the sensor's mode list, so profiles flip
+    # the control, re-detect modes and restart cinepi-raw with --hdr sensor.
+
+    def _load_hdr_profiles(self):
+        """Return the profile list from resources/HDR_profiles.json ([] on error)."""
+        path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..", "resources", "HDR_profiles.json")
+        )
+        try:
+            with open(path, "r", encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (OSError, json.JSONDecodeError) as exc:
+            logging.error(f"HDR profiles unavailable ({path}): {exc}")
+            return []
+        profiles = data.get("profiles", [])
+        return profiles if isinstance(profiles, list) else []
+
+    def _set_wide_dynamic_range(self, enable: bool) -> bool:
+        """Set wide_dynamic_range on every sensor subdev that accepts it.
+
+        Returns True when at least one subdev took the control. The control
+        changes the sensor's mode list, so callers must re-detect modes and
+        restart cinepi-raw afterwards.
+        """
+        value = 1 if enable else 0
+        applied = False
+        for idx in range(16):
+            dev = f"/dev/v4l-subdev{idx}"
+            if not os.path.exists(dev):
+                continue
+            probe = subprocess.run(
+                ["v4l2-ctl", "-d", dev, "--set-ctrl", f"wide_dynamic_range={value}"],
+                capture_output=True, text=True,
+            )
+            if probe.returncode == 0:
+                logging.info(f"wide_dynamic_range={value} set on {dev}")
+                applied = True
+        if not applied:
+            logging.warning("No sensor subdev accepted wide_dynamic_range (imx585 ClearHDR)")
+        return applied
+
+    def set_hdr_threshold(self, low, high=None):
+        """Set the ClearHDR data-selection thresholds (0–4095 each).
+
+        Accepts two ints or a single "low,high" string. Applied live.
+        """
+        if high is None:
+            try:
+                low, high = str(low).replace(" ", "").split(",")
+            except ValueError:
+                logging.error("hdr threshold expects 'low,high' (each 0..4095)")
+                return
+        try:
+            low_i = max(0, min(4095, int(low)))
+            high_i = max(0, min(4095, int(high)))
+        except (TypeError, ValueError):
+            logging.error("hdr threshold expects integers 0..4095")
+            return
+        self.redis_controller.set_value(ParameterKey.HDR_THRESHOLD.value, f"{low_i},{high_i}")
+        logging.info(f"ClearHDR data-selection threshold set to {low_i},{high_i}")
+
+    def set_hdr_blend(self, value):
+        """Set the ClearHDR blending mode (driver menu index 0–8). Applied live."""
+        try:
+            v = max(0, min(8, int(value)))
+        except (TypeError, ValueError):
+            logging.error("hdr blend expects an integer 0..8")
+            return
+        self.redis_controller.set_value(ParameterKey.HDR_BLEND.value, v)
+        logging.info(f"ClearHDR blending mode set to {v}")
+
+    def set_hdr_gain_adder(self, value):
+        """Set the ClearHDR gain adder (driver menu index 0–5, 2 = +12 dB). Applied live."""
+        try:
+            v = max(0, min(5, int(value)))
+        except (TypeError, ValueError):
+            logging.error("hdr gain adder expects an integer 0..5")
+            return
+        self.redis_controller.set_value(ParameterKey.HDR_GAIN_ADDER.value, v)
+        logging.info(f"ClearHDR gain adder set to menu index {v}")
+
+    def hdr_profile(self, index=None):
+        """Apply a profile from resources/HDR_profiles.json and restart the camera.
+
+        ``hdr profile 1`` applies profile 1; a bare ``hdr profile`` cycles to
+        the next one.
+        """
+        profiles = self._load_hdr_profiles()
+        if not profiles:
+            logging.error("No HDR profiles found (resources/HDR_profiles.json)")
+            return
+
+        if index is None:
+            try:
+                current = int(self.redis_controller.get_value(ParameterKey.HDR_PROFILE.value))
+            except (TypeError, ValueError):
+                current = -1
+            index = (current + 1) % len(profiles)
+        index = int(index)
+        if not 0 <= index < len(profiles):
+            logging.error(f"HDR profile {index} out of range (0..{len(profiles) - 1})")
+            return
+
+        profile = profiles[index]
+        name = profile.get("name", str(index))
+        hdr_on = bool(profile.get("hdr", False))
+
+        # Order matters: flip the sensor control first so the re-detected
+        # mode table reflects the new state, publish the knob keys (cinepi-raw
+        # also re-applies them from Redis at startup), then restart cinepi-raw
+        # with or without --hdr sensor (read from the hdr key at launch).
+        self._set_wide_dynamic_range(hdr_on)
+        self.redis_controller.set_value(ParameterKey.HDR.value, 1 if hdr_on else 0)
+
+        threshold = profile.get("threshold")
+        if isinstance(threshold, (list, tuple)) and len(threshold) == 2:
+            self.set_hdr_threshold(threshold[0], threshold[1])
+        if "blend_mode" in profile:
+            self.set_hdr_blend(profile["blend_mode"])
+        if "gain_adder" in profile:
+            self.set_hdr_gain_adder(profile["gain_adder"])
+        self.redis_controller.set_value(ParameterKey.HDR_PROFILE.value, index)
+
+        try:
+            self.sensor_detect.detect_camera_model()
+        except Exception as exc:
+            logging.warning(f"Sensor mode re-detection after HDR change failed: {exc}")
+
+        logging.info(
+            f"HDR profile {index} ('{name}') applied — restarting camera "
+            f"(hdr={'on' if hdr_on else 'off'})"
+        )
+        self.cinepi.restart()
+
     def initialize_shutter_angle_steps(self):
         base_steps = self.settings['arrays']['shutter_a_steps']
         self.shutter_angle_steps = sorted(base_steps.copy())

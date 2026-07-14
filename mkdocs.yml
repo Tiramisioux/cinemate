@@ -27,6 +27,7 @@ nav:
   - Configuring:
       - Settings file: settings-json.md
       - Camera sensors and frame rates: sensors.md
+      - ClearHDR (imx585): clear-hdr.md
       - Dual sensors: dual-sensors.md
       - Additional hardware: hardware-controls.md
       - Bookworm config.txt: config-txt.md

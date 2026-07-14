@@ -20,7 +20,7 @@ Each entry explains which component normally writes the key and whether it makes
 | fps_last | Cinemate | Previous stable FPS value from stats | No |
 | fps_max | Cinemate startup | Maximum FPS supported by the current sensor mode | No |
 | sensor_mode | Cinemate -> CinePi-raw startup | Active sensor resolution/mode index | Yes (causes pipeline restart) |
-| bit_depth | Cinemate startup | Sensor bit depth (10 or 12) for the selected mode | No |
+| bit_depth | Cinemate startup | Sensor bit depth (10, 12 or 16) for the selected mode | No |
 | width / height | Cinemate startup | Active sensor resolution | No |
 | lores_width / lores_height | Cinemate startup | Preview stream resolution passed to CinePi-raw | No |
 | wb | Cinemate -> CinePi-raw | White-balance temperature in Kelvin | Yes |
@@ -29,6 +29,11 @@ Each entry explains which component normally writes the key and whether it makes
 | zoom | Cinemate | Digital zoom factor for preview streams | Yes |
 | hdmi_preview_source | Cinemate -> CinePi-raw | Dual-sensor HDMI preview source: `both`, `cam0`, `cam1`, `pip_cam0`, or `pip_cam1`. Read live by the compositor; no restart | Yes |
 | ir_filter | Cinemate -> CinePi-raw | Toggle IR-cut filter (IMX585 only) | Yes |
+| hdr | Cinemate -> CinePi-raw startup | ClearHDR state (imx585): `1` makes CinePi-raw launch with `--hdr sensor`. Set by `hdr profile`; changing it requires a camera restart | No (use `hdr profile`) |
+| hdr_profile | Cinemate | Index of the active entry in `resources/HDR_profiles.json` | No (use `hdr profile`) |
+| hdr_threshold | Cinemate -> CinePi-raw | ClearHDR data-selection thresholds `low,high` (0–4095 each). Applied live to the sensor, and re-applied at every CinePi-raw start | Yes (publish key to apply) |
+| hdr_blend | Cinemate -> CinePi-raw | ClearHDR HG/LG blending mode, driver menu 0–8 (0 = HG 1/2 + LG 1/2). Applied live | Yes (publish key to apply) |
+| hdr_gain_adder | Cinemate -> CinePi-raw | ClearHDR low-gain path gain adder, driver menu 0–5 (2 = +12 dB). Applied live | Yes (publish key to apply) |
 | is_recording | Cinemate -> CinePi-raw | Requested record state. Edge-triggered: `0 -> 1` starts, `1 -> 0` stops | Yes |
 | record_cams | Cinemate -> CinePi-raw | Dual-sensor record gate: which sensor(s) capture this take (`cam0+cam1`, `cam0`, or `cam1`). Published before `is_recording` flips; each `cinepi-raw` records only if its `--cam-port` is selected. Absent/empty = both | No |
 | rec | Cinemate (RedisListener) | Derived runtime record flag based on `framecount` rising/going flat | No |

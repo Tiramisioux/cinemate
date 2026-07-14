@@ -54,36 +54,38 @@ sudo apt upgrade -y
 
 ### Kernel baseline (Raspberry Pi 5 / CM5)
 
-Fresh Bookworm Pi 5 images currently boot a newer kernel than the one Cinemate is validated against. Before building `libcamera`, `cinepi-raw`, or the IMX585 driver, roll the Pi 5 kernel and firmware back to the known-good baseline and make the new boot files stick in `/boot/firmware`.
+Cinemate pins the Pi 5 kernel to a validated baseline: **6.12.93+rpt**. Install it before building `libcamera`, `cinepi-raw`, or the IMX585 driver, and make the boot files stick in `/boot/firmware`.
+
+The baseline matters in both directions. Older kernels — including the previous 6.12.25 pin — ship an `rp1-cfe` driver that corrupts 16-bit CSI-2 capture, which breaks imx585 ClearHDR (10/12-bit recording is unaffected). The fixes landed mid-2025 (`cfe: Avoid unpack operation for 16-bit formats` plus a 16-bit hardware mismatch workaround), so any kernel from 6.12.93+rpt onward works; the pin keeps the fleet on one tested version.
 
 Skip this section on Pi 4.
 
 ```bash
-mkdir -p ~/kernel-rollback-6.12.25
-cd ~/kernel-rollback-6.12.25
+mkdir -p ~/kernel-baseline-6.12.93
+cd ~/kernel-baseline-6.12.93
 
-curl -LO https://archive.raspberrypi.com/debian/pool/main/l/linux/linux-support-6.12.25+rpt_6.12.25-1+rpt1_all.deb
-curl -LO https://archive.raspberrypi.com/debian/pool/main/l/linux/linux-image-6.12.25+rpt-rpi-2712_6.12.25-1+rpt1_arm64.deb
-curl -LO https://archive.raspberrypi.com/debian/pool/main/l/linux/linux-image-rpi-2712_6.12.25-1+rpt1_arm64.deb
-curl -LO https://archive.raspberrypi.com/debian/pool/main/l/linux/linux-headers-6.12.25+rpt-rpi-2712_6.12.25-1+rpt1_arm64.deb
-curl -LO https://archive.raspberrypi.com/debian/pool/main/l/linux/linux-headers-rpi-2712_6.12.25-1+rpt1_arm64.deb
-curl -LO https://archive.raspberrypi.com/debian/pool/untested/r/raspi-firmware/raspi-firmware_1.20250430-1_all.deb
+curl -LO https://archive.raspberrypi.com/debian/pool/main/l/linux/linux-support-6.12.93+rpt_6.12.93-1+rpt1_all.deb
+curl -LO https://archive.raspberrypi.com/debian/pool/main/l/linux/linux-image-6.12.93+rpt-rpi-2712_6.12.93-1+rpt1_arm64.deb
+curl -LO https://archive.raspberrypi.com/debian/pool/main/l/linux/linux-image-rpi-2712_6.12.93-1+rpt1_arm64.deb
+curl -LO https://archive.raspberrypi.com/debian/pool/main/l/linux/linux-headers-6.12.93+rpt-rpi-2712_6.12.93-1+rpt1_arm64.deb
+curl -LO https://archive.raspberrypi.com/debian/pool/main/l/linux/linux-headers-rpi-2712_6.12.93-1+rpt1_arm64.deb
+curl -LO https://archive.raspberrypi.com/debian/pool/main/r/raspi-firmware/raspi-firmware_1.20260521-1~bookworm_all.deb
 
 sudo apt install -y --allow-downgrades ./*.deb
-sudo update-initramfs -u -k 6.12.25+rpt-rpi-2712
-sudo cp /boot/vmlinuz-6.12.25+rpt-rpi-2712 /boot/firmware/kernel_2712.img
-sudo cp /boot/initrd.img-6.12.25+rpt-rpi-2712 /boot/firmware/initramfs_2712
+sudo update-initramfs -u -k 6.12.93+rpt-rpi-2712
+sudo cp /boot/vmlinuz-6.12.93+rpt-rpi-2712 /boot/firmware/kernel_2712.img
+sudo cp /boot/initrd.img-6.12.93+rpt-rpi-2712 /boot/firmware/initramfs_2712
 sudo apt-mark hold \
   raspi-firmware \
-  linux-support-6.12.25+rpt \
-  linux-image-6.12.25+rpt-rpi-2712 \
+  linux-support-6.12.93+rpt \
+  linux-image-6.12.93+rpt-rpi-2712 \
   linux-image-rpi-2712 \
-  linux-headers-6.12.25+rpt-rpi-2712 \
+  linux-headers-6.12.93+rpt-rpi-2712 \
   linux-headers-rpi-2712
 sudo reboot
 ```
 
-After the reboot, verify the rollback before continuing:
+After the reboot, verify the baseline before continuing:
 
 ```bash
 uname -r
@@ -92,8 +94,10 @@ uname -r
 Expected output on Pi 5:
 
 ```text
-6.12.25+rpt-rpi-2712
+6.12.93+rpt-rpi-2712
 ```
+
+The `-rpi-2712` flavour matters: if `uname -r` reports `-rpi-v8`, the Pi booted the generic 4K-page kernel instead of the copied `kernel_2712.img` — repeat the `update-initramfs`/`cp` steps above. Out-of-tree sensor modules (imx585, imx283) must be rebuilt whenever the kernel version changes.
 
 ```bash
 sudo apt-get install python3-jinja2 python3-ply python3-yaml ffmpeg

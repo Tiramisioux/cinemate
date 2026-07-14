@@ -167,8 +167,10 @@
     ],
     "bit_depths": [
       10,
-      12
+      12,
+      16
     ],
+    "min_frame_rate": 20,
     "custom_modes": {}
   },
   "sensors": {

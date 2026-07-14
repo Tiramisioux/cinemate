@@ -92,14 +92,19 @@ IMX585_DRIVER_REPO_URL="${IMX585_DRIVER_REPO_URL:-https://github.com/Tiramisioux
 IMX585_DRIVER_REPO_REF="${IMX585_DRIVER_REPO_REF:-6.12.y}"
 IR_FILTER_URL="${IR_FILTER_URL:-https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter}"
 PISHRINK_URL="${PISHRINK_URL:-https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh}"
-KERNEL_BASELINE_ABI_2712="${KERNEL_BASELINE_ABI_2712:-6.12.25+rpt-rpi-2712}"
-KERNEL_BASELINE_DEB_VERSION_2712="${KERNEL_BASELINE_DEB_VERSION_2712:-6.12.25-1+rpt1}"
-KERNEL_BASELINE_SUPPORT_PKG_2712="${KERNEL_BASELINE_SUPPORT_PKG_2712:-linux-support-6.12.25+rpt}"
-KERNEL_BASELINE_IMAGE_REAL_PKG_2712="${KERNEL_BASELINE_IMAGE_REAL_PKG_2712:-linux-image-6.12.25+rpt-rpi-2712}"
+# Pi 5 kernel baseline. 6.12.93+rpt is the oldest baseline validated for
+# imx585 ClearHDR: earlier kernels (including the previous 6.12.25 pin) ship
+# an rp1-cfe driver that corrupts 16-bit CSI-2 capture (fixed mid-2025 by
+# "cfe: Avoid unpack operation for 16-bit formats" and the 16-bit hardware
+# mismatch workaround). 10/12-bit capture is unaffected either way.
+KERNEL_BASELINE_ABI_2712="${KERNEL_BASELINE_ABI_2712:-6.12.93+rpt-rpi-2712}"
+KERNEL_BASELINE_DEB_VERSION_2712="${KERNEL_BASELINE_DEB_VERSION_2712:-6.12.93-1+rpt1}"
+KERNEL_BASELINE_SUPPORT_PKG_2712="${KERNEL_BASELINE_SUPPORT_PKG_2712:-linux-support-6.12.93+rpt}"
+KERNEL_BASELINE_IMAGE_REAL_PKG_2712="${KERNEL_BASELINE_IMAGE_REAL_PKG_2712:-linux-image-6.12.93+rpt-rpi-2712}"
 KERNEL_BASELINE_IMAGE_META_PKG_2712="${KERNEL_BASELINE_IMAGE_META_PKG_2712:-linux-image-rpi-2712}"
-KERNEL_BASELINE_HEADERS_REAL_PKG_2712="${KERNEL_BASELINE_HEADERS_REAL_PKG_2712:-linux-headers-6.12.25+rpt-rpi-2712}"
+KERNEL_BASELINE_HEADERS_REAL_PKG_2712="${KERNEL_BASELINE_HEADERS_REAL_PKG_2712:-linux-headers-6.12.93+rpt-rpi-2712}"
 KERNEL_BASELINE_HEADERS_META_PKG_2712="${KERNEL_BASELINE_HEADERS_META_PKG_2712:-linux-headers-rpi-2712}"
-RASPI_FIRMWARE_VERSION_2712="${RASPI_FIRMWARE_VERSION_2712:-1.20250430-1}"
+RASPI_FIRMWARE_VERSION_2712="${RASPI_FIRMWARE_VERSION_2712:-1.20260521-1~bookworm}"
 KERNEL_ROLLBACK_DIR="${KERNEL_ROLLBACK_DIR:-/var/tmp/cinemate-kernel-baseline}"
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

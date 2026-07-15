@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "comment": "imx585 ClearHDR presets, applied with the CineMate CLI command 'set hdr profile [n]' (a bare 'set hdr profile' cycles to the next entry). Applying a profile restarts the camera. Fields: hdr = ClearHDR on/off (wide_dynamic_range); threshold = [low, high] HG->LG data-selection thresholds, 0-4095 each; blend_mode = driver menu 0-8 (0 = HG 1/2 + LG 1/2); gain_adder = driver menu 0-5 (2 = +12 dB). Knob fields are optional, but explicit values keep profiles deterministic because sensor controls persist until reboot.",
+  "comment": "imx585 ClearHDR presets, applied with the CineMate CLI command 'set hdr profile [n]' (a bare 'set hdr profile' cycles to the next entry). Applying a profile restarts the camera. Fields: hdr = ClearHDR on/off (wide_dynamic_range); threshold = [low, high] HG->LG data-selection thresholds, 0-4095 each; blend_mode = driver menu 0-8 (0 = HG 1/2 + LG 1/2); gain_adder = driver menu 0-5 (0 = +0 dB, 1 = +6 dB, 2 = +12 dB). Knob fields are optional, but explicit values keep profiles deterministic because sensor controls persist until reboot.",
   "profiles": [
     {
       "name": "sdr",
@@ -12,8 +12,8 @@
       "hdr": true,
       "threshold": [0, 0],
       "blend_mode": 0,
-      "gain_adder": 2,
-      "notes": "Driver defaults: 16-bit linear ClearHDR, HG 1/2 + LG 1/2 blend, +12 dB gain adder."
+      "gain_adder": 1,
+      "notes": "16-bit linear ClearHDR, HG 1/2 + LG 1/2 blend, +6 dB gain adder (menu 1) — a lower noise floor than the driver's +12 dB default; raise to 2 if you need more low-gain lift in the merge."
     },
     {
       "name": "hdr-highlight",

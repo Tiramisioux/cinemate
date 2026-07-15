@@ -76,7 +76,7 @@ Shipped profiles:
 | # | Name | ClearHDR | Knobs |
 |---|------|----------|-------|
 | 0 | `sdr` | off | — |
-| 1 | `hdr-default` | on | driver defaults (threshold 0,0 · blend 0 · gain adder +12 dB) |
+| 1 | `hdr-default` | on | threshold 0,0 · blend 0 · gain adder +6 dB (menu 1 — lower noise than the driver's +12 dB) |
 | 2 | `hdr-highlight` | on | threshold 500,3000 · blend 2 · gain adder +12 dB |
 
 Profile fields: `hdr` (bool), `threshold` (`[low, high]`, 0–4095 each), `blend_mode` (0–8), `gain_adder` (0–5). Knob fields are optional, but explicit values keep profiles deterministic — sensor controls persist until reboot. The active profile index is stored in the Redis key `hdr_profile`, and the stored knob keys are re-applied by cinepi-raw at every start.

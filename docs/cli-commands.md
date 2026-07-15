@@ -24,7 +24,7 @@ These commands can also be sent to the Pi as serial via the Tx/Rx pins or via US
 | `inc shutter a nom` / `dec shutter a nom`  | -              |                      | Step the nominal shutter angle                  |
 | `set fps <value>`                          | float             | `set fps 24`                            | Change frame rate (snaps unless free)           |
 | `inc fps` / `dec fps`                      | -              |                                | Step through FPS list                           |
-| `hdr profile [<n>]`                        | int or none       | `hdr profile 1`                         | Apply ClearHDR profile n, or cycle with no arg; restarts the camera ([ClearHDR](clear-hdr.md)) |
+| `set hdr profile [<n>]`                    | int or none       | `set hdr profile 1`                     | Apply ClearHDR profile n, or cycle with no arg; restarts the camera ([ClearHDR](clear-hdr.md)) |
 | `set hdr threshold <low,high>`             | string            | `set hdr threshold 500,3000`            | ClearHDR HG→LG data-selection thresholds (0–4095 each), applied live |
 | `set hdr blend <n>`                        | int               | `set hdr blend 2`                       | ClearHDR blending mode 0–8, applied live        |
 | `set hdr gain adder <n>`                   | int               | `set hdr gain adder 2`                  | ClearHDR low-gain gain adder 0–5 (2 = +12 dB), applied live |

@@ -29,7 +29,7 @@ Each entry explains which component normally writes the key and whether it makes
 | zoom | Cinemate | Digital zoom factor for preview streams | Yes |
 | hdmi_preview_source | Cinemate -> CinePi-raw | Dual-sensor HDMI preview source: `both`, `cam0`, `cam1`, `pip_cam0`, or `pip_cam1`. Read live by the compositor; no restart | Yes |
 | ir_filter | Cinemate -> CinePi-raw | Toggle IR-cut filter (IMX585 only) | Yes |
-| hdr | Cinemate -> CinePi-raw startup | ClearHDR state (imx585): `1` makes CinePi-raw launch with `--hdr sensor`. Set by `hdr profile`; changing it requires a camera restart | No (use `hdr profile`) |
+| hdr | Cinemate -> CinePi-raw startup | ClearHDR state (imx585): `1` makes CinePi-raw launch with `--hdr sensor`. Set automatically when a ClearHDR sensor mode is selected, or by `set hdr profile`; changing it requires a camera restart | No (select an HDR mode or use `set hdr profile`) |
 | hdr_profile | Cinemate | Index of the active entry in `resources/HDR_profiles.json` | No (use `hdr profile`) |
 | hdr_threshold | Cinemate -> CinePi-raw | ClearHDR data-selection thresholds `low,high` (0–4095 each). Applied live to the sensor, and re-applied at every CinePi-raw start | Yes (publish key to apply) |
 | hdr_blend | Cinemate -> CinePi-raw | ClearHDR HG/LG blending mode, driver menu 0–8 (0 = HG 1/2 + LG 1/2). Applied live | Yes (publish key to apply) |

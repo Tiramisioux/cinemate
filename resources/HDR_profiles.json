@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "comment": "imx585 ClearHDR presets, applied with the CineMate CLI command 'hdr profile [n]' (a bare 'hdr profile' cycles to the next entry). Applying a profile restarts the camera. Fields: hdr = ClearHDR on/off (wide_dynamic_range); threshold = [low, high] HG->LG data-selection thresholds, 0-4095 each; blend_mode = driver menu 0-8 (0 = HG 1/2 + LG 1/2); gain_adder = driver menu 0-5 (2 = +12 dB). Knob fields are optional, but explicit values keep profiles deterministic because sensor controls persist until reboot.",
+  "comment": "imx585 ClearHDR presets, applied with the CineMate CLI command 'set hdr profile [n]' (a bare 'set hdr profile' cycles to the next entry). Applying a profile restarts the camera. Fields: hdr = ClearHDR on/off (wide_dynamic_range); threshold = [low, high] HG->LG data-selection thresholds, 0-4095 each; blend_mode = driver menu 0-8 (0 = HG 1/2 + LG 1/2); gain_adder = driver menu 0-5 (2 = +12 dB). Knob fields are optional, but explicit values keep profiles deterministic because sensor controls persist until reboot.",
   "profiles": [
     {
       "name": "sdr",

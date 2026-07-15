@@ -99,6 +99,13 @@ class SensorDatabaseTests(unittest.TestCase):
                              3856x2180 [43.80 fps - (0, 0)/3840x2160 crop]
 """
 
+    IMX585_HDR_LISTCAMERAS = """0 : imx585 [3840x2160 16-bit RGGB] (/base/axi/pcie@1000120000/rp1/i2c@70000/imx585@1a)
+    Modes: 'SRGGB12_CSI2P' : 1928x1090 [25.00 fps - (0, 0)/3840x2160 crop]
+                             3856x2180 [21.90 fps - (0, 0)/3840x2160 crop]
+           'SRGGB16' : 1928x1090 [25.00 fps - (0, 0)/3840x2160 crop]
+                       3856x2180 [21.90 fps - (0, 0)/3840x2160 crop]
+"""
+
     def _detector_for_parse(self):
         import json
         detector = self._detector_without_probe()
@@ -108,25 +115,65 @@ class SensorDatabaseTests(unittest.TestCase):
         detector.k_steps = rc.get("k_steps", [])
         detector.bit_depths = rc.get("bit_depths", [])
         detector.custom_modes = rc.get("custom_modes", {})
+        # These parse tests isolate mode parsing/merging, so leave the frame-rate
+        # floor off and expose both HDR and non-HDR modes.
+        detector.min_frame_rate = 0
+        detector.hdr_modes = rc.get("hdr", [])
         detector.sensor_resolutions = {}
         return detector
 
+    def _parse(self, detector, output, hdr_output=None):
+        """Run a detector's parse → merge → finalize pipeline for one (or two)
+        --list-cameras runs, mirroring detect_camera_model()."""
+        base = detector._parse_cinepi_output(output, hdr=False)
+        hdr = detector._parse_cinepi_output(hdr_output, hdr=True) if hdr_output else {}
+        return detector._finalize_modes(detector._merge_mode_lists(base, hdr))
+
     def test_imx585_mode_table_is_stable(self):
-        """Regression guard: imx585's driver reports a single bit depth, so its
-        parsed table must stay at exactly two 12-bit modes — unaffected by any
-        handling added for multi-bit-depth sensors like imx477."""
+        """Regression guard: with only the plain run, imx585 stays at exactly
+        two 12-bit non-HDR modes — unaffected by any handling added for
+        multi-bit-depth sensors like imx477."""
         d = self._detector_for_parse()
-        parsed = d._parse_cinepi_output(self.IMX585_LISTCAMERAS)["imx585"]
-        table = {(m["width"], m["height"], m["bit_depth"]) for m in parsed.values()}
+        parsed = self._parse(d, self.IMX585_LISTCAMERAS)["imx585"]
+        table = {(m["width"], m["height"], m["bit_depth"], m["hdr"]) for m in parsed.values()}
         self.assertEqual(len(parsed), 2)
-        self.assertEqual(table, {(3856, 2180, 12), (1928, 1090, 12)})
+        self.assertEqual(table, {(3856, 2180, 12, False), (1928, 1090, 12, False)})
+
+    def test_imx585_clearhdr_modes_merged_and_ordered(self):
+        """The plain and --hdr sensor runs merge into one table ordered plain →
+        12-bit HDR → 16-bit HDR, and the HDR modes carry hdr=True."""
+        d = self._detector_for_parse()
+        parsed = self._parse(d, self.IMX585_LISTCAMERAS, self.IMX585_HDR_LISTCAMERAS)["imx585"]
+        ordered = [
+            (m["width"], m["bit_depth"], m["hdr"]) for _, m in sorted(parsed.items())
+        ]
+        self.assertEqual(
+            ordered,
+            [
+                (1928, 12, False),
+                (3856, 12, False),
+                (1928, 12, True),
+                (3856, 12, True),
+                (1928, 16, True),
+                (3856, 16, True),
+            ],
+        )
+
+    def test_non_hdr_sensor_not_doubled_by_hdr_probe(self):
+        """A sensor that ignores --hdr sensor returns identical modes twice; the
+        merge must collapse them back to a single non-HDR list."""
+        d = self._detector_for_parse()
+        # Same output for both runs (flag ignored by a non-HDR sensor).
+        parsed = self._parse(d, self.IMX477_LISTCAMERAS, self.IMX477_LISTCAMERAS)["imx477"]
+        self.assertTrue(all(m["hdr"] is False for m in parsed.values()))
+        self.assertEqual(len(parsed), 10)             # not 20
 
     def test_imx477_multi_bitdepth_modes_are_parsed(self):
         """imx477 reports SRGGB8/10/12; the bit_depths=[10,12] filter keeps both
         the 10- and 12-bit copies of all five resolutions (8-bit dropped), so a
         resolution exists at two bit depths and the operator can reach either."""
         d = self._detector_for_parse()
-        parsed = d._parse_cinepi_output(self.IMX477_LISTCAMERAS)["imx477"]
+        parsed = self._parse(d, self.IMX477_LISTCAMERAS)["imx477"]
         depths = sorted({m["bit_depth"] for m in parsed.values()})
         self.assertEqual(depths, [10, 12])            # 8-bit filtered out
         self.assertEqual(len(parsed), 10)             # 5 resolutions x 2 depths

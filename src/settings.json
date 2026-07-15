@@ -170,6 +170,10 @@
       12,
       16
     ],
+    "hdr": [
+      false,
+      true
+    ],
     "min_frame_rate": 20,
     "custom_modes": {}
   },

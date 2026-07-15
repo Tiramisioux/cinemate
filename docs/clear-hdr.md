@@ -13,10 +13,50 @@ ClearHDR is the imx585's on-sensor single-frame HDR. The sensor merges a high-ga
 
 ## What changes when ClearHDR is on
 
-- The sensor's mode list switches: 16-bit modes appear (3856×2180 and 1928×1090) and frame rates halve (≈ 21.9 fps max at 4K). `min_frame_rate` in `settings.json` defaults to 20 so the 4K ClearHDR mode stays selectable.
+- Frame rates halve versus the plain modes (≈ 33 fps at 4K, ≈ 37 fps at 2K on an overclocked RP1). `min_frame_rate` in `settings.json` defaults to 20 so the 4K ClearHDR mode stays selectable.
 - Analogue gain caps at code 80 ≈ 15.8× (ISO 1580).
 - Each 3856×2180 DNG is ≈ 16.9 MB. Storage bandwidth: 15 fps ≈ 252 MB/s, 20 fps ≈ 336 MB/s — plan drives accordingly. The minutes-left display uses the 16.9 MB figure automatically.
+- Auto exposure and auto white balance cannot run in the 16-bit modes (ISP statistics are invalid at 16-bit). Set exposure manually.
 - Highlights near the HG→LG hand-off can render magenta in flat greys: the two readouts converge there and white balance lifts red/blue above green. Tune the knobs below for the scene or grade it out — it is not a capture defect.
+
+## ClearHDR modes in the mode table
+
+Cinemate probes the sensor **twice** at startup — `cinepi-raw --list-cameras`
+and `cinepi-raw --list-cameras --hdr sensor` — and merges both results, so the
+plain and the ClearHDR modes live in the same mode table. Selecting a ClearHDR
+mode launches cinepi-raw with `--hdr sensor`; selecting a plain mode launches
+without it. No separate toggle is needed.
+
+The imx585 exposes ClearHDR at **both** 12-bit and 16-bit, so the table is
+ordered plain modes first, then 12-bit HDR, then 16-bit HDR:
+
+| Mode | Resolution | Bit depth | HDR | ~fps (overclocked) |
+|------|-----------|-----------|-----|--------------------|
+| 0 | 1928×1090 | 12-bit | — | 75 |
+| 1 | 3856×2180 | 12-bit | — | 66.85 |
+| 2 | 1928×1090 | 12-bit | HDR | 37.50 |
+| 3 | 3856×2180 | 12-bit | HDR | 33.43 |
+| 4 | 1928×1090 | 16-bit | HDR | 37.50 |
+| 5 | 3856×2180 | 16-bit | HDR | 33.43 |
+
+HDR modes are labelled so they read distinctly from the plain modes:
+
+- **Simple (HDMI) GUI** — `HDR` after the bit depth, e.g. `1928×1090 :12b HDR`.
+- **Web GUI** — `:HDR` appended in the resolution dropdown, e.g. `1928 : 1090 : 12b :HDR`.
+
+To hide the ClearHDR modes entirely, set the `hdr` whitelist in
+`settings.json` → `resolutions`:
+
+```json
+"resolutions": {
+  "hdr": [false]
+}
+```
+
+`[false, true]` (the default) exposes both; `[false]` hides the HDR modes;
+`[true]` shows only them. It works like the neighbouring `bit_depths` and
+`k_steps` whitelists. Frame rates depend on the RP1 clock — see
+[Overclocking the Pi](overclocking.md).
 
 ## HDR profiles
 
@@ -25,10 +65,10 @@ Presets live in `resources/HDR_profiles.json`. Each profile sets ClearHDR on or 
 CLI:
 
 ```text
-hdr profile        # cycle to the next profile
-hdr profile 0      # apply profile 0 (sdr)
-hdr profile 1      # apply profile 1 (hdr-default)
-hdr profile 2      # apply profile 2 (hdr-highlight)
+set hdr profile        # cycle to the next profile
+set hdr profile 0      # apply profile 0 (sdr)
+set hdr profile 1      # apply profile 1 (hdr-default)
+set hdr profile 2      # apply profile 2 (hdr-highlight)
 ```
 
 Shipped profiles:

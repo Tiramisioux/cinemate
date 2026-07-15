@@ -329,14 +329,16 @@ Choose which sensor modes are practical to expose in the UI when cycling resolut
 "resolutions": {
   "k_steps": [1.5, 2, 3, 4],
   "bit_depths": [10, 12, 16],
+  "hdr": [false, true],
   "min_frame_rate": 20,
   "custom_modes": {}
 }
 ```
 
 `k_steps` – K‑style categories for allowed widths. Modes are grouped to the nearest half‑K. Example: 1332×990 counts as **1.5 K**.
-<br>`bit_depths` – list of bit depths to expose. `16` covers the imx585 ClearHDR modes (see [ClearHDR](clear-hdr.md)).
-<br>`min_frame_rate` – hide modes whose maximum frame rate is below this value. The default `20` keeps the imx585 4K ClearHDR mode (~21.9 fps) visible; raise it to hide slow modes, lower it to expose slower ones.
+<br>`bit_depths` – list of bit depths to expose. `16` covers the imx585 ClearHDR 16-bit modes (see [ClearHDR](clear-hdr.md)).
+<br>`hdr` – whitelist of the ClearHDR flag. `[false, true]` (default) exposes both the plain and the imx585 ClearHDR modes; `[false]` hides the HDR modes; `[true]` shows only them. Cinemate detects the HDR modes by probing `cinepi-raw --list-cameras --hdr sensor` alongside the plain list. imx585 has HDR modes at **both** 12-bit and 16-bit, and they are labelled `HDR` (simple GUI) / `:HDR` (web GUI).
+<br>`min_frame_rate` – hide modes whose maximum frame rate is below this value. The default `20` keeps the imx585 4K ClearHDR mode visible; raise it to hide slow modes, lower it to expose slower ones.
 <br>`custom_modes` – optional extra modes per sensor if the driver advertises none.
 
 !!! note "Design: full capability vs practical exposure"

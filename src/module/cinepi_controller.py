@@ -591,8 +591,8 @@ class CinePiController:
     def hdr_profile(self, index=None):
         """Apply a profile from resources/HDR_profiles.json and restart the camera.
 
-        ``hdr profile 1`` applies profile 1; a bare ``hdr profile`` cycles to
-        the next one.
+        ``set hdr profile 1`` applies profile 1; a bare ``set hdr profile``
+        cycles to the next one.
         """
         profiles = self._load_hdr_profiles()
         if not profiles:
@@ -614,10 +614,13 @@ class CinePiController:
         name = profile.get("name", str(index))
         hdr_on = bool(profile.get("hdr", False))
 
-        # Order matters: flip the sensor control first so the re-detected
-        # mode table reflects the new state, publish the knob keys (cinepi-raw
-        # also re-applies them from Redis at startup), then restart cinepi-raw
-        # with or without --hdr sensor (read from the hdr key at launch).
+        # Order matters: flip the sensor control first, publish the knob keys
+        # (cinepi-raw also re-applies them from Redis at startup), then restart
+        # cinepi-raw with or without --hdr sensor (read from the hdr key at
+        # launch). The mode table already carries both the plain and the HDR
+        # modes (SensorDetect probes --list-cameras with and without --hdr
+        # sensor), so no re-detection is needed here — and re-detecting now,
+        # with wide_dynamic_range flipped on, would mislabel the HDR modes.
         self._set_wide_dynamic_range(hdr_on)
         self.redis_controller.set_value(ParameterKey.HDR.value, 1 if hdr_on else 0)
 
@@ -629,11 +632,6 @@ class CinePiController:
         if "gain_adder" in profile:
             self.set_hdr_gain_adder(profile["gain_adder"])
         self.redis_controller.set_value(ParameterKey.HDR_PROFILE.value, index)
-
-        try:
-            self.sensor_detect.detect_camera_model()
-        except Exception as exc:
-            logging.warning(f"Sensor mode re-detection after HDR change failed: {exc}")
 
         logging.info(
             f"HDR profile {index} ('{name}') applied — restarting camera "
@@ -1451,6 +1449,11 @@ class CinePiController:
         self.redis_controller.set_value(ParameterKey.HEIGHT.value, str(height_new))
         self.redis_controller.set_value(ParameterKey.WIDTH.value, str(width_new))
         self.redis_controller.set_value(ParameterKey.BIT_DEPTH.value, str(bit_depth_new))
+        # ClearHDR (imx585): the mode carries the HDR flag, so selecting a
+        # 12-bit-HDR or 16-bit-HDR mode turns the hdr key on and cinepi-raw
+        # launches with --hdr sensor; a plain mode turns it back off.
+        hdr_new = bool(resolution_info.get('hdr', False))
+        self.redis_controller.set_value(ParameterKey.HDR.value, 1 if hdr_new else 0)
         self.redis_controller.set_value(ParameterKey.PACKING.value, str(packing_new))
         self.redis_controller.set_value(ParameterKey.GUI_LAYOUT.value, str(gui_layout_new))
         self.redis_controller.set_value(ParameterKey.FILE_SIZE.value, str(file_size_new))

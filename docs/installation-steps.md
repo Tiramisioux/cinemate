@@ -184,17 +184,14 @@ sudo ninja -C build install && \
 sudo ldconfig
 ```
 
-```shell
-git -C ~/libcamera log --oneline -2
-find ~/libcamera/src/ipa/rpi/cam_helper -name '*imx585*'
-```
-
-Expected output:
-
-```text
-<hash> <HEAD commit message of the cinemate tip>
-/home/pi/libcamera/src/ipa/rpi/cam_helper/cam_helper_imx585.cpp
-```
+!!! tip "Pi 5 overclock (optional)"
+    On a Raspberry Pi 5 you can raise the RP1 image-pipeline clock to unlock
+    higher imx585 ClearHDR frame rates before you build libcamera. See
+    [Overclocking the Pi](overclocking.md) — it changes one line in
+    `controller.cpp` (`minPixelProcessingTime`) and adds an RP1 device-tree
+    overlay. Do this **before** the libcamera build above so the change is
+    compiled in. The prebuilt Cinemate image already ships this libcamera build;
+    only the RP1 overlay stays commented out in `config.txt` until you opt in.
 
 ### cpp-mjpeg-streamer
 

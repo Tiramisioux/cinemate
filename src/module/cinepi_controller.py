@@ -1625,14 +1625,22 @@ class CinePiController:
     def _resolution_change_needs_restart(self, target_mode):
         """Whether switching to *target_mode* must relaunch cinepi-raw.
 
-        cinepi-raw bakes the preview window (-p) and lores geometry into its
-        launch args from the mode's aspect ratio, so a live "record-through"
-        reconfigure keeps the OLD geometry — it only stays correct when the
-        aspect ratio is unchanged. When the aspect ratio changes we must restart
-        cinepi-raw to rebuild the preview (otherwise it stays letterboxed/
-        undersized until the next restart). Recording is deliberately left
-        seamless: a same-aspect change is the only kind wanted mid-take, so we
-        never split a running take just to fix the preview shape.
+        A live "record-through" reconfigure can only change things cinepi-raw
+        re-reads on the fly; several launch args it cannot:
+
+        * **Aspect ratio** — the preview window (-p) and lores geometry are
+          baked in from the mode's aspect ratio, so a same-aspect change stays
+          correct but a different-aspect one leaves the preview letterboxed
+          until a restart.
+        * **Bit depth** — part of ``--mode``. Switching between the imx585
+          12-bit and 16-bit ClearHDR modes (same aspect) otherwise keeps
+          recording 12-bit DNGs because the sensor format never changes.
+        * **ClearHDR** — ``--hdr sensor`` is a launch flag; toggling it needs a
+          relaunch for wide_dynamic_range to take effect.
+
+        So a change to aspect ratio, bit depth or the HDR flag needs a restart.
+        Recording is deliberately left seamless: we never split a running take,
+        so such a change applies on the next launch instead.
         """
         if self._is_recording():
             return False
@@ -1640,14 +1648,34 @@ class CinePiController:
             target_info = self.sensor_detect.res_modes.get(int(target_mode), {})
         except (TypeError, ValueError):
             return False
+
         new_ar = self._aspect_ratio(target_info.get("width"), target_info.get("height"))
         cur_ar = self._aspect_ratio(
             self.redis_controller.get_value(ParameterKey.WIDTH.value),
             self.redis_controller.get_value(ParameterKey.HEIGHT.value),
         )
-        if new_ar is None or cur_ar is None:
-            return False
-        return abs(new_ar - cur_ar) > 0.01
+        if new_ar is not None and cur_ar is not None and abs(new_ar - cur_ar) > 0.01:
+            return True
+
+        # Bit depth is part of --mode; a live reconfigure cannot change the
+        # sensor's bit depth, so a 12-bit → 16-bit switch needs a relaunch.
+        # (All imx585 modes share one aspect ratio, so without this the switch
+        # would never restart and 16-bit modes would keep writing 12-bit DNGs.)
+        try:
+            new_bd = int(target_info.get("bit_depth"))
+            cur_bd = int(self.redis_controller.get_value(ParameterKey.BIT_DEPTH.value))
+            if new_bd != cur_bd:
+                return True
+        except (TypeError, ValueError):
+            pass
+
+        # ClearHDR is the --hdr sensor launch flag.
+        new_hdr = 1 if bool(target_info.get("hdr")) else 0
+        cur_hdr = 1 if str(self.redis_controller.get_value(ParameterKey.HDR.value) or "0") == "1" else 0
+        if new_hdr != cur_hdr:
+            return True
+
+        return False
 
     def set_resolution(self, value=None, *, restart_process=False):
         if value is not None:

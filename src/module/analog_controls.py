@@ -9,7 +9,8 @@ from collections import deque
 from module.redis_controller import ParameterKey
 
 class AnalogControls(threading.Thread):
-    def __init__(self, cinepi_controller, redis_controller, iso_pot=None, shutter_a_pot=None, fps_pot=None, wb_pot=None, iso_steps=None, shutter_a_steps=None, fps_steps=None, wb_steps=None):
+    def __init__(self, cinepi_controller, redis_controller, iso_pot=None, shutter_a_pot=None, fps_pot=None, wb_pot=None, iso_steps=None, shutter_a_steps=None, fps_steps=None, wb_steps=None,
+                 hdr_threshold_low_pot=None, hdr_threshold_high_pot=None, hdr_blend_pot=None, hdr_gain_adder_pot=None):
         threading.Thread.__init__(self)
 
         self.cinepi_controller = cinepi_controller
@@ -21,11 +22,22 @@ class AnalogControls(threading.Thread):
         self.shutter_a_pot = self.convert_to_int_or_none(shutter_a_pot)
         self.fps_pot = self.convert_to_int_or_none(fps_pot)
         self.wb_pot = self.convert_to_int_or_none(wb_pot)
-        
+        # imx585 ClearHDR knobs (ranges per the sensor driver: thresholds
+        # 0–4095 each, blending mode 0–8, gain adder 0–5)
+        self.hdr_threshold_low_pot = self.convert_to_int_or_none(hdr_threshold_low_pot)
+        self.hdr_threshold_high_pot = self.convert_to_int_or_none(hdr_threshold_high_pot)
+        self.hdr_blend_pot = self.convert_to_int_or_none(hdr_blend_pot)
+        self.hdr_gain_adder_pot = self.convert_to_int_or_none(hdr_gain_adder_pot)
+
         self.iso_steps = iso_steps or []
         self.shutter_a_steps = shutter_a_steps or []
         self.fps_steps = fps_steps or []
         self.wb_steps = wb_steps or []
+        # 16-count granularity keeps the 0–4095 threshold range stable against
+        # pot jitter (256 positions); blend and gain adder are small menus.
+        self.hdr_threshold_steps = list(range(0, 4096, 16))
+        self.hdr_blend_steps = list(range(0, 9))
+        self.hdr_gain_adder_steps = list(range(0, 6))
 
         # Rolling buffers for filtering
         self.buffer_size = 5
@@ -33,12 +45,20 @@ class AnalogControls(threading.Thread):
         self.shutter_a_buffer = deque(maxlen=self.buffer_size)
         self.fps_buffer = deque(maxlen=self.buffer_size)
         self.wb_buffer = deque(maxlen=self.buffer_size)
+        self.hdr_threshold_low_buffer = deque(maxlen=self.buffer_size)
+        self.hdr_threshold_high_buffer = deque(maxlen=self.buffer_size)
+        self.hdr_blend_buffer = deque(maxlen=self.buffer_size)
+        self.hdr_gain_adder_buffer = deque(maxlen=self.buffer_size)
 
         # Last set values for debouncing
         self.last_iso = None
         self.last_shutter_a = None
         self.last_fps = None
         self.last_wb = None
+        self.last_hdr_threshold_low = None
+        self.last_hdr_threshold_high = None
+        self.last_hdr_blend = None
+        self.last_hdr_gain_adder = None
         
         GROVE_BASE_HAT_ADDRESS = 0x08
         I2C_BUS = 1
@@ -208,8 +228,58 @@ class AnalogControls(threading.Thread):
                     self.cinepi_controller.set_wb(new_wb)
                     self.last_wb = new_wb
 
+            # ── imx585 ClearHDR knobs ────────────────────────────────────
+            if self.hdr_threshold_low_pot is not None:
+                raw = self.adc.read(self.hdr_threshold_low_pot)
+                self.hdr_threshold_low_buffer.append(raw)
+                new_low = self.map_adc_to_steps(self.moving_average(self.hdr_threshold_low_buffer),
+                                                steps=self.hdr_threshold_steps)
+                if new_low is not None and new_low != self.last_hdr_threshold_low:
+                    logging.info(f"HDR threshold low changed → ADC raw={raw}, mapped={new_low}")
+                    self.cinepi_controller.set_hdr_threshold(new_low, self._current_hdr_threshold()[1])
+                    self.last_hdr_threshold_low = new_low
+
+            if self.hdr_threshold_high_pot is not None:
+                raw = self.adc.read(self.hdr_threshold_high_pot)
+                self.hdr_threshold_high_buffer.append(raw)
+                new_high = self.map_adc_to_steps(self.moving_average(self.hdr_threshold_high_buffer),
+                                                 steps=self.hdr_threshold_steps)
+                if new_high is not None and new_high != self.last_hdr_threshold_high:
+                    logging.info(f"HDR threshold high changed → ADC raw={raw}, mapped={new_high}")
+                    self.cinepi_controller.set_hdr_threshold(self._current_hdr_threshold()[0], new_high)
+                    self.last_hdr_threshold_high = new_high
+
+            if self.hdr_blend_pot is not None:
+                raw = self.adc.read(self.hdr_blend_pot)
+                self.hdr_blend_buffer.append(raw)
+                new_blend = self.map_adc_to_steps(self.moving_average(self.hdr_blend_buffer),
+                                                  steps=self.hdr_blend_steps)
+                if new_blend is not None and new_blend != self.last_hdr_blend:
+                    logging.info(f"HDR blend changed → ADC raw={raw}, mapped={new_blend}")
+                    self.cinepi_controller.set_hdr_blend(new_blend)
+                    self.last_hdr_blend = new_blend
+
+            if self.hdr_gain_adder_pot is not None:
+                raw = self.adc.read(self.hdr_gain_adder_pot)
+                self.hdr_gain_adder_buffer.append(raw)
+                new_adder = self.map_adc_to_steps(self.moving_average(self.hdr_gain_adder_buffer),
+                                                  steps=self.hdr_gain_adder_steps)
+                if new_adder is not None and new_adder != self.last_hdr_gain_adder:
+                    logging.info(f"HDR gain adder changed → ADC raw={raw}, mapped={new_adder}")
+                    self.cinepi_controller.set_hdr_gain_adder(new_adder)
+                    self.last_hdr_gain_adder = new_adder
+
         except Exception as e:
             logging.error(f"Error occurred while updating parameters: {e}\n{traceback.format_exc()}")
+
+    def _current_hdr_threshold(self):
+        """Return the (low, high) pair currently stored in Redis (0,0 fallback)."""
+        try:
+            raw = self.redis_controller.get_value(ParameterKey.HDR_THRESHOLD.value) or "0,0"
+            low, high = (int(x) for x in str(raw).split(","))
+            return low, high
+        except (TypeError, ValueError):
+            return 0, 0
 
     def run(self):
         try:

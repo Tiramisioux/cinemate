@@ -798,7 +798,11 @@ def run_application(args, log_queue):
         settings["arrays"]["iso_steps"],
         settings["arrays"]["shutter_a_steps"],
         settings["arrays"]["fps_steps"],
-        settings["arrays"]["wb_steps"]
+        settings["arrays"]["wb_steps"],
+        hdr_threshold_low_pot=settings["analog_controls"].get("hdr_threshold_low_pot", "None"),
+        hdr_threshold_high_pot=settings["analog_controls"].get("hdr_threshold_high_pot", "None"),
+        hdr_blend_pot=settings["analog_controls"].get("hdr_blend_pot", "None"),
+        hdr_gain_adder_pot=settings["analog_controls"].get("hdr_gain_adder_pot", "None"),
     )
 
     # Mount CFE card if not mounted

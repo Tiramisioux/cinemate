@@ -1709,17 +1709,28 @@ class CinePiController:
         
     def get_current_sensor_mode(self):
         current_height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value))
+        try:
+            current_bd = int(self.redis_controller.get_value(ParameterKey.BIT_DEPTH.value))
+        except (TypeError, ValueError):
+            current_bd = None
+        current_hdr = str(self.redis_controller.get_value(ParameterKey.HDR.value) or "0") == "1"
 
-        for mode, height_dict in self.sensor_detect.res_modes.items():
-            if height_dict.get('height') == current_height:
-                # Update fps_max based on the current sensor mode
-                fps_max_value = height_dict.get('fps_max', None)
-                self.redis_controller.set_value(ParameterKey.FPS_MAX.value, fps_max_value)
+        # Height alone is ambiguous on the imx585: the 12-bit HDR modes share
+        # dimensions with the plain 12-bit ones (and with the 16-bit HDR
+        # modes), so a height-only match used to select the SDR sibling of a
+        # chosen HDR mode. Match bit depth and the HDR flag as well.
+        for mode, info in self.sensor_detect.res_modes.items():
+            if info.get('height') != current_height:
+                continue
+            if current_bd is not None and info.get('bit_depth') not in (None, current_bd):
+                continue
+            if bool(info.get('hdr', False)) != current_hdr:
+                continue
 
-                # Update sensor_mode in Redis
-                self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, mode)
-
-                return mode
+            fps_max_value = info.get('fps_max', None)
+            self.redis_controller.set_value(ParameterKey.FPS_MAX.value, fps_max_value)
+            self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, mode)
+            return mode
 
         return None  # Return None if no matching sensor mode is found
 

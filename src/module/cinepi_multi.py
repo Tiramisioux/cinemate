@@ -528,6 +528,13 @@ class CinePiProcess(Thread):
         if zoom_init and float(zoom_init) != 1.0:
             args += ['--zoom', str(zoom_init)]
 
+        # ── Dual HDMI output: mirror the one sensor's preview (with GUI) on
+        # both HDMI connectors via cinepi-raw's --same-hdmi. Single-sensor
+        # only — the dual-sensor compositor already owns both-feed layouts.
+        dual_out = (_settings().get('hdmi_display', {}) or {}).get('dual_output', False)
+        if dual_out and not self.multi:
+            args += ['--same-hdmi']
+
         # ── imx585 ClearHDR: launch with sensor HDR when the hdr state is on.
         # wide_dynamic_range changes the sensor's mode list, so it must be a
         # launch flag (cinepi-raw resets its camera manager around it); the

@@ -172,3 +172,65 @@ Available cameras
 
 Cinemate probes both lists, so the plain and ClearHDR modes appear together in
 the mode table. See [imx585 ClearHDR](clear-hdr.md).
+
+
+## RP1 overclock (Pi 5): higher sensor frame rates
+
+The RP1 I/O chip's clock limits CSI-2 throughput. Raising RP1_PLL_SYS and
+RP1_CLK_SYS from 200 to 300 MHz lifts the imx585 to 75 fps at 2K / 66.85 fps
+at 4K (SDR), and 37.5 / 33.43 fps in ClearHDR. Method by **Will Whang** —
+credit and thanks: <https://github.com/will127534>.
+
+Pi 5 / CM5 only. The Cinemate image ships the overlay compiled but **commented
+out** in `/boot/firmware/config.txt`; uncomment `#dtoverlay=rp1-overclock` to
+enable, then reboot.
+
+Manual setup: save the overlay source below as `~/rp1-overclock.dts`, then:
+
+```bash
+sudo apt install device-tree-compiler
+dtc -@ -I dts -O dtb -o rp1-overclock.dtbo ~/rp1-overclock.dts
+sudo cp rp1-overclock.dtbo /boot/firmware/overlays/
+echo '#dtoverlay=rp1-overclock' | sudo tee -a /boot/firmware/config.txt   # uncomment to enable
+```
+
+```dts
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2712";
+
+	fragment@0 {
+		target = <&rp1_clocks>;
+		__overlay__ {
+			/* Entire assigned-clock-rates array re-specified; only
+			 * RP1_PLL_SYS (#2) and RP1_CLK_SYS (#7) changed to 300 MHz. */
+			assigned-clock-rates = <
+				/* RP1_PLL_SYS_CORE  */ 1000000000
+				/* RP1_PLL_AUDIO_CORE*/ 1536000000
+				/* RP1_PLL_SYS       */ 300000000
+				/* RP1_PLL_SYS_SEC   */ 125000000
+				/* RP1_CLK_ETH       */ 125000000
+				/* RP1_PLL_AUDIO     */ 61440000
+				/* RP1_PLL_AUDIO_SEC */ 153600000
+				/* RP1_CLK_SYS       */ 300000000
+				/* RP1_PLL_SYS_PRI_PH*/ 100000000
+				/* RP1_CLK_SLOW_SYS  */ 50000000
+				/* RP1_CLK_SDIO_TIMER*/ 1000000
+				/* RP1_CLK_SDIO_ALT_SRC*/ 200000000
+				/* RP1_CLK_ETH_TSU   */ 50000000
+			>;
+		};
+	};
+};
+```
+
+libcamera must be told about the faster ISP: in
+`~/libcamera/src/ipa/rpi/controller/controller.cpp`, under the "pisp" section,
+change `.minPixelProcessingTime = 1.0us / 380` to `1.0us / 580`, rebuild
+libcamera (meson/ninja install as in the install guide), and reboot.
+
+Verify with `cinepi-raw --list-cameras` (expect 75 / 66.85 fps) and
+`cinepi-raw --list-cameras --hdr sensor` (expect 37.5 / 33.43 fps, with the
+SRGGB16 modes listed).

@@ -48,7 +48,15 @@ class SensorDetect:
         res_cfg = self.settings.get("resolutions", {})
         self.k_steps = res_cfg.get("k_steps", [])
         self.bit_depths = res_cfg.get("bit_depths", [])
+        # Modes slower than this (max fps) are dropped from the mode table.
+        # Default 20 keeps the imx585 4K ClearHDR modes (~21.9 fps) visible.
+        self.min_frame_rate = res_cfg.get("min_frame_rate", 20)
         self.custom_modes = res_cfg.get("custom_modes", {})
+        # Optional ClearHDR (imx585) whitelist. Empty list = expose both the
+        # plain and the HDR sensor modes; set to [false] in settings.json to
+        # hide the HDR modes, or [true] to show only them. Mirrors the
+        # bit_depths / k_steps whitelists above.
+        self.hdr_modes = res_cfg.get("hdr", [])
         sensor_cfg = self.settings.get("sensors", {})
         self.sensor_database_file = sensor_cfg.get(
             "database_file",
@@ -162,6 +170,7 @@ class SensorDetect:
         height: int,
         bit_depth: int | None,
         fps_max: int | None,
+        hdr: bool = False,
         extra: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         metadata = self._sensor_mode_metadata(camera_name, width, height, bit_depth)
@@ -174,7 +183,15 @@ class SensorDetect:
             or self.packing_info.get(camera_name, "U")
         )
         bpp = bit_depth / 8 if bit_depth else 2
-        file_size = extra.get("file_size_mb", round(width * height * bpp / (1024 * 1024), 1))
+        if bit_depth == 16:
+            # 16-bit modes (imx585 ClearHDR) are written as unpacked DNGs:
+            # 2 bytes/pixel payload + ~100 KB header, in decimal MB so the
+            # minutes-left math matches on-disk sizes (3856×2180 → 16.9 MB).
+            file_size = extra.get(
+                "file_size_mb", round((width * height * 2 + 100_000) / 1e6, 1)
+            )
+        else:
+            file_size = extra.get("file_size_mb", round(width * height * bpp / (1024 * 1024), 1))
         fps_max_value = fps_max if fps_max is not None else extra.get("fps_max", metadata.get("max_fps"))
         mode = {
             "aspect": extra.get("aspect", metadata.get("aspect", round(width / height, 2))),
@@ -185,6 +202,10 @@ class SensorDetect:
             "fps_max": fps_max_value,
             "gui_layout": extra.get("gui_layout", metadata.get("gui_layout", 0)),
             "file_size": file_size,
+            # ClearHDR flag (imx585). A mode is HDR when it is reported only
+            # by `cinepi-raw --list-cameras --hdr sensor`; selecting it makes
+            # cinepi-raw launch with --hdr sensor. See detect_camera_model().
+            "hdr": bool(extra.get("hdr", hdr)),
         }
         sustainable_fps = extra.get("sustainable_fps", metadata.get("sustainable_fps"))
         if sustainable_fps:
@@ -194,11 +215,12 @@ class SensorDetect:
     # ────────────────────────────────────────────────────────────────
     #  1.  Parse *all* cameras and all modes that cinepi-raw reports    
     # ────────────────────────────────────────────────────────────────
-    def _parse_cinepi_output(self, output: str) -> Dict[str, Dict[int, Dict]]:
+    def _parse_cinepi_output(self, output: str, hdr: bool = False) -> Dict[str, List[Dict]]:
         """
-        Return a mapping   {camera_model → {mode_index → mode_dict}}
-        covering every camera found in the *cinepi-raw --list-cameras* output.
-        A mono sensor is reported as “<model>_mono”.
+        Return a mapping   {camera_model → [mode_dict, …]}   covering every
+        camera found in a single *cinepi-raw --list-cameras* run. A mono sensor
+        is reported as “<model>_mono”. ``hdr`` tags every mode parsed from a
+        ``--hdr sensor`` run; the caller merges the plain and HDR runs.
         """
 
         sensors: Dict[str, List[Dict]] = {}
@@ -253,9 +275,71 @@ class SensorDetect:
                     height=height,
                     bit_depth=current_bit_depth,
                     fps_max=fps_max,
+                    hdr=hdr,
                 )
             )
 
+        return sensors
+
+    @staticmethod
+    def _mode_key(mode: Dict) -> tuple:
+        """Identity used to dedupe a mode across the plain and HDR runs."""
+        return (
+            int(mode.get("width") or 0),
+            int(mode.get("height") or 0),
+            int(mode.get("bit_depth") or 0),
+            mode.get("fps_max"),
+        )
+
+    def _merge_mode_lists(
+        self,
+        base: Dict[str, List[Dict]],
+        hdr: Dict[str, List[Dict]],
+    ) -> Dict[str, List[Dict]]:
+        """Combine the plain (non-HDR) and ``--hdr sensor`` mode lists.
+
+        A mode reported by the HDR run is kept as HDR only when the plain run
+        did not already report an identical (width, height, bit_depth, fps)
+        mode. Sensors that ignore ``--hdr sensor`` therefore return the same
+        modes twice and collapse back to a single non-HDR list, so only real
+        ClearHDR sensors (imx585) gain HDR modes.
+        """
+        merged: Dict[str, List[Dict]] = {cam: list(modes) for cam, modes in base.items()}
+        for cam, hdr_modes in hdr.items():
+            base_keys = {self._mode_key(m) for m in merged.get(cam, [])}
+            for mode in hdr_modes:
+                if self._mode_key(mode) in base_keys:
+                    continue
+                merged.setdefault(cam, []).append(mode)
+        return merged
+
+    def _order_modes(self, selected: List[Dict]) -> List[Dict]:
+        """Order a camera's filtered modes for the GUI mode table.
+
+        Sensors that expose ClearHDR modes use the HDR-aware hierarchy the
+        operator sees on an imx585: the plain modes first (12-bit, ascending
+        resolution), then the 12-bit HDR modes, then the 16-bit HDR modes —
+        i.e. ordered by (hdr, bit_depth, resolution). Sensors without HDR keep
+        their long-standing order (reversed detection order) so imx477 / imx283
+        / imx296 mode indices are unchanged.
+        """
+        if any(m.get("hdr") for m in selected):
+            return sorted(
+                selected,
+                key=lambda m: (
+                    bool(m.get("hdr")),
+                    int(m.get("bit_depth") or 0),
+                    int(m.get("width") or 0),
+                    int(m.get("height") or 0),
+                ),
+            )
+        return list(reversed(selected))
+
+    def _finalize_modes(
+        self,
+        sensors: Dict[str, List[Dict]],
+    ) -> Dict[str, Dict[int, Dict]]:
+        """Add custom modes, apply the settings.json filters, order and index."""
         # ── add any user-defined custom modes ──────────────────────
         for cam, extras in self.custom_modes.items():
             sensors.setdefault(cam, [])
@@ -270,16 +354,27 @@ class SensorDetect:
                         height=h,
                         bit_depth=bd,
                         fps_max=fps,
+                        hdr=bool(extra.get("hdr", False)),
                         extra=extra,
                     )
                 )
 
-        # ── filter & index (k-steps / bit depths) ───────────────────
+        # ── filter & index (k-steps / bit depths / hdr) ─────────────
         pruned: Dict[str, Dict[int, Dict]] = {}
         for cam, modes in sensors.items():
             selected = []
             for m in modes:
                 if self.bit_depths and m["bit_depth"] not in self.bit_depths:
+                    continue
+                # settings.json → resolutions.hdr: optional whitelist of the
+                # ClearHDR flag. Empty = expose both; [false] hides HDR modes.
+                if self.hdr_modes and bool(m.get("hdr")) not in self.hdr_modes:
+                    continue
+                # settings.json → resolutions.min_frame_rate: drop modes whose
+                # max frame rate is below the floor (default 20 keeps the
+                # imx585 4K ClearHDR modes at ~21.9 fps).
+                fps_cap = m.get("fps_max")
+                if self.min_frame_rate and fps_cap and fps_cap < self.min_frame_rate:
                     continue
                 k_val = round(m["width"] / 1000 * 2) / 2
                 if self.k_steps and k_val not in self.k_steps:
@@ -292,8 +387,22 @@ class SensorDetect:
                                 "keeping full list instead", cam)
                 selected = modes
 
-            pruned[cam] = {i: m for i, m in enumerate(reversed(selected))}
+            pruned[cam] = {i: m for i, m in enumerate(self._order_modes(selected))}
         return pruned
+
+    def _list_cameras(self, hdr: bool = False) -> str:
+        """Run ``cinepi-raw --list-cameras`` (optionally with ``--hdr sensor``).
+
+        Returns stdout, or "" when the run fails. The HDR run is best-effort:
+        a cinepi-raw build without ClearHDR support just yields no extra modes.
+        """
+        cmd = "cinepi-raw --list-cameras" + (" --hdr sensor" if hdr else "")
+        try:
+            proc = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        except Exception as exc:  # pragma: no cover - defensive
+            logging.warning("'%s' failed: %s", cmd, exc)
+            return ""
+        return proc.stdout or ""
 
 
     # ────────────────────────────────────────────────────────────────
@@ -301,16 +410,13 @@ class SensorDetect:
     # ────────────────────────────────────────────────────────────────
     def detect_camera_model(self):
         """
-        Runs *cinepi-raw --list-cameras*, fills ``self.sensor_resolutions`` with
-        **all** detected cameras, and chooses the first one as
+        Runs *cinepi-raw --list-cameras* twice — once plain and once with
+        ``--hdr sensor`` — fills ``self.sensor_resolutions`` with **all**
+        detected cameras (plain + ClearHDR modes), and chooses the first one as
         ``self.camera_model`` (the caller may later override this).
         """
         try:
-            proc = subprocess.run(
-                "cinepi-raw --list-cameras",
-                shell=True, capture_output=True, text=True
-            )
-            out = proc.stdout or ""
+            out = self._list_cameras(hdr=False)
             logging.info("cinepi-raw output:\n%s", out)
 
             if not out.strip():
@@ -319,8 +425,19 @@ class SensorDetect:
                 self.res_modes = {}
                 return
 
-            # full parse → {model → {mode_idx → mode_dict}}
-            sensors = self._parse_cinepi_output(out)
+            # Second pass exposes the imx585 ClearHDR (16-bit + 12-bit HDR)
+            # modes; sensors that ignore --hdr sensor collapse back to the
+            # plain list in _merge_mode_lists().
+            hdr_out = self._list_cameras(hdr=True)
+            if hdr_out.strip():
+                logging.info("cinepi-raw --hdr sensor output:\n%s", hdr_out)
+
+            base_modes = self._parse_cinepi_output(out, hdr=False)
+            hdr_modes = self._parse_cinepi_output(hdr_out, hdr=True) if hdr_out.strip() else {}
+            merged = self._merge_mode_lists(base_modes, hdr_modes)
+
+            # full assembly → {model → {mode_idx → mode_dict}}
+            sensors = self._finalize_modes(merged)
 
             if not sensors:
                 logging.warning("No cameras parsed")
@@ -476,9 +593,17 @@ class SensorDetect:
         h = res.get('height') or 1080
         return self._calc_lores(w, h)[1]
     
+    def get_hdr(self, camera_name, sensor_mode):
+        resolution_info = self.get_resolution_info(camera_name, sensor_mode)
+        return bool(resolution_info.get('hdr', False))
+
     def get_available_resolutions(self):
         resolutions = []
         for mode, info in self.res_modes.items():
             resolution = f"{info['width']} : {info['height']} : {info['bit_depth']}b"
+            # imx585 ClearHDR modes are tagged in the web GUI dropdown so the
+            # 12-bit HDR modes are distinguishable from the plain 12-bit ones.
+            if info.get('hdr'):
+                resolution += " :HDR"
             resolutions.append({'mode': mode, 'resolution': resolution})
         return resolutions

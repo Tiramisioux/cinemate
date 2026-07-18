@@ -55,6 +55,15 @@ class CommandExecutor(threading.Thread):
             'inc fps'                : (cinepi_controller.inc_fps,        None),
             'dec fps'                : (cinepi_controller.dec_fps,        None),
 
+            # ── imx585 ClearHDR ───────────────────────────────────────────────────
+            #  "set hdr profile 1" applies HDR_profiles.json entry 1; a bare
+            #  "set hdr profile" cycles to the next one. Both restart the camera.
+            #  The set commands below apply live to the sensor while streaming.
+            'set hdr profile'        : (cinepi_controller.hdr_profile,       [int, None]),
+            'set hdr threshold'      : (cinepi_controller.set_hdr_threshold, str),
+            'set hdr blend'          : (cinepi_controller.set_hdr_blend,     int),
+            'set hdr gain adder'     : (cinepi_controller.set_hdr_gain_adder, int),
+
             # ── White balance (Kelvin or step) ────────────────────────────────────
             'set wb'                 : (cinepi_controller.set_wb,         [int, None]),
             'inc wb'                 : (cinepi_controller.inc_wb,         None),

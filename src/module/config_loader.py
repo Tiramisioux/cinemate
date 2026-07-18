@@ -281,6 +281,9 @@ def _apply_settings_defaults(settings: dict) -> dict:
     resolution_defaults = {
         "k_steps": [1.5, 2.0, 4.0],
         "bit_depths": [10, 12],
+        # ClearHDR (imx585) whitelist. [False, True] exposes both the plain and
+        # the HDR modes; [False] hides the HDR modes. See SensorDetect.
+        "hdr": [False, True],
         "custom_modes": {},
     }
     res_cfg = settings.setdefault("resolutions", {})

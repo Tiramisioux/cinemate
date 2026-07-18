@@ -92,14 +92,19 @@ IMX585_DRIVER_REPO_URL="${IMX585_DRIVER_REPO_URL:-https://github.com/Tiramisioux
 IMX585_DRIVER_REPO_REF="${IMX585_DRIVER_REPO_REF:-6.12.y}"
 IR_FILTER_URL="${IR_FILTER_URL:-https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter}"
 PISHRINK_URL="${PISHRINK_URL:-https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh}"
-KERNEL_BASELINE_ABI_2712="${KERNEL_BASELINE_ABI_2712:-6.12.25+rpt-rpi-2712}"
-KERNEL_BASELINE_DEB_VERSION_2712="${KERNEL_BASELINE_DEB_VERSION_2712:-6.12.25-1+rpt1}"
-KERNEL_BASELINE_SUPPORT_PKG_2712="${KERNEL_BASELINE_SUPPORT_PKG_2712:-linux-support-6.12.25+rpt}"
-KERNEL_BASELINE_IMAGE_REAL_PKG_2712="${KERNEL_BASELINE_IMAGE_REAL_PKG_2712:-linux-image-6.12.25+rpt-rpi-2712}"
+# Pi 5 kernel baseline. 6.12.93+rpt is the oldest baseline validated for
+# imx585 ClearHDR: earlier kernels (including the previous 6.12.25 pin) ship
+# an rp1-cfe driver that corrupts 16-bit CSI-2 capture (fixed mid-2025 by
+# "cfe: Avoid unpack operation for 16-bit formats" and the 16-bit hardware
+# mismatch workaround). 10/12-bit capture is unaffected either way.
+KERNEL_BASELINE_ABI_2712="${KERNEL_BASELINE_ABI_2712:-6.12.93+rpt-rpi-2712}"
+KERNEL_BASELINE_DEB_VERSION_2712="${KERNEL_BASELINE_DEB_VERSION_2712:-6.12.93-1+rpt1}"
+KERNEL_BASELINE_SUPPORT_PKG_2712="${KERNEL_BASELINE_SUPPORT_PKG_2712:-linux-support-6.12.93+rpt}"
+KERNEL_BASELINE_IMAGE_REAL_PKG_2712="${KERNEL_BASELINE_IMAGE_REAL_PKG_2712:-linux-image-6.12.93+rpt-rpi-2712}"
 KERNEL_BASELINE_IMAGE_META_PKG_2712="${KERNEL_BASELINE_IMAGE_META_PKG_2712:-linux-image-rpi-2712}"
-KERNEL_BASELINE_HEADERS_REAL_PKG_2712="${KERNEL_BASELINE_HEADERS_REAL_PKG_2712:-linux-headers-6.12.25+rpt-rpi-2712}"
+KERNEL_BASELINE_HEADERS_REAL_PKG_2712="${KERNEL_BASELINE_HEADERS_REAL_PKG_2712:-linux-headers-6.12.93+rpt-rpi-2712}"
 KERNEL_BASELINE_HEADERS_META_PKG_2712="${KERNEL_BASELINE_HEADERS_META_PKG_2712:-linux-headers-rpi-2712}"
-RASPI_FIRMWARE_VERSION_2712="${RASPI_FIRMWARE_VERSION_2712:-1.20250430-1}"
+RASPI_FIRMWARE_VERSION_2712="${RASPI_FIRMWARE_VERSION_2712:-1.20260521-1~bookworm}"
 KERNEL_ROLLBACK_DIR="${KERNEL_ROLLBACK_DIR:-/var/tmp/cinemate-kernel-baseline}"
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -645,6 +650,67 @@ remove_build_zram() {
 }
 trap remove_build_zram EXIT
 
+configure_rp1_overclock() {
+    # Will Whang's RP1 SYS/PLL 300 MHz overclock raises the imx585 ClearHDR
+    # frame-rate ceiling. Pi 5 (bcm2712) only — the RP1 does not exist on the
+    # Pi 4 family. This compiles and installs the device-tree overlay; it is
+    # left commented out in config.txt (configure_boot_config) so stock clocks
+    # remain the default. The companion libcamera pixel-rate cap is lifted in
+    # build_libcamera. Runs before the libcamera build so the whole overclock
+    # is in place when libcamera compiles. Thanks to Will Whang
+    # (https://github.com/will127534).
+    if ! is_rpi2712_platform; then
+        detail "Skipping RP1 overclock overlay on non-Pi 5 hardware"
+        return 0
+    fi
+
+    detail "Installing device-tree-compiler"
+    sudo apt install -y device-tree-compiler
+
+    local dts dtbo overlays_dir=/boot/firmware/overlays
+    dts="$(mktemp --suffix=.dts)"
+    dtbo="$(mktemp --suffix=.dtbo)"
+    cat >"$dts" <<'DTS'
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2712";
+
+	fragment@0 {
+		target = <&rp1_clocks>;
+		__overlay__ {
+			/*
+			 * Re-specify the entire assigned-clock-rates array.
+			 * Only the items for RP1_PLL_SYS (index #2) and
+			 * RP1_CLK_SYS (index #7) have been changed to 300000000.
+			 */
+			assigned-clock-rates = <
+				/* RP1_PLL_SYS_CORE  */ 1000000000
+				/* RP1_PLL_AUDIO_CORE*/ 1536000000
+				/* RP1_PLL_SYS       */ 300000000
+				/* RP1_PLL_SYS_SEC   */ 125000000
+				/* RP1_CLK_ETH       */ 125000000
+				/* RP1_PLL_AUDIO     */ 61440000
+				/* RP1_PLL_AUDIO_SEC */ 153600000
+				/* RP1_CLK_SYS       */ 300000000
+				/* RP1_PLL_SYS_PRI_PH*/ 100000000
+				/* RP1_CLK_SLOW_SYS  */ 50000000
+				/* RP1_CLK_SDIO_TIMER*/ 1000000
+				/* RP1_CLK_SDIO_ALT_SRC*/ 200000000
+				/* RP1_CLK_ETH_TSU   */ 50000000
+			>;
+		};
+	};
+};
+DTS
+
+    detail "Compiling rp1-overclock.dtbo into $overlays_dir (disabled by default)"
+    dtc -@ -I dts -O dtb -o "$dtbo" "$dts"
+    sudo install -m 644 "$dtbo" "$overlays_dir/rp1-overclock.dtbo"
+    rm -f "$dts" "$dtbo"
+}
+
 build_libcamera() {
     # The build step below runs chmod +x on every .py/.sh file.  On Linux,
     # git tracks permission bits, so those mode changes show up as dirty and
@@ -676,6 +742,18 @@ build_libcamera() {
             # the base ref) by accepting the patch's version of the file.
             run_as_pi git -C "$LIBCAMERA_DIR" cherry-pick -X theirs "$patch"
         done
+    fi
+
+    # Pi 5 overclock companion: lift the PiSP minimum pixel-processing time so
+    # the overclocked RP1 can advertise the faster imx585 modes. Applied after
+    # the checkout/stash above so a re-run cannot leave it half-applied; the
+    # grep guard keeps it idempotent. Pairs with configure_rp1_overclock.
+    if is_rpi2712_platform; then
+        local controller_cpp="$LIBCAMERA_DIR/src/ipa/rpi/controller/controller.cpp"
+        if grep -q 'minPixelProcessingTime = 1.0us / 380' "$controller_cpp" 2>/dev/null; then
+            detail "Pi 5 overclock: libcamera minPixelProcessingTime 1.0us/380 -> 1.0us/580 (pisp)"
+            run_as_pi sed -i 's#minPixelProcessingTime = 1.0us / 380#minPixelProcessingTime = 1.0us / 580#' "$controller_cpp"
+        fi
     fi
 
     log "Building libcamera"
@@ -895,7 +973,14 @@ configure_boot_config() {
     backup_file "$config_txt"
     temp="$(mktemp)"
 
-    python3 - "$temp" "$MANAGED_BEGIN" "$MANAGED_END" "$DTO_OVERLAY" "$CAMERA_AUTO_DETECT" "$BT_OVERLAY" "$ENABLE_CFE_HAT_PCIE" "$SENSOR_MODEL" <<'PY'
+    # Pi 5 (bcm2712) ships the RP1 overclock overlay commented out; see
+    # configure_rp1_overclock. Non-Pi-5 images omit the line entirely.
+    local overclock_available=0
+    if is_rpi2712_platform; then
+        overclock_available=1
+    fi
+
+    python3 - "$temp" "$MANAGED_BEGIN" "$MANAGED_END" "$DTO_OVERLAY" "$CAMERA_AUTO_DETECT" "$BT_OVERLAY" "$ENABLE_CFE_HAT_PCIE" "$SENSOR_MODEL" "$overclock_available" <<'PY'
 import pathlib
 import sys
 
@@ -907,6 +992,7 @@ camera_auto_detect = sys.argv[5]
 bt_overlay = sys.argv[6]
 enable_pcie = sys.argv[7].lower() in {"1", "true", "yes", "on"}
 sensor_model = sys.argv[8]
+overclock_available = sys.argv[9].lower() in {"1", "true", "yes", "on"}
 
 def camera_section(label, key, default_auto_detect, default_overlay):
     active = key == sensor_model
@@ -997,6 +1083,22 @@ block += [
     "# Run as fast as firmware / board allows",
     "arm_boost=1",
     "",
+]
+
+if overclock_available:
+    # Will Whang's RP1 SYS/PLL 300 MHz overclock (Pi 5 only). The overlay is
+    # installed by configure_rp1_overclock and libcamera is already built for
+    # it; only this line is the opt-in switch. Left commented so stock clocks
+    # are the default. Thanks to Will Whang (https://github.com/will127534).
+    block += [
+        "# ---- RP1 overclock (Pi 5, optional) ----",
+        "# Raises imx585 ClearHDR frame rates. Uncomment and reboot to enable;",
+        "# re-comment and reboot to return to stock. See docs/overclocking.md.",
+        "#dtoverlay=rp1-overclock",
+        "",
+    ]
+
+block += [
     "[cm4]",
     "# Enable host mode on the 2711 built-in XHCI USB controller.",
     "# This line should be removed if the legacy DWC2 controller is required",
@@ -1623,6 +1725,8 @@ main() {
     section "Building redis-plus-plus"
     build_redis_plus_plus
     ensure_build_zram   # compressed-RAM build swap on < 4 GB boards; removed after
+    section "Configuring the RP1 overclock (Pi 5, optional)"
+    configure_rp1_overclock
     section "Building libcamera"
     build_libcamera
     section "Building cpp-mjpeg-streamer"

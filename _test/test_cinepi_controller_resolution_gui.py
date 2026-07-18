@@ -150,14 +150,16 @@ class ResolutionGuiStateTests(unittest.TestCase):
         self.assertEqual(controller.notifications, [1])
         controller._cancel_resolution_switching_timer()
 
-    def test_resolution_change_needs_restart_only_on_aspect_change(self):
+    def test_resolution_change_needs_restart_on_aspect_bitdepth_or_hdr(self):
         controller = self.controller()
-        # Currently running 1928x1090 (~1.769) — seed redis as the live mode.
+        # Currently running 1928x1090 (~1.769) 12-bit non-HDR — seed redis.
         controller.redis_controller.set_value(ParameterKey.WIDTH.value, 1928)
         controller.redis_controller.set_value(ParameterKey.HEIGHT.value, 1090)
+        controller.redis_controller.set_value(ParameterKey.BIT_DEPTH.value, 12)
+        controller.redis_controller.set_value(ParameterKey.HDR.value, 0)
         controller._is_recording = lambda: False
 
-        # Same-aspect target (mode 1 = 3856x2180, also ~1.769) → no restart.
+        # Same aspect, same bit depth, same HDR (mode 1 = 3856x2180 12-bit) → no restart.
         self.assertFalse(controller._resolution_change_needs_restart(1))
 
         # Different-aspect target (1.33) → restart so the preview is rebuilt.
@@ -167,9 +169,26 @@ class ResolutionGuiStateTests(unittest.TestCase):
         }
         self.assertTrue(controller._resolution_change_needs_restart(2))
 
+        # Same aspect but 16-bit ClearHDR (mode 3 = 3856x2180 16-bit HDR) →
+        # restart: bit depth and --hdr sensor are launch args, so a live
+        # reconfigure would keep writing 12-bit DNGs.
+        controller.sensor_detect.res_modes[3] = {
+            "width": 3856, "height": 2180, "bit_depth": 16, "hdr": True,
+            "gui_layout": 1, "file_size": 16, "fps_max": 22,
+        }
+        self.assertTrue(controller._resolution_change_needs_restart(3))
+
+        # Same aspect, same bit depth, but ClearHDR toggled on (12-bit HDR) →
+        # restart so cinepi-raw relaunches with --hdr sensor.
+        controller.sensor_detect.res_modes[4] = {
+            "width": 3856, "height": 2180, "bit_depth": 12, "hdr": True,
+            "gui_layout": 1, "file_size": 12, "fps_max": 33,
+        }
+        self.assertTrue(controller._resolution_change_needs_restart(4))
+
         # While recording, never restart — record-through is preserved.
         controller._is_recording = lambda: True
-        self.assertFalse(controller._resolution_change_needs_restart(2))
+        self.assertFalse(controller._resolution_change_needs_restart(3))
 
     def test_switch_resolution_logs_and_toggles_from_desired_mode_when_dynamic_active(self):
         controller = self.controller()

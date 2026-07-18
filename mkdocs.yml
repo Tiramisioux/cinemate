@@ -27,6 +27,7 @@ nav:
   - Configuring:
       - Settings file: settings-json.md
       - Camera sensors and frame rates: sensors.md
+      - ClearHDR (imx585): clear-hdr.md
       - Dual sensors: dual-sensors.md
       - Additional hardware: hardware-controls.md
       - Bookworm config.txt: config-txt.md
@@ -41,13 +42,13 @@ nav:
       - Simple GUI refresh tuning: simple-gui-refresh-tuning.md
       - Manual installation: installation-steps.md
       - Compiling cinepi-raw: compiling-cinepi-raw.md
+      - Overclocking the Pi: overclocking.md
   - Reference:
       - Cinemate terminal commands: cli-commands.md
       - CinePi RAW terminal commands: cli-user-guide.md
       - Redis API: redis-guide.md
       - Redis Key reference: redis-keys.md
       - Changelog: changelog.md
-      # - Overclocking the Pi: overclocking.md
   # - Cinemate builds:
   #     - Bare bones build: bare-bones-build.md
   #     - Box build: brick.md

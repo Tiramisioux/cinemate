@@ -247,12 +247,14 @@ class SimpleGUI(threading.Thread):
             self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value) or 1920)
             self.height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value) or 1080)
             self.bit_depth = int(self.redis_controller.get_value(ParameterKey.BIT_DEPTH.value) or 10)
+            self.hdr = _to_bool(self.redis_controller.get_value(ParameterKey.HDR.value, 0))
             #logging.info(f"Loaded sensor values from Redis: width={self.width}, height={self.height}, bit_depth={self.bit_depth}")
         except ValueError:
             logging.error("Failed to load sensor values from Redis, using default values.")
             self.width = 1920
             self.height = 1080
             self.bit_depth = 12
+            self.hdr = False
 
     # Method to set the current background color
     def set_background_color(self, color):
@@ -768,7 +770,10 @@ class SimpleGUI(threading.Thread):
             "color_temp":     f"{self.redis_controller.get_value(ParameterKey.WB_USER.value)} K",
             "color_temp_libcamera": f"/ {self.redis_listener.colorTemp}K",
             "res_label":      "RES",
-            "res":            f"{display_width}×{display_height} :{display_bit_depth}b",
+            # imx585 ClearHDR modes append "HDR" after the bit depth, e.g.
+            # "1928×1090 :12b HDR" — the 12-bit HDR modes read distinctly from
+            # the plain 12-bit ones.
+            "res":            f"{display_width}×{display_height} :{display_bit_depth}b" + (" HDR" if getattr(self, 'hdr', False) else ""),
             "resolution_switching": resolution_switching,
 
             # left column (CAM0)

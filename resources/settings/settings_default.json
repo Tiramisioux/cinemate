@@ -132,6 +132,10 @@
       10,
       12
     ],
+    "hdr": [
+      false,
+      true
+    ],
     "custom_modes": {}
   },
   "sensors": {

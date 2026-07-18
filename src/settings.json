@@ -53,7 +53,8 @@
   },
   "hdmi_display": {
     "width": 1920,
-    "height": 1080
+    "height": 1080,
+    "dual_output": false
   },
   "preview": {
     "default_zoom": 1.0,
@@ -150,7 +151,11 @@
     "iso_pot": "None",
     "shutter_a_pot": "None",
     "fps_pot": "None",
-    "wb_pot": "None"
+    "wb_pot": "None",
+    "hdr_threshold_low_pot": "None",
+    "hdr_threshold_high_pot": "None",
+    "hdr_blend_pot": "None",
+    "hdr_gain_adder_pot": "None"
   },
   "free_mode": {
     "iso_free": false,
@@ -167,8 +172,14 @@
     ],
     "bit_depths": [
       10,
-      12
+      12,
+      16
     ],
+    "hdr": [
+      false,
+      true
+    ],
+    "min_frame_rate": 20,
     "custom_modes": {}
   },
   "sensors": {

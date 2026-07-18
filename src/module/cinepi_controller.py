@@ -500,9 +500,145 @@ class CinePiController:
             # Set the next value in Redis
             self.redis_controller.set_value(ParameterKey.ANAMORPHIC_FACTOR.value, next_value)
             logging.info(f"Anamorphic factor toggled to: {next_value}")
-        
+
         self.cinepi.restart()
-                      
+
+    # ── imx585 ClearHDR ──────────────────────────────────────────────────
+    # Live knobs (threshold / blend / gain adder) are plain sensor controls:
+    # setting the Redis key publishes on cp_controls and cinepi-raw applies
+    # them to the sensor while streaming. Toggling ClearHDR itself
+    # (wide_dynamic_range) changes the sensor's mode list, so profiles flip
+    # the control, re-detect modes and restart cinepi-raw with --hdr sensor.
+
+    def _load_hdr_profiles(self):
+        """Return the profile list from resources/HDR_profiles.json ([] on error)."""
+        path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..", "resources", "HDR_profiles.json")
+        )
+        try:
+            with open(path, "r", encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (OSError, json.JSONDecodeError) as exc:
+            logging.error(f"HDR profiles unavailable ({path}): {exc}")
+            return []
+        profiles = data.get("profiles", [])
+        return profiles if isinstance(profiles, list) else []
+
+    def _set_wide_dynamic_range(self, enable: bool) -> bool:
+        """Set wide_dynamic_range on every sensor subdev that accepts it.
+
+        Returns True when at least one subdev took the control. The control
+        changes the sensor's mode list, so callers must re-detect modes and
+        restart cinepi-raw afterwards.
+        """
+        value = 1 if enable else 0
+        applied = False
+        for idx in range(16):
+            dev = f"/dev/v4l-subdev{idx}"
+            if not os.path.exists(dev):
+                continue
+            probe = subprocess.run(
+                ["v4l2-ctl", "-d", dev, "--set-ctrl", f"wide_dynamic_range={value}"],
+                capture_output=True, text=True,
+            )
+            if probe.returncode == 0:
+                logging.info(f"wide_dynamic_range={value} set on {dev}")
+                applied = True
+        if not applied:
+            logging.warning("No sensor subdev accepted wide_dynamic_range (imx585 ClearHDR)")
+        return applied
+
+    def set_hdr_threshold(self, low, high=None):
+        """Set the ClearHDR data-selection thresholds (0–4095 each).
+
+        Accepts two ints or a single "low,high" string. Applied live.
+        """
+        if high is None:
+            try:
+                low, high = str(low).replace(" ", "").split(",")
+            except ValueError:
+                logging.error("hdr threshold expects 'low,high' (each 0..4095)")
+                return
+        try:
+            low_i = max(0, min(4095, int(low)))
+            high_i = max(0, min(4095, int(high)))
+        except (TypeError, ValueError):
+            logging.error("hdr threshold expects integers 0..4095")
+            return
+        self.redis_controller.set_value(ParameterKey.HDR_THRESHOLD.value, f"{low_i},{high_i}")
+        logging.info(f"ClearHDR data-selection threshold set to {low_i},{high_i}")
+
+    def set_hdr_blend(self, value):
+        """Set the ClearHDR blending mode (driver menu index 0–8). Applied live."""
+        try:
+            v = max(0, min(8, int(value)))
+        except (TypeError, ValueError):
+            logging.error("hdr blend expects an integer 0..8")
+            return
+        self.redis_controller.set_value(ParameterKey.HDR_BLEND.value, v)
+        logging.info(f"ClearHDR blending mode set to {v}")
+
+    def set_hdr_gain_adder(self, value):
+        """Set the ClearHDR gain adder (driver menu index 0–5, 2 = +12 dB). Applied live."""
+        try:
+            v = max(0, min(5, int(value)))
+        except (TypeError, ValueError):
+            logging.error("hdr gain adder expects an integer 0..5")
+            return
+        self.redis_controller.set_value(ParameterKey.HDR_GAIN_ADDER.value, v)
+        logging.info(f"ClearHDR gain adder set to menu index {v}")
+
+    def hdr_profile(self, index=None):
+        """Apply a profile from resources/HDR_profiles.json and restart the camera.
+
+        ``set hdr profile 1`` applies profile 1; a bare ``set hdr profile``
+        cycles to the next one.
+        """
+        profiles = self._load_hdr_profiles()
+        if not profiles:
+            logging.error("No HDR profiles found (resources/HDR_profiles.json)")
+            return
+
+        if index is None:
+            try:
+                current = int(self.redis_controller.get_value(ParameterKey.HDR_PROFILE.value))
+            except (TypeError, ValueError):
+                current = -1
+            index = (current + 1) % len(profiles)
+        index = int(index)
+        if not 0 <= index < len(profiles):
+            logging.error(f"HDR profile {index} out of range (0..{len(profiles) - 1})")
+            return
+
+        profile = profiles[index]
+        name = profile.get("name", str(index))
+        hdr_on = bool(profile.get("hdr", False))
+
+        # Order matters: flip the sensor control first, publish the knob keys
+        # (cinepi-raw also re-applies them from Redis at startup), then restart
+        # cinepi-raw with or without --hdr sensor (read from the hdr key at
+        # launch). The mode table already carries both the plain and the HDR
+        # modes (SensorDetect probes --list-cameras with and without --hdr
+        # sensor), so no re-detection is needed here — and re-detecting now,
+        # with wide_dynamic_range flipped on, would mislabel the HDR modes.
+        self._set_wide_dynamic_range(hdr_on)
+        self.redis_controller.set_value(ParameterKey.HDR.value, 1 if hdr_on else 0)
+
+        threshold = profile.get("threshold")
+        if isinstance(threshold, (list, tuple)) and len(threshold) == 2:
+            self.set_hdr_threshold(threshold[0], threshold[1])
+        if "blend_mode" in profile:
+            self.set_hdr_blend(profile["blend_mode"])
+        if "gain_adder" in profile:
+            self.set_hdr_gain_adder(profile["gain_adder"])
+        self.redis_controller.set_value(ParameterKey.HDR_PROFILE.value, index)
+
+        logging.info(
+            f"HDR profile {index} ('{name}') applied — restarting camera "
+            f"(hdr={'on' if hdr_on else 'off'})"
+        )
+        self.cinepi.restart()
+
     def initialize_shutter_angle_steps(self):
         base_steps = self.settings['arrays']['shutter_a_steps']
         self.shutter_angle_steps = sorted(base_steps.copy())
@@ -1313,6 +1449,11 @@ class CinePiController:
         self.redis_controller.set_value(ParameterKey.HEIGHT.value, str(height_new))
         self.redis_controller.set_value(ParameterKey.WIDTH.value, str(width_new))
         self.redis_controller.set_value(ParameterKey.BIT_DEPTH.value, str(bit_depth_new))
+        # ClearHDR (imx585): the mode carries the HDR flag, so selecting a
+        # 12-bit-HDR or 16-bit-HDR mode turns the hdr key on and cinepi-raw
+        # launches with --hdr sensor; a plain mode turns it back off.
+        hdr_new = bool(resolution_info.get('hdr', False))
+        self.redis_controller.set_value(ParameterKey.HDR.value, 1 if hdr_new else 0)
         self.redis_controller.set_value(ParameterKey.PACKING.value, str(packing_new))
         self.redis_controller.set_value(ParameterKey.GUI_LAYOUT.value, str(gui_layout_new))
         self.redis_controller.set_value(ParameterKey.FILE_SIZE.value, str(file_size_new))
@@ -1484,14 +1625,22 @@ class CinePiController:
     def _resolution_change_needs_restart(self, target_mode):
         """Whether switching to *target_mode* must relaunch cinepi-raw.
 
-        cinepi-raw bakes the preview window (-p) and lores geometry into its
-        launch args from the mode's aspect ratio, so a live "record-through"
-        reconfigure keeps the OLD geometry — it only stays correct when the
-        aspect ratio is unchanged. When the aspect ratio changes we must restart
-        cinepi-raw to rebuild the preview (otherwise it stays letterboxed/
-        undersized until the next restart). Recording is deliberately left
-        seamless: a same-aspect change is the only kind wanted mid-take, so we
-        never split a running take just to fix the preview shape.
+        A live "record-through" reconfigure can only change things cinepi-raw
+        re-reads on the fly; several launch args it cannot:
+
+        * **Aspect ratio** — the preview window (-p) and lores geometry are
+          baked in from the mode's aspect ratio, so a same-aspect change stays
+          correct but a different-aspect one leaves the preview letterboxed
+          until a restart.
+        * **Bit depth** — part of ``--mode``. Switching between the imx585
+          12-bit and 16-bit ClearHDR modes (same aspect) otherwise keeps
+          recording 12-bit DNGs because the sensor format never changes.
+        * **ClearHDR** — ``--hdr sensor`` is a launch flag; toggling it needs a
+          relaunch for wide_dynamic_range to take effect.
+
+        So a change to aspect ratio, bit depth or the HDR flag needs a restart.
+        Recording is deliberately left seamless: we never split a running take,
+        so such a change applies on the next launch instead.
         """
         if self._is_recording():
             return False
@@ -1499,14 +1648,34 @@ class CinePiController:
             target_info = self.sensor_detect.res_modes.get(int(target_mode), {})
         except (TypeError, ValueError):
             return False
+
         new_ar = self._aspect_ratio(target_info.get("width"), target_info.get("height"))
         cur_ar = self._aspect_ratio(
             self.redis_controller.get_value(ParameterKey.WIDTH.value),
             self.redis_controller.get_value(ParameterKey.HEIGHT.value),
         )
-        if new_ar is None or cur_ar is None:
-            return False
-        return abs(new_ar - cur_ar) > 0.01
+        if new_ar is not None and cur_ar is not None and abs(new_ar - cur_ar) > 0.01:
+            return True
+
+        # Bit depth is part of --mode; a live reconfigure cannot change the
+        # sensor's bit depth, so a 12-bit → 16-bit switch needs a relaunch.
+        # (All imx585 modes share one aspect ratio, so without this the switch
+        # would never restart and 16-bit modes would keep writing 12-bit DNGs.)
+        try:
+            new_bd = int(target_info.get("bit_depth"))
+            cur_bd = int(self.redis_controller.get_value(ParameterKey.BIT_DEPTH.value))
+            if new_bd != cur_bd:
+                return True
+        except (TypeError, ValueError):
+            pass
+
+        # ClearHDR is the --hdr sensor launch flag.
+        new_hdr = 1 if bool(target_info.get("hdr")) else 0
+        cur_hdr = 1 if str(self.redis_controller.get_value(ParameterKey.HDR.value) or "0") == "1" else 0
+        if new_hdr != cur_hdr:
+            return True
+
+        return False
 
     def set_resolution(self, value=None, *, restart_process=False):
         if value is not None:
@@ -1540,17 +1709,28 @@ class CinePiController:
         
     def get_current_sensor_mode(self):
         current_height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value))
+        try:
+            current_bd = int(self.redis_controller.get_value(ParameterKey.BIT_DEPTH.value))
+        except (TypeError, ValueError):
+            current_bd = None
+        current_hdr = str(self.redis_controller.get_value(ParameterKey.HDR.value) or "0") == "1"
 
-        for mode, height_dict in self.sensor_detect.res_modes.items():
-            if height_dict.get('height') == current_height:
-                # Update fps_max based on the current sensor mode
-                fps_max_value = height_dict.get('fps_max', None)
-                self.redis_controller.set_value(ParameterKey.FPS_MAX.value, fps_max_value)
+        # Height alone is ambiguous on the imx585: the 12-bit HDR modes share
+        # dimensions with the plain 12-bit ones (and with the 16-bit HDR
+        # modes), so a height-only match used to select the SDR sibling of a
+        # chosen HDR mode. Match bit depth and the HDR flag as well.
+        for mode, info in self.sensor_detect.res_modes.items():
+            if info.get('height') != current_height:
+                continue
+            if current_bd is not None and info.get('bit_depth') not in (None, current_bd):
+                continue
+            if bool(info.get('hdr', False)) != current_hdr:
+                continue
 
-                # Update sensor_mode in Redis
-                self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, mode)
-
-                return mode
+            fps_max_value = info.get('fps_max', None)
+            self.redis_controller.set_value(ParameterKey.FPS_MAX.value, fps_max_value)
+            self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, mode)
+            return mode
 
         return None  # Return None if no matching sensor mode is found
 

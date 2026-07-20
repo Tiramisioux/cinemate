@@ -392,8 +392,18 @@ def choose_resolution(
     if desired_row is None:
         return None
 
+    # The imx585 12-bit ClearHDR modes share width/height/bit_depth with their
+    # plain 12-bit siblings, and the measured performance table has no HDR
+    # column, so a substitute would otherwise collapse a 12-bit HDR selection
+    # onto the SDR sibling — silently dropping --hdr sensor (16-bit HDR is
+    # immune because it has no same-dimension SDR mode). Only ever substitute
+    # within the desired mode's own HDR class.
+    desired_hdr = bool((normalized_modes.get(desired_mode) or {}).get("hdr", False))
+
     eligible: list[tuple[int, ResolutionPerformance]] = []
     for mode, mode_info in normalized_modes.items():
+        if bool(mode_info.get("hdr", False)) != desired_hdr:
+            continue
         mode_rows = [
             row
             for row in context_rows

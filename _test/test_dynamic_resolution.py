@@ -125,6 +125,56 @@ class DynamicResolutionTests(unittest.TestCase):
         self.assertEqual(choice.mode, 0)
         self.assertTrue(choice.dynamic_active)
 
+    def test_never_substitutes_a_12bit_hdr_mode_with_its_sdr_sibling(self):
+        # imx585 ClearHDR: the 12-bit HDR modes share width/height/bit_depth
+        # with the plain 12-bit ones, and the performance table has no HDR
+        # column. Dynamic resolution must stay inside the desired mode's HDR
+        # class so a 12-bit HDR selection keeps --hdr sensor on.
+        modes = {
+            0: {"width": 1928, "height": 1090, "bit_depth": 12, "hdr": False},
+            1: {"width": 3856, "height": 2180, "bit_depth": 12, "hdr": False},
+            2: {"width": 1928, "height": 1090, "bit_depth": 12, "hdr": True},
+            3: {"width": 3856, "height": 2180, "bit_depth": 12, "hdr": True},
+        }
+        choice = choose_resolution(
+            sensor_modes=modes,
+            desired_mode=3,
+            requested_fps=24,
+            sensor="imx585",
+            storage_type="cfe",
+            filesystem="ext4",
+            performance_table=IMX585_TABLE,
+            tolerance_px=32,
+        )
+
+        self.assertIsNotNone(choice)
+        self.assertEqual(choice.mode, 3)
+        self.assertTrue(modes[choice.mode]["hdr"])
+
+    def test_hdr_class_downshift_stays_within_hdr(self):
+        # A genuine HDR downshift must land on a lower-resolution HDR mode,
+        # not cross over into the SDR class.
+        modes = {
+            0: {"width": 1928, "height": 1090, "bit_depth": 12, "hdr": False},
+            1: {"width": 3856, "height": 2180, "bit_depth": 12, "hdr": False},
+            2: {"width": 1928, "height": 1090, "bit_depth": 12, "hdr": True},
+            3: {"width": 3856, "height": 2180, "bit_depth": 12, "hdr": True},
+        }
+        choice = choose_resolution(
+            sensor_modes=modes,
+            desired_mode=3,
+            requested_fps=41,
+            sensor="imx585",
+            storage_type="cfe",
+            filesystem="ext4",
+            performance_table=IMX585_TABLE,
+            tolerance_px=32,
+        )
+
+        self.assertIsNotNone(choice)
+        self.assertEqual(choice.mode, 2)
+        self.assertTrue(modes[choice.mode]["hdr"])
+
     def test_keeps_desired_mode_at_or_below_observed_limit(self):
         choice = choose_resolution(
             sensor_modes=IMX585_MODES,

@@ -35,6 +35,7 @@ class ResolutionPerformance:
     height: int
     bit_depth: int | None
     max_fps: float
+    hdr: bool = False
     notes: str = ""
 
     @property
@@ -270,6 +271,7 @@ def parse_performance_table(rows: Iterable[dict[str, Any]]) -> list[ResolutionPe
                     height=height,
                     bit_depth=_as_int(row.get("bit_depth")),
                     max_fps=max_fps,
+                    hdr=_as_bool(row.get("hdr", False)),
                     notes=str(row.get("notes") or ""),
                 )
             )
@@ -309,6 +311,12 @@ def _mode_matches_row(
         return False
     bit_depth = _as_int(mode_info.get("bit_depth"))
     if row.bit_depth is not None and bit_depth is not None and bit_depth != row.bit_depth:
+        return False
+    # HDR class must match. The imx585 12-bit ClearHDR modes share
+    # width/height/bit_depth with their SDR siblings, so without this an HDR
+    # mode would match SDR rows (inflating its fps cap to the SDR value) and a
+    # substitute could cross HDR classes. Rows/modes without an hdr flag are SDR.
+    if bool(mode_info.get("hdr", False)) != row.hdr:
         return False
     return True
 

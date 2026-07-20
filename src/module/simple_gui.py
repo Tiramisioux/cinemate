@@ -27,6 +27,13 @@ RESOLUTION_SWITCHING_COLOR = (176, 176, 176)
 PREVIEW_PADDING_X = 94
 PREVIEW_PADDING_Y = 50
 PREVIEW_GUIDE_OUTLINE_WIDTH = 2
+# Right edge (1920-ref x) the top-row RES value aligns to — the preview-guide
+# (white) line. The RES label+value are drawn as a right-anchored group so the
+# imx585 ClearHDR " HDR" suffix grows leftward (tightening the WB→RES gap)
+# instead of overflowing past the line. A plain string (283 px) lands its left
+# edge back at the original x=1540, so non-HDR modes are unchanged.
+RES_RIGHT_ANCHOR = 1823
+RES_LABEL_GAP = 15
 
 
 def _to_bool(value) -> bool:
@@ -1665,6 +1672,24 @@ class SimpleGUI(threading.Thread):
                 text_width = text_bbox[2] - text_bbox[0]
                 x = position[0] + info["width"] - text_width
                 position = (x, position[1])
+
+            # Right-anchor the RES label+value group to the preview-guide (white)
+            # line so the imx585 ClearHDR " HDR" suffix grows leftward instead of
+            # overflowing past the line. Non-HDR strings reproduce their old x.
+            if element in ("res", "res_label"):
+                res_val = str(values.get("res", ""))
+                res_info = current_layout["res"]
+                res_font = self._get_font(
+                    res_info.get("font", "bold"),
+                    res_info.get("size", 41) * min(min(shrink_x, shrink_y), 1),
+                )
+                res_bbox = draw.textbbox((0, 0), res_val, font=res_font)
+                res_x = RES_RIGHT_ANCHOR * shrink_x - (res_bbox[2] - res_bbox[0])
+                if element == "res":
+                    position[0] = res_x
+                else:  # res_label sits a fixed gap to the left of the value
+                    label_bbox = draw.textbbox((0, 0), value, font=font)
+                    position[0] = res_x - RES_LABEL_GAP * shrink_x - (label_bbox[2] - label_bbox[0])
 
             if element in lock_mapping and getattr(self.cinepi_controller, lock_mapping[element]):
                 # Only draw inside the box

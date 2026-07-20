@@ -161,6 +161,15 @@ sudo apt install -y python3-pip python3-jinja2 libboost-dev libgnutls28-dev open
 sudo apt-get install --reinstall libtiff5-dev && sudo ln -sf $(find /usr/lib -name "libtiff.so" | head -n 1) /usr/lib/aarch64-linux-gnu/libtiff.so.5 && export LD_LIBRARY_PATH=/usr/lib/aarch64-linux-gnu:$LD_LIBRARY_PATH && sudo ldconfig
 ```
 
+!!! tip "Pi 5 overclock (optional)"
+    On a Raspberry Pi 5 you can raise the RP1 image-pipeline clock to unlock
+    higher imx585 ClearHDR frame rates. Do this **before** the libcamera build
+    below so the change is compiled in. See [Overclocking the Pi](overclocking.md)
+    — it changes one line in `controller.cpp` (`minPixelProcessingTime`) and adds
+    an RP1 device-tree overlay. The prebuilt Cinemate image already ships this
+    libcamera build; only the RP1 overlay stays commented out in `config.txt`
+    until you opt in.
+
 ```shell
 git clone https://github.com/Tiramisioux/libcamera.git && \
 cd libcamera && \
@@ -183,15 +192,6 @@ ninja -C build && \
 sudo ninja -C build install && \
 sudo ldconfig
 ```
-
-!!! tip "Pi 5 overclock (optional)"
-    On a Raspberry Pi 5 you can raise the RP1 image-pipeline clock to unlock
-    higher imx585 ClearHDR frame rates before you build libcamera. See
-    [Overclocking the Pi](overclocking.md) — it changes one line in
-    `controller.cpp` (`minPixelProcessingTime`) and adds an RP1 device-tree
-    overlay. Do this **before** the libcamera build above so the change is
-    compiled in. The prebuilt Cinemate image already ships this libcamera build;
-    only the RP1 overlay stays commented out in `config.txt` until you opt in.
 
 ### cpp-mjpeg-streamer
 

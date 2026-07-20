@@ -27,13 +27,20 @@ RESOLUTION_SWITCHING_COLOR = (176, 176, 176)
 PREVIEW_PADDING_X = 94
 PREVIEW_PADDING_Y = 50
 PREVIEW_GUIDE_OUTLINE_WIDTH = 2
-# Right edge (1920-ref x) the top-row RES value aligns to — the preview-guide
-# (white) line. The RES label+value are drawn as a right-anchored group so the
-# imx585 ClearHDR " HDR" suffix grows leftward (tightening the WB→RES gap)
-# instead of overflowing past the line. A plain string (283 px) lands its left
-# edge back at the original x=1540, so non-HDR modes are unchanged.
-RES_RIGHT_ANCHOR = 1823
-RES_LABEL_GAP = 15
+# Top info row (1920-ref geometry). The six label+value groups are justified
+# with equal gaps between TOP_ROW_LEFT_X and RES_RIGHT_ANCHOR (the preview-guide
+# "white" line), so the row stays evenly spaced and the RES group ends on the
+# line — including its trailing SDR/HDR badge on ClearHDR sensors.
+TOP_ROW_LEFT_X = 90         # left edge of the first group (FPS)
+RES_RIGHT_ANCHOR = 1823     # right edge of the last group (RES / its badge)
+TOP_ROW_INTRA_GAP = 12      # label → value gap inside one group
+# SDR/HDR badge (drawn like the WAV badge: rounded box, black text). Shown only
+# when the sensor exposes BOTH plain and ClearHDR modes; on SDR-only sensors
+# (e.g. imx477) the class is self-evident and no badge is drawn.
+HDR_BADGE_GAP = 12          # RES value → badge gap
+HDR_BADGE_FONT_SIZE = 24    # 1920-ref badge text size
+SDR_BADGE_COLOR = (120, 120, 120)   # dark grey
+HDR_BADGE_COLOR = (205, 205, 205)   # lighter grey
 
 
 def _to_bool(value) -> bool:
@@ -777,10 +784,9 @@ class SimpleGUI(threading.Thread):
             "color_temp":     f"{self.redis_controller.get_value(ParameterKey.WB_USER.value)} K",
             "color_temp_libcamera": f"/ {self.redis_listener.colorTemp}K",
             "res_label":      "RES",
-            # imx585 ClearHDR modes append "HDR" after the bit depth, e.g.
-            # "1928×1090 :12b HDR" — the 12-bit HDR modes read distinctly from
-            # the plain 12-bit ones.
-            "res":            f"{display_width}×{display_height} :{display_bit_depth}b" + (" HDR" if getattr(self, 'hdr', False) else ""),
+            # ClearHDR state is shown as a rounded SDR/HDR badge after the RES
+            # value (see _draw_hdr_badge), not as a text suffix here.
+            "res":            f"{display_width}×{display_height} :{display_bit_depth}b",
             "resolution_switching": resolution_switching,
 
             # left column (CAM0)
@@ -1511,8 +1517,111 @@ class SimpleGUI(threading.Thread):
             draw.line([(base_x, y), (base_x + BAR_W, y)], fill=(136,136,136))
 
 
+    # Top info-row groups, in display order: (label_key, value_key).
+    TOP_ROW_GROUPS = (
+        ("fps_label", "fps"),
+        ("shutter_label", "shutter_speed"),
+        ("exposure_label", "exposure_time"),
+        ("iso_label", "iso"),
+        ("wb_label", "color_temp"),
+        ("res_label", "res"),
+    )
+
+    def _sensor_has_sdr_and_hdr(self):
+        """True when the active sensor exposes both plain and ClearHDR modes.
+
+        Only then is the SDR/HDR badge meaningful; on SDR-only sensors (imx477,
+        imx283 …) the class is self-evident so the badge is suppressed.
+        """
+        modes = getattr(self.sensor_detect, "res_modes", {}) or {}
+        has_hdr = any(bool(m.get("hdr", False)) for m in modes.values())
+        has_sdr = any(not bool(m.get("hdr", False)) for m in modes.values())
+        return has_hdr and has_sdr
+
+    def _measure_layout_text(self, draw, key, values, shrink_x, shrink_y):
+        info = self.layout[key]
+        font_size = info.get("size", 12) * min(min(shrink_x, shrink_y), 1)
+        font = self._get_font(info.get("font", "bold"), font_size)
+        bbox = draw.textbbox((0, 0), str(values.get(key, "")), font=font)
+        return bbox[2] - bbox[0]
+
+    def _hdr_badge(self, draw, shrink_x, shrink_y):
+        """Build the SDR/HDR badge spec (or None when it should be hidden)."""
+        if not self._sensor_has_sdr_and_hdr():
+            return None
+        is_hdr = bool(getattr(self, "hdr", False))
+        text = "HDR" if is_hdr else "SDR"
+        font_size = max(1, int(round(HDR_BADGE_FONT_SIZE * min(min(shrink_x, shrink_y), 1))))
+        font = self._get_font("bold", font_size)
+        bbox = draw.textbbox((0, 0), text, font=font)
+        pad_x = max(3, int(6 * shrink_x))
+        pad_y = max(2, int(4 * shrink_y))
+        return {
+            "text": text,
+            "font": font,
+            "bbox": bbox,
+            "text_w": bbox[2] - bbox[0],
+            "text_h": bbox[3] - bbox[1],
+            "pad_x": pad_x,
+            "pad_y": pad_y,
+            "width": (bbox[2] - bbox[0]) + 2 * pad_x,
+            "color": HDR_BADGE_COLOR if is_hdr else SDR_BADGE_COLOR,
+        }
+
+    def _top_row_layout(self, draw, values, shrink_x, shrink_y, badge):
+        """Justify the six top-row groups with equal gaps between
+        TOP_ROW_LEFT_X and RES_RIGHT_ANCHOR. Returns (x_by_key, badge_x)."""
+        intra = TOP_ROW_INTRA_GAP * shrink_x
+        groups = []
+        for label_key, value_key in self.TOP_ROW_GROUPS:
+            label_w = self._measure_layout_text(draw, label_key, values, shrink_x, shrink_y)
+            value_w = self._measure_layout_text(draw, value_key, values, shrink_x, shrink_y)
+            group_w = label_w + intra + value_w
+            if value_key == "res" and badge is not None:
+                group_w += HDR_BADGE_GAP * shrink_x + badge["width"]
+            groups.append((label_key, value_key, label_w, value_w, group_w))
+
+        total_w = sum(g[4] for g in groups)
+        left = TOP_ROW_LEFT_X * shrink_x
+        right = RES_RIGHT_ANCHOR * shrink_x
+        gap = (right - left - total_w) / (len(groups) - 1) if len(groups) > 1 else 0
+
+        x_by_key = {}
+        badge_x = None
+        cursor = left
+        for label_key, value_key, label_w, value_w, group_w in groups:
+            x_by_key[label_key] = cursor
+            value_x = cursor + label_w + intra
+            x_by_key[value_key] = value_x
+            if value_key == "res" and badge is not None:
+                badge_x = value_x + value_w + HDR_BADGE_GAP * shrink_x
+            cursor += group_w + gap
+        return x_by_key, badge_x
+
+    def _draw_hdr_badge(self, draw, badge, badge_x, shrink_x, shrink_y, res_text):
+        """Draw the SDR/HDR rounded badge, vertically centred on the RES value."""
+        res_info = self.layout["res"]
+        res_font = self._get_font(
+            res_info.get("font", "bold"),
+            res_info.get("size", 41) * min(min(shrink_x, shrink_y), 1),
+        )
+        res_bbox = draw.textbbox((0, 0), str(res_text or ""), font=res_font)
+        res_top = res_info["pos"][1] * shrink_y + res_bbox[1]
+        res_h = res_bbox[3] - res_bbox[1]
+
+        box_h = badge["text_h"] + 2 * badge["pad_y"]
+        box_x0 = badge_x
+        box_y0 = res_top + (res_h - box_h) / 2
+        box_x1 = box_x0 + badge["width"]
+        box_y1 = box_y0 + box_h
+        radius = max(2, int(3 * min(shrink_x, shrink_y)))
+        draw.rounded_rectangle([(box_x0, box_y0), (box_x1, box_y1)], radius=radius, fill=badge["color"])
+        text_x = box_x0 + badge["pad_x"] - badge["bbox"][0]
+        text_y = box_y0 + badge["pad_y"] - badge["bbox"][1]
+        draw.text((text_x, text_y), badge["text"], font=badge["font"], fill=(0, 0, 0))
+
     def draw_gui(self, values):
-        
+
         # ── shrink clip-name text when two cameras are active ─────────────────────────
         show_wav = bool(values.get("mic_wav_recording") or values.get("mic_wav_saved"))
         self._adjust_clip_layout(self.draw_right_col, show_wav=show_wav)
@@ -1656,6 +1765,12 @@ class SimpleGUI(threading.Thread):
 
         }
 
+        # Justify the six top-row groups with equal gaps and reserve room for the
+        # SDR/HDR badge; the loop below overrides each top-row element's x from
+        # this map, then the badge is drawn after the loop.
+        hdr_badge = self._hdr_badge(draw, shrink_x, shrink_y)
+        top_row_x, hdr_badge_x = self._top_row_layout(draw, values, shrink_x, shrink_y, hdr_badge)
+
         for element, info in current_layout.items():
             if values.get(element) is None:
                 continue
@@ -1673,29 +1788,19 @@ class SimpleGUI(threading.Thread):
                 x = position[0] + info["width"] - text_width
                 position = (x, position[1])
 
-            # Right-anchor the RES label+value group to the preview-guide (white)
-            # line so the imx585 ClearHDR " HDR" suffix grows leftward instead of
-            # overflowing past the line. Non-HDR strings reproduce their old x.
-            if element in ("res", "res_label"):
-                res_val = str(values.get("res", ""))
-                res_info = current_layout["res"]
-                res_font = self._get_font(
-                    res_info.get("font", "bold"),
-                    res_info.get("size", 41) * min(min(shrink_x, shrink_y), 1),
-                )
-                res_bbox = draw.textbbox((0, 0), res_val, font=res_font)
-                res_x = RES_RIGHT_ANCHOR * shrink_x - (res_bbox[2] - res_bbox[0])
-                if element == "res":
-                    position[0] = res_x
-                else:  # res_label sits a fixed gap to the left of the value
-                    label_bbox = draw.textbbox((0, 0), value, font=font)
-                    position[0] = res_x - RES_LABEL_GAP * shrink_x - (label_bbox[2] - label_bbox[0])
+            # Equal-gap top row: override x with the justified position.
+            if element in top_row_x:
+                position[0] = top_row_x[element]
 
             if element in lock_mapping and getattr(self.cinepi_controller, lock_mapping[element]):
                 # Only draw inside the box
                 self.draw_rounded_box(draw, value, position, font_size, 5, "black", "white", image)
             else:
                 draw.text(position, value, font=font, fill=color)
+
+        # ── SDR/HDR badge after the RES value (ClearHDR sensors only) ────────────
+        if hdr_badge is not None and hdr_badge_x is not None and values.get("res") is not None:
+            self._draw_hdr_badge(draw, hdr_badge, hdr_badge_x, shrink_x, shrink_y, str(values.get("res", "")))
 
         # ── grey CAMx placeholder on whichever line hasn't recorded a clip yet ───
         if self.draw_right_col:

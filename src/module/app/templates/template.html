@@ -101,7 +101,7 @@
         <div>Resolution:
             <select id="resolution-select">
                 {% for resolution in resolution_values %}
-                    <option value="{{ resolution.mode }}">{{ resolution.width }}x{{ resolution.height }}</option>
+                    <option value="{{ resolution.mode }}">{{ resolution.resolution }}</option>
                 {% endfor %}
             </select>
         </div>

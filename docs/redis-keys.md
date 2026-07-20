@@ -31,7 +31,8 @@ Each entry explains which component normally writes the key and whether it makes
 | ir_filter | Cinemate -> CinePi-raw | Toggle IR-cut filter (IMX585 only) | Yes |
 | hdr | Cinemate -> CinePi-raw startup | ClearHDR state (imx585): `1` makes CinePi-raw launch with `--hdr sensor`. Set automatically when a ClearHDR sensor mode is selected, or by `set hdr profile`; changing it requires a camera restart | No (select an HDR mode or use `set hdr profile`) |
 | hdr_profile | Cinemate | Index of the active entry in `resources/HDR_profiles.json` | No (use `hdr profile`) |
-| hdr_threshold | Cinemate -> CinePi-raw | ClearHDR data-selection thresholds `low,high` (0–4095 each). Applied live to the sensor, and re-applied at every CinePi-raw start | Yes (publish key to apply) |
+| hdr_threshold_low | Cinemate -> CinePi-raw | ClearHDR data-selection threshold, low side (0–4095). Applied live to the sensor (as a pair with `hdr_threshold_high`), and re-applied at every CinePi-raw start | Yes (publish key to apply) |
+| hdr_threshold_high | Cinemate -> CinePi-raw | ClearHDR data-selection threshold, high side (0–4095). Applied live to the sensor (as a pair with `hdr_threshold_low`), and re-applied at every CinePi-raw start | Yes (publish key to apply) |
 | hdr_blend | Cinemate -> CinePi-raw | ClearHDR HG/LG blending mode, driver menu 0–8 (0 = HG 1/2 + LG 1/2). Applied live | Yes (publish key to apply) |
 | hdr_gain_adder | Cinemate -> CinePi-raw | ClearHDR low-gain path gain adder, driver menu 0–5 (2 = +12 dB). Applied live | Yes (publish key to apply) |
 | is_recording | Cinemate -> CinePi-raw | Requested record state. Edge-triggered: `0 -> 1` starts, `1 -> 0` stops | Yes |

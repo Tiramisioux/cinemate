@@ -52,11 +52,11 @@ class SensorDetect:
         # Default 20 keeps the imx585 4K ClearHDR modes (~21.9 fps) visible.
         self.min_frame_rate = res_cfg.get("min_frame_rate", 20)
         self.custom_modes = res_cfg.get("custom_modes", {})
-        # Optional ClearHDR (imx585) whitelist. Empty list = expose both the
-        # plain and the HDR sensor modes; set to [false] in settings.json to
-        # hide the HDR modes, or [true] to show only them. Mirrors the
-        # bit_depths / k_steps whitelists above.
-        self.hdr_modes = res_cfg.get("hdr", [])
+        # Optional ClearHDR (imx585) whitelist. settings.json → resolutions.hdr
+        # is {"sdr": bool, "imx585_clear_hdr": bool}; both true (default)
+        # exposes plain and ClearHDR modes, turn a flag off to hide that class
+        # of modes. Mirrors the bit_depths / k_steps whitelists above.
+        self.hdr_modes = self._hdr_whitelist(res_cfg.get("hdr", {}))
         sensor_cfg = self.settings.get("sensors", {})
         self.sensor_database_file = sensor_cfg.get(
             "database_file",
@@ -282,6 +282,22 @@ class SensorDetect:
         return sensors
 
     @staticmethod
+    def _hdr_whitelist(hdr_cfg: Any) -> List[bool]:
+        """Normalize settings.json resolutions.hdr into the internal
+        [bool, ...] whitelist consumed by _finalize_modes.
+
+        Accepts the named form {"sdr": bool, "imx585_clear_hdr": bool} (both
+        default true) or the legacy [false, true] list form for old Pi
+        settings.json files.
+        """
+        if isinstance(hdr_cfg, dict):
+            return [
+                val for val, key in ((False, "sdr"), (True, "imx585_clear_hdr"))
+                if hdr_cfg.get(key, True)
+            ]
+        return list(hdr_cfg or [])
+
+    @staticmethod
     def _mode_key(mode: Dict) -> tuple:
         """Identity used to dedupe a mode across the plain and HDR runs."""
         return (
@@ -366,8 +382,8 @@ class SensorDetect:
             for m in modes:
                 if self.bit_depths and m["bit_depth"] not in self.bit_depths:
                     continue
-                # settings.json → resolutions.hdr: optional whitelist of the
-                # ClearHDR flag. Empty = expose both; [false] hides HDR modes.
+                # settings.json → resolutions.hdr: {sdr, imx585_clear_hdr}
+                # whitelist of the ClearHDR flag, normalized by _hdr_whitelist.
                 if self.hdr_modes and bool(m.get("hdr")) not in self.hdr_modes:
                     continue
                 # settings.json → resolutions.min_frame_rate: drop modes whose

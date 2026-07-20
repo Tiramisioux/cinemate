@@ -548,25 +548,25 @@ class CinePiController:
             logging.warning("No sensor subdev accepted wide_dynamic_range (imx585 ClearHDR)")
         return applied
 
-    def set_hdr_threshold(self, low, high=None):
-        """Set the ClearHDR data-selection thresholds (0–4095 each).
-
-        Accepts two ints or a single "low,high" string. Applied live.
-        """
-        if high is None:
-            try:
-                low, high = str(low).replace(" ", "").split(",")
-            except ValueError:
-                logging.error("hdr threshold expects 'low,high' (each 0..4095)")
-                return
+    def set_hdr_threshold_low(self, value):
+        """Set the ClearHDR data-selection threshold, low side (0–4095). Applied live."""
         try:
-            low_i = max(0, min(4095, int(low)))
-            high_i = max(0, min(4095, int(high)))
+            v = max(0, min(4095, int(value)))
         except (TypeError, ValueError):
-            logging.error("hdr threshold expects integers 0..4095")
+            logging.error("hdr threshold low expects an integer 0..4095")
             return
-        self.redis_controller.set_value(ParameterKey.HDR_THRESHOLD.value, f"{low_i},{high_i}")
-        logging.info(f"ClearHDR data-selection threshold set to {low_i},{high_i}")
+        self.redis_controller.set_value(ParameterKey.HDR_THRESHOLD_LOW.value, v)
+        logging.info(f"ClearHDR data-selection threshold low set to {v}")
+
+    def set_hdr_threshold_high(self, value):
+        """Set the ClearHDR data-selection threshold, high side (0–4095). Applied live."""
+        try:
+            v = max(0, min(4095, int(value)))
+        except (TypeError, ValueError):
+            logging.error("hdr threshold high expects an integer 0..4095")
+            return
+        self.redis_controller.set_value(ParameterKey.HDR_THRESHOLD_HIGH.value, v)
+        logging.info(f"ClearHDR data-selection threshold high set to {v}")
 
     def set_hdr_blend(self, value):
         """Set the ClearHDR blending mode (driver menu index 0–8). Applied live."""
@@ -626,7 +626,8 @@ class CinePiController:
 
         threshold = profile.get("threshold")
         if isinstance(threshold, (list, tuple)) and len(threshold) == 2:
-            self.set_hdr_threshold(threshold[0], threshold[1])
+            self.set_hdr_threshold_low(threshold[0])
+            self.set_hdr_threshold_high(threshold[1])
         if "blend_mode" in profile:
             self.set_hdr_blend(profile["blend_mode"])
         if "gain_adder" in profile:

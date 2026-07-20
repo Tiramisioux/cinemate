@@ -281,9 +281,10 @@ def _apply_settings_defaults(settings: dict) -> dict:
     resolution_defaults = {
         "k_steps": [1.5, 2.0, 4.0],
         "bit_depths": [10, 12],
-        # ClearHDR (imx585) whitelist. [False, True] exposes both the plain and
-        # the HDR modes; [False] hides the HDR modes. See SensorDetect.
-        "hdr": [False, True],
+        # ClearHDR (imx585) whitelist. Both true exposes the plain and the HDR
+        # modes; set "imx585_clear_hdr" false to hide the HDR modes. See
+        # SensorDetect._hdr_whitelist.
+        "hdr": {"sdr": True, "imx585_clear_hdr": True},
         "custom_modes": {},
     }
     res_cfg = settings.setdefault("resolutions", {})

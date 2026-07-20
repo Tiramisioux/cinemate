@@ -118,7 +118,7 @@ class SensorDatabaseTests(unittest.TestCase):
         # These parse tests isolate mode parsing/merging, so leave the frame-rate
         # floor off and expose both HDR and non-HDR modes.
         detector.min_frame_rate = 0
-        detector.hdr_modes = rc.get("hdr", [])
+        detector.hdr_modes = SensorDetect._hdr_whitelist(rc.get("hdr", {}))
         detector.sensor_resolutions = {}
         return detector
 

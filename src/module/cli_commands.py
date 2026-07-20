@@ -60,7 +60,8 @@ class CommandExecutor(threading.Thread):
             #  "set hdr profile" cycles to the next one. Both restart the camera.
             #  The set commands below apply live to the sensor while streaming.
             'set hdr profile'        : (cinepi_controller.hdr_profile,       [int, None]),
-            'set hdr threshold'      : (cinepi_controller.set_hdr_threshold, str),
+            'set hdr threshold low'  : (cinepi_controller.set_hdr_threshold_low, int),
+            'set hdr threshold high' : (cinepi_controller.set_hdr_threshold_high, int),
             'set hdr blend'          : (cinepi_controller.set_hdr_blend,     int),
             'set hdr gain adder'     : (cinepi_controller.set_hdr_gain_adder, int),
 

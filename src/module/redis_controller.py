@@ -35,7 +35,8 @@ class ParameterKey(Enum):
     GUI_LAYOUT        = "gui_layout"
     HDR               = "hdr"             # 1 = ClearHDR active (imx585): cinepi-raw launches with --hdr sensor
     HDR_PROFILE       = "hdr_profile"     # index of the active HDR_profiles.json entry
-    HDR_THRESHOLD     = "hdr_threshold"   # "low,high" 0..4095 — ClearHDR data-selection thresholds
+    HDR_THRESHOLD_LOW  = "hdr_threshold_low"   # 0..4095 — ClearHDR data-selection threshold, low
+    HDR_THRESHOLD_HIGH = "hdr_threshold_high"  # 0..4095 — ClearHDR data-selection threshold, high
     HDR_BLEND         = "hdr_blend"       # 0..8 — ClearHDR blending mode (driver menu index)
     HDR_GAIN_ADDER    = "hdr_gain_adder"  # 0..5 — ClearHDR gain adder (driver menu index, 2 = +12 dB)
     HEIGHT            = "height"

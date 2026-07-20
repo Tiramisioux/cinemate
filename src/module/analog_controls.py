@@ -236,7 +236,7 @@ class AnalogControls(threading.Thread):
                                                 steps=self.hdr_threshold_steps)
                 if new_low is not None and new_low != self.last_hdr_threshold_low:
                     logging.info(f"HDR threshold low changed → ADC raw={raw}, mapped={new_low}")
-                    self.cinepi_controller.set_hdr_threshold(new_low, self._current_hdr_threshold()[1])
+                    self.cinepi_controller.set_hdr_threshold_low(new_low)
                     self.last_hdr_threshold_low = new_low
 
             if self.hdr_threshold_high_pot is not None:
@@ -246,7 +246,7 @@ class AnalogControls(threading.Thread):
                                                  steps=self.hdr_threshold_steps)
                 if new_high is not None and new_high != self.last_hdr_threshold_high:
                     logging.info(f"HDR threshold high changed → ADC raw={raw}, mapped={new_high}")
-                    self.cinepi_controller.set_hdr_threshold(self._current_hdr_threshold()[0], new_high)
+                    self.cinepi_controller.set_hdr_threshold_high(new_high)
                     self.last_hdr_threshold_high = new_high
 
             if self.hdr_blend_pot is not None:
@@ -271,15 +271,6 @@ class AnalogControls(threading.Thread):
 
         except Exception as e:
             logging.error(f"Error occurred while updating parameters: {e}\n{traceback.format_exc()}")
-
-    def _current_hdr_threshold(self):
-        """Return the (low, high) pair currently stored in Redis (0,0 fallback)."""
-        try:
-            raw = self.redis_controller.get_value(ParameterKey.HDR_THRESHOLD.value) or "0,0"
-            low, high = (int(x) for x in str(raw).split(","))
-            return low, high
-        except (TypeError, ValueError):
-            return 0, 0
 
     def run(self):
         try:

@@ -132,10 +132,10 @@
       10,
       12
     ],
-    "hdr": [
-      false,
-      true
-    ],
+    "hdr": {
+      "sdr": true,
+      "imx585_clear_hdr": true
+    },
     "custom_modes": {}
   },
   "sensors": {

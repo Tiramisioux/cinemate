@@ -35,7 +35,7 @@ class ResolutionDefaultsTests(unittest.TestCase):
         detector.bit_depths = rc["bit_depths"]
         detector.custom_modes = rc["custom_modes"]
         detector.min_frame_rate = rc.get("min_frame_rate", 20)
-        detector.hdr_modes = rc.get("hdr", [])
+        detector.hdr_modes = SensorDetect._hdr_whitelist(rc.get("hdr", {}))
         detector.sensor_database_file = "resources/sensors.json"
         detector.sensor_database = detector._load_sensor_database()
         detector.packing_info = detector._packing_info_from_database()

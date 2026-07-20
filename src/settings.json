@@ -175,10 +175,10 @@
       12,
       16
     ],
-    "hdr": [
-      false,
-      true
-    ],
+    "hdr": {
+      "sdr": true,
+      "imx585_clear_hdr": true
+    },
     "min_frame_rate": 20,
     "custom_modes": {}
   },

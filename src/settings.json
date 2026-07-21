@@ -22,7 +22,7 @@
         "hdmi_port": 0
       },
       "override_camera_name": true,
-      "camera_name": "Blackmagic Pocket Cinema Camera 4K",
+      "camera_name": "cinepi",
       "phase_lock": true,
       "tuning_file_override": {
         "enabled": false,
@@ -39,7 +39,7 @@
         "hdmi_port": 1
       },
       "override_camera_name": true,
-      "camera_name": "Blackmagic Pocket Cinema Camera 4K",
+      "camera_name": "cinepi",
       "phase_lock": true,
       "tuning_file_override": {
         "enabled": false,

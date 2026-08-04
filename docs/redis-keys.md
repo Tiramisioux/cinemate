@@ -65,7 +65,7 @@ Each entry explains which component normally writes the key and whether it makes
 | space_left | Cinemate (SSD monitor) | Remaining free space in GB | No |
 | write_speed_to_drive | Cinemate (SSD monitor) | Current write speed in MB/s | No |
 | file_size | Cinemate | Bytes per frame for the current mode | No |
-| memory_alert | Cinemate | `1` if RAM usage is high | No |
+| memory_alert | Cinemate | RAM percentage at which the watchdog auto-stopped recording (integer, set at the 80 % trip point); `0` when clear | No |
 | cam_init | CinePi-raw | Internal startup flag | No |
 | cameras | Cinemate startup | JSON list of detected cameras and port assignments | No |
 | gui_layout | Cinemate | Path to the active GUI layout preset | No |

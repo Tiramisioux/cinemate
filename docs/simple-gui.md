@@ -14,7 +14,7 @@ The browser-based web UI features basic settings and interactive controls.
 | **Purple** | Live drop-frame alert. |
 | **Magenta** | Live frame-count sync mismatch. |
 | **Blue** | Storage pre-roll warm-up is running. |
-| **Yellow** | RAM load has passed the safety threshold; the GUI asks the controller to stop recording. |
+| **Yellow** | RAM load has passed the safety threshold (80 %); recording is auto-stopped. Most likely on 2 GB boards at UHD/4K — see [Quick start](getting-started.md#hardware-requirements). |
 
 ## Indicators
 

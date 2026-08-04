@@ -1,9 +1,20 @@
 # Quick start
 
 ## Hardware requirements
-- Raspberry Pi 4 or 5 (>2GB RAM).
+- Raspberry Pi 4 or 5 / CM5. **4 GB RAM or more.** 2 GB boards run, but are not recommended for UHD/4K.
 - Official HQ or Global Shutter camera
 - HDMI monitor or a phone/tablet for monitoring
+
+!!! warning "2 GB boards and UHD/4K"
+
+    Cinemate buffers raw frames in RAM before they reach the disk. A watchdog
+    polls total RAM use and **auto-stops recording at 80 %** — the HDMI GUI
+    turns yellow and `memory_alert` is set.
+
+    At UHD/4K a 2 GB board reaches that threshold quickly, so takes stop on
+    their own. 4 GB is the practical minimum for 4K work. Compiling
+    `cinepi-raw` on the Pi also wants 4 GB (the installer adds a temporary zram
+    swap below 3 GB).
 
 ## Installation
 

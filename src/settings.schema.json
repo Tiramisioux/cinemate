@@ -192,6 +192,12 @@
               "default": "resources/tuning_files/imx477.json"
             }
           }
+        },
+        "log_encode": {
+          "description": "CineMate Log recording target for this sensor. false = off (default, opt-in only). true = on, using the live source bit depth's default target (16-bit -> 12, 12-bit -> 10). 10 or 12 = on, forcing that target explicitly -- applied only when the sensor's live source bit depth actually supports it (e.g. 10 to force 16-bit ClearHDR down to 16to10 instead of its 12 default); never silently substituted to a different target. Only sensors with a sensors.json log_encode block (currently imx585, imx283) support this -- the setting is ignored on other sensors.",
+          "type": ["boolean", "integer"],
+          "enum": [false, true, 10, 12],
+          "default": false
         }
       },
       "additionalProperties": true

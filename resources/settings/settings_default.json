@@ -280,7 +280,8 @@
         "hdmi_port": 0
       },
       "override_camera_name": false,
-      "camera_name": ""
+      "camera_name": "",
+      "log_encode": false
     },
     "cam1": {
       "geometry": {
@@ -292,7 +293,8 @@
         "hdmi_port": 1
       },
       "override_camera_name": false,
-      "camera_name": ""
+      "camera_name": "",
+      "log_encode": false
     }
   },
   "i2c_oled": {

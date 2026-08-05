@@ -29,6 +29,7 @@ Release notes for Cinemate. For downloads, see the [releases page](https://githu
 - **More reliable audio sync on 4K / exFAT** — the capture path was reworked (protected helper, dedicated writer thread, wall-clock reconciliation, real-time scheduling) for more reliable WAV sync on demanding modes.
 - **Correct Pi 4 RAW** — CSI2-packed frames decode correctly on Pi 4-family boards; raw packing (P/U) is chosen per Pi model automatically.
 - **Camera model** — set the camera model manually for each attached sensor.
+- **`--keep16` removed** — SDR sensor modes always write 12-bit DNGs. The flag only preserved 4 padding bits, so files are ~33% smaller with no loss of information. True 16-bit modes (IMX585 ClearHDR) are unaffected.
 
 ### Cinemate
 

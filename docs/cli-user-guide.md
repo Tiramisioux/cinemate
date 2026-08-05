@@ -76,11 +76,10 @@ The Cinemate fork introduces several extra options:
 | `--cam-port`  | `cam0` \| `cam1`   | Select which CSI camera port to use.                                                        |
 | `--hdmi-port` | `0` \| `1` \| `-1` | Choose the HDMI connector for the preview (`0` = HDMI-0, `1` = HDMI-1, `-1` = auto-detect). |
 | `--same-hdmi` | *(none)*           | Force both capture and controller GUI to share the same HDMI output.                        |
-| `--keep16`    | `true` \| `false`  | Save full 16-bit DNGs instead of 12-bit packed files.                                       |
 
 !!! note ""
 
-    At this moment though, Cinemate is 12bit only. The flag is for future updates of the IMX585 16bit clear HDR modes.
+    DNGs are 12-bit, except in true 16-bit sensor modes (IMX585 ClearHDR), which write 16-bit. The `--keep16` flag was removed — the 4 bits it kept in SDR modes are padding.
 
 ## Example commands
 

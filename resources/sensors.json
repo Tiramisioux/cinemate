@@ -65,6 +65,13 @@
       "common_name": "Starlight Eye",
       "packing": "U",
       "aliases": ["imx585_mono"],
+      "log_encode": {
+        "black_level_16bit": 3200,
+        "targets": {
+          "16": { "valid": [10, 12], "default": 12 },
+          "12": { "valid": [10], "default": 10 }
+        }
+      },
       "modes": [
         {
           "mode": 0,
@@ -144,6 +151,12 @@
       "common_name": "OneInchEye",
       "packing": "U",
       "aliases": [],
+      "log_encode": {
+        "black_level_16bit": 3200,
+        "targets": {
+          "12": { "valid": [10], "default": 10 }
+        }
+      },
       "modes": [
         {
           "mode": 0,

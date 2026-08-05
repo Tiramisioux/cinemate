@@ -1,3 +1,4 @@
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -56,6 +57,134 @@ class SensorDatabaseTests(unittest.TestCase):
         self.assertEqual(d.get_packing_for_platform("imx283", 0, is_pi4=False), "U")
         self.assertEqual(d.get_packing_for_platform("imx519", 0, is_pi4=True), "P")
         self.assertEqual(d.get_packing_for_platform("imx519", 0, is_pi4=False), "P")
+
+    def test_log_encode_reader_returns_capability_data(self):
+        """sensor_detect exposes sensors.json's log_encode block read-only --
+        cinepi_multi/CLI wiring is Pass C2/C4. imx585 16-bit defaults to
+        target 12 but can be forced to 10 (`set log 10`); every source depth
+        this sensor supports maps to exactly one default, never a silent
+        substitution when nothing matches.
+        """
+        detector = self._detector_without_probe()
+
+        self.assertTrue(detector.supports_log_encode("imx585"))
+        self.assertEqual(
+            detector.get_log_encode_targets("imx585"),
+            {
+                16: {"valid": [10, 12], "default": 12},
+                12: {"valid": [10], "default": 10},
+            },
+        )
+        self.assertEqual(detector.get_log_encode_valid_targets("imx585", 16), [10, 12])
+        self.assertEqual(detector.get_log_encode_default_target("imx585", 16), 12)
+        self.assertEqual(detector.get_log_encode_default_target("imx585", 12), 10)
+        self.assertEqual(detector.get_log_encode_black_level_16bit("imx585"), 3200)
+
+        # Bare toggle (requested=None) resolves to the mode's default.
+        self.assertEqual(detector.resolve_log_encode_target("imx585", 16), 12)
+        self.assertEqual(detector.resolve_log_encode_target("imx585", 12), 10)
+        # `set log 10` while in 16-bit ClearHDR overrides the 12 default.
+        self.assertEqual(detector.resolve_log_encode_target("imx585", 16, requested=10), 10)
+        # `set log 12` while in 12-bit mode has no matching spec (no 12to12)
+        # -- resolves to None, never silently substituted to 10.
+        self.assertIsNone(detector.resolve_log_encode_target("imx585", 12, requested=12))
+        # A source depth this sensor never operates at (e.g. 8-bit) is
+        # simply unsupported.
+        self.assertIsNone(detector.resolve_log_encode_target("imx585", 8))
+
+        # Alias resolution matches the get_packing_for_platform precedent.
+        self.assertTrue(detector.supports_log_encode("imx585_mono"))
+        self.assertEqual(detector.get_log_encode_black_level_16bit("imx585_mono"), 3200)
+
+        self.assertTrue(detector.supports_log_encode("imx283"))
+        self.assertEqual(
+            detector.get_log_encode_targets("imx283"),
+            {12: {"valid": [10], "default": 10}},
+        )
+        self.assertEqual(detector.resolve_log_encode_target("imx283", 12), 10)
+        # imx283 has 10-bit sensor modes but no 10-bit source spec.
+        self.assertIsNone(detector.resolve_log_encode_target("imx283", 10))
+
+        # Absence is the answer -- no special-casing for unsupported sensors.
+        for unsupported in ("imx296", "imx296_mono", "imx477", "imx519", "does-not-exist"):
+            self.assertFalse(detector.supports_log_encode(unsupported))
+            self.assertEqual(detector.get_log_encode_targets(unsupported), {})
+            self.assertEqual(detector.get_log_encode_valid_targets(unsupported, 12), [])
+            self.assertIsNone(detector.get_log_encode_default_target(unsupported, 12))
+            self.assertIsNone(detector.get_log_encode_black_level_16bit(unsupported))
+            self.assertIsNone(detector.resolve_log_encode_target(unsupported, 12))
+
+    # Sensor -> tuning-file stem covering every camera model sensors.json
+    # tracks. imx519 has no shipped tuning file, so it can never clear the
+    # black-level check below -- that absence is itself part of the data.
+    TUNING_FILE_STEM_BY_SENSOR = {
+        "imx477": "imx477",
+        "imx296": "imx296",
+        "imx585": "imx585",
+        "imx283": "imx283",
+    }
+
+    @staticmethod
+    def _tuning_black_level(stem: str) -> int:
+        path = ROOT / "resources" / "tuning_files" / f"{stem}.json"
+        data = json.loads(path.read_text())
+        for algo in data.get("algorithms", []):
+            if "rpi.black_level" in algo:
+                return int(algo["rpi.black_level"]["black_level"])
+        raise AssertionError(f"no rpi.black_level algorithm in {path}")
+
+    def test_log_encode_support_matrix_is_derived_from_tuning_black_levels(self):
+        """Reproduce CINEMATE-LOG-CINEMATE-PLAN.md §2 from data, not by typing
+        in a sensor name list: a sensor is log-encode-supported iff its
+        tuning-file black level (the 16-bit domain SensorBlackLevels reports)
+        exactly matches another tracked sensor's -- the real-world fact that
+        lets imx585 and imx283 share the same log spec files.
+        """
+        detector = self._detector_without_probe()
+        sensors = detector.sensor_database["sensors"]
+
+        tuning_black_level = {
+            name: self._tuning_black_level(stem)
+            for name, stem in self.TUNING_FILE_STEM_BY_SENSOR.items()
+        }
+
+        by_black_level: dict[int, list[str]] = {}
+        for name, level in tuning_black_level.items():
+            by_black_level.setdefault(level, []).append(name)
+
+        # The supported cluster is whichever black level two or more tracked
+        # sensors share. If a fork adds a fifth sensor at 3200 or changes
+        # which two collide, this still derives the right set without
+        # editing the test.
+        clusters = [names for names in by_black_level.values() if len(names) > 1]
+        self.assertEqual(len(clusters), 1, by_black_level)
+        supported_names = set(clusters[0])
+        self.assertEqual(supported_names, {"imx585", "imx283"})
+
+        for name, sensor_info in sensors.items():
+            has_block = isinstance(sensor_info.get("log_encode"), dict)
+            if name in supported_names:
+                self.assertTrue(has_block, f"{name} should declare log_encode")
+                self.assertEqual(
+                    sensor_info["log_encode"]["black_level_16bit"],
+                    tuning_black_level[name],
+                    f"{name} black_level_16bit must match its tuning file",
+                )
+            else:
+                self.assertFalse(has_block, f"{name} should not declare log_encode")
+
+        # Every non-clustered sensor sits far outside any plausible
+        # quantisation tolerance (single-digit LSBs) from the supported
+        # cluster's black level -- these are genuinely different sensors,
+        # not a near-miss a guard should actually let through.
+        cluster_level = tuning_black_level[next(iter(supported_names))]
+        for name, level in tuning_black_level.items():
+            if name in supported_names:
+                continue
+            self.assertGreater(
+                abs(level - cluster_level), 32,
+                f"{name} unexpectedly close to the supported black level",
+            )
 
     def test_enriches_detected_mode_with_sustainable_fps(self):
         detector = self._detector_without_probe()

@@ -574,7 +574,108 @@ class SensorDetect:
                     return str(value).strip().upper()
         return base
 
-    
+    def _log_encode_info(self, camera_name: str | None) -> dict[str, Any] | None:
+        """Return sensors.json's ``log_encode`` block for *camera_name*, or
+        None when absent. Absence means the sensor is unsupported — there is
+        no special-casing here, mirroring how ``packing_by_platform`` absence
+        just falls through to the default packing above.
+        """
+        sensor_info = self._sensor_database_entry(camera_name)
+        if not sensor_info:
+            return None
+        log_encode = sensor_info.get('log_encode')
+        return log_encode if isinstance(log_encode, dict) else None
+
+    def supports_log_encode(self, camera_name: str | None) -> bool:
+        """True when *camera_name* has a ``log_encode`` block in sensors.json."""
+        return self._log_encode_info(camera_name) is not None
+
+    def get_log_encode_targets(self, camera_name: str | None) -> dict[int, dict[str, Any]]:
+        """Return ``{source_bit_depth: {'valid': [target, ...], 'default': target}}``
+        for *camera_name*, or ``{}`` when the sensor has no ``log_encode`` block.
+
+        This is capability data only. ``valid`` is every target whose spec
+        matches this sensor's black level for that source depth (imx585
+        16-bit has both a 16to10 and a 16to12 spec); ``default`` is the one
+        a bare toggle picks. Resolving a live target from the camera's
+        current mode is :meth:`resolve_log_encode_target`.
+        """
+        info = self._log_encode_info(camera_name)
+        if not info:
+            return {}
+        targets = info.get('targets')
+        if not isinstance(targets, dict):
+            return {}
+        result: dict[int, dict[str, Any]] = {}
+        for source_bits, spec in targets.items():
+            try:
+                source_key = int(source_bits)
+            except (TypeError, ValueError):
+                continue
+            if not isinstance(spec, dict):
+                continue
+            valid = [int(t) for t in (spec.get('valid') or [])]
+            default = spec.get('default')
+            result[source_key] = {
+                'valid': valid,
+                'default': int(default) if default is not None else None,
+            }
+        return result
+
+    def get_log_encode_valid_targets(self, camera_name: str | None, source_bit_depth: int | None) -> list[int]:
+        """Return the target depths *camera_name* supports from
+        *source_bit_depth*, or ``[]`` when there is no matching spec (the
+        sensor is unsupported, or this source depth has none)."""
+        if source_bit_depth is None:
+            return []
+        entry = self.get_log_encode_targets(camera_name).get(int(source_bit_depth))
+        return list(entry['valid']) if entry else []
+
+    def get_log_encode_default_target(self, camera_name: str | None, source_bit_depth: int | None) -> int | None:
+        """Return the default (bare-toggle) target for *camera_name* at
+        *source_bit_depth*, or None when this source depth has no spec."""
+        if source_bit_depth is None:
+            return None
+        entry = self.get_log_encode_targets(camera_name).get(int(source_bit_depth))
+        return entry['default'] if entry else None
+
+    def resolve_log_encode_target(
+        self,
+        camera_name: str | None,
+        source_bit_depth: int | None,
+        requested: int | None = None,
+    ) -> int | None:
+        """Resolve the ``--log-encode`` target for *camera_name* currently
+        running at *source_bit_depth*.
+
+        ``requested=None`` (a bare ``set log`` toggle) resolves to this
+        source depth's default (16-bit -> 12, 12-bit -> 10). An explicit
+        ``requested`` (e.g. ``set log 10`` to force 16-bit down to 16to10
+        instead of the 16to12 default) is returned only when it is one of
+        this sensor/source-depth's valid targets; otherwise None — this
+        never silently substitutes a different target than what was asked
+        for or implied.
+        """
+        valid = self.get_log_encode_valid_targets(camera_name, source_bit_depth)
+        if not valid:
+            return None
+        if requested is None:
+            return self.get_log_encode_default_target(camera_name, source_bit_depth)
+        try:
+            requested_target = int(requested)
+        except (TypeError, ValueError):
+            return None
+        return requested_target if requested_target in valid else None
+
+    def get_log_encode_black_level_16bit(self, camera_name: str | None) -> int | None:
+        """Return sensors.json's ``log_encode.black_level_16bit`` for
+        *camera_name*, or None when the sensor has no ``log_encode`` block."""
+        info = self._log_encode_info(camera_name)
+        if not info:
+            return None
+        black_level = info.get('black_level_16bit')
+        return int(black_level) if black_level is not None else None
+
     def get_file_size(self, camera_name, sensor_mode):
         resolution_info = self.get_resolution_info(camera_name, sensor_mode)
         return resolution_info.get('file_size', None)

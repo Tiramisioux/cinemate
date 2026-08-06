@@ -27,7 +27,8 @@
       "tuning_file_override": {
         "enabled": false,
         "path": "resources/tuning_files/imx477.json"
-      }
+      },
+      "log_encode": false
     },
     "cam1": {
       "geometry": {
@@ -44,7 +45,8 @@
       "tuning_file_override": {
         "enabled": false,
         "path": "resources/tuning_files/imx477.json"
-      }
+      },
+      "log_encode": false
     }
   },
   "hdmi_gui": {

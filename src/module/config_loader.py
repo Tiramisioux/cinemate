@@ -315,14 +315,14 @@ def _apply_settings_defaults(settings: dict) -> dict:
         cam.setdefault("override_camera_name", False)
         cam.setdefault("camera_name",          "")
         cam.setdefault("phase_lock", True)
+        tf = cam.setdefault("tuning_file_override", {})
+        tf.setdefault("enabled", False)
+        tf.setdefault("path", "resources/tuning_files/imx477.json")
         # CineMate Log target: False (off) | True (on, mode's default target) |
         # 10 | 12 (on, forced target). Off by default -- log changes recorded
         # output. Resolved against the live sensor + bit depth at launch via
         # SensorDetect.resolve_log_encode_target(); never a raw flag value.
         cam.setdefault("log_encode", False)
-        tf = cam.setdefault("tuning_file_override", {})
-        tf.setdefault("enabled", False)
-        tf.setdefault("path", "resources/tuning_files/imx477.json")
     settings["camera"] = camera_cfg
 
     sensor_defaults = {

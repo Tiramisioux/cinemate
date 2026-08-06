@@ -47,6 +47,20 @@ Note that maximum fps will vary according to disk write speed. For the specific 
 
     Cinemate handles the CinePi-RAW packing choice automatically. On Raspberry Pi 4 / Pi 400 / CM4, IMX296 and IMX477 use packed raw mode (`P`). On Raspberry Pi 5 / CM5 they stay on unpacked mode (`U`). For IMX296 this means `1456:1088:10:P` on Raspberry Pi 4-family boards and `1456:1088:10:U` on Raspberry Pi 5 / CM5.
 
+## CineMate Log support
+
+[CineMate Log](cinemate-log.md) is supported on **IMX585 and IMX283 only**. Support is decided by the sensor's black level, not chosen: the two shipped log DNG specs (12→10 and 16→10/16→12) are built for BlackLevel 3200, which is exactly what IMX585 and IMX283 report and no other sensor does.
+
+| Sensor | Live mode | `set log` (default) | `set log 10` / `set log 12` |
+|--------|-----------|----------------------|------------------------------|
+| IMX585 | ClearHDR 16-bit | on → **LOG12** | 10 or 12, either works |
+| IMX585 | 12-bit (SDR or 12-bit ClearHDR) | on → **LOG10** | only 10 works — no 12→12 spec |
+| IMX283 | 12-bit modes | on → **LOG10** | only 10 works |
+| IMX283 | 10-bit modes | not supported | — no 10-bit source spec |
+| IMX477, IMX296, all others | any | not supported | — black level doesn't match |
+
+IMX477 is not a hardware limitation — its 12-bit modes would work the same way — it needs sensor-aware spec selection on the `cinepi-raw` side that hasn't been built yet.
+
 ## Sensor size, crop factor and film-format equivalents
 
 Each mode reads out a physical area of the sensor. Binned modes keep the full field of view. Cropped modes use a smaller area, so the same lens frames tighter.

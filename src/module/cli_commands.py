@@ -65,6 +65,13 @@ class CommandExecutor(threading.Thread):
             'set hdr blend'          : (cinepi_controller.set_hdr_blend,     int),
             'set hdr gain adder'     : (cinepi_controller.set_hdr_gain_adder, int),
 
+            # ── CineMate Log (--log-encode) ───────────────────────────────────────
+            #  "set log" toggles on/off, using each live camera's own bit-depth
+            #  default target. "set log 10" / "set log 12" force that target where
+            #  the live bit depth supports it; "set log off" forces off. Restarts
+            #  the camera when idle, deferred while recording.
+            'set log'                : (cinepi_controller.set_log_encode,    [int, str]),
+
             # ── White balance (Kelvin or step) ────────────────────────────────────
             'set wb'                 : (cinepi_controller.set_wb,         [int, None]),
             'inc wb'                 : (cinepi_controller.inc_wb,         None),

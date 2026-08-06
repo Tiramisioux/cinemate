@@ -67,7 +67,8 @@ All per-port settings live inside a `cam0` or `cam1` block so every option for a
     },
     "override_camera_name": false,
     "camera_name": "Blackmagic Pocket Cinema Camera 4K",
-    "phase_lock": true
+    "phase_lock": true,
+    "log_encode": false
   },
   "cam1": {
     "geometry": {
@@ -80,7 +81,8 @@ All per-port settings live inside a `cam0` or `cam1` block so every option for a
     },
     "override_camera_name": false,
     "camera_name": "Blackmagic Pocket Cinema Camera 4K",
-    "phase_lock": true
+    "phase_lock": true,
+    "log_encode": false
   }
 }
 ```
@@ -117,6 +119,8 @@ Maps the camera to an HDMI connector.
 
     Setting `camera_name` to `"Blackmagic Pocket Cinema Camera 4K"` is therefore not cosmetic — it is what makes Resolve treat the footage as genuine BRAW-adjacent DNG and apply the correct ISO-aware decode.
 
+    **Caveat once [CineMate Log](cinemate-log.md) is in use:** the Blackmagic spoof layers BMD colour science and its own tone curve on top of data that CineMate Log has already linearised via the DNG `LinearizationTable`. Keep `override_camera_name` off (the default) on any camera recording log — spoofing and log-encoding the same clip confound each other in the grade. The spoof is still fine for a camera you are recording in plain linear DNGs.
+
 ### phase_lock
 
 `phase_lock` – `true` (default) keeps audio and video aligned over long takes by locking the recorded frame cadence to the Pi clock. Leave it on.
@@ -128,6 +132,10 @@ Maps the camera to an HDMI connector.
     Cinemate writes this per-camera flag to the shared `fps_phase_lock` runtime key, which `cinepi-raw` reads (it is off by default in `cinepi-raw` itself when run standalone). The loop is VBLANK-only and holds the recorded cadence on the nominal FPS directly, so no per-sensor FPS-correction table is needed.
 
     **Multi-camera genlock.** `phase_lock` can stay `true` on a multi-camera `--sync` (beam-splitter / genlock) rig. `cinepi-raw` infers its role from `--sync`: the master (`--sync server`) runs the phase lock and disciplines the pair to the Pi clock, while the `--sync client` automatically suppresses its own phase lock and lets libcamera's `rpi.sync` hold the relative camera-to-camera (A→B) alignment. One setting works for single and dual — no per-camera differentiation. See [Dual sensors](dual-sensors.md).
+
+### log_encode
+
+`log_encode` – this camera's [CineMate Log](cinemate-log.md) setting: `false` (default, off), `true` (on, using the live sensor mode's default target), or `10` / `12` to force that target explicitly when the live mode supports it. Only imx585 and imx283 support it; the setting is ignored on every other sensor. See [CineMate Log](cinemate-log.md) for the full picture, including the `set log` CLI command and the per-camera `LOG10`/`LOG12` badge on the Simple GUI.
 
 ## hdmi_gui
 

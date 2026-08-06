@@ -12,7 +12,7 @@ import psutil
 import math
 import sys
 
-from module.redis_controller import ParameterKey
+from module.redis_controller import ParameterKey, encode_log_encode_request, decode_log_encode_request
 from module.ir_filter import IRFilter
 from module.config_loader import load_settings as _load_settings
 from module.storage_profiles import recorder_profile_name_for_filesystem
@@ -638,6 +638,68 @@ class CinePiController:
             f"HDR profile {index} ('{name}') applied — restarting camera "
             f"(hdr={'on' if hdr_on else 'off'})"
         )
+        self.cinepi.restart()
+
+    def set_log_encode(self, value=None):
+        """Live control for CineMate Log (`set log`).
+
+        Bare ``set log`` toggles on/off, using each camera's own default
+        target for its live source bit depth (16-bit -> 12, 12-bit -> 10;
+        resolved independently per camera in ``CinePiProcess._build_args()``,
+        never here). ``set log 10`` / ``set log 12`` force that target where
+        the live bit depth supports it -- e.g. forcing 16-bit ClearHDR down
+        to 16to10 instead of its 12 default. ``set log off`` / ``set log on``
+        force a state. The request is shared across every launched camera,
+        exactly like ``--hdr sensor``; a camera whose sensor or live bit
+        depth doesn't support the request simply logs why and stays linear
+        (see _build_args()) -- never a silent substitution.
+
+        Restarts immediately when idle, exactly like hdr_profile(). While
+        recording, the request is stored and applied on the next restart --
+        we never split a running take.
+        """
+        raw_current = self.redis_controller.get_value(ParameterKey.LOG_ENCODE_REQUEST.value)
+        if raw_current is None:
+            cam0_cfg = (self.settings.get("camera") or {}).get("cam0", {}) or {}
+            current = cam0_cfg.get("log_encode", False)
+        else:
+            current = decode_log_encode_request(raw_current)
+
+        if value is None:
+            new_value = False if current else True
+        elif isinstance(value, str):
+            low = value.strip().lower()
+            if low in ("off", "0", "false", "no"):
+                new_value = False
+            elif low in ("on", "1", "true", "yes"):
+                new_value = True
+            else:
+                logging.warning("set log: unrecognized value %r, ignoring", value)
+                return
+        else:
+            try:
+                new_value = int(value)
+            except (TypeError, ValueError):
+                logging.warning("set log: unrecognized value %r, ignoring", value)
+                return
+            if new_value not in (10, 12):
+                logging.warning(
+                    "set log: target must be 10 or 12, got %r, ignoring", value
+                )
+                return
+
+        self.redis_controller.set_value(
+            ParameterKey.LOG_ENCODE_REQUEST.value, encode_log_encode_request(new_value)
+        )
+        logging.info("CineMate Log request set to %r", new_value)
+
+        if self._is_recording():
+            logging.info(
+                "CineMate Log request changed while recording — deferring "
+                "restart until the current take ends; applies on next launch"
+            )
+            return
+
         self.cinepi.restart()
 
     def initialize_shutter_angle_steps(self):

@@ -93,7 +93,18 @@ class ParameterKey(Enum):
     EXPOSURE_TIME       = 'exposure_time'
     LAST_DNG_CAM1       = "last_dng_cam1"
     LAST_DNG_CAM0       = "last_dng_cam0"
-    
+
+    # CineMate Log (--log-encode). REQUEST is the live `set log` state,
+    # shared across every launched camera like HDR's ParameterKey.HDR --
+    # each camera's _build_args() resolves it independently against its own
+    # sensor/live bit depth. LOG_ENCODE_CAM0/CAM1 are per-camera and hold
+    # what that camera was actually LAUNCHED with (0 = off/not applied, else
+    # the resolved target 10/12) -- the badge reads these, never REQUEST,
+    # so it never shows a target that isn't actually running yet.
+    LOG_ENCODE_REQUEST = "log_encode_request"
+    LOG_ENCODE_CAM0    = "log_encode_cam0"
+    LOG_ENCODE_CAM1    = "log_encode_cam1"
+
     ZOOM                = "zoom"  # digital zoom factor for streams 0 & 2
     HDMI_PREVIEW_SOURCE = "hdmi_preview_source"  # dual-sensor HDMI: both / cam0 / cam1 / pip_cam0 / pip_cam1
     RECORD_CAMS         = "record_cams"          # which sensors record this take: cam0+cam1 / cam0 / cam1
@@ -102,6 +113,33 @@ class ParameterKey(Enum):
     RECORDING_TC_REC     = "recording_tc_rec"    # elapsed-time time-code
     RECORDING_TC_TOD   = "recording_time_tod"    # time-of-day time-code
     FRAMES_IN_SYNC      = "frames_in_sync"
+
+
+def encode_log_encode_request(value) -> int:
+    """False|True|10|12 -> 0|1|10|12 -- the redis-safe int encoding for
+    ParameterKey.LOG_ENCODE_REQUEST (mirrors camera.camN.log_encode in
+    settings.json). Unparsable input encodes as 0 (off)."""
+    if value is False:
+        return 0
+    if value is True:
+        return 1
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def decode_log_encode_request(raw):
+    """Inverse of encode_log_encode_request. None/unparsable -> False."""
+    try:
+        n = int(raw)
+    except (TypeError, ValueError):
+        return False
+    if n <= 0:
+        return False
+    if n == 1:
+        return True
+    return n
 
 
 # ────────────────────────── tiny pub‑sub helper ──────────────────────

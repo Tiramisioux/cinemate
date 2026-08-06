@@ -31,6 +31,12 @@ Release notes for Cinemate. For downloads, see the [releases page](https://githu
 - **Camera model** — set the camera model manually for each attached sensor.
 - **`--keep16` removed** — SDR sensor modes always write 12-bit DNGs. The flag only preserved 4 padding bits, so files are ~33% smaller with no loss of information. True 16-bit modes (IMX585 ClearHDR) are unaffected.
 
+### CineMate Log
+
+- **New, opt-in log-companded DNG recording** on IMX585 and IMX283 — log-compands the linear sensor signal to a smaller code depth and writes a DNG `LinearizationTable` so any DNG app decodes it back to linear automatically. No LUT is needed or should be applied. Shrinks 16-bit ClearHDR frames 17–37% and 12-bit SDR frames ~17%. See [CineMate Log](cinemate-log.md).
+- **Per-camera `log_encode` setting** (`false` / `true` / `10` / `12`) and the live `set log` command, both resolved against each camera's own live sensor mode — never a standing choice that can silently drift out of sync with a resolution or ClearHDR switch.
+- **`LOG10`/`LOG12` badge** on the Simple GUI, per camera, reflecting what's actually running rather than what was requested.
+
 ### Cinemate
 
 - **Storage / media** — multi-drive RAW hot-swap with a standby drive and automatic promotion. Default format is exFAT.

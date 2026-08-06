@@ -13,7 +13,7 @@ import os, signal
 import shutil
 
 from module.config_loader import load_settings
-from module.redis_controller import ParameterKey
+from module.redis_controller import ParameterKey, decode_log_encode_request
 from module.framebuffer import Framebuffer
 from module.sensor_detect import is_pi4_family
 from module.storage_profiles import (
@@ -627,6 +627,41 @@ class CinePiProcess(Thread):
             if name:
                 args += ["--unique-camera-model", name]
                 logging.info("[%s] DNG UniqueCameraModel overridden: %s", self.cam.port, name)
+
+        # ── CineMate Log: log-companded DNG output (--log-encode) ──────────
+        # Target only; cinepi-raw resolves the SOURCE from the live mode and
+        # refuses (recording linear) if no spec matches. The live `set log`
+        # request is shared across every launched camera via redis, like
+        # --hdr sensor; camera.camN.log_encode in settings.json is only the
+        # boot-time seed, read until the first `set log` of a session writes
+        # the redis key. We resolve here (not in cinepi-raw) so the reason is
+        # visible at launch instead of buried in its log, and we publish the
+        # per-cam result so the GUI badge reflects what was actually
+        # launched, never merely requested.
+        raw_log_request = self.redis_controller.get_value(ParameterKey.LOG_ENCODE_REQUEST.value)
+        if raw_log_request is None:
+            log_requested = cam_cfg.get("log_encode", False)
+        else:
+            log_requested = decode_log_encode_request(raw_log_request)
+        log_target = None
+        if log_requested:
+            log_target = self.sensor_detect.resolve_log_encode_target(
+                model_key, bit_depth,
+                requested=None if log_requested is True else log_requested,
+            )
+            if log_target:
+                args += ["--log-encode", str(log_target)]
+                logging.info(
+                    "[%s] CineMate Log: %d-bit source -> %d-bit log",
+                    self.cam.port, bit_depth, log_target,
+                )
+            else:
+                logging.warning(
+                    "[%s] CineMate Log requested (%r) but not applied at "
+                    "%d-bit -- unsupported sensor/source-depth, recording linear",
+                    self.cam.port, log_requested, bit_depth,
+                )
+        self.redis_controller.set_value(f'log_encode_{self.cam.port}', log_target or 0)
 
         return args
 

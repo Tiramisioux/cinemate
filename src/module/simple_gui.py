@@ -41,6 +41,10 @@ HDR_BADGE_GAP = 12          # RES value → badge gap
 HDR_BADGE_FONT_SIZE = 24    # 1920-ref badge text size
 SDR_BADGE_COLOR = (120, 120, 120)   # dark grey
 HDR_BADGE_COLOR = (205, 205, 205)   # lighter grey
+# CineMate Log per-cam badge (drawn via _draw_status_box, like DROP/SYNC).
+# Grey, distinct from both the plain CAM box grey (136,136,136) and the
+# DROP/SYNC alarm colours -- this is a calm mode indicator, not a warning.
+LOG_BADGE_COLOR = (205, 205, 205)
 
 
 def _to_bool(value) -> bool:
@@ -55,6 +59,14 @@ def _to_int(value, default=None):
         return int(float(value))
     except (TypeError, ValueError):
         return default
+
+
+def _log_badge_text(target) -> str:
+    """"" for 0/None/unparsable, else "LOG10"/"LOG12" -- the CAM-section
+    badge text for a log_encode_camN redis value (what that camera was
+    actually LAUNCHED with)."""
+    n = _to_int(target, 0) or 0
+    return f"LOG{n}" if n else ""
 
 
 def _calculate_preview_guide_rect(
@@ -826,6 +838,17 @@ class SimpleGUI(threading.Thread):
             "missing_frame_count": int(self.redis_controller.get_value(ParameterKey.MISSING_FRAME_COUNT.value) or 0),
 
         }
+        # CineMate Log per-cam badge text. Read from log_encode_camN -- what
+        # that camera was actually LAUNCHED with, published by
+        # CinePiProcess._build_args() -- never from settings or the live
+        # `set log` request, so the badge can't show a target that isn't
+        # actually running yet (the launch-only-flag/live-mode trap).
+        values["log_badge_cam0"] = _log_badge_text(
+            self.redis_controller.get_value(ParameterKey.LOG_ENCODE_CAM0.value)
+        )
+        values["log_badge_cam1"] = _log_badge_text(
+            self.redis_controller.get_value(ParameterKey.LOG_ENCODE_CAM1.value)
+        )
         # drop_frame_latched drives the persistent UI warning overlay.
         # Option 1: live drop_frame pulse = TC hole advisory (flashes during recording).
         # Option 2: drop_frame_during_last_take = only set when files are genuinely
@@ -1263,6 +1286,17 @@ class SimpleGUI(threading.Thread):
                 )
                 y += BOX_H + BOX_GAP
 
+            if section == self.left_section_layout[0] and values.get("log_badge_cam0"):
+                self._draw_status_box(
+                    draw,
+                    [box_x, y, box_x + BOX_W, y + BOX_H],
+                    values["log_badge_cam0"],
+                    LOG_BADGE_COLOR,
+                    box_font,
+                    TEXT_COLOR,
+                )
+                y += BOX_H + BOX_GAP
+
             y += SECTION_GAP
 
         # ── SYS section (USB / MIC / KEY / storage) ──────────────
@@ -1394,6 +1428,17 @@ class SimpleGUI(threading.Thread):
                     box_font,
                     TEXT_COLOR,
                     crossed=True,
+                )
+                y += BOX_H + BOX_GAP
+
+            if values.get("log_badge_cam1"):
+                self._draw_status_box(
+                    draw,
+                    [box_pad_x, y, box_pad_x + BOX_W, y + BOX_H],
+                    values["log_badge_cam1"],
+                    LOG_BADGE_COLOR,
+                    box_font,
+                    TEXT_COLOR,
                 )
                 y += BOX_H + BOX_GAP
             y += SECTION_GAP

@@ -28,6 +28,7 @@ These commands can also be sent to the Pi as serial via the Tx/Rx pins or via US
 | `set hdr threshold <low,high>`             | string            | `set hdr threshold 500,3000`            | ClearHDR HG→LG data-selection thresholds (0–4095 each), applied live |
 | `set hdr blend <n>`                        | int               | `set hdr blend 2`                       | ClearHDR blending mode 0–8, applied live        |
 | `set hdr gain adder <n>`                   | int               | `set hdr gain adder 2`                  | ClearHDR low-gain gain adder 0–5 (2 = +12 dB), applied live |
+| `set log [<10\|12\|off>]`                   | int, string or none | `set log` / `set log 10` / `set log off` | Toggle [CineMate Log](cinemate-log.md) on/off using the live mode's default target, or force `10`/`12` explicitly where the live mode supports it; restarts the camera when idle, deferred while recording |
 | `set wb [<Kelvin>]`                        | int or none       | `set wb 5600`                           | Set white balance or cycle active WB steps      |
 | `inc wb` / `dec wb`                        | -              |                                 | Step white balance; 100 K steps in free mode    |
 | `set resolution [<mode>]`                  | int or none       | `set resolution 2`                      | Apply or cycle sensor mode                      |

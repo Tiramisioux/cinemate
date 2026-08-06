@@ -1263,6 +1263,17 @@ class SimpleGUI(threading.Thread):
 
                     y += BOX_H + BOX_GAP
 
+            if section == self.left_section_layout[0] and values.get("log_badge_cam0"):
+                self._draw_status_box(
+                    draw,
+                    [box_x, y, box_x + BOX_W, y + BOX_H],
+                    values["log_badge_cam0"],
+                    LOG_BADGE_COLOR,
+                    box_font,
+                    TEXT_COLOR,
+                )
+                y += BOX_H + BOX_GAP
+
             if section == self.left_section_layout[0] and values.get("drop_frame_latched"):
                 self._draw_status_box(
                     draw,
@@ -1283,17 +1294,6 @@ class SimpleGUI(threading.Thread):
                     box_font,
                     TEXT_COLOR,
                     crossed=True,
-                )
-                y += BOX_H + BOX_GAP
-
-            if section == self.left_section_layout[0] and values.get("log_badge_cam0"):
-                self._draw_status_box(
-                    draw,
-                    [box_x, y, box_x + BOX_W, y + BOX_H],
-                    values["log_badge_cam0"],
-                    LOG_BADGE_COLOR,
-                    box_font,
-                    TEXT_COLOR,
                 )
                 y += BOX_H + BOX_GAP
 
@@ -1408,6 +1408,17 @@ class SimpleGUI(threading.Thread):
                     draw.text((tx, ty), part, font=part_font, fill=TEXT_COLOR)
                     y += BOX_H + BOX_GAP
 
+            if values.get("log_badge_cam1"):
+                self._draw_status_box(
+                    draw,
+                    [box_pad_x, y, box_pad_x + BOX_W, y + BOX_H],
+                    values["log_badge_cam1"],
+                    LOG_BADGE_COLOR,
+                    box_font,
+                    TEXT_COLOR,
+                )
+                y += BOX_H + BOX_GAP
+
             if values.get("drop_frame_latched"):
                 self._draw_status_box(
                     draw,
@@ -1428,17 +1439,6 @@ class SimpleGUI(threading.Thread):
                     box_font,
                     TEXT_COLOR,
                     crossed=True,
-                )
-                y += BOX_H + BOX_GAP
-
-            if values.get("log_badge_cam1"):
-                self._draw_status_box(
-                    draw,
-                    [box_pad_x, y, box_pad_x + BOX_W, y + BOX_H],
-                    values["log_badge_cam1"],
-                    LOG_BADGE_COLOR,
-                    box_font,
-                    TEXT_COLOR,
                 )
                 y += BOX_H + BOX_GAP
             y += SECTION_GAP

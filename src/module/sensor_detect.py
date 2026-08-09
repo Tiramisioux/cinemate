@@ -644,6 +644,7 @@ class SensorDetect:
         camera_name: str | None,
         source_bit_depth: int | None,
         requested: int | None = None,
+        hdr: bool = False,
     ) -> int | None:
         """Resolve the ``--log-encode`` target for *camera_name* currently
         running at *source_bit_depth*.
@@ -655,7 +656,38 @@ class SensorDetect:
         this sensor/source-depth's valid targets; otherwise None — this
         never silently substitutes a different target than what was asked
         for or implied.
+
+        *hdr* is whether the launch will carry ``--hdr sensor``. It matters
+        because log encoding assumes a LINEAR source and 12-bit ClearHDR is
+        not one — see the guard below.
         """
+        # ── 12-bit ClearHDR is CCMP-companded on-sensor ──────────────────
+        #
+        # sensors.json declares imx585 "12": {"valid":[10],"default":10} on
+        # bit depth alone, so without this a 12-bit ClearHDR mode resolves to
+        # 10 and launches --hdr sensor --log-encode 10 against companded data.
+        # mu-law then lands on top of Sony's CCMP curve, with a mu-law
+        # LinearizationTable written over the result claiming linear input.
+        #
+        # Nothing downstream used to catch it, and in particular the
+        # black-level check CANNOT: CCMP is the IDENTITY below its first knee
+        # and black sits at 200, well inside that segment, so the pedestal is
+        # untouched and every level-based test reads clean. (A companded black
+        # of ~542 appears in an early doc and is FALSIFIED — measured 201.4 and
+        # 198.7 on a clean lens-cap set.) The defect is entirely in the
+        # transfer above the knee, so only an HDR-aware test can see it.
+        #
+        # Resolved here as well as in cinepi-raw so the reason is visible at
+        # launch instead of buried in cinepi-raw's warning.
+        #
+        # ** TEMPORARY, AND WRITTEN TO BE REPLACED RATHER THAN DELETED. **
+        # Once the CCMP decompand runs first the combination becomes legal by
+        # precomposition — and the source domain after decompand is SIXTEEN
+        # bit, so it uses the 16to10 spec, never 12to10. Deleting this without
+        # adding that precomposition reintroduces the original bug.
+        if hdr and source_bit_depth == 12:
+            return None
+
         valid = self.get_log_encode_valid_targets(camera_name, source_bit_depth)
         if not valid:
             return None

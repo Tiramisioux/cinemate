@@ -539,7 +539,12 @@ class CinePiProcess(Thread):
         # wide_dynamic_range changes the sensor's mode list, so it must be a
         # launch flag (cinepi-raw resets its camera manager around it); the
         # live knobs (hdr_threshold/hdr_blend/hdr_gain_adder) travel via Redis.
-        if str(self.redis_controller.get_value(ParameterKey.HDR.value) or "0") == "1":
+        # Read once into a local: the log-encode resolve further down needs the
+        # same value, and a second Redis read could see a different one if the
+        # key changes mid-launch — which would let --hdr sensor and
+        # --log-encode disagree about whether the source is companded.
+        hdr_on = str(self.redis_controller.get_value(ParameterKey.HDR.value) or "0") == "1"
+        if hdr_on:
             args += ['--hdr', 'sensor']
 
         # ── if running in multi-camera mode, pass --sync server/client ──
@@ -648,12 +653,24 @@ class CinePiProcess(Thread):
             log_target = self.sensor_detect.resolve_log_encode_target(
                 model_key, bit_depth,
                 requested=None if log_requested is True else log_requested,
+                hdr=hdr_on,
             )
             if log_target:
                 args += ["--log-encode", str(log_target)]
                 logging.info(
                     "[%s] CineMate Log: %d-bit source -> %d-bit log",
                     self.cam.port, bit_depth, log_target,
+                )
+            elif hdr_on and bit_depth == 12:
+                # Name the actual reason. The generic message below would send
+                # someone looking at sensors.json, where the entry is present
+                # and correct — the source is simply not linear.
+                logging.warning(
+                    "[%s] CineMate Log requested (%r) but NOT applied: 12-bit "
+                    "ClearHDR is CCMP-companded on-sensor and log-encoding it "
+                    "would compand twice. Recording linear 12-bit. Use 16-bit "
+                    "ClearHDR for log, or turn ClearHDR off.",
+                    self.cam.port, log_requested,
                 )
             else:
                 logging.warning(

@@ -273,10 +273,29 @@ class CinePiController:
     def _get_startup_sensor_mode(self) -> int:
         value = self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value)
         try:
-            return int(value)
+            mode = int(value)
         except (TypeError, ValueError):
-            self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, 0)
-            return 0
+            mode = None
+
+        if mode is not None and mode in self.sensor_detect.res_modes:
+            return mode
+
+        # Stored mode is missing or no longer valid -- e.g. settings.json
+        # now filters resolutions (k_steps/bit_depths/hdr) down to a smaller
+        # set than when this mode index was saved, so res_modes was
+        # re-indexed from 0. Fall back to a mode that actually exists so
+        # callers like _recompute_file_size() (a plain res_modes[...]
+        # lookup) don't raise KeyError during startup.
+        fallback = 0 if 0 in self.sensor_detect.res_modes else next(
+            iter(self.sensor_detect.res_modes), 0
+        )
+        if mode is not None:
+            logging.info(
+                "Stored sensor mode %s not available -- falling back to "
+                "mode %s.", mode, fallback,
+            )
+        self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, fallback)
+        return fallback
 
     def _get_startup_dynamic_resolution_desired_mode(self) -> int:
         value = self.redis_controller.get_value(

@@ -13,6 +13,7 @@ import math
 import sys
 
 from module.redis_controller import ParameterKey, encode_log_encode_request, decode_log_encode_request
+from module.sensor_detect import compute_frame_size_mb
 from module.ir_filter import IRFilter
 from module.config_loader import load_settings as _load_settings
 from module.storage_profiles import recorder_profile_name_for_filesystem
@@ -227,8 +228,8 @@ class CinePiController:
         self.gui_layout = self.sensor_detect.get_gui_layout(self.current_sensor, self.sensor_mode)
         self.exposure_time_s = float(self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)) / 360 * (1 / self.fps) 
         self.exposure_time_saved = self.exposure_time_s
-        self.file_size = self.sensor_detect.get_file_size(self.current_sensor, self.sensor_mode)
-        
+        self._recompute_file_size()
+
         self._publish_dynamic_resolution_state()
         
         # ── put default zoom into Redis if nothing stored yet ─────────────
@@ -640,6 +641,40 @@ class CinePiController:
         )
         self.cinepi.restart()
 
+    def _log_requested_state(self):
+        """The live `set log` request -- False/True/10/12 -- from redis, or
+        settings.json's boot-time seed before the first `set log` of a
+        session writes the redis key. Shared by set_log_encode() and the
+        file-size recompute so both agree on what's currently requested."""
+        raw_current = self.redis_controller.get_value(ParameterKey.LOG_ENCODE_REQUEST.value)
+        if raw_current is None:
+            cam0_cfg = (self.settings.get("camera") or {}).get("cam0", {}) or {}
+            return cam0_cfg.get("log_encode", False)
+        return decode_log_encode_request(raw_current)
+
+    def _recompute_file_size(self, *, log_requested=None):
+        """Recompute self.file_size for the current sensor mode and CineMate
+        Log state, and republish it to redis. Call whenever the active
+        mode's effective on-disk bit depth changes (sensor-mode switch or
+        `set log` toggle) -- see _publish_resolution_gui_state() and
+        set_log_encode().
+        """
+        resolution_info = self.sensor_detect.res_modes[self.sensor_mode]
+        native_bit_depth = resolution_info.get('bit_depth')
+        hdr = bool(resolution_info.get('hdr', False))
+        if log_requested is None:
+            log_requested = self._log_requested_state()
+        effective_bit_depth = self.sensor_detect.resolve_effective_bit_depth(
+            self.current_sensor, native_bit_depth,
+            log_requested=log_requested, hdr=hdr,
+        )
+        width = resolution_info.get('width')
+        height = resolution_info.get('height')
+        if width is None or height is None or effective_bit_depth is None:
+            return
+        self.file_size = compute_frame_size_mb(width, height, effective_bit_depth)
+        self.redis_controller.set_value(ParameterKey.FILE_SIZE.value, str(self.file_size))
+
     def set_log_encode(self, value=None):
         """Live control for CineMate Log (`set log`).
 
@@ -658,12 +693,7 @@ class CinePiController:
         recording, the request is stored and applied on the next restart --
         we never split a running take.
         """
-        raw_current = self.redis_controller.get_value(ParameterKey.LOG_ENCODE_REQUEST.value)
-        if raw_current is None:
-            cam0_cfg = (self.settings.get("camera") or {}).get("cam0", {}) or {}
-            current = cam0_cfg.get("log_encode", False)
-        else:
-            current = decode_log_encode_request(raw_current)
+        current = self._log_requested_state()
 
         if value is None:
             new_value = False if current else True
@@ -700,6 +730,9 @@ class CinePiController:
             )
             return
 
+        # Optimistic, like resolution changes: reflect the new file size
+        # immediately rather than waiting on the restart round-trip.
+        self._recompute_file_size(log_requested=new_value)
         self.cinepi.restart()
 
     def initialize_shutter_angle_steps(self):
@@ -1500,13 +1533,15 @@ class CinePiController:
         # report the same P/U token that cinepi-raw is actually launched with.
         packing_new = self.sensor_detect.get_packing_for_platform(self.current_sensor, int(value))
         gui_layout_new = resolution_info.get('gui_layout', None)
-        file_size_new = resolution_info.get('file_size', None)
 
         if height_new is None or width_new is None or gui_layout_new is None:
             raise ValueError("Invalid height, width, or gui_layout value.")
 
         self.gui_layout = gui_layout_new
-        self.file_size = file_size_new
+        # Computed from the new mode's width/height/bit_depth and the live
+        # CineMate Log request, not sensors.json's static file_size_mb --
+        # see compute_frame_size_mb()/resolve_effective_bit_depth().
+        self._recompute_file_size()
 
         self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, str(value))
         self.redis_controller.set_value(ParameterKey.HEIGHT.value, str(height_new))
@@ -1519,7 +1554,6 @@ class CinePiController:
         self.redis_controller.set_value(ParameterKey.HDR.value, 1 if hdr_new else 0)
         self.redis_controller.set_value(ParameterKey.PACKING.value, str(packing_new))
         self.redis_controller.set_value(ParameterKey.GUI_LAYOUT.value, str(gui_layout_new))
-        self.redis_controller.set_value(ParameterKey.FILE_SIZE.value, str(file_size_new))
         self.redis_controller.set_value(
             ParameterKey.LORES_WIDTH.value,
             str(self.sensor_detect.get_lores_width(self.current_sensor, self.sensor_mode)),

@@ -6,22 +6,22 @@ Higher frame rates need fast storage. If you see a purple/magenta `DROP` indicat
 
 | Mode | Resolution       | Aspect Ratio | Bit Depth | Max FPS | Sustainable FPS* | DNG Frame File Size (MB) |
 |------|------------------|--------------|-----------|---------|------------------|--------------------------|
-| 0    | 2028 x 1080      | 1.87         | 12        | 50      | -                | 4.3                      |
-| 1    | 2028 x 1520      | 1.33         | 12        | 40      | -                | 5.3                      |
-| 2    | 1332 x 990       | 1.34         | 10        | 120     | -                | 2.7                      |
+| 0    | 2028 x 1080      | 1.87         | 12        | 50      | -                | 3.29                     |
+| 1    | 2028 x 1520      | 1.33         | 12        | 40      | -                | 4.62                     |
+| 2    | 1332 x 990       | 1.34         | 10        | 120     | -                | 1.65                     |
 
 ### IMX296 (Raspberry Pi Global Shutter Camera)
 
 | Mode | Resolution       | Aspect Ratio | Bit Depth | Max FPS | Sustainable FPS* | DNG Frame File Size (MB) |
 |------|------------------|--------------|-----------|---------|------------------|--------------------------|
-| 0    | 1456 x 1088      | 1.33         | 10        | 60      | -                | 3.1                      |
+| 0    | 1456 x 1088      | 1.33         | 10        | 60      | -                | 1.98                     |
 
 ### IMX585 (Starlight Eye)
 
 | Mode | Resolution       | Aspect Ratio | Bit Depth | Max FPS | Sustainable FPS* | DNG Frame File Size (MB) |
 |------|------------------|--------------|-----------|---------|------------------|--------------------------|
-| 0    | 1928 x 1090      | 1.77         | 12        | 87      | 50 on CFE/NVMe ext4/exFAT and SSD ext4/exFAT | 4.0 |
-| 1    | 3856 x 2180      | 1.77         | 12        | 40      | 40 on CFE/NVMe ext4; 38 on CFE/NVMe exFAT; 25 on SSD ext4/exFAT | 10.0 |
+| 0    | 1928 x 1090      | 1.77         | 12        | 87      | 50 on CFE/NVMe ext4/exFAT and SSD ext4/exFAT | 3.15 |
+| 1    | 3856 x 2180      | 1.77         | 12        | 40      | 40 on CFE/NVMe ext4; 38 on CFE/NVMe exFAT; 25 on SSD ext4/exFAT | 12.61 |
 
 ### IMX283 (OneInchEye)
 
@@ -46,6 +46,40 @@ Note that maximum fps will vary according to disk write speed. For the specific 
 !!! info "Raspberry Pi 4 raw packing"
 
     Cinemate handles the CinePi-RAW packing choice automatically. On Raspberry Pi 4 / Pi 400 / CM4, IMX296 and IMX477 use packed raw mode (`P`). On Raspberry Pi 5 / CM5 they stay on unpacked mode (`U`). For IMX296 this means `1456:1088:10:P` on Raspberry Pi 4-family boards and `1456:1088:10:U` on Raspberry Pi 5 / CM5.
+
+## Frame size and recording time
+
+DNG frame size is calculated dynamically, not read from a fixed table: `ceil(width × effective_bit_depth / 8) × height`, plus a small fixed per-frame header overhead. *Effective bit depth* is the sensor mode's native bit depth, or the live [`--log-encode`](cinemate-log.md) target (10 or 12) when CineMate Log is on -- so the same mode gets smaller on disk once log encoding is enabled. `resources/sensors.json` no longer carries a static file-size number; Cinemate always computes it from the mode's resolution and the live log state (`module/sensor_detect.py`'s `compute_frame_size_mb()`).
+
+Recording time assumes a 1 TB drive (1,000,000 MB decimal, matching Cinemate's own free-space math) recording continuously at 25 fps, with no other files on the drive. Actual time left depends on your drive's free space and the FPS you're recording at -- see the `disk_space` readout in the GUI for the live estimate on your setup.
+
+| Sensor | Mode | Resolution | Native bit depth | CineMate Log | Frame size (MB) | Time on 1 TB @ 25 fps |
+|--------|------|------------|-------------------|--------------|------------------|------------------------|
+| IMX477 | 0 | 2028 x 1080 | 12 | not supported | 3.29 | 3h 23m |
+| IMX477 | 1 | 2028 x 1520 | 12 | not supported | 4.62 | 2h 24m |
+| IMX477 | 2 | 1332 x 990 | 10 | not supported | 1.65 | 6h 44m |
+| IMX296 | 0 | 1456 x 1088 | 10 | not supported | 1.98 | 5h 37m |
+| IMX585 | 0 | 1928 x 1090 | 12 | off | 3.15 | 3h 32m |
+| IMX585 | 0 | 1928 x 1090 | 12 | on (→10) | 2.63 | 4h 13m |
+| IMX585 | 1 | 3856 x 2180 | 12 | off | 12.61 | 53m |
+| IMX585 | 1 | 3856 x 2180 | 12 | on (→10) | 10.51 | 1h 03m |
+| IMX585 | 1, ClearHDR | 3856 x 2180 | 16 | off | 16.81 | 40m |
+| IMX585 | 1, ClearHDR | 3856 x 2180 | 16 | on, default (→12) | 12.61 | 53m |
+| IMX585 | 1, ClearHDR | 3856 x 2180 | 16 | on, forced (→10) | 10.51 | 1h 03m |
+| IMX585 | 1, ClearHDR + 12-bit (CCMP12) | 3856 x 2180 | 12 | refused -- stays linear* | 12.61 | 53m |
+| IMX283 | 0 | 5568 x 3664 | 12 | off | 30.60 | 22m |
+| IMX283 | 0 | 5568 x 3664 | 12 | on (→10) | 25.50 | 26m |
+| IMX283 | 1 | 2784 x 1828 | 12 | off | 7.63 | 1h 27m |
+| IMX283 | 1 | 2784 x 1828 | 12 | on (→10) | 6.36 | 1h 45m |
+| IMX283 | 2 | 2784 x 1542 | 12 | off | 6.44 | 1h 44m |
+| IMX283 | 2 | 2784 x 1542 | 12 | on (→10) | 5.37 | 2h 04m |
+| IMX283 | 3 | 5568 x 3664 | 10 | not supported (10-bit mode) | 25.50 | 26m |
+| IMX283 | 4 | 5568 x 3094 | 10 | not supported (10-bit mode) | 21.54 | 31m |
+| IMX283 | 5 | 3936 x 2176 | 10 | not supported (10-bit mode) | 10.71 | 1h 02m |
+
+*12-bit ClearHDR is CCMP-companded on-sensor; log-encoding it would compand twice, so `set log` has no effect there -- use 16-bit ClearHDR for log, or turn ClearHDR off. See [CineMate Log support](#cinemate-log-support) below.
+
+Resolutions above are the modes currently defined in `resources/sensors.json`; the IMX283 rows in the [Compatible sensors](#compatible-sensors) table above list an older/alternate mode set and haven't been reconciled with this one yet.
 
 ## CineMate Log support
 

@@ -25,6 +25,30 @@ PI4_MODEL_MARKERS = (
     "Compute Module 4",
 )
 
+# DNG frame-size model, calibrated against real captures (imx585 3856x2180
+# linear/log at 10/12/16-bit -- see innomaker585/pi-2026-08-05-goodkernel/).
+# cinepi-raw packs pixel data tightly at N bits/row ((width*bits+7)//8 bytes),
+# so pixel_bytes scales exactly with the *effective* bit depth (the live
+# --log-encode target when active, else the sensor mode's native depth).
+# The remaining per-frame overhead (DNG header/tags, plus a LinearizationTable
+# on log-encoded frames) is <0.07% of frame size across every measured case,
+# so one flat constant is used rather than modelling it exactly.
+DNG_HEADER_OVERHEAD_BYTES = 1024
+# cinepi-raw writes DNGs uncompressed (COMPRESSION_NONE is hardcoded in
+# dng_encoder.cpp; the vendored lj92 lossless codec is dead code) -- this is
+# the seam to update once that changes, so the minutes-left math doesn't need
+# a redesign when it does.
+DNG_COMPRESSION_RATIO = 1.0
+
+
+def compute_frame_size_mb(width: int, height: int, bit_depth: int,
+                           compression_ratio: float = DNG_COMPRESSION_RATIO) -> float:
+    """DNG frame size in decimal MB for a *bit_depth*-packed frame of *width*
+    x *height*. See DNG_HEADER_OVERHEAD_BYTES/DNG_COMPRESSION_RATIO above."""
+    row_bytes = (int(width) * int(bit_depth) + 7) // 8
+    pixel_bytes = row_bytes * int(height)
+    return round((pixel_bytes + DNG_HEADER_OVERHEAD_BYTES) / compression_ratio / 1_000_000, 2)
+
 
 def read_pi_model() -> str:
     try:
@@ -182,16 +206,11 @@ class SensorDetect:
             or sensor_info.get("packing")
             or self.packing_info.get(camera_name, "U")
         )
-        bpp = bit_depth / 8 if bit_depth else 2
-        if bit_depth == 16:
-            # 16-bit modes (imx585 ClearHDR) are written as unpacked DNGs:
-            # 2 bytes/pixel payload + ~100 KB header, in decimal MB so the
-            # minutes-left math matches on-disk sizes (3856×2180 → 16.9 MB).
-            file_size = extra.get(
-                "file_size_mb", round((width * height * 2 + 100_000) / 1e6, 1)
-            )
-        else:
-            file_size = extra.get("file_size_mb", round(width * height * bpp / (1024 * 1024), 1))
+        # Always computed from the packed-bytes model (compute_frame_size_mb).
+        # sensors.json no longer carries a static file_size_mb -- it doesn't
+        # know about --log-encode, which is a runtime toggle applied
+        # dynamically in cinepi_controller instead.
+        file_size = compute_frame_size_mb(width, height, bit_depth) if bit_depth else None
         fps_max_value = fps_max if fps_max is not None else extra.get("fps_max", metadata.get("max_fps"))
         mode = {
             "aspect": extra.get("aspect", metadata.get("aspect", round(width / height, 2))),
@@ -698,6 +717,35 @@ class SensorDetect:
         except (TypeError, ValueError):
             return None
         return requested_target if requested_target in valid else None
+
+    def resolve_effective_bit_depth(
+        self,
+        camera_name: str | None,
+        native_bit_depth: int | None,
+        *,
+        log_requested: bool | int = False,
+        hdr: bool = False,
+    ) -> int | None:
+        """Return the bit depth DNG frames are actually written at: the
+        resolved --log-encode target when CineMate Log applies for this
+        sensor/mode/request, else *native_bit_depth* unchanged.
+
+        *log_requested* is the live `set log` request -- False/True/10/12,
+        e.g. from redis_controller.decode_log_encode_request(). Mirrors the
+        --log-encode resolution CinePiProcess._build_args() applies at
+        launch (cinepi_multi.py) so file-size estimates always match what
+        cinepi-raw will actually write.
+        """
+        if native_bit_depth is None:
+            return None
+        if not log_requested:
+            return native_bit_depth
+        target = self.resolve_log_encode_target(
+            camera_name, native_bit_depth,
+            requested=None if log_requested is True else log_requested,
+            hdr=hdr,
+        )
+        return target if target is not None else native_bit_depth
 
     def get_log_encode_black_level_16bit(self, camera_name: str | None) -> int | None:
         """Return sensors.json's ``log_encode.black_level_16bit`` for

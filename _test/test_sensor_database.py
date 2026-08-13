@@ -186,25 +186,6 @@ class SensorDatabaseTests(unittest.TestCase):
                 f"{name} unexpectedly close to the supported black level",
             )
 
-    def test_enriches_detected_mode_with_sustainable_fps(self):
-        detector = self._detector_without_probe()
-        mode = detector._mode_from_metadata_or_detected(
-            camera_name="imx585_mono",
-            width=1928,
-            height=1090,
-            bit_depth=12,
-            fps_max=87,
-        )
-
-        sustainable_rows = mode["sustainable_fps"]
-        self.assertTrue(
-            any(
-                row["filesystem"] == "ext4" and row["fps"] == 50
-                for row in sustainable_rows
-            )
-        )
-
-
     IMX477_LISTCAMERAS = """0 : imx477 [4056x3040 12-bit RGGB] (/base/soc/i2c0mux/i2c@1/imx477@1a)
     Modes: 'SRGGB10_CSI2P' : 1332x990 [120.50 fps - (696, 528)/2664x1980 crop]
                              2028x1080 [74.74 fps - (0, 440)/4056x2160 crop]

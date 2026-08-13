@@ -1,6 +1,5 @@
 {
   "schema_version": 1,
-  "sustainable_fps_definition": "Empirically observed recording frame rate without dropped frames.",
   "sensors": {
     "imx477": {
       "display_name": "IMX477",
@@ -15,8 +14,7 @@
           "height": 1080,
           "aspect": 1.87,
           "bit_depth": 12,
-          "max_fps": 50,
-          "sustainable_fps": []
+          "max_fps": 50
         },
         {
           "mode": 1,
@@ -24,8 +22,7 @@
           "height": 1520,
           "aspect": 1.33,
           "bit_depth": 12,
-          "max_fps": 40,
-          "sustainable_fps": []
+          "max_fps": 40
         },
         {
           "mode": 2,
@@ -33,8 +30,7 @@
           "height": 990,
           "aspect": 1.34,
           "bit_depth": 10,
-          "max_fps": 120,
-          "sustainable_fps": []
+          "max_fps": 120
         }
       ]
     },
@@ -51,8 +47,7 @@
           "height": 1088,
           "aspect": 1.33,
           "bit_depth": 10,
-          "max_fps": 60,
-          "sustainable_fps": []
+          "max_fps": 60
         }
       ]
     },
@@ -75,33 +70,7 @@
           "height": 1090,
           "aspect": 1.77,
           "bit_depth": 12,
-          "max_fps": 87,
-          "sustainable_fps": [
-            {
-              "storage_type": ["cfe", "nvme"],
-              "filesystem": "exfat",
-              "fps": 50,
-              "source": "Cinemate nya cinepi-raw fps-tester.xlsx"
-            },
-            {
-              "storage_type": ["cfe", "nvme"],
-              "filesystem": "ext4",
-              "fps": 50,
-              "source": "Cinemate nya cinepi-raw fps-tester.xlsx"
-            },
-            {
-              "storage_type": "ssd",
-              "filesystem": "exfat",
-              "fps": 50,
-              "source": "Cinemate nya cinepi-raw fps-tester.xlsx"
-            },
-            {
-              "storage_type": "ssd",
-              "filesystem": "ext4",
-              "fps": 50,
-              "source": "Cinemate nya cinepi-raw fps-tester.xlsx"
-            }
-          ]
+          "max_fps": 87
         },
         {
           "mode": 1,
@@ -109,34 +78,7 @@
           "height": 2180,
           "aspect": 1.77,
           "bit_depth": 12,
-          "max_fps": 40,
-          "sustainable_fps": [
-            {
-              "storage_type": ["cfe", "nvme"],
-              "filesystem": "exfat",
-              "fps": 38,
-              "source": "Cinemate nya cinepi-raw fps-tester.xlsx"
-            },
-            {
-              "storage_type": ["cfe", "nvme"],
-              "filesystem": "ext4",
-              "fps": 40,
-              "source": "Cinemate nya cinepi-raw fps-tester.xlsx"
-            },
-            {
-              "storage_type": "ssd",
-              "filesystem": "exfat",
-              "fps": 25,
-              "source": "Cinemate nya cinepi-raw fps-tester.xlsx",
-              "notes": "Workbook notes occasional buffering but sustainable recording with the 4 GB version."
-            },
-            {
-              "storage_type": "ssd",
-              "filesystem": "ext4",
-              "fps": 25,
-              "source": "Cinemate nya cinepi-raw fps-tester.xlsx"
-            }
-          ]
+          "max_fps": 40
         }
       ]
     },
@@ -158,8 +100,7 @@
           "height": 3664,
           "aspect": 1.5,
           "bit_depth": 12,
-          "max_fps": 18,
-          "sustainable_fps": []
+          "max_fps": 18
         },
         {
           "mode": 1,
@@ -167,8 +108,7 @@
           "height": 1828,
           "aspect": 1.5,
           "bit_depth": 12,
-          "max_fps": 36,
-          "sustainable_fps": []
+          "max_fps": 36
         },
         {
           "mode": 2,
@@ -176,8 +116,7 @@
           "height": 1542,
           "aspect": 1.78,
           "bit_depth": 12,
-          "max_fps": 41,
-          "sustainable_fps": []
+          "max_fps": 41
         },
         {
           "mode": 3,
@@ -185,8 +124,7 @@
           "height": 3664,
           "aspect": 1.5,
           "bit_depth": 10,
-          "max_fps": 18,
-          "sustainable_fps": []
+          "max_fps": 18
         },
         {
           "mode": 4,
@@ -194,8 +132,7 @@
           "height": 3094,
           "aspect": 1.78,
           "bit_depth": 10,
-          "max_fps": 21,
-          "sustainable_fps": []
+          "max_fps": 21
         },
         {
           "mode": 5,
@@ -203,8 +140,7 @@
           "height": 2176,
           "aspect": 1.78,
           "bit_depth": 10,
-          "max_fps": 44,
-          "sustainable_fps": []
+          "max_fps": 44
         }
       ]
     },

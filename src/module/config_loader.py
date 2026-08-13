@@ -2,8 +2,6 @@ import json
 import logging
 from pathlib import Path
 
-from module.dynamic_resolution import default_dynamic_resolution_config
-
 ANSI_RESET = "\033[0m"
 ANSI_RED = "\033[1;31m"
 ANSI_YELLOW = "\033[1;33m"
@@ -332,15 +330,6 @@ def _apply_settings_defaults(settings: dict) -> dict:
     for k, v in sensor_defaults.items():
         sensor_cfg.setdefault(k, v)
     settings["sensors"] = sensor_cfg
-
-    dynamic_resolution_cfg = settings.setdefault(
-        "dynamic_resolution",
-        default_dynamic_resolution_config(),
-    )
-    dynamic_resolution_defaults = default_dynamic_resolution_config()
-    for k, v in dynamic_resolution_defaults.items():
-        dynamic_resolution_cfg.setdefault(k, v)
-    settings["dynamic_resolution"] = dynamic_resolution_cfg
 
     return settings
 

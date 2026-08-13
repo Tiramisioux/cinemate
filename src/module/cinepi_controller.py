@@ -18,10 +18,8 @@ from module.ir_filter import IRFilter
 from module.config_loader import load_settings as _load_settings
 from module.storage_profiles import recorder_profile_name_for_filesystem
 from module.dynamic_resolution import (
-    DEFAULT_MATCH_TOLERANCE_PX,
     choose_resolution,
     dynamic_resolution_is_lower_substitute,
-    load_profile_rows,
     max_fps_for_context,
 )
 
@@ -103,23 +101,12 @@ class CinePiController:
         except Exception as exc:
             logging.warning("Could not apply phase_lock setting: %s", exc)
 
-        dynamic_resolution_cfg = self.settings.get("dynamic_resolution", {})
-        self.dynamic_resolution_cfg = dynamic_resolution_cfg
-        self.dynamic_resolution_enabled = self._as_bool(dynamic_resolution_cfg.get("enabled", False))
-        self.dynamic_resolution_match_tolerance_px = int(
-            dynamic_resolution_cfg.get("match_tolerance_px", DEFAULT_MATCH_TOLERANCE_PX)
-            or DEFAULT_MATCH_TOLERANCE_PX
-        )
-        self.dynamic_resolution_policy = str(
-            dynamic_resolution_cfg.get("policy", "highest_sustainable_resolution")
-        )
-        self.dynamic_resolution_safety_margin_fps = float(
-            dynamic_resolution_cfg.get("safety_margin_fps", 0) or 0
-        )
-        self.dynamic_resolution_table = load_profile_rows(
-            dynamic_resolution_cfg,
-            settings_file=SETTINGS_FILE,
-        )
+        # Dynamic resolution is always on: it substitutes a lower-resolution
+        # sensor mode when the requested fps exceeds what the desired mode's
+        # own declared fps_max (the value cinepi-raw --list-cameras reports,
+        # see sensor_detect.py) can sustain. No curated performance table,
+        # no policy -- just the sensor's own numbers.
+        self.dynamic_resolution_enabled = True
         self.dynamic_resolution_desired_mode = None
         self.dynamic_resolution_active = False
         self.dynamic_resolution_suspended = False
@@ -261,7 +248,8 @@ class CinePiController:
 
         # Communicate the initial fps without changing resolution. Storage
         # pre-roll should stress the selected mode before dynamic resolution
-        # restores the user's FPS and chooses a sustainable mode.
+        # restores the user's FPS and chooses a mode whose own fps_max
+        # supports it.
         prev_dynamic_suspended = self.dynamic_resolution_suspended
         self.dynamic_resolution_suspended = True
         try:
@@ -349,22 +337,9 @@ class CinePiController:
     def _dynamic_context_fps_max(self):
         if not self.dynamic_resolution_enabled:
             return None
-        storage_type = self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value, "none")
-        filesystem = self.redis_controller.get_value(ParameterKey.STORAGE_FILESYSTEM.value, "none")
-        if str(storage_type or "").strip().lower() in ("", "none", "unknown"):
-            return None
-        if str(filesystem or "").strip().lower() in ("", "none", "unknown"):
-            return None
         return max_fps_for_context(
             sensor_modes=self.sensor_detect.res_modes,
-            sensor=self.current_sensor,
-            storage_type=storage_type,
-            filesystem=filesystem,
-            performance_table=self.dynamic_resolution_table,
             desired_mode=self.dynamic_resolution_desired_mode,
-            tolerance_px=self.dynamic_resolution_match_tolerance_px,
-            safety_margin_fps=self.dynamic_resolution_safety_margin_fps,
-            policy=self.dynamic_resolution_policy,
         )
 
     def _refresh_fps_max(self):
@@ -386,24 +361,10 @@ class CinePiController:
         if self.dynamic_resolution_desired_mode is None:
             self.dynamic_resolution_desired_mode = self.sensor_mode
 
-        storage_type = self.redis_controller.get_value(ParameterKey.STORAGE_TYPE.value, "none")
-        filesystem = self.redis_controller.get_value(ParameterKey.STORAGE_FILESYSTEM.value, "none")
-        if str(storage_type or "").strip().lower() in ("", "none", "unknown"):
-            return None
-        if str(filesystem or "").strip().lower() in ("", "none", "unknown"):
-            return None
-
         return choose_resolution(
             sensor_modes=self.sensor_detect.res_modes,
             desired_mode=self.dynamic_resolution_desired_mode,
             requested_fps=requested_user_fps,
-            sensor=self.current_sensor,
-            storage_type=storage_type,
-            filesystem=filesystem,
-            performance_table=self.dynamic_resolution_table,
-            tolerance_px=self.dynamic_resolution_match_tolerance_px,
-            safety_margin_fps=self.dynamic_resolution_safety_margin_fps,
-            policy=self.dynamic_resolution_policy,
         )
 
     def _maybe_apply_dynamic_resolution_for_fps(self, requested_user_fps):
@@ -420,14 +381,13 @@ class CinePiController:
             return False
 
         logging.info(
-            "Dynamic resolution selecting mode %s for %.3ffps "
-            "(desired mode %s supports %.3ffps on measured %sx%s)",
+            "Dynamic resolution selecting mode %s (max %.3ffps) for %.3ffps "
+            "(desired mode %s max is %.3ffps)",
             choice.mode,
+            choice.fps_max,
             float(requested_user_fps),
             choice.desired_mode,
-            choice.desired_row.max_fps,
-            choice.desired_row.width,
-            choice.desired_row.height,
+            choice.desired_fps_max,
         )
         return self._apply_resolution_mode(choice.mode, restore_user_fps=None)
         

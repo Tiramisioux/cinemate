@@ -159,8 +159,6 @@ The [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-p
 
 No configuration is needed. Cinemate detects the hat automatically at startup and shows **CFE** as the media type in the GUI. The card follows the same rules as any other recording drive: format it as `exFAT` and label it `RAW` (the web GUI has a format button that does this for you).
 
-The [dynamic resolution](settings-json.md#dynamic_resolution) profiles include measured sustainable frame rates for CFE media, so fps limits adjust automatically to what the card can sustain.
-
 ## Outputs and displays
 
 Cinemate can also drive hardware in the other direction:

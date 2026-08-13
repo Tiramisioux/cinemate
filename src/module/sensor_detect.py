@@ -226,9 +226,6 @@ class SensorDetect:
             # cinepi-raw launch with --hdr sensor. See detect_camera_model().
             "hdr": bool(extra.get("hdr", hdr)),
         }
-        sustainable_fps = extra.get("sustainable_fps", metadata.get("sustainable_fps"))
-        if sustainable_fps:
-            mode["sustainable_fps"] = sustainable_fps
         return mode
 
     # ────────────────────────────────────────────────────────────────
@@ -760,10 +757,7 @@ class SensorDetect:
         resolution_info = self.get_resolution_info(camera_name, sensor_mode)
         return resolution_info.get('file_size', None)
 
-    def get_sustainable_fps(self, camera_name, sensor_mode):
-        resolution_info = self.get_resolution_info(camera_name, sensor_mode)
-        return resolution_info.get('sustainable_fps', [])
-    
+
     def _calc_lores(self, sensor_w: int, sensor_h: int) -> tuple[int, int]:
         """Return (lores_width, lores_height) preserving sensor aspect ratio within the preview area."""
         fw, fh = 1920, 1080

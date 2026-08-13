@@ -661,15 +661,18 @@ class CinePiProcess(Thread):
                     "[%s] CineMate Log: %d-bit source -> %d-bit log",
                     self.cam.port, bit_depth, log_target,
                 )
-            elif hdr_on and bit_depth == 12:
-                # Name the actual reason. The generic message below would send
-                # someone looking at sensors.json, where the entry is present
-                # and correct — the source is simply not linear.
+            elif hdr_on and bit_depth == 12 and log_requested not in (True, 10):
+                # 12-bit ClearHDR (CCMP) composes with log at target 10 only —
+                # cinepi-raw decompands to 16-bit linear first, then applies
+                # the 16-to-10 curve (get_ccmp_composed_log_lut()). The bare
+                # toggle and an explicit 10 both resolve above; only a forced
+                # target other than 10 (there is no composed 16-to-12 path)
+                # reaches here, so name that specifically rather than the
+                # generic message below.
                 logging.warning(
-                    "[%s] CineMate Log requested (%r) but NOT applied: 12-bit "
-                    "ClearHDR is CCMP-companded on-sensor and log-encoding it "
-                    "would compand twice. Recording linear 12-bit. Use 16-bit "
-                    "ClearHDR for log, or turn ClearHDR off.",
+                    "[%s] CineMate Log target %r requested but NOT applied: "
+                    "12-bit ClearHDR only composes with the CCMP decompand at "
+                    "target 10. Recording linear 12-bit.",
                     self.cam.port, log_requested,
                 )
             else:

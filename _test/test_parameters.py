@@ -109,8 +109,21 @@ class StepsCallableTests(unittest.TestCase):
         steps = REGISTRY["shutter_a"].steps(self.controller)
         self.assertEqual(steps, self.controller.calculate_dynamic_shutter_angles(25))
 
-    def test_shutter_a_nom_borrows_shutter_a_steps_table(self):
-        self.assertIs(REGISTRY["shutter_a_nom"].steps, REGISTRY["shutter_a"].steps)
+    def test_shutter_a_nom_borrows_the_static_shutter_a_steps_attribute(self):
+        # NOT shutter_a's own steps() callable: that one recomputes the
+        # flicker-free-augmented table, but shutter_a_nom has only ever
+        # cycled through the plain configured list (inc_shutter_a_nom
+        # passes self.shutter_a_steps straight through to increment_setting).
+        self.assertEqual(
+            REGISTRY["shutter_a_nom"].steps(self.controller),
+            self.controller.shutter_a_steps,
+        )
+
+    def test_shutter_a_nom_steps_do_not_include_flicker_free_additions(self):
+        nom_steps = REGISTRY["shutter_a_nom"].steps(self.controller)
+        dynamic_steps = REGISTRY["shutter_a"].steps(self.controller)
+        self.assertLess(len(nom_steps), len(dynamic_steps))
+        self.assertTrue(set(nom_steps).issubset(set(dynamic_steps)))
 
     def test_shutter_a_nom_borrows_shutter_a_policy(self):
         self.assertEqual(REGISTRY["shutter_a_nom"].policy_key, "shutter_a")

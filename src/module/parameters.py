@@ -79,10 +79,19 @@ _SHUTTER_A = _param(
 _SHUTTER_A_NOM = _param(
     "shutter_a_nom", "Shutter Angle (Nominal)", "°",
     redis_key="shutter_angle_nom",
-    # Borrows shutter_a's step table AND its free/sync policy verbatim
-    # (set_shutter_a_nom gates on shutter_a_sync_mode/shutter_a_free, not a
-    # shutter_a_nom-specific flag) - only the lock is its own.
-    steps=_SHUTTER_A.steps,
+    # Borrows shutter_a's underlying step-table ATTRIBUTE (the static
+    # configured list) and its free/sync policy verbatim (set_shutter_a_nom
+    # gates on shutter_a_sync_mode/shutter_a_free, not a shutter_a_nom-
+    # specific flag) - only the lock is its own.
+    #
+    # This is deliberately NOT shutter_a's own steps() callable: shutter_a's
+    # callable recomputes the flicker-free-augmented table, but
+    # increment_setting has only ever cycled shutter_a_nom through the
+    # plain static list (inc_shutter_a_nom passes self.shutter_a_steps
+    # straight through). Sharing shutter_a's callable here would widen the
+    # set of angles shutter_a_nom can land on - an observable behaviour
+    # change, not a refactor.
+    steps=lambda c: c.shutter_a_steps,
     policy_key="shutter_a",
     free_attr=_SHUTTER_A.free_attr,
     lock_attr="shutter_a_nom_lock",

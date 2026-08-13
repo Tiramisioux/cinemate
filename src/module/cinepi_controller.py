@@ -22,6 +22,7 @@ from module.dynamic_resolution import (
     dynamic_resolution_is_lower_substitute,
     max_fps_for_context,
 )
+from module import parameters
 
 SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
 GUI_RESOLUTION_PREVIEW_DELAY_SECONDS = 0.12
@@ -2054,15 +2055,10 @@ class CinePiController:
 
     def increment_setting(self, setting_name, steps, fps=None):
         current_value = float(self.get_setting(setting_name))
-        
-        if setting_name == 'shutter_a':
-            dynamic_steps = self.calculate_dynamic_shutter_angles(self.current_fps)
-        else:
-            dynamic_steps = steps
-        
-        if setting_name == 'fps':
-            current_value = int(round(float(self.get_setting(setting_name))))
-        
+
+        param = parameters.get(setting_name, source="increment_setting")
+        dynamic_steps = param.steps(self) if param is not None else steps
+
         if current_value in dynamic_steps:
             idx = dynamic_steps.index(current_value)
             idx = min(idx + 1, len(dynamic_steps) - 1)
@@ -2070,7 +2066,7 @@ class CinePiController:
             idx = 0
 
         new_value = dynamic_steps[idx]
-        
+
         # NEW: if we are changing FPS and sync mode is active,
         # sync shutter angle as well
         if setting_name == 'fps' and self.shutter_a_sync_mode == 1:
@@ -2080,7 +2076,8 @@ class CinePiController:
             self.update_shutter_angle_nom(new_value)
             # this triggers sync logic
         else:
-            getattr(self, f"set_{setting_name}")(new_value)
+            setter = param.setter if param is not None else f"set_{setting_name}"
+            getattr(self, setter)(new_value)
 
         logging.info(f"Increasing {setting_name} to {self.get_setting(setting_name)}")
 
@@ -2088,13 +2085,8 @@ class CinePiController:
     def decrement_setting(self, setting_name, steps, fps=None):
         current_value = float(self.get_setting(setting_name))
 
-        if setting_name == 'shutter_a':
-            dynamic_steps = self.calculate_dynamic_shutter_angles(self.current_fps)
-        else:
-            dynamic_steps = steps
-
-        if setting_name == 'fps':
-            current_value = int(round(float(self.get_setting(setting_name))))
+        param = parameters.get(setting_name, source="decrement_setting")
+        dynamic_steps = param.steps(self) if param is not None else steps
 
         if current_value in dynamic_steps:
             idx = dynamic_steps.index(current_value)
@@ -2110,7 +2102,8 @@ class CinePiController:
         elif setting_name == 'shutter_a_nom' and self.shutter_a_sync_mode == 1:
             self.update_shutter_angle_nom(new_value)
         else:
-            getattr(self, f"set_{setting_name}")(new_value)
+            setter = param.setter if param is not None else f"set_{setting_name}"
+            getattr(self, setter)(new_value)
 
         logging.info(f"Decreasing {setting_name} to {self.get_setting(setting_name)}")
 

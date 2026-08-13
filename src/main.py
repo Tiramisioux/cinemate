@@ -27,6 +27,8 @@ from module.gpio_input import ComponentInitializer
 from module.battery_monitor import BatteryMonitor
 from module.wifi_hotspot import WiFiHotspotManager
 from module.cli_commands import CommandExecutor
+from module.status_broadcast import StatusBroadcaster
+from module.web_api_settings import web_api_settings
 from module.storage_preroll import StoragePreroll
 from module.dmesg_monitor import DmesgMonitor
 from module.app import create_app
@@ -784,6 +786,20 @@ def run_application(args, log_queue):
     t = threading.Thread(target=_relay_rec_over_serial, args=(redis_controller, serial_handler), daemon=True)
     t.start()
 
+    # UDP status broadcast for tally lights / displays on the hotspot.
+    # Independent of the HTTP server's network_available() gate: it
+    # recomputes the subnet broadcast address on every send, so it starts
+    # working as soon as wlan0 is addressed, with or without the web server.
+    status_broadcaster = None
+    web_api_cfg = web_api_settings(settings)
+    if web_api_cfg["broadcast"].get("enabled", True):
+        status_broadcaster = StatusBroadcaster(
+            redis_controller,
+            web_api_cfg["broadcast"].get("keys", []),
+            port=web_api_cfg["broadcast"].get("port", 8888),
+            hz=web_api_cfg["broadcast"].get("hz", 5),
+        )
+        status_broadcaster.start()
 
     # Initialize USB monitoring
     usb_monitor.check_initial_devices()
@@ -885,7 +901,10 @@ def run_application(args, log_queue):
     # Start Streaming if a network connection is available
     stream = None
     if network_available():
-        app, socketio = create_app(redis_controller, cinepi_controller, simple_gui, sensor_detect)
+        app, socketio = create_app(
+            redis_controller, cinepi_controller, simple_gui, sensor_detect,
+            command_executor, settings,
+        )
         stream = threading.Thread(target=socketio.run, args=(app,), kwargs={'host': '0.0.0.0', 'port': 5000, 'allow_unsafe_werkzeug': True})
         stream.start()
         logging.info("Stream module loaded")
@@ -935,9 +954,11 @@ def run_application(args, log_queue):
         # Stop peripherals
 
         if hasattr(dmesg_monitor, "stop"):
-            dmesg_monitor.stop() 
+            dmesg_monitor.stop()
         if hasattr(command_executor, "stop"):
             command_executor.stop()
+        if status_broadcaster is not None:
+            status_broadcaster.stop()
         gui_stopped = False
         if simple_gui:
             gui_stopped = simple_gui.stop(
@@ -950,6 +971,7 @@ def run_application(args, log_queue):
             restore_local_console_prompt()
         join_thread(dmesg_monitor, "DmesgMonitor")
         join_thread(command_executor, "CommandExecutor")
+        join_thread(status_broadcaster, "StatusBroadcaster")
         if hasattr(cinepi, "shutdown"):
             cinepi.shutdown()
         if hasattr(serial_handler, "stop"):

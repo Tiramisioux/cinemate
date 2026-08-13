@@ -41,6 +41,10 @@ Release notes for Cinemate. For downloads, see the [releases page](https://githu
 
 - **Storage / media** — multi-drive RAW hot-swap with a standby drive and automatic promotion. Default format is exFAT.
 
+### Web API
+
+- **New wireless control API** over the Wi-Fi hotspot — ESP32, Pico W, other Pis and phones can now send the same commands as the CLI/serial over HTTP (`POST /api/v1/cmd`), read live status (`/api/v1/get/<key>`, `/api/v1/status`), and receive push updates via a UDP status broadcast (`8888/udp`) or SSE (`/api/v1/events`). One dispatcher (`CommandExecutor.handle_received_data`) now serves the CLI, serial and web paths identically. `allow_destructive` defaults to `false`, so `reboot`/`shutdown`/`erase`/`format` are blocked out of the box on a stock unit. See [Web API](web-api.md) and [Building control units](building-control-units.md).
+
 ### Raspberry Pi / Bookworm**
 - **Boot / install** — faster boot-to-preview on Pi 4/5 (about 10-15 seconds)
 

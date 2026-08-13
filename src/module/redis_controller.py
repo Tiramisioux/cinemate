@@ -148,8 +148,13 @@ class Event:
         self._handlers = []
     def subscribe(self, fn):
         self._handlers.append(fn)
+    def unsubscribe(self, fn):
+        try:
+            self._handlers.remove(fn)
+        except ValueError:
+            pass
     def emit(self, data=None):
-        for fn in self._handlers:
+        for fn in list(self._handlers):
             fn(data)
 
 # ────────────────────────── main controller class ────────────────────

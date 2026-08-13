@@ -4,6 +4,8 @@ By typing `cinemate`in the Raspberry Pi CLI we can start Cinemate manually. This
 
 These commands can also be sent to the Pi as serial via the Tx/Rx pins or via USB. This can be useful for creating external controllers.
 
+The same commands can be sent wirelessly over the camera's Wi-Fi hotspot — see the [Web API](web-api.md) and [Building control units](building-control-units.md).
+
 !!! note ""
 
     Commands without an explicit argument toggle the current state when possible (e.g. `set fps lock` flips the lock; `set fps lock 1` forces it on).

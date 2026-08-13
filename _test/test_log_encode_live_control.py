@@ -33,6 +33,20 @@ class FakeRedis:
         self.sets.append((key, value))
 
 
+class FakeSensorDetect:
+    """Just enough of SensorDetect for set_log_encode()'s
+    _recompute_file_size() call to run -- these tests are about the
+    redis/restart side of set_log_encode(), not the file-size number, so
+    resolve_effective_bit_depth() is a trivial pass-through rather than the
+    real resolver."""
+
+    def __init__(self):
+        self.res_modes = {0: {"bit_depth": 12, "width": 1928, "height": 1090, "hdr": False}}
+
+    def resolve_effective_bit_depth(self, camera_name, native_bit_depth, *, log_requested=False, hdr=False):
+        return native_bit_depth
+
+
 class LogEncodeRequestCodecTests(unittest.TestCase):
     def test_round_trips_every_valid_settings_value(self):
         for value in (False, True, 10, 12):
@@ -56,6 +70,9 @@ class SetLogEncodeTests(unittest.TestCase):
         }
         controller.cinepi = mock.Mock()
         controller._is_recording = lambda: recording
+        controller.sensor_detect = FakeSensorDetect()
+        controller.sensor_mode = 0
+        controller.current_sensor = "imx585"
         return controller
 
     def test_bare_toggle_uses_settings_seed_when_redis_unset(self):

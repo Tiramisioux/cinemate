@@ -73,6 +73,13 @@ class FakeSensorDetect:
     def get_fps_correction_factor(self, _sensor, _mode, _fps=None):
         return 1.0
 
+    def resolve_effective_bit_depth(self, _camera_name, native_bit_depth, *, log_requested=False, hdr=False):
+        """These tests are about resolution-switch GUI/pacing behavior, not
+        CineMate Log's bit-depth math -- a trivial pass-through is enough to
+        let _recompute_file_size() (wired into every resolution switch since
+        671f327f) run without crashing."""
+        return native_bit_depth
+
 
 class ResolutionGuiStateTests(unittest.TestCase):
     def controller(self):
@@ -81,6 +88,9 @@ class ResolutionGuiStateTests(unittest.TestCase):
         controller.sensor_detect = FakeSensorDetect()
         controller.current_sensor = "imx585"
         controller.sensor_mode = 0
+        # _recompute_file_size() (671f327f) reads settings.camera.cam0.log_encode
+        # as the pre-first-toggle seed -- off, like these tests' unrelated focus.
+        controller.settings = {"camera": {"cam0": {"log_encode": False}, "cam1": {}}}
         controller.dynamic_resolution_enabled = True
         controller.dynamic_resolution_desired_mode = 0
         controller.dynamic_resolution_active = False

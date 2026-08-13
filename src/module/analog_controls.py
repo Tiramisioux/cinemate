@@ -7,6 +7,7 @@ import traceback
 from collections import deque
 
 from module.redis_controller import ParameterKey
+from module import parameters
 
 class AnalogControls(threading.Thread):
     def __init__(self, cinepi_controller, redis_controller, iso_pot=None, shutter_a_pot=None, fps_pot=None, wb_pot=None, iso_steps=None, shutter_a_steps=None, fps_steps=None, wb_steps=None,
@@ -148,7 +149,16 @@ class AnalogControls(threading.Thread):
 
         return []      # fallback – should never happen
 
+    def _dispatch(self, name: str, value):
+        """Call the registered setter for *name* with *value*.
 
+        Keeps the pot's target-method name sourced from the same registry
+        as every other consumer, instead of a hardcoded literal call, so a
+        renamed setter only needs updating in one place.
+        """
+        param = parameters.get(name, source="analog_controls")
+        setter = param.setter if param is not None else f"set_{name}"
+        getattr(self.cinepi_controller, setter)(value)
 
     def update_parameters(self):
         try:
@@ -164,7 +174,7 @@ class AnalogControls(threading.Thread):
                     logging.info(
                         f"ISO changed → ADC raw={iso_read}, smoothed={smoothed_iso}, mapped={new_iso}"
                     )
-                    self.cinepi_controller.set_iso(new_iso)
+                    self._dispatch('iso', new_iso)
                     self.last_iso = new_iso
 
             # SHUTTER ANGLE
@@ -192,7 +202,7 @@ class AnalogControls(threading.Thread):
                         f"ADC raw={shutter_a_read}, smoothed={smoothed_shutter}, "
                         f"mapped={new_shutter_a}"
                     )
-                    self.cinepi_controller.set_shutter_a_nom(new_shutter_a)
+                    self._dispatch('shutter_a_nom', new_shutter_a)
                     self.last_shutter_a = new_shutter_a
 
             # FPS
@@ -208,7 +218,7 @@ class AnalogControls(threading.Thread):
                     logging.info(
                         f"FPS changed → ADC raw={fps_read}, smoothed={smoothed_fps}, mapped={new_fps}"
                     )
-                    self.cinepi_controller.set_fps(new_fps)
+                    self._dispatch('fps', new_fps)
                     self.last_fps = new_fps
 
             # WHITE BALANCE
@@ -225,7 +235,7 @@ class AnalogControls(threading.Thread):
                         f"White Balance changed → ADC raw={wb_read}, smoothed={smoothed_wb}, mapped={new_wb}K"
                     )
                     self.redis_controller.set_value(ParameterKey.WB_USER.value, new_wb)
-                    self.cinepi_controller.set_wb(new_wb)
+                    self._dispatch('wb', new_wb)
                     self.last_wb = new_wb
 
             # ── imx585 ClearHDR knobs ────────────────────────────────────
@@ -236,7 +246,7 @@ class AnalogControls(threading.Thread):
                                                 steps=self.hdr_threshold_steps)
                 if new_low is not None and new_low != self.last_hdr_threshold_low:
                     logging.info(f"HDR threshold low changed → ADC raw={raw}, mapped={new_low}")
-                    self.cinepi_controller.set_hdr_threshold_low(new_low)
+                    self._dispatch('hdr_threshold_low', new_low)
                     self.last_hdr_threshold_low = new_low
 
             if self.hdr_threshold_high_pot is not None:
@@ -246,7 +256,7 @@ class AnalogControls(threading.Thread):
                                                  steps=self.hdr_threshold_steps)
                 if new_high is not None and new_high != self.last_hdr_threshold_high:
                     logging.info(f"HDR threshold high changed → ADC raw={raw}, mapped={new_high}")
-                    self.cinepi_controller.set_hdr_threshold_high(new_high)
+                    self._dispatch('hdr_threshold_high', new_high)
                     self.last_hdr_threshold_high = new_high
 
             if self.hdr_blend_pot is not None:
@@ -256,7 +266,7 @@ class AnalogControls(threading.Thread):
                                                   steps=self.hdr_blend_steps)
                 if new_blend is not None and new_blend != self.last_hdr_blend:
                     logging.info(f"HDR blend changed → ADC raw={raw}, mapped={new_blend}")
-                    self.cinepi_controller.set_hdr_blend(new_blend)
+                    self._dispatch('hdr_blend', new_blend)
                     self.last_hdr_blend = new_blend
 
             if self.hdr_gain_adder_pot is not None:
@@ -266,7 +276,7 @@ class AnalogControls(threading.Thread):
                                                   steps=self.hdr_gain_adder_steps)
                 if new_adder is not None and new_adder != self.last_hdr_gain_adder:
                     logging.info(f"HDR gain adder changed → ADC raw={raw}, mapped={new_adder}")
-                    self.cinepi_controller.set_hdr_gain_adder(new_adder)
+                    self._dispatch('hdr_gain_adder', new_adder)
                     self.last_hdr_gain_adder = new_adder
 
         except Exception as e:

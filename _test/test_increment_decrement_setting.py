@@ -115,18 +115,15 @@ class ShutterANomWiringTests(unittest.TestCase):
     static step *table* (not shutter_a's own flicker-free-recomputing
     steps() callable) while keeping its own lock.
 
-    NOTE: increment_setting/decrement_setting read the current value via
-    get_setting(setting_name), which looks the raw string 'shutter_a_nom' up
-    directly in Redis - but every writer (set_shutter_a_nom,
-    update_shutter_angle_nom) persists under ParameterKey.SHUTTER_A_NOM
-    ('shutter_angle_nom'), a different key. That mismatch is a pre-existing
-    bug this refactor does not touch or fix; these tests seed the literal
-    'shutter_a_nom' key to exercise the surrounding dispatch logic exactly
-    as increment_setting reads it today.
+    get_setting(setting_name) now resolves 'shutter_a_nom' through the
+    registry's redis_key ('shutter_angle_nom') instead of looking up the raw
+    setting_name directly - matching the key every writer (set_shutter_a_nom,
+    update_shutter_angle_nom) actually persists under. These tests seed that
+    real key.
     """
 
     def test_increment_only_cycles_through_the_static_table(self):
-        c = make_controller({"shutter_a_nom": "180.0"})
+        c = make_controller({ParameterKey.SHUTTER_A_NOM.value: "180.0"})
         c.increment_setting("shutter_a_nom", c.shutter_a_steps)
 
         # Static table is [45, 90, 180, 270, 360]: the next entry is 270,
@@ -137,20 +134,22 @@ class ShutterANomWiringTests(unittest.TestCase):
         )
 
     def test_decrement_only_cycles_through_the_static_table(self):
-        c = make_controller({"shutter_a_nom": "180.0"})
+        c = make_controller({ParameterKey.SHUTTER_A_NOM.value: "180.0"})
         c.decrement_setting("shutter_a_nom", c.shutter_a_steps)
         self.assertEqual(
             c.redis_controller.get_value(ParameterKey.SHUTTER_A_NOM.value), 90.0
         )
 
     def test_lock_blocks_the_write(self):
-        c = make_controller({"shutter_a_nom": "180.0"})
+        c = make_controller({ParameterKey.SHUTTER_A_NOM.value: "180.0"})
         c.shutter_a_nom_lock = True
         c.increment_setting("shutter_a_nom", c.shutter_a_steps)
-        self.assertIsNone(c.redis_controller.get_value(ParameterKey.SHUTTER_A_NOM.value))
+        self.assertEqual(
+            c.redis_controller.get_value(ParameterKey.SHUTTER_A_NOM.value), "180.0"
+        )
 
     def test_sync_mode_routes_to_update_shutter_angle_nom_not_set_shutter_a_nom(self):
-        c = make_controller({"shutter_a_nom": "180.0"})
+        c = make_controller({ParameterKey.SHUTTER_A_NOM.value: "180.0"})
         c.shutter_a_sync_mode = 1
         c.set_shutter_a_nom = mock.Mock(name="set_shutter_a_nom")
 

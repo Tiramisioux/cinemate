@@ -21,7 +21,7 @@ The browser-based web UI features basic settings and interactive controls.
 - The buffer meter in the lower-left corner shows used vs total frame buffer. Optional hatch lines can be enabled in `settings.json` under `hdmi_gui`.
 - During storage pre-roll, the GUI hides recording time and clip names.
 - If zoom is anything other than the configured default, the zoom box is highlighted yellow.
-- If dynamic resolution is substituting a measured sustainable mode for the current FPS, the resolution numbers turn green.
+- If dynamic resolution is substituting a lower-resolution mode to reach the current FPS, the resolution numbers turn green.
 - If shutter angle sync is activated, the shutter value is green.
 - If fps is modified by double fps being activated, the number turns green.
 - When a compatible USB microphone is connected, the right side shows VU meters plus sample rate, bit depth, and a `WAV` badge once the latest take contains both DNG frames and a WAV sidecar.

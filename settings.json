@@ -8,6 +8,20 @@
       "name": "CinePi",
       "password": "11111111",
       "enabled": true
+    },
+    "web_api": {
+      "enabled": true,
+      "token": "",
+      "allow_destructive": false,
+      "max_commands_per_sec": 20,
+      "max_sse_clients": 4,
+      "broadcast": {
+        "enabled": true,
+        "port": 8888,
+        "hz": 5,
+        "keys": ["is_recording", "iso", "fps", "shutter_a_actual",
+                 "recording_tc_tod", "space_left", "drop_frame_count", "is_mounted"]
+      }
     }
   },
   "camera": {

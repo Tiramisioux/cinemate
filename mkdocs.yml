@@ -19,6 +19,7 @@ nav:
   - Using the camera:
       - Simple GUI: simple-gui.md
       - Web GUI: web-gui.md
+      - Web API: web-api.md
       # - Lenses and image circles: image-circle.md   # hidden until manually reviewed
       - Audio recording: audio-recording.md
       - Digital zoom: digital-zoom.md
@@ -31,6 +32,7 @@ nav:
       - CineMate Log (imx585 / imx283): cinemate-log.md
       - Dual sensors: dual-sensors.md
       - Additional hardware: hardware-controls.md
+      - Building control units: building-control-units.md
       - Bookworm config.txt: config-txt.md
       - Configuring the Wi-Fi hotspot: hotspot-logic.md
   - System maintenance:

@@ -14,6 +14,11 @@ class CommandExecutor(threading.Thread):
         self.cinepi_app = cinepi_app
         self.storage_preroll = storage_preroll
         self.running = True  # Flag to control the thread's execution
+        # Serialises dispatch across CLI, serial and HTTP callers. Held for
+        # the duration of handle_received_data() so all three inbound
+        # transports get the same ordering guarantee the CLI/serial paths
+        # already had by construction (single-threaded callers).
+        self._dispatch_lock = threading.Lock()
 
         # ---------------------------------------------------------------------------
         # CLI COMMAND TABLE
@@ -167,12 +172,20 @@ class CommandExecutor(threading.Thread):
             return False
 
     def handle_received_data(self, data):
-        """Handles received input data and executes corresponding commands."""
+        """Handles received input data and executes corresponding commands.
+
+        Returns ``(ok, message)``. ``ok`` is False for anything that should
+        surface as a 4xx over the web API; ``message`` is one of a small
+        fixed vocabulary ("unknown command", "bad argument", "missing
+        argument", "busy") on failure, or "" (occasionally a handler-supplied
+        string) on success. The CLI and serial callers ignore this return
+        value, so their console behaviour is unchanged.
+        """
         logging.info(f"Received: {data.strip()}")  # Log the received data
         input_command = data.strip().split()  # Split the input into parts
 
         if not input_command:
-            return  # If there's no input, just return
+            return False, "unknown command"  # If there's no input, just return
 
         # Reconstruct the full command name by trying all possible matches
         command_name = None
@@ -188,37 +201,48 @@ class CommandExecutor(threading.Thread):
 
         if not command_name:
             logging.info(f"Command '{data.strip()}' not found")
-            return
+            return False, "unknown command"
 
-        func, expected_types = self.commands[command_name]
+        if not self._dispatch_lock.acquire(timeout=2.0):
+            logging.warning(f"Command '{data.strip()}' dropped: dispatch lock busy")
+            return False, "busy"
 
-        if command_name == 'rec':
-            self.handle_rec_command(command_args)
-            return
+        try:
+            func, expected_types = self.commands[command_name]
 
-        # Handle commands with arguments or those that can be called without arguments
-        if isinstance(expected_types, list):  # If the command can take multiple types
-            if command_args:  # Arguments provided
-                arg = command_args[0]
-                for expected_type in filter(None, expected_types):
-                    if self.is_valid_arg(arg, expected_type):
-                        func(expected_type(arg))  # Call function with converted argument
-                        return
-                logging.info(f"Invalid argument type for command '{command_name}'")
-            else:
-                func()  # Call the function without arguments
-        else:  # Single expected type or no argument
-            if command_args:  # Arguments provided
-                arg = command_args[0]
-                if self.is_valid_arg(arg, expected_types):
-                    func(expected_types(arg))  # Call function with converted argument
-                    return
-                logging.info(f"Invalid argument type for command '{command_name}'")
-            else:
-                if expected_types is None:  # No arguments expected
-                    func()  # Call the function without arguments
+            if command_name == 'rec':
+                return self.handle_rec_command(command_args)
+
+            # Handle commands with arguments or those that can be called without arguments
+            if isinstance(expected_types, list):  # If the command can take multiple types
+                if command_args:  # Arguments provided
+                    arg = command_args[0]
+                    for expected_type in filter(None, expected_types):
+                        if self.is_valid_arg(arg, expected_type):
+                            func(expected_type(arg))  # Call function with converted argument
+                            return True, ""
+                    logging.info(f"Invalid argument type for command '{command_name}'")
+                    return False, "bad argument"
                 else:
-                    logging.info(f"Command '{command_name}' requires an argument")
+                    func()  # Call the function without arguments
+                    return True, ""
+            else:  # Single expected type or no argument
+                if command_args:  # Arguments provided
+                    arg = command_args[0]
+                    if self.is_valid_arg(arg, expected_types):
+                        func(expected_types(arg))  # Call function with converted argument
+                        return True, ""
+                    logging.info(f"Invalid argument type for command '{command_name}'")
+                    return False, "bad argument"
+                else:
+                    if expected_types is None:  # No arguments expected
+                        func()  # Call the function without arguments
+                        return True, ""
+                    else:
+                        logging.info(f"Command '{command_name}' requires an argument")
+                        return False, "missing argument"
+        finally:
+            self._dispatch_lock.release()
 
     def stop(self):
 
@@ -238,7 +262,8 @@ class CommandExecutor(threading.Thread):
     def handle_rec_command(self, args):
         """Handle recording command: optional leading camera target
         (``cam0`` | ``cam1`` | ``both``/``dual``) followed by optional timed
-        arguments (``s``/``f`` <amount>)."""
+        arguments (``s``/``f`` <amount>). Returns ``(ok, message)`` — see
+        ``handle_received_data``."""
         override = None
         if args and args[0].lower() in self._REC_CAM_TOKENS:
             override = self._REC_CAM_TOKENS[args[0].lower()]
@@ -246,35 +271,36 @@ class CommandExecutor(threading.Thread):
 
         if not args:
             self.cinepi_controller.rec(record_override=override)
-            return
+            return True, ""
 
         mode = args[0].lower()
 
         if mode in {"s", "sec", "secs", "second", "seconds"}:
             if len(args) < 2:
                 logging.info("Timed recording in seconds requires a duration argument.")
-                return
+                return False, "missing argument"
             try:
                 seconds = float(args[1])
             except ValueError:
                 logging.info("Invalid seconds value for timed recording.")
-                return
+                return False, "bad argument"
             self.cinepi_controller.rec(mode, seconds, record_override=override)
-            return
+            return True, ""
 
         if mode in {"f", "frame", "frames"}:
             if len(args) < 2:
                 logging.info("Timed recording in frames requires a frame count.")
-                return
+                return False, "missing argument"
             try:
                 frames = int(args[1])
             except ValueError:
                 logging.info("Invalid frame count for timed recording.")
-                return
+                return False, "bad argument"
             self.cinepi_controller.rec(mode, frames, record_override=override)
-            return
+            return True, ""
 
         logging.info("Unknown rec argument. Use cam0/cam1/both, or 's'/'f' with a duration.")
+        return False, "bad argument"
 
     def run(self):
             """Thread run function to continuously process input commands."""

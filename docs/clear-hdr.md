@@ -13,7 +13,7 @@ ClearHDR is the imx585's on-sensor single-frame HDR. The sensor merges a high-ga
 
 ## What changes when ClearHDR is on
 
-- Frame rates halve versus the plain modes (≈ 33 fps at 4K, ≈ 37 fps at 2K on an overclocked RP1). `min_frame_rate` in `settings.json` defaults to 20 so the 4K ClearHDR mode stays selectable.
+- Frame rates halve versus the plain modes (≈ 33 fps at 4K, ≈ 37 fps at 2K on an overclocked RP1).
 - Analogue gain caps at code 80 ≈ 15.8× (ISO 1580).
 - Each 3856×2180 DNG is ≈ 16.9 MB. Storage bandwidth: 15 fps ≈ 252 MB/s, 20 fps ≈ 336 MB/s — plan drives accordingly. The minutes-left display uses the 16.9 MB figure automatically.
 - Auto exposure and auto white balance cannot run in the 16-bit modes (ISP statistics are invalid at 16-bit). Set exposure manually.

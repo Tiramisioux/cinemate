@@ -92,6 +92,22 @@ class SensorDatabaseTests(unittest.TestCase):
         # simply unsupported.
         self.assertIsNone(detector.resolve_log_encode_target("imx585", 8))
 
+        # hdr=True (12-bit ClearHDR, CCMP-companded on-sensor) resolves the
+        # same as plain 12-bit SDR -- P3 in cinepi-raw composes the CCMP
+        # decompand with the log curve rather than refusing the source, so
+        # this function no longer special-cases hdr at all. The default and
+        # an explicit 10 both still work; 12 still has no composed spec.
+        self.assertEqual(detector.resolve_log_encode_target("imx585", 12, hdr=True), 10)
+        self.assertEqual(
+            detector.resolve_log_encode_target("imx585", 12, requested=10, hdr=True), 10
+        )
+        self.assertIsNone(
+            detector.resolve_log_encode_target("imx585", 12, requested=12, hdr=True)
+        )
+        # 16-bit ClearHDR was never companded (SRGGB16, no compander in the
+        # path) -- hdr=True must not perturb it either.
+        self.assertEqual(detector.resolve_log_encode_target("imx585", 16, hdr=True), 12)
+
         # Alias resolution matches the get_packing_for_platform precedent.
         self.assertTrue(detector.supports_log_encode("imx585_mono"))
         self.assertEqual(detector.get_log_encode_black_level_16bit("imx585_mono"), 3200)
@@ -244,9 +260,6 @@ class SensorDatabaseTests(unittest.TestCase):
         detector.k_steps = rc.get("k_steps", [])
         detector.bit_depths = rc.get("bit_depths", [])
         detector.custom_modes = rc.get("custom_modes", {})
-        # These parse tests isolate mode parsing/merging, so leave the frame-rate
-        # floor off and expose both HDR and non-HDR modes.
-        detector.min_frame_rate = 0
         detector.hdr_modes = SensorDetect._hdr_whitelist(rc.get("hdr", {}))
         detector.sensor_resolutions = {}
         return detector

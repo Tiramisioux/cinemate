@@ -72,9 +72,6 @@ class SensorDetect:
         res_cfg = self.settings.get("resolutions", {})
         self.k_steps = res_cfg.get("k_steps", [])
         self.bit_depths = res_cfg.get("bit_depths", [])
-        # Modes slower than this (max fps) are dropped from the mode table.
-        # Default 20 keeps the imx585 4K ClearHDR modes (~21.9 fps) visible.
-        self.min_frame_rate = res_cfg.get("min_frame_rate", 20)
         self.custom_modes = res_cfg.get("custom_modes", {})
         # Optional ClearHDR (imx585) whitelist. settings.json → resolutions.hdr
         # is {"sdr": bool, "imx585_clear_hdr": bool}; both true (default)
@@ -405,12 +402,6 @@ class SensorDetect:
                 # whitelist of the ClearHDR flag, normalized by _hdr_whitelist.
                 if self.hdr_modes and bool(m.get("hdr")) not in self.hdr_modes:
                     continue
-                # settings.json → resolutions.min_frame_rate: drop modes whose
-                # max frame rate is below the floor (default 20 keeps the
-                # imx585 4K ClearHDR modes at ~21.9 fps).
-                fps_cap = m.get("fps_max")
-                if self.min_frame_rate and fps_cap and fps_cap < self.min_frame_rate:
-                    continue
                 k_val = round(m["width"] / 1000 * 2) / 2
                 if self.k_steps and k_val not in self.k_steps:
                     continue
@@ -676,37 +667,27 @@ class SensorDetect:
         never silently substitutes a different target than what was asked
         for or implied.
 
-        *hdr* is whether the launch will carry ``--hdr sensor``. It matters
-        because log encoding assumes a LINEAR source and 12-bit ClearHDR is
-        not one — see the guard below.
+        *hdr* is whether the launch will carry ``--hdr sensor``. It is not
+        used to refuse anything here (see below) — it is accepted so the
+        call site never has to special-case ClearHDR itself.
         """
-        # ── 12-bit ClearHDR is CCMP-companded on-sensor ──────────────────
+        # ── 12-bit ClearHDR (CCMP) is not a special case here ────────────
         #
-        # sensors.json declares imx585 "12": {"valid":[10],"default":10} on
-        # bit depth alone, so without this a 12-bit ClearHDR mode resolves to
-        # 10 and launches --hdr sensor --log-encode 10 against companded data.
-        # mu-law then lands on top of Sony's CCMP curve, with a mu-law
-        # LinearizationTable written over the result claiming linear input.
+        # 12-bit ClearHDR companies on-sensor (CCMP), so it is not a LINEAR
+        # log source. That used to make this function refuse it outright
+        # (return None whenever hdr and source_bit_depth == 12), because
+        # cinepi-raw could only log-encode a linear 12-bit source and would
+        # otherwise compand the already-companded data a second time.
         #
-        # Nothing downstream used to catch it, and in particular the
-        # black-level check CANNOT: CCMP is the IDENTITY below its first knee
-        # and black sits at 200, well inside that segment, so the pedestal is
-        # untouched and every level-based test reads clean. (A companded black
-        # of ~542 appears in an early doc and is FALSIFIED — measured 201.4 and
-        # 198.7 on a clean lens-cap set.) The defect is entirely in the
-        # transfer above the knee, so only an HDR-aware test can see it.
-        #
-        # Resolved here as well as in cinepi-raw so the reason is visible at
-        # launch instead of buried in cinepi-raw's warning.
-        #
-        # ** TEMPORARY, AND WRITTEN TO BE REPLACED RATHER THAN DELETED. **
-        # Once the CCMP decompand runs first the combination becomes legal by
-        # precomposition — and the source domain after decompand is SIXTEEN
-        # bit, so it uses the 16to10 spec, never 12to10. Deleting this without
-        # adding that precomposition reintroduces the original bug.
-        if hdr and source_bit_depth == 12:
-            return None
-
+        # cinepi-raw now composes instead: decompand to 16-bit linear first
+        # (the CCMP curve, itself gated), then apply the 16-to-target log
+        # curve — see get_ccmp_composed_log_lut() / log_source_is_companded()
+        # in cinepi-raw's cinepi/log_lut.hpp. From cinemate's side that is
+        # invisible: it is still "12-bit source -> target 10", exactly what
+        # sensors.json's imx585 "12": {"valid":[10],"default":10} already
+        # says, hdr or not. So *hdr* no longer changes this function's
+        # answer — it is kept as a parameter only so callers that pass it
+        # (there is exactly one valid target either way) do not need editing.
         valid = self.get_log_encode_valid_targets(camera_name, source_bit_depth)
         if not valid:
             return None

@@ -1964,7 +1964,9 @@ class CinePiController:
             logging.info(f"FPS multiplier {self.fps_multiplier}")
                 
     def get_setting(self, key):
-        value = self.redis_controller.get_value(key)
+        param = parameters.get(key, source="get_setting")
+        redis_key = param.redis_key if param is not None else key
+        value = self.redis_controller.get_value(redis_key)
         return value
     
     def reboot(self):

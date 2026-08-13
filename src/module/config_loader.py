@@ -75,12 +75,10 @@ class SettingsLoadError(RuntimeError):
 
 def _recommend_json_fix(message: str) -> str:
     normalized = message.lower()
-    if "trailing comma" in normalized:
-        return "Remove the trailing comma just before this point. JSON does not allow commas before } or ]."
     if "property name enclosed in double quotes" in normalized:
-        return "Check for a trailing comma before this point, or wrap the key name in double quotes."
+        return "Wrap the key name in double quotes."
     if "expecting value" in normalized:
-        return "Check for a missing value, a trailing comma, or a comment. JSON does not allow comments."
+        return "Check for a missing value near this point, for example an empty array/object entry or two commas in a row."
     if "expecting ',' delimiter" in normalized:
         return "Check for a missing comma between entries, or a mismatched quote/bracket just before this point."
     if "unterminated string" in normalized:
@@ -89,7 +87,7 @@ def _recommend_json_fix(message: str) -> str:
         return "Escape special characters inside strings, for example as \\n, instead of writing them raw."
     if "extra data" in normalized:
         return "Remove the extra text that appears after the final closing } or ]."
-    return "Fix the JSON syntax near the highlighted line. Common causes are trailing commas, missing commas, comments, or missing double quotes."
+    return "Fix the JSON syntax near the highlighted line. // and /* */ comments and trailing commas are allowed; common remaining causes are a missing comma, an unquoted key, or a stray quote."
 
 
 def _format_error_context(path: Path, line: int, column: int, radius: int = 1) -> str | None:
@@ -334,10 +332,123 @@ def _apply_settings_defaults(settings: dict) -> dict:
     return settings
 
 
+class _UnterminatedBlockComment(Exception):
+    def __init__(self, line: int, column: int) -> None:
+        self.line = line
+        self.column = column
+
+
+def _strip_jsonc_comments(text: str) -> str:
+    """Blank out // and /* */ comments, outside of string literals.
+
+    Comment characters become spaces rather than being deleted (newlines
+    inside a block comment stay newlines), so every remaining character
+    keeps its original line/column position. A json.JSONDecodeError raised
+    against the result still points at the right place in the *original*
+    file, and _format_error_context() -- which re-reads the original file
+    from disk -- shows the user their real text, comments included.
+    """
+    out: list[str] = []
+    i = 0
+    n = len(text)
+    in_string = False
+    escape = False
+    while i < n:
+        c = text[i]
+        if in_string:
+            out.append(c)
+            if escape:
+                escape = False
+            elif c == "\\":
+                escape = True
+            elif c == '"':
+                in_string = False
+            i += 1
+            continue
+        if c == '"':
+            in_string = True
+            out.append(c)
+            i += 1
+            continue
+        if c == "/" and i + 1 < n and text[i + 1] == "/":
+            while i < n and text[i] != "\n":
+                out.append(" ")
+                i += 1
+            continue
+        if c == "/" and i + 1 < n and text[i + 1] == "*":
+            line_start = text.rfind("\n", 0, i) + 1
+            start_line = text.count("\n", 0, i) + 1
+            start_col = i - line_start + 1
+            out.append("  ")
+            i += 2
+            closed = False
+            while i < n:
+                if text[i] == "*" and i + 1 < n and text[i + 1] == "/":
+                    out.append("  ")
+                    i += 2
+                    closed = True
+                    break
+                out.append("\n" if text[i] == "\n" else " ")
+                i += 1
+            if not closed:
+                raise _UnterminatedBlockComment(start_line, start_col)
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
+def _strip_trailing_commas(text: str) -> str:
+    """Blank out a comma followed only by whitespace before } or ], outside
+    of string literals, so a trailing comma parses instead of raising
+    "Expecting property name enclosed in double quotes" / "Expecting value".
+    """
+    out = list(text)
+    in_string = False
+    escape = False
+    i = 0
+    n = len(text)
+    while i < n:
+        c = text[i]
+        if in_string:
+            if escape:
+                escape = False
+            elif c == "\\":
+                escape = True
+            elif c == '"':
+                in_string = False
+            i += 1
+            continue
+        if c == '"':
+            in_string = True
+            i += 1
+            continue
+        if c == ",":
+            j = i + 1
+            while j < n and text[j] in " \t\r\n":
+                j += 1
+            if j < n and text[j] in "}]":
+                out[i] = " "
+        i += 1
+    return "".join(out)
+
+
+def strip_jsonc(text: str) -> str:
+    """Make settings.json tolerant of // and /* */ comments and trailing
+    commas, matching how a hand-edited config file is normally expected to
+    behave. Length- and line-preserving, so downstream error reporting
+    (SettingsLoadError.line/column, _format_error_context) stays accurate
+    against the original file.
+    """
+    return _strip_trailing_commas(_strip_jsonc_comments(text))
+
+
 def load_settings(filename: str | Path) -> dict:
     """
     Load CineMate’s JSON configuration *and* guarantee that every section the
     code relies on is present with safe defaults.
+
+    Tolerates // and /* */ comments and trailing commas (see strip_jsonc()).
 
     Return an always-valid settings dict for valid JSON input.
     Raise SettingsLoadError when the file exists but cannot be parsed safely.
@@ -345,12 +456,10 @@ def load_settings(filename: str | Path) -> dict:
     filename = Path(filename)
     try:
         with filename.open("r", encoding="utf-8") as fp:
-            settings = json.load(fp)
+            raw_text = fp.read()
     except FileNotFoundError:
         logging.warning("Settings file %s not found – using built-in defaults", filename)
-        settings = {}
-    except json.JSONDecodeError as exc:
-        raise SettingsLoadError.from_json_decode_error(filename, exc) from exc
+        raw_text = None
     except UnicodeDecodeError as exc:
         raise SettingsLoadError(
             filename,
@@ -365,6 +474,26 @@ def load_settings(filename: str | Path) -> dict:
             str(exc),
             "Check that the file exists, is readable, and is not being edited by another process.",
         ) from exc
+
+    if raw_text is None:
+        settings = {}
+    else:
+        try:
+            cleaned = strip_jsonc(raw_text)
+        except _UnterminatedBlockComment as exc:
+            raise SettingsLoadError(
+                filename,
+                "settings.json has an unterminated /* comment",
+                f"A /* comment starting at line {exc.line}, column {exc.column} is never closed with */",
+                "Add the closing */ after the comment, or remove the stray /*.",
+                line=exc.line,
+                column=exc.column,
+                context=_format_error_context(filename, exc.line, exc.column),
+            ) from exc
+        try:
+            settings = json.loads(cleaned)
+        except json.JSONDecodeError as exc:
+            raise SettingsLoadError.from_json_decode_error(filename, exc) from exc
 
     if not isinstance(settings, dict):
         raise SettingsLoadError(

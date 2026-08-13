@@ -23,6 +23,8 @@ import time
 from pathlib import Path
 from typing import Final, Optional
 
+from module.config_loader import strip_jsonc
+
 logger = logging.getLogger(__name__)
 
 __all__ = ["WiFiHotspotManager"]
@@ -40,10 +42,17 @@ READY_STATES: Final[set[str]] = {"connected", "connected (externally)", "disconn
 # ---------------------------------------------------------------------------
 
 def _load_settings(path: Path = SETTINGS_PATH) -> dict:
-    """Return settings as dict; empty dict on any error."""
+    """Return settings as dict; empty dict on any error.
+
+    Tolerates // and /* */ comments and trailing commas via
+    config_loader.strip_jsonc(), matching how main.py's load_settings()
+    parses the same file -- this manager runs as its own entry point and
+    must not silently fall back to CinePi/11111111 just because the user
+    annotated settings.json.
+    """
     try:
         with path.open("r", encoding="utf-8") as fh:
-            return json.load(fh)
+            return json.loads(strip_jsonc(fh.read()))
     except Exception as exc:  # pragma: no‑cover – broad OK for util
         logger.debug("Could not parse %s: %s", path, exc)
         return {}

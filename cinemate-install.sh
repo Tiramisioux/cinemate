@@ -1582,6 +1582,53 @@ import json
 import pathlib
 import sys
 
+
+def _strip_jsonc(text):
+    # Minimal mirror of module.config_loader.strip_jsonc() -- duplicated
+    # rather than imported because this heredoc runs under the system
+    # python3, outside the cinemate package/venv. Keep in sync by hand.
+    out = []
+    i, n = 0, len(text)
+    in_string = escape = False
+    while i < n:
+        c = text[i]
+        if in_string:
+            out.append(c)
+            if escape:
+                escape = False
+            elif c == "\\":
+                escape = True
+            elif c == '"':
+                in_string = False
+            i += 1
+            continue
+        if c == '"':
+            in_string = True
+            out.append(c)
+            i += 1
+            continue
+        if c == "/" and i + 1 < n and text[i + 1] == "/":
+            while i < n and text[i] != "\n":
+                i += 1
+            continue
+        if c == "/" and i + 1 < n and text[i + 1] == "*":
+            i += 2
+            while i < n and not (text[i] == "*" and i + 1 < n and text[i + 1] == "/"):
+                i += 1
+            i += 2
+            continue
+        if c == ",":
+            j = i + 1
+            while j < n and text[j] in " \t\r\n":
+                j += 1
+            if j < n and text[j] in "}]":
+                i += 1
+                continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
 path = pathlib.Path(sys.argv[1])
 ssid = sys.argv[2]
 password = sys.argv[3]
@@ -1589,7 +1636,7 @@ enabled = sys.argv[4].lower() == "true"
 hdmi0 = int(sys.argv[5])
 hdmi1 = int(sys.argv[6])
 
-data = json.loads(path.read_text())
+data = json.loads(_strip_jsonc(path.read_text()))
 system_cfg = data.setdefault("system", {})
 wifi_cfg = system_cfg.setdefault("wifi_hotspot", {})
 wifi_cfg["name"] = ssid

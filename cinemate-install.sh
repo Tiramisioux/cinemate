@@ -1545,7 +1545,7 @@ alias cinemate-env='source "$VENV_DIR/bin/activate"'
 alias cinemate='$PI_HOME/run_cinemate.sh'
 alias editboot='sudo nano /boot/firmware/config.txt'
 alias editcmdline='sudo nano /boot/firmware/cmdline.txt'
-alias editsettings='sudo nano $CINEMATE_DIR/src/settings.json'
+alias editsettings='sudo nano $CINEMATE_DIR/settings.json'
 $MANAGED_END
 EOF
 
@@ -1568,7 +1568,7 @@ print_post_install_notes() {
 }
 
 configure_settings_json() {
-    local settings_json="$CINEMATE_DIR/src/settings.json"
+    local settings_json="$CINEMATE_DIR/settings.json"
     local hotspot_enabled_json=false
 
     [[ -f "$settings_json" ]] || die "Missing settings.json at $settings_json"

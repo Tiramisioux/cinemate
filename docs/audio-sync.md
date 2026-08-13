@@ -2,7 +2,7 @@
 
 ## Fine timecode offset
 
-A USB mic can sit a fixed couple of frames early or late relative to video (constant analog/buffering latency). Correct that offset per toolchain in `src/settings.json`:
+A USB mic can sit a fixed couple of frames early or late relative to video (constant analog/buffering latency). Correct that offset per toolchain in `settings.json`:
 
 ```json
 "audio": {

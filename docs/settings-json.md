@@ -1,6 +1,6 @@
 # Settings.json file
 
-This file controls how the camera behaves and how your buttons, switches and displays are mapped. It lives in `~/cinemate/src/settings.json`. You can edit it with any text editor; the settings take effect the next time you start Cinemate.
+This file controls how the camera behaves and how your buttons, switches and displays are mapped. It lives in `~/cinemate/settings.json`. You can edit it with any text editor; the settings take effect the next time you start Cinemate.
 
 !!! note ""
     The prebuilt image works out of the box. You do **not** need to edit `settings.json` to start shooting. This page is a reference for when you want to customise hardware controls and behaviour.

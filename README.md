@@ -111,7 +111,7 @@ After installing, reboot the system and Cinemate should start automatically.
 For the full manual install, configuration steps, and CLI reference, please see the [documentation/manual installation steps](https://tiramisioux.github.io/cinemate/installation-steps/).
 
 ## Customization
-GPIO buttons and switches, rotary encoders and oled display for controlling camera settings such as recording, iso etc. are configured in the `~/cinemate/src/settings.json` file. On the Pi, type `editsettings` in the terminal to open this file.
+GPIO buttons and switches, rotary encoders and oled display for controlling camera settings such as recording, iso etc. are configured in the `~/cinemate/settings.json` file. On the Pi, type `editsettings` in the terminal to open this file.
 
 ## Documentation
 Full manual installation instructions, configuration guides in the [documentation](https://tiramisioux.github.io/cinemate/).

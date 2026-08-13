@@ -24,7 +24,7 @@ from module.dynamic_resolution import (
 )
 from module import parameters
 
-SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
+SETTINGS_FILE = "/home/pi/cinemate/settings.json"
 GUI_RESOLUTION_PREVIEW_DELAY_SECONDS = 0.12
 GUI_RESOLUTION_SWITCHING_HOLD_SECONDS = 2.5
 RAW_STREAM_READY_RE = re.compile(r"\bRaw stream:\s*(\d+)x(\d+)\b", re.IGNORECASE)

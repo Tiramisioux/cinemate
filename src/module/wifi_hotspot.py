@@ -32,7 +32,7 @@ __all__ = ["WiFiHotspotManager"]
 # ---------------------------------------------------------------------------
 DEFAULT_SSID:  Final[str] = "CinePi"
 DEFAULT_PASS:  Final[str] = "11111111"  # 8 chars → nmcli minimum
-SETTINGS_PATH: Final[Path] = Path("/home/pi/cinemate/src/settings.json")
+SETTINGS_PATH: Final[Path] = Path("/home/pi/cinemate/settings.json")
 READY_STATES: Final[set[str]] = {"connected", "connected (externally)", "disconnected"}
 
 # ---------------------------------------------------------------------------

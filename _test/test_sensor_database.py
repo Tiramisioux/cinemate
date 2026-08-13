@@ -235,7 +235,7 @@ class SensorDatabaseTests(unittest.TestCase):
     def _detector_for_parse(self):
         import json
         detector = self._detector_without_probe()
-        settings = json.loads((ROOT / "src" / "settings.json").read_text())
+        settings = json.loads((ROOT / "settings.json").read_text())
         rc = settings.get("resolutions", {})
         detector.settings = settings
         detector.k_steps = rc.get("k_steps", [])

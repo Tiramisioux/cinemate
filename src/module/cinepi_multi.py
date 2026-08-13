@@ -24,7 +24,7 @@ from module.storage_profiles import (
 )
 
 # Path to settings file
-SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
+SETTINGS_FILE = "/home/pi/cinemate/settings.json"
 _SETTINGS: dict | None = None
 
 

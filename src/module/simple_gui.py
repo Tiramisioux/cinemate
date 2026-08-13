@@ -152,7 +152,7 @@ class SimpleGUI(threading.Thread):
         self.color_mode = "normal"
         
         # Load settings, not sure when the settings will be None so left the code here
-        self.settings = settings or load_settings("/home/pi/cinemate/src/settings.json")
+        self.settings = settings or load_settings("/home/pi/cinemate/settings.json")
         
         self.setup_resources()
         self.display_poll_interval = 1.0

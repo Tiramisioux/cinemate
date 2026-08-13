@@ -19,7 +19,7 @@ Watches for removable drives and mounts them automatically. The accompanying Pyt
 It understands `ext4`, `ntfs` and `exfat` filesystems. Partitions labelled `RAW` are mounted at `/media/RAW`; any other label is mounted under `/media/<LABEL>` after sanitising the name. This applies to USB SSDs, NVMe drives and the CFE-HAT slot.
 
 ## wifi-hotspot.service
-Keeps a small access point running with the help of NetworkManager so you can always reach the web interface. The SSID and password are read from `/home/pi/cinemate/src/settings.json` under `system.wifi_hotspot`.
+Keeps a small access point running with the help of NetworkManager so you can always reach the web interface. The SSID and password are read from `/home/pi/cinemate/settings.json` under `system.wifi_hotspot`.
 
 ## redis-log-maintenance.timer
 

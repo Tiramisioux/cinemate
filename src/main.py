@@ -46,7 +46,7 @@ from module.framebuffer import acquire_framebuffer
 
 # Constants
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
-SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
+SETTINGS_FILE = "/home/pi/cinemate/settings.json"
 STARTUP_MESSAGE_MIN_DURATION = 3.0
 CLI_COLOR_RED = "\033[1;31m"
 CLI_COLOR_YELLOW = "\033[1;33m"

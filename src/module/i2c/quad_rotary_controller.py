@@ -11,6 +11,8 @@ import adafruit_seesaw.rotaryio
 import adafruit_seesaw.digitalio
 import adafruit_seesaw.neopixel
 
+from module import parameters
+
 
 class QuadRotarySettings(TypedDict, total=False):
     enabled: bool
@@ -129,6 +131,10 @@ class QuadRotaryController(threading.Thread):
         cfg: QuadRotarySettings = settings.get("quad_rotary_controller", {})
         self.enabled = cfg.get("enabled", False)
         self.encoder_cfg = cfg.get("encoders", {})
+        for idx, enc in self.encoder_cfg.items():
+            setting_name = enc.get("setting_name")
+            if setting_name:
+                parameters.get(setting_name, source=f"quad_rotary_controller.encoders.{idx}")
         self.buttons = {}
         for idx, enc in self.encoder_cfg.items():
             self.buttons[int(idx)] = I2CButton(

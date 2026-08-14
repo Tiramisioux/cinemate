@@ -12,7 +12,7 @@ from module.web_api_settings import DEFAULT_WEB_API_SETTINGS, web_api_settings
 class WebApiSettingsDefaultsTests(unittest.TestCase):
     """Plan section 5 / docs/web-api.md: a missing or partial web_api block
     must behave exactly like the documented defaults — users must not have
-    to edit settings.json to get a working, safe-by-default API."""
+    to edit settings.jsonc to get a working, safe-by-default API."""
 
     def test_missing_settings_dict_uses_full_defaults(self):
         self.assertEqual(web_api_settings(None), DEFAULT_WEB_API_SETTINGS)

@@ -69,16 +69,16 @@ class SensorDetect:
         self.camera_model = None
         self.res_modes = {}
         self.settings = settings or {}
-        res_cfg = self.settings.get("resolutions", {})
+        res_cfg = self.settings.get("capture", {}).get("resolutions", {})
         self.k_steps = res_cfg.get("k_steps", [])
         self.bit_depths = res_cfg.get("bit_depths", [])
         self.custom_modes = res_cfg.get("custom_modes", {})
-        # Optional ClearHDR (imx585) whitelist. settings.json → resolutions.hdr
+        # Optional ClearHDR (imx585) whitelist. settings.jsonc → resolutions.hdr
         # is {"sdr": bool, "imx585_clear_hdr": bool}; both true (default)
         # exposes plain and ClearHDR modes, turn a flag off to hide that class
         # of modes. Mirrors the bit_depths / k_steps whitelists above.
         self.hdr_modes = self._hdr_whitelist(res_cfg.get("hdr", {}))
-        sensor_cfg = self.settings.get("sensors", {})
+        sensor_cfg = self.settings.get("camera", {}).get("sensors", {})
         self.sensor_database_file = sensor_cfg.get(
             "database_file",
             DEFAULT_SENSOR_DATABASE_FILE,
@@ -296,12 +296,12 @@ class SensorDetect:
 
     @staticmethod
     def _hdr_whitelist(hdr_cfg: Any) -> List[bool]:
-        """Normalize settings.json resolutions.hdr into the internal
+        """Normalize settings.jsonc resolutions.hdr into the internal
         [bool, ...] whitelist consumed by _finalize_modes.
 
         Accepts the named form {"sdr": bool, "imx585_clear_hdr": bool} (both
         default true) or the legacy [false, true] list form for old Pi
-        settings.json files.
+        settings.jsonc files.
         """
         if isinstance(hdr_cfg, dict):
             return [
@@ -368,7 +368,7 @@ class SensorDetect:
         self,
         sensors: Dict[str, List[Dict]],
     ) -> Dict[str, Dict[int, Dict]]:
-        """Add custom modes, apply the settings.json filters, order and index."""
+        """Add custom modes, apply the settings.jsonc filters, order and index."""
         # ── add any user-defined custom modes ──────────────────────
         for cam, extras in self.custom_modes.items():
             sensors.setdefault(cam, [])
@@ -395,7 +395,7 @@ class SensorDetect:
             for m in modes:
                 if self.bit_depths and m["bit_depth"] not in self.bit_depths:
                     continue
-                # settings.json → resolutions.hdr: {sdr, imx585_clear_hdr}
+                # settings.jsonc → resolutions.hdr: {sdr, imx585_clear_hdr}
                 # whitelist of the ClearHDR flag, normalized by _hdr_whitelist.
                 if self.hdr_modes and bool(m.get("hdr")) not in self.hdr_modes:
                     continue

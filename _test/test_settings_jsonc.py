@@ -129,7 +129,7 @@ class StripJsoncEndToEndTests(unittest.TestCase):
 class LoadSettingsJsoncTests(unittest.TestCase):
     def _load(self, text: str) -> dict:
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "settings.json"
+            path = Path(tmp) / "settings.jsonc"
             path.write_text(text, encoding="utf-8")
             return load_settings(path)
 
@@ -149,7 +149,7 @@ class LoadSettingsJsoncTests(unittest.TestCase):
     def test_unterminated_block_comment_raises_settings_load_error(self):
         text = '{\n  "a": 1,\n  /* never closed\n  "b": 2\n}'
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "settings.json"
+            path = Path(tmp) / "settings.jsonc"
             path.write_text(text, encoding="utf-8")
             with self.assertRaises(SettingsLoadError) as ctx:
                 load_settings(path)
@@ -159,16 +159,17 @@ class LoadSettingsJsoncTests(unittest.TestCase):
     def test_a_genuine_syntax_error_past_a_comment_still_reports_correctly(self):
         text = '{\n  // fine\n  "a": 1 "b": 2\n}'
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "settings.json"
+            path = Path(tmp) / "settings.jsonc"
             path.write_text(text, encoding="utf-8")
             with self.assertRaises(SettingsLoadError) as ctx:
                 load_settings(path)
         self.assertEqual(ctx.exception.line, 3)
 
-    def test_real_shipped_settings_json_still_loads(self):
-        # Regression guard: today's settings.json has no comments at all,
-        # so strip_jsonc must be a no-op on it end to end.
-        settings = load_settings(ROOT / "settings.json")
+    def test_real_shipped_settings_jsonc_still_loads(self):
+        # Regression guard: the shipped settings.jsonc now has real // and
+        # /* */ comments in it -- this exercises strip_jsonc end to end
+        # against the actual file, not just synthetic fixtures above.
+        settings = load_settings(ROOT / "settings.jsonc")
         self.assertIn("camera", settings)
         self.assertIn("system", settings)
 

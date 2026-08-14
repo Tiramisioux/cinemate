@@ -48,15 +48,15 @@ HARD CONSTRAINTS
   every open SSE connection holds a thread. Cap SSE; UDP broadcast is the scalable path.
 - Defaults must be safe on a stock unit. The hotspot password ships as 11111111, so
   allow_destructive defaults to false and blocks reboot/shutdown/erase/format.
-- A missing system.web_api block in settings.json must behave as the documented defaults.
-  Users must not have to edit settings.json to get a working API.
+- A missing system.web_api block in settings.jsonc must behave as the documented defaults.
+  Users must not have to edit settings.jsonc to get a working API.
 - Plain text is the default response format. A microcontroller must never need a JSON
   parser for the common path.
 
 DELIVERY
 - Default handoff is: commit on feature/web-api, push with explicit HTTPS
   (git -C <repo> push -u https://github.com/Tiramisioux/cinemate.git feature/web-api),
-  then give me the exact Pi commands to run myself — including the src/settings.json
+  then give me the exact Pi commands to run myself — including the src/settings.jsonc
   stash/pop around the branch switch.
 - Do not drive the Pi yourself unless I ask for an agent-driven run. Phase 0 verification
   is the exception: for that, read-only inspection over SSH is fine and expected.

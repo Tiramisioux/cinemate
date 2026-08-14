@@ -396,7 +396,7 @@ for dir in /usr/local/share/libcamera/ipa/rpi/pisp; do
 done
 ```
 
-Every mode a sensor supports is listed in `resources/sensors.json`, so all of them stay available to the system. Cinemate's stock `settings.json` then exposes only the practical ones in the UI — for the IMX283 that is the ≥25 fps 2.7K and 4K crops (`k_steps: [3, 4]`). Add `5.5` to also show the IMX283 5K modes, or set `k_steps` to your sensor's sizes (for example `[1.5, 2, 4]` for IMX477). To check or edit the list, type `editsettings` in the Pi terminal, or edit `/home/pi/cinemate/settings.json` directly:
+Every mode a sensor supports is listed in `resources/sensors.json`, so all of them stay available to the system. Cinemate's stock `settings.jsonc` then exposes only the practical ones in the UI — for the IMX283 that is the ≥25 fps 2.7K and 4K crops (`k_steps: [3, 4]`). Add `5.5` to also show the IMX283 5K modes, or set `k_steps` to your sensor's sizes (for example `[1.5, 2, 4]` for IMX477). To check or edit the list, type `editsettings` in the Pi terminal, or edit `/home/pi/cinemate/settings.jsonc` directly:
 
 ```json
 "resolutions": {
@@ -406,7 +406,7 @@ Every mode a sensor supports is listed in `resources/sensors.json`, so all of th
 }
 ```
 
-Restart Cinemate after changing `settings.json`.
+Restart Cinemate after changing `settings.jsonc`.
 
 #### IR filter switch script
 
@@ -476,7 +476,7 @@ video=HDMI-A-2:1920x1080M@60D
     `cmdline.txt` must stay on a single line. Do not add line breaks.
 
 !!! note ""
-    This boot-time `video=` setting pins the framebuffer mode. Cinemate still reads the preferred HDMI canvas and runtime HDMI port from `settings.json`.
+    This boot-time `video=` setting pins the framebuffer mode. Cinemate still reads the preferred HDMI canvas and runtime HDMI port from `settings.jsonc`.
 
 ### Enable console auto-login
 
@@ -729,7 +729,7 @@ alias cinemate-env='source /home/pi/.cinemate-env/bin/activate'
 alias cinemate='/home/pi/run_cinemate.sh'
 alias editboot='sudo nano /boot/firmware/config.txt'
 alias editcmdline='sudo nano /boot/firmware/cmdline.txt'
-alias editsettings='sudo nano /home/pi/cinemate/settings.json'
+alias editsettings='sudo nano /home/pi/cinemate/settings.jsonc'
 ```
 
 Exit with Ctrl+x. System will ask you to save the file. Press "y" and then enter.
@@ -740,7 +740,7 @@ Reload .bashrc
 source ~/.bashrc
 ```
 
-#### Match `settings.json` to the HDMI output you want to use
+#### Match `settings.jsonc` to the HDMI output you want to use
 
 Open the settings file:
 
@@ -751,14 +751,16 @@ editsettings
 Make sure the HDMI sections are present and match your install:
 
 ```json
-"output": {
-  "cam0": { "hdmi_port": 0 },
-  "cam1": { "hdmi_port": 1 }
+"camera": {
+  "cam0": { "output": { "hdmi_port": 0 } },
+  "cam1": { "output": { "hdmi_port": 1 } }
 },
 
-"hdmi_display": {
-  "width": 1920,
-  "height": 1080
+"display": {
+  "hdmi": {
+    "width": 1920,
+    "height": 1080
+  }
 }
 ```
 
@@ -849,7 +851,7 @@ Mounts and unmounts removable drives such as SSDs, NVMe enclosures and the CFE H
 
 #### wifi-hotspot
 
-Keeps a simple Wi‑Fi hotspot running via NetworkManager so you can reach the web UI while in the field. The SSID and password come from the `system.wifi_hotspot` section of `settings.json`.
+Keeps a simple Wi‑Fi hotspot running via NetworkManager so you can reach the web UI while in the field. The SSID and password come from the `system.wifi_hotspot` section of `settings.jsonc`.
 
 #### redis-log-maintenance
 
@@ -908,7 +910,7 @@ You will see something like
 ? (10.42.0.1) at e4:5f:1:a9:72:a7 on en0 ifscope [ethernet]
 ```
 
-During development/building your rig you might prefer the Pi to use your normal Wi‑Fi instead of its own hotspot so you remain online while tinkering. Disable the hotspot by setting `system.wifi_hotspot.enabled` to `false` in `settings.json` _and_ by stopping the service with: 
+During development/building your rig you might prefer the Pi to use your normal Wi‑Fi instead of its own hotspot so you remain online while tinkering. Disable the hotspot by setting `system.wifi_hotspot.enabled` to `false` in `settings.jsonc` _and_ by stopping the service with: 
 
 ```
 sudo systemctl stop wifi-hotspot
@@ -932,7 +934,7 @@ password: 1
 
 ## Running cinemate manually
 
-Running Cinemate manually is recommended while you are trying out the system, testing GPIO buttons, checking rotary encoder actions, changing `settings.json`, or doing maintenance and development. When Cinemate is started from a terminal, that terminal also becomes the Cinemate CLI. You can type commands such as `get`, `rec`, `stop`, `set iso 800`, `set resolution`, or `restart camera`. See [Cinemate terminal commands](cli-commands.md) for the full command list.
+Running Cinemate manually is recommended while you are trying out the system, testing GPIO buttons, checking rotary encoder actions, changing `settings.jsonc`, or doing maintenance and development. When Cinemate is started from a terminal, that terminal also becomes the Cinemate CLI. You can type commands such as `get`, `rec`, `stop`, `set iso 800`, `set resolution`, or `restart camera`. See [Cinemate terminal commands](cli-commands.md) for the full command list.
 
 If `cinemate-autostart.service` is already running, stop it before launching Cinemate manually:
 

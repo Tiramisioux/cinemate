@@ -12,7 +12,7 @@ Cinemate has been tested with RODE VideoMic NTG 24 bit microphone and simple 16 
 
 Timecode is readable by DaVinci Resolve, which treats the `.dng` sequence and `.wav` as one clip.
 
-## `settings.json` audio section
+## `settings.jsonc` audio section
 
 ```json
 "audio": {

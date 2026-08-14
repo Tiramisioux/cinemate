@@ -40,7 +40,7 @@ The prebuilt image ships with this mapping:
 | 10 | press: start/stop recording |
 | 13 | single click: change resolution · double click: restart Cinemate · triple click: reboot the Pi · hold: mount/unmount drive |
 
-A minimal button entry in `settings.json` looks like this:
+A minimal button entry in `settings.jsonc` looks like this:
 
 ```json
 "buttons": [
@@ -56,7 +56,7 @@ A minimal button entry in `settings.json` looks like this:
 !!! info ""
     Some push buttons are wired closed = 1 and open = 0. At startup Cinemate detects buttons that read as pressed and reverses them automatically, so both button types work without any configuration.
 
-One button can also act as a modifier for another (hold one, press the other) via the `combined_actions` section — see [settings.json](settings-json.md#combined_actions).
+One button can also act as a modifier for another (hold one, press the other) via the `combined_actions` section — see [settings.jsonc](settings-json.md#combined_actions).
 
 ## Switches
 
@@ -116,22 +116,21 @@ No encoders are enabled in the stock settings file. A typical entry — turning 
 ]
 ```
 
-The `inc_`/`dec_` commands step through the value arrays defined in `settings.json` — see [arrays](settings-json.md#arrays) and [free mode](settings-json.md#free_mode).
+The `inc_`/`dec_` commands step through the value tables defined in `settings.jsonc` — see [parameters](settings-json.md#parameters).
 
 ## Grove Base HAT
 
-The Pi has no analog inputs, so potentiometers need an analog-to-digital converter. Cinemate supports the [Grove Base HAT](https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/), which stacks on the GPIO header and adds analog ports. Plug in Grove rotary angle sensors (or wire any 10 kΩ linear pot to a Grove analog port) and map the channels in `settings.json`:
+The Pi has no analog inputs, so potentiometers need an analog-to-digital converter. Cinemate supports the [Grove Base HAT](https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/), which stacks on the GPIO header and adds analog ports. Plug in Grove rotary angle sensors (or wire any 10 kΩ linear pot to a Grove analog port) and map the channels in `settings.jsonc`:
 
-```json
-"analog_controls": {
-  "iso_pot": 0,
-  "shutter_a_pot": 2,
-  "fps_pot": 4,
-  "wb_pot": "None"
-}
+```jsonc
+"pots": [
+  { "channel": 0, "setting": "iso" },
+  { "channel": 2, "setting": "shutter_a" },
+  { "channel": 4, "setting": "fps" }
+]
 ```
 
-The HAT is detected automatically at startup; if it is not present, the section is simply ignored. Pot positions snap to the step arrays (or to the full range in [free mode](settings-json.md#free_mode)), and readings are smoothed with dead zones so values don't flicker between steps.
+The HAT is detected automatically at startup; if it is not present, the section is simply ignored. Pot positions snap to the parameter's step table (or to the full range if that [parameter](settings-json.md#parameters) has `free` set), and readings are smoothed with dead zones so values don't flicker between steps.
 
 !!! info ""
     Only map channels that actually have a potentiometer connected. Unconnected analog inputs pick up noise and can trigger false readings.
@@ -163,14 +162,14 @@ No configuration is needed. Cinemate detects the hat automatically at startup an
 
 Cinemate can also drive hardware in the other direction:
 
-- **Rec light (tally LED)** – pins listed in `gpio_output.rec_out_pin` (GPIO 21 in the stock file) go high while recording. Wire an LED with a series resistor (roughly 220–330 Ω) between the pin and GND.
-- **Rec sync tone** – `gpio_output.rec_tone_pin` (GPIO 18 in the stock file) outputs a 1 kHz tone while recording, useful for feeding a sync signal to an external recorder.
-- **I²C OLED display** – a small SSD1306-style status screen showing values you choose (ISO, timecode, write speed, disk space…). Enable it in the `i2c_oled` section.
+- **Rec light (tally LED)** – pins listed in `outputs.rec_out_pin` (GPIO 21 in the stock file) go high while recording. Wire an LED with a series resistor (roughly 220–330 Ω) between the pin and GND.
+- **Rec sync tone** – `outputs.rec_tone.pin` (GPIO 18 in the stock file) outputs a 1 kHz tone while recording, useful for feeding a sync signal to an external recorder.
+- **I²C OLED display** – a small SSD1306-style status screen showing values you choose (ISO, timecode, write speed, disk space…). Enable it in the `outputs.oled` section.
 
-All three are configured in `settings.json` — see [gpio_output](settings-json.md#gpio_output) and [i2c_oled](settings-json.md#i2c_oled).
+All three are configured in `settings.jsonc` — see [outputs](settings-json.md#outputs).
 
 ## Going further
 
-- [settings.json reference](settings-json.md) – every option for the sections shown above.
+- [settings.jsonc reference](settings-json.md) – every option for the sections shown above.
 - [Controller methods](controller-methods.md) – all commands you can bind to buttons, switches and dials.
 - [Cinemate terminal commands](cli-commands.md) – try a command in the CLI first, then map it to hardware.

@@ -10,7 +10,7 @@ For a step-by-step guide to building a physical controller, see [Building contro
 
 | | |
 |---|---|
-| Hotspot SSID / password | `CinePi` / `11111111` (set in [`settings.json`](settings-json.md) under `system.wifi_hotspot`) |
+| Hotspot SSID / password | `CinePi` / `11111111` (set in [`settings.jsonc`](settings-json.md) under `system.wifi_hotspot`) |
 | Camera address on the hotspot | `10.42.0.1` (NetworkManager shared-mode default — not yet confirmed against a running hotspot; see `dev-notes/web-api/IMPLEMENTATION-PLAN.md` section 10) |
 | API port | `5000` |
 | Status broadcast port | `8888/udp` |
@@ -67,7 +67,7 @@ Add `?json=1` to get `{"ok":true,"cmd":"set iso 800","message":""}` instead.
 
 !!! warning "200 means dispatched, not applied"
 
-    `set resolution`, `set log` and `set hdr profile` restart the camera. The response
+    `set resolution` and `set log` restart the camera. The response
     returns before the restart finishes. Confirm the new state by reading it back with
     `/api/v1/get/<key>` or by watching the status broadcast.
 
@@ -129,7 +129,7 @@ The camera broadcasts a single plain-text line to port `8888` on the hotspot sub
 rec=1 iso=800 fps=24.0 shutter=180.0 tc=01:02:03:04 space=412 drops=0 mounted=1
 ```
 
-One packet, under 500 bytes, no parser, no connection to maintain, and it scales to as many devices as you like. Configure which keys are included in [`settings.json`](settings-json.md).
+One packet, under 500 bytes, no parser, no connection to maintain, and it scales to as many devices as you like. Configure which keys are included in [`settings.jsonc`](settings-json.md).
 
 ### Server-sent events
 
@@ -147,7 +147,7 @@ GET /api/v1/events
 
 ## Settings
 
-Add to [`settings.json`](settings-json.md) under `system`. Every field is optional — the defaults below apply when the block is absent.
+Add to [`settings.jsonc`](settings-json.md) under `system`. Every field is optional — the defaults below apply when the block is absent.
 
 ```json
 "system": {
@@ -193,6 +193,6 @@ Add to [`settings.json`](settings-json.md) under `system`. Every field is option
 | Serial | Tx/Rx pins or USB, 9600 baud | Yes |
 | **Web API** | HTTP on port 5000 | **Yes** |
 | Web GUI | Browser on port 5000 | No — its own control events |
-| GPIO / rotary / I²C | [`settings.json`](settings-json.md) mappings | Yes |
+| GPIO / rotary / I²C | [`settings.jsonc`](settings-json.md) mappings | Yes |
 
 All command-based paths go through one dispatcher, so behaviour cannot drift between them.

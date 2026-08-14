@@ -6,6 +6,31 @@
     "system": {
       "type": "object",
       "properties": {
+        "welcome": {
+          "type": "object",
+          "description": "Startup splash. If Plymouth is active during boot, Cinemate waits for it to hand off before showing this so the screen transition stays clean.",
+          "properties": {
+            "show": { "type": "boolean", "default": true },
+            "message": { "type": "string", "default": "THIS IS A COOL MACHINE" },
+            "image": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "default": null,
+              "description": "Path to a bitmap logo, e.g. /home/pi/welcome_image.bmp. Overrides message when set."
+            }
+          }
+        },
+        "wifi_hotspot": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "default": "CinePi" },
+            "password": { "type": "string", "default": "11111111" },
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "true broadcasts this hotspot on boot. false still serves the web UI on wlan0/eth0 if that interface already has an IP when Cinemate starts."
+            }
+          }
+        },
         "web_api": {
           "type": "object",
           "description": "HTTP/UDP control API over the Wi-Fi hotspot (docs/web-api.md). A missing or partial block behaves as the defaults shown here.",
@@ -36,72 +61,102 @@
             }
           },
           "additionalProperties": true
+        },
+        "storage": {
+          "type": "object",
+          "properties": {
+            "auto_preroll": {
+              "type": "boolean",
+              "default": true,
+              "description": "Warm media automatically before the first take. See docs/storage-preroll.md."
+            },
+            "recognized_ssds": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "additionalProperties": true
         }
       },
       "additionalProperties": true
     },
-    "i2c_oled": {
+    "camera": {
       "type": "object",
       "properties": {
-        "enabled": {
-          "type": "boolean",
-          "default": true
+        "raw_buffer_count": { "type": "integer", "default": 0 },
+        "record_policy": {
+          "type": "string",
+          "enum": ["follow_preview", "always_both"],
+          "default": "follow_preview",
+          "description": "Dual-sensor record policy. follow_preview: recording follows the HDMI preview -- a full-screen or pip-main sensor records alone, side-by-side records both. always_both: force both sensors every take regardless of preview. A camera token on `rec` (rec cam0/cam1/both) overrides either policy for one take. No effect with a single sensor."
         },
-        "width": {
-          "type": "integer",
-          "default": 128
-        },
-        "height": {
-          "type": "integer",
-          "default": 64
-        },
-        "font_size": {
-          "type": "integer",
-          "default": 10
-        },
-        "values": {
-          "type": "array",
-          "items": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "iso",
-                  "shutter_a",
-                  "fps",
-                  "wb_user",
-                  "is_recording",
-                  "resolution",
-                  "cpu_load",
-                  "cpu_temp",
-                  "memory_usage",
-                  "space_left"
-                ]
-              },
-              {
-                "type": "string"
-              }
-            ]
-          }
+        "cam0": { "$ref": "#/definitions/cam_config" },
+        "cam1": { "$ref": "#/definitions/cam_config" },
+        "sensors": {
+          "type": "object",
+          "properties": {
+            "database_file": { "type": "string", "default": "resources/sensors.json" }
+          },
+          "additionalProperties": true
         }
+      },
+      "additionalProperties": true
+    },
+    "capture": {
+      "type": "object",
+      "description": "Recording-wide behavior: frame-rate conform target, flicker-free input, sync tolerances, and the resolution/bit-depth/HDR filters offered by `set_resolution`.",
+      "properties": {
+        "conform_frame_rate": { "type": "number", "default": 24 },
+        "light_hz": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "Mains frequencies to derive flicker-free shutter angles from."
+        },
+        "sync_tolerances": {
+          "type": "object",
+          "properties": {
+            "live_sync_warning_frames": { "type": "number", "minimum": 0, "default": 5 },
+            "live_sync_startup_guard_frames": { "type": "number", "minimum": 0, "default": 10 },
+            "final_sync_analysis_frames": { "type": "number", "minimum": 0, "default": 1 },
+            "tc_drop_jitter_frames": { "type": "number", "minimum": 0, "default": 1 }
+          },
+          "additionalProperties": true
+        },
+        "resolutions": {
+          "type": "object",
+          "properties": {
+            "k_steps": { "type": "array", "items": { "type": "number" } },
+            "bit_depths": { "type": "array", "items": { "type": "integer" } },
+            "hdr": {
+              "type": "object",
+              "description": "ClearHDR (imx585) whitelist plus startup values for the live knobs. sdr/imx585_clear_hdr both true exposes the plain and the HDR modes; set imx585_clear_hdr false to hide the HDR modes. threshold_low/high (0-4095), blend (0-8), gain_adder (0-5) seed the ClearHDR knobs when a ClearHDR mode is selected -- adjust live afterwards with `set hdr threshold low/high`, `set hdr blend`, `set hdr gain adder`, or a pot/quad-rotary channel.",
+              "properties": {
+                "sdr": { "type": "boolean", "default": true },
+                "imx585_clear_hdr": { "type": "boolean", "default": true },
+                "threshold_low": { "type": "integer", "minimum": 0, "maximum": 4095, "default": 0 },
+                "threshold_high": { "type": "integer", "minimum": 0, "maximum": 4095, "default": 0 },
+                "blend": { "type": "integer", "minimum": 0, "maximum": 8, "default": 0 },
+                "gain_adder": { "type": "integer", "minimum": 0, "maximum": 5, "default": 1 }
+              }
+            },
+            "custom_modes": { "type": "object" }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "parameters": {
+      "type": "object",
+      "description": "One block per cycle-able camera parameter. steps is the selectable table; free steps continuously instead. See module/parameters.py:REGISTRY for the canonical name list (iso, shutter_a, fps, wb, ...).",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "steps": { "type": "array" },
+          "free": { "type": "boolean", "default": false }
+        },
+        "additionalProperties": true
       }
-    },
-    "welcome_message": {
-      "type": "string",
-      "default": "THIS IS A COOL MACHINE"
-    },
-    "show_welcome_message": {
-      "type": "boolean",
-      "default": true
-    },
-    "welcome_image": {
-      "anyOf": [{"type": "string"}, {"type": "null"}],
-      "default": null
-    },
-    "lock_dual_recording": {
-      "type": "boolean",
-      "default": false,
-      "description": "Dual-sensor rigs: true forces both sensors to record every take regardless of the HDMI preview (rec cam0/cam1 still overrides for one take); false makes recording follow the preview's main sensor, with side-by-side 'both' always recording both."
     },
     "audio": {
       "type": "object",
@@ -125,51 +180,141 @@
       },
       "additionalProperties": true
     },
-    "settings": {
+    "display": {
       "type": "object",
+      "description": "Everything the operator sees: HDMI canvas, GUI overlays, preview zoom/source/pip/anamorphic, and the optional I2C OLED.",
       "properties": {
-        "auto_storage_preroll": {
-          "type": "boolean",
-          "default": true
+        "hdmi": {
+          "type": "object",
+          "properties": {
+            "width": { "type": "integer", "default": 1920 },
+            "height": { "type": "integer", "default": 1080 },
+            "mirror_to_both_ports": {
+              "type": "boolean",
+              "default": false,
+              "description": "Single-sensor only: mirror the one sensor's preview (with GUI) onto both HDMI connectors. The dual-sensor compositor already owns both-feed layouts, so this has no effect with two sensors attached."
+            }
+          },
+          "additionalProperties": true
         },
-        "light_hz": {
+        "overlays": {
+          "type": "object",
+          "properties": {
+            "buffer_vu_meter": { "type": "boolean", "default": true },
+            "vu_meter_hatch_lines": { "type": "boolean", "default": true }
+          },
+          "additionalProperties": true
+        },
+        "preview": {
+          "type": "object",
+          "properties": {
+            "default_zoom": { "type": "number", "default": 1.0 },
+            "zoom_steps": { "type": "array", "items": { "type": "number" } },
+            "default_hdmi_source": {
+              "type": "string",
+              "enum": ["both", "cam0", "cam1", "pip_cam0", "pip_cam1"],
+              "default": "both",
+              "description": "Dual-sensor HDMI preview source at startup. Switch live with `set preview`. No effect with a single sensor."
+            },
+            "pip": {
+              "type": "object",
+              "properties": {
+                "scale": { "type": "number", "default": 0.28 },
+                "corner": {
+                  "type": "string",
+                  "enum": ["lower_right", "lower_left", "upper_right", "upper_left"],
+                  "default": "lower_right"
+                },
+                "margin": { "type": "number", "default": 0.03 }
+              },
+              "additionalProperties": true
+            },
+            "anamorphic": {
+              "type": "object",
+              "properties": {
+                "default_factor": { "type": "number", "default": 1.0 },
+                "steps": { "type": "array", "items": { "type": "number" } }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "controls": {
+      "type": "object",
+      "description": "Every physical input, channel-first: buttons, switches, rotary encoders, analog pots, and the quad rotary controller.",
+      "properties": {
+        "buttons": { "type": "array" },
+        "two_way_switches": { "type": "array" },
+        "three_way_switches": { "type": "array" },
+        "rotary_encoders": { "type": "array" },
+        "combined_actions": { "type": "array" },
+        "pots": {
           "type": "array",
+          "description": "Grove Base HAT analog pots.",
           "items": {
-            "type": "number"
+            "type": "object",
+            "properties": {
+              "channel": {},
+              "setting": { "type": "string" }
+            }
           }
         },
-        "conform_frame_rate": {
-          "type": "number",
-          "default": 24
-        },
-        "live_sync_warning_tolerance_frames": {
-          "type": "number",
-          "minimum": 0,
-          "default": 2
-        },
-        "final_sync_analysis_tolerance_frames": {
-          "type": "number",
-          "minimum": 0,
-          "default": 1
+        "quad_rotary_controller": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "encoders": { "type": "object" }
+          },
+          "additionalProperties": true
         }
       },
       "additionalProperties": true
     },
-    "sensors": {
+    "outputs": {
       "type": "object",
+      "description": "Everything Cinemate drives: the REC tally/relay pin(s) and the REC sync tone.",
       "properties": {
-        "database_file": {
-          "type": "string",
-          "default": "resources/sensors.json"
+        "pwm_pin": { "type": "integer", "default": 19 },
+        "rec_out_pin": { "type": "array", "items": { "type": "integer" } },
+        "rec_tone": {
+          "type": "object",
+          "properties": {
+            "pin": { "type": "array", "items": { "type": "integer" } },
+            "frequency_hz": { "type": "integer", "default": 1000 },
+            "duty_cycle": { "type": "integer", "default": 50 },
+            "relay_drop_frames": { "type": "boolean", "default": false }
+          },
+          "additionalProperties": true
+        },
+        "oled": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "width": { "type": "integer", "default": 128 },
+            "height": { "type": "integer", "default": 64 },
+            "font_size": { "type": "integer", "default": 20 },
+            "values": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "iso", "shutter_a", "fps", "wb_user", "is_recording",
+                      "resolution", "cpu_load", "cpu_temp", "memory_usage", "space_left"
+                    ]
+                  },
+                  { "type": "string" }
+                ]
+              }
+            }
+          },
+          "additionalProperties": true
         }
-      },
-      "additionalProperties": true
-    },
-    "camera": {
-      "type": "object",
-      "properties": {
-        "cam0": { "$ref": "#/definitions/cam_config" },
-        "cam1": { "$ref": "#/definitions/cam_config" }
       },
       "additionalProperties": true
     }

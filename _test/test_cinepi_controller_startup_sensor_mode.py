@@ -36,7 +36,7 @@ class FakeSensorDetect:
 
 
 class StartupSensorModeTests(unittest.TestCase):
-    """Covers the crash from settings.json narrowing `resolutions.k_steps`
+    """Covers the crash from settings.jsonc narrowing `resolutions.k_steps`
     (e.g. to 4K only): SensorDetect re-indexes res_modes from 0, so a
     sensor_mode saved in redis from a wider mode table (e.g. 3) is no
     longer a valid key. _get_startup_sensor_mode() must not hand that

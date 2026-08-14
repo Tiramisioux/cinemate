@@ -45,11 +45,13 @@ HDR modes are labelled so they read distinctly from the plain modes:
 - **Web GUI** — `:HDR` appended in the resolution dropdown, e.g. `1928 : 1090 : 12b :HDR`.
 
 To hide the ClearHDR modes entirely, set the `hdr` whitelist in
-`settings.json` → `resolutions`:
+`settings.jsonc` → `capture.resolutions`:
 
-```json
-"resolutions": {
-  "hdr": {"sdr": true, "imx585_clear_hdr": false}
+```jsonc
+"capture": {
+  "resolutions": {
+    "hdr": {"sdr": true, "imx585_clear_hdr": false}
+  }
 }
 ```
 
@@ -59,28 +61,27 @@ neighbouring `bit_depths` and `k_steps` whitelists (the legacy
 `[false, true]` list form still works too). Frame rates depend on the RP1
 clock — see [Overclocking the Pi](overclocking.md).
 
-## HDR profiles
+## Default knob values
 
-Presets live in `resources/HDR_profiles.json`. Each profile sets ClearHDR on or off plus optional knob values, and applying one restarts the camera (the `wide_dynamic_range` control changes the sensor's mode list, so a restart is required).
+`capture.resolutions.hdr` also carries the startup values for the four live
+knobs below — Cinemate seeds them into Redis at launch, and cinepi-raw
+applies them whenever a ClearHDR mode is selected:
 
-CLI:
-
-```text
-set hdr profile        # cycle to the next profile
-set hdr profile 0      # apply profile 0 (sdr)
-set hdr profile 1      # apply profile 1 (hdr-default)
-set hdr profile 2      # apply profile 2 (hdr-highlight)
+```jsonc
+"hdr": {
+  "sdr": true,
+  "imx585_clear_hdr": true,
+  "threshold_low": 0,
+  "threshold_high": 0,
+  "blend": 0,
+  "gain_adder": 1
+}
 ```
 
-Shipped profiles:
-
-| # | Name | ClearHDR | Knobs |
-|---|------|----------|-------|
-| 0 | `sdr` | off | — |
-| 1 | `hdr-default` | on | threshold 0,0 · blend 0 · gain adder +6 dB (menu 1 — lower noise than the driver's +12 dB) |
-| 2 | `hdr-highlight` | on | threshold 500,3000 · blend 2 · gain adder +12 dB |
-
-Profile fields: `hdr` (bool), `threshold` (`[low, high]`, 0–4095 each), `blend_mode` (0–8), `gain_adder` (0–5). Knob fields are optional, but explicit values keep profiles deterministic — sensor controls persist until reboot. The active profile index is stored in the Redis key `hdr_profile`, and the stored knob keys are re-applied by cinepi-raw at every start.
+The shipped default (threshold 0,0 · blend 0 · gain adder +6 dB, menu 1) is
+a lower noise floor than the driver's own +12 dB default. Edit these four
+values directly in `settings.jsonc` to change what a fresh boot starts
+with; use the live knobs below to change them without a restart.
 
 ## Live knobs
 
@@ -114,7 +115,7 @@ Both values are raw 12-bit levels compared against the HG signal (the vendor man
 - **First value** — below it, pure HG. Raising it keeps more of the range on the clean high-gain data.
 - **Second value** — above it, pure LG. Lowering it protects highlights earlier.
 - **The gap** — the blend zone. Wide (`500,3000`) = gradual hand-off. Narrow = abrupt seam that can show as a band or colour step in smooth gradients.
-- `0,0` — no explicit bracket (vendor default, used by the `hdr-default` profile); the sensor applies its internal hand-off.
+- `0,0` — no explicit bracket (the vendor default, and Cinemate's shipped default); the sensor applies its internal hand-off.
 
 ### Blend — the mix inside the zone
 
@@ -135,7 +136,7 @@ The datasheet lists three 50/50 entries — 0, 2 and 5 behave the same.
 
 ### Gain adder — where the knee lands
 
-Menu 0–5 = **+0, +6, +12, +18, +24, +29.1 dB** of digital gain on the low-gain path. 2 (+12 dB) is the driver default; the `hdr-default` profile uses 1 (+6 dB) for a lower noise floor.
+Menu 0–5 = **+0, +6, +12, +18, +24, +29.1 dB** of digital gain on the low-gain path. 2 (+12 dB) is the driver default; Cinemate ships 1 (+6 dB) for a lower noise floor.
 
 - Lower values place highlights lower in the output range: darker and flatter out of camera, but cleanest — bring them up in the grade.
 - Higher values render highlights brighter and push the blend knee up the range, amplifying low-gain read noise in exactly the tones ClearHDR is protecting.
@@ -144,7 +145,7 @@ Menu 0–5 = **+0, +6, +12, +18, +24, +29.1 dB** of digital gain on the low-gain
 
 | You see | Try |
 |---------|-----|
-| Magenta in bright flat areas | start from the `hdr-highlight` profile — see [Magenta highlights](#magenta-highlights) |
+| Magenta in bright flat areas | try `set hdr threshold low 500`, `set hdr threshold high 3000`, `set hdr blend 2`, `set hdr gain adder 2` — see [Magenta highlights](#magenta-highlights) |
 | Grainy mids or faces | higher thresholds, HG-heavier blend (3, 4), or a lower gain adder |
 | A band or step where tones change character | widen the gap between the two threshold values |
 | Highlights too dark and flat out of camera | higher gain adder — costs highlight grain |
@@ -164,7 +165,7 @@ Handling it:
 | Approach | How |
 |----------|-----|
 | Exposure | keep important neutrals out of the hand-off band; in HDR modes err darker rather than brighter |
-| Knobs | start from the `hdr-highlight` profile (threshold 500,3000 · blend 2 · +12 dB) and move the hand-off away from the affected tones |
+| Knobs | try threshold 500,3000 · blend 2 · gain adder +12 dB (menu 2) as a starting point, and move the hand-off away from the affected tones |
 | Grade | treat the plateau as the clip point: highlight reconstruction/desaturation, or pull the shot's effective white level down to the plateau |
 
 The plateau level depends on gain and knob settings, so handle it per shot in the grade — the DNG WhiteLevel tag stays 65535.

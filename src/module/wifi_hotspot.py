@@ -34,7 +34,7 @@ __all__ = ["WiFiHotspotManager"]
 # ---------------------------------------------------------------------------
 DEFAULT_SSID:  Final[str] = "CinePi"
 DEFAULT_PASS:  Final[str] = "11111111"  # 8 chars → nmcli minimum
-SETTINGS_PATH: Final[Path] = Path("/home/pi/cinemate/settings.json")
+SETTINGS_PATH: Final[Path] = Path("/home/pi/cinemate/settings.jsonc")
 READY_STATES: Final[set[str]] = {"connected", "connected (externally)", "disconnected"}
 
 # ---------------------------------------------------------------------------
@@ -48,7 +48,7 @@ def _load_settings(path: Path = SETTINGS_PATH) -> dict:
     config_loader.strip_jsonc(), matching how main.py's load_settings()
     parses the same file -- this manager runs as its own entry point and
     must not silently fall back to CinePi/11111111 just because the user
-    annotated settings.json.
+    annotated settings.jsonc.
     """
     try:
         with path.open("r", encoding="utf-8") as fh:
@@ -91,9 +91,9 @@ class WiFiHotspotManager:
 
         Args:
             iface:       Network interface (usually *wlan0*).
-            settings:    An already‑loaded *settings.json* dict. When *None*,
+            settings:    An already‑loaded *settings.jsonc* dict. When *None*,
                          the file at *settings_path* is parsed internally.
-            settings_path: Where to look for *settings.json* when *settings*
+            settings_path: Where to look for *settings.jsonc* when *settings*
                          is *None*.
         """
         self.iface = iface
@@ -263,5 +263,5 @@ class WiFiHotspotManager:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-    mgr = WiFiHotspotManager()  # self‑contained – reads settings.json
+    mgr = WiFiHotspotManager()  # self‑contained – reads settings.jsonc
     mgr.create_hotspot()        # honours settings or falls back

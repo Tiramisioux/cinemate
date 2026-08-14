@@ -34,7 +34,6 @@ class ParameterKey(Enum):
     FRAMECOUNT        = "framecount"
     GUI_LAYOUT        = "gui_layout"
     HDR               = "hdr"             # 1 = ClearHDR active (imx585): cinepi-raw launches with --hdr sensor
-    HDR_PROFILE       = "hdr_profile"     # index of the active HDR_profiles.json entry
     HDR_THRESHOLD_LOW  = "hdr_threshold_low"   # 0..4095 — ClearHDR data-selection threshold, low
     HDR_THRESHOLD_HIGH = "hdr_threshold_high"  # 0..4095 — ClearHDR data-selection threshold, high
     HDR_BLEND         = "hdr_blend"       # 0..8 — ClearHDR blending mode (driver menu index)
@@ -118,7 +117,7 @@ class ParameterKey(Enum):
 def encode_log_encode_request(value) -> int:
     """False|True|10|12 -> 0|1|10|12 -- the redis-safe int encoding for
     ParameterKey.LOG_ENCODE_REQUEST (mirrors camera.camN.log_encode in
-    settings.json). Unparsable input encodes as 0 (off)."""
+    settings.jsonc). Unparsable input encodes as 0 (off)."""
     if value is False:
         return 0
     if value is True:

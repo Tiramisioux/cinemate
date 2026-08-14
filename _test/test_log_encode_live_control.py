@@ -77,7 +77,7 @@ class SetLogEncodeTests(unittest.TestCase):
 
     def test_bare_toggle_uses_settings_seed_when_redis_unset(self):
         """No `set log` has run yet this session (redis key absent) -- the
-        bare toggle's "current" state must fall back to the settings.json
+        bare toggle's "current" state must fall back to the settings.jsonc
         seed (cam0.log_encode), matching what _build_args() itself falls
         back to, or the first toggle would guess the wrong direction."""
         controller = self.controller(settings_log_encode=False)

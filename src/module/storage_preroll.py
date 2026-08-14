@@ -58,7 +58,7 @@ class StoragePreroll:
         if self.auto_enabled:
             self.ssd_monitor.mount_event.subscribe(self._handle_mount_event)
         else:
-            logging.info("Automatic storage pre-roll disabled by settings.json")
+            logging.info("Automatic storage pre-roll disabled by settings.jsonc")
 
     # ------------------------------------------------------------------
     # public API

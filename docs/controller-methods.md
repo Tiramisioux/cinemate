@@ -10,7 +10,7 @@ CineMate exposes most of its runtime features through the `CinePiController` cla
 
 ## Exposure settings
 
-These methods adjust ISO, shutter angle and frame rate. Increment/decrement helpers step through the arrays defined in `settings.json` unless free mode is active.
+These methods adjust ISO, shutter angle and frame rate. Increment/decrement helpers step through the arrays defined in `settings.jsonc` unless free mode is active.
 
 - `set_iso(value)` – Set ISO to a specific value.
 - `inc_iso()` / `dec_iso()` – Step ISO up or down.
@@ -61,7 +61,7 @@ These helpers prevent accidental changes or keep shutter speed in sync with FPS:
 
 ## Free‑mode toggles
 
-When free mode is enabled, the preset arrays from `settings.json` are ignored and you can dial any value supported by the sensor.
+When free mode is enabled, the preset arrays from `settings.jsonc` are ignored and you can dial any value supported by the sensor.
 
 - `set_iso_free(value=None)`
 - `set_shutter_a_free(value=None)`

@@ -30,7 +30,7 @@ def web_api_settings(settings):
     """Merge settings["system"]["web_api"] over the documented defaults.
 
     A missing or partial block behaves exactly like the full defaults —
-    users must not have to edit settings.json to get a working API.
+    users must not have to edit settings.jsonc to get a working API.
     """
     cfg = ((settings or {}).get("system", {}) or {}).get("web_api", {}) or {}
     merged = dict(DEFAULT_WEB_API_SETTINGS)

@@ -22,10 +22,11 @@ class ComponentInitializer:
         self.initialize_components()
         
     def initialize_components(self):
-        combined_actions = self.settings.get('combined_actions', [])
-        
+        controls_cfg = self.settings.get('controls', {})
+        combined_actions = controls_cfg.get('combined_actions', [])
+
         # Initialize Buttons
-        for button_config in self.settings.get('buttons', []):
+        for button_config in controls_cfg.get('buttons', []):
             pin = int(button_config['pin'])
             if pin in self.reserved_output_pins:
                 self.logger.warning(
@@ -61,7 +62,7 @@ class ComponentInitializer:
             self.smart_buttons_list.append(smart_button)  # Store SmartButton instance
         
         # Initialize Two-Way Switches
-        for switch_config in self.settings.get('two_way_switches', []):
+        for switch_config in controls_cfg.get('two_way_switches', []):
             pin = int(switch_config['pin'])
             if pin in self.reserved_output_pins:
                 self.logger.warning(
@@ -83,7 +84,7 @@ class ComponentInitializer:
             
         # Initialize three-way switches
         self.three_way_switches = []
-        for switch_config in self.settings.get('three_way_switches', []):
+        for switch_config in controls_cfg.get('three_way_switches', []):
             pins = switch_config['pins']
             self.logger.info(f"Three-way switch on pins {pins}:")
             for i in range(3):
@@ -97,7 +98,7 @@ class ComponentInitializer:
             self.three_way_switches.append(three_way_switch)
         
         # Initialize Rotary Encoders with Buttons
-        for encoder_config in self.settings.get('rotary_encoders', []):
+        for encoder_config in controls_cfg.get('rotary_encoders', []):
             if not self._as_bool(encoder_config.get('enabled', True), default=True):
                 self.logger.info("Skipping disabled rotary encoder config: %s", encoder_config)
                 continue

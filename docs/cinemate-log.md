@@ -32,7 +32,7 @@ The flag is per-camera and launch-only; the sensor mode is live. Cinemate re-res
 
 ## Turning it on
 
-### In `settings.json`
+### In `settings.jsonc`
 
 ```json
 "camera": {
@@ -53,7 +53,7 @@ set log 12     # force target 12
 set log off    # force off
 ```
 
-Restarts the camera when idle, exactly like `set hdr profile`. If you run it mid-take, the request is stored and applied on the **next** restart — CineMate never splits a running recording. An explicit target that the live mode doesn't support (e.g. `set log 12` while in a 12-bit mode) is rejected and logged, never silently swapped for a different depth.
+Restarts the camera when idle, exactly like `set resolution`. If you run it mid-take, the request is stored and applied on the **next** restart — CineMate never splits a running recording. An explicit target that the live mode doesn't support (e.g. `set log 12` while in a 12-bit mode) is rejected and logged, never silently swapped for a different depth.
 
 ## The LOG badge
 

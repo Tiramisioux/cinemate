@@ -4,7 +4,7 @@ The built-in hotspot lets you use any device (phone/tablet/computer) for preview
 
 There are two layers involved:
 
-- **At app startup:** when `system.wifi_hotspot.enabled` is `true`, Cinemate can create the hotspot itself with `nmcli device wifi hotspot` using the SSID and password from `settings.json`.
+- **At app startup:** when `system.wifi_hotspot.enabled` is `true`, Cinemate can create the hotspot itself with `nmcli device wifi hotspot` using the SSID and password from `settings.jsonc`.
 - **As a background service:** `wifi-hotspot.service` is a simple watchdog that recreates the hotspot if it is supposed to be on and NetworkManager no longer reports an active hotspot.
 
 This is handy when shooting in the field. Connect your phone or laptop directly to the hotspot and browse to the GUI to control the camera. If the Pi was previously connected to another Wi-Fi network, that Wi-Fi connection is replaced by the hotspot.

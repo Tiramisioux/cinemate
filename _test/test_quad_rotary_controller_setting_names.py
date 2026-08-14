@@ -35,7 +35,7 @@ from module.i2c.quad_rotary_controller import QuadRotaryController
 
 
 def settings_with(encoders):
-    return {"quad_rotary_controller": {"enabled": False, "encoders": encoders}}
+    return {"controls": {"quad_rotary_controller": {"enabled": False, "encoders": encoders}}}
 
 
 class QuadRotarySettingNameValidationTests(unittest.TestCase):
@@ -58,7 +58,7 @@ class QuadRotarySettingNameValidationTests(unittest.TestCase):
         )
 
     def test_encoder_without_a_setting_name_does_not_warn(self):
-        # The wb encoder's button-only config in the stock settings.json has
+        # The wb encoder's button-only config in the stock settings.jsonc has
         # no setting_name at all (its button drives set_resolution etc, not
         # a cycle-able parameter) - that's a valid shape, not a typo.
         settings = settings_with({"0": {"button": {"press_action": {"method": "set_resolution"}}}})

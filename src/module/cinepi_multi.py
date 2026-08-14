@@ -24,7 +24,7 @@ from module.storage_profiles import (
 )
 
 # Path to settings file
-SETTINGS_FILE = "/home/pi/cinemate/settings.json"
+SETTINGS_FILE = "/home/pi/cinemate/settings.jsonc"
 _SETTINGS: dict | None = None
 
 
@@ -69,7 +69,7 @@ def _seed_default_zoom(redis_ctl):
     Write preview.default_zoom to Redis once per boot, but
     only if the key doesn’t exist yet.
     """
-    preview_cfg  = _settings().get("preview", {})
+    preview_cfg  = _settings().get("display", {}).get("preview", {})
     default_zoom = float(preview_cfg.get("default_zoom", 1.0))
 
     if redis_ctl.get_value(ParameterKey.ZOOM.value) is None:
@@ -322,9 +322,10 @@ class CinePiProcess(Thread):
         to shared memory. Returns the file path for ``--post-process-file``.
         """
         role = 'primary' if self.primary else 'secondary'
-        # Picture-in-picture inset geometry comes from settings.json preview.pip
-        # and is baked into the post-process file the primary reads at Configure.
-        pip_cfg = (_settings().get('preview', {}) or {}).get('pip', {}) or {}
+        # Picture-in-picture inset geometry comes from settings.jsonc
+        # display.preview.pip and is baked into the post-process file the
+        # primary reads at Configure.
+        pip_cfg = (_settings().get('display', {}) or {}).get('preview', {}).get('pip', {}) or {}
         cfg = {
             'sharedContext': {},
             'mjpegPreview': {'port': 8000 + int(self.cam.index)},
@@ -374,7 +375,7 @@ class CinePiProcess(Thread):
         
         # Get HDMI resolution from settings, but prefer the active
         # framebuffer mode when HDMI is already attached.
-        hdmi_config = _settings().get("hdmi_display", {})
+        hdmi_config = _settings().get("display", {}).get("hdmi", {})
         fw, fh = hdmi_config.get("width", 1920), hdmi_config.get("height", 1080)
         try:
             fw = int(fw)
@@ -531,7 +532,7 @@ class CinePiProcess(Thread):
         # ── Dual HDMI output: mirror the one sensor's preview (with GUI) on
         # both HDMI connectors via cinepi-raw's --same-hdmi. Single-sensor
         # only — the dual-sensor compositor already owns both-feed layouts.
-        dual_out = (_settings().get('hdmi_display', {}) or {}).get('dual_output', False)
+        dual_out = (_settings().get('display', {}) or {}).get('hdmi', {}).get('mirror_to_both_ports', False)
         if dual_out and not self.multi:
             args += ['--same-hdmi']
 
@@ -597,7 +598,7 @@ class CinePiProcess(Thread):
         # (visible as a one-tick hole in the DNG timecode). The base value is
         # per storage profile — slower/spikier filesystems (exFAT, NTFS) get
         # more headroom than ext4 — and can be overridden globally via
-        # settings.json camera.raw_buffer_count. Each extra buffer is ~25 MB of
+        # settings.jsonc camera.raw_buffer_count. Each extra buffer is ~25 MB of
         # CMA at 4K; too high exhausts CMA and the camera fails to start, so
         # confirm headroom with `grep Cma /proc/meminfo` before raising.
         try:
@@ -637,7 +638,7 @@ class CinePiProcess(Thread):
         # Target only; cinepi-raw resolves the SOURCE from the live mode and
         # refuses (recording linear) if no spec matches. The live `set log`
         # request is shared across every launched camera via redis, like
-        # --hdr sensor; camera.camN.log_encode in settings.json is only the
+        # --hdr sensor; camera.camN.log_encode in settings.jsonc is only the
         # boot-time seed, read until the first `set log` of a session writes
         # the redis key. We resolve here (not in cinepi-raw) so the reason is
         # visible at launch instead of buried in its log, and we publish the

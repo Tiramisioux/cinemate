@@ -28,9 +28,9 @@ the redis_listener post-take correction-suggestion engine, and `docs/fps-correct
 
 These trivial keys were dropped in the *settings-cleanup* commit, not in `2f79397`.
 `set_fps` reads the flag with a `True` default, so correction works without them —
-re-add them only to expose the toggle in `settings.json` again:
+re-add them only to expose the toggle in `settings.jsonc` again:
 
-- `settings.json` and `resources/settings/settings_default.json`, under
+- `settings.jsonc` and `resources/settings/settings_default.json`, under
   `camera.cam0` / `camera.cam1`:
   `"sensor_fps_correction": true,`
 - `src/module/config_loader.py` (per-camera defaults loop):

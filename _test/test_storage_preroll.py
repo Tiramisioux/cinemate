@@ -53,20 +53,13 @@ class StoragePrerollTests(unittest.TestCase):
     def test_settings_default_to_enabled(self):
         settings = _apply_settings_defaults({})
 
-        self.assertTrue(settings["settings"]["auto_storage_preroll"])
+        self.assertTrue(settings["system"]["storage"]["auto_preroll"])
         self.assertTrue(auto_storage_preroll_enabled(settings))
 
     def test_settings_can_disable_auto_preroll(self):
-        settings = _apply_settings_defaults({"settings": {"auto_storage_preroll": False}})
+        settings = _apply_settings_defaults({"system": {"storage": {"auto_preroll": False}}})
 
-        self.assertFalse(settings["settings"]["auto_storage_preroll"])
-        self.assertFalse(auto_storage_preroll_enabled(settings))
-
-    def test_legacy_top_level_setting_still_disables_auto_preroll(self):
-        settings = _apply_settings_defaults({"storage_preroll": False})
-
-        self.assertNotIn("storage_preroll", settings)
-        self.assertFalse(settings["settings"]["auto_storage_preroll"])
+        self.assertFalse(settings["system"]["storage"]["auto_preroll"])
         self.assertFalse(auto_storage_preroll_enabled(settings))
 
     def test_auto_disabled_preroll_does_not_subscribe_or_schedule(self):

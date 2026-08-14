@@ -32,7 +32,7 @@ All facts below were read from `cinemate` `dev` @ `07d3186d`. Do not re-derive t
 | F9 | A change-push event already exists | `RedisController.redis_parameter_changed` (`Event` class) — `src/module/redis_controller.py:146,165,207,294` |
 | F10 | Serial's outbound status is **only** `rec`/`stop` | `_relay_rec_over_serial`, `src/main.py:775-785` |
 | F11 | `handle_received_data` returns `None`; both callers ignore the return | `src/module/cli_commands.py:169-221` |
-| F12 | Hotspot is nmcli shared mode on `wlan0`, SSID/pw from settings | `src/module/wifi_hotspot.py:230-235`; `settings.json → system.wifi_hotspot` |
+| F12 | Hotspot is nmcli shared mode on `wlan0`, SSID/pw from settings | `src/module/wifi_hotspot.py:230-235`; `settings.jsonc → system.wifi_hotspot` |
 | F13 | **No eventlet/gevent installed** → Flask-SocketIO runs `threading` async mode on the Werkzeug dev server | `requirements.txt`; `allow_unsafe_werkzeug=True` at `src/main.py:889` |
 | F14 | `command_executor` is constructed at `src/main.py:761`, well before `create_app` at `:888` | ordering for dependency injection already works |
 | F15 | Serial input is debounced 100 ms per port; HTTP would have no such guard | `src/module/serial_handler.py:132-141` |
@@ -95,7 +95,7 @@ Accepts `+` or `%20` for spaces. Same semantics as POST.
 
 Add `?json=1` for `{"ok":true,"cmd":"set iso 800","message":""}`.
 
-**200 means "dispatched", not "the camera reached that state."** Commands that restart the camera (`set resolution`, `set log`, `set hdr profile`) return before the restart completes. Clients confirm via `/api/v1/get/<key>` or the push channel.
+**200 means "dispatched", not "the camera reached that state."** Commands that restart the camera (`set resolution`, `set log`) return before the restart completes. Clients confirm via `/api/v1/get/<key>` or the push channel.
 
 ### 4.4 `GET /api/v1/get/<key>` — parser-free single value
 
@@ -152,7 +152,7 @@ No parser needed, no connection state, one packet serves every device on the hot
 
 ## 5. Settings
 
-New block in `src/settings.json` and `src/settings.schema.json`:
+New block in `settings.jsonc` and `settings.schema.json`:
 
 ```json
 "system": {
@@ -177,7 +177,7 @@ Defaults must be safe on a stock unit: hotspot password ships as `11111111`, so 
 
 `allow_destructive: false` blocks exactly: `reboot`, `shutdown`, `erase`, `format`. `unmount` stays allowed — it is routine and reversible.
 
-Missing `web_api` block must behave as the defaults above. Do not require users to edit `settings.json` to get a working API.
+Missing `web_api` block must behave as the defaults above. Do not require users to edit `settings.jsonc` to get a working API.
 
 ---
 
@@ -190,7 +190,7 @@ Missing `web_api` block must behave as the defaults above. Do not require users 
 | `src/module/app/__init__.py` | `create_app(redis_controller, cinepi_controller, simple_gui, sensor_detect, command_executor, settings)`; register `api_v1` | Low |
 | `src/main.py` | pass `command_executor` and `settings` into `create_app` (F14: ordering already correct); start `StatusBroadcaster` | Low |
 | `src/module/status_broadcast.py` | **new**. Thread; subscribes to `redis_parameter_changed`; coalesces; sends UDP. | new file |
-| `src/settings.json`, `src/settings.schema.json` | `system.web_api` block | Low |
+| `settings.jsonc`, `settings.schema.json` | `system.web_api` block | Low |
 | `docs/web-api.md`, `docs/building-control-units.md`, `mkdocs.yml` | already written — remove the "not implemented" banners when Phase 5 lands | Docs |
 | `src/module/web_api_settings.py` | **new, not in the original plan.** `DEFAULT_WEB_API_SETTINGS` + `web_api_settings()` factored out of `api.py` so `status_broadcast.py` and `main.py` don't have to import `module.app` (which imports `flask_socketio`) just to read one settings block. Both `api.py` and `status_broadcast.py` import from here. | Low, additive |
 | `src/module/redis_controller.py` | **new, not in the original plan.** Added `Event.unsubscribe()` (the class only had `subscribe`/`emit`). Required for `/api/v1/events`: without it, every SSE client that disconnects leaves its callback permanently subscribed — a real memory/CPU leak on a device meant to run for days. `emit()` now iterates `list(self._handlers)` so unsubscribing during emit is safe. No existing caller unsubscribes today, so this is purely additive. | Low, additive |

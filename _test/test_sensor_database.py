@@ -234,9 +234,10 @@ class SensorDatabaseTests(unittest.TestCase):
 
     def _detector_for_parse(self):
         import json
+        from module.config_loader import strip_jsonc
         detector = self._detector_without_probe()
-        settings = json.loads((ROOT / "settings.json").read_text())
-        rc = settings.get("resolutions", {})
+        settings = json.loads(strip_jsonc((ROOT / "settings.jsonc").read_text()))
+        rc = settings.get("capture", {}).get("resolutions", {})
         detector.settings = settings
         detector.k_steps = rc.get("k_steps", [])
         detector.bit_depths = rc.get("bit_depths", [])

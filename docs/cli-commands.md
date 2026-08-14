@@ -26,8 +26,7 @@ The same commands can be sent wirelessly over the camera's Wi-Fi hotspot — see
 | `inc shutter a nom` / `dec shutter a nom`  | -              |                      | Step the nominal shutter angle                  |
 | `set fps <value>`                          | float             | `set fps 24`                            | Change frame rate (snaps unless free)           |
 | `inc fps` / `dec fps`                      | -              |                                | Step through FPS list                           |
-| `set hdr profile [<n>]`                    | int or none       | `set hdr profile 1`                     | Apply ClearHDR profile n, or cycle with no arg; restarts the camera ([ClearHDR](clear-hdr.md)) |
-| `set hdr threshold <low,high>`             | string            | `set hdr threshold 500,3000`            | ClearHDR HG→LG data-selection thresholds (0–4095 each), applied live |
+| `set hdr threshold <low,high>`             | string            | `set hdr threshold 500,3000`            | ClearHDR HG→LG data-selection thresholds (0–4095 each), applied live ([ClearHDR](clear-hdr.md)) |
 | `set hdr blend <n>`                        | int               | `set hdr blend 2`                       | ClearHDR blending mode 0–8, applied live        |
 | `set hdr gain adder <n>`                   | int               | `set hdr gain adder 2`                  | ClearHDR low-gain gain adder 0–5 (2 = +12 dB), applied live |
 | `set log [<10\|12\|off>]`                   | int, string or none | `set log` / `set log 10` / `set log off` | Toggle [CineMate Log](cinemate-log.md) on/off using the live mode's default target, or force `10`/`12` explicitly where the live mode supports it; restarts the camera when idle, deferred while recording |
@@ -83,6 +82,6 @@ On a dual-sensor rig you can prepend a camera token — `cam0`, `cam1`, or `both
 
 ## Storage pre-roll warm-up
 
-`storage preroll` triggers the same warm-up clip that Cinemate runs automatically on startup or when you mount new storage. During the pre-roll, Cinemate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take. The manual command stays available even when `settings.auto_storage_preroll` is set to `false` in `settings.json`.
+`storage preroll` triggers the same warm-up clip that Cinemate runs automatically on startup or when you mount new storage. During the pre-roll, Cinemate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take. The manual command stays available even when `settings.auto_storage_preroll` is set to `false` in `settings.jsonc`.
 
 See [Storage pre-roll warm-up](storage-preroll.md) for a detailed walkthrough of the workflow and tips on when to run it manually.

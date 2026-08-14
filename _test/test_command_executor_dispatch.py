@@ -86,13 +86,13 @@ class DispatchReturnValueTests(unittest.TestCase):
 
     def test_multi_type_command_bare_toggles(self):
         executor, controller, _ = make_executor()
-        self.assertEqual(executor.handle_received_data("set hdr profile"), (True, ""))
-        controller.hdr_profile.assert_called_once_with()
+        self.assertEqual(executor.handle_received_data("set resolution"), (True, ""))
+        controller.set_resolution.assert_called_once_with()
 
     def test_multi_type_command_with_int_argument(self):
         executor, controller, _ = make_executor()
-        self.assertEqual(executor.handle_received_data("set hdr profile 2"), (True, ""))
-        controller.hdr_profile.assert_called_once_with(2)
+        self.assertEqual(executor.handle_received_data("set resolution 2"), (True, ""))
+        controller.set_resolution.assert_called_once_with(2)
 
     def test_longest_prefix_match_wins(self):
         executor, controller, _ = make_executor()

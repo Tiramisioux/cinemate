@@ -152,7 +152,7 @@ class SimpleGUI(threading.Thread):
         self.color_mode = "normal"
         
         # Load settings, not sure when the settings will be None so left the code here
-        self.settings = settings or load_settings("/home/pi/cinemate/settings.json")
+        self.settings = settings or load_settings("/home/pi/cinemate/settings.jsonc")
         
         self.setup_resources()
         self.display_poll_interval = 1.0
@@ -190,9 +190,9 @@ class SimpleGUI(threading.Thread):
 
         # Buffer VU meter and hatch line toggles from settings
         if settings is not None:
-            hdmi_cfg = settings.get("hdmi_gui", {})
-            self.show_buffer_vu = _to_bool(hdmi_cfg.get("buffer_vu_meter", True))
-            self.vu_meter_hatch_lines = _to_bool(hdmi_cfg.get("vu_meter_hatch_lines", True))
+            overlays_cfg = settings.get("display", {}).get("overlays", {})
+            self.show_buffer_vu = _to_bool(overlays_cfg.get("buffer_vu_meter", True))
+            self.vu_meter_hatch_lines = _to_bool(overlays_cfg.get("vu_meter_hatch_lines", True))
         else:
             self.show_buffer_vu = True
             self.vu_meter_hatch_lines = True
@@ -314,7 +314,7 @@ class SimpleGUI(threading.Thread):
         return self._emit_socketio_event('gui_data_change', changed_data)
 
     def _configured_display_size(self, fb: Framebuffer):
-        hdmi_config = self.settings.get("hdmi_display", {})
+        hdmi_config = self.settings.get("display", {}).get("hdmi", {})
 
         try:
             width = int(hdmi_config.get("width") or fb.size[0])
@@ -370,8 +370,8 @@ class SimpleGUI(threading.Thread):
         self.disp_height = disp_height
 
         if display_changed:
-            requested_width = self.settings.get("hdmi_display", {}).get("width", fb.size[0])
-            requested_height = self.settings.get("hdmi_display", {}).get("height", fb.size[1])
+            requested_width = self.settings.get("display", {}).get("hdmi", {}).get("width", fb.size[0])
+            requested_height = self.settings.get("display", {}).get("hdmi", {}).get("height", fb.size[1])
             claim_console_for_framebuffer()
             logging.info(
                 "HDMI framebuffer ready. fb0=%sx%s (%sbpp), GUI=%sx%s",
@@ -909,7 +909,7 @@ class SimpleGUI(threading.Thread):
                     pass
 
         # ── Zoom factor (preview punch-in) ────────────────────────────────
-        default_zoom = float(self.settings.get("preview", {}).get("default_zoom", 1.0))
+        default_zoom = float(self.settings.get("display", {}).get("preview", {}).get("default_zoom", 1.0))
         try:
             z = float(self.redis_controller.get_value(ParameterKey.ZOOM.value) or 1.0)
         except (TypeError, ValueError):

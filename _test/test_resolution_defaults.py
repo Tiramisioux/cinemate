@@ -7,7 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from module.config_loader import _apply_settings_defaults
+from module.config_loader import _apply_settings_defaults, strip_jsonc
 from module.sensor_detect import SensorDetect
 
 
@@ -15,20 +15,20 @@ class ResolutionDefaultsTests(unittest.TestCase):
     def test_runtime_defaults_include_4k_step(self):
         settings = _apply_settings_defaults({})
 
-        self.assertIn(4.0, settings["resolutions"]["k_steps"])
+        self.assertIn(4.0, settings["capture"]["resolutions"]["k_steps"])
 
     def test_stock_settings_include_4k_step(self):
-        settings = json.loads(
-            (ROOT / "resources/settings/settings_default.json").read_text(encoding="utf-8")
-        )
+        settings = json.loads(strip_jsonc(
+            (ROOT / "resources/settings/settings_default.jsonc").read_text(encoding="utf-8")
+        ))
 
-        self.assertIn(4, settings["resolutions"]["k_steps"])
+        self.assertIn(4, settings["capture"]["resolutions"]["k_steps"])
 
     def test_stock_filter_keeps_imx585_4k_mode(self):
-        settings = json.loads(
-            (ROOT / "resources/settings/settings_default.json").read_text(encoding="utf-8")
-        )
-        rc = settings["resolutions"]
+        settings = json.loads(strip_jsonc(
+            (ROOT / "resources/settings/settings_default.jsonc").read_text(encoding="utf-8")
+        ))
+        rc = settings["capture"]["resolutions"]
         detector = SensorDetect.__new__(SensorDetect)
         detector.settings = settings
         detector.k_steps = rc["k_steps"]

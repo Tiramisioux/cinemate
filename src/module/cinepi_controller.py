@@ -24,7 +24,7 @@ from module.dynamic_resolution import (
 )
 from module import parameters
 
-SETTINGS_FILE = "/home/pi/cinemate/settings.json"
+SETTINGS_FILE = "/home/pi/cinemate/settings.jsonc"
 GUI_RESOLUTION_PREVIEW_DELAY_SECONDS = 0.12
 GUI_RESOLUTION_SWITCHING_HOLD_SECONDS = 2.5
 RAW_STREAM_READY_RE = re.compile(r"\bRaw stream:\s*(\d+)x(\d+)\b", re.IGNORECASE)
@@ -222,18 +222,18 @@ class CinePiController:
         
         # ── put default zoom into Redis if nothing stored yet ─────────────
         if self.redis_controller.get_value(ParameterKey.ZOOM.value) is None:
-            default_zoom = self.settings.get('preview', {}).get('default_zoom', 1.0)
+            default_zoom = self.settings.get('display', {}).get('preview', {}).get('default_zoom', 1.0)
             self.redis_controller.set_value(ParameterKey.ZOOM.value, default_zoom)
 
-        
+
         self.initialize_fps_steps(self.fps_steps)
         self.initialize_shutter_angle_steps()
 
-        free_mode = self.settings.get('free_mode', {})
-        self.iso_free = free_mode.get('iso_free', False)
-        self.shutter_a_free = free_mode.get('shutter_a_free', False)
-        self.fps_free = free_mode.get('fps_free', False)
-        self.wb_free = free_mode.get('wb_free', False)
+        parameters_cfg = self.settings.get('parameters', {})
+        self.iso_free = parameters_cfg.get('iso', {}).get('free', False)
+        self.shutter_a_free = parameters_cfg.get('shutter_a', {}).get('free', False)
+        self.fps_free = parameters_cfg.get('fps', {}).get('free', False)
+        self.wb_free = parameters_cfg.get('wb', {}).get('free', False)
         
         self.RAM_LIMIT_PERCENT = 80
         # Stop recording when the cinepi-raw RAM frame buffer is this full
@@ -269,7 +269,7 @@ class CinePiController:
         if mode is not None and mode in self.sensor_detect.res_modes:
             return mode
 
-        # Stored mode is missing or no longer valid -- e.g. settings.json
+        # Stored mode is missing or no longer valid -- e.g. settings.jsonc
         # now filters resolutions (k_steps/bit_depths/hdr) down to a smaller
         # set than when this mode index was saved, so res_modes was
         # re-indexed from 0. Fall back to a mode that actually exists so
@@ -396,12 +396,12 @@ class CinePiController:
     def _rebuild_iso_steps(self):
         self.iso_steps = (list(range(100, 3201, 50))
                         if self.iso_free
-                        else list(self.settings['arrays']['iso_steps']))
+                        else list(self.settings['parameters']['iso']['steps']))
 
     def _rebuild_shutter_steps(self):
         self.shutter_a_steps = ([round(i * 0.1, 1) for i in range(10, 3601)]
                                 if self.shutter_a_free
-                                else list(self.settings['arrays']['shutter_a_steps']))
+                                else list(self.settings['parameters']['shutter_a']['steps']))
         # keep the flicker-free additions in sync
         self.shutter_a_steps_dynamic = self.calculate_dynamic_shutter_angles(
             self.current_fps)
@@ -410,7 +410,7 @@ class CinePiController:
         if self.fps_free:
             self.fps_steps = list(range(1, self.fps_max + 1))
         else:
-            self.fps_steps = list(self.settings['arrays']['fps_steps'])
+            self.fps_steps = list(self.settings['parameters']['fps']['steps'])
         self.fps_steps_dynamic = self._fps_steps_capped_at_max(self.fps_steps)
 
     def _fps_steps_capped_at_max(self, fps_steps):
@@ -438,7 +438,7 @@ class CinePiController:
     def _rebuild_wb_steps(self):
         self.wb_steps = (list(range(2800, 6501, 100))
                         if self.wb_free
-                        else list(self.settings['arrays']['wb_steps']))
+                        else list(self.settings['parameters']['wb']['steps']))
     
     # ─── main public call ──────────────────────────────────────────────────
     def update_steps(self):
@@ -487,23 +487,12 @@ class CinePiController:
     # ── imx585 ClearHDR ──────────────────────────────────────────────────
     # Live knobs (threshold / blend / gain adder) are plain sensor controls:
     # setting the Redis key publishes on cp_controls and cinepi-raw applies
-    # them to the sensor while streaming. Toggling ClearHDR itself
-    # (wide_dynamic_range) changes the sensor's mode list, so profiles flip
-    # the control, re-detect modes and restart cinepi-raw with --hdr sensor.
-
-    def _load_hdr_profiles(self):
-        """Return the profile list from resources/HDR_profiles.json ([] on error)."""
-        path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "..", "resources", "HDR_profiles.json")
-        )
-        try:
-            with open(path, "r", encoding="utf-8") as fh:
-                data = json.load(fh)
-        except (OSError, json.JSONDecodeError) as exc:
-            logging.error(f"HDR profiles unavailable ({path}): {exc}")
-            return []
-        profiles = data.get("profiles", [])
-        return profiles if isinstance(profiles, list) else []
+    # them to the sensor while streaming. Their startup values come from
+    # capture.resolutions.hdr in settings.jsonc (seeded in main.py). Toggling
+    # ClearHDR itself (wide_dynamic_range) changes the sensor's mode list --
+    # _publish_resolution_gui_state() sets it alongside the hdr Redis key on
+    # every resolution change, so it needs a restart to take effect exactly
+    # like the --hdr sensor launch flag it accompanies.
 
     def _set_wide_dynamic_range(self, enable: bool) -> bool:
         """Set wide_dynamic_range on every sensor subdev that accepts it.
@@ -569,61 +558,9 @@ class CinePiController:
         self.redis_controller.set_value(ParameterKey.HDR_GAIN_ADDER.value, v)
         logging.info(f"ClearHDR gain adder set to menu index {v}")
 
-    def hdr_profile(self, index=None):
-        """Apply a profile from resources/HDR_profiles.json and restart the camera.
-
-        ``set hdr profile 1`` applies profile 1; a bare ``set hdr profile``
-        cycles to the next one.
-        """
-        profiles = self._load_hdr_profiles()
-        if not profiles:
-            logging.error("No HDR profiles found (resources/HDR_profiles.json)")
-            return
-
-        if index is None:
-            try:
-                current = int(self.redis_controller.get_value(ParameterKey.HDR_PROFILE.value))
-            except (TypeError, ValueError):
-                current = -1
-            index = (current + 1) % len(profiles)
-        index = int(index)
-        if not 0 <= index < len(profiles):
-            logging.error(f"HDR profile {index} out of range (0..{len(profiles) - 1})")
-            return
-
-        profile = profiles[index]
-        name = profile.get("name", str(index))
-        hdr_on = bool(profile.get("hdr", False))
-
-        # Order matters: flip the sensor control first, publish the knob keys
-        # (cinepi-raw also re-applies them from Redis at startup), then restart
-        # cinepi-raw with or without --hdr sensor (read from the hdr key at
-        # launch). The mode table already carries both the plain and the HDR
-        # modes (SensorDetect probes --list-cameras with and without --hdr
-        # sensor), so no re-detection is needed here — and re-detecting now,
-        # with wide_dynamic_range flipped on, would mislabel the HDR modes.
-        self._set_wide_dynamic_range(hdr_on)
-        self.redis_controller.set_value(ParameterKey.HDR.value, 1 if hdr_on else 0)
-
-        threshold = profile.get("threshold")
-        if isinstance(threshold, (list, tuple)) and len(threshold) == 2:
-            self.set_hdr_threshold_low(threshold[0])
-            self.set_hdr_threshold_high(threshold[1])
-        if "blend_mode" in profile:
-            self.set_hdr_blend(profile["blend_mode"])
-        if "gain_adder" in profile:
-            self.set_hdr_gain_adder(profile["gain_adder"])
-        self.redis_controller.set_value(ParameterKey.HDR_PROFILE.value, index)
-
-        logging.info(
-            f"HDR profile {index} ('{name}') applied — restarting camera "
-            f"(hdr={'on' if hdr_on else 'off'})"
-        )
-        self.cinepi.restart()
-
     def _log_requested_state(self):
         """The live `set log` request -- False/True/10/12 -- from redis, or
-        settings.json's boot-time seed before the first `set log` of a
+        settings.jsonc's boot-time seed before the first `set log` of a
         session writes the redis key. Shared by set_log_encode() and the
         file-size recompute so both agree on what's currently requested."""
         raw_current = self.redis_controller.get_value(ParameterKey.LOG_ENCODE_REQUEST.value)
@@ -669,7 +606,7 @@ class CinePiController:
         depth doesn't support the request simply logs why and stays linear
         (see _build_args()) -- never a silent substitution.
 
-        Restarts immediately when idle, exactly like hdr_profile(). While
+        Restarts immediately when idle, exactly like set_resolution(). While
         recording, the request is stored and applied on the next restart --
         we never split a running take.
         """
@@ -716,11 +653,11 @@ class CinePiController:
         self.cinepi.restart()
 
     def initialize_shutter_angle_steps(self):
-        base_steps = self.settings['arrays']['shutter_a_steps']
+        base_steps = self.settings['parameters']['shutter_a']['steps']
         self.shutter_angle_steps = sorted(base_steps.copy())
 
         # Add flicker-free steps if 50Hz/60Hz defined
-        for hz in self.settings.get('settings', {}).get('light_hz', []):
+        for hz in self.settings.get('capture', {}).get('light_hz', []):
             flicker_free_steps = self.calculate_flicker_free_steps(hz)
             self.shutter_angle_steps += flicker_free_steps
         
@@ -811,7 +748,7 @@ class CinePiController:
 
     def load_wb_steps(self):
         try:
-            wb_steps = self.settings.get('arrays', {}).get('wb_steps', [])
+            wb_steps = self.settings.get('parameters', {}).get('wb', {}).get('steps', [])
             logging.info(f"WB steps loaded: {wb_steps}")
             return wb_steps
         except Exception as e:
@@ -828,10 +765,10 @@ class CinePiController:
         logging.info(f"Initialized fps_steps: {self.fps_steps_dynamic}")
 
     def set_free_mode(self, iso_free, shutter_a_free, fps_free, wb_free):
-        self.settings['free_mode']['iso_free'] = iso_free
-        self.settings['free_mode']['shutter_a_free'] = shutter_a_free
-        self.settings['free_mode']['fps_free'] = fps_free
-        self.settings['free_mode']['wb_free'] = wb_free
+        self.settings['parameters']['iso']['free'] = iso_free
+        self.settings['parameters']['shutter_a']['free'] = shutter_a_free
+        self.settings['parameters']['fps']['free'] = fps_free
+        self.settings['parameters']['wb']['free'] = wb_free
         self.iso_free = iso_free
         self.shutter_a_free = shutter_a_free
         self.fps_free = fps_free
@@ -1326,7 +1263,7 @@ class CinePiController:
             or "both"
         ).strip().lower()
 
-        lock_dual = bool(self.settings.get("lock_dual_recording", False))
+        lock_dual = self.settings.get("camera", {}).get("record_policy", "follow_preview") == "always_both"
 
         # Side-by-side always records both (both are equally shown); the lock
         # forces dual even in a single-sensor preview mode.
@@ -1529,9 +1466,14 @@ class CinePiController:
         self.redis_controller.set_value(ParameterKey.BIT_DEPTH.value, str(bit_depth_new))
         # ClearHDR (imx585): the mode carries the HDR flag, so selecting a
         # 12-bit-HDR or 16-bit-HDR mode turns the hdr key on and cinepi-raw
-        # launches with --hdr sensor; a plain mode turns it back off.
+        # launches with --hdr sensor; a plain mode turns it back off. Also
+        # set the wide_dynamic_range sensor control directly here (not just
+        # via --hdr sensor at cinepi-raw launch) so ClearHDR activates
+        # correctly regardless of which path picked the mode -- GUI, CLI
+        # `set resolution`, a pot, or the quad rotary.
         hdr_new = bool(resolution_info.get('hdr', False))
         self.redis_controller.set_value(ParameterKey.HDR.value, 1 if hdr_new else 0)
+        self._set_wide_dynamic_range(hdr_new)
         self.redis_controller.set_value(ParameterKey.PACKING.value, str(packing_new))
         self.redis_controller.set_value(ParameterKey.GUI_LAYOUT.value, str(gui_layout_new))
         self.redis_controller.set_value(
@@ -2421,7 +2363,7 @@ class CinePiController:
         • Omit *value*                    → step through preview.zoom_steps.
         Use *direction="prev"* to step backwards.
         """
-        preview_cfg  = self.settings.get("preview", {})
+        preview_cfg  = self.settings.get("display", {}).get("preview", {})
         zoom_steps   = preview_cfg.get("zoom_steps",   [0.5, 1.0, 1.5, 2.0])
         default_zoom = preview_cfg.get("default_zoom", 1.0)
 

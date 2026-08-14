@@ -294,7 +294,7 @@ The camera may reboot, or be switched on after the controller. Never block forev
 
 ### Confirm state after a restart command
 
-`set resolution`, `set log` and `set hdr profile` restart the camera. The `200 ok` arrives before the restart finishes. Do not assume the value took. Read it back:
+`set resolution` and `set log` restart the camera. The `200 ok` arrives before the restart finishes. Do not assume the value took. Read it back:
 
 ```
 GET /api/v1/get/sensor_mode

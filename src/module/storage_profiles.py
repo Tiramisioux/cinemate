@@ -35,7 +35,7 @@ FILESYSTEM_ALIASES = {
 # sensor and drop a frame. Slower / spikier filesystems (exFAT, NTFS) get more
 # headroom than ext4, which has flatter write latency. Each extra buffer costs
 # ~25 MB of CMA at 4K (raw + video streams share the count), so values stay
-# conservative; raise per profile (or via settings.json camera.raw_buffer_count)
+# conservative; raise per profile (or via settings.jsonc camera.raw_buffer_count)
 # only after confirming CMA headroom with `grep Cma /proc/meminfo`.
 #
 # AUDIO-CORE INVARIANT: cinepi-audio-capture pins itself to the last CPU core

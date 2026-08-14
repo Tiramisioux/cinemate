@@ -116,7 +116,7 @@ _WB = _param(
 _ZOOM = _param(
     "zoom", "Zoom", "×",
     cycle="direction",
-    steps=lambda c: c.settings.get("preview", {}).get(
+    steps=lambda c: c.settings.get("display", {}).get("preview", {}).get(
         "zoom_steps", [0.5, 1.0, 1.5, 2.0]),
 )
 

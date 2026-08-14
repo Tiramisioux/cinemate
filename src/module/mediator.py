@@ -36,7 +36,7 @@ class Mediator:
         try:
             with open(settings_file, 'r') as file:
                 settings = json.load(file)
-                return settings.get('recognized_ssds', [])
+                return settings.get('system', {}).get('storage', {}).get('recognized_ssds', [])
         except Exception as e:
             logging.error(f"Failed to load SSD settings: {e}")
             return []

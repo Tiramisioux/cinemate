@@ -1545,7 +1545,7 @@ alias cinemate-env='source "$VENV_DIR/bin/activate"'
 alias cinemate='$PI_HOME/run_cinemate.sh'
 alias editboot='sudo nano /boot/firmware/config.txt'
 alias editcmdline='sudo nano /boot/firmware/cmdline.txt'
-alias editsettings='sudo nano $CINEMATE_DIR/settings.json'
+alias editsettings='sudo nano $CINEMATE_DIR/settings.jsonc'
 $MANAGED_END
 EOF
 
@@ -1568,13 +1568,13 @@ print_post_install_notes() {
 }
 
 configure_settings_json() {
-    local settings_json="$CINEMATE_DIR/settings.json"
+    local settings_json="$CINEMATE_DIR/settings.jsonc"
     local hotspot_enabled_json=false
 
-    [[ -f "$settings_json" ]] || die "Missing settings.json at $settings_json"
+    [[ -f "$settings_json" ]] || die "Missing settings.jsonc at $settings_json"
     is_true "$HOTSPOT_ENABLED" && hotspot_enabled_json=true
 
-    log "Patching settings.json"
+    log "Patching settings.jsonc"
     detail "Applying hotspot + HDMI defaults to $settings_json"
     backup_file "$settings_json"
     run_as_pi python3 - "$settings_json" "$HOTSPOT_NAME" "$HOTSPOT_PASSWORD" "$hotspot_enabled_json" "$HDMI_PORT_CAM0" "$HDMI_PORT_CAM1" <<'PY'
@@ -1643,13 +1643,13 @@ wifi_cfg["name"] = ssid
 wifi_cfg["password"] = password
 wifi_cfg["enabled"] = enabled
 
-output_cfg = data.setdefault("output", {})
-output_cfg.setdefault("cam0", {})["hdmi_port"] = hdmi0
-output_cfg.setdefault("cam1", {})["hdmi_port"] = hdmi1
+camera_cfg = data.setdefault("camera", {})
+camera_cfg.setdefault("cam0", {}).setdefault("output", {})["hdmi_port"] = hdmi0
+camera_cfg.setdefault("cam1", {}).setdefault("output", {})["hdmi_port"] = hdmi1
 
-hdmi_display = data.setdefault("hdmi_display", {})
-hdmi_display.setdefault("width", 1920)
-hdmi_display.setdefault("height", 1080)
+hdmi_cfg = data.setdefault("display", {}).setdefault("hdmi", {})
+hdmi_cfg.setdefault("width", 1920)
+hdmi_cfg.setdefault("height", 1080)
 
 path.write_text(json.dumps(data, indent=2) + "\n")
 PY

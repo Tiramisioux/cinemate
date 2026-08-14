@@ -48,7 +48,7 @@ from module.framebuffer import acquire_framebuffer
 
 # Constants
 MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
-SETTINGS_FILE = "/home/pi/cinemate/settings.json"
+SETTINGS_FILE = "/home/pi/cinemate/settings.jsonc"
 STARTUP_MESSAGE_MIN_DURATION = 3.0
 CLI_COLOR_RED = "\033[1;31m"
 CLI_COLOR_YELLOW = "\033[1;33m"
@@ -593,13 +593,13 @@ def start_hotspot(settings) -> None:
 
 def initialize_system(settings, pi_model="unknown"):
     """Initialize core system components."""
-    conf_rate = settings.get("settings", {}).get("conform_frame_rate", 24)
+    conf_rate = settings.get("capture", {}).get("conform_frame_rate", 24)
     redis_controller = RedisController(conform_frame_rate=conf_rate)
     sensor_detect = SensorDetect(settings)
     ssd_monitor = SSDMonitor(redis_controller=redis_controller)
     usb_monitor = USBMonitor(ssd_monitor, settings=settings)
 
-    gpio_cfg = settings["gpio_output"]
+    gpio_cfg = settings["outputs"]
     rec_tone_pins = gpio_cfg.get("rec_tone_pin")
     if rec_tone_pins in (None, []):
         # Backward compatibility: if no explicit rec_tone_pin is configured,
@@ -646,11 +646,10 @@ def run_application(args, log_queue):
     startup_ready_notified = False
     timekeeper = None
 
-    welcome_text = settings.get("welcome_message", "THIS IS A COOL MACHINE")
-    show_welcome_message = bool(
-        settings.get("show_welcome_message", settings.get("show_startup_message", True))
-    )
-    welcome_image = settings.get("welcome_image")
+    welcome_cfg = settings.get("system", {}).get("welcome", {})
+    welcome_text = welcome_cfg.get("message", "THIS IS A COOL MACHINE")
+    show_welcome_message = bool(welcome_cfg.get("show", True))
+    welcome_image = welcome_cfg.get("image")
     plymouth_active_at_startup = plymouth_is_running()
     defer_startup_message_until_after_plymouth = show_welcome_message and plymouth_active_at_startup
     restart_camera_after_startup_handoff = plymouth_active_at_startup
@@ -687,7 +686,7 @@ def run_application(args, log_queue):
     redis_controller.set_value(ParameterKey.PI_MODEL.value, pi_model)
 
     # Set redis anamorphic factor to default value
-    redis_controller.set_value(ParameterKey.ANAMORPHIC_FACTOR.value, settings["anamorphic_preview"]["default_anamorphic_factor"])
+    redis_controller.set_value(ParameterKey.ANAMORPHIC_FACTOR.value, settings["display"]["preview"]["anamorphic"]["default_factor"])
     _audio_cfg = settings.get("audio", {})
     redis_controller.set_value(
         ParameterKey.AUDIO_CAPTURE_GAIN_DB.value,
@@ -698,14 +697,24 @@ def run_application(args, log_queue):
     # Default zoom factor
     redis_controller.set_value(
         ParameterKey.ZOOM.value,
-        settings.get("preview", {}).get("default_zoom", 1.0)
+        settings.get("display", {}).get("preview", {}).get("default_zoom", 1.0)
 )
 
     # Default dual-sensor HDMI preview source (both / cam0 / cam1)
     redis_controller.set_value(
         ParameterKey.HDMI_PREVIEW_SOURCE.value,
-        settings.get("preview", {}).get("default_hdmi_source", "both")
+        settings.get("display", {}).get("preview", {}).get("default_hdmi_source", "both")
 )
+
+    # ClearHDR live-knob startup values (capture.resolutions.hdr). Cinepi-raw
+    # re-applies these from Redis once a ClearHDR mode is actually selected;
+    # seeding them here just means the first `set hdr threshold/blend/gain
+    # adder` read (pot, quad, CLI) already sees the configured default.
+    _hdr_cfg = settings.get("capture", {}).get("resolutions", {}).get("hdr", {})
+    redis_controller.set_value(ParameterKey.HDR_THRESHOLD_LOW.value, _hdr_cfg.get("threshold_low", 0))
+    redis_controller.set_value(ParameterKey.HDR_THRESHOLD_HIGH.value, _hdr_cfg.get("threshold_high", 0))
+    redis_controller.set_value(ParameterKey.HDR_BLEND.value, _hdr_cfg.get("blend", 0))
+    redis_controller.set_value(ParameterKey.HDR_GAIN_ADDER.value, _hdr_cfg.get("gain_adder", 1))
 
     # Reset recording time
     redis_controller.set_value(ParameterKey.RECORDING_TIME.value, 0)
@@ -724,13 +733,13 @@ def run_application(args, log_queue):
 
     cinepi_controller = CinePiController(
         cinepi, redis_controller, ssd_monitor, sensor_detect,
-        iso_steps=settings["arrays"]["iso_steps"],
-        shutter_a_steps=settings["arrays"]["shutter_a_steps"],
-        fps_steps=settings["arrays"]["fps_steps"],
-        wb_steps=settings["arrays"]["wb_steps"],
-        light_hz=settings["settings"]["light_hz"],
-        anamorphic_steps=settings["anamorphic_preview"]["anamorphic_steps"],
-        default_anamorphic_factor=settings["anamorphic_preview"]["default_anamorphic_factor"]
+        iso_steps=settings["parameters"]["iso"]["steps"],
+        shutter_a_steps=settings["parameters"]["shutter_a"]["steps"],
+        fps_steps=settings["parameters"]["fps"]["steps"],
+        wb_steps=settings["parameters"]["wb"]["steps"],
+        light_hz=settings["capture"]["light_hz"],
+        anamorphic_steps=settings["display"]["preview"]["anamorphic"]["steps"],
+        default_anamorphic_factor=settings["display"]["preview"]["anamorphic"]["default_factor"]
     )
 
     storage_preroll = StoragePreroll(
@@ -741,7 +750,7 @@ def run_application(args, log_queue):
         auto_enabled=auto_storage_preroll_enabled(settings),
     )
 
-    gpio_cfg = settings.get("gpio_output", {})
+    gpio_cfg = settings.get("outputs", {})
     rec_tone_pins = gpio_cfg.get("rec_tone_pin")
     if rec_tone_pins in (None, []):
         rec_tone_pins = gpio_cfg.get("pwm_pin")
@@ -804,21 +813,28 @@ def run_application(args, log_queue):
     # Initialize USB monitoring
     usb_monitor.check_initial_devices()
 
-    # Setup Analog Controls
+    # Setup Analog Controls. controls.pots is a channel-first list
+    # ({"channel": ..., "setting": "iso"}); AnalogControls itself still
+    # takes one named channel per parameter, so resolve that lookup here.
+    pot_channel_by_setting = {
+        p.get("setting"): p.get("channel")
+        for p in settings.get("controls", {}).get("pots", [])
+        if p.get("setting")
+    }
     analog_controls = AnalogControls(
         cinepi_controller, redis_controller,
-        settings["analog_controls"]["iso_pot"],
-        settings["analog_controls"]["shutter_a_pot"],
-        settings["analog_controls"]["fps_pot"],
-        settings["analog_controls"]["wb_pot"],
-        settings["arrays"]["iso_steps"],
-        settings["arrays"]["shutter_a_steps"],
-        settings["arrays"]["fps_steps"],
-        settings["arrays"]["wb_steps"],
-        hdr_threshold_low_pot=settings["analog_controls"].get("hdr_threshold_low_pot", "None"),
-        hdr_threshold_high_pot=settings["analog_controls"].get("hdr_threshold_high_pot", "None"),
-        hdr_blend_pot=settings["analog_controls"].get("hdr_blend_pot", "None"),
-        hdr_gain_adder_pot=settings["analog_controls"].get("hdr_gain_adder_pot", "None"),
+        pot_channel_by_setting.get("iso", "None"),
+        pot_channel_by_setting.get("shutter_a", "None"),
+        pot_channel_by_setting.get("fps", "None"),
+        pot_channel_by_setting.get("wb", "None"),
+        settings["parameters"]["iso"]["steps"],
+        settings["parameters"]["shutter_a"]["steps"],
+        settings["parameters"]["fps"]["steps"],
+        settings["parameters"]["wb"]["steps"],
+        hdr_threshold_low_pot=pot_channel_by_setting.get("hdr_threshold_low", "None"),
+        hdr_threshold_high_pot=pot_channel_by_setting.get("hdr_threshold_high", "None"),
+        hdr_blend_pot=pot_channel_by_setting.get("hdr_blend", "None"),
+        hdr_gain_adder_pot=pot_channel_by_setting.get("hdr_gain_adder", "None"),
     )
 
     # Mount CFE card if not mounted
@@ -860,14 +876,14 @@ def run_application(args, log_queue):
         logging.info("Restarting cinepi-raw after startup handoff so preview binds above Cinemate")
         cinepi_controller.restart_camera(preview_enabled=True)
 
-    settings_cfg = settings.get("settings", {})
+    tol_cfg = settings.get("capture", {}).get("sync_tolerances", {})
     redis_listener = RedisListener(
         redis_controller,
         ssd_monitor,
-        live_sync_warning_tolerance_frames=settings_cfg.get("live_sync_warning_tolerance_frames", 5),
-        live_sync_startup_guard_frames=settings_cfg.get("live_sync_startup_guard_frames", 10),
-        final_sync_analysis_tolerance_frames=settings_cfg.get("final_sync_analysis_tolerance_frames", 1),
-        tc_drop_jitter_tolerance_frames=settings_cfg.get("tc_drop_jitter_tolerance_frames", 1),
+        live_sync_warning_tolerance_frames=tol_cfg.get("live_sync_warning_frames", 5),
+        live_sync_startup_guard_frames=tol_cfg.get("live_sync_startup_guard_frames", 10),
+        final_sync_analysis_tolerance_frames=tol_cfg.get("final_sync_analysis_frames", 1),
+        tc_drop_jitter_tolerance_frames=tol_cfg.get("tc_drop_jitter_frames", 1),
     )
     redis_listener.set_recording_stop_callback(cinepi_controller.stop_recording)
     cinepi_controller.attach_redis_listener(redis_listener)
@@ -888,12 +904,12 @@ def run_application(args, log_queue):
         settings=settings,
     )
 
-    if settings.get("i2c_oled", {}).get("enabled", False):
+    if settings.get("outputs", {}).get("oled", {}).get("enabled", False):
         i2c_oled = I2cOled(settings, redis_controller)
         i2c_oled.start()
 
     quad_rotary = None
-    qcfg = settings.get("quad_rotary_controller", {})
+    qcfg = settings.get("controls", {}).get("quad_rotary_controller", {})
     if qcfg.get("enabled", False) and qcfg.get("encoders"):
         quad_rotary = QuadRotaryController(cinepi_controller, settings)
         quad_rotary.start()
@@ -1037,7 +1053,7 @@ def main():
     try:
         return run_application(args, log_queue)
     except SettingsLoadError as exc:
-        systemd_status("Cinemate startup failed: invalid settings.json")
+        systemd_status("Cinemate startup failed: invalid settings.jsonc")
         logging.error("Cinemate startup aborted: %s", exc.detail)
         report_startup_failure("Cinemate could not start", exc.format_for_cli())
         return 1

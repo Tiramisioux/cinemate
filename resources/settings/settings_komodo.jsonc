@@ -1,25 +1,28 @@
 // Komodo-cage hardware reference. This is a PARTIAL settings file -- copy
-// the sections you need (controls.buttons, controls.rotary_encoders,
-// controls.combined_actions, controls.pots) into your own settings.jsonc
-// rather than replacing it wholesale; there's no system/camera/capture/
-// audio/display block here, so loading this file standalone would run on
+// the sections you need (hardware_controls.buttons, hardware_controls.
+// rotary_encoders, hardware_controls.combined_actions, input_peripherals.
+// pots) into your own settings.jsonc rather than replacing it wholesale;
+// there's no system/sensors/settings/arrays/image_capture/audio_capture/
+// hdmi_display block here, so loading this file standalone would run on
 // nothing but built-in defaults for everything except the wiring below.
 {
-  "outputs": {
+  "hardware_outputs": {
     "pwm_pin": 19,
     "rec_out_pin": [6, 21]
   },
-  "parameters": {
+  "arrays": {
     "iso": {
       "steps": [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200]
     }
   },
-  "controls": {
+  "input_peripherals": {
     "pots": [
       { "channel": "A0", "setting": "iso" },
       { "channel": "A2", "setting": "shutter_a" },
       { "channel": "A4", "setting": "fps" }
-    ],
+    ]
+  },
+  "hardware_controls": {
     "buttons": [
       {
         "pin": 4,

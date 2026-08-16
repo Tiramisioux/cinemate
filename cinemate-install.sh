@@ -1643,11 +1643,11 @@ wifi_cfg["name"] = ssid
 wifi_cfg["password"] = password
 wifi_cfg["enabled"] = enabled
 
-camera_cfg = data.setdefault("camera", {})
-camera_cfg.setdefault("cam0", {}).setdefault("output", {})["hdmi_port"] = hdmi0
-camera_cfg.setdefault("cam1", {}).setdefault("output", {})["hdmi_port"] = hdmi1
+sensors_cfg = data.setdefault("sensors", {})
+sensors_cfg.setdefault("cam0", {}).setdefault("output", {})["hdmi_port"] = hdmi0
+sensors_cfg.setdefault("cam1", {}).setdefault("output", {})["hdmi_port"] = hdmi1
 
-hdmi_cfg = data.setdefault("display", {}).setdefault("hdmi", {})
+hdmi_cfg = data.setdefault("hdmi_display", {})
 hdmi_cfg.setdefault("width", 1920)
 hdmi_cfg.setdefault("height", 1080)
 

@@ -45,13 +45,11 @@ HDR modes are labelled so they read distinctly from the plain modes:
 - **Web GUI** — `:HDR` appended in the resolution dropdown, e.g. `1928 : 1090 : 12b :HDR`.
 
 To hide the ClearHDR modes entirely, set the `hdr` whitelist in
-`settings.jsonc` → `capture.resolutions`:
+`settings.jsonc` → `image_capture`:
 
 ```jsonc
-"capture": {
-  "resolutions": {
-    "hdr": {"sdr": true, "imx585_clear_hdr": false}
-  }
+"image_capture": {
+  "hdr": {"sdr": true, "imx585_clear_hdr": false}
 }
 ```
 
@@ -63,7 +61,7 @@ clock — see [Overclocking the Pi](overclocking.md).
 
 ## Default knob values
 
-`capture.resolutions.hdr` also carries the startup values for the four live
+`image_capture.hdr` also carries the startup values for the four live
 knobs below — Cinemate seeds them into Redis at launch, and cinepi-raw
 applies them whenever a ClearHDR mode is selected:
 

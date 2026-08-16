@@ -36,7 +36,7 @@ If the secondary sensor hasn't produced a frame yet, pip falls back to cam0 full
 
 ## Recording
 
-Which sensor(s) record a take depends on the `camera.record_policy` setting in [settings.jsonc](settings-json.md) and, when it is `follow_preview`, on the preview:
+Which sensor(s) record a take depends on the `sensors.record_policy` setting in [settings.jsonc](settings-json.md) and, when it is `follow_preview`, on the preview:
 
 **`false` — recording follows the preview.** _Note that if preview is changed while the Pi is recording, the recording has to be stopped and commenced again in order to start recording on the previewed sensor. Side-by-side records both._
 
@@ -47,4 +47,4 @@ Each sensor writes to its own clip folder (`..._cam0` / `..._cam1`).
 !!! note ""
     When using the cam1 with the official Raspberry Pi CM carrier board, make sure to connect the JC GPIO pins as described here: [https://www.raspberrypi.com/documentation/computers/compute-module.html#connect-two-cameras](https://www.raspberrypi.com/documentation/computers/compute-module.html#connect-two-cameras)
 
-You can override geometry, HDMI port, camera name, and FPS correction for each port independently in `settings.jsonc` under `camera.cam0` and `camera.cam1`. See [settings](settings-json.md#camera).
+You can override geometry, HDMI port, camera name, and FPS correction for each port independently in `settings.jsonc` under `sensors.cam0` and `sensors.cam1`. See [settings](settings-json.md#sensors).

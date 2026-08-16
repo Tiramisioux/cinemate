@@ -15,13 +15,16 @@ The configuration is JSON with `//` and `/* */` comments and trailing commas all
 | Key | Covers |
 |---|---|
 | [`system`](#system) | Splash screen, Wi‑Fi hotspot, web API, storage behaviour |
-| [`camera`](#camera) | Per-sensor hardware: geometry, HDMI output, name spoofing, phase lock, CineMate Log, sensor database |
-| [`capture`](#capture) | Recording-wide behaviour: frame-rate conform, flicker-free input, sync tolerances, resolution/bit-depth/HDR filters |
-| [`parameters`](#parameters) | One block per cycle-able camera parameter: ISO, shutter angle, FPS, white balance |
-| [`audio`](#audio) | Capture gain and timecode offset, per microphone path |
-| [`display`](#display) | Everything the operator sees: HDMI canvas, GUI overlays, preview zoom/source/pip/anamorphic |
-| [`controls`](#controls) | Every physical input, channel-first: buttons, switches, rotary encoders, analog pots, quad rotary controller |
-| [`outputs`](#outputs) | Everything Cinemate drives: REC tally/relay pins, REC sync tone, the optional OLED status screen |
+| [`sensors`](#sensors) | Per-sensor hardware: geometry, HDMI output, name spoofing, phase lock, CineMate Log, sensor database |
+| [`settings`](#settings) | Frame-rate conform target, flicker-free input, sync tolerances |
+| [`arrays`](#arrays) | One block per cycle-able camera parameter: ISO, shutter angle, FPS, white balance |
+| [`image_capture`](#image_capture) | Resolution / bit-depth / HDR filters |
+| [`audio_capture`](#audio_capture) | Capture gain and timecode offset, per microphone path |
+| [`hdmi_display`](#hdmi_display) | Everything the operator sees: HDMI canvas, GUI overlays, preview zoom/source/pip/anamorphic |
+| [`hardware_controls`](#hardware_controls) | Direct-GPIO physical inputs, channel-first: buttons, switches, rotary encoders, combined actions |
+| [`input_peripherals`](#input_peripherals) | Grove Base HAT analog pots + the Adafruit quad I2C rotary encoder board |
+| [`hardware_outputs`](#hardware_outputs) | Direct-GPIO outputs Cinemate drives: REC tally/relay pins, REC sync tone |
+| [`output_peripherals`](#output_peripherals) | The optional I2C OLED status screen |
 
 ## system
 
@@ -84,12 +87,12 @@ Wireless control API for microcontrollers (ESP32/Pico/M5Stack etc.) over the hot
 
 `auto_preroll` – controls the short automatic warm-up recording that prepares mounted media before the first real take. Set it to `true` to run the warm-up on startup and when RAW storage mounts. Set it to `false` to skip only the automatic startup and mount-triggered pre-rolls. Manual `storage preroll` CLI runs remain available either way. See [Storage pre-roll](storage-preroll.md).
 
-## camera
+## sensors
 
-All per-port settings live inside a `cam0` or `cam1` block so every option for a given camera port is visible in one place. `raw_buffer_count`, `record_policy`, and `sensors` are the global keys.
+Per-sensor hardware. All per-port settings live inside a `cam0` or `cam1` block so every option for a given camera port is visible in one place. `raw_buffer_count`, `record_policy`, and `database_file` are the global keys.
 
 ```jsonc
-"camera": {
+"sensors": {
   "raw_buffer_count": 0,
   "record_policy": "follow_preview",
   "cam0": {
@@ -122,9 +125,7 @@ All per-port settings live inside a `cam0` or `cam1` block so every option for a
     "tuning_file_override": { "enabled": false, "path": "resources/tuning_files/imx477.json" },
     "log_encode": false
   },
-  "sensors": {
-    "database_file": "resources/sensors.json"
-  }
+  "database_file": "resources/sensors.json"
 }
 ```
 
@@ -187,18 +188,18 @@ Maps the camera to an HDMI connector.
 
 `log_encode` – this camera's [CineMate Log](cinemate-log.md) setting: `false` (default, off), `true` (on, using the live sensor mode's default target), or `10` / `12` to force that target explicitly when the live mode supports it. Only imx585 and imx283 support it; the setting is ignored on every other sensor. See [CineMate Log](cinemate-log.md) for the full picture, including the `set log` CLI command and the per-camera `LOG10`/`LOG12` badge on the Simple GUI.
 
-### sensors
+### database_file
 
-Points Cinemate at the sensor metadata database. It lists the **full** set of modes each sensor supports — every mode stays available to the system — alongside known packing modes and documentation metadata. The [capture.resolutions](#resolutions) filter selects which of those modes appear in the UI.
+Points Cinemate at the sensor metadata database. It lists the **full** set of modes each sensor supports — every mode stays available to the system — alongside known packing modes and documentation metadata. The [image_capture](#image_capture) filter selects which of those modes appear in the UI.
 
 `database_file` – JSON file containing compatible sensor metadata. The default file is `resources/sensors.json`.
 
-## capture
+## settings
 
-Recording-wide behaviour: frame-rate conform target, flicker-free input, sync tolerances, and which resolution/bit-depth/HDR modes are practical to expose in the UI.
+Frame-rate conform target, flicker-free input, and sync tolerances.
 
 ```jsonc
-"capture": {
+"settings": {
   "conform_frame_rate": 25,
   "light_hz": [50, 60],
   "sync_tolerances": {
@@ -206,25 +207,12 @@ Recording-wide behaviour: frame-rate conform target, flicker-free input, sync to
     "live_sync_startup_guard_frames": 10,
     "final_sync_analysis_frames": 1,
     "tc_drop_jitter_frames": 1
-  },
-  "resolutions": {
-    "k_steps": [1.5, 2, 3, 4],
-    "bit_depths": [10, 12, 16],
-    "hdr": {
-      "sdr": true,
-      "imx585_clear_hdr": true,
-      "threshold_low": 0,
-      "threshold_high": 0,
-      "blend": 0,
-      "gain_adder": 1
-    },
-    "custom_modes": {}
   }
 }
 ```
 
 `conform_frame_rate` – frame rate intended for project conforming in post. This setting is not really used by CineMate except for calculating the recording timecode tracker in redis but might be used in future updates.<br>
-`light_hz` – list of mains frequencies used to calculate flicker‑free shutter angles. These are added to the shutter angle steps and also dynamically calculated upon each fps change. This way, there is always a flicker free shutter angle value close by, when toggling through shutter angles, either via the cli or using buttons/pots/rotary encoder.
+`light_hz` – list of mains frequencies used to calculate flicker‑free shutter angles. These are added to the shutter angle steps (see [arrays](#arrays)) and also dynamically calculated upon each fps change. This way, there is always a flicker free shutter angle value close by, when toggling through shutter angles, either via the cli or using buttons/pots/rotary encoder.
 
 `sync_tolerances`:
 
@@ -233,28 +221,12 @@ Recording-wide behaviour: frame-rate conform target, flicker-free input, sync to
 <br>`final_sync_analysis_frames` – frame tolerance for the end-of-take DNG count analysis after buffered frames have flushed. Kept stricter than the live warning by default.
 <br>`tc_drop_jitter_frames` – tolerance for late-but-present frames (TC holes) before they count as a sync concern.
 
-### resolutions
-
-Choose which sensor modes are practical to expose in the UI when cycling resolutions. This is a filter, not the mode list itself: every mode a sensor supports lives in the sensor database (`resources/sensors.json`, see [camera.sensors](#sensors) above), and `resolutions` selects the useful subset to show. Hidden modes stay technically available to the system.
-
-`k_steps` – K‑style categories for allowed widths. Modes are grouped to the nearest half‑K. Example: 1332×990 counts as **1.5 K**.<br>
-`bit_depths` – list of bit depths to expose. `16` covers the imx585 ClearHDR 16-bit modes (see [ClearHDR](clear-hdr.md)).<br>
-`hdr.sdr` / `hdr.imx585_clear_hdr` – whitelist of the ClearHDR flag. Both `true` (default) exposes the plain and the imx585 ClearHDR modes; set `imx585_clear_hdr` to `false` to hide the HDR modes, or `sdr` to `false` to show only them. Cinemate detects the HDR modes by probing `cinepi-raw --list-cameras --hdr sensor` alongside the plain list. imx585 has HDR modes at **both** 12-bit and 16-bit, and they are labelled `HDR` (simple GUI) / `:HDR` (web GUI). The legacy `[false, true]` list form still works.<br>
-`hdr.threshold_low` / `hdr.threshold_high` / `hdr.blend` / `hdr.gain_adder` – startup values for the four ClearHDR live knobs, seeded into Redis at launch. Adjust them afterwards without a restart via `set hdr threshold low/high`, `set hdr blend`, `set hdr gain adder`, or a pot/quad-rotary channel. See [ClearHDR](clear-hdr.md#live-knobs) for what each one does.<br>
-`custom_modes` – optional extra modes per sensor if the driver advertises none.
-
-!!! note "Design: full capability vs practical exposure"
-
-    `resources/sensors.json` lists **every** mode each sensor supports, so all of them are technically available to the system. `capture.resolutions` then exposes only the **practical** subset in the UI. Example: the IMX283 default `k_steps: [3, 4]` shows its ≥25 fps modes (2.7K and 4K) and hides the 5K modes (~18–21 fps); those 5K modes stay in `sensors.json` and reappear if you add `5.5`. `k_steps`/`bit_depths` are global across all sensors.
-
-Cinemate also always runs **dynamic resolution**: if you select a mode and then raise FPS above what that mode's own sensor-reported maximum (the same number `cinepi-raw --list-cameras` reports) can sustain, Cinemate automatically switches to the highest-resolution mode that can. FPS returns to your selected mode once you dial back down. There is no setting for this — it always uses the sensor's own reported limits, never a separate measured table.
-
-## parameters
+## arrays
 
 One block per cycle-able camera parameter: ISO, shutter angle, frame rate, white balance. `steps` is the preset table Cinemate steps through; `free` switches to a continuous runtime range instead — for potentiometers, rotary encoders, CLI commands, and the web GUI. White balance free mode uses 100 K steps from 2800 K through 6500 K.
 
 ```jsonc
-"parameters": {
+"arrays": {
   "iso": {
     "steps": [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200],
     "free": false
@@ -281,12 +253,44 @@ One block per cycle-able camera parameter: ISO, shutter angle, frame rate, white
 
     References: [BRAW decode](https://blackmagiccameraapk.pro/blackmagic-raw-explained/) · [Gen 4 vs Gen 5](https://forum.blackmagicdesign.com/viewtopic.php?f=2&t=130645&start=50) · [ISO vs Exposure](https://forum.blackmagicdesign.com/viewtopic.php?f=2&t=123096) · [Resolve Camera RAW manual](https://www.steakunderwater.com/VFXPedia/__man/Resolve18-6/DaVinciResolve18_Manual_files/part202.htm)
 
-## audio
+## image_capture
+
+Which resolution/bit-depth/HDR modes are practical to expose in the UI when cycling resolutions. This is a filter, not the mode list itself: every mode a sensor supports lives in the sensor database (`resources/sensors.json`, see [sensors.database_file](#database_file) above), and `image_capture` selects the useful subset to show. Hidden modes stay technically available to the system.
+
+```jsonc
+"image_capture": {
+  "k_steps": [1.5, 2, 3, 4],
+  "bit_depths": [10, 12, 16],
+  "hdr": {
+    "sdr": true,
+    "imx585_clear_hdr": true,
+    "threshold_low": 0,
+    "threshold_high": 0,
+    "blend": 0,
+    "gain_adder": 1
+  },
+  "custom_modes": {}
+}
+```
+
+`k_steps` – K‑style categories for allowed widths. Modes are grouped to the nearest half‑K. Example: 1332×990 counts as **1.5 K**.<br>
+`bit_depths` – list of bit depths to expose. `16` covers the imx585 ClearHDR 16-bit modes (see [ClearHDR](clear-hdr.md)).<br>
+`hdr.sdr` / `hdr.imx585_clear_hdr` – whitelist of the ClearHDR flag. Both `true` (default) exposes the plain and the imx585 ClearHDR modes; set `imx585_clear_hdr` to `false` to hide the HDR modes, or `sdr` to `false` to show only them. Cinemate detects the HDR modes by probing `cinepi-raw --list-cameras --hdr sensor` alongside the plain list. imx585 has HDR modes at **both** 12-bit and 16-bit, and they are labelled `HDR` (simple GUI) / `:HDR` (web GUI). The legacy `[false, true]` list form still works.<br>
+`hdr.threshold_low` / `hdr.threshold_high` / `hdr.blend` / `hdr.gain_adder` – startup values for the four ClearHDR live knobs, seeded into Redis at launch. Adjust them afterwards without a restart via `set hdr threshold low/high`, `set hdr blend`, `set hdr gain adder`, or a pot/quad-rotary channel. See [ClearHDR](clear-hdr.md#live-knobs) for what each one does.<br>
+`custom_modes` – optional extra modes per sensor if the driver advertises none.
+
+!!! note "Design: full capability vs practical exposure"
+
+    `resources/sensors.json` lists **every** mode each sensor supports, so all of them are technically available to the system. `image_capture` then exposes only the **practical** subset in the UI. Example: the IMX283 default `k_steps: [3, 4]` shows its ≥25 fps modes (2.7K and 4K) and hides the 5K modes (~18–21 fps); those 5K modes stay in `sensors.json` and reappear if you add `5.5`. `k_steps`/`bit_depths` are global across all sensors.
+
+Cinemate also always runs **dynamic resolution**: if you select a mode and then raise FPS above what that mode's own sensor-reported maximum (the same number `cinepi-raw --list-cameras` reports) can sustain, Cinemate automatically switches to the highest-resolution mode that can. FPS returns to your selected mode once you dial back down. There is no setting for this — it always uses the sensor's own reported limits, never a separate measured table.
+
+## audio_capture
 
 Audio capture options shared by idle monitoring and recorded WAV input level. The stock file applies a 2-frame timecode offset on both paths.
 
 ```jsonc
-"audio": {
+"audio_capture": {
   "24bit": {
     "capture_gain_db": 6.0,
     "timecode_offset_frames": 2
@@ -306,17 +310,15 @@ Settings are split by the bit depth negotiated with the connected microphone. `2
 
 Some USB microphones expose a writable ALSA capture control and some do not. When the mic supports it, Cinemate applies `capture_gain_db` via `amixer` when the microphone is detected. If the device exposes no compatible control, the setting is silently skipped and the log will note that the mic likely has fixed hardware gain.
 
-## display
+## hdmi_display
 
 Everything the operator sees: the HDMI canvas, GUI overlays, and preview zoom/source/pip/anamorphic.
 
 ```jsonc
-"display": {
-  "hdmi": {
-    "width": 1920,
-    "height": 1080,
-    "mirror_to_both_ports": false
-  },
+"hdmi_display": {
+  "width": 1920,
+  "height": 1080,
+  "mirror_to_both_ports": false,
   "overlays": {
     "buffer_vu_meter": false,
     "vu_meter_hatch_lines": true
@@ -338,8 +340,6 @@ Everything the operator sees: the HDMI canvas, GUI overlays, and preview zoom/so
 }
 ```
 
-### hdmi
-
 `width` / `height` – the GUI canvas size Cinemate targets. If the active framebuffer is smaller, Cinemate falls back to the active framebuffer size instead of drawing a clipped layout into a smaller mode.<br>
 `mirror_to_both_ports` – single-sensor only: mirror the one sensor's preview (with GUI) onto both HDMI connectors via cinepi-raw's `--same-hdmi`. The dual-sensor compositor already owns both-feed layouts, so this has no effect with two sensors attached.
 
@@ -356,9 +356,9 @@ Everything the operator sees: the HDMI canvas, GUI overlays, and preview zoom/so
 `pip` – picture-in-picture inset geometry for the `pip_cam0` / `pip_cam1` preview modes. `scale` – inset size as a fraction of the main pane (default `0.28`). `corner` – `lower_right`, `lower_left`, `upper_right`, or `upper_left` (default `lower_right`). `margin` – gap from the edge as a fraction of the pane (default `0.03`). See [Dual sensors](dual-sensors.md#picture-in-picture).<br>
 `anamorphic` – stretching the preview for anamorphic lenses. `default_factor` – factor loaded when Cinemate starts. `steps` – selectable squeeze factors; values above `1.0` widen the image.
 
-## controls
+## hardware_controls
 
-Every physical input, channel-first: which pin/channel it's on, then what it does.
+Direct-GPIO physical inputs, channel-first: which pin it's on, then what it does.
 
 ### buttons
 
@@ -432,7 +432,7 @@ Rotary encoders used for fine adjustment of settings. These can be wired straigh
 }
 ```
 
-<br>`enabled` – optional per-encoder switch; set `false` to keep an example in the file without claiming pins at startup.
+<br>`enabled` – optional per-encoder switch; set `false` to keep an example in the file without claiming pins at startup. The stock file ships one disabled example.
 <br>`clk_pin` and `dt_pin` – the two pins of the encoder.
 <br>`button_pin` – optional BCM pin for the encoder push button.
 <br>`button_actions` – optional press/click/hold actions for the encoder push button.
@@ -460,9 +460,13 @@ Combined actions let one button act as a modifier for another button.
 
 Combined actions only fire while the hold button is still held down. If the modifier button is not active, the normal per-button actions continue to run.
 
+## input_peripherals
+
+Grove Base HAT analog pots and the Adafruit quad I2C rotary encoder board — separate from [hardware_controls](#hardware_controls) because these are their own peripheral boards, not pins wired straight to the Pi's GPIO header.
+
 ### pots
 
-Maps Grove Base HAT ADC channels to analogue dials (potentiometers), channel-first: which channel, then which [parameter](#parameters) it drives.
+Maps Grove Base HAT ADC channels to analogue dials (potentiometers), channel-first: which channel, then which [array](#arrays) it drives.
 
 ```jsonc
 "pots": [
@@ -473,7 +477,7 @@ Maps Grove Base HAT ADC channels to analogue dials (potentiometers), channel-fir
 ```
 
 `channel` – the Grove Base HAT ADC channel the pot is wired to.<br>
-`setting` – which entry in [`parameters`](#parameters) the pot drives (`iso`, `shutter_a`, `fps`, `wb`, or an HDR knob name like `hdr_threshold_low`).
+`setting` – which entry in [`arrays`](#arrays) the pot drives (`iso`, `shutter_a`, `fps`, `wb`, or an HDR knob name like `hdr_threshold_low`).
 
 !!! info ""
 
@@ -481,7 +485,7 @@ Maps Grove Base HAT ADC channels to analogue dials (potentiometers), channel-fir
 
 ### quad_rotary_controller
 
-Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry maps one of the four dials to a [parameter](#parameters) and defines the push button actions similar to `buttons`. The stock settings include this mapping with `enabled` set to `false`; set it to `true` only when the board is connected.
+Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry maps one of the four dials to an [array](#arrays) and defines the push button actions similar to `buttons`. The stock settings include this mapping with `enabled` set to `false`; set it to `true` only when the board is connected.
 
 ```jsonc
 "quad_rotary_controller": {
@@ -504,14 +508,14 @@ Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry m
 }
 ```
 
-`enabled` – turn the quad rotary controller on or off.<br>`encoders` – mapping of each dial (channel `"0"`–`"3"`) to a `setting_name` from [`parameters`](#parameters) and button actions. An encoder with no `setting_name` is valid too — its button can still drive its own actions without cycling a parameter.
+`enabled` – turn the quad rotary controller on or off.<br>`encoders` – mapping of each dial (channel `"0"`–`"3"`) to a `setting_name` from [`arrays`](#arrays) and button actions. An encoder with no `setting_name` is valid too — its button can still drive its own actions without cycling a parameter.
 
-## outputs
+## hardware_outputs
 
-Everything Cinemate drives: the REC tally/relay pin(s), the REC sync tone, and the optional OLED status screen.
+Direct-GPIO outputs Cinemate drives: the REC tally/relay pin(s) and the REC sync tone.
 
 ```jsonc
-"outputs": {
+"hardware_outputs": {
   "pwm_pin": 19,
   "rec_out_pin": [6, 21],
   "rec_tone": {
@@ -519,13 +523,6 @@ Everything Cinemate drives: the REC tally/relay pin(s), the REC sync tone, and t
     "frequency_hz": 1000,
     "duty_cycle": 50,
     "relay_drop_frames": false
-  },
-  "oled": {
-    "enabled": true,
-    "width": 128,
-    "height": 64,
-    "font_size": 30,
-    "values": ["write_speed_to_drive"]
   }
 }
 ```
@@ -540,9 +537,21 @@ Everything Cinemate drives: the REC tally/relay pin(s), the REC sync tone, and t
 <br>`duty_cycle` – PWM duty cycle percentage (`0–100`).
 <br>`relay_drop_frames` – when `true`, each live drop-frame pulse (`drop_frame_relay = 1`) briefly mutes REC tone output for about one frame, then resumes automatically.
 
-### oled
+## output_peripherals
 
-Configuration for the optional OLED status screen. This can be useful for presenting extra information apart from the HDMI/web display.
+The optional I2C OLED status screen — separate from [hardware_outputs](#hardware_outputs) because it's its own I2C peripheral board, not a pin wired straight to the Pi's GPIO header. This can be useful for presenting extra information apart from the HDMI/web display.
+
+```jsonc
+"output_peripherals": {
+  "oled": {
+    "enabled": true,
+    "width": 128,
+    "height": 64,
+    "font_size": 30,
+    "values": ["write_speed_to_drive"]
+  }
+}
+```
 
 `enabled` – turn the OLED display on or off.<br>
 `width` / `height` – pixel dimensions of your screen.<br>

@@ -17,8 +17,8 @@ class CameraLogEncodeDefaultsTests(unittest.TestCase):
         output, so it must be opt-in even for a from-scratch config."""
         settings = _apply_settings_defaults({})
 
-        self.assertIs(settings["camera"]["cam0"]["log_encode"], False)
-        self.assertIs(settings["camera"]["cam1"]["log_encode"], False)
+        self.assertIs(settings["sensors"]["cam0"]["log_encode"], False)
+        self.assertIs(settings["sensors"]["cam1"]["log_encode"], False)
 
     def test_runtime_defaults_preserve_an_existing_log_encode_choice(self):
         """_apply_settings_defaults runs on every launch (it fills gaps in a
@@ -26,11 +26,11 @@ class CameraLogEncodeDefaultsTests(unittest.TestCase):
         -- or every restart would silently reset the user's log choice back
         to off."""
         settings = _apply_settings_defaults(
-            {"camera": {"cam0": {"log_encode": 10}, "cam1": {"log_encode": True}}}
+            {"sensors": {"cam0": {"log_encode": 10}, "cam1": {"log_encode": True}}}
         )
 
-        self.assertEqual(settings["camera"]["cam0"]["log_encode"], 10)
-        self.assertIs(settings["camera"]["cam1"]["log_encode"], True)
+        self.assertEqual(settings["sensors"]["cam0"]["log_encode"], 10)
+        self.assertIs(settings["sensors"]["cam1"]["log_encode"], True)
 
     def test_stock_settings_default_log_encode_off(self):
         """The shipped resources/settings/settings_default.jsonc (the
@@ -40,8 +40,8 @@ class CameraLogEncodeDefaultsTests(unittest.TestCase):
             (ROOT / "resources/settings/settings_default.jsonc").read_text(encoding="utf-8")
         ))
 
-        self.assertIs(settings["camera"]["cam0"]["log_encode"], False)
-        self.assertIs(settings["camera"]["cam1"]["log_encode"], False)
+        self.assertIs(settings["sensors"]["cam0"]["log_encode"], False)
+        self.assertIs(settings["sensors"]["cam1"]["log_encode"], False)
 
 
 if __name__ == "__main__":

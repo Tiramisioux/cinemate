@@ -12,7 +12,7 @@ For each detected camera, the manager creates a `CinePiProcess`. `_build_args()`
 - per-camera HDMI output mapping from the `output` section
 - the low-resolution preview size used by CinePi-raw
 
-The preview size is based on `display.hdmi.width` and `display.hdmi.height`, but if a framebuffer is already active, Cinemate prefers the real framebuffer size instead of forcing the configured canvas. That avoids drawing a clipped `1920x1080` preview into a smaller active mode.
+The preview size is based on `hdmi_display.width` and `hdmi_display.height`, but if a framebuffer is already active, Cinemate prefers the real framebuffer size instead of forcing the configured canvas. That avoids drawing a clipped `1920x1080` preview into a smaller active mode.
 
 Here is a simplified example of the resulting command:
 

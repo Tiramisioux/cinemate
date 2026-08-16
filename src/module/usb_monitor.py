@@ -120,7 +120,7 @@ class AudioMonitor:
         self.card_name: Optional[str] = None
         self.capture_gain_control: Optional[str] = None
         self.capture_gain_db = self._parse_capture_gain_db(
-            self.settings.get("audio", {}).get("capture_gain_db", 0.0)
+            self.settings.get("audio_capture", {}).get("capture_gain_db", 0.0)
         )
 
     @staticmethod
@@ -215,7 +215,7 @@ class AudioMonitor:
         # Re-read gain from the per-toolchain sub-object now that bit_depth is known.
         # Falls back to the legacy flat key for Pi-local settings files that haven't
         # been updated yet.
-        audio_cfg = self.settings.get("audio", {})
+        audio_cfg = self.settings.get("audio_capture", {})
         toolchain_key = "24bit" if self.bit_depth == 24 else "16bit"
         if toolchain_key in audio_cfg and "capture_gain_db" in audio_cfg[toolchain_key]:
             self.capture_gain_db = self._parse_capture_gain_db(

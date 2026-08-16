@@ -593,13 +593,13 @@ def start_hotspot(settings) -> None:
 
 def initialize_system(settings, pi_model="unknown"):
     """Initialize core system components."""
-    conf_rate = settings.get("capture", {}).get("conform_frame_rate", 24)
+    conf_rate = settings.get("settings", {}).get("conform_frame_rate", 24)
     redis_controller = RedisController(conform_frame_rate=conf_rate)
     sensor_detect = SensorDetect(settings)
     ssd_monitor = SSDMonitor(redis_controller=redis_controller)
     usb_monitor = USBMonitor(ssd_monitor, settings=settings)
 
-    gpio_cfg = settings["outputs"]
+    gpio_cfg = settings["hardware_outputs"]
     rec_tone_pins = gpio_cfg.get("rec_tone_pin")
     if rec_tone_pins in (None, []):
         # Backward compatibility: if no explicit rec_tone_pin is configured,
@@ -686,8 +686,8 @@ def run_application(args, log_queue):
     redis_controller.set_value(ParameterKey.PI_MODEL.value, pi_model)
 
     # Set redis anamorphic factor to default value
-    redis_controller.set_value(ParameterKey.ANAMORPHIC_FACTOR.value, settings["display"]["preview"]["anamorphic"]["default_factor"])
-    _audio_cfg = settings.get("audio", {})
+    redis_controller.set_value(ParameterKey.ANAMORPHIC_FACTOR.value, settings["hdmi_display"]["preview"]["anamorphic"]["default_factor"])
+    _audio_cfg = settings.get("audio_capture", {})
     redis_controller.set_value(
         ParameterKey.AUDIO_CAPTURE_GAIN_DB.value,
         (_audio_cfg.get("16bit") or {}).get("capture_gain_db",
@@ -697,20 +697,20 @@ def run_application(args, log_queue):
     # Default zoom factor
     redis_controller.set_value(
         ParameterKey.ZOOM.value,
-        settings.get("display", {}).get("preview", {}).get("default_zoom", 1.0)
+        settings.get("hdmi_display", {}).get("preview", {}).get("default_zoom", 1.0)
 )
 
     # Default dual-sensor HDMI preview source (both / cam0 / cam1)
     redis_controller.set_value(
         ParameterKey.HDMI_PREVIEW_SOURCE.value,
-        settings.get("display", {}).get("preview", {}).get("default_hdmi_source", "both")
+        settings.get("hdmi_display", {}).get("preview", {}).get("default_hdmi_source", "both")
 )
 
-    # ClearHDR live-knob startup values (capture.resolutions.hdr). Cinepi-raw
+    # ClearHDR live-knob startup values (image_capture.hdr). Cinepi-raw
     # re-applies these from Redis once a ClearHDR mode is actually selected;
     # seeding them here just means the first `set hdr threshold/blend/gain
     # adder` read (pot, quad, CLI) already sees the configured default.
-    _hdr_cfg = settings.get("capture", {}).get("resolutions", {}).get("hdr", {})
+    _hdr_cfg = settings.get("image_capture", {}).get("hdr", {})
     redis_controller.set_value(ParameterKey.HDR_THRESHOLD_LOW.value, _hdr_cfg.get("threshold_low", 0))
     redis_controller.set_value(ParameterKey.HDR_THRESHOLD_HIGH.value, _hdr_cfg.get("threshold_high", 0))
     redis_controller.set_value(ParameterKey.HDR_BLEND.value, _hdr_cfg.get("blend", 0))
@@ -733,13 +733,13 @@ def run_application(args, log_queue):
 
     cinepi_controller = CinePiController(
         cinepi, redis_controller, ssd_monitor, sensor_detect,
-        iso_steps=settings["parameters"]["iso"]["steps"],
-        shutter_a_steps=settings["parameters"]["shutter_a"]["steps"],
-        fps_steps=settings["parameters"]["fps"]["steps"],
-        wb_steps=settings["parameters"]["wb"]["steps"],
-        light_hz=settings["capture"]["light_hz"],
-        anamorphic_steps=settings["display"]["preview"]["anamorphic"]["steps"],
-        default_anamorphic_factor=settings["display"]["preview"]["anamorphic"]["default_factor"]
+        iso_steps=settings["arrays"]["iso"]["steps"],
+        shutter_a_steps=settings["arrays"]["shutter_a"]["steps"],
+        fps_steps=settings["arrays"]["fps"]["steps"],
+        wb_steps=settings["arrays"]["wb"]["steps"],
+        light_hz=settings["settings"]["light_hz"],
+        anamorphic_steps=settings["hdmi_display"]["preview"]["anamorphic"]["steps"],
+        default_anamorphic_factor=settings["hdmi_display"]["preview"]["anamorphic"]["default_factor"]
     )
 
     storage_preroll = StoragePreroll(
@@ -750,7 +750,7 @@ def run_application(args, log_queue):
         auto_enabled=auto_storage_preroll_enabled(settings),
     )
 
-    gpio_cfg = settings.get("outputs", {})
+    gpio_cfg = settings.get("hardware_outputs", {})
     rec_tone_pins = gpio_cfg.get("rec_tone_pin")
     if rec_tone_pins in (None, []):
         rec_tone_pins = gpio_cfg.get("pwm_pin")
@@ -813,12 +813,12 @@ def run_application(args, log_queue):
     # Initialize USB monitoring
     usb_monitor.check_initial_devices()
 
-    # Setup Analog Controls. controls.pots is a channel-first list
+    # Setup Analog Controls. input_peripherals.pots is a channel-first list
     # ({"channel": ..., "setting": "iso"}); AnalogControls itself still
     # takes one named channel per parameter, so resolve that lookup here.
     pot_channel_by_setting = {
         p.get("setting"): p.get("channel")
-        for p in settings.get("controls", {}).get("pots", [])
+        for p in settings.get("input_peripherals", {}).get("pots", [])
         if p.get("setting")
     }
     analog_controls = AnalogControls(
@@ -827,10 +827,10 @@ def run_application(args, log_queue):
         pot_channel_by_setting.get("shutter_a", "None"),
         pot_channel_by_setting.get("fps", "None"),
         pot_channel_by_setting.get("wb", "None"),
-        settings["parameters"]["iso"]["steps"],
-        settings["parameters"]["shutter_a"]["steps"],
-        settings["parameters"]["fps"]["steps"],
-        settings["parameters"]["wb"]["steps"],
+        settings["arrays"]["iso"]["steps"],
+        settings["arrays"]["shutter_a"]["steps"],
+        settings["arrays"]["fps"]["steps"],
+        settings["arrays"]["wb"]["steps"],
         hdr_threshold_low_pot=pot_channel_by_setting.get("hdr_threshold_low", "None"),
         hdr_threshold_high_pot=pot_channel_by_setting.get("hdr_threshold_high", "None"),
         hdr_blend_pot=pot_channel_by_setting.get("hdr_blend", "None"),
@@ -876,7 +876,7 @@ def run_application(args, log_queue):
         logging.info("Restarting cinepi-raw after startup handoff so preview binds above Cinemate")
         cinepi_controller.restart_camera(preview_enabled=True)
 
-    tol_cfg = settings.get("capture", {}).get("sync_tolerances", {})
+    tol_cfg = settings.get("settings", {}).get("sync_tolerances", {})
     redis_listener = RedisListener(
         redis_controller,
         ssd_monitor,
@@ -904,12 +904,12 @@ def run_application(args, log_queue):
         settings=settings,
     )
 
-    if settings.get("outputs", {}).get("oled", {}).get("enabled", False):
+    if settings.get("output_peripherals", {}).get("oled", {}).get("enabled", False):
         i2c_oled = I2cOled(settings, redis_controller)
         i2c_oled.start()
 
     quad_rotary = None
-    qcfg = settings.get("controls", {}).get("quad_rotary_controller", {})
+    qcfg = settings.get("input_peripherals", {}).get("quad_rotary_controller", {})
     if qcfg.get("enabled", False) and qcfg.get("encoders"):
         quad_rotary = QuadRotaryController(cinepi_controller, settings)
         quad_rotary.start()

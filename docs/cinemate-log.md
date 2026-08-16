@@ -35,7 +35,7 @@ The flag is per-camera and launch-only; the sensor mode is live. Cinemate re-res
 ### In `settings.jsonc`
 
 ```json
-"camera": {
+"sensors": {
   "cam0": {
     "log_encode": false
   }

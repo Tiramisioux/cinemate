@@ -35,7 +35,7 @@ from module.i2c.quad_rotary_controller import QuadRotaryController
 
 
 def settings_with(encoders):
-    return {"controls": {"quad_rotary_controller": {"enabled": False, "encoders": encoders}}}
+    return {"input_peripherals": {"quad_rotary_controller": {"enabled": False, "encoders": encoders}}}
 
 
 class QuadRotarySettingNameValidationTests(unittest.TestCase):

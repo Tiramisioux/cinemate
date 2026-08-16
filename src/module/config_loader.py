@@ -174,21 +174,21 @@ def _apply_settings_defaults(settings: dict) -> dict:
 
     settings["system"] = system_cfg
 
-    # ── camera: per-sensor hardware + dual-sensor record policy ────────────
-    camera_cfg = settings.setdefault("camera", {})
-    camera_cfg.setdefault("raw_buffer_count", 0)
+    # ── sensors: per-sensor hardware + dual-sensor record policy ───────────
+    sensors_cfg = settings.setdefault("sensors", {})
+    sensors_cfg.setdefault("raw_buffer_count", 0)
     # "follow_preview": recording follows the HDMI preview (side-by-side
     # records both, a full-screen/pip-main sensor records alone). A camera
     # token on `rec` overrides either policy for one take. No effect with a
     # single sensor. "always_both" forces both sensors every take regardless
     # of preview. See docs/dual-sensors.md#recording.
-    camera_cfg.setdefault("record_policy", "follow_preview")
+    sensors_cfg.setdefault("record_policy", "follow_preview")
     # Legacy top-level "geometry"/"output" sections (written by settings.jsonc
-    # files that predate the camera.cam0/cam1 nesting) still fold in here.
+    # files that predate the cam0/cam1 nesting) still fold in here.
     old_geo = settings.pop("geometry", None) or {}
     old_out = settings.pop("output", None) or {}
     for port, default_hdmi in (("cam0", 0), ("cam1", 1)):
-        cam = camera_cfg.setdefault(port, {})
+        cam = sensors_cfg.setdefault(port, {})
         if "geometry" not in cam and port in old_geo:
             cam["geometry"] = old_geo[port]
         geo = cam.setdefault("geometry", {})
@@ -210,17 +210,15 @@ def _apply_settings_defaults(settings: dict) -> dict:
         # output. Resolved against the live sensor + bit depth at launch via
         # SensorDetect.resolve_log_encode_target(); never a raw flag value.
         cam.setdefault("log_encode", False)
-    sensor_cfg = camera_cfg.setdefault("sensors", {})
-    sensor_cfg.setdefault("database_file", "resources/sensors.json")
-    camera_cfg["sensors"] = sensor_cfg
-    settings["camera"] = camera_cfg
+    sensors_cfg.setdefault("database_file", "resources/sensors.json")
+    settings["sensors"] = sensors_cfg
 
-    # ── capture: recording-wide behavior + resolution/HDR filters ──────────
-    capture_cfg = settings.setdefault("capture", {})
-    capture_cfg.setdefault("conform_frame_rate", 24)
-    capture_cfg.setdefault("light_hz", [50, 60])
+    # ── settings: frame-rate conform + flicker-free input + sync tuning ────
+    settings_cfg = settings.setdefault("settings", {})
+    settings_cfg.setdefault("conform_frame_rate", 24)
+    settings_cfg.setdefault("light_hz", [50, 60])
 
-    tol_cfg = capture_cfg.setdefault("sync_tolerances", {})
+    tol_cfg = settings_cfg.setdefault("sync_tolerances", {})
     tolerance_defaults = {
         "live_sync_warning_frames": 5,
         "live_sync_startup_guard_frames": 10,
@@ -229,28 +227,14 @@ def _apply_settings_defaults(settings: dict) -> dict:
     }
     for k, v in tolerance_defaults.items():
         tol_cfg.setdefault(k, v)
-    capture_cfg["sync_tolerances"] = tol_cfg
+    settings_cfg["sync_tolerances"] = tol_cfg
+    settings["settings"] = settings_cfg
 
-    res_cfg = capture_cfg.setdefault("resolutions", {})
-    resolution_defaults = {
-        "k_steps": [1.5, 2.0, 4.0],
-        "bit_depths": [10, 12],
-        # ClearHDR (imx585) whitelist. Both true exposes the plain and the HDR
-        # modes; set "imx585_clear_hdr" false to hide the HDR modes. See
-        # SensorDetect._hdr_whitelist.
-        "hdr": {"sdr": True, "imx585_clear_hdr": True},
-        "custom_modes": {},
-    }
-    for k, v in resolution_defaults.items():
-        res_cfg.setdefault(k, v)
-    capture_cfg["resolutions"] = res_cfg
-    settings["capture"] = capture_cfg
-
-    # ── parameters: one block per cycle-able camera parameter ──────────────
+    # ── arrays: one block per cycle-able camera parameter ──────────────────
     # steps = the selectable table; free = continuous stepping instead of the
-    # table. Kept in the shape parameters.REGISTRY expects (name -> {steps,
-    # free}) -- see module/parameters.py.
-    parameters_cfg = settings.setdefault("parameters", {})
+    # table. Each parameter block is kept in the shape parameters.REGISTRY
+    # expects (name -> {steps, free}) -- see module/parameters.py.
+    arrays_cfg = settings.setdefault("arrays", {})
     parameter_defaults = {
         "iso": {
             "steps": [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200],
@@ -270,15 +254,30 @@ def _apply_settings_defaults(settings: dict) -> dict:
         },
     }
     for name, defaults in parameter_defaults.items():
-        p_cfg = parameters_cfg.setdefault(name, {})
+        p_cfg = arrays_cfg.setdefault(name, {})
         for k, v in defaults.items():
             p_cfg.setdefault(k, v)
-        parameters_cfg[name] = p_cfg
-    settings["parameters"] = parameters_cfg
+        arrays_cfg[name] = p_cfg
+    settings["arrays"] = arrays_cfg
 
-    # ── audio: capture gain + timecode offset per mic path ──────────────────
+    # ── image_capture: resolution / bit-depth / HDR filters ────────────────
+    image_capture_cfg = settings.setdefault("image_capture", {})
+    image_capture_defaults = {
+        "k_steps": [1.5, 2.0, 4.0],
+        "bit_depths": [10, 12],
+        # ClearHDR (imx585) whitelist. Both true exposes the plain and the HDR
+        # modes; set "imx585_clear_hdr" false to hide the HDR modes. See
+        # SensorDetect._hdr_whitelist.
+        "hdr": {"sdr": True, "imx585_clear_hdr": True},
+        "custom_modes": {},
+    }
+    for k, v in image_capture_defaults.items():
+        image_capture_cfg.setdefault(k, v)
+    settings["image_capture"] = image_capture_cfg
+
+    # ── audio_capture: capture gain + timecode offset per mic path ─────────
     # Migrate old flat keys to nested per-toolchain objects.
-    audio_cfg = settings.setdefault("audio", {})
+    audio_cfg = settings.setdefault("audio_capture", {})
     old_gain = audio_cfg.pop("capture_gain_db", 0.0)
     if "timecode_offset_frames" in audio_cfg and "24bit" not in audio_cfg:
         audio_cfg["24bit"] = {
@@ -296,27 +295,24 @@ def _apply_settings_defaults(settings: dict) -> dict:
     audio_cfg.setdefault("16bit", {})
     audio_cfg["16bit"].setdefault("capture_gain_db", 0.0)
     audio_cfg["16bit"].setdefault("timecode_offset_frames", 0)
-    settings["audio"] = audio_cfg
+    settings["audio_capture"] = audio_cfg
 
-    # ── display: everything the operator sees ───────────────────────────────
-    display_cfg = settings.setdefault("display", {})
-
-    hdmi_cfg = display_cfg.setdefault("hdmi", {})
-    hdmi_cfg.setdefault("width", 1920)
-    hdmi_cfg.setdefault("height", 1080)
+    # ── hdmi_display: HDMI canvas, GUI overlays, preview ────────────────────
+    hdmi_display_cfg = settings.setdefault("hdmi_display", {})
+    hdmi_display_cfg.setdefault("width", 1920)
+    hdmi_display_cfg.setdefault("height", 1080)
     # Single-sensor only: mirrors the one sensor's preview (with GUI) onto
     # BOTH HDMI connectors via cinepi-raw's --same-hdmi. The dual-sensor
     # compositor already owns both-feed layouts, so this has no effect with
     # two sensors attached.
-    hdmi_cfg.setdefault("mirror_to_both_ports", False)
-    display_cfg["hdmi"] = hdmi_cfg
+    hdmi_display_cfg.setdefault("mirror_to_both_ports", False)
 
-    overlays_cfg = display_cfg.setdefault("overlays", {})
+    overlays_cfg = hdmi_display_cfg.setdefault("overlays", {})
     overlays_cfg.setdefault("buffer_vu_meter", True)
     overlays_cfg.setdefault("vu_meter_hatch_lines", True)
-    display_cfg["overlays"] = overlays_cfg
+    hdmi_display_cfg["overlays"] = overlays_cfg
 
-    preview_cfg = display_cfg.setdefault("preview", {})
+    preview_cfg = hdmi_display_cfg.setdefault("preview", {})
     preview_cfg.setdefault("default_zoom", 1.0)
     preview_cfg.setdefault("zoom_steps", [1.0, 1.5, 2.0])
     preview_cfg["zoom_steps"] = sorted(set(preview_cfg["zoom_steps"]))
@@ -335,34 +331,34 @@ def _apply_settings_defaults(settings: dict) -> dict:
     anamorphic_cfg.setdefault("default_factor", 1.00)
     anamorphic_cfg.setdefault("steps", [1.00, 1.33, 2.00])
     preview_cfg["anamorphic"] = anamorphic_cfg
-    display_cfg["preview"] = preview_cfg
+    hdmi_display_cfg["preview"] = preview_cfg
 
-    settings["display"] = display_cfg
+    settings["hdmi_display"] = hdmi_display_cfg
 
-    # ── controls: every physical input, channel-first ──────────────────────
-    controls_cfg = settings.setdefault("controls", {})
+    # ── hardware_controls: direct-GPIO physical inputs, channel-first ──────
+    controls_cfg = settings.setdefault("hardware_controls", {})
     controls_cfg.setdefault("buttons", [])
     controls_cfg.setdefault("two_way_switches", [])
     controls_cfg.setdefault("three_way_switches", [])
     controls_cfg.setdefault("rotary_encoders", [])
     controls_cfg.setdefault("combined_actions", [])
-    # Analog pots: [{"channel": <adc-channel>, "setting": "<parameters key>"}]
-    controls_cfg.setdefault("pots", [])
-    controls_cfg.setdefault(
-        "quad_rotary_controller",
-        {"enabled": False, "encoders": []},
-    )
-    settings["controls"] = controls_cfg
+    settings["hardware_controls"] = controls_cfg
 
-    # ── outputs: everything Cinemate drives ─────────────────────────────────
-    outputs_cfg = settings.setdefault("outputs", {})
-    oled_cfg = outputs_cfg.setdefault("oled", {})
-    oled_cfg.setdefault("enabled", False)
-    oled_cfg.setdefault("width", 128)
-    oled_cfg.setdefault("height", 64)
-    oled_cfg.setdefault("font_size", 20)
-    oled_cfg.setdefault("values", ["iso", "tc_cam0", "RECORDING_TC"])
-    outputs_cfg["oled"] = oled_cfg
+    # ── input_peripherals: Grove Base HAT pots + quad I2C rotary board ─────
+    input_peripherals_cfg = settings.setdefault("input_peripherals", {})
+    # Analog pots: [{"channel": <adc-channel>, "setting": "<settings key>"}]
+    input_peripherals_cfg.setdefault("pots", [])
+    quad_cfg = input_peripherals_cfg.setdefault(
+        "quad_rotary_controller",
+        {"enabled": False, "encoders": {}},
+    )
+    quad_cfg.setdefault("enabled", False)
+    quad_cfg.setdefault("encoders", {})
+    input_peripherals_cfg["quad_rotary_controller"] = quad_cfg
+    settings["input_peripherals"] = input_peripherals_cfg
+
+    # ── hardware_outputs: direct-GPIO outputs Cinemate drives ──────────────
+    outputs_cfg = settings.setdefault("hardware_outputs", {})
     outputs_cfg.setdefault("pwm_pin", 19)
     outputs_cfg.setdefault("rec_out_pin", [6, 21])
     rec_tone_cfg = outputs_cfg.setdefault("rec_tone", {})
@@ -371,7 +367,18 @@ def _apply_settings_defaults(settings: dict) -> dict:
     rec_tone_cfg.setdefault("duty_cycle", 50)
     rec_tone_cfg.setdefault("relay_drop_frames", False)
     outputs_cfg["rec_tone"] = rec_tone_cfg
-    settings["outputs"] = outputs_cfg
+    settings["hardware_outputs"] = outputs_cfg
+
+    # ── output_peripherals: the optional I2C OLED status screen ────────────
+    output_peripherals_cfg = settings.setdefault("output_peripherals", {})
+    oled_cfg = output_peripherals_cfg.setdefault("oled", {})
+    oled_cfg.setdefault("enabled", False)
+    oled_cfg.setdefault("width", 128)
+    oled_cfg.setdefault("height", 64)
+    oled_cfg.setdefault("font_size", 20)
+    oled_cfg.setdefault("values", ["iso", "tc_cam0", "RECORDING_TC"])
+    output_peripherals_cfg["oled"] = oled_cfg
+    settings["output_peripherals"] = output_peripherals_cfg
 
     return settings
 

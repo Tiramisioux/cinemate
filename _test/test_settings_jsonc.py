@@ -170,7 +170,7 @@ class LoadSettingsJsoncTests(unittest.TestCase):
         # /* */ comments in it -- this exercises strip_jsonc end to end
         # against the actual file, not just synthetic fixtures above.
         settings = load_settings(ROOT / "settings.jsonc")
-        self.assertIn("camera", settings)
+        self.assertIn("sensors", settings)
         self.assertIn("system", settings)
 
 

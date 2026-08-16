@@ -237,7 +237,7 @@ class SensorDatabaseTests(unittest.TestCase):
         from module.config_loader import strip_jsonc
         detector = self._detector_without_probe()
         settings = json.loads(strip_jsonc((ROOT / "settings.jsonc").read_text()))
-        rc = settings.get("capture", {}).get("resolutions", {})
+        rc = settings.get("image_capture", {})
         detector.settings = settings
         detector.k_steps = rc.get("k_steps", [])
         detector.bit_depths = rc.get("bit_depths", [])

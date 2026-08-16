@@ -69,7 +69,7 @@ class SensorDetect:
         self.camera_model = None
         self.res_modes = {}
         self.settings = settings or {}
-        res_cfg = self.settings.get("capture", {}).get("resolutions", {})
+        res_cfg = self.settings.get("image_capture", {})
         self.k_steps = res_cfg.get("k_steps", [])
         self.bit_depths = res_cfg.get("bit_depths", [])
         self.custom_modes = res_cfg.get("custom_modes", {})
@@ -78,7 +78,7 @@ class SensorDetect:
         # exposes plain and ClearHDR modes, turn a flag off to hide that class
         # of modes. Mirrors the bit_depths / k_steps whitelists above.
         self.hdr_modes = self._hdr_whitelist(res_cfg.get("hdr", {}))
-        sensor_cfg = self.settings.get("camera", {}).get("sensors", {})
+        sensor_cfg = self.settings.get("sensors", {})
         self.sensor_database_file = sensor_cfg.get(
             "database_file",
             DEFAULT_SENSOR_DATABASE_FILE,

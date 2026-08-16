@@ -30,8 +30,8 @@ These trivial keys were dropped in the *settings-cleanup* commit, not in `2f7939
 `set_fps` reads the flag with a `True` default, so correction works without them —
 re-add them only to expose the toggle in `settings.jsonc` again:
 
-- `settings.jsonc` and `resources/settings/settings_default.json`, under
-  `camera.cam0` / `camera.cam1`:
+- `settings.jsonc` and `resources/settings/settings_default.jsonc`, under
+  `sensors.cam0` / `sensors.cam1`:
   `"sensor_fps_correction": true,`
 - `src/module/config_loader.py` (per-camera defaults loop):
   `cam.setdefault("sensor_fps_correction", True)`

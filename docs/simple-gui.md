@@ -18,7 +18,7 @@ The browser-based web UI features basic settings and interactive controls.
 
 ## Indicators
 
-- The buffer meter in the lower-left corner shows used vs total frame buffer. Optional hatch lines can be enabled in `settings.jsonc` under `display.overlays`.
+- The buffer meter in the lower-left corner shows used vs total frame buffer. Optional hatch lines can be enabled in `settings.jsonc` under `hdmi_display.overlays`.
 - During storage pre-roll, the GUI hides recording time and clip names.
 - If zoom is anything other than the configured default, the zoom box is highlighted yellow.
 - If dynamic resolution is substituting a lower-resolution mode to reach the current FPS, the resolution numbers turn green.

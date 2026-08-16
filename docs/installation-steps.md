@@ -751,16 +751,14 @@ editsettings
 Make sure the HDMI sections are present and match your install:
 
 ```json
-"camera": {
+"sensors": {
   "cam0": { "output": { "hdmi_port": 0 } },
   "cam1": { "output": { "hdmi_port": 1 } }
 },
 
-"display": {
-  "hdmi": {
-    "width": 1920,
-    "height": 1080
-  }
+"hdmi_display": {
+  "width": 1920,
+  "height": 1080
 }
 ```
 

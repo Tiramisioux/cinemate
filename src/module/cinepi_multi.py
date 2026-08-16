@@ -69,7 +69,7 @@ def _seed_default_zoom(redis_ctl):
     Write preview.default_zoom to Redis once per boot, but
     only if the key doesn’t exist yet.
     """
-    preview_cfg  = _settings().get("display", {}).get("preview", {})
+    preview_cfg  = _settings().get("hdmi_display", {}).get("preview", {})
     default_zoom = float(preview_cfg.get("default_zoom", 1.0))
 
     if redis_ctl.get_value(ParameterKey.ZOOM.value) is None:
@@ -81,7 +81,7 @@ def _seed_default_zoom(redis_ctl):
 
 def _plain_arecord_timecode_offset_frames(settings: dict | None = None) -> int:
     """Timecode offset for the 16-bit mic path (audio.16bit.timecode_offset_frames)."""
-    audio_cfg = (settings if settings is not None else _settings()).get("audio", {})
+    audio_cfg = (settings if settings is not None else _settings()).get("audio_capture", {})
     raw_value = (
         audio_cfg["16bit"].get("timecode_offset_frames", 0)
         if "16bit" in audio_cfg
@@ -96,7 +96,7 @@ def _plain_arecord_timecode_offset_frames(settings: dict | None = None) -> int:
 
 def _audio_timecode_offset_frames(settings: dict | None = None) -> int:
     """Timecode offset for the 24-bit USB dsnoop capture path (audio.24bit.timecode_offset_frames)."""
-    audio_cfg = (settings if settings is not None else _settings()).get("audio", {})
+    audio_cfg = (settings if settings is not None else _settings()).get("audio_capture", {})
     raw_value = (
         audio_cfg["24bit"].get("timecode_offset_frames", 0)
         if "24bit" in audio_cfg
@@ -225,7 +225,7 @@ class CinePiProcess(Thread):
         
         # load per-camera settings (geometry, output, fps-correction flag)
         settings = _settings()
-        camera_cfg = settings.get('camera', {}) or {}
+        camera_cfg = settings.get('sensors', {}) or {}
         cam_cfg = camera_cfg.get(self.cam.port, {})
         self.geometry = cam_cfg.get('geometry', {})
         self.output   = cam_cfg.get('output', {})
@@ -323,9 +323,9 @@ class CinePiProcess(Thread):
         """
         role = 'primary' if self.primary else 'secondary'
         # Picture-in-picture inset geometry comes from settings.jsonc
-        # display.preview.pip and is baked into the post-process file the
-        # primary reads at Configure.
-        pip_cfg = (_settings().get('display', {}) or {}).get('preview', {}).get('pip', {}) or {}
+        # hdmi_display.preview.pip and is baked into the post-process file
+        # the primary reads at Configure.
+        pip_cfg = (_settings().get('hdmi_display', {}) or {}).get('preview', {}).get('pip', {}) or {}
         cfg = {
             'sharedContext': {},
             'mjpegPreview': {'port': 8000 + int(self.cam.index)},
@@ -375,7 +375,7 @@ class CinePiProcess(Thread):
         
         # Get HDMI resolution from settings, but prefer the active
         # framebuffer mode when HDMI is already attached.
-        hdmi_config = _settings().get("display", {}).get("hdmi", {})
+        hdmi_config = _settings().get("hdmi_display", {})
         fw, fh = hdmi_config.get("width", 1920), hdmi_config.get("height", 1080)
         try:
             fw = int(fw)
@@ -532,7 +532,7 @@ class CinePiProcess(Thread):
         # ── Dual HDMI output: mirror the one sensor's preview (with GUI) on
         # both HDMI connectors via cinepi-raw's --same-hdmi. Single-sensor
         # only — the dual-sensor compositor already owns both-feed layouts.
-        dual_out = (_settings().get('display', {}) or {}).get('hdmi', {}).get('mirror_to_both_ports', False)
+        dual_out = _settings().get('hdmi_display', {}).get('mirror_to_both_ports', False)
         if dual_out and not self.multi:
             args += ['--same-hdmi']
 
@@ -607,7 +607,7 @@ class CinePiProcess(Thread):
             buffer_count = 8
         try:
             override = int(
-                (_settings().get("camera", {}) or {}).get("raw_buffer_count", 0) or 0
+                (_settings().get("sensors", {}) or {}).get("raw_buffer_count", 0) or 0
             )
             if override > 0:
                 buffer_count = override
@@ -625,8 +625,8 @@ class CinePiProcess(Thread):
         )
         args += ["--buffer-count", str(buffer_count)]
 
-        # unique camera model override — per-cam (camera.cam0 / camera.cam1)
-        camera_cfg = _settings().get("camera", {}) or {}
+        # unique camera model override — per-cam (sensors.cam0 / sensors.cam1)
+        camera_cfg = _settings().get("sensors", {}) or {}
         cam_cfg = camera_cfg.get(self.cam.port, {})
         if cam_cfg.get("override_camera_name", False):
             name = str(cam_cfg.get("camera_name", "") or "").strip()

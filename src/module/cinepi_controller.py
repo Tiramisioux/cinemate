@@ -85,7 +85,7 @@ class CinePiController:
         # clock; the --sync client self-suppresses the lock and lets rpi.sync own its
         # VBLANK. So the same shared flag is correct for both single and dual.
         try:
-            _cam_cfg = (self.settings.get("camera") or {})
+            _cam_cfg = (self.settings.get("sensors") or {})
             _phase_lock = True
             for _port in ("cam0", "cam1"):
                 _c = _cam_cfg.get(_port)
@@ -222,18 +222,18 @@ class CinePiController:
         
         # ── put default zoom into Redis if nothing stored yet ─────────────
         if self.redis_controller.get_value(ParameterKey.ZOOM.value) is None:
-            default_zoom = self.settings.get('display', {}).get('preview', {}).get('default_zoom', 1.0)
+            default_zoom = self.settings.get('hdmi_display', {}).get('preview', {}).get('default_zoom', 1.0)
             self.redis_controller.set_value(ParameterKey.ZOOM.value, default_zoom)
 
 
         self.initialize_fps_steps(self.fps_steps)
         self.initialize_shutter_angle_steps()
 
-        parameters_cfg = self.settings.get('parameters', {})
-        self.iso_free = parameters_cfg.get('iso', {}).get('free', False)
-        self.shutter_a_free = parameters_cfg.get('shutter_a', {}).get('free', False)
-        self.fps_free = parameters_cfg.get('fps', {}).get('free', False)
-        self.wb_free = parameters_cfg.get('wb', {}).get('free', False)
+        arrays_cfg = self.settings.get('arrays', {})
+        self.iso_free = arrays_cfg.get('iso', {}).get('free', False)
+        self.shutter_a_free = arrays_cfg.get('shutter_a', {}).get('free', False)
+        self.fps_free = arrays_cfg.get('fps', {}).get('free', False)
+        self.wb_free = arrays_cfg.get('wb', {}).get('free', False)
         
         self.RAM_LIMIT_PERCENT = 80
         # Stop recording when the cinepi-raw RAM frame buffer is this full
@@ -396,12 +396,12 @@ class CinePiController:
     def _rebuild_iso_steps(self):
         self.iso_steps = (list(range(100, 3201, 50))
                         if self.iso_free
-                        else list(self.settings['parameters']['iso']['steps']))
+                        else list(self.settings['arrays']['iso']['steps']))
 
     def _rebuild_shutter_steps(self):
         self.shutter_a_steps = ([round(i * 0.1, 1) for i in range(10, 3601)]
                                 if self.shutter_a_free
-                                else list(self.settings['parameters']['shutter_a']['steps']))
+                                else list(self.settings['arrays']['shutter_a']['steps']))
         # keep the flicker-free additions in sync
         self.shutter_a_steps_dynamic = self.calculate_dynamic_shutter_angles(
             self.current_fps)
@@ -410,7 +410,7 @@ class CinePiController:
         if self.fps_free:
             self.fps_steps = list(range(1, self.fps_max + 1))
         else:
-            self.fps_steps = list(self.settings['parameters']['fps']['steps'])
+            self.fps_steps = list(self.settings['arrays']['fps']['steps'])
         self.fps_steps_dynamic = self._fps_steps_capped_at_max(self.fps_steps)
 
     def _fps_steps_capped_at_max(self, fps_steps):
@@ -438,7 +438,7 @@ class CinePiController:
     def _rebuild_wb_steps(self):
         self.wb_steps = (list(range(2800, 6501, 100))
                         if self.wb_free
-                        else list(self.settings['parameters']['wb']['steps']))
+                        else list(self.settings['arrays']['wb']['steps']))
     
     # ─── main public call ──────────────────────────────────────────────────
     def update_steps(self):
@@ -565,7 +565,7 @@ class CinePiController:
         file-size recompute so both agree on what's currently requested."""
         raw_current = self.redis_controller.get_value(ParameterKey.LOG_ENCODE_REQUEST.value)
         if raw_current is None:
-            cam0_cfg = (self.settings.get("camera") or {}).get("cam0", {}) or {}
+            cam0_cfg = (self.settings.get("sensors") or {}).get("cam0", {}) or {}
             return cam0_cfg.get("log_encode", False)
         return decode_log_encode_request(raw_current)
 
@@ -653,11 +653,11 @@ class CinePiController:
         self.cinepi.restart()
 
     def initialize_shutter_angle_steps(self):
-        base_steps = self.settings['parameters']['shutter_a']['steps']
+        base_steps = self.settings['arrays']['shutter_a']['steps']
         self.shutter_angle_steps = sorted(base_steps.copy())
 
         # Add flicker-free steps if 50Hz/60Hz defined
-        for hz in self.settings.get('capture', {}).get('light_hz', []):
+        for hz in self.settings.get('settings', {}).get('light_hz', []):
             flicker_free_steps = self.calculate_flicker_free_steps(hz)
             self.shutter_angle_steps += flicker_free_steps
         
@@ -748,7 +748,7 @@ class CinePiController:
 
     def load_wb_steps(self):
         try:
-            wb_steps = self.settings.get('parameters', {}).get('wb', {}).get('steps', [])
+            wb_steps = self.settings.get('arrays', {}).get('wb', {}).get('steps', [])
             logging.info(f"WB steps loaded: {wb_steps}")
             return wb_steps
         except Exception as e:
@@ -765,10 +765,10 @@ class CinePiController:
         logging.info(f"Initialized fps_steps: {self.fps_steps_dynamic}")
 
     def set_free_mode(self, iso_free, shutter_a_free, fps_free, wb_free):
-        self.settings['parameters']['iso']['free'] = iso_free
-        self.settings['parameters']['shutter_a']['free'] = shutter_a_free
-        self.settings['parameters']['fps']['free'] = fps_free
-        self.settings['parameters']['wb']['free'] = wb_free
+        self.settings['arrays']['iso']['free'] = iso_free
+        self.settings['arrays']['shutter_a']['free'] = shutter_a_free
+        self.settings['arrays']['fps']['free'] = fps_free
+        self.settings['arrays']['wb']['free'] = wb_free
         self.iso_free = iso_free
         self.shutter_a_free = shutter_a_free
         self.fps_free = fps_free
@@ -1263,7 +1263,7 @@ class CinePiController:
             or "both"
         ).strip().lower()
 
-        lock_dual = self.settings.get("camera", {}).get("record_policy", "follow_preview") == "always_both"
+        lock_dual = self.settings.get("sensors", {}).get("record_policy", "follow_preview") == "always_both"
 
         # Side-by-side always records both (both are equally shown); the lock
         # forces dual even in a single-sensor preview mode.
@@ -2363,7 +2363,7 @@ class CinePiController:
         • Omit *value*                    → step through preview.zoom_steps.
         Use *direction="prev"* to step backwards.
         """
-        preview_cfg  = self.settings.get("display", {}).get("preview", {})
+        preview_cfg  = self.settings.get("hdmi_display", {}).get("preview", {})
         zoom_steps   = preview_cfg.get("zoom_steps",   [0.5, 1.0, 1.5, 2.0])
         default_zoom = preview_cfg.get("default_zoom", 1.0)
 

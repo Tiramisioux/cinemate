@@ -15,20 +15,20 @@ class ResolutionDefaultsTests(unittest.TestCase):
     def test_runtime_defaults_include_4k_step(self):
         settings = _apply_settings_defaults({})
 
-        self.assertIn(4.0, settings["capture"]["resolutions"]["k_steps"])
+        self.assertIn(4.0, settings["image_capture"]["k_steps"])
 
     def test_stock_settings_include_4k_step(self):
         settings = json.loads(strip_jsonc(
             (ROOT / "resources/settings/settings_default.jsonc").read_text(encoding="utf-8")
         ))
 
-        self.assertIn(4, settings["capture"]["resolutions"]["k_steps"])
+        self.assertIn(4, settings["image_capture"]["k_steps"])
 
     def test_stock_filter_keeps_imx585_4k_mode(self):
         settings = json.loads(strip_jsonc(
             (ROOT / "resources/settings/settings_default.jsonc").read_text(encoding="utf-8")
         ))
-        rc = settings["capture"]["resolutions"]
+        rc = settings["image_capture"]
         detector = SensorDetect.__new__(SensorDetect)
         detector.settings = settings
         detector.k_steps = rc["k_steps"]

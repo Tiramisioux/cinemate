@@ -128,7 +128,7 @@ class QuadRotaryController(threading.Thread):
     def __init__(self, cinepi_controller, settings: Dict[str, Any]):
         super().__init__(daemon=True)
         self.cinepi_controller = cinepi_controller
-        cfg: QuadRotarySettings = settings.get("controls", {}).get("quad_rotary_controller", {})
+        cfg: QuadRotarySettings = settings.get("input_peripherals", {}).get("quad_rotary_controller", {})
         self.enabled = cfg.get("enabled", False)
         self.encoder_cfg = cfg.get("encoders", {})
         for idx, enc in self.encoder_cfg.items():

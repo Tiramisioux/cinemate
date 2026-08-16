@@ -116,7 +116,7 @@ No encoders are enabled in the stock settings file. A typical entry — turning 
 ]
 ```
 
-The `inc_`/`dec_` commands step through the value tables defined in `settings.jsonc` — see [parameters](settings-json.md#parameters).
+The `inc_`/`dec_` commands step through the value tables defined in `settings.jsonc` — see [arrays](settings-json.md#arrays).
 
 ## Grove Base HAT
 
@@ -130,7 +130,7 @@ The Pi has no analog inputs, so potentiometers need an analog-to-digital convert
 ]
 ```
 
-The HAT is detected automatically at startup; if it is not present, the section is simply ignored. Pot positions snap to the parameter's step table (or to the full range if that [parameter](settings-json.md#parameters) has `free` set), and readings are smoothed with dead zones so values don't flicker between steps.
+The HAT is detected automatically at startup; if it is not present, the section is simply ignored. Pot positions snap to the parameter's step table (or to the full range if that [parameter](settings-json.md#arrays) has `free` set), and readings are smoothed with dead zones so values don't flicker between steps.
 
 !!! info ""
     Only map channels that actually have a potentiometer connected. Unconnected analog inputs pick up noise and can trigger false readings.
@@ -162,11 +162,11 @@ No configuration is needed. Cinemate detects the hat automatically at startup an
 
 Cinemate can also drive hardware in the other direction:
 
-- **Rec light (tally LED)** – pins listed in `outputs.rec_out_pin` (GPIO 21 in the stock file) go high while recording. Wire an LED with a series resistor (roughly 220–330 Ω) between the pin and GND.
-- **Rec sync tone** – `outputs.rec_tone.pin` (GPIO 18 in the stock file) outputs a 1 kHz tone while recording, useful for feeding a sync signal to an external recorder.
-- **I²C OLED display** – a small SSD1306-style status screen showing values you choose (ISO, timecode, write speed, disk space…). Enable it in the `outputs.oled` section.
+- **Rec light (tally LED)** – pins listed in `hardware_outputs.rec_out_pin` (GPIO 21 in the stock file) go high while recording. Wire an LED with a series resistor (roughly 220–330 Ω) between the pin and GND.
+- **Rec sync tone** – `hardware_outputs.rec_tone.pin` (GPIO 18 in the stock file) outputs a 1 kHz tone while recording, useful for feeding a sync signal to an external recorder.
+- **I²C OLED display** – a small SSD1306-style status screen showing values you choose (ISO, timecode, write speed, disk space…). Enable it in the `output_peripherals.oled` section.
 
-All three are configured in `settings.jsonc` — see [outputs](settings-json.md#outputs).
+The tally LED and sync tone are configured under [hardware_outputs](settings-json.md#hardware_outputs); the OLED display is under [output_peripherals](settings-json.md#output_peripherals).
 
 ## Going further
 

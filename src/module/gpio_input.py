@@ -22,7 +22,7 @@ class ComponentInitializer:
         self.initialize_components()
         
     def initialize_components(self):
-        controls_cfg = self.settings.get('controls', {})
+        controls_cfg = self.settings.get('hardware_controls', {})
         combined_actions = controls_cfg.get('combined_actions', [])
 
         # Initialize Buttons

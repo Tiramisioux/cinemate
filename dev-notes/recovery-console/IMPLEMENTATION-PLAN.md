@@ -2,7 +2,7 @@
 
 **Status:** not implemented. Analysis complete, phases defined, nothing written. Phase 0 hardware verification has not run — the Pi at `pi@cinepi.local` was unreachable when this plan was written (mDNS not resolving from the Mac).
 **Owning repo:** `cinemate` only. `cinepi-raw` and `libcamera` are untouched.
-**Target branch:** `feature/recovery-console`, cut from `cinemate` `dev`.
+**Branch:** `feature/recovery-console`, cut from `cinemate` `dev` @ `a3680322`. This plan landed on it as `84babd4a`; no implementation code exists yet.
 **Source of truth:** this file.
 
 ---

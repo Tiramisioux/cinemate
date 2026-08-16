@@ -25,12 +25,22 @@ The hotspot ALREADY survives a Cinemate crash (plan fact F1). Do not rebuild it.
 the web surface. If you find yourself writing hotspot creation code outside Phase 1's
 credential ladder, you have misread the plan.
 
+STATE RIGHT NOW
+- The branch ALREADY EXISTS and should already be checked out: feature/recovery-console,
+  cut from dev @ a3680322.
+- The plan is ALREADY COMMITTED on it as 84babd4a. Do not cut a new branch, do not rebase
+  onto dev, do not rewrite the plan files.
+- No implementation code exists yet. Nothing has been installed on the Pi.
+- Phase 0 has NOT run. The Pi was unreachable when the plan was written.
+- Start by confirming: git -C /Users/patrikeriksson/Documents/cinemate/cinemate status
+  should show feature/recovery-console and a clean tree.
+
 REPO AND BRANCH
 - Owning repo: cinemate ONLY, at /Users/patrikeriksson/Documents/cinemate/cinemate
   (this is the dev clone; the top-level /Users/patrikeriksson/Documents/cinemate is a
   separate main-branch clone — do not edit it)
-- Cut feature/recovery-console from dev. Confirm the tree is clean first; if it is not,
-  preserve unrelated dirty work and use a temporary worktree under /private/tmp instead.
+- If the tree is dirty with unrelated work, preserve it and use a temporary worktree under
+  /private/tmp instead. Do not stash or force-checkout over someone else's changes.
 - cinepi-raw and libcamera are NOT touched. If you think they are, stop and say why before
   editing anything.
 

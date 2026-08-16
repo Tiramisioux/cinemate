@@ -276,6 +276,7 @@
       { "channel": "None", "setting": "hdr_blend" },
       { "channel": "None", "setting": "hdr_gain_adder" }
     ],
+    // Adafruit Quad Rotary Encoder (Neopixel I2C breakout).
     "quad_rotary_controller": {
       "enabled": true,
       "encoders": {

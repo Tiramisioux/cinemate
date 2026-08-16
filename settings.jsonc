@@ -238,8 +238,21 @@
     "three_way_switches": [],
     "rotary_encoders": [],
     "combined_actions": [],
-    // Grove Base HAT analog pots: [{"channel": <adc-channel>, "setting": "<parameters key>"}]
-    "pots": [],
+    // Grove Base HAT analog pots. "channel" is the ADC channel number (0-7);
+    // "None" means no pot wired for that setting -- set a real channel
+    // number to enable it. "setting" must match a name in `parameters`
+    // above, or one of the ClearHDR knobs (hdr_threshold_low/high, hdr_blend,
+    // hdr_gain_adder).
+    "pots": [
+      { "channel": "None", "setting": "iso" },
+      { "channel": "None", "setting": "shutter_a" },
+      { "channel": "None", "setting": "fps" },
+      { "channel": "None", "setting": "wb" },
+      { "channel": "None", "setting": "hdr_threshold_low" },
+      { "channel": "None", "setting": "hdr_threshold_high" },
+      { "channel": "None", "setting": "hdr_blend" },
+      { "channel": "None", "setting": "hdr_gain_adder" }
+    ],
     "quad_rotary_controller": {
       "enabled": true,
       "encoders": {

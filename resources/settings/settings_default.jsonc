@@ -151,7 +151,12 @@
       }
     ],
     "rotary_encoders": [],
-    "pots": [],
+    "pots": [
+      { "channel": "None", "setting": "iso" },
+      { "channel": "None", "setting": "shutter_a" },
+      { "channel": "None", "setting": "fps" },
+      { "channel": "None", "setting": "wb" }
+    ],
     "quad_rotary_controller": {
       "enabled": false,
       "encoders": {

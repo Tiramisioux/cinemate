@@ -56,7 +56,7 @@ HARD CONSTRAINTS
 DELIVERY
 - Default handoff is: commit on feature/web-api, push with explicit HTTPS
   (git -C <repo> push -u https://github.com/Tiramisioux/cinemate.git feature/web-api),
-  then give me the exact Pi commands to run myself — including the src/settings.jsonc
+  then give me the exact Pi commands to run myself — including the settings.jsonc
   stash/pop around the branch switch.
 - Do not drive the Pi yourself unless I ask for an agent-driven run. Phase 0 verification
   is the exception: for that, read-only inspection over SSH is fine and expected.

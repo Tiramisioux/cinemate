@@ -1,12 +1,11 @@
 """config.txt reader/writer for the settings editor's Boot Config pane.
 
 There is no existing Python plumbing for config.txt anywhere in this
-codebase (see dev_projects/settings-editor-ui/IMPLEMENTATION-PLAN.md F9).
-Cinemate supports independent dual-port sensor selection -- cam0 and cam1
-each get their own `dtoverlay=<model>,camN[,mono]` line, any of the known
-models on either port -- confirmed against dev_projects/settings-editor-ui/
-concept.html's cfgOverlayLine()/currentConfigText(), which already define
-the canonical shape this module reads and writes:
+codebase. Cinemate supports independent dual-port sensor selection --
+cam0 and cam1 each get their own `dtoverlay=<model>,camN[,mono]` line,
+any of the known models on either port -- confirmed against
+templates/settings_editor.html's cfgOverlayLine()/currentConfigText(),
+which already define the canonical shape this module reads and writes:
 
     camera_auto_detect=<0 or 1>
     dtoverlay=<model>,cam0            # only if cam0 has a sensor selected
@@ -30,7 +29,7 @@ MANAGED_END = "# <<< cinemate-install <<<"
 CAMERA_SECTION_BEGIN = "# ---- Camera section ----"
 CAMERA_SECTION_END = "# ---- End camera section ----"
 
-# Selectable models per port (dev_projects/settings-editor-ui/concept.html's
+# Selectable models per port (templates/settings_editor.html's
 # CFG_SENSOR_LABELS) -- only imx585 has a distinct mono variant key; other
 # sensors don't get a separate "_mono" option here.
 SENSOR_MODELS = ["none", "imx477", "imx296", "imx283", "imx585", "imx585_mono"]

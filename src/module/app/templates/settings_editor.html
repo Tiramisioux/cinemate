@@ -2604,7 +2604,8 @@
      the DOM. What was missing was (a) populating the DOM from the real
      files on load, and (b) actually calling the server on save/download/
      upload/revert instead of faking it with setTimeout/toast. That's what
-     follows. See dev_projects/settings-editor-ui/IMPLEMENTATION-PLAN.md. */
+     follows. See settings_editor.py/boot_config.py/raw_files.py for the
+     backend this now talks to. */
 
   var lastLoadedSettings = null;
   var lastLoadedConfigTxt = null;

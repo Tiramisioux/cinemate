@@ -7,7 +7,6 @@ still reach this from a phone over the camera's hotspot (http://10.42.0.1:8080)
 to see *why* it failed, edit settings.jsonc and config.txt, and restart it --
 with no laptop and no SSH.
 
-  Design: dev-notes/recovery-console/IMPLEMENTATION-PLAN.md
   Operator docs: docs/recovery-console.md
 
 THE ONE RULE

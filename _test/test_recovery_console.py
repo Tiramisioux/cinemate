@@ -1,9 +1,9 @@
 """Recovery console: config ladder, validation ladder, write discipline,
 confirm-or-revert, service allowlist and ANSI rendering.
 
-Covers dev-notes/recovery-console/IMPLEMENTATION-PLAN.md sections 4.3-4.6 and
-the allowlist in section 5. All pure logic -- no hardware, no server socket,
-no real subprocess.
+Covers the config/validation ladders, write discipline, confirm-or-revert
+flow and service allowlist documented in docs/recovery-console.md. All pure
+logic -- no hardware, no server socket, no real subprocess.
 
 The console is loaded by path because its filename contains a hyphen and is
 therefore not a legal module name.

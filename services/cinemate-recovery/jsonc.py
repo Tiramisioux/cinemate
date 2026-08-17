@@ -9,7 +9,7 @@ THIS IS THE THIRD COPY OF THIS LOGIC IN THE TREE. The others are:
 It is duplicated rather than imported on purpose. The recovery console must
 keep working when the venv is broken, when redis is down, and when
 /home/pi/cinemate is unreadable -- so it may not import anything from
-src/module/. See dev-notes/recovery-console/IMPLEMENTATION-PLAN.md fact F14.
+src/module/.
 
 The cost of that decision is drift. The mitigation is
 _test/test_recovery_jsonc_golden.py, which asserts character-for-character

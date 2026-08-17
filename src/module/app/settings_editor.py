@@ -2,9 +2,8 @@
 
 Real read/write UI for settings.jsonc, backed by the same
 `cinepi_controller` the GPIO/quad-rotary dispatch and the CLI/web-API command
-table already use. See dev_projects/settings-editor-ui/IMPLEMENTATION-PLAN.md
-for the architecture this follows (F1-F12) and dev_projects/settings-editor-ui/
-concept.html for the mockup this replaces panel by panel.
+table already use. See templates/settings_editor.html, which this blueprint
+serves -- ported panel by panel from the original settings-editor-ui mockup.
 """
 from __future__ import annotations
 
@@ -54,14 +53,13 @@ SETTINGS_FILE = "/home/pi/cinemate/settings.jsonc"
 # the repo root, same pattern as sensor_detect.py's _resolve_repo_path.
 STOCK_SETTINGS_FILE = Path(__file__).resolve().parents[3] / "resources/settings/settings_default.jsonc"
 
-# Corrected copy of the mockup's ACTION_METHODS catalog
-# (dev_projects/settings-editor-ui/concept.html:2923-2969). Fixes the 3
-# entries that don't resolve via getattr() on cinepi_controller -- the same
-# lookup gpio_input.py / i2c/quad_rotary_controller.py use at dispatch time
-# (IMPLEMENTATION-PLAN.md F7): 'erase' -> 'erase_drive', 'format' ->
-# 'format_drive', 'storage_preroll' dropped (it's CLI/serial/web-API-only,
-# bound to a separate storage_preroll object, not a cinepi_controller
-# method -- see cli_commands.py's 'storage preroll' entry).
+# Corrected copy of the mockup's original ACTION_METHODS catalog. Fixes the
+# 3 entries that don't resolve via getattr() on cinepi_controller -- the
+# same lookup gpio_input.py / i2c/quad_rotary_controller.py use at dispatch
+# time: 'erase' -> 'erase_drive', 'format' -> 'format_drive',
+# 'storage_preroll' dropped (it's CLI/serial/web-API-only, bound to a
+# separate storage_preroll object, not a cinepi_controller method -- see
+# cli_commands.py's 'storage preroll' entry).
 ACTION_METHODS = [
     {"group": "Record", "value": "rec", "label": "Start / stop recording"},
     {"group": "ISO", "value": "set_iso", "label": "Set ISO",

@@ -1,10 +1,9 @@
 """RAW take browsing/download/delete for the settings editor's RAW files pane.
 
-No list-all/delete/download endpoint exists anywhere in this codebase (see
-dev_projects/settings-editor-ui/IMPLEMENTATION-PLAN.md F10) -- only
-SSDMonitor.get_latest_recording_infos() (src/module/ssd_monitor.py), which
-returns just the most-recent take(s) for GUI status display. This module is
-new, from-scratch plumbing built on the on-disk convention
+No list-all/delete/download endpoint exists anywhere in this codebase --
+only SSDMonitor.get_latest_recording_infos() (src/module/ssd_monitor.py),
+which returns just the most-recent take(s) for GUI status display. This
+module is new, from-scratch plumbing built on the on-disk convention
 storage-automount.py owns: recordings land as subdirectories directly under
 /media/RAW (active) and /media/RAW1, /media/RAW2, ... (standby, promoted on
 active-drive removal).

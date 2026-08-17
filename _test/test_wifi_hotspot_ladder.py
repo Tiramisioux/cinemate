@@ -1,9 +1,9 @@
 """Hotspot credential ladder, state files and reconciliation.
 
-Covers dev-notes/recovery-console/IMPLEMENTATION-PLAN.md section 4.2 and the
-write discipline in 4.5. Every rung is exercised, including the ones that only
-fire when something else is already broken -- a fallback nobody has run is not
-a fallback.
+Covers the hotspot credential ladder and write discipline documented in
+docs/recovery-console.md. Every rung is exercised, including the ones that
+only fire when something else is already broken -- a fallback nobody has
+run is not a fallback.
 
 No hardware and no subprocess: nmcli and systemctl are faked.
 """

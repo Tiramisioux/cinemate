@@ -40,6 +40,7 @@ Release notes for Cinemate. For downloads, see the [releases page](https://githu
 ### Cinemate
 
 - **Storage / media** — multi-drive RAW hot-swap with a standby drive and automatic promotion. Default format is exFAT.
+- **Recovery console** — a new, independent `cinemate-recovery.service` on `:8080` lets you diagnose a Cinemate that will not start, edit `settings.jsonc` and `/boot/firmware/config.txt`, and restart Cinemate — from a phone on the hotspot, with no laptop or SSH. Standard library only, runs as root, and has no dependency on `cinemate-autostart.service` so it survives a crash that takes Cinemate down. The hotspot's Wi-Fi profile now also autoconnects at boot and self-heals a broken `settings.jsonc` by falling back to the last-known-good SSID rather than the compiled-in `CinePi` default. See [Recovery console](recovery-console.md).
 
 ### Web API
 

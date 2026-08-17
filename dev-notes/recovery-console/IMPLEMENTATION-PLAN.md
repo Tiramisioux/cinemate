@@ -1,6 +1,6 @@
 # Cinemate Recovery Console — implementation plan
 
-**Status:** not implemented. Analysis complete, phases defined, nothing written. Phase 0 hardware verification has not run — the Pi at `pi@cinepi.local` was unreachable when this plan was written (mDNS not resolving from the Mac).
+**Status:** Phases 1 and 2 implemented and unit-tested (355/355 tests pass, including a 100-test suite for the console and a 53-test suite for the hotspot ladder). Phase 0 hardware verification is done — see section 11 for the answers. Phases 1/2's *hardware* gates (section 9) have not run: they need the code on the Pi. Phases 3-5 are not started.
 **Owning repo:** `cinemate` only. `cinepi-raw` and `libcamera` are untouched.
 **Branch:** `feature/recovery-console`, cut from `cinemate` `dev` @ `a3680322`. This plan landed on it as `84babd4a`; no implementation code exists yet.
 **Source of truth:** this file.
@@ -34,9 +34,9 @@ All facts below were read from `cinemate` `feature/settings-jsonc` @ `a3680322`.
 | F5 | Two independent owners create the hotspot, with no ordering constraint between them | `src/main.py:677` (`start_hotspot`) and the watchdog loop (F2) |
 | F6 | The Flask UI and `/api/v1` are built ~250 lines into `run_application()`, so any earlier exception means no HTTP surface at all | `src/main.py:920`, `:924` (binds `0.0.0.0:5000`) |
 | F7 | The web server is additionally gated on an interface already having an IP. Lose that race and the UI is gone for the whole session | `src/main.py:919` `network_available()`; documented in `docs/hotspot-logic.md` |
-| F8 | `main()` catches `SettingsLoadError` and bare `Exception`, prints a block to tty1, returns 1 | `src/main.py:1053-1075` |
-| F9 | `cinemate-autostart.service` has **no `Restart=` directive**. A crash leaves it dead until manual intervention | `services/cinemate-autostart/cinemate-autostart.service` |
-| F10 | The failure block is persisted to disk and is readable by another process | `Environment=CINEMATE_STARTUP_FAILURE_FILE=/home/pi/.cache/cinemate/startup-failure.ansi`; writer at `src/main.py:211` |
+| F8 | `main()` catches `SettingsLoadError` and bare `Exception`, prints a block to tty1, returns 1 | `src/main.py:1055` (re-verified @ `3ac26d88`, was `:1053-1075`) |
+| F9 | `cinemate-autostart.service` has **no `Restart=` directive**. A crash leaves it dead until manual intervention | `services/cinemate-autostart/cinemate-autostart.service`; confirmed live on the Pi, `Restart=no` (Phase 0) |
+| F10 | The failure block is persisted to disk and is readable by another process | `Environment=CINEMATE_STARTUP_FAILURE_FILE=/home/pi/.cache/cinemate/startup-failure.ansi` at `src/main.py:59-61`; writer at `:217-218` (re-verified @ `3ac26d88`, was `:211`) |
 | F11 | **No `config.txt` code path exists anywhere in `src/`.** The only affordance is the `editboot` bashrc alias | `grep -rn "config\.txt" src/` → zero hits; `cinemate-install.sh` bashrc block |
 | F12 | Support services install through one umbrella Makefile driven by a single variable | `services/Makefile:4` — `SUBSERVICES := storage-automount wifi-hotspot redis-log-maintenance` |
 | F13 | The `pi` sudoers drop-ins grant `mount`/`umount`/`main.py`/venv binaries — **not** `systemctl` | `cinemate-install.sh:1514` and the block above it |
@@ -276,8 +276,28 @@ Everything in sections 4.2–4.6 is pure logic with no hardware in it. Test it o
 
 ## 11. Open questions
 
-1. **Does NetworkManager already persist the AP with `connection.autoconnect=yes`?** If yes, layer 0 of section 4.1 is free, and the watchdog demotes from keep-alive to reconciler. If no, decide whether Phase 1 should create a persistent profile instead of an ephemeral one. Phase 0 answers this; it changes the shape of Phase 1.
-2. **Is `:8080` free on the running unit?** F15 proves it is free in the source tree. The Pi also runs a docs `mkdocs serve` on `:8000` from time to time — confirm nothing similar squats `:8080`.
-3. **Should the console bind hotspot-only or all interfaces?** All-interfaces is more useful (works over ethernet during development) and more exposed. Current plan: bind `0.0.0.0`, default `token` empty, `allow_config_txt` false. Revisit if the unit is ever used on a shared network.
-4. **Should `cinemate-autostart` get `Restart=on-failure`?** (F9.) It would auto-recover transient crashes, but it interacts with the tty1 failure display and the console handoff in `ExecStopPost=`. A crash-loop would also repeatedly seize tty1. Needs its own decision, and probably `StartLimitBurst`. Out of scope for this branch — record the answer here.
-5. **Should the settings editor offer a schema-aware form instead of a textarea?** `settings.schema.json` exists. A form is friendlier on a phone but is a much larger surface and can itself break. Textarea first; revisit after Phase 4 is used in anger.
+1. **Does NetworkManager already persist the AP with `connection.autoconnect=yes`? ANSWERED (Phase 0, 2026-08-17, live unit).** No. The profile is persisted to disk (`/etc/NetworkManager/system-connections/Hotspot.nmconnection`, mode 0600) but ships with `autoconnect=false`. However `802-11-wireless-security.psk-flags` is `0` (system-owned, not agent-owned), so the stored PSK is usable with no login session and no secret agent — flipping `autoconnect` to `yes` is sufficient to make layer 0 real. Phase 1 implements this: `WiFiHotspotManager.set_autoconnect()` in [wifi_hotspot.py](../../src/module/wifi_hotspot.py) asserts `connection.autoconnect=yes` on every reconcile pass when `system.wifi_hotspot.enabled` is true, and `no` when it is false (so disabling the hotspot in settings isn't undone by NM at the next boot). The watchdog was reshaped as planned, from pure keep-alive to a full reconciler (`reconcile()`), not just a demotion.
+2. **Is `:8080` free on the running unit? ANSWERED (Phase 0, live unit).** Yes. Full port map observed: `5000` Flask (pid 885), `8000` cinepi-raw MJPEG (pid 1245), `6379` redis, `53` dnsmasq (`10.42.0.1`, AP-scoped), `22` sshd, `631` cupsd (localhost only, not in F15's map but harmless). No docs server was running at verification time. `8080` free.
+   - Corollary not previously stated: the AP subnet is `10.42.0.1/24` (`wlan0`), so the console's real address is `http://10.42.0.1:8080` — now documented in [docs/recovery-console.md](../../docs/recovery-console.md).
+3. **Should the console bind hotspot-only or all interfaces?** Unchanged from the plan: binds `0.0.0.0`. Not revisited.
+4. **Should `cinemate-autostart` get `Restart=on-failure`?** (F9.) Confirmed live: `Restart=no` on the running unit. Still out of scope for this branch; not decided.
+5. **Should the settings editor offer a schema-aware form instead of a textarea?** Not revisited. Phase 4 (`/edit/settings`) shipped as a textarea, per the original plan.
+
+### Phase 0 hardware findings (2026-08-17, `cinepi.local` = `192.168.2.2`, kernel `6.12.93+rpt-rpi-2712`, repo at `dev`@`06c5983`)
+
+All checks were read-only.
+
+- **F1 confirmed via the resolved systemd dependency graph**, not a live stop test: `wifi-hotspot.service` has `BindsTo=∅ PartOf=∅ Requisite=∅`; `cinemate-autostart.service` has `Wants=∅ BindsTo=∅ PartOf=∅` and its `ExecStopPost=` hooks (`cinemate-startup-failure-display.sh`, `cinemate-console-handoff.sh`) touch neither networking nor the hotspot. `systemctl list-dependencies --reverse cinemate-autostart` shows nothing depends on it below `multi-user.target`. No coupling exists in either direction.
+- `/var/lib/cinemate` did not exist on this unit before Phase 1/2 landed — confirms the section 10 regression note was describing the *current*, not a hypothetical, state.
+- `/home/pi/.cache/cinemate/startup-failure.ansi` was absent (clean start) — `/why` must treat absence as the healthy case.
+- F13 (sudoers) confirmed live: `pi` may sudo `mount`/`umount`/`ntfs-3g`/`mount.ext4`/`main.py`/`run_cinemate.sh`/venv binaries — no `systemctl`. This is the concrete reason the recovery console must run as root.
+- `redis-log-maintenance.timer` was inactive/disabled on this unit despite being in `SUBSERVICES` — pre-existing, unrelated to this branch.
+
+### What's implemented vs. what's gated on Pi hardware
+
+Phases 1 and 2 are code-complete and unit-tested. Their **hardware gates** (section 9) have not run — they require the code to actually be on the Pi:
+
+- Phase 1 gate: corrupt `settings.jsonc`, reboot, confirm the hotspot comes up on the last-good SSID and `hotspot.state` names the rung.
+- Phase 2 gate: stop `cinemate-autostart`, confirm `:8080` still answers from a phone on the hotspot with `:5000` dead throughout.
+
+A live console smoke test on the Mac (simulated broken `settings.jsonc`, simulated `cinemate-autostart: failed`, faked `systemctl`/`journalctl`) exercised every route (`/`, `/why`, `/log`, `/edit/settings`, `/edit/config`, `/service/<name>/<action>`, `/health`) and found two real bugs the unit tests could not see on their own: `RecoveryHandler.runner` needed `staticmethod()` (a bare function on the class is a descriptor and silently binds `self` as its first positional argument), and `systemctl()` needed to catch `OSError` around a missing `systemctl` binary rather than 500. Both are fixed and covered by the smoke test's structure, though the smoke test itself is not part of the persisted `_test/` suite (it exercises HTTP end-to-end, which is out of scope for the stdlib-only ladder tests).

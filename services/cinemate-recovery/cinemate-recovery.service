@@ -1,0 +1,29 @@
+[Unit]
+Description=Cinemate Recovery Console
+Documentation=https://tiramisioux.github.io/cinemate/recovery-console/
+# NOTE: there is deliberately NO Wants= or After= on cinemate-autostart.
+# Coupling the recovery console to the service it exists to recover is the
+# exact bug this unit was written to fix. Do not "tidy" this by adding one.
+# NetworkManager is wanted, not required: the console must still start and
+# serve over ethernet if the AP never comes up.
+Wants=NetworkManager.service
+After=network.target NetworkManager.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/lib/cinemate-recovery/cinemate-recovery.py
+# Root: the console restarts services and writes /boot/firmware/config.txt.
+# The pi user's sudoers drop-ins grant mount/umount and the venv binaries but
+# not systemctl, so a non-root console could not restart Cinemate at all.
+User=root
+Restart=always
+RestartSec=5
+# System python3, never the venv -- "the venv is broken" is a supported
+# failure mode for this service.
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cinemate-recovery
+
+[Install]
+WantedBy=multi-user.target

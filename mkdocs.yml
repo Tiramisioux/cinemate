@@ -38,6 +38,7 @@ nav:
   - System maintenance:
       - Connecting via SSH: ssh.md
       - System services: system-services.md
+      - Recovery console: recovery-console.md
       - Backing up the SD card: backing-up-sd-card.md
   - Troubleshooting: troubleshooting.md
   - Advanced:

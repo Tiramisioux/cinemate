@@ -76,6 +76,30 @@
             }
           },
           "additionalProperties": true
+        },
+        "recovery": {
+          "type": "object",
+          "description": "Standalone recovery console (its own root systemd service) for diagnosing and repairing a Cinemate that will not start. Reachable over the hotspot at http://10.42.0.1:8080. See docs/recovery-console.md. A missing block behaves exactly as the defaults shown here.",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "port": { "type": "integer", "default": 8080 },
+            "token": {
+              "type": "string",
+              "default": "",
+              "description": "Required on every mutating request once non-empty. Read-only pages (status, log, why) stay reachable without it."
+            },
+            "allow_config_txt": {
+              "type": "boolean",
+              "default": false,
+              "description": "false hides the config.txt editor. A bad config.txt can make the Pi unbootable, and nothing running on the Pi can recover that -- so this defaults to off."
+            },
+            "config_confirm_timeout_s": {
+              "type": "integer",
+              "default": 300,
+              "description": "Seconds to confirm a config.txt change before it auto-reverts and the Pi reboots."
+            }
+          },
+          "additionalProperties": true
         }
       },
       "additionalProperties": true

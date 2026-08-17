@@ -24,6 +24,35 @@ from typing import Callable, Optional
 logger = logging.getLogger(__name__)
 
 
+def free_mode_steps(min_value, max_value, increment):
+    """Build the fine step table a parameter's free mode expands to.
+
+    Shared by every ``_rebuild_*_steps``/``_get_steps`` call site that
+    replaces a coarse ``arrays.<name>.steps`` table with a (near-)continuous
+    range once free mode is on, so the granularity comes from one formula
+    instead of a hardcoded literal re-typed at each call site. *max_value*
+    is always included even when it is not an exact multiple of *increment*
+    above *min_value*.
+    """
+    try:
+        increment = float(increment)
+    except (TypeError, ValueError):
+        increment = 1.0
+    if increment <= 0:
+        increment = 1.0
+
+    # floor, not round: rounding up here can overshoot max_value (e.g. 0-4095
+    # step 16 is 255.9375 steps, which round() takes to 256 -> a spurious
+    # 4096). The "append max_value if undershooting" line below is what
+    # guarantees the true max is still always reachable.
+    count = int((max_value - min_value) / increment)
+    values = [round(min_value + i * increment, 6) for i in range(count + 1)]
+    if values[-1] < max_value:
+        values.append(float(max_value))
+
+    return [int(v) if float(v).is_integer() else v for v in values]
+
+
 @dataclass(frozen=True)
 class Parameter:
     name: str
@@ -122,22 +151,26 @@ _ZOOM = _param(
 
 _HDR_BLEND = _param(
     "hdr_blend", "ClearHDR Blend Mode", "",
-    steps=lambda c: list(range(0, 9)),
+    steps=lambda c: c.hdr_blend_steps,
+    free_attr="hdr_blend_free",
 )
 
 _HDR_GAIN_ADDER = _param(
     "hdr_gain_adder", "ClearHDR Gain Adder", "",
-    steps=lambda c: list(range(0, 6)),
+    steps=lambda c: c.hdr_gain_adder_steps,
+    free_attr="hdr_gain_adder_free",
 )
 
 _HDR_THRESHOLD_LOW = _param(
     "hdr_threshold_low", "ClearHDR Threshold Low", "",
-    steps=lambda c: list(range(0, 4096, 16)),
+    steps=lambda c: c.hdr_threshold_low_steps,
+    free_attr="hdr_threshold_low_free",
 )
 
 _HDR_THRESHOLD_HIGH = _param(
     "hdr_threshold_high", "ClearHDR Threshold High", "",
-    steps=lambda c: list(range(0, 4096, 16)),
+    steps=lambda c: c.hdr_threshold_high_steps,
+    free_attr="hdr_threshold_high_free",
 )
 
 REGISTRY: dict[str, Parameter] = {

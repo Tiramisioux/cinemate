@@ -234,7 +234,22 @@ class CinePiController:
         self.shutter_a_free = arrays_cfg.get('shutter_a', {}).get('free', False)
         self.fps_free = arrays_cfg.get('fps', {}).get('free', False)
         self.wb_free = arrays_cfg.get('wb', {}).get('free', False)
-        
+        self.hdr_threshold_low_free = arrays_cfg.get('hdr_threshold_low', {}).get('free', False)
+        self.hdr_threshold_high_free = arrays_cfg.get('hdr_threshold_high', {}).get('free', False)
+        self.hdr_blend_free = arrays_cfg.get('hdr_blend', {}).get('free', False)
+        self.hdr_gain_adder_free = arrays_cfg.get('hdr_gain_adder', {}).get('free', False)
+
+        # Step size free mode expands to, per parameter (see
+        # parameters.free_mode_steps and the _rebuild_*_steps methods below).
+        self.iso_free_increment = arrays_cfg.get('iso', {}).get('free_increment', 100)
+        self.shutter_a_free_increment = arrays_cfg.get('shutter_a', {}).get('free_increment', 1)
+        self.fps_free_increment = arrays_cfg.get('fps', {}).get('free_increment', 1)
+        self.wb_free_increment = arrays_cfg.get('wb', {}).get('free_increment', 100)
+        self.hdr_threshold_low_free_increment = arrays_cfg.get('hdr_threshold_low', {}).get('free_increment', 16)
+        self.hdr_threshold_high_free_increment = arrays_cfg.get('hdr_threshold_high', {}).get('free_increment', 16)
+        self.hdr_blend_free_increment = arrays_cfg.get('hdr_blend', {}).get('free_increment', 1)
+        self.hdr_gain_adder_free_increment = arrays_cfg.get('hdr_gain_adder', {}).get('free_increment', 1)
+
         self.RAM_LIMIT_PERCENT = 80
         # Stop recording when the cinepi-raw RAM frame buffer is this full
         # (used slots / total slots). This is the direct "about to drop
@@ -394,12 +409,12 @@ class CinePiController:
         
     # ─── step-table helpers ────────────────────────────────────────────────
     def _rebuild_iso_steps(self):
-        self.iso_steps = (list(range(100, 3201, 50))
+        self.iso_steps = (parameters.free_mode_steps(100, 3200, self.iso_free_increment)
                         if self.iso_free
                         else list(self.settings['arrays']['iso']['steps']))
 
     def _rebuild_shutter_steps(self):
-        self.shutter_a_steps = ([round(i * 0.1, 1) for i in range(10, 3601)]
+        self.shutter_a_steps = (parameters.free_mode_steps(1, 360, self.shutter_a_free_increment)
                                 if self.shutter_a_free
                                 else list(self.settings['arrays']['shutter_a']['steps']))
         # keep the flicker-free additions in sync
@@ -408,7 +423,7 @@ class CinePiController:
 
     def _rebuild_fps_steps(self):
         if self.fps_free:
-            self.fps_steps = list(range(1, self.fps_max + 1))
+            self.fps_steps = parameters.free_mode_steps(1, self.fps_max, self.fps_free_increment)
         else:
             self.fps_steps = list(self.settings['arrays']['fps']['steps'])
         self.fps_steps_dynamic = self._fps_steps_capped_at_max(self.fps_steps)
@@ -436,10 +451,34 @@ class CinePiController:
         ]
 
     def _rebuild_wb_steps(self):
-        self.wb_steps = (list(range(2800, 6501, 100))
+        self.wb_steps = (parameters.free_mode_steps(2800, 6500, self.wb_free_increment)
                         if self.wb_free
                         else list(self.settings['arrays']['wb']['steps']))
-    
+
+    def _rebuild_hdr_threshold_low_steps(self):
+        self.hdr_threshold_low_steps = (
+            parameters.free_mode_steps(0, 4095, self.hdr_threshold_low_free_increment)
+            if self.hdr_threshold_low_free
+            else list(self.settings['arrays']['hdr_threshold_low']['steps']))
+
+    def _rebuild_hdr_threshold_high_steps(self):
+        self.hdr_threshold_high_steps = (
+            parameters.free_mode_steps(0, 4095, self.hdr_threshold_high_free_increment)
+            if self.hdr_threshold_high_free
+            else list(self.settings['arrays']['hdr_threshold_high']['steps']))
+
+    def _rebuild_hdr_blend_steps(self):
+        self.hdr_blend_steps = (
+            parameters.free_mode_steps(0, 8, self.hdr_blend_free_increment)
+            if self.hdr_blend_free
+            else list(self.settings['arrays']['hdr_blend']['steps']))
+
+    def _rebuild_hdr_gain_adder_steps(self):
+        self.hdr_gain_adder_steps = (
+            parameters.free_mode_steps(0, 5, self.hdr_gain_adder_free_increment)
+            if self.hdr_gain_adder_free
+            else list(self.settings['arrays']['hdr_gain_adder']['steps']))
+
     # ─── main public call ──────────────────────────────────────────────────
     def update_steps(self):
         """Re-calculate all step tables after a ‘*_free’ flag or fps_max changes."""
@@ -447,6 +486,10 @@ class CinePiController:
         self._rebuild_shutter_steps()
         self._rebuild_fps_steps()
         self._rebuild_wb_steps()
+        self._rebuild_hdr_threshold_low_steps()
+        self._rebuild_hdr_threshold_high_steps()
+        self._rebuild_hdr_blend_steps()
+        self._rebuild_hdr_gain_adder_steps()
         logging.info(f"Step tables rebuilt "
                     f"(iso {len(self.iso_steps)}, "
                     f"shutter {len(self.shutter_a_steps_dynamic)}, "
@@ -557,6 +600,30 @@ class CinePiController:
             return
         self.redis_controller.set_value(ParameterKey.HDR_GAIN_ADDER.value, v)
         logging.info(f"ClearHDR gain adder set to menu index {v}")
+
+    def inc_hdr_threshold_low(self):
+        self.increment_setting('hdr_threshold_low', self.hdr_threshold_low_steps)
+
+    def dec_hdr_threshold_low(self):
+        self.decrement_setting('hdr_threshold_low', self.hdr_threshold_low_steps)
+
+    def inc_hdr_threshold_high(self):
+        self.increment_setting('hdr_threshold_high', self.hdr_threshold_high_steps)
+
+    def dec_hdr_threshold_high(self):
+        self.decrement_setting('hdr_threshold_high', self.hdr_threshold_high_steps)
+
+    def inc_hdr_blend(self):
+        self.increment_setting('hdr_blend', self.hdr_blend_steps)
+
+    def dec_hdr_blend(self):
+        self.decrement_setting('hdr_blend', self.hdr_blend_steps)
+
+    def inc_hdr_gain_adder(self):
+        self.increment_setting('hdr_gain_adder', self.hdr_gain_adder_steps)
+
+    def dec_hdr_gain_adder(self):
+        self.decrement_setting('hdr_gain_adder', self.hdr_gain_adder_steps)
 
     def _log_requested_state(self):
         """The live `set log` request -- False/True/10/12 -- from redis, or
@@ -687,7 +754,7 @@ class CinePiController:
 
         if self.shutter_a_sync_mode == 1:
             self.exposure_time_nominal = (self.shutter_angle_nom / 360) / self.current_fps
-            self.shutter_angle_steps = [round(x * 0.1, 1) for x in range(10, 3601)]
+            self.shutter_angle_steps = parameters.free_mode_steps(1, 360, self.shutter_a_free_increment)
         else:
             self.initialize_shutter_angle_steps()
 
@@ -731,6 +798,38 @@ class CinePiController:
         self.update_steps()
         self.initialize_wb_cg_rb_array()
         logging.info(f"WB Free Mode set to {self.wb_free}")
+
+    def set_hdr_threshold_low_free(self, value=None):
+        if value is None:
+            self.hdr_threshold_low_free = not self.hdr_threshold_low_free
+        else:
+            self.hdr_threshold_low_free = value
+        self.update_steps()
+        logging.info(f"HDR Threshold Low Free Mode set to {self.hdr_threshold_low_free}")
+
+    def set_hdr_threshold_high_free(self, value=None):
+        if value is None:
+            self.hdr_threshold_high_free = not self.hdr_threshold_high_free
+        else:
+            self.hdr_threshold_high_free = value
+        self.update_steps()
+        logging.info(f"HDR Threshold High Free Mode set to {self.hdr_threshold_high_free}")
+
+    def set_hdr_blend_free(self, value=None):
+        if value is None:
+            self.hdr_blend_free = not self.hdr_blend_free
+        else:
+            self.hdr_blend_free = value
+        self.update_steps()
+        logging.info(f"HDR Blend Free Mode set to {self.hdr_blend_free}")
+
+    def set_hdr_gain_adder_free(self, value=None):
+        if value is None:
+            self.hdr_gain_adder_free = not self.hdr_gain_adder_free
+        else:
+            self.hdr_gain_adder_free = value
+        self.update_steps()
+        logging.info(f"HDR Gain Adder Free Mode set to {self.hdr_gain_adder_free}")
 
     def load_settings(self):
         try:
@@ -784,7 +883,7 @@ class CinePiController:
 
         # Update shutter angle steps immediately if changed
         if shutter_a_free:
-            self.shutter_angle_steps = [round(x * 0.1, 1) for x in range(10, 3601)]
+            self.shutter_angle_steps = parameters.free_mode_steps(1, 360, self.shutter_a_free_increment)
         else:
             self.initialize_shutter_angle_steps()
 
@@ -1616,7 +1715,7 @@ class CinePiController:
 
             self.fps_max = self._refresh_fps_max()
             if self.fps_free:
-                self.fps_steps = list(range(1, self.fps_max + 1))
+                self.fps_steps = parameters.free_mode_steps(1, self.fps_max, self.fps_free_increment)
 
             self.update_steps()
 

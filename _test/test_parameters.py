@@ -27,6 +27,10 @@ class StubController:
         self.shutter_a_steps = [45.0, 90.0, 180.0, 270.0, 360.0]
         self.shutter_a_steps_dynamic = []
         self.settings = {"preview": {"zoom_steps": [0.5, 1.0, 1.5, 2.0]}}
+        self.hdr_threshold_low_steps = [0, 512, 1024, 1536, 2048, 2560, 3072, 3584, 4095]
+        self.hdr_threshold_high_steps = [0, 512, 1024, 1536, 2048, 2560, 3072, 3584, 4095]
+        self.hdr_blend_steps = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+        self.hdr_gain_adder_steps = [0, 1, 2, 3, 4, 5]
 
     # Mirrors CinePiController.calculate_dynamic_shutter_angles enough for
     # the steps callable to have something real to call.
@@ -140,19 +144,24 @@ class StepsCallableTests(unittest.TestCase):
         self.controller.settings = {}
         self.assertEqual(REGISTRY["zoom"].steps(self.controller), [0.5, 1.0, 1.5, 2.0])
 
-    def test_hdr_threshold_steps_match_the_analog_controls_constants(self):
+    def test_hdr_threshold_steps_read_the_live_controller_table(self):
+        # Settings-driven now (arrays.hdr_threshold_low/high), rebuilt by
+        # CinePiController._rebuild_hdr_threshold_low_steps/_high_steps -
+        # the registry just reads whatever the controller last computed.
         self.assertEqual(
             REGISTRY["hdr_threshold_low"].steps(self.controller),
-            list(range(0, 4096, 16)),
+            self.controller.hdr_threshold_low_steps,
         )
         self.assertEqual(
             REGISTRY["hdr_threshold_high"].steps(self.controller),
-            list(range(0, 4096, 16)),
+            self.controller.hdr_threshold_high_steps,
         )
 
-    def test_hdr_blend_and_gain_adder_steps_match_the_analog_controls_constants(self):
-        self.assertEqual(REGISTRY["hdr_blend"].steps(self.controller), list(range(0, 9)))
-        self.assertEqual(REGISTRY["hdr_gain_adder"].steps(self.controller), list(range(0, 6)))
+    def test_hdr_blend_and_gain_adder_steps_read_the_live_controller_table(self):
+        self.assertEqual(REGISTRY["hdr_blend"].steps(self.controller), self.controller.hdr_blend_steps)
+        self.assertEqual(
+            REGISTRY["hdr_gain_adder"].steps(self.controller), self.controller.hdr_gain_adder_steps
+        )
 
 
 class LockAndFreeAttrTests(unittest.TestCase):
@@ -160,11 +169,11 @@ class LockAndFreeAttrTests(unittest.TestCase):
         locked = {name for name, p in REGISTRY.items() if p.lock_attr}
         self.assertEqual(locked, {"iso", "fps", "shutter_a_nom"})
 
-    def test_hdr_parameters_declare_no_lock_or_free_attr(self):
+    def test_hdr_parameters_declare_no_lock_but_do_declare_a_free_attr(self):
         for name in ("hdr_blend", "hdr_gain_adder", "hdr_threshold_low", "hdr_threshold_high"):
             with self.subTest(name=name):
                 self.assertIsNone(REGISTRY[name].lock_attr)
-                self.assertIsNone(REGISTRY[name].free_attr)
+                self.assertEqual(REGISTRY[name].free_attr, f"{name}_free")
 
 
 class MenuParametersTests(unittest.TestCase):

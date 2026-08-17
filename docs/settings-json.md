@@ -223,25 +223,59 @@ Frame-rate conform target, flicker-free input, and sync tolerances.
 
 ## arrays
 
-One block per cycle-able camera parameter: ISO, shutter angle, frame rate, white balance. `steps` is the preset table Cinemate steps through; `free` switches to a continuous runtime range instead — for potentiometers, rotary encoders, CLI commands, and the web GUI. White balance free mode uses 100 K steps from 2800 K through 6500 K.
+One block per cycle-able camera parameter: ISO, shutter angle, frame rate, white balance, and the four ClearHDR live knobs. `steps` is the preset table Cinemate steps through; `free` switches to a continuous runtime range instead — for potentiometers, rotary encoders, CLI inc/dec commands, and the web GUI. `free_increment` sets the step size free mode counts in (bounds are fixed per parameter; only the increment is configurable).
+
+| parameter | free range | `free_increment` default |
+|---|---|---|
+| `iso` | 100–3200 | 100 |
+| `shutter_a` | 1–360° | 1° |
+| `fps` | 1–`fps_max` | 1 |
+| `wb` | 2800–6500 K | 100 K |
+| `hdr_threshold_low` / `hdr_threshold_high` | 0–4095 | 16 |
+| `hdr_blend` | 0–8 | 1 |
+| `hdr_gain_adder` | 0–5 | 1 |
 
 ```jsonc
 "arrays": {
   "iso": {
     "steps": [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200],
-    "free": false
+    "free": false,
+    "free_increment": 100
   },
   "shutter_a": {
     "steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360],
-    "free": false
+    "free": false,
+    "free_increment": 1
   },
   "fps": {
     "steps": [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50],
-    "free": true
+    "free": true,
+    "free_increment": 1
   },
   "wb": {
     "steps": [3200, 4400, 5600],
-    "free": false
+    "free": false,
+    "free_increment": 100
+  },
+  "hdr_threshold_low": {
+    "steps": [0, 512, 1024, 1536, 2048, 2560, 3072, 3584, 4095],
+    "free": false,
+    "free_increment": 16
+  },
+  "hdr_threshold_high": {
+    "steps": [0, 512, 1024, 1536, 2048, 2560, 3072, 3584, 4095],
+    "free": false,
+    "free_increment": 16
+  },
+  "hdr_blend": {
+    "steps": [0, 1, 2, 3, 4, 5, 6, 7, 8],
+    "free": false,
+    "free_increment": 1
+  },
+  "hdr_gain_adder": {
+    "steps": [0, 1, 2, 3, 4, 5],
+    "free": false,
+    "free_increment": 1
   }
 }
 ```

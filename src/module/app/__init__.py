@@ -40,8 +40,10 @@ def create_app(redis_controller, cinepi_controller, simple_gui, sensor_detect,
     from .main.routes import main_routes
     from .main.events import register_events
     from .api import api_v1
+    from .settings_editor import settings_editor_bp
     from module.web_api_settings import web_api_settings
     app.register_blueprint(main_routes)
+    app.register_blueprint(settings_editor_bp)
     register_events(socketio, redis_controller, cinepi_controller, simple_gui, sensor_detect)
 
     if web_api_settings(settings).get('enabled', True):

@@ -1,0 +1,211 @@
+"""config.txt reader/writer for the settings editor's Boot Config pane.
+
+There is no existing Python plumbing for config.txt anywhere in this
+codebase (see dev_projects/settings-editor-ui/IMPLEMENTATION-PLAN.md F9).
+Cinemate supports independent dual-port sensor selection -- cam0 and cam1
+each get their own `dtoverlay=<model>,camN[,mono]` line, any of the known
+models on either port -- confirmed against dev_projects/settings-editor-ui/
+concept.html's cfgOverlayLine()/currentConfigText(), which already define
+the canonical shape this module reads and writes:
+
+    camera_auto_detect=<0 or 1>
+    dtoverlay=<model>,cam0            # only if cam0 has a sensor selected
+    dtoverlay=<model>,cam1[,mono]     # only if cam1 has a sensor selected
+
+Only the "# ---- Camera section ----" ... "# ---- End camera section ----"
+sub-region and the standalone i2c/i2s/spi/audio/RP1-overclock toggle lines
+are ever rewritten -- everything else in the managed block (and everything
+outside it) is left byte-identical. A live boot config is not a safe place
+to regenerate wholesale from a from-scratch template on every save.
+"""
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+CONFIG_TXT_PATH = "/boot/firmware/config.txt"
+
+MANAGED_BEGIN = "# >>> cinemate-install >>>"
+MANAGED_END = "# <<< cinemate-install <<<"
+CAMERA_SECTION_BEGIN = "# ---- Camera section ----"
+CAMERA_SECTION_END = "# ---- End camera section ----"
+
+# Selectable models per port (dev_projects/settings-editor-ui/concept.html's
+# CFG_SENSOR_LABELS) -- only imx585 has a distinct mono variant key; other
+# sensors don't get a separate "_mono" option here.
+SENSOR_MODELS = ["none", "imx477", "imx296", "imx283", "imx585", "imx585_mono"]
+
+_TOGGLE_LINES = {
+    "i2c": "dtparam=i2c_arm=on",
+    "i2s": "dtparam=i2s=on",
+    "spi": "dtparam=spi=on",
+    "audio": "dtparam=audio=on",
+}
+RP1_OVERCLOCK_LINE = "dtoverlay=rp1-overclock"
+
+_DTOVERLAY_LINE_RE = re.compile(r"^(#?)dtoverlay=(\S+)\s*$", re.MULTILINE)
+
+
+def is_rpi2712_platform() -> bool:
+    """Mirrors cinemate-install.sh's is_rpi2712_platform() (line ~414):
+    RP1 overclock only applies to BCM2712 boards (Pi 5 / CM5)."""
+    try:
+        return "bcm2712" in Path("/proc/device-tree/compatible").read_bytes().decode("ascii", "ignore")
+    except OSError:
+        return False
+
+
+def overlay_line_for(model: str, port: str) -> str | None:
+    """dtoverlay line text (no leading '#') for *model* on *port*
+    ('cam0'/'cam1'), or None for 'none'. Matches concept.html's
+    cfgOverlayLine() exactly."""
+    if model == "none":
+        return None
+    base = model[:-len("_mono")] if model.endswith("_mono") else model
+    mono_suffix = ",mono" if model == "imx585_mono" else ""
+    return f"dtoverlay={base},{port}{mono_suffix}"
+
+
+def _model_from_overlay_value(value: str) -> tuple[str | None, str | None]:
+    """Parse a dtoverlay value (everything after 'dtoverlay=') into
+    (model, port), or (None, None) if it doesn't target cam0/cam1 at all
+    (e.g. vc4-kms-v3d, dwc2, disable-bt, rp1-overclock -- unrelated
+    overlays that also live in this file)."""
+    tokens = value.split(",")
+    port = "cam0" if "cam0" in tokens else "cam1" if "cam1" in tokens else None
+    if port is None:
+        return None, None
+    mono = "mono" in tokens
+    model_tokens = [t for t in tokens if t not in ("cam0", "cam1", "mono")]
+    if not model_tokens:
+        return None, None
+    base = model_tokens[0]
+    model = f"{base}_mono" if (base == "imx585" and mono) else base
+    return model, port
+
+
+def default_config_state() -> dict:
+    """The clean-install default shape: IMX477 active on cam0, cam1 empty,
+    i2c on, i2s/spi off, audio on, RP1 overclock off."""
+    return {
+        "cam0_sensor": "imx477",
+        "cam1_sensor": "none",
+        "i2c": True,
+        "i2s": False,
+        "spi": False,
+        "audio": True,
+        "rp1_overclock": False,
+        "rp1_available": is_rpi2712_platform(),
+    }
+
+
+def _extract(text: str, begin: str, end: str) -> tuple[str | None, int, int]:
+    start = text.find(begin)
+    if start == -1:
+        return None, -1, -1
+    stop = text.find(end, start)
+    if stop == -1:
+        return None, -1, -1
+    stop += len(end)
+    return text[start:stop], start, stop
+
+
+def parse_config_txt(full_text: str) -> dict:
+    block, _start, _end = _extract(full_text, MANAGED_BEGIN, MANAGED_END)
+    if block is None:
+        state = default_config_state()
+        state["found"] = False
+        return state
+
+    cam_section, _cs, _ce = _extract(block, CAMERA_SECTION_BEGIN, CAMERA_SECTION_END)
+    cam0_sensor = "none"
+    cam1_sensor = "none"
+    if cam_section:
+        for commented, value in _DTOVERLAY_LINE_RE.findall(cam_section):
+            if commented:
+                continue
+            model, port = _model_from_overlay_value(value)
+            if model is None:
+                continue
+            if port == "cam0":
+                cam0_sensor = model
+            elif port == "cam1":
+                cam1_sensor = model
+
+    def _line_on(marker: str) -> bool:
+        return bool(re.search(r"^" + re.escape(marker) + r"\s*$", block, re.MULTILINE))
+
+    rp1_present = bool(re.search(
+        r"^#?" + re.escape(RP1_OVERCLOCK_LINE) + r"\s*$", block, re.MULTILINE,
+    ))
+
+    return {
+        "found": True,
+        "cam0_sensor": cam0_sensor,
+        "cam1_sensor": cam1_sensor,
+        "i2c": _line_on(_TOGGLE_LINES["i2c"]),
+        "i2s": _line_on(_TOGGLE_LINES["i2s"]),
+        "spi": _line_on(_TOGGLE_LINES["spi"]),
+        "audio": _line_on(_TOGGLE_LINES["audio"]),
+        "rp1_overclock": _line_on(RP1_OVERCLOCK_LINE),
+        "rp1_available": rp1_present,
+    }
+
+
+def _render_camera_section(cam0_sensor: str, cam1_sensor: str) -> str:
+    lines = [overlay_line_for(cam0_sensor, "cam0"), overlay_line_for(cam1_sensor, "cam1")]
+    lines = [l for l in lines if l]
+    auto_detect = "1" if lines else "0"
+    if not lines:
+        lines = ["# no camera overlay selected"]
+    return "\n".join([
+        CAMERA_SECTION_BEGIN,
+        "",
+        f"camera_auto_detect={auto_detect}",
+        *lines,
+        "",
+        CAMERA_SECTION_END,
+    ])
+
+
+def apply_config_txt_state(full_text: str, state: dict) -> str:
+    """Return *full_text* with only the editor-exposed lines touched inside
+    the existing managed block. Raises ValueError if no managed block is
+    present (this module never synthesizes one from scratch on a live
+    file -- see module docstring)."""
+    block, start, end = _extract(full_text, MANAGED_BEGIN, MANAGED_END)
+    if block is None:
+        raise ValueError(
+            f"No managed block ({MANAGED_BEGIN} ... {MANAGED_END}) found in "
+            f"{CONFIG_TXT_PATH} -- refusing to synthesize one on a live file."
+        )
+
+    cam_section, cs, ce = _extract(block, CAMERA_SECTION_BEGIN, CAMERA_SECTION_END)
+    new_block = block
+    if cam_section is not None:
+        replacement = _render_camera_section(
+            state.get("cam0_sensor", "none"), state.get("cam1_sensor", "none"),
+        )
+        new_block = block[:cs] + replacement + block[ce:]
+
+    for key, marker in _TOGGLE_LINES.items():
+        if key not in state:
+            continue
+        prefix = "" if state[key] else "#"
+        new_block = re.sub(
+            r"^#?" + re.escape(marker) + r"\s*$",
+            f"{prefix}{marker}",
+            new_block,
+            flags=re.MULTILINE,
+        )
+
+    if "rp1_overclock" in state:
+        prefix = "" if state["rp1_overclock"] else "#"
+        new_block = re.sub(
+            r"^#?" + re.escape(RP1_OVERCLOCK_LINE) + r"\s*$",
+            f"{prefix}{RP1_OVERCLOCK_LINE}",
+            new_block,
+            flags=re.MULTILINE,
+        )
+
+    return full_text[:start] + new_block + full_text[end:]

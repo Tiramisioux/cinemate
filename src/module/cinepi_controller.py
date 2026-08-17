@@ -243,6 +243,10 @@ class CinePiController:
         # parameters.free_mode_steps and the _rebuild_*_steps methods below).
         self.iso_free_increment = arrays_cfg.get('iso', {}).get('free_increment', 100)
         self.shutter_a_free_increment = arrays_cfg.get('shutter_a', {}).get('free_increment', 1)
+        # Independent of free_increment: used only while shutter_a_sync_mode
+        # is on, so it keeps its own default regardless of what free_increment
+        # is set to.
+        self.shutter_a_sync_increment = arrays_cfg.get('shutter_a', {}).get('sync_increment', 0.1)
         self.fps_free_increment = arrays_cfg.get('fps', {}).get('free_increment', 1)
         self.wb_free_increment = arrays_cfg.get('wb', {}).get('free_increment', 100)
         self.hdr_threshold_low_free_increment = arrays_cfg.get('hdr_threshold_low', {}).get('free_increment', 16)
@@ -754,7 +758,7 @@ class CinePiController:
 
         if self.shutter_a_sync_mode == 1:
             self.exposure_time_nominal = (self.shutter_angle_nom / 360) / self.current_fps
-            self.shutter_angle_steps = parameters.free_mode_steps(1, 360, self.shutter_a_free_increment)
+            self.shutter_angle_steps = parameters.free_mode_steps(1, 360, self.shutter_a_sync_increment)
         else:
             self.initialize_shutter_angle_steps()
 

@@ -55,6 +55,18 @@ class RuntimeDefaultsTests(unittest.TestCase):
         # untouched siblings still get their own defaults filled in
         self.assertEqual(settings["arrays"]["shutter_a"]["free_increment"], 1)
 
+    def test_shutter_a_gets_its_own_sync_increment_default(self):
+        arrays_cfg = _apply_settings_defaults({})["arrays"]
+        self.assertEqual(arrays_cfg["shutter_a"]["sync_increment"], 0.1)
+
+    def test_an_existing_sync_increment_choice_is_preserved_not_overwritten(self):
+        settings = _apply_settings_defaults(
+            {"arrays": {"shutter_a": {"sync_increment": 0.5}}}
+        )
+        self.assertEqual(settings["arrays"]["shutter_a"]["sync_increment"], 0.5)
+        # free_increment is a separate field and still gets its own default
+        self.assertEqual(settings["arrays"]["shutter_a"]["free_increment"], 1)
+
 
 class StockSettingsFileTests(unittest.TestCase):
     """The shipped resources/settings/settings_default.jsonc (the
@@ -69,6 +81,9 @@ class StockSettingsFileTests(unittest.TestCase):
         for name, expected in EXPECTED_FREE_INCREMENT_DEFAULTS.items():
             with self.subTest(name=name):
                 self.assertEqual(self.arrays_cfg[name]["free_increment"], expected)
+
+    def test_shutter_a_ships_its_own_sync_increment(self):
+        self.assertEqual(self.arrays_cfg["shutter_a"]["sync_increment"], 0.1)
 
 
 if __name__ == "__main__":

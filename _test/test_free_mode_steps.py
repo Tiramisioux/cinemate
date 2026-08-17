@@ -13,9 +13,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.modules.setdefault("redis", types.SimpleNamespace(StrictRedis=object))
 sys.modules.setdefault("smbus", types.SimpleNamespace(SMBus=object))
+for name in ("smbus2", "grove", "grove.i2c"):
+    sys.modules.setdefault(name, types.ModuleType(name))
+sys.modules["grove.i2c"].Bus = object
+sys.modules["smbus2"].SMBus = object
 
 from module import parameters
 from module.cinepi_controller import CinePiController
+from module.analog_controls import AnalogControls
 
 
 class FreeModeStepsTests(unittest.TestCase):
@@ -66,6 +71,12 @@ def make_stub():
     stub.fps_max = 50
     stub.calculate_dynamic_shutter_angles = lambda fps: list(stub.shutter_a_steps)
     stub._fps_steps_capped_at_max = CinePiController._fps_steps_capped_at_max.__get__(stub)
+    stub.initialize_shutter_angle_steps = CinePiController.initialize_shutter_angle_steps.__get__(stub)
+    stub.calculate_flicker_free_steps = CinePiController.calculate_flicker_free_steps.__get__(stub)
+    stub.redis_controller = types.SimpleNamespace(set_value=lambda key, value: None)
+    stub.shutter_angle_nom = 180.0
+    stub.shutter_a_sync_mode = 0
+    stub.shutter_a_sync_increment = 0.1
     for name, default_increment in (
         ("iso", 100), ("shutter_a", 1), ("fps", 1), ("wb", 100),
         ("hdr_threshold_low", 16), ("hdr_threshold_high", 16),
@@ -133,6 +144,59 @@ class RebuildStepsHonourFreeIncrementTests(unittest.TestCase):
         self.assertEqual(stub.hdr_threshold_low_steps, list(range(0, 4081, 16)) + [4095])
         self.assertEqual(stub.hdr_blend_steps, list(range(0, 9)))
         self.assertEqual(stub.hdr_gain_adder_steps, list(range(0, 6)))
+
+
+class ShutterASyncGranularityTests(unittest.TestCase):
+    """sync mode (`set shutter a sync`) and free mode used to share one
+    hardcoded 0.1 degree literal, so toggling either looked identical. They
+    now read separate settings -- these lock in that sync mode keeps its own
+    granularity regardless of what free_increment is set to."""
+
+    def test_sync_mode_on_uses_sync_increment_not_free_increment(self):
+        stub = make_stub()
+        stub.shutter_a_free_increment = 1     # deliberately different...
+        stub.shutter_a_sync_increment = 0.1   # ...from this, to tell them apart
+        CinePiController.set_shutter_a_sync_mode(stub, 1)
+        self.assertEqual(stub.shutter_angle_steps, parameters.free_mode_steps(1, 360, 0.1))
+        self.assertNotEqual(stub.shutter_angle_steps, parameters.free_mode_steps(1, 360, 1))
+
+    def test_sync_mode_off_falls_back_to_the_static_table(self):
+        stub = make_stub()
+        stub.shutter_a_sync_mode = 1
+        CinePiController.set_shutter_a_sync_mode(stub, 0)
+        self.assertEqual(stub.shutter_a_sync_mode, 0)
+        self.assertEqual(stub.shutter_angle_steps, [45.0, 90.0, 180.0])  # stub's configured steps
+
+
+def make_analog_controls_for_shutter_a(**controller_overrides):
+    defaults = dict(
+        shutter_a_free=False,
+        shutter_a_sync_mode=0,
+        shutter_a_free_increment=1,
+        shutter_a_sync_increment=0.1,
+        shutter_a_steps_dynamic=["static-table-sentinel"],
+    )
+    defaults.update(controller_overrides)
+    ac = AnalogControls.__new__(AnalogControls)
+    ac.cinepi_controller = types.SimpleNamespace(**defaults)
+    return ac
+
+
+class AnalogControlsShutterAPrecedenceTests(unittest.TestCase):
+    def test_sync_mode_wins_over_free_mode_when_both_are_on(self):
+        ac = make_analog_controls_for_shutter_a(
+            shutter_a_free=True, shutter_a_sync_mode=1,
+            shutter_a_free_increment=1, shutter_a_sync_increment=0.1,
+        )
+        self.assertEqual(ac._get_steps('shutter_a'), parameters.free_mode_steps(1, 360, 0.1))
+
+    def test_free_mode_alone_uses_free_increment(self):
+        ac = make_analog_controls_for_shutter_a(shutter_a_free=True, shutter_a_free_increment=1)
+        self.assertEqual(ac._get_steps('shutter_a'), parameters.free_mode_steps(1, 360, 1))
+
+    def test_neither_free_nor_sync_returns_the_static_table(self):
+        ac = make_analog_controls_for_shutter_a()
+        self.assertEqual(ac._get_steps('shutter_a'), ["static-table-sentinel"])
 
 
 if __name__ == "__main__":

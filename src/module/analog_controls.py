@@ -131,7 +131,12 @@ class AnalogControls(threading.Thread):
             return c.iso_steps                      # already rebuilt by update_steps()
 
         if kind == 'shutter_a':
-            if c.shutter_a_free or c.shutter_a_sync_mode == 1:
+            # sync mode's own granularity wins if both happen to be on --
+            # it's tracking exposure time continuously across fps changes,
+            # not just offering free-roam manual control.
+            if c.shutter_a_sync_mode == 1:
+                return parameters.free_mode_steps(1, 360, c.shutter_a_sync_increment)
+            if c.shutter_a_free:
                 return parameters.free_mode_steps(1, 360, c.shutter_a_free_increment)
             return c.shutter_a_steps_dynamic        # includes flicker-free angles
 

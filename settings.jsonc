@@ -120,7 +120,11 @@
     "shutter_a": {
       "steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360],
       "free": false,
-      "free_increment": 1
+      "free_increment": 1,
+      // Separate, finer granularity used only while `set shutter a sync` is
+      // on -- sync mode tracks exposure time continuously across fps
+      // changes, so it keeps its own default independent of free_increment.
+      "sync_increment": 0.1
     },
     "fps": {
       "steps": [25, 33, 50],

@@ -51,7 +51,7 @@ The same commands can be sent wirelessly over the camera's Wi-Fi hotspot — see
 | `set rtc time`                             | -              |                           | Copy system time to the RTC                     |
 | `space`                                    | -              |                                  | Report remaining SSD space                      |
 | `get`                                      | -              |                                    | Print all current settings (Redis keys in cp_controls channel)                      |
-| `set shutter a sync [0/1]`                 | 0/1 or none       | `set shutter a sync 1`                  | Enable exposure sync mode                       |
+| `set shutter a sync [0/1]`                 | 0/1 or none       | `set shutter a sync 1`                  | Enable exposure sync mode; pots/encoders then step in `arrays.shutter_a.sync_increment` (0.1° default), independent of `free_increment` |
 | `set iso lock [0/1]`                       | 0/1 or none       |                           | Lock or unlock ISO setting                      |
 | `set shutter a nom lock [0/1]`             | 0/1 or none       | `set shutter a nom lock`                | Lock or unlock nominal shutter                  |
 | `set shutter a nom fps lock [0/1]`         | 0/1 or none       | `set shutter a nom fps lock 1`          | Lock nominal shutter and FPS together           |

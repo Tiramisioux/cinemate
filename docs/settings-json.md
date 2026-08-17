@@ -235,6 +235,8 @@ One block per cycle-able camera parameter: ISO, shutter angle, frame rate, white
 | `hdr_blend` | 0–8 | 1 |
 | `hdr_gain_adder` | 0–5 | 1 |
 
+`shutter_a` has one more field, `sync_increment` (default 0.1°): the granularity used only while [shutter-angle sync mode](cli-commands.md) (`set shutter a sync`) is on, tracking exposure time continuously across fps changes. It's independent of `free_increment` — the two used to share a single hardcoded 0.1° value, so toggling sync mode and toggling free mode looked identical; they're now separate knobs for two different jobs (sync mode's continuous exposure tracking vs. free mode's manual pot/encoder control).
+
 ```jsonc
 "arrays": {
   "iso": {
@@ -245,7 +247,8 @@ One block per cycle-able camera parameter: ISO, shutter angle, frame rate, white
   "shutter_a": {
     "steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360],
     "free": false,
-    "free_increment": 1
+    "free_increment": 1,
+    "sync_increment": 0.1
   },
   "fps": {
     "steps": [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50],

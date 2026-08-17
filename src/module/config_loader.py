@@ -246,6 +246,10 @@ def _apply_settings_defaults(settings: dict) -> dict:
             "steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 360],
             "free": False,
             "free_increment": 1,
+            # Own granularity used only while shutter-angle sync mode is on
+            # (`set shutter a sync`) -- independent of free_increment, which
+            # is for manual free-roam pot/encoder control.
+            "sync_increment": 0.1,
         },
         "fps": {
             "steps": [1, 2, 4, 8, 12, 16, 18, 24, 25, 30],

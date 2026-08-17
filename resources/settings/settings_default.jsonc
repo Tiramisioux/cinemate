@@ -63,7 +63,8 @@
     "shutter_a": {
       "steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360],
       "free": false,
-      "free_increment": 1
+      "free_increment": 1,
+      "sync_increment": 0.1
     },
     "fps": {
       "steps": [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50],

@@ -1553,6 +1553,52 @@ EOF
     rm -f "$temp"
 }
 
+configure_nano_jsonc_highlighting() {
+    log "Adding nano syntax highlighting for settings.jsonc"
+    backup_file /usr/share/nano/jsonc.nanorc
+    write_root_file /usr/share/nano/jsonc.nanorc 644 <<'EOF'
+## JSONC (JSON with // and /* */ comments) syntax highlighting for nano.
+## nano's stock JSON rule (where present) only matches "\.json$", which does
+## not match settings.jsonc -- this file adds that match on its own so it
+## survives a nano package update overwriting the stock rule.
+syntax "jsonc" "\.jsonc$"
+comment "//"
+
+# String values (generic -- listed first so the more specific "key" rule
+# below paints over the key portion of "key": value pairs).
+color green "\"(\\.|[^\"])*\""
+
+# Object keys: a quoted string immediately followed by a colon.
+color cyan "\"(\\.|[^\"])*\"[[:space:]]*:"
+
+# Numbers.
+color magenta "-?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?"
+
+# true / false / null.
+color yellow "\<(true|false|null)\>"
+
+# Structural punctuation.
+color brightwhite "[]{}[,:]"
+
+# // line comments.
+color brightblack "//.*"
+
+# /* block comments */ (can span multiple lines).
+color brightblack start="/\*" end="\*/"
+EOF
+
+    local nanorc="/etc/nanorc"
+    local active_include='^[[:space:]]*include[[:space:]]+"?/usr/share/nano/(\*\.nanorc|jsonc\.nanorc)"?[[:space:]]*$'
+    if [[ -f "$nanorc" ]] && sudo grep -qE "$active_include" "$nanorc"; then
+        detail "$nanorc already includes /usr/share/nano/*.nanorc"
+        return 0
+    fi
+
+    detail "Adding jsonc.nanorc include to $nanorc"
+    [[ -f "$nanorc" ]] && backup_file "$nanorc"
+    printf '\ninclude "/usr/share/nano/jsonc.nanorc"\n' | sudo tee -a "$nanorc" >/dev/null
+}
+
 print_post_install_notes() {
     section "Post-install notes"
     log "Cinemate virtualenv: $VENV_DIR"
@@ -1816,6 +1862,7 @@ main() {
     configure_audio_rtprio
     configure_logrotate
     configure_bashrc
+    configure_nano_jsonc_highlighting
     configure_settings_json
     section "Seeding Redis defaults"
     seed_redis_defaults

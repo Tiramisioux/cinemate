@@ -740,6 +740,30 @@ Reload .bashrc
 source ~/.bashrc
 ```
 
+#### Add nano syntax highlighting for `settings.jsonc`
+
+nano's stock JSON rule only matches `.json`, not `.jsonc`, so `editsettings` opens with no colors until you add a syntax file for it:
+
+```shell
+sudo nano /usr/share/nano/jsonc.nanorc
+```
+
+Paste:
+
+```
+syntax "jsonc" "\.jsonc$"
+comment "//"
+color green "\"(\\.|[^\"])*\""
+color cyan "\"(\\.|[^\"])*\"[[:space:]]*:"
+color magenta "-?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?"
+color yellow "\<(true|false|null)\>"
+color brightwhite "[]{}[,:]"
+color brightblack "//.*"
+color brightblack start="/\*" end="\*/"
+```
+
+Save with Ctrl+x, y, enter. Debian's nano already includes `/usr/share/nano/*.nanorc`, so no further config is needed — `editsettings` will show colors the next time you open it.
+
 #### Match `settings.jsonc` to the HDMI output you want to use
 
 Open the settings file:

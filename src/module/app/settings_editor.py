@@ -16,7 +16,15 @@ import tempfile
 import threading
 from pathlib import Path
 
-from flask import Blueprint, current_app, jsonify, render_template, request
+from flask import (
+    Blueprint,
+    after_this_request,
+    current_app,
+    jsonify,
+    render_template,
+    request,
+    send_file,
+)
 
 from module.config_loader import (
     SettingsLoadError,
@@ -24,7 +32,7 @@ from module.config_loader import (
     load_settings,
     strip_jsonc,
 )
-from module.app import boot_config
+from module.app import boot_config, raw_files
 
 logger = logging.getLogger(__name__)
 
@@ -296,3 +304,54 @@ def get_actions():
         actions.append(item)
 
     return jsonify({"ok": True, "actions": actions})
+
+
+@settings_editor_bp.route("/api/raw/storage", methods=["GET"])
+def get_raw_storage():
+    return jsonify({"ok": True, "storage": raw_files.storage_summary()})
+
+
+@settings_editor_bp.route("/api/raw/takes", methods=["GET"])
+def get_raw_takes():
+    return jsonify({"ok": True, "takes": raw_files.list_takes()})
+
+
+@settings_editor_bp.route("/api/raw/takes/<name>", methods=["DELETE"])
+def delete_raw_take(name):
+    ok, message = raw_files.delete_take(name)
+    return jsonify({"ok": ok, "message": message}), (200 if ok else 404)
+
+
+@settings_editor_bp.route("/api/raw/takes/<name>/download", methods=["GET"])
+def download_raw_take(name):
+    path = raw_files.resolve_take(name)
+    if path is None:
+        return jsonify({"ok": False, "message": f"Take '{name}' not found"}), 404
+
+    zip_path = raw_files.build_take_zip(path)
+
+    @after_this_request
+    def _cleanup(response):
+        try:
+            zip_path.unlink(missing_ok=True)
+        except OSError:
+            logger.warning("Could not remove temp zip %s", zip_path)
+        return response
+
+    return send_file(zip_path, as_attachment=True, download_name=f"{name}.zip")
+
+
+@settings_editor_bp.route("/api/raw/bulk", methods=["POST"])
+def bulk_raw_action():
+    body = request.get_json(silent=True) or {}
+    action = body.get("action")
+    names = body.get("names") or []
+    if action != "delete" or not isinstance(names, list):
+        return jsonify({"ok": False, "message": "Expected {action: 'delete', names: [...]}"}), 400
+
+    results = {}
+    for name in names:
+        ok, message = raw_files.delete_take(name)
+        results[name] = {"ok": ok, "message": message}
+    all_ok = all(r["ok"] for r in results.values())
+    return jsonify({"ok": all_ok, "results": results})

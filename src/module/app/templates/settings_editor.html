@@ -2041,18 +2041,7 @@
         <p class="group-sub">Browse what's on the active storage device and pull takes off over Wi‑Fi — no card swap needed.</p>
       </header>
 
-      <div class="storage-card">
-        <div class="storage-top">
-          <div class="storage-device">RAW1 — Samsung T7 <span class="mono" style="color:var(--muted); font-weight:400; font-size:12px">(sda1 · exFAT)</span></div>
-          <div class="storage-stats">
-            <span><b>1.44 TB</b> free of 1.86 TB</span>
-            <span><b>148</b> takes</span>
-            <span><b>187 MB/s</b> last write</span>
-          </div>
-        </div>
-        <div class="capacity-track"><div class="capacity-fill" style="width:23%"></div></div>
-        <p class="card-help" style="margin:0">RAW2 is the standby drive — pull this one and recording promotes to it automatically, no missed take. ext4 and exFAT are both fine here; NTFS isn't recommended for recording.</p>
-      </div>
+      <div id="storageCards"><p class="card-help">Loading storage…</p></div>
 
       <div class="clip-toolbar">
         <label class="left"><input type="checkbox" id="selectAllClips"> Select all</label>
@@ -2064,122 +2053,19 @@
             <option value="largest">Largest first</option>
           </select>
         </div>
+        <button class="btn btn-ghost" id="refreshClips" style="margin-left:auto">Refresh</button>
       </div>
 
       <div class="bulk-bar" id="bulkBar">
         <span id="bulkCount">0 selected</span>
         <span class="actions">
-          <button class="btn btn-primary" id="bulkDownload">Download as ZIP</button>
+          <button class="btn btn-primary" id="bulkDownload">Download selected</button>
           <button class="btn btn-danger-outline" id="bulkDelete">Delete selected</button>
         </span>
       </div>
 
-      <div class="cliplist" id="clipList">
-        <div class="cliprow" data-search="cinepi 26-08-14 193207 c00042 dual cam0 cam1 4k 12-bit clearhdr" data-ts="20260814193207" data-size-gb="36.8">
-          <input type="checkbox" class="clip-check">
-          <div>
-            <div class="clip-name">CINEPI_26-08-14_193207_F25_C00042</div>
-            <div class="clip-meta">Aug 14, 2026 · 19:32 — 812 frames · 32.5s @ 25 fps</div>
-            <div class="clip-badges">
-              <span class="chip">DUAL</span>
-              <span class="chip">4K · 12-bit</span>
-              <span class="chip chip-live">WAV</span>
-            </div>
-          </div>
-          <div class="clip-size">36.8 GB</div>
-          <div class="clip-actions">
-            <button class="icon-action" data-download title="Download" aria-label="Download this take"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg></button>
-            <button class="icon-action danger" data-delete title="Delete" aria-label="Delete this take"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
-          </div>
-        </div>
-        <div class="cliprow" data-search="cinepi 26-08-14 184501 c00041 cam0 4k 12-bit log12" data-ts="20260814184501" data-size-gb="30.1">
-          <input type="checkbox" class="clip-check">
-          <div>
-            <div class="clip-name">CINEPI_26-08-14_184501_F25_C00041</div>
-            <div class="clip-meta">Aug 14, 2026 · 18:45 — 2,700 frames · 1m 48s @ 25 fps</div>
-            <div class="clip-badges">
-              <span class="chip">CAM0</span>
-              <span class="chip">4K · 12-bit</span>
-              <span class="chip chip-live">WAV</span>
-              <span class="chip chip-log">LOG12</span>
-            </div>
-          </div>
-          <div class="clip-size">30.1 GB</div>
-          <div class="clip-actions">
-            <button class="icon-action" data-download title="Download" aria-label="Download this take"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg></button>
-            <button class="icon-action danger" data-delete title="Delete" aria-label="Delete this take"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
-          </div>
-        </div>
-        <div class="cliprow" data-search="cinepi 26-08-13 142230 c00039 cam0 2k 10-bit 50fps" data-ts="20260813142230" data-size-gb="4.6">
-          <input type="checkbox" class="clip-check">
-          <div>
-            <div class="clip-name">CINEPI_26-08-13_142230_F50_C00039</div>
-            <div class="clip-meta">Aug 13, 2026 · 14:22 — 410 frames · 8.2s @ 50 fps</div>
-            <div class="clip-badges">
-              <span class="chip">CAM0</span>
-              <span class="chip">2K · 10-bit</span>
-            </div>
-          </div>
-          <div class="clip-size">4.6 GB</div>
-          <div class="clip-actions">
-            <button class="icon-action" data-download title="Download" aria-label="Download this take"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg></button>
-            <button class="icon-action danger" data-delete title="Delete" aria-label="Delete this take"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
-          </div>
-        </div>
-        <div class="cliprow" data-search="cinepi 26-08-13 140112 c00038 dual dropped frames warning" data-ts="20260813140112" data-size-gb="13.5">
-          <input type="checkbox" class="clip-check">
-          <div>
-            <div class="clip-name">CINEPI_26-08-13_140112_F25_C00038</div>
-            <div class="clip-meta">Aug 13, 2026 · 14:01 — 300 frames · 12.0s @ 25 fps</div>
-            <div class="clip-badges">
-              <span class="chip">DUAL</span>
-              <span class="chip">4K · 12-bit</span>
-              <span class="chip chip-live">WAV</span>
-              <span class="chip chip-danger">2 dropped frames</span>
-            </div>
-          </div>
-          <div class="clip-size">13.5 GB</div>
-          <div class="clip-actions">
-            <button class="icon-action" data-download title="Download" aria-label="Download this take"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg></button>
-            <button class="icon-action danger" data-delete title="Delete" aria-label="Delete this take"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
-          </div>
-        </div>
-        <div class="cliprow" data-search="cinepi 26-08-12 101534 c00030 cam1 3k 12-bit clearhdr" data-ts="20260812101534" data-size-gb="22.7">
-          <input type="checkbox" class="clip-check">
-          <div>
-            <div class="clip-name">CINEPI_26-08-12_101534_F25_C00030</div>
-            <div class="clip-meta">Aug 12, 2026 · 10:15 — 1,375 frames · 55.0s @ 25 fps</div>
-            <div class="clip-badges">
-              <span class="chip">CAM1</span>
-              <span class="chip">3K · 12-bit ClearHDR</span>
-              <span class="chip chip-live">WAV</span>
-            </div>
-          </div>
-          <div class="clip-size">22.7 GB</div>
-          <div class="clip-actions">
-            <button class="icon-action" data-download title="Download" aria-label="Download this take"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg></button>
-            <button class="icon-action danger" data-delete title="Delete" aria-label="Delete this take"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
-          </div>
-        </div>
-        <div class="cliprow" data-search="cinepi 26-08-11 090012 c00021 cam0 1.5k 10-bit" data-ts="20260811090012" data-size-gb="28.9">
-          <input type="checkbox" class="clip-check">
-          <div>
-            <div class="clip-name">CINEPI_26-08-11_090012_F25_C00021</div>
-            <div class="clip-meta">Aug 11, 2026 · 09:00 — 5,000 frames · 3m 20s @ 25 fps</div>
-            <div class="clip-badges">
-              <span class="chip">CAM0</span>
-              <span class="chip">1.5K · 10-bit</span>
-            </div>
-          </div>
-          <div class="clip-size">28.9 GB</div>
-          <div class="clip-actions">
-            <button class="icon-action" data-download title="Download" aria-label="Download this take"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg></button>
-            <button class="icon-action danger" data-delete title="Delete" aria-label="Delete this take"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
-          </div>
-        </div>
-      </div>
-
-      <p class="card-help" style="margin-top:10px">Showing the 6 most recent takes of 148 on this card. <a href="#">View all →</a></p>
+      <div class="cliplist" id="clipList"></div>
+      <p class="card-help" id="clipListFooter" style="margin-top:10px"></p>
     </section>
 
     <!-- BOOT CONFIG -->
@@ -3018,9 +2904,193 @@
     reader.readAsText(file);
   });
 
+  /* ---------- RAW files (real, from scratch -- no mockup logic to reuse
+     here: the concept.html clips pane had zero fetch calls and 6
+     hand-authored example rows, so this renders real rows instead of
+     populating fixed markup. See raw_files.py for the on-disk scan. ---------- */
+  var DOWNLOAD_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>';
+  var DELETE_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
+
+  function formatBytes(n){
+    if (n == null) return '—';
+    var units = ['B', 'KB', 'MB', 'GB', 'TB'], i = 0;
+    while (n >= 1024 && i < units.length - 1){ n /= 1024; i++; }
+    return (i === 0 ? n : n.toFixed(1)) + ' ' + units[i];
+  }
+  function formatDate(epochSeconds){
+    if (!epochSeconds) return 'Unknown date';
+    var d = new Date(epochSeconds * 1000);
+    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  var currentTakes = [];
+
+  function renderStorageCards(storage){
+    var wrap = document.getElementById('storageCards');
+    wrap.innerHTML = '';
+    if (!storage.length){
+      wrap.innerHTML = '<p class="card-help">No RAW storage mounted at /media/RAW right now.</p>';
+      return;
+    }
+    storage.forEach(function(s){
+      var pct = (s.total_bytes && s.free_bytes != null)
+        ? Math.round(100 - (s.free_bytes / s.total_bytes) * 100) : 0;
+      var card = document.createElement('div');
+      card.className = 'storage-card';
+      card.innerHTML =
+        '<div class="storage-top">' +
+          '<div class="storage-device">' + s.label + (s.active ? ' (active)' : ' (standby)') +
+            ' <span class="mono" style="color:var(--muted); font-weight:400; font-size:12px">(' +
+            (s.device || 'unknown device') + ' · ' + (s.filesystem || 'unknown fs') + ')</span></div>' +
+          '<div class="storage-stats">' +
+            '<span><b>' + formatBytes(s.free_bytes) + '</b> free of ' + formatBytes(s.total_bytes) + '</span>' +
+            '<span><b>' + s.take_count + '</b> takes</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="capacity-track"><div class="capacity-fill" style="width:' + pct + '%"></div></div>';
+      wrap.appendChild(card);
+    });
+  }
+
+  function renderClipList(){
+    var list = document.getElementById('clipList');
+    var footer = document.getElementById('clipListFooter');
+    var sort = document.getElementById('clipSort').value;
+    var takes = currentTakes.slice();
+    takes.sort(function(a, b){
+      if (sort === 'oldest') return (a.mtime || 0) - (b.mtime || 0);
+      if (sort === 'largest') return (b.size_bytes || 0) - (a.size_bytes || 0);
+      return (b.mtime || 0) - (a.mtime || 0);
+    });
+
+    list.innerHTML = '';
+    takes.forEach(function(t){
+      var row = document.createElement('div');
+      row.className = 'cliprow';
+      row.setAttribute('data-name', t.name);
+      row.setAttribute('data-search', t.name.toLowerCase() + ' ' + t.storage.toLowerCase());
+      row.setAttribute('data-ts', String(t.mtime || 0));
+      row.setAttribute('data-size', String(t.size_bytes || 0));
+      row.innerHTML =
+        '<input type="checkbox" class="clip-check">' +
+        '<div>' +
+          '<div class="clip-name">' + t.name + '</div>' +
+          '<div class="clip-meta">' + formatDate(t.mtime) + ' — ' + t.frame_count + ' frames</div>' +
+          '<div class="clip-badges">' +
+            '<span class="chip">' + t.storage + '</span>' +
+            (t.has_wav ? '<span class="chip chip-live">WAV</span>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="clip-size">' + formatBytes(t.size_bytes) + '</div>' +
+        '<div class="clip-actions">' +
+          '<button class="icon-action" data-download title="Download" aria-label="Download this take">' + DOWNLOAD_ICON + '</button>' +
+          '<button class="icon-action danger" data-delete title="Delete" aria-label="Delete this take">' + DELETE_ICON + '</button>' +
+        '</div>';
+      list.appendChild(row);
+    });
+
+    footer.textContent = takes.length
+      ? 'Showing all ' + takes.length + ' take' + (takes.length === 1 ? '' : 's') + ' across mounted storage.'
+      : 'No takes found on mounted storage.';
+
+    wireClipRowActions();
+    updateBulkBar();
+    updateGroupVisibility();
+  }
+
+  function loadRawStorage(){
+    return fetch('/settings-editor/api/raw/storage').then(function(r){ return r.json(); }).then(function(res){
+      if (res.ok) renderStorageCards(res.storage);
+    }).catch(function(){ /* RAW pane is best-effort; settings/config already reported connectivity issues */ });
+  }
+
+  function loadRawTakes(){
+    return fetch('/settings-editor/api/raw/takes').then(function(r){ return r.json(); }).then(function(res){
+      if (res.ok){ currentTakes = res.takes; renderClipList(); }
+    }).catch(function(){});
+  }
+
+  function refreshRawPane(){
+    loadRawStorage();
+    loadRawTakes();
+  }
+
+  function selectedClipNames(){
+    return Array.from(document.querySelectorAll('.cliprow .clip-check:checked'))
+      .map(function(cb){ return cb.closest('.cliprow').getAttribute('data-name'); });
+  }
+
+  function updateBulkBar(){
+    var names = selectedClipNames();
+    var bar = document.getElementById('bulkBar');
+    document.getElementById('bulkCount').textContent = names.length + ' selected';
+    bar.classList.toggle('show', names.length > 0);
+    document.getElementById('selectAllClips').checked = names.length > 0 && names.length === currentTakes.length;
+  }
+
+  function wireClipRowActions(){
+    document.querySelectorAll('.cliprow .clip-check').forEach(function(cb){
+      cb.addEventListener('change', updateBulkBar);
+    });
+    document.querySelectorAll('.cliprow [data-download]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var name = btn.closest('.cliprow').getAttribute('data-name');
+        window.location = '/settings-editor/api/raw/takes/' + encodeURIComponent(name) + '/download';
+      });
+    });
+    document.querySelectorAll('.cliprow [data-delete]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var name = btn.closest('.cliprow').getAttribute('data-name');
+        showConfirm('Delete take "' + name + '"? This cannot be undone.', function(){
+          fetch('/settings-editor/api/raw/takes/' + encodeURIComponent(name), { method: 'DELETE' })
+            .then(function(r){ return r.json(); }).then(function(res){
+              showToast(res.ok ? 'Deleted ' + name : 'Delete failed: ' + res.message);
+              if (res.ok) refreshRawPane();
+            }).catch(function(err){ showToast('Delete failed: ' + err); });
+        }, null, { title: 'Delete this take?', okLabel: 'Delete', danger: true });
+      });
+    });
+  }
+
+  document.getElementById('selectAllClips').addEventListener('change', function(){
+    var checked = this.checked;
+    document.querySelectorAll('.cliprow .clip-check').forEach(function(cb){ cb.checked = checked; });
+    updateBulkBar();
+  });
+  document.getElementById('clipSort').addEventListener('change', renderClipList);
+  document.getElementById('refreshClips').addEventListener('click', refreshRawPane);
+  document.getElementById('bulkDelete').addEventListener('click', function(){
+    var names = selectedClipNames();
+    if (!names.length) return;
+    showConfirm('Delete ' + names.length + ' selected take(s)? This cannot be undone.', function(){
+      fetch('/settings-editor/api/raw/bulk', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', names: names })
+      }).then(function(r){ return r.json(); }).then(function(res){
+        showToast(res.ok ? 'Deleted ' + names.length + ' take(s)' : 'Some deletes failed — see console');
+        if (!res.ok) console.warn('Bulk delete results', res.results);
+        refreshRawPane();
+      }).catch(function(err){ showToast('Bulk delete failed: ' + err); });
+    }, null, { title: 'Delete ' + names.length + ' take(s)?', okLabel: 'Delete', danger: true });
+  });
+  document.getElementById('bulkDownload').addEventListener('click', function(){
+    // One take at a time client-side rather than a multi-take zip endpoint
+    // -- see raw_files.py's build_take_zip() docstring: even a single
+    // take's zip briefly doubles disk usage on a storage-constrained Pi,
+    // so a real multi-take zip endpoint isn't a safe default here yet.
+    var names = selectedClipNames();
+    names.forEach(function(name, i){
+      setTimeout(function(){
+        window.location = '/settings-editor/api/raw/takes/' + encodeURIComponent(name) + '/download';
+      }, i * 800);
+    });
+    if (names.length > 1) showToast('Downloading ' + names.length + ' takes one at a time…');
+  });
+
   /* ---------- initial load ---------- */
   loadSettings();
   loadConfigTxt();
+  refreshRawPane();
 
   /* ---------- toast ---------- */
   var toastTimer;
@@ -3110,7 +3180,12 @@
   var confirmModalOk = document.getElementById('confirmModalOk');
   var confirmModalCancel = document.getElementById('confirmModalCancel');
   var pendingConfirmYes = null, pendingConfirmCancel = null;
-  function showConfirm(message, onYes, onCancel){
+  function showConfirm(message, onYes, onCancel, opts){
+    opts = opts || {};
+    document.getElementById('confirmModalTitle').textContent = opts.title || 'Remap this control?';
+    confirmModalOk.textContent = opts.okLabel || 'Remap';
+    confirmModalOk.classList.toggle('btn-danger-outline', !!opts.danger);
+    confirmModalOk.classList.toggle('btn-primary', !opts.danger);
     confirmModalBody.textContent = message;
     pendingConfirmYes = onYes;
     pendingConfirmCancel = onCancel;
@@ -3618,73 +3693,6 @@
   document.getElementById('genericRebootBtn').addEventListener('click', function(){
     document.getElementById('bootconfig').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
     cfgRebootBtn.click();
-  });
-
-  /* ---------- clips & downloads ---------- */
-  var clipList = document.getElementById('clipList');
-  var bulkBar = document.getElementById('bulkBar');
-  var bulkCount = document.getElementById('bulkCount');
-  var selectAllClips = document.getElementById('selectAllClips');
-  function updateBulkBar(){
-    var checked = Array.prototype.slice.call(clipList.querySelectorAll('.clip-check:checked'));
-    if (!checked.length){ bulkBar.classList.remove('show'); selectAllClips.checked = false; return; }
-    var totalGb = checked.reduce(function(sum, c){ return sum + (parseFloat(c.closest('.cliprow').getAttribute('data-size-gb')) || 0); }, 0);
-    bulkCount.textContent = checked.length + ' selected · ' + totalGb.toFixed(1) + ' GB';
-    bulkBar.classList.add('show');
-    var visibleRows = clipList.querySelectorAll('.cliprow:not(.is-hidden)').length;
-    selectAllClips.checked = checked.length === visibleRows;
-  }
-  clipList.querySelectorAll('.clip-check').forEach(function(c){ c.addEventListener('change', updateBulkBar); });
-  selectAllClips.addEventListener('change', function(){
-    clipList.querySelectorAll('.cliprow:not(.is-hidden) .clip-check').forEach(function(c){ c.checked = selectAllClips.checked; });
-    updateBulkBar();
-  });
-  function wireRowActions(actions){
-    var dl = actions.querySelector('[data-download]');
-    if (dl){
-      dl.addEventListener('click', function(){
-        var name = actions.closest('.cliprow').querySelector('.clip-name').textContent;
-        showToast('Downloading ' + name + '.zip…');
-      });
-    }
-    var del = actions.querySelector('[data-delete]');
-    if (del){
-      del.addEventListener('click', function(){
-        var row = actions.closest('.cliprow');
-        var original = actions.innerHTML;
-        actions.innerHTML = '<span class="confirm-row">Delete this take? <button type="button" data-yes>Yes</button><button type="button" data-no>No</button></span>';
-        actions.querySelector('[data-yes]').addEventListener('click', function(){
-          row.remove();
-          updateBulkBar();
-          showToast('Take deleted');
-        });
-        actions.querySelector('[data-no]').addEventListener('click', function(){
-          actions.innerHTML = original;
-          wireRowActions(actions);
-        });
-      });
-    }
-  }
-  clipList.querySelectorAll('.clip-actions').forEach(wireRowActions);
-  document.getElementById('bulkDownload').addEventListener('click', function(){
-    var n = clipList.querySelectorAll('.clip-check:checked').length;
-    showToast('Zipping ' + n + ' takes for download…');
-  });
-  document.getElementById('bulkDelete').addEventListener('click', function(){
-    var checked = Array.prototype.slice.call(clipList.querySelectorAll('.clip-check:checked'));
-    showToast(checked.length + ' takes deleted');
-    checked.forEach(function(c){ c.closest('.cliprow').remove(); });
-    updateBulkBar();
-  });
-  document.getElementById('clipSort').addEventListener('change', function(){
-    var mode = this.value;
-    var rows = Array.prototype.slice.call(clipList.querySelectorAll('.cliprow'));
-    rows.sort(function(a, b){
-      if (mode === 'largest') return parseFloat(b.getAttribute('data-size-gb')) - parseFloat(a.getAttribute('data-size-gb'));
-      var ta = parseInt(a.getAttribute('data-ts'), 10), tb = parseInt(b.getAttribute('data-ts'), 10);
-      return mode === 'oldest' ? ta - tb : tb - ta;
-    });
-    rows.forEach(function(r){ clipList.appendChild(r); });
   });
 
   var styleTag = document.createElement('style');

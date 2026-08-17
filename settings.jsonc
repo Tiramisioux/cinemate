@@ -109,23 +109,55 @@
   },
 
   // ── arrays: one block per cycle-able camera parameter ─────────────────────
-  // steps = the selectable table; free = step continuously instead.
+  // steps = the selectable table; free = step continuously instead, in units
+  // of free_increment (e.g. 0.1 for fine sub-degree shutter-angle control).
   "arrays": {
     "iso": {
       "steps": [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200],
-      "free": false
+      "free": false,
+      "free_increment": 100
     },
     "shutter_a": {
       "steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360],
-      "free": false
+      "free": false,
+      "free_increment": 1,
+      // Separate, finer granularity used only while `set shutter a sync` is
+      // on -- sync mode tracks exposure time continuously across fps
+      // changes, so it keeps its own default independent of free_increment.
+      "sync_increment": 0.1
     },
     "fps": {
       "steps": [25, 33, 50],
-      "free": false
+      "free": false,
+      "free_increment": 1
     },
     "wb": {
       "steps": [3200, 4400, 5600],
-      "free": true
+      "free": true,
+      "free_increment": 100
+    },
+    // ClearHDR live knobs -- ranges per the imx585 driver: thresholds
+    // 0-4095 each, blend mode 0-8, gain adder 0-5. See image_capture.hdr
+    // below for their startup values.
+    "hdr_threshold_low": {
+      "steps": [0, 512, 1024, 1536, 2048, 2560, 3072, 3584, 4095],
+      "free": false,
+      "free_increment": 16
+    },
+    "hdr_threshold_high": {
+      "steps": [0, 512, 1024, 1536, 2048, 2560, 3072, 3584, 4095],
+      "free": false,
+      "free_increment": 16
+    },
+    "hdr_blend": {
+      "steps": [0, 1, 2, 3, 4, 5, 6, 7, 8],
+      "free": false,
+      "free_increment": 1
+    },
+    "hdr_gain_adder": {
+      "steps": [0, 1, 2, 3, 4, 5],
+      "free": false,
+      "free_increment": 1
     }
   },
 
@@ -263,9 +295,9 @@
   "input_peripherals": {
     // Grove Base HAT analog pots. "channel" is the ADC channel number (0-7);
     // "None" means no pot wired for that setting -- set a real channel
-    // number to enable it. "setting" must match a name in `arrays` above,
-    // or one of the ClearHDR knobs (hdr_threshold_low/high, hdr_blend,
-    // hdr_gain_adder).
+    // number to enable it. "setting" must match a name in `arrays` above
+    // (iso, shutter_a, fps, wb, hdr_threshold_low, hdr_threshold_high,
+    // hdr_blend, hdr_gain_adder).
     "pots": [
       { "channel": "None", "setting": "iso" },
       { "channel": "None", "setting": "shutter_a" },

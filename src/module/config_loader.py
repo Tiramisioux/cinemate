@@ -232,25 +232,56 @@ def _apply_settings_defaults(settings: dict) -> dict:
 
     # ── arrays: one block per cycle-able camera parameter ──────────────────
     # steps = the selectable table; free = continuous stepping instead of the
-    # table. Each parameter block is kept in the shape parameters.REGISTRY
-    # expects (name -> {steps, free}) -- see module/parameters.py.
+    # table, in units of free_increment. Each parameter block is kept in the
+    # shape parameters.REGISTRY expects (name -> {steps, free, free_increment})
+    # -- see module/parameters.py.
     arrays_cfg = settings.setdefault("arrays", {})
     parameter_defaults = {
         "iso": {
             "steps": [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200],
             "free": False,
+            "free_increment": 100,
         },
         "shutter_a": {
             "steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 360],
             "free": False,
+            "free_increment": 1,
+            # Own granularity used only while shutter-angle sync mode is on
+            # (`set shutter a sync`) -- independent of free_increment, which
+            # is for manual free-roam pot/encoder control.
+            "sync_increment": 0.1,
         },
         "fps": {
             "steps": [1, 2, 4, 8, 12, 16, 18, 24, 25, 30],
             "free": False,
+            "free_increment": 1,
         },
         "wb": {
             "steps": [3200, 4400, 5600],
             "free": False,
+            "free_increment": 100,
+        },
+        # ClearHDR live knobs -- ranges per the imx585 driver: thresholds
+        # 0-4095 each, blend mode 0-8, gain adder 0-5.
+        "hdr_threshold_low": {
+            "steps": [0, 512, 1024, 1536, 2048, 2560, 3072, 3584, 4095],
+            "free": False,
+            "free_increment": 16,
+        },
+        "hdr_threshold_high": {
+            "steps": [0, 512, 1024, 1536, 2048, 2560, 3072, 3584, 4095],
+            "free": False,
+            "free_increment": 16,
+        },
+        "hdr_blend": {
+            "steps": [0, 1, 2, 3, 4, 5, 6, 7, 8],
+            "free": False,
+            "free_increment": 1,
+        },
+        "hdr_gain_adder": {
+            "steps": [0, 1, 2, 3, 4, 5],
+            "free": False,
+            "free_increment": 1,
         },
     }
     for name, defaults in parameter_defaults.items():

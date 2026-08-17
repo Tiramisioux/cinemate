@@ -34,11 +34,10 @@ class AnalogControls(threading.Thread):
         self.shutter_a_steps = shutter_a_steps or []
         self.fps_steps = fps_steps or []
         self.wb_steps = wb_steps or []
-        # 16-count granularity keeps the 0–4095 threshold range stable against
-        # pot jitter (256 positions); blend and gain adder are small menus.
-        self.hdr_threshold_steps = list(range(0, 4096, 16))
-        self.hdr_blend_steps = list(range(0, 9))
-        self.hdr_gain_adder_steps = list(range(0, 6))
+        # HDR knob step tables are read live from the controller via
+        # _get_steps() (see below) instead of cached here, so a settings.jsonc
+        # free_increment change or a live free-mode toggle takes effect
+        # without restarting this thread.
 
         # Rolling buffers for filtering
         self.buffer_size = 5
@@ -132,8 +131,13 @@ class AnalogControls(threading.Thread):
             return c.iso_steps                      # already rebuilt by update_steps()
 
         if kind == 'shutter_a':
-            if c.shutter_a_free or c.shutter_a_sync_mode == 1:
-                return [round(i * 0.1, 1) for i in range(10, 3601)]
+            # sync mode's own granularity wins if both happen to be on --
+            # it's tracking exposure time continuously across fps changes,
+            # not just offering free-roam manual control.
+            if c.shutter_a_sync_mode == 1:
+                return parameters.free_mode_steps(1, 360, c.shutter_a_sync_increment)
+            if c.shutter_a_free:
+                return parameters.free_mode_steps(1, 360, c.shutter_a_free_increment)
             return c.shutter_a_steps_dynamic        # includes flicker-free angles
 
         if kind == 'fps':
@@ -141,11 +145,14 @@ class AnalogControls(threading.Thread):
             # which truncates the raw sensor capability (e.g. 49.97 Hz) to 49.
             # Thus, even in free mode, the range is 1..49, not up to 50.
             if c.fps_free or c.shutter_a_sync_mode == 1:
-                return list(range(1, c.fps_max + 2))
+                return parameters.free_mode_steps(1, c.fps_max, c.fps_free_increment)
             return c.fps_steps                      # snapped list
 
         if kind == 'wb':
             return c.wb_steps                       # free-mode handled in controller
+
+        if kind in ('hdr_threshold_low', 'hdr_threshold_high', 'hdr_blend', 'hdr_gain_adder'):
+            return getattr(c, f'{kind}_steps')      # already rebuilt by update_steps()
 
         return []      # fallback – should never happen
 
@@ -243,7 +250,7 @@ class AnalogControls(threading.Thread):
                 raw = self.adc.read(self.hdr_threshold_low_pot)
                 self.hdr_threshold_low_buffer.append(raw)
                 new_low = self.map_adc_to_steps(self.moving_average(self.hdr_threshold_low_buffer),
-                                                steps=self.hdr_threshold_steps)
+                                                steps=self._get_steps('hdr_threshold_low'))
                 if new_low is not None and new_low != self.last_hdr_threshold_low:
                     logging.info(f"HDR threshold low changed → ADC raw={raw}, mapped={new_low}")
                     self._dispatch('hdr_threshold_low', new_low)
@@ -253,7 +260,7 @@ class AnalogControls(threading.Thread):
                 raw = self.adc.read(self.hdr_threshold_high_pot)
                 self.hdr_threshold_high_buffer.append(raw)
                 new_high = self.map_adc_to_steps(self.moving_average(self.hdr_threshold_high_buffer),
-                                                 steps=self.hdr_threshold_steps)
+                                                 steps=self._get_steps('hdr_threshold_high'))
                 if new_high is not None and new_high != self.last_hdr_threshold_high:
                     logging.info(f"HDR threshold high changed → ADC raw={raw}, mapped={new_high}")
                     self._dispatch('hdr_threshold_high', new_high)
@@ -263,7 +270,7 @@ class AnalogControls(threading.Thread):
                 raw = self.adc.read(self.hdr_blend_pot)
                 self.hdr_blend_buffer.append(raw)
                 new_blend = self.map_adc_to_steps(self.moving_average(self.hdr_blend_buffer),
-                                                  steps=self.hdr_blend_steps)
+                                                  steps=self._get_steps('hdr_blend'))
                 if new_blend is not None and new_blend != self.last_hdr_blend:
                     logging.info(f"HDR blend changed → ADC raw={raw}, mapped={new_blend}")
                     self._dispatch('hdr_blend', new_blend)
@@ -273,7 +280,7 @@ class AnalogControls(threading.Thread):
                 raw = self.adc.read(self.hdr_gain_adder_pot)
                 self.hdr_gain_adder_buffer.append(raw)
                 new_adder = self.map_adc_to_steps(self.moving_average(self.hdr_gain_adder_buffer),
-                                                  steps=self.hdr_gain_adder_steps)
+                                                  steps=self._get_steps('hdr_gain_adder'))
                 if new_adder is not None and new_adder != self.last_hdr_gain_adder:
                     logging.info(f"HDR gain adder changed → ADC raw={raw}, mapped={new_adder}")
                     self._dispatch('hdr_gain_adder', new_adder)

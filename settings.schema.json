@@ -126,12 +126,17 @@
     },
     "arrays": {
       "type": "object",
-      "description": "One block per cycle-able camera parameter. steps is the selectable table; free steps continuously instead. See module/parameters.py:REGISTRY for the canonical name list (iso, shutter_a, fps, wb, ...).",
+      "description": "One block per cycle-able camera parameter. steps is the selectable table; free steps continuously instead, in units of free_increment. See module/parameters.py:REGISTRY for the canonical name list (iso, shutter_a, fps, wb, hdr_threshold_low, hdr_threshold_high, hdr_blend, hdr_gain_adder). shutter_a additionally has sync_increment, its own granularity used only while shutter-angle sync mode is on (`set shutter a sync`), independent of free_increment.",
       "additionalProperties": {
         "type": "object",
         "properties": {
           "steps": { "type": "array" },
-          "free": { "type": "boolean", "default": false }
+          "free": { "type": "boolean", "default": false },
+          "free_increment": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Step size used when free is true, e.g. 0.1 for fine sub-degree shutter-angle control."
+          }
         },
         "additionalProperties": true
       }

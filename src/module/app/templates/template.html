@@ -2,399 +2,799 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MJPEG Stream with Overlay</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>CineMate</title>
     <style>
-        body {
+        /* ── simple_gui's type and palette ───────────────────────────────
+           Same two faces the framebuffer GUI draws with (resources/fonts,
+           copied into app/static), and the same colour constants, so the
+           browser and the on-camera monitor read as one instrument. */
+        @font-face {
+            font-family: 'DIN2014';
+            font-weight: 400;
+            src: url("{{ url_for('static', filename='DIN2014-Regular.ttf') }}") format('truetype');
+        }
+        @font-face {
+            font-family: 'DIN2014';
+            font-weight: 700;
+            src: url("{{ url_for('static', filename='DIN2014-Bold.ttf') }}") format('truetype');
+        }
+
+        :root {
+            --label: rgb(136, 136, 136);   /* simple_gui label grey   */
+            --value: rgb(249, 249, 249);   /* simple_gui value white  */
+            --box: rgb(136, 136, 136);     /* status-box grey         */
+            --box-text: #000;
+            --zoom-hi: rgb(255, 221, 0);   /* ZOOM_HIGHLIGHT_COLOR    */
+            --drop: rgb(120, 40, 180);     /* DROP_WARNING_COLOR      */
+            --sync: rgb(255, 0, 255);      /* SYNC_WARNING_COLOR      */
+            --log-badge: rgb(205, 205, 205);
+            --hdr-badge: rgb(205, 205, 205);
+            --sdr-badge: rgb(120, 120, 120);
+            --wav-rec: rgb(210, 210, 210);
+            --res-switching: rgb(176, 176, 176);
+            --sync-tint: lightgreen;
+            --lock: rgb(255, 0, 0);
+            --voltage: rgb(218, 149, 77);
+            --guide: rgb(249, 249, 249);
+
+            --gap: clamp(8px, 1.4vw, 22px);
+            --value-size: clamp(1.05rem, 2.05vw, 1.9rem);
+            --label-size: clamp(0.72rem, 1.45vw, 1.35rem);
+            --box-size: clamp(38px, 3.6vw, 60px);
+            --box-height: clamp(28px, 2.5vw, 40px);
+        }
+
+        /* draw_gui() switches every label and value to black once the
+           background leaves "black" (color_mode = "inverse"). */
+        /* The preview guide keeps its own colour in every mode — draw_gui()
+           picks it from zoom state, not from color_mode. */
+        body.inverse {
+            --label: #000;
+            --value: #000;
+            --sync-tint: #000;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
             margin: 0;
             padding: 0;
-            font-family: 'Arial', sans-serif;
-            background-color: {{ background_color }};
+            overflow: hidden;
+            font-family: 'DIN2014', 'Arial Narrow', Arial, sans-serif;
+            background-color: {{ background_color or 'black' }};
+            color: var(--value);
+            -webkit-text-size-adjust: 100%;
+            transition: background-color 90ms linear;
         }
-        .top-bar, .bottom-bar {
-            background-color: black;
-            font-size: 16px;
-            color: #fff;
-            padding: 10px;
+
+        #app {
+            height: 100%;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            padding: calc(var(--gap) * 0.6) var(--gap);
+            gap: calc(var(--gap) * 0.5);
+        }
+
+        /* ── top info row ────────────────────────────────────────────────
+           simple_gui justifies six label+value groups between
+           TOP_ROW_LEFT_X and RES_RIGHT_ANCHOR; space-between is the same
+           idea, and it wraps on a phone instead of overflowing. */
+        #top-row {
             display: flex;
-            justify-content: space-evenly;
-            align-items: center;
-            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: calc(var(--gap) * 0.5) var(--gap);
         }
-        .bottom-bar > div {
-            flex: 1;
-            text-align: center;
-        }
-        .bottom-bar button {
-            flex: 0 0 auto;
-        }
-        .top-bar select, .bottom-bar select {
-            margin-left: 10px;
-            padding: 8px;
-            font-size: 16px;
-            border: none;
-            background-color: #111;
-            color: #fff;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .top-bar select:focus, .bottom-bar select:focus {
-            outline: none;
-        }
-        #resolution-select.resolution-switching {
-            color: #aaa;
-        }
-        #resolution-select.resolution-switching option {
-            color: #fff;
-        }
-        #stream-container {
-            background-color: black;
+
+        .group {
             position: relative;
+            display: flex;
+            align-items: baseline;
+            gap: 0.35em;
+            white-space: nowrap;
+        }
+        .group .label {
+            font-weight: 400;
+            font-size: var(--label-size);
+            color: var(--label);
+        }
+        .group .value {
+            font-weight: 700;
+            font-size: var(--value-size);
+            color: var(--value);
+            line-height: 1.05;
+        }
+        .group.tinted .value { color: var(--sync-tint); }
+        .group.switching .value { color: var(--res-switching); }
+
+        /* draw_rounded_box(): a locked parameter is drawn inverted. */
+        .group.locked .value {
+            background: #fff;
+            color: #000;
+            border-radius: 5px;
+            padding: 0 0.22em;
+        }
+
+        /* A transparent native select over the group keeps the platform
+           picker on touch devices while the styled text stays visible. */
+        .group select {
+            position: absolute;
+            inset: 0;
             width: 100%;
             height: 100%;
-            padding-bottom: 46.25%;
-            overflow: hidden;
-            margin: 0;
+            opacity: 0;
+            border: 0;
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
         }
-        #stream {
+        .group.selectable { cursor: pointer; }
+
+        .badge {
+            display: inline-block;
+            font-weight: 700;
+            font-size: calc(var(--value-size) * 0.58);
+            line-height: 1;
+            color: #000;
+            border-radius: 3px;
+            padding: 0.28em 0.45em;
+            vertical-align: 0.18em;
+        }
+        .badge.hdr { background: var(--hdr-badge); }
+        .badge.sdr { background: var(--sdr-badge); }
+        .badge.wav { background: var(--box); }
+        .badge.wav.recording { background: var(--wav-rec); }
+        .badge.hidden { display: none; }
+
+        /* ── stage: left rail · preview · right rail ─────────────────── */
+        #stage {
+            min-height: 0;
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: stretch;
+            gap: var(--gap);
+        }
+
+        /* Unlike simple_gui's fixed 1920x1080 canvas, the rail's content
+           height is not bounded — two sensors plus every warning/lock box
+           can outgrow the stage row on a short viewport. Scroll rather
+           than clip, so a real status (e.g. the storage filesystem badge)
+           never silently disappears. */
+        .rail {
+            display: flex;
+            flex-direction: column;
+            gap: calc(var(--gap) * 0.5);
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+        }
+        .rail:empty { display: none; }
+
+        .section { display: flex; flex-direction: column; align-items: center; }
+        .section + .section { margin-top: calc(var(--gap) * 0.7); }
+        .section .section-label {
+            font-weight: 400;
+            font-size: var(--label-size);
+            color: var(--value);
+            margin-bottom: 0.1em;
+        }
+        .section .boxes {
+            display: flex;
+            flex-direction: column;
+            gap: calc(var(--gap) * 0.35);
+        }
+
+        .box {
+            width: var(--box-size);
+            height: var(--box-height);
+            background: var(--box);
+            color: var(--box-text);
+            font-weight: 700;
+            font-size: calc(var(--box-height) * 0.62);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+        /* aspect and anamorphic get the inset outline simple_gui draws */
+        .box.outlined { box-shadow: inset 0 0 0 2px #000; }
+        .box.small { font-size: calc(var(--box-height) * 0.48); }
+        .box.zoom-active { background: var(--zoom-hi); }
+        .box.log { background: var(--log-badge); }
+        .box.drop { background: var(--drop); }
+        .box.sync { background: var(--sync); position: relative; }
+        /* _draw_status_box(crossed=True) strikes the SYNC box through */
+        .box.sync::after {
+            content: '';
             position: absolute;
-            top: 0;
-            left: 0;
+            inset: 4px;
+            background: linear-gradient(to bottom right,
+                transparent calc(50% - 1.5px), #000 calc(50% - 1.5px),
+                #000 calc(50% + 1.5px), transparent calc(50% + 1.5px));
+        }
+
+        #preview-wrap {
+            min-width: 0;
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* The guide box is drawn on the frame, not the <img>, so the border
+           hugs the picture instead of the letterbox — the browser analogue
+           of _calculate_preview_guide_rect(). sizePreview() sets the pixel
+           size from the live aspect; CSS alone cannot fit a ratio inside
+           both a max width and a max height without breaking one of them. */
+        #preview-frame {
+            position: relative;
+            border: 2px solid var(--guide);
+            background: #000;
+            cursor: pointer;
+            display: flex;
+        }
+        #preview-frame.dual { gap: 2px; }
+        #preview-frame img {
+            flex: 1 1 0;
+            min-width: 0;
             width: 100%;
             height: 100%;
             object-fit: contain;
-            background-color: black;
+            display: block;
+            background: #000;
+        }
+        #preview-frame img.hidden { display: none; }
+
+        /* ── bottom row ──────────────────────────────────────────────── */
+        /* Same field order as simple_gui's bottom row, but a size down so
+           MEDIA … RAM and the action buttons stay on one line on a laptop. */
+        #bottom-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: calc(var(--gap) * 0.4) calc(var(--gap) * 0.8);
+            --value-size: clamp(0.9rem, 1.5vw, 1.4rem);
+            --label-size: clamp(0.65rem, 1.05vw, 1rem);
+        }
+        #bottom-row .spacer { flex: 1 1 auto; }
+        .group.clip .value {
+            font-size: calc(var(--value-size) * 0.62);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 42vw;
+        }
+        .clip-lines { display: flex; flex-direction: column; gap: 0.1em; }
+        .warn { font-weight: 700; font-size: var(--value-size); }
+        .warn.lock { color: var(--lock); }
+        .warn.voltage { color: var(--voltage); }
+
+        #buffer-meter {
+            width: clamp(46px, 6vw, 96px);
+            height: calc(var(--value-size) * 0.42);
+            background: rgba(136, 136, 136, 0.35);
+            box-shadow: inset 0 0 0 1px var(--label);
+        }
+        #buffer-fill { height: 100%; width: 0%; background: var(--label); }
+
+        button {
+            font-family: inherit;
+            font-weight: 700;
+            font-size: calc(var(--value-size) * 0.62);
+            color: var(--value);
+            background: transparent;
+            border: 2px solid var(--label);
+            border-radius: 4px;
+            padding: 0.3em 0.7em;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        button:active { background: var(--label); color: #000; }
+        button.on { background: var(--log-badge); border-color: var(--log-badge); color: #000; }
+        button[disabled] { opacity: 0.45; cursor: default; }
+
+        .hidden { display: none !important; }
+
+        /* Toast for a rejected command — the API answers "err <reason>"
+           and silently dropping that would be worse than a brief banner. */
+        #toast {
+            position: fixed;
+            left: 50%;
+            bottom: calc(var(--gap) * 2);
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            border: 1px solid var(--label);
+            border-radius: 4px;
+            padding: 0.5em 0.9em;
+            font-size: 0.95rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 140ms linear;
+            z-index: 20;
+        }
+        #toast.show { opacity: 1; }
+
+        /* ── narrow screens: rails become strips above/below the preview ── */
+        @media (max-width: 900px), (orientation: portrait) {
+            #stage {
+                grid-template-columns: minmax(0, 1fr);
+                grid-template-rows: auto minmax(0, 1fr) auto;
+            }
+            .rail {
+                flex-direction: row;
+                flex-wrap: wrap;
+                align-items: flex-start;
+                gap: calc(var(--gap) * 0.6);
+            }
+            .section { flex-direction: row; align-items: center; gap: 0.4em; }
+            .section + .section { margin-top: 0; }
+            .section .section-label { margin-bottom: 0; }
+            .section .boxes { flex-direction: row; }
+            .group.clip .value { max-width: 60vw; }
         }
     </style>
 </head>
 <body>
-    <div class="top-bar">
-        <div>FPS:
-            <select id="fps-select">
-                {% for fps_value in fps_values %}
-                    <option value="{{ fps_value }}" {% if fps_value == current_fps %}selected{% endif %}>{{ fps_value }}</option>
-                {% endfor %}
-            </select>
+<div id="app">
+
+    <div id="top-row">
+        <div class="group selectable" id="g-fps">
+            <span class="label">FPS</span><span class="value" id="v-fps"></span>
+            <select id="s-fps" aria-label="Frame rate"></select>
         </div>
-        <div>Shutter Angle:
-            <select id="shutter-speed-select">
-                {% for shutter_speed_value in shutter_speed_values %}
-                    <option value="{{ shutter_speed_value }}" {% if shutter_speed_value == current_shutter_a %}selected{% endif %}>{{ shutter_speed_value }}</option>
-                {% endfor %}
-            </select>
+        <div class="group selectable" id="g-shutter">
+            <span class="label">SHUTTER</span><span class="value" id="v-shutter"></span>
+            <select id="s-shutter" aria-label="Shutter angle"></select>
         </div>
-        <div>Exposure: <span id="exposure-time"></span></div>
-        <div>ISO:
-            <select id="iso-select">
-                {% for iso_value in iso_values %}
-                    <option value="{{ iso_value }}" {% if iso_value == current_iso %}selected{% endif %}>{{ iso_value }}</option>
-                {% endfor %}
-            </select>
+        <div class="group" id="g-exp">
+            <span class="label">EXP</span><span class="value" id="v-exp"></span>
         </div>
-        <div>WB:
-            <select id="wb-select">
-                {% for wb_value in wb_steps %}
-                    <option value="{{ wb_value }}" {% if wb_value == current_wb %}selected{% endif %}>{{ wb_value }}K</option>
-                {% endfor %}
-            </select>
+        <div class="group selectable" id="g-iso">
+            <span class="label">EI</span><span class="value" id="v-iso"></span>
+            <select id="s-iso" aria-label="ISO"></select>
         </div>
-        <div>Resolution:
-            <select id="resolution-select">
-                {% for resolution in resolution_values %}
-                    <option value="{{ resolution.mode }}">{{ resolution.resolution }}</option>
-                {% endfor %}
-            </select>
+        <div class="group selectable" id="g-wb">
+            <span class="label">WB</span><span class="value" id="v-wb"></span>
+            <select id="s-wb" aria-label="White balance"></select>
+        </div>
+        <div class="group selectable" id="g-res">
+            <span class="label">RES</span><span class="value" id="v-res"></span>
+            <span class="badge hidden" id="v-hdr-badge"></span>
+            <select id="s-res" aria-label="Resolution"></select>
         </div>
     </div>
-    <div id="stream-container">
-        <img id="stream" src="{{ stream_url }}" alt="Stream">
+
+    <div id="stage">
+        <div class="rail" id="rail-left"></div>
+        <div id="preview-wrap">
+            <div id="preview-frame" title="Tap to toggle record">
+                <img id="stream" src="{{ stream_url }}" alt="Camera preview">
+                <img id="stream-cam1" class="hidden" alt="Camera 1 preview">
+            </div>
+        </div>
+        <div class="rail" id="rail-right"></div>
     </div>
-    <div class="bottom-bar">
-        <button id="unmount-btn">Unmount</button>
-        <div><span id="disk-space"></span></div>
-        <div>WRITE: <span id="write-speed"></span></div>
-        <div>FRAMES BUFFERED: <span id="buffer-used"></span></div>
-        <div>BUFFER SIZE: <span id="buffer-size"></span></div>
-        <div>CPU: <span id="cpu-load"></span></div>
-        <div>RAM: <span id="ram-load"></span></div>
-        <div>TEMP: <span id="cpu-temp"></span></div>
-        <button id="fullscreen-btn" style="margin-left:auto;">Enter Fullscreen</button>
+
+    <div id="bottom-row">
+        <div class="group"><span class="label">MEDIA</span><span class="value" id="v-disk"></span></div>
+        <div class="group"><span class="value" id="v-write"></span></div>
+        <div class="group"><span class="label">BUF</span><span class="value" id="v-buffer"></span>
+            <div id="buffer-meter"><div id="buffer-fill"></div></div>
+        </div>
+        <div class="group"><span class="value" id="v-rectime"></span></div>
+        <div class="group clip">
+            <div class="clip-lines">
+                <span class="value hidden" id="v-clip-cam1"></span>
+                <span class="value" id="v-clip"></span>
+            </div>
+            <span class="badge wav hidden" id="v-wav">WAV</span>
+        </div>
+        <span class="warn lock hidden" id="v-lock">LOCK</span>
+        <span class="warn voltage hidden" id="v-voltage">VOLTAGE</span>
+
+        <div class="spacer"></div>
+
+        <div class="group"><span class="label">CPU</span><span class="value" id="v-cpu"></span></div>
+        <div class="group"><span class="label">TEMP</span><span class="value" id="v-temp"></span></div>
+        <div class="group"><span class="label">RAM</span><span class="value" id="v-ram"></span></div>
+        <div class="group hidden" id="g-battery"><span class="label">BATT</span><span class="value" id="v-battery"></span></div>
+
+        <button id="btn-log" title="set log — toggles CineMate Log, restarts the camera when idle">LOG</button>
+        <button id="btn-unmount" title="unmount">UNMOUNT</button>
+        <button id="btn-fullscreen">FULLSCREEN</button>
     </div>
-    <script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
-    <script>
-        const socket = io();
+</div>
 
-        function updateShutterSpeedOptions(shutter_a_steps, current_shutter_a) {
-            const shutterSpeedSelect = document.getElementById('shutter-speed-select');
-            shutterSpeedSelect.innerHTML = '';
-            shutter_a_steps.forEach(angle => {
-                const option = document.createElement('option');
-                option.value = angle;
-                option.textContent = angle;
-                if (angle == current_shutter_a) {
-                    option.selected = true;
-                }
-                shutterSpeedSelect.appendChild(option);
+<div id="toast"></div>
+
+<script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
+<script>
+(function () {
+    'use strict';
+
+    // ── control: every action is a CLI command line posted to the web API
+    //    (docs/web-api.md). Same dispatcher as the CLI, serial and GPIO
+    //    paths, so the browser cannot drift from them.
+    const API = '/api/v1/cmd';
+    const TOKEN = {{ api_token | tojson }};
+    const CAM1_STREAM = {{ stream_url_cam1 | tojson }};
+
+    const toastEl = document.getElementById('toast');
+    let toastTimer = null;
+    function toast(msg) {
+        toastEl.textContent = msg;
+        toastEl.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
+    }
+
+    async function cmd(line) {
+        const headers = { 'Content-Type': 'text/plain' };
+        if (TOKEN) { headers['X-Cinemate-Token'] = TOKEN; }
+        try {
+            const res = await fetch(API, { method: 'POST', headers, body: line });
+            const body = (await res.text()).trim();
+            if (!res.ok) { toast(line + ' → ' + (body || res.status)); }
+            return res.ok;
+        } catch (err) {
+            toast(line + ' → ' + err.message);
+            return false;
+        }
+    }
+
+    // ── state: the populate_values() dict, arriving whole as
+    //    `initial_values` and as deltas as `gui_data_change`.
+    let V = {};
+    let steps = { iso: [], shutter_a: [], fps: [], wb: [], resolutions: [] };
+
+    const $ = (id) => document.getElementById(id);
+    const text = (id, value) => {
+        const el = $(id);
+        const s = (value === undefined || value === null) ? '' : String(value);
+        if (el.textContent !== s) { el.textContent = s; }
+    };
+    const show = (el, on) => el.classList.toggle('hidden', !on);
+    const truthy = (v) => v === true || v === 1 || v === '1' ||
+        (typeof v === 'string' && ['true', 'yes', 'on'].includes(v.trim().toLowerCase()));
+
+    function fillSelect(sel, options, current) {
+        const wanted = options.map((o) => String(o.value)).join(' ');
+        if (sel.dataset.filled !== wanted) {
+            sel.innerHTML = '';
+            options.forEach((o) => {
+                const opt = document.createElement('option');
+                opt.value = o.value;
+                opt.textContent = o.text;
+                sel.appendChild(opt);
             });
+            sel.dataset.filled = wanted;
+        }
+        if (current !== undefined && current !== null) { sel.value = String(current); }
+    }
+
+    // ── left / right rails: same sections, order and box contents as
+    //    draw_left_sections() / draw_right_sections().
+    function box(content, classes) {
+        const el = document.createElement('div');
+        el.className = 'box' + (classes ? ' ' + classes : '');
+        el.textContent = content;
+        return el;
+    }
+
+    // _format_sensor_name() returns "585" or "585\nMONO"; simple_gui draws
+    // one box per line, with MONO a size down so it fits.
+    function boxes(value, classes) {
+        if (value === undefined || value === null || value === '') { return []; }
+        return String(value).split('\n').filter(Boolean).map((part) => {
+            const extra = (part === 'MONO' || part.length > 3) ? ' small' : '';
+            return box(part, (classes || '') + extra);
+        });
+    }
+
+    function section(label, boxes) {
+        if (!boxes.length) { return null; }
+        const wrap = document.createElement('div');
+        wrap.className = 'section';
+        const lbl = document.createElement('div');
+        lbl.className = 'section-label';
+        lbl.textContent = label;
+        const holder = document.createElement('div');
+        holder.className = 'boxes';
+        boxes.forEach((b) => holder.appendChild(b));
+        wrap.appendChild(lbl);
+        wrap.appendChild(holder);
+        return wrap;
+    }
+
+    function warningBoxes() {
+        const out = [];
+        if (V.drop_frame_latched) { out.push(box('DROP', 'drop')); }
+        if (V.frames_off_sync) { out.push(box('SYNC', 'sync')); }
+        return out;
+    }
+
+    function renderLeftRail() {
+        const rail = $('rail-left');
+        const sections = [];
+
+        const cam = boxes(String(V.sensor || '').toUpperCase());
+        if (V.aspect) { cam.push(box(V.aspect, 'outlined')); }
+        if (V.log_badge_cam0) { cam.push(box(V.log_badge_cam0, 'log small')); }
+        warningBoxes().forEach((b) => cam.push(b));
+        sections.push(section('CAM', cam));
+
+        const mon = [];
+        if (V.zoom_factor) {
+            mon.push(box(V.zoom_factor, V.zoom_is_default ? '' : 'zoom-active'));
+        }
+        if (V.anamorphic_factor) { mon.push(box(V.anamorphic_factor, 'outlined small')); }
+        sections.push(section('MON', mon));
+
+        if (V.mic_connected) {
+            const aud = [];
+            if (V.mic_sample_rate) { aud.push(box(V.mic_sample_rate, '')); }
+            if (V.mic_bit_depth) { aud.push(box(V.mic_bit_depth, '')); }
+            sections.push(section('AUD', aud));
         }
 
-        function updateFpsOptions(fps_steps, current_fps) {
-            const fpsSelect = document.getElementById('fps-select');
-            fpsSelect.innerHTML = '';
-            fps_steps.forEach(fps => {
-                const option = document.createElement('option');
-                option.value = fps;
-                option.textContent = fps;
-                if (fps == current_fps) {
-                    option.selected = true;
-                }
-                fpsSelect.appendChild(option);
-            });
+        const sys = [];
+        if (V.usb_connected) { sys.push(box('SER', '')); }
+        if (V.mic_connected) { sys.push(box('MIC', '')); }
+        if (V.keyboard_connected) { sys.push(box('KEY', '')); }
+        const storage = String(V.storage_type || '').toUpperCase();
+        if (storage && storage !== 'NONE') {
+            boxes(storage).forEach((b) => sys.push(b));
+            const fs = String(V.storage_filesystem || '').toLowerCase();
+            if (fs && !['none', 'unknown', ''].includes(fs)) {
+                sys.push(box({ exfat: 'exFAT', ntfs: 'NTFS' }[fs] || fs, 'small'));
+            }
         }
+        sections.push(section('SYS', sys));
 
-        function updateWBOptions(wb_steps, current_wb) {
-            const wbSelect = document.getElementById('wb-select');
-            wbSelect.innerHTML = '';
-            wb_steps.forEach(wb => {
-                const option = document.createElement('option');
-                option.value = wb;
-                option.textContent = `${wb}K`;
-                if (wb == current_wb) {
-                    option.selected = true;
-                }
-                wbSelect.appendChild(option);
-            });
+        rail.replaceChildren(...sections.filter(Boolean));
+    }
+
+    function renderRightRail() {
+        const rail = $('rail-right');
+        if (!V.sensor_cam1) { rail.replaceChildren(); return; }
+        const cam = boxes(String(V.sensor_cam1).toUpperCase());
+        if (V.aspect_cam1) { cam.push(box(V.aspect_cam1, 'outlined')); }
+        if (V.exposure_time) { cam.push(box(V.exposure_time, 'small')); }
+        if (V.log_badge_cam1) { cam.push(box(V.log_badge_cam1, 'log small')); }
+        warningBoxes().forEach((b) => cam.push(b));
+        rail.replaceChildren(section('CAM1', cam));
+    }
+
+    // ── preview frame: aspect from the live sensor geometry × anamorphic,
+    //    matching the lores stream the guide box wraps in simple_gui.
+    let previewAspect = 16 / 9;
+
+    function sizePreview() {
+        const wrap = $('preview-wrap');
+        const frame = $('preview-frame');
+        const avail = wrap.getBoundingClientRect();
+        if (!avail.width || !avail.height) { return; }
+        // Fit the ratio inside the available box, letterbox or pillarbox
+        // whichever the box calls for — the same choice _build_args() and
+        // DrmPreview::Show() make for the on-camera preview window.
+        let w = avail.width;
+        let h = w / previewAspect;
+        if (h > avail.height) {
+            h = avail.height;
+            w = h * previewAspect;
         }
+        frame.style.width = Math.floor(w) + 'px';
+        frame.style.height = Math.floor(h) + 'px';
+    }
 
-        function isSwitching(value) {
-            const normalized = String(value).trim().toLowerCase();
-            return value === true || normalized === '1' || normalized === 'true';
+    function renderPreview() {
+        const frame = $('preview-frame');
+        const dual = Boolean(V.sensor_cam1);
+        const cam1 = $('stream-cam1');
+        frame.classList.toggle('dual', dual);
+        show(cam1, dual);
+        if (dual && !cam1.src) { cam1.src = CAM1_STREAM; }
+
+        const aspect = parseFloat(V.aspect);
+        const ana = parseFloat(String(V.anamorphic_factor || '1').replace(/[^0-9.]/g, ''));
+        if (aspect > 0) {
+            previewAspect = aspect * (ana > 0 ? ana : 1) * (dual ? 2 : 1);
         }
+        frame.style.borderColor = V.zoom_is_default === false
+            ? 'var(--zoom-hi)' : 'var(--guide)';
+        sizePreview();
+    }
 
-        function updateResolutionSelection(mode, switching) {
-            const resolutionSelect = document.getElementById('resolution-select');
-            if (!resolutionSelect) {
-                return;
-            }
-            if (mode !== undefined && mode !== null) {
-                resolutionSelect.value = mode;
-            }
-            resolutionSelect.classList.toggle('resolution-switching', isSwitching(switching));
+    window.addEventListener('resize', sizePreview);
+
+    function renderTopRow() {
+        text('v-fps', V.fps);
+        text('v-shutter', V.shutter_speed);
+        text('v-exp', V.exposure_time);
+        text('v-iso', V.iso);
+        text('v-wb', V.color_temp);
+        text('v-res', V.res);
+
+        // shutter-sync tints FPS and SHUTTER green, exactly as
+        // populate_values() recolours them for the framebuffer GUI.
+        $('g-fps').classList.toggle('tinted', Boolean(V.shutter_a_sync));
+        $('g-shutter').classList.toggle('tinted', Boolean(V.shutter_a_sync));
+        $('g-fps').classList.toggle('locked', Boolean(V.fps_lock));
+        $('g-shutter').classList.toggle('locked', Boolean(V.shutter_a_nom_lock));
+        $('g-iso').classList.toggle('locked', Boolean(V.iso_lock));
+        $('g-res').classList.toggle('switching', truthy(V.resolution_switching));
+
+        const badge = $('v-hdr-badge');
+        const badgeText = V.hdr_badge || '';
+        show(badge, Boolean(badgeText));
+        if (badgeText) {
+            badge.textContent = badgeText;
+            badge.className = 'badge ' + (badgeText === 'HDR' ? 'hdr' : 'sdr');
         }
+    }
 
-        socket.on('initial_values', data => {
-            document.getElementById('iso-select').value = data.iso;
-            updateShutterSpeedOptions(data.shutter_a_steps, data.shutter_a);
-            updateFpsOptions(data.fps_steps, data.fps);
-            updateWBOptions(data.wb_steps, data.wb);
+    function renderBottomRow() {
+        text('v-disk', V.disk_space);
+        text('v-write', V.write_speed);
+        text('v-rectime', V.recording_time);
+        text('v-cpu', V.cpu_load);
+        text('v-temp', V.cpu_temp);
+        text('v-ram', V.ram_load);
 
-            document.body.style.backgroundColor = data.background_color;
-            document.getElementById('disk-space').innerText = data.disk_space;
-            document.getElementById('write-speed').innerText = data.write_speed;
-            document.getElementById('buffer-used').innerText = data.buffer_used;
-            document.getElementById('buffer-size').innerText = data.buffer_size;
-            document.getElementById('cpu-load').innerText = data.cpu_load;
-            document.getElementById('ram-load').innerText = data.ram_load;
-            document.getElementById('cpu-temp').innerText = data.cpu_temp;
-            document.getElementById('exposure-time').innerText = data.exposure_time;
-            const resolutionSelect = document.getElementById('resolution-select');
-            resolutionSelect.innerHTML = '';
-            data.sensor_resolutions.forEach(res => {
-                const option = document.createElement('option');
-                option.value = res.mode;
-                option.textContent = res.resolution;
-                resolutionSelect.appendChild(option);
-            });
-            updateResolutionSelection(data.selected_resolution_mode, data.resolution_switching);
-        });
+        const used = parseInt(V.buffer_used, 10) || 0;
+        const size = parseInt(V.buffer_size, 10) || 0;
+        text('v-buffer', size ? used + '/' + size : '');
+        $('buffer-fill').style.width = size ? Math.min(100, (used / size) * 100) + '%' : '0%';
 
-        socket.on('parameter_change', data => {
-            if (data.iso !== undefined) {
-                document.getElementById('iso-select').value = data.iso;
-            }
-            if (data.shutter_a !== undefined) {
-                const currentShutter = data.shutter_a;
-                document.getElementById('shutter-speed-select').value = currentShutter;
-                socket.emit('request_shutter_a_steps', {}, (response) => {
-                    updateShutterSpeedOptions(response.shutter_a_steps, currentShutter);
-                });
-            }
-            if (data.fps !== undefined) {
-                document.getElementById('fps-select').value = data.fps;
-            }
-            if (data.wb !== undefined) {
-                document.getElementById('wb-select').value = data.wb;
-            }
-            if (data.selected_resolution_mode !== undefined) {
-                updateResolutionSelection(data.selected_resolution_mode, data.resolution_switching);
-            }
-            if (data.sensor_mode !== undefined) {
-                updateResolutionSelection(data.sensor_mode, data.resolution_switching);
-            }
-            if (data.resolution_switching !== undefined) {
-                updateResolutionSelection(data.selected_resolution_mode, data.resolution_switching);
-            }
-            if (data.buffer !== undefined) {
-                document.getElementById('buffer-used').innerText = data.buffer;
-            }
-        });
+        text('v-clip', V.clip_name);
+        const cam1Clip = $('v-clip-cam1');
+        show(cam1Clip, Boolean(V.sensor_cam1));
+        text('v-clip-cam1', V.clip_name_cam1);
 
-        socket.on('resolution_change', data => {
-            if (data.sensor_mode !== undefined) {
-                updateResolutionSelection(data.sensor_mode, data.resolution_switching);
-            }
-        });
+        const wav = $('v-wav');
+        show(wav, Boolean(V.mic_wav_recording || V.mic_wav_saved));
+        wav.classList.toggle('recording', Boolean(V.mic_wav_recording));
 
-        socket.on('shutter_a_update', data => {
-            updateShutterSpeedOptions(data.shutter_a_steps, data.current_shutter_a);
-        });
+        show($('v-lock'), Boolean(V.lock));
+        show($('v-voltage'), Boolean(V.low_voltage));
+        show($('g-battery'), Boolean(V.battery_level));
+        text('v-battery', V.battery_level);
 
-        socket.on('fps_update', data => {
-            updateFpsOptions(data.fps_steps, data.fps_actual);
-        });
+        // The LOG button reflects log_encode_cam0 — what the camera was
+        // actually launched with, not the pending request.
+        $('btn-log').classList.toggle('on', Boolean(V.log_badge_cam0));
+        $('btn-log').textContent = V.log_badge_cam0 || 'LOG';
+    }
 
-        socket.on('gui_data_change', data => {
-            if (data.disk_space !== undefined) {
-                document.getElementById('disk-space').innerText = data.disk_space;
-            }
-            if (data.write_speed !== undefined) {
-                document.getElementById('write-speed').innerText = data.write_speed;
-            }
-            if (data.buffer_used !== undefined) {
-                document.getElementById('buffer-used').innerText = data.buffer_used;
-            }
-            if (data.buffer_size !== undefined) {
-                document.getElementById('buffer-size').innerText = data.buffer_size;
-            }
-            if (data.cpu_load !== undefined) {
-                document.getElementById('cpu-load').innerText = data.cpu_load;
-            }
-            if (data.ram_load !== undefined) {
-                document.getElementById('ram-load').innerText = data.ram_load;
-            }
-            if (data.cpu_temp !== undefined) {
-                document.getElementById('cpu-temp').innerText = data.cpu_temp;
-            }
-            if (data.exposure_time !== undefined) {
-                document.getElementById('exposure-time').innerText = data.exposure_time;
-            }
-        });
+    function renderSelectors() {
+        fillSelect($('s-iso'), steps.iso.map((v) => ({ value: v, text: v })), V.iso);
+        fillSelect($('s-shutter'), steps.shutter_a.map((v) => ({ value: v, text: v })),
+            steps.shutter_a.find((v) => String(v) === String(parseFloat(V.shutter_speed))));
+        fillSelect($('s-fps'), steps.fps.map((v) => ({ value: v, text: v })), V.fps);
+        fillSelect($('s-wb'), steps.wb.map((v) => ({ value: v, text: v + 'K' })), V.wb);
+        fillSelect($('s-res'),
+            steps.resolutions.map((r) => ({ value: r.mode, text: r.resolution })),
+            V.selected_resolution_mode);
+    }
 
-        socket.on('background_color_change', data => {
-            updateBackgroundColor(data.background_color);
-        });
+    function render() {
+        document.body.style.backgroundColor = V.background_color || 'black';
+        // color_mode = "inverse" for every non-idle background in draw_gui()
+        document.body.classList.toggle('inverse',
+            Boolean(V.background_color) && V.background_color !== 'black');
+        renderTopRow();
+        renderBottomRow();
+        renderLeftRail();
+        renderRightRail();
+        renderPreview();
+        renderSelectors();
+    }
 
-        function updateBackgroundColor(color) {
-            document.body.style.backgroundColor = color;
-            const elementsToChange = document.querySelectorAll('*:not(button)');
-            elementsToChange.forEach(element => {
-                element.style.backgroundColor = color;
-            });
+    // ── push: server → browser only (module/app/main/events.py) ────────
+    const socket = io();
+
+    socket.on('initial_values', (data) => {
+        V = Object.assign({}, data);
+        steps.iso = data.iso_steps || [];
+        steps.shutter_a = data.shutter_a_steps || [];
+        steps.fps = data.fps_steps || [];
+        steps.wb = data.wb_steps || [];
+        steps.resolutions = data.sensor_resolutions || [];
+        render();
+    });
+
+    socket.on('gui_data_change', (data) => {
+        Object.assign(V, data);
+        render();
+    });
+
+    socket.on('background_color_change', (data) => {
+        V.background_color = data.background_color;
+        render();
+    });
+
+    socket.on('parameter_change', (data) => {
+        if (data.iso !== undefined) { V.iso = data.iso; }
+        if (data.wb !== undefined) { V.wb = data.wb; }
+        if (data.selected_resolution_mode !== undefined) {
+            V.selected_resolution_mode = data.selected_resolution_mode;
         }
-
-        document.getElementById('iso-select').addEventListener('change', function() {
-            const iso = this.value;
-            socket.emit('change_iso', { iso });
-        });
-
-        document.getElementById('shutter-speed-select').addEventListener('change', function() {
-            const shutterAngle = this.value;
-            socket.emit('change_shutter_a', { shutter_a: shutterAngle });
-        });
-
-        document.getElementById('fps-select').addEventListener('change', function() {
-            const fps = this.value;
-            socket.emit('change_fps', { fps });
-        });
-
-        document.getElementById('wb-select').addEventListener('change', function() {
-            const wb = this.value;
-            socket.emit('change_wb', { wb });
-        });
-
-        document.getElementById('resolution-select').addEventListener('change', function() {
-            const resolutionMode = this.value;
-            socket.emit('change_resolution', { mode: resolutionMode });
-        });
-
-        document.getElementById('unmount-btn').addEventListener('click', function() {
-            socket.emit('unmount');
-        });
-
-        document.getElementById('stream-container').addEventListener('click', function() {
-            socket.emit('container_tap');
-        });
-
-        socket.on('reload_stream', () => {
-            reloadStream();
-        });
-
-        let streamReloadTimers = [];
-
-        function clearStreamReloadTimers() {
-            streamReloadTimers.forEach((timer) => clearTimeout(timer));
-            streamReloadTimers = [];
+        if (data.resolution_switching !== undefined) {
+            V.resolution_switching = data.resolution_switching;
         }
+        render();
+    });
 
-        function reloadStream() {
-            const streamElement = document.getElementById('stream');
-            if (!streamElement) {
-                return;
-            }
+    socket.on('shutter_a_update', (data) => {
+        steps.shutter_a = data.shutter_a_steps || steps.shutter_a;
+        render();
+    });
 
-            const baseSrc = streamElement.dataset.streamBase || streamElement.src.split('?')[0];
-            if (!baseSrc) {
-                return;
-            }
+    socket.on('fps_update', (data) => {
+        steps.fps = data.fps_steps || steps.fps;
+        render();
+    });
 
-            streamElement.dataset.streamBase = baseSrc;
-            clearStreamReloadTimers();
-            streamElement.onload = clearStreamReloadTimers;
-            streamElement.src = '';
+    socket.on('resolution_change', (data) => {
+        if (data.sensor_mode !== undefined) { V.selected_resolution_mode = data.sensor_mode; }
+        if (data.resolution_switching !== undefined) {
+            V.resolution_switching = data.resolution_switching;
+        }
+        render();
+    });
+
+    socket.on('reload_browser', () => window.location.reload());
+    socket.on('reload_stream', () => reloadStreams());
+
+    // ── stream reload after a mode switch ─────────────────────────────
+    let reloadTimers = [];
+    function reloadStreams() {
+        reloadTimers.forEach(clearTimeout);
+        reloadTimers = [];
+        [$('stream'), $('stream-cam1')].forEach((img) => {
+            if (!img || img.classList.contains('hidden')) { return; }
+            const base = img.dataset.streamBase || img.src.split('?')[0];
+            if (!base) { return; }
+            img.dataset.streamBase = base;
+            img.src = '';
             [350, 1200, 2500].forEach((delay) => {
-                const timer = setTimeout(() => {
-                    streamElement.src = `${baseSrc}?reload=${Date.now()}`;
-                }, delay);
-                streamReloadTimers.push(timer);
+                reloadTimers.push(setTimeout(() => {
+                    img.src = base + '?reload=' + Date.now();
+                }, delay));
             });
-        }
-
-        socket.on('reload_browser', () => {
-            window.location.reload();
         });
+    }
 
-        function toggleFullScreen() {
-            const elem = document.documentElement;
-            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                if (elem.requestFullscreen) {
-                    elem.requestFullscreen();
-                } else if (elem.webkitRequestFullscreen) {
-                    elem.webkitRequestFullscreen();
-                }
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
-                }
-            }
+    // ── bindings ──────────────────────────────────────────────────────
+    $('s-iso').addEventListener('change', (e) => cmd('set iso ' + e.target.value));
+    $('s-shutter').addEventListener('change', (e) => cmd('set shutter a ' + e.target.value));
+    $('s-fps').addEventListener('change', (e) => cmd('set fps ' + e.target.value));
+    $('s-wb').addEventListener('change', (e) => cmd('set wb ' + e.target.value));
+    $('s-res').addEventListener('change', (e) => cmd('set resolution ' + e.target.value));
+
+    $('preview-frame').addEventListener('click', () => cmd('rec'));
+    $('btn-log').addEventListener('click', () => cmd('set log'));
+    $('btn-unmount').addEventListener('click', () => cmd('unmount'));
+
+    const fsBtn = $('btn-fullscreen');
+    function toggleFullScreen() {
+        const el = document.documentElement;
+        const active = document.fullscreenElement || document.webkitFullscreenElement;
+        if (!active) {
+            (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+        } else {
+            (document.exitFullscreen || document.webkitExitFullscreen).call(document);
         }
+    }
+    fsBtn.addEventListener('click', toggleFullScreen);
+    document.addEventListener('fullscreenchange', () => {
+        fsBtn.textContent = document.fullscreenElement ? 'EXIT FULLSCREEN' : 'FULLSCREEN';
+    });
 
-        document.getElementById('fullscreen-btn').addEventListener('click', function() {
-            toggleFullScreen();
-            updateFullscreenButton();
-        });
-
-        function updateFullscreenButton() {
-            const isInFullScreen = document.fullscreenElement !== null || document.webkitFullscreenElement !== null;
-            document.getElementById('fullscreen-btn').textContent = isInFullScreen ? 'Exit Fullscreen' : 'Enter Fullscreen';
-        }
-
-        document.getElementById('fullscreen-btn').addEventListener('touchstart', function(event) {
-            event.preventDefault();
-            toggleFullScreen();
-            updateFullscreenButton();
-        });
-    </script>
+    render();
+}());
+</script>
 </body>
 </html>

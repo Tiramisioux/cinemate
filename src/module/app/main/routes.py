@@ -1,39 +1,39 @@
-from flask import Blueprint, current_app, jsonify, request, render_template
-from module.redis_controller import ParameterKey
+from flask import Blueprint, current_app, render_template, request
+
+from module.web_api_settings import web_api_settings
 
 main_routes = Blueprint('main', __name__)
 
+# cinepi-raw serves the clean MJPEG preview on 8000 (cam0) and 8001 (cam1).
+CAM0_STREAM_PORT = 8000
+CAM1_STREAM_PORT = 8001
+
+
+def _stream_host():
+    """Host the browser reached us on, without the :5000 port.
+
+    Hardcoding cinepi.local breaks on the hotspot, where the camera is
+    10.42.0.1 and mDNS is not guaranteed (see docs/web-api.md "Address").
+    Whatever host resolved for this page also resolves for the stream.
+    """
+    host = request.host.rsplit(':', 1)[0]
+    return host or 'cinepi.local'
+
+
 @main_routes.route('/')
 def index():
-    redis_controller = current_app.config['REDIS_CONTROLLER']
-    cinepi_controller = current_app.config['CINEPI_CONTROLLER']
     simple_gui = current_app.config['SIMPLE_GUI']
-    sensor_detect = current_app.config['SENSOR_DETECT']
+    settings = current_app.config['SETTINGS']
 
-    iso_value = redis_controller.get_value(ParameterKey.ISO.value)
-    shutter_a_value = redis_controller.get_value(ParameterKey.SHUTTER_A.value)
-    fps_value = redis_controller.get_value(ParameterKey.FPS_ACTUAL.value)
-    wb_value = redis_controller.get_value(ParameterKey.WB_USER.value)
-    background_color_value = simple_gui.get_background_color()
-    
-    dynamic_data = simple_gui.populate_values()
+    host = _stream_host()
 
-    dynamic_data = {
-        "iso": iso_value if iso_value else "Initializing...",
-        "shutter_a": shutter_a_value if shutter_a_value else "Initializing...",
-        "fps": fps_value if fps_value else "Initializing...",
-        "background_color": background_color_value if background_color_value else "Initializing...",
-    }
-
-    return render_template('template.html', stream_url="http://cinepi.local:8000/stream", 
-                           dynamic_data=dynamic_data,
-                           iso_values=cinepi_controller.iso_steps, 
-                           shutter_speed_values=cinepi_controller.shutter_a_steps_dynamic,
-                           fps_values=cinepi_controller.fps_steps_dynamic,
-                           wb_steps=cinepi_controller.wb_steps,
-                           current_wb=wb_value,
-                           resolution_values=sensor_detect.get_available_resolutions(),
-                           current_iso=iso_value,
-                           current_shutter_a=shutter_a_value,
-                           current_fps=fps_value,
-                           background_color=background_color_value)
+    # First paint only. Every displayed value arrives over Socket.IO as
+    # `initial_values` (the full populate_values() dict) the moment the
+    # socket connects, and as `gui_data_change` deltas after that.
+    return render_template(
+        'template.html',
+        stream_url=f'http://{host}:{CAM0_STREAM_PORT}/stream',
+        stream_url_cam1=f'http://{host}:{CAM1_STREAM_PORT}/stream',
+        background_color=simple_gui.get_background_color(),
+        api_token=web_api_settings(settings).get('token') or '',
+    )

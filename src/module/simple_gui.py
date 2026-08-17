@@ -849,6 +849,16 @@ class SimpleGUI(threading.Thread):
         values["log_badge_cam1"] = _log_badge_text(
             self.redis_controller.get_value(ParameterKey.LOG_ENCODE_CAM1.value)
         )
+        # Badge/lock state the framebuffer GUI reads off self and the
+        # controller. Published here too so the web GUI renders the same
+        # badges from this one dict instead of re-deriving them.
+        values["hdr_badge"] = self._hdr_badge_text()
+        values["iso_lock"] = bool(self.cinepi_controller.iso_lock)
+        values["shutter_a_nom_lock"] = bool(self.cinepi_controller.shutter_a_nom_lock)
+        values["fps_lock"] = bool(self.cinepi_controller.fps_lock)
+        # Drives the green SHUTTER/FPS tint below, and the same tint in the
+        # web GUI.
+        values["shutter_a_sync"] = self.cinepi_controller.shutter_a_sync_mode != 0
         # drop_frame_latched drives the persistent UI warning overlay.
         # Option 1: live drop_frame pulse = TC hole advisory (flashes during recording).
         # Option 2: drop_frame_during_last_take = only set when files are genuinely
@@ -1590,12 +1600,22 @@ class SimpleGUI(threading.Thread):
         bbox = draw.textbbox((0, 0), str(values.get(key, "")), font=font)
         return bbox[2] - bbox[0]
 
+    def _hdr_badge_text(self) -> str:
+        """"HDR"/"SDR" when the sensor exposes both classes, else "".
+
+        Published in populate_values() as `hdr_badge` so the web GUI renders
+        the same badge from the same decision the framebuffer GUI draws.
+        """
+        if not self._sensor_has_sdr_and_hdr():
+            return ""
+        return "HDR" if bool(getattr(self, "hdr", False)) else "SDR"
+
     def _hdr_badge(self, draw, shrink_x, shrink_y):
         """Build the SDR/HDR badge spec (or None when it should be hidden)."""
-        if not self._sensor_has_sdr_and_hdr():
+        text = self._hdr_badge_text()
+        if not text:
             return None
-        is_hdr = bool(getattr(self, "hdr", False))
-        text = "HDR" if is_hdr else "SDR"
+        is_hdr = text == "HDR"
         font_size = max(1, int(round(HDR_BADGE_FONT_SIZE * min(min(shrink_x, shrink_y), 1))))
         font = self._get_font("bold", font_size)
         bbox = draw.textbbox((0, 0), text, font=font)

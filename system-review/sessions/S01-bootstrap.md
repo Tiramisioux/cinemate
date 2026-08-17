@@ -94,7 +94,7 @@ incidentally while verifying the others.
 | F-003 | Confirmed exactly, including the "11 packages" count. Detail file written. |
 | F-004 | **Confirmed and substantially widened** — see below. |
 | F-005 | Confirmed. |
-| F-006 | Confirmed; count refined to 27 pytest files (of 34 total in `_test/`). |
+| F-006 | **Confirmed and sharpened** — count refined to 27 pytest files (of 34), and the gap is wider than stated. See the addendum at the end of this log. |
 | F-007 | Confirmed, with stronger evidence than KICKOFF claimed. |
 | F-008 | Confirmed, **with a nuance** — see below. |
 | F-009 | Confirmed exactly. |
@@ -179,3 +179,31 @@ written down so it is not repeated.
 ## Context budget
 
 Comfortable. Finished well inside the window with no work abandoned mid-flight.
+
+---
+
+## Addendum — F-006 sharpened after opening the PR
+
+Opening PR #129 produced evidence that was not available while verifying the seed
+findings: the status API returns `total_count: 0`. Not a failing check — **no checks
+exist at all.**
+
+Reading `.github/workflows/docs.yml:9-13` explains it. The sole workflow triggers on
+`push` to `main` and `workflow_dispatch` only. There is no `pull_request` trigger and no
+`dev` trigger, and both repos develop on `dev`.
+
+So F-006 is worse than "the tests don't run in CI": **nothing runs on any PR or on `dev`,
+including the docs build** — the one piece of tooling the repo actually has. That is the
+enabling condition for F-004 and F-002/F-003 rather than a separate gap; those are exactly
+the defects a cheap CI job catches at the commit that introduces them.
+
+Detail written to `findings/F-006.md`, including a trap that must not be missed on
+remediation: adding a `pull_request` trigger to `docs.yml` as currently written would run
+the `peaceiris/actions-gh-pages` deploy **and** the "copy PDF and push" step on every PR.
+Both need gating on `github.event_name == 'push' && github.ref == 'refs/heads/main'`. The
+job has `contents: write` and runs `git push`, so this is a real hazard, not a
+hypothetical one.
+
+Also worth noting for S06: adding the `pull_request`/`dev` triggers to the existing,
+already-working docs build is the highest value-per-effort change surfaced anywhere in
+S01, and it is not blocked on the Pi or on any decision in this review.

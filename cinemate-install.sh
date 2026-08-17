@@ -1581,10 +1581,10 @@ color yellow "\<(true|false|null)\>"
 color brightwhite "[]{}[,:]"
 
 # // line comments.
-color brightblack "//.*"
+color white "//.*"
 
 # /* block comments */ (can span multiple lines).
-color brightblack start="/\*" end="\*/"
+color white start="/\*" end="\*/"
 EOF
 
     local nanorc="/etc/nanorc"

@@ -3,6 +3,14 @@ import time
 from module.redis_controller import ParameterKey
 
 def register_events(socketio, redis_controller, cinepi_controller, simple_gui, sensor_detect):
+    """Server → browser push only.
+
+    Control moved to POST /api/v1/cmd (docs/web-api.md), so the browser now
+    sends the same command lines as the CLI and serial paths and behaviour
+    cannot drift between them. What is left here is the push channel: the
+    initial snapshot, redis-change fan-out, and the dependent step lists.
+    """
+
     def resolution_switching_active():
         return str(
             redis_controller.get_value(ParameterKey.RESOLUTION_SWITCHING.value, "0")
@@ -35,6 +43,7 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
             'shutter_a': redis_controller.get_value(ParameterKey.SHUTTER_A.value),
             'fps': redis_controller.get_value(ParameterKey.FPS_ACTUAL.value),
             'background_color': simple_gui.get_background_color(),
+            'iso_steps': cinepi_controller.iso_steps,
             'shutter_a_steps': cinepi_controller.shutter_a_steps_dynamic,
             'fps_steps': cinepi_controller.fps_steps_dynamic,
             'wb_steps': cinepi_controller.wb_steps,
@@ -53,6 +62,29 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
 
         emit('initial_values', initial_values)
 
+    def emit_step_lists():
+        """Re-publish the fps-dependent shutter-angle list and the fps list.
+
+        Both depend on the live frame rate, so a `set fps` from any path —
+        web API, CLI, serial, GPIO — has to refresh them. Driven off the
+        redis keys that actually reach subscribers: RedisController._listen
+        deliberately does not emit for fps_actual, so keying on that alone
+        would never fire.
+        """
+        try:
+            fps_now = int(float(redis_controller.get_value(ParameterKey.FPS_ACTUAL.value)))
+        except (TypeError, ValueError):
+            return
+        current_shutter_a = redis_controller.get_value(ParameterKey.SHUTTER_A.value)
+        socketio.emit('shutter_a_update', {
+            'shutter_a_steps': cinepi_controller.calculate_dynamic_shutter_angles(fps_now),
+            'current_shutter_a': current_shutter_a,
+        })
+        socketio.emit('fps_update', {
+            'fps_steps': cinepi_controller.fps_steps_dynamic,
+            'fps_actual': redis_controller.get_value(ParameterKey.FPS_ACTUAL.value),
+        })
+
     def redis_change_handler(data):
         key = data['key']
         value = data['value']
@@ -62,13 +94,10 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
         if key == ParameterKey.WB_USER.value:
             socketio.emit('parameter_change', {'wb': value})
 
-        if key == ParameterKey.FPS_ACTUAL.value:
-            # Emit the updated shutter_a_steps array and the current shutter speed
-            shutter_a_steps = cinepi_controller.calculate_dynamic_shutter_angles(
-                int(float(redis_controller.get_value(ParameterKey.FPS_ACTUAL.value)))
-            )
-            current_shutter_a = redis_controller.get_value(ParameterKey.SHUTTER_A.value)
-            socketio.emit('shutter_a_update', {'shutter_a_steps': shutter_a_steps, 'current_shutter_a': current_shutter_a})
+        if key in (ParameterKey.FPS.value,
+                   ParameterKey.FPS_USER.value,
+                   ParameterKey.FPS_ACTUAL.value):
+            emit_step_lists()
 
         if key == ParameterKey.RESOLUTION_TARGET_MODE.value:
             emit_resolution_selection(value)
@@ -87,87 +116,9 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
         background_color = simple_gui.get_background_color()
         socketio.emit('background_color_change', {'background_color': background_color})
 
-    @socketio.on('change_framebuffer')
-    def handle_change_framebuffer(data):
-        framebuffer = data.get('framebuffer')
-        if framebuffer:
-            socketio.emit('parameter_change', {'framebuffer': framebuffer})
-            print(emit)
-
-    @socketio.on('change_iso')
-    def handle_change_iso(data):
-        iso = data.get('iso')
-        if iso:
-            cinepi_controller.set_iso(int(iso))
-            socketio.emit('parameter_change', {'iso': iso})
-
-    @socketio.on('change_shutter_a')
-    def handle_change_shutter_a(data):
-        shutter_a = data.get('shutter_a')
-        if shutter_a:
-            cinepi_controller.set_shutter_a(float(shutter_a))
-            socketio.emit('parameter_change', {'shutter_a': shutter_a})
-            # Emit the updated shutter_a_steps array and the current shutter speed
-            shutter_a_steps = cinepi_controller.calculate_dynamic_shutter_angles(
-                int(float(redis_controller.get_value(ParameterKey.FPS_ACTUAL.value)))
-            )
-            socketio.emit('shutter_a_update', {'shutter_a_steps': shutter_a_steps, 'current_shutter_a': shutter_a})
-
-    @socketio.on('change_fps')
-    def handle_change_fps(data):
-        fps = data.get('fps')
-        if fps:
-            cinepi_controller.set_fps(int(fps))
-            socketio.emit('parameter_change', {'fps': fps})
-            # Emit the updated shutter_a_steps array and the current shutter speed
-            shutter_a_steps = cinepi_controller.calculate_dynamic_shutter_angles(int(fps))
-            current_shutter_a = redis_controller.get_value(ParameterKey.SHUTTER_A.value)
-            socketio.emit('shutter_a_update', {'shutter_a_steps': shutter_a_steps, 'current_shutter_a': current_shutter_a})
-
-    @socketio.on('change_wb')
-    def handle_change_wb(data):
-        wb = data.get('wb')
-        if wb:
-            cinepi_controller.set_wb(int(wb))  # Call set_wb method
-            socketio.emit('parameter_change', {'wb': wb})   
-
-    @socketio.on('change_resolution')
-    def handle_change_resolution(data):
-        sensor_mode = data.get('mode')
-        if sensor_mode is not None:
-            socketio.emit('parameter_change', {
-                'selected_resolution_mode': sensor_mode,
-                'resolution_switching': "1",
-            })
-            if not cinepi_controller.set_resolution(int(sensor_mode)):
-                emit_resolution_selection()
-                return
-            # Emit the current values and steps immediately before reloading
-            shutter_a_steps = cinepi_controller.calculate_dynamic_shutter_angles(
-                int(float(redis_controller.get_value(ParameterKey.FPS_ACTUAL.value)))
-            )
-            current_shutter_a = redis_controller.get_value(ParameterKey.SHUTTER_A.value)
-            current_fps = redis_controller.get_value(ParameterKey.FPS_ACTUAL.value)
-            socketio.emit('shutter_a_update', {
-                'shutter_a_steps': shutter_a_steps,
-                'current_shutter_a': current_shutter_a
-            })
-            socketio.emit('fps_update', {
-                'fps_steps': cinepi_controller.fps_steps_dynamic,
-                'current_fps': current_fps
-            })
-
-            socketio.emit('reload_stream')
-
-    @socketio.on('container_tap')
-    def handle_container_tap():
-        cinepi_controller.rec()
-        
-    @socketio.on('gui_data_change')
-    def handle_gui_data_change(data):
-        emit('gui_data_change', data)
-        
-    @socketio.on('unmount')
-    def handle_unmount():
-        cinepi_controller.unmount()
-        socketio.emit('unmount_complete')
+    # No control handlers here. The browser posts command lines to
+    # /api/v1/cmd, so `set iso`, `set fps`, `set resolution`, `set log`,
+    # `rec` and `unmount` take exactly the path the CLI and serial take.
+    # The resulting redis writes come back through redis_change_handler
+    # above, and cinepi_controller's own resolution-change callback (see
+    # module.app.create_app) emits `reload_stream`.

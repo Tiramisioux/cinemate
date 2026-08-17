@@ -25,7 +25,7 @@ from module.sensor_detect import SensorDetect
 from module.redis_listener import RedisListener
 from module.gpio_input import ComponentInitializer
 from module.battery_monitor import BatteryMonitor
-from module.wifi_hotspot import WiFiHotspotManager
+from module.wifi_hotspot import WiFiHotspotManager, hotspot_service_active
 from module.cli_commands import CommandExecutor
 from module.status_broadcast import StatusBroadcaster
 from module.web_api_settings import web_api_settings
@@ -581,7 +581,18 @@ def setup_logging(debug_mode):
     return configure_logging(MODULES_OUTPUT_TO_SERIAL, logging_level)
 
 def start_hotspot(settings) -> None:
-    """Start hotspot if enabled in *settings*."""
+    """Start the hotspot if enabled in *settings* and nothing else owns it.
+
+    wifi-hotspot.service reconciles the same hotspot every 60 s, survives a
+    Cinemate crash, and applies the credential ladder. When it is running it is
+    the single owner and we stand down -- two owners with no ordering between
+    them was the race described in docs/hotspot-logic.md. In-app creation stays
+    as the fallback for installs where that service was never enabled.
+    """
+    if hotspot_service_active():
+        logging.info("wifi-hotspot.service owns the hotspot - skipping in-app creation")
+        return
+
     wifi_mgr = WiFiHotspotManager(settings=settings)
     if not wifi_mgr.enabled:
         logging.info("Wi-Fi hotspot disabled in settings")

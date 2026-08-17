@@ -46,6 +46,7 @@ ENABLE_SUPPORT_SERVICES="${ENABLE_SUPPORT_SERVICES:-1}"
 ENABLE_STORAGE_AUTOMOUNT_SERVICE="${ENABLE_STORAGE_AUTOMOUNT_SERVICE:-1}"
 ENABLE_WIFI_HOTSPOT_SERVICE="${ENABLE_WIFI_HOTSPOT_SERVICE:-1}"
 ENABLE_REDIS_LOG_MAINTENANCE_SERVICE="${ENABLE_REDIS_LOG_MAINTENANCE_SERVICE:-1}"
+ENABLE_RECOVERY_CONSOLE_SERVICE="${ENABLE_RECOVERY_CONSOLE_SERVICE:-1}"
 ENABLE_AUTOSTART="${ENABLE_AUTOSTART:-1}"
 START_AUTOSTART_NOW="${START_AUTOSTART_NOW:-0}"
 RUN_REBOOT="${RUN_REBOOT:-0}"
@@ -321,7 +322,7 @@ print_configuration_summary() {
     detail "Libcamera: $LIBCAMERA_REPO_URL @ $LIBCAMERA_REPO_REF"
     detail "Hotspot: $HOTSPOT_NAME (enabled=$HOTSPOT_ENABLED)"
     detail "Optional features: lgpio=$INSTALL_ALT_GPIO_BACKEND console_font=$INSTALL_CONSOLE_FONT console_autologin=$ENABLE_CONSOLE_AUTOLOGIN pishrink=$INSTALL_PISHRINK plymouth=$INSTALL_PLYMOUTH imx283_driver=$INSTALL_IMX283_DRIVER imx585_driver=$INSTALL_IMX585_DRIVER ir_filter=$INSTALL_IR_FILTER_HELPER"
-    detail "Services: support=$ENABLE_SUPPORT_SERVICES storage=$ENABLE_STORAGE_AUTOMOUNT_SERVICE wifi=$ENABLE_WIFI_HOTSPOT_SERVICE redis_log=$ENABLE_REDIS_LOG_MAINTENANCE_SERVICE autostart=$ENABLE_AUTOSTART start_now=$START_AUTOSTART_NOW"
+    detail "Services: support=$ENABLE_SUPPORT_SERVICES storage=$ENABLE_STORAGE_AUTOMOUNT_SERVICE wifi=$ENABLE_WIFI_HOTSPOT_SERVICE redis_log=$ENABLE_REDIS_LOG_MAINTENANCE_SERVICE recovery=$ENABLE_RECOVERY_CONSOLE_SERVICE autostart=$ENABLE_AUTOSTART start_now=$START_AUTOSTART_NOW"
 }
 
 is_commitish_ref() {
@@ -1581,10 +1582,10 @@ color yellow "\<(true|false|null)\>"
 color brightwhite "[]{}[,:]"
 
 # // line comments.
-color brightblack "//.*"
+color white "//.*"
 
 # /* block comments */ (can span multiple lines).
-color brightblack start="/\*" end="\*/"
+color white start="/\*" end="\*/"
 EOF
 
     local nanorc="/etc/nanorc"
@@ -1701,6 +1702,27 @@ path.write_text(json.dumps(data, indent=2) + "\n")
 PY
 }
 
+write_recovery_conf() {
+    # Rung 2 of the recovery console's own config ladder
+    # (docs/recovery-console.md): read when settings.jsonc will not parse,
+    # which is precisely the console's primary use case. Flat key=value so it
+    # is trivial to read without a JSON parser at all.
+    local conf_path="/etc/cinemate-recovery.conf"
+
+    log "Writing $conf_path"
+    [[ -f "$conf_path" ]] && backup_file "$conf_path"
+    sudo tee "$conf_path" >/dev/null <<EOF
+# Written by cinemate-install.sh. Fallback config for cinemate-recovery.service
+# when settings.jsonc cannot be parsed. See docs/recovery-console.md.
+enabled=true
+port=8080
+token=
+allow_config_txt=false
+config_confirm_timeout_s=300
+EOF
+    sudo chmod 644 "$conf_path"
+}
+
 seed_redis_defaults() {
     log "Seeding Redis defaults"
     detail "Writing default runtime keys and white-balance defaults"
@@ -1750,6 +1772,14 @@ install_cinemate_services() {
             sudo make -C "$CINEMATE_SOURCE_DIR/services" start-redis-log-maintenance
         else
             detail "Skipping redis-log-maintenance.timer"
+        fi
+
+        if is_true "$ENABLE_RECOVERY_CONSOLE_SERVICE"; then
+            log "Installing and enabling cinemate-recovery.service"
+            write_recovery_conf
+            sudo make -C "$CINEMATE_SOURCE_DIR/services" enable-cinemate-recovery
+        else
+            detail "Skipping cinemate-recovery.service"
         fi
     else
         detail "Skipping support services"

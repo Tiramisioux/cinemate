@@ -758,8 +758,8 @@ color cyan "\"(\\.|[^\"])*\"[[:space:]]*:"
 color magenta "-?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?"
 color yellow "\<(true|false|null)\>"
 color brightwhite "[]{}[,:]"
-color brightblack "//.*"
-color brightblack start="/\*" end="\*/"
+color white "//.*"
+color white start="/\*" end="\*/"
 ```
 
 Save with Ctrl+x, y, enter. Debian's nano already includes `/usr/share/nano/*.nanorc`, so no further config is needed — `editsettings` will show colors the next time you open it.

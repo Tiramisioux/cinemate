@@ -192,7 +192,10 @@ Add to [`settings.jsonc`](settings-json.md) under `system`. Every field is optio
 | Cinemate CLI | `cinemate` in a terminal | — |
 | Serial | Tx/Rx pins or USB, 9600 baud | Yes |
 | **Web API** | HTTP on port 5000 | **Yes** |
-| Web GUI | Browser on port 5000 | No — its own control events |
+| Web GUI | Browser on port 5000, posts to `/api/v1/cmd` | Yes |
 | GPIO / rotary / I²C | [`settings.jsonc`](settings-json.md) mappings | Yes |
 
-All command-based paths go through one dispatcher, so behaviour cannot drift between them.
+All command-based paths go through one dispatcher, so behaviour cannot drift between them. The
+browser control page (`docs/web-gui.md`) is itself a `/api/v1/cmd` client — its ISO/shutter/FPS/WB/
+resolution selectors, REC tap, LOG toggle and Unmount button all post CLI command lines. Socket.IO
+carries only the push side: the live preview data feeding the on-screen readout.

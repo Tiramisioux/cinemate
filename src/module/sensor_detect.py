@@ -1,7 +1,10 @@
+import os
+import signal
 import subprocess
 import re
 import logging
 import json
+import time
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -413,6 +416,54 @@ class SensorDetect:
             pruned[cam] = {i: m for i, m in enumerate(self._order_modes(selected))}
         return pruned
 
+    @staticmethod
+    def _running_cinepi_raw_pids() -> List[str]:
+        try:
+            result = subprocess.run(
+                ["pgrep", "-x", "cinepi-raw"], capture_output=True, text=True,
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            logging.debug("Could not check for a running cinepi-raw process: %s", exc)
+            return []
+        return [pid for pid in result.stdout.split() if pid.strip()]
+
+    def _kill_stale_cinepi_raw(self, timeout: float = 3.0) -> None:
+        """Kill any cinepi-raw process already running before probing sensor
+        modes.
+
+        detect_camera_model() runs once, at Cinemate startup -- before
+        Cinemate has launched its own cinepi-raw child, so any cinepi-raw
+        found here is orphaned (e.g. a botched previous restart, or a manual
+        test session left running). If it isn't killed first, the
+        ``--hdr sensor`` probe can't actually toggle wide_dynamic_range on a
+        sensor subdev the orphan already holds (V4L2 reports the control as
+        "grabbed"), so ClearHDR/16-bit modes silently vanish from this
+        session's mode table instead of the probe failing loudly.
+        """
+        pids = self._running_cinepi_raw_pids()
+        if not pids:
+            return
+        logging.warning(
+            "Found stale cinepi-raw process(es) %s at startup -- killing before "
+            "probing sensor modes so ClearHDR/16-bit detection isn't silently "
+            "degraded by an already-held sensor subdev.", pids,
+        )
+        for pid in pids:
+            try:
+                os.kill(int(pid), signal.SIGKILL)
+            except (ValueError, ProcessLookupError, PermissionError) as exc:
+                logging.warning("Failed to kill stale cinepi-raw pid %s: %s", pid, exc)
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if not self._running_cinepi_raw_pids():
+                return
+            time.sleep(0.1)
+        logging.warning(
+            "Stale cinepi-raw process(es) %s did not exit within %.1fs -- "
+            "ClearHDR/16-bit mode detection may still be degraded this session.",
+            pids, timeout,
+        )
+
     def _list_cameras(self, hdr: bool = False) -> str:
         """Run ``cinepi-raw --list-cameras`` (optionally with ``--hdr sensor``).
 
@@ -439,6 +490,8 @@ class SensorDetect:
         ``self.camera_model`` (the caller may later override this).
         """
         try:
+            self._kill_stale_cinepi_raw()
+
             out = self._list_cameras(hdr=False)
             logging.info("cinepi-raw output:\n%s", out)
 
@@ -458,6 +511,25 @@ class SensorDetect:
             base_modes = self._parse_cinepi_output(out, hdr=False)
             hdr_modes = self._parse_cinepi_output(hdr_out, hdr=True) if hdr_out.strip() else {}
             merged = self._merge_mode_lists(base_modes, hdr_modes)
+
+            # The HDR probe "succeeding" (non-empty output) but adding zero new
+            # modes means --hdr sensor couldn't actually change what the sensor
+            # reports -- most commonly because another process (see
+            # _kill_stale_cinepi_raw above) still held the subdev. Surface this
+            # loudly instead of silently shipping a mode table missing ClearHDR.
+            if hdr_out.strip():
+                added = sum(
+                    len(merged.get(cam, [])) - len(base_modes.get(cam, []))
+                    for cam in merged
+                )
+                if added == 0:
+                    logging.warning(
+                        "ClearHDR probe (--hdr sensor) returned no modes beyond "
+                        "the plain probe. If this sensor supports ClearHDR (e.g. "
+                        "imx585), 16-bit modes are unavailable this session -- "
+                        "likely because something already held the sensor "
+                        "subdev when Cinemate started."
+                    )
 
             # full assembly → {model → {mode_idx → mode_dict}}
             sensors = self._finalize_modes(merged)

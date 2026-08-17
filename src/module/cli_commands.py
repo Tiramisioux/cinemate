@@ -62,11 +62,21 @@ class CommandExecutor(threading.Thread):
 
             # ── imx585 ClearHDR ───────────────────────────────────────────────────
             #  Startup values come from capture.resolutions.hdr in settings.jsonc.
-            #  These commands apply live to the sensor while streaming.
+            #  These commands apply live to the sensor while streaming. inc/dec
+            #  step through arrays.hdr_*.steps, or free_increment when that
+            #  knob's free mode is on (see 'set hdr ... free' below).
             'set hdr threshold low'  : (cinepi_controller.set_hdr_threshold_low, int),
+            'inc hdr threshold low'  : (cinepi_controller.inc_hdr_threshold_low, None),
+            'dec hdr threshold low'  : (cinepi_controller.dec_hdr_threshold_low, None),
             'set hdr threshold high' : (cinepi_controller.set_hdr_threshold_high, int),
+            'inc hdr threshold high' : (cinepi_controller.inc_hdr_threshold_high, None),
+            'dec hdr threshold high' : (cinepi_controller.dec_hdr_threshold_high, None),
             'set hdr blend'          : (cinepi_controller.set_hdr_blend,     int),
+            'inc hdr blend'          : (cinepi_controller.inc_hdr_blend,     None),
+            'dec hdr blend'          : (cinepi_controller.dec_hdr_blend,     None),
             'set hdr gain adder'     : (cinepi_controller.set_hdr_gain_adder, int),
+            'inc hdr gain adder'     : (cinepi_controller.inc_hdr_gain_adder, None),
+            'dec hdr gain adder'     : (cinepi_controller.dec_hdr_gain_adder, None),
 
             # ── CineMate Log (--log-encode) ───────────────────────────────────────
             #  "set log" toggles on/off, using each live camera's own bit-depth
@@ -116,6 +126,10 @@ class CommandExecutor(threading.Thread):
             'set shutter a free'     : (cinepi_controller.set_shutter_a_free, [int, str]),
             'set fps free'           : (cinepi_controller.set_fps_free,   [int, str]),
             'set wb free'            : (cinepi_controller.set_wb_free,    [int, str]),
+            'set hdr threshold low free' : (cinepi_controller.set_hdr_threshold_low_free, [int, str]),
+            'set hdr threshold high free': (cinepi_controller.set_hdr_threshold_high_free, [int, str]),
+            'set hdr blend free'     : (cinepi_controller.set_hdr_blend_free, [int, str]),
+            'set hdr gain adder free': (cinepi_controller.set_hdr_gain_adder_free, [int, str]),
 
             # ── Sensor-specific ──────────────────────────────────────────────────
             'set filter'             : (cinepi_controller.set_filter,     [int]), #Toggle IR-cut filter on StarlightEye sensors

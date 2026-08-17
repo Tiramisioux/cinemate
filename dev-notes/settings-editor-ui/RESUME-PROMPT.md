@@ -18,6 +18,13 @@ open it directly, or serve it with the `settings-editor-preview` entry already i
 It is also published as a Claude Artifact — ask me for the URL if you need to redeploy
 to the same one instead of minting a new one.
 
+REPO AND BRANCH
+Dev clone is /Users/patrikeriksson/Documents/cinemate/cinemate (NOT the top-level
+/Users/patrikeriksson/Documents/cinemate, which is a separate main-branch clone — don't
+conflate the two). This work lives on feature/settings-editor-ui, cut from origin/dev,
+one commit so far (the concept.html + this prompt). Keep working on that branch unless
+told otherwise. It has not been pushed to GitHub yet — ask before pushing.
+
 WHAT IT IS
 A 4-pane pedagogical editor: config.txt | settings.jsonc | RAW files | Live view.
 - config.txt pane: per-port sensor overlay pickers, RP1 overclock, hardware interface
@@ -72,5 +79,5 @@ HOW TO WORK
 
 ## Notes for whoever pastes this
 
-- Unlike `recovery-console`/`web-api`, this workspace deliberately has **no IMPLEMENTATION-PLAN.md and no feature branch**. Nothing here is committed — it's still exploratory mockup work, not a scoped implementation with phases and gates. Don't invent phases/gates for it until the user actually decides to build the real thing.
+- Unlike `recovery-console`/`web-api`, this workspace deliberately has **no IMPLEMENTATION-PLAN.md**. It does have its own branch (`feature/settings-editor-ui`, committed) for isolation, but no phases/gates — it's still exploratory mockup work, not a scoped implementation. Don't invent phases/gates for it until the user actually decides to build the real thing.
 - The concept file is large (single HTML file, several hundred KB with embedded fonts) — read it in sections if context is tight, or grep for the section you need (`<!-- STEPS -->`, `<!-- POTS`, etc. mark each settings.jsonc section; `<!-- BOOT CONFIG -->`, `<!-- CLIPS -->`, `<!-- LIVE VIEW -->` mark the other 3 panes).

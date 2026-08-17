@@ -4,7 +4,7 @@ Thin HTTP/SSE adapter over CommandExecutor.handle_received_data(). This
 module never parses command lines, coerces arguments, or special-cases
 `rec` itself — that dispatch logic lives in module.cli_commands, shared
 with the CLI and serial paths. See docs/web-api.md for the wire contract
-and dev-notes/web-api/IMPLEMENTATION-PLAN.md for the internals.
+and dev_projects/web-api/IMPLEMENTATION-PLAN.md for the internals.
 """
 from __future__ import annotations
 

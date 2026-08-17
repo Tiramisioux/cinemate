@@ -17,7 +17,7 @@ git revert 2f79397
 **Option B — apply the restore patch:**
 
 ```sh
-git apply dev-notes/fps_correction_restore.patch   # from the repo root
+git apply dev_projects/fps_correction_restore.patch   # from the repo root
 ```
 
 Either re-creates `src/module/sensor_correction_factors.py`, the

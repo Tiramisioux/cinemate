@@ -3,7 +3,7 @@
 Broadcasts a single plain-text `key=value ...` line to the hotspot subnet
 so tally lights and displays need no HTTP connection, no parser, and no
 per-device load on the camera. See docs/web-api.md ("UDP broadcast") and
-dev-notes/web-api/IMPLEMENTATION-PLAN.md section 4.9.
+dev_projects/web-api/IMPLEMENTATION-PLAN.md section 4.9.
 """
 from __future__ import annotations
 

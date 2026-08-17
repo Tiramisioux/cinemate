@@ -11,7 +11,7 @@ For a step-by-step guide to building a physical controller, see [Building contro
 | | |
 |---|---|
 | Hotspot SSID / password | `CinePi` / `11111111` (set in [`settings.jsonc`](settings-json.md) under `system.wifi_hotspot`) |
-| Camera address on the hotspot | `10.42.0.1` (NetworkManager shared-mode default — not yet confirmed against a running hotspot; see `dev-notes/web-api/IMPLEMENTATION-PLAN.md` section 10) |
+| Camera address on the hotspot | `10.42.0.1` (NetworkManager shared-mode default — not yet confirmed against a running hotspot; see `dev_projects/web-api/IMPLEMENTATION-PLAN.md` section 10) |
 | API port | `5000` |
 | Status broadcast port | `8888/udp` |
 | Base URL | `http://10.42.0.1:5000/api/v1/` |

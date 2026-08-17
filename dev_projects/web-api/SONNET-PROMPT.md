@@ -10,7 +10,7 @@ Paste the block below into a fresh thread. It is self-contained.
 Implement the Cinemate Web API. Your source of truth is already written — read these
 three files before doing anything else, in this order:
 
-  1. cinemate/dev-notes/web-api/IMPLEMENTATION-PLAN.md   ← internals, phases, gates
+  1. cinemate/dev_projects/web-api/IMPLEMENTATION-PLAN.md   ← internals, phases, gates
   2. cinemate/docs/web-api.md                            ← the wire contract
   3. cinemate/docs/building-control-units.md             ← what client devices expect
 
@@ -69,7 +69,7 @@ WHEN THE CODE LANDS
 - Correct any address, port or behaviour in those two docs that Phase 0 proved wrong.
   The docs were written ahead of the code; the running system wins.
 - Add a changelog entry in docs/changelog.md.
-- Update dev-notes/web-api/IMPLEMENTATION-PLAN.md section 10 with the answers to the open
+- Update dev_projects/web-api/IMPLEMENTATION-PLAN.md section 10 with the answers to the open
   questions, and mark the status line at the top as implemented.
 ```
 

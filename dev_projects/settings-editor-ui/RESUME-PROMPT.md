@@ -10,7 +10,7 @@ Paste the block below into a fresh thread to pick this back up. It is self-conta
 Continue the Cinemate settings editor web UI concept. We are still in mockup mode — this
 is a design sketch, not an implementation task. Read the file before doing anything else:
 
-  cinemate/dev-notes/settings-editor-ui/concept.html
+  cinemate/dev_projects/settings-editor-ui/concept.html
 
 It's a single self-contained HTML file (inline CSS/JS, no build step, no backend) —
 open it directly, or serve it with the `settings-editor-preview` entry already in

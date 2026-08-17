@@ -1,8 +1,8 @@
 # Cinemate Recovery Console — implementation plan
 
-**Status:** Phases 1 and 2 implemented and unit-tested (355/355 tests pass, including a 100-test suite for the console and a 53-test suite for the hotspot ladder). Phase 0 hardware verification is done — see section 11 for the answers. Phases 1/2's *hardware* gates (section 9) have not run: they need the code on the Pi. Phases 3-5 are not started.
+**Status:** Shipped. All five phases are implemented and unit-tested (355/355 tests pass). Phases 0-3's hardware gates (section 9) have run on the live Pi and passed — see section 11. Phases 4/5 (the settings.jsonc editor's write path and the config.txt confirm-or-revert machine) are implemented and unit-tested but their *hardware* gates were not exercised end-to-end on the Pi in this round — the settings editor route was reached and displayed correctly, but no save was performed live, and config.txt editing was never enabled (`allow_config_txt` stayed at its default `false`) or tested. Merged to `dev`.
 **Owning repo:** `cinemate` only. `cinepi-raw` and `libcamera` are untouched.
-**Branch:** `feature/recovery-console`, cut from `cinemate` `dev` @ `a3680322`. This plan landed on it as `84babd4a`; no implementation code exists yet.
+**Branch:** `feature/recovery-console`, cut from `cinemate` `dev` @ `a3680322`, merged back into `dev`.
 **Source of truth:** this file.
 
 ---
@@ -293,11 +293,24 @@ All checks were read-only.
 - F13 (sudoers) confirmed live: `pi` may sudo `mount`/`umount`/`ntfs-3g`/`mount.ext4`/`main.py`/`run_cinemate.sh`/venv binaries — no `systemctl`. This is the concrete reason the recovery console must run as root.
 - `redis-log-maintenance.timer` was inactive/disabled on this unit despite being in `SUBSERVICES` — pre-existing, unrelated to this branch.
 
-### What's implemented vs. what's gated on Pi hardware
-
-Phases 1 and 2 are code-complete and unit-tested. Their **hardware gates** (section 9) have not run — they require the code to actually be on the Pi:
-
-- Phase 1 gate: corrupt `settings.jsonc`, reboot, confirm the hotspot comes up on the last-good SSID and `hotspot.state` names the rung.
-- Phase 2 gate: stop `cinemate-autostart`, confirm `:8080` still answers from a phone on the hotspot with `:5000` dead throughout.
-
 A live console smoke test on the Mac (simulated broken `settings.jsonc`, simulated `cinemate-autostart: failed`, faked `systemctl`/`journalctl`) exercised every route (`/`, `/why`, `/log`, `/edit/settings`, `/edit/config`, `/service/<name>/<action>`, `/health`) and found two real bugs the unit tests could not see on their own: `RecoveryHandler.runner` needed `staticmethod()` (a bare function on the class is a descriptor and silently binds `self` as its first positional argument), and `systemctl()` needed to catch `OSError` around a missing `systemctl` binary rather than 500. Both are fixed and covered by the smoke test's structure, though the smoke test itself is not part of the persisted `_test/` suite (it exercises HTTP end-to-end, which is out of scope for the stdlib-only ladder tests).
+
+### Phases 1-3 hardware gate results (2026-08-17, live unit, verified by user)
+
+All three gates passed, with two deployment gotchas surfaced along the way that are worth recording for the next branch that touches this path.
+
+**Deployment gotcha 1 — `services/wifi-hotspot/wifi-hotspot.py` is an installed copy, not a live import.** `src/module/wifi_hotspot.py` (the manager class, holding the ladder logic) is imported at runtime via `sys.path.insert(0, "/home/pi/cinemate/src")`, so a plain `git pull` + `systemctl restart wifi-hotspot` picks it up immediately. But the *entrypoint* script the service actually execs is a separate installed copy at `/usr/local/bin/wifi-hotspot.py`, refreshed only by `make install-wifi-hotspot`. A first test round against a bare `restart` silently exercised the pre-existing entrypoint and produced misleading "the ladder isn't doing anything" symptoms (no `hotspot.state`, SSID always `CinePi`) that had nothing to do with the new code. Fixed by running `sudo make -C services install-wifi-hotspot && sudo systemctl restart wifi-hotspot`; standard Pi handoff instructions for this repo should include the explicit `install-<service>` step, not just `restart`, whenever a service's entrypoint script changed.
+
+**Deployment gotcha 2 — mid-session branch collision.** Partway through Phase 1/2 implementation, something outside the implementing session checked out `feature/settings-editor-ui` in the same local clone and committed twice there, while uncommitted recovery-console work was still sitting in the working tree. No commits landed on the wrong branch — recovered cleanly via `git stash push -u` → `git switch feature/recovery-console` → `git stash pop` (one clean auto-merge, no conflicts). Two local clones or sessions sharing one working tree is a real hazard on this repo; worth a worktree per concurrent task.
+
+**Phase 1 — PASS.** After the entrypoint reinstall, `wifi-hotspot.service` correctly reconciles and writes `/var/lib/cinemate/hotspot.state`; the console's status page renders it as *"Hotspot SSID CinePi from rung 1 (settings): settings.jsonc parsed"*. This unit's configured SSID happens to equal the compiled-in default (`CinePi`), so the plan's literal "not CinePi" visual check can't discriminate rung 2 (cache) from rung 3 (default) on this specific hardware — the rung+reason display is the actual proof mechanism the plan wanted, and it works. Rung 2 was not separately exercised with a distinct custom SSID; the mechanism (`read_last_good`/`write_last_good` round-trip) is covered by the unit test suite instead.
+
+**Phase 2 — PASS.** With `settings.jsonc` corrupted, `:5000` confirmed dead via `ss -tlnp` while `:8080` served a real browser (screenshot evidence) showing `cinemate-autostart: failed` in red against `wifi-hotspot`/`storage-automount: active` in green.
+
+**Phase 3 — PASS.** The console's Restart button was exercised through both outcomes: `systemctl restart cinemate-autostart → exit 1` against broken settings, and a full recovery to `active` once settings were restored.
+
+**F10 (persisted startup failure) — reconfirmed correct, not a bug.** Two rounds of live testing initially looked like `persist_startup_failure()` was silently failing (directory created, file never appearing). Root cause was test methodology, not the code: `cinemate-autostart.service`'s `ExecStopPost=` scripts (`cinemate-startup-failure-display.sh`, `cinemate-console-handoff.sh`) take 9-12 seconds to complete against a 5s `TimeoutStopSec`, so `systemctl restart` issued back-to-back collides mid-transition and logs a cosmetic `Job for cinemate-autostart.service canceled.` — while the actual crash-and-report cycle just hadn't finished yet. A test that separates `stop` (wait ~12s) from `start` (wait ~5s) shows the file written correctly, 539 bytes, exact tty1-format content. This stop-sequence slowness is pre-existing, unrelated to this branch, and not fixed here — but it means the console's own restart handler (section 5, `/service/<name>/<action>`) should be read as "fire and poll `/`", not "trust the immediate exit code," since a `restart` can report `canceled` on the systemd side while the underlying operation still completes correctly a few seconds later.
+
+**Settings.jsonc recovery technique confirmed live.** `settings.jsonc` is git-tracked and, on this unit, had zero uncommitted drift from the branch at the time of an accidental `echo '{broken' > settings.jsonc` corruption. `git checkout -- settings.jsonc` cleanly and safely restored the exact pre-corruption content — a materially better recovery path than trusting an ad hoc `/tmp` copy, which in this session had itself been silently corrupted by a mistimed backup command. Worth remembering as the default "I broke settings.jsonc by hand" recovery move on any unit where the file isn't known to carry uncommitted local edits.
+
+**Not exercised on hardware this round:** Phase 4's actual `/edit/settings` write path (a `Save` was never clicked against real hardware — only the GET view, showing the broken content, was observed) and all of Phase 5 (`config.txt` editing stayed at its default `allow_config_txt: false`, untested). Both are unit-tested and considered code-complete per the plan's original scope, but their live gates remain open for a future round.

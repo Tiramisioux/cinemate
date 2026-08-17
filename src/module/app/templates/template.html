@@ -135,13 +135,13 @@
 
         .badge {
             display: inline-block;
+            align-self: center;
             font-weight: 700;
             font-size: calc(var(--value-size) * 0.58);
             line-height: 1;
             color: #000;
             border-radius: 3px;
             padding: 0.28em 0.45em;
-            vertical-align: 0.18em;
         }
         .badge.hdr { background: var(--hdr-badge); }
         .badge.sdr { background: var(--sdr-badge); }
@@ -259,11 +259,18 @@
             --label-size: clamp(0.65rem, 1.05vw, 1rem);
         }
         #bottom-row .spacer { flex: 1 1 auto; }
+        /* simple_gui's layout dict draws clip_name at size 18 against 41 for
+           its neighbours (disk_space, cpu_load, …) — ~0.44 of them, not a
+           font a browser would pick on its own. Match that ratio, and give
+           it enough room for the full "CINEPI_25-07-01_220547_F10_C00000_
+           000000009" string simple_gui actually shows (uncut — the DNG
+           basename minus the _camN suffix, frame counter included) rather
+           than an arbitrary width that ellipsizes it early. */
         .group.clip .value {
-            font-size: calc(var(--value-size) * 0.62);
+            font-size: calc(var(--value-size) * 0.44);
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 42vw;
+            max-width: 70vw;
         }
         .clip-lines { display: flex; flex-direction: column; gap: 0.1em; }
         .warn { font-weight: 700; font-size: var(--value-size); }
@@ -277,6 +284,20 @@
             box-shadow: inset 0 0 0 1px var(--label);
         }
         #buffer-fill { height: 100%; width: 0%; background: var(--label); }
+
+        #bottom {
+            display: flex;
+            flex-direction: column;
+            gap: calc(var(--gap) * 0.45);
+        }
+        #button-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: calc(var(--gap) * 0.5);
+            padding-top: calc(var(--gap) * 0.45);
+            border-top: 1px dashed var(--label);
+        }
 
         button {
             font-family: inherit;
@@ -332,7 +353,8 @@
             .section + .section { margin-top: 0; }
             .section .section-label { margin-bottom: 0; }
             .section .boxes { flex-direction: row; }
-            .group.clip .value { max-width: 60vw; }
+            .group.clip .value { max-width: 85vw; }
+            #button-row { justify-content: center; }
         }
     </style>
 </head>
@@ -377,33 +399,37 @@
         <div class="rail" id="rail-right"></div>
     </div>
 
-    <div id="bottom-row">
-        <div class="group"><span class="label">MEDIA</span><span class="value" id="v-disk"></span></div>
-        <div class="group"><span class="value" id="v-write"></span></div>
-        <div class="group"><span class="label">BUF</span><span class="value" id="v-buffer"></span>
-            <div id="buffer-meter"><div id="buffer-fill"></div></div>
-        </div>
-        <div class="group"><span class="value" id="v-rectime"></span></div>
-        <div class="group clip">
-            <div class="clip-lines">
-                <span class="value hidden" id="v-clip-cam1"></span>
-                <span class="value" id="v-clip"></span>
+    <div id="bottom">
+        <div id="bottom-row">
+            <div class="group"><span class="label">MEDIA</span><span class="value" id="v-disk"></span></div>
+            <div class="group"><span class="value" id="v-write"></span></div>
+            <div class="group"><span class="label">BUF</span><span class="value" id="v-buffer"></span>
+                <div id="buffer-meter"><div id="buffer-fill"></div></div>
             </div>
-            <span class="badge wav hidden" id="v-wav">WAV</span>
+            <div class="group"><span class="value" id="v-rectime"></span></div>
+            <div class="group clip">
+                <div class="clip-lines">
+                    <span class="value hidden" id="v-clip-cam1"></span>
+                    <span class="value" id="v-clip"></span>
+                </div>
+                <span class="badge wav hidden" id="v-wav">WAV</span>
+            </div>
+            <span class="warn lock hidden" id="v-lock">LOCK</span>
+            <span class="warn voltage hidden" id="v-voltage">VOLTAGE</span>
+
+            <div class="spacer"></div>
+
+            <div class="group"><span class="label">CPU</span><span class="value" id="v-cpu"></span></div>
+            <div class="group"><span class="label">TEMP</span><span class="value" id="v-temp"></span></div>
+            <div class="group"><span class="label">RAM</span><span class="value" id="v-ram"></span></div>
+            <div class="group hidden" id="g-battery"><span class="label">BATT</span><span class="value" id="v-battery"></span></div>
         </div>
-        <span class="warn lock hidden" id="v-lock">LOCK</span>
-        <span class="warn voltage hidden" id="v-voltage">VOLTAGE</span>
 
-        <div class="spacer"></div>
-
-        <div class="group"><span class="label">CPU</span><span class="value" id="v-cpu"></span></div>
-        <div class="group"><span class="label">TEMP</span><span class="value" id="v-temp"></span></div>
-        <div class="group"><span class="label">RAM</span><span class="value" id="v-ram"></span></div>
-        <div class="group hidden" id="g-battery"><span class="label">BATT</span><span class="value" id="v-battery"></span></div>
-
-        <button id="btn-log" title="set log — toggles CineMate Log, restarts the camera when idle">LOG</button>
-        <button id="btn-unmount" title="unmount">UNMOUNT</button>
-        <button id="btn-fullscreen">FULLSCREEN</button>
+        <div id="button-row">
+            <button id="btn-log" title="set log — toggles CineMate Log, restarts the camera when idle">LOG</button>
+            <button id="btn-unmount" title="unmount">UNMOUNT</button>
+            <button id="btn-fullscreen">FULLSCREEN</button>
+        </div>
     </div>
 </div>
 

@@ -145,7 +145,14 @@
         }
         .badge.hdr { background: var(--hdr-badge); }
         .badge.sdr { background: var(--sdr-badge); }
-        .badge.wav { background: var(--box); }
+        /* simple_gui draws the WAV pill at 14px against clip_name's 18px
+           (~0.78x) -- smaller than clip_name itself, not the generic 0.58
+           top-row badge ratio, which was sized against the full-height RES
+           value instead. */
+        .badge.wav {
+            background: var(--box);
+            font-size: calc(var(--value-size) * 0.34);
+        }
         .badge.wav.recording { background: var(--wav-rec); }
         .badge.hidden { display: none; }
 
@@ -214,6 +221,57 @@
             background: linear-gradient(to bottom right,
                 transparent calc(50% - 1.5px), #000 calc(50% - 1.5px),
                 #000 calc(50% + 1.5px), transparent calc(50% + 1.5px));
+        }
+
+        /* ── mic input VU meter (draw_right_vu_meter) ──────────────────
+           Bars are built once per channel-count change and updated in
+           place afterward (height/colour/peak only) so the CSS transition
+           actually animates instead of snapping on every ~83ms push. Sits
+           at the bottom of the right rail via margin-top:auto, the same
+           bottom-right corner simple_gui anchors it to. */
+        #vu-meter {
+            display: flex;
+            align-items: flex-end;
+            gap: clamp(4px, 0.5vw, 8px);
+            margin-top: auto;
+            padding-top: calc(var(--gap) * 0.6);
+        }
+        #vu-meter.hidden { display: none; }
+        .vu-channel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .vu-track {
+            position: relative;
+            width: clamp(8px, 0.6vw, 14px);
+            height: clamp(70px, 16vh, 180px);
+            background: rgb(50, 50, 50);
+            overflow: hidden;
+        }
+        .vu-fill {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 0%;
+            background: rgb(0, 200, 0);
+            transition: height 90ms linear, background-color 90ms linear;
+        }
+        .vu-peak {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0%;
+            height: 2px;
+            background: #fff;
+            transition: bottom 90ms linear;
+        }
+        .vu-channel .label {
+            font-weight: 400;
+            font-size: var(--label-size);
+            color: var(--label);
         }
 
         #preview-wrap {
@@ -355,6 +413,11 @@
             .section .boxes { flex-direction: row; }
             .group.clip .value { max-width: 85vw; }
             #button-row { justify-content: center; }
+            /* margin-top:auto only means "push to the bottom" in a column
+               rail; in the row-wrapped mobile rail it would just tug the
+               meter into leftover cross-space unevenly, so drop it. */
+            #vu-meter { margin-top: 0; padding-top: 0; }
+            .vu-track { height: clamp(50px, 12vh, 100px); }
         }
     </style>
 </head>
@@ -396,7 +459,10 @@
                 <img id="stream-cam1" class="hidden" alt="Camera 1 preview">
             </div>
         </div>
-        <div class="rail" id="rail-right"></div>
+        <div class="rail hidden" id="rail-right">
+            <div id="rail-right-sections"></div>
+            <div class="hidden" id="vu-meter"></div>
+        </div>
     </div>
 
     <div id="bottom">
@@ -486,7 +552,7 @@
         (typeof v === 'string' && ['true', 'yes', 'on'].includes(v.trim().toLowerCase()));
 
     function fillSelect(sel, options, current) {
-        const wanted = options.map((o) => String(o.value)).join(' ');
+        const wanted = options.map((o) => String(o.value)).join(' ');
         if (sel.dataset.filled !== wanted) {
             sel.innerHTML = '';
             options.forEach((o) => {
@@ -583,14 +649,85 @@
     }
 
     function renderRightRail() {
-        const rail = $('rail-right');
-        if (!V.sensor_cam1) { rail.replaceChildren(); return; }
+        const sections = $('rail-right-sections');
+        if (!V.sensor_cam1) { sections.replaceChildren(); return; }
         const cam = boxes(String(V.sensor_cam1).toUpperCase());
         if (V.aspect_cam1) { cam.push(box(V.aspect_cam1, 'outlined')); }
         if (V.exposure_time) { cam.push(box(V.exposure_time, 'small')); }
         if (V.log_badge_cam1) { cam.push(box(V.log_badge_cam1, 'log small')); }
         warningBoxes().forEach((b) => cam.push(b));
-        rail.replaceChildren(section('CAM1', cam));
+        sections.replaceChildren(section('CAM1', cam));
+    }
+
+    // ── mic input VU meter (draw_right_vu_meter) ────────────────────────
+    // Bar skeleton is rebuilt only when the channel count changes; every
+    // other tick just updates height/colour/peak in place so the CSS
+    // transition actually animates. Matches simple_gui's own thresholds
+    // (<60 green, <85 yellow, else red) and its "L"/"R" vs. numeric
+    // channel labels.
+    function vuColor(level) {
+        if (level < 60) return 'rgb(0, 255, 0)';
+        if (level < 85) return 'rgb(255, 255, 0)';
+        return 'rgb(255, 0, 0)';
+    }
+
+    let vuChannelCount = -1;
+
+    function buildVuChannel(label) {
+        const ch = document.createElement('div');
+        ch.className = 'vu-channel';
+        const track = document.createElement('div');
+        track.className = 'vu-track';
+        const fill = document.createElement('div');
+        fill.className = 'vu-fill';
+        const peak = document.createElement('div');
+        peak.className = 'vu-peak';
+        track.appendChild(fill);
+        track.appendChild(peak);
+        const lbl = document.createElement('span');
+        lbl.className = 'label';
+        lbl.textContent = label;
+        ch.appendChild(track);
+        ch.appendChild(lbl);
+        return ch;
+    }
+
+    function renderVuMeter() {
+        const container = $('vu-meter');
+        const levels = Array.isArray(V.vu_levels) ? V.vu_levels : [];
+
+        if (!levels.length) {
+            show(container, false);
+            vuChannelCount = -1;
+            return;
+        }
+
+        const peaks = Array.isArray(V.vu_peaks) && V.vu_peaks.length === levels.length
+            ? V.vu_peaks : levels;
+
+        if (levels.length !== vuChannelCount) {
+            const labels = levels.length === 2 ? ['L', 'R'] : levels.map((_, i) => String(i + 1));
+            container.replaceChildren(...labels.map(buildVuChannel));
+            vuChannelCount = levels.length;
+        }
+
+        const channels = container.children;
+        for (let i = 0; i < levels.length; i++) {
+            const level = Math.max(0, Math.min(100, Number(levels[i]) || 0));
+            const peak = Math.max(0, Math.min(100, Number(peaks[i]) || 0));
+            const track = channels[i].querySelector('.vu-track');
+            track.querySelector('.vu-fill').style.height = level + '%';
+            track.querySelector('.vu-fill').style.background = vuColor(level);
+            track.querySelector('.vu-peak').style.bottom = peak + '%';
+        }
+
+        show(container, true);
+    }
+
+    function updateRailRightVisibility() {
+        const hasSections = $('rail-right-sections').children.length > 0;
+        const hasVu = !$('vu-meter').classList.contains('hidden');
+        show($('rail-right'), hasSections || hasVu);
     }
 
     // ── preview frame: aspect from the live sensor geometry × anamorphic,
@@ -714,6 +851,8 @@
         renderBottomRow();
         renderLeftRail();
         renderRightRail();
+        renderVuMeter();
+        updateRailRightVisibility();
         renderPreview();
         renderSelectors();
     }

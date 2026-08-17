@@ -918,6 +918,13 @@ class SimpleGUI(threading.Thread):
                 except (TypeError, ValueError):
                     pass
 
+        # update_smoothed_vu_levels() (called each draw tick in run(),
+        # before populate_values()) already keeps these current -- publish
+        # them so the web GUI can draw the same meter draw_right_vu_meter()
+        # draws here, with identical ballistics.
+        values["vu_levels"] = list(self.vu_smoothed)
+        values["vu_peaks"] = list(self.vu_peaks)
+
         # ── Zoom factor (preview punch-in) ────────────────────────────────
         default_zoom = float(self.settings.get("hdmi_display", {}).get("preview", {}).get("default_zoom", 1.0))
         try:

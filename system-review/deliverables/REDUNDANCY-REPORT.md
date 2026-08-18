@@ -166,9 +166,37 @@ before unification**, not after.
 
 ---
 
-## 7. Scope not covered — S04 owes this
+## 7. Agent 2's scope — PARTIALLY covered (added after the S05 session)
 
-**Agent 2's scope was never run:** `services/`, `_test/`, `cinemate-install.sh` (1916 LOC),
+Agent 2 was re-run and died on a usage limit again, but its incremental-write
+discipline preserved **16 findings, F-150..F-165**, before it stopped. They are merged.
+
+**What it found is significant — a whole second duplication cluster around storage:**
+
+| Finding | What |
+|---|---|
+| **F-160** (high) | **Two processes independently mount, fsck and unmount `/media/RAW`** — the recording target — with no lock or ownership protocol |
+| **F-156** (high) | The filesystem→mount-options table is duplicated across those two processes and **the copies disagree** |
+| **F-155** (high) | `YANK_ERRNOS` defined byte-identically in both, no shared module |
+| **F-161** (high) | `services/cinemate-services.Makefile` recurses into three **deleted** directories |
+| **F-164** | **The root cause:** the intended service↔app coupling is a dead `journalctl` tail, so the app re-implements mount detection by polling |
+| **F-165** | Root `CMakeLists.txt` references a non-existent directory — `cmake .` fails immediately |
+
+F-164 is the insight that ties the cluster together: F-155..F-160 are not six independent
+copy-pastes, they are the **symptom of one severed link**. Fixing the coupling collapses
+five findings at once. That reframes the remediation for this cluster entirely.
+
+This also raises the duplicated-truth count and adds F-156 to the already-drifted list
+(now **10 drifted**, not 9).
+
+### Still not covered by agent 2 before it stopped
+
+- Settings keys defined but never read; keys read but absent from the schema
+- Installer idempotency by reading; `shellcheck` warning classes
+- Three-way `wifi_hotspot` duplication — only the `_test/` copy was reached (F-150)
+- IDs F-166..F-199 remain free for the remainder
+
+### Originally unscoped (unchanged) `services/`, `_test/`, `cinemate-install.sh` (1916 LOC),
 `cinemate-update.sh`, `settings.jsonc`/`settings.schema.json` as config-key sources,
 `Makefile`, `scripts/`, `resources/`. Its prompt is ready in
 `agent-reports/S04-AGENT-PROMPTS.md`. Specifically still open:

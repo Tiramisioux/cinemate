@@ -174,11 +174,12 @@ contract is exactly the set of keys both sides agree on.
 | count | 84 | 24 |
 | enforced? | no — `set_value` takes any string | no — macros are plain strings |
 
-**19 keys are genuinely shared. 11 C++ keys have no reference anywhere in cinemate:**
+**19 keys are genuinely shared. 12 C++ key strings have no reference anywhere in
+cinemate** (11 distinct concerns — `raw_crop`/`rawCrop` are one feature)**:**
 six registered handlers that can never fire (`awb`, `shutter_s`, `compress`, `thumbnail`,
 `thumbnail_size`, `raw_crop`/`rawCrop`), three PLL tuning knobs never set (`pll_kp`,
 `pll_ki`, `pll_deadband_us`), and two telemetry keys nobody reads (`pll_phase_err_us`,
-`pll_req_dur_us`). Full analysis in `findings/F-027.md`.
+`pll_req_dur_us`). Full analysis in `findings/F-027.md`; reproducible with `harness/redis_key_diff.py`.
 
 `awb` is the trap: it looks like the white-balance control, but cinemate sends `wb` /
 `wb_user` and drives colour through `cg_rb` plus `--awb`/`--awbgains` launch flags

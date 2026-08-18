@@ -17,6 +17,8 @@ procedure** that settles it. An entry without a runnable procedure is not done.
 | PI-007 | S02 | F-025 | open — **step 1 is a desk task, do it before booking Pi time** |
 | PI-008 | S03 | F-027 | open |
 | PI-009 | S03 | ADR-001 constraint 2 | open — **blocks S08** |
+| PI-010 | S04 | F-253 | open |
+| PI-011 | S04 | F-259 | open |
 
 ---
 
@@ -259,3 +261,50 @@ and will accumulate entries in later sessions:
 
 **S08 in particular must not resolve ADR-001 without queueing the DRM-ownership test** —
 options D and E stand or fall on it.
+
+---
+
+## PI-010 — Does the timecode rounding divergence (F-253) show in the field?
+
+**Belief (confirmed in code, unverified in effect):** "SMPTE base = round(fps)" is derived at
+four sites with three rounding rules — Python banker's rounding
+(`redis_controller.py:334`, `simple_gui.py:794`) vs C++ half-away-from-zero and half-up
+(`cinepi_sound.cpp:154`, `dng_encoder.cpp:1178`). They disagree at half-integer fps.
+
+**Why the Pi is needed:** the divergence is provable statically; whether the operator ever
+*sees* a wrong timecode depends on real capture, real DNG tags and a real WAV.
+
+**Procedure** (written by the agent that found it):
+1. `set fps free 1`, then `set fps 24.5`.
+2. Record ~5 s with audio armed.
+3. Compare: (i) `tc_cam0` and `recording_tc_tod` in Redis, (ii) the SMPTE timecode in the
+   first DNG's TIFF tag, (iii) `TimeReference` in the BWF WAV header.
+4. **Prediction to test:** the DNG/WAV frame field reaches 24 while the Redis/GUI field
+   wraps at 23.
+
+**Settles:** whether F-253 is a latent inconsistency or a live wrong-timecode bug. Note
+F-202 compounds it — that key has two writers as well.
+
+**Expected effort:** 20 minutes.
+
+---
+
+## PI-011 — Does the ISO cold-start fallback (F-259) apply the wrong gain?
+
+**Belief (confirmed in code, unverified in effect):** cinepi-raw states the convention
+"Redis `iso` ÷ 100 = libcamera `AnalogueGain`" twice (`cinepi_controller.cpp:74,403`), and
+its own cold-start fallback at `:76-77` skips the division.
+
+**Why the Pi is needed:** it only manifests on the cold-start path with no `iso` key set,
+and the symptom is an exposure error, which needs a real sensor to observe.
+
+**Procedure:**
+1. `redis-cli DEL iso`, then start cinepi-raw cold.
+2. Read back the applied `AnalogueGain` (cinepi-raw log at verbose ≥2, or the DNG metadata).
+3. Compare against the same start with `iso` explicitly set to a known value.
+4. **Prediction to test:** the fallback path applies a gain ~100× the intended one, or
+   clamps, producing a visibly wrong first exposure.
+
+**Settles:** F-259's severity — latent tidiness issue vs a real cold-start exposure bug.
+
+**Expected effort:** 15 minutes.

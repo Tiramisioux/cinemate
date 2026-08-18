@@ -3,13 +3,15 @@
 **Read this first, every session.** Then read the last `sessions/S##-*.md`, then do what
 `PLAN.md` says is next.
 
-- **Last session:** S01 (2026-08-17) — Bootstrap & census
-- **Current phase:** 0 → A (bootstrap complete, understanding not started)
-- **Next session:** S02 — Architecture map, cinemate (Python)
-- **Ledger branch:** `claude/cinemate-system-review-kickoff-cilicc` — pushed: yes
-- **Findings:** 13 total — 0 critical, 6 high, 4 medium, 2 low, 1 refuted
-- **Open decisions:** ADR-001 (GUI harmonization) — not started, blocked on S07 inventory
-- **Blockers:** none for S02. See D2 below for a Stage-2 blocker.
+- **Last session:** S02 (2026-08-18) — Architecture map, cinemate (Python)
+- **Current phase:** A — Understanding (cinemate mapped; cinepi-raw next)
+- **Next session:** S03 — Architecture map, cinepi-raw (C++)
+- **Ledger branch:** `claude/cinemate-system-review-kickoff-cilicc` — pushed: yes · PR #129 (draft)
+- **Findings:** 26 total — 0 critical, 8 high, 11 medium, 6 low, 1 refuted
+- **Open decisions:** ADR-001 (GUI harmonization) — not started, blocked on S07 inventory.
+  **S02 changed its shape: see F-016** — the state contract spans three languages, not two.
+- **Blockers:** none for S03. See D2 below — S03's subject is a read-only shallow clone on
+  `main`, which constrains what it can establish.
 
 ---
 
@@ -63,6 +65,21 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
 
 ## Ground truth established so far
 
+### From S02 (cinemate architecture) — detail in `deliverables/CODE-MAP-cinemate.md`
+- **`ParameterKey` (`redis_controller.py:18`) is the canonical Redis registry** — 84
+  members. It is convention, not enforcement: `set_value` accepts any string (F-015).
+- **Redis docs are a strict subset of code** — 18 undocumented keys, 0 orphan docs (F-014).
+  The gap clusters around dual-sensor and dynamic-resolution work.
+- **`RedisController` caches locally.** `get_value()` reads the cache, not Redis; a pub/sub
+  listener thread keeps it fresh. Four distinct access patterns exist across the codebase.
+- **Two paths into `CinePiController`, one serialised.** CLI/serial/HTTP share
+  `_dispatch_lock`; GPIO, pots, quad rotary and keyboard bypass it entirely (F-025).
+- **`settings.jsonc` contains controller method names**, resolved by `getattr`. Those 94
+  method names are a user-facing API — renaming one is a breaking change (F-026).
+- **Boot is one 400-line straight-line function**; `cleanup()` sits 300 lines away in the
+  same function and misses four components (F-022, F-023, F-024).
+- **`timekeeper.py` (243 LOC) is entirely dead** — `Timekeeper(` appears nowhere (F-017).
+
 - **Scale.** cinemate: 47 Python files / 19,794 LOC in `src/`, plus a 1,916-LOC installer,
   50 docs, 34 files in `_test/`, 5 systemd service subsystems (one of which,
   `storage-automount.py`, is ~1,123 LOC and was invisible to KICKOFF's `src/`-only table).
@@ -93,13 +110,22 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
   the two remediation options; it does not recount.
 - **Do not recount the docs.** `CENSUS.md` §9 has the complete 50-file inventory, the
   empty files, and the mkdocs nav gaps. S09 starts from there.
-- **Do not repeat the S01 Redis-key grep.** It found 13 of 69 keys and the reason it
-  failed is written up in `CENSUS.md` §7 along with the method that will work.
+- **The Redis key census is DONE** (S02). `ParameterKey` at `redis_controller.py:18` is the
+  registry; the docs diff is F-014. Do not re-derive it. `CENSUS.md` §7 is superseded.
+- **Do not re-trace `main.py` boot or shutdown** — `deliverables/CODE-MAP-cinemate.md` §3–4
+  has the 28-step construction order and the full thread table with verified citations.
+- **Do not re-map the control surfaces** — CODE-MAP §5 has both dispatch paths.
 - **Do not look for the 8 uncommitted files** (D3) or the LFS pointer corruption (D4).
 - **Do not re-read `KICKOFF.md` §6.2's C++ table as current.** It describes a different
   branch than the one available. (D2)
 
 ## Watch items
+
+- **PI-007 step 1 is a desk task, not a Pi task.** Reading `cinepi_controller.py` for
+  internal locking may settle F-025 for free. Do it before booking hardware time.
+- **`cinepi_controller.py` (2626 LOC) internals are still untraced** — deliberately
+  deferred at S02's budget line. It is the largest remaining unknown in the Python side and
+  it gates F-025's severity.
 
 - `CENSUS.md` §12 lists everything S01 deliberately left unestablished. Check it before
   assuming coverage.

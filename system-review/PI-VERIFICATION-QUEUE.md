@@ -13,6 +13,8 @@ procedure** that settles it. An entry without a runnable procedure is not done.
 | PI-003 | S01 | census §11 | open |
 | PI-004 | S01 | F-003 | open |
 | PI-005 | S01 | census §11 | open |
+| PI-006 | S02 | F-016 | open |
+| PI-007 | S02 | F-025 | open — **step 1 is a desk task, do it before booking Pi time** |
 
 ---
 
@@ -128,23 +130,6 @@ that happens to be masked because pkg-config always succeeds today.
 
 ---
 
-## Notes on scope
-
-Per KICKOFF §2.1, these categories are **unverifiable in this review by construction**
-and will accumulate entries in later sessions:
-
-- timing and refresh cadence (S07/S08 — GUI redraw rate)
-- thermals and sustained throughput
-- DRM/framebuffer ownership and compositing (S08 — decisive for ADR-001 options D and E)
-- sensor behavior and mode switching
-- storage throughput and the RAM auto-stop at UHD
-- audio/video sync
-
-**S08 in particular must not resolve ADR-001 without queueing the DRM-ownership test** —
-options D and E stand or fall on it.
-
----
-
 ## PI-006 — Does the audio VU meter still render end to end?
 
 **Belief (confirmed statically):** `audio_vu` is written by cinepi-raw
@@ -192,3 +177,20 @@ genuinely simultaneously, which cannot be produced off-hardware.
 **Settles:** F-025's severity. Step 1 may settle it for free.
 
 **Expected effort:** 30 minutes on the Pi, but do step 1 first — it is a desk task.
+
+---
+
+## Notes on scope
+
+Per KICKOFF §2.1, these categories are **unverifiable in this review by construction**
+and will accumulate entries in later sessions:
+
+- timing and refresh cadence (S07/S08 — GUI redraw rate)
+- thermals and sustained throughput
+- DRM/framebuffer ownership and compositing (S08 — decisive for ADR-001 options D and E)
+- sensor behavior and mode switching
+- storage throughput and the RAM auto-stop at UHD
+- audio/video sync
+
+**S08 in particular must not resolve ADR-001 without queueing the DRM-ownership test** —
+options D and E stand or fall on it.

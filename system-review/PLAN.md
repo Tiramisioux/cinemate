@@ -8,8 +8,8 @@ Update this file as reality diverges. Divergence is expected, not failure.
 | Session | Title | Status |
 |---|---|---|
 | S01 | Bootstrap & census | ✅ done 2026-08-17 |
-| S02 | Architecture map — cinemate (Python) | ⏭ next |
-| S03 | Architecture map — cinepi-raw (C++) | pending |
+| S02 | Architecture map — cinemate (Python) | ✅ done 2026-08-18 |
+| S03 | Architecture map — cinepi-raw (C++) | ⏭ next |
 | S04 | Redundancy & dead code sweep | pending |
 | S05 | Readability, comments & structure | pending |
 | S06 | Standards, consistency & tooling | pending |
@@ -39,18 +39,19 @@ S02's first task. See `CENSUS.md` §7.
 
 ## Phase A — Understanding
 
-### S02 · Architecture map — cinemate (Python) — ⏭ NEXT
+### S02 · Architecture map — cinemate (Python) — ✅ DONE
 
-- **First: complete the Redis key census** that S01 could not (CENSUS.md §7). Read
-  `redis_controller.py` (411 LOC) in full to learn the access API, then trace callers.
-- Trace `src/main.py` boot: construction order, thread inventory and lifecycle, shutdown
-  path, who owns which state, where Redis is written vs. read.
-- Map the control surfaces (GPIO, rotary, serial, CLI, web API, keyboard) onto the
-  dispatcher, and the dispatcher onto the controller.
-- Name the seams — the places a change is *supposed* to be made.
-- → `deliverables/CODE-MAP-cinemate.md`. Written for someone who has never seen the repo.
+- ~~Complete the Redis key census~~ ✅ `ParameterKey` is the registry; F-014/F-015.
+- ~~Trace `src/main.py` boot~~ ✅ 28-step order, full thread table, shutdown gaps F-022..F-024.
+- ~~Map the control surfaces onto the dispatcher~~ ✅ two paths, one lock; F-025/F-026.
+- ~~Name the seams~~ ✅ CODE-MAP §7.
+- → `deliverables/CODE-MAP-cinemate.md` ✅
 
-### S03 · Architecture map — cinepi-raw (C++)
+**Deferred out of S02 at the budget line:** `cinepi_controller.py` (2626 LOC) internals,
+`redis_listener.py` (2084 LOC) internals. Neither is S03's subject. Fold the controller
+read into PI-007 step 1 (a desk task) or into S05.
+
+### S03 · Architecture map — cinepi-raw (C++) — ⏭ NEXT
 
 - Trace `cinepi/cinepi_raw.cpp` → manager/controller/state → capture loop →
   `dng_encoder` / `cinepi_sound` → preview stages → Redis bridge.
@@ -58,6 +59,12 @@ S02's first task. See `CENSUS.md` §7.
 - Note where behavior depends on the forked libcamera without auditing libcamera.
 - **Also resolve:** how `cinepi_audio_capture.cpp` and `lj92.c` enter the build — neither
   is in `cinepi/meson.build`'s source list (CENSUS.md §3).
+- **Carry F-016 forward:** `cinepi_sound.cpp:22` declares `RECORDER_VU_REDIS_KEY = "audio_vu"`,
+  hand-mirrored in `simple_gui.py:21`. While tracing the Redis bridge, **enumerate every
+  Redis key cinepi-raw writes or reads** and diff against cinemate's 84-member
+  `ParameterKey`. That cross-repo key diff is the single most valuable thing S03 can
+  produce for ADR-001, and nobody has it.
+- Remember the constraint: shallow read-only clone on `main`, no history (STATE.md D2).
 - → `deliverables/CODE-MAP-cinepi-raw.md`
 
 ---

@@ -160,7 +160,7 @@ This is the part most worth internalising. **There are two independent paths to
  ├──────────────────┤  │        (direct .method() calls)
  │ Quad rotary (I²C)│──┤
  ├──────────────────┤  │
- │ Keyboard         │──┘
+ │ Keyboard  (DEAD) │──┘   ← class never instantiated, F-031
  └──────────────────┘
 ```
 
@@ -175,8 +175,10 @@ ordering guarantee CLI and serial had by construction.
   invoked at `serial_handler.py:175`
 - Web: `command_executor` is passed into `create_app(...)`, `main.py:932`
 
-**Path B** — four hardware surfaces hold a `cinepi_controller` reference and call methods
-on it directly. None of them touches `_dispatch_lock` (grep confirms the lock appears
+**Path B** — hardware surfaces hold a `cinepi_controller` reference and call methods on it
+directly. **Three are live** (GPIO, analog pots, quad rotary); the fourth, `keyboard.py`,
+is dead — class `Keyboard` is never instantiated and `module.keyboard` is never imported
+(F-031, found in S03). An earlier revision of this map listed it as live; that was wrong. None of them touches `_dispatch_lock` (grep confirms the lock appears
 only in `cli_commands.py`). So a GPIO button press and an HTTP request can enter the
 controller concurrently, with only the latter serialised. Whether that is actually
 harmful depends on controller-internal locking — **not established in S02, and it needs

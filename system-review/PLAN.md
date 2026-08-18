@@ -10,8 +10,8 @@ Update this file as reality diverges. Divergence is expected, not failure.
 | S01 | Bootstrap & census | ✅ done 2026-08-17 |
 | S02 | Architecture map — cinemate (Python) | ✅ done 2026-08-18 |
 | S03 | Architecture map — cinepi-raw (C++) | ✅ done 2026-08-18 |
-| S04 | Redundancy & dead code sweep | ⚠ attempted 2026-08-18, **blocked on usage limit — retry** |
-| S05 | Readability, comments & structure | pending |
+| S04 | Redundancy & dead code sweep | ✅ done 2026-08-18 (attempt 2) — **agent 2 scope still owed** |
+| S05 | Readability, comments & structure | ⏭ next — **run agent 2's S04 scope first** |
 | S06 | Standards, consistency & tooling | pending |
 | S07 | GUI surface inventory & state-model extraction | pending |
 | S08 | GUI harmonization evaluation → ADR-001 | pending |
@@ -71,13 +71,13 @@ read into PI-007 step 1 (a desk task) or into S05.
 
 ## Phase B — Critical analysis
 
-### S04 · Redundancy & dead code sweep *(agent fan-out, both repos)* — ⚠ RETRY NEEDED
+### S04 · Redundancy & dead code sweep *(agent fan-out, both repos)* — ✅ DONE (attempt 2)
 
-> **Attempt 1 (2026-08-18) produced nothing.** All four agents died on an account session
-> limit in their first step. Prompts are saved verbatim in
-> `agent-reports/S04-AGENT-PROMPTS.md` — the retry is copy-paste. F-100..F-299 unconsumed.
-> If capacity is uncertain, run **two agents at a time**; agents 1 and 4 are highest value.
-> The one thing attempt 1 delivered was `harness/redis_key_diff.py`.
+> **Attempt 1 produced nothing** (usage limit). **Attempt 2 delivered** with 2 agents plus
+> one scope run inline: 41 net new findings, `deliverables/REDUNDANCY-REPORT.md`.
+>
+> **STILL OWED: agent 2's scope** — services, `_test/`, installer, config keys. Never run.
+> Prompt ready in `agent-reports/S04-AGENT-PROMPTS.md`. Run it at the start of S05.
 
 - Unreferenced files, unreachable code, dead branches, commented-out blocks.
 - Duplicated logic: same computation in two places; constants duplicated across the

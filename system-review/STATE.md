@@ -3,23 +3,21 @@
 **Read this first, every session.** Then read the last `sessions/S##-*.md`, then do what
 `PLAN.md` says is next.
 
-- **Last session:** S04 attempt 1 (2026-08-18) — **BLOCKED, agent fan-out failed on an
-  account session limit. No agent output. S04 must be re-run.**
-  See `sessions/S04-attempt-blocked.md`.
-- **Current phase:** A complete → B started but not delivered.
-- **Next session:** **S04 (retry)** — prompts ready in `agent-reports/S04-AGENT-PROMPTS.md`
+- **Last session:** S04 attempt 2 (2026-08-18) — Redundancy sweep **delivered**,
+  one scope outstanding. See `sessions/S04-redundancy-sweep.md`.
+- **Current phase:** B — Critical analysis
+- **Next session:** **S05 — Readability, comments & structure**, but *first* run agent 2's
+  unrun S04 scope (services / `_test/` / installer). Prompt ready in
+  `agent-reports/S04-AGENT-PROMPTS.md`; it is one agent's worth of work.
 - **Ledger branch:** `claude/cinemate-system-review-kickoff-cilicc` — pushed: yes · PR #129 (draft)
-- **Findings:** 33 total — 0 critical, 11 high, 15 medium, 6 low, 1 refuted.
-  **F-100..F-299 are unconsumed** — the S04 agents produced nothing, so those blocks are
-  free and the retry can reuse them as allocated.
+- **Findings:** 76 total. F-100..F-127, F-200..F-202, F-250..F-261 added by S04.
+  Free ID blocks: F-128..F-149, F-203..F-249, F-262..F-299.
 - **Open decisions:** ADR-001 (GUI harmonization) — not started.
   **S03 supplied its hardest evidence and its hardest blocker.** DRM master exclusivity is
   now confirmed *from cinepi-raw's own comment* (`dualHdmiPreviewStage.cpp:5-18`), which
   likely kills options D and E. But **PI-009 blocks S08**: how the DRM preview and the
   fbdev GUI actually compose cannot be determined from source.
-- **Blockers:** S04's fan-out is capacity-bound, not knowledge-bound — retry when the
-  usage window allows, and consider 2 agents at a time rather than 4.
-  **PI-009 blocks S08** — do not let S08 answer KICKOFF §7
+- **Blockers:** **PI-009 blocks S08** — do not let S08 answer KICKOFF §7
   constraint 2 from reasoning.
 
 ---
@@ -73,6 +71,21 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
 ---
 
 ## Ground truth established so far
+
+### From S04 (redundancy sweep) — detail in `deliverables/REDUNDANCY-REPORT.md`
+- **Duplicated truth is systemic: 16 instances, 9 already drifted.** This is the review's
+  central structural finding and it constrains ADR-001 — see the deliverable §6.
+- **F-118 is the proof it costs something:** a Python↔JS duplicated action catalogue offers
+  `set_log` where the method is `set_log_encode`, so a settings-editor button silently
+  no-ops **today**.
+- **≈3,250 LOC of confirmed-dead source** is deletable with no hardware (deliverable §2).
+- **Module reachability in `src/` is exhausted** — exactly 4 of 48 unreachable (F-122).
+- **No triple sensor table.** `resources/sensors.json` is a genuine single source; cinepi-raw
+  holds no sensor data. Hypothesis disproved — do not re-hunt.
+- **`settings.schema.json` agrees with `config_loader.py` on all 41 comparable defaults** —
+  the viable origin for defaults unification (F-251).
+- **Pattern matching has under-reported three times now** (`cinepi_ready_<port>`, `tc_key`,
+  `from module import X`). Treat "no grep hit" as a hypothesis, never a result.
 
 ### Tooling now in the ledger
 - **`harness/redis_key_diff.py` works** and reproduces F-027: 84 / 32 / 19 shared / 12
@@ -147,6 +160,9 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
 - **Do not re-map the control surfaces** — CODE-MAP §5 has both dispatch paths. Note the
   keyboard surface is **dead** (F-031); an early revision of that map said otherwise.
 - **Do not redo the cross-repo Redis key diff** — S03 did it, `findings/F-027.md`.
+- **Do not re-run module reachability in `src/`** — F-122 is the corrected, exhaustive result.
+- **Do not re-hunt a duplicated sensor table** — disproved in S04.
+- **Do not re-verify F-100..F-127, F-200..F-202, F-250..F-261** — all merged with citations.
 - **Do not re-derive the cinepi-raw build graph** — CODE-MAP-cinepi-raw §2. `lj92.c` is
   dead (F-029); `cinepi_audio_capture.cpp` is a separate executable, not a missing source.
 - **Do not look for the 8 uncommitted files** (D3) or the LFS pointer corruption (D4).

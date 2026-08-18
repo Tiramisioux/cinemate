@@ -142,3 +142,53 @@ and will accumulate entries in later sessions:
 
 **S08 in particular must not resolve ADR-001 without queueing the DRM-ownership test** —
 options D and E stand or fall on it.
+
+---
+
+## PI-006 — Does the audio VU meter still render end to end?
+
+**Belief (confirmed statically):** `audio_vu` is written by cinepi-raw
+(`cinepi_sound.cpp:22`) and read by the HDMI GUI (`simple_gui.py:1166-1172`), with the key
+name hand-duplicated on both sides (F-016).
+
+**Why the Pi is needed:** nothing else exercises this contract. There is no test, and the
+read path swallows failure (`except: return None`), so a broken contract is invisible
+off-hardware.
+
+**Procedure:**
+1. Arm audio capture and start a take.
+2. Confirm the VU meter renders and moves on the HDMI GUI.
+3. `redis-cli GET audio_vu` during the take — confirm non-empty and changing.
+4. Deliberately break it: `redis-cli DEL audio_vu` mid-take. Confirm the expected
+   degradation (meter disappears) and note whether *anything* is logged.
+
+**Settles:** whether F-016's silent-failure claim is real, and whether the degradation is
+acceptable or needs a visible warning (KICKOFF §9 principle 3).
+
+**Expected effort:** 15 minutes.
+
+---
+
+## PI-007 — Is the unserialised control path (F-025) actually racy?
+
+**Belief (probable, not confirmed):** CLI, serial and HTTP commands are serialised under
+`CommandExecutor._dispatch_lock`, but GPIO buttons, analog pots, the quad rotary and the
+keyboard call `CinePiController` methods directly without it. Whether this is harmful
+depends on locking *inside* `CinePiController`, which S02 did not trace (2626 LOC).
+
+**Why the Pi is needed:** this is a concurrency question. It needs real inputs arriving
+genuinely simultaneously, which cannot be produced off-hardware.
+
+**Procedure:**
+1. First, off-Pi: read `cinepi_controller.py` for internal locking. **If it locks
+   internally, F-025 downgrades to a style issue and this entry can be closed without
+   hardware.** Do this before booking Pi time.
+2. If it does not lock: while turning an ISO pot continuously, issue rapid
+   `set iso` commands over the CLI. Watch for the Redis value disagreeing with both
+   inputs, or for the GUI and the recorder disagreeing.
+3. Repeat with a GPIO resolution switch versus an HTTP `set_resolution` — the
+   higher-stakes pairing, since resolution changes restart the camera.
+
+**Settles:** F-025's severity. Step 1 may settle it for free.
+
+**Expected effort:** 30 minutes on the Pi, but do step 1 first — it is a desk task.

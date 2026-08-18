@@ -9,8 +9,8 @@ Update this file as reality diverges. Divergence is expected, not failure.
 |---|---|---|
 | S01 | Bootstrap & census | ✅ done 2026-08-17 |
 | S02 | Architecture map — cinemate (Python) | ✅ done 2026-08-18 |
-| S03 | Architecture map — cinepi-raw (C++) | ⏭ next |
-| S04 | Redundancy & dead code sweep | pending |
+| S03 | Architecture map — cinepi-raw (C++) | ✅ done 2026-08-18 |
+| S04 | Redundancy & dead code sweep | ⏭ next |
 | S05 | Readability, comments & structure | pending |
 | S06 | Standards, consistency & tooling | pending |
 | S07 | GUI surface inventory & state-model extraction | pending |
@@ -51,7 +51,7 @@ S02's first task. See `CENSUS.md` §7.
 `redis_listener.py` (2084 LOC) internals. Neither is S03's subject. Fold the controller
 read into PI-007 step 1 (a desk task) or into S05.
 
-### S03 · Architecture map — cinepi-raw (C++) — ⏭ NEXT
+### S03 · Architecture map — cinepi-raw (C++) — ✅ DONE
 
 - Trace `cinepi/cinepi_raw.cpp` → manager/controller/state → capture loop →
   `dng_encoder` / `cinepi_sound` → preview stages → Redis bridge.
@@ -71,7 +71,7 @@ read into PI-007 step 1 (a desk task) or into S05.
 
 ## Phase B — Critical analysis
 
-### S04 · Redundancy & dead code sweep *(agent fan-out, both repos)*
+### S04 · Redundancy & dead code sweep *(agent fan-out, both repos)* — ⏭ NEXT
 
 - Unreferenced files, unreachable code, dead branches, commented-out blocks.
 - Duplicated logic: same computation in two places; constants duplicated across the
@@ -86,6 +86,14 @@ read into PI-007 step 1 (a desk task) or into S05.
   - the two cinepi-raw root patch files (see PI-003)
   - three-way `wifi_hotspot` duplication (`src/module/`, `services/`, `_test/`)
   - `usb_monitor.py` opening its own Redis client at 4 sites instead of reusing the injected one
+- **Already confirmed dead by S02/S03 — do NOT re-investigate, just fold into the report:**
+  `timekeeper.py` (243 LOC, F-017) · `keyboard.py` (F-031) · `src/stream.py` (F-013) ·
+  `handle_vu_output()` (F-018) · `lj92.c`+`lj92.h` (1218 LOC, F-029) ·
+  `_mjpegPreviewStage.cpp` (F-012) · 4 unreferenced HTML templates (F-001)
+- **Still open from S02/S03 — these are the real S04 work:**
+  `parameters.py`, `rotary_encoder.py`, `app/raw_files.py`, `app/boot_config.py`;
+  the 11 orphaned Redis keys (F-027, see PI-008); the 7 unused installer packages (F-032);
+  the two cinepi-raw patch files (PI-003); `cinepi_state.cpp`/`cinepi_manager.*` unread
 - ID blocks: agent1 F-100.., agent2 F-150.., agent3 F-200.., agent4 F-250..
 - → `deliverables/REDUNDANCY-REPORT.md`
 

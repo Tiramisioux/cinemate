@@ -3,15 +3,18 @@
 **Read this first, every session.** Then read the last `sessions/S##-*.md`, then do what
 `PLAN.md` says is next.
 
-- **Last session:** S02 (2026-08-18) — Architecture map, cinemate (Python)
-- **Current phase:** A — Understanding (cinemate mapped; cinepi-raw next)
-- **Next session:** S03 — Architecture map, cinepi-raw (C++)
+- **Last session:** S03 (2026-08-18) — Architecture map, cinepi-raw (C++)
+- **Current phase:** A complete → B. Both repos are now mapped.
+- **Next session:** S04 — Redundancy & dead code sweep *(the fan-out session)*
 - **Ledger branch:** `claude/cinemate-system-review-kickoff-cilicc` — pushed: yes · PR #129 (draft)
-- **Findings:** 26 total — 0 critical, 8 high, 11 medium, 6 low, 1 refuted
-- **Open decisions:** ADR-001 (GUI harmonization) — not started, blocked on S07 inventory.
-  **S02 changed its shape: see F-016** — the state contract spans three languages, not two.
-- **Blockers:** none for S03. See D2 below — S03's subject is a read-only shallow clone on
-  `main`, which constrains what it can establish.
+- **Findings:** 33 total — 0 critical, 11 high, 15 medium, 6 low, 1 refuted
+- **Open decisions:** ADR-001 (GUI harmonization) — not started.
+  **S03 supplied its hardest evidence and its hardest blocker.** DRM master exclusivity is
+  now confirmed *from cinepi-raw's own comment* (`dualHdmiPreviewStage.cpp:5-18`), which
+  likely kills options D and E. But **PI-009 blocks S08**: how the DRM preview and the
+  fbdev GUI actually compose cannot be determined from source.
+- **Blockers:** none for S04. **PI-009 blocks S08** — do not let S08 answer KICKOFF §7
+  constraint 2 from reasoning.
 
 ---
 
@@ -65,6 +68,22 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
 
 ## Ground truth established so far
 
+### From S03 (cinepi-raw architecture) — detail in `deliverables/CODE-MAP-cinepi-raw.md`
+- **cinepi-raw is a fork of `rpicam-apps`.** `cinepi/` is the product; `core/`, `preview/`,
+  `encoder/`, `apps/` are upstream.
+- **Three executables**, not one: `cinepi-raw`, `cinepi-audio-capture` (separate process,
+  supervised via fork/popen), and `phase_lock_core_test` (wired into `meson test`).
+- **The cross-repo contract is the `cp_controls` channel.** cinepi-raw's registry is 24
+  `CONTROL_KEY_*` macros (`cinepi_state.hpp:23-52`) against cinemate's 84-member enum.
+  ≥19 shared, ≥11 orphaned (F-027). Counts are lower bounds — dynamic keys exist.
+- **`cinepi_ready_<port>` is a live handshake in neither registry** and is a fifth Redis
+  access pattern (glob scan through the raw client).
+- **DRM master is exclusive and cinepi-raw holds it.** The project already worked around
+  this once for dual-sensor, using SysV shared memory rather than sharing the display.
+- **The GUI and the preview use two different kernel interfaces** — DRM/KMS vs legacy
+  fbdev. How they compose is unknown (PI-009).
+- **The RAM auto-stop is `cinepi_raw.cpp:200-212`** — a hard stop on the record path.
+
 ### From S02 (cinemate architecture) — detail in `deliverables/CODE-MAP-cinemate.md`
 - **`ParameterKey` (`redis_controller.py:18`) is the canonical Redis registry** — 84
   members. It is convention, not enforcement: `set_value` accepts any string (F-015).
@@ -114,7 +133,11 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
   registry; the docs diff is F-014. Do not re-derive it. `CENSUS.md` §7 is superseded.
 - **Do not re-trace `main.py` boot or shutdown** — `deliverables/CODE-MAP-cinemate.md` §3–4
   has the 28-step construction order and the full thread table with verified citations.
-- **Do not re-map the control surfaces** — CODE-MAP §5 has both dispatch paths.
+- **Do not re-map the control surfaces** — CODE-MAP §5 has both dispatch paths. Note the
+  keyboard surface is **dead** (F-031); an early revision of that map said otherwise.
+- **Do not redo the cross-repo Redis key diff** — S03 did it, `findings/F-027.md`.
+- **Do not re-derive the cinepi-raw build graph** — CODE-MAP-cinepi-raw §2. `lj92.c` is
+  dead (F-029); `cinepi_audio_capture.cpp` is a separate executable, not a missing source.
 - **Do not look for the 8 uncommitted files** (D3) or the LFS pointer corruption (D4).
 - **Do not re-read `KICKOFF.md` §6.2's C++ table as current.** It describes a different
   branch than the one available. (D2)
@@ -123,6 +146,11 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
 
 - **PI-007 step 1 is a desk task, not a Pi task.** Reading `cinepi_controller.py` for
   internal locking may settle F-025 for free. Do it before booking hardware time.
+- **The DNG metadata path (timing → DNG tags) was in S03's brief and was not done.**
+  `dng_save()` and `dng_encoder.cpp` (1521 LOC) remain untraced. Blocks nothing yet.
+- **The F-027 key-diff harness script is unwritten.** It would turn the cross-repo drift
+  into a CI check. Needs no hardware; belongs in `harness/`. Highest value-per-effort item
+  currently unclaimed.
 - **`cinepi_controller.py` (2626 LOC) internals are still untraced** — deliberately
   deferred at S02's budget line. It is the largest remaining unknown in the Python side and
   it gates F-025's severity.

@@ -15,6 +15,8 @@ procedure** that settles it. An entry without a runnable procedure is not done.
 | PI-005 | S01 | census §11 | open |
 | PI-006 | S02 | F-016 | open |
 | PI-007 | S02 | F-025 | open — **step 1 is a desk task, do it before booking Pi time** |
+| PI-008 | S03 | F-027 | open |
+| PI-009 | S03 | ADR-001 constraint 2 | open — **blocks S08** |
 
 ---
 
@@ -177,6 +179,69 @@ genuinely simultaneously, which cannot be produced off-hardware.
 **Settles:** F-025's severity. Step 1 may settle it for free.
 
 **Expected effort:** 30 minutes on the Pi, but do step 1 first — it is a desk task.
+
+---
+
+## PI-008 — Which of the 11 orphaned Redis keys actually move?
+
+**Belief (confirmed statically):** 11 keys cinepi-raw handles have zero references in
+cinemate (F-027). Six are control handlers that cannot fire, three are tuning knobs never
+set, two are telemetry nobody reads.
+
+**Why the Pi is needed:** static analysis proves cinemate never writes them. It cannot
+prove nobody does — these are reachable by hand with `redis-cli`, and groups B/C read like
+a deliberate manual tuning surface. Only observation distinguishes "vestigial" from
+"undocumented debug feature".
+
+**Procedure:**
+1. `redis-cli MONITOR > /tmp/redis-trace.txt` for a full session: boot, a take, a
+   resolution change, shutdown.
+2. `grep -oE '"(awb|shutter_s|compress|thumbnail|thumbnail_size|raw_crop|rawCrop|pll_kp|pll_ki|pll_deadband_us|pll_phase_err_us|pll_req_dur_us)"' /tmp/redis-trace.txt | sort | uniq -c`
+3. Anything with a nonzero count has a writer this review did not find — investigate that
+   writer before concluding anything.
+4. Ask the operator directly whether the PLL knobs are a tuning workflow they use.
+
+**Settles:** whether F-027's groups are dead code to remove or an undocumented feature to
+document. Step 4 may settle most of it faster than step 1.
+
+**Expected effort:** 20 minutes, plus one question to the operator.
+
+---
+
+## PI-009 — How do the DRM preview and the fbdev GUI actually compose?
+
+**Belief (partly confirmed):** cinepi-raw draws preview through DRM/KMS
+(`drm_preview.cpp:337,350`) and holds DRM master, which
+`dualHdmiPreviewStage.cpp:5-18` states is exclusive per GPU. cinemate's HDMI GUI writes the
+legacy fbdev node directly (`framebuffer.py:84,136`). Two different kernel interfaces to
+one display.
+
+**Why the Pi is needed:** **this is the single most important unverified fact in the
+review.** Source establishes *that* two interfaces are in use. It cannot establish z-order,
+whether the GUI occupies a genuine overlay plane or races the same scanout buffer, what
+happens on mode change, or whether tearing occurs. None of that is inferable.
+
+**This blocks ADR-001.** KICKOFF §7 constraint 2 asks exactly this, and S08 must not answer
+it from reasoning. Options D and E depend on it entirely; even option C's PIL backend
+depends on the answer holding.
+
+**Procedure:**
+1. With cinepi-raw running and the GUI painting:
+   `cat /sys/class/graphics/fb0/{name,virtual_size,bits_per_pixel,stride}`
+2. `sudo cat /sys/kernel/debug/dri/0/state` — record planes, CRTCs, z-order, formats.
+3. `ls -l /sys/class/drm/*/` and identify which connector/CRTC is driving HDMI.
+4. Confirm whether `fb0` is the DRM fbdev emulation (`name` typically reports the DRM
+   driver) or an independent device.
+5. Stop cinemate's GUI only, leaving cinepi-raw running. Does preview still paint? Then the
+   reverse. Record both.
+6. Change resolution mid-session (which restarts the camera) and watch whether the GUI
+   survives the mode change or has to repaint.
+
+**Settles:** ADR-001 constraint 2, and the feasibility of options D and E. Step 5 is the
+decisive one — it establishes whether the two are genuinely independent layers or one is
+overwriting the other.
+
+**Expected effort:** 45 minutes. **Do this before S08 if at all possible.**
 
 ---
 

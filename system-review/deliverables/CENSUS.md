@@ -204,8 +204,22 @@ stream.py         → app (BROKEN), cinepi_controller, redis_controller, simple_
   `redis_controller`, `storage_profiles`, `status_broadcast`, `web_api_settings`,
   `app/boot_config`, `app/raw_files`. These are the cheapest units to test.
 
+> ### ⚠ CORRECTION (S04) — this graph had a real bug, not just the caveat below
+>
+> The regex read `from module import parameters` as an edge to **`module`**, not to
+> `module.parameters`. Three live modules therefore appeared to have no inbound edge
+> (`cinepi_controller.py:25`, `quad_rotary_controller.py:14`, `analog_controls.py:10` all
+> import `parameters` that way). A second miss: `app/raw_files.py` and `app/boot_config.py`
+> are reached by **relative** imports inside `create_app`.
+>
+> **`parameters.py`, `app/raw_files.py`, `app/boot_config.py`, `mediator.py` and `utils.py`
+> are LIVE.** The "candidate dead" list below is wrong about all five.
+> The corrected result is F-122: exactly **4 of 48** modules are unreachable from
+> `main.py`. Use that, not this section.
+
 **Method caveat:** graph built by regex over `import`/`from` lines. It misses dynamic
-imports (`importlib`, `__import__`) and imports inside function bodies. `stream.py`'s
+imports (`importlib`, `__import__`), imports inside function bodies, relative imports, and
+— as the correction above records — `from <pkg> import <module>` form. `stream.py`'s
 function-body imports were caught only because they are `from module.x import Y` at
 column 4. Treat absence of an edge as *suggestive*, not proof.
 

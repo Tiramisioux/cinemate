@@ -982,3 +982,205 @@ warning-suppression the shim appears to offer does nothing.
 **Action:** delete the seven above except `_validate_wav_length`, which should be wired in or
 consciously dropped. Leave the GPIO shim. **Needs Pi:** no for the deadness. **Yes** to wire
 up `_validate_wav_length` meaningfully — it needs a real take with audio to test against.
+
+### F-126 — `_as_bool` implemented four times, with four different answers
+
+| F-126 | high | confirmed | cinemate | correctness | Four divergent boolean coercions for the same settings values; `_as_bool(2)` is `True` in one and `False` in three | src/module/gpio_input.py:163 |
+
+The same helper name is defined in four modules, all coercing settings/Redis values to bool,
+none shared:
+
+| Location | `None` | `2` (int) | Extra parameter |
+|---|---|---|---|
+| `src/module/cinepi_controller.py:345` | `False` (via `str(None)` = `"none"`) | **`False`** | — |
+| `src/module/dynamic_resolution.py:43` | `False` (via `str(value or "")`) | **`False`** | — |
+| `src/module/gpio_input.py:163` | **`default`** (caller-supplied, often `True`) | **`True`** | `default=False` |
+| `src/module/mediator.py:80` | `False` (explicit) | **`False`** | — |
+
+Three implementations stringify and test membership in `("1","true","yes","on")`; the fourth
+(`src/module/gpio_input.py:167-168`) short-circuits numeric types with `bool(value)`. So for
+any integer other than 0 or 1 the four disagree:
+
+- `_as_bool(2)` → `True` under `gpio_input`, `False` under the other three, because `str(2)`
+  is `"2"` which is not in the membership set.
+
+They also disagree on `None`. Three return `False`; `gpio_input` returns its `default`
+argument, and its callers pass `default=True` — for example
+`self._as_bool(encoder_config.get('enabled', True), default=True)` at
+`src/module/gpio_input.py:102` and `self._as_bool(encoder_config.get('pull_up'), default=True)`
+at `src/module/gpio_input.py:137`. So a missing or null `enabled` key means *enabled* in the
+GPIO layer and *disabled* everywhere else.
+
+**Why this matters concretely.** These four all parse the same `settings.jsonc` document.
+`gpio_input._as_bool` decides whether a rotary encoder or button is enabled
+(`src/module/gpio_input.py:102`) and whether its pull-up is on (`src/module/gpio_input.py:137`);
+`cinepi_controller._as_bool` and `dynamic_resolution._as_bool` decide feature flags on the
+same settings tree. A user who writes `"enabled": 2` — or any truthy-looking non-1 integer —
+gets a control that the GPIO layer arms and the rest of the system believes is off. The
+failure is silent in both directions and would present as "the button works but the feature
+it toggles doesn't".
+
+Severity **high** on the maintenance-trap criterion: four copies of a coercion is the exact
+shape that produces a bug the next time anyone touches settings parsing, and one copy has
+already diverged on two axes.
+
+**Action:** promote a single implementation to `config_loader.py` (which already owns
+`_coerce_bool_setting`, defined at `src/module/config_loader.py:118` and used at
+`src/module/config_loader.py:138` and `:171`) and have all four call it.
+Decide deliberately what `None` and non-0/1 integers mean, and write that down.
+**Risk:** medium — unifying will *change behaviour* wherever the divergent path was being
+relied on, so the `gpio_input` `default=True` call sites at `src/module/gpio_input.py:102`
+and `:137` need their semantics preserved explicitly.
+**Needs Pi:** no to confirm the divergence (pure source comparison). **Yes** to confirm no
+deployed `settings.jsonc` relies on it: `grep -n '"enabled"' /home/pi/cinemate/settings.jsonc`
+and check for any value that is not `true`/`false`.
+
+### F-127 — Hand-rolled observer `Event` class implemented four times
+
+| F-127 | medium | confirmed | cinemate | redundancy | Four separate `class Event` definitions with divergent error handling and signatures | src/module/usb_monitor.py:17 |
+
+Four modules each define their own `class Event`:
+
+| Location | `emit` signature | Error handling | `unsubscribe`? |
+|---|---|---|---|
+| `src/module/usb_monitor.py:17` | `emit(self, *args)` | try/except → `logging.error` + `traceback.print_exc()` | no |
+| `src/module/ssd_monitor.py:58` | `emit(self, *args)` | try/except → `logging.exception` | no |
+| `src/module/cinepi_multi.py:113` | `emit(self, data=None)` | **none — one raising listener kills the emit loop** | no |
+| `src/module/redis_controller.py:145` | `emit(self, data=None)` | **none** | **yes** (`src/module/redis_controller.py:150`) |
+
+The divergences are behavioural, not cosmetic:
+
+- **Two of the four have no exception isolation.** In `cinepi_multi` (`src/module/cinepi_multi.py:118-120`)
+  and `redis_controller` (`src/module/redis_controller.py:155-157`), one listener raising
+  aborts the loop and the remaining listeners never fire. `redis_controller.redis_parameter_changed`
+  is the busiest event in the system — subscribed by the mediator
+  (`src/module/mediator.py:20-22`), the GUI (`src/module/simple_gui.py:222`), the web API
+  (`src/module/app/api.py:205`), socket events (`src/module/app/main/events.py:112`), the
+  status broadcaster (`src/module/status_broadcast.py:77`) and the controller
+  (`src/module/cinepi_controller.py:147`). Six subscribers, no isolation, and subscription
+  order decides who gets dropped when one of them throws.
+- **Two iterate a live list.** `usb_monitor` (`src/module/usb_monitor.py:25`) and
+  `cinepi_multi` (`src/module/cinepi_multi.py:119`) iterate `self._listeners` directly, while
+  `ssd_monitor` (`src/module/ssd_monitor.py:66`) and `redis_controller`
+  (`src/module/redis_controller.py:156`) copy first — `ssd_monitor` even documents why
+  (`# shallow copy – safe against rm`, `src/module/ssd_monitor.py:66`). A listener that unsubscribes during dispatch corrupts
+  iteration in two of the four.
+- **Only one supports `unsubscribe`** (`src/module/redis_controller.py:150`).
+
+**Action:** extract one `Event` into a shared module — with copy-on-iterate, per-listener
+exception isolation, and `unsubscribe` — and delete the other three. **Risk:** medium, and
+it is the interesting kind: adding exception isolation to `redis_parameter_changed` will
+*surface* listener exceptions that are currently silently truncating the dispatch chain. That
+is a fix, but it will look like new errors appearing. Expect to find real bugs.
+**Needs Pi:** no to confirm the duplication. **Yes** to assess the impact: on a Pi, add a
+temporary `logging.exception` around each `redis_parameter_changed` listener and watch a full
+record cycle in `journalctl -u cinemate` for listeners that currently throw.
+
+
+---
+
+## Summary table
+
+All findings, in ID order. Same rows as above, collected for the ledger.
+
+| ID | severity | confidence | repo | category | summary | evidence |
+|---|---|---|---|---|---|---|
+| F-100 | medium | confirmed | cinemate | dead-code | `rotary_encoder.py` / `SimpleRotaryEncoder` never imported; superseded by `gpio_input.RotaryEncoder` | src/module/rotary_encoder.py:4 |
+| F-101 | medium | confirmed | cinemate | redundancy | 5 `.pyc` files committed to git despite `.gitignore`; one is for a deleted `adc` module | src/module/__pycache__/adc.cpython-39.pyc |
+| F-102 | medium | confirmed | cinemate | dead-code | 6/13 `Mediator` methods have no subscriber and no caller | src/module/mediator.py:34 |
+| F-103 | low | confirmed | cinemate | dead-code | `self.usb_monitor` and `self.redis_listener` assigned but never used | src/module/mediator.py:11 |
+| F-104 | medium | confirmed | cinemate | dead-code | `hasattr(self.stream, "toggle_background_color")` can never be true; branch is unreachable | src/module/mediator.py:151 |
+| F-105 | medium | confirmed | cinemate | redundancy | Four independent `StrictRedis` clients with hardcoded `localhost:6379`, bypassing `RedisController` | src/module/usb_monitor.py:141 |
+| F-106 | medium | confirmed | cinemate | redundancy | `CAPTURE_GAIN_REDIS_KEY` re-declares an existing `ParameterKey`; `"is_recording"` used as a bare literal | src/module/usb_monitor.py:14 |
+| F-107 | low | probable | cinemate | dead-code | Five `MIC_*` keys published/cleared with no in-repo reader | src/module/usb_monitor.py:441 |
+| F-108 | high | confirmed | cinemate | dead-code | `SSDMonitor.stop()` has no caller; its body would raise `AttributeError` on `self._jthread` if it did | src/module/ssd_monitor.py:155 |
+| F-109 | medium | confirmed | cinemate | dead-code | 70-line `_journal_loop` unreachable; sole reference is a commented-out thread target | src/module/ssd_monitor.py:1254 |
+| F-110 | low | confirmed | cinemate | dead-code | `timekeeper` is set to `None` and never reassigned; the shutdown guard can never fire | src/main.py:658 |
+| F-111 | low | confirmed | cinemate | readability | At least 8 multi-line commented-out code blocks, two of them file-tail dumps | src/module/framebuffer.py:173 |
+| F-112 | high | confirmed | cinemate | correctness | Guard `if self.ssd_monitor.is_mounted:` commented out; body now runs unconditionally and the CFE-HAT branch calls a method that does not exist | src/module/cinepi_controller.py:2033 |
+| F-113 | medium | confirmed | cinemate | dead-code | fsck result published to Redis but no live consumer; only reader is a commented-out GUI snippet | src/module/ssd_monitor.py:44 |
+| F-114 | medium | confirmed | cinemate | redundancy | Superseded `arecord -vvv` VU path still present alongside the live Redis `audio_vu` path | src/module/usb_monitor.py:467 |
+| F-115 | medium | confirmed | cinemate | dead-code | Entire `USBDriveMonitor` class unreferenced outside its own definition | src/module/usb_monitor.py:33 |
+| F-116 | medium | confirmed | cinemate | redundancy | 6 wrapper accessors around `get_resolution_info` never called; `get_packing` is silently wrong on Pi 4 | src/module/sensor_detect.py:616 |
+| F-117 | high | confirmed | cinemate | redundancy | `ACTION_METHODS` duplicated verbatim in Python and JS; `GET /api/actions`, the only thing that validates it, has no consumer | src/module/app/settings_editor.py:63 |
+| F-118 | high | confirmed | cinemate | correctness | Catalogue entry `set_log` resolves to nothing; the real method is `set_log_encode` | src/module/app/settings_editor.py:94 |
+| F-119 | medium | confirmed | cinemate | dead-code | 7 controller methods with no static caller, no `settings.jsonc` binding and no catalogue entry | src/module/cinepi_controller.py:768 |
+| F-120 | low | confirmed | cinemate | dead-code | 5 properties and `get_mount_status` have no reader | src/module/ssd_monitor.py:166 |
+| F-121 | low | confirmed | cinemate | dead-code | `read_dmesg_log`, `handle_file_change`, `reset_undervoltage_flag` have no caller | src/module/dmesg_monitor.py:29 |
+| F-122 | medium | confirmed | cinemate | dead-code | Exactly 4 of 48 modules are unreachable from `main.py`, totalling 376 LOC; no others | src/module/rotary_encoder.py:1 |
+| F-123 | low | confirmed | cinemate | redundancy | 3 self-declared compatibility aliases with zero callers, each shadowing a live function | src/module/config_loader.py:143 |
+| F-124 | medium | confirmed | cinemate | redundancy | Two implementations of "is the hotspot up?"; the `main.py` one is dead and uses a different mechanism | src/main.py:529 |
+| F-125 | low | confirmed | cinemate | dead-code | 7 further functions with no caller anywhere in the repo | src/module/gpio_input.py:146 |
+| F-126 | high | confirmed | cinemate | correctness | Four divergent boolean coercions for the same settings values; `_as_bool(2)` is `True` in one and `False` in three | src/module/gpio_input.py:163 |
+| F-127 | medium | confirmed | cinemate | redundancy | Four separate `class Event` definitions with divergent error handling and signatures | src/module/usb_monitor.py:17 |
+
+**Counts by severity:** high 5 · medium 15 · low 8 · critical 0 · nit 0 — **28 total**
+
+**Counts by confidence:** confirmed 27 · probable 1 · unverified 0
+
+**Counts by category:** dead-code 15 · redundancy 9 · correctness 3 · readability 1
+---
+
+## Pi-verification queue (from this agent)
+
+Nothing in this report *depends* on a Pi to be believed — all 28 are settled statically. These
+are checks that would sharpen consequence or catch deployment-specific risk.
+
+| Finding | Test | What it settles |
+|---|---|---|
+| F-105 | `redis-cli info clients` and `ss -tn state established '( dport = :6379 )' \| wc -l` sampled during a 60 s take | Confirms one new Redis connection per second while recording |
+| F-108 | `systemctl stop cinemate`, then `journalctl -u cinemate` | Whether the un-stopped SSD thread delays or hangs shutdown |
+| F-112 | With no SSD attached, call `CinePiController.unmount` (`src/module/cinepi_controller.py:2032`); watch `journalctl -u cinemate` | Whether the now-unguarded `unmount_drive()` errors when nothing is mounted |
+| F-118 | Bind a button to `set_log` in the settings editor, press it | Confirms the silent no-op through `getattr(..., None)` |
+| F-119 | `grep '"method"' ~/cinemate/settings.jsonc` on a deployed unit | Whether a *user's* settings bind any of the 7 methods I found unbound in shipped configs |
+| F-121 | Load the 5 V rail to trigger undervoltage | Whether the undervoltage flag ever clears without `reset_undervoltage_flag` |
+| F-126 | `grep -n '"enabled"' ~/cinemate/settings.jsonc` | Whether any deployed value is a non-`true`/`false` literal that the four `_as_bool` copies would read differently |
+| F-127 | Temporarily wrap each `redis_parameter_changed` listener in `logging.exception`; run a full record cycle | Which listeners currently throw and silently truncate the dispatch chain |
+
+## Cross-agent handoffs
+
+- **Agent 3 (cinepi-raw, F-200..F-249)** — two greps of the sibling repo close two findings:
+  - `MIC_PCM_ALIAS` → settles **F-107**. If cinepi-raw has no reader, promote F-107 from
+    `probable` to `confirmed` dead-code.
+  - `FSCK_STATUS` → refines **F-113**. Currently `confirmed` for cinemate only.
+- **Agent 2 (services/install, F-150..F-199)** — `python3-systemd` is installed at
+  `cinemate-install.sh:523`; with **F-109** actioned, nothing in `src/` imports `systemd`.
+  Candidate for the unused-installer-packages list (F-032), pending a check that nothing in
+  `services/` imports it.
+- **F-113** proposes *adding* `FSCK_STATUS` to `ParameterKey` rather than deleting the writes.
+  If Agent 2's dead-config-key sweep independently proposes removing it, reconcile — my
+  reading is that the display is missing, not that the data is unwanted.
+
+## Method notes for later sessions
+
+1. **The import graph needs relative-import resolution.** Absolute-only resolution reports 36
+   of 48 modules reachable and falsely condemns six live `module.app.*` files (1,136 LOC).
+   With relative imports resolved the answer is 42 of 48. See F-122.
+2. **`from module import parameters` hides from `grep "import parameters"`.** The module name
+   sits in the imported-names position. This is why `parameters.py` was on the suspect list.
+3. **The four dispatch surfaces** that must be checked before calling a `CinePiController`
+   method dead: static callers; `"method"` strings in `settings.jsonc` and both
+   `resources/settings/*.jsonc`; the two `ACTION_METHODS` catalogues; and the whole-repo text
+   corpus. Control probes: `set_zoom` scores 19 in the corpus, `set_iso` 15 — if your method
+   scores 1, it is the `def` line alone.
+4. **Dead subgraphs need transitive analysis.** In `mediator.py`, four of six dead methods are
+   referenced — but only by other dead methods (F-102). A "is this name mentioned anywhere?"
+   check clears them wrongly.
+5. **`hasattr` guards are where removed features go to hide.** F-104 and F-110 are both
+   permanently-false `hasattr`/truthiness guards left behind when a collaborator changed type
+   or disappeared. Grepping for `hasattr(` against known-`None` locals is a productive sweep.
+
+## Coverage and limits
+
+- All 47 `.py` files under `src/` (19,794 LOC) were included in the import graph, the
+  never-called sweep and the commented-block scan.
+- **Symbol counts are lower bounds.** Grep cannot see dynamically constructed names. Where I
+  say "at least N" I mean it; where I say a symbol scores 1 in the corpus, that is exact for
+  literal occurrences only.
+- **Not covered** (out of scope or better placed elsewhere): the HTML/JS inside
+  `src/module/app/templates/` beyond the `ACTION_METHODS` comparison in F-117/F-118; dead
+  config keys in `settings.jsonc` (Agent 2); anything in `services/`, `_test/` or the
+  installer (Agent 2).
+- **One residual gap I cannot close statically:** a user's own `settings.jsonc` on a deployed
+  Pi could bind a controller method I classified as dead (F-119). Shipped configs are clean —
+  all 37 `"method"` strings across the three shipped files resolve.

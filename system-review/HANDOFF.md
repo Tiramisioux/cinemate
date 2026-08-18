@@ -2,38 +2,40 @@ Continue the CineMate system review.
 
 1. Read `system-review/KICKOFF.md` in full.
 2. Read `system-review/STATE.md` — **especially Deviations D1–D5**.
-3. Read `system-review/sessions/S03-code-map-cinepi-raw.md`.
-4. Then execute **S04 — Redundancy & dead code sweep** as specified in
-   `system-review/PLAN.md`.
+3. Read `system-review/sessions/S04-attempt-blocked.md`, then
+   `sessions/S03-code-map-cinepi-raw.md`.
+4. Then **re-run S04 — Redundancy & dead code sweep**.
+
+> **S04 attempt 1 produced nothing.** All four agents died on an account session limit in
+> their first step. No agent reports exist; F-100..F-299 are unconsumed. **The four prompts
+> are saved verbatim in `agent-reports/S04-AGENT-PROMPTS.md` — start there, it is
+> copy-paste.** If capacity is uncertain, launch **two at a time** rather than four;
+> agents 1 and 4 are the highest value.
 
 Phase A is complete. Both repos are mapped: `deliverables/CODE-MAP-cinemate.md` and
 `deliverables/CODE-MAP-cinepi-raw.md`. Read those before searching for anything.
 
 ---
 
-## S04 is the fan-out session — the first one that genuinely suits it
+## S04 is the fan-out session — and it is already planned
 
-S01–S03 used no subagents, deliberately: each finding came from chasing the previous
-one's loose end, so there was nothing to parallelise. **The redundancy sweep is different**
-— it is embarrassingly parallel. Use up to 4 agents (KICKOFF §2.5) and follow the six
-mandatory prompt clauses in `CONVENTIONS.md` §5.2 verbatim.
+S01–S03 used no subagents, deliberately: each finding came from chasing the previous one's
+loose end, so there was nothing to parallelise. The redundancy sweep is different — it is
+embarrassingly parallel.
 
-Suggested split, with reserved ID blocks already allocated in `CONVENTIONS.md` §5.1:
+**All the planning is done.** `agent-reports/S04-AGENT-PROMPTS.md` holds the four prompts
+verbatim, including the shared preamble (CONVENTIONS §5.2's six mandatory clauses), the
+method warnings, the "already confirmed — do not re-investigate" list, and per-agent
+priority targets. Do not rewrite them; launch them.
 
-| Agent | Scope | IDs |
-|---|---|---|
-| 1 | cinemate `src/` — unreferenced modules, unreachable code, dead branches | F-100.. |
-| 2 | cinemate `services/`, `_test/`, installer, config keys | F-150.. |
-| 3 | cinepi-raw — dead sources, unused build targets, the two patch files | F-200.. |
-| 4 | duplicated logic across the Python/C++/CSS boundary | F-250.. |
+| Agent | Scope | IDs | Value |
+|---|---|---|---|
+| 1 | cinemate `src/` | F-100.. | high — largest body of code |
+| 2 | services, `_test/`, installer, config | F-150.. | medium |
+| 3 | cinepi-raw | F-200.. | medium |
+| 4 | cross-boundary duplicated truth | F-250.. | **highest — feeds ADR-001 directly** |
 
-Agent 4 has the most interesting brief: F-007 (colours), F-016 (`audio_vu`) and F-027/F-028
-(key registries) are all the same defect class. A fourth or fifth instance would make the
-pattern conclusive for ADR-001.
-
-**Do not let agents re-investigate what is already confirmed dead.** `PLAN.md` S04 now has
-two explicit lists: things to fold into the report without re-checking, and the genuinely
-open candidates. Put the "already confirmed" list in every agent prompt.
+If you can only run two, run **1 and 4**.
 
 ---
 
@@ -75,15 +77,11 @@ derived citation before commit. Put this in the agent prompts.
 
 ## Cheap, high-value, currently unclaimed
 
-If S04 finishes early, these beat starting S05:
-
-1. **The F-027 key-diff harness script.** Parse `ParameterKey` from `redis_controller.py`
-   and `CONTROL_KEY_*` from `cinepi_state.hpp`; report shared / cinemate-only /
-   cinepi-raw-only. Turns the review's best finding into a check that cannot regress. No
-   hardware. Belongs in `harness/`. **This is the single highest value-per-effort item in
-   the ledger.**
+1. ~~The F-027 key-diff harness script~~ ✅ **done** — `harness/redis_key_diff.py`. It
+   reproduces F-027 (84 / 32 / 19 shared / 12 unreferenced) and already caught an
+   arithmetic error in that finding. Run it before trusting any hand-counted key figure.
 2. **PI-007 step 1** — read `cinepi_controller.py` for internal locking; settles F-025's
-   severity without hardware.
+   severity without hardware. Still unclaimed.
 
 ## Watch this for S08
 
@@ -94,8 +92,8 @@ not determinable statically. S08 must not answer KICKOFF §7 constraint 2 from r
 
 ## Start with
 
-Read both code maps, then write the four agent prompts before launching anything — the
-prompts are the work product that determines whether this session is worth its window.
+`cat system-review/agent-reports/S04-AGENT-PROMPTS.md` and launch from it. The prompts are
+already written and reviewed; the previous attempt failed on capacity, not on planning.
 
 ## Finish with
 

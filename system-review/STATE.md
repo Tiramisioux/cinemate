@@ -3,17 +3,23 @@
 **Read this first, every session.** Then read the last `sessions/S##-*.md`, then do what
 `PLAN.md` says is next.
 
-- **Last session:** S03 (2026-08-18) — Architecture map, cinepi-raw (C++)
-- **Current phase:** A complete → B. Both repos are now mapped.
-- **Next session:** S04 — Redundancy & dead code sweep *(the fan-out session)*
+- **Last session:** S04 attempt 1 (2026-08-18) — **BLOCKED, agent fan-out failed on an
+  account session limit. No agent output. S04 must be re-run.**
+  See `sessions/S04-attempt-blocked.md`.
+- **Current phase:** A complete → B started but not delivered.
+- **Next session:** **S04 (retry)** — prompts ready in `agent-reports/S04-AGENT-PROMPTS.md`
 - **Ledger branch:** `claude/cinemate-system-review-kickoff-cilicc` — pushed: yes · PR #129 (draft)
-- **Findings:** 33 total — 0 critical, 11 high, 15 medium, 6 low, 1 refuted
+- **Findings:** 33 total — 0 critical, 11 high, 15 medium, 6 low, 1 refuted.
+  **F-100..F-299 are unconsumed** — the S04 agents produced nothing, so those blocks are
+  free and the retry can reuse them as allocated.
 - **Open decisions:** ADR-001 (GUI harmonization) — not started.
   **S03 supplied its hardest evidence and its hardest blocker.** DRM master exclusivity is
   now confirmed *from cinepi-raw's own comment* (`dualHdmiPreviewStage.cpp:5-18`), which
   likely kills options D and E. But **PI-009 blocks S08**: how the DRM preview and the
   fbdev GUI actually compose cannot be determined from source.
-- **Blockers:** none for S04. **PI-009 blocks S08** — do not let S08 answer KICKOFF §7
+- **Blockers:** S04's fan-out is capacity-bound, not knowledge-bound — retry when the
+  usage window allows, and consider 2 agents at a time rather than 4.
+  **PI-009 blocks S08** — do not let S08 answer KICKOFF §7
   constraint 2 from reasoning.
 
 ---
@@ -67,6 +73,11 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
 ---
 
 ## Ground truth established so far
+
+### Tooling now in the ledger
+- **`harness/redis_key_diff.py` works** and reproduces F-027: 84 / 32 / 19 shared / 12
+  unreferenced. Run it before trusting any hand-counted key figure — it already caught one
+  arithmetic error in F-027 (11 → 12 key strings).
 
 ### From S03 (cinepi-raw architecture) — detail in `deliverables/CODE-MAP-cinepi-raw.md`
 - **cinepi-raw is a fork of `rpicam-apps`.** `cinepi/` is the product; `core/`, `preview/`,

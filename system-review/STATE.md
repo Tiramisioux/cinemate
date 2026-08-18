@@ -3,15 +3,15 @@
 **Read this first, every session.** Then read the last `sessions/S##-*.md`, then do what
 `PLAN.md` says is next.
 
-- **Last session:** S04 attempt 2 (2026-08-18) — Redundancy sweep **delivered**,
-  one scope outstanding. See `sessions/S04-redundancy-sweep.md`.
+- **Last session:** S05 (2026-08-18) — Readability **delivered**, plus 16 findings
+  recovered from agent 2's second partial run. See `sessions/S05-readability.md`.
 - **Current phase:** B — Critical analysis
-- **Next session:** **S05 — Readability, comments & structure**, but *first* run agent 2's
-  unrun S04 scope (services / `_test/` / installer). Prompt ready in
-  `agent-reports/S04-AGENT-PROMPTS.md`; it is one agent's worth of work.
+- **Next session:** **S06 — Standards, consistency & tooling.** Agent 2's scope is now
+  *partially* done (F-150..F-165); the remainder is small and folds naturally into S06,
+  which already covers installer/config consistency. Do not open another S04.
 - **Ledger branch:** `claude/cinemate-system-review-kickoff-cilicc` — pushed: yes · PR #129 (draft)
-- **Findings:** 76 total. F-100..F-127, F-200..F-202, F-250..F-261 added by S04.
-  Free ID blocks: F-128..F-149, F-203..F-249, F-262..F-299.
+- **Findings:** 99 total. Free ID blocks: F-135..F-149, F-166..F-199, F-203..F-249,
+  F-262..F-299.
 - **Open decisions:** ADR-001 (GUI harmonization) — not started.
   **S03 supplied its hardest evidence and its hardest blocker.** DRM master exclusivity is
   now confirmed *from cinepi-raw's own comment* (`dualHdmiPreviewStage.cpp:5-18`), which
@@ -72,6 +72,21 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
 
 ## Ground truth established so far
 
+### From S05 (readability) — detail in `deliverables/READABILITY-REPORT.md`
+- **The best comment in the codebase guards an invariant that no running test protects.**
+  `storage_profiles.py:41-49` (AUDIO-CORE INVARIANT) names its own guarding test, and that
+  test is one of the 27 that never run. Sharpest argument in the review for CI first.
+- **47 load-bearing why-comments exist and are a deletion hazard** (F-133), including two
+  falsified experiments. Promote to `docs/` before refactoring those files.
+- **Zero TODO/FIXME/XXX/HACK** in ~19,800 LOC (F-134) — a genuine positive.
+- **337 except handlers, 15 silently swallowing** (F-130) — violates the project's own
+  "fail visible" principle.
+- **The codebase explains decisions well and interfaces poorly** — 27% docstring coverage,
+  40 public classes with none including `CinePiController`.
+- **A second duplication cluster exists around storage** (F-155..F-165), and **F-164 is its
+  root cause**: the service↔app coupling is a dead journalctl tail, so the app polls
+  instead. Fixing that one link collapses five findings.
+
 ### From S04 (redundancy sweep) — detail in `deliverables/REDUNDANCY-REPORT.md`
 - **Duplicated truth is systemic: 16 instances, 9 already drifted.** This is the review's
   central structural finding and it constrains ADR-001 — see the deliverable §6.
@@ -84,6 +99,9 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
   holds no sensor data. Hypothesis disproved — do not re-hunt.
 - **`settings.schema.json` agrees with `config_loader.py` on all 41 comparable defaults** —
   the viable origin for defaults unification (F-251).
+- **Incremental agent writes are mandatory, not advice.** Two agent runs died mid-flight
+  to usage limits; the one told to write incrementally preserved 16 findings, the four that
+  weren't preserved nothing.
 - **Pattern matching has under-reported three times now** (`cinepi_ready_<port>`, `tc_key`,
   `from module import X`). Treat "no grep hit" as a hypothesis, never a result.
 

@@ -11,8 +11,8 @@ Update this file as reality diverges. Divergence is expected, not failure.
 | S02 | Architecture map — cinemate (Python) | ✅ done 2026-08-18 |
 | S03 | Architecture map — cinepi-raw (C++) | ✅ done 2026-08-18 |
 | S04 | Redundancy & dead code sweep | ✅ done 2026-08-18 (attempt 2) — **agent 2 scope still owed** |
-| S05 | Readability, comments & structure | ⏭ next — **run agent 2's S04 scope first** |
-| S06 | Standards, consistency & tooling | pending |
+| S05 | Readability, comments & structure | ✅ done 2026-08-18 |
+| S06 | Standards, consistency & tooling | ⏭ next — **absorb the rest of agent 2's scope** |
 | S07 | GUI surface inventory & state-model extraction | pending |
 | S08 | GUI harmonization evaluation → ADR-001 | pending |
 | S09 | Docs vs. code | pending |
@@ -103,7 +103,7 @@ read into PI-007 step 1 (a desk task) or into S05.
 - ID blocks: agent1 F-100.., agent2 F-150.., agent3 F-200.., agent4 F-250..
 - → `deliverables/REDUNDANCY-REPORT.md`
 
-### S05 · Readability, comments & structure
+### S05 · Readability, comments & structure — ✅ DONE
 
 - Target reader: **competent but intermediate** Python/C developer, new to this code.
 - Flag: functions >60 lines, nesting >3 deep, magic numbers, boolean-parameter APIs,
@@ -116,7 +116,17 @@ read into PI-007 step 1 (a desk task) or into S05.
   explains *why* `RES_RIGHT_ANCHOR = 1823`. Identify these; recommend promoting to docs.
 - → `deliverables/READABILITY-REPORT.md`
 
-### S06 · Standards, consistency & tooling
+### S06 · Standards, consistency & tooling — ⏭ NEXT
+
+> **Absorb the remainder of agent 2's S04 scope** — it is small and overlaps S06's own
+> brief. Still open: settings keys defined-but-never-read and read-but-not-in-schema;
+> installer idempotency by reading; `shellcheck` warning classes; two thirds of the
+> `wifi_hotspot` triangle. Use IDs F-166..F-199.
+>
+> **New input from S05:** F-130 (15 silently-swallowing handlers) and F-131 (2 bare
+> `except:`) are exactly what the lint config should catch — ruff's `E722`/`S110` make them
+> mechanical. F-133's load-bearing comments must be exempt from any "remove commented
+> code" rule.
 
 - Given F-005/F-006: propose a **minimal, low-friction** standard. One developer plus
   agents. Do not propose a twelve-tool pipeline that will be abandoned.

@@ -2,74 +2,74 @@ Continue the CineMate system review.
 
 1. Read `system-review/KICKOFF.md` in full.
 2. Read `system-review/STATE.md` — **especially Deviations D1–D5**.
-3. Read `system-review/sessions/S04-redundancy-sweep.md`.
-4. **First**, run agent 2's unrun S04 scope (below). **Then** execute
-   **S05 — Readability, comments & structure** per `system-review/PLAN.md`.
+3. Read `system-review/sessions/S05-readability.md`.
+4. Then execute **S06 — Standards, consistency & tooling** per `system-review/PLAN.md`,
+   **absorbing the small remainder of agent 2's S04 scope** (see below).
 
 ---
 
-## First: S04 owes one scope
+## S06 has unusually good inputs — most of the audit is already done
 
-S04 ran two agents plus one inline scope and delivered
-`deliverables/REDUNDANCY-REPORT.md`. **Agent 2's scope was never run** — services, `_test/`,
-`cinemate-install.sh`, `cinemate-update.sh`, config keys, Makefiles, `scripts/`,
-`resources/`.
+S06's brief is "propose a minimal standard + audit consistency". **The consistency audit
+has largely been performed already** across S02–S05. Do not redo it; assemble it.
 
-Its prompt is ready verbatim in `agent-reports/S04-AGENT-PROMPTS.md` (§"Agent 2"). Use ID
-block **F-150..F-199** — untouched. It is one agent's worth of work; do it first, merge into
-`FINDINGS.md`, then start S05. Do not open a third S04 session for it.
+| S06 asks for | Already established |
+|---|---|
+| error handling / bare `except` | **F-130** (337 handlers, 15 silent), **F-131** (2 bare) |
+| thread start/stop patterns | **F-022, F-023, F-024** + the full thread table in `CODE-MAP-cinemate.md` §4 |
+| Redis access patterns | **F-015, F-020, F-105** — five distinct patterns catalogued |
+| settings access | **F-251** (4 registries, 11 keys disagree), **F-252** |
+| hardcoded absolute paths | **F-260** (`settings.jsonc` path in 7 files) |
+| logging | not yet done — this is genuinely S06's own work |
+| import style | partly — see the `from module import X` note in `CENSUS.md` §4 |
 
-Specific open items it should settle, listed in `REDUNDANCY-REPORT.md` §7:
-- Three-way `wifi_hotspot` duplication (753 / 52 LOC + a `_test/` copy)
-- Whether `services/storage-automount/storage-automount.py` (~1123 LOC) duplicates
-  `usb_monitor.py` / `ssd_monitor.py`
-- Settings keys defined but never read; keys read but absent from the schema
-- Installer idempotency by reading, and `shellcheck` warning classes
-- **New:** `python3-systemd` (`cinemate-install.sh:523`) becomes an unused install
-  dependency once F-109 lands — add to the F-032 list
+**So the drafting is the work, not the auditing.** Spend the session on
+`deliverables/STANDARDS-PROPOSAL.md` + `deliverables/draft-config/`.
+
+### Concrete inputs for the config drafts
+
+- **ruff `E722`** catches F-131's bare `except:` mechanically. **`S110`/`S112`**
+  (`try-except-pass`/`continue`) catches F-130's 15 silent handlers. Both are exactly the
+  project's own "fail visible, never silent" principle expressed as a lint rule — say so
+  in the proposal; it lands better than a generic style argument.
+- **Any "remove commented-out code" rule must exempt F-133's load-bearing comments.**
+  47 of them encode *why*, including two falsified experiments. A blanket rule would
+  destroy the most valuable prose in the repo. Name the exemption explicitly.
+- **`.editorconfig`** is trivially safe and uncontroversial — include it.
+- **CI is still blocked on PI-002** for the *test* job (the portable/hardware split is
+  unknown). But the **docs-build job is not blocked** (F-006): adding `pull_request` and
+  `dev` triggers to the existing working workflow is the single highest value-per-effort
+  change in the ledger. `findings/F-006.md` has the trap — you must split build from
+  deploy, or a PR build will publish gh-pages and push a commit.
+- **`harness/redis_key_diff.py` is a ready-made CI check.** Do not wire `--strict` yet
+  (12 known drifts would fail day one); the useful form fails only on an *increase*.
+- **cinepi-raw already has the pattern** cinemate lacks — `meson test` with
+  `phase_lock_core_test` (F-030). Point at it rather than proposing from scratch.
+
+### Also fold in: the rest of agent 2's scope
+
+Small, and overlapping S06's brief. Use IDs **F-166..F-199**. Still open:
+settings keys defined-but-never-read and read-but-absent-from-schema · installer
+idempotency by reading · `shellcheck` warning classes · two thirds of the `wifi_hotspot`
+triangle (only the `_test/` copy was reached, F-150).
 
 ---
 
-## What S04 established that changes later sessions
+## Method warnings — all earned in this review
 
-**Duplicated truth is systemic — 16 instances, 9 already drifted.** This is now the
-review's central structural finding. `REDUNDANCY-REPORT.md` §1 has the table, §6 has what
-it means for ADR-001. The short version for S08:
+**Incremental agent writes are mandatory, not advice.** Four agents that batched their
+writes lost everything to a usage limit; the one instructed to append as it went preserved
+16 findings through the same failure. Put it in every agent prompt, in bold.
 
-> "One source of truth, N renderers" is viable for cinemate-internal data but should be
-> scoped **out** for the cinepi-raw boundary. The binding constraint is not language count
-> — it is that **nothing verifies anything**. A test runner plus ~5 cross-registry
-> assertions would catch 5 of the 6 drifts with no architectural change. A GUI unification
-> shipped without one will re-grow these duplicates within a release.
-> **Sequencing: verification before unification.**
+**Pattern matching has under-reported three times.** `cinepi_ready_<port>`, a `tc_key`
+variable, and `from module import X` — the last put five *live* modules on a dead list.
+Treat "no grep hit" as a hypothesis; say "at least N".
 
-**≈3,250 LOC of confirmed-dead source** is deletable without hardware — S12's easiest batch.
+**Citation discipline.** Line numbers from `grep -n` only, never arithmetic on a `sed`
+window. S02 and S03 both shipped off-by-one citations that way.
 
-**Three closed avenues — do not re-open:**
-- Module reachability in `src/` is exhausted (F-122: exactly 4 of 48 unreachable).
-- There is no duplicated sensor table. `resources/sensors.json` is a genuine single source.
-- `settings.schema.json` agrees with `config_loader.py` on all 41 comparable defaults.
-
----
-
-## Method warnings — earned, not theoretical
-
-**Pattern matching has under-reported three times in this review.** `cinepi_ready_<port>`
-(S03), `tc_key` (S04), and `from module import X` (S04, which put five live modules on a
-dead list in `CENSUS.md` §4). **Treat "no grep hit" as a hypothesis, never a result**, and
-say "at least N" for any count derived that way.
-
-**Citation discipline.** Line numbers from `grep -n` only, never from arithmetic on a
-`sed -n 'A,Bp'` window. S02 and S03 both shipped off-by-one citations that way.
-
-**Tell agents to write their report file incrementally.** Attempt 1 of S04 lost four agents'
-work entirely to a usage limit; attempt 2 added that instruction and one agent's file
-survived a mid-run interruption as a strict superset.
-
-**Verify agent claims before merging.** S04 corrected two of 40 agent findings — one
-overstated (F-112 claimed a call to a non-existent method; that branch is commented out),
-one understated (F-107 was a cross-repo duplication, not a dead key). Both were caught by
-one grep each.
+**Verify agent claims before merging.** S04 corrected two of 40 — one overstated, one
+understated. Both took one grep.
 
 ---
 
@@ -83,11 +83,7 @@ one grep each.
 GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/Tiramisioux/cinepi-raw /workspace/tiramisioux/cinepi-raw
 ```
 
-**Free ID blocks:** F-128..F-149, F-150..F-199 (agent 2), F-203..F-249, F-262..F-299.
-
-**`harness/redis_key_diff.py` works** — run it before trusting any hand-counted key figure.
-It should grow a check that flags dynamic `redis_->set(<identifier>, …)` call sites as
-"needs manual review" rather than skipping them (F-202 showed why).
+**Free ID blocks:** F-135..F-149, F-166..F-199, F-203..F-249, F-262..F-299.
 
 ## Watch for S08
 
@@ -95,7 +91,11 @@ It should grow a check that flags dynamic `redis_->set(<identifier>, …)` call 
 but how the DRM preview and the fbdev GUI *compose* is not determinable statically. S08
 must not answer KICKOFF §7 constraint 2 from reasoning.
 
+Also for S08: S04's verdict is **verification before unification** — a GUI unification
+shipped without a verification layer will re-grow the duplicates within a release. The
+codebase already tried comments as the sync mechanism and the comments drifted.
+
 ## Finish with
 
-Update `STATE.md`, write `sessions/S05-*.md`, overwrite this file for S06, then
-`git add system-review/`, commit as `review(S05): ...`, and push.
+Update `STATE.md`, write `sessions/S06-*.md`, overwrite this file for S07, then
+`git add system-review/`, commit as `review(S06): ...`, and push.

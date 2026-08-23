@@ -13,6 +13,7 @@ import logging
 import os
 import tempfile
 import threading
+from datetime import datetime, timezone
 from pathlib import Path
 
 from flask import (
@@ -170,6 +171,51 @@ def parse_settings():
     return jsonify({"ok": True, "settings": settings})
 
 
+SETTINGS_BACKUP_KEEP = 10
+
+
+def _backup_settings(dest: Path) -> Path | None:
+    """Copy *dest* aside before it is overwritten. Returns the backup path.
+
+    This deliberately reimplements what cinemate-recovery.py's backup_file()
+    does rather than importing it: that console is standard-library-only by
+    rule, must not be coupled to src/module, and is deployed to
+    /usr/local/bin -- see its module docstring. The two therefore keep
+    separate histories, and this one lives beside the settings file because
+    that directory is already known-writable by this process (put_settings
+    mkstemps into it), whereas the console's /var/lib/cinemate is root-owned.
+
+    Returns None when there is nothing to back up. A missing source is not a
+    reason to refuse the write.
+    """
+    try:
+        data = dest.read_bytes()
+    except OSError as exc:
+        logger.info("No backup taken for %s: %s", dest, exc)
+        return None
+
+    backup_dir = dest.parent / ".settings-backups"
+    try:
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        target = backup_dir / f"{dest.name}.{stamp}.bak"
+        counter = 1
+        while target.exists():  # two saves inside one second
+            target = backup_dir / f"{dest.name}.{stamp}-{counter}.bak"
+            counter += 1
+        target.write_bytes(data)
+
+        keep = sorted(backup_dir.glob(f"{dest.name}.*.bak"))[:-SETTINGS_BACKUP_KEEP]
+        for stale in keep:
+            stale.unlink(missing_ok=True)
+    except OSError as exc:
+        # Losing the backup must not lose the save -- but say so, loudly.
+        logger.error("Could not back up %s before saving: %s", dest, exc)
+        return None
+
+    return target
+
+
 @settings_editor_bp.route("/api/settings", methods=["PUT"])
 def put_settings():
     body = request.get_json(silent=True)
@@ -184,6 +230,7 @@ def put_settings():
 
     text = json.dumps(settings, indent=2, ensure_ascii=False) + "\n"
     dest = Path(SETTINGS_FILE)
+    backup = _backup_settings(dest)
     try:
         fd, tmp_path = tempfile.mkstemp(dir=str(dest.parent), prefix=".settings-editor-", suffix=".jsonc.tmp")
         try:
@@ -197,7 +244,11 @@ def put_settings():
         logger.exception("Failed to write %s", dest)
         return jsonify({"ok": False, "message": f"Could not write {dest}: {exc}"}), 500
 
-    logger.info("settings.jsonc saved via settings editor (%d bytes)", len(text))
+    logger.info(
+        "settings.jsonc saved via settings editor (%d bytes); backup: %s",
+        len(text),
+        backup or "none",
+    )
 
     cinepi_controller = current_app.config.get("CINEPI_CONTROLLER")
     restarting = False

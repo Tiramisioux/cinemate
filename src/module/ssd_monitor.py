@@ -149,11 +149,22 @@ class SSDMonitor:
         self._thread.start()
         logging.info("SSD monitoring thread started.")
 
-    def stop(self) -> None:
+    def stop(self, timeout: float = 2.0) -> None:
+        """Stop the mount-watch thread.
+
+        Used to join self._jthread as well, which raised AttributeError every
+        time: the journal thread's creation is commented out just above its
+        own loop. Having no caller was the only reason that never surfaced.
+
+        Bounded join -- shutdown must not hang on a thread that is wedged in a
+        blocking poll.
+        """
         self._stop_evt.set()
-        self._thread.join()
-        self._jthread.join()
-        logging.info("SSD monitoring stopped.")
+        self._thread.join(timeout=timeout)
+        if self._thread.is_alive():
+            logging.warning("SSD monitor thread did not stop within %.1fs", timeout)
+        else:
+            logging.info("SSD monitoring stopped.")
 
     # ------------------------------------------------------------------
     # read-only properties

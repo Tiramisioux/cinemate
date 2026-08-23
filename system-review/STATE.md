@@ -14,11 +14,13 @@
   cinepi-raw figure.**
 - **Then S08 (2026-08-23) — ADR-001 **proposed**: `decisions/ADR-001-gui-harmonization.md`,
   `harness/design_token_diff.py`, 8 findings, PI-016. See `sessions/S08-adr-001.md`.
-- **Current phase:** C complete. S09 opens Phase D — truth passes.
-- **Next session:** **S09 — docs drift.**
+- **Then S09 (2026-08-23) — docs drift **delivered**: `deliverables/DOCS-DRIFT-REPORT.md`,
+  `harness/docs_drift_check.py`, 12 findings. See `sessions/S09-docs-drift.md`.
+- **Current phase:** D — truth passes.
+- **Next session:** **S10 — install script vs. install docs.**
 - **Ledger branch:** `claude/cinemate-system-review-kickoff-cilicc` — pushed: yes · PR #129 (draft)
-- **Findings:** 166 rows, **161 net** (F-183..F-186, F-189 merged into F-002/F-003). Free ID
-  blocks: F-135..F-149, F-196..F-199, F-240..F-249, F-262..F-299.
+- **Findings:** 178 rows, **173 net** (F-183..F-186, F-189 merged into F-002/F-003). Free ID
+  blocks: F-135..F-149, F-196..F-199, F-264..F-299.
 - **Open decisions:** **ADR-001 is written and `proposed`** —
   `decisions/ADR-001-gui-harmonization.md`. Reject D and E; adopt C reached through B; fix
   F-204 first. Surface 4 excluded permanently. It does **not** decide constraint 2 (PI-009),
@@ -209,6 +211,27 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
 - **C7 has a number:** `SimpleGUI` is 1913 lines — 925 draw/layout (rewritten), **636 state
   (preserved)**, 241 display/fb. A renderer swap is ~43% of the file, contiguous and
   flag-gateable.
+
+### From S09 (docs drift) — detail in `deliverables/DOCS-DRIFT-REPORT.md`
+- **The docs are the best-maintained boundary in the system, and this inverts the review's
+  prior.** 103 links / 0 broken · 64 code citations / 0 bad · 11 of 11 settings sections ·
+  71 of 71 key rows real · 43 of 43 method names real (F-240).
+- **The prose copy of the controller catalogue is the correct one** (F-242). Both
+  machine-readable copies carry `set_log`, which does not exist. Use this in S11 and S12.
+- **Drift lives in code prose, not in `docs/`** — 3 hand-sync comments drifted, a fourth in
+  CSS, and F-246's `lock_dual_recording` survives in a **docstring** and a **comment** as
+  well as the changelog while existing nowhere. **Second argument for promoting F-133's 47
+  why-comments into `docs/`.**
+- **Thin ≠ drifted, and `PLAN.md` conflated them.** The 15-line `compiling-cinepi-raw.md` is
+  completely correct (F-262). Line count predicted nothing in all three test cases.
+- **The published site is missing its best method reference** — `controller-methods.md` and
+  `image-circle.md` (232 LOC of correct content) are unreachable from the nav (F-244). One
+  line of YAML each; highest value-per-effort docs fix.
+- **Four stdlib-only checkers now exist.** `redis_key_diff.py`, `gui_field_extract.py`,
+  `design_token_diff.py`, `docs_drift_check.py`. None needs hardware.
+- **Write the checker before the prose that cites it.** Three of S09's six checks were wrong
+  on the first attempt; one would have appeared to contradict F-014. Four of five
+  corrections came from reading script output back against source.
 - **Incremental agent writes are mandatory, not advice.** Two agent runs died mid-flight
   to usage limits; the one told to write incrementally preserved 16 findings, the four that
   weren't preserved nothing.
@@ -292,6 +315,8 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
 - **Do not re-derive installer idempotency.** F-192 settles it: idempotent by construction.
 - **Do not re-inventory the GUI surfaces or re-count their fields.** S07 did it and the
   counts are reproducible: `python3 system-review/harness/gui_field_extract.py --repo .`
+- **Do not re-check the docs mechanically.** S09 did all six:
+  `python3 system-review/harness/docs_drift_check.py --repo .`
 - **The Redis key census is DONE** (S02). `ParameterKey` at `redis_controller.py:18` is the
   registry; the docs diff is F-014. Do not re-derive it. `CENSUS.md` §7 is superseded.
 - **Do not re-trace `main.py` boot or shutdown** — `deliverables/CODE-MAP-cinemate.md` §3–4

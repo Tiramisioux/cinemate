@@ -21,12 +21,19 @@ procedure** that settles it. An entry without a runnable procedure is not done.
 > (`No camera frames received for 3s, attempting a camera restart!!!`, looping continuously)
 > before this session touched anything. A test take requesting 300 frames wrote only 44 and
 > declared `frames_in_sync=0`. This blocked every recording-dependent item below (PI-006,
-> PI-010, PI-011, PI-016's load phase). Operator chose to continue with the non-recording
-> items rather than debug the sensor mid-session. **Also found:** `systemctl restart
+> PI-010, PI-011, PI-016's load phase) in the first pass. **Also found:** `systemctl restart
 > cinemate-autostart` reliably hangs ~9-14s on `ExecStopPost=cinemate-console-handoff.sh`
 > and lands the unit in `failed` (needs `systemctl reset-failed` + `start` to recover) —
-> reproduced twice, unrelated to the PI-014 fault injection. Neither of these has a finding
+> reproduced three times across this session, unrelated to the PI-014 fault injection and
+> not sensor-specific (recurred after the sensor swap too). Neither of these has a finding
 > ID yet; flagging here so they aren't lost.
+>
+> **Mid-session update: the operator swapped the imx585 mono for a working imx477** and
+> attached a USB mic. PI-006, PI-010, PI-011, PI-013, and PI-016 were re-run against the
+> imx477 (`cinemate` HEAD unchanged) with real, successful recordings — see the "Follow-up"
+> blocks under each item below the original (imx585-blocked) result. PI-016 still didn't
+> reach the sensor's true highest mode (4056x3040 12-bit) because `dynamic_resolution_enabled`
+> overrode the explicit request down to a sustainable-at-current-fps mode instead.
 
 | id | opened | source finding | status |
 |---|---|---|---|
@@ -35,17 +42,17 @@ procedure** that settles it. An entry without a runnable procedure is not done.
 | PI-003 | S01 | census §11 | **done — CONFIRMED (vestigial)** |
 | PI-004 | S01 | F-003 | **done — INCONCLUSIVE (no blank SD card)** |
 | PI-005 | S01 | census §11 | **done — CONTRADICTED** |
-| PI-006 | S02 | F-016 | **done — INCONCLUSIVE (no mic, sensor fault)** |
+| PI-006 | S02 | F-016 | **done — CONFIRMED (VU end-to-end) / CONTRADICTED (DEL degradation) — imx477 + mic** |
 | PI-007 | S02 | F-025 | open — **step 1 is a desk task, do it before booking Pi time** — see S11a, live step not run |
 | PI-008 | S03 | F-027 | **done — partial, INCONCLUSIVE (short window)** |
 | PI-009 | S03 | ADR-001 constraint 2 | **done — CONFIRMED (same-hdmi toggle not tested)** |
-| PI-010 | S04 | F-253 | **done — INCONCLUSIVE (sensor fault)** |
-| PI-011 | S04 | F-259 | **done — INCONCLUSIVE (sensor fault)** |
+| PI-010 | S04 | F-253 | **done — CONTRADICTED (DNG side, base 24 not 25) — imx477** |
+| PI-011 | S04 | F-259 | **done — INCONCLUSIVE, method gap found (restart camera isn't a true cold start) — imx477** |
 | PI-012 | S04 | F-182 | **done — INCONCLUSIVE (no blank SD card)** |
-| PI-013 | S04 | F-172 | **done — partial, INCONCLUSIVE (short window)** |
+| PI-013 | S04 | F-172 | **done — CONFIRMED (recording ~70x faster than idle) — imx477** |
 | PI-014 | S04 | F-204 | **done — CONFIRMED** |
 | PI-015 | S05 | F-207 | **done — INCONCLUSIVE (no physical HDMI access)** |
-| PI-016 | S06 | ADR-001 headroom | **done — partial (idle floor only, load phase blocked)** |
+| PI-016 | S06 | ADR-001 headroom | **done — partial, real load sampled but not sensor's true max mode — imx477** |
 
 ---
 
@@ -273,6 +280,33 @@ PI-006
              one thing this did show: the poll is continuous and unconditional, which is
              at least consistent with "the read path swallows failure silently" — a GUI
              polling a nil key 12x/sec with nothing on screen and nothing logged.
+```
+
+**Follow-up (2026-08-23, same session, mic attached mid-session):**
+```
+PI-006
+  ran:       real rec f 200 (~8s) with a USB mic attached (arecord -l now shows "USB PnP
+             Sound Device"). Polled redis-cli GET audio_vu during the take. Then, mid-take,
+             redis-cli DEL audio_vu and polled every 1s for 4s to check for degradation.
+             Operator confirmed visually that the VU meters render and move on the physical
+             HDMI display throughout.
+  observed:  audio_vu populated correctly during the take ("2|2|2|2", a 4-value string).
+             DEL returned 1 (key existed, deleted) but the very next poll 1s later already
+             showed "2|2|2|2" again, and every poll after stayed populated — the key never
+             stayed missing. Take completed cleanly: "Attached WAV metadata without
+             altering PCM: timecode 22:32:38:12, rate 25, source audio-start+16bit-offset,
+             audio start offset +0.192830s (5 frames, 9256 samples), BEXT + iXML." No
+             warnings or errors tied to audio_vu anywhere in the log.
+  predicted: VU bars move with a mic attached; DEL mid-take degrades visibly
+  verdict:   CONFIRMED for the first half (VU meter works end to end, both on the physical
+             display per the operator and in the underlying redis data, WAV attaches
+             correctly). CONTRADICTED for the second half: DEL does NOT produce visible
+             degradation, because cinepi_sound republishes audio_vu on essentially every
+             cycle (sub-second) — a stale/missing read is never observable in practice, it's
+             overwritten too fast. This is a different mechanism from PI-014: audio_vu is
+             written continuously and unconditionally by the C++ side, not gated through the
+             Python Event-bus cache that PI-014 showed can die. F-016's "silent failure"
+             concern doesn't manifest as a freeze here — worth revisiting F-016's severity.
 ```
 
 ---
@@ -514,6 +548,33 @@ PI-010
   verdict:   INCONCLUSIVE — re-run once the imx585 mono frame-drop issue is resolved.
 ```
 
+**Follow-up (2026-08-23, same session, sensor swapped to imx477 by operator — working):**
+```
+PI-010
+  ran:       set fps free 1; set fps 24.5; rec f 120 (~5s, no mic yet at this point).
+             Read the DNG TimeCodes (0xC763) and FrameRate (0xC764) tags directly from the
+             raw TIFF/DNG structure with a hand-written IFD0 parser (exiftool/exiv2/dcraw
+             are not installed on this device; avoided installing packages). Decoded the
+             SMPTE-packed BCD timecode byte for every one of the 123 frames in the take to
+             find where the frame field wraps.
+  observed:  FrameRate tag reads exactly {24500, 1000} = 24.5, confirming the tag itself is
+             fp-accurate, not rounded. First frame TC 22:28:56:04, last frame (frame 122)
+             22:29:01:06. Scanning the frame-field across all 123 files: it wraps 23 -> 0
+             every time (five wraps observed), NEVER reaching 24. So the DNG encoder's own
+             SMPTE base for 24.5 fps is 24, not 25.
+  predicted: DNG/WAV frame field reaches 24 while Redis/GUI field wraps at 23 (i.e. DNG uses
+             the higher C++ half-up/half-away-from-zero base, Redis uses Python's banker's
+             rounding base)
+  verdict:   CONTRADICTED as stated — the DNG side actually wraps at 23 (base 24), the same
+             base Python's banker's-rounding round(24.5)=24 would produce, not the base-25
+             the prediction expected from a half-up C++ round. I did not get a clean
+             same-instant cross-check against Redis tc_cam0/recording_tc_rec's own frame
+             field this round (time-boundary noise made a direct value-for-value diff
+             unreliable), so this doesn't fully close F-253/F-202 — it only rules out the
+             specific direction the prediction guessed. Worth a repeat with a longer take and
+             simultaneous Redis polling to nail the Redis-side base with the same rigor.
+```
+
 ---
 
 ## PI-011 — Does the ISO cold-start fallback (F-259) apply the wrong gain?
@@ -546,6 +607,34 @@ PI-011
   predicted: n/a
   verdict:   INCONCLUSIVE — re-run once the frame-drop and restart-hang issues are resolved
              (the latter makes this item riskier than its 15-minute estimate suggests).
+```
+
+**Follow-up (2026-08-23, same session, imx477 working):**
+```
+PI-011
+  ran:       redis-cli DEL iso, then "restart camera" (the CLI command that restarts just
+             cinepi-raw, not the full cinemate-autostart service — chosen specifically to
+             avoid the console-handoff restart-hang found earlier this session).
+  observed:  iso read back as 400 immediately after the restart — the SAME value as before
+             the DEL, not a fallback/wrong value. No gain-fallback or ModuleNotFoundError-
+             style warning anywhere in the log around the restart.
+  predicted: the fallback path applies a gain ~100x intended, or clamps, producing a visibly
+             wrong first exposure
+  verdict:   INCONCLUSIVE, but with a real finding: "restart camera" is NOT a true cold start
+             for this question. cinemate's own Python-side CinePiController already holds
+             iso=400 in memory from before the DEL and re-publishes/re-applies it as part of
+             the restart sequence, so cinepi-raw's own C++ cold-start fallback
+             (cinepi_controller.cpp:76-77, the thing F-259 is actually about) never gets
+             exercised through this trigger — Python re-seeds Redis before or as cinepi-raw
+             comes back up. A real test needs either a full cinemate-autostart restart with
+             iso deleted at the right moment, or launching cinepi-raw standalone bypassing
+             cinemate's Python layer entirely. Given this session had already hit the
+             restart-hang twice, I didn't risk a third cycle to chase this — flagging the
+             method gap rather than a fake result. Also worth noting as its own observation:
+             if cinemate's Python layer always re-seeds iso before cinepi-raw needs it in
+             normal operation, F-259's fallback may be unreachable in practice outside a
+             standalone cinepi-raw launch — that changes its real-world severity regardless
+             of what the fallback code itself does.
 ```
 
 ---
@@ -627,6 +716,25 @@ PI-013
              "faster while recording" half of the claim (blocked by the sensor fault). At
              the observed rate (~51 KB/min idle) this would take a very long session to
              become operationally significant, but that's an idle-only extrapolation.
+```
+
+**Follow-up (2026-08-23, same session, imx477 working, real recording achieved):**
+```
+PI-013
+  ran:       ps -o rss= -p <cinemate pid> immediately before a real 400-frame recording
+             (2028x1520 10-bit, ~18s at fps_actual=24) and again ~40s after it started
+             (covering the recording plus a few seconds post-stop).
+  observed:  RSS 116976 KB (t, just before rec) -> ~118064-118176 KB by the end of the
+             sampling window (18s of active recording + settle) — roughly +1.1-1.2 MB over
+             that span, versus +160 KB over the earlier 187s idle window. That's an idle
+             rate of ~0.85 KB/s vs a recording-phase rate of ~60 KB/s — about 70x faster.
+  predicted: qsize() rises monotonically and never falls; RSS growth correlates with logged
+             lines and is markedly faster while recording
+  verdict:   CONFIRMED — growth is monotonic in both phases and is dramatically faster while
+             recording, directly matching the "markedly faster while recording" half of the
+             claim that the sensor fault blocked earlier. Still no direct qsize() reading
+             (no shell into the live process), so this is an RSS proxy, not a queue-length
+             measurement, but the direction and magnitude both line up with the prediction.
 ```
 
 ---
@@ -795,4 +903,31 @@ PI-016
              to test that claim. Re-run once recording is reliable; note the 4 GB RAM figure
              found this session (see header) changes the ADR-001 headroom math regardless —
              300 MB free at UHD on a 4 GB board is a very different argument than on 2 GB.
+```
+
+**Follow-up (2026-08-23, same session, imx477 working, real recording achieved):**
+```
+PI-016
+  ran:       free -m and ps -o rss=,pcpu= for cinemate + cinepi-raw sampled every 3s across
+             a real 400-frame take (2028x1520 10-bit, ~18s, NOT the sensor's absolute
+             highest mode — dynamic_resolution_enabled overrode an explicit request for the
+             full 4056x3040 12-bit mode down to whatever the current fps could sustain;
+             lowering fps first didn't stick either, since resolution changes restore the
+             prior fps. Did not fight this further given the time already spent). Take
+             completed cleanly: 398/400 frames, write_speed_to_drive sustained ~110 MB/s.
+  observed:  cinemate RSS 117120->118064 KB (+~1 MB), cinepi-raw RSS 127600->127792 KB
+             (~flat), cinemate CPU climbed 31.8%->33.5%, cinepi-raw CPU climbed 16.5%->19.7%.
+             free -m's "free" column dropped hard during the take (2583 MB -> 1093 MB) but
+             "available" stayed at 3469/4048 MB immediately after — the drop was page cache
+             (buff/cache climbed to 2463 MB), not real pressure. memory_alert stayed 0
+             throughout; no auto-stop fired at this resolution/duration.
+  predicted: peak RSS at UHD leaves under ~300 MB free; camera-ready.sh dominates boot
+  verdict:   INCONCLUSIVE for the letter of the claim (this wasn't the sensor's true peak
+             resolution, and boot timing still wasn't measured), but the process-RSS numbers
+             here make the ~300 MB-free UHD prediction hard to credit on THIS board: RSS
+             growth for both processes combined was ~1 MB over an 18s take at a demanding-
+             but-not-maximal mode, nowhere near "leaves under 300 MB". Combined with the
+             4 GB-not-2-GB RAM finding from the session header, the ADR-001 headroom argument
+             for rejecting options D/E may need re-measuring at the sensor's true max mode
+             before it's trusted as-is.
 ```

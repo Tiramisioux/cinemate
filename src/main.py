@@ -652,7 +652,6 @@ def run_application(args, log_queue):
     splash_thread = splash_stop = None
     splash_visible_started_at = None
     startup_ready_notified = False
-    timekeeper = None
 
     welcome_cfg = settings.get("system", {}).get("welcome", {})
     welcome_text = welcome_cfg.get("message", "THIS IS A COOL MACHINE")
@@ -1024,9 +1023,6 @@ def run_application(args, log_queue):
             splash_stop.set()
             splash_thread.join()
             
-        if timekeeper and hasattr(timekeeper, "stop"):
-            timekeeper.stop()
-
         # SSDMonitor owns a thread of its own and was never stopped here.
         # USBMonitor deliberately is not in this list: it has no stop() at all,
         # so giving it one is a design change rather than a cleanup fix.

@@ -153,8 +153,20 @@ class Event:
         except ValueError:
             pass
     def emit(self, data=None):
+        # Every subscriber runs on the single _listen thread, synchronously. An
+        # unguarded raise here used to kill that thread outright, and because
+        # get_value() serves the cache rather than redis, every surface then went
+        # on rendering its last values with no error anywhere -- the operator sees
+        # plausible frozen numbers mid-take. One bad subscriber must not silence
+        # the others or the bus. Mirrors CinePiController._notify_resolution_change.
         for fn in list(self._handlers):
-            fn(data)
+            try:
+                fn(data)
+            except Exception:
+                logging.exception(
+                    "Redis subscriber %s failed; continuing with the rest",
+                    getattr(fn, "__qualname__", fn),
+                )
 
 # ────────────────────────── main controller class ────────────────────
 class RedisController:
@@ -177,6 +189,15 @@ class RedisController:
         self._thread = threading.Thread(target=self._listen, daemon=True)
         self._thread.start()
 
+    def listener_alive(self) -> bool:
+        """Is the pub/sub listener still running?
+
+        If this is False the cache is frozen: get_value() keeps answering, but
+        with whatever it last saw. Nothing here restarts the thread -- callers
+        that care should surface it rather than paper over it.
+        """
+        return bool(self._thread and self._thread.is_alive())
+
     # ─────────────────────── initial cache fill ─────────────────────
     def _prime_cache(self):
         for key in self.r.keys("*"):
@@ -187,28 +208,37 @@ class RedisController:
     # ─────────────────────── background listener ────────────────────
     def _listen(self):
         for msg in self.ps.listen():
-            if msg["type"] != "message":
-                continue
-            key = msg["data"].decode()
-            with self.lock:
-                # suppress echo of own writes
-                if key in self.local_updates:
-                    self.local_updates.remove(key)
-                value = (self.r.get(key) or b"").decode()
-                self.cache[key] = value
+            try:
+                self._handle_message(msg)
+            except Exception:
+                # Same reasoning as Event.emit: losing this thread freezes all
+                # live state silently. A bad message is survivable; a dead
+                # listener is not.
+                logging.exception("Redis listener failed on message %r; continuing", msg)
 
-            if key == ParameterKey.IS_RECORDING.value:
-                if value == "0":
-                    self._stop_recording_timer()
-            elif key == ParameterKey.REC.value:
-                if value == "1":
-                    # Start timer on first frame of take; don't restart if already running
-                    # (rec can bounce 0→1 during pipeline stalls without ending the take)
-                    if not (self._rec_timer_thread and self._rec_timer_thread.is_alive()):
-                        self._start_recording_timer()
-            # notify subscribers – no log spam here
-            if key != ParameterKey.FPS_ACTUAL.value:
-                self.redis_parameter_changed.emit({"key": key, "value": value})
+    def _handle_message(self, msg):
+        if msg["type"] != "message":
+            return
+        key = msg["data"].decode()
+        with self.lock:
+            # suppress echo of own writes
+            if key in self.local_updates:
+                self.local_updates.remove(key)
+            value = (self.r.get(key) or b"").decode()
+            self.cache[key] = value
+
+        if key == ParameterKey.IS_RECORDING.value:
+            if value == "0":
+                self._stop_recording_timer()
+        elif key == ParameterKey.REC.value:
+            if value == "1":
+                # Start timer on first frame of take; don't restart if already running
+                # (rec can bounce 0→1 during pipeline stalls without ending the take)
+                if not (self._rec_timer_thread and self._rec_timer_thread.is_alive()):
+                    self._start_recording_timer()
+        # notify subscribers – no log spam here
+        if key != ParameterKey.FPS_ACTUAL.value:
+            self.redis_parameter_changed.emit({"key": key, "value": value})
 
     # ───────────────────────── public helpers ───────────────────────
     def get_value(self, key, default=None):

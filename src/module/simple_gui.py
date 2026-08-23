@@ -652,21 +652,23 @@ class SimpleGUI(threading.Thread):
         cpu_load = self._slow_values.get("cpu_load", "0%")
         cpu_temp = self._slow_values.get("cpu_temp", "--")
 
+        # Keep the previous reading rather than blanking the GUI. debug, not
+        # warning: this sits on the redraw path and would flood at 12 fps.
         try:
             cpu_load = Utils.cpu_load()
         except Exception:
-            pass
+            logging.debug("cpu_load unavailable; keeping the last value", exc_info=True)
 
         try:
             cpu_temp = Utils.cpu_temp()
         except Exception:
-            pass
+            logging.debug("cpu_temp unavailable; keeping the last value", exc_info=True)
 
         if self.ssd_monitor:
             try:
                 latest_recording_info = self.ssd_monitor.get_latest_recording_info()
             except Exception:
-                pass
+                logging.debug("No latest-recording info this pass", exc_info=True)
 
         self._slow_values.update({
             "cpu_load": cpu_load,
@@ -1767,7 +1769,9 @@ class SimpleGUI(threading.Thread):
                 try:
                     self.emit_gui_data_change(changed_data)
                 except Exception:
-                    pass
+                    # The framebuffer draw below must happen even if no browser
+                    # is listening. debug: this is per-frame.
+                    logging.debug("Could not push GUI delta to the browser", exc_info=True)
         self.previous_values = current_values.copy()
 
         fb = self.fb

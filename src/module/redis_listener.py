@@ -549,7 +549,7 @@ class RedisListener:
                     return len(ready)
                 return len(data) or 1
         except Exception:
-            pass
+            logging.debug("Could not read the camera list; falling back", exc_info=True)
 
         return 1
 
@@ -1181,7 +1181,7 @@ class RedisListener:
                 if self._coerce_int(self.redis_controller.get_value(key)) == 1:
                     return True
             except Exception:
-                pass
+                logging.debug("Unreadable flag %s; trying the next", key, exc_info=True)
         # Fallback when the redis flags are momentarily unset: prefer the
         # framesInFlight gauge (encode_queue_ + disk_buffer_) so a still-draining
         # compression backlog keeps this True even when bufferSize (disk-only)
@@ -1554,7 +1554,7 @@ class RedisListener:
                     if not base or os.path.basename(d) == base:
                         return os.path.abspath(d)
             except Exception:
-                pass
+                logging.debug("Could not inspect a candidate folder", exc_info=True)
 
         # Last attempt: if hint is relative and exists from CWD
         if hint:

@@ -1,3 +1,4 @@
+import contextlib
 import pyudev
 import logging
 import traceback
@@ -674,10 +675,8 @@ class USBMonitor():
         if mic_has_changed:
             logging.info(f"Microphone changed from {self.current_mic_id} → {mic_id}")
             # Stop old monitor and create a fresh one bound to this mic
-            try:
+            with contextlib.suppress(Exception):
                 self.audio_monitor.stop()
-            except Exception:
-                pass
             AudioMonitor.clear_mic_selection("microphone changed; waiting for re-probe")
             self.audio_monitor = AudioMonitor(settings=self.settings)
             self.audio_monitor.set_model_info(model, serial, card_num=card_num, card_name=card_name)

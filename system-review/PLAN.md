@@ -12,8 +12,8 @@ Update this file as reality diverges. Divergence is expected, not failure.
 | S03 | Architecture map — cinepi-raw (C++) | ✅ done 2026-08-18 |
 | S04 | Redundancy & dead code sweep | ✅ done 2026-08-18 (attempt 2) — **agent 2 scope still owed** |
 | S05 | Readability, comments & structure | ✅ done 2026-08-18 |
-| S06 | Standards, consistency & tooling | ⏭ next — **absorb the rest of agent 2's scope** |
-| S07 | GUI surface inventory & state-model extraction | pending |
+| S06 | Standards, consistency & tooling | ✅ delivered 2026-08-23 — `STANDARDS-PROPOSAL.md` + `draft-config/` |
+| S07 | GUI surface inventory & state-model extraction | ⏭ next |
 | S08 | GUI harmonization evaluation → ADR-001 | pending |
 | S09 | Docs vs. code | pending |
 | S10 | Install script vs. install docs | pending |
@@ -116,7 +116,7 @@ read into PI-007 step 1 (a desk task) or into S05.
   explains *why* `RES_RIGHT_ANCHOR = 1823`. Identify these; recommend promoting to docs.
 - → `deliverables/READABILITY-REPORT.md`
 
-### S06 · Standards, consistency & tooling — ⏭ NEXT
+### S06 · Standards, consistency & tooling — ✅ DELIVERED
 
 > **Absorb the remainder of agent 2's S04 scope** — it is small and overlaps S06's own
 > brief. Still open: settings keys defined-but-never-read and read-but-not-in-schema;
@@ -143,7 +143,7 @@ read into PI-007 step 1 (a desk task) or into S05.
 
 ## Phase C — GUI
 
-### S07 · GUI surface inventory & state-model extraction
+### S07 · GUI surface inventory & state-model extraction — ⏭ NEXT
 
 - Complete the KICKOFF §6.3 table: every surface, every widget, every control, every field.
 - Build the surface × field matrix with source-of-truth per field.

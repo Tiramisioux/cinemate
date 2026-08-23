@@ -3,15 +3,14 @@
 **Read this first, every session.** Then read the last `sessions/S##-*.md`, then do what
 `PLAN.md` says is next.
 
-- **Last session:** S05 (2026-08-18) — Readability **delivered**, plus 16 findings
-  recovered from agent 2's second partial run. See `sessions/S05-readability.md`.
-- **Current phase:** B — Critical analysis
-- **Next session:** **S06 — Standards, consistency & tooling.** Agent 2's scope is now
-  *partially* done (F-150..F-165); the remainder is small and folds naturally into S06,
-  which already covers installer/config consistency. Do not open another S04.
+- **Last session:** S06 (2026-08-23) — Standards **delivered**:
+  `deliverables/STANDARDS-PROPOSAL.md` + `deliverables/draft-config/`, 25 net findings, 2 PI
+  items. See `sessions/S06-standards.md`.
+- **Current phase:** B — Critical analysis (last entry). S07 opens Phase C.
+- **Next session:** **S07 — GUI surface inventory & state-model extraction.**
 - **Ledger branch:** `claude/cinemate-system-review-kickoff-cilicc` — pushed: yes · PR #129 (draft)
-- **Findings:** 99 total. Free ID blocks: F-135..F-149, F-166..F-199, F-203..F-249,
-  F-262..F-299.
+- **Findings:** 129 rows, **124 net** (F-183..F-186, F-189 merged into F-002/F-003). Free ID
+  blocks: F-135..F-149, F-196..F-199, F-203..F-249, F-262..F-299.
 - **Open decisions:** ADR-001 (GUI harmonization) — not started.
   **S03 supplied its hardest evidence and its hardest blocker.** DRM master exclusivity is
   now confirmed *from cinepi-raw's own comment* (`dualHdmiPreviewStage.cpp:5-18`), which
@@ -99,11 +98,36 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
   holds no sensor data. Hypothesis disproved — do not re-hunt.
 - **`settings.schema.json` agrees with `config_loader.py` on all 41 comparable defaults** —
   the viable origin for defaults unification (F-251).
+
+### From S06 (standards) — detail in `deliverables/STANDARDS-PROPOSAL.md`
+- **The review's organising claim, now stated outright: CineMate has a drift problem, not a
+  style problem.** Every serious finding is two copies of one truth that stopped agreeing.
+  The standard is built around drift *checks*, with lint second and formatting last. Carry
+  this framing into S11 and S12 — it is the spine of the remediation plan.
+- **The rule worth writing down:** *duplicated truth must either be deleted, or carry a
+  named reason **and** an automated check. A comment is not a check.* Three hand-sync
+  comments exist; two are already wrong.
+- **The shell is the best-maintained code in the repo** (F-174, F-192, F-194). 15 shellcheck
+  findings across 11 scripts, one of them in the 1916-line installer, whose idempotency is
+  *designed and documented*. The standards proposal generalises from it rather than
+  importing conventions from outside. Do not propose shell cleanup as a priority.
+- **`settings.schema.json` cannot reject an unknown key** — `"additionalProperties": true`
+  25×, `false` 0× (F-166). A typo'd setting validates clean and is silently ignored.
+- **The in-app log queue is never drained** (F-172) — unbounded growth for the process
+  lifetime. Structurally confirmed; rate is PI-013.
+- **`INSTALL_ALT_GPIO_BACKEND` is advertised as optional but is load-bearing for boot**
+  (F-182) → PI-012. The only S06 finding that touches the install path.
 - **Incremental agent writes are mandatory, not advice.** Two agent runs died mid-flight
   to usage limits; the one told to write incrementally preserved 16 findings, the four that
   weren't preserved nothing.
 - **Pattern matching has under-reported three times now** (`cinepi_ready_<port>`, `tc_key`,
   `from module import X`). Treat "no grep hit" as a hypothesis, never a result.
+- **And it has OVER-reported once** (S06): a naive schema walk claimed 88 settings keys were
+  unvalidated; most were covered by `additionalProperties` subschemas and `$ref`s. The real
+  finding was different and stronger (F-166). Probe the structure before counting it.
+- **Read `STATE.md` before the first grep — including in a resumed session.** S06 skipped it
+  and re-derived F-002/F-003 as five new findings before catching itself. The "Do not redo"
+  list below only works if it is actually read.
 
 ### Tooling now in the ledger
 - **`harness/redis_key_diff.py` works** and reproduces F-027: 84 / 32 / 19 shared / 12
@@ -171,6 +195,9 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
   the two remediation options; it does not recount.
 - **Do not recount the docs.** `CENSUS.md` §9 has the complete 50-file inventory, the
   empty files, and the mkdocs nav gaps. S09 starts from there.
+- **Do not re-audit logging, `print()`, shellcheck, or the settings schema.** S06 did all
+  four; figures are in `sessions/S06-standards.md` and F-166..F-181.
+- **Do not re-derive installer idempotency.** F-192 settles it: idempotent by construction.
 - **The Redis key census is DONE** (S02). `ParameterKey` at `redis_controller.py:18` is the
   registry; the docs diff is F-014. Do not re-derive it. `CENSUS.md` §7 is superseded.
 - **Do not re-trace `main.py` boot or shutdown** — `deliverables/CODE-MAP-cinemate.md` §3–4

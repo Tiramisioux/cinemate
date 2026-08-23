@@ -34,6 +34,18 @@ procedure** that settles it. An entry without a runnable procedure is not done.
 > blocks under each item below the original (imx585-blocked) result. PI-016 still didn't
 > reach the sensor's true highest mode (4056x3040 12-bit) because `dynamic_resolution_enabled`
 > overrode the explicit request down to a sustainable-at-current-fps mode instead.
+>
+> **Second update: pytest was installed in the Pi venv** (`pip install pytest
+> pytest-subtests`) to close PI-002, and **python-socketio[client] + requests** were
+> installed to close PI-015 with a real `gui_data_change` cadence measurement — both are
+> real, reversible device modifications, flagged here rather than left implicit. **A Grove
+> Base HAT is physically attached to this unit** (the quad rotary encoder is not); one pot
+> was enabled (channel 0 -> iso) in `settings.jsonc` to close PI-007, which produced this
+> session's single most concrete result: a live analog control input can completely and
+> silently starve an explicit CLI/HTTP command targeting the same parameter, with no error
+> surfaced to the caller. **The "unmount"/"mount" CLI pair also proved not to be a reliable
+> round-trip** for the NVMe RAW volume during the PI-008 test — recovered manually, noted
+> under PI-008, not something we're calling out as an existing review finding yet.
 
 | id | opened | source finding | status |
 |---|---|---|---|
@@ -43,7 +55,7 @@ procedure** that settles it. An entry without a runnable procedure is not done.
 | PI-004 | S01 | F-003 | **done — INCONCLUSIVE (no blank SD card)** |
 | PI-005 | S01 | census §11 | **done — CONTRADICTED** |
 | PI-006 | S02 | F-016 | **done — CONFIRMED (VU end-to-end) / CONTRADICTED (DEL degradation) — imx477 + mic** |
-| PI-007 | S02 | F-025 | **done — INCONCLUSIVE (no GPIO input hardware on this unit); structure CONFIRMED via S11a** |
+| PI-007 | S02 | F-025 | **done — CONFIRMED (pot starves CLI "set iso" completely) — Grove HAT enabled** |
 | PI-008 | S03 | F-027 | **done — CONTRADICTED ("most never appear") / CONFIRMED (undocumented contract) — full session** |
 | PI-009 | S03 | ADR-001 constraint 2 | **done — CONFIRMED (same-hdmi toggle not tested)** |
 | PI-010 | S04 | F-253 | **done — CONTRADICTED (DNG side, base 24 not 25) — imx477** |
@@ -405,6 +417,44 @@ PI-007
              that would test something structurally different from what this item asks for
              (real concurrent hardware timing), and the structural half is already settled
              via S11a.
+```
+
+**Second follow-up (2026-08-23, same session — operator confirmed a Grove Base HAT IS
+physically attached, just not enabled in settings.jsonc):**
+```
+PI-007
+  ran:       disabled quad_rotary_controller (not physically attached — stops the I2C 0x49
+             error that had been repeating every ~5s all session) and enabled one Grove Base
+             HAT pot, channel 0 -> iso, in input_peripherals.pots (settings.jsonc: exactly
+             two lines changed, diffed before/after, all comments intact). Restarted
+             cinemate-autostart (hit the known restart-hang again, recovered the same way).
+             Confirmed the pot was live (iso tracked the physical knob, no I2C errors). Then,
+             with the operator continuously turning the pot, fired 40 alternating
+             "set iso 100" / "set iso 6400" commands via /api/v1/cmd over ~14s while
+             redis-cli MONITOR captured every SET/PUBLISH on the iso key.
+  observed:  107 total iso SETs in ~14s (~1 every 130ms) — far more than my 40 requests,
+             confirming AnalogControls polls and writes continuously and independently of
+             any CLI activity. Value breakdown: 3200 x24, 100 x22, 1600 x11, 800 x10,
+             2500 x9, 200 x9, 640 x8, 400 x8, 1200 x6. "6400" — one of my two explicitly
+             requested values, sent 20 separate times — appears ZERO times in the entire
+             trace. A follow-up single, isolated "set iso 6400" (no rapid-fire, pot just
+             sitting live) also failed to stick: the API returned "ok" but redis-cli GET iso
+             one second later read 3200, the pot's position, with no error anywhere.
+  predicted: watch for the Redis value disagreeing with both inputs, or the GUI and the
+             recorder disagreeing
+  verdict:   CONFIRMED, and worse than the predicted form: this isn't occasional value
+             corruption between two competing inputs, it's one un-serialized input path (the
+             analog pot, bypassing CommandExecutor's lock per F-025/S11a) reliably starving
+             a serialized one by out-polling it. A CLI/HTTP "set iso" call returns "ok"
+             (accepted, briefly applied) but is silently overwritten on the pot thread's very
+             next cycle with nothing surfaced to the caller — this will happen in completely
+             ordinary use whenever a pot is connected, not just under synthetic load. Real,
+             current, easily reproducible. The fix is either routing AnalogControls through
+             the existing lock or having it back off briefly after an external command lands
+             on the same parameter.
+  note:      channel 0 -> iso is now live in the Pi's settings.jsonc as a direct result of
+             this test — the operator's own hardware, enabled on request. Left in place since
+             it's the correct config for what's physically attached, not a test artifact.
 ```
 
 ---

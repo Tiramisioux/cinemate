@@ -181,11 +181,16 @@ def editor_method_names(repo: Path) -> set[str]:
     catalogue offers `set_log`, the method is `set_log_encode`, and the button
     silently does nothing.
     """
-    names: set[str] = set()
-    for rel in (SETTINGS_EDITOR_PY, SETTINGS_EDITOR_HTML):
-        src = (repo / rel).read_text(encoding="utf-8")
-        names |= set(re.findall(r"['\"](set_[a-z0-9_]+|inc_[a-z0-9_]+|dec_[a-z0-9_]+)['\"]", src))
-    return names
+    # The Python catalogue tags each entry `"value": "..."`, so read those
+    # directly. The JS copy has no such marker, so it is matched against the
+    # Python catalogue's vocabulary -- an earlier `set_|inc_|dec_` regex missed
+    # `rec`, `mount`, `reboot` and seven more, and wrongly made the JS copy look
+    # like a subset. It is not: the two are identical, including the same bug.
+    py_src = (repo / SETTINGS_EDITOR_PY).read_text(encoding="utf-8")
+    vocab = set(re.findall(r'"value":\s*"([a-z0-9_]+)"', py_src))
+    js_src = (repo / SETTINGS_EDITOR_HTML).read_text(encoding="utf-8")
+    js = {v for v in vocab if re.search(r"['\"]%s['\"]" % re.escape(v), js_src)}
+    return vocab | js
 
 
 def settings_paths(repo: Path) -> set[str]:

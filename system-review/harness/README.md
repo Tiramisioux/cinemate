@@ -137,3 +137,33 @@ This is the **third** ready-made CI check in the ledger, after `redis_key_diff.p
 `gui_field_extract.py`. All three are stdlib-only and need no hardware. See
 `decisions/ADR-001-gui-harmonization.md` §6 — no unification step should land without its
 check landing on the same commit.
+
+## `docs_drift_check.py` — S09
+
+Six independent mechanical checks of `docs/` against the code:
+
+```
+python3 system-review/harness/docs_drift_check.py --repo . [--only CHECK]
+```
+
+| check | what it answers | today |
+|---|---|---|
+| `nav` | mkdocs nav vs files on disk, both ways | 50 files, 35 live entries, **15 unreachable**, 0 phantom |
+| `links` | internal markdown links vs targets | 103 checked, **0 broken** |
+| `cites` | `` `file.py:123` `` citations — file exists, line in range | 64 resolved, **0 bad**, 36 runtime paths classified |
+| `methods` | `controller-methods.md` vs `CinePiController` | 43 named, **43 exist** |
+| `keys` | `redis-keys.md` vs `ParameterKey` | 71 of 84 documented, **0 orphan rows** |
+| `settings` | `settings-json.md` headings vs `settings.jsonc` | **11 of 11** top-level, 0 phantom |
+
+Standard library only, no hardware. Four of the six pass at zero and could gate today;
+`keys` and `nav` should ratchet at 13 and 15.
+
+**Three of these checks were wrong on the first attempt**, and each near-miss is documented
+as a warning in the function that made it: the key check matched only backticked names and
+reported 8 of 84 (the doc is a table); it read `pip_cam0` as a key when it is a *value*; and
+the settings check looked for dotted paths in a document structured by headings. The first
+would have appeared to contradict F-014.
+
+A seventh check — `cli-commands.md` against the dispatcher — was attempted and **withheld**:
+a token diff cannot distinguish a command from its arguments, and it produced 14 false
+"doc-only commands". A real version needs the dispatcher's grammar.

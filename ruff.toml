@@ -22,11 +22,17 @@ select = [
     "S110",   # try-except-pass
     "S112",   # try-except-continue
     "T201",   # `print` found
-    "ARG001", # unused function argument
-    "ARG002", # unused method argument
     "B006",   # mutable default argument
     "B008",   # function call in default argument
 ]
+
+# ARG001/ARG002 are deliberately NOT selected. They were worth one pass -- they
+# found configure_logging()'s parameter that the function never read, and the
+# dead module constant feeding it. Every remaining hit is signature-required:
+# signal handlers (sig, frame), pyudev callbacks (action, device, model,
+# serial), and public keyword parameters callers pass by name. Keeping the rule
+# would mean nine permanent suppressions for nothing, which is how a check earns
+# being switched off.
 
 ignore = [
     "E501",   # line too long.

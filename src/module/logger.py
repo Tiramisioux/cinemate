@@ -74,7 +74,7 @@ class ColoredFormatter(logging.Formatter):
 
 # Configure the logging
 
-def configure_logging(MODULES_OUTPUT_TO_SERIAL, level=logging.INFO):
+def configure_logging(level=logging.INFO):
     # Base format (timestamp handled by formatter)
     log_format = '%(asctime)s.%(msecs)03d: %(levelname)s: %(module)s %(message)s'
     date_format = '%Y-%m-%d %H:%M:%S'

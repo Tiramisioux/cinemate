@@ -1,3 +1,4 @@
+import logging
 import threading
 import socket
 import time
@@ -18,18 +19,18 @@ class BatteryMonitor:
                 response = sock.recv(1024)
             return response.decode().strip()
         except socket.timeout:
-            print(f"Timeout: No response received for command '{command}'")
+            logging.warning(f"Timeout: No response received for command '{command}'")
             return None
         except socket.error as e:
-            print(f"Socket error for command '{command}': {e}")
+            logging.warning(f"Socket error for command '{command}': {e}")
             return None
         except Exception as e:
-            print(f"An error occurred for command '{command}': {e}")
+            logging.error(f"An error occurred for command '{command}': {e}")
             return None
 
     def detect_pisugar(self):
         """Perform multiple checks to detect if PiSugar is actually connected and functioning."""
-        print("Detecting PiSugar...")
+        logging.info("Detecting PiSugar...")
         checks = [
             ('get model', lambda x: x.startswith('model:'), "Checking PiSugar model"),
             ('get battery', lambda x: x.startswith('battery:') and float(x.split()[1]) > 0, "Checking battery level"),
@@ -37,14 +38,14 @@ class BatteryMonitor:
         ]
 
         for command, check_func, message in checks:
-            print(message + "...")
+            logging.info(message + "...")
             response = self.send_battery_command_tcp(command)
             if not response or not check_func(response):
-                print(f"PiSugar detection failed: {message}")
+                logging.warning(f"PiSugar detection failed: {message}")
                 return False
-            print(f"Success: {response}")
+            logging.info(f"Success: {response}")
         
-        print("PiSugar detected successfully.")
+        logging.info("PiSugar detected successfully.")
         return True
 
     def _update_battery_status(self):
@@ -57,7 +58,7 @@ class BatteryMonitor:
             power_plugged_response = self.send_battery_command_tcp('get battery_power_plugged')
             self.charging = power_plugged_response == 'battery_power_plugged: true'
         except Exception as e:
-            print(f"Error updating battery status: {e}")
+            logging.error(f"Error updating battery status: {e}")
 
     def _start_periodic_check(self):
         """Start the background thread to periodically check battery status."""
@@ -68,40 +69,40 @@ class BatteryMonitor:
         """Periodically check the battery status every 5 seconds and log the information."""
         while not self._stop_event.is_set():
             self._update_battery_status()
-            print(f"Battery level: {self.battery_level}%")
-            print(f"Battery charging: {'Yes' if self.charging else 'No'}")
+            logging.debug(f"Battery level: {self.battery_level}%")
+            logging.debug(f"Battery charging: {'Yes' if self.charging else 'No'}")
             time.sleep(5)
 
     def start(self):
         """Initialize battery monitoring by detecting PiSugar and setting up periodic checks if detected."""
-        print("Starting PiSugar Battery Monitor...")
+        logging.info("Starting PiSugar Battery Monitor...")
         self.pisugar_detected = self.detect_pisugar()
         if self.pisugar_detected:
-            print("Starting periodic battery checks...")
+            logging.info("Starting periodic battery checks...")
             self._start_periodic_check()
             return True
         else:
-            print("PiSugar not detected. Monitoring process will not start.")
+            logging.warning("PiSugar not detected. Monitoring process will not start.")
             return False
 
     def stop(self):
         """Stop the periodic check."""
         self._stop_event.set()
-        print("Stopping battery monitor...")
+        logging.info("Stopping battery monitor...")
 
 if __name__ == "__main__":
     monitor = BatteryMonitor()
     
     if not monitor.start():
-        print("Exiting due to PiSugar not being detected.")
+        print("Exiting due to PiSugar not being detected.")  # noqa: T201 - standalone CLI
         sys.exit(1)
     
-    print("Battery monitor is running. Press Ctrl+C to stop.")
+    print("Battery monitor is running. Press Ctrl+C to stop.")  # noqa: T201 - standalone CLI
     try:
         # Keep the script running
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
         monitor.stop()
-        print("Battery monitor stopped.")
+        print("Battery monitor stopped.")  # noqa: T201 - standalone CLI
         sys.exit(0)

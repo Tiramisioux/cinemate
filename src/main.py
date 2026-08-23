@@ -45,7 +45,6 @@ from module.console_display import (
 from module.framebuffer import acquire_framebuffer
 
 # Constants
-MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
 SETTINGS_FILE = "/home/pi/cinemate/settings.jsonc"
 STARTUP_MESSAGE_MIN_DURATION = 3.0
 CLI_COLOR_RED = "\033[1;31m"
@@ -576,7 +575,7 @@ def setup_logging(debug_mode):
         root_logger.removeHandler(handler)
 
     # Configure new logging handlers (file, serial, etc.)
-    return configure_logging(MODULES_OUTPUT_TO_SERIAL, logging_level)
+    return configure_logging(logging_level)
 
 def start_hotspot(settings) -> None:
     """Start the hotspot if enabled in *settings* and nothing else owns it.

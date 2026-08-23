@@ -19,7 +19,7 @@ decide what the standard is. Go down the list of everything serious this review 
 | F-118 | A settings-editor button that silently no-ops, because a Python↔JS catalogue says `set_log` and the method is `set_log_encode` |
 | F-251 | Config defaults declared in 4 registries; **11 keys disagree** |
 | F-027 | 12 Redis key strings written by one repo and never read by the other |
-| F-183 | Two Python dependency registries sharing only 12 of 30 packages |
+| F-002 / F-003 | Two Python dependency registries sharing only 12 of 30 packages |
 | F-260 | One absolute path retyped in 7 files; the comment indexing them lists 4, one with a wrong line number |
 | F-164 | Six apparent copy-pastes that turned out to be one severed link |
 
@@ -123,10 +123,12 @@ validates the most complex and most reflectively-dispatched block in the config.
 
 ### 3.4 Dependency-registry agreement — **or just delete one registry**
 
-F-183: `requirements.txt` and the installer's pip list share 12 of 30 packages, and
-`requirements.txt` is referenced by nothing at all. It contains a stdlib module (`wave`,
-F-184), three duplicate lines (F-185), three docs-only packages (F-189), and a GPIO stack
-the installer does not build.
+F-002 and F-003 (S01): `requirements.txt` and the installer's pip list share 12 of 30
+packages, and `requirements.txt` is referenced by nothing at all. It contains a stdlib
+module (`wave`), three duplicate lines, three docs-only packages, and a GPIO stack the
+installer does not build. S06 adds two dead entries on top: `sounddevice` is installed on
+every camera and referenced nowhere (F-187), and `pyaudio` is required and imported nowhere
+(F-188).
 
 **The check is the fallback here; the fix is better.** Make `cinemate-install.sh` read
 `requirements.txt` — one registry, no check needed. That is the pattern to prefer wherever
@@ -317,7 +319,7 @@ Ordered by value per unit of risk, not by convenience. Nothing here needs a Pi.
 | 5 | Wire `redis_key_diff.py` as a ratchet | 1 h | none | F-027 family |
 | 6 | Write the reflective-dispatch name check; gate at zero | 2 h | none | F-118 |
 | 7 | Write the settings-defaults check; ratchet at 11 | 3 h | none | F-251, F-252 |
-| 8 | Make the installer read `requirements.txt`; delete the duplicate list | 1 h | **medium — installer change, needs PI-012's clean install to verify** | F-183..F-190 |
+| 8 | Make the installer read `requirements.txt`; delete the duplicate list | 1 h | **medium — installer change, needs PI-012's clean install to verify** | F-002, F-003, F-187, F-188, F-190 |
 | 9 | Test job, discovery mode | 1 h | none while `continue-on-error` | F-006 |
 | 10 | Annotate the two boundaries in §5 | 1 day | low | legibility |
 | 11 | `ruff format` + `.git-blame-ignore-revs` | 1 h | **medium — blame churn** | — |
@@ -354,5 +356,5 @@ Actions run happened here. Specifically:
   `unverified` and will be higher than the numbers in §4 (grep undercounts — this review has
   been caught by that three times).
 - The workflow YAML has never executed. Treat it as a reviewed starting point.
-- F-186 (Flask arriving only transitively) is `probable`, not confirmed — verifying it needs
-  a network resolve or a real install.
+- The claim that Flask arrives only transitively (F-003, refined in S06) is `probable`, not
+  confirmed — verifying it needs a network resolve or a real install.

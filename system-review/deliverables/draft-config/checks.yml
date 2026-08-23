@@ -124,7 +124,7 @@ jobs:
           sudo systemctl start redis-server
 
       # Deliberately NOT `pip install -r requirements.txt`. That file is
-      # inert (F-183), lists a stdlib module (F-184), and does not match what
+      # inert (F-003), lists a stdlib module (F-002), and does not match what
       # the installer builds. Install what the tests import, and let the
       # failures name anything missing.
       - name: Install test dependencies

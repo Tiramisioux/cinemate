@@ -220,16 +220,17 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
   internal locking may settle F-025 for free. Do it before booking hardware time.
 - **The DNG metadata path (timing → DNG tags) was in S03's brief and was not done.**
   `dng_save()` and `dng_encoder.cpp` (1521 LOC) remain untraced. Blocks nothing yet.
-- **The F-027 key-diff harness script is unwritten.** It would turn the cross-repo drift
-  into a CI check. Needs no hardware; belongs in `harness/`. Highest value-per-effort item
-  currently unclaimed.
+- ~~The F-027 key-diff harness script is unwritten.~~ **Done** — `harness/redis_key_diff.py`.
+  S07 added a second: `harness/gui_field_extract.py`, which independently reproduces F-118.
+  Both are wired into `STANDARDS-PROPOSAL.md` §3 as CI checks and neither needs hardware.
 - **`cinepi_controller.py` (2626 LOC) internals are still untraced** — deliberately
   deferred at S02's budget line. It is the largest remaining unknown in the Python side and
   it gates F-025's severity.
 
 - `CENSUS.md` §12 lists everything S01 deliberately left unestablished. Check it before
   assuming coverage.
-- `PI-VERIFICATION-QUEUE.md` has 5 open entries. **PI-002 (run the test suite) gates
-  S06's CI proposal** — it should be among the first things done once hardware is available.
+- `PI-VERIFICATION-QUEUE.md` has **15** open entries. **PI-002 (run the test suite) gates
+  S06's CI proposal** — it should be among the first things done once hardware is
+  available, and F-222 raises its value: **381 tests**, not 27 files.
 - PI-003 is mislabelled as Pi-bound; it only needs a full cinepi-raw clone. Reclassify
   when one is attached.

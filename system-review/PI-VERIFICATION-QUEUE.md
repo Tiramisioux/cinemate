@@ -361,3 +361,62 @@ on the frame path, the connected peripherals and the configured level.
 handler should be dropped entirely.
 
 **Expected effort:** 45 minutes (mostly waiting).
+
+---
+
+## PI-014 — Kill the redis listener thread and see what each surface shows
+
+**Belief (`confirmed` structurally, consequence `probable`):** F-204. `Event.emit` is an
+unguarded synchronous loop over nine subscribers, `_listen` has no exception handling, the
+thread is `daemon=True` with no supervision, and `get_value()` serves a cache. So one
+raising subscriber should freeze all live state everywhere while every surface keeps
+rendering plausible values.
+
+**Why hardware is needed:** the failure has to be *observed* on each surface to be worth
+the severity claimed. What the operator sees is the whole point (KICKOFF §7 constraint 5),
+and "the HDMI GUI keeps showing the last frame's numbers" is not something source reading
+can assert.
+
+**Procedure:**
+1. Start Cinemate normally with a camera attached. Confirm live values move on both the
+   HDMI GUI and the browser.
+2. Force a subscriber to raise. Least invasive route: attach with `pdb`/`py-spy`, or
+   temporarily point one subscriber at a function that raises. **Do not commit the edit.**
+3. Observe, in order: the HDMI GUI, the browser, `/api/v1/status`, the `:8888` broadcast.
+4. `redis-cli SET iso 800` and check whether *any* surface reflects it.
+5. **Prediction to test:** every surface holds its last values indefinitely, no surface
+   shows an error or a staleness indicator, and the log contains one traceback from the
+   dead thread and nothing after it.
+
+**Settles:** F-204's severity, and the baseline score for ADR-001 constraint 5. If the
+prediction holds, the status quo's failure mode is "silently wrong", which is the worst
+category for a camera instrument and changes how the options rank.
+
+**Expected effort:** 30 minutes.
+
+---
+
+## PI-015 — Does the browser freeze when the HDMI thread stops?
+
+**Belief (`confirmed` structurally, consequence `unverified`):** F-207. `gui_data_change`
+is emitted only from `draw_gui()`, called only from `SimpleGUI.run()` behind a
+`has_work` gate. The emit sits before `draw_gui`'s `if not fb: return`, which *should* mean
+the browser keeps updating with no display attached.
+
+**Why hardware is needed:** it is a claim about two behaviours that only exist at runtime —
+the redraw cadence and the headless path.
+
+**Procedure:**
+1. Boot with **no HDMI display attached**. Open the web GUI. Change ISO from the CLI.
+   **Prediction:** the browser updates normally — the headless path works.
+2. Attach a display, confirm the camera restarts (F-223), confirm the browser still works.
+3. Stop the `SimpleGUI` thread (`request_stop`) with the app otherwise running.
+   **Prediction:** the browser stops receiving `gui_data_change` entirely and freezes,
+   while `/api/v1/status` — which does not go through `simple_gui` — keeps working.
+4. Time ten consecutive `gui_data_change` arrivals in the browser console, idle and while
+   recording, to get the actual cadence for ADR-001 constraint 4.
+
+**Settles:** F-207's severity, whether the headless path is real or accidental, and the
+only measured number ADR-001 constraint 4 will have.
+
+**Expected effort:** 40 minutes.

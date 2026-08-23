@@ -438,3 +438,37 @@ the redraw cadence and the headless path.
 only measured number ADR-001 constraint 4 will have.
 
 **Expected effort:** 40 minutes.
+
+---
+
+## PI-016 — The ADR-001 headroom baseline: RAM, CPU and boot
+
+**Belief (`probable`, argued not measured):** ADR-001 rejects options D and E partly on
+resource grounds — a resident browser or an HTML rasteriser on a 2 GB CM5 Lite that already
+carries **two** independent recording auto-stops for memory (F-235). That argument is sound
+but it is an argument, and the ADR says so. A measurement either closes it or reopens D/E.
+
+**Why the Pi is needed:** every number here is a property of the real board under real
+capture load. Nothing about it is derivable from source.
+
+**Procedure:**
+1. Idle, camera running, no recording: `free -m`, and `ps -o rss=,pcpu= -p <cinemate>
+   <cinepi-raw>`. Record the floor.
+2. Recording at the highest resolution the sensor supports, for 60 s. Sample the same every
+   5 s. Record the peak and how close it gets to `RAM_LIMIT_PERCENT = 80`.
+3. Note whether either auto-stop fires, and **which one** — cinemate's percentage trip or
+   cinepi-raw's `"RAM pool exhausted"` (F-235). If they can both fire for one condition, the
+   operator sees two different reasons for one event.
+4. `pidstat -p <cinemate> 1 30` during recording to separate the GUI thread's CPU from the
+   rest. Compare against `target_fps = 12`.
+5. Boot: `systemd-analyze`, then `systemd-analyze blame | head`, and time
+   `camera-ready.sh` specifically — it can hold `ExecStartPre` for ~30 s (F-236).
+6. **Prediction to test:** peak RSS at UHD leaves under ~300 MB free, which is less than a
+   resident Chromium's working set — confirming D's rejection. And `camera-ready.sh`
+   dominates the boot profile.
+
+**Settles:** whether ADR-001's rejection of D and E rests on measurement or only on
+argument; the C3 and C6 rows of its decision matrix; and whether option C's renderer change
+has any headroom cost at all (it should be ~nil — same renderers).
+
+**Expected effort:** 45 minutes.

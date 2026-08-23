@@ -33,6 +33,7 @@ from module.config_loader import (
     strip_jsonc,
 )
 from module.app import boot_config, raw_files
+from module.jsonc_edit import apply_updates
 
 logger = logging.getLogger(__name__)
 
@@ -216,6 +217,37 @@ def _backup_settings(dest: Path) -> Path | None:
     return target
 
 
+def _render_settings(dest: Path, settings: dict) -> tuple[str, bool]:
+    """Produce the text to write, keeping the file's comments where possible.
+
+    Returns (text, comments_preserved). The surgical path rewrites only the
+    spans whose values changed, so comments, key order and formatting survive
+    untouched. It cannot express a structural change -- a key added or removed,
+    an array resized -- and falls back to a full json.dumps() rewrite, which is
+    correct but loses every comment. The caller must report that, not hide it.
+    """
+    full = json.dumps(settings, indent=2, ensure_ascii=False) + "\n"
+
+    try:
+        original = dest.read_text(encoding="utf-8")
+        current = json.loads(strip_jsonc(original))
+    except (OSError, ValueError) as exc:
+        # No readable file to preserve anything from -- a first write, or one
+        # the user has already broken. Either way the full rewrite is right.
+        logger.info("Rewriting %s in full (%s)", dest, exc)
+        return full, False
+
+    try:
+        edited = apply_updates(original, current, settings)
+    except Exception:  # pragma: no cover - the editor must never block a save
+        logger.exception("Surgical settings edit failed; falling back to a full rewrite")
+        return full, False
+
+    if edited is None:
+        return full, False
+    return edited, True
+
+
 @settings_editor_bp.route("/api/settings", methods=["PUT"])
 def put_settings():
     body = request.get_json(silent=True)
@@ -228,9 +260,9 @@ def put_settings():
         logger.exception("Rejected settings save: failed to normalize payload")
         return jsonify({"ok": False, "message": f"Invalid settings payload: {exc}"}), 400
 
-    text = json.dumps(settings, indent=2, ensure_ascii=False) + "\n"
     dest = Path(SETTINGS_FILE)
     backup = _backup_settings(dest)
+    text, comments_kept = _render_settings(dest, settings)
     try:
         fd, tmp_path = tempfile.mkstemp(dir=str(dest.parent), prefix=".settings-editor-", suffix=".jsonc.tmp")
         try:
@@ -245,8 +277,9 @@ def put_settings():
         return jsonify({"ok": False, "message": f"Could not write {dest}: {exc}"}), 500
 
     logger.info(
-        "settings.jsonc saved via settings editor (%d bytes); backup: %s",
+        "settings.jsonc saved via settings editor (%d bytes); comments %s; backup: %s",
         len(text),
+        "preserved" if comments_kept else "LOST (structural change)",
         backup or "none",
     )
 
@@ -261,7 +294,23 @@ def put_settings():
         timer.daemon = True
         timer.start()
 
-    return jsonify({"ok": True, "message": "Saved.", "restarting": restarting})
+    message = "Saved."
+    if not comments_kept:
+        # Say it out loud. Silently dropping the operator's annotations is how
+        # this went unnoticed in the first place.
+        message = (
+            "Saved, but the comments in settings.jsonc could not be kept: this change "
+            "altered the file's structure, so it was rewritten from scratch."
+            + (f" The previous version is at {backup}." if backup else "")
+        )
+
+    return jsonify({
+        "ok": True,
+        "message": message,
+        "restarting": restarting,
+        "comments_preserved": comments_kept,
+        "backup": str(backup) if backup else None,
+    })
 
 
 @settings_editor_bp.route("/api/config-txt", methods=["GET"])

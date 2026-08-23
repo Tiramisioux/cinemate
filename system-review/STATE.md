@@ -19,11 +19,15 @@
 - **Then S10 (2026-08-23) — install drift **delivered**:
   `deliverables/INSTALL-DRIFT-REPORT.md`, 4 findings, **F-003 decided (option 2, reversing
   S01's lean)**. See `sessions/S10-install-drift.md`.
-- **Current phase:** D complete. S11 opens Phase E — distillation.
-- **Next session:** **S11 — CineMate style, philosophy & skill payload.**
+- **Then S11a (2026-08-23) — `cinepi_controller.py` **traced** (the six-times-deferred item)
+  and `deliverables/CINEMATE-PHILOSOPHY.md` **delivered**. 4 findings, **PI-007 step 1
+  discharged with no hardware**. See `sessions/S11a-controller-and-philosophy.md`.
+- **Current phase:** E — distillation.
+- **Next session:** **S11b — style, entry-points & skill payload** (the other three S11
+  deliverables). Then S12.
 - **Ledger branch:** `claude/cinemate-system-review-kickoff-cilicc` — pushed: yes · PR #129 (draft)
-- **Findings:** 182 rows, **177 net** (F-183..F-186, F-189 merged into F-002/F-003). Free ID
-  blocks: F-135..F-149, F-196..F-199, F-268..F-299.
+- **Findings:** 186 rows, **181 net** (F-183..F-186, F-189 merged into F-002/F-003). Free ID
+  blocks: F-135..F-149, F-196..F-199, F-272..F-299.
 - **Open decisions:** **ADR-001 is written and `proposed`** —
   `decisions/ADR-001-gui-harmonization.md`. Reject D and E; adopt C reached through B; fix
   F-204 first. Surface 4 excluded permanently. It does **not** decide constraint 2 (PI-009),
@@ -254,6 +258,27 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
 - **Four apparent findings dissolved on checking** — a keyword matcher's 11 false "missing
   steps", an upstream-attribution URL, `$PI_HOME`-derived paths, and a regex that missed
   bare-name headings. The dissolved candidates took more work than the recorded ones.
+
+### From S11a (controller + philosophy) — detail in `deliverables/CINEMATE-PHILOSOPHY.md`
+- **`cinepi_controller.py` is TRACED. Stop deferring it.** F-270: 2626 lines is **151 methods
+  on one class** (94 public, 57 private, no `@property`), averaging ~16 lines. Only
+  `__init__` (239) is oversized. **Wide, not deep** — S12 should split it by concern into
+  modules, not by extracting long methods.
+- **F-025 is SETTLED (F-268), PI-007 step 1 discharged, no hardware.** `_dispatch_lock` is
+  `CommandExecutor`'s (`cli_commands.py:21`, 2 s timeout) and serialises **3** paths
+  (CLI, serial, HTTP). **6** modules bypass it via `getattr` — including `storage_preroll.py`
+  and `simple_gui.py`, which F-025 did not name. F-269: the controller has **9 lock sites
+  across 151 methods**, so there is no internal fallback.
+- **F-271 — the settings editor destroys all 74 comment lines in `settings.jsonc`** (19% of
+  the file), no warning, no backup. The correct implementation is ~1000 lines away in
+  `cinemate-recovery.py`'s `write_config_file`.
+- **The philosophy document's spine, and the review's thesis restated:** *this project knows
+  what it believes, states it in prose, and enforces it nowhere — and where a principle is
+  violated, the correct implementation usually exists a few hundred lines away.* Three
+  instances: F-204/F-208, F-271/`write_config_file`, F-118/F-219.
+- **Twelve principles now:** 8 from KICKOFF (2 refined, 3 confirmed, 1 bounded, **2 stated
+  and violated by the product**) plus 4 new — degrade in ladders · state the reason in place
+  · duplicated truth needs a check not a comment · route don't replicate.
 - **Incremental agent writes are mandatory, not advice.** Two agent runs died mid-flight
   to usage limits; the one told to write incrementally preserved 16 findings, the four that
   weren't preserved nothing.

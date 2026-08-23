@@ -46,6 +46,17 @@ change) or "delete 928 dead LOC that are also shipping to every camera".
 
 ## PI-002 — Do the 27 `_test/` pytest files actually pass on hardware?
 
+> **LARGELY DISCHARGED 2026-08-23, no hardware used — see F-272.** The suite was run during
+> remediation batch B3: **381 passed + 241 subtests in ~2 s**, zero failures, on nine pip
+> packages and no Pi. The portable/hardware split this item was written to discover
+> **appears not to exist** — everything is portable.
+>
+> **What remains for the Pi:** whether any test passes off-hardware for the wrong reason —
+> i.e. silently skips or stubs past the thing it claims to check. Worth one pass with
+> `-v` on the device comparing per-test outcomes, but this is now a spot-check, not a
+> discovery exercise.
+
+
 **Belief (unverified):** 27 pytest files exist and none run in CI (F-006). Whether they
 currently *pass* is unknown — they have never been observed running.
 

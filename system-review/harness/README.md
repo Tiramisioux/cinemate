@@ -98,3 +98,42 @@ Settings-editor catalogue entries        46
 Two of its own bugs are documented in the source as warnings, because both are the kind
 this review keeps making: it once walked every nested dict and over-counted fields, and it
 once scanned two of the three Socket.IO emit sites and under-counted events.
+
+## `design_token_diff.py` — S08
+
+Compares the HDMI GUI's colour constants against the web GUI's CSS custom properties, and
+reports three distinct states rather than one: an annotation that resolves and agrees, an
+annotation that names a constant which does not exist, and a token with no stated link at
+all.
+
+```
+python3 system-review/harness/design_token_diff.py --repo . [--strict]
+```
+
+Standard library only. `--strict` exits 1 on a drifted pair or a dangling annotation.
+**Safe to gate at zero today** — nothing has drifted yet, which is exactly when a check is
+worth adding.
+
+Current output:
+
+```
+CSS colour custom properties            16
+  annotation resolves, values agree      3
+  annotation dangles                     0
+  value match only (no stated link)     11
+  not comparable (#000, lightgreen)      2
+```
+
+**It refined F-007.** The ledger recorded the colours as "synced only by a comment"; the
+measurement is that only 3 of 16 have that comment. The other 11 are undocumented parallel
+definitions. The sync mechanism is weaker than the finding claimed — see F-232.
+
+It also caught one of its own bugs before publication: an earlier version read only
+module-level constants and reported `--zoom-hi`'s `ZOOM_HIGHLIGHT_COLOR` annotation as
+dangling. That constant is a function-local at `simple_gui.py:1226`. The script now walks
+the whole tree, and the near-miss is documented in its docstring.
+
+This is the **third** ready-made CI check in the ledger, after `redis_key_diff.py` and
+`gui_field_extract.py`. All three are stdlib-only and need no hardware. See
+`decisions/ADR-001-gui-harmonization.md` §6 — no unification step should land without its
+check landing on the same commit.

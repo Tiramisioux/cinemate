@@ -35,20 +35,37 @@ forbids pushing elsewhere without permission. Cut from `origin/dev` @ `02b5a39`.
 
 Use this branch. Do not create `review/system-analysis` without asking the operator.
 
-### D2 · cinepi-raw is read-only, shallow, and on `main` — not `dev`
+### D2 · cinepi-raw — **now on `dev`** (revised 2026-08-23 on operator instruction)
 
-Not a sibling checkout. Fetched per-session as an anonymous clone at
-`/workspace/tiramisioux/cinepi-raw`, branch **`main` @ `774402c`**.
+**Operator instruction: use the `dev` branches of both projects.** Both are now on `dev`.
 
-- **Cannot push.** No review branch exists there. Stage-2 work needs `add_repo` with
-  `access: "push"`, which lands the clone at a *different* path (`/workspace/cinepi-raw`).
-- **No history.** Shallow clone — no `git log`, blame, or `-S`. PI-003 is blocked on this.
-- **C++ LOC differ from KICKOFF §6.2**, which described `dev` @ `ea96f2d`. Use
-  `CENSUS.md` §2 for `main` figures. Do not mix the two tables.
-- `libcamera/` and `imx585-v4l2-driver/` are absent entirely.
+**cinemate** was already correct: `origin/dev` is `02b5a39`, unmoved, and that is exactly
+the ledger branch's base and merge-base. Nothing needed rebasing. The ledger branch stays
+`claude/cinemate-system-review-kickoff-cilicc` — **never commit or push to `dev`** (§6.1).
 
-**If a fresh session finds no cinepi-raw:** re-clone with
-`GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/Tiramisioux/cinepi-raw /workspace/tiramisioux/cinepi-raw`
+**cinepi-raw** was on `main` @ `774402c` for S01–S07 and is now on **`dev` @ `ea96f2d`** at
+`/workspace/tiramisioux/cinepi-raw`. That gap was **45 files / +7164 lines** (F-225).
+
+- **KICKOFF §6.2's C++ table is now the applicable one.** It described `dev` @ `ea96f2d` all
+  along. The old "do not mix the two tables" warning is void. `CENSUS.md` §2 holds `main`
+  figures (24,051 LOC); `dev` is **29,438** (F-231).
+- **Every cinepi-raw figure in S01–S07 is a `main` figure.** Re-verified so far: the key
+  contract (F-226), the test targets (F-228), the RAM auto-stop citation (F-230), the LOC
+  (F-231), and the `dualHdmiPreviewStage.cpp` DRM comment (**unchanged — S03's ADR-001
+  evidence holds**). Not yet re-verified: `dng_encoder.cpp` (687 lines changed, a near
+  rewrite), the CCMP preview stage and LOG-LUT subsystem (both new), `cinepi_controller.cpp`
+  (+151), `cinepi_recorder.hpp` (+60).
+- **Still read-only and shallow.** No push target, no history, no blame, no `-S`. PI-003
+  remains blocked on a full clone.
+- `libcamera/` and `imx585-v4l2-driver/` are still absent.
+
+**If a fresh session finds no cinepi-raw, clone `dev`:**
+```
+GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 --branch dev \
+  https://github.com/Tiramisioux/cinepi-raw /workspace/tiramisioux/cinepi-raw
+```
+**Check the branch before trusting any cinepi-raw figure:**
+`git -C /workspace/tiramisioux/cinepi-raw branch --show-current` must print `dev`.
 
 ### D3 · The dirty tree in KICKOFF §6.1 does not exist
 

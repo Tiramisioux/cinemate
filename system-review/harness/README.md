@@ -20,17 +20,24 @@ GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 \
   https://github.com/Tiramisioux/cinepi-raw /workspace/tiramisioux/cinepi-raw
 ```
 
-Current output against `main` @ 774402c:
+**Run it against `dev`.** Both repos are on `dev` (STATE.md D2). Check first:
+`git -C /workspace/tiramisioux/cinepi-raw branch --show-current` must print `dev`.
+
+Current output against **`dev` @ ea96f2d** (the numbers to baseline a CI ratchet on):
 
 ```
 cinemate   ParameterKey members    : 84
-cinepi-raw CONTROL_KEY_ macros    : 24
+cinepi-raw CONTROL_KEY_ macros    : 28
 cinepi-raw direct/constexpr keys  : 8   (no macro name)
-cinepi-raw total                  : 32
-shared (the visible contract)     : 19
+cinepi-raw total                  : 36
+shared (the visible contract)     : 23
   -> 12 cinepi-raw keys unreferenced in cinemate
   ->  1 (audio_vu) referenced but outside the enum
 ```
+
+For reference, `main` @ 774402c gave 84 / 32 / **19** shared / 12. The four extra shared
+keys on `dev` are the HDR family, which landed on both `dev` branches together. **The
+unreferenced count is 12 on both — the drift did not grow** (F-226).
 
 `--strict` exits 1 when any cinepi-raw key is unreferenced in cinemate. Do **not** wire
 that into CI until the current 12 are triaged (PI-008) — it would fail on day one. The

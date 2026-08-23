@@ -9,6 +9,23 @@
 
 ---
 
+> ## ⚠ CORRECTION — this map was built against `main`; both repos are now on `dev`
+>
+> **Added 2026-08-23 on operator instruction (see `STATE.md` D2, F-225).** S03 read
+> cinepi-raw `main` @ `774402c`. The applicable branch is **`dev` @ `ea96f2d`**, which is
+> **45 files / +7164 lines** ahead. Re-verified against `dev` so far:
+>
+> | Section | Status on `dev` |
+> |---|---|
+> | §2 build targets | **Changed** — 7 `meson test` targets, not 1 (F-228) |
+> | §5 key contract | **Changed** — 84 / 36 / **23** shared / 12 unreferenced (F-226) |
+> | §7 display ownership | **Holds.** The `dualHdmiPreviewStage.cpp` DRM-master comment is byte-identical on `dev`. But `dev` adds plane-level DRM composition to `drm_preview.cpp` (F-227) — read that before using §7 for ADR-001 |
+> | RAM auto-stop citation | **Stale** — `cinepi_raw.cpp:225-229` on `dev`, not `:200-212` (F-230) |
+>
+> **Not yet re-verified:** §4's frame lifecycle (`dng_encoder.cpp` changed by 687 lines — a
+> near rewrite), and the entirely new CCMP preview stage and LOG-LUT subsystem, which §2
+> and §4 do not mention at all. Treat those sections as `main`-only until re-read.
+
 ## 1. The one-paragraph version
 
 cinepi-raw is a **fork of `rpicam-apps`** with a CineMate-specific application layered on

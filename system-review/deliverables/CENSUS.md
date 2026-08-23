@@ -39,11 +39,16 @@ of a deleted module. Flagged for S04.
 
 | Category | Count |
 |---|---|
-| C/C++/hpp sources | 24,051 LOC total |
+| C/C++/hpp sources | 24,051 LOC total — **`main` figure; `dev` is 29,438** (F-231) |
 | Files in `cinepi/` | 29 |
 | Patch files at root | 2 (`add-redis-timecode.patch`, `add-tc.patch`) |
 
 ---
+
+> **⚠ `main` figures.** Every cinepi-raw number in §1 and §2 was measured on `main` @
+> `774402c`. Both repos are now on `dev` (`STATE.md` D2). cinepi-raw `dev` @ `ea96f2d` is
+> **29,438** C/C++ LOC, not 24,051 — +22% (F-231). **KICKOFF §6.2's C++ table describes
+> `dev` and is now the applicable one.**
 
 ## 2. Size census — files over 200 LOC
 

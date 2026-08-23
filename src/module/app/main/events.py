@@ -1,5 +1,5 @@
 from flask_socketio import emit
-import time
+import threading
 from module.redis_controller import ParameterKey
 
 def register_events(socketio, redis_controller, cinepi_controller, simple_gui, sensor_detect):
@@ -106,8 +106,17 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
             emit_resolution_selection()
 
         if key == ParameterKey.WB.value:
-            time.sleep(2)  # Add a 2-second pause
-            socketio.emit('reload_browser')  # Emit event to reload the browser
+            # Defer, do not sleep. This handler runs on RedisController's single
+            # _listen thread, synchronously, ahead of eight other subscribers --
+            # sleeping here stalled the entire live-state bus for two seconds on
+            # every white-balance change, and blocked the pub/sub loop from
+            # consuming the next message at all. Same threading.Timer shape the
+            # settings editor uses to let a response land before it acts.
+            timer = threading.Timer(
+                2.0, lambda: socketio.emit('reload_browser')
+            )
+            timer.daemon = True
+            timer.start()
 
     redis_controller.redis_parameter_changed.subscribe(redis_change_handler)
 

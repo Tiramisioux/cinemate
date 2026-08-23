@@ -128,8 +128,25 @@ whole point is that reading the source could not produce one. Report the plane t
 
 ---
 
-## When you are done
+## When you are done — commit the results, do not just report them
 
-Post the results as one block — all items, in order, four lines each. Do not summarise or
-interpret; the raw observations are the deliverable. In particular, do not drop an
-INCONCLUSIVE or a CONTRADICTED because it looks untidy: those two are why the session exists.
+**Append your observations to `system-review/PI-VERIFICATION-QUEUE.md`, under the item they
+belong to, and push.** Results that exist only as chat text are one context window from
+gone; results in git can be read by any later session, which is how this whole review has
+been carried across eleven of them.
+
+```
+git checkout claude/cinemate-system-review-kickoff-cilicc
+# append under each PI-0NN heading, then:
+git add system-review/ && git commit -m "pi: results from the hardware session" && git push
+```
+
+Append under the existing item rather than editing its procedure — the prediction has to
+stay visible next to what actually happened, or the record loses its point.
+
+**Then** post the same block in chat: all items, in order, four lines each. Do not summarise
+or interpret; the raw observations are the deliverable. In particular, do not drop an
+INCONCLUSIVE or a CONTRADICTED because it looks untidy — those two are why the session
+exists.
+
+Only `system-review/` should be touched. No commits to `src/`, and never to `dev`.

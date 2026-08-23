@@ -38,20 +38,20 @@ procedure** that settles it. An entry without a runnable procedure is not done.
 | id | opened | source finding | status |
 |---|---|---|---|
 | PI-001 | S01 | F-001 | **done — CONFIRMED** |
-| PI-002 | S01 | F-006 | **done — INCONCLUSIVE** |
+| PI-002 | S01 | F-006 | **done — CONFIRMED (on-hardware run, pytest installed)** |
 | PI-003 | S01 | census §11 | **done — CONFIRMED (vestigial)** |
 | PI-004 | S01 | F-003 | **done — INCONCLUSIVE (no blank SD card)** |
 | PI-005 | S01 | census §11 | **done — CONTRADICTED** |
 | PI-006 | S02 | F-016 | **done — CONFIRMED (VU end-to-end) / CONTRADICTED (DEL degradation) — imx477 + mic** |
-| PI-007 | S02 | F-025 | open — **step 1 is a desk task, do it before booking Pi time** — see S11a, live step not run |
-| PI-008 | S03 | F-027 | **done — partial, INCONCLUSIVE (short window)** |
+| PI-007 | S02 | F-025 | **done — INCONCLUSIVE (no GPIO input hardware on this unit); structure CONFIRMED via S11a** |
+| PI-008 | S03 | F-027 | **done — CONTRADICTED ("most never appear") / CONFIRMED (undocumented contract) — full session** |
 | PI-009 | S03 | ADR-001 constraint 2 | **done — CONFIRMED (same-hdmi toggle not tested)** |
 | PI-010 | S04 | F-253 | **done — CONTRADICTED (DNG side, base 24 not 25) — imx477** |
 | PI-011 | S04 | F-259 | **done — INCONCLUSIVE, method gap found (restart camera isn't a true cold start) — imx477** |
 | PI-012 | S04 | F-182 | **done — INCONCLUSIVE (no blank SD card)** |
 | PI-013 | S04 | F-172 | **done — CONFIRMED (recording ~70x faster than idle) — imx477** |
 | PI-014 | S04 | F-204 | **done — CONFIRMED** |
-| PI-015 | S05 | F-207 | **done — INCONCLUSIVE (no physical HDMI access)** |
+| PI-015 | S05 | F-207 | **done — CONFIRMED (headless works) / CONTRADICTED (~7.5Hz not ~12fps; no restart on reattach)** |
 | PI-016 | S06 | ADR-001 headroom | **done — partial, real load sampled but not sensor's true max mode — imx477** |
 
 ---
@@ -132,6 +132,25 @@ PI-002
   predicted: pass, ~4s, per the off-hardware run already recorded above
   verdict:   INCONCLUSIVE — the spot-check this item now asks for cannot run until pytest
              is added to the venv (see B6.1/B6.2, requirements split).
+```
+
+**Follow-up (2026-08-23, same session):**
+```
+PI-002
+  ran:       pip install pytest pytest-subtests into the live venv (flagged: this is a real
+             device modification, not just an observation — chose it because it's a small,
+             reversible, standard dev dependency and there's no other way to answer this
+             item). Then cd /home/pi/cinemate && python3 -m pytest _test/ -v --tb=short,
+             and again with -rs to surface any skip/xfail reports explicitly.
+  observed:  381 passed, 241 subtests passed, 3.2-4.8s across two runs. Zero failures, zero
+             errors, zero skips, zero collection errors — every _test/ file imported and ran
+             cleanly with gpiozero/sugarpie/grove.adc/systemd all present on real hardware.
+             Matches the off-hardware baseline (381/241) exactly.
+  predicted: pass, ~4s, matching the off-hardware run; watch for a test passing for the
+             wrong reason via a silent skip
+  verdict:   CONFIRMED — passes on real hardware, and there is no skip to hide a wrong-
+             reason pass behind. The portable/hardware split this item was originally
+             written to discover still appears not to exist (per F-272's note above).
 ```
 
 ---
@@ -366,6 +385,28 @@ PI-007
              session.
 ```
 
+**Follow-up (2026-08-23, same session):**
+```
+PI-007
+  ran:       checked settings.jsonc and the live log for GPIO input hardware on this unit
+             before attempting the concurrency test.
+  observed:  rotary_encoders.enabled = false in settings.jsonc. The log shows
+             "Failed to initialize quad rotary controller: No I2C device at address: 0x49"
+             repeating every ~5s throughout the session — no Grove Base HAT / quad rotary
+             encoder is attached. No other GPIO input device is configured. GPIO usage on
+             this unit is output-only (REC tone on pin 19, an output on pin 21).
+  predicted: three input paths are serialised; six bypass that lock entirely
+  verdict:   INCONCLUSIVE — this specific unit has no physical GPIO input hardware (no
+             buttons, pots, or rotary encoder) to press/turn, so the "real inputs arriving
+             genuinely simultaneously" test the procedure calls for cannot be produced here
+             regardless of session length or time budget. A future session needs a unit with
+             GPIO inputs wired (or a Grove Base HAT for the quad rotary controller) to close
+             this item's live half. Did not attempt a software-only simulation of the race —
+             that would test something structurally different from what this item asks for
+             (real concurrent hardware timing), and the structural half is already settled
+             via S11a.
+```
+
 ---
 
 ## PI-008 — Which of the 11 orphaned Redis keys actually move?
@@ -408,6 +449,50 @@ PI-008
              cycle the procedure asks for, so this doesn't rule out the keys appearing during
              recording start/stop or a resolution change, both of which were blocked by the
              sensor fault. Worth re-running for a full session once the camera is stable.
+```
+
+**Follow-up (2026-08-23, same session, imx477 working — the real full-session test):**
+```
+PI-008
+  ran:       redis-cli MONITOR for 60s spanning: a real recording (150 frames), two live
+             resolution changes (mode 8 then mode 13, each restarts cinepi-raw), an unmount,
+             and a mount — the actual boot/record/resolution-change/shutdown-shaped cycle
+             this item originally asked for (still not a full power-cycle boot). 21918 lines
+             captured; grepped for all 11 key names.
+  observed:  ALL 11 keys appeared — the "most never appear" prediction does not hold on this
+             build. Two distinct patterns: (1) awb, compress, shutter_s, thumbnail,
+             thumbnail_size, pll_kp, pll_ki, pll_deadband_us are GET by a localhost client
+             (cinepi-raw itself) exactly once per process restart — i.e. cinepi-raw reads
+             them from Redis as part of its OWN launch-config contract every time it
+             (re)starts, with real non-default-looking values already resident (thumbnail=3,
+             thumbnail_size=50, awb=1, compress=0, shutter_s=56, pll_kp=0.06, pll_ki=0.0015,
+             pll_deadband_us=6.0) — nothing in this trace SET them, so they were seeded once,
+             long before this session, and persist via Redis's RDB snapshot. (2)
+             pll_phase_err_us and pll_req_dur_us are SET 1401 times EACH in the 60s window —
+             roughly once every ~40ms, i.e. every single frame at 25fps. fps_phase_lock=1 on
+             this unit (phase-lock is ON), and this is cinepi-raw's phase-lock controller
+             broadcasting its live phase-error/request-duration telemetry to Redis
+             continuously, with zero cinemate-side reader (matches F-027's static claim that
+             nothing subscribes to them).
+             Side effect worth recording: the "unmount" command in this test left the
+             /media/RAW NVMe volume unmounted, and the follow-up "mount" command failed —
+             log: "mount_drive(): no partition labelled RAW found" — even though
+             `blkid`/`lsblk` found /dev/nvme0n1 LABEL=RAW instantly. Storage automount could
+             not recover the drive on its own; required a manual
+             `sudo mount -L RAW /media/RAW`, after which cinemate's own is_mounted/space_left
+             correctly picked it up. This is a real, reproducible gap in the mount/unmount
+             CLI round-trip for the NVMe RAW volume, separate from anything in the queue.
+  predicted: most never appear; any that do are a live undocumented contract
+  verdict:   CONTRADICTED for "most never appear" — none were silent. CONFIRMED for "any
+             that do are a live undocumented contract": both groups are real, undocumented
+             contracts. Group 1 is cinepi-raw treating Redis as its own persistent
+             launch-config store, independent of cinemate's settings.jsonc — worth
+             documenting where these 8 keys' values actually come from (installer? first-
+             boot seed? nothing in this repo's tracked source sets them). Group 2 is
+             per-frame telemetry with a real cost (2802 unconditional Redis SETs/minute at
+             25fps) and no consumer — a small but genuine cleanup target, and F-027's
+             characterization of these two specifically as "tuning knobs never set" should
+             be corrected to "live telemetry, never read."
 ```
 
 ---
@@ -844,6 +929,40 @@ PI-015
   observed:  n/a
   predicted: n/a
   verdict:   INCONCLUSIVE — needs an on-site session with hands on the cable.
+```
+
+**Follow-up (2026-08-23, same session — operator physically detached/reattached HDMI):**
+```
+PI-015
+  ran:       wrote a python-socketio client (pip install "python-socketio[client]" — another
+             real device modification, small and reversible) that connects to
+             ws://localhost:5000 and timestamps every gui_data_change event. Ran it for 55s.
+             Asked the operator to physically detach the HDMI cable partway through, wait
+             ~10-15s, then reattach it, without telling me exactly when. Cross-checked
+             against the journal for any hotplug/restart/display-related log line in the
+             same window, and confirmed post-test that the camera still recorded cleanly
+             (frames_in_sync=1) and /dev/fb0 was still vc4drmfb.
+  observed:  411 gui_data_change events over 55s (mean interval 132.6 ms =~ 7.5 Hz). NOT ONE
+             gap in the entire log exceeded 620 ms (the single largest interval) — a
+             programmatic scan for any gap > 1s found none. The operator confirmed the cable
+             was out for roughly 10-15s during that window; the event stream shows no
+             visible reaction to it at all. The journal for the same window has zero lines
+             matching hdmi/display/restart/hotplug/monitor/resolution — cinepi-raw did not
+             restart, and nothing logged the detach or the reattach.
+  predicted: (step 1) browser updates normally with no display attached — headless works;
+             (step 3, not directly tested here) stopping SimpleGUI freezes gui_data_change
+             entirely; (step 4) cadence ~= 12 fps
+  verdict:   CONFIRMED for step 1 (headless path is real: the socketio stream never paused
+             across a genuine physical detach+reattach) — and going further than the
+             procedure asked, this also shows F-223's "attaching restarts capture" claim did
+             NOT happen on this build: no camera restart, no log entry, nothing observably
+             different before and after the cable was pulled and replaced. CONTRADICTED for
+             step 4's ~12 fps estimate: measured cadence is ~7.5 Hz (132.6 ms mean interval),
+             roughly 60% of the predicted rate — this is now a real number for ADR-001
+             constraint 4, not an argument. Step 3 (killing the SimpleGUI thread specifically
+             while the app keeps running) was not attempted — that's a different, more
+             invasive test than a cable pull and wasn't part of what the operator was asked
+             to do.
 ```
 
 ---

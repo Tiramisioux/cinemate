@@ -212,6 +212,24 @@ document. Step 4 may settle most of it faster than step 1.
 
 ## PI-009 — How do the DRM preview and the fbdev GUI actually compose?
 
+> **UPDATED 2026-08-23 — new material from cinepi-raw `dev` (F-227, F-229).** The review
+> previously read cinepi-raw `main`. On `dev`, `preview/drm_preview.cpp` gains a
+> `--same-hdmi` clone path that **enumerates DRM planes** (`drmModeGetPlaneResources`),
+> picks one that is not the primary's and supports the same fourcc on the second CRTC, and
+> programs it with `drmModeSetPlane` — logging *"no spare plane for the second output;
+> clone disabled"* when none is free. So cinepi-raw already does plane-level composition
+> and already handles plane exhaustion.
+>
+> Add to the procedure below: **run `modetest -p` (or `drm_info`) with cinepi-raw running
+> and record how many overlay planes exist on the primary CRTC and how many are already
+> claimed.** That number decides whether a GUI overlay plane is even available, which is
+> the concrete form of ADR-001 constraint 2. Also test with `--same-hdmi` on and off, since
+> the clone path consumes a plane.
+>
+> Note too that both repos describe `--same-hdmi` as making *preview and GUI share the same
+> HDMI output* (F-229) — evidence that they do compose, with no statement of how.
+
+
 **Belief (partly confirmed):** cinepi-raw draws preview through DRM/KMS
 (`drm_preview.cpp:337,350`) and holds DRM master, which
 `dualHdmiPreviewStage.cpp:5-18` states is exclusive per GPU. cinemate's HDMI GUI writes the

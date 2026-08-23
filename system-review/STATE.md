@@ -7,12 +7,17 @@
   `deliverables/GUI-INVENTORY.md`, `deliverables/GUI-STATE-MODEL.md`,
   `harness/gui_field_extract.py`, 22 findings, 2 PI items. See
   `sessions/S07-gui-inventory.md`.
+- **Then S07b (2026-08-23), on operator instruction — both repos are now on `dev`.**
+  cinemate already was; cinepi-raw was on `main` and was 45 files / +7164 lines behind.
+  7 findings, D2 rewritten, correction banners on `CODE-MAP-cinepi-raw.md` and `CENSUS.md`.
+  See `sessions/S07b-dev-branch-reconciliation.md`. **Check the branch before trusting any
+  cinepi-raw figure.**
 - **Current phase:** C — GUI.
 - **Next session:** **S08 — GUI harmonization evaluation → ADR-001.** Still gated by
   PI-009, but S07 narrowed it substantially — read `GUI-STATE-MODEL.md` §6 first.
 - **Ledger branch:** `claude/cinemate-system-review-kickoff-cilicc` — pushed: yes · PR #129 (draft)
-- **Findings:** 151 rows, **146 net** (F-183..F-186, F-189 merged into F-002/F-003). Free ID
-  blocks: F-135..F-149, F-196..F-199, F-225..F-249, F-262..F-299.
+- **Findings:** 158 rows, **153 net** (F-183..F-186, F-189 merged into F-002/F-003). Free ID
+  blocks: F-135..F-149, F-196..F-199, F-232..F-249, F-262..F-299.
 - **Open decisions:** ADR-001 (GUI harmonization) — not started.
   **S03 supplied its hardest evidence and its hardest blocker.** DRM master exclusivity is
   now confirmed *from cinepi-raw's own comment* (`dualHdmiPreviewStage.cpp:5-18`), which
@@ -163,6 +168,23 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
 - **The extractor over-counted once and under-counted once, in one session.** Both were
   caught by re-checking output against source. Numbers not produced by a committed script
   should be treated as provisional.
+
+### From S07b (dev-branch reconciliation) — detail in `sessions/S07b-dev-branch-reconciliation.md`
+- **Both repos are on `dev`. Verify it before trusting a cinepi-raw figure:**
+  `git -C /workspace/tiramisioux/cinepi-raw branch --show-current` → must print `dev`.
+- **The cross-repo drift did not grow between branches** — 12 unreferenced keys on both.
+  The 4 new `dev` keys are the HDR family and cinemate already has all four. Worth stating
+  in S12: this boundary is being maintained.
+- **F-227 is new ADR-001 material.** `dev`'s `drm_preview.cpp` enumerates DRM planes and
+  programs a spare overlay plane for `--same-hdmi`, degrading gracefully when none is free.
+  cinepi-raw already does plane-level composition. PI-009 now has a concrete measurement
+  attached: count free overlay planes on the primary CRTC, `--same-hdmi` on and off.
+- **`dualHdmiPreviewStage.cpp`'s DRM-master comment is byte-identical on `dev`** — S03's
+  strongest ADR-001 evidence survives the branch change.
+- **The largest outstanding re-verification: `dng_encoder.cpp` changed by 687 lines.**
+  `CODE-MAP-cinepi-raw.md` §4's frame lifecycle is a `main` account of a component that has
+  since been rewritten, and the new CCMP preview stage and LOG-LUT subsystem are not in the
+  map at all. Banner is on the file.
 - **Incremental agent writes are mandatory, not advice.** Two agent runs died mid-flight
   to usage limits; the one told to write incrementally preserved 16 findings, the four that
   weren't preserved nothing.

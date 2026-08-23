@@ -4,6 +4,8 @@ Continue the CineMate system review.
 2. **Read `system-review/STATE.md` — all of it, before your first grep.**
 3. Read `system-review/sessions/S07-gui-inventory.md`, then
    **`deliverables/GUI-STATE-MODEL.md` §6** — it is written as S08's input list.
+   Then read **`sessions/S07b-dev-branch-reconciliation.md`** — cinepi-raw moved from
+   `main` to `dev` after S07 and it added ADR-001 material (F-227).
 4. Then execute **S08 — GUI harmonization evaluation → ADR-001** per `PLAN.md`.
    → `decisions/ADR-001-gui-harmonization.md`
 
@@ -36,7 +38,7 @@ KICKOFF's framing alone — evaluate them against what is actually in the code.
 | KICKOFF §7 constraint | Answer available now |
 |---|---|
 | **1. DRM master exclusive** | Confirmed in S03 from cinepi-raw's own comment (`dualHdmiPreviewStage.cpp:5-18`) |
-| **2. How the GUI and preview compose** | **Still PI-009 — but narrowed.** F-223: HDMI hot-plug makes the GUI thread restart `cinepi-raw` *"so preview binds to the active display"*. So the preview binds at process start and cannot rebind. Options D and E must own that behaviour. This narrows constraint 2; it does not settle it |
+| **2. How the GUI and preview compose** | **Still PI-009 — but narrowed twice.** F-223: HDMI hot-plug makes the GUI thread restart `cinepi-raw` *"so preview binds to the active display"* — the preview binds at process start and cannot rebind. **F-227 (new, `dev`-only):** `drm_preview.cpp` already enumerates DRM planes and programs a spare overlay plane for `--same-hdmi`, degrading with a log when none is free — cinepi-raw does plane-level composition today. PI-009 now has a concrete measurement: **how many overlay planes are free on the primary CRTC**, with `--same-hdmi` on and off. F-229: both repos describe the flag as making preview and GUI share one output. Neither says how |
 | **5. Failure mode** | **Answered, and the baseline is worse than it looks.** F-204: one raising redis subscriber kills the live-state bus permanently and silently; `get_value()` then serves a stale cache, so *every* surface renders plausible frozen values and none shows an error. Score every option against that, including option A |
 | **7. Migration cost** | Partly. Note F-224: `simple_gui` also owns the restart-on-HDMI-attach logic, so a replacement renderer inherits it. The cost is not only pixels |
 | **Scope** | **Surface 4 is out.** The recovery console's value is its isolation (F-221); unifying it deletes the property it exists for. Say so explicitly in the ADR and scope the recommendation to surfaces 1, 2, 3 |
@@ -96,12 +98,19 @@ findings through the same failure.
 **Branch:** `claude/cinemate-system-review-kickoff-cilicc`. PR #129 (draft). Ledger-only —
 `git add system-review/`, never `-A`.
 
-**cinepi-raw** may need re-cloning (read-only, `main`, shallow, no history):
+**Both repos are on `dev`** (STATE.md D2, revised). **Verify before trusting any cinepi-raw
+figure:** `git -C /workspace/tiramisioux/cinepi-raw branch --show-current` must print `dev`.
+If the clone is missing (read-only, shallow, no history):
 ```
-GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/Tiramisioux/cinepi-raw /workspace/tiramisioux/cinepi-raw
+GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 --branch dev \
+  https://github.com/Tiramisioux/cinepi-raw /workspace/tiramisioux/cinepi-raw
 ```
+**Every cinepi-raw figure in S01–S07 is a `main` figure.** `CODE-MAP-cinepi-raw.md` and
+`CENSUS.md` carry correction banners naming what was re-verified and what was not. The
+biggest hole: `dng_encoder.cpp` changed by 687 lines, so the map's §4 frame lifecycle is a
+`main` account of a rewritten component.
 
-**Free ID blocks:** F-135..F-149, F-196..F-199, F-225..F-249, F-262..F-299.
+**Free ID blocks:** F-135..F-149, F-196..F-199, F-232..F-249, F-262..F-299.
 
 **`decisions/` does not exist yet.** S08 creates it.
 

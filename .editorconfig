@@ -1,0 +1,32 @@
+# Keep editors from reflowing files. Paired with ruff.toml.
+#
+# The one uncontroversial item in this proposal. Costs nothing, changes no
+# existing bytes on its own, and stops the next editor from reflowing a file.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.py]
+indent_style = space
+indent_size = 4
+
+[*.{json,jsonc,yml,yaml}]
+indent_style = space
+indent_size = 2
+
+[*.{sh,bash}]
+indent_style = space
+indent_size = 4
+
+[Makefile]
+indent_style = tab
+
+[*.md]
+# Markdown uses two trailing spaces as a hard line break. Stripping them
+# silently changes rendered output -- and docs/ is a published site.
+trim_trailing_whitespace = false

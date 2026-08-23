@@ -1,0 +1,65 @@
+# Deliberately small. A rule is here only if it catches something this codebase
+# actually does; the rest of ruff's catalogue answers problems CineMate does not
+# have. Each selection below names the defect it was chosen for.
+
+line-length = 100          # matches what src/ mostly already does
+target-version = "py311"   # Raspberry Pi OS bookworm ships 3.11
+
+# Vendored and generated code is out of scope.
+extend-exclude = [
+    "src/module/grove_base_hat_adc.py",  # vendored Seeed driver, upstream style
+    "docs",
+    "site",
+]
+
+[lint]
+select = [
+    "E9",     # syntax errors — the floor
+    "F82",    # undefined name
+    "F401",   # unused import
+    "F841",   # unused local variable
+    "E722",   # bare `except:`
+    "S110",   # try-except-pass
+    "S112",   # try-except-continue
+    "T201",   # `print` found
+    "ARG001", # unused function argument
+    "ARG002", # unused method argument
+    "B006",   # mutable default argument
+    "B008",   # function call in default argument
+]
+
+ignore = [
+    "E501",   # line too long.
+              # Deliberate. Enforcing it retroactively flags hundreds of lines,
+              # several of them the load-bearing comments catalogued in F-133,
+              # and the noise would bury the twelve rules above.
+]
+
+# ---------------------------------------------------------------------------
+# DO NOT ADD `ERA001` (commented-out code).
+#
+# F-133 catalogued 47 comments in this repository that encode *why*, including
+# two falsified experiments -- ssd_monitor.py:1122-1125 records that 1 MB exFAT
+# clusters break the macOS driver -- and the cross-repo AUDIO-CORE INVARIANT at
+# storage_profiles.py:41-49. Several are commented-out code kept deliberately as
+# the record of what was tried and did not work.
+#
+# ERA001 would delete the most valuable prose in the codebase, and the diff
+# would look like cleanup. This comment exists so that nobody adds the rule
+# later without reading F-133 first.
+# ---------------------------------------------------------------------------
+
+[lint.per-file-ignores]
+# `print` is the correct call in these three places:
+#   - cinepi_controller.py renders a CLI parameter table to stdout.
+#   - main.py:573 reports a log-file removal failure from *inside* setup_logging,
+#     before any handler exists -- logging there would go nowhere. (The second
+#     print in main.py, "VU levels:", is leftover debug and should be removed
+#     rather than ignored.)
+#   - _test/ is scripts, not library code.
+"src/module/cinepi_controller.py" = ["T201"]
+"src/main.py" = ["T201"]
+"_test/*" = ["T201", "S110", "S112", "ARG001", "ARG002"]
+
+[lint.flake8-bugbear]
+extend-immutable-calls = []

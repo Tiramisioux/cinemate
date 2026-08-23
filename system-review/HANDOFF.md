@@ -1,86 +1,49 @@
 Continue the CineMate system review.
 
-1. Read `system-review/KICKOFF.md` in full — **§7 especially**, it is S08's entire brief.
-2. **Read `system-review/STATE.md` — all of it, before your first grep.**
-3. Read `system-review/sessions/S07-gui-inventory.md`, then
-   **`deliverables/GUI-STATE-MODEL.md` §6** — it is written as S08's input list.
-   Then read **`sessions/S07b-dev-branch-reconciliation.md`** — cinepi-raw moved from
-   `main` to `dev` after S07 and it added ADR-001 material (F-227).
-4. Then execute **S08 — GUI harmonization evaluation → ADR-001** per `PLAN.md`.
-   → `decisions/ADR-001-gui-harmonization.md`
+1. Read `system-review/KICKOFF.md` in full.
+2. **Read `system-review/STATE.md` — all of it, before your first grep.** Two sessions have
+   been caught skipping it.
+3. Read `system-review/sessions/S08-adr-001.md`.
+4. Then execute **S09 — Docs vs. code** per `PLAN.md`.
+   → `deliverables/DOCS-DRIFT-REPORT.md`
+
+Phase C is closed. **ADR-001 is written and `proposed`.** S09 opens Phase D.
 
 ---
 
-## Read this before you start: S07 changed the question
+## S09 has a strong head start — do not recount
 
-KICKOFF §7 frames the decision as *"should we build one shared way of generating all three
-GUIs?"* S07 established that **two of the three things such a system would need already
-exist**, which changes the option costings materially. Do not evaluate the options against
-KICKOFF's framing alone — evaluate them against what is actually in the code.
-
-| Option C would need | Status |
+| S09 asks for | Already established |
 |---|---|
-| a shared state model | **exists** — the web GUI already consumes `simple_gui.populate_values()` verbatim, 68 fields, one owner (F-203) |
-| a widget/grouping/visibility spec | **exists** — `left_section_layout` / `right_section_layout`, with labels, ordered items, per-item formatters and a `condition` predicate (F-215). Lambdas, so not serialisable — the shape is right, the encoding is not |
-| adaptive layout | **does not exist and is the whole problem** — `self.layout` is absolute 1920-reference pixels scaled by `shrink_x`/`shrink_y`. It scales; it does not reflow (F-008) |
+| the docs inventory | **F-004 / `CENSUS.md` §9** — 50 docs, 35 nav entries, **15 unreachable**, 5 empty, 6 commented-out nav lines. Complete. Start there |
+| `redis-keys.md` vs the code | **F-014** — docs are a strict subset: 18 undocumented keys, 0 orphan docs. The gap clusters around dual-sensor and dynamic-resolution work |
+| `settings-json.md` vs schema | Partly — **F-166/F-167**: the schema cannot reject an unknown key (`additionalProperties: true` 25×, `false` 0×), and `encoders`/`rotary_encoders` are declared with no properties at all |
+| the cross-repo key contract | **F-027**, re-measured on `dev`: 84 / 36 / 23 shared / 12 unreferenced (F-226). Reproduce with `harness/redis_key_diff.py`, do not hand-count |
+| `simple-gui-refresh-tuning.md` | **Done — F-234. It is accurate**, every value matches the code. One doc you can mark verified without re-reading |
+| `cli-user-guide.md` on `--same-hdmi` | Spot-checked accurate (F-229) |
 
-**Two consequences to state in the ADR:**
+**The interesting question for S09 is not "how much is wrong" — it is which docs are
+*accurate*, and why those.** F-234 and F-229 are two accurate ones. This review has recorded
+a lot of drift; a docs pass that only counts errors will miss the more useful pattern.
 
-- **Option B (shared tokens only) is now under-ambitious.** It would kill F-007 and F-214,
-  but the codebase has already gone further than B on its own. Shipping B means stopping
-  short of where the code already is.
-- **Option C is cheaper than KICKOFF assumes, and its cost is concentrated in one place.**
-  The honest question is not "should we build a spec" but "should we lift the spec that
-  exists out of `simple_gui.py` and give the HDMI backend a reflow engine".
+### Two things S09 should carry from earlier sessions
 
-## What S07 already answered, with evidence — do not re-derive
+- **F-133's 47 load-bearing comments should be promoted into `docs/`** before anyone
+  refactors those files. S05 flagged them as a deletion hazard. S09 is the natural session
+  to decide which become documentation.
+- **Three hand-sync comments have drifted** (F-260, F-183, F-220) and a fourth kind exists
+  in CSS (F-217). Comments that *claim* to index something else are a docs-drift category
+  of their own, and grepping for that shape is cheap.
 
-| KICKOFF §7 constraint | Answer available now |
-|---|---|
-| **1. DRM master exclusive** | Confirmed in S03 from cinepi-raw's own comment (`dualHdmiPreviewStage.cpp:5-18`) |
-| **2. How the GUI and preview compose** | **Still PI-009 — but narrowed twice.** F-223: HDMI hot-plug makes the GUI thread restart `cinepi-raw` *"so preview binds to the active display"* — the preview binds at process start and cannot rebind. **F-227 (new, `dev`-only):** `drm_preview.cpp` already enumerates DRM planes and programs a spare overlay plane for `--same-hdmi`, degrading with a log when none is free — cinepi-raw does plane-level composition today. PI-009 now has a concrete measurement: **how many overlay planes are free on the primary CRTC**, with `--same-hdmi` on and off. F-229: both repos describe the flag as making preview and GUI share one output. Neither says how |
-| **5. Failure mode** | **Answered, and the baseline is worse than it looks.** F-204: one raising redis subscriber kills the live-state bus permanently and silently; `get_value()` then serves a stale cache, so *every* surface renders plausible frozen values and none shows an error. Score every option against that, including option A |
-| **7. Migration cost** | Partly. Note F-224: `simple_gui` also owns the restart-on-HDMI-attach logic, so a replacement renderer inherits it. The cost is not only pixels |
-| **Scope** | **Surface 4 is out.** The recovery console's value is its isolation (F-221); unifying it deletes the property it exists for. Say so explicitly in the ADR and scope the recommendation to surfaces 1, 2, 3 |
-
-Constraints **3 (RAM/CPU)**, **4 (refresh/latency)** and **6 (boot time)** have no numbers
-yet. Constraint 4's measurement is **PI-015 step 4**. Do not estimate them from reading —
-KICKOFF §2.1 forbids it and §7 says "unknown" is an acceptable answer if queued.
-
-## The two precedents the ADR should lean on
-
-- **F-206 — this project has already done a unification of this kind, and it held.**
-  Control flow was routed through `POST /api/v1/cmd` so web, CLI and serial share one path,
-  with the reason recorded in the code: *"behaviour cannot drift between them."* That is
-  the model. State and presentation are the two that did not get the same treatment.
-- **F-218..F-220 — and it has already tried the other way, and that failed.** The
-  settings-editor action catalogue exists three times; the two hand-maintained copies agree
-  perfectly *including on the same wrong entry*; a comment claims to have corrected the
-  catalogue and missed one; and the endpoint that computes the check has zero consumers.
-
-S04's standing verdict follows from both: **verification before unification.** A unification
-shipped without a drift check will re-grow the duplicates within a release. S06 turned that
-into a concrete mechanism — `STANDARDS-PROPOSAL.md` §3 — and `harness/gui_field_extract.py`
-is already half of it.
-
-## Do not
-
-- **Do not answer constraint 2 from reasoning.** PI-009 is still open. F-223 is evidence
-  about binding, not about composition.
-- **Do not re-inventory the surfaces or re-count fields.** Reproduce instead:
-  `python3 system-review/harness/gui_field_extract.py --repo .`
-- **Do not rush the recommendation.** `PLAN.md` explicitly permits splitting into S08a/S08b.
-  A five-option evaluation against seven constraints is the largest single deliverable in
-  the review.
+---
 
 ## Method warnings — every one earned here
 
 **Read `STATE.md` before the first grep.** S06 skipped it and re-derived five findings.
 
-**Scripts over reading, then check the script against the source.** S07's extractor
-over-counted once (93 vs 68 — it swept in a nested colour dict) and under-counted once (two
-Socket.IO events, because it scanned two of three emit sites). Both were caught by
-re-checking. Four of S07's five corrections came from that habit.
+**Write the checker before the prose that depends on it.** S08's design-token script caught
+two of that session's four corrections, including one that would have shipped a false
+finding.
 
 **Say "at least N".** Pattern matching has under-reported four times in this review and
 over-reported twice.
@@ -88,41 +51,53 @@ over-reported twice.
 **Citation discipline.** Line numbers from `grep -n` only, never arithmetic on a `sed`
 window.
 
+**Contradict a finding rather than quietly amending it.** F-238 corrects F-008, a KICKOFF
+seed finding, and is recorded as its own row with its own citations. Corrections are
+additive and traceable.
+
 **If you use subagents:** put **"WRITE YOUR REPORT FILE INCREMENTALLY"** in every prompt, in
-bold, and save the prompts verbatim before dispatching. Four agents that batched their
-writes lost everything to a usage limit; the one told to append as it went preserved 16
-findings through the same failure.
+bold, and save the prompts verbatim before dispatching.
 
 ## Context that isn't obvious
 
 **Branch:** `claude/cinemate-system-review-kickoff-cilicc`. PR #129 (draft). Ledger-only —
-`git add system-review/`, never `-A`.
+`git add system-review/`, never `-A`. Never commit or push to `dev`.
 
-**Both repos are on `dev`** (STATE.md D2, revised). **Verify before trusting any cinepi-raw
-figure:** `git -C /workspace/tiramisioux/cinepi-raw branch --show-current` must print `dev`.
-If the clone is missing (read-only, shallow, no history):
+**Both repos are on `dev`** (STATE.md D2). **Verify before trusting any cinepi-raw figure:**
+`git -C /workspace/tiramisioux/cinepi-raw branch --show-current` must print `dev`. If the
+clone is missing:
 ```
 GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 --branch dev \
   https://github.com/Tiramisioux/cinepi-raw /workspace/tiramisioux/cinepi-raw
 ```
-**Every cinepi-raw figure in S01–S07 is a `main` figure.** `CODE-MAP-cinepi-raw.md` and
-`CENSUS.md` carry correction banners naming what was re-verified and what was not. The
-biggest hole: `dng_encoder.cpp` changed by 687 lines, so the map's §4 frame lifecycle is a
-`main` account of a rewritten component.
 
-**Free ID blocks:** F-135..F-149, F-196..F-199, F-232..F-249, F-262..F-299.
+**Free ID blocks:** F-135..F-149, F-196..F-199, F-240..F-249, F-262..F-299.
 
-**`decisions/` does not exist yet.** S08 creates it.
+**Three stdlib-only harness checks exist** — `redis_key_diff.py`, `gui_field_extract.py`,
+`design_token_diff.py`. None needs hardware. Run them rather than re-deriving their numbers.
 
-## Still open from earlier sessions
+## Still open — and S12 will need these
 
-- **`cinepi_controller.py` (2626 LOC) is still untraced** since S02 — now blocking more than
-  before: it is the dispatch target for every GUI control and it gates F-025. **PI-007 step
-  1 is a desk task** — reading it for internal locking may settle F-025 with no hardware.
+- **`cinepi_controller.py` (2626 LOC) is untraced** since S02. It is the dispatch target for
+  every GUI control and it gates F-025's severity. **PI-007 step 1 is a desk task**, not a
+  Pi task — reading it for internal locking may settle F-025 for free. This is now the
+  largest unknown on the Python side and it has been deferred four times.
+- **`dng_encoder.cpp` on `dev` changed by 687 lines** — `CODE-MAP-cinepi-raw.md` §4's frame
+  lifecycle is a `main` account of a rewritten component, and the new CCMP preview stage and
+  LOG-LUT subsystem are not in the map at all. Banner is on the file. Largest cinepi-raw
+  hole.
 - **The `wifi_hotspot` triangle** — two thirds unreached since S04.
 - **The 1471 lines of JavaScript in `settings_editor.html`** were scanned, not read.
 
+## For S12, when it arrives
+
+The remediation plan has one spine already: **CineMate has a drift problem, not a style
+problem** — and the three checks above are the mechanism. ADR-001 §6 orders the GUI work;
+`STANDARDS-PROPOSAL.md` §9 orders the tooling. **F-204 outranks both** — one raising redis
+subscriber silently freezes every surface, and the guarded version of that loop already
+exists 900 lines away (F-208). It is ~10 lines and it should be first.
+
 ## Finish with
 
-Update `STATE.md`, write `sessions/S08-*.md`, overwrite this file for S09, then
-`git add system-review/`, commit as `review(S08): ...`, and push.
+Update `STATE.md`, write `sessions/S09-*.md`, overwrite this file for S10, then
+`git add system-review/`, commit as `review(S09): ...`, and push.

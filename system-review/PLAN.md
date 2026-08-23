@@ -14,8 +14,8 @@ Update this file as reality diverges. Divergence is expected, not failure.
 | S05 | Readability, comments & structure | ✅ done 2026-08-18 |
 | S06 | Standards, consistency & tooling | ✅ delivered 2026-08-23 — `STANDARDS-PROPOSAL.md` + `draft-config/` |
 | S07 | GUI surface inventory & state-model extraction | ✅ delivered 2026-08-23 — `GUI-INVENTORY.md` + `GUI-STATE-MODEL.md` |
-| S08 | GUI harmonization evaluation → ADR-001 | ⏭ next — **still gated by PI-009**, but S07 narrowed it |
-| S09 | Docs vs. code | pending |
+| S08 | GUI harmonization evaluation → ADR-001 | ✅ delivered 2026-08-23 — ADR **proposed**; C2 still open (PI-009) |
+| S09 | Docs vs. code | ⏭ next |
 | S10 | Install script vs. install docs | pending |
 | S11 | CineMate style, philosophy & skill payload | pending |
 | S12 | Remediation plan | pending |
@@ -155,7 +155,7 @@ read into PI-007 step 1 (a desk task) or into S05.
   render harness; do not reinvent the stubbing approach.
 - → `deliverables/GUI-INVENTORY.md`, `deliverables/GUI-STATE-MODEL.md`
 
-### S08 · GUI harmonization evaluation → ADR-001 — ⏭ NEXT
+### S08 · GUI harmonization evaluation → ADR-001 — ✅ DELIVERED
 
 - Execute KICKOFF §7 in full: five options against seven constraints, run the divergence diff.
 - **Must queue the DRM-ownership Pi test** — options D and E stand or fall on it

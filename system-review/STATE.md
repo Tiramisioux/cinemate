@@ -12,13 +12,17 @@
   7 findings, D2 rewritten, correction banners on `CODE-MAP-cinepi-raw.md` and `CENSUS.md`.
   See `sessions/S07b-dev-branch-reconciliation.md`. **Check the branch before trusting any
   cinepi-raw figure.**
-- **Current phase:** C — GUI.
-- **Next session:** **S08 — GUI harmonization evaluation → ADR-001.** Still gated by
-  PI-009, but S07 narrowed it substantially — read `GUI-STATE-MODEL.md` §6 first.
+- **Then S08 (2026-08-23) — ADR-001 **proposed**: `decisions/ADR-001-gui-harmonization.md`,
+  `harness/design_token_diff.py`, 8 findings, PI-016. See `sessions/S08-adr-001.md`.
+- **Current phase:** C complete. S09 opens Phase D — truth passes.
+- **Next session:** **S09 — docs drift.**
 - **Ledger branch:** `claude/cinemate-system-review-kickoff-cilicc` — pushed: yes · PR #129 (draft)
-- **Findings:** 158 rows, **153 net** (F-183..F-186, F-189 merged into F-002/F-003). Free ID
-  blocks: F-135..F-149, F-196..F-199, F-232..F-249, F-262..F-299.
-- **Open decisions:** ADR-001 (GUI harmonization) — not started.
+- **Findings:** 166 rows, **161 net** (F-183..F-186, F-189 merged into F-002/F-003). Free ID
+  blocks: F-135..F-149, F-196..F-199, F-240..F-249, F-262..F-299.
+- **Open decisions:** **ADR-001 is written and `proposed`** —
+  `decisions/ADR-001-gui-harmonization.md`. Reject D and E; adopt C reached through B; fix
+  F-204 first. Surface 4 excluded permanently. It does **not** decide constraint 2 (PI-009),
+  and rejects D/E on argument rather than measurement (PI-016).
   **S03 supplied its hardest evidence and its hardest blocker.** DRM master exclusivity is
   now confirmed *from cinepi-raw's own comment* (`dualHdmiPreviewStage.cpp:5-18`), which
   likely kills options D and E. But **PI-009 blocks S08**: how the DRM preview and the
@@ -185,6 +189,26 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
   `CODE-MAP-cinepi-raw.md` §4's frame lifecycle is a `main` account of a component that has
   since been rewritten, and the new CCMP preview stage and LOG-LUT subsystem are not in the
   map at all. Banner is on the file.
+
+### From S08 (ADR-001) — detail in `decisions/ADR-001-gui-harmonization.md`
+- **F-238 decided the ADR, and it corrects F-008.** The HDMI GUI is *not* uniformly
+  absolute-positioned: `_top_row_layout` is a justified flex row computed from measured text
+  widths, and `draw_left_sections` is a conditional vertical stack. It is **a fixed grid of
+  regions with content-driven flow inside the two busiest ones.** KICKOFF §7's
+  immediate-vs-retained framing overstates the gap (F-239). **Do not cite F-008 unqualified
+  again.**
+- **Correction to KICKOFF §7 constraint 1:** DRM exclusivity is fatal to option **D only**,
+  not to E. E writes `/dev/fb0` like `simple_gui` does and adds no second DRM client; it
+  dies on refresh rate and RAM instead.
+- **`design_token_diff.py` refined F-007 in the harsh direction:** only **3 of 16** colour
+  tokens name their Python counterpart; 11 have no stated link at all (F-232). Zero drift
+  today — which is exactly when the check is worth adding.
+- **Three stdlib-only CI checks now exist** — `redis_key_diff.py`, `gui_field_extract.py`,
+  `design_token_diff.py`. None needs hardware. ADR-001 §6: no unification step lands without
+  its check landing on the same commit.
+- **C7 has a number:** `SimpleGUI` is 1913 lines — 925 draw/layout (rewritten), **636 state
+  (preserved)**, 241 display/fb. A renderer swap is ~43% of the file, contiguous and
+  flag-gateable.
 - **Incremental agent writes are mandatory, not advice.** Two agent runs died mid-flight
   to usage limits; the one told to write incrementally preserved 16 findings, the four that
   weren't preserved nothing.

@@ -18,7 +18,7 @@ Update this file as reality diverges. Divergence is expected, not failure.
 | S09 | Docs vs. code | ✅ delivered 2026-08-23 — `DOCS-DRIFT-REPORT.md` |
 | S10 | Install script vs. install docs | ✅ delivered 2026-08-23 — `INSTALL-DRIFT-REPORT.md`; F-003 decided |
 | S11 | CineMate style, philosophy & skill payload | 🔵 **S11a delivered** (controller trace + `CINEMATE-PHILOSOPHY.md`) · **S11b ⏭ next**: style, entry-points, payload |
-| S12 | Remediation plan | pending |
+| S12 | Remediation plan | ✅ delivered 2026-08-23 (out of order, on operator request) — `REMEDIATION-PLAN.md` |
 
 ---
 
@@ -217,7 +217,7 @@ read into PI-007 step 1 (a desk task) or into S05.
 - `deliverables/SKILL-PAYLOAD.md` — the above, packaged for the `cinemate-dev` skill's
   `references/` directory. Self-contained; assumes no repo access.
 
-### S12 · Remediation plan
+### S12 · Remediation plan — ✅ DELIVERED (ahead of S11b, on operator request)
 
 - Triage every finding into PR-sized batches. Order by
   (risk reduction × comprehension gain) ÷ blast radius.

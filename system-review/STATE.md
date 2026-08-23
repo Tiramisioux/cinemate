@@ -22,12 +22,17 @@
 - **Then S11a (2026-08-23) — `cinepi_controller.py` **traced** (the six-times-deferred item)
   and `deliverables/CINEMATE-PHILOSOPHY.md` **delivered**. 4 findings, **PI-007 step 1
   discharged with no hardware**. See `sessions/S11a-controller-and-philosophy.md`.
-- **Current phase:** E — distillation.
-- **Next session:** **S11b — style, entry-points & skill payload** (the other three S11
-  deliverables). Then S12.
+- **Then S12 (2026-08-23) — `deliverables/REMEDIATION-PLAN.md` **delivered**, on operator
+  request, ahead of S11b. 8 batches ordered by risk, **6 ready-to-paste handoff prompts**.
+  The analysis phase is closed.
+- **Current phase:** E — distillation. **The review's output is now actionable.**
+- **Next session:** **S11b — style, entry-points & skill payload** (the last three
+  deliverables; reference material, no longer blocking). Or start executing
+  `REMEDIATION-PLAN.md` batch **B3**.
 - **Ledger branch:** `claude/cinemate-system-review-kickoff-cilicc` — pushed: yes · PR #129 (draft)
 - **Findings:** 186 rows, **181 net** (F-183..F-186, F-189 merged into F-002/F-003). Free ID
-  blocks: F-135..F-149, F-196..F-199, F-272..F-299.
+  blocks: F-135..F-149, F-196..F-199, F-272..F-299. **Analysis is complete — S11b adds
+  reference material, not findings.**
 - **Open decisions:** **ADR-001 is written and `proposed`** —
   `decisions/ADR-001-gui-harmonization.md`. Reject D and E; adopt C reached through B; fix
   F-204 first. Surface 4 excluded permanently. It does **not** decide constraint 2 (PI-009),
@@ -279,6 +284,17 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
 - **Twelve principles now:** 8 from KICKOFF (2 refined, 3 confirmed, 1 bounded, **2 stated
   and violated by the product**) plus 4 new — degrade in ladders · state the reason in place
   · duplicated truth needs a check not a comment · route don't replicate.
+
+### From S12 (remediation) — `deliverables/REMEDIATION-PLAN.md`
+- **The batches are split by risk and verifiability, NOT by repo.** The operator proposed a
+  per-repo split; the distribution kills it — cinepi-raw has **8** findings and **17 are
+  cross-repo by nature**. §1 has the argument.
+- **B3 goes first**: F-204 and F-271, ~10 lines each, both with a correct sibling
+  implementation already in-repo. Then B1 docs / B2 delete / B4 checks in any order, then
+  B5 the Pi session, then B6 dependencies, then B7 ADR-001 steps 1–3.
+- **§6 has six ready-to-paste handoff prompts**, self-contained, one per supervised thread.
+- **§4 lists the 24 strengths that must survive the work** — F-133's comments are the main
+  thing B2 could damage.
 - **Incremental agent writes are mandatory, not advice.** Two agent runs died mid-flight
   to usage limits; the one told to write incrementally preserved 16 findings, the four that
   weren't preserved nothing.

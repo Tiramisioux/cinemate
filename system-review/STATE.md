@@ -25,14 +25,18 @@
 - **Then S12 (2026-08-23) — `deliverables/REMEDIATION-PLAN.md` **delivered**, on operator
   request, ahead of S11b. 8 batches ordered by risk, **6 ready-to-paste handoff prompts**.
   The analysis phase is closed.
-- **Current phase:** E — distillation. **The review's output is now actionable.**
-- **Next session:** **S11b — style, entry-points & skill payload** (the last three
-  deliverables; reference material, no longer blocking). Or start executing
-  `REMEDIATION-PLAN.md` batch **B3**.
+- **Then: REMEDIATION IS UNDER WAY.** On operator instruction, batches B2/B3/B4/B6 are
+  implemented on feature branches off `dev` in both repos — **five draft PRs**, four of
+  them with green CI. See "Remediation status" below.
+- **Then S11b (partial):** `deliverables/ENTRY-POINTS.md` delivered.
+- **Current phase:** E — distillation, alongside execution.
+- **Next:** S11b's remaining two (`CINEMATE-STYLE.md`, `SKILL-PAYLOAD.md`), and
+  **B5 — the Pi session**, which is the only remaining blocker on everything else.
 - **Ledger branch:** `claude/cinemate-system-review-kickoff-cilicc` — pushed: yes · PR #129 (draft)
-- **Findings:** 186 rows, **181 net** (F-183..F-186, F-189 merged into F-002/F-003). Free ID
-  blocks: F-135..F-149, F-196..F-199, F-272..F-299. **Analysis is complete — S11b adds
-  reference material, not findings.**
+- **Findings:** 193 rows, **188 net** (F-183..F-186, F-189 merged into F-002/F-003). Free ID
+  blocks: F-135..F-149, F-196..F-199, F-279..F-299. Analysis is complete; F-272..F-278 were
+  all found *while implementing the fixes*, which is worth knowing — implementation is a
+  better detector than reading was.
 - **Open decisions:** **ADR-001 is written and `proposed`** —
   `decisions/ADR-001-gui-harmonization.md`. Reject D and E; adopt C reached through B; fix
   F-204 first. Surface 4 excluded permanently. It does **not** decide constraint 2 (PI-009),
@@ -43,6 +47,32 @@
   fbdev GUI actually compose cannot be determined from source.
 - **Blockers:** **PI-009 blocks S08** — do not let S08 answer KICKOFF §7
   constraint 2 from reasoning.
+
+---
+
+## Remediation status — added 2026-08-23
+
+**KICKOFF §2.2's "analysis only, zero source edits" no longer applies.** The operator
+directed implementation to begin, on new feature branches off `dev` in both repos. The
+review ledger stays on `claude/cinemate-system-review-kickoff-cilicc` and is still the only
+thing committed there.
+
+| PR | repo | batch | state |
+|---|---|---|---|
+| #130 | cinemate | B3 correctness, 8 commits | draft · no CI (needs #131) |
+| #131 | cinemate | B4 style + **the CI itself**, 6 commits | draft · **5 green** |
+| #132 | cinemate | B2 dead code, −1,398 lines | draft · **5 green** |
+| #133 | cinemate | B6 dependencies + `versions.env` | draft · **5 green** |
+| #59 | cinepi-raw | B2 dead code, −1,565 lines | draft · no CI in that repo |
+
+**Merge order: #131 first** (it carries `.github/workflows/checks.yml`); #132 and #133 are
+based on it and retarget to `dev` cleanly afterwards.
+
+**Everything executable without hardware is done.** What remains is **B5 — the Pi session**
+(16 queued items), and **B7** (ADR-001 steps 1–3), which should follow B3 landing.
+
+**Not verified on hardware:** every one of the above. #133 in particular changes the
+installer's pip invocation, which is a boot-path change — PI-004 and PI-012.
 
 ---
 

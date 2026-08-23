@@ -1,3 +1,7 @@
+# shellcheck shell=bash
+# shellcheck disable=SC2317  # `return || exit` is the sourced-or-executed
+# idiom: whichever half applies, the other looks unreachable to a linter.
+# Sourced from /etc/profile.d/, so no shebang: the shell is the login shell.
 failure_file="${CINEMATE_STARTUP_FAILURE_FILE:-/home/pi/.cache/cinemate/startup-failure.ansi}"
 
 case $- in

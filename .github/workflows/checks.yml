@@ -1,0 +1,107 @@
+# Everything a pull request can be checked against without a Raspberry Pi.
+#
+# Read-only by design: nothing here publishes, pushes or comments. The docs
+# workflow keeps its write scopes for the two publishing steps it guards to
+# main; this file needs none of that.
+
+name: checks
+
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+
+  lint:
+    name: ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'   # Raspberry Pi OS bookworm
+      - run: python -m pip install ruff
+      - run: ruff check src/
+
+  test:
+    name: pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Deliberately NOT `pip install -r requirements.txt`. That file is read by
+      # nothing, lists a stdlib module, and does not match what the installer
+      # builds. Reconciling those is its own piece of work; until then this
+      # lists what the tests actually import.
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest psutil redis pillow numpy termcolor \
+            flask flask_socketio pyudev jsonschema
+
+      # The whole suite is portable -- it needs no camera, no redis server and
+      # no GPIO, and runs in a couple of seconds. It had never been executed by
+      # anything before this workflow existed.
+      #
+      # -p no:randomly on purpose: two tests install flask_socketio into
+      # sys.modules as a stub and never clean it up, so collection order
+      # currently decides what that module means for the rest of the run.
+      # Randomising would go red on ordering alone. Fixing that is a separate
+      # change; until then this pins the order rather than pretending.
+      - run: python -m pytest _test/ -q -p no:randomly
+
+  shell:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y shellcheck
+          find . -name '*.sh' -not -path './.git/*' -print0 \
+            | xargs -0 shellcheck -f gcc
+
+  drift:
+    name: contract drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install jsonschema
+
+      # These four exist because the same defect kept recurring: two copies of
+      # one fact, kept in step by hand, drifting apart. A comment is not a
+      # check. Each gates the boundary it was written for.
+
+      - name: Docs match the code
+        run: python3 tools/docs_drift_check.py --repo . --strict
+
+      - name: Design tokens match between the GUIs
+        run: python3 tools/design_token_diff.py --repo . --strict
+
+      # Gate at zero once the set_log fix lands; one known unresolved name
+      # until then. Raising this number is never the fix.
+      - name: Every offered action resolves on the controller
+        run: python3 tools/gui_field_extract.py --repo . --max-unresolved 1
+
+      # Needs both repositories: the key contract spans them.
+      - name: Check out cinepi-raw
+        run: |
+          GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 --branch dev \
+            https://github.com/Tiramisioux/cinepi-raw ../cinepi-raw
+
+      # A ratchet, not a gate. 12 keys cinepi-raw touches have no reference in
+      # cinemate today; the check exists to stop a thirteenth appearing
+      # unnoticed, not to fail until those twelve are triaged.
+      - name: Cross-repo redis key contract
+        run: python3 tools/redis_key_diff.py --max-unreferenced 12

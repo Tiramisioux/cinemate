@@ -65,7 +65,7 @@ For cinepi-raw, this file defines the port used by cpp-mjpeg-streamer (default c
 
 !!! note ""
 
-    If you have more than one camera connected to the Pi, and activated in `boot/firmware/config.txt`, the camera connected to physical cam0 will use `/home/pi/post-processing0.json` and the camera connected to cam1 will use `/home/pi/post-processing1.json`.
+    If you have more than one camera connected to the Pi, and activated in `/boot/firmware/config.txt`, the camera connected to physical cam0 will use `/home/pi/post-processing0.json` and the camera connected to cam1 will use `/home/pi/post-processing1.json`.
 
 ## Cinemate‑specific flags
 

@@ -12,18 +12,22 @@ CINEMATE_DIR=${CINEMATE_DIR:-$(cd "$(dirname "$0")" && pwd)}
 update_repo() {
     local dir="$1"
     local name="$2"
-    echo "\n----- Checking $name -----"
+    printf '\n----- Checking %s -----\n' "$name"
     if [ ! -d "$dir/.git" ]; then
         echo "[Error] $name repo not found at $dir"
         return 1
     fi
     cd "$dir"
-    local branch=$(git rev-parse --abbrev-ref HEAD)
+    local branch
+    branch=$(git rev-parse --abbrev-ref HEAD)
     echo "Current branch: $branch"
     echo "Fetching latest changes..."
     git fetch
-    local local_rev=$(git rev-parse @)
-    local remote_rev=$(git rev-parse @{u})
+    local local_rev remote_rev
+    local_rev=$(git rev-parse @)
+    # shellcheck disable=SC1083  # @{u} is git syntax for the upstream ref,
+    # not brace expansion.
+    remote_rev=$(git rev-parse "@{u}")
     if [[ "$local_rev" == "$remote_rev" ]]; then
         echo "$name is up to date."
         REPO_UPDATED=0
@@ -65,4 +69,4 @@ else
     echo "Cinemate already at latest version."
 fi
 
-echo "\nAll done."
+printf '\nAll done.\n'

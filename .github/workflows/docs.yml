@@ -1,6 +1,8 @@
 name: build-and-deploy-doc
 
-# grant the job permission to push and deploy Pages
+# Write scopes are needed only by the two publishing steps at the end, which
+# are guarded to main. Everything else -- including every pull request build --
+# runs read-only.
 permissions:
   contents: write
   pages: write
@@ -10,6 +12,8 @@ on:
   push:
     branches:
       - main
+      - dev
+  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -64,7 +68,13 @@ jobs:
           path: site/renders/*.pdf
           if-no-files-found: ignore
 
+      # PUBLISHING STARTS HERE. Everything above is a build and is safe to run
+      # on a pull request; these last two steps are not. Without this guard a
+      # PR build would publish gh-pages from the PR's own docs, and the step
+      # below would push a commit onto the PR branch -- or fail outright from a
+      # fork, where GITHUB_TOKEN is read-only.
       - name: Deploy to GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -75,7 +85,10 @@ jobs:
           allow_empty_commit: true
 
       - name: Copy PDF to docs/renders and push
-        if: steps.rendered_pdf.outputs.exists == 'true'
+        if: >
+          github.event_name == 'push' &&
+          github.ref == 'refs/heads/main' &&
+          steps.rendered_pdf.outputs.exists == 'true'
         run: |
           cp site/renders/Cinemate-Docs.pdf docs/renders/
           git config user.name "CI"

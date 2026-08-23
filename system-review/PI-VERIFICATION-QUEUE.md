@@ -6,19 +6,46 @@ Everything that cannot be settled without hardware. **This is a first-class deli
 Every entry needs: what we believe, why we can't confirm it here, and the **exact
 procedure** that settles it. An entry without a runnable procedure is not done.
 
+> **Hardware session run 2026-08-23.** Revisions tested:
+> `cinemate` `02b5a395922f8ed63d35498562142fe1ac08abb3` (`dev`, clean except a pre-existing
+> local `settings.jsonc` diff), `cinepi-raw` `ea96f2d3da98511df3a2ba001fb54433445017d4`
+> (`dev`, clean). **Neither the B2/B3/B4/B6 remediation branches nor any open PR are on this
+> build** — they exist on GitHub but are unmerged, so every prediction below should be read
+> against pre-fix `dev`, not against the fixes. Raspberry Pi Compute Module 5 Lite Rev 1.0,
+> kernel `6.12.93+rpt-rpi-2712`, **4048 MB RAM total** (prior notes on this unit say 2 GB —
+> that's stale or wrong; worth a follow-up check, since it changes the ADR-001 headroom
+> argument). Sensor: imx585 mono.
+>
+> **A live, pre-existing hardware fault was found and is not one of the 16 queued items:**
+> the camera was intermittently failing to deliver frames to cinepi-raw
+> (`No camera frames received for 3s, attempting a camera restart!!!`, looping continuously)
+> before this session touched anything. A test take requesting 300 frames wrote only 44 and
+> declared `frames_in_sync=0`. This blocked every recording-dependent item below (PI-006,
+> PI-010, PI-011, PI-016's load phase). Operator chose to continue with the non-recording
+> items rather than debug the sensor mid-session. **Also found:** `systemctl restart
+> cinemate-autostart` reliably hangs ~9-14s on `ExecStopPost=cinemate-console-handoff.sh`
+> and lands the unit in `failed` (needs `systemctl reset-failed` + `start` to recover) —
+> reproduced twice, unrelated to the PI-014 fault injection. Neither of these has a finding
+> ID yet; flagging here so they aren't lost.
+
 | id | opened | source finding | status |
 |---|---|---|---|
-| PI-001 | S01 | F-001 | open |
-| PI-002 | S01 | F-006 | open |
-| PI-003 | S01 | census §11 | open |
-| PI-004 | S01 | F-003 | open |
-| PI-005 | S01 | census §11 | open |
-| PI-006 | S02 | F-016 | open |
-| PI-007 | S02 | F-025 | open — **step 1 is a desk task, do it before booking Pi time** |
-| PI-008 | S03 | F-027 | open |
-| PI-009 | S03 | ADR-001 constraint 2 | open — **blocks S08** |
-| PI-010 | S04 | F-253 | open |
-| PI-011 | S04 | F-259 | open |
+| PI-001 | S01 | F-001 | **done — CONFIRMED** |
+| PI-002 | S01 | F-006 | **done — INCONCLUSIVE** |
+| PI-003 | S01 | census §11 | **done — CONFIRMED (vestigial)** |
+| PI-004 | S01 | F-003 | **done — INCONCLUSIVE (no blank SD card)** |
+| PI-005 | S01 | census §11 | **done — CONTRADICTED** |
+| PI-006 | S02 | F-016 | **done — INCONCLUSIVE (no mic, sensor fault)** |
+| PI-007 | S02 | F-025 | open — **step 1 is a desk task, do it before booking Pi time** — see S11a, live step not run |
+| PI-008 | S03 | F-027 | **done — partial, INCONCLUSIVE (short window)** |
+| PI-009 | S03 | ADR-001 constraint 2 | **done — CONFIRMED (same-hdmi toggle not tested)** |
+| PI-010 | S04 | F-253 | **done — INCONCLUSIVE (sensor fault)** |
+| PI-011 | S04 | F-259 | **done — INCONCLUSIVE (sensor fault)** |
+| PI-012 | S04 | F-182 | **done — INCONCLUSIVE (no blank SD card)** |
+| PI-013 | S04 | F-172 | **done — partial, INCONCLUSIVE (short window)** |
+| PI-014 | S04 | F-204 | **done — CONFIRMED** |
+| PI-015 | S05 | F-207 | **done — INCONCLUSIVE (no physical HDMI access)** |
+| PI-016 | S06 | ADR-001 headroom | **done — partial (idle floor only, load phase blocked)** |
 
 ---
 
@@ -41,6 +68,18 @@ source. Harmless either way, but it settles whether deletion has any deployment 
 change) or "delete 928 dead LOC that are also shipping to every camera".
 
 **Expected effort:** 2 minutes on an existing install.
+
+**Result (2026-08-23):**
+```
+PI-001
+  ran:       ls -la /home/pi/cinemate/src/module/templates/ ; ls -la /home/pi/cinemate/src/module/app/template.html
+  observed:  Both present on the deployed device. templates/ holds index.html (15 B),
+             template.html (13988 B), AND template_old.html (13213 B) — a third dead file
+             not named in the original finding. app/template.html (8913 B) also present.
+  predicted: present/absent, unstated which
+  verdict:   CONFIRMED — the dead files ARE deployed to every camera, not just sitting in
+             the repo. Note the extra template_old.html for whoever writes the B2 delete.
+```
 
 ---
 
@@ -76,6 +115,18 @@ guesswork.
 **Expected effort:** 10 minutes. **Do this early in Stage 2 — S06's CI proposal depends
 on it.**
 
+**Result (2026-08-23):**
+```
+PI-002
+  ran:       cd /home/pi/cinemate && ~/.cinemate-env/bin/python3 -m pytest _test/ -v --tb=short
+  observed:  "No module named pytest" — pytest is not installed in the Pi's cinemate venv.
+             Did not pip install it to avoid modifying the device beyond this session's
+             scope; that's a call for whoever owns the dependency-split work (B6).
+  predicted: pass, ~4s, per the off-hardware run already recorded above
+  verdict:   INCONCLUSIVE — the spot-check this item now asks for cannot run until pytest
+             is added to the venv (see B6.1/B6.2, requirements split).
+```
+
 ---
 
 ## PI-003 — Are `add-redis-timecode.patch` and `add-tc.patch` applied, pending, or vestigial?
@@ -98,6 +149,24 @@ history to test-apply against.
 **Expected effort:** 10 minutes. **Can be done on any machine with a full clone — not
 truly Pi-bound.** Reclassify once a full checkout is available.
 
+**Result (2026-08-23, done off-Pi as the item itself allows):**
+```
+PI-003
+  ran:       git apply --check on both patches against local cinepi-raw dev (full clone);
+             git log --all -S on the patch's own added lines
+  observed:  Both fail --check on current dev (diverged further since). The content they
+             add (#include <iomanip>/<sstream> etc.) is already present on dev — landed via
+             commit 471bba0 "add output of dng timecodes to redis". add-tc.patch and
+             add-redis-timecode.patch are byte-identical except add-tc.patch wraps the same
+             hunks in a `git apply --3way <<EOF` heredoc. Cross-checked against the B2
+             remediation branch (claude/remediation-b2-dead-code, commit 50fa70b), which
+             independently reached the same conclusion and already deletes add-tc.patch as
+             "byte-identical hunks... differing only by a git apply --3way heredoc wrapper".
+  predicted: n/a — this item asks which of two outcomes, not a specific behavior
+  verdict:   CONFIRMED (vestigial) — both patches are stale exports of an already-landed
+             commit, not pending work. Independent corroboration of B2's own reasoning.
+```
+
 ---
 
 ## PI-004 — Does a clean install succeed, and is `flask` genuinely only transitive?
@@ -119,6 +188,16 @@ against real ARM wheels on the real Pi OS image.
 currently fragile or merely untidy.
 
 **Expected effort:** 1–2 hours (full install). Combine with any other clean-install test.
+
+**Result (2026-08-23):**
+```
+PI-004
+  ran:       nothing — no blank SD card was available in this session, only the already-
+             running production unit.
+  observed:  n/a
+  predicted: n/a
+  verdict:   INCONCLUSIVE — needs a dedicated clean-install session with a blank card.
+```
 
 ---
 
@@ -143,6 +222,19 @@ that happens to be masked because pkg-config always succeeds today.
 
 **Expected effort:** 5 minutes for steps 1–2; 30+ minutes for a clean rebuild.
 
+**Result (2026-08-23):**
+```
+PI-005
+  ran:       pkg-config --exists hiredis; echo $? / pkg-config --exists redis++; echo $?
+             (plus --modversion for both). Clean rebuild not attempted — no reason to given
+             step 1's result.
+  observed:  Both exit 0. hiredis 0.14.1, redis++ 1.3.15.
+  predicted: n/a — item asks which branch is live, no directional prediction given
+  verdict:   CONTRADICTED (in the sense of settling toward the milder outcome) — the
+             /path/to/... fallback branch is never taken on this device. Dead defensive
+             code, safe to delete, not a live landmine.
+```
+
 ---
 
 ## PI-006 — Does the audio VU meter still render end to end?
@@ -166,6 +258,22 @@ off-hardware.
 acceptable or needs a visible warning (KICKOFF §9 principle 3).
 
 **Expected effort:** 15 minutes.
+
+**Result (2026-08-23):**
+```
+PI-006
+  ran:       redis-cli GET audio_vu while idle (no USB mic attached, and the sensor fault
+             ruled out a real take anyway)
+  observed:  audio_vu reads nil/empty. During a 45s redis MONITOR trace (see PI-008) it was
+             GET'd roughly every 86ms continuously by the GUI even with no mic and no take
+             in progress — the read path is alive and polling constantly regardless of
+             whether there's anything to show.
+  predicted: VU bars move with a mic attached; DEL mid-take degrades visibly
+  verdict:   INCONCLUSIVE — no mic on hand and the sensor fault blocked a real take. The
+             one thing this did show: the poll is continuous and unconditional, which is
+             at least consistent with "the read path swallows failure silently" — a GUI
+             polling a nil key 12x/sec with nothing on screen and nothing logged.
+```
 
 ---
 
@@ -210,6 +318,20 @@ genuinely simultaneously, which cannot be produced off-hardware.
 
 **Expected effort:** 30 minutes on the Pi, but do step 1 first — it is a desk task.
 
+**Result (2026-08-23):**
+```
+PI-007
+  ran:       nothing live this session (step 2/3, concurrent GPIO + web commands, not run —
+             deprioritized behind the sensor-fault triage within this session's time budget)
+  observed:  n/a for the live step. Step 1 (desk task) was already discharged per the S11a
+             update above before this session: structure is settled — 3 serialised paths,
+             6 bypass modules, 9 lock sites, no internal fallback.
+  predicted: three input paths are serialised; six bypass that lock entirely
+  verdict:   INCONCLUSIVE for the live observability question (is the race actually hit in
+             practice) — the structural half is already CONFIRMED via S11a, not by this
+             session.
+```
+
 ---
 
 ## PI-008 — Which of the 11 orphaned Redis keys actually move?
@@ -235,6 +357,24 @@ a deliberate manual tuning surface. Only observation distinguishes "vestigial" f
 document. Step 4 may settle most of it faster than step 1.
 
 **Expected effort:** 20 minutes, plus one question to the operator.
+
+**Result (2026-08-23):**
+```
+PI-008
+  ran:       redis-cli MONITOR for 45s (not a full boot->take->unmount session — the
+             sensor fault ruled that out) while idling and issuing a few benign commands
+             (set iso, set wb, set fps) via /api/v1/cmd; grepped for the 11 key names.
+  observed:  Zero hits for awb, shutter_s, compress, thumbnail, thumbnail_size, raw_crop/
+             rawCrop, pll_kp, pll_ki, pll_deadband_us, pll_phase_err_us, pll_req_dur_us in
+             558 captured lines. Dominant traffic was audio_vu GETs (522 of 558 lines,
+             ~12 Hz, unconditional) plus the commands I issued.
+  predicted: most never appear; any that do are a live undocumented contract
+  verdict:   INCONCLUSIVE (leaning CONFIRMED for the window tested) — 45s of idle+light
+             traffic is much narrower than the full boot/record/resolution-change/shutdown
+             cycle the procedure asks for, so this doesn't rule out the keys appearing during
+             recording start/stop or a resolution change, both of which were blocked by the
+             sensor fault. Worth re-running for a full session once the camera is stable.
+```
 
 ---
 
@@ -291,6 +431,37 @@ overwriting the other.
 
 **Expected effort:** 45 minutes. **Do this before S08 if at all possible.**
 
+**Result (2026-08-23):**
+```
+PI-009
+  ran:       modetest/drm_info are not installed on this device (not installed, to avoid
+             modifying the unit beyond scope). Used the equivalent primary source instead:
+             cat /sys/class/graphics/fb0/{name,virtual_size,bits_per_pixel,stride}; sudo cat
+             /sys/kernel/debug/dri/1/state (card1 = axi:gpu, the actual display card — card0
+             is v3d, the GPU render node, and has no display planes). --same-hdmi toggle
+             comparison NOT run (would need a cinepi-raw restart, deferred given the
+             restart-hang issue found this session).
+  observed:  fb0 name="vc4drmfb" (confirms fb0 IS the DRM fbdev emulation, not a separate
+             device), 1600x1024, 16 bpp, stride 3200 — matches the plane data exactly.
+             card1 exposes 56 total planes across 4 CRTCs (mop, moplet, crtc-2, crtc-3).
+             Only ONE plane is claimed: plane-2 -> crtc-2, fb format RG16, 1600x1024,
+             "allocated by = [fbcon]" — i.e. the kernel console framebuffer, which is what
+             cinemate's simple_gui.py writes via /dev/fb0. crtc-2 drives HDMI-A-1 at
+             1600x1024@60Hz (plane_mask=4, exactly 1 bit set). HDMI-A-2 has crtc=(null) —
+             not driving anything right now. All other 55 planes: crtc=(null), fb=0, fully
+             idle. cinepi-raw's own DRM preview (drm_preview.cpp) does not currently hold
+             any plane on this card under these launch args (no --same-hdmi in the process
+             line).
+  predicted: unknown, deliberately — no prediction to confirm/contradict
+  verdict:   CONFIRMED (answered) — the GUI (via fbcon/fb0) does occupy a genuine DRM plane,
+             not some side-channel; plenty of spare planes exist in principle (55 idle); but
+             under THIS session's conditions cinepi-raw's DRM preview held no plane at all,
+             so the two were not observed contending for the same one. That's a narrower and
+             more concrete answer than the review's "two interfaces racing" framing assumed
+             — worth re-checking with --same-hdmi on and with a confirmed-attached preview
+             client to see whether cinepi-raw ever does claim a plane on this card.
+```
+
 ---
 
 ## Notes on scope
@@ -333,6 +504,16 @@ F-202 compounds it — that key has two writers as well.
 
 **Expected effort:** 20 minutes.
 
+**Result (2026-08-23):**
+```
+PI-010
+  ran:       nothing — requires a successful recording with audio armed, blocked by the
+             live sensor fault (camera not reliably delivering frames; see session header).
+  observed:  n/a
+  predicted: n/a
+  verdict:   INCONCLUSIVE — re-run once the imx585 mono frame-drop issue is resolved.
+```
+
 ---
 
 ## PI-011 — Does the ISO cold-start fallback (F-259) apply the wrong gain?
@@ -354,6 +535,18 @@ and the symptom is an exposure error, which needs a real sensor to observe.
 **Settles:** F-259's severity — latent tidiness issue vs a real cold-start exposure bug.
 
 **Expected effort:** 15 minutes.
+
+**Result (2026-08-23):**
+```
+PI-011
+  ran:       nothing — requires DEL iso + a cold cinepi-raw start, which given this
+             session's confirmed restart-hang bug and the live camera-frame-dropout fault
+             was too likely to leave the unit in a bad state to attempt without a spotter.
+  observed:  n/a
+  predicted: n/a
+  verdict:   INCONCLUSIVE — re-run once the frame-drop and restart-hang issues are resolved
+             (the latter makes this item riskier than its 15-minute estimate suggests).
+```
 
 ---
 
@@ -382,6 +575,16 @@ theoretical one, and whether the failure is legible to the user or silent.
 
 **Expected effort:** 40 minutes (one clean install).
 
+**Result (2026-08-23):**
+```
+PI-012
+  ran:       nothing — no blank SD card available in this session (same constraint as
+             PI-004).
+  observed:  n/a
+  predicted: n/a
+  verdict:   INCONCLUSIVE — needs a dedicated clean-install session.
+```
+
 ---
 
 ## PI-013 — How fast does the undrained in-app log queue grow?
@@ -407,6 +610,24 @@ on the frame path, the connected peripherals and the configured level.
 handler should be dropped entirely.
 
 **Expected effort:** 45 minutes (mostly waiting).
+
+**Result (2026-08-23):**
+```
+PI-013
+  ran:       ps -o rss= -p <cinemate pid> at two points, 187s apart (idle, no recording —
+             the 15 min idle + 10 min recording protocol wasn't run; this session's time
+             budget and the sensor fault both cut against the full duration).
+  observed:  RSS 116256 KB -> 116416 KB over 187s: +160 KB, monotonic, non-zero. No
+             log_queue.qsize() available (no shell into the live process).
+  predicted: qsize() rises monotonically and never falls; RSS growth correlates with logged
+             lines and is markedly faster while recording
+  verdict:   INCONCLUSIVE (direction consistent, magnitude unconfirmed) — growth is real and
+             monotonic over this short window, which doesn't contradict the prediction, but
+             187s at idle is nowhere near enough to characterize the rate or to test the
+             "faster while recording" half of the claim (blocked by the sensor fault). At
+             the observed rate (~51 KB/min idle) this would take a very long session to
+             become operationally significant, but that's an idle-only extrapolation.
+```
 
 ---
 
@@ -440,6 +661,46 @@ category for a camera instrument and changes how the options rank.
 
 **Expected effort:** 30 minutes.
 
+**Result (2026-08-23):**
+```
+PI-014
+  ran:       instead of pdb/py-spy, temporarily added `raise RuntimeError(...)` as the
+             first line of StatusBroadcast._on_change (src/module/status_broadcast.py,
+             a real registered subscriber, the :8888 broadcast's own handler) on the live
+             Pi checkout — uncommitted, reverted after. Restarted cinemate-autostart to pick
+             it up (hit the console-handoff hang both times; recovered via
+             systemctl reset-failed + start each time — see session header). Then, with the
+             fault live: confirmed cache primes correctly on startup (iso read back
+             correctly from redis), then redis-cli SET iso 400 + PUBLISH cp_controls iso,
+             then a second SET+PUBLISH on an unrelated key (fps_user) to rule out a
+             per-key effect, checked /api/v1/status and /api/v1/events (SSE) before/after,
+             and read the journal for the traceback. Did NOT have physical access to the
+             HDMI GUI or an open browser tab to eyeball directly — inferred their state from
+             the fact that all four surfaces (HDMI GUI, browser, /api/v1/status,
+             the :8888 broadcast) are subscribers on the exact same single Event object /
+             single listener thread, so a dead thread stops all of them identically; this is
+             architectural, not assumed.
+  observed:  Before the fault: SET+PUBLISH iso 640 -> /api/v1/status reflected it within 1s,
+             then correctly reverted. Confirms the live path works normally pre-fault.
+             After the fault (service restarted with the raise in place): iso stayed at 800
+             (the value from just before the crash) despite SET+PUBLISH to 400. fps_user —
+             a key never before touched in this process's life — stayed at 25 despite
+             SET+PUBLISH to 23, proving the WHOLE listener thread died, not just the one
+             subscriber. /api/v1/events (SSE) produced zero new lines over a 4s window while
+             other traffic was happening. The journal showed a RuntimeError traceback
+             through redis_controller.py:157 (emit) -> status_broadcast.py:80 (_on_change)
+             at the moment of the first PUBLISH, and normal camera/event_loop log lines
+             continued around it — i.e. only this one thread died silently; the rest of the
+             process kept running and looked healthy.
+  predicted: every surface holds its last values indefinitely, none shows an error or a
+             staleness indicator, and the log has one traceback and then nothing (after)
+  verdict:   CONFIRMED. Both tested surfaces (the cache-backed HTTP API and the SSE stream)
+             froze permanently and silently on the very first PUBLISH after the fault, for
+             both a previously-seen key and a brand-new one, with zero staleness indicator
+             anywhere and no further related log output. This is the worst-case failure mode
+             claimed: silently wrong, indefinitely, everywhere the cache is the source.
+```
+
 ---
 
 ## PI-015 — Does the browser freeze when the HDMI thread stops?
@@ -466,6 +727,16 @@ the redraw cadence and the headless path.
 only measured number ADR-001 constraint 4 will have.
 
 **Expected effort:** 40 minutes.
+
+**Result (2026-08-23):**
+```
+PI-015
+  ran:       nothing — this item needs physically attaching/detaching an HDMI display,
+             which isn't possible in a remote session.
+  observed:  n/a
+  predicted: n/a
+  verdict:   INCONCLUSIVE — needs an on-site session with hands on the cable.
+```
 
 ---
 
@@ -500,3 +771,28 @@ argument; the C3 and C6 rows of its decision matrix; and whether option C's rend
 has any headroom cost at all (it should be ~nil — same renderers).
 
 **Expected effort:** 45 minutes.
+
+**Result (2026-08-23):**
+```
+PI-016
+  ran:       free -m and ps -o rss=,pcpu= for both cinemate and cinepi-raw while idle.
+             Attempted a 300-frame UHD ClearHDR take (fps=25, ~12s nominal) via
+             /api/v1/cmd to sample under load — this is what surfaced the sensor fault:
+             only 44/300 frames wrote before frame delivery stalled, and RSS/free-mem were
+             essentially flat (116-116.3 MB cinemate, 142.8 MB cinepi-raw, ~2890-2905 MB
+             free) across the whole attempt, because the pipeline wasn't actually under
+             real UHD write load — it was stalled waiting on frames, not encoding them.
+             systemd-analyze / camera-ready.sh boot timing not measured (would need a
+             reboot, deferred given the other live issues this session already surfaced).
+  observed:  Idle floor: 688 MB used / 2987-2892 MB free of 4048 MB total. cinemate RSS
+             ~116 MB (6.3% CPU idle-ish), cinepi-raw RSS ~143 MB (0.4% CPU idle). This floor
+             number is real; the "peak under sustained UHD load" number is not, because no
+             sustained load was actually achieved.
+  predicted: peak RSS at UHD leaves under ~300 MB free; camera-ready.sh dominates boot
+  verdict:   INCONCLUSIVE for the load/boot claims — blocked by the sensor fault and not
+             attempted for boot timing. The idle floor (2890-2987 MB free) is nowhere near
+             the predicted ~300 MB-free peak, which is expected since idle was never meant
+             to test that claim. Re-run once recording is reliable; note the 4 GB RAM figure
+             found this session (see header) changes the ADR-001 headroom math regardless —
+             300 MB free at UHD on a 4 GB board is a very different argument than on 2 GB.
+```

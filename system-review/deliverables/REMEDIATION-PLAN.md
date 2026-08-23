@@ -380,29 +380,75 @@ find out.
 
 ### Thread B5 — the Pi session
 
+Run this where the camera is reachable, **not** in a cloud session. Sonnet is a good fit:
+the work is executing written procedures and recording what happened, and `PI-RUNBOOK.md`
+is self-contained so the session does not need the review's context.
+
 ```
-Hardware session. The Pi is connected. This session CHANGES NOTHING - it answers questions.
+Hardware session on a CineMate camera. You are RECORDING OBSERVATIONS, not fixing
+anything. No edits to src/, no commits to the camera's code, and never to `dev`.
 
-Read `system-review/PI-VERIFICATION-QUEUE.md` in full. It has 16 items, each with a belief,
-a why-hardware-is-needed, an exact procedure, a falsifiable prediction, and an effort
-estimate.
+Get the runbook first -- it is self-contained and you do not need anything else:
 
-Run in this order - the first three unblock the most downstream work:
+    cd ~/cinemate
+    git fetch origin claude/cinemate-system-review-kickoff-cilicc
+    git checkout claude/cinemate-system-review-kickoff-cilicc
+    cat system-review/PI-RUNBOOK.md
 
-  PI-002  run the 381 tests. Record which need hardware. This gates the CI test job and
-          the requirements.txt split line.
-  PI-014  force a redis subscriber to raise, then observe the HDMI GUI, the browser,
-          /api/v1/status and the :8888 broadcast in that order. Predicted: all four hold
-          their last values indefinitely and none shows an error.
-  PI-009  with cinepi-raw running, `modetest -p` (or drm_info). Count the overlay planes on
-          the primary CRTC and how many are already claimed, with --same-hdmi on and off.
-          This is the last open constraint in ADR-001.
+(The runbook lives on that review branch, NOT on dev. If you are on dev you will not
+find it.)
 
-Then PI-012, PI-016, PI-013, PI-015, then the rest.
+FIRST, AND THIS DECIDES HOW TO READ EVERY PREDICTION -- establish which build the
+camera is running:
 
-For each: record the OBSERVED result against the written prediction, including when the
-prediction was wrong - especially then. Append results under each item rather than editing
-the procedure. Budget ~5 hours including two clean installs.
+    git -C ~/cinemate   rev-parse HEAD && git -C ~/cinemate   log --oneline -3
+    git -C ~/cinepi-raw rev-parse HEAD
+    uname -a && cat /proc/device-tree/model && free -m
+
+The predictions in the runbook describe the code BEFORE a set of fixes that are
+currently in open pull requests (cinemate #130, #131, #132, #133; cinepi-raw #59).
+If the camera is running a build that INCLUDES those fixes, several predictions
+invert -- most importantly PI-014, where the whole point of the fix is that the
+failure no longer happens. Say plainly which build you tested. A result recorded
+against the wrong build is worse than no result.
+
+Then work the runbook in its own order. Tier 1 is three items and is the session
+even if you do nothing else:
+
+  PI-014       kill the redis listener, watch all four surfaces in order
+  PI-004/012   two clean installs on blank SD cards
+  PI-009       count the free DRM overlay planes -- the only item with NO prediction,
+               deliberately, because reading the source could not produce one
+
+Tier 2 is nine items as a table. Tier 3 is three cheap greps.
+
+RECORDING. Four lines per item, format in the runbook, ending in
+CONFIRMED | CONTRADICTED | INCONCLUSIVE.
+
+A CONTRADICTED prediction is the most valuable outcome here. These were written from
+source with no hardware; several are probably wrong. Do not reconcile an observation
+to match what the document expected, do not soften it, and do not drop an
+INCONCLUSIVE because it looks untidy. If a procedure cannot be run, say why -- that
+is a real result.
+
+WHEN DONE, COMMIT THE RESULTS. Append them under each item in
+system-review/PI-VERIFICATION-QUEUE.md, keeping the original prediction visible next
+to what happened, then:
+
+    git add system-review/ && git commit -m "pi: results from the hardware session"
+    git push origin claude/cinemate-system-review-kickoff-cilicc
+
+Only system-review/ should be touched. Results that exist only in a chat window are
+one context window from gone.
+
+Then post the same block in chat, raw, without summarising or interpreting.
+
+Note on PI-002: the suite has since been run off-hardware -- 386 tests, ~2 s, nine pip
+packages, all passing. So its question is no longer "which tests need a Pi" (none do).
+It is now a spot-check: does any test pass on the camera for the WRONG reason, by
+silently skipping the thing it claims to check? Run it with -v and look.
+
+Budget ~5 hours, most of it waiting on the two installs.
 ```
 
 ### Thread B6 — dependencies and pinning

@@ -3,14 +3,16 @@
 **Read this first, every session.** Then read the last `sessions/S##-*.md`, then do what
 `PLAN.md` says is next.
 
-- **Last session:** S06 (2026-08-23) — Standards **delivered**:
-  `deliverables/STANDARDS-PROPOSAL.md` + `deliverables/draft-config/`, 25 net findings, 2 PI
-  items. See `sessions/S06-standards.md`.
-- **Current phase:** B — Critical analysis (last entry). S07 opens Phase C.
-- **Next session:** **S07 — GUI surface inventory & state-model extraction.**
+- **Last session:** S07 (2026-08-23) — GUI inventory **delivered**:
+  `deliverables/GUI-INVENTORY.md`, `deliverables/GUI-STATE-MODEL.md`,
+  `harness/gui_field_extract.py`, 22 findings, 2 PI items. See
+  `sessions/S07-gui-inventory.md`.
+- **Current phase:** C — GUI.
+- **Next session:** **S08 — GUI harmonization evaluation → ADR-001.** Still gated by
+  PI-009, but S07 narrowed it substantially — read `GUI-STATE-MODEL.md` §6 first.
 - **Ledger branch:** `claude/cinemate-system-review-kickoff-cilicc` — pushed: yes · PR #129 (draft)
-- **Findings:** 129 rows, **124 net** (F-183..F-186, F-189 merged into F-002/F-003). Free ID
-  blocks: F-135..F-149, F-196..F-199, F-203..F-249, F-262..F-299.
+- **Findings:** 151 rows, **146 net** (F-183..F-186, F-189 merged into F-002/F-003). Free ID
+  blocks: F-135..F-149, F-196..F-199, F-225..F-249, F-262..F-299.
 - **Open decisions:** ADR-001 (GUI harmonization) — not started.
   **S03 supplied its hardest evidence and its hardest blocker.** DRM master exclusivity is
   now confirmed *from cinepi-raw's own comment* (`dualHdmiPreviewStage.cpp:5-18`), which
@@ -117,6 +119,33 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
   lifetime. Structurally confirmed; rate is PI-013.
 - **`INSTALL_ALT_GPIO_BACKEND` is advertised as optional but is load-bearing for boot**
   (F-182) → PI-012. The only S06 finding that touches the install path.
+
+### From S07 (GUI) — detail in `deliverables/GUI-INVENTORY.md` + `GUI-STATE-MODEL.md`
+- **THE headline for ADR-001: the web GUI has no state model of its own — it consumes
+  `simple_gui.populate_values()` verbatim** (F-203). The operator's hypothesis is half
+  right and the true half is the expensive half. A shared state model does not need
+  building; it exists, 68 fields wide, one owner.
+- **Option C's widget spec also already exists** (F-215): `left_section_layout` /
+  `right_section_layout` in `setup_resources` — label, ordered items, per-item formatters,
+  optional visibility `condition`. Encoded as Python lambdas, so not serialisable, but the
+  shape is right. **The residual hard problem is layout and only layout** (F-008).
+- **Surface 4 (recovery console) must be excluded from any unification** (F-221). Its value
+  is its isolation, and it is the best-engineered component in the review.
+- **F-204 is the most severe finding in the ledger.** One raising redis subscriber kills the
+  live-state bus permanently and silently; `get_value()` then serves a stale cache, so every
+  surface shows plausible frozen values instead of an error. That is the baseline for
+  KICKOFF §7 constraint 5. → PI-014. **F-208: the guarded version of the same loop already
+  exists 900 lines away** (`cinepi_controller.py:1082-1087`).
+- **HDMI hot-plug restarts `cinepi-raw`** (F-223) — so the preview binds to the display at
+  process start and cannot rebind. Strongest static evidence for PI-009; narrows ADR-001
+  constraint 2 without settling it.
+- **The settings-editor action catalogue is the thesis in miniature**: 3 copies, the two
+  hand-maintained ones agreeing perfectly *including on the same bug*, a hand-correction
+  that was itself incomplete, and the mechanical check written and unwired (F-218..F-220).
+- **381 tests across 27 files have never run** (F-222). F-006 undercounted the loss.
+- **The extractor over-counted once and under-counted once, in one session.** Both were
+  caught by re-checking output against source. Numbers not produced by a committed script
+  should be treated as provisional.
 - **Incremental agent writes are mandatory, not advice.** Two agent runs died mid-flight
   to usage limits; the one told to write incrementally preserved 16 findings, the four that
   weren't preserved nothing.
@@ -198,6 +227,8 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
 - **Do not re-audit logging, `print()`, shellcheck, or the settings schema.** S06 did all
   four; figures are in `sessions/S06-standards.md` and F-166..F-181.
 - **Do not re-derive installer idempotency.** F-192 settles it: idempotent by construction.
+- **Do not re-inventory the GUI surfaces or re-count their fields.** S07 did it and the
+  counts are reproducible: `python3 system-review/harness/gui_field_extract.py --repo .`
 - **The Redis key census is DONE** (S02). `ParameterKey` at `redis_controller.py:18` is the
   registry; the docs diff is F-014. Do not re-derive it. `CENSUS.md` §7 is superseded.
 - **Do not re-trace `main.py` boot or shutdown** — `deliverables/CODE-MAP-cinemate.md` §3–4

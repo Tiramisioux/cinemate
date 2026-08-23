@@ -13,8 +13,8 @@ Update this file as reality diverges. Divergence is expected, not failure.
 | S04 | Redundancy & dead code sweep | ✅ done 2026-08-18 (attempt 2) — **agent 2 scope still owed** |
 | S05 | Readability, comments & structure | ✅ done 2026-08-18 |
 | S06 | Standards, consistency & tooling | ✅ delivered 2026-08-23 — `STANDARDS-PROPOSAL.md` + `draft-config/` |
-| S07 | GUI surface inventory & state-model extraction | ⏭ next |
-| S08 | GUI harmonization evaluation → ADR-001 | pending |
+| S07 | GUI surface inventory & state-model extraction | ✅ delivered 2026-08-23 — `GUI-INVENTORY.md` + `GUI-STATE-MODEL.md` |
+| S08 | GUI harmonization evaluation → ADR-001 | ⏭ next — **still gated by PI-009**, but S07 narrowed it |
 | S09 | Docs vs. code | pending |
 | S10 | Install script vs. install docs | pending |
 | S11 | CineMate style, philosophy & skill payload | pending |
@@ -143,7 +143,7 @@ read into PI-007 step 1 (a desk task) or into S05.
 
 ## Phase C — GUI
 
-### S07 · GUI surface inventory & state-model extraction — ⏭ NEXT
+### S07 · GUI surface inventory & state-model extraction — ✅ DELIVERED
 
 - Complete the KICKOFF §6.3 table: every surface, every widget, every control, every field.
 - Build the surface × field matrix with source-of-truth per field.
@@ -155,7 +155,7 @@ read into PI-007 step 1 (a desk task) or into S05.
   render harness; do not reinvent the stubbing approach.
 - → `deliverables/GUI-INVENTORY.md`, `deliverables/GUI-STATE-MODEL.md`
 
-### S08 · GUI harmonization evaluation → ADR-001
+### S08 · GUI harmonization evaluation → ADR-001 — ⏭ NEXT
 
 - Execute KICKOFF §7 in full: five options against seven constraints, run the divergence diff.
 - **Must queue the DRM-ownership Pi test** — options D and E stand or fall on it

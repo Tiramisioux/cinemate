@@ -160,6 +160,23 @@ acceptable or needs a visible warning (KICKOFF §9 principle 3).
 
 ## PI-007 — Is the unserialised control path (F-025) actually racy?
 
+> **UPDATED 2026-08-23 — step 1 is DISCHARGED at a desk, no hardware used (S11a).**
+> `STATE.md` flagged step 1 as a desk task that might settle F-025 for free. It did, and the
+> answer is broader than F-025 recorded — see **F-268** and **F-269**:
+>
+> - `_dispatch_lock` lives in `CommandExecutor` (`cli_commands.py:21`, 2 s timeout at `:218`)
+>   and serialises **three** paths: CLI, serial, HTTP `/api/v1/cmd`.
+> - **Six** modules bypass it via `getattr` on the controller — `gpio_input.py`,
+>   `analog_controls.py`, `rotary_encoder.py`, `i2c/quad_rotary_controller.py`,
+>   **`storage_preroll.py`** and **`simple_gui.py`**. The last two were not in F-025's list.
+> - `CinePiController` has **9 lock-acquisition sites across 151 methods**, guarding three
+>   specific concerns, so there is no internal fallback.
+>
+> **What remains for the Pi:** only whether the race is *observable* — whether concurrent
+> GPIO and web commands actually interleave destructively in practice. The structure is
+> settled; the consequence is not.
+
+
 **Belief (probable, not confirmed):** CLI, serial and HTTP commands are serialised under
 `CommandExecutor._dispatch_lock`, but GPIO buttons, analog pots, the quad rotary and the
 keyboard call `CinePiController` methods directly without it. Whether this is harmful

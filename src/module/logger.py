@@ -72,6 +72,25 @@ class ColoredFormatter(logging.Formatter):
 
         return f"{timestamp}: {colored_record}"
 
+DEFAULT_LOG_DIR = '/home/pi/cinemate/src/logs'
+
+
+def log_directory() -> str:
+    """Where system.log lives.
+
+    The default is unchanged from the path this has always used, because
+    deployed cameras and anything reading their logs expect it. It is a
+    function rather than a literal so that main.py's log cleanup and this
+    writer cannot drift apart -- they used to state it separately -- and so a
+    dev checkout or a test run can point somewhere else without editing source.
+
+    Note for whoever revisits this: the default puts runtime state inside the
+    source tree, which is worth changing, but moving it is an operational
+    decision rather than a tidy-up.
+    """
+    return os.environ.get('CINEMATE_LOG_DIR', DEFAULT_LOG_DIR)
+
+
 # Configure the logging
 
 def configure_logging(level=logging.INFO):
@@ -93,7 +112,7 @@ def configure_logging(level=logging.INFO):
     logger.addHandler(console_handler)
 
     # File handler (plain text)
-    log_dir = '/home/pi/cinemate/src/logs'
+    log_dir = log_directory()
     os.makedirs(log_dir, exist_ok=True)
     file_path = os.path.join(log_dir, 'system.log')
     file_handler = logging.FileHandler(file_path)

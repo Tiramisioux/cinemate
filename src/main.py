@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw, ImageFont
 import glob
 
 from module.config_loader import SettingsLoadError, auto_storage_preroll_enabled, load_settings
-from module.logger import configure_logging
+from module.logger import configure_logging, log_directory
 from module.redis_controller import RedisController, ParameterKey
 from module.ssd_monitor import SSDMonitor
 from module.usb_monitor import USBMonitor
@@ -557,7 +557,7 @@ def setup_logging(debug_mode):
     logging_level = logging.DEBUG if debug_mode else logging.INFO
 
     # Ensure logs directory exists
-    log_dir = '/home/pi/cinemate/src/logs'
+    log_dir = log_directory()
     os.makedirs(log_dir, exist_ok=True)
 
     # Clear existing log files

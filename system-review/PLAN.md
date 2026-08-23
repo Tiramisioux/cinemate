@@ -16,8 +16,8 @@ Update this file as reality diverges. Divergence is expected, not failure.
 | S07 | GUI surface inventory & state-model extraction | ✅ delivered 2026-08-23 — `GUI-INVENTORY.md` + `GUI-STATE-MODEL.md` |
 | S08 | GUI harmonization evaluation → ADR-001 | ✅ delivered 2026-08-23 — ADR **proposed**; C2 still open (PI-009) |
 | S09 | Docs vs. code | ✅ delivered 2026-08-23 — `DOCS-DRIFT-REPORT.md` |
-| S10 | Install script vs. install docs | ⏭ next |
-| S11 | CineMate style, philosophy & skill payload | pending |
+| S10 | Install script vs. install docs | ✅ delivered 2026-08-23 — `INSTALL-DRIFT-REPORT.md`; F-003 decided |
+| S11 | CineMate style, philosophy & skill payload | ⏭ next |
 | S12 | Remediation plan | pending |
 
 ---
@@ -181,7 +181,7 @@ read into PI-007 step 1 (a desk task) or into S05.
   CENSUS.md §9 rather than recounting.**
 - → `deliverables/DOCS-DRIFT-REPORT.md`
 
-### S10 · Install script vs. install docs — ⏭ NEXT
+### S10 · Install script vs. install docs — ✅ DELIVERED
 
 - `cinemate-install.sh` (1916 LOC) against `docs/installation-steps.md` (1061 LOC), step
   by step. Correspondence table; every divergence is a finding.
@@ -201,7 +201,7 @@ read into PI-007 step 1 (a desk task) or into S05.
 
 ## Phase E — Synthesis
 
-### S11 · CineMate style, philosophy & skill payload
+### S11 · CineMate style, philosophy & skill payload — ⏭ NEXT
 
 - `deliverables/CINEMATE-STYLE.md` — how code is written here. Naming, module shape,
   error handling, logging, threading, config, comments. Derived from the code, with

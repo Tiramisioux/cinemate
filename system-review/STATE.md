@@ -16,11 +16,14 @@
   `harness/design_token_diff.py`, 8 findings, PI-016. See `sessions/S08-adr-001.md`.
 - **Then S09 (2026-08-23) — docs drift **delivered**: `deliverables/DOCS-DRIFT-REPORT.md`,
   `harness/docs_drift_check.py`, 12 findings. See `sessions/S09-docs-drift.md`.
-- **Current phase:** D — truth passes.
-- **Next session:** **S10 — install script vs. install docs.**
+- **Then S10 (2026-08-23) — install drift **delivered**:
+  `deliverables/INSTALL-DRIFT-REPORT.md`, 4 findings, **F-003 decided (option 2, reversing
+  S01's lean)**. See `sessions/S10-install-drift.md`.
+- **Current phase:** D complete. S11 opens Phase E — distillation.
+- **Next session:** **S11 — CineMate style, philosophy & skill payload.**
 - **Ledger branch:** `claude/cinemate-system-review-kickoff-cilicc` — pushed: yes · PR #129 (draft)
-- **Findings:** 178 rows, **173 net** (F-183..F-186, F-189 merged into F-002/F-003). Free ID
-  blocks: F-135..F-149, F-196..F-199, F-264..F-299.
+- **Findings:** 182 rows, **177 net** (F-183..F-186, F-189 merged into F-002/F-003). Free ID
+  blocks: F-135..F-149, F-196..F-199, F-268..F-299.
 - **Open decisions:** **ADR-001 is written and `proposed`** —
   `decisions/ADR-001-gui-harmonization.md`. Reject D and E; adopt C reached through B; fix
   F-204 first. Surface 4 excluded permanently. It does **not** decide constraint 2 (PI-009),
@@ -232,6 +235,25 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
 - **Write the checker before the prose that cites it.** Three of S09's six checks were wrong
   on the first attempt; one would have appeared to contradict F-014. Four of five
   corrections came from reading script output back against source.
+
+### From S10 (install drift) — detail in `deliverables/INSTALL-DRIFT-REPORT.md`
+- **The installer and its docs agree on everything mechanically checkable** (F-267) — repo
+  URLs, refs, 16 shared paths, an exactly matching 17-name unit set. The problems are
+  structural.
+- **F-264: the two repos that move most are the two nothing pins.** Drivers pinned to
+  `6.12.y`, libcamera to `cinemate`; `CINEMATE_REPO_REF` and `CINEPI_RAW_REPO_REF` empty in
+  both installer and doc. With S07b's 45-file/+7164-line `main`↔`dev` gap and F-190's zero
+  pip pins, **an install is not reproducible across two days.** Fix: a `versions.env`
+  pairing manifest.
+- **F-266: the recovery console appears zero times in the 1061-line install doc** — the
+  component whose whole purpose is being reachable when everything else is broken.
+- **F-003 is DECIDED, reversing S01's lean: option 2** (`requirements.txt` canonical,
+  three-file split). Reason: option 1 would push the dependency list into the CI workflow as
+  a *third* copy — `checks.yml` already hand-lists it. F-182's `lgpio` fix falls out for
+  free. **The split line is `unverified` pending PI-002.**
+- **Four apparent findings dissolved on checking** — a keyword matcher's 11 false "missing
+  steps", an upstream-attribution URL, `$PI_HOME`-derived paths, and a regex that missed
+  bare-name headings. The dissolved candidates took more work than the recorded ones.
 - **Incremental agent writes are mandatory, not advice.** Two agent runs died mid-flight
   to usage limits; the one told to write incrementally preserved 16 findings, the four that
   weren't preserved nothing.
@@ -317,6 +339,8 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
   counts are reproducible: `python3 system-review/harness/gui_field_extract.py --repo .`
 - **Do not re-check the docs mechanically.** S09 did all six:
   `python3 system-review/harness/docs_drift_check.py --repo .`
+- **Do not re-diff the installer against `installation-steps.md`.** S10 did it; they agree
+  (F-267). And **do not re-open F-003** — S10 chose option 2 with reasons.
 - **The Redis key census is DONE** (S02). `ParameterKey` at `redis_controller.py:18` is the
   registry; the docs diff is F-014. Do not re-derive it. `CENSUS.md` §7 is superseded.
 - **Do not re-trace `main.py` boot or shutdown** — `deliverables/CODE-MAP-cinemate.md` §3–4

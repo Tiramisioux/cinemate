@@ -1,54 +1,84 @@
 Continue the CineMate system review.
 
-1. Read `system-review/KICKOFF.md` in full.
+1. Read `system-review/KICKOFF.md` in full — **§9's eight candidate principles are S11's
+   spine**, and §1.7 says what the skill payload is for.
 2. **Read `system-review/STATE.md` — all of it, before your first grep.** Two sessions have
    been caught skipping it.
-3. Read `system-review/sessions/S09-docs-drift.md`.
-4. Then execute **S10 — Install script vs. install docs** per `PLAN.md`.
-   → `deliverables/INSTALL-DRIFT-REPORT.md`
+3. Read `system-review/sessions/S10-install-drift.md`.
+4. Then execute **S11 — CineMate style, philosophy & skill payload** per `PLAN.md`.
+   → `CINEMATE-STYLE.md`, `CINEMATE-PHILOSOPHY.md`, `ENTRY-POINTS.md`, `SKILL-PAYLOAD.md`
+
+Phase D is closed. S11 opens Phase E — distillation. **This is the session the whole review
+has been feeding**, and four deliverables is a lot: split into S11a/S11b rather than
+thinning any of them.
 
 ---
 
-## S10's brief overlaps work already done — read this before starting
+## S11 is assembly, not investigation — and the ledger is unusually ready
 
-`PLAN.md` S10 lists five tasks. **Two are finished** and one is settled:
+Ten sessions have produced 182 findings and 8 deliverables. S11's job is to turn them into
+four documents a future developer or agent can use **without repo access**. Almost nothing
+new needs discovering.
 
-| S10 asks for | Status |
+### `CINEMATE-PHILOSOPHY.md` — the one with real intellectual work
+
+KICKOFF §9's eight principles must each be **confirmed, refuted or refined against code**,
+and *"where the codebase violates its own principles, those violations are findings."*
+Several are already settled:
+
+| principle | evidence |
 |---|---|
-| run `shellcheck` on the installer, record warning classes | **Done — S06.** 15 findings across all 11 scripts, **1** in the 1916-line installer. F-174..F-179 have the classes. It is a **strength**, not a problem area |
-| check idempotency and failure handling by reading | **Done — S06, F-192.** Idempotent *by construction*: `MANAGED_BEGIN`/`END` delete-then-rewrite, `ensure_repo` guards, a `grep -q`-guarded source patch whose comment states the reasoning. One gap: F-193, the libcamera patch has no `else` branch, so an upstream change makes it a silent no-op |
-| the dependency divergence | **Settled — F-002/F-003.** `findings/F-003.md` has both package lists. S10 *chooses between the two remediation options*; it does not recount |
+| "Redis is the single source of live state" | **Refine.** `redis_controller` has the widest fan-in (10 modules, CENSUS §4) — but `get_value()` reads a **cache**, not Redis (S02), four independent `StrictRedis` clients bypass it (F-105), and the enum is convention not enforcement (F-015, F-212). The principle is *aspired to*, not enforced |
+| "fail visible, never silent" | **Confirmed as intent, violated in practice.** The project states it at `storage_profiles.py:41-49`. F-130: 15 silently-swallowing handlers. F-204: the state bus dies silently. F-118/F-219: a button that no-ops. F-193: a patch that silently skips |
+| duplication policy | **The review's central thesis.** 16 instances, 10 drifted. S06's rule: *duplicated truth must be deleted, or carry a named reason **and** a check. A comment is not a check.* |
 
-**So S10's real job is the correspondence table:** `cinemate-install.sh` (1916 LOC) against
-`docs/installation-steps.md` (1061 LOC), step by step, plus `services/` against what the
-docs claim gets installed.
+**Add what the review found that KICKOFF did not list.** Strong candidates, all evidenced:
+*degrade in ladders whose last rung still answers* (F-221, the recovery console, and the
+wifi-hotspot ladder); *state the reason in place* (F-192's idempotency comments, F-206's
+`/api/v1/cmd` note, F-191's honest "keep in sync by hand"); *the operator must never see a
+plausible wrong number* — which F-204 violates and which is the sharpest thing the review
+found.
 
-### What S09 hands S10 directly
+### `CINEMATE-STYLE.md` — derived, not generic
 
-**`installation-steps.md` is the largest doc in the repo (1061 LOC) and S09 did not read
-it.** S09's mechanical checks covered it — its links resolve and its citations are all
-runtime paths, correctly absent — but nobody has read it against the installer. That is
-S10's whole deliverable and it is genuinely unexamined.
+`STANDARDS-PROPOSAL.md` §4 already argues the rules from findings. S05's
+`READABILITY-REPORT.md` has the metrics and the PRESERVE list. S09 found **why the accurate
+docs are accurate** — tabular, structurally mirroring what they describe, honestly scoped
+(`DOCS-DRIFT-REPORT.md` §3) — and that generalises past docs.
 
-S09's transferable result: **the docs turned out to be the best-maintained boundary in the
-system** (F-240), and the accurate ones are accurate because they are tabular, structured to
-mirror what they describe, and honestly scoped. A step-by-step installer doc is exactly that
-shape. **Expect it to be better than the review's priors suggest, and be ready to say so.**
+**The best material is the strengths.** F-174/F-192/F-194 (the shell), F-221 (the recovery
+console), F-206, F-210, F-223, F-234, F-242, F-181. This codebase's own best work is the
+style guide; do not import conventions from outside. S06 made that argument and it held.
 
-But note the counter-evidence in the same session: F-245, the one substantive docs error,
-was a *scope* claim — "the CLI, serial and GPIO paths" where GPIO does not qualify. Installer
-docs are full of scope claims ("this step installs X"). Check the scope of each claim, not
-just whether the named thing exists.
+### `ENTRY-POINTS.md` — "where do I go to change X"
 
-### Known installer-side findings to carry in
+`PLAN.md` calls this the highest-value artifact for future sessions. Every row: task → file
+→ function → **what else to update**. That last column is the review's whole thesis made
+operational — it is the drift map. Sources: `CODE-MAP-cinemate.md` §3–5,
+`CODE-MAP-cinepi-raw.md`, `GUI-STATE-MODEL.md`, `REDUNDANCY-REPORT.md`.
 
-F-163 (`python3-systemd` reachable only through dead code; F-032's unused list becomes 8 of
-11) · F-161 (`services/cinemate-services.Makefile` recurses into three deleted directories)
-· F-162 (`services/Makefile` `uninstall` targets generate no recipe) · F-165 (root
-`CMakeLists.txt` references a directory that does not exist, so `cmake .` fails immediately)
-· F-182 (`INSTALL_ALT_GPIO_BACKEND` advertised as optional but load-bearing for boot →
-PI-012) · F-236 (`camera-ready.sh` can hold `ExecStartPre` ~30 s) · F-195 (the two scripts
-the installer *generates* are never linted by anything).
+**Blocked-ish:** `cinepi_controller.py` (2626 LOC) is the dispatch target for nearly every
+row and **is still untraced** — see below.
+
+### `SKILL-PAYLOAD.md` — self-contained, assumes no repo access
+
+Which means every citation needs enough context to be useful without opening the file.
+
+---
+
+## Do this first, before the four deliverables
+
+**Trace `cinepi_controller.py`.** It has been deferred **six times** — S02 through S10 — and
+it is now blocking:
+
+- `ENTRY-POINTS.md`, whose rows mostly land in it;
+- **F-025's severity**, which `PI-007 step 1` says may be settleable **at a desk, with no
+  hardware** — reading it for internal locking;
+- the F-026 claim that its 94 public method names are a user-facing API.
+
+It is 2626 lines, so budget for it — but an AST pass plus targeted reads has worked in every
+session that tried it. **If the window is tight, do this and S11a's philosophy document, and
+leave style/entry-points/payload for S11b.** Do not write `ENTRY-POINTS.md` without it.
 
 ---
 
@@ -56,22 +86,23 @@ the installer *generates* are never linted by anything).
 
 **Read `STATE.md` before the first grep.** S06 skipped it and re-derived five findings.
 
-**Write the checker before the prose that cites it.** Three sessions running, this has
-caught errors that would otherwise have shipped. In S09, three of six checks were wrong on
-the first attempt and one would have appeared to contradict a settled finding (F-014).
+**Write the checker before the prose that cites it.** Four sessions running. In S10 a
+keyword matcher produced **11 false "missing steps"**; grepping each subject dissolved all
+eleven. In S09 three of six checks were wrong on the first attempt.
+
+**Most candidate findings dissolve.** S10 recorded 4 and dissolved 4, and the dissolved ones
+took longer. Check before writing, every time.
 
 **Withhold a check you cannot trust.** S09 attempted a `cli-commands.md`-vs-dispatcher diff,
-got 14 false positives it could not separate from real ones, and reported *that* instead of
-the numbers. An inconclusive result stated plainly is worth more than a confident wrong one.
+could not separate commands from arguments, and reported *that* instead of numbers.
 
-**Say "at least N".** Pattern matching has under-reported six times in this review and
-over-reported twice.
+**Say "at least N".** Pattern matching has under-reported six times and over-reported twice.
 
 **Citation discipline.** Line numbers from `grep -n` only, never arithmetic on a `sed`
 window.
 
 **Contradict a finding rather than quietly amending it.** F-238 corrects F-008 as its own
-row with its own citations. Corrections are additive and traceable.
+row. Corrections are additive and traceable.
 
 ## Context that isn't obvious
 
@@ -81,41 +112,33 @@ row with its own citations. Corrections are additive and traceable.
 **Both repos are on `dev`** (STATE.md D2). **Verify before trusting any cinepi-raw figure:**
 `git -C /workspace/tiramisioux/cinepi-raw branch --show-current` must print `dev`.
 
-**This clone has no git tags** (F-263) — anything asking for a diff against a release tag
-cannot be done here. Say so rather than approximating.
+**This clone has no git tags** (F-263).
 
-**Free ID blocks:** F-135..F-149, F-196..F-199, F-264..F-299.
+**Free ID blocks:** F-135..F-149, F-196..F-199, F-268..F-299.
 
 **Four stdlib-only harness checks exist** — `redis_key_diff.py`, `gui_field_extract.py`,
-`design_token_diff.py`, `docs_drift_check.py`. Run them rather than re-deriving their
-numbers. All four are candidates for the CI job in `STANDARDS-PROPOSAL.md` §3.
+`design_token_diff.py`, `docs_drift_check.py`. Run them rather than re-deriving numbers.
 
-## Still open — S11 and S12 will need these
+## Still open
 
-- **`cinepi_controller.py` (2626 LOC) is untraced** since S02 — **deferred five times.** It
-  is the dispatch target for every GUI control and it gates F-025's severity. **PI-007 step
-  1 is a desk task, not a Pi task.** If S10 finishes early, do this instead of extending
-  S10's scope.
+- **`cinepi_controller.py` (2626 LOC)** — see above. Deferred six times; do it now.
 - **`dng_encoder.cpp` on `dev` changed by 687 lines** — `CODE-MAP-cinepi-raw.md` §4 is a
-  `main` account of a rewritten component. Banner is on the file. Largest cinepi-raw hole.
-- **The `wifi_hotspot` triangle** — two thirds unreached since S04.
+  `main` account of a rewritten component. Banner is on the file.
+- **The `wifi_hotspot` triangle** — two thirds unreached since S04. Its ladder is good
+  material for the philosophy doc, so S11 may want it anyway.
 - **The 1471 lines of JavaScript in `settings_editor.html`** were scanned, not read.
 
-## For S11 and S12
+## For S12, the last session
 
-**S11 (style/philosophy) has two strong new inputs from S09:** the accurate docs are
-accurate for three identifiable reasons (tabular / structurally mirroring / honestly
-scoped — `DOCS-DRIFT-REPORT.md` §3), and **prose inside the code rots where `docs/` does
-not** (§4). The second is the sharpest argument yet for S05's F-133 recommendation to
-promote the 47 load-bearing why-comments into `docs/`.
-
-**S12's spine is settled:** CineMate has a drift problem, not a style problem, and four
-stdlib-only checks are the mechanism. `ADR-001` §6 orders the GUI work;
-`STANDARDS-PROPOSAL.md` §9 orders the tooling; `DOCS-DRIFT-REPORT.md` §6 orders the docs.
-**F-204 outranks all three** — one raising redis subscriber silently freezes every surface,
-and the guarded version of that loop already exists 900 lines away (F-208). ~10 lines, first.
+**The spine is settled and does not need rediscovering:** CineMate has a drift problem, not
+a style problem, and four stdlib-only checks are the mechanism. The orderings already exist
+— `ADR-001` §6 for the GUI, `STANDARDS-PROPOSAL.md` §9 for tooling, `DOCS-DRIFT-REPORT.md`
+§6 for docs, `INSTALL-DRIFT-REPORT.md` §5 for dependencies. **F-204 outranks all of them:**
+one raising redis subscriber silently freezes every surface, `get_value()` then serves a
+stale cache, and the guarded version of that loop already exists 900 lines away (F-208).
+~10 lines, and it should be the first thing anyone does.
 
 ## Finish with
 
-Update `STATE.md`, write `sessions/S10-*.md`, overwrite this file for S11, then
-`git add system-review/`, commit as `review(S10): ...`, and push.
+Update `STATE.md`, write `sessions/S11-*.md`, overwrite this file for S12, then
+`git add system-review/`, commit as `review(S11): ...`, and push.

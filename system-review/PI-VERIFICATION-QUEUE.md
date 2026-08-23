@@ -308,3 +308,56 @@ and the symptom is an exposure error, which needs a real sensor to observe.
 **Settles:** F-259's severity — latent tidiness issue vs a real cold-start exposure bug.
 
 **Expected effort:** 15 minutes.
+
+---
+
+## PI-012 — Does `INSTALL_ALT_GPIO_BACKEND=0` produce an install that cannot boot?
+
+**Belief (`confirmed` statically, outcome `probable`):** F-182. With the flag off, `lgpio`
+is never pip-installed into the venv, and `main.py:21` imports it transitively and
+unguarded. Python import semantics say `main.py` then raises `ModuleNotFoundError` before
+any of the startup-failure display machinery runs.
+
+**Why the Pi is needed:** the flag is an installer knob, so only a real install exercises
+it. There may also be a path by which `lgpio` reaches the venv that static reading missed
+(a dependency of `gpiozero`, a Raspberry Pi OS preinstall, an `apt` package pulled in by
+another step).
+
+**Procedure:**
+1. On a clean Raspberry Pi OS image, run `INSTALL_ALT_GPIO_BACKEND=0 ./cinemate-install.sh`.
+2. `~/.cinemate-env/bin/python3 -c "import lgpio"` — record whether it resolves.
+3. `systemctl status cinemate-autostart` and `journalctl -u cinemate-autostart -n 50`.
+4. **Prediction to test:** step 2 fails, step 3 shows `ModuleNotFoundError: No module named
+   'lgpio'` from `rpi_gpio_wrapper.py:1`, and the startup-failure display does *not* appear
+   because the crash precedes it.
+
+**Settles:** whether F-182 is a high-severity broken supported configuration or a
+theoretical one, and whether the failure is legible to the user or silent.
+
+**Expected effort:** 40 minutes (one clean install).
+
+---
+
+## PI-013 — How fast does the undrained in-app log queue grow?
+
+**Belief (`confirmed` structurally, rate `unverified`):** F-172. `QueueHandler` puts every
+formatted record into an unbounded `queue.Queue()` and nothing ever `get()`s. Growth is
+therefore monotonic for the process lifetime; only the *rate* is unknown, and the rate is
+what decides whether this is a slow leak or an operational limit on session length.
+
+**Why the Pi is needed:** the rate is entirely a function of real log volume, which depends
+on the frame path, the connected peripherals and the configured level.
+
+**Procedure:**
+1. Start Cinemate normally; note the PID.
+2. Record `ps -o rss= -p <pid>` and, if a shell into the process is available,
+   `log_queue.qsize()` — otherwise use RSS alone.
+3. Sample at 0 min, 15 min idle, and after a 10-minute recording at the highest fps the
+   sensor supports.
+4. **Prediction to test:** `qsize()` rises monotonically and never falls; RSS growth
+   correlates with logged lines, and is markedly faster while recording.
+
+**Settles:** F-172's severity, and whether a `maxlen` deque is a sufficient fix or the
+handler should be dropped entirely.
+
+**Expected effort:** 45 minutes (mostly waiting).

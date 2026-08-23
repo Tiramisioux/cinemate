@@ -4,12 +4,9 @@ import threading
 import os
 import time
 import json
-from fractions import Fraction
-import math
 import subprocess
-from threading import Thread, Timer
+from threading import Timer
 import psutil
-import math
 import sys
 
 from module.redis_controller import ParameterKey, encode_log_encode_request, decode_log_encode_request

@@ -4,7 +4,6 @@ import time
 import select
 import threading
 import logging
-import queue
 import serial
 import errno
 
@@ -73,7 +72,7 @@ class SerialHandler(threading.Thread):
 
             logging.info(f"Successfully opened port {port}")
             return ser
-        except serial.SerialException as e:
+        except serial.SerialException:
             return None
 
     def _schedule_retry(self, port, immediate=False):

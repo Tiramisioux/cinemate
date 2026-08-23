@@ -3,13 +3,11 @@ import logging
 import re
 import json
 import time
-from pathlib import Path
 from queue import Queue
 from threading import Thread
 from typing import List, Optional
-from threading import Event as ThreadEvent
 from typing import List
-import os, signal
+import os
 import shutil
 
 from module.config_loader import load_settings

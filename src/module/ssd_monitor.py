@@ -286,8 +286,8 @@ class SSDMonitor:
         monitor.start()                         # non-blocking
 
         while not self._stop_evt.is_set():
-            dev = monitor.poll(self._poll_int)  # returns None on timeout
-            # In either case we resync; if an event arrived, dev is not None.
+            monitor.poll(self._poll_int)  # returns None on timeout
+            # The result is deliberately ignored: event or timeout, we resync.
             self._check_mount_status()
             self._maybe_run_fsck()
 

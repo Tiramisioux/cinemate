@@ -10,7 +10,6 @@ import os
 import re
 import time
 import math
-import statistics
 
 class RedisListener:
     def __init__(
@@ -1612,7 +1611,6 @@ class RedisListener:
         file's mtime is older than settle_s (no in-flight files).
         """
         last = None
-        last_latest_mtime = None
         for _ in range(max_attempts):
             cnt, li, ln, latest_mtime = self._scan_dngs_once(folder_path)
             now = time.time()
@@ -1624,7 +1622,6 @@ class RedisListener:
                     return cnt, li, ln
 
             last = cnt
-            last_latest_mtime = latest_mtime
             time.sleep(settle_s)
 
         # final return after attempts
@@ -1791,10 +1788,6 @@ class RedisListener:
                         paused_seconds,
                     )
 
-        drop_detected_this_take = (
-            self.drop_frame_count_current_take > 0
-            or segment_index_hole_frames_total > 0
-        )
         live_drop_holes_total = (
             self.drop_frame_count_current_take * max(1, sensor_count_effective)
             if self.drop_frame_count_current_take > 0

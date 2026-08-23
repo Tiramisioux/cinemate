@@ -6,12 +6,9 @@ from PIL import Image, ImageDraw, ImageFont
 from module.console_display import claim_console_for_framebuffer, release_console_to_text
 from module.framebuffer import Framebuffer, acquire_framebuffer
 from module.config_loader import load_settings
-import subprocess
 import logging
-from sugarpie import pisugar
 from flask_socketio import SocketIO
 import re
-from statistics import mean
 from module.utils import Utils
 from module.redis_controller import ParameterKey
 from module.dynamic_resolution import dynamic_resolution_indicator_active
@@ -1701,7 +1698,6 @@ class SimpleGUI(threading.Thread):
         previous_background_color = self.get_background_color()
 
         # ─── choose background colour & colour-mode ────────────────────
-        prev_bg = self.get_background_color()      # ← fixed () call
         
         try:
             preroll_active = int(
@@ -1932,12 +1928,6 @@ class SimpleGUI(threading.Thread):
             vu_bar_h = max(_MIN_BAR_H, min(_MAX_BAR_H, available))
             self.draw_framebuffer_vu_meter(draw, bar_height=vu_bar_h)
 
-        vu = self.vu_smoothed  # Or .usb_monitor.audio_monitor.vu_levels if you want raw
-        # if vu:
-        #     levels = " | ".join([f"Ch{i+1}={v:.1f}%" for i, v in enumerate(vu)])
-        #     logging.info(f"Mic levels: {levels}")
-        # else:
-        #     logging.info("Mic level: No VU data available.")
 
         if self.draw_right_col:
             self.draw_right_sections(draw, values)
@@ -1960,7 +1950,6 @@ class SimpleGUI(threading.Thread):
 
         # Reduce the top padding by reduce_top and increase the bottom by the same amount
         upper_left = ((position[0] - padding), position[1] - (padding - reduce_top)-6) 
-        bottom_right = (upper_left[0] + text_width + 2 * padding, upper_left[1] + text_height + 2 * padding + reduce_top)
         radius = 5
         radius_2x = radius * 2
 

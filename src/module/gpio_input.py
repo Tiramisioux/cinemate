@@ -433,7 +433,6 @@ class SmartButton:
             if action_dict and isinstance(action_dict, dict):
                 self.logger.debug(f"Action dict before accessing 'method': {action_dict}")
                 action_method = action_dict.get('method')
-                action_args = action_dict.get('args', [])
                 if action_method:
                     self.trigger_action(action_dict)  # Assuming you have this method implemented
                 else:

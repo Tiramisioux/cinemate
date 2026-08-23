@@ -707,8 +707,6 @@ class USBMonitor():
 
         model = device.get('ID_MODEL', '')
         serial = device.get('ID_SERIAL', '')
-        vendor_id = device.get('ID_VENDOR_ID', None)
-        product_id = device.get('ID_MODEL_ID', None)
         model_upper = model.upper()
         device_id = device.device_path
 

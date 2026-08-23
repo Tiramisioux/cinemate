@@ -25,7 +25,7 @@ endef
 # ---------------------------------------------------------------
 # umbrella targets
 # ---------------------------------------------------------------
-install enable disable start stop restart status clean:
+install enable disable start stop restart status clean uninstall:
 	@for svc in $(SUBSERVICES); do \
 	  $(call CALL_SUB,$$svc,$@); \
 	done
@@ -41,11 +41,12 @@ $(foreach s,$(SUBSERVICES),\
   $(eval stop-$(s)   : ; $(call CALL_SUB,$(s),stop   )) \
   $(eval restart-$(s): ; $(call CALL_SUB,$(s),restart)) \
   $(eval status-$(s) : ; $(call CALL_SUB,$(s),status )) \
-  $(eval clean-$(s)  : ; $(call CALL_SUB,$(s),clean  )) )
+  $(eval clean-$(s)  : ; $(call CALL_SUB,$(s),clean  )) \
+  $(eval uninstall-$(s): ; $(call CALL_SUB,$(s),uninstall)) )
 
 # ---------------------------------------------------------------
 # default help
 # ---------------------------------------------------------------
 all help:
-	@echo "Targets: install|enable|disable|start|stop|restart|status|clean"
+	@echo "Targets: install|enable|disable|start|stop|restart|status|clean|uninstall"
 	@echo "Add -<service> suffix for one service only, e.g. 'make start-storage-automount'"

@@ -55,3 +55,39 @@ cinemate    cinepi_multi.py:812    redis_controller.r.keys("cinepi_ready_*")
 
 Treat a clean run as "no new drift *of the kind this script can see*", never as proof the
 contract is intact.
+
+## `gui_field_extract.py` — S07
+
+Extracts the GUI field inventory mechanically: the 68 fields `simple_gui.populate_values()`
+builds, which of them reach the web template, the Socket.IO event contract in both
+directions, and the settings-editor action catalogue against `CinePiController`'s real
+methods.
+
+```
+python3 system-review/harness/gui_field_extract.py --repo . [--format md|text|json]
+```
+
+Standard library only. Does not import the application, does not need redis, does not need
+a Raspberry Pi.
+
+**It independently reproduces F-118** — `set_log` is offered by the action catalogue and
+does not exist on the controller — which makes it the second ready-made CI check in the
+ledger, alongside `redis_key_diff.py`. See `deliverables/STANDARDS-PROPOSAL.md` §3.3; that
+check should gate at zero, not ratchet, because there is exactly one known instance and it
+is a bug.
+
+Current output:
+
+```
+HDMI fields (lower bound)                68
+  also named in the web template         48
+  HDMI-only                              20
+Socket.IO events emitted / handled        9 / 9   (no drift, either direction)
+CinePiController public methods          94
+Settings-editor catalogue entries        46
+  absent on the controller                1  <-- set_log (F-118)
+```
+
+Two of its own bugs are documented in the source as warnings, because both are the kind
+this review keeps making: it once walked every nested dict and over-counted fields, and it
+once scanned two of the three Socket.IO emit sites and under-counted events.

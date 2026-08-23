@@ -17,7 +17,7 @@ Update this file as reality diverges. Divergence is expected, not failure.
 | S08 | GUI harmonization evaluation → ADR-001 | ✅ delivered 2026-08-23 — ADR **proposed**; C2 still open (PI-009) |
 | S09 | Docs vs. code | ✅ delivered 2026-08-23 — `DOCS-DRIFT-REPORT.md` |
 | S10 | Install script vs. install docs | ✅ delivered 2026-08-23 — `INSTALL-DRIFT-REPORT.md`; F-003 decided |
-| S11 | CineMate style, philosophy & skill payload | 🔵 **S11a delivered** (controller trace + `CINEMATE-PHILOSOPHY.md`) · **S11b ⏭ next**: style, entry-points, payload |
+| S11 | CineMate style, philosophy & skill payload | ✅ **delivered** — philosophy, style, entry-points, skill payload |
 | S12 | Remediation plan | ✅ delivered 2026-08-23 (out of order, on operator request) — `REMEDIATION-PLAN.md` |
 
 ---
@@ -201,7 +201,7 @@ read into PI-007 step 1 (a desk task) or into S05.
 
 ## Phase E — Synthesis
 
-### S11 · CineMate style, philosophy & skill payload — 🔵 SPLIT: S11a ✅ / S11b ⏭ NEXT
+### S11 · CineMate style, philosophy & skill payload — ✅ DELIVERED (S11a + S11b)
 
 - `deliverables/CINEMATE-STYLE.md` — how code is written here. Naming, module shape,
   error handling, logging, threading, config, comments. Derived from the code, with

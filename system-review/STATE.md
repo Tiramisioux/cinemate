@@ -28,10 +28,15 @@
 - **Then: REMEDIATION IS UNDER WAY.** On operator instruction, batches B2/B3/B4/B6 are
   implemented on feature branches off `dev` in both repos — **five draft PRs**, four of
   them with green CI. See "Remediation status" below.
-- **Then S11b (partial):** `deliverables/ENTRY-POINTS.md` delivered.
-- **Current phase:** E — distillation, alongside execution.
-- **Next:** S11b's remaining two (`CINEMATE-STYLE.md`, `SKILL-PAYLOAD.md`), and
-  **B5 — the Pi session**, which is the only remaining blocker on everything else.
+- **Then S11b — complete.** `ENTRY-POINTS.md`, `CINEMATE-STYLE.md`, `SKILL-PAYLOAD.md`.
+- **THE REVIEW IS COMPLETE.** All twelve plan entries delivered, 193 findings, 15
+  deliverables. Every remediation batch that can be executed without hardware is merged into
+  five draft PRs.
+- **The only remaining work is B5 — the Pi session.** `PI-RUNBOOK.md` is self-contained and
+  `REMEDIATION-PLAN.md` §6 Thread B5 is the handoff prompt. Everything else is downstream of
+  it: version pinning, the `versions.env` pairing, ADR-001 constraint 2, and the severity of
+  three findings.
+- **After that:** B7 (ADR-001 steps 1–3), which should follow B3 landing.
 - **Ledger branch:** `claude/cinemate-system-review-kickoff-cilicc` — pushed: yes · PR #129 (draft)
 - **Findings:** 193 rows, **188 net** (F-183..F-186, F-189 merged into F-002/F-003). Free ID
   blocks: F-135..F-149, F-196..F-199, F-279..F-299. Analysis is complete; F-272..F-278 were

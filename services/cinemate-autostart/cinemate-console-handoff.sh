@@ -33,7 +33,7 @@ shutdown_job_in_progress() {
 }
 
 if systemd_manager_stopping || shutdown_job_in_progress; then
-    /bin/systemctl --no-block start plymouth-start.service >/dev/null 2>&1 || true
+    sudo -n /bin/systemctl --no-block start plymouth-start.service >/dev/null 2>&1 || true
     if command -v plymouth >/dev/null 2>&1; then
         plymouth change-mode --shutdown >/dev/null 2>&1 || true
         plymouth show-splash >/dev/null 2>&1 || true
@@ -41,4 +41,8 @@ if systemd_manager_stopping || shutdown_job_in_progress; then
     exit 0
 fi
 
-/bin/systemctl start getty@tty1.service >/dev/null 2>&1 || true
+# Unprivileged `systemctl start` triggers a PolicyKit prompt that blocks
+# forever with no tty to answer it -- systemd then kills this ExecStopPost
+# step at TimeoutStopSec and the unit lands failed instead of restarting.
+# `pi` has passwordless sudo; running as root skips the polkit prompt.
+sudo -n /bin/systemctl --no-block start getty@tty1.service >/dev/null 2>&1 || true

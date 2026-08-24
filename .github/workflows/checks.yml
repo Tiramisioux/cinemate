@@ -89,10 +89,10 @@ jobs:
       - name: Design tokens match between the GUIs
         run: python3 tools/design_token_diff.py --repo . --strict
 
-      # Gate at zero once the set_log fix lands; one known unresolved name
-      # until then. Raising this number is never the fix.
+      # Gated at zero: the set_log fix landed in #130. Raising this number
+      # is never the fix.
       - name: Every offered action resolves on the controller
-        run: python3 tools/gui_field_extract.py --repo . --max-unresolved 1
+        run: python3 tools/gui_field_extract.py --repo . --max-unresolved 0
 
       # Needs both repositories: the key contract spans them.
       - name: Check out cinepi-raw

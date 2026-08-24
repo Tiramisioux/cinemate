@@ -6,7 +6,6 @@ import threading
 import re
 
 import subprocess
-import time
 import shlex
 
 from collections import deque
@@ -31,72 +30,6 @@ class Event:
                 traceback.print_exc()  # Print the traceback for better debugging
 
 
-class USBDriveMonitor:
-    def __init__(self, ssd_monitor):
-        self.context = pyudev.Context()
-        self.monitor = pyudev.Monitor.from_netlink(self.context)
-        self.monitor.filter_by(subsystem='block')
-        self.ssd_monitor = ssd_monitor
-        self.device_processing_lock = threading.Lock()
-        self.processed_devices = {}  # Tracks devices and their last processed time
-        
-        self.usb_mic_level = 0
-    
-
-        self.check_mounted_devices_on_startup()  # Check for already mounted devices
-
-    def is_usb_mounted_at(self, path):
-        try:
-            output = subprocess.check_output(['findmnt', '-n', '-o', 'SOURCE', path], stderr=subprocess.STDOUT).decode().strip()
-            if '/dev/sd' in output:
-                self.ssd_monitor.disk_mounted = True
-                return True
-        except subprocess.CalledProcessError:
-            self.ssd_monitor.disk_mounted = False
-
-        return False
-
-    def device_key(self, device):
-        return (device.get('ID_MODEL', 'Unknown'), device.get('ID_SERIAL_SHORT', 'Unknown'))
-
-    def is_within_cooldown(self, device_key):
-        current_time = time.time()
-        with self.device_processing_lock:
-            last_processed = self.processed_devices.get(device_key, 0)
-            return current_time - last_processed < 5
-
-    def mark_device_processed(self, device_key):
-        with self.device_processing_lock:
-            self.processed_devices[device_key] = time.time()
-
-    def check_mounted_devices_on_startup(self):
-        for device in self.context.list_devices(subsystem='block'):
-            if self.is_usb_mounted_at('/media/RAW'):
-                device_key = self.device_key(device)
-                logging.info(f"SSD already mounted at startup: Model={device_key[0]}, Serial={device_key[1]}")
-                self.ssd_monitor.update_on_add(device_key[0], device_key[1])
-                break
-
-    def start_monitoring(self):
-        for device in iter(self.monitor.poll, None):
-            device_key = self.device_key(device)
-
-            if device.action == 'add':
-                if self.is_within_cooldown(device_key):
-                    logging.debug(f"Device {device_key} within cooldown period, skipping detection.")
-                    continue
-
-                self.mark_device_processed(device_key)
-                logging.info(f"USB device connected: Model={device_key[0]}, Serial={device_key[1]}")
-
-                for _ in range(10):
-                    if self.is_usb_mounted_at('/media/RAW'):
-                        self.ssd_monitor.update_on_add(device_key[0], device_key[1])
-                        break
-                    time.sleep(1)
-            elif device.action == 'remove':
-                self.ssd_monitor.update_on_remove("Detected USB disconnection.")
-                self.ssd_monitor.on_ssd_removed()
 
 class AudioMonitor:
     def __init__(self, settings: Optional[dict] = None):

@@ -1,7 +1,6 @@
 import logging
 import threading
 import json
-import time
 from module.redis_controller import ParameterKey
 
 class Mediator:
@@ -168,10 +167,13 @@ class Mediator:
         logging.info("Stop recording timeout reached. Stopping recording...")
 
     def handle_fps_change(self, data):
-        # Handle "fps" key changes
-            fps_new = self.redis_controller.get_value(ParameterKey.FPS.value)
-            
+        # Subscribed in __init__ but currently does nothing: its whole body was
+        # a read of ParameterKey.FPS whose result was never used. Left in place
+        # rather than unsubscribed, because the subscription is the documented
+        # hook -- but it is a no-op today, not a working handler.
+        return
+
     def handle_shutter_a_change(self, data):
-        # Handle "shutter_a" key changes
+        # As above: reads SHUTTER_A and does nothing with it. No-op today.
         if data['key'] == ParameterKey.SHUTTER_A.value:
-            shutter_a_new = self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)
+            return

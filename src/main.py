@@ -5,16 +5,14 @@ import time
 import signal
 import atexit
 import subprocess
-import traceback
 import os
-import json
 import shutil
 import socket
 from PIL import Image, ImageDraw, ImageFont
 import glob
 
 from module.config_loader import SettingsLoadError, auto_storage_preroll_enabled, load_settings
-from module.logger import configure_logging
+from module.logger import configure_logging, log_directory
 from module.redis_controller import RedisController, ParameterKey
 from module.ssd_monitor import SSDMonitor
 from module.usb_monitor import USBMonitor
@@ -47,7 +45,6 @@ from module.console_display import (
 from module.framebuffer import acquire_framebuffer
 
 # Constants
-MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
 SETTINGS_FILE = "/home/pi/cinemate/settings.jsonc"
 STARTUP_MESSAGE_MIN_DURATION = 3.0
 CLI_COLOR_RED = "\033[1;31m"
@@ -560,7 +557,7 @@ def setup_logging(debug_mode):
     logging_level = logging.DEBUG if debug_mode else logging.INFO
 
     # Ensure logs directory exists
-    log_dir = '/home/pi/cinemate/src/logs'
+    log_dir = log_directory()
     os.makedirs(log_dir, exist_ok=True)
 
     # Clear existing log files
@@ -578,7 +575,7 @@ def setup_logging(debug_mode):
         root_logger.removeHandler(handler)
 
     # Configure new logging handlers (file, serial, etc.)
-    return configure_logging(MODULES_OUTPUT_TO_SERIAL, logging_level)
+    return configure_logging(logging_level)
 
 def start_hotspot(settings) -> None:
     """Start the hotspot if enabled in *settings* and nothing else owns it.
@@ -773,7 +770,9 @@ def run_application(args, log_queue):
         else:
             reserved_output_pins.update(int(pin) for pin in rec_tone_pins)
 
-    gpio_input = ComponentInitializer(
+    # Held, not used: ComponentInitializer registers the GPIO callbacks in
+    # __init__ and must outlive this scope.
+    gpio_input = ComponentInitializer(  # noqa: F841
         cinepi_controller,
         settings,
         reserved_output_pins=reserved_output_pins,
@@ -832,7 +831,8 @@ def run_application(args, log_queue):
         for p in settings.get("input_peripherals", {}).get("pots", [])
         if p.get("setting")
     }
-    analog_controls = AnalogControls(
+    # Held, not used -- starts its own polling thread.
+    analog_controls = AnalogControls(  # noqa: F841
         cinepi_controller, redis_controller,
         pot_channel_by_setting.get("iso", "None"),
         pot_channel_by_setting.get("shutter_a", "None"),
@@ -938,7 +938,8 @@ def run_application(args, log_queue):
     else:
         logging.error("No network connection found. Stream module not loaded")
 
-    mediator = Mediator(cinepi, cinepi_controller, redis_listener, redis_controller, ssd_monitor, gpio_output, stream, usb_monitor)
+    # Held, not used -- Mediator subscribes to redis events in __init__.
+    mediator = Mediator(cinepi, cinepi_controller, redis_listener, redis_controller, ssd_monitor, gpio_output, stream, usb_monitor)  # noqa: F841
 
     logging.info("--- Initialization Complete ---")
 

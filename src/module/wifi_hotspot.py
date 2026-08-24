@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Final, NamedTuple, Optional
 
-from module.config_loader import SettingsLoadError, load_settings, strip_jsonc
+from module.config_loader import SettingsLoadError, load_settings
 
 logger = logging.getLogger(__name__)
 

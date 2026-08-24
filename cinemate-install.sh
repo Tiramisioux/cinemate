@@ -108,7 +108,8 @@ KERNEL_BASELINE_HEADERS_META_PKG_2712="${KERNEL_BASELINE_HEADERS_META_PKG_2712:-
 RASPI_FIRMWARE_VERSION_2712="${RASPI_FIRMWARE_VERSION_2712:-1.20260521-1~bookworm}"
 KERNEL_ROLLBACK_DIR="${KERNEL_ROLLBACK_DIR:-/var/tmp/cinemate-kernel-baseline}"
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
 readonly MANAGED_BEGIN="# >>> cinemate-install >>>"
 readonly MANAGED_END="# <<< cinemate-install <<<"
 # Parallel build jobs. On boards with < 4 GB RAM (1 GB / 2 GB models) heavy

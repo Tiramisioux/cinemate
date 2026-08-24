@@ -2,10 +2,6 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-STATE_DIR="/tmp"
-INPUT_FILE="$STATE_DIR/cinemate_cli.in"
-LOG_FILE="$STATE_DIR/cinemate_cli.log"
-PID_FILE="$STATE_DIR/cinemate_cli.pid"
 
 usage() {
   cat <<'EOF'

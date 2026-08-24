@@ -755,6 +755,16 @@ build_libcamera() {
         if grep -q 'minPixelProcessingTime = 1.0us / 380' "$controller_cpp" 2>/dev/null; then
             detail "Pi 5 overclock: libcamera minPixelProcessingTime 1.0us/380 -> 1.0us/580 (pisp)"
             run_as_pi sed -i 's#minPixelProcessingTime = 1.0us / 380#minPixelProcessingTime = 1.0us / 580#' "$controller_cpp"
+        elif grep -q 'minPixelProcessingTime = 1.0us / 580' "$controller_cpp" 2>/dev/null; then
+            detail "Pi 5 overclock: libcamera minPixelProcessingTime already at 1.0us/580"
+        else
+            # Neither value present. The grep guard makes a re-run safe, but it
+            # cannot tell "already patched" from "upstream moved this line", and
+            # the second case silently ships an overclocked RP1 without the
+            # companion fix. Say so rather than skipping quietly.
+            warn "Pi 5 overclock: could not find minPixelProcessingTime in ${controller_cpp}."
+            warn "  libcamera has probably changed upstream; the overclock companion fix was NOT applied."
+            warn "  The faster imx585 modes may not be advertised. See docs/overclocking.md."
         fi
     fi
 

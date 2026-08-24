@@ -1027,6 +1027,24 @@ def run_application(args, log_queue):
         if timekeeper and hasattr(timekeeper, "stop"):
             timekeeper.stop()
 
+        # SSDMonitor owns a thread of its own and was never stopped here.
+        # USBMonitor deliberately is not in this list: it has no stop() at all,
+        # so giving it one is a design change rather than a cleanup fix.
+        if ssd_monitor is not None and hasattr(ssd_monitor, "stop"):
+            try:
+                ssd_monitor.stop()
+            except Exception:
+                logging.exception("SSD monitor did not stop cleanly")
+
+        # Last, because everything above may still want to read redis state on
+        # its way out. Without this the pub/sub thread outlived the process's
+        # own shutdown; it is a daemon, so nothing noticed.
+        if redis_controller is not None and hasattr(redis_controller, "stop_listener"):
+            try:
+                redis_controller.stop_listener()
+            except Exception:
+                logging.exception("Redis listener did not stop cleanly")
+
         if not shutdown_in_progress and not gui_stopped:
             release_console_to_text()
 

@@ -32,26 +32,100 @@
 - **THE REVIEW IS COMPLETE.** All twelve plan entries delivered, 193 findings, 15
   deliverables. Every remediation batch that can be executed without hardware is merged into
   five draft PRs.
-- **The only remaining work is B5 — the Pi session.** `PI-RUNBOOK.md` is self-contained and
-  `REMEDIATION-PLAN.md` §6 Thread B5 is the handoff prompt. Everything else is downstream of
-  it: version pinning, the `versions.env` pairing, ADR-001 constraint 2, and the severity of
-  three findings.
-- **After that:** B7 (ADR-001 steps 1–3), which should follow B3 landing.
+- ~~**The only remaining work is B5 — the Pi session.**~~ **B5 is DONE (2026-08-24).** All
+  16 queued items closed across two sessions (2026-08-23, 2026-08-24). Digest:
+  `PI-RESULTS-2026-08-24.md`.
+- **Then: RECONCILIATION (2026-08-25).** The ledger and 15 deliverables were written entirely
+  pre-hardware. This session reconciled `FINDINGS.md`, the citing deliverables, and
+  `ADR-001-gui-harmonization.md` against the Pi results — see "Ground truth from the Pi
+  session" below for what actually changed, and the git log on this branch from
+  `25615d8` onward for the full diff. **Read that section before trusting any pre-2026-08-24
+  claim about F-001, F-016, F-025, F-027, F-172, F-182, F-204, F-253, F-259, or ADR-001's RAM
+  argument** — each has a stated correction now.
+- **After that:** B7 (ADR-001 steps 1–3), which should follow B3 landing. ADR-001's
+  conclusion (reject D/E, adopt C) is unchanged by the reconciliation, so B7 can proceed on
+  the existing plan.
 - **Ledger branch:** `claude/cinemate-system-review-kickoff-cilicc` — pushed: yes · PR #129 (draft)
-- **Findings:** 193 rows, **188 net** (F-183..F-186, F-189 merged into F-002/F-003). Free ID
-  blocks: F-135..F-149, F-196..F-199, F-279..F-299. Analysis is complete; F-272..F-278 were
-  all found *while implementing the fixes*, which is worth knowing — implementation is a
-  better detector than reading was.
+- **Findings:** 201 rows (F-001..F-286, with gaps — see free ID blocks below). **188 net**
+  through F-278 (F-183..F-186, F-189 merged into F-002/F-003), **+8 from the Pi session**
+  (F-279..F-286, see below) = **196 net**. Free ID blocks: F-135..F-149, F-196..F-199,
+  F-287..F-299. Analysis is complete; F-272..F-278 were all found *while implementing the
+  fixes*, which is worth knowing — implementation is a better detector than reading was.
 - **Open decisions:** **ADR-001 is written and `proposed`** —
   `decisions/ADR-001-gui-harmonization.md`. Reject D and E; adopt C reached through B; fix
-  F-204 first. Surface 4 excluded permanently. It does **not** decide constraint 2 (PI-009),
-  and rejects D/E on argument rather than measurement (PI-016).
-  **S03 supplied its hardest evidence and its hardest blocker.** DRM master exclusivity is
-  now confirmed *from cinepi-raw's own comment* (`dualHdmiPreviewStage.cpp:5-18`), which
-  likely kills options D and E. But **PI-009 blocks S08**: how the DRM preview and the
-  fbdev GUI actually compose cannot be determined from source.
-- **Blockers:** **PI-009 blocks S08** — do not let S08 answer KICKOFF §7
-  constraint 2 from reasoning.
+  F-204 first. Surface 4 excluded permanently. **Reconciled 2026-08-25**: constraint 2
+  (PI-009) and constraint 4 (PI-015) are now answered; the RAM argument the ADR used against
+  D and E is CONTRADICTED on the actual (4 GB, not 2 GB) hardware. **The decision does not
+  change** — D still fails on C1 (DRM exclusivity) alone, E still fails on C4 (refresh rate)
+  alone — but read the ADR's own correction banner before citing its RAM reasoning anywhere
+  else; it no longer holds as originally argued.
+- **Blockers:** none remaining from the original review. ~~PI-009 blocks S08~~ — resolved,
+  see above.
+
+## Ground truth from the Pi session (2026-08-24) — read before trusting anything pre-hardware
+
+**Five predictions were CONTRADICTED**, not just refined. Each killed an *inference*, not
+the underlying static observation — see `FINDINGS.md` for the corrected rows and each
+deliverable's correction banner for downstream effects. Do not re-derive any of these:
+
+| what was believed | what PI found | finding | still true? |
+|---|---|---|---|
+| The dev unit is a 2 GB CM5 Lite; ADR-001 rejects options D/E partly on that basis | **4048 MB total, confirmed by the operator as the genuine current unit** (not a fluke) — but 2 GB stays a real install/compile target | ADR-001 §3 C3 | Board size: no. RAM-based rejection of D/E: contradicted at peak load too (~2970MB free). D/E rejection itself: unchanged — each rests on an independent, unaffected leg |
+| F-027's 12 unreferenced key strings are dead code, safe to remove | **All 11 concerns are live** — 8 form an undocumented cinepi-raw launch-config contract read from Redis at every process start, 2 are per-frame telemetry (~1401 SETs/60s each) with no reader | F-027 (reclassified `redundancy`→`correctness`, not downgraded) | The static claim (zero cinemate references) still holds exactly |
+| F-253's timecode rounding divergence would show the DNG side wrapping at base 25 (C++ half-up) | It wraps at **base 24** (Python's convention) at 24.5fps | F-253 | The divergence itself is real; the specific predicted direction was wrong |
+| F-182: `INSTALL_ALT_GPIO_BACKEND=0` produces an install that cannot boot (`ModuleNotFoundError`) | `python3-lgpio` ships via apt as a `python3-gpiozero` dependency regardless of the flag — **no crash** | F-182 (downgraded `high`→`low`) | The installer-conditional-vs-unconditional-import structure still holds; just doesn't crash |
+| PI-005: the meson `/path/to/...` fallback is a live landmine masked by `pkg-config` happening to succeed | `pkg-config --exists hiredis`/`redis++` both exit 0 — the fallback branch is never taken | CENSUS.md §11 | Dead defensive code, confirmed safe to delete |
+
+**What CONFIRMED, some more sharply than expected:**
+- **F-204** (worst finding in the ledger) — decisively confirmed: a forced subscriber
+  exception froze the cache-backed HTTP API and SSE stream permanently and silently on the
+  first PUBLISH after the fault, for both a previously-seen key and a brand-new one.
+- **F-025/F-268/F-269** (unserialised control paths) — confirmed as a **100% starve**, not
+  an occasional race: a live Grove Base HAT pot on `iso` out-polled 20/20 explicit CLI
+  commands over 14s. F-025 upgraded `probable`→`confirmed`, `medium`→`high` (see F-285).
+- **F-172** (undrained log queue) — confirmed ~70x faster growth while recording than idle.
+- **F-006/F-002** (test suite) — confirmed 381 passed + 241 subtests, zero skips, on real
+  hardware, matching the off-hardware baseline exactly. The portable/hardware test split
+  this item was written to discover **appears not to exist**.
+- **F-003/F-186/F-276** (dependency drift) — a clean install succeeds end to end (after
+  fixing two real installer bugs, F-279/F-280); flask and pyserial both confirmed
+  transitive-only.
+- **F-016** (audio_vu duplication) — VU meter works end to end, but the DEL-mid-take
+  degradation this finding implied does **not** reproduce — `audio_vu` is republished
+  unconditionally on nearly every cycle. Downgraded `high`→`medium`.
+- **F-207** (web GUI liveness) — headless path confirmed real on a genuine cable pull;
+  cadence measured at **~7.5 Hz**, not the ~12fps assumed everywhere it was cited — this
+  number now appears in ADR-001 constraint 4 and GUI-INVENTORY.md.
+- **F-259** (ISO cold-start fallback) — confirmed real (~5.6x silent overexposure via a
+  standalone cinepi-raw launch) but likely unreachable through normal `cinemate-autostart`
+  operation, since cinemate's Python layer re-seeds `iso` first.
+
+**Eight new findings, F-279..F-286**, from the Pi session itself (not predicted by any
+queue item): **F-279..F-282 are fixed** on `feature/no-venv-install` (`sudo -v` hang,
+`raspi-firmware` 404, `settings.jsonc` comment destruction on every install not just via the
+web editor, a relative tuning-file path). **F-283..F-286 are open**: `systemctl restart
+cinemate-autostart` reliably hangs on `ExecStopPost=cinemate-console-handoff.sh` (F-283,
+reproduced 5+ times); the NVMe `mount`/`unmount` CLI round-trip is unreliable (F-284);
+F-285 is the hardware proof for F-025 above; F-286 is `choose_resolution()`'s tie-break
+never selecting the higher-bit-depth mode at a sensor's max resolution.
+
+**Operator decision (2026-08-25): keep F-027's 11 Redis-key concerns.** They are candidates
+for future cinemate-side implementation, not dead surface — do not propose deleting any of
+the 12 key strings in F-027. Documenting them in `docs/redis-keys.md` and the ADR-001
+structural fix (a shared key registry) both remain live recommendations; only the "remove
+it" branch closed.
+
+**Open gap, not yet resolved — flag for a future Pi session:** the 2026-08-24 blank-card
+session (`feature/no-venv-install`, PI-004/PI-011 second follow-up/PI-012/PI-016 second
+follow-up) never recorded which `cinepi-raw` commit the fresh install actually built. The
+2026-08-23 session pinned `cinepi-raw` at `dev` @ `ea96f2d` explicitly; F-264 notes
+`CINEPI_RAW_REPO_REF` is unpinned in the installer, so a fresh clone on a different day could
+have picked up a newer `dev` tip. This mostly doesn't matter (PI-004/PI-012 are
+cinemate/apt-side; PI-016's second follow-up touches cinemate's `cinepi_controller.py`, not
+cinepi-raw) **except for PI-011's second follow-up**, which exercises cinepi-raw's own
+`cinepi_controller.cpp:76-77` cold-start fallback directly in a freshly-built binary — that
+result is not provably against `ea96f2d` specifically. Next Pi session: `git -C
+/home/pi/cinepi-raw log --oneline -1` and compare.
 
 ---
 
@@ -64,20 +138,34 @@ thing committed there.
 
 | PR | repo | batch | state |
 |---|---|---|---|
-| #130 | cinemate | B3 correctness, 8 commits | draft · no CI (needs #131) |
-| #131 | cinemate | B4 style + **the CI itself**, 6 commits | draft · **5 green** |
-| #132 | cinemate | B2 dead code, −1,398 lines | draft · **5 green** |
-| #133 | cinemate | B6 dependencies + `versions.env` | draft · **5 green** |
-| #59 | cinepi-raw | B2 dead code, −1,565 lines | draft · no CI in that repo |
+| #130 | cinemate | B3 correctness, 8 commits | draft · no CI (needs #131) · **SAFE — PI-014/PI-013 confirm the severity of what it fixes** |
+| #131 | cinemate | B4 style + **the CI itself**, 6 commits | draft · **5 green** · **SAFE — PI-002 confirms the suite it gates passes clean on hardware** |
+| #132 | cinemate | B2 dead code, −1,398 lines | draft · **5 green** · **SAFE — PI-001 confirms the dead templates are deployed, deletion has real effect** |
+| #133 | cinemate | B6 dependencies + `versions.env` | draft · **5 green** · **NEEDS-CHANGE — see below** |
+| #59 | cinepi-raw | B2 dead code, −1,565 lines | draft · no CI in that repo · **SAFE — PI-003 independently confirms `add-tc.patch` is a vestigial duplicate** |
 
 **Merge order: #131 first** (it carries `.github/workflows/checks.yml`); #132 and #133 are
 based on it and retarget to `dev` cleanly afterwards.
 
-**Everything executable without hardware is done.** What remains is **B5 — the Pi session**
-(16 queued items), and **B7** (ADR-001 steps 1–3), which should follow B3 landing.
+**#133 is NEEDS-CHANGE (2026-08-24).** It still installs into `$VENV_DIR` via
+`pip install -r requirements.txt -r requirements-hardware.txt`. The operator has since
+removed the venv entirely, in favour of `pip install --user --break-system-packages`
+(`feature/no-venv-install`, matching the pattern `cinemate-recovery.service` already used
+deliberately). **The requirements-file content is vindicated by PI-004** — flask and
+pyserial both confirmed transitive-only on a clean install — **only the install mechanism
+conflicts.** Whoever picks up #133 needs to retarget the venv-install commands onto the
+no-venv pattern; the three-file split (`requirements.txt`/`requirements-hardware.txt`/
+`docs/requirements-docs.txt`) and its contents do not need rework.
 
-**Not verified on hardware:** every one of the above. #133 in particular changes the
-installer's pip invocation, which is a boot-path change — PI-004 and PI-012.
+~~**Everything executable without hardware is done.** What remains is **B5 — the Pi
+session** (16 queued items), and **B7** (ADR-001 steps 1–3), which should follow B3
+landing.~~ **B5 is done** (see "Ground truth from the Pi session" above). B7 remains, and
+should follow B3 landing, same as before — ADR-001's conclusion didn't change, so B7's plan
+doesn't need re-deriving, just the corrected ADR text (already reconciled) as its input.
+
+**Verified on hardware, 2026-08-24:** #130, #131, #132, cinepi-raw #59 — see the SAFE/
+NEEDS-CHANGE column above and `PI-RESULTS-2026-08-24.md`'s "Merge verdict" section for the
+full reasoning per PR.
 
 ---
 
@@ -432,6 +520,23 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
 - **Do not look for the 8 uncommitted files** (D3) or the LFS pointer corruption (D4).
 - **Do not re-read `KICKOFF.md` §6.2's C++ table as current.** It describes a different
   branch than the one available. (D2)
+- **Do not re-run any of the 16 `PI-VERIFICATION-QUEUE.md` items.** All done, digest in
+  `PI-RESULTS-2026-08-24.md`. Two narrower sub-cases were not reached (PI-009's `--same-hdmi`
+  toggle, PI-015 step 3 — killing the `SimpleGUI` thread specifically) — those are still
+  open, everything else is not.
+- **Do not re-derive the five contradictions** (board RAM/size, F-027's dead-vs-live status,
+  F-253's rounding base, F-182's crash claim, PI-005's landmine claim) — see "Ground truth
+  from the Pi session" above. Each has a stated correction with a citation; re-deriving them
+  from source alone will reproduce the pre-hardware belief, not the measured one.
+- **Do not re-open F-003's option-2 decision on the strength of F-182 alone.** F-182 is
+  downgraded (PI-012), but F-003's option-2 reasoning never actually depended on F-182's
+  severity — it rested on F-264 (pinning) and the CI-duplication argument. Both untouched.
+- **Do not propose deleting any of F-027's 12 Redis key strings.** Operator decision,
+  2026-08-25: keep them, they're candidates for future implementation. Documenting them and
+  the structural (shared-registry) fix remain live; deletion does not.
+- **Do not re-argue ADR-001's D/E rejection from the RAM constraint.** It's gone (PI-016
+  contradicted it) and is not what D/E are rejected on anymore — see the ADR's own
+  correction banner. D rests on C1 alone, E on C4 alone, both untouched by the RAM finding.
 
 ## Watch items
 
@@ -442,9 +547,24 @@ cross-session persistence layer. **This is deliberate. Do not "fix" it.**
 - ~~The F-027 key-diff harness script is unwritten.~~ **Done** — `harness/redis_key_diff.py`.
   S07 added a second: `harness/gui_field_extract.py`, which independently reproduces F-118.
   Both are wired into `STANDARDS-PROPOSAL.md` §3 as CI checks and neither needs hardware.
-- **`cinepi_controller.py` (2626 LOC) internals are still untraced** — deliberately
-  deferred at S02's budget line. It is the largest remaining unknown in the Python side and
-  it gates F-025's severity.
+- ~~`cinepi_controller.py` (2626 LOC) internals are still untraced... it gates F-025's
+  severity.~~ **Done.** S11a traced it (F-268/F-269), PI-007/F-285 confirmed the consequence
+  on hardware (100% starve). See `CINEMATE-PHILOSOPHY.md`.
+- **Which `cinepi-raw` commit the 2026-08-24 blank-card session actually built is
+  unrecorded.** The Aug 23 session pinned `dev` @ `ea96f2d` explicitly; the Aug 24 session
+  cloned `feature/no-venv-install` (a **cinemate** branch) onto a blank card, and
+  `cinemate-install.sh` pulls cinepi-raw at whatever `dev` currently is (`CINEPI_RAW_REPO_REF`
+  is unpinned, F-264) — not necessarily still `ea96f2d`. Mostly harmless (PI-004/PI-012 are
+  cinemate/apt-side), but **PI-011's second follow-up exercises cinepi-raw's own
+  `cinepi_controller.cpp:76-77` cold-start fallback directly** in that freshly-built binary,
+  so that specific result isn't provably against `ea96f2d`. Next Pi session:
+  `git -C /home/pi/cinepi-raw log --oneline -1`, compare, record it in the queue header the
+  way the Aug 23 session did.
+- **The install/compile path must keep working on 2 GB CM5 hardware, not just the 4 GB dev
+  unit** (operator instruction, 2026-08-25). No 2 GB-specific measurement exists anywhere in
+  this ledger — PI-016's RAM headroom numbers are 4 GB-only. This doesn't block anything
+  currently planned (ADR-001's D/E rejection no longer depends on RAM at all — see above),
+  but any future RAM-sensitive decision should not assume the 4 GB numbers generalize down.
 
 - `CENSUS.md` §12 lists everything S01 deliberately left unestablished. Check it before
   assuming coverage.

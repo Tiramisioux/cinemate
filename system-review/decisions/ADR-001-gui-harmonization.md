@@ -263,6 +263,12 @@ which is what the `condition` predicate already expresses.
   which cinepi-raw holds exclusively. The one workaround the project already built for this
   problem was shared memory, precisely to *avoid* a second display client. **This alone is
   sufficient to reject D — unaffected by the C3 correction below.**
+- **Operator constraint (2026-08-25), independent of C1–C7:** the HDMI output is used today
+  for cinepi-raw's own libcamera-derived DRM preview specifically because of its image
+  quality — a browser driving HDMI would mean giving that up (or fighting it for the
+  display, which C1 already says can't work). This is a product reason to reject D even in
+  a hypothetical where C1 were somehow not fatal; it is not just a technical constraint, it
+  is a stated preference for what the display is *for*.
 - **C3:** ~~a resident browser on a 2 GB board that already auto-stops recording for memory
   at UHD. Two independent RAM stops exist because memory is already the binding
   constraint.~~ **CONTRADICTED by PI-016**: on the actual (4 GB, not 2 GB) hardware,
@@ -340,6 +346,11 @@ from both but left D's DRM-exclusivity (C1) and E's refresh-rate (C4) legs stand
 their own. The recommendation below is the same recommendation, now resting on narrower,
 hardware-confirmed ground instead of an argument that turned out to be wrong about the
 board it was reasoning from.
+
+**Operator confirmation (2026-08-25):** the stated goal is *"one file to work with, when
+adjusting the GUI, and that it propagates to the web instances"* — that is option C exactly,
+not a rephrasing of it. Steps 2–3 below (lift the section spec into data; generalise the
+layout primitives so both backends read it) are that one-file goal's implementation path.
 
 Ordered, each step shippable and revertible on its own:
 

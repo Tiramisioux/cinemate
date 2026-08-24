@@ -93,7 +93,7 @@ procedure** that settles it. An entry without a runnable procedure is not done.
 | PI-008 | S03 | F-027 | **done — CONTRADICTED ("most never appear") / CONFIRMED (undocumented contract) — full session** |
 | PI-009 | S03 | ADR-001 constraint 2 | **done — CONFIRMED (same-hdmi toggle not tested)** |
 | PI-010 | S04 | F-253 | **done — CONTRADICTED (DNG side, base 24 not 25) — imx477** |
-| PI-011 | S04 | F-259 | **done — INCONCLUSIVE, method gap found (restart camera isn't a true cold start) — imx477** |
+| PI-011 | S04 | F-259 | **done — CONFIRMED (cold-start clamps gain to 22.26x max while claiming iso=400, ~5.6x over) — standalone cinepi-raw** |
 | PI-012 | S04 | F-182 | **done — CONTRADICTED (lgpio ships via apt/gpiozero regardless of the flag)** |
 | PI-013 | S04 | F-172 | **done — CONFIRMED (recording ~70x faster than idle) — imx477** |
 | PI-014 | S04 | F-204 | **done — CONFIRMED** |
@@ -844,6 +844,48 @@ PI-011
              normal operation, F-259's fallback may be unreachable in practice outside a
              standalone cinepi-raw launch — that changes its real-world severity regardless
              of what the fallback code itself does.
+```
+
+**Second follow-up (2026-08-24, no-venv blank-card build — the true cold-start test):**
+```
+PI-011
+  ran:       took the method gap above seriously: sudo systemctl stop cinemate-autostart
+             (fully stops main.py, not just cinepi-raw), confirmed no cinemate/cinepi-raw
+             process left running, redis-cli DEL iso, then launched cinepi-raw standalone
+             with the exact args the systemd unit uses (captured from ps beforehand),
+             completely bypassing cinemate's Python layer -- nothing left to re-seed iso
+             before cinepi-raw's own init runs. Triggered a real take via redis-cli SET
+             is_recording 1 + PUBLISH (cinepi-raw's control interface is redis regardless of
+             what launched it). Read the sensor's actual analogue_gain register directly via
+             v4l2-ctl -d /dev/v4l-subdev2 --get-ctrl analogue_gain -- ground truth
+             independent of anything Redis or the DNG claims. Then, on the SAME standalone
+             process, explicitly redis-cli SET iso 400 + PUBLISH (the normal path) and read
+             the register again, to get a same-process, same-conditions comparison rather
+             than trusting the Redis iso value's face meaning.
+  observed:  Cold start (no iso key at all): analogue_gain register = 978, and cinepi-raw
+             itself writes "400" into the iso key as its own fallback default -- a plausible-
+             looking value, not an obviously-wrong one. Explicit `set iso 400` on the same
+             process: analogue_gain register = 768. Using the imx477 gain-code formula
+             (gain = 1024/(1024-reg), confirmed against the log's own printed range
+             AnalogueGain:[1.0..22.26] -- reg 978 -> 1024/46 = 22.26, exactly the printed
+             maximum): reg 768 -> 1024/256 = 4.0, exactly matching the documented
+             iso/100 = AnalogueGain convention for iso 400. Reg 978 -> gain 22.26, the
+             sensor's absolute maximum -- 5.6x higher than what "iso 400" is supposed to
+             mean, and Redis's own iso key gives no indication anything is wrong; it reads
+             the same plausible "400" in both cases.
+  predicted: the fallback path applies a gain ~100x the intended one, or clamps, producing a
+             visibly wrong first exposure
+  verdict:   CONFIRMED via the "or clamps" branch of the prediction, not literally 100x: the
+             cold-start fallback clamps analogue gain to the sensor's maximum (22.26x)
+             while writing a normal-looking "400" to the iso key that implies only 4.0x --
+             a real, silent, ~5.6x overexposure with zero error surfaced anywhere. This
+             fully settles F-259: it is a real cold-start exposure bug, not a latent tidiness
+             issue, IF cinepi-raw is ever the first thing to touch the iso key with no prior
+             writer -- which the PI-011 first follow-up already showed cinemate's own Python
+             layer normally prevents by re-seeding iso before cinepi-raw needs it. So the
+             bug is real and now proven, but likely unreachable through the normal cinemate-
+             autostart path; it would bite a standalone cinepi-raw launch (development,
+             debugging, or a future integration that skips cinemate's Python layer).
 ```
 
 ---

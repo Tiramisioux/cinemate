@@ -46,13 +46,27 @@ procedure** that settles it. An entry without a runnable procedure is not done.
 > surfaced to the caller. **The "unmount"/"mount" CLI pair also proved not to be a reliable
 > round-trip** for the NVMe RAW volume during the PI-008 test — recovered manually, noted
 > under PI-008, not something we're calling out as an existing review finding yet.
+>
+> **2026-08-24, separate session: PI-004 and PI-012 closed on a genuinely blank Raspberry
+> Pi OS Lite Bookworm 64-bit card.** Two real installer bugs found and fixed on
+> `feature/no-venv-install` (pushed, not yet merged): `bootstrap_sudo()`'s `sudo -v` hangs
+> forever on stock Pi OS (fixed: `sudo -n true`), and the pinned `raspi-firmware` download
+> 404's because it's pinned against the "untested" apt pool, which only retains the single
+> newest upload (fixed: point at "main", same exact pinned version). **The operator also
+> asked, separately from the PI queue, whether the venv could be dropped entirely for a
+> simpler/faster install — it now has been**, on the same branch: Cinemate's Python
+> packages install to the system interpreter via `pip install --user --break-system-packages`
+> instead of a dedicated virtualenv, matching the pattern `cinemate-recovery.service`
+> already used deliberately (its own test asserts it runs system python3, "the venv is
+> broken" being a supported failure mode for that service). All PI-004/PI-012 results below
+> were captured against this no-venv build, not the original venv-based installer.
 
 | id | opened | source finding | status |
 |---|---|---|---|
 | PI-001 | S01 | F-001 | **done — CONFIRMED** |
 | PI-002 | S01 | F-006 | **done — CONFIRMED (on-hardware run, pytest installed)** |
 | PI-003 | S01 | census §11 | **done — CONFIRMED (vestigial)** |
-| PI-004 | S01 | F-003 | **done — INCONCLUSIVE (no blank SD card)** |
+| PI-004 | S01 | F-003 | **done — CONFIRMED (clean install works, flask+pyserial transitive) — blank card** |
 | PI-005 | S01 | census §11 | **done — CONTRADICTED** |
 | PI-006 | S02 | F-016 | **done — CONFIRMED (VU end-to-end) / CONTRADICTED (DEL degradation) — imx477 + mic** |
 | PI-007 | S02 | F-025 | **done — CONFIRMED (pot starves CLI "set iso" completely) — Grove HAT enabled** |
@@ -60,7 +74,7 @@ procedure** that settles it. An entry without a runnable procedure is not done.
 | PI-009 | S03 | ADR-001 constraint 2 | **done — CONFIRMED (same-hdmi toggle not tested)** |
 | PI-010 | S04 | F-253 | **done — CONTRADICTED (DNG side, base 24 not 25) — imx477** |
 | PI-011 | S04 | F-259 | **done — INCONCLUSIVE, method gap found (restart camera isn't a true cold start) — imx477** |
-| PI-012 | S04 | F-182 | **done — INCONCLUSIVE (no blank SD card)** |
+| PI-012 | S04 | F-182 | **done — CONTRADICTED (lgpio ships via apt/gpiozero regardless of the flag)** |
 | PI-013 | S04 | F-172 | **done — CONFIRMED (recording ~70x faster than idle) — imx477** |
 | PI-014 | S04 | F-204 | **done — CONFIRMED** |
 | PI-015 | S05 | F-207 | **done — CONFIRMED (headless works) / CONTRADICTED (~7.5Hz not ~12fps; no restart on reattach)** |
@@ -235,6 +249,46 @@ PI-004
   observed:  n/a
   predicted: n/a
   verdict:   INCONCLUSIVE — needs a dedicated clean-install session with a blank card.
+```
+
+**Follow-up (2026-08-24, blank Raspberry Pi OS Lite Bookworm 64-bit, real hardware):**
+```
+PI-004
+  ran:       git clone (main, then feature/no-venv-install once that branch existed) +
+             ./cinemate-install.sh end to end, twice more after two real failures (see
+             below), then a reboot and a real recording, on a genuinely blank card the
+             operator flashed and connected mid-session.
+  observed:  Two real installer bugs found and fixed before a clean run was possible,
+             both pushed to feature/no-venv-install:
+               1. bootstrap_sudo()'s `sudo -v` hangs forever (no error, no timeout) on
+                  stock Raspberry Pi OS — the pi user has both the default
+                  `%sudo ALL=(ALL:ALL) ALL` group rule and a NOPASSWD:ALL per-user rule,
+                  and `sudo -v` specifically needs a password despite that; plain
+                  `sudo <cmd>` does not. Fixed: `sudo -n true` instead.
+               2. The pinned raspi-firmware download 404's — it pins against the
+                  "untested" apt pool, which only ever retains the single newest upload;
+                  the exact pinned version (1.20260521-1~bookworm) was still available,
+                  just already promoted to the "main" pool. Fixed by pointing at "main".
+             After both fixes, a full install completed clean end to end (see the
+             separate deliverable note below — this same session also removed the venv
+             entirely at the operator's request, so this install exercises that new
+             system-Python-only path, not the original venv-based one). Post-install,
+             confirmed: no ~/.cinemate-env directory; every package main.py needs imports
+             cleanly under system python3 as the pi user; sudoers has no more
+             cinemate-env wildcard file and the specific pi_cinemate grants are intact;
+             cinemate-autostart.service's ExecStart is /usr/bin/python3. Rebooted into
+             the aligned 6.12.93+rpt-rpi-2712 kernel: cinemate-autostart came up active,
+             detected the imx477, and `rec f 60` produced a real 63-DNG + 1-WAV take.
+             pip show flask -> Required-by: Flask-SocketIO. pip show pyserial ->
+             Required-by: binho-host-adapter, pyftdi (both hardware/serial-adapter
+             packages, pulled in transitively by something in the GPIO/sensor stack).
+  predicted: n/a (item asks a factual question, not a directional prediction)
+  verdict:   CONFIRMED — a clean install succeeds end to end (after the two fixes above,
+             which are now real, permanent installer fixes, not workarounds specific to
+             this session) and reaches a working, recording camera. flask and pyserial
+             are BOTH confirmed transitive-only, settling F-003's open question directly:
+             flask via Flask-SocketIO, pyserial via binho-host-adapter/pyftdi. Neither
+             appears in any explicit install list.
 ```
 
 ---
@@ -807,6 +861,48 @@ PI-012
   observed:  n/a
   predicted: n/a
   verdict:   INCONCLUSIVE — needs a dedicated clean-install session.
+```
+
+**Follow-up (2026-08-24, same blank-card session as PI-004, real hardware):**
+```
+PI-012
+  ran:       rather than a second full blank-card install (one card, one session), removed
+             both of the installer's own lgpio artifacts from the already-clean PI-004
+             install: the source-built copy at
+             /usr/local/lib/python3.11/dist-packages/lgpio-*.egg (installed by
+             install_lgpio_backend(), root-owned, hence rm as root not pip uninstall as
+             pi) and confirmed the pip-installed PyPI copy was already absent from
+             ~/.local. This reproduces exactly what INSTALL_ALT_GPIO_BACKEND=0 skips —
+             both of the installer's own lgpio-providing steps gated by that flag.
+             Then: sudo -u pi python3 -c "import lgpio" (isolated import test), then a
+             real systemctl restart cinemate-autostart (hit the pre-existing, unrelated
+             console-handoff restart-hang, recovered via reset-failed + start as in
+             earlier sessions), then checked the journal and ran a real recording.
+  observed:  import lgpio still resolves — to /usr/lib/python3/dist-packages/lgpio.py.
+             `dpkg -S` identifies this as the apt package python3-lgpio (0.2.2-1~rpt1,
+             from archive.raspberrypi.com). `apt-cache rdepends --installed python3-lgpio`
+             shows it is a dependency of python3-gpiozero and python3-rpi-lgpio — both
+             present via apt independent of anything cinemate-install.sh does. With both
+             installer-added lgpio copies gone, cinemate-autostart restarted clean:
+             active, imx477 detected, `gpio_output GPIO 21 set to LOW` logged normally (a
+             real GPIO write succeeding), zero traceback/ModuleNotFoundError/ImportError
+             anywhere in the journal, and `rec f 30` produced a real synced take
+             (frames_in_sync eventually 1 on a clean re-check). Restored both removed
+             copies afterward via a full installer re-run (idempotent, ~10 min this time
+             since most steps were cached) to leave the unit in its canonical state.
+  predicted: step 2 fails, step 3 shows ModuleNotFoundError from rpi_gpio_wrapper.py:1,
+             and the startup-failure display does not appear because the crash precedes it
+  verdict:   CONTRADICTED — and the review's own "why the Pi is needed" note called this
+             exact possibility in advance ("a dependency of gpiozero, a Raspberry Pi OS
+             preinstall, an apt package pulled in by another step"). That's precisely what
+             happens: python3-lgpio ships via apt as a gpiozero dependency on current
+             Raspberry Pi OS Bookworm, so INSTALL_ALT_GPIO_BACKEND=0 does not leave the
+             system without lgpio in practice, and main.py does not crash. F-182's
+             predicted high-severity broken-supported-configuration outcome does not
+             reproduce on this OS generation — worth downgrading its severity, though the
+             installer's own two lgpio-install code paths becoming fully redundant with
+             the apt-provided one (do they diverge in version or behavior over time?) is
+             now the more interesting open question, not the crash.
 ```
 
 ---

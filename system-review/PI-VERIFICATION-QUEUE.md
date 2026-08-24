@@ -60,6 +60,26 @@ procedure** that settles it. An entry without a runnable procedure is not done.
 > already used deliberately (its own test asserts it runs system python3, "the venv is
 > broken" being a supported failure mode for that service). All PI-004/PI-012 results below
 > were captured against this no-venv build, not the original venv-based installer.
+>
+> **A third real bug found and fixed on the same branch, unrelated to venv or the PI queue:**
+> `configure_settings_json()` unconditionally round-trips settings.jsonc through
+> `json.loads()`/`json.dumps()` on every install to patch hotspot/HDMI values — destroying
+> all 71 `//`/`/* */` comments every time, even when the installer's defaults already match
+> what's committed (the common case). Confirmed on this session's fresh install: on-disk
+> settings.jsonc came out 482 lines, zero comments, vs. the tracked 386 lines/71 comments.
+> Same class of bug as F-271 (`settings_editor.py`), different code path. Fixed: skip the
+> write entirely when nothing needs to change; only fall back to the lossy rewrite (with a
+> warning and a `.bak`) when a value is genuinely customized. Also fixed, flagged by the
+> operator in passing: `tuning_file_override.path` for cam0/cam1 was a relative path
+> (`resources/tuning_files/imx477.json`), silently dependent on the process's CWD at launch
+> (works today only because `cinemate-autostart.service` pins `WorkingDirectory`) — made
+> absolute to match the non-override default path's own convention.
+>
+> **PI-016 was completed properly in a follow-up pass** at the sensor's true peak (4056x3040
+> 12-bit, not the 10-bit approximation from the first attempt) by temporarily disabling
+> `dynamic_resolution_enabled` — see its second follow-up block below, which also documents
+> why that flag's tie-break can never select the higher-bit-depth mode at max resolution
+> through the normal command surface.
 
 | id | opened | source finding | status |
 |---|---|---|---|
@@ -78,7 +98,7 @@ procedure** that settles it. An entry without a runnable procedure is not done.
 | PI-013 | S04 | F-172 | **done — CONFIRMED (recording ~70x faster than idle) — imx477** |
 | PI-014 | S04 | F-204 | **done — CONFIRMED** |
 | PI-015 | S05 | F-207 | **done — CONFIRMED (headless works) / CONTRADICTED (~7.5Hz not ~12fps; no restart on reattach)** |
-| PI-016 | S06 | ADR-001 headroom | **done — partial, real load sampled but not sensor's true max mode — imx477** |
+| PI-016 | S06 | ADR-001 headroom | **done — CONTRADICTED at the sensor's true max mode (4056x3040 12-bit): available never dropped below ~2970MB** |
 
 ---
 
@@ -1195,4 +1215,55 @@ PI-016
              4 GB-not-2-GB RAM finding from the session header, the ADR-001 headroom argument
              for rejecting options D/E may need re-measuring at the sensor's true max mode
              before it's trusted as-is.
+```
+
+**Second follow-up (2026-08-24, no-venv blank-card build, real load at the sensor's true max
+mode — settles the letter of the claim):**
+```
+PI-016
+  ran:       reaching the sensor's true peak (4056x3040, 12-bit — cinepi-raw --list-cameras
+             confirms 11.72 fps max there) needed bypassing dynamic resolution entirely: its
+             tie-break always prefers higher fps_max at equal area, so 4056x3040 10-bit
+             (fps_max 14) beats 4056x3040 12-bit (fps_max 11.72) every time through the
+             normal set-resolution path, for any fps low enough to make 12-bit eligible at
+             all (see the F-025-adjacent note below). Temporarily flipped
+             self.dynamic_resolution_enabled from True to False in cinepi_controller.py on
+             the live checkout (uncommitted, same pattern as PI-014's fault injection),
+             restarted cinemate-autostart. Also discovered the sensor-mode index numbering
+             is NOT stable across processes -- SensorDetect() rebuilds it fresh each time
+             cinepi-raw is probed, so a standalone diagnostic probe's numbering does not
+             match the live service's own table. Mapped the live table directly by cycling
+             set-resolution through indices 0-14 and reading back width/height/bit_depth;
+             index 0 = 4056x3040 12-bit in this process's numbering. Set fps free + fps 10,
+             set resolution 0, confirmed mode 4056:3040:12:U, then ran a real 600-frame
+             (~60s @ 10fps) take sampling free -m and ps -o rss=,pcpu= for both processes
+             every 5s. Reverted the dynamic_resolution_enabled edit afterward (diffed clean)
+             and restarted; fps restored to 25, a follow-up recording confirmed normal
+             operation resumed at the default 2028x1520 10-bit mode.
+  observed:  598/600 frames written, drop_frame=0 throughout, write_speed_to_drive sustained
+             170-190 MB/s. cinemate RSS 108768->109712 KB (+~1 MB over 60s), cinepi-raw RSS
+             flat at ~180000-180144 KB, cinepi-raw CPU climbed steadily 11.0%->25.3% (real
+             encode load building, unlike the earlier non-maximal test). free -m's "free"
+             column swung 121-329 MB throughout (page-cache pressure, same pattern as
+             before) but "available" stayed at 2969-3113 MB out of 4048 MB the entire take
+             -- never approached the predicted ~300 MB-free peak. memory_alert never fired.
+  predicted: peak RSS at UHD leaves under ~300 MB free
+  verdict:   CONTRADICTED, now at the sensor's actual highest resolution AND bit depth, not
+             an approximation -- "available" free memory never dropped below ~2970 MB
+             (73% of total) at any point in a full 60s take at 4056x3040 12-bit, the most
+             demanding mode this sensor has. Combined with the 4 GB-not-2-GB RAM finding,
+             the ADR-001 argument that a resident browser (option D) or HTML rasteriser
+             (option E) can't fit alongside recording headroom does not hold on this board
+             as measured -- it may still hold on a genuine 2 GB unit, but that needs its own
+             measurement, not an inference from this one.
+  incidental finding (not F-025, adjacent to it): choose_resolution()'s tie-break
+    (src/module/dynamic_resolution.py) maximizes (area, fps_max) in that order with no bit-
+    depth preference, so for any sensor where a higher-fps lower-bit-depth mode exists at
+    the sensor's max resolution (imx477 here: 10-bit/14fps vs 12-bit/11.72fps at
+    4056x3040), normal dynamic-resolution operation can never select the higher-bit-depth
+    variant at max resolution -- it is not reachable through set-resolution at any fps.
+    dynamic_resolution_enabled itself has no CLI or redis-write toggle; it is a hardcoded
+    True in cinepi_controller.py, published to redis for display only, never read back.
+    Worth its own finding if "highest resolution" and "highest bit depth" are expected to
+    be jointly reachable through the normal command surface.
 ```

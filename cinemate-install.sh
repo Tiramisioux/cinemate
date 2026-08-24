@@ -444,7 +444,11 @@ align_pi5_kernel_baseline() {
     current_fw_version="$(dpkg-query -W -f='${Version}' raspi-firmware 2>/dev/null || true)"
 
     local kernel_pool_url="https://archive.raspberrypi.com/debian/pool/main/l/linux"
-    local firmware_pool_url="https://archive.raspberrypi.com/debian/pool/untested/r/raspi-firmware"
+    # "untested" only ever retains the single newest upload -- any pinned
+    # version there gets 404'd the moment the next build lands. Once a
+    # raspi-firmware build graduates it lands in "main" too and stays
+    # there, so pin against that pool instead for a pin that survives.
+    local firmware_pool_url="https://archive.raspberrypi.com/debian/pool/main/r/raspi-firmware"
     local -a urls=(
         "$kernel_pool_url/${KERNEL_BASELINE_SUPPORT_PKG_2712}_${KERNEL_BASELINE_DEB_VERSION_2712}_all.deb"
         "$kernel_pool_url/${KERNEL_BASELINE_IMAGE_REAL_PKG_2712}_${KERNEL_BASELINE_DEB_VERSION_2712}_arm64.deb"

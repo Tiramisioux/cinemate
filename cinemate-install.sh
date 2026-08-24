@@ -1650,7 +1650,6 @@ configure_settings_json() {
 
     log "Patching settings.jsonc"
     detail "Applying hotspot + HDMI defaults to $settings_json"
-    backup_file "$settings_json"
     run_as_pi python3 - "$settings_json" "$HOTSPOT_NAME" "$HOTSPOT_PASSWORD" "$hotspot_enabled_json" "$HDMI_PORT_CAM0" "$HDMI_PORT_CAM1" <<'PY'
 import json
 import pathlib
@@ -1710,21 +1709,49 @@ enabled = sys.argv[4].lower() == "true"
 hdmi0 = int(sys.argv[5])
 hdmi1 = int(sys.argv[6])
 
-data = json.loads(_strip_jsonc(path.read_text()))
+original_text = path.read_text()
+data = json.loads(_strip_jsonc(original_text))
+
+# json.dumps() below is a lossy round-trip -- it throws away every // and
+# /* */ comment in settings.jsonc (71 of them on the stock template). Most
+# installs pass the installer's own defaults, which already match what's
+# committed in settings.jsonc, so there is nothing to patch. Detect that
+# case and skip the write entirely rather than silently gutting the file
+# on every single install regardless of whether anything changed.
 system_cfg = data.setdefault("system", {})
 wifi_cfg = system_cfg.setdefault("wifi_hotspot", {})
+sensors_cfg = data.setdefault("sensors", {})
+cam0_out = sensors_cfg.setdefault("cam0", {}).setdefault("output", {})
+cam1_out = sensors_cfg.setdefault("cam1", {}).setdefault("output", {})
+hdmi_cfg = data.setdefault("hdmi_display", {})
+
+unchanged = (
+    wifi_cfg.get("name") == ssid
+    and wifi_cfg.get("password") == password
+    and wifi_cfg.get("enabled") == enabled
+    and cam0_out.get("hdmi_port") == hdmi0
+    and cam1_out.get("hdmi_port") == hdmi1
+    and "width" in hdmi_cfg
+    and "height" in hdmi_cfg
+)
+if unchanged:
+    print("settings.jsonc already matches the requested hotspot/HDMI values -- leaving it untouched (comments intact).")
+    sys.exit(0)
+
 wifi_cfg["name"] = ssid
 wifi_cfg["password"] = password
 wifi_cfg["enabled"] = enabled
-
-sensors_cfg = data.setdefault("sensors", {})
-sensors_cfg.setdefault("cam0", {}).setdefault("output", {})["hdmi_port"] = hdmi0
-sensors_cfg.setdefault("cam1", {}).setdefault("output", {})["hdmi_port"] = hdmi1
-
-hdmi_cfg = data.setdefault("hdmi_display", {})
+cam0_out["hdmi_port"] = hdmi0
+cam1_out["hdmi_port"] = hdmi1
 hdmi_cfg.setdefault("width", 1920)
 hdmi_cfg.setdefault("height", 1080)
 
+print("WARNING: settings.jsonc needs a real value change (hotspot/HDMI settings differ "
+      "from the template) -- writing it back with json.dumps() will strip every // and "
+      "/* */ comment. Back up your comments if you rely on them; a preserving editor for "
+      "this path does not exist yet.")
+backup_path = path.with_suffix(path.suffix + ".bak")
+backup_path.write_text(original_text)
 path.write_text(json.dumps(data, indent=2) + "\n")
 PY
 }

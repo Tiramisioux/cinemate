@@ -127,10 +127,16 @@ duplicated between them is presentation only: colours (F-007), label strings (F-
 one CSS rule that names a Python method (F-217).
 
 Consequences worth carrying into ADR-001:
-- Browser update cadence is the framebuffer redraw cadence (F-207).
+- Browser update cadence is the framebuffer redraw cadence (F-207) — **PI-015 measured this
+  at ~7.5 Hz (132.6ms mean interval) on real hardware, not the ~12fps this finding assumed.
+  That is the only number ADR-001 constraint 4 has ever had.**
 - The emit sits *before* `draw_gui`'s `if not fb: return`, so the web GUI keeps working
-  with no HDMI display attached. Preserve that deliberately.
-- If the `SimpleGUI` thread dies, the web GUI freezes with it.
+  with no HDMI display attached. Preserve that deliberately. **PI-015 confirmed this on a
+  real physical HDMI detach+reattach (411 events, zero gaps >620ms over 55s) — the headless
+  path is real, not accidental.**
+- If the `SimpleGUI` thread dies, the web GUI freezes with it. (Not directly tested — PI-015
+  tested the physical-cable-pull case, not killing the thread specifically; see
+  `PI-VERIFICATION-QUEUE.md` "Not run".)
 
 **Control has already been unified** (F-206): the browser POSTs command lines to
 `/api/v1/cmd`, the same path the CLI and serial use, with the reasoning in the code —
@@ -252,10 +258,14 @@ No Raspberry Pi was used and no runtime behaviour is asserted as observed.
 scan, and this review has been caught under-counting three times and over-counting once.
 Read every number as "at least".
 
-Specifically `unverified` and left for S08 / the Pi queue:
-- How the framebuffer overlay and the DRM preview actually compose (**PI-009**) — the
-  single largest unknown, and it gates ADR-001 constraint 2.
-- The HDMI redraw cadence in practice. The `run()` loop's gating is read (`_fast_dirty`,
-  `_slow_dirty`, `_vu_active`, `min_frame_interval`) but no rate was measured.
+Specifically `unverified` at the time, since settled by the 2026-08-24 Pi session:
+- How the framebuffer overlay and the DRM preview actually compose (**PI-009**) — **done**:
+  the GUI (fbcon) holds a genuine DRM plane; cinepi-raw's own preview held none under the
+  tested conditions (no `--same-hdmi`, no confirmed-attached preview client). Narrower and
+  more concrete than "two interfaces racing" — see ADR-001.
+- The HDMI redraw cadence in practice — **measured (PI-015): ~7.5 Hz (132.6ms mean
+  interval)**, not the ~12fps this document's earlier drafts assumed.
 - Whether the web GUI's dependence on the `SimpleGUI` thread (F-207) is observable as a
-  freeze in the field.
+  freeze in the field — **still not directly tested**: PI-015 confirmed the headless path
+  (no HDMI attached) survives a real cable pull, but did not stop the `SimpleGUI` thread
+  itself, which is a different, more invasive test.

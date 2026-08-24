@@ -120,7 +120,7 @@ Providers: derived 21 · literal 15 · gui-internal 15 · redis 14 · slow-poll 
 
 | provider | count | source of truth | notes |
 |---|---|---|---|
-| `redis` | 14 | the `cp_controls` bus, read through `RedisController`'s **cache** | `get_value()` never touches redis; it reads the cache the `_listen` thread maintains. If that thread dies the values freeze silently (F-204). |
+| `redis` | 14 | the `cp_controls` bus, read through `RedisController`'s **cache** | `get_value()` never touches redis; it reads the cache the `_listen` thread maintains. If that thread dies the values freeze silently (F-204 — **hardware-confirmed by PI-014**: a forced subscriber exception froze the cache-backed HTTP API and SSE stream permanently and silently on the first PUBLISH after the fault). |
 | `derived` | 21 | computed inside `populate_values` from redis values, `ssd_monitor`, `cinepi_controller` attributes and locals | Formatting logic lives with the field, not with the renderer — which is why surface 2 gets formatted strings, not raw values. |
 | `literal` | 15 | inline string constants in `populate_values` | Ten of these are label text duplicated into the HTML (F-214). |
 | `gui-internal` | 15 | `SimpleGUI` instance state (VU smoothing, lock flags, badges, display geometry) | Not on the redis bus. Surface 2 can only get these *because* it consumes `populate_values()`. |

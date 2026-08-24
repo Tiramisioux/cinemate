@@ -6,6 +6,21 @@
 
 ---
 
+> ## ⚠ CORRECTION — reconciled against `PI-RESULTS-2026-08-24.md`
+>
+> **Added 2026-08-25.** §5's option-2 argument leaned partly on F-182 ("hardware-only
+> packages is not a safe category to reason about casually" — §5.3). **PI-012 contradicted
+> F-182's crash prediction**: `python3-lgpio` ships via apt as a `python3-gpiozero`
+> dependency independent of `INSTALL_ALT_GPIO_BACKEND`, so the unguarded `import lgpio` never
+> fails in practice on current Raspberry Pi OS. §5's *conclusion* (option 2, pin
+> `requirements.txt`, put `lgpio` in the hardware file unconditionally) is unaffected — it
+> rests on F-264's pinning argument and the CI-duplication argument, both untouched — but the
+> F-182 supporting argument is weaker than stated: it's still good hygiene to stop gating
+> `lgpio` behind a flag, just not a boot-crash fix. §6's Risk section is also resolved: **both
+> PI-004 and PI-012 are done.** PI-004 ran a real clean install end to end (after fixing two
+> real installer bugs, F-279/F-280) and confirmed flask and pyserial are both transitive-only,
+> settling F-003/F-186 directly.
+
 ## 1. Verdict
 
 **They agree on everything mechanically checkable. The problems are structural, not
@@ -139,7 +154,9 @@ S01 laid out two options and leaned toward **option 1** (installer canonical, de
 instead**, because three findings that postdate F-003 change the arithmetic.
 
 **1. CI is coming, and it needs an installable list off-Pi.** `STANDARDS-PROPOSAL.md` §6.2
-drafts a pytest job for the **381 tests that have never run** (F-222). Under option 1 that
+drafts a pytest job for the **381 tests that have never run in CI** (F-222; PI-002 has since
+run them once, manually, on real hardware — 381 passed, zero skips, matching the
+off-hardware baseline). Under option 1 that
 workflow hand-lists its packages — and the draft `checks.yml` already does, with a comment
 explaining why. **That is a third copy of the dependency set**, created by the very change
 meant to remove the second. Option 1 does not delete the duplication; it relocates it into
@@ -149,8 +166,11 @@ CI where nobody looks.
 file removes the only artefact shaped like a place to record versions.
 
 **3. The hardware/portable split is not as clean as F-003 assumed.** F-182: `lgpio` is
-installed conditionally but imported unconditionally at the top of the boot chain, so
-"hardware-only packages" is not a safe category to reason about casually.
+installed conditionally but imported unconditionally at the top of the boot chain. **PI-012
+later showed this does not crash in practice** (`python3-lgpio` ships via apt as a
+`gpiozero` dependency regardless of the flag), so the risk this point raises is lower than
+originally stated — but the category (installer-conditional vs. unconditionally-imported)
+is still real and still worth not reasoning about casually.
 
 ### Recommended shape
 
@@ -168,6 +188,8 @@ F-187, F-188), and the duplicate lines (F-185).
 
 **`lgpio` belongs in the hardware file unconditionally**, not behind
 `INSTALL_ALT_GPIO_BACKEND` — that is F-182's fix and it falls out of this change for free.
+(F-182 itself is now `low` severity per PI-012 — apt already provides `lgpio` regardless —
+but the fix is free either way, so keep it.)
 
 **Where the split line actually goes is `unverified`** and depends on which packages the
 portable tests import. That is **PI-002**: run the suite once, read the import errors, and
@@ -175,9 +197,12 @@ the line draws itself. Do not guess it.
 
 ### Risk
 
-Medium, and unchanged from F-003's assessment: this is a boot-path change to the installer
-and needs a clean install to validate — **PI-004**, and now also **PI-012**, since the
-`lgpio` move touches the same code path.
+**Resolved.** Both validating items are done: **PI-004** ran a real clean install end to end
+(fixing two real installer bugs along the way, F-279/F-280) and reached a working, recording
+camera; **PI-012** confirmed the `lgpio` boot path does not crash. §5's recommended shape has
+not itself been built yet — #133 (the draft PR implementing it) is `NEEDS-CHANGE` because it
+still targets a venv the operator has since removed (see `STATE.md`) — but the shape's
+underlying assumptions are now measured, not argued.
 
 ---
 
@@ -201,7 +226,7 @@ Per `STATE.md`'s "Do not redo" list, S10 did not recount these:
 | F-162 | `services/Makefile`'s `uninstall` targets generate no recipe |
 | F-163 | `python3-systemd` reachable only through dead code — F-032's unused apt list becomes 8 of 11 |
 | F-165 | root `CMakeLists.txt` references a directory that does not exist, so `cmake .` fails immediately |
-| F-182 | `INSTALL_ALT_GPIO_BACKEND` advertised as optional but load-bearing for boot → PI-012 |
+| F-182 | `INSTALL_ALT_GPIO_BACKEND` advertised as optional; **PI-012 CONTRADICTED the load-bearing-for-boot prediction** — apt's `python3-lgpio` covers it regardless, downgraded to `low` |
 | F-195 | the two scripts the installer *generates* are never linted by anything |
 | F-236 | `camera-ready.sh` can hold `ExecStartPre` ~30 s before `main.py` starts |
 

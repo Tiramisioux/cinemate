@@ -78,9 +78,13 @@ cli_commands.py:332 · redis_listener.py:552,1184,1557 · serial_handler.py:66,1
 ```
 
 This is a **direct violation of the project's own stated principle** (KICKOFF §9 №3, "fail
-visible, never silent"), and it is not theoretical: F-016 showed the `audio_vu` read path
-swallowing failure, which would remove the operator's audio meter mid-take with nothing
-logged. F-130.
+visible, never silent"). F-016 showed the `audio_vu` read path swallowing failure — the
+scenario that would cause on real hardware (a mid-take `redis-cli DEL`) turned out **not**
+to remove the operator's audio meter: PI-006 found `cinepi_sound` republishes `audio_vu`
+unconditionally on essentially every sub-second cycle, so a transient miss is never
+observed in practice. The swallowed-failure pattern itself is still real and still a
+violation of the stated principle — it just doesn't manifest through this particular key.
+F-130.
 
 **Two bare `except:`** (`cli_commands.py:159,167`) also catch `KeyboardInterrupt` and
 `SystemExit` — in the CLI dispatcher, the one place a user expects Ctrl-C to work. F-131.
@@ -109,9 +113,11 @@ That one comment does four things at once: states a cross-repo constraint, names
 consequence of breaking it, names the backstop *and* warns against relying on it, and names
 its own guarding test.
 
-**And that test is one of the 27 that never run (F-006).** The invariant preventing lost
-audio sync is guarded by a test nobody executes. That is the sharpest argument in the
-review for fixing CI first.
+**And that test is one of the 27 that never run in CI (F-006).** The invariant preventing
+lost audio sync is guarded by a test nothing automated executes. (PI-002 has since run the
+full suite once, manually, on real hardware — 381 passed, zero skips, this test included —
+which confirms the test itself is sound; it does not change the CI gap this argument is
+about.) That is the sharpest argument in the review for fixing CI first.
 
 Other comments that must survive any cleanup:
 

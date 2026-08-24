@@ -78,7 +78,11 @@ B3.2 — save from the settings editor, `diff` the file, confirm 74 comment line
 a backup exists. B3.5 — `python3 tools/gui_field_extract.py` must report **0** offered-but-
 absent names.
 
-**Verification, Pi (rolls into B5):** PI-014 for F-204, PI-013 for F-172.
+**Verification, Pi (rolled into B5, done 2026-08-24):** PI-014 for F-204 — **CONFIRMED**, the
+worst-case failure mode: both the cache-backed HTTP API and the SSE stream froze permanently
+and silently on the first PUBLISH after a forced subscriber exception. PI-013 for F-172 —
+**CONFIRMED**, log-queue RSS growth is ~70x faster while recording than idle. B3.1 and B3.6
+are safe to merge and now hardware-verified, not just structurally argued.
 
 **Blast radius:** B3.1 touches the object every live value flows through — but it only adds a
 guard, so the failure mode it changes is "thread dies" → "one subscriber's exception is
@@ -114,7 +118,7 @@ Five commits, grouped so each is independently reviewable.
 | commit | contents | closes |
 |---|---|---|
 | B2.1 | Unreferenced Python modules: `timekeeper.py` (243), `keyboard.py`, `stream.py`, `rotary_encoder.py`, `USBDriveMonitor` | F-017, F-031, F-013, F-100, F-115 |
-| B2.2 | Unreferenced templates — 4 files, 928 LOC | F-001 |
+| B2.2 | Unreferenced templates — **5 files, not 4** (`template_old.html` missed), ~928+ LOC. **PI-001 confirmed all five are deployed to every camera** — the deletion has real effect, not just repo hygiene | F-001 |
 | B2.3 | cinepi-raw dead sources: `lj92.c`/`lj92.h` (1218), `_mjpegPreviewStage.cpp` (240), the 0-byte `cinepi_manager.cpp`, one of the two byte-identical patches | F-029, F-012, F-200, F-201 |
 | B2.4 | Build-file rot: the Makefile recursing into three deleted directories, the `uninstall` targets with no recipe, and the root `CMakeLists.txt` that makes `cmake .` fail immediately | F-161, F-162, F-165 |
 | B2.5 | Dead members and functions — 12 findings, all with no caller anywhere | F-018, F-102..F-104, F-109, F-119..F-121, F-125, F-171, F-178, F-179 |
@@ -144,7 +148,7 @@ Without this batch, everything above is a snapshot that starts drifting the next
 | B4.3 | `ruff.toml` + a lint job. Run it locally and fix the hits first so the first CI run is green | F-005, F-130, F-131, F-169 |
 | B4.4 | Move the four harness scripts to `tools/` and add the `drift` job. Ratchet, do not gate, where a known count exists | F-027, F-118, F-007 |
 | B4.5 | shellcheck gate at zero after fixing the 15 | F-174..F-179 |
-| B4.6 | pytest job in **discovery mode** (`continue-on-error: true`) — its only purpose is to learn the portable/hardware split, then mark the hardware tests and remove the flag | **F-222**, F-006 |
+| B4.6 | pytest job — **PI-002 has since closed the discovery question**: 381 passed + 241 subtests, zero skips, on- and off-hardware alike. `continue-on-error: true` is no longer needed as a hedge; the job can gate at zero from adoption | **F-222**, F-006 |
 
 **The four checks, all stdlib-only and hardware-free:**
 
@@ -155,12 +159,21 @@ Without this batch, everything above is a snapshot that starts drifting the next
 | `design_token_diff.py` | colour tokens — **gate at 0**, nothing has drifted yet |
 | `docs_drift_check.py` | six docs checks — 4 gate at 0, `keys`/`nav` ratchet |
 
-> **381 tests across 27 files have never run** (F-222). B4.6 is how that changes, and its
-> first run is a discovery exercise, not a gate.
+> **381 tests across 27 files have never run in CI** (F-222). B4.6 is how that changes.
+> **PI-002 has since run them once, manually, on real hardware — 381 passed, zero skips,
+> matching the off-hardware baseline exactly** — so the first CI run can gate at zero rather
+> than discover the split.
 
 ---
 
 ### B5 · The Pi session — 16 queued items
+
+> **DONE, 2026-08-24.** All 16 items closed across two sessions (2026-08-23, 2026-08-24).
+> Digest: `PI-RESULTS-2026-08-24.md`. Five predictions CONTRADICTED (PI-005, PI-008 partly,
+> PI-010, PI-012, PI-016); the rest CONFIRMED or CONFIRMED/CONTRADICTED split. See
+> `FINDINGS.md` for the findings this reconciled and `STATE.md` for the ground-truth summary.
+> Two narrower sub-cases were not reached (PI-009's `--same-hdmi` toggle, PI-015 step 3) —
+> see `PI-RESULTS-2026-08-24.md` "Not run".
 
 Read-only. Nothing is changed on hardware; the session produces answers.
 
@@ -184,8 +197,8 @@ procedure and a falsifiable prediction for each.
 
 | commit | change | closes |
 |---|---|---|
-| B6.1 | Three-file split — `requirements.txt` (portable, **pinned**), `requirements-hardware.txt`, `docs/requirements-docs.txt`. **The split line comes from PI-002's output, not from a guess.** `lgpio` moves to the hardware file *unconditionally*, which is F-182's fix | F-002, F-003, F-184..F-190 |
-| B6.2 | Installer reads them: `pip install -r requirements.txt -r requirements-hardware.txt` | F-003 |
+| B6.1 | Three-file split — `requirements.txt` (portable, **pinned**), `requirements-hardware.txt`, `docs/requirements-docs.txt`. **The split line comes from PI-002's output, not from a guess** — PI-002 is done: 381 passed + 241 subtests, zero skips, both on- and off-hardware, so the portable/hardware split among test files "appears not to exist" (see `PI-RESULTS-2026-08-24.md`). `lgpio` moves to the hardware file *unconditionally* — no longer F-182's fix for a real crash (PI-012 contradicted the crash prediction), but still correct hygiene | F-002, F-003, F-184..F-190 |
+| B6.2 | Installer reads them: `pip install -r requirements.txt -r requirements-hardware.txt` — **draft PR #133 implements this into a `$VENV_DIR`, which the operator has since removed in favour of `pip install --user --break-system-packages`; #133 is `NEEDS-CHANGE` on the install mechanism, not on this requirements-file content, which PI-004 vindicated directly (flask/pyserial both confirmed transitive-only on a clean install)** | F-003 |
 | B6.3 | **`versions.env`** — a pairing manifest the installer sources and the docs quote, pinning `CINEMATE_REPO_REF` and `CINEPI_RAW_REPO_REF` | **F-264** |
 
 **B6.3 is the one to argue for.** cinepi-raw's `main` and `dev` differ by 45 files and +7164
@@ -220,8 +233,11 @@ value is its isolation.
   averaging ~16 lines. Split by concern into modules; do **not** hunt for long methods to
   extract, there are almost none. Only `__init__` (239 lines) is oversized.
 - **F-268/F-269 — the concurrency model.** Three serialised input paths, six that bypass, and
-  9 lock sites across 151 methods. This needs a design decision, not a patch. PI-007's
-  remaining step says whether the race is observable.
+  9 lock sites across 151 methods. This needs a design decision, not a patch. **PI-007/F-285
+  (done, 2026-08-24) confirmed the race is not just observable but a 100% starve**: a live
+  analog pot out-polled 20/20 explicit CLI `set iso` calls over 14s. Still deferred to B8 —
+  the fix (route `AnalogControls` through the lock, or back off after an external command
+  lands) is a design decision, not a patch, but it is no longer a hypothetical one.
 - **F-251** — four registries of config defaults, 11 keys disagreeing. B4.4's ratchet stops
   it growing; unification is its own project.
 - **F-160** — two processes mounting/fsck'ing `/media/RAW` with no ownership protocol.

@@ -182,7 +182,12 @@ is dead — class `Keyboard` is never instantiated and `module.keyboard` is neve
 only in `cli_commands.py`). So a GPIO button press and an HTTP request can enter the
 controller concurrently, with only the latter serialised. Whether that is actually
 harmful depends on controller-internal locking — **not established in S02, and it needs
-a Pi to observe.** Recorded as F-025 with the consequence marked `probable`.
+a Pi to observe.** Recorded as F-025 with the consequence marked `probable`. **S11a
+(desk-only) then found the internal locking directly (F-268/F-269): 3 serialised paths, 6
+bypassing modules, 9 lock sites guarding 3 narrow concerns, no general fallback. PI-007/F-285
+confirmed the consequence on hardware: a live analog pot 100% starves explicit CLI commands
+on the same key, not an occasional race. F-025 is now `confirmed`, `high`, not `probable`,
+`medium`.**
 
 ### The reflective-dispatch contract (important)
 
@@ -282,8 +287,10 @@ between them.
 
 ## 8. What S02 did not establish
 
-- **`CinePiController` internals.** 2626 LOC, 94 methods, only its API surface was
-  mapped. Whether it locks internally — which determines how serious F-025 is — is open.
+- ~~`CinePiController` internals. 2626 LOC, 94 methods, only its API surface was
+  mapped. Whether it locks internally — which determines how serious F-025 is — is open.~~
+  **Settled: S11a traced it (F-268/F-269, no hardware), PI-007/F-285 confirmed the
+  consequence on hardware. See CINEMATE-PHILOSOPHY.md.**
 - **`RedisListener` internals.** 2084 LOC, the entire read side, untraced.
 - **`cinepi_multi.py` / `CinePi` process supervision.** How the C++ child is launched,
   monitored, and restarted is S03's boundary but partly lives here.

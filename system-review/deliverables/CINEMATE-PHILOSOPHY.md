@@ -265,10 +265,16 @@ the controller directly through `getattr`.
 
 ## Confidence
 
-Every verdict cites a line read in this repository on the `dev` branch of both repos. No
-Raspberry Pi was used and no runtime behaviour is asserted as observed.
+Every verdict cites a line read in this repository on the `dev` branch of both repos. This
+document itself predates the 2026-08-24 Pi session; the two open dependencies below are
+now settled — see `PI-RESULTS-2026-08-24.md`.
 
-Two verdicts rest on `probable` consequences rather than confirmed ones: **P3**'s severity
+~~Two verdicts rest on `probable` consequences rather than confirmed ones: **P3**'s severity
 depends on F-204's observed behaviour (PI-014), and **P5**'s bearing on ADR-001 options D
-and E rests on resource arguments that were not measured (PI-016). Both are labelled in
-their own sections and neither changes the verdict.
+and E rests on resource arguments that were not measured (PI-016).~~ **Both are now
+confirmed on hardware, and neither changes the verdict — but P5's specifically changes the
+argument it feeds.** PI-014 confirmed F-204's worst-case failure mode decisively (both the
+HTTP API and SSE stream froze permanently and silently). PI-016 measured the RAM headroom
+this ADR-001 rejects options D/E on: at the sensor's true peak mode, available memory never
+dropped below ~2970MB of 4048MB — **CONTRADICTING** the ~300MB-free-at-peak argument on this
+board. See `decisions/ADR-001-gui-harmonization.md`'s own correction for what that changes.

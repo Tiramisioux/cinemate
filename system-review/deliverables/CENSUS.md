@@ -441,8 +441,13 @@ Root-level patch files, purpose unresolved:
 - `add-redis-timecode.patch`
 - `add-tc.patch`
 
-Both names suggest timecode features that may already be merged into the tree. Whether
-they are pending, applied, or vestigial is **unverified** — S04.
+Both names suggest timecode features that may already be merged into the tree. ~~Whether
+they are pending, applied, or vestigial is **unverified** — S04.~~ **Settled — PI-003
+(CONFIRMED, vestigial):** both fail `git apply --check` against current `dev`; the content
+they add is already present via `471bba0` ("add output of dng timecodes to redis").
+`add-tc.patch` and `add-redis-timecode.patch` are byte-identical except for a
+`git apply --3way` heredoc wrapper. Independently corroborates cinepi-raw PR #59 (B2 · dead
+sources), which already deletes `add-tc.patch` on the same reasoning.
 
 `cinepi/meson.build` contains two hardcoded placeholder paths that would break a
 from-source build if `pkg-config` fails to find hiredis or redis++:
@@ -453,7 +458,11 @@ cinepi/meson.build   include_directories('/path/to/hiredis/includes')
 ```
 
 These are literal `/path/to/...` strings in the fallback branches. Confirmed present;
-whether the fallback branch is ever taken on a real Pi build is **unverified** (PI-005).
+~~whether the fallback branch is ever taken on a real Pi build is **unverified** (PI-005).~~
+**Settled — PI-005 CONTRADICTED the "live landmine" framing**: `pkg-config --exists hiredis`
+and `--exists redis++` both exit 0 on the deployed device (hiredis 0.14.1, redis++ 1.3.15).
+The fallback branch is never taken on this hardware — dead defensive code, safe to delete,
+not a landmine that happens to be masked.
 
 ---
 

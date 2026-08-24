@@ -7,6 +7,32 @@ working `meson test` target and is not the problem (F-005, F-030).
 
 ---
 
+> ## ⚠ CORRECTION — reconciled against `PI-RESULTS-2026-08-24.md`
+>
+> **Added 2026-08-25.** This proposal was written before the Pi session. Four things it
+> states as open or as a specific shape are now settled:
+>
+> - **§6.2's premise is gone.** PI-002 ran the full suite on real hardware: 381 passed + 241
+>   subtests, zero skips, zero collection errors, matching the off-hardware baseline exactly.
+>   "The portable/hardware split... appears not to exist" (PI-RESULTS). §6.2's discovery-mode
+>   job (`continue-on-error: true`) was the right call *before* this result — it no longer
+>   needs to be provisional. Item 9 in §9's table can gate at zero from adoption, not just
+>   after a discovery run.
+> - **§11's Flask claim is confirmed, not probable.** PI-004: a clean install's `pip show
+>   flask` reads `Required-by: Flask-SocketIO`. Verifying it did not need a network resolve
+>   this review lacked — it needed the clean install this review now has.
+> - **§9 item 8's risk note cited the wrong PI item** (said "needs PI-012's clean install to
+>   verify" — PI-012 is the GPIO-backend item, F-182). The clean install is **PI-004**, and
+>   it's done: flask and pyserial both confirmed transitive-only, F-003's split decision
+>   stands on measured ground now, not an assumption.
+> - **§3.1's F-027 row undersells what the ratchet would catch.** PI-008 found the 12
+>   "unreferenced" keys are not dead — 8 are an undocumented cinepi-raw launch-config
+>   contract, 2 are live per-frame telemetry. The ratchet is more valuable than the proposal
+>   argued: it would surface a real live contract with no other guard, not just prune dead
+>   entries. See `FINDINGS.md` F-027.
+
+---
+
 ## 1. The thesis
 
 **CineMate does not have a style problem. It has a drift problem.**
@@ -18,7 +44,7 @@ decide what the standard is. Go down the list of everything serious this review 
 |---|---|
 | F-118 | A settings-editor button that silently no-ops, because a Python↔JS catalogue says `set_log` and the method is `set_log_encode` |
 | F-251 | Config defaults declared in 4 registries; **11 keys disagree** |
-| F-027 | 12 Redis key strings written by one repo and never read by the other |
+| F-027 | 12 Redis key strings cinepi-raw handles with zero references in cinemate — PI-008 found them live, not dead: an undocumented launch-config contract + per-frame telemetry nobody reads |
 | F-002 / F-003 | Two Python dependency registries sharing only 12 of 30 packages |
 | F-260 | One absolute path retyped in 7 files; the comment indexing them lists 4, one with a wrong line number |
 | F-164 | Six apparent copy-pastes that turned out to be one severed link |
@@ -319,8 +345,8 @@ Ordered by value per unit of risk, not by convenience. Nothing here needs a Pi.
 | 5 | Wire `redis_key_diff.py` as a ratchet | 1 h | none | F-027 family |
 | 6 | Write the reflective-dispatch name check; gate at zero | 2 h | none | F-118 |
 | 7 | Write the settings-defaults check; ratchet at 11 | 3 h | none | F-251, F-252 |
-| 8 | Make the installer read `requirements.txt`; delete the duplicate list | 1 h | **medium — installer change, needs PI-012's clean install to verify** | F-002, F-003, F-187, F-188, F-190 |
-| 9 | Test job, discovery mode | 1 h | none while `continue-on-error` | F-006 |
+| 8 | Make the installer read `requirements.txt`; delete the duplicate list | 1 h | low — **PI-004 verified a clean install end to end on this dependency shape** | F-002, F-003, F-187, F-188, F-190 |
+| 9 | Test job — **PI-002 closed the discovery question (381/241 pass, zero skips); can gate at zero from adoption** | 1 h | none | F-006 |
 | 10 | Annotate the two boundaries in §5 | 1 day | low | legibility |
 | 11 | `ruff format` + `.git-blame-ignore-revs` | 1 h | **medium — blame churn** | — |
 
@@ -356,5 +382,5 @@ Actions run happened here. Specifically:
   `unverified` and will be higher than the numbers in §4 (grep undercounts — this review has
   been caught by that three times).
 - The workflow YAML has never executed. Treat it as a reviewed starting point.
-- The claim that Flask arrives only transitively (F-003, refined in S06) is `probable`, not
-  confirmed — verifying it needs a network resolve or a real install.
+- The claim that Flask arrives only transitively (F-003, refined in S06) is **confirmed by
+  PI-004**: a clean install's `pip show flask` reads `Required-by: Flask-SocketIO`.

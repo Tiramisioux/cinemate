@@ -3,6 +3,23 @@
 **Session:** S04 (attempt 2) · **Snapshots:** cinemate `origin/dev` @ `02b5a39`,
 cinepi-raw `main` @ `774402c` (shallow, read-only)
 
+> ## ⚠ CORRECTION — reconciled against `PI-RESULTS-2026-08-24.md`
+>
+> **Added 2026-08-25.** Four hardware-tested items in this report's tables changed:
+> - **F-027** (§1, §1 cross-repo table): the "written by one repo, never read by the other"
+>   framing is refuted by PI-008 — all 11 concerns are live (an undocumented launch-config
+>   contract + unread per-frame telemetry), not dead. Reclassified, not downgraded — see
+>   `FINDINGS.md`.
+> - **F-253**: PI-010 measured the DNG side's SMPTE base at 24.5fps as **24** (Python's
+>   convention), not the base-25 a naive C++ half-up rule would give — the divergence is
+>   real, the specific direction tested was not what the original write-up implied.
+> - **F-259**: PI-011 confirmed the cold-start fallback is real (~5.6x silent overexposure)
+>   but likely unreachable via normal `cinemate-autostart` operation — cinemate's Python
+>   layer re-seeds `iso` first.
+> - **F-001** (§2 dead-code table): the templates are **5 files, not 4** (`template_old.html`
+>   was missed), and PI-001 confirmed they are deployed to every camera, not just sitting in
+>   the repo.
+
 **Method:** two subagents (cinemate `src/`, cross-boundary duplication) plus one scope run
 inline by the coordinator (cinepi-raw). A third scope — services/tests/installer — was not
 run; see §7. Every finding carries `path:line`. Coordinator corrections to agent output are
@@ -67,7 +84,7 @@ evidence gets.
 | Item | LOC | Finding |
 |---|---|---|
 | `cinepi/lj92.c` + `lj92.h` | 1218 | F-029 |
-| `src/module/templates/` + `app/template.html` (4 files) | 928 | F-001 |
+| `src/module/templates/` + `app/template.html` (**5 files, not 4** — `template_old.html` missed; PI-001 confirmed all deployed to every camera) | 928+ | F-001 |
 | `src/module/timekeeper.py` | 243 | F-017 |
 | `cinepi/_mjpegPreviewStage.cpp` | 240 | F-012 |
 | `src/module/keyboard.py` | ~90 | F-031 |

@@ -113,12 +113,6 @@ to:
 
 ## 3. Rebuild libcamera
 
-Leave the Cinemate virtualenv first so meson uses the system Python:
-
-```bash
-deactivate
-```
-
 ```bash
 cd libcamera && \
 git config core.fileMode false && \

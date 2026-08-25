@@ -12,7 +12,7 @@ Simple GUI is available on the attached HDMI output.
 | **Purple** | Live drop-frame alert. |
 | **Magenta** | Live frame-count sync mismatch. |
 | **Blue** | Storage pre-roll warm-up is running. |
-| **Yellow** | RAM load has passed the safety threshold (80 %); recording is auto-stopped. Most likely on 2 GB boards at UHD/4K — see [Quick start](getting-started.md#hardware-requirements). |
+| **Yellow** | RAM load has passed the safety threshold (80 %); recording is auto-stopped. On a 4 GB CM5, headroom stays comfortable even at UHD/4K ClearHDR (measured ~73% peak usage); genuine 2 GB boards remain unmeasured and may trip this sooner — see [Quick start](getting-started.md#hardware-requirements). |
 
 ## Indicators
 

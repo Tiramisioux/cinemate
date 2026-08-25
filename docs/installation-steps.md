@@ -113,13 +113,7 @@ These steps build the [Tiramisioux/libcamera](https://github.com/Tiramisioux/lib
 
 **On the Pi, to update an existing install:**
 
-If you are inside `~/.cinemate-env`, meson will use the virtualenv Python and will fail with *"Python module yaml not found"* unless the helpers are present. Install them first:
-
-```shell
-pip install PyYAML ply Jinja2
-```
-
-Then update and rebuild:
+Update and rebuild:
 
 ```shell
 cd ~/libcamera && \
@@ -150,8 +144,6 @@ sudo systemctl restart cinepi-raw
 `git checkout -B cinemate origin/cinemate` resets to the latest `cinemate` tip so this command is safe to re-run. `git config core.fileMode false` silences executable-bit changes left behind by the build. `git stash` clears any remaining content changes so the checkout cannot be blocked.
 
 **Fresh install:**
-
-If you are already inside `~/.cinemate-env`, either run `deactivate` before building `libcamera` or install the Python helpers into that environment with `pip install PyYAML ply Jinja2` first.
 
 ```shell
 sudo apt install -y python3-pip python3-jinja2 libboost-dev libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a meson cmake python3-yaml python3-ply libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libavdevice59 libyaml-dev
@@ -605,19 +597,15 @@ sudo apt install -y \
     console-terminus
 ```
 
-#### Create a Python virtual environment
+#### Enable I²C
+
+The `pi_cinemate` sudoers drop-in is written in [Allow Cinemate to run with
+sudo](#allow-cinemate-to-run-with-sudo) below, after the repo is cloned — Cinemate's Python
+packages install to the system interpreter (`pip install --user --break-system-packages`,
+see [Python packages](#python-packages) below), so there is no virtualenv to scope an
+earlier grant to.
 
 ```bash
-python3 -m venv ~/.cinemate-env
-source /home/pi/.cinemate-env/bin/activate
-echo "source /home/pi/.cinemate-env/bin/activate" >> ~/.bashrc
-```
-
-#### Grant sudo privileges and enable I²C
-
-```bash
-echo "pi ALL=(ALL) NOPASSWD: /home/pi/.cinemate-env/bin/*" | sudo tee /etc/sudoers.d/cinemate-env
-sudo chown -R pi:pi /home/pi/.cinemate-env
 sudo chown -R pi:pi /media && chmod 755 /media
 sudo usermod -aG i2c pi
 sudo modprobe i2c-dev && echo i2c-dev | sudo tee -a /etc/modules
@@ -634,13 +622,14 @@ sudo reboot
 
     If you previously installed the `board` Python package, remove it with `pip3 uninstall board`.
 
+Clone the repo first if you haven't yet (see [Clone the Cinemate repo](#clone-the-cinemate-repo)
+below), then install from its requirements files — the portable set plus the hardware-only set
+(`lgpio`, `gpiozero`, the Adafruit/Grove libraries, and everything else GPIO/I²C-specific):
+
 ```bash
-pip install \
-    gpiozero \
-    adafruit-blinka adafruit-circuitpython-ssd1306 adafruit-circuitpython-seesaw \
-    luma.oled grove.py pigpio-encoder smbus2 rpi_hardware_pwm \
-    watchdog psutil pillow redis keyboard pyudev numpy termcolor sounddevice \
-    evdev inotify_simple sysv_ipc flask_socketio sugarpie
+pip install --user --break-system-packages \
+    -r /home/pi/cinemate/requirements.txt \
+    -r /home/pi/cinemate/requirements-hardware.txt
 ```
 
 #### Alternative GPIO back-end
@@ -670,6 +659,8 @@ pi ALL=(ALL) NOPASSWD: /home/pi/run_cinemate.sh
 pi ALL=(ALL) NOPASSWD: /home/pi/cinemate/src/main.py
 pi ALL=(ALL) NOPASSWD: /bin/mount, /bin/umount, /usr/bin/ntfs-3g
 pi ALL=(ALL) NOPASSWD: /sbin/mount.ext4
+pi ALL=(ALL) NOPASSWD: /usr/bin/systemd-run --no-block --collect --unit=cinemate-restart-trigger -- systemctl restart cinemate-autostart
+pi ALL=(ALL) NOPASSWD: /usr/local/bin/cinemate-apply-config-txt
 EOF
 sudo visudo -cf /etc/sudoers.d/pi_cinemate
 ```
@@ -725,7 +716,6 @@ nano ~/.bashrc
 Add to the end of the file:
 
 ```shell
-alias cinemate-env='source /home/pi/.cinemate-env/bin/activate'
 alias cinemate='/home/pi/run_cinemate.sh'
 alias editboot='sudo nano /boot/firmware/config.txt'
 alias editcmdline='sudo nano /boot/firmware/cmdline.txt'

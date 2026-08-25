@@ -55,12 +55,9 @@ nav:
       - Redis Key reference: redis-keys.md
       - Changelog: changelog.md
   # - Cinemate builds:
-  #     - Bare bones build: bare-bones-build.md
   #     - Box build: brick.md
   - Contributing:
       # - Todo: todo.md
-      # - Contributors: contributors.md
-      # - Contributing to the project: contributing.md
       - Acknowledgements: acknowledgments.md
   #- Download PDF: renders/Cinemate-Docs.pdf
 # Theme

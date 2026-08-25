@@ -42,8 +42,14 @@ default; you opt in.
 
 Use the **Boot config** pane of the settings editor at
 `http://cinepi.local:5000/settings-editor`. The **RP1 overclock** toggle
-comments and uncomments the overlay line for you, then reboots — a reboot is
-required either way, because the clock is set by the device tree at boot.
+comments and uncomments the overlay line for you.
+
+!!! warning "Both directions need a reboot"
+    The RP1 clock is set from the device tree at boot, so nothing changes
+    until the Pi restarts — switching **on** and switching **off** both
+    require it. Restarting Cinemate alone does not pick it up. Saving from
+    the settings editor reboots for you (**Save & reboot Pi**, roughly 25
+    seconds); from a shell you reboot yourself.
 
 The toggle only appears on a `bcm2712` board whose `config.txt` already
 contains the overlay line. If it is missing, re-run `cinemate-install.sh` to

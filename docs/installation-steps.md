@@ -79,6 +79,46 @@ caught instead.
 
 Start from a fresh Raspberry Pi OS Lite (Bookworm) install before continuing.
 
+??? note "Installer step correspondence (F-265)"
+
+    `cinemate-install.sh` runs 27 numbered `section "..."` steps. This table maps each to
+    where it's covered below, so a failure at `[NN] <name>` in the installer's own log has
+    somewhere to look it up:
+
+    | # | Installer section | Covered by |
+    |---|---|---|
+    | 1 | Validating environment and installer configuration | not covered — OS/sudo checks, no manual equivalent |
+    | 2 | Installing bootstrap tools | partial — `apt update`/`upgrade` above; `rsync` not installed here |
+    | 3 | Aligning the Pi 5 kernel baseline | [Kernel baseline](#kernel-baseline-raspberry-pi-5-cm5) |
+    | 4 | Locating the Cinemate source tree | [Clone the Cinemate repo](#clone-the-cinemate-repo) |
+    | 5 | Installing apt dependencies | scattered — the `apt install` commands throughout this page |
+    | 6 | Enabling base system services | [Enable NetworkManager and Redis](#enable-networkmanager-and-redis) |
+    | 7 | Applying boot time optimizations | [Disable unnecessary background services](#disable-unnecessary-background-services) |
+    | 8 | Refreshing the libtiff linker fix | inline, in [libcamera](#libcamera-tiramisiouxlibcamera-cinemate-branch) |
+    | 9 | Building redis-plus-plus | inline, in the same libcamera command block |
+    | 10 | Configuring the RP1 overclock (Pi 5, optional) | linked out to [Overclocking the Pi](overclocking.md) |
+    | 11 | Building libcamera | [libcamera](#libcamera-tiramisiouxlibcamera-cinemate-branch) |
+    | 12 | Building cpp-mjpeg-streamer | [cpp-mjpeg-streamer](#cpp-mjpeg-streamer) |
+    | 13 | Building cinepi-raw | [CinePi-RAW](#cinepi-raw) |
+    | 14 | Seeding initial cinepi-raw Redis defaults | [Seed Redis with white balance default keys](#seed-redis-with-white-balance-default-keys) |
+    | 15 | Installing sensor-specific support | [IMX283 and IMX585 sensor support](#imx283-and-imx585-sensor-support) |
+    | 16 | Installing optional GPIO backend | [Alternative GPIO back-end](#alternative-gpio-back-end) |
+    | 17 | Preparing the Python environment | [Python packages](#python-packages) |
+    | 18 | Writing runtime loader configuration | not covered — `/etc/ld.so.conf.d/cinepi-raw.conf`, only shown for Pi 4 above |
+    | 19 | Configuring hostname and I2C | [Enabling I²C](#enabling-i%C2%B2c), [Setting hostname](#setting-hostname) |
+    | 20 | Writing boot configuration | [Add camera modules to config.txt](#add-camera-modules-to-configtxt) |
+    | 21 | Writing audio and preview helper files | [.asoundrc Setup](#asoundrc-setup), [Create post-processing configs](#create-post-processing-configs) |
+    | 22 | Applying optional UI and boot helpers | console font / auto-login / PiShrink / Plymouth sections |
+    | 23 | Refreshing Pi 5 boot handoff | part of [Kernel baseline](#kernel-baseline-raspberry-pi-5-cm5) |
+    | 24 | Preparing runtime wrappers and permissions | [Create the run wrapper and the config.txt apply helper](#create-the-run-wrapper-and-the-configtxt-apply-helper), sudoers, [audio real-time priority](#grant-real-time-audio-priority) |
+    | 25 | Seeding Redis defaults | [Seed Redis with default keys](#seed-redis-with-default-keys) |
+    | 26 | Installing Cinemate services | [Cinemate services](#cinemate-services) |
+    | 27 | Finishing up | not consolidated — scattered reminders (e.g. `source ~/.bashrc`) |
+
+    Rows marked "not covered" have no functional consequence if skipped by hand (diagnostics,
+    an `ld.so.conf.d` entry the Pi 4 path already covers) — see the B13.6 commit for why those
+    were deliberately left rather than padded in.
+
 ```
 sudo apt update -y
 sudo apt upgrade -y

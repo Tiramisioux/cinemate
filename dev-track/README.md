@@ -18,7 +18,7 @@ happened.
 | Step | Feature | State | Materials | Implementation branch |
 |---|---|---|---|---|
 | C0 | Format drive from the settings editor's RAW pane | Planned, not implemented | `C0-format-drive/PLAN.md` (ledger entry) + `FORMAT-DRIVE-PLAN.md` (full spec) + `SONNET-PROMPT.md` (kickoff prompt) | `feature/raw-pane-format-drive` off `dev` (to be cut) |
-| C1 | Long-take stability — eliminate dropped frames, keep audio in sync at the higher 12-bit modes | Runbook ready, campaign not started | `C1-longtake-stability/RUNBOOK.md` (Sonnet session prompt + protocol) + `RESULTS.md` (campaign ledger) | none — measurement campaign on the Pi's `dev` checkouts |
+| C1 | Long-take stability — eliminate dropped frames, keep audio in sync at the higher 12-bit modes | Runbook **verified 2026-08-26** (blockers fixed), campaign not started | `C1-longtake-stability/RUNBOOK.md` (Sonnet session prompt + protocol) + `RESULTS.md` (campaign ledger) + `VERIFICATION-2026-08-26.md` (pre-flight findings) | none — measurement campaign on the Pi's `dev` checkouts |
 | C2 | DSI / DPI panel as a camera monitor, alongside HDMI | Planned, not implemented; hardware gates unrun | `C2-dsi-display/PLAN.md` (ledger entry) + `DSI-DISPLAY-PLAN.md` (full spec) + `SONNET-PROMPT.md` (kickoff prompt) | `feature/display-connector` off `dev` (cinepi-raw) + `feature/dsi-display` off `dev` (cinemate) — both to be cut |
 | C3 | Start without a camera, and say so in the GUI | Planned, not implemented; hardware gates unrun | `C3-no-camera-start/PLAN.md` (ledger entry) + `NO-CAMERA-START-PLAN.md` (full spec) + `SONNET-PROMPT.md` (kickoff prompt) | `feature/no-camera-start` off `dev` (cinemate only, to be cut) |
 

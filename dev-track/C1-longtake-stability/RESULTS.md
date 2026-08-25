@@ -4,6 +4,9 @@ Ledger for the C1 campaign. Protocol and all definitions: `RUNBOOK.md` (same
 directory). Filled by the Sonnet session; reviewed in the Fable thread at each STOP gate.
 Rules: append-per-phase, never rewrite a filled row, every number carries its source command.
 
+Pre-flight verification of the runbook (2026-08-26, before any Pi time):
+`VERIFICATION-2026-08-26.md` — blockers fixed, minor tier still open.
+
 Status: **NOT STARTED** — update this line as phases complete.
 
 - [ ] Phase 0 preflight
@@ -88,17 +91,17 @@ Config interventions log (each: what, why, when, reversible-how):
 
 One row per take. Class + audio verdict definitions: runbook "Outcome classes".
 
-| Take | Mode | fps | frames req | DNGs on disk | seq gaps | missing_frame_count | warnings in log | class | WAV Δ (ms) | xruns | audio | buffer max / shape | temp max | verdict vs prediction |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| S1-C1 | | | | | | | | | | | | | | |
-| S1-C2 | | | | | | | | | | | | | | |
-| S1-C3 | | | | | | | | | | | | | | |
-| S1-B1 | | | | | | | | | | | | | | |
-| S1-B2 | | | | | | | | | | | | | | |
-| S1-B3 | | | | | | | | | | | | | | |
-| S1-A1 | | | | | | | | | | | | | | |
-| S1-A2 | | | | | | | | | | | | | | |
-| S1-A3 | | | | | | | | | | | | | | |
+| Take | Mode | fps target | fps readback | frames req | DNGs on disk | seq gaps | missing_frame_count | warnings in log | class (name the guard if auto-stop) | WAV Δ (ms) | padding lines / silence ms | audio | buffer max / shape | temp max | verdict vs prediction |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| S1-C1 | | | | | | | | | | | | | | | |
+| S1-C2 | | | | | | | | | | | | | | | |
+| S1-C3 | | | | | | | | | | | | | | | |
+| S1-B1 | | | | | | | | | | | | | | | |
+| S1-B2 | | | | | | | | | | | | | | | |
+| S1-B3 | | | | | | | | | | | | | | | |
+| S1-A1 | | | | | | | | | | | | | | | |
+| S1-A2 | | | | | | | | | | | | | | | |
+| S1-A3 | | | | | | | | | | | | | | | |
 
 Per-take notes (short; archive paths under `development/pi-test-takes/c1/<take-id>/`):
 
@@ -149,14 +152,14 @@ Predictions (written/re-confirmed after the Stage 1 review, before the first S2 
 | B × S2 | | | |
 | C × S2 | | | |
 
-| Take | Mode | fps | frames req | DNGs on disk | seq gaps | missing_frame_count | warnings in log | class | WAV Δ (ms) | xruns | audio | buffer max / shape | temp max | verdict vs prediction |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| S2-C1 | | | | | | | | | | | | | | |
-| S2-C2 | | | | | | | | | | | | | | |
-| S2-B1 | | | | | | | | | | | | | | |
-| S2-B2 | | | | | | | | | | | | | | |
-| S2-A1 | | | | | | | | | | | | | | |
-| S2-A2 | | | | | | | | | | | | | | |
+| Take | Mode | fps target | fps readback | frames req | DNGs on disk | seq gaps | missing_frame_count | warnings in log | class (name the guard if auto-stop) | WAV Δ (ms) | padding lines / silence ms | audio | buffer max / shape | temp max | verdict vs prediction |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| S2-C1 | | | | | | | | | | | | | | | |
+| S2-C2 | | | | | | | | | | | | | | | |
+| S2-B1 | | | | | | | | | | | | | | | |
+| S2-B2 | | | | | | | | | | | | | | | |
+| S2-A1 | | | | | | | | | | | | | | | |
+| S2-A2 | | | | | | | | | | | | | | | |
 
 Skipped modes + why: —
 

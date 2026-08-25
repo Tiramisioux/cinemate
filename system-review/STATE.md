@@ -167,6 +167,36 @@ doesn't need re-deriving, just the corrected ADR text (already reconciled) as it
 NEEDS-CHANGE column above and `PI-RESULTS-2026-08-24.md`'s "Merge verdict" section for the
 full reasoning per PR.
 
+### B9 and B10 — added 2026-08-25, on operator instruction
+
+The plan originally batched 76 of the findings. The operator asked for coverage of **all** of
+them, so `REMEDIATION-PLAN.md` §3 now carries two more batches:
+
+- **B9 · One fact, one home** — 7 commits, 28 findings. The duplication backlog, grouped by
+  *which fact* is duplicated rather than by file: storage facts, boolean decoding, the redis
+  client and `ParameterKey` enforcement, the cross-repo formulas, config defaults, the four
+  `class Event` definitions, and the GUI's derived labels. Nine of these have already drifted.
+  B9.4 depends on PI-010/PI-011 having measured which implementation wins at runtime — both
+  are done, so unification has a target rather than a guess.
+- **B10 · Close the ledger** — 8 commits. A second deletion pass, shell-script correctness,
+  logging hygiene, docs round two, a CI for cinepi-raw (**F-287**, new), and — the point of
+  the batch — a `disposition` column on every finding plus
+  `tools/findings_disposition_check.py` in the drift job to enforce it. Five dispositions are
+  allowed: `fixed`, `guarded`, `accepted`, `superseded`, `strength`.
+
+**Coverage is now checkable, not asserted:** every one of the 202 findings is named in a
+batch, and every finding cited by a batch exists. Verify with:
+
+```
+grep -o 'F-[0-9]\{3\}' FINDINGS.md | sort -u > /tmp/a
+sed -n '60,/^## 4\. What is NOT/p' deliverables/REMEDIATION-PLAN.md | grep -o 'F-[0-9]\{3\}' | sort -u > /tmp/b
+comm -3 /tmp/a /tmp/b        # must print nothing
+```
+
+**"Named in a batch" is not "fixed".** Most of B10 records an accepted risk rather than
+changing code — that is a legitimate outcome, and B10.7's check exists so an accepted risk
+cannot quietly become a forgotten one.
+
 ---
 
 ## Deviations from KICKOFF — read before touching git

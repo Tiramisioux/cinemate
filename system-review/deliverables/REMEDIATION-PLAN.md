@@ -54,6 +54,8 @@ in parallel with each other; none can break a camera.
 | **B6** | Dependencies & pinning | on merge | medium | 9 | 3 |
 | **B7** | ADR-001 steps 1–3 | verify | medium | 6 | 4 |
 | **B8** | Structural (deferred) | mixed | high | — | — |
+| **B9** | One fact, one home | B9.1/B9.4 | medium | 28 | 7 |
+| **B10** | Close the ledger | B10.2 only | low | 35 + all 201 dispositioned | 7 |
 
 ---
 
@@ -245,6 +247,94 @@ value is its isolation.
 
 ---
 
+### B9 · One fact, one home — the duplication backlog
+
+**39 redundancy and duplication findings sit outside every earlier batch.** They are the
+review's central thesis in its rawest form: one fact, written down in several places, kept in
+step by hand — and in nine cases the copies have already stopped agreeing. Every commit below
+collapses one *fact*, not one file. Group by what is duplicated, never by where it lives.
+
+The ordering inside B9 is by how much a disagreement costs at the moment it happens.
+
+| commit | change | closes |
+|---|---|---|
+| B9.1 | **Storage facts into one module both processes import.** The filesystem→mount-options table (**copies disagree**), the ext4 option string stated 5×, `YANK_ERRNOS` byte-identical twice, two device-classification taxonomies that are **incompatible**, and the partition→root-block-device derivation | **F-156**, **F-158**, F-157, **F-155**, F-159, F-258 |
+| B9.2 | **One boolean decoder.** Four divergent `_as_bool` implementations — `_as_bool(2)` is `True` in `gpio_input` and `False` in the other three — the truth-set `("1","true","yes","on")` re-typed across 7 files and 8 helpers, and one Redis boolean re-decoded in 6 places under 3 incompatible rules | **F-126**, F-254, F-255 |
+| B9.3 | **One Redis client, and `ParameterKey` enforced rather than merely offered.** Four independent `StrictRedis` clients with hardcoded `localhost:6379`; `CAPTURE_GAIN_REDIS_KEY` re-declaring an existing member; the five `MIC_*` keys published by both repos; `set_value` accepting any string | F-105, F-106, F-107, **F-015**, F-028 |
+| B9.4 | **The cross-repo formulas.** "SMPTE base = round(fps)" at 4 sites under **3 rounding rules** (PI-010 measured base 24 as the live winner — encode that, do not re-derive it); `tc_cam0`/`tc_cam1` written by both repos by different algorithms, last write wins mid-take; the `--mode W:H:B:P` string; `FALLBACK_PACKING_INFO` against `sensors.json` | **F-253**, **F-202**, F-250, F-261 |
+| B9.5 | **Config defaults, and the comments that were standing in for a check.** `arrays.*.steps` stated 7× across 4 languages with the shutter table already missing entries; `system.web_api.*`/`system.recovery.*` 3× each; the settings path re-typed in 7 files; `pwm_pin`; the installer's heredoc reimplementation of `strip_jsonc()`; and the two hand-sync comments that were themselves incomplete | **F-256**, F-252, F-260, F-180, F-191, F-220, F-217 |
+| B9.6 | **Four `class Event` definitions** with divergent error handling and signatures. B3.1 fixed the one that mattered; the other three still exist and can be raised through | F-127 |
+| B9.7 | **The GUI's derived labels.** `populate_values()` publishes `iso_label`/`fps_label` for the web GUI while the template derives its own; the web GUI shows the drop/sync warning *state* but not the *counts* | F-257, F-211 |
+
+**Precondition:** B9.4 must follow B5 — PI-010 and PI-011 measured which of the competing
+implementations actually wins at runtime, and unifying on the wrong one is worse than leaving
+four. **Both are done.**
+
+**Do not start B9.3 before B9.2.** The boolean decoder is the thing several Redis readers use
+to interpret what they read; fixing the client first just moves the disagreement.
+
+**Verification, desk:** `python3 tools/redis_key_diff.py` — the unreferenced count must not
+rise, and B9.3 should *lower* it. `python3 tools/design_token_diff.py --strict` after B9.7.
+The full suite after each commit. **B9.1 and B9.4 want hardware:** a mount/unmount round trip
+on the real NVMe, and a timecode round trip at a non-integer fps (24.5 or 29.97) checked in
+the DNG, not in the GUI.
+
+**Blast radius:** B9.1 touches the recording target's mount path and B9.4 touches values the
+operator reads mid-take. Both are one-commit reverts, and neither should be merged the same
+day as the other.
+
+---
+
+### B10 · Close the ledger — every remaining finding gets a disposition
+
+The other batches fix what is dangerous. B10 exists so the review can be *finished* rather
+than merely abandoned: **every finding ends with a recorded disposition, and a check enforces
+it.** Most of these dispositions are "accepted, no action" — that is a legitimate outcome, and
+writing it down is what separates an accepted risk from a forgotten one.
+
+Five dispositions, and nothing else is allowed: `fixed` · `guarded` (not fixed, but a check
+stops it growing — F-117 is the model) · `accepted` · `superseded` · `strength`.
+
+| commit | change | closes |
+|---|---|---|
+| B10.1 | **The triage pass.** Add a `disposition` column to `FINDINGS.md` and fill it for all 201 rows. Verify each against the tree rather than trusting this plan — several findings here were closed by merged PRs after it was written. Anything that turns out still-open and *dangerous* gets pulled out into its own commit rather than dispositioned away | all 201 |
+| B10.2 | **Second deletion pass.** Two write-only Redis keys; `Mediator`'s two no-op handlers and its two unused attributes; five `SSDMonitor` properties with no reader; six wrapper accessors; three zero-caller compatibility aliases; the dead hotspot check; the superseded `arecord -vvv` VU path; four stale `_test/` forks; the committed `.pyc` files; and the **nine pip packages installed on every camera and imported nowhere** | F-019, **F-274**, F-103, F-120, F-116, F-123, F-124, F-114, F-150, F-151, F-152, F-153, F-154, F-101, **F-277**, F-187, F-188, **F-032**, F-163 |
+| B10.3 | **Shell-script correctness.** `local x=$(git …)` masking git's exit status at 4 sites (SC2155); `echo "\n…"` without `-e`; `[[ ]]` with no shebang in a `profile.d` script; the `pkill -f` pattern that can match more than its child; and put the two scripts the repo-wide `shellcheck` sweep misses **into** the sweep | F-176, F-175, F-177, F-033, **F-195** |
+| B10.4 | **Logging and standards hygiene.** One logging idiom, not two (615 module-level calls beside a configured logger); lazy `%` formatting or f-strings, chosen once, ruff-enforced; the hardcoded `/home/pi/cinemate/src/logs`; the raw `'resolution_switching'` string where a `ParameterKey` exists; and the bare `set` no-op in the boot path | F-168, F-170, F-173, F-212, F-021, F-167, F-111 |
+| B10.5 | **Docs, round two.** The 18 `ParameterKey` members absent from `redis-keys.md`; `web-gui.md`'s "same field layout, same styling" claim; the installer's missing step-level correspondence; the recovery console's total absence from a 1061-line install document; and the `--same-hdmi` description both repos state differently | F-014, F-248, **F-265**, **F-266**, F-229 |
+| B10.6 | **Give cinepi-raw a CI.** It has **seven** `meson test` targets and **no `.github/workflows` at all** — they passed for the first time on 2026-08-24, run by hand. cinemate now has five checks on every PR and cinepi-raw has none; that asymmetry is the finding. A build job and `meson test` is the whole commit | **F-287**, F-228, F-030 |
+| B10.7 | **The gate.** `tools/findings_disposition_check.py`, wired into the drift job: fail if any row in `FINDINGS.md` lacks a disposition, or carries one outside the five. This is what makes "all findings handled" a fact instead of a claim | — |
+| B10.8 | **Record what the merged work already earned.** This plan predates the batch merges, the Pi session and the fix round, so a block of findings are closed in the tree and open in the ledger. Verify each against `dev` before marking — `fixed` where a merged PR closed it, `guarded` where only a check stands between it and a regression | F-166, F-276, F-279, F-280, F-281, F-282, F-283, F-284, F-286, F-275, F-016, F-207, F-259, F-272, F-278, F-237, F-235, F-236, F-239, F-026 |
+
+**What B10.1 will mostly record, and should not try to fix:**
+
+- **11 strengths** (F-181, F-192, F-194, F-206, F-210, F-221, F-223, F-234, F-240, F-262,
+  F-267, F-134) → `strength`. §4 names which batches endanger which. F-134 — zero
+  `TODO`/`FIXME`/`HACK` markers in the entire Python codebase — is the one worth stating out
+  loud, because B10.4 is the commit most likely to leave one behind.
+- **Bookkeeping** — merged duplicates, corrections, and one finding that was not reproducible
+  (F-011, F-110, F-113, F-183, F-185, F-186, F-189, F-112, F-273, F-225, F-230, F-231, F-263,
+  F-226, F-227) → `superseded`.
+- **The structural and readability measurements** (F-010, F-128, F-129, F-132, F-009, F-020,
+  F-024, F-209, F-213, F-224) → `accepted`, with a pointer to B8. Depth-11 nesting and 27%
+  docstring coverage are facts about a codebase, not defects with a fix; F-270 already showed
+  that treating the controller's size as a defect leads to the wrong remedy.
+- **Findings B8 owns** (F-025, F-268, F-269, F-251, F-160, F-164) → `accepted`, pointing at
+  B8. F-285 gave the concurrency question hardware proof; it is still a design decision.
+
+**Verification:** B10.7's own check, run against `FINDINGS.md`, is the batch's verification —
+it must pass with zero unset dispositions. B10.6 verifies itself on the first cinepi-raw PR.
+B10.2 needs `git grep` per symbol before each deletion and the full suite after, exactly as
+B2 did — and B2's own precondition applies again: **F-133's 47 load-bearing why-comments are
+the risk**, promote any that document a deletion's reasoning before removing it.
+
+**Blast radius:** B10.2 is the only one that can break a camera, and only through the pip
+removals — nine packages that nothing imports is a static claim, and PI-012 already showed
+once that an apt-installed dependency can be reached without a Python import. **Test the
+package removals on a clean install, not on a running camera.**
+
+---
+
 ## 4. What is NOT in any batch
 
 **24 findings are strengths and must survive the work**, several because a batch could
@@ -271,6 +361,8 @@ plausibly damage them:
 | B5 | — | the whole session |
 | B6 | `pip install -r` in a clean venv | **PI-004, PI-012 — mandatory** |
 | B7 | `design_token_diff.py --strict`; per-region visual diff | PI-009, PI-015 |
+| B9 | `redis_key_diff.py` (count must not rise), `design_token_diff.py --strict`, full suite per commit | **B9.1 mount round trip, B9.4 timecode at 24.5/29.97 — mandatory** |
+| B10 | `findings_disposition_check.py` at zero unset; `git grep` per deleted symbol | **B10.2 pip removals on a clean install, never on a running camera** |
 
 ---
 

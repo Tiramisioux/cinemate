@@ -75,7 +75,7 @@ The Cinemate fork introduces several extra options:
 | ------------------ | ---------------------- | -------------------------- |
 | `--cam-port`  | `cam0` \| `cam1`   | Select which CSI camera port to use.                                                        |
 | `--hdmi-port` | `0` \| `1` \| `-1` | Choose the HDMI connector for the preview (`0` = HDMI-0, `1` = HDMI-1, `-1` = auto-detect). |
-| `--same-hdmi` | *(none)*           | Force both capture and controller GUI to share the same HDMI output.                        |
+| `--same-hdmi` | *(none)*           | Force preview and GUI to share the same HDMI output.                                        |
 
 !!! note ""
 

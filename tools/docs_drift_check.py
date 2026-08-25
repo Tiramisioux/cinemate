@@ -203,7 +203,10 @@ def check_keys(repo: Path) -> list[str]:
         # cells like "width / height" and "lores_width / lores_height"
         for part in re.split(r"\s*/\s*", cell):
             part = part.strip().strip("`")
-            if re.fullmatch(r"[a-z][a-z0-9_]*", part):
+            # Almost every ParameterKey value is snake_case, but not all --
+            # FSCK_STATUS is upper-case (F-014), so this can't anchor on
+            # [a-z] alone without reporting a real doc row as undocumented.
+            if re.fullmatch(r"[a-zA-Z][a-zA-Z0-9_]*", part):
                 named.add(part)
 
     documented = named & values

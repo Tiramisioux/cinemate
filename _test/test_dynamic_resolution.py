@@ -146,6 +146,25 @@ class DynamicResolutionTests(unittest.TestCase):
         self.assertEqual(IMX477_MODES[choice.mode]["bit_depth"], 12)
         self.assertFalse(choice.dynamic_active)
 
+    def test_genuine_downgrade_prefers_bit_depth_over_unused_fps_headroom(self):
+        # F-286 tie-break correction. requested_fps=20 excludes both
+        # 4056x3040 and 4056x2160 variants (all four fps_max < 20), forcing
+        # a real downgrade. The next-largest area, 2028x1520, has both
+        # 10-bit (mode 2, fps_max 53.77) and 12-bit (mode 7, fps_max 45.19)
+        # eligible and tied on area. Both already clear requested_fps=20,
+        # so the extra headroom the 10-bit mode has over the 12-bit one is
+        # unused -- bit depth should win the tie, not fps_max.
+        choice = choose_resolution(
+            sensor_modes=IMX477_MODES,
+            desired_mode=9,
+            requested_fps=20,
+        )
+
+        self.assertIsNotNone(choice)
+        self.assertEqual(choice.mode, 7)
+        self.assertEqual(IMX477_MODES[choice.mode]["bit_depth"], 12)
+        self.assertTrue(choice.dynamic_active)
+
     def test_max_resolution_downshift_still_reaches_10bit_when_12bit_cannot_sustain_fps(self):
         # The 12-bit mode's own ceiling is 11.72fps; requesting faster than
         # that at the same desired mode must still fall through to the

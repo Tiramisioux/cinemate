@@ -435,16 +435,16 @@
   /* ---------- Translated action rows (buttons / switches / encoders) ----------
      Exactly 3 direct children per .actionrow (pin-picker | gestures-wrap |
      view-raw link) — anything else breaks the 3-column auto-placement below.
-     Visual order reads command → action → GPIO (matching the rest of the
-     settings cards), via CSS `order` rather than reshuffling the DOM. */
+     Visual order reads GPIO → action → method (B11.5's column model), via
+     CSS `order` rather than reshuffling the DOM. */
   .actionrow{
-    display:grid; grid-template-columns: 1fr 140px auto; gap: 4px 16px;
+    display:grid; grid-template-columns: 140px 1fr auto; gap: 4px 16px;
     padding: 13px 16px; border-top: 1px solid var(--line); align-items:start;
   }
   .actionrow:first-child{ border-top:0; }
-  .actionrow > .gestures-wrap{ order: 1; }
-  .actionrow > .pin-picker, .actionrow > .pin-badge{ order: 2; }
-  .actionrow > .edit-json-link{ order: 3; }
+  .actionrow > .pin-picker, .actionrow > .pin-badge{ order: 1; }
+  .actionrow > .gestures-wrap{ order: 2; }
+  .actionrow > .edit-json-link, .actionrow > .row-remove{ order: 3; }
   .pin-badge{
     font-family:'DIN2014',sans-serif; font-weight:700; font-size: 11.5px; color: var(--ink);
     background: var(--panel-2); border:1px solid var(--line); border-radius: var(--radius);
@@ -454,6 +454,7 @@
 
   .pin-picker{ display:flex; flex-direction:column; gap:5px; align-items:stretch; align-self:start; }
   .pin-picker small{ font-weight:400; font-size:9px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); text-align:center; }
+  .pin-picker.pin-picker-multi{ gap:8px; }
   .gpio-select{
     font-family:'DIN2014',sans-serif; font-weight:700; font-size:11.5px; text-align:center;
     padding: 6px 22px 6px 8px; width:100%; min-width:0; box-sizing:border-box;
@@ -461,18 +462,31 @@
   .actionrow.unassigned .gestures{ opacity:.4; }
 
   .gestures-wrap{ display:flex; flex-direction:column; gap:8px; min-width:0; }
-  .gestures{ display:grid; grid-template-columns: 1fr 74px; gap: 9px 16px; align-items:center; }
-  .gestures-head{ display:grid; grid-template-columns: 1fr 74px; gap: 9px 16px; }
+  .gestures{ display:grid; grid-template-columns: 74px 1fr; gap: 9px 16px; align-items:center; }
+  .gestures-head{ display:grid; grid-template-columns: 74px 1fr; gap: 9px 16px; }
   .gestures-head span{
     font-family:'DIN2014',sans-serif; font-weight:700; font-size: 9px; text-transform:uppercase; letter-spacing:.07em; color: var(--muted); opacity:.75;
   }
   .gesture{ display:contents; }
-  /* Method-before-Action is done by swapping DOM order at init (see JS),
-     not CSS `order` — with .gesture as display:contents, `order` re-sorts
-     ALL grid items globally instead of preserving each gesture's own pair. */
+  /* .g-name (action name, e.g. "Press") then .action-slot (method picker) —
+     plain DOM order now that the grid tracks (74px name, 1fr method) match
+     that order; no JS reordering hack needed. */
   .gesture-add .add-gesture-select{ color: var(--muted); }
   .gesture .g-name{ font-family:'DIN2014',sans-serif; font-weight:700; font-size: 10.5px; text-transform:uppercase; letter-spacing:.05em; color: var(--muted); }
   .gesture .g-action{ color: var(--ink); }
+  .gesture-remove{
+    width:22px; height:22px; border-radius: var(--radius); border:1px solid var(--line); background: var(--panel-2);
+    color: var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none; padding:0;
+    font-size:14px; line-height:1;
+  }
+  .gesture-remove:hover{ color: var(--danger, #c0392b); border-color: var(--danger, #c0392b); }
+  .row-remove{
+    align-self:start; background:none; border:none; color: var(--muted); cursor:pointer;
+    font-family:'DIN2014',sans-serif; font-weight:700; font-size: 11px; text-decoration: none;
+    border-bottom: 1px dashed var(--muted); padding:0;
+  }
+  .row-remove:hover{ color: var(--danger, #c0392b); border-color: var(--danger, #c0392b); }
+  .add-control-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
 
   .action-picker{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0; }
   .action-method{ font-size:12.5px; padding:6px 20px 6px 8px; min-width:0; max-width: 220px; text-overflow: ellipsis; }
@@ -1722,130 +1736,28 @@
     </section>
     <section class="group" id="controls" data-page="settings">
       <header class="group-head">
-        <h2>Buttons &amp; switches</h2>
-        <p class="group-sub">What's wired to each GPIO pin, translated from the raw action list into plain gestures.</p>
+        <h2>GPIO in</h2>
+        <p class="group-sub">What's wired to each GPIO pin, translated from the raw action list into plain gestures. Every button, switch and rotary encoder in <code class="mono">hardware_controls</code> shows here — add as many as you're wired for.</p>
       </header>
-      <div class="card" id="hwControlsExtraWarning" hidden style="border-color: var(--warn, #c9a227); margin-bottom: 14px;">
-        <div class="card-main">
-          <label class="card-label">This file has more bindings than this page can edit</label>
-          <p class="card-help">Your real <code class="mono">hardware_controls</code> has more than 3 buttons, more than 2 two-way switches, or has three-way switches / rotary encoders / combined actions configured — this page only edits the first 3 buttons and first 2 switches. Saving is safe: anything this page doesn't show is passed through unchanged, not deleted. Edit the rest by hand in <code class="mono">settings.jsonc</code> for now.</p>
-        </div>
+      <div class="cards" id="controlsList"></div>
+      <div class="add-control-row">
+        <button class="btn btn-ghost" type="button" id="addButtonBtn">+ Add button</button>
+        <button class="btn btn-ghost" type="button" id="addSwitch2Btn">+ Add 2‑way switch</button>
+        <button class="btn btn-ghost" type="button" id="addSwitch3Btn">+ Add 3‑way switch</button>
+        <button class="btn btn-ghost" type="button" id="addRotaryBtn">+ Add rotary encoder</button>
       </div>
-      <div class="cards">
-        <div class="actionrow" data-search="button gpio 7 record" data-highlight-gpio="cfg-gpio-btn1">
-          <div class="pin-picker">
-            <select class="field-input gpio-select" id="cfg-gpio-btn1" data-role-label="the record button" data-initial="7" aria-label="GPIO pin for the record button"></select>
-            <small>button</small>
-          </div>
-          <div class="gestures-wrap">
-            <div class="gestures-head"><span>Method</span><span>Action</span></div>
-            <div class="gestures">
-              <div class="gesture"><span class="g-name">Press</span><span class="action-slot" id="act-btn1-press" data-method="rec"></span></div>
-              <div class="gesture gesture-add">
-                <span class="g-name">+ Add</span>
-                <span class="action-args">
-                  <select class="field-input add-gesture-select" data-prefix="act-btn1">
-                    <option value="" selected>Choose a gesture…</option>
-                    <option value="single">Single click</option>
-                    <option value="double">Double click</option>
-                    <option value="triple">Triple click</option>
-                    <option value="hold">Hold</option>
-                  </select>
-                </span>
-              </div>
-            </div>
-          </div>
-          <a class="edit-json-link" href="#" data-open-json>View raw</a>
-        </div>
-        <div class="actionrow" data-search="button gpio 10 record" data-highlight-gpio="cfg-gpio-btn2">
-          <div class="pin-picker">
-            <select class="field-input gpio-select" id="cfg-gpio-btn2" data-role-label="the second record button" data-initial="10" aria-label="GPIO pin for the second record button"></select>
-            <small>button</small>
-          </div>
-          <div class="gestures-wrap">
-            <div class="gestures-head"><span>Method</span><span>Action</span></div>
-            <div class="gestures">
-              <div class="gesture"><span class="g-name">Press</span><span class="action-slot" id="act-btn2-press" data-method="rec"></span></div>
-              <div class="gesture gesture-add">
-                <span class="g-name">+ Add</span>
-                <span class="action-args">
-                  <select class="field-input add-gesture-select" data-prefix="act-btn2">
-                    <option value="" selected>Choose a gesture…</option>
-                    <option value="single">Single click</option>
-                    <option value="double">Double click</option>
-                    <option value="triple">Triple click</option>
-                    <option value="hold">Hold</option>
-                  </select>
-                </span>
-              </div>
-            </div>
-          </div>
-          <a class="edit-json-link" href="#" data-open-json>View raw</a>
-        </div>
-        <div class="actionrow" data-search="button gpio 13 resolution restart reboot mount" data-highlight-gpio="cfg-gpio-btn3">
-          <div class="pin-picker">
-            <select class="field-input gpio-select" id="cfg-gpio-btn3" data-role-label="the multi‑function button" data-initial="13" aria-label="GPIO pin for the multi-function button"></select>
-            <small>button</small>
-          </div>
-          <div class="gestures-wrap">
-            <div class="gestures-head"><span>Method</span><span>Action</span></div>
-            <div class="gestures">
-              <div class="gesture"><span class="g-name">Single</span><span class="action-slot" id="act-btn3-single" data-method="set_resolution"></span></div>
-              <div class="gesture"><span class="g-name">Double</span><span class="action-slot" id="act-btn3-double" data-method="restart_cinemate"></span></div>
-              <div class="gesture"><span class="g-name">Triple</span><span class="action-slot" id="act-btn3-triple" data-method="reboot"></span></div>
-              <div class="gesture"><span class="g-name">Hold</span><span class="action-slot" id="act-btn3-hold" data-method="toggle_mount"></span></div>
-              <div class="gesture gesture-add">
-                <span class="g-name">+ Add</span>
-                <span class="action-args">
-                  <select class="field-input add-gesture-select" data-prefix="act-btn3">
-                    <option value="" selected>Choose a gesture…</option>
-                    <option value="press">Press</option>
-                  </select>
-                </span>
-              </div>
-            </div>
-          </div>
-          <a class="edit-json-link" href="#" data-open-json>View raw</a>
-        </div>
-        <div class="actionrow" data-search="two way switch gpio 24 zoom" data-highlight-gpio="cfg-gpio-sw1">
-          <div class="pin-picker">
-            <select class="field-input gpio-select" id="cfg-gpio-sw1" data-role-label="the zoom switch" data-initial="24" aria-label="GPIO pin for the zoom switch"></select>
-            <small>2‑way switch</small>
-          </div>
-          <div class="gestures-wrap">
-            <div class="gestures-head"><span>Method</span><span>Action</span></div>
-            <div class="gestures">
-              <div class="gesture"><span class="g-name">On</span><span class="action-slot" id="act-sw1-on" data-method="set_zoom" data-args="2"></span></div>
-              <div class="gesture"><span class="g-name">Off</span><span class="action-slot" id="act-sw1-off" data-method="set_zoom" data-args="1"></span></div>
-            </div>
-          </div>
-          <a class="edit-json-link" href="#" data-open-json>View raw</a>
-        </div>
-        <div class="actionrow" data-search="two way switch gpio 22 shutter sync" data-highlight-gpio="cfg-gpio-sw2">
-          <div class="pin-picker">
-            <select class="field-input gpio-select" id="cfg-gpio-sw2" data-role-label="the shutter‑sync switch" data-initial="22" aria-label="GPIO pin for the shutter-sync switch"></select>
-            <small>2‑way switch</small>
-          </div>
-          <div class="gestures-wrap">
-            <div class="gestures-head"><span>Method</span><span>Action</span></div>
-            <div class="gestures">
-              <div class="gesture"><span class="g-name">On</span><span class="action-slot" id="act-sw2-on" data-method="set_shutter_a_sync_mode" data-args="1"></span></div>
-              <div class="gesture"><span class="g-name">Off</span><span class="action-slot" id="act-sw2-off" data-method="set_shutter_a_sync_mode" data-args="0"></span></div>
-            </div>
-          </div>
-          <a class="edit-json-link" href="#" data-open-json>View raw</a>
-        </div>
+      <div class="cards" style="margin-top:14px">
         <div class="actionrow" data-search="quad rotary controller encoders iso shutter fps wb" data-highlight-text="quad_rotary_controller">
           <span class="pin-badge">Quad rotary<small>i²c encoders</small></span>
           <div class="gestures-wrap">
-            <div class="gestures-head"><span>Method</span><span>Action</span></div>
+            <div class="gestures-head"><span>Action</span><span>Method</span></div>
             <div class="gestures">
               <div class="gesture"><span class="g-name">Enc 0 · ISO</span><span class="action-slot" id="act-qr0-press" data-method="set_zoom"></span></div>
               <div class="gesture"><span class="g-name">Enc 0 hold</span><span class="action-slot" id="act-qr0-hold" data-method="safe_shutdown"></span></div>
               <div class="gesture gesture-add">
                 <span class="g-name">Enc 0 +</span>
                 <span class="action-args">
-                  <select class="field-input add-gesture-select" data-prefix="act-qr0">
+                  <select class="field-input add-gesture-select" data-prefix="act-qr0" data-removable="false">
                     <option value="" selected>Choose a gesture…</option>
                     <option value="single">Single click</option>
                     <option value="double">Double click</option>
@@ -1857,7 +1769,7 @@
               <div class="gesture gesture-add">
                 <span class="g-name">Enc 1 +</span>
                 <span class="action-args">
-                  <select class="field-input add-gesture-select" data-prefix="act-qr1">
+                  <select class="field-input add-gesture-select" data-prefix="act-qr1" data-removable="false">
                     <option value="" selected>Choose a gesture…</option>
                     <option value="single">Single click</option>
                     <option value="double">Double click</option>
@@ -1870,7 +1782,7 @@
               <div class="gesture gesture-add">
                 <span class="g-name">Enc 2 +</span>
                 <span class="action-args">
-                  <select class="field-input add-gesture-select" data-prefix="act-qr2">
+                  <select class="field-input add-gesture-select" data-prefix="act-qr2" data-removable="false">
                     <option value="" selected>Choose a gesture…</option>
                     <option value="single">Single click</option>
                     <option value="double">Double click</option>
@@ -1886,7 +1798,7 @@
               <div class="gesture gesture-add">
                 <span class="g-name">Enc 3 +</span>
                 <span class="action-args">
-                  <select class="field-input add-gesture-select" data-prefix="act-qr3">
+                  <select class="field-input add-gesture-select" data-prefix="act-qr3" data-removable="false">
                     <option value="" selected>Choose a gesture…</option>
                     <option value="press">Press</option>
                   </select>
@@ -1904,26 +1816,30 @@
     </section>
     <section class="group" id="gpio" data-page="settings">
       <header class="group-head">
-        <h2>Rec tally &amp; GPIO out</h2>
-        <p class="group-sub">Physical signals the camera drives while recording — tally lamps, a slate tone, a relay.</p>
+        <h2>GPIO out</h2>
+        <p class="group-sub">Physical signals the camera drives while recording — tally lamps, a slate tone, a relay. Add as many tally or tone pins as you're wired for.</p>
       </header>
-      <div class="cards">
-        <div class="card" data-search="rec out pin tally gpio 21">
+      <div class="cards" id="gpioOutList"></div>
+      <div class="add-control-row">
+        <button class="btn btn-ghost" type="button" id="addGpioOutBtn">+ Add pin</button>
+      </div>
+      <div class="cards" style="margin-top:14px">
+        <div class="card" data-search="rec tone pin slate beep gpio 18 frequency pitch">
           <div class="card-main">
-            <label class="card-label">Tally output pin</label>
-            <p class="card-help">GPIO pin driven high while recording — wire a tally light or LED here.</p>
-          </div>
-          <div class="card-control">
-            <select class="field-input gpio-select" id="cfg-gpio-tally" data-role-label="the tally output" data-initial="21" aria-label="GPIO pin for the tally output"></select>
-          </div>
-        </div>
-        <div class="card" data-search="rec tone pin slate beep gpio 18">
-          <div class="card-main">
-            <label class="card-label" for="f-tonefreq">Slate tone</label>
-            <p class="card-help">A short tone driven on GPIO 18 at record‑start, useful as an audible sync reference. Set its pitch and duty cycle.</p>
+            <label class="card-label" for="f-tonefreq">Slate tone pitch</label>
+            <p class="card-help">Frequency of the tone driven on any pin set to "REC tone" above, at record‑start — useful as an audible sync reference.</p>
           </div>
           <div class="card-control">
             <input class="field-input num-input" type="number" id="f-tonefreq" data-path="hardware_outputs.rec_tone.frequency_hz" data-type="number" data-original="1000" value="1000"> Hz
+          </div>
+        </div>
+        <div class="card" data-search="rec tone duty cycle pulse width">
+          <div class="card-main">
+            <label class="card-label" for="f-toneduty">Slate tone duty cycle</label>
+            <p class="card-help">Pulse width of the tone, in percent.</p>
+          </div>
+          <div class="card-control">
+            <input class="field-input num-input" type="number" min="1" max="99" id="f-toneduty" data-path="hardware_outputs.rec_tone.duty_cycle" data-type="number" data-original="50" value="50"> %
           </div>
         </div>
         <div class="card" data-search="rec tone relay drop frames">
@@ -2281,8 +2197,9 @@
     return parseInt(el.value, 10);
   }
   /* Reads whichever gesture slots actually exist for a given id prefix (e.g.
-     "act-btn1") — so buttons/encoders that gained an added gesture, or never
-     had one to begin with, both reconstruct correctly with no special-casing.
+     "act-qr0", or a dynamic control row's own "hwctl-N") — so buttons/
+     encoders that gained an added gesture, or never had one to begin with,
+     both reconstruct correctly with no special-casing.
      press_action is always present (a real key, "None" if there's no Press
      row); the click-variant keys only appear if that gesture row exists,
      matching how the real file omits keys it doesn't use. */
@@ -2294,20 +2211,321 @@
     });
     return obj;
   }
+  /* ---------- B11.5: dynamic GPIO IN rows (buttons / 2-way / 3-way switches /
+     rotary encoders) -- replaces the old fixed 3-button/2-switch slots and
+     the "more bindings than this page can edit" banner. Every row lives in
+     #controlsList and carries data-control-type + data-prefix; building and
+     populating both walk that list generically, so any count of any type
+     round-trips. combined_actions has no UI here (not part of the operator's
+     column model) and is passed through byte-for-byte from the last load. */
+  var CONTROL_ROW_SEQ = 0;
+  function nextControlPrefix(){ return 'hwctl-' + (++CONTROL_ROW_SEQ); }
+
+  function markControlsDirtyIfNeeded(){ markDirty(document.getElementById('controlsList'), true); }
+
+  function addGestureRemoveButton(gestureEl, slotEl, label){
+    var rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'gesture-remove';
+    rm.title = 'Remove this action';
+    rm.setAttribute('aria-label', 'Remove ' + label + ' action');
+    rm.textContent = '×';
+    rm.addEventListener('click', function(){
+      gestureEl.remove();
+      dirtyEls.delete(slotEl);
+      markControlsDirtyIfNeeded();
+      showToast(label + ' action removed');
+    });
+    gestureEl.appendChild(rm);
+  }
+
+  function makeGestureRow(prefix, gestureKey, label, action){
+    var g = document.createElement('div');
+    g.className = 'gesture';
+    var name = document.createElement('span');
+    name.className = 'g-name';
+    name.textContent = label;
+    var slot = document.createElement('span');
+    slot.className = 'action-slot';
+    slot.id = prefix + '-' + gestureKey;
+    g.appendChild(name);
+    g.appendChild(slot);
+    addGestureRemoveButton(g, slot, label);
+    applyActionToSlot(slot, action);
+    return g;
+  }
+
+  function makeAddGestureRow(prefix, remainingSpecs){
+    var addRow = document.createElement('div');
+    addRow.className = 'gesture gesture-add';
+    var label = document.createElement('span');
+    label.className = 'g-name';
+    label.textContent = '+ Add';
+    var wrap = document.createElement('span');
+    wrap.className = 'action-args';
+    var sel = document.createElement('select');
+    sel.className = 'field-input add-gesture-select';
+    sel.setAttribute('data-prefix', prefix);
+    var blank = document.createElement('option');
+    blank.value = ''; blank.textContent = 'Choose a gesture…'; blank.selected = true;
+    sel.appendChild(blank);
+    remainingSpecs.forEach(function(spec){
+      var opt = document.createElement('option');
+      opt.value = spec.key; opt.textContent = spec.label;
+      sel.appendChild(opt);
+    });
+    wrap.appendChild(sel);
+    addRow.appendChild(label);
+    addRow.appendChild(wrap);
+    if (remainingSpecs.length === 0) addRow.hidden = true;
+    return addRow;
+  }
+
+  /* Builds a .gestures block for a control row: one row per action already
+     present in `actionsByKey` (key -> action-or-"None"), plus a "+ Add" row
+     offering whichever gestures from `allSpecs` aren't shown yet. */
+  function buildGesturesBlock(prefix, allSpecs, actionsByKey){
+    var wrap = document.createElement('div');
+    wrap.className = 'gestures-wrap';
+    var head = document.createElement('div');
+    head.className = 'gestures-head';
+    head.innerHTML = '<span>Action</span><span>Method</span>';
+    var gestures = document.createElement('div');
+    gestures.className = 'gestures';
+    var present = {};
+    allSpecs.forEach(function(spec){
+      if (Object.prototype.hasOwnProperty.call(actionsByKey, spec.key)){
+        present[spec.key] = true;
+        gestures.appendChild(makeGestureRow(prefix, spec.key, spec.label, actionsByKey[spec.key]));
+      }
+    });
+    var remaining = allSpecs.filter(function(spec){ return !present[spec.key]; });
+    gestures.appendChild(makeAddGestureRow(prefix, remaining));
+    wrap.appendChild(head);
+    wrap.appendChild(gestures);
+    return wrap;
+  }
+
+  function makeRowRemoveButton(rowEl, label){
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'row-remove';
+    btn.textContent = 'Remove';
+    btn.setAttribute('aria-label', 'Remove ' + label);
+    btn.addEventListener('click', function(){
+      showConfirm('Remove ' + label + '? This deletes it from hardware_controls on the next save.', function(){
+        rowEl.remove();
+        markControlsDirtyIfNeeded();
+        refreshAllGpioSelects();
+        showToast(label + ' removed');
+      });
+    });
+    return btn;
+  }
+
+  var BUTTON_GESTURE_SPECS = [
+    { key: 'press', field: 'press_action', label: 'Press' },
+    { key: 'single', field: 'single_click_action', label: 'Single click' },
+    { key: 'double', field: 'double_click_action', label: 'Double click' },
+    { key: 'triple', field: 'triple_click_action', label: 'Triple click' },
+    { key: 'hold', field: 'hold_action', label: 'Hold' }
+  ];
+  var SWITCH2_GESTURE_SPECS = [
+    { key: 'on', field: 'state_on_action', label: 'On' },
+    { key: 'off', field: 'state_off_action', label: 'Off' }
+  ];
+  var SWITCH3_GESTURE_SPECS = [
+    { key: 's0', field: 'state_0_action', label: 'Position 1' },
+    { key: 's1', field: 'state_1_action', label: 'Position 2' },
+    { key: 's2', field: 'state_2_action', label: 'Position 3' }
+  ];
+  var ROTARY_GESTURE_SPECS = [
+    { key: 'rpress', field: '__press', label: 'Button press' },
+    { key: 'rhold', field: '__hold', label: 'Button hold' },
+    { key: 'cw', field: '__cw', label: 'Rotate CW' },
+    { key: 'ccw', field: '__ccw', label: 'Rotate CCW' }
+  ];
+
+  function actionsByFieldMap(specs, obj){
+    var out = {};
+    specs.forEach(function(spec){
+      if (Object.prototype.hasOwnProperty.call(obj, spec.field)) out[spec.key] = obj[spec.field];
+    });
+    return out;
+  }
+
+  function makeControlRow(type, prefix, pinPickerEl, gesturesEl, roleLabel, searchText){
+    var row = document.createElement('div');
+    row.className = 'actionrow';
+    row.setAttribute('data-control-type', type);
+    row.setAttribute('data-prefix', prefix);
+    row.setAttribute('data-search', searchText);
+    row.appendChild(pinPickerEl);
+    row.appendChild(gesturesEl);
+    row.appendChild(makeRowRemoveButton(row, roleLabel));
+    return row;
+  }
+
+  function makePinSelect(id, roleLabel, initialPin){
+    var sel = document.createElement('select');
+    sel.className = 'field-input gpio-select';
+    sel.id = id;
+    sel.setAttribute('data-role-label', roleLabel);
+    sel.setAttribute('data-initial', initialPin != null ? String(initialPin) : 'none');
+    sel.setAttribute('aria-label', 'GPIO pin for ' + roleLabel);
+    return sel;
+  }
+
+  function makeSingleGpioOutPinPicker(id, roleLabel, initialPin, typeLabel){
+    var wrap = document.createElement('div');
+    wrap.className = 'pin-picker';
+    var sel = makePinSelect(id, roleLabel, initialPin);
+    var small = document.createElement('small');
+    small.textContent = typeLabel;
+    wrap.appendChild(sel);
+    wrap.appendChild(small);
+    return { wrap: wrap, sel: sel };
+  }
+
+  function buildButtonRow(data){
+    var prefix = nextControlPrefix();
+    var pin = data ? data.pin : null;
+    var picker = makeSingleGpioOutPinPicker(prefix + '-pin', 'a button', pin, 'button').wrap;
+    var actions = data ? actionsByFieldMap(BUTTON_GESTURE_SPECS, data) : { press: 'None' };
+    var gestures = buildGesturesBlock(prefix, BUTTON_GESTURE_SPECS, actions);
+    var row = makeControlRow('button', prefix, picker, gestures, 'this button', 'button gpio');
+    // pull_up/debounce_time have no dedicated widget (not part of the
+    // operator's column model) but must still round-trip rather than
+    // silently resetting every button to pull_up=true on save.
+    row.setAttribute('data-pull-up', String(data && data.pull_up === false ? false : true));
+    row.setAttribute('data-debounce', String(data && data.debounce_time != null ? data.debounce_time : 0.1));
+    return row;
+  }
+
+  function buildSwitch2Row(data){
+    var prefix = nextControlPrefix();
+    var pin = data ? data.pin : null;
+    var picker = makeSingleGpioOutPinPicker(prefix + '-pin', 'a 2-way switch', pin, '2‑way switch').wrap;
+    var actions = data ? actionsByFieldMap(SWITCH2_GESTURE_SPECS, data) : { on: 'None', off: 'None' };
+    var gestures = buildGesturesBlock(prefix, SWITCH2_GESTURE_SPECS, actions);
+    return makeControlRow('switch2', prefix, picker, gestures, 'this 2-way switch', 'two way switch gpio');
+  }
+
+  function buildSwitch3Row(data){
+    var prefix = nextControlPrefix();
+    var pins = (data && data.pins) || [null, null, null];
+    var picker = document.createElement('div');
+    picker.className = 'pin-picker pin-picker-multi';
+    ['1', '2', '3'].forEach(function(label, i){
+      var sel = makePinSelect(prefix + '-pin' + i, 'a 3-way switch (position ' + label + ' pin)', pins[i]);
+      var small = document.createElement('small');
+      small.textContent = 'pin ' + label;
+      picker.appendChild(sel);
+      picker.appendChild(small);
+    });
+    var actions = data ? actionsByFieldMap(SWITCH3_GESTURE_SPECS, data) : { s0: 'None', s1: 'None', s2: 'None' };
+    var gestures = buildGesturesBlock(prefix, SWITCH3_GESTURE_SPECS, actions);
+    return makeControlRow('switch3', prefix, picker, gestures, 'this 3-way switch', 'three way switch gpio');
+  }
+
+  function buildRotaryRow(data){
+    var prefix = nextControlPrefix();
+    var picker = document.createElement('div');
+    picker.className = 'pin-picker pin-picker-multi';
+    [['clk', 'CLK', data && data.clk_pin], ['dt', 'DT', data && data.dt_pin], ['btnpin', 'BTN', data && data.button_pin]].forEach(function(spec){
+      var sel = makePinSelect(prefix + '-' + spec[0], 'a rotary encoder (' + spec[1] + ' pin)', spec[2]);
+      var small = document.createElement('small');
+      small.textContent = spec[1];
+      picker.appendChild(sel);
+      picker.appendChild(small);
+    });
+    var buttonActions = (data && data.button_actions) || {};
+    var encoderActions = (data && data.encoder_actions) || {};
+    var actions = data ? {
+      rpress: Object.prototype.hasOwnProperty.call(buttonActions, 'press_action') ? buttonActions.press_action : undefined,
+      rhold: Object.prototype.hasOwnProperty.call(buttonActions, 'hold_action') ? buttonActions.hold_action : undefined,
+      cw: Object.prototype.hasOwnProperty.call(encoderActions, 'rotate_clockwise') ? encoderActions.rotate_clockwise : undefined,
+      ccw: Object.prototype.hasOwnProperty.call(encoderActions, 'rotate_counterclockwise') ? encoderActions.rotate_counterclockwise : undefined
+    } : { rpress: 'None' };
+    Object.keys(actions).forEach(function(k){ if (actions[k] === undefined) delete actions[k]; });
+    var gestures = buildGesturesBlock(prefix, ROTARY_GESTURE_SPECS, actions);
+    return makeControlRow('rotary', prefix, picker, gestures, 'this rotary encoder', 'rotary encoder gpio clk dt');
+  }
+
+  /* data-original-method/args are left as applyActionToSlot() (inside
+     buildGesturesBlock -> makeGestureRow) already set them: matching the
+     loaded value when populating from settings.jsonc, or a fresh default
+     when building a brand-new row from the "+ Add ..." buttons -- either
+     way correct, so this must not stomp them back to "". */
+  function appendControlRow(rowEl){
+    document.getElementById('controlsList').appendChild(rowEl);
+    rowEl.querySelectorAll('.gpio-select').forEach(initGpioSelect);
+  }
+
+  document.getElementById('addButtonBtn').addEventListener('click', function(){
+    appendControlRow(buildButtonRow(null));
+    markControlsDirtyIfNeeded();
+  });
+  document.getElementById('addSwitch2Btn').addEventListener('click', function(){
+    appendControlRow(buildSwitch2Row(null));
+    markControlsDirtyIfNeeded();
+  });
+  document.getElementById('addSwitch3Btn').addEventListener('click', function(){
+    appendControlRow(buildSwitch3Row(null));
+    markControlsDirtyIfNeeded();
+  });
+  document.getElementById('addRotaryBtn').addEventListener('click', function(){
+    appendControlRow(buildRotaryRow(null));
+    markControlsDirtyIfNeeded();
+  });
+
   function buildHardwareControlsState(){
-    var buttons = [];
-    var b1 = gpioPinValue('cfg-gpio-btn1');
-    if (b1 != null) buttons.push(Object.assign({ pin: b1, pull_up: true, debounce_time: 0.1 }, buildButtonLikeObject('act-btn1')));
-    var b2 = gpioPinValue('cfg-gpio-btn2');
-    if (b2 != null) buttons.push(Object.assign({ pin: b2, pull_up: true, debounce_time: 0.1 }, buildButtonLikeObject('act-btn2')));
-    var b3 = gpioPinValue('cfg-gpio-btn3');
-    if (b3 != null) buttons.push(Object.assign({ pin: b3, pull_up: false, debounce_time: 0.1 }, buildButtonLikeObject('act-btn3')));
-    var switches = [];
-    var s1 = gpioPinValue('cfg-gpio-sw1');
-    if (s1 != null) switches.push({ pin: s1, state_on_action: actionFromSlot('act-sw1-on'), state_off_action: actionFromSlot('act-sw1-off') });
-    var s2 = gpioPinValue('cfg-gpio-sw2');
-    if (s2 != null) switches.push({ pin: s2, state_on_action: actionFromSlot('act-sw2-on'), state_off_action: actionFromSlot('act-sw2-off') });
-    return { buttons: buttons, two_way_switches: switches, three_way_switches: [], rotary_encoders: [], combined_actions: [] };
+    var buttons = [], two_way = [], three_way = [], rotary = [];
+    document.querySelectorAll('#controlsList [data-control-type]').forEach(function(row){
+      var type = row.getAttribute('data-control-type');
+      var prefix = row.getAttribute('data-prefix');
+      if (type === 'button'){
+        var pin = gpioPinValue(prefix + '-pin');
+        if (pin == null) return;
+        var pullUp = row.getAttribute('data-pull-up') !== 'false';
+        var debounce = parseFloat(row.getAttribute('data-debounce'));
+        if (isNaN(debounce)) debounce = 0.1;
+        buttons.push(Object.assign({ pin: pin, pull_up: pullUp, debounce_time: debounce }, buildButtonLikeObject(prefix)));
+      } else if (type === 'switch2'){
+        var pin2 = gpioPinValue(prefix + '-pin');
+        if (pin2 == null) return;
+        two_way.push({ pin: pin2, state_on_action: actionFromSlot(prefix + '-on'), state_off_action: actionFromSlot(prefix + '-off') });
+      } else if (type === 'switch3'){
+        var pins3 = [0, 1, 2].map(function(i){ return gpioPinValue(prefix + '-pin' + i); });
+        if (pins3.some(function(p){ return p == null; })) return;
+        three_way.push({
+          pins: pins3,
+          state_0_action: actionFromSlot(prefix + '-s0'),
+          state_1_action: actionFromSlot(prefix + '-s1'),
+          state_2_action: actionFromSlot(prefix + '-s2')
+        });
+      } else if (type === 'rotary'){
+        var clk = gpioPinValue(prefix + '-clk');
+        var dt = gpioPinValue(prefix + '-dt');
+        var btnPin = gpioPinValue(prefix + '-btnpin');
+        if (clk == null || dt == null) return;
+        var entry = {
+          enabled: true, clk_pin: clk, dt_pin: dt,
+          pull_up: true, debounce_time: 0.05,
+          button_actions: { press_action: actionFromSlot(prefix + '-rpress'), hold_action: actionFromSlot(prefix + '-rhold') },
+          encoder_actions: { rotate_clockwise: actionFromSlot(prefix + '-cw'), rotate_counterclockwise: actionFromSlot(prefix + '-ccw') }
+        };
+        if (btnPin != null) entry.button_pin = btnPin;
+        rotary.push(entry);
+      }
+    });
+    return {
+      buttons: buttons,
+      two_way_switches: two_way,
+      three_way_switches: three_way,
+      rotary_encoders: rotary,
+      combined_actions: (lastLoadedSettings && lastLoadedSettings.hardware_controls && lastLoadedSettings.hardware_controls.combined_actions) || []
+    };
   }
   function buildQuadRotaryState(){
     return {
@@ -2339,6 +2557,7 @@
     state.hardware_controls = buildHardwareControlsState();
     if (!state.input_peripherals) state.input_peripherals = {};
     state.input_peripherals.quad_rotary_controller = buildQuadRotaryState();
+    applyGpioOutToState(state);
     return state;
   }
 
@@ -2657,18 +2876,23 @@
     container.setAttribute('data-chip-original', JSON.stringify(arr.map(String)));
   }
 
-  /* Buttons/switches/quad-rotary: the mockup's UI only edits 3 fixed
-     buttons + 2 fixed two-way switches (buildHardwareControlsState() always
-     returns empty three_way_switches/rotary_encoders/combined_actions,
-     since it has no widgets for them). A real settings.jsonc can have more
-     of any of these. Populating for display is fine either way, but SAVING
-     must never let an un-editable field silently disappear -- see the save
-     handler below, which passes those through from lastLoadedSettings
-     rather than trusting buildHardwareControlsState()/buildQuadRotaryState()
-     for anything this page doesn't actually expose a widget for. */
+  /* Buttons/switches/rotary encoders (B11.5): #controlsList is fully
+     dynamic, built and read generically by control type and prefix (see
+     buildHardwareControlsState() and populateHardwareControlsAndQuadRotary()
+     above), so any count of any type round-trips -- no fixed slots, no
+     ceiling, nothing silently dropped on save. quad_rotary_controller keeps
+     its own fixed 4-encoder UI (unrelated to F-292/293/294) and is likewise
+     built fresh by buildQuadRotaryState() every save now. combined_actions
+     has no UI on this page and is the one thing still passed through from
+     lastLoadedSettings -- see buildHardwareControlsState(). */
   function applyActionToSlot(slot, action){
     if (!slot) return;
-    var method = 'rec', args = '';
+    // "None" (or absent) must stay distinguishable from a real action once
+    // it round-trips -- defaulting to 'rec' here silently turned a gesture
+    // with no action configured into "start/stop recording" on save
+    // (caught by a full save round-trip test against a button whose
+    // press_action is "None"; see system-review/FINDINGS.md B11.5 notes).
+    var method = '', args = '';
     if (action && typeof action === 'object' && action.method){
       method = action.method;
       if (Array.isArray(action.args)) args = action.args.join(' ');
@@ -2690,29 +2914,13 @@
 
   function populateHardwareControlsAndQuadRotary(settings){
     var hw = (settings && settings.hardware_controls) || {};
-    var buttons = hw.buttons || [];
-    var switches = hw.two_way_switches || [];
 
-    function setPin(id, pin){
-      var el = document.getElementById(id);
-      if (el) el.value = (pin === undefined || pin === null) ? 'none' : String(pin);
-    }
-    setPin('cfg-gpio-btn1', buttons[0] && buttons[0].pin);
-    setPin('cfg-gpio-btn2', buttons[1] && buttons[1].pin);
-    setPin('cfg-gpio-btn3', buttons[2] && buttons[2].pin);
-    setPin('cfg-gpio-sw1', switches[0] && switches[0].pin);
-    setPin('cfg-gpio-sw2', switches[1] && switches[1].pin);
-    if (buttons[0]) populateButtonLike('act-btn1', buttons[0]);
-    if (buttons[1]) populateButtonLike('act-btn2', buttons[1]);
-    if (buttons[2]) populateButtonLike('act-btn3', buttons[2]);
-    if (switches[0]){
-      applyActionToSlot(document.getElementById('act-sw1-on'), switches[0].state_on_action);
-      applyActionToSlot(document.getElementById('act-sw1-off'), switches[0].state_off_action);
-    }
-    if (switches[1]){
-      applyActionToSlot(document.getElementById('act-sw2-on'), switches[1].state_on_action);
-      applyActionToSlot(document.getElementById('act-sw2-off'), switches[1].state_off_action);
-    }
+    var list = document.getElementById('controlsList');
+    list.innerHTML = '';
+    (hw.buttons || []).forEach(function(b){ appendControlRow(buildButtonRow(b)); });
+    (hw.two_way_switches || []).forEach(function(s){ appendControlRow(buildSwitch2Row(s)); });
+    (hw.three_way_switches || []).forEach(function(s){ appendControlRow(buildSwitch3Row(s)); });
+    (hw.rotary_encoders || []).forEach(function(r){ appendControlRow(buildRotaryRow(r)); });
 
     var qr = (settings && settings.input_peripherals && settings.input_peripherals.quad_rotary_controller) || {};
     var enc = qr.encoders || {};
@@ -2720,12 +2928,106 @@
       if (enc[idx] && enc[idx].button) populateButtonLike('act-qr' + idx, enc[idx].button);
     });
 
-    var extra = buttons.length > 3 || switches.length > 2 ||
-      (hw.three_way_switches && hw.three_way_switches.length) ||
-      (hw.rotary_encoders && hw.rotary_encoders.length) ||
-      (hw.combined_actions && hw.combined_actions.length);
-    var warn = document.getElementById('hwControlsExtraWarning');
-    if (warn) warn.hidden = !extra;
+    populateGpioOut(settings);
+  }
+
+  /* ---------- B11.5: dynamic GPIO OUT rows (rec_out_pin[] "REC tally" +
+     rec_tone.pin[] "REC tone") -- replaces the single fixed tally-pin select,
+     which had no data-path and so was silently dropped (reset to the
+     defaults in config_loader.py) on every save regardless of what page the
+     operator was actually editing. Adding a second tally/tone pin was
+     impossible for the same reason: there was nowhere to put it. */
+  function buildGpioOutRow(pin, method){
+    var prefix = nextControlPrefix();
+    var row = document.createElement('div');
+    row.className = 'actionrow';
+    row.setAttribute('data-control-type', 'gpio-out');
+    row.setAttribute('data-prefix', prefix);
+    row.setAttribute('data-search', 'gpio out tally tone rec');
+    var picker = makeSingleGpioOutPinPicker(prefix + '-pin', 'a GPIO output', pin, 'output').wrap;
+    var gesturesWrap = document.createElement('div');
+    gesturesWrap.className = 'gestures-wrap';
+    var head = document.createElement('div');
+    head.className = 'gestures-head';
+    head.innerHTML = '<span>Trigger</span><span>Method</span>';
+    var gestures = document.createElement('div');
+    gestures.className = 'gestures';
+    var g = document.createElement('div');
+    g.className = 'gesture';
+    var name = document.createElement('span');
+    name.className = 'g-name';
+    name.textContent = 'While rec';
+    var methodSel = document.createElement('select');
+    methodSel.className = 'field-input gpio-out-method';
+    methodSel.id = prefix + '-method';
+    methodSel.setAttribute('aria-label', 'What this output pin drives');
+    ['tally', 'tone'].forEach(function(v){
+      var opt = document.createElement('option');
+      opt.value = v; opt.textContent = v === 'tally' ? 'REC tally' : 'REC tone';
+      if (v === method) opt.selected = true;
+      methodSel.appendChild(opt);
+    });
+    methodSel.addEventListener('change', markControlsDirtyIfNeeded);
+    g.appendChild(name);
+    g.appendChild(methodSel);
+    gestures.appendChild(g);
+    gesturesWrap.appendChild(head);
+    gesturesWrap.appendChild(gestures);
+    row.appendChild(picker);
+    row.appendChild(gesturesWrap);
+    row.appendChild(makeRowRemoveButton(row, 'this output pin'));
+    return row;
+  }
+
+  function populateGpioOut(settings){
+    var out = (settings && settings.hardware_outputs) || {};
+    var list = document.getElementById('gpioOutList');
+    list.innerHTML = '';
+    (out.rec_out_pin || []).forEach(function(pin){
+      var row = buildGpioOutRow(pin, 'tally');
+      list.appendChild(row);
+      row.querySelectorAll('.gpio-select').forEach(initGpioSelect);
+    });
+    ((out.rec_tone && out.rec_tone.pin) || []).forEach(function(pin){
+      var row = buildGpioOutRow(pin, 'tone');
+      list.appendChild(row);
+      row.querySelectorAll('.gpio-select').forEach(initGpioSelect);
+    });
+  }
+
+  document.getElementById('addGpioOutBtn').addEventListener('click', function(){
+    var row = buildGpioOutRow(null, 'tally');
+    document.getElementById('gpioOutList').appendChild(row);
+    row.querySelectorAll('.gpio-select').forEach(initGpioSelect);
+    markControlsDirtyIfNeeded();
+  });
+
+  /* Called after buildState()'s generic [data-path] walk already populated
+     state.hardware_outputs.rec_tone.{frequency_hz,duty_cycle,relay_drop_frames}
+     -- adds rec_out_pin[] and rec_tone.pin[] (read from #gpioOutList, which
+     has no data-path since each row is a dynamic pin+method pair, not a
+     single field) into that same object rather than replacing it.
+     pwm_pin has no UI anywhere on this page; preserved from the last real
+     load so it doesn't default-reset (config_loader.py's setdefault) on
+     every unrelated save the way rec_out_pin/rec_tone.pin used to. */
+  function applyGpioOutToState(state){
+    state.hardware_outputs = state.hardware_outputs || {};
+    var recOutPins = [], tonePins = [];
+    document.querySelectorAll('#gpioOutList [data-control-type="gpio-out"]').forEach(function(row){
+      var prefix = row.getAttribute('data-prefix');
+      var pin = gpioPinValue(prefix + '-pin');
+      if (pin == null) return;
+      var methodEl = document.getElementById(prefix + '-method');
+      if (methodEl && methodEl.value === 'tone') tonePins.push(pin);
+      else recOutPins.push(pin);
+    });
+    state.hardware_outputs.rec_out_pin = recOutPins;
+    state.hardware_outputs.rec_tone = state.hardware_outputs.rec_tone || {};
+    state.hardware_outputs.rec_tone.pin = tonePins;
+    var prevOutputs = lastLoadedSettings && lastLoadedSettings.hardware_outputs;
+    if (prevOutputs && prevOutputs.pwm_pin !== undefined && state.hardware_outputs.pwm_pin === undefined){
+      state.hardware_outputs.pwm_pin = prevOutputs.pwm_pin;
+    }
   }
 
   function clearSettingsDirtyState(){
@@ -2815,20 +3117,14 @@
       return;
     }
 
-    // settings.jsonc: build the payload from the fields this page actually
-    // edits, but pass hardware_controls / quad_rotary_controller through
-    // from the last real load rather than buildHardwareControlsState()/
-    // buildQuadRotaryState() -- see populateHardwareControlsAndQuadRotary()
-    // above for why: this page only has widgets for 3 buttons + 2 switches,
-    // and silently dropping a real file's 4th button or its rotary_encoders
-    // on save would be a correctness bug, not a mockup gap.
+    // settings.jsonc: buildState() now builds hardware_controls and
+    // quad_rotary_controller fresh from #controlsList/the quad-rotary
+    // widgets (B11.5 -- the GPIO IN pane represents every button, switch,
+    // three-way switch and rotary encoder, so there's no longer a subset
+    // this page can't express). combined_actions has no UI here, so
+    // buildHardwareControlsState() carries it through from the last real
+    // load rather than dropping it.
     var payload = buildState();
-    if (lastLoadedSettings){
-      payload.hardware_controls = lastLoadedSettings.hardware_controls;
-      if (!payload.input_peripherals) payload.input_peripherals = {};
-      payload.input_peripherals.quad_rotary_controller =
-        lastLoadedSettings.input_peripherals && lastLoadedSettings.input_peripherals.quad_rotary_controller;
-    }
 
     fetch('/settings-editor/api/settings', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -3232,11 +3528,14 @@
     select.innerHTML = html;
   }
   function refreshAllGpioSelects(){ document.querySelectorAll('.gpio-select').forEach(renderGpioOptions); }
-  document.querySelectorAll('.gpio-select').forEach(function(sel){
+  /* One-time setup for a .gpio-select -- called for every pin picker present
+     at load, and again for each one a dynamically-added control row creates
+     (B11.5), so newly-added buttons/switches/rotary encoders get the exact
+     same conflict-aware options + confirm-to-remap behavior as the ones the
+     page started with. */
+  function initGpioSelect(sel){
     sel.setAttribute('data-prev-value', sel.getAttribute('data-initial') || 'none');
-  });
-  refreshAllGpioSelects();
-  document.querySelectorAll('.gpio-select').forEach(function(sel){
+    renderGpioOptions(sel);
     sel.addEventListener('change', function(){
       var next = sel.value;
       var prev = sel.getAttribute('data-prev-value');
@@ -3255,7 +3554,8 @@
         sel.value = prev;
       });
     });
-  });
+  }
+  document.querySelectorAll('.gpio-select').forEach(initGpioSelect);
 
   /* ---------- button/switch/rotary action pickers, sourced from cli_commands.py ---------- */
   var ACTION_METHODS = [
@@ -3314,6 +3614,10 @@
     var sel = document.createElement('select');
     sel.className = 'field-input action-method';
     sel.setAttribute('aria-label', 'Method');
+    var none = document.createElement('option');
+    none.value = ''; none.textContent = 'No action';
+    if (!currentMethod) none.selected = true;
+    sel.appendChild(none);
     var groups = {};
     var order = [];
     ACTION_METHODS.forEach(function(m){
@@ -3332,10 +3636,10 @@
       });
       sel.appendChild(og);
     });
-    if (!ACTION_METHOD_MAP[currentMethod]){
+    if (currentMethod && !ACTION_METHOD_MAP[currentMethod]){
       var custom = document.createElement('option');
       custom.value = currentMethod; custom.textContent = currentMethod + ' (custom)'; custom.selected = true;
-      sel.insertBefore(custom, sel.firstChild);
+      sel.insertBefore(custom, sel.firstChild.nextSibling);
     }
     return sel;
   }
@@ -3378,7 +3682,7 @@
   function actionListIcon(){ return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3" cy="6" r="1"/><circle cx="3" cy="12" r="1"/><circle cx="3" cy="18" r="1"/></svg>'; }
 
   function renderActionSlot(slot){
-    var method = slot.getAttribute('data-method') || 'rec';
+    var method = slot.getAttribute('data-method') || '';
     var args = slot.getAttribute('data-args') || '';
     slot.innerHTML = '';
     var picker = document.createElement('span');
@@ -3444,52 +3748,56 @@
     var origArgs = slot.getAttribute('data-original-args') || '';
     markDirty(slot, curMethod !== origMethod || curArgs !== origArgs);
   }
-  /* Method reads before Action (left-to-right) — swap each gesture's own
-     pair in the DOM so display:contents lays them into the grid in that
-     order, without disturbing any other gesture's pair. */
-  document.querySelectorAll('.gesture').forEach(function(g){
-    var name = g.querySelector('.g-name');
-    var value = g.querySelector('.action-slot, .action-args');
-    if (name && value) g.insertBefore(value, name);
-  });
   document.querySelectorAll('.action-slot').forEach(function(slot){
     slot.setAttribute('data-original-method', slot.getAttribute('data-method') || '');
     slot.setAttribute('data-original-args', slot.getAttribute('data-args') || '');
     renderActionSlot(slot);
   });
 
-  /* ---------- "+ Add" a second (or third…) gesture onto a button/encoder ---------- */
-  var GESTURE_LABELS = { press: 'Press', single: 'Single', double: 'Double', triple: 'Triple', hold: 'Hold' };
-  document.querySelectorAll('.add-gesture-select').forEach(function(sel){
-    sel.addEventListener('change', function(){
-      if (!sel.value) return;
-      var gestureKey = sel.value;
-      var prefix = sel.getAttribute('data-prefix');
-      var addRow = sel.closest('.gesture-add');
-      var gestures = addRow.closest('.gestures');
-      var newGesture = document.createElement('div');
-      newGesture.className = 'gesture';
-      var nameSpan = document.createElement('span');
-      nameSpan.className = 'g-name';
-      nameSpan.textContent = GESTURE_LABELS[gestureKey];
-      var slotSpan = document.createElement('span');
-      slotSpan.className = 'action-slot';
-      slotSpan.id = prefix + '-' + gestureKey;
-      slotSpan.setAttribute('data-method', 'rec');
-      slotSpan.setAttribute('data-original-method', '');
-      slotSpan.setAttribute('data-original-args', '');
-      newGesture.appendChild(slotSpan);
-      newGesture.appendChild(nameSpan);
-      gestures.insertBefore(newGesture, addRow);
-      renderActionSlot(slotSpan);
-      checkActionDirty(slotSpan);
-      showToast(GESTURE_LABELS[gestureKey] + ' action added');
+  /* ---------- "+ Add" a second (or third…) gesture onto a button/switch/
+     encoder (B11.5) — event-delegated on #app so it covers quad-rotary's
+     static rows and every dynamically-added control row the same way,
+     with no separate wiring needed per row. .g-name (74px) then
+     .action-slot (1fr) is the DOM order the CSS grid tracks expect. */
+  var GESTURE_LABELS = {
+    press: 'Press', single: 'Single', double: 'Double', triple: 'Triple', hold: 'Hold',
+    on: 'On', off: 'Off',
+    s0: 'Position 1', s1: 'Position 2', s2: 'Position 3',
+    rpress: 'Button press', rhold: 'Button hold', cw: 'Rotate CW', ccw: 'Rotate CCW'
+  };
+  document.getElementById('app').addEventListener('change', function(e){
+    var sel = e.target.closest('.add-gesture-select');
+    if (!sel || !sel.value) return;
+    var gestureKey = sel.value;
+    var prefix = sel.getAttribute('data-prefix');
+    var addRow = sel.closest('.gesture-add');
+    var gestures = addRow.closest('.gestures');
+    var newGesture = document.createElement('div');
+    newGesture.className = 'gesture';
+    var nameSpan = document.createElement('span');
+    nameSpan.className = 'g-name';
+    nameSpan.textContent = GESTURE_LABELS[gestureKey] || gestureKey;
+    var slotSpan = document.createElement('span');
+    slotSpan.className = 'action-slot';
+    slotSpan.id = prefix + '-' + gestureKey;
+    slotSpan.setAttribute('data-method', '');
+    slotSpan.setAttribute('data-original-method', '');
+    slotSpan.setAttribute('data-original-args', '');
+    newGesture.appendChild(nameSpan);
+    newGesture.appendChild(slotSpan);
+    if (sel.getAttribute('data-removable') !== 'false'){
+      addGestureRemoveButton(newGesture, slotSpan, GESTURE_LABELS[gestureKey] || gestureKey);
+    }
+    gestures.insertBefore(newGesture, addRow);
+    renderActionSlot(slotSpan);
+    checkActionDirty(slotSpan);
+    markControlsDirtyIfNeeded(sel);
+    showToast((GESTURE_LABELS[gestureKey] || gestureKey) + ' action added');
 
-      var chosenOpt = sel.querySelector('option[value="' + gestureKey + '"]');
-      if (chosenOpt) chosenOpt.remove();
-      sel.value = '';
-      if (sel.options.length <= 1) addRow.remove();
-    });
+    var chosenOpt = sel.querySelector('option[value="' + gestureKey + '"]');
+    if (chosenOpt) chosenOpt.remove();
+    sel.value = '';
+    if (sel.options.length <= 1) addRow.remove();
   });
 
   /* ---------- mobile rail ---------- */
@@ -3575,38 +3883,6 @@
     updateGroupVisibility();
     if (typeof updateBulkBar === 'function') updateBulkBar();
   });
-
-  /* ---------- live view ---------- */
-  document.getElementById('liveIsoSelect').addEventListener('change', function(){ document.getElementById('liveIso').textContent = this.value; });
-  document.getElementById('liveShutterSelect').addEventListener('change', function(){ document.getElementById('liveShutter').textContent = this.value + '°'; });
-  document.getElementById('liveFpsSelect').addEventListener('change', function(){ document.getElementById('liveFps').textContent = this.value; });
-  document.getElementById('liveWbSelect').addEventListener('change', function(){ document.getElementById('liveWb').textContent = this.value + ' K'; });
-  (function(){
-    var recBtn = document.getElementById('liveRecBtn');
-    var recLabel = document.getElementById('liveRecLabel');
-    var tally = document.getElementById('liveTally');
-    var recTimeEl = document.getElementById('liveRecTime');
-    var timer = null, seconds = 0;
-    recBtn.addEventListener('click', function(){
-      var recording = recBtn.classList.toggle('recording');
-      tally.classList.toggle('on', recording);
-      recLabel.textContent = recording ? 'Stop' : 'Record';
-      if (recording){
-        seconds = 0;
-        recTimeEl.textContent = '00:00';
-        timer = setInterval(function(){
-          seconds++;
-          var m = String(Math.floor(seconds / 60)).padStart(2, '0');
-          var s = String(seconds % 60).padStart(2, '0');
-          recTimeEl.textContent = m + ':' + s;
-        }, 1000);
-        showToast('Recording started');
-      } else {
-        clearInterval(timer);
-        showToast('Recording stopped — take saved');
-      }
-    });
-  })();
 
   /* ---------- boot sequence engine (shared by Cinemate restart & Pi reboot) ---------- */
   function runBootSequence(opts){

@@ -5,12 +5,17 @@ F-283: reproduced on hardware with `timeout 10 bash -x` on the installed
 script -- as user `pi`, `systemctl start <unit>` triggers a PolicyKit
 "AUTHENTICATING FOR org.freedesktop.systemd1.manage-units" prompt with no
 tty to answer it. It blocks until systemd kills this ExecStopPost step at
-TimeoutStopSec and the unit lands failed instead of restarting. (A
-Before=/Conflicts= job-cancellation race was also considered; ruled out --
-no "Job ... was cancelled" or "contradicts existing jobs" lines appear
-anywhere in `journalctl -u cinemate-autostart -b`.) `pi` has passwordless
-sudo, so running as root skips the prompt entirely; `-n` guarantees a fast
-failure instead of a hang if that sudoers rule is ever tightened.
+TimeoutStopSec and the unit lands failed instead of restarting. `pi` has
+passwordless sudo, so running as root skips the prompt entirely; `-n`
+guarantees a fast failure instead of a hang if that sudoers rule is ever
+tightened. This closes the hang/failed symptom, verified on hardware across
+many restarts.
+
+A separate, narrower race is still open (not covered by this test):
+Conflicts=getty@tty1.service on the unit can occasionally collide with the
+start half of an in-flight `systemctl restart`, leaving the unit inactive
+instead of active (not failed/hung). See the longer comment in the script
+itself for the four mitigations tried and rejected.
 """
 
 import re

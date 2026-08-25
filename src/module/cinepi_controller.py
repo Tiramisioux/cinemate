@@ -7,7 +7,6 @@ import json
 import subprocess
 from threading import Timer
 import psutil
-import sys
 
 from module.redis_controller import ParameterKey, encode_log_encode_request, decode_log_encode_request
 from module.sensor_detect import compute_frame_size_mb

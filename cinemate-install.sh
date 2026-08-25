@@ -873,7 +873,9 @@ if [[ "\$cr_mem_mb" -gt 0 && "\$cr_mem_mb" -lt 3000 && "\$cr_swap_lines" -le 1 ]
     if [[ -n "\$CR_ZRAM_DEV" ]] && sudo mkswap "\$CR_ZRAM_DEV" >/dev/null 2>&1 && sudo swapon -p 100 "\$CR_ZRAM_DEV" 2>/dev/null; then
         printf '[compile-raw] Low-RAM board (%s MB): added 4 GB zram build swap on %s (removed on exit)\n' "\$cr_mem_mb" "\$CR_ZRAM_DEV"
     else
-        [[ -n "\$CR_ZRAM_DEV" ]] && sudo zramctl --reset "\$CR_ZRAM_DEV" 2>/dev/null || true
+        if [[ -n "\$CR_ZRAM_DEV" ]]; then
+            sudo zramctl --reset "\$CR_ZRAM_DEV" 2>/dev/null || true
+        fi
         CR_ZRAM_DEV=""
         printf '[compile-raw] WARNING: could not set up zram build swap; low-RAM build may OOM\n'
     fi

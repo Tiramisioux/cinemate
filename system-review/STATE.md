@@ -81,6 +81,41 @@
   needing a fix; F-313 is a citation correction with nothing downstream to correct. **F-289 is
   reopened, not closed** — B11.2's hardening shipped but isn't a confirmed fix for the original
   field report; root cause needs operator input, queued as **PI-017**.
+- **Then: B13 extended, B10.3/4/5, B7 step 1, and B10.1/7/8 (2026-08-26), four PRs, all
+  green CI at last check:**
+  - **#151 — B13, extended past its original scope** to cover B11.4/.5/.7/.8 drift the
+    batch predates: GPIO/rotary docs, the new per-mode fps-ceiling settings, web GUI
+    scaling, the restart mechanism (no doc drift found there — already accurate), plus
+    the original B13.1–B13.7. Also closed F-265/F-266 with a real installer-step
+    correspondence table and found + fixed real gaps a manual install would have hit
+    (`run_cinemate.sh`/the config.txt apply helper never created, avahi never installed —
+    same gap as F-289/F-308, `cinemate-recovery` missing from the services section).
+    cinepi-raw's own README fix (`python-pip`→`python3-pip`, F-304) is a separate PR,
+    **cinepi-raw #61**, open.
+  - **#153 — B10.3/B10.4/B10.5.** F-175/F-176 were already fixed on `dev` when checked;
+    F-177/F-195/F-021/F-111/F-167/F-014/F-229/F-248 were genuinely open and fixed here
+    (F-167 in particular: `rotary_encoders`/`quad_rotary_controller.encoders` had zero
+    schema validation, now do, verified against all three shipped settings files plus two
+    hand-built typo-rejection tests). F-033 and F-168/F-170 deliberately left open — no
+    hardware to verify a `pkill` pattern change, and a ~1000-call-site logging-idiom
+    unification is more than one pass can review carefully.
+  - **#155 — B7 step 1 only** (design tokens, F-007/F-232/F-233). `src/module/
+    design_tokens.py` is now the one place the 14 shared HDMI/web colours live;
+    `design_token_diff.py` checks the CSS against it by exact match instead of guessing
+    by value. **B7.2–B7.4 (lift the section spec into data, web backend reads it, unify
+    the layout primitives) are NOT done** — real rendering-architecture changes with no
+    way to visually verify them in this environment (no Pi, no browser against a live
+    camera). Left for a session that has one or the other.
+  - **#156 — B10.1/B10.7/B10.8.** All 228 findings dispositioned (`fixed`/`guarded`/
+    `accepted`/`superseded`/`strength`), verified against the tree rather than the plan —
+    a real block had drifted in both directions since REMEDIATION-PLAN.md was written
+    (see the commit message for the specific corrections). `tools/
+    findings_disposition_check.py` gates it in CI now.
+  - **All four PRs (#151, #153, #155, #156) were open, CI-green, not yet merged** at the
+    end of this session. Several `fixed` dispositions in #156 depend on the other three
+    landing as authored — re-triage those rows if any of the three change materially
+    before merge. **#147** (`merge-b11-into-dev`) still looks superseded by the
+    individually-merged B11 PRs and was flagged, not closed, for the operator.
 - **Open decisions:** **ADR-001 is written and `proposed`** —
   `decisions/ADR-001-gui-harmonization.md`. Reject D and E; adopt C reached through B; fix
   F-204 first. Surface 4 excluded permanently. **Reconciled 2026-08-25**: constraint 2

@@ -35,6 +35,7 @@ from module.config_loader import (
 )
 from module.app import boot_config, raw_files
 from module.jsonc_edit import apply_updates
+from module.redis_controller import ParameterKey
 from module.web_api_settings import web_api_settings
 
 logger = logging.getLogger(__name__)
@@ -481,3 +482,60 @@ def bulk_raw_action():
         results[name] = {"ok": ok, "message": message}
     all_ok = all(r["ok"] for r in results.values())
     return jsonify({"ok": all_ok, "results": results})
+
+
+# psutil reports the NTFS mount as ntfs, ntfs3 or fuseblk depending on which
+# driver took the volume; all three mean the mkfs.ntfs succeeded. ext4 and
+# exfat report literally.
+_FSTYPE_ALIASES = {
+    "ext4": ("ext4",),
+    "exfat": ("exfat",),
+    "ntfs": ("ntfs", "ntfs3", "fuseblk"),
+}
+
+
+@settings_editor_bp.route("/api/raw/format", methods=["POST"])
+def format_raw_drive():
+    body = request.get_json(silent=True) or {}
+    fs = str(body.get("filesystem") or "").strip().lower()
+    if fs not in _FSTYPE_ALIASES:
+        return jsonify({"ok": False, "message": "filesystem must be ext4, exfat or ntfs"}), 400
+
+    command_executor = current_app.config.get("COMMAND_EXECUTOR")
+    if command_executor is None:
+        return jsonify({"ok": False, "message": "Command dispatcher not available"}), 503
+
+    # Sequencing interlock, not a permissions gate: ssd_monitor's own guard
+    # only covers the buffer flush, and its unmount escalation runs
+    # `fuser -km` on the mount, which would kill a running writer mid-take.
+    redis_controller = current_app.config.get("REDIS_CONTROLLER")
+    if redis_controller is not None:
+        rec = str(redis_controller.get_value(ParameterKey.IS_RECORDING.value, "0") or "0").strip()
+        if rec == "1":
+            return jsonify({"ok": False, "message": "Refusing to format while recording"}), 409
+
+    logger.info("Dispatching 'format %s' from the settings editor", fs)
+    ok, message = command_executor.handle_received_data(f"format {fs}")
+    if not ok:
+        return jsonify({"ok": False, "message": message or "dispatch failed"}), (
+            503 if message == "busy" else 500
+        )
+
+    # The dispatcher discards handler return values, so a (True, "") here says
+    # only that `format` was dispatched -- never that mkfs worked. Verify
+    # against reality instead: format_drive() remounts before it returns, so
+    # the active mount's filesystem is the authoritative answer.
+    active = next((s for s in raw_files.storage_summary() if s.get("active")), None)
+    fstype = ((active or {}).get("filesystem") or "").lower()
+    if active and fstype in _FSTYPE_ALIASES[fs]:
+        return jsonify({"ok": True, "message": f"Formatted as {fs} and remounted."})
+    if active:
+        return jsonify({
+            "ok": False,
+            "message": f"Format may have failed — drive is mounted as {fstype or 'unknown'}. "
+                       "Check the cinemate log.",
+        }), 500
+    return jsonify({
+        "ok": False,
+        "message": "Format failed — drive did not remount. Check the cinemate log.",
+    }), 500

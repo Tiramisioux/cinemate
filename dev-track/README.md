@@ -21,8 +21,9 @@ happened.
 | C1 | Long-take stability — eliminate dropped frames, keep audio in sync at the higher 12-bit modes | Runbook **verified 2026-08-26** (blockers fixed), campaign not started | `C1-longtake-stability/RUNBOOK.md` (Sonnet session prompt + protocol) + `RESULTS.md` (campaign ledger) + `VERIFICATION-2026-08-26.md` (pre-flight findings) | none — measurement campaign on the Pi's `dev` checkouts |
 | C2 | DSI / DPI panel as a camera monitor, alongside HDMI | Planned, not implemented; hardware gates unrun | `C2-dsi-display/PLAN.md` (ledger entry) + `DSI-DISPLAY-PLAN.md` (full spec) + `SONNET-PROMPT.md` (kickoff prompt) | `feature/display-connector` off `dev` (cinepi-raw) + `feature/dsi-display` off `dev` (cinemate) — both to be cut |
 | C3 | Start without a camera, and say so in the GUI | Planned, not implemented; hardware gates unrun | `C3-no-camera-start/PLAN.md` (ledger entry) + `NO-CAMERA-START-PLAN.md` (full spec) + `SONNET-PROMPT.md` (kickoff prompt) | `feature/no-camera-start` off `dev` (cinemate only, to be cut) |
+| C4 | Sensor autodetect — probe-and-heal the camera overlay, with on/off toggle, explicit fallback and imx585 mono checkbox | Planned, not implemented; **depends on C3**; go/no-go gate G0 unrun | `C4-sensor-autodetect/PLAN.md` (ledger entry) + `SENSOR-AUTODETECT-PLAN.md` (full spec) + `SONNET-PROMPT.md` (kickoff prompt) | `feature/sensor-autodetect` off `dev` (cinemate only, to be cut after C3 lands) |
 
-Next free step: **C4**.
+Next free step: **C5**.
 
 ## Adding a feature
 
@@ -57,3 +58,8 @@ system-review ledger (`system-review/deliverables/REMEDIATION-PLAN.md` on
   under the old number exists.
 - **C3** (no-camera start) was planned directly here on 2026-08-26 from a Fable
   investigation thread; it is unrelated to C2's brief tenure of that number.
+- **C4** (sensor autodetect) was planned directly here on 2026-08-26 from a second Fable
+  investigation thread the same day, building on a hardware feasibility session from
+  2026-06-16 (`~/Documents/codex/sensor_probe.sh`). It deliberately layers on C3's
+  advisory gate and NO CAM fallback — implementation order C3 → C4 is a real dependency,
+  not just numbering.

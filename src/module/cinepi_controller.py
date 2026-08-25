@@ -12,7 +12,13 @@ import sys
 from module.redis_controller import ParameterKey, encode_log_encode_request, decode_log_encode_request
 from module.sensor_detect import compute_frame_size_mb
 from module.ir_filter import IRFilter
-from module.config_loader import load_settings as _load_settings
+from module.config_loader import (
+    load_settings as _load_settings,
+    as_bool,
+    TRUE_VALUES,
+    FALSE_VALUES,
+    DEFAULT_SETTINGS_PATH,
+)
 from module.storage_profiles import recorder_profile_name_for_filesystem
 from module.dynamic_resolution import (
     choose_resolution,
@@ -21,7 +27,7 @@ from module.dynamic_resolution import (
 )
 from module import parameters
 
-SETTINGS_FILE = "/home/pi/cinemate/settings.jsonc"
+SETTINGS_FILE = DEFAULT_SETTINGS_PATH
 GUI_RESOLUTION_PREVIEW_DELAY_SECONDS = 0.12
 GUI_RESOLUTION_SWITCHING_HOLD_SECONDS = 2.5
 RAW_STREAM_READY_RE = re.compile(r"\bRaw stream:\s*(\d+)x(\d+)\b", re.IGNORECASE)
@@ -181,7 +187,7 @@ class CinePiController:
         self.sensor_mode = self._get_startup_sensor_mode()
         self.sensor_mode_saved = self.sensor_mode
         self.dynamic_resolution_desired_mode = self._get_startup_dynamic_resolution_desired_mode()
-        stored_dynamic_resolution_active = self._as_bool(
+        stored_dynamic_resolution_active = as_bool(
             self.redis_controller.get_value(
                 ParameterKey.DYNAMIC_RESOLUTION_ACTIVE.value,
                 0,
@@ -322,7 +328,7 @@ class CinePiController:
         )
         if value is None:
             return True
-        return self._as_bool(value)
+        return as_bool(value)
 
     def _publish_dynamic_resolution_state(self):
         self.redis_controller.set_value(
@@ -360,12 +366,6 @@ class CinePiController:
             return float(value)
         except (TypeError, ValueError):
             return None
-
-    @staticmethod
-    def _as_bool(value):
-        if isinstance(value, bool):
-            return value
-        return str(value).strip().lower() in ("1", "true", "yes", "on")
 
     def _sensor_readout_fps_max(self, mode=None):
         mode = self.sensor_mode if mode is None else mode
@@ -707,9 +707,9 @@ class CinePiController:
             new_value = False if current else True
         elif isinstance(value, str):
             low = value.strip().lower()
-            if low in ("off", "0", "false", "no"):
+            if low in FALSE_VALUES:
                 new_value = False
-            elif low in ("on", "1", "true", "yes"):
+            elif low in TRUE_VALUES:
                 new_value = True
             else:
                 logging.warning("set log: unrecognized value %r, ignoring", value)

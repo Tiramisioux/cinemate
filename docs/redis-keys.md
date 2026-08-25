@@ -17,6 +17,7 @@ Each entry explains which component normally writes the key and whether it makes
 | fps | Cinemate -> CinePi-raw | Target frames per second | Yes |
 | fps_user | Cinemate | User-selected FPS value stored by the UI/controller | No |
 | fps_actual | CinePi-raw -> Cinemate | Measured FPS from the running pipeline | No |
+| user_changing_fps | Cinemate (RedisListener) | `1` while an fps change is debouncing; cleared once `fps` has been stable for a while | No |
 | fps_last | Cinemate | Previous stable FPS value from stats | No |
 | fps_max | Cinemate startup | Maximum FPS supported by the current sensor mode | No |
 | fps_phase_lock | Cinemate startup | Runtime enable for CinePi-raw's closed-loop frame-rate phase lock, from `sensors.<cam>.phase_lock` in settings.jsonc (default on); read once at CinePi-raw startup, not live | No |
@@ -84,6 +85,7 @@ transition instead of a stale value.
 | storage_recorder_profile | Cinemate (SSD monitor) | Recorder worker profile selected from the current filesystem | No |
 | space_left | Cinemate (SSD monitor) | Remaining free space in GB | No |
 | write_speed_to_drive | Cinemate (SSD monitor) | Current write speed in MB/s | No |
+| FSCK_STATUS | Cinemate (SSD monitor) | Result of the periodic filesystem check run after mount, e.g. `OK ...` / `FAIL ...`; cinemate-internal, cinepi-raw never reads it | No |
 | file_size | Cinemate | Bytes per frame for the current mode | No |
 | memory_alert | Cinemate | RAM percentage at which the watchdog auto-stopped recording (integer, set at the 80 % trip point); `0` when clear | No |
 | cam_init | CinePi-raw | Internal startup flag | No |

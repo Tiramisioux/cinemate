@@ -5,7 +5,7 @@ import wave
 from PIL import Image, ImageDraw, ImageFont
 from module.console_display import claim_console_for_framebuffer, release_console_to_text
 from module.framebuffer import Framebuffer, acquire_framebuffer
-from module.config_loader import load_settings
+from module.config_loader import load_settings, as_bool, DEFAULT_SETTINGS_PATH
 import logging
 from flask_socketio import SocketIO
 import re
@@ -42,13 +42,6 @@ HDR_BADGE_COLOR = (205, 205, 205)   # lighter grey
 # Grey, distinct from both the plain CAM box grey (136,136,136) and the
 # DROP/SYNC alarm colours -- this is a calm mode indicator, not a warning.
 LOG_BADGE_COLOR = (205, 205, 205)
-
-
-def _to_bool(value) -> bool:
-    """Return *value* as bool, accepting common string variants."""
-    if isinstance(value, str):
-        return value.strip().lower() in {"1", "true", "yes", "on"}
-    return bool(value)
 
 
 def _to_int(value, default=None):
@@ -149,7 +142,7 @@ class SimpleGUI(threading.Thread):
         self.color_mode = "normal"
         
         # Load settings, not sure when the settings will be None so left the code here
-        self.settings = settings or load_settings("/home/pi/cinemate/settings.jsonc")
+        self.settings = settings or load_settings(DEFAULT_SETTINGS_PATH)
         
         self.setup_resources()
         self.display_poll_interval = 1.0
@@ -188,8 +181,8 @@ class SimpleGUI(threading.Thread):
         # Buffer VU meter and hatch line toggles from settings
         if settings is not None:
             overlays_cfg = settings.get("hdmi_display", {}).get("overlays", {})
-            self.show_buffer_vu = _to_bool(overlays_cfg.get("buffer_vu_meter", True))
-            self.vu_meter_hatch_lines = _to_bool(overlays_cfg.get("vu_meter_hatch_lines", True))
+            self.show_buffer_vu = as_bool(overlays_cfg.get("buffer_vu_meter", True))
+            self.vu_meter_hatch_lines = as_bool(overlays_cfg.get("vu_meter_hatch_lines", True))
         else:
             self.show_buffer_vu = True
             self.vu_meter_hatch_lines = True
@@ -270,7 +263,7 @@ class SimpleGUI(threading.Thread):
             self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value) or 1920)
             self.height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value) or 1080)
             self.bit_depth = int(self.redis_controller.get_value(ParameterKey.BIT_DEPTH.value) or 10)
-            self.hdr = _to_bool(self.redis_controller.get_value(ParameterKey.HDR.value, 0))
+            self.hdr = as_bool(self.redis_controller.get_value(ParameterKey.HDR.value, 0))
             #logging.info(f"Loaded sensor values from Redis: width={self.width}, height={self.height}, bit_depth={self.bit_depth}")
         except ValueError:
             logging.error("Failed to load sensor values from Redis, using default values.")
@@ -397,8 +390,8 @@ class SimpleGUI(threading.Thread):
 
     def _display_restart_allowed(self) -> bool:
         return not (
-            _to_bool(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) or 0)
-            or _to_bool(self.redis_controller.get_value(ParameterKey.IS_WRITING.value) or 0)
+            as_bool(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) or 0)
+            or as_bool(self.redis_controller.get_value(ParameterKey.IS_WRITING.value) or 0)
         )
 
     def _maybe_restart_camera_for_display_attach(self):
@@ -708,7 +701,7 @@ class SimpleGUI(threading.Thread):
         self._maybe_refresh_slow_values()
         self.load_sensor_values_from_redis()
         resolution_value = self.estimate_resolution_in_k()
-        resolution_switching = _to_bool(
+        resolution_switching = as_bool(
             self.redis_controller.get_value(ParameterKey.RESOLUTION_SWITCHING.value, 0)
         )
         display_width = self.width

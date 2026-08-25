@@ -143,10 +143,10 @@ Support is built in but disabled in the stock settings file. Set `"enabled": tru
 
 | Dial | Turning | Push button |
 | --- | --- | --- |
-| 0 | white balance | single click: change resolution · double click: restart Cinemate · triple click: reboot · hold: mount/unmount drive |
-| 1 | fps | press: toggle fps double |
-| 2 | shutter angle | press: toggle shutter sync mode |
-| 3 | ISO | press: toggle zoom · hold: safe shutdown |
+| 0 | ISO | press: toggle zoom · hold: safe shutdown |
+| 1 | shutter angle | press: toggle shutter sync mode |
+| 2 | fps | press: toggle fps double |
+| 3 | white balance | single click: change resolution · double click: restart Cinemate · triple click: reboot · hold: mount/unmount drive |
 
 Each dial steps through the same value arrays as the CLI and GPIO encoders. The buttons use the same press/click/hold grammar as the [buttons](#push-buttons) section, so every dial can be remapped freely — see [quad_rotary_controller](settings-json.md#quad_rotary_controller).
 

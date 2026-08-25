@@ -399,7 +399,7 @@ done
 Every mode a sensor supports is listed in `resources/sensors.json`, so all of them stay available to the system. Cinemate's stock `settings.jsonc` then exposes only the practical ones in the UI — for the IMX283 that is the ≥25 fps 2.7K and 4K crops (`k_steps: [3, 4]`). Add `5.5` to also show the IMX283 5K modes, or set `k_steps` to your sensor's sizes (for example `[1.5, 2, 4]` for IMX477). To check or edit the list, type `editsettings` in the Pi terminal, or edit `/home/pi/cinemate/settings.jsonc` directly:
 
 ```json
-"resolutions": {
+"image_capture": {
   "k_steps": [3, 4],
   "bit_depths": [10, 12],
   "custom_modes": {}

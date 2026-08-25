@@ -361,7 +361,7 @@ sudo apt install dkms -y
 git clone https://github.com/Tiramisioux/imx283-v4l2-driver.git --branch 6.12.y
 cd imx283-v4l2-driver/
 ./setup.sh
-sudo dkms autoinstall -k 6.12.25+rpt-rpi-2712
+sudo dkms autoinstall -k "$(uname -r)"
 cd
 ```
 
@@ -369,7 +369,7 @@ cd
 git clone https://github.com/Tiramisioux/imx585-v4l2-driver.git --branch 6.12.y
 cd imx585-v4l2-driver/
 ./setup.sh
-sudo dkms autoinstall -k 6.12.25+rpt-rpi-2712
+sudo dkms autoinstall -k "$(uname -r)"
 cd
 ```
 

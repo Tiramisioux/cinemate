@@ -1,7 +1,6 @@
 import contextlib
 import pyudev
 import logging
-import traceback
 import threading
 import re
 
@@ -22,12 +21,18 @@ class Event:
         self._listeners.append(listener)
 
     def emit(self, *args):
-        for listener in self._listeners:
+        # Iterate a copy: a listener that subscribes/unsubscribes in response
+        # to its own event (mic hotswap handlers do this) would otherwise
+        # mutate self._listeners mid-iteration and raise RuntimeError, taking
+        # the whole emit -- and its caller's thread -- down with it.
+        for listener in list(self._listeners):
             try:
                 listener(*args)
-            except Exception as e:
-                logging.error(f"Error while invoking listener: {e}")
-                traceback.print_exc()  # Print the traceback for better debugging
+            except Exception:
+                logging.exception(
+                    "usb_monitor listener %s failed; continuing with the rest",
+                    getattr(listener, "__qualname__", listener),
+                )
 
 
 

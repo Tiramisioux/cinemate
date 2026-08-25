@@ -114,8 +114,19 @@ class Event:
     def subscribe(self, listener):
         self._listeners.append(listener)
     def emit(self, data=None):
-        for l in self._listeners:
-            l(data)
+        # self.message fans out cinepi-raw's subprocess output (see :281/:299
+        # below) to every subscriber, synchronously, on the reader thread. An
+        # unguarded raise here used to kill that thread outright and silently
+        # stop the log relay. One bad listener must not take the others down
+        # with it. Mirrors RedisController's Event (module/redis_controller.py).
+        for listener in list(self._listeners):
+            try:
+                listener(data)
+            except Exception:
+                logging.exception(
+                    "cinepi_multi listener %s failed; continuing with the rest",
+                    getattr(listener, "__qualname__", listener),
+                )
 
 # ───────────────────── Camera Discovery ──────────────────
 class CameraInfo:

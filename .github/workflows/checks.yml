@@ -96,6 +96,13 @@ jobs:
       - name: Docs match the code
         run: python3 tools/docs_drift_check.py --repo . --strict
 
+      # B10.1 gave every one of the 228 findings a disposition -- fixed /
+      # guarded / accepted / superseded / strength. This is what keeps that
+      # true: a new finding appended without one, or a typo'd value, fails
+      # here instead of silently reopening the gap B10.1 closed.
+      - name: Every finding has a disposition
+        run: python3 tools/findings_disposition_check.py --repo .
+
       - name: Design tokens match between the GUIs
         run: python3 tools/design_token_diff.py --repo . --strict
 

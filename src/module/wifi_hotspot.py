@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Final, NamedTuple, Optional
 
-from module.config_loader import SettingsLoadError, load_settings
+from module.config_loader import SettingsLoadError, load_settings, DEFAULT_SETTINGS_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ __all__ = [
 # ---------------------------------------------------------------------------
 DEFAULT_SSID:  Final[str] = "CinePi"
 DEFAULT_PASS:  Final[str] = "11111111"  # 8 chars → nmcli minimum
-SETTINGS_PATH: Final[Path] = Path("/home/pi/cinemate/settings.jsonc")
+SETTINGS_PATH: Final[Path] = Path(DEFAULT_SETTINGS_PATH)
 READY_STATES: Final[set[str]] = {"connected", "connected (externally)", "disconnected"}
 
 #: Root-owned runtime state. Created by the installer and, failing that, by the

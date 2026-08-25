@@ -13,6 +13,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from module.config_loader import as_bool
+
 
 @dataclass(frozen=True)
 class DynamicResolutionChoice:
@@ -38,12 +40,6 @@ def _as_float(value: Any) -> float | None:
     if result <= 0:
         return None
     return result
-
-
-def _as_bool(value: Any) -> bool:
-    if isinstance(value, bool):
-        return value
-    return str(value or "").strip().lower() in ("1", "true", "yes", "on")
 
 
 def _normalize_modes(sensor_modes: dict[int, dict[str, Any]] | None) -> dict[int, dict[str, Any]]:
@@ -94,7 +90,7 @@ def dynamic_resolution_indicator_active(
     sensor_modes: dict[int, dict[str, Any]] | None = None,
 ) -> bool:
     """Return True while dynamic resolution is actively showing a substitute mode."""
-    if not _as_bool(enabled) or not _as_bool(active):
+    if not as_bool(enabled) or not as_bool(active):
         return False
     return dynamic_resolution_is_lower_substitute(
         sensor_modes=sensor_modes,

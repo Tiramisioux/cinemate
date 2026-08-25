@@ -426,26 +426,26 @@
 
     <div id="top-row">
         <div class="group selectable" id="g-fps">
-            <span class="label">FPS</span><span class="value" id="v-fps"></span>
+            <span class="label" id="l-fps"></span><span class="value" id="v-fps"></span>
             <select id="s-fps" aria-label="Frame rate"></select>
         </div>
         <div class="group selectable" id="g-shutter">
-            <span class="label">SHUTTER</span><span class="value" id="v-shutter"></span>
+            <span class="label" id="l-shutter"></span><span class="value" id="v-shutter"></span>
             <select id="s-shutter" aria-label="Shutter angle"></select>
         </div>
         <div class="group" id="g-exp">
-            <span class="label">EXP</span><span class="value" id="v-exp"></span>
+            <span class="label" id="l-exp"></span><span class="value" id="v-exp"></span>
         </div>
         <div class="group selectable" id="g-iso">
-            <span class="label">EI</span><span class="value" id="v-iso"></span>
+            <span class="label" id="l-iso"></span><span class="value" id="v-iso"></span>
             <select id="s-iso" aria-label="ISO"></select>
         </div>
         <div class="group selectable" id="g-wb">
-            <span class="label">WB</span><span class="value" id="v-wb"></span>
+            <span class="label" id="l-wb"></span><span class="value" id="v-wb"></span>
             <select id="s-wb" aria-label="White balance"></select>
         </div>
         <div class="group selectable" id="g-res">
-            <span class="label">RES</span><span class="value" id="v-res"></span>
+            <span class="label" id="l-res"></span><span class="value" id="v-res"></span>
             <span class="badge hidden" id="v-hdr-badge"></span>
             <select id="s-res" aria-label="Resolution"></select>
         </div>
@@ -601,8 +601,21 @@
     }
 
     function warningBoxes() {
+        // F-211: the framebuffer GUI's DROP/SYNC boxes are a fixed on-camera
+        // size and only ever show the word, never a count -- there is no
+        // room. The browser has room. drop_frame_count is already published
+        // (populate_values(), aliases tc_hole_count) and unused here; show
+        // it. frames_off_sync has no equivalent published count today -- the
+        // frame-difference number that latches it (redis_listener.py) is
+        // only logged, never set_value()'d -- so SYNC stays word-only rather
+        // than this display change quietly growing into new live-path
+        // telemetry with no Pi available to verify it.
         const out = [];
-        if (V.drop_frame_latched) { out.push(box('DROP', 'drop')); }
+        if (V.drop_frame_latched) {
+            const count = Number(V.drop_frame_count) || 0;
+            const label = count > 0 ? `DROP ${count}` : 'DROP';
+            out.push(box(label, 'drop' + (label.length > 4 ? ' small' : '')));
+        }
         if (V.frames_off_sync) { out.push(box('SYNC', 'sync')); }
         return out;
     }
@@ -773,6 +786,17 @@
     window.addEventListener('resize', sizePreview);
 
     function renderTopRow() {
+        // Labels come from populate_values() too (fps_label, shutter_label,
+        // exposure_label, iso_label, wb_label, res_label) -- the web GUI has
+        // no state of its own, so these render whatever the HDMI GUI sent
+        // instead of a second hardcoded copy of the same six words (F-257).
+        text('l-fps', V.fps_label);
+        text('l-shutter', V.shutter_label);
+        text('l-exp', V.exposure_label);
+        text('l-iso', V.iso_label);
+        text('l-wb', V.wb_label);
+        text('l-res', V.res_label);
+
         text('v-fps', V.fps);
         text('v-shutter', V.shutter_speed);
         text('v-exp', V.exposure_time);

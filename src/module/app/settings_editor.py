@@ -31,9 +31,11 @@ from module.config_loader import (
     _apply_settings_defaults,
     load_settings,
     strip_jsonc,
+    DEFAULT_SETTINGS_PATH,
 )
 from module.app import boot_config, raw_files
 from module.jsonc_edit import apply_updates
+from module.web_api_settings import web_api_settings
 
 logger = logging.getLogger(__name__)
 
@@ -44,10 +46,7 @@ settings_editor_bp = Blueprint(
     template_folder="templates",
 )
 
-# Every settings.jsonc caller in this codebase hardcodes this same absolute
-# path (src/main.py:51, cinepi_multi.py:27, cinepi_controller.py:27,
-# wifi_hotspot.py:37) -- it is a live-hardware constant, not configurable.
-SETTINGS_FILE = "/home/pi/cinemate/settings.jsonc"
+SETTINGS_FILE = DEFAULT_SETTINGS_PATH
 
 # Shipped template (resources/settings/settings_default.jsonc) -- used as
 # (a) the GET /api/settings fallback when the live file is missing, and
@@ -124,7 +123,8 @@ def _public_method_names(obj) -> set[str]:
 
 @settings_editor_bp.route("/")
 def index():
-    return render_template("settings_editor.html")
+    settings = current_app.config["SETTINGS"]
+    return render_template("settings_editor.html", api_token=web_api_settings(settings).get("token") or "")
 
 
 @settings_editor_bp.route("/api/settings", methods=["GET"])
@@ -362,14 +362,7 @@ def put_config_txt():
         return jsonify({"ok": False, "message": str(exc)}), 400
 
     try:
-        fd, tmp_path = tempfile.mkstemp(dir=str(dest.parent), prefix=".settings-editor-", suffix=".config.txt.tmp")
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as fp:
-                fp.write(new_text)
-            os.replace(tmp_path, dest)
-        except Exception:
-            os.unlink(tmp_path)
-            raise
+        boot_config.write_config_txt(new_text)
     except OSError as exc:
         logger.exception("Failed to write %s", dest)
         return jsonify({"ok": False, "message": f"Could not write {dest}: {exc}"}), 500

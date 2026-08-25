@@ -20,14 +20,21 @@
             src: url("{{ url_for('static', filename='DIN2014-Bold.ttf') }}") format('truetype');
         }
 
+        /* Every token below except --box-text and --sync-tint (no Python
+               counterpart -- see src/module/design_tokens.py's own docstring
+               for why) is generated from src/module/design_tokens.py's
+               DESIGN_TOKENS dict, name-for-name (underscores -> hyphens).
+               tools/design_token_diff.py --strict fails if this block drifts
+               from that source. */
         :root {
-            --label: rgb(136, 136, 136);   /* simple_gui label grey   */
-            --value: rgb(249, 249, 249);   /* simple_gui value white  */
-            --box: rgb(136, 136, 136);     /* status-box grey         */
+            --label: rgb(136, 136, 136);
+            --box: rgb(136, 136, 136);
+            --value: rgb(249, 249, 249);
+            --guide: rgb(249, 249, 249);
             --box-text: #000;
-            --zoom-hi: rgb(255, 221, 0);   /* ZOOM_HIGHLIGHT_COLOR    */
-            --drop: rgb(120, 40, 180);     /* DROP_WARNING_COLOR      */
-            --sync: rgb(255, 0, 255);      /* SYNC_WARNING_COLOR      */
+            --zoom-hi: rgb(255, 221, 0);
+            --drop: rgb(120, 40, 180);
+            --sync: rgb(255, 0, 255);
             --log-badge: rgb(205, 205, 205);
             --hdr-badge: rgb(205, 205, 205);
             --sdr-badge: rgb(120, 120, 120);
@@ -36,7 +43,6 @@
             --sync-tint: lightgreen;
             --lock: rgb(255, 0, 0);
             --voltage: rgb(218, 149, 77);
-            --guide: rgb(249, 249, 249);
 
             --gap: clamp(8px, 1.4vw, 22px);
             --value-size: clamp(1.05rem, 2.05vw, 1.9rem);

@@ -3,7 +3,6 @@ import signal
 import subprocess
 import re
 import logging
-import json
 import time
 from pathlib import Path
 from typing import Any, Dict, List

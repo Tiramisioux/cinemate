@@ -58,6 +58,7 @@ in parallel with each other; none can break a camera.
 | **B10** | Close the ledger | B10.2 only | low | 35 + all 201 dispositioned | 7 |
 | **B11** | Field-reported defects | B11.1/2/8 | mixed | 11 | 8 |
 | **B13** | Docs vs. the code that shipped | B13.1/2 verify | none | 8 | 7 |
+| **B14** | Format drive from the RAW pane (feature) | **yes** — destructive | medium | — (feature) | 3 |
 
 ---
 
@@ -416,6 +417,49 @@ work and wants the installer open beside the document.
 0 — necessary, not sufficient, since both already pass today. **The real verification for
 B13.1 and B13.2 is a clean install performed by following the document**, not the script.
 That is the only test that distinguishes a doc that is accurate from one that merely parses.
+
+---
+
+### B14 · Format drive from the settings editor's RAW pane
+
+*(The first batch that is a feature, not remediation — operator-requested 2026-08-25. It
+follows B11's precedent of tracking post-audit field work here so one ledger holds
+everything. Closes no findings.)*
+
+The RAW files pane browses, downloads and deletes takes but cannot prepare a drive — yet
+the format backend has existed all along: `SSDMonitor.format_drive()` (unmount escalation,
+repartition when the partition underfills the disk, `mkfs.{ext4,exfat,ntfs}` labelled
+`RAW`, remount), the CLI `format` command, and `_test/test_ssd_monitor_format.py`. B14 is
+the missing UI wiring only.
+
+**Full implementation spec: [`FORMAT-DRIVE-PLAN.md`](FORMAT-DRIVE-PLAN.md) in this
+directory** — a verbatim copy of the operator-side handoff plan, written against `dev`
+(`13ab022`). The operator-settled decisions, recorded once here:
+
+- Dispatch goes **through the command executor** (`handle_received_data("format <fs>")`
+  — the same serialised path CLI/serial/web-API share), accepting that the dispatch lock
+  reports `busy` to other commands for the format's duration. Formatting is exclusive by
+  nature.
+- The browser surface allows destructive operations **ungated**, exactly like the pane's
+  existing clip delete; the existing danger confirm modal is the are-you-sure step.
+  `api.py`'s `allow_destructive` gate keeps protecting headless IoT clients and is
+  untouched.
+- exFAT is the default selection; ext4 and NTFS equally selectable. Active drive only.
+  Refuse-while-recording (409) as a sequencing interlock, not a permissions gate.
+
+| commit | change | closes |
+|---|---|---|
+| B14.1 | `POST /settings-editor/api/raw/format` — validates the filesystem, refuses while recording, dispatches `format <fs>` via `COMMAND_EXECUTOR`, then verifies against the remounted filesystem (the dispatcher ignores handler return values, so the active mount is the only truthful status source; accept `ntfs`/`ntfs3`/`fuseblk` as NTFS) | — |
+| B14.2 | The control on the active storage card: exFAT-default select + `Format…` danger button + confirm modal naming device, size and filesystem; ES5 to match the template | — |
+| B14.3 | `_test/test_settings_editor_format.py` — blueprint tests off `test_web_api_blueprint.py`'s pattern (real `CommandExecutor`, mocked controller, patched `storage_summary`) | — |
+
+**Branch:** `feature/raw-pane-format-drive` off `dev`; merge only after hardware passes.
+
+**Verification:** desk — the full `_test/` suite green. Hardware — **destructive, needs a
+scratch drive**: all three filesystems format and remount with label `RAW` at full
+capacity; a format attempt during recording is refused; `busy` during an in-flight format
+recovers afterwards; no mount fight with `storage-automount.service` after the remount.
+The checklist with exact steps is in the plan file.
 
 ---
 

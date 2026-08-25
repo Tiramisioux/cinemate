@@ -12,15 +12,16 @@ import re
 from module.utils import Utils
 from module.redis_controller import ParameterKey
 from module.dynamic_resolution import dynamic_resolution_indicator_active
+from module.design_tokens import DESIGN_TOKENS
 import json
 import re
 
 RECORDER_VU_REDIS_KEY    = "audio_vu"
-WAV_RECORDING_COLOR      = (210, 210, 210)   # bright grey while WAV is actively recording
-DROP_WARNING_COLOR = (120, 40, 180)
-SYNC_WARNING_COLOR = (255, 0, 255)
-SYNC_FLASH_COLOR = "magenta"
-RESOLUTION_SWITCHING_COLOR = (176, 176, 176)
+WAV_RECORDING_COLOR      = DESIGN_TOKENS["wav_rec"]   # bright grey while WAV is actively recording
+DROP_WARNING_COLOR = DESIGN_TOKENS["drop"]
+SYNC_WARNING_COLOR = DESIGN_TOKENS["sync"]
+SYNC_FLASH_COLOR = "magenta"  # PIL named colour -- no CSS/design-token counterpart
+RESOLUTION_SWITCHING_COLOR = DESIGN_TOKENS["res_switching"]
 PREVIEW_PADDING_X = 94
 PREVIEW_PADDING_Y = 50
 PREVIEW_GUIDE_OUTLINE_WIDTH = 2
@@ -36,12 +37,12 @@ TOP_ROW_INTRA_GAP = 12      # label → value gap inside one group
 # (e.g. imx477) the class is self-evident and no badge is drawn.
 HDR_BADGE_GAP = 12          # RES value → badge gap
 HDR_BADGE_FONT_SIZE = 24    # 1920-ref badge text size
-SDR_BADGE_COLOR = (120, 120, 120)   # dark grey
-HDR_BADGE_COLOR = (205, 205, 205)   # lighter grey
+SDR_BADGE_COLOR = DESIGN_TOKENS["sdr_badge"]   # dark grey
+HDR_BADGE_COLOR = DESIGN_TOKENS["hdr_badge"]   # lighter grey
 # CineMate Log per-cam badge (drawn via _draw_status_box, like DROP/SYNC).
 # Grey, distinct from both the plain CAM box grey (136,136,136) and the
 # DROP/SYNC alarm colours -- this is a calm mode indicator, not a warning.
-LOG_BADGE_COLOR = (205, 205, 205)
+LOG_BADGE_COLOR = DESIGN_TOKENS["log_badge"]
 
 
 def _to_int(value, default=None):
@@ -513,8 +514,8 @@ class SimpleGUI(threading.Thread):
             "aspect": {"normal": "black", "inverse": "black"},
             "color_temp_libcamera": {"normal": (136,136,136), "inverse": "black"},
             # "shutter_a_sync_mode": {"normal": "white", "inverse": "black"},
-            "lock": {"normal": (255, 0, 0, 255), "inverse": "black"},
-            "low_voltage": {"normal": (218,149,77), "inverse": "black"},
+            "lock": {"normal": DESIGN_TOKENS["lock"] + (255,), "inverse": "black"},
+            "low_voltage": {"normal": DESIGN_TOKENS["voltage"], "inverse": "black"},
         
             "ram_label": {"normal": (136,136,136), "inverse": "black"},
             "ram_load": {"normal": (249,249,249), "inverse": "black"},
@@ -1214,8 +1215,8 @@ class SimpleGUI(threading.Thread):
         box_font   = self._get_font("bold", 26)
 
         BOX_H, BOX_W  = 40, 60
-        BOX_COLOR     = (136, 136, 136)
-        ZOOM_HIGHLIGHT_COLOR = (255, 221, 0)
+        BOX_COLOR     = DESIGN_TOKENS["box"]
+        ZOOM_HIGHLIGHT_COLOR = DESIGN_TOKENS["zoom_hi"]
         TEXT_COLOR    = (0,   0,   0)
 
         label_x       = 19
@@ -1378,7 +1379,7 @@ class SimpleGUI(threading.Thread):
         box_font   = self._get_font("bold", 24)
 
         BOX_H, BOX_W  = 40, 60
-        BOX_COLOR     = (136, 136, 136)
+        BOX_COLOR     = DESIGN_TOKENS["box"]
         TEXT_COLOR    = (0,   0,   0)
 
         box_pad_x     = self.disp_width - 15 - BOX_W
@@ -1796,7 +1797,7 @@ class SimpleGUI(threading.Thread):
         shrink_x = disp_width / 1920
         shrink_y = disp_height / 1080
         
-        line_color = (249, 249, 249) if values.get("zoom_is_default", True) else (255, 221, 0)
+        line_color = DESIGN_TOKENS["guide"] if values.get("zoom_is_default", True) else DESIGN_TOKENS["zoom_hi"]
 
         # Match CinePi._build_args() and DrmPreview::Show(): place the preview
         # window from the raw aspect, then fit the visible lores/anamorphic

@@ -1,31 +1,37 @@
 #!/usr/bin/env python3
-"""Compare the HDMI GUI's colour constants against the web GUI's CSS custom properties.
+"""Compare the shared design-token source against the HDMI GUI and the web GUI's CSS.
 
 Written for S08 of the CineMate system review, to put a number on F-007 and to give
-ADR-001 option B a concrete cost. It is also the check option B would need to *stay* true:
-right now the two sides are kept in agreement by a comment, and this review has watched
-three hand-sync comments drift.
+ADR-001 option B a concrete cost. ADR-001 step 1 (system-review/decisions/
+ADR-001-gui-harmonization.md section 6) then closed the gap this check measured:
+src/module/design_tokens.py is now the one place these colours are written down, and
+simple_gui.py's module-level *_COLOR constants (plus the two CSS-linked self.colors
+entries, "lock" and "voltage") read from it instead of repeating the literal. This check's
+job changed accordingly, from "do two hand-maintained lists still agree" to "does the CSS
+still say what the shared source says" -- the CSS block is not itself generated (it is
+still hand-written in template.html), so this is what keeps it honest.
 
-Two sources:
-  Python  src/module/simple_gui.py   module-level *_COLOR constants + the self.colors table
-  CSS     src/module/app/templates/template.html   :root { --token: rgb(...) }
-
-Pairing is by the comment the CSS already carries -- `--drop: rgb(120,40,180); /*
-DROP_WARNING_COLOR */` names its own counterpart. Tokens with no such comment are matched
-by value, and reported separately so an unannotated match is never mistaken for a
-declared one.
+Three sources:
+  Shared  src/module/design_tokens.py           DESIGN_TOKENS = {name: (r, g, b), ...}
+  Python  src/module/simple_gui.py               module-level *_COLOR constants + the
+                                                   self.colors table (informational only
+                                                   now -- most of it predates the shared
+                                                   source and was never in its scope)
+  CSS     src/module/app/templates/template.html  :root { --token: rgb(...) }
 
 Usage:
     python3 tools/design_token_diff.py [--repo PATH] [--strict]
 
-    --strict   exit 1 if any annotated pair disagrees.
+    --strict   exit 1 if the CSS disagrees with design_tokens.py on any shared token,
+               or a shared token is missing from the CSS entirely.
 
 Limitations, stated because the review's convention requires it:
   * Only literal `rgb(r, g, b)` and `(r, g, b)` tuples are compared. Named CSS colours
-    (`lightgreen`), hex (`#000`) and Python string colours (`"magenta"`) are listed as
+    (`lightgreen`), hex (`#000`) and Python string colours (`"magenta"`) have no shared-
+    token equivalent by design (module docstring explains why) and are listed as
     uncomparable rather than silently skipped.
-  * A value match is not proof of intent. Two tokens can share a value by coincidence;
-    the annotated pairs are the contract, the rest is a hint.
+  * The informational Python/CSS value-matching section below predates the shared source
+    and is a hint, not a contract -- design_tokens.py is the contract now.
 """
 
 from __future__ import annotations
@@ -38,6 +44,39 @@ from pathlib import Path
 
 SIMPLE_GUI = "src/module/simple_gui.py"
 TEMPLATE = "src/module/app/templates/template.html"
+
+
+def shared_tokens(repo: Path) -> dict[str, tuple]:
+    sys.path.insert(0, str(repo / "src"))
+    from module.design_tokens import DESIGN_TOKENS  # noqa: E402
+
+    return dict(DESIGN_TOKENS)
+
+
+def check_shared_tokens(repo: Path) -> tuple[list[str], bool]:
+    """Every design_tokens.py entry must have an exact, present CSS counterpart."""
+    tokens = shared_tokens(repo)
+    css = {name: raw for name, raw, _comment in css_tokens(repo)}
+
+    lines = [f"design_tokens.py entries: {len(tokens)}"]
+    ok = True
+    for name, rgb in tokens.items():
+        css_name = name.replace("_", "-")
+        raw = css.get(css_name)
+        if raw is None:
+            lines.append(f"  --{css_name:<15} MISSING from template.html's :root block")
+            ok = False
+            continue
+        m = RGB_RE.search(raw)
+        css_val = tuple(int(g) for g in m.groups()) if m else None
+        if css_val == rgb:
+            lines.append(f"  --{css_name:<15} {str(rgb):<18} == design_tokens.py")
+        else:
+            lines.append(
+                f"  --{css_name:<15} {str(css_val):<18} != design_tokens.py {rgb}   <-- DRIFTED"
+            )
+            ok = False
+    return lines, ok
 
 
 def python_colors(repo: Path) -> tuple[dict[str, tuple], dict[str, str]]:
@@ -114,6 +153,12 @@ def main() -> int:
     args = ap.parse_args()
     repo = args.repo.resolve()
 
+    shared_lines, shared_ok = check_shared_tokens(repo)
+    print("SHARED SOURCE -- design_tokens.py vs template.html's :root block:")
+    for line in shared_lines:
+        print(line)
+    print()
+
     py_rgb, py_other = python_colors(repo)
     table = python_table_colors(repo)
     tokens = [t for t in css_tokens(repo) if RGB_RE.search(t[1]) or "#" in t[1]
@@ -188,10 +233,10 @@ def main() -> int:
           "%d not comparable."
           % (len(colour_tokens), len(annotated), bad, len(dangling),
              len(unannotated), matched, len(uncomparable)))
-    print("Sync mechanism today is a comment. Three hand-sync comments in this review have")
-    print("drifted (F-260, F-183, F-220). See F-007 and ADR-001 option B.")
+    print("The 14 shared tokens above are generated from a single source (design_tokens.py)")
+    print("as of ADR-001 step 1; everything below predates that and is informational.")
 
-    if args.strict and (bad or dangling):
+    if args.strict and not shared_ok:
         return 1
     return 0
 

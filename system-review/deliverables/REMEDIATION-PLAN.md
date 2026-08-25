@@ -351,12 +351,12 @@ Two of these are broken-in-the-field, not cosmetic. Do those first.
 | commit | change | closes |
 |---|---|---|
 | B11.1 | **`config.txt` cannot be saved at all.** `mkstemp(dir="/boot/firmware")` as `User=pi` fails before writing a byte. Stage the temp file somewhere pi-writable and move it into place with a narrow privileged step — the installer's `configure_sudoers()` is the existing mechanism, and #138's `sudo -n` is the existing idiom. **Do not widen sudo to a general file write**; scope it to this one path | **F-288** |
-| B11.2 | **`cinepi.local` does not resolve.** Nothing in either repo installs or enables `avahi-daemon`; a repo-wide grep for `avahi`/`mdns`/`nss-mdns` returns zero. Install and enable it, and fix `/etc/hosts` alongside `hostnamectl`, which currently leaves the old `127.0.1.1` entry | **F-289** |
+| B11.2 | **`cinepi.local` does not resolve.** Nothing in either repo installs or enables `avahi-daemon`; a repo-wide grep for `avahi`/`mdns`/`nss-mdns` returns zero. Install and enable it, and fix `/etc/hosts` alongside `hostnamectl`, which currently leaves the old `127.0.1.1` entry | F-289 **(reopened — see F-308; the hardening landed but did not reproduce the original mechanism)** |
 | B11.3 | **The preview reconnects too early after a resolution change.** Move the `reload_stream` emit off `_notify_resolution_change` (fired at initiation, `cinepi_controller.py:1749`) and onto the completion path — `_schedule_resolution_switch_complete` is the very next line. The client machinery at `template.html:914-925` is already correct and needs no change | **F-290** |
-| B11.4 | **"Restart Cinemate" does nothing.** Root-cause first, fix second — `journalctl -u cinemate-autostart -f` while pressing it. Candidates in the finding. If `os.execl` from a Timer thread is the cause, restarting via systemd rather than in-process is the more honest fix | F-291 |
-| B11.5 | **The GPIO panes, rebuilt to the operator's column model.** Inputs: GPIO · action (**including `press`, currently missing from the dropdown**) · method, renamed to something a user recognises, with several actions per pin adding aligned method rows. Outputs: the same shape, section renamed **"GPIO out"**, which makes multiple tally pins expressible for the first time. This subsumes the 3-button/2-switch ceiling — rebuild the pane so the banner at `settings_editor.html:1730` can be deleted rather than reworded | **F-293**, **F-294**, F-292 |
+| B11.4 | **"Restart Cinemate" does nothing.** Root-cause first, fix second — `journalctl -u cinemate-autostart -f` while pressing it. Candidates in the finding. If `os.execl` from a Timer thread is the cause, restarting via systemd rather than in-process is the more honest fix | F-291, **F-307** |
+| B11.5 | **The GPIO panes, rebuilt to the operator's column model.** Inputs: GPIO · action (**including `press`, currently missing from the dropdown**) · method, renamed to something a user recognises, with several actions per pin adding aligned method rows. Outputs: the same shape, section renamed **"GPIO out"**, which makes multiple tally pins expressible for the first time. This subsumes the 3-button/2-switch ceiling — rebuild the pane so the banner at `settings_editor.html:1730` can be deleted rather than reworded | **F-293**, **F-294**, F-292, **F-309**, **F-310**, **F-311**, **F-312** |
 | B11.6 | **Raw pane:** move "download selected" and "delete selected" below the list they act on | F-295 |
-| B11.7 | **The web GUIs scale rather than reflow.** The top row stays the top row; the left and right grey-box columns stay columns at any width. Characterise the phone hamburger failure before touching it — it is currently only "does not really work" | **F-297**, F-296 |
+| B11.7 | **The web GUIs scale rather than reflow.** The top row stays the top row; the left and right grey-box columns stay columns at any width. Characterise the phone hamburger failure before touching it — it is currently only "does not really work" | **F-297**, F-296, F-313 |
 | B11.8 | **Make the per-resolution fps ceiling correctable and editable, sensor value as default.** `image_capture.custom_modes` already carries `fps_max` per mode and is already read — it just `append`s instead of merging, so it can add a mode but never correct a detected one. Make a matching entry **override** that mode's `fps_max`, give the block a real schema, and **surface it in the settings editor** so the ceiling can be found by trial without editing code. Prefer sparse overrides with detected values shown as placeholders — materialising the whole table goes stale on every sensor swap, and this project swaps sensors. `choose_resolution()` needs no new logic: it keeps selecting on `fps_max`, now the effective value | **F-298** |
 
 **Why B11.8 is shaped this way, stated once so it is not re-litigated:** `fps_max` comes from
@@ -375,6 +375,34 @@ design pass before code. B11.8 should follow B9.5, which touches the same settin
 for the same reason B10.2 does. B11.3 needs a resolution change with the web GUI open. B11.5,
 B11.6 and B11.7 need a browser at several widths, and a phone for the hamburger. B11.8 needs a
 recording at either side of the threshold. Everything else is desk work.
+
+**Outcomes, and corrections found while implementing (F-307..F-313) — added after B11 landed.**
+Two of eight desk diagnoses did not survive contact with hardware:
+
+- **F-307** corrects B11.4: the restart bug was two compounding bugs, not one (the button never
+  called the backend, and the `os.execl()` re-exec it would have called was itself broken since
+  the listening socket survives `exec()`). Both fixed. A third, narrower, pre-existing systemd
+  race (`Conflicts=getty@tty1.service` vs the console-handoff script) was hit during verification
+  and is tracked as F-283's residual, not new scope here.
+- **F-308** corrects B11.2: on the real test device, avahi-daemon was already installed and
+  running before B11.2's install step ran. The hardening (explicit install + idempotent
+  `/etc/hosts` fix) still landed as a defensive measure, but it is **not a confirmed fix for the
+  original field report** — see F-289's "reopened" note in the B11.2 row above. Root-causing the
+  operator's original failure needs more information (which client OS/network/image originally
+  saw `cinepi.local` fail to resolve) than this ledger currently has.
+- **F-309, F-310, F-312** were found while rebuilding the GPIO panes for B11.5 (two silent-save
+  bugs in `hardware_controls`/`quad_rotary_controller`/`hardware_outputs`, and an uncaught
+  `TypeError` from dead mockup script left in `settings_editor.html`) and fixed in the same
+  commit.
+- **F-311** (`applyActionToSlot()` defaulting a `"None"`/absent gesture action to `method='rec'`)
+  was also fixed in B11.5 — verified directly against `dev`: `applyActionToSlot()` now defaults
+  `method` to `''` ("No action"), with a comment citing this exact defect.
+- **F-313** is a citation correction, not a code defect: B11.7's own brief cited "ADR-001's
+  constraint 2 and PI-009's result" for the web GUI's scale-vs-reflow question, and that citation
+  doesn't hold up (ADR-001 C2/PI-009 is about DRM plane composition on the Pi's local HDMI output,
+  unrelated to CSS layout strategy for a remote browser client). The real precedent —
+  `simple_gui.py`'s own `shrink_x`/`shrink_y` scaling — was used for the actual fix instead, so
+  nothing downstream repeats the bad citation. No further action.
 
 ---
 

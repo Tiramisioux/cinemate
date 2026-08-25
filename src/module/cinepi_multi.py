@@ -10,6 +10,7 @@ from typing import List
 import os
 import shutil
 
+from module import rp1_regime
 from module.config_loader import load_settings, DEFAULT_SETTINGS_PATH
 from module.redis_controller import ParameterKey, decode_log_encode_request, Event
 from module.framebuffer import Framebuffer
@@ -511,7 +512,17 @@ class CinePiProcess(Thread):
         # * Skip --tuning-file on Pi 4.  All other models keep it. *
         if not self._is_pi4():
             args += ["--tuning-file", tune]
-            
+
+        # ── PiSP pixel-rate ceiling. libcamera's bound is a compile-time
+        # constant, so a build made for the rp1-overclock overlay advertises
+        # rates a stock-clock board cannot drain — and overrunning it corrupts
+        # wide modes with nothing logged. Decide here, where the overlay switch
+        # is visible, and pass the answer down. None on boards with no RP1.
+        max_pixel_rate = rp1_regime.pixel_rate()
+        if max_pixel_rate is not None:
+            args += ["--max-pixel-rate", str(max_pixel_rate)]
+
+
         zoom_init = self.redis_controller.get_value(ParameterKey.ZOOM.value)
 
         if zoom_init and float(zoom_init) != 1.0:

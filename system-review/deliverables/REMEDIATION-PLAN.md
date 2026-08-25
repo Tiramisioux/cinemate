@@ -355,13 +355,15 @@ Two of these are broken-in-the-field, not cosmetic. Do those first.
 | B11.5 | **The GPIO panes, rebuilt to the operator's column model.** Inputs: GPIO · action (**including `press`, currently missing from the dropdown**) · method, renamed to something a user recognises, with several actions per pin adding aligned method rows. Outputs: the same shape, section renamed **"GPIO out"**, which makes multiple tally pins expressible for the first time. This subsumes the 3-button/2-switch ceiling — rebuild the pane so the banner at `settings_editor.html:1730` can be deleted rather than reworded | **F-293**, **F-294**, F-292 |
 | B11.6 | **Raw pane:** move "download selected" and "delete selected" below the list they act on | F-295 |
 | B11.7 | **The web GUIs scale rather than reflow.** The top row stays the top row; the left and right grey-box columns stay columns at any width. Characterise the phone hamburger failure before touching it — it is currently only "does not really work" | **F-297**, F-296 |
-| B11.8 | **`resolution_threshold_fps`.** Replace the sensor-derived switch point with a user-set value in `settings.jsonc`: above it dynamic resolution drops 4K→2K, below it restores. Schema entry, a default, and `choose_resolution()` reading it instead of inferring from `fps_max`. Keep `fps_max` as the *eligibility* filter — a mode the sensor cannot run must still be excluded — and let the threshold decide only where the switch happens | **F-298** |
+| B11.8 | **Make the per-resolution fps ceiling correctable, sensor value as default.** `image_capture.custom_modes` already carries `fps_max` per mode and is already read — it just `append`s instead of merging, so it can add a mode but never correct a detected one. Make an entry matching an existing (width, height, bit_depth, hdr) **override** that mode's `fps_max` rather than duplicating it, and give the block a real schema. `choose_resolution()` then needs no new logic: it keeps selecting on `fps_max`, which is now the effective value | **F-298** |
 
-**Why the threshold change is right, stated once so it is not re-litigated:** `fps_max` comes
-from `cinepi-raw --list-cameras`. It is a property of the *sensor*, and it says nothing about
-what this storage and this CPU sustain in practice. The operator can only find the real number
-by trial. B11.8 does not add a knob for its own sake; it moves a decision from a table that
-cannot know the answer to a person who can measure it.
+**Why B11.8 is shaped this way, stated once so it is not re-litigated:** `fps_max` comes from
+`cinepi-raw --list-cameras`. It is an electrical property of the *sensor* and says nothing about
+what this storage and this CPU sustain — only trial can find that. But the fix is **not** a new
+global threshold: the switching mechanic is already right, it is simply reading a number nobody
+can correct. Per-resolution overrides with the sensor value as default keep the existing
+selection logic untouched, keep behaviour identical until someone overrides something, and let
+4K be tuned down without touching 2K. `custom_modes` already proves the shape.
 
 **Ordering:** B11.1 and B11.2 are broken-in-the-field — do them first and land them alone.
 B11.3 and B11.4 are small and independent. B11.5 and B11.7 are the real work and want a

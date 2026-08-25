@@ -38,6 +38,7 @@ The same commands can be sent wirelessly over the camera's Wi-Fi hotspot — see
 | `set wb [<Kelvin>]`                        | int or none       | `set wb 5600`                           | Set white balance or cycle active WB steps      |
 | `inc wb` / `dec wb`                        | -              |                                 | Step white balance; `arrays.wb.free_increment` (100 K default) in free mode |
 | `set resolution [<mode>]`                  | int or none       | `set resolution 2`                      | Apply or cycle sensor mode                      |
+| `set dynamic resolution [0/1]`             | 0/1 or none       | `set dynamic resolution 0`              | Enable/disable/toggle dynamic resolution substitution |
 | `set anamorphic factor [<float>]`          | float or none     | `set anamorphic factor 1.33`            | Set or toggle anamorphic stretch                |
 | `set zoom [<float>]`                       | float or none     | `set zoom 2`                            | Change digital zoom; omit to cycle              |
 | `inc zoom` / `dec zoom`                    | -              |                              | Step preview zoom factor                        |

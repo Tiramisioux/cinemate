@@ -86,6 +86,52 @@ class SSDMonitorFormatTests(unittest.TestCase):
         self.assertEqual(calls[0], ["blkid", "-p", "-s", "TYPE", "-o", "value", "/dev/sda2"])
         self.assertEqual(calls[1], ["blkid", "-c", "/dev/null", "-s", "TYPE", "-o", "value", "/dev/sda2"])
 
+    def test_fresh_probe_skips_a_successful_but_empty_result(self):
+        """F-284. Unprivileged (User=pi): `blkid -p` raises on a raw device it
+        cannot open, correctly falls through. `-c /dev/null` needs the same
+        raw access and does not have it either, but on this hardware it
+        exits 0 with empty stdout instead of raising -- reproduced 10/10 on
+        a whole-disk (no partition table) NVMe volume. An empty-but-
+        successful result must not be treated as final; the cache-backed
+        query one step further, which actually has the label, must still
+        run.
+        """
+        calls = []
+
+        def fake_check_output(cmd, **_kwargs):
+            calls.append(cmd)
+            if "-p" in cmd:
+                raise CalledProcessError(2, cmd)
+            if "-c" in cmd:
+                return ""
+            return "RAW\n"
+
+        with patch.object(ssd_monitor.subprocess, "check_output", side_effect=fake_check_output):
+            value = ssd_monitor.SSDMonitor._blkid_value("/dev/nvme0n1", "LABEL", fresh=True)
+
+        self.assertEqual(value, "RAW")
+        self.assertEqual(len(calls), 3)
+        self.assertEqual(calls[2], ["blkid", "-s", "LABEL", "-o", "value", "/dev/nvme0n1"])
+
+    def test_find_raw_device_logs_when_blkid_enumeration_fails(self):
+        monitor = self._monitor()
+
+        with (
+            patch.object(
+                ssd_monitor.subprocess,
+                "check_output",
+                side_effect=CalledProcessError(2, ["blkid"]),
+            ),
+            self.assertLogs(level="WARNING") as logs,
+        ):
+            result = monitor._find_raw_device()
+
+        self.assertIsNone(result)
+        self.assertTrue(
+            any("blkid enumeration failed" in message for message in logs.output),
+            logs.output,
+        )
+
 
 class SSDMonitorStorageErrorTests(unittest.TestCase):
     """A corrupt clip dir on a dirty NTFS volume must not unmount a healthy drive.

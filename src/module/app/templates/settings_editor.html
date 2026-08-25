@@ -421,6 +421,15 @@
   }
   .filepath svg{ opacity:.6; flex:none; }
 
+  /* Detected-modes readout on the Boot config page. */
+  .mode-table{ width:100%; border-collapse:collapse; font-size:12.5px; margin:2px 0 6px; }
+  .mode-table th{
+    font-weight:700; color: var(--muted); padding:3px 0; text-align:left;
+    border-bottom:1px solid var(--line); font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+  }
+  .mode-table td{ padding:3px 0; border-bottom:1px solid var(--line); color: var(--ink); }
+  .mode-table tr:last-child td{ border-bottom:none; }
+
   .upload-control{ display:flex; align-items:center; gap:10px; }
   .upload-thumb{
     width:52px; height:34px; border-radius: var(--radius); border:1px dashed var(--line);
@@ -2061,6 +2070,14 @@
           </div>
         </div>
 
+        <div class="card" id="cfg-modes-card" data-search="detected modes list-cameras resolution bit depth frame rate fps sensor live">
+          <div class="card-main">
+            <label class="card-label">Detected modes</label>
+            <p class="card-help">What <code class="mono">cinepi-raw --list-cameras</code> reports for the sensor that is actually attached right now — not what the selections above will produce after a reboot. Frame rates are the ceiling for each mode.</p>
+            <div id="cfg-modes-list"><p class="card-help">Loading detected modes…</p></div>
+          </div>
+        </div>
+
         <div class="card" data-search="rp1 overclock frame rate clock io die">
           <div class="card-main">
             <label class="card-label" for="cfg-rp1">RP1 overclock</label>
@@ -2673,10 +2690,64 @@
     if (!any) list.innerHTML = '<p class="card-help">No detected sensor modes yet -- reconnect the camera or check cinepi-raw --list-cameras.</p>';
   }
 
+  /* Read-only mirror of the same detection on the Boot config page. The
+     selects there describe what the *next* boot will load; this says what is
+     attached right now, which is the question you actually have when the two
+     disagree. Shares one fetch with the fps-ceiling pane. */
+  function renderConfigModes(sensors){
+    var host = document.getElementById('cfg-modes-list');
+    if (!host) return;
+    var cameras = Object.keys(sensors || {});
+    if (!cameras.length) {
+      host.innerHTML = '<p class="card-help">No camera detected. Check the ribbon and <code class="mono">cinepi-raw --list-cameras</code>.</p>';
+      return;
+    }
+    host.innerHTML = '';
+    cameras.forEach(function(camera){
+      var modes = sensors[camera] || [];
+      var head = document.createElement('p');
+      head.className = 'card-help';
+      head.style.marginTop = '10px';
+      head.innerHTML = '<strong>' + camera + '</strong> — ' + modes.length + ' mode' + (modes.length === 1 ? '' : 's');
+      host.appendChild(head);
+
+      if (!modes.length) return;
+      var table = document.createElement('table');
+      table.className = 'mode-table';
+      table.style.width = '100%';
+      table.style.borderCollapse = 'collapse';
+      table.innerHTML = '<thead><tr>'
+        + '<th style="text-align:left">Resolution</th>'
+        + '<th style="text-align:left">Depth</th>'
+        + '<th style="text-align:right">Max fps</th>'
+        + '</tr></thead>';
+      var body = document.createElement('tbody');
+      modes.forEach(function(mode){
+        var tr = document.createElement('tr');
+        var depth = (mode.bit_depth || '?') + '-bit' + (mode.hdr ? ' HDR' : '');
+        /* fps_max_effective is what cinepi-raw launches with; it differs from
+           fps_max_detected only where a custom_modes ceiling overrides it.
+           Showing just one number would hide that the override exists. */
+        var eff = mode.fps_max_effective, det = mode.fps_max_detected;
+        var fps = (eff === null || eff === undefined) ? '—' : String(eff);
+        if (det !== null && det !== undefined && det !== eff) {
+          fps = eff + ' <span class="card-help" style="opacity:.7">(capped from ' + det + ')</span>';
+        }
+        tr.innerHTML = '<td>' + (mode.width || '?') + '×' + (mode.height || '?') + '</td>'
+          + '<td>' + depth + '</td>'
+          + '<td style="text-align:right">' + fps + '</td>';
+        body.appendChild(tr);
+      });
+      table.appendChild(body);
+      host.appendChild(table);
+    });
+  }
+
   function loadFpsCeilings(){
     return fetch('/settings-editor/api/sensor-modes').then(function(r){ return r.json(); }).then(function(res){
       if (!res.ok) return;
       renderFpsCeilings(res.sensors || {});
+      renderConfigModes(res.sensors || {});
     }).catch(function(){ /* non-fatal -- the rest of the page still works */ });
   }
 

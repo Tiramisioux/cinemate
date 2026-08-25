@@ -362,14 +362,7 @@ def put_config_txt():
         return jsonify({"ok": False, "message": str(exc)}), 400
 
     try:
-        fd, tmp_path = tempfile.mkstemp(dir=str(dest.parent), prefix=".settings-editor-", suffix=".config.txt.tmp")
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as fp:
-                fp.write(new_text)
-            os.replace(tmp_path, dest)
-        except Exception:
-            os.unlink(tmp_path)
-            raise
+        boot_config.write_config_txt(new_text)
     except OSError as exc:
         logger.exception("Failed to write %s", dest)
         return jsonify({"ok": False, "message": f"Could not write {dest}: {exc}"}), 500

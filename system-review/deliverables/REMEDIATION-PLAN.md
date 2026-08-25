@@ -56,6 +56,7 @@ in parallel with each other; none can break a camera.
 | **B8** | Structural (deferred) | mixed | high | — | — |
 | **B9** | One fact, one home | B9.1/B9.4 | medium | 28 | 7 |
 | **B10** | Close the ledger | B10.2 only | low | 35 + all 201 dispositioned | 7 |
+| **B11** | Field-reported defects | B11.1/2/8 | mixed | 11 | 8 |
 
 ---
 
@@ -332,6 +333,44 @@ the risk**, promote any that document a deletion's reasoning before removing it.
 removals — nine packages that nothing imports is a static claim, and PI-012 already showed
 once that an apt-installed dependency can be reached without a Python import. **Test the
 package removals on a clean install, not on a running camera.**
+
+---
+
+### B11 · Field-reported defects — the first batch that did not come from the audit
+
+**Every other batch in this plan came from reading. B11 came from using the camera.** Eleven
+findings (F-288..F-298) reported by the operator from a running system, investigated against
+`dev` at `13ab022`. That provenance matters: the audit read 20k lines of Python and never
+found F-288, because a permission error on a root-owned directory is invisible to static
+analysis — the same lesson `lessons/what-the-pi-taught-us.md` records for the Pi session.
+
+Two of these are broken-in-the-field, not cosmetic. Do those first.
+
+| commit | change | closes |
+|---|---|---|
+| B11.1 | **`config.txt` cannot be saved at all.** `mkstemp(dir="/boot/firmware")` as `User=pi` fails before writing a byte. Stage the temp file somewhere pi-writable and move it into place with a narrow privileged step — the installer's `configure_sudoers()` is the existing mechanism, and #138's `sudo -n` is the existing idiom. **Do not widen sudo to a general file write**; scope it to this one path | **F-288** |
+| B11.2 | **`cinepi.local` does not resolve.** Nothing in either repo installs or enables `avahi-daemon`; a repo-wide grep for `avahi`/`mdns`/`nss-mdns` returns zero. Install and enable it, and fix `/etc/hosts` alongside `hostnamectl`, which currently leaves the old `127.0.1.1` entry | **F-289** |
+| B11.3 | **The preview reconnects too early after a resolution change.** Move the `reload_stream` emit off `_notify_resolution_change` (fired at initiation, `cinepi_controller.py:1749`) and onto the completion path — `_schedule_resolution_switch_complete` is the very next line. The client machinery at `template.html:914-925` is already correct and needs no change | **F-290** |
+| B11.4 | **"Restart Cinemate" does nothing.** Root-cause first, fix second — `journalctl -u cinemate-autostart -f` while pressing it. Candidates in the finding. If `os.execl` from a Timer thread is the cause, restarting via systemd rather than in-process is the more honest fix | F-291 |
+| B11.5 | **The GPIO panes, rebuilt to the operator's column model.** Inputs: GPIO · action (**including `press`, currently missing from the dropdown**) · method, renamed to something a user recognises, with several actions per pin adding aligned method rows. Outputs: the same shape, section renamed **"GPIO out"**, which makes multiple tally pins expressible for the first time. This subsumes the 3-button/2-switch ceiling — rebuild the pane so the banner at `settings_editor.html:1730` can be deleted rather than reworded | **F-293**, **F-294**, F-292 |
+| B11.6 | **Raw pane:** move "download selected" and "delete selected" below the list they act on | F-295 |
+| B11.7 | **The web GUIs scale rather than reflow.** The top row stays the top row; the left and right grey-box columns stay columns at any width. Characterise the phone hamburger failure before touching it — it is currently only "does not really work" | **F-297**, F-296 |
+| B11.8 | **`resolution_threshold_fps`.** Replace the sensor-derived switch point with a user-set value in `settings.jsonc`: above it dynamic resolution drops 4K→2K, below it restores. Schema entry, a default, and `choose_resolution()` reading it instead of inferring from `fps_max`. Keep `fps_max` as the *eligibility* filter — a mode the sensor cannot run must still be excluded — and let the threshold decide only where the switch happens | **F-298** |
+
+**Why the threshold change is right, stated once so it is not re-litigated:** `fps_max` comes
+from `cinepi-raw --list-cameras`. It is a property of the *sensor*, and it says nothing about
+what this storage and this CPU sustain in practice. The operator can only find the real number
+by trial. B11.8 does not add a knob for its own sake; it moves a decision from a table that
+cannot know the answer to a person who can measure it.
+
+**Ordering:** B11.1 and B11.2 are broken-in-the-field — do them first and land them alone.
+B11.3 and B11.4 are small and independent. B11.5 and B11.7 are the real work and want a
+design pass before code. B11.8 should follow B9.5, which touches the same settings plumbing.
+
+**Verification:** B11.1 and B11.2 need a real install — **a clean one, not a running camera**,
+for the same reason B10.2 does. B11.3 needs a resolution change with the web GUI open. B11.5,
+B11.6 and B11.7 need a browser at several widths, and a phone for the hamburger. B11.8 needs a
+recording at either side of the threshold. Everything else is desk work.
 
 ---
 

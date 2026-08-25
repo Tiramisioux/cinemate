@@ -10,12 +10,39 @@ from module.redis_controller import ParameterKey
 from module import parameters
 
 class AnalogControls(threading.Thread):
+    # F-285: how far the smoothed ADC reading must move (in raw 0-1023
+    # counts) from its value at the last dispatch before this thread will
+    # dispatch again. Without this, the debounce below (new_X != last_X)
+    # compares against this thread's OWN last-dispatched value only -- it
+    # has no notion of "did anything else change this parameter since
+    # then". A stationary pot's next poll cycle can still recompute a
+    # value that differs from that stale cache (a step-boundary flip from
+    # ordinary ADC noise, or simply because last_X predates an external
+    # `set` command entirely) and silently re-dispatch the pot's own
+    # resting position, clobbering an explicit command a caller just
+    # issued -- reproduced on hardware (F-285): an isolated `set iso 6400`
+    # with the pot merely sitting live read back as the pot's position a
+    # second later. Gating on genuine physical movement instead of on a
+    # mapped-value comparison closes this regardless of the mechanism.
+    MOVEMENT_THRESHOLD_RAW = 3
+
     def __init__(self, cinepi_controller, redis_controller, iso_pot=None, shutter_a_pot=None, fps_pot=None, wb_pot=None, iso_steps=None, shutter_a_steps=None, fps_steps=None, wb_steps=None,
-                 hdr_threshold_low_pot=None, hdr_threshold_high_pot=None, hdr_blend_pot=None, hdr_gain_adder_pot=None):
+                 hdr_threshold_low_pot=None, hdr_threshold_high_pot=None, hdr_blend_pot=None, hdr_gain_adder_pot=None,
+                 dispatch_lock=None):
         threading.Thread.__init__(self)
 
         self.cinepi_controller = cinepi_controller
         self.redis_controller = redis_controller
+        # F-268/F-285: CommandExecutor._dispatch_lock, so this thread's
+        # writes serialise against explicit CLI/serial/HTTP commands
+        # instead of racing them unlocked. Optional (defaults to no
+        # locking) so tests can construct this class without a real
+        # CommandExecutor.
+        self.dispatch_lock = dispatch_lock
+        # F-285: smoothed ADC reading at the time of each parameter's last
+        # dispatch, keyed by parameter name. Absent key = never dispatched
+        # (the movement gate always allows a first dispatch).
+        self._last_dispatch_raw = {}
 
         self.adc = ADC()
 
@@ -162,10 +189,34 @@ class AnalogControls(threading.Thread):
         Keeps the pot's target-method name sourced from the same registry
         as every other consumer, instead of a hardcoded literal call, so a
         renamed setter only needs updating in one place.
+
+        F-268/F-285: takes the same dispatch lock CommandExecutor uses for
+        CLI/serial/HTTP commands, if one was provided, so this write does
+        not interleave with an explicit command's write.
         """
         param = parameters.get(name, source="analog_controls")
         setter = param.setter if param is not None else f"set_{name}"
-        getattr(self.cinepi_controller, setter)(value)
+        if self.dispatch_lock is not None:
+            with self.dispatch_lock:
+                getattr(self.cinepi_controller, setter)(value)
+        else:
+            getattr(self.cinepi_controller, setter)(value)
+
+    def _has_moved(self, name: str, current_raw) -> bool:
+        """F-285: True if *name*'s smoothed ADC reading has moved beyond
+        MOVEMENT_THRESHOLD_RAW since its last dispatch, or has never
+        dispatched. Gates re-dispatch on genuine physical movement rather
+        than on whether the mapped step value differs from this thread's
+        own stale cache -- see the class docstring comment above."""
+        if current_raw is None:
+            return False
+        last_raw = self._last_dispatch_raw.get(name)
+        if last_raw is None:
+            return True
+        return abs(current_raw - last_raw) >= self.MOVEMENT_THRESHOLD_RAW
+
+    def _record_dispatch(self, name: str, current_raw):
+        self._last_dispatch_raw[name] = current_raw
 
     def update_parameters(self):
         try:
@@ -177,12 +228,14 @@ class AnalogControls(threading.Thread):
                 new_iso = self.map_adc_to_steps(smoothed_iso, 
                                                 steps=self._get_steps('iso'))
 
-                if new_iso is not None and new_iso != self.last_iso:
+                if (new_iso is not None and new_iso != self.last_iso
+                        and self._has_moved('iso', smoothed_iso)):
                     logging.info(
                         f"ISO changed → ADC raw={iso_read}, smoothed={smoothed_iso}, mapped={new_iso}"
                     )
                     self._dispatch('iso', new_iso)
                     self.last_iso = new_iso
+                    self._record_dispatch('iso', smoothed_iso)
 
             # SHUTTER ANGLE
             if self.shutter_a_pot is not None:
@@ -202,7 +255,8 @@ class AnalogControls(threading.Thread):
 
                 if (new_shutter_a is not None and
                         (self.last_shutter_a is None or
-                        abs(new_shutter_a - self.last_shutter_a) >= MIN_DEG_DELTA)):
+                        abs(new_shutter_a - self.last_shutter_a) >= MIN_DEG_DELTA) and
+                        self._has_moved('shutter_a', smoothed_shutter)):
 
                     logging.info(
                         f"Shutter Angle changed → "
@@ -211,6 +265,7 @@ class AnalogControls(threading.Thread):
                     )
                     self._dispatch('shutter_a_nom', new_shutter_a)
                     self.last_shutter_a = new_shutter_a
+                    self._record_dispatch('shutter_a', smoothed_shutter)
 
             # FPS
             if self.fps_pot is not None:
@@ -221,12 +276,14 @@ class AnalogControls(threading.Thread):
                                 steps=self._get_steps('fps'))
 
 
-                if new_fps is not None and new_fps != self.last_fps:
+                if (new_fps is not None and new_fps != self.last_fps
+                        and self._has_moved('fps', smoothed_fps)):
                     logging.info(
                         f"FPS changed → ADC raw={fps_read}, smoothed={smoothed_fps}, mapped={new_fps}"
                     )
                     self._dispatch('fps', new_fps)
                     self.last_fps = new_fps
+                    self._record_dispatch('fps', smoothed_fps)
 
             # WHITE BALANCE
             if self.wb_pot is not None:
@@ -237,54 +294,68 @@ class AnalogControls(threading.Thread):
                                steps=self._get_steps('wb'))
 
 
-                if new_wb is not None and new_wb != self.last_wb:
+                if (new_wb is not None and new_wb != self.last_wb
+                        and self._has_moved('wb', smoothed_wb)):
                     logging.info(
                         f"White Balance changed → ADC raw={wb_read}, smoothed={smoothed_wb}, mapped={new_wb}K"
                     )
                     self.redis_controller.set_value(ParameterKey.WB_USER.value, new_wb)
                     self._dispatch('wb', new_wb)
                     self.last_wb = new_wb
+                    self._record_dispatch('wb', smoothed_wb)
 
             # ── imx585 ClearHDR knobs ────────────────────────────────────
             if self.hdr_threshold_low_pot is not None:
                 raw = self.adc.read(self.hdr_threshold_low_pot)
                 self.hdr_threshold_low_buffer.append(raw)
-                new_low = self.map_adc_to_steps(self.moving_average(self.hdr_threshold_low_buffer),
+                smoothed_hdr_threshold_low = self.moving_average(self.hdr_threshold_low_buffer)
+                new_low = self.map_adc_to_steps(smoothed_hdr_threshold_low,
                                                 steps=self._get_steps('hdr_threshold_low'))
-                if new_low is not None and new_low != self.last_hdr_threshold_low:
+                if (new_low is not None and new_low != self.last_hdr_threshold_low
+                        and self._has_moved('hdr_threshold_low', smoothed_hdr_threshold_low)):
                     logging.info(f"HDR threshold low changed → ADC raw={raw}, mapped={new_low}")
                     self._dispatch('hdr_threshold_low', new_low)
                     self.last_hdr_threshold_low = new_low
+                    self._record_dispatch('hdr_threshold_low', smoothed_hdr_threshold_low)
 
             if self.hdr_threshold_high_pot is not None:
                 raw = self.adc.read(self.hdr_threshold_high_pot)
                 self.hdr_threshold_high_buffer.append(raw)
-                new_high = self.map_adc_to_steps(self.moving_average(self.hdr_threshold_high_buffer),
+                smoothed_hdr_threshold_high = self.moving_average(self.hdr_threshold_high_buffer)
+                new_high = self.map_adc_to_steps(smoothed_hdr_threshold_high,
                                                  steps=self._get_steps('hdr_threshold_high'))
-                if new_high is not None and new_high != self.last_hdr_threshold_high:
+                if (new_high is not None and new_high != self.last_hdr_threshold_high
+                        and self._has_moved('hdr_threshold_high', smoothed_hdr_threshold_high)):
                     logging.info(f"HDR threshold high changed → ADC raw={raw}, mapped={new_high}")
                     self._dispatch('hdr_threshold_high', new_high)
                     self.last_hdr_threshold_high = new_high
+                    self._record_dispatch('hdr_threshold_high', smoothed_hdr_threshold_high)
 
             if self.hdr_blend_pot is not None:
                 raw = self.adc.read(self.hdr_blend_pot)
                 self.hdr_blend_buffer.append(raw)
-                new_blend = self.map_adc_to_steps(self.moving_average(self.hdr_blend_buffer),
+                smoothed_hdr_blend = self.moving_average(self.hdr_blend_buffer)
+                new_blend = self.map_adc_to_steps(smoothed_hdr_blend,
                                                   steps=self._get_steps('hdr_blend'))
-                if new_blend is not None and new_blend != self.last_hdr_blend:
+                if (new_blend is not None and new_blend != self.last_hdr_blend
+                        and self._has_moved('hdr_blend', smoothed_hdr_blend)):
                     logging.info(f"HDR blend changed → ADC raw={raw}, mapped={new_blend}")
                     self._dispatch('hdr_blend', new_blend)
                     self.last_hdr_blend = new_blend
+                    self._record_dispatch('hdr_blend', smoothed_hdr_blend)
 
             if self.hdr_gain_adder_pot is not None:
                 raw = self.adc.read(self.hdr_gain_adder_pot)
                 self.hdr_gain_adder_buffer.append(raw)
-                new_adder = self.map_adc_to_steps(self.moving_average(self.hdr_gain_adder_buffer),
+                smoothed_hdr_gain_adder = self.moving_average(self.hdr_gain_adder_buffer)
+                new_adder = self.map_adc_to_steps(smoothed_hdr_gain_adder,
                                                   steps=self._get_steps('hdr_gain_adder'))
-                if new_adder is not None and new_adder != self.last_hdr_gain_adder:
+                if (new_adder is not None and new_adder != self.last_hdr_gain_adder
+                        and self._has_moved('hdr_gain_adder', smoothed_hdr_gain_adder)):
                     logging.info(f"HDR gain adder changed → ADC raw={raw}, mapped={new_adder}")
                     self._dispatch('hdr_gain_adder', new_adder)
                     self.last_hdr_gain_adder = new_adder
+                    self._record_dispatch('hdr_gain_adder', smoothed_hdr_gain_adder)
 
         except Exception as e:
             logging.error(f"Error occurred while updating parameters: {e}\n{traceback.format_exc()}")

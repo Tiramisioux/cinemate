@@ -845,6 +845,9 @@ def run_application(args, log_queue):
         hdr_threshold_high_pot=pot_channel_by_setting.get("hdr_threshold_high", "None"),
         hdr_blend_pot=pot_channel_by_setting.get("hdr_blend", "None"),
         hdr_gain_adder_pot=pot_channel_by_setting.get("hdr_gain_adder", "None"),
+        # F-268/F-285: share CommandExecutor's dispatch lock so pot writes
+        # serialise against explicit CLI/serial/HTTP commands.
+        dispatch_lock=command_executor._dispatch_lock,
     )
 
     # Mount CFE card if not mounted

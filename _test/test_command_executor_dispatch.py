@@ -102,6 +102,57 @@ class DispatchReturnValueTests(unittest.TestCase):
         controller.set_shutter_a.assert_not_called()
 
 
+class ReadBackConfirmationTests(unittest.TestCase):
+    """F-285. A command can execute without error and still not stick --
+    most concretely, AnalogControls' pot thread overwriting the same
+    parameter moments later. handle_received_data must read back what
+    actually took effect for parameters with a registered redis key,
+    instead of unconditionally reporting success."""
+
+    def make_executor_with_live_redis(self, values=None):
+        controller = mock.MagicMock()
+        # A plain MagicMock attribute has no real __name__ the way a bound
+        # method does (cinepi_controller.set_iso.__name__ == "set_iso" in
+        # production) -- set it explicitly so _confirm_or_ok's lookup
+        # against the real parameters.REGISTRY resolves the same way.
+        controller.set_iso.__name__ = "set_iso"
+        redis_values = dict(values or {})
+        controller.redis_controller.get_value.side_effect = (
+            lambda key, default=None: redis_values.get(key, default)
+        )
+
+        def set_iso(value):
+            # Simulate a setter that genuinely writes through, so a normal
+            # (uncontended) command still round-trips correctly.
+            redis_values["iso"] = value
+
+        controller.set_iso.side_effect = set_iso
+        app = mock.MagicMock()
+        return CommandExecutor(controller, app), controller, redis_values
+
+    def test_value_that_sticks_reports_plain_ok(self):
+        executor, controller, _ = self.make_executor_with_live_redis()
+        self.assertEqual(executor.handle_received_data("set iso 800"), (True, ""))
+
+    def test_value_overwritten_before_readback_is_reported_not_hidden(self):
+        executor, controller, redis_values = self.make_executor_with_live_redis()
+
+        # The setter "succeeds" (no exception), but something else -- the
+        # pot thread in the real system -- has already overwritten the
+        # live value by the time handle_received_data reads it back.
+        controller.set_iso.side_effect = lambda value: redis_values.__setitem__("iso", 800)
+
+        ok, message = executor.handle_received_data("set iso 6400")
+
+        self.assertTrue(ok)  # the command itself did not error
+        self.assertIn("6400", message)
+        self.assertIn("800", message)
+
+    def test_command_with_no_registered_parameter_is_unaffected(self):
+        executor, controller, _ = self.make_executor_with_live_redis()
+        self.assertEqual(executor.handle_received_data("set resolution 2"), (True, ""))
+
+
 class DispatchLockTests(unittest.TestCase):
     """F13/section 7: dispatch is serialised behind a single lock, and a
     timed-out acquire must surface as ('busy'), not raise or hang."""

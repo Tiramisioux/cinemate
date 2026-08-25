@@ -1,12 +1,21 @@
 # Import required modules
-import threading  
-import time  
-import datetime 
-import os  
-import logging  
+import threading
+import time
+import datetime
+import os
+import logging
 import contextlib
 import select
 import sys
+
+from module import parameters
+
+# F-285: reverse index from a registered setter's method name (e.g.
+# "set_iso") back to its Parameter, so handle_received_data can read back
+# what a command actually set without a per-command mapping. Built once;
+# parameters.REGISTRY does not change at runtime.
+_PARAM_BY_SETTER = {p.setter: p for p in parameters.REGISTRY.values()}
+
 
 class CommandExecutor(threading.Thread):
     def __init__(self, cinepi_controller, cinepi_app, storage_preroll=None):
@@ -185,6 +194,36 @@ class CommandExecutor(threading.Thread):
         except ValueError:
             return False
 
+    def _confirm_or_ok(self, func, requested_value):
+        """F-285: read back what *func* actually set, if it maps to a
+        registered Parameter, instead of blindly reporting success.
+
+        A command can execute without error and still not stick -- most
+        concretely, AnalogControls' pot thread writing the same parameter
+        moments later. Without this, the API told the operator "ok" while
+        the live value was already something else, with nothing anywhere
+        recording the mismatch. Commands with no matching Parameter (most
+        of the table) are unaffected: this only ever adds information, and
+        only for parameters that have a canonical redis key to check.
+        """
+        param = _PARAM_BY_SETTER.get(getattr(func, "__name__", None))
+        if param is None:
+            return True, ""
+
+        actual = self.cinepi_controller.redis_controller.get_value(param.redis_key)
+        try:
+            matches = float(actual) == float(requested_value)
+        except (TypeError, ValueError):
+            matches = str(actual) == str(requested_value)
+
+        if matches:
+            return True, ""
+
+        logging.warning(
+            f"set {param.name} {requested_value} did not stick; live value is {actual!r}"
+        )
+        return True, f"requested {requested_value}, live value is {actual}"
+
     def handle_received_data(self, data):
         """Handles received input data and executes corresponding commands.
 
@@ -233,8 +272,9 @@ class CommandExecutor(threading.Thread):
                     arg = command_args[0]
                     for expected_type in filter(None, expected_types):
                         if self.is_valid_arg(arg, expected_type):
-                            func(expected_type(arg))  # Call function with converted argument
-                            return True, ""
+                            converted = expected_type(arg)
+                            func(converted)  # Call function with converted argument
+                            return self._confirm_or_ok(func, converted)
                     logging.info(f"Invalid argument type for command '{command_name}'")
                     return False, "bad argument"
                 else:
@@ -244,8 +284,9 @@ class CommandExecutor(threading.Thread):
                 if command_args:  # Arguments provided
                     arg = command_args[0]
                     if self.is_valid_arg(arg, expected_types):
-                        func(expected_types(arg))  # Call function with converted argument
-                        return True, ""
+                        converted = expected_types(arg)
+                        func(converted)  # Call function with converted argument
+                        return self._confirm_or_ok(func, converted)
                     logging.info(f"Invalid argument type for command '{command_name}'")
                     return False, "bad argument"
                 else:

@@ -27,8 +27,12 @@ The browser UI exposes:
 - live stats such as free space, write speed, buffered frames, buffer size, CPU load, RAM load,
   temperature, and exposure time
 
-The layout is responsive rather than a fixed canvas: on a narrow or portrait screen the status
-rail collapses into a horizontal strip above the preview instead of a fixed side column.
+The layout scales rather than reflows: the same three-column arrangement (left status rail,
+preview, right status rail) holds at any width or orientation, with the rails and top-row text
+shrinking smoothly on a narrow or portrait screen instead of restacking into a different layout
+— the same model `simple_gui.py` already uses for the HDMI GUI, which scales its entire
+1920×1080-authored layout by a single `disp_width/1920`, `disp_height/1080` ratio and never
+restacks either.
 
 !!! note ""
 

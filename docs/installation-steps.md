@@ -43,6 +43,38 @@ SENSOR_MODEL=imx585_mono CAM_PORT=cam1 ./cinemate-install.sh
 
 After installing, reboot the system and Cinemate should start automatically.
 
+## Dependency files
+
+Python dependencies are split across four files:
+
+| File | Installed by | Contents |
+|---|---|---|
+| `requirements.txt` | the installer, always; CI's `test` job | Portable runtime deps — `flask`, `flask_socketio`, `numpy`, `pillow`, `psutil`, `pyserial`, `pyudev`, `redis`, `termcolor` |
+| `requirements-hardware.txt` | the installer, always | GPIO/I²C-only deps — `gpiozero`, `lgpio` (**not optional**, despite `INSTALL_ALT_GPIO_BACKEND`), the Adafruit/Grove libraries, `evdev`, `smbus2` |
+| `requirements-dev.txt` | not installed on the Pi | Local dev tooling |
+| `docs/requirements-docs.txt` | CI's docs build only | `mkdocs` and its plugins, kept out of the runtime set entirely |
+
+`versions.env` pairs a `cinemate` revision with the `cinepi-raw` revision the installer should
+clone alongside it (`CINEMATE_REPO_REF` / `CINEPI_RAW_REPO_REF`). Both are empty by default,
+which clones each repo's current default branch — set them to pin an install to a known-good
+pair of commits.
+
+## Continuous integration
+
+Both repositories run checks on every pull request — not required reading to install Cinemate,
+but this is what has to stay green if you're contributing a change:
+
+- **cinemate** (`.github/workflows/checks.yml`): `lint` (ruff), `test` (pytest, `_test/`),
+  `shell` (shellcheck), and `drift` — four stdlib-only checks
+  (`docs_drift_check.py`, `design_token_diff.py`, `gui_field_extract.py`, `redis_key_diff.py`),
+  none of which needs hardware.
+- **cinepi-raw** (`.github/workflows/checks.yml`): unit tests (the project's seven `meson test`
+  targets) and shellcheck.
+
+A ratchet (for example `redis_key_diff.py --max-unreferenced`) only ever tightens as the
+codebase improves — raising one to make a failing check pass is never the fix; fix what it
+caught instead.
+
 ## Manual install
 
 Start from a fresh Raspberry Pi OS Lite (Bookworm) install before continuing.

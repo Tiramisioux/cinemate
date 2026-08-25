@@ -493,7 +493,50 @@
           "type": "array"
         },
         "rotary_encoders": {
-          "type": "array"
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "clk_pin": {
+                "type": "integer"
+              },
+              "dt_pin": {
+                "type": "integer"
+              },
+              "button_pin": {
+                "type": "integer"
+              },
+              "pull_up": {
+                "type": "boolean"
+              },
+              "debounce_time": {
+                "type": "number"
+              },
+              "button_actions": {
+                "type": "object",
+                "properties": {
+                  "press_action": { "$ref": "#/definitions/action" },
+                  "single_click_action": { "$ref": "#/definitions/action" },
+                  "double_click_action": { "$ref": "#/definitions/action" },
+                  "triple_click_action": { "$ref": "#/definitions/action" },
+                  "hold_action": { "$ref": "#/definitions/action" }
+                },
+                "additionalProperties": false
+              },
+              "encoder_actions": {
+                "type": "object",
+                "properties": {
+                  "rotate_clockwise": { "$ref": "#/definitions/action" },
+                  "rotate_counterclockwise": { "$ref": "#/definitions/action" }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
         },
         "combined_actions": {
           "type": "array"
@@ -526,7 +569,28 @@
               "default": false
             },
             "encoders": {
-              "type": "object"
+              "type": "object",
+              "description": "Keyed by dial index (\"0\"..\"3\").",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "setting_name": {
+                    "type": "string"
+                  },
+                  "button": {
+                    "type": "object",
+                    "properties": {
+                      "press_action": { "$ref": "#/definitions/action" },
+                      "single_click_action": { "$ref": "#/definitions/action" },
+                      "double_click_action": { "$ref": "#/definitions/action" },
+                      "triple_click_action": { "$ref": "#/definitions/action" },
+                      "hold_action": { "$ref": "#/definitions/action" }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
             }
           },
           "additionalProperties": false
@@ -635,6 +699,27 @@
     }
   },
   "definitions": {
+    "action": {
+      "description": "A gesture action: the string \"None\"/\"none\" for no action, or a controller method call.",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "method": {
+              "type": "string"
+            },
+            "args": {
+              "type": "array"
+            }
+          },
+          "required": ["method"],
+          "additionalProperties": false
+        }
+      ]
+    },
     "cam_config": {
       "type": "object",
       "properties": {

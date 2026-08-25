@@ -63,11 +63,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - name: shellcheck
         run: |
           sudo apt-get update -qq && sudo apt-get install -y shellcheck
           find . -name '*.sh' -not -path './.git/*' -print0 \
             | xargs -0 shellcheck -f gcc
+
+      # F-195: compile-raw.sh and run_cinemate.sh are heredoc bodies inside
+      # cinemate-install.sh, written to the Pi at install time -- the sweep
+      # above only finds committed *.sh files, so these two never got any
+      # lint coverage. They're the two scripts a user actually invokes.
+      - name: shellcheck the scripts the installer generates
+        run: python3 tools/check_generated_scripts.py
 
   drift:
     name: contract drift

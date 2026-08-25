@@ -395,28 +395,24 @@
         }
         #toast.show { opacity: 1; }
 
-        /* ── narrow screens: rails become strips above/below the preview ── */
+        /* ── narrow screens: scale, don't reflow (B11.7 / F-297) ──────────
+           This used to restack #stage into rows and turn each .rail into a
+           horizontal strip above/below the preview at <=900px or portrait
+           -- the one thing that made the web GUI stop resembling the HDMI
+           GUI at narrow widths (simple_gui.py scales its whole 1920x1080
+           layout by a single disp_width/1920, disp_height/1080 ratio; it
+           never restacks). #stage's 3-column grid (left rail | preview |
+           right rail) and .rail's own column direction are the same at
+           every width now -- --gap/--box-size/--box-height/--value-size/
+           --label-size are already clamp()-based (top of this file), so
+           the rails and top-row text shrink smoothly as the viewport
+           narrows instead of the layout restructuring at a breakpoint.
+           minmax(0, 1fr) on #stage's center column absorbs whatever's left
+           for the preview once both rails have taken their (now small)
+           clamped width. Only genuinely orientation-neutral narrow-screen
+           tweaks remain here. */
         @media (max-width: 900px), (orientation: portrait) {
-            #stage {
-                grid-template-columns: minmax(0, 1fr);
-                grid-template-rows: auto minmax(0, 1fr) auto;
-            }
-            .rail {
-                flex-direction: row;
-                flex-wrap: wrap;
-                align-items: flex-start;
-                gap: calc(var(--gap) * 0.6);
-            }
-            .section { flex-direction: row; align-items: center; gap: 0.4em; }
-            .section + .section { margin-top: 0; }
-            .section .section-label { margin-bottom: 0; }
-            .section .boxes { flex-direction: row; }
-            .group.clip .value { max-width: 85vw; }
             #button-row { justify-content: center; }
-            /* margin-top:auto only means "push to the bottom" in a column
-               rail; in the row-wrapped mobile rail it would just tug the
-               meter into leftover cross-space unevenly, so drop it. */
-            #vu-meter { margin-top: 0; padding-top: 0; }
             .vu-track { height: clamp(50px, 12vh, 100px); }
         }
     </style>

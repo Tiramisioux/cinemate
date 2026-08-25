@@ -22,8 +22,9 @@ happened.
 | C2 | DSI / DPI panel as a camera monitor, alongside HDMI | Planned, not implemented; hardware gates unrun | `C2-dsi-display/PLAN.md` (ledger entry) + `DSI-DISPLAY-PLAN.md` (full spec) + `SONNET-PROMPT.md` (kickoff prompt) | `feature/display-connector` off `dev` (cinepi-raw) + `feature/dsi-display` off `dev` (cinemate) — both to be cut |
 | C3 | Start without a camera, and say so in the GUI | Planned, not implemented; hardware gates unrun | `C3-no-camera-start/PLAN.md` (ledger entry) + `NO-CAMERA-START-PLAN.md` (full spec) + `SONNET-PROMPT.md` (kickoff prompt) | `feature/no-camera-start` off `dev` (cinemate only, to be cut) |
 | C4 | Sensor autodetect — probe-and-heal the camera overlay, with on/off toggle, explicit fallback and imx585 mono checkbox | Planned, not implemented; **depends on C3**; go/no-go gate G0 unrun | `C4-sensor-autodetect/PLAN.md` (ledger entry) + `SENSOR-AUTODETECT-PLAN.md` (full spec) + `SONNET-PROMPT.md` (kickoff prompt) | `feature/sensor-autodetect` off `dev` (cinemate only, to be cut after C3 lands) |
+| C5 | Link frequency and RP1 regime — verify what shipped, then make the advertised mode ceilings reflect the live RP1 clock | Feature **shipped to `dev` unverified**; gates G0–G3 unrun; regime fix planned | `C5-link-frequency-regime/PLAN.md` (ledger entry) + `GATES.md` (four gates, predictions stated in advance) | `feature/link-frequency-regime` off `dev` (cinemate only, to be cut after G2) |
 
-Next free step: **C5**.
+Next free step: **C6**.
 
 ## Adding a feature
 
@@ -63,3 +64,12 @@ system-review ledger (`system-review/deliverables/REMEDIATION-PLAN.md` on
   2026-06-16 (`~/Documents/codex/sensor_probe.sh`). It deliberately layers on C3's
   advisory gate and NO CAM fallback — implementation order C3 → C4 is a real dependency,
   not just numbering.
+- **C5** (link frequency / RP1 regime) is the only step so far whose feature **shipped
+  before** it was filed: the RP1 overclock automation, the settings-editor toggle and the
+  database-driven link-frequency menus all merged to `dev` on 2026-08-26 (`d175b2fe`, then
+  PR #154 at `9834b322`) from a Fable session that started as "are my old overclock
+  instructions still valid". It is filed here because that work is entirely unverified on
+  hardware and because it exposed a real defect — advertised mode ceilings ignore the live
+  RP1 clock — which is a feature, not review remediation. Its `GATES.md` supersedes the
+  scratch copy at `development/rp1-overclock/HARDWARE-GATES.md`; that external file was the
+  drafting copy and should not be worked from.

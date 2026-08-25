@@ -64,6 +64,47 @@ sudo reboot
 
 To go back to stock, re-comment the line and reboot.
 
+## Link frequency (imx585)
+
+Raising the RP1 clock lifts the *receiver's* ceiling. The sensor still has to
+be told to send faster, and on the imx585 that is a separate setting: the
+CSI-2 link frequency, a parameter on the sensor's own overlay line.
+
+With the overclock on, the Boot config pane shows a **link frequency** menu
+per port. Each port has its own — cam0 and cam1 are independent.
+
+| Value | Mbps/lane | 4K 12-bit, 4 lanes | 2 lanes |
+|---|---|---|---|
+| 297 MHz | 594 | 20.8 fps | 10.4 fps |
+| 360 MHz | 720 | 25.0 fps | 12.5 fps |
+| 445.5 MHz | 891 | 30.0 fps | 15.0 fps |
+| 594 MHz | 1188 | 41.7 fps | 20.8 fps |
+| **720 MHz** (default) | 1440 | 50.0 fps | 25.0 fps |
+| 891 MHz | 1782 | 60.0 fps | 30.0 fps |
+| 1039.5 MHz | 2079 | 75.0 fps | 37.5 fps |
+
+Halve again for ClearHDR; double for 2×2 binned 1080p. Values and rates come
+from [will127534/imx585-v4l2-driver](https://github.com/will127534/imx585-v4l2-driver).
+
+Anything above 720 MHz only pays off with the overclock active — a stock RP1
+tops out near 43.8 fps at 4K no matter what the sensor sends. Cinemate writes
+the parameter only when it differs from the default:
+
+```
+dtoverlay=imx585,cam0,link-frequency=1039500000
+```
+
+The driver also defines 1188 MHz (2376 Mbps/lane). Cinemate does not offer it
+— the Pi 4 cannot use it and the Pi 5 drops frames.
+
+!!! info "Only the imx585 has this menu"
+    The other supported sensors cannot offer one. The imx283 driver accepts
+    360 and 720 MHz but its overlay exposes no `link-frequency` parameter.
+    The imx477 driver accepts *any* exact multiple of 3 MHz with no upper
+    bound, so there is no list it actually vouches for — only its 450 MHz
+    default is proven. The imx296 has no link-frequency property at all; it
+    derives its own MIPI timing.
+
 !!! note "The mode list does not tell you whether the overclock is on"
     `minPixelProcessingTime` is compiled into libcamera unconditionally on
     Pi 5 / CM5, so `--list-cameras` advertises the faster imx585 modes even

@@ -11,6 +11,11 @@ which already define the canonical shape this module reads and writes:
     dtoverlay=<model>,cam0            # only if cam0 has a sensor selected
     dtoverlay=<model>,cam1[,mono]     # only if cam1 has a sensor selected
 
+imx585 lines may also carry a link-frequency parameter, which is why the
+overlay line is built and parsed rather than string-matched:
+
+    dtoverlay=imx585,cam0,link-frequency=1039500000
+
 Only the "# ---- Camera section ----" ... "# ---- End camera section ----"
 sub-region and the standalone i2c/i2s/spi/audio/RP1-overclock toggle lines
 are ever rewritten -- everything else in the managed block (and everything
@@ -53,7 +58,49 @@ _TOGGLE_LINES = {
 }
 RP1_OVERCLOCK_LINE = "dtoverlay=rp1-overclock"
 
+# CSI-2 link frequency, settable per port as a dtoverlay parameter:
+#   dtoverlay=imx585,cam0,link-frequency=1039500000
+#
+# imx585 only. The other three sensors cannot offer this menu:
+#   imx283  driver accepts 360/720 MHz, but its overlay exposes no
+#           link-frequency override -- would need a patch to the driver fork
+#   imx477  imx477_check_link_freq() accepts *any* exact multiple of 3 MHz
+#           with no upper bound, so there is no list to offer that the driver
+#           would actually vouch for. Only its 450 MHz default is proven.
+#   imx296  no link-frequencies property at all; the sensor derives its own
+#           MIPI timing (1122-1198 Mbps)
+#
+# Values and frame rates from will127534/imx585-v4l2-driver's README, which
+# match link_freqs[] in the driver the installer builds. The driver also
+# defines 1188000000, deliberately not offered: the README reports the Pi 4
+# cannot do it and the Pi 5 drops frames.
+#
+# Anything above the 720 MHz default needs the RP1 overclock to be useful --
+# a stock RP1 caps out around 43.8 fps at 4K no matter what the sensor sends.
+# fps figures are the README's 4K 12-bit 4-lane column; halve for 2-lane, and
+# again for ClearHDR. They are shipped to the settings editor rather than
+# restated in JavaScript -- the ACTION_METHODS catalogue already demonstrates
+# what a second hand-maintained copy costs.
+IMX585_DEFAULT_LINK_FREQUENCY = 720000000
+IMX585_LINK_FREQUENCY_TABLE = [
+    {"hz": 297000000, "mbps_per_lane": 594, "fps_4k_4lane": 20.8},
+    {"hz": 360000000, "mbps_per_lane": 720, "fps_4k_4lane": 25.0},
+    {"hz": 445500000, "mbps_per_lane": 891, "fps_4k_4lane": 30.0},
+    {"hz": 594000000, "mbps_per_lane": 1188, "fps_4k_4lane": 41.7},
+    {"hz": 720000000, "mbps_per_lane": 1440, "fps_4k_4lane": 50.0},
+    {"hz": 891000000, "mbps_per_lane": 1782, "fps_4k_4lane": 60.0},
+    {"hz": 1039500000, "mbps_per_lane": 2079, "fps_4k_4lane": 75.0},
+]
+IMX585_LINK_FREQUENCIES = [entry["hz"] for entry in IMX585_LINK_FREQUENCY_TABLE]
+LINK_FREQUENCY_MODELS = ("imx585", "imx585_mono")
+
+_LINK_FREQUENCY_TOKEN = "link-frequency="
+
 _DTOVERLAY_LINE_RE = re.compile(r"^(#?)dtoverlay=(\S+)\s*$", re.MULTILINE)
+
+
+def supports_link_frequency(model: str) -> bool:
+    return model in LINK_FREQUENCY_MODELS
 
 
 def is_rpi2712_platform() -> bool:
@@ -65,33 +112,58 @@ def is_rpi2712_platform() -> bool:
         return False
 
 
-def overlay_line_for(model: str, port: str) -> str | None:
+def overlay_line_for(model: str, port: str, link_frequency: int | None = None) -> str | None:
     """dtoverlay line text (no leading '#') for *model* on *port*
     ('cam0'/'cam1'), or None for 'none'. Matches concept.html's
-    cfgOverlayLine() exactly."""
+    cfgOverlayLine() exactly, plus the optional link-frequency parameter.
+
+    *link_frequency* is only emitted for a model that supports it and only
+    when it differs from that model's default -- the overlay's own default
+    is the same value, so writing it out adds a number to config.txt that
+    the reader then has to look up to discover means "unchanged"."""
     if model == "none":
         return None
     base = model[:-len("_mono")] if model.endswith("_mono") else model
     mono_suffix = ",mono" if model == "imx585_mono" else ""
-    return f"dtoverlay={base},{port}{mono_suffix}"
+    link_suffix = ""
+    if (
+        supports_link_frequency(model)
+        and link_frequency is not None
+        and link_frequency != IMX585_DEFAULT_LINK_FREQUENCY
+    ):
+        link_suffix = f",{_LINK_FREQUENCY_TOKEN}{link_frequency}"
+    return f"dtoverlay={base},{port}{mono_suffix}{link_suffix}"
 
 
-def _model_from_overlay_value(value: str) -> tuple[str | None, str | None]:
+def _model_from_overlay_value(value: str) -> tuple[str | None, str | None, int | None]:
     """Parse a dtoverlay value (everything after 'dtoverlay=') into
-    (model, port), or (None, None) if it doesn't target cam0/cam1 at all
-    (e.g. vc4-kms-v3d, dwc2, disable-bt, rp1-overclock -- unrelated
-    overlays that also live in this file)."""
+    (model, port, link_frequency), or (None, None, None) if it doesn't target
+    cam0/cam1 at all (e.g. vc4-kms-v3d, dwc2, disable-bt, rp1-overclock --
+    unrelated overlays that also live in this file)."""
     tokens = value.split(",")
     port = "cam0" if "cam0" in tokens else "cam1" if "cam1" in tokens else None
     if port is None:
-        return None, None
+        return None, None, None
     mono = "mono" in tokens
-    model_tokens = [t for t in tokens if t not in ("cam0", "cam1", "mono")]
+
+    link_frequency = None
+    for token in tokens:
+        if token.startswith(_LINK_FREQUENCY_TOKEN):
+            raw = token[len(_LINK_FREQUENCY_TOKEN):]
+            # A hand-edited config.txt can hold anything. An unparseable value
+            # means "we don't know", not zero -- reporting 0 back to the editor
+            # would let a save quietly overwrite whatever the operator wrote.
+            link_frequency = int(raw) if raw.isdigit() else None
+
+    model_tokens = [
+        t for t in tokens
+        if t not in ("cam0", "cam1", "mono") and not t.startswith(_LINK_FREQUENCY_TOKEN)
+    ]
     if not model_tokens:
-        return None, None
+        return None, None, None
     base = model_tokens[0]
     model = f"{base}_mono" if (base == "imx585" and mono) else base
-    return model, port
+    return model, port, link_frequency
 
 
 def default_config_state() -> dict:
@@ -100,12 +172,16 @@ def default_config_state() -> dict:
     return {
         "cam0_sensor": "imx477",
         "cam1_sensor": "none",
+        "cam0_link_frequency": None,
+        "cam1_link_frequency": None,
         "i2c": True,
         "i2s": False,
         "spi": False,
         "audio": True,
         "rp1_overclock": False,
         "rp1_available": is_rpi2712_platform(),
+        "link_frequencies": IMX585_LINK_FREQUENCY_TABLE,
+        "link_frequency_default": IMX585_DEFAULT_LINK_FREQUENCY,
     }
 
 
@@ -130,17 +206,21 @@ def parse_config_txt(full_text: str) -> dict:
     cam_section, _cs, _ce = _extract(block, CAMERA_SECTION_BEGIN, CAMERA_SECTION_END)
     cam0_sensor = "none"
     cam1_sensor = "none"
+    cam0_link_frequency = None
+    cam1_link_frequency = None
     if cam_section:
         for commented, value in _DTOVERLAY_LINE_RE.findall(cam_section):
             if commented:
                 continue
-            model, port = _model_from_overlay_value(value)
+            model, port, link_frequency = _model_from_overlay_value(value)
             if model is None:
                 continue
             if port == "cam0":
                 cam0_sensor = model
+                cam0_link_frequency = link_frequency
             elif port == "cam1":
                 cam1_sensor = model
+                cam1_link_frequency = link_frequency
 
     def _line_on(marker: str) -> bool:
         return bool(re.search(r"^" + re.escape(marker) + r"\s*$", block, re.MULTILINE))
@@ -153,17 +233,32 @@ def parse_config_txt(full_text: str) -> dict:
         "found": True,
         "cam0_sensor": cam0_sensor,
         "cam1_sensor": cam1_sensor,
+        # None means "the overlay default", which is what an absent parameter
+        # means to the driver too -- don't substitute the number here, or a
+        # later save would write it out as if the operator had chosen it.
+        "cam0_link_frequency": cam0_link_frequency,
+        "cam1_link_frequency": cam1_link_frequency,
         "i2c": _line_on(_TOGGLE_LINES["i2c"]),
         "i2s": _line_on(_TOGGLE_LINES["i2s"]),
         "spi": _line_on(_TOGGLE_LINES["spi"]),
         "audio": _line_on(_TOGGLE_LINES["audio"]),
         "rp1_overclock": _line_on(RP1_OVERCLOCK_LINE),
         "rp1_available": rp1_present,
+        "link_frequencies": IMX585_LINK_FREQUENCY_TABLE,
+        "link_frequency_default": IMX585_DEFAULT_LINK_FREQUENCY,
     }
 
 
-def _render_camera_section(cam0_sensor: str, cam1_sensor: str) -> str:
-    lines = [overlay_line_for(cam0_sensor, "cam0"), overlay_line_for(cam1_sensor, "cam1")]
+def _render_camera_section(
+    cam0_sensor: str,
+    cam1_sensor: str,
+    cam0_link_frequency: int | None = None,
+    cam1_link_frequency: int | None = None,
+) -> str:
+    lines = [
+        overlay_line_for(cam0_sensor, "cam0", cam0_link_frequency),
+        overlay_line_for(cam1_sensor, "cam1", cam1_link_frequency),
+    ]
     lines = [l for l in lines if l]
     auto_detect = "1" if lines else "0"
     if not lines:
@@ -178,6 +273,43 @@ def _render_camera_section(cam0_sensor: str, cam1_sensor: str) -> str:
     ])
 
 
+def _validated_link_frequency(value, model: str, port: str) -> int | None:
+    """Coerce an editor-supplied link frequency for *port*, or raise.
+
+    A wrong value here doesn't fail loudly on the Pi -- the sensor either
+    refuses to probe at boot or streams at a rate the receiver can't hold,
+    both of which surface as "the camera stopped working" long after the
+    save. Reject at the point the operator can still see why.
+    """
+    if value is None or value == "":
+        return None
+
+    # An empty port has nothing to configure. The form can still be carrying a
+    # frequency from the sensor that was selected a moment ago; that is not a
+    # mismatch worth failing a save over, since no overlay line is emitted.
+    if model == "none":
+        return None
+
+    try:
+        frequency = int(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{port} link frequency must be a whole number of Hz, got {value!r}")
+
+    if not supports_link_frequency(model):
+        raise ValueError(
+            f"{port} is set to {model}, which has no selectable link frequency. "
+            f"Only {' / '.join(LINK_FREQUENCY_MODELS)} does."
+        )
+
+    if frequency not in IMX585_LINK_FREQUENCIES:
+        allowed = ", ".join(str(f) for f in IMX585_LINK_FREQUENCIES)
+        raise ValueError(
+            f"{frequency} is not a supported imx585 link frequency. Supported: {allowed}."
+        )
+
+    return frequency
+
+
 def apply_config_txt_state(full_text: str, state: dict) -> str:
     """Return *full_text* with only the editor-exposed lines touched inside
     the existing managed block. Raises ValueError if no managed block is
@@ -190,12 +322,15 @@ def apply_config_txt_state(full_text: str, state: dict) -> str:
             f"{CONFIG_TXT_PATH} -- refusing to synthesize one on a live file."
         )
 
+    cam0_sensor = state.get("cam0_sensor", "none")
+    cam1_sensor = state.get("cam1_sensor", "none")
+    cam0_link = _validated_link_frequency(state.get("cam0_link_frequency"), cam0_sensor, "cam0")
+    cam1_link = _validated_link_frequency(state.get("cam1_link_frequency"), cam1_sensor, "cam1")
+
     cam_section, cs, ce = _extract(block, CAMERA_SECTION_BEGIN, CAMERA_SECTION_END)
     new_block = block
     if cam_section is not None:
-        replacement = _render_camera_section(
-            state.get("cam0_sensor", "none"), state.get("cam1_sensor", "none"),
-        )
+        replacement = _render_camera_section(cam0_sensor, cam1_sensor, cam0_link, cam1_link)
         new_block = block[:cs] + replacement + block[ce:]
 
     for key, marker in _TOGGLE_LINES.items():

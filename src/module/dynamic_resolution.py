@@ -156,9 +156,10 @@ def choose_resolution(
         return None
 
     eligible = [
-        (mode, area, mode_fps_max)
+        (mode, area, mode_fps_max, mode_bit_depth)
         for mode, info, area in candidates
         for mode_fps_max in [_as_float(info.get("fps_max"))]
+        for mode_bit_depth in [_as_int(info.get("bit_depth")) or 0]
         if mode_fps_max is not None and mode_fps_max >= fps
     ]
     if not eligible:
@@ -166,21 +167,26 @@ def choose_resolution(
 
     # F-286: two modes can share an area and differ only in bit depth (a
     # sensor's max-resolution 10-bit and 12-bit modes always tie on area,
-    # since both sit at the sensor's ceiling). The (area, fps_max)
-    # tie-break below then prefers whichever is faster -- typically the
-    # lower bit depth -- even when the desired mode itself already
-    # sustains requested_fps and substitution has nothing to do. An
-    # explicit, sustainable request for the desired mode is honored
-    # directly, ahead of the tie-break.
+    # since both sit at the sensor's ceiling). An explicit, sustainable
+    # request for the desired mode is honored directly, ahead of the
+    # tie-break below.
     desired_eligible = next(
         (item for item in eligible if item[0] == desired_mode_int),
         None,
     )
     if desired_eligible is not None:
-        selected_mode, selected_area, selected_fps_max = desired_eligible
+        selected_mode, selected_area, selected_fps_max, _selected_bit_depth = desired_eligible
     else:
-        selected_mode, selected_area, selected_fps_max = max(
-            eligible, key=lambda item: (item[1], item[2])
+        # Genuine downgrade: the desired mode itself cannot sustain
+        # requested_fps, so a substitute must be chosen among candidates
+        # that all already clear the fps bar. Among those, bit depth ranks
+        # above fps_max -- once eligibility is satisfied, any fps_max a
+        # candidate has beyond requested_fps is unused headroom, not
+        # something the request needs, so it should not be traded against
+        # image quality. Ranked: area (resolution) first, then bit depth,
+        # then fps_max only to break a remaining tie.
+        selected_mode, selected_area, selected_fps_max, _selected_bit_depth = max(
+            eligible, key=lambda item: (item[1], item[3], item[2])
         )
     desired_area = _mode_area(desired_info)
     return DynamicResolutionChoice(

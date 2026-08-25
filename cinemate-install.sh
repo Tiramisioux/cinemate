@@ -71,6 +71,14 @@ PYTHON_BIN="${PYTHON_BIN:-/usr/bin/python3}"
 PIP_BIN="${PIP_BIN:-/usr/bin/pip3}"
 
 CINEMATE_REPO_URL="${CINEMATE_REPO_URL:-https://github.com/Tiramisioux/cinemate.git}"
+# Optional pairing manifest: records which cinepi-raw revision goes with which
+# cinemate revision. Sourced before the defaults below so anything it sets
+# wins, and an environment variable still wins over both. Absent is fine --
+# that is the historical behaviour of tracking each default branch.
+_versions_env="$(dirname "${BASH_SOURCE[0]}")/versions.env"
+# shellcheck source=/dev/null
+[[ -f "$_versions_env" ]] && source "$_versions_env"
+
 CINEMATE_REPO_REF="${CINEMATE_REPO_REF:-}"
 CINEPI_RAW_REPO_URL="${CINEPI_RAW_REPO_URL:-https://github.com/Tiramisioux/cinepi-raw.git}"
 CINEPI_RAW_REPO_REF="${CINEPI_RAW_REPO_REF:-}"
@@ -947,18 +955,20 @@ install_python_environment() {
     detail "Upgrading pip tooling"
     run_as_pi "${pip_cmd[@]}" --upgrade pip setuptools wheel
     run_as_pi "$PIP_BIN" uninstall -y --break-system-packages board >/dev/null 2>&1 || true
-    detail "Installing Cinemate Python packages"
-    run_as_pi "${pip_cmd[@]}" \
-        gpiozero \
-        adafruit-blinka adafruit-circuitpython-ssd1306 adafruit-circuitpython-seesaw \
-        luma.oled grove.py pigpio-encoder smbus2 rpi_hardware_pwm \
-        watchdog psutil pillow redis keyboard pyudev numpy termcolor sounddevice \
-        evdev inotify_simple sysv_ipc flask_socketio sugarpie
-
-    if is_true "$INSTALL_ALT_GPIO_BACKEND"; then
-        detail "Installing lgpio Python package"
-        run_as_pi "${pip_cmd[@]}" lgpio
+    # Read the package list from the repo rather than restating it here. The
+    # two lists used to disagree: requirements.txt was read by nothing, and the
+    # literal that lived here had drifted from it in both directions. lgpio is
+    # in requirements-hardware.txt unconditionally -- rpi_gpio_wrapper imports
+    # it at the top of main.py's own import chain, so it is not optional
+    # whatever INSTALL_ALT_GPIO_BACKEND says about the C library below.
+    local req_dir="${CINEMATE_SOURCE_DIR:-$CINEMATE_DIR}"
+    local req="$req_dir/requirements.txt"
+    local req_hw="$req_dir/requirements-hardware.txt"
+    if [[ ! -f "$req" || ! -f "$req_hw" ]]; then
+        die "Missing $req or $req_hw -- cannot install the Python environment."
     fi
+    detail "Installing Cinemate Python packages from requirements files"
+    run_as_pi "${pip_cmd[@]}" -r "$req" -r "$req_hw"
 }
 
 configure_loader_paths() {

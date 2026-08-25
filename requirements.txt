@@ -1,22 +1,24 @@
-rpi-lgpio
-flask
-flask_socketio
-wave
-pyaudio
-sugarpie
-redis
-pyudev
-Pillow
-psutil
-gpiozero
-numpy
-sugarpie
-flask_socketio
-termcolor
-adafruit-blinka
-adafruit-circuitpython-seesaw
-adafruit-circuitpython-ssd1306
-mkdocs-with-pdf==0.9.3
-schemdraw<0.18
-schemdraw-markdown
-pillow
+# Portable runtime dependencies.
+#
+# Everything here installs and imports on any Linux or macOS, which is what
+# makes `pytest _test/` runnable off-hardware. Pi-only packages live in
+# requirements-hardware.txt; the installer installs both.
+#
+# Derived from the actual top-level imports in src/, not maintained by hand:
+#   python3 -c "import ast,pathlib,sys; ..."   (see tools/ and the CI drift job)
+#
+# NOT PINNED YET, deliberately. Reproducible installs need exact versions, but
+# they have to come from `pip freeze` on a verified Raspberry Pi install --
+# pinning to whatever a developer machine happens to resolve risks naming
+# versions with no aarch64 wheel, which would turn a fast install into a long
+# source build or a failure. Structure first, pins when hardware confirms them.
+
+flask                 # module.app, api, settings_editor, main.routes
+flask_socketio        # the browser push channel
+numpy                 # simple_gui VU maths
+pillow                # PIL -- the HDMI GUI's raster path
+psutil                # host stats
+pyserial              # `import serial` in serial_handler
+pyudev                # USB/storage hotplug
+redis                 # the live-state bus
+termcolor             # logger's coloured console formatter

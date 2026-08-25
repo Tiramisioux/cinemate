@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging, threading, redis, psutil, time
 from enum import Enum
 import time, math
+from module.config_loader import as_bool
 
 # ───────────────────────── parameter keys ────────────────────────────
 class ParameterKey(Enum):
@@ -246,14 +247,7 @@ class RedisController:
             return self.cache.get(key, default)
 
     def _storage_preroll_active(self) -> bool:
-        value = self.cache.get(ParameterKey.STORAGE_PREROLL_ACTIVE.value, "0")
-        text = str(value).strip().lower()
-        if text in ("1", "true", "yes", "on"):
-            return True
-        try:
-            return bool(int(text))
-        except (TypeError, ValueError):
-            return False
+        return as_bool(self.cache.get(ParameterKey.STORAGE_PREROLL_ACTIVE.value, "0"))
 
         # ────────────────────────── public helpers ───────────────────────
     def set_value(self, key, value):

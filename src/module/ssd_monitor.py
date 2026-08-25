@@ -27,6 +27,7 @@ except ImportError:
 # project-local imports
 # ----------------------------------------------------------------------
 from module.redis_controller import ParameterKey
+from module.config_loader import as_bool
 from module.storage_profiles import (
     DEFAULT_RECORDER_PROFILE,
     NO_STORAGE_FILESYSTEM,
@@ -1214,10 +1215,7 @@ class SSDMonitor:
         if self._redis:
             try:
                 raw_value = self._redis.get_value(ParameterKey.STORAGE_PREROLL_ACTIVE.value)
-                text = str(raw_value or "0").strip().lower()
-                preroll_active = text in ("1", "true", "yes", "on")
-                if not preroll_active:
-                    preroll_active = bool(int(text))
+                preroll_active = as_bool(raw_value)
             except (TypeError, ValueError, AttributeError):
                 preroll_active = False
         infos = []

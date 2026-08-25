@@ -5,6 +5,7 @@ import datetime
 import json
 from collections import deque
 from module.redis_controller import ParameterKey
+from module.config_loader import as_bool
 
 import os
 import re
@@ -561,17 +562,7 @@ class RedisListener:
         except Exception:
             return False
 
-        if value is None:
-            return False
-
-        text = str(value).strip().lower()
-        if text in ("1", "true", "yes", "on"):
-            return True
-
-        try:
-            return bool(int(text))
-        except (TypeError, ValueError):
-            return False
+        return as_bool(value)
 
     def _determine_expected_fps(self) -> float | None:
         if self.fps_at_rec_start is not None and self.fps_at_rec_start > 0:

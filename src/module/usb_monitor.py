@@ -10,6 +10,8 @@ import shlex
 from collections import deque
 from typing import Optional
 
+from module.config_loader import as_bool
+
 CAPTURE_GAIN_REDIS_KEY = "audio_capture_gain_db"
 
 
@@ -526,13 +528,7 @@ class USBMonitor():
         if isinstance(value, bytes):
             value = value.decode("utf-8", errors="replace")
 
-        text = str(value or "").strip().lower()
-        if text in ("1", "true", "yes", "on"):
-            return True
-        try:
-            return bool(int(text))
-        except (TypeError, ValueError):
-            return False
+        return as_bool(value)
 
     def _cancel_audio_prepare_timer(self) -> None:
         with self.audio_prepare_lock:

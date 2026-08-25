@@ -7,7 +7,9 @@ import shlex  # Add this import
 import warnings
 import logging
 import time
-    
+
+from module.config_loader import as_bool
+
 class ComponentInitializer:
     def __init__(self, cinepi_controller, settings, reserved_output_pins=None):
         self.cinepi_controller = cinepi_controller
@@ -52,7 +54,7 @@ class ComponentInitializer:
             smart_button = SmartButton(
                 cinepi_controller=self.cinepi_controller,
                 pin=pin,
-                pull_up=self._as_bool(button_config.get('pull_up'), default=True),
+                pull_up=as_bool(button_config.get('pull_up'), default=True),
                 debounce_time=float(button_config['debounce_time']),
                 actions=button_config,
                 identifier=str(pin),
@@ -99,7 +101,7 @@ class ComponentInitializer:
         
         # Initialize Rotary Encoders with Buttons
         for encoder_config in controls_cfg.get('rotary_encoders', []):
-            if not self._as_bool(encoder_config.get('enabled', True), default=True):
+            if not as_bool(encoder_config.get('enabled', True), default=True):
                 self.logger.info("Skipping disabled rotary encoder config: %s", encoder_config)
                 continue
 
@@ -134,7 +136,7 @@ class ComponentInitializer:
             smart_button = SmartButton(
                 cinepi_controller=self.cinepi_controller,
                 pin=button_pin,
-                pull_up=self._as_bool(encoder_config.get('pull_up'), default=True),
+                pull_up=as_bool(encoder_config.get('pull_up'), default=True),
                 debounce_time=float(encoder_config.get('debounce_time', 0.05)),
                 actions=button_actions,
                 identifier=str(button_pin),
@@ -158,18 +160,6 @@ class ComponentInitializer:
             return action_config.get('method')
         else:
             return None
-
-    @staticmethod
-    def _as_bool(value, default=False):
-        if isinstance(value, bool):
-            return value
-        if value is None:
-            return default
-        if isinstance(value, (int, float)):
-            return bool(value)
-        if isinstance(value, str):
-            return value.strip().lower() in {"1", "true", "yes", "on"}
-        return bool(value)
 
     @staticmethod
     def _is_noop_action(action):

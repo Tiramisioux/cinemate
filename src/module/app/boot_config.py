@@ -30,6 +30,13 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from module.sensor_database import (
+    link_frequency_block,
+    link_frequency_default,
+    link_frequency_is_selectable,
+    load_sensor_database,
+)
+
 CONFIG_TXT_PATH = "/boot/firmware/config.txt"
 
 # /boot/firmware is root-owned; the settings editor runs as an unprivileged
@@ -61,46 +68,63 @@ RP1_OVERCLOCK_LINE = "dtoverlay=rp1-overclock"
 # CSI-2 link frequency, settable per port as a dtoverlay parameter:
 #   dtoverlay=imx585,cam0,link-frequency=1039500000
 #
-# imx585 only. The other three sensors cannot offer this menu:
-#   imx283  driver accepts 360/720 MHz, but its overlay exposes no
-#           link-frequency override -- would need a patch to the driver fork
-#   imx477  imx477_check_link_freq() accepts *any* exact multiple of 3 MHz
-#           with no upper bound, so there is no list to offer that the driver
-#           would actually vouch for. Only its 450 MHz default is proven.
-#   imx296  no link-frequencies property at all; the sensor derives its own
-#           MIPI timing (1122-1198 Mbps)
+# Which values each sensor accepts, which is default, and whether a menu is
+# offered at all now live in resources/sensors.json's link_frequency block --
+# not here. That file is the one place this is written down, and the values
+# reach the settings editor's JavaScript from it too, rather than being
+# restated there by hand.
 #
-# Values and frame rates from will127534/imx585-v4l2-driver's README, which
-# match link_freqs[] in the driver the installer builds. The driver also
-# defines 1188000000, deliberately not offered: the README reports the Pi 4
-# cannot do it and the Pi 5 drops frames.
-#
-# Anything above the 720 MHz default needs the RP1 overclock to be useful --
-# a stock RP1 caps out around 43.8 fps at 4K no matter what the sensor sends.
-# fps figures are the README's 4K 12-bit 4-lane column; halve for 2-lane, and
-# again for ClearHDR. They are shipped to the settings editor rather than
-# restated in JavaScript -- the ACTION_METHODS catalogue already demonstrates
-# what a second hand-maintained copy costs.
-IMX585_DEFAULT_LINK_FREQUENCY = 720000000
-IMX585_LINK_FREQUENCY_TABLE = [
-    {"hz": 297000000, "mbps_per_lane": 594, "fps_4k_4lane": 20.8},
-    {"hz": 360000000, "mbps_per_lane": 720, "fps_4k_4lane": 25.0},
-    {"hz": 445500000, "mbps_per_lane": 891, "fps_4k_4lane": 30.0},
-    {"hz": 594000000, "mbps_per_lane": 1188, "fps_4k_4lane": 41.7},
-    {"hz": 720000000, "mbps_per_lane": 1440, "fps_4k_4lane": 50.0},
-    {"hz": 891000000, "mbps_per_lane": 1782, "fps_4k_4lane": 60.0},
-    {"hz": 1039500000, "mbps_per_lane": 2079, "fps_4k_4lane": 75.0},
-]
-IMX585_LINK_FREQUENCIES = [entry["hz"] for entry in IMX585_LINK_FREQUENCY_TABLE]
-LINK_FREQUENCY_MODELS = ("imx585", "imx585_mono")
-
+# Raising the link frequency raises what the *sensor sends*. The RP1 overclock
+# raises what the *receiver takes*. Both are needed: a stock RP1 caps out
+# around 43.8 fps at 4K no matter what the sensor is told to do.
 _LINK_FREQUENCY_TOKEN = "link-frequency="
 
 _DTOVERLAY_LINE_RE = re.compile(r"^(#?)dtoverlay=(\S+)\s*$", re.MULTILINE)
 
+_database_cache: dict | None = None
+
+
+def sensor_database() -> dict:
+    """Cached sensors.json. Cached because parse/apply run per request and the
+    file only changes on an install."""
+    global _database_cache
+    if _database_cache is None:
+        _database_cache = load_sensor_database()
+    return _database_cache
+
+
+def reset_database_cache() -> None:
+    """Drop the cache. For tests that point at a different database."""
+    global _database_cache
+    _database_cache = None
+
 
 def supports_link_frequency(model: str) -> bool:
-    return model in LINK_FREQUENCY_MODELS
+    """Whether to offer this model a link-frequency menu. False covers both
+    'the overlay has no such parameter' and 'the values are recorded but the
+    menu is held back pending hardware verification'."""
+    return link_frequency_is_selectable(sensor_database(), model)
+
+
+def link_frequency_options(model: str) -> list[dict]:
+    return list(link_frequency_block(sensor_database(), model).get("options", []))
+
+
+def link_frequency_menus() -> dict[str, dict]:
+    """Every model that gets a menu, shaped for the settings editor.
+
+    Keyed by the model string the editor's <select> uses, so imx585_mono gets
+    its own entry rather than the page having to know it shares imx585's
+    silicon."""
+    menus = {}
+    for model in SENSOR_MODELS:
+        if model == "none" or not supports_link_frequency(model):
+            continue
+        menus[model] = {
+            "default_hz": link_frequency_default(sensor_database(), model),
+            "options": link_frequency_options(model),
+        }
+    return menus
 
 
 def is_rpi2712_platform() -> bool:
@@ -126,10 +150,11 @@ def overlay_line_for(model: str, port: str, link_frequency: int | None = None) -
     base = model[:-len("_mono")] if model.endswith("_mono") else model
     mono_suffix = ",mono" if model == "imx585_mono" else ""
     link_suffix = ""
+    default_hz = link_frequency_default(sensor_database(), model)
     if (
         supports_link_frequency(model)
         and link_frequency is not None
-        and link_frequency != IMX585_DEFAULT_LINK_FREQUENCY
+        and link_frequency != default_hz
     ):
         link_suffix = f",{_LINK_FREQUENCY_TOKEN}{link_frequency}"
     return f"dtoverlay={base},{port}{mono_suffix}{link_suffix}"
@@ -180,8 +205,9 @@ def default_config_state() -> dict:
         "audio": True,
         "rp1_overclock": False,
         "rp1_available": is_rpi2712_platform(),
-        "link_frequencies": IMX585_LINK_FREQUENCY_TABLE,
-        "link_frequency_default": IMX585_DEFAULT_LINK_FREQUENCY,
+        # Per-model menus, straight from the database, so the page never
+        # carries its own copy of the values.
+        "link_frequency_menus": link_frequency_menus(),
     }
 
 
@@ -244,8 +270,9 @@ def parse_config_txt(full_text: str) -> dict:
         "audio": _line_on(_TOGGLE_LINES["audio"]),
         "rp1_overclock": _line_on(RP1_OVERCLOCK_LINE),
         "rp1_available": rp1_present,
-        "link_frequencies": IMX585_LINK_FREQUENCY_TABLE,
-        "link_frequency_default": IMX585_DEFAULT_LINK_FREQUENCY,
+        # Per-model menus, straight from the database, so the page never
+        # carries its own copy of the values.
+        "link_frequency_menus": link_frequency_menus(),
     }
 
 
@@ -298,13 +325,14 @@ def _validated_link_frequency(value, model: str, port: str) -> int | None:
     if not supports_link_frequency(model):
         raise ValueError(
             f"{port} is set to {model}, which has no selectable link frequency. "
-            f"Only {' / '.join(LINK_FREQUENCY_MODELS)} does."
+            f"See its link_frequency block in resources/sensors.json for why."
         )
 
-    if frequency not in IMX585_LINK_FREQUENCIES:
-        allowed = ", ".join(str(f) for f in IMX585_LINK_FREQUENCIES)
+    allowed = [option["hz"] for option in link_frequency_options(model)]
+    if frequency not in allowed:
         raise ValueError(
-            f"{frequency} is not a supported imx585 link frequency. Supported: {allowed}."
+            f"{frequency} is not a supported {model} link frequency. "
+            f"Supported: {', '.join(str(f) for f in allowed)}."
         )
 
     return frequency

@@ -306,5 +306,83 @@ class SensorDatabaseTests(unittest.TestCase):
         self.assertEqual(twins, {10, 12})
 
 
+class LinkFrequencyBlockTests(unittest.TestCase):
+    """resources/sensors.json is the only place link frequencies are written
+    down now, so its shape is worth asserting directly. A wrong value here is
+    silent on the Pi: the sensor either refuses to probe or outruns the
+    receiver, and both surface much later as "the camera stopped working"."""
+
+    @classmethod
+    def setUpClass(cls):
+        from module.sensor_database import load_sensor_database
+        cls.db = load_sensor_database()
+        cls.sensors = cls.db["sensors"]
+
+    def test_every_sensor_records_its_link_frequency(self):
+        # Absence would read as "capability unknown". Every sensor Cinemate
+        # supports has a known answer, including the fixed-link ones.
+        for name, entry in self.sensors.items():
+            self.assertIn("link_frequency", entry, name)
+
+    def test_each_block_is_internally_consistent(self):
+        for name, entry in self.sensors.items():
+            block = entry["link_frequency"]
+            values = [o["hz"] for o in block["options"]]
+            with self.subTest(sensor=name):
+                self.assertTrue(values, "options must not be empty")
+                self.assertEqual(values, sorted(values), "options should be ascending")
+                self.assertEqual(len(values), len(set(values)), "duplicate hz")
+                self.assertIn(block["default_hz"], values, "default_hz must be an option")
+                self.assertIsInstance(block["lanes"], int)
+                self.assertIsInstance(block["selectable"], bool)
+                for option in block["options"]:
+                    self.assertIsInstance(option["hz"], int)
+                    self.assertIsInstance(option["mbps_per_lane"], int)
+
+    def test_excluded_values_are_not_also_offered(self):
+        # imx585's 1188 MHz drops frames on a Pi 5. Listing it in both places
+        # would put it in the menu anyway.
+        for name, entry in self.sensors.items():
+            block = entry["link_frequency"]
+            offered = {o["hz"] for o in block.get("options", [])}
+            for excluded in block.get("excluded", []):
+                with self.subTest(sensor=name, hz=excluded["hz"]):
+                    self.assertNotIn(excluded["hz"], offered)
+                    self.assertTrue(excluded.get("reason"), "an exclusion needs a reason")
+
+    def test_imx585_offers_the_seven_driver_values(self):
+        block = self.sensors["imx585"]["link_frequency"]
+        self.assertEqual([o["hz"] for o in block["options"]], [
+            297000000, 360000000, 445500000, 594000000, 720000000, 891000000, 1039500000,
+        ])
+        self.assertEqual(block["default_hz"], 720000000)
+        self.assertEqual([e["hz"] for e in block["excluded"]], [1188000000])
+
+    def test_imx283_records_the_closed_faster_link_question(self):
+        # The "explore a faster MIPI link for higher fps" TODO is answered:
+        # 720 MHz is both default and ceiling. Record it so it isn't reopened.
+        block = self.sensors["imx283"]["link_frequency"]
+        self.assertEqual([o["hz"] for o in block["options"]], [360000000, 720000000])
+        self.assertEqual(block["default_hz"], 720000000)
+        self.assertEqual(max(o["hz"] for o in block["options"]), block["default_hz"])
+        self.assertIn("infeasible", block["notes"])
+
+    def test_fixed_link_sensors_are_flagged_unselectable(self):
+        for name in ("imx296", "imx519"):
+            block = self.sensors[name]["link_frequency"]
+            with self.subTest(sensor=name):
+                self.assertFalse(block["selectable"])
+                self.assertEqual(len(block["options"]), 1)
+                self.assertTrue(block.get("notes"))
+
+    def test_imx477_data_is_present_but_its_menu_is_gated_off(self):
+        block = self.sensors["imx477"]["link_frequency"]
+        self.assertEqual(block["default_hz"], 450000000)
+        self.assertFalse(block["menu_enabled"])
+        # The driver takes any ~3 MHz multiple, so these are curated presets
+        # rather than a list it vouches for -- record the step so that stays clear.
+        self.assertEqual(block["arbitrary"]["step_hz"], 3000000)
+
+
 if __name__ == "__main__":
     unittest.main()

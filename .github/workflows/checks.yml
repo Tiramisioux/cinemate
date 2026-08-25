@@ -94,6 +94,9 @@ jobs:
       - name: Every offered action resolves on the controller
         run: python3 tools/gui_field_extract.py --repo . --max-unresolved 0
 
+      - name: Link frequencies live only in the sensor database
+        run: python3 tools/link_frequency_drift_check.py --repo . --strict
+
       # Needs both repositories: the key contract spans them.
       - name: Check out cinepi-raw
         run: |

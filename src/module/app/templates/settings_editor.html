@@ -631,6 +631,8 @@
   .storage-stats b{ color: var(--ink); font-variant-numeric: tabular-nums; font-weight:600; }
   .capacity-track{ height:8px; border-radius:999px; background: var(--panel-2); border:1px solid var(--line); overflow:hidden; }
   .capacity-fill{ height:100%; background: var(--accent); border-radius:999px 0 0 999px; }
+  .storage-format{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .storage-format .btn:disabled, .storage-format select:disabled{ opacity:.5; cursor:default; }
 
   .clip-toolbar{
     display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
@@ -3576,8 +3578,55 @@
             '<span><b>' + s.take_count + '</b> takes</span>' +
           '</div>' +
         '</div>' +
-        '<div class="capacity-track"><div class="capacity-fill" style="width:' + pct + '%"></div></div>';
+        '<div class="capacity-track"><div class="capacity-fill" style="width:' + pct + '%"></div></div>' +
+        // Only the active drive: format_drive() targets the mounted /media/RAW
+        // device and cannot address a standby one.
+        (s.active
+          ? '<div class="storage-format">' +
+              '<select class="field-input" data-format-fs aria-label="Filesystem to format as">' +
+                '<option value="exfat" selected>exFAT</option>' +
+                '<option value="ext4">ext4</option>' +
+                '<option value="ntfs">NTFS</option>' +
+              '</select>' +
+              '<button class="btn btn-danger-outline" data-format-go>Format…</button>' +
+            '</div>' +
+            '<p class="card-help">Erases the whole drive. ext4 is the most robust for long recordings; ' +
+              'exFAT reads on any computer; NTFS works but is not recommended.</p>'
+          : '');
       wrap.appendChild(card);
+      // Cards are rebuilt with innerHTML on every refresh, so listeners are
+      // wired per render rather than delegated from a stable ancestor.
+      if (s.active) wireStorageFormat(card, s);
+    });
+  }
+
+  function wireStorageFormat(card, s){
+    var select = card.querySelector('[data-format-fs]');
+    var button = card.querySelector('[data-format-go]');
+    if (!select || !button) return;
+    button.addEventListener('click', function(){
+      var fs = select.value;
+      var message = 'Format ' + s.label + ' (' + (s.device || 'unknown device') + ', ' +
+        formatBytes(s.total_bytes) + ') as ' + fs + '? Every take on it is permanently erased.';
+      showConfirm(message, function(){
+        select.disabled = true;
+        button.disabled = true;
+        button.textContent = 'Formatting…';
+        showToast('Formatting — this can take a couple of minutes. Other commands will report busy until it finishes.');
+        fetch('/settings-editor/api/raw/format', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filesystem: fs })
+        }).then(function(r){ return r.json(); }).then(function(res){
+          showToast(res.message);
+          // Refresh on failure too -- that re-renders the card and so
+          // re-enables the controls.
+          refreshRawPane();
+        }).catch(function(){
+          showToast('Connection lost — the format may still be running. Refresh in a minute.');
+          refreshRawPane();
+        });
+      }, null, { title: 'Format this drive?', okLabel: 'Format', danger: true });
     });
   }
 

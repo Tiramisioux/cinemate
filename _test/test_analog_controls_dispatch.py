@@ -29,6 +29,7 @@ from module.analog_controls import AnalogControls
 def make_analog_controls():
     ac = AnalogControls.__new__(AnalogControls)
     ac.cinepi_controller = mock.Mock()
+    ac.dispatch_lock = None
     return ac
 
 

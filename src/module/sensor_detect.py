@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
+from module import rp1_regime
 from module.sensor_database import load_sensor_database
 
 DEFAULT_SENSOR_DATABASE_FILE = "resources/sensors.json"
@@ -501,7 +502,14 @@ class SensorDetect:
         Returns stdout, or "" when the run fails. The HDR run is best-effort:
         a cinepi-raw build without ClearHDR support just yields no extra modes.
         """
-        cmd = "cinepi-raw --list-cameras" + (" --hdr sensor" if hdr else "")
+        # Probe under the same pixel-rate ceiling the real launch will use, so
+        # the mode table cannot advertise a frame rate the configured RP1
+        # regime could never sustain. Harmless if libcamera turns out to apply
+        # the bound only at configure time rather than during enumeration --
+        # that is what hardware gate G2 settles.
+        max_pixel_rate = rp1_regime.pixel_rate()
+        rate_arg = f" --max-pixel-rate {max_pixel_rate}" if max_pixel_rate is not None else ""
+        cmd = "cinepi-raw --list-cameras" + rate_arg + (" --hdr sensor" if hdr else "")
         try:
             proc = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         except Exception as exc:  # pragma: no cover - defensive

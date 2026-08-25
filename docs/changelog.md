@@ -8,7 +8,7 @@ Release notes for Cinemate. For downloads, see the [releases page](https://githu
 
 - **Automatic dual-camera** — two connected sensors are each detected and driven by their own genlocked `cinepi-raw` process (cam0 server, cam1 client).
 - **HDMI preview switching** — new command `set preview` cycles side-by-side preview → cam0 → cam1 → picture-in-picture.
-- **Per-sensor recording** — record both sensors or just the previewed one (`lock_dual_recording` can be set in settings.json), or target sensors with `rec cam0` / `rec cam1` / `rec both`. Each sensor writes its own `..._cam0` / `..._cam1` clip folder.
+- **Per-sensor recording** — record both sensors or just the previewed one (`sensors.record_policy` can be set in settings.jsonc), or target sensors with `rec cam0` / `rec cam1` / `rec both`. Each sensor writes its own `..._cam0` / `..._cam1` clip folder.
 
 ### libcamera
 
@@ -63,4 +63,4 @@ Release notes for Cinemate. For downloads, see the [releases page](https://githu
 - Dynamic resolution switching to match the observed sustainable frame rate for the attached sensor and storage media — for example, IMX585 automatically switches to HD above 25 fps when an SSD is used.
 - Hot-swapping between 16-bit and 24-bit USB microphones.
 - 4K-class recording modes are visible by default.
-- Automatic storage pre-roll can be disabled in `settings.json`.
+- Automatic storage pre-roll can be disabled in `settings.jsonc`.

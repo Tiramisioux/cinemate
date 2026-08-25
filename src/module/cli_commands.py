@@ -307,7 +307,7 @@ class CommandExecutor(threading.Thread):
 
     # Dual-sensor record target. An optional leading token on `rec` forces
     # which sensor(s) capture the take, overriding the preview-follows /
-    # lock_dual_recording policy for that one take.
+    # sensors.record_policy policy for that one take.
     _REC_CAM_TOKENS = {
         "cam0": "cam0", "0": "cam0", "a": "cam0",
         "cam1": "cam1", "1": "cam1", "b": "cam1",

@@ -108,6 +108,7 @@ class ResolutionGuiStateTests(unittest.TestCase):
         controller.update_steps = lambda: None
         controller._notify_resolution_change = controller.notifications.append
         controller._resolution_switching_timer = None
+        controller._resolution_switch_complete_callbacks = []
 
         def refresh_fps_max():
             controller.fps_max = 50
@@ -232,6 +233,55 @@ class ResolutionGuiStateTests(unittest.TestCase):
             controller.redis_controller.get_value(ParameterKey.RESOLUTION_SWITCHING.value),
             0,
         )
+
+    def test_raw_stream_ready_log_fires_switch_complete_not_switch_started(self):
+        # F-290: reload_stream must ride the completion signal, not the one
+        # that fires when the switch starts (the browser would reconnect to
+        # a stream cinepi-raw hasn't finished restarting yet).
+        controller = self.controller()
+        resolution_info = controller.sensor_detect.res_modes[1]
+        controller._publish_resolution_target_state(1, resolution_info, switching=True)
+        controller._resolution_switching_timer = mock.Mock()
+        complete_calls = []
+        controller.add_resolution_switch_complete_callback(lambda: complete_calls.append(1))
+
+        controller.handle_cinepi_raw_message(
+            "[2026-05-31 18:00:31.405] [event_loop] [info] Raw stream: 3856x2180 : 7712 : SRGGB16"
+        )
+
+        self.assertEqual(complete_calls, [1])
+
+    def test_nonmatching_raw_stream_log_does_not_fire_switch_complete(self):
+        controller = self.controller()
+        resolution_info = controller.sensor_detect.res_modes[1]
+        controller._publish_resolution_target_state(1, resolution_info, switching=True)
+        controller._resolution_switching_timer = mock.Mock()
+        complete_calls = []
+        controller.add_resolution_switch_complete_callback(lambda: complete_calls.append(1))
+
+        controller.handle_cinepi_raw_message(
+            "[2026-05-31 18:00:31.405] [event_loop] [info] Raw stream: 1928x1090 : 3904 : SRGGB16"
+        )
+
+        self.assertEqual(complete_calls, [])
+
+    def test_switch_complete_timer_fallback_fires_the_callback(self):
+        # The evidence path (handle_cinepi_raw_message) is the fast path;
+        # this is the fallback if that log line is never seen.
+        controller = self.controller()
+        resolution_info = controller.sensor_detect.res_modes[1]
+        complete_calls = []
+        controller.add_resolution_switch_complete_callback(lambda: complete_calls.append(1))
+
+        with mock.patch.object(cinepi_controller_module.threading, "Timer") as fake_timer_cls:
+            fake_timer = mock.Mock()
+            fake_timer_cls.return_value = fake_timer
+            controller._schedule_resolution_switch_complete(1, resolution_info)
+            complete_fn = fake_timer_cls.call_args.args[1]
+
+        self.assertEqual(complete_calls, [])  # not fired until the timer actually runs
+        complete_fn()
+        self.assertEqual(complete_calls, [1])
 
     def test_nonmatching_raw_stream_log_does_not_clear_resolution_switching(self):
         controller = self.controller()

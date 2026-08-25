@@ -7,7 +7,6 @@ import json
 import subprocess
 from threading import Timer
 import psutil
-import sys
 
 from module.redis_controller import ParameterKey, encode_log_encode_request, decode_log_encode_request
 from module.sensor_detect import compute_frame_size_mb
@@ -140,6 +139,7 @@ class CinePiController:
         self._storage_profile_restart_lock = threading.Lock()
         self._storage_profile_restart_active = False
         self._resolution_change_callbacks = []
+        self._resolution_switch_complete_callbacks = []
         self._resolution_change_pace_lock = threading.Lock()
         self._last_resolution_change_started_at = 0.0
         self._resolution_change_min_interval_s = 0.25
@@ -1099,12 +1099,31 @@ class CinePiController:
             return
         self._resolution_change_callbacks.append(callback)
 
+    def add_resolution_switch_complete_callback(self, callback) -> None:
+        if not callable(callback):
+            logging.warning("Ignoring non-callable resolution switch-complete callback.")
+            return
+        self._resolution_switch_complete_callbacks.append(callback)
+
     def _notify_resolution_change(self, sensor_mode) -> None:
         for callback in list(self._resolution_change_callbacks):
             try:
                 callback(sensor_mode)
             except Exception:
                 logging.exception("Resolution change callback failed.")
+
+    def _notify_resolution_switch_complete(self) -> None:
+        # Fires once the switch is actually over -- either handle_cinepi_raw_message
+        # saw evidence the new stream is up, or (if that message never arrived)
+        # the GUI_RESOLUTION_SWITCHING_HOLD_SECONDS fallback timer expired. This
+        # is deliberately a separate hook from _notify_resolution_change: that one
+        # fires when the switch *starts*, so the browser can show "switching..."
+        # immediately, well before there is a new stream to reconnect to (F-290).
+        for callback in list(self._resolution_switch_complete_callbacks):
+            try:
+                callback()
+            except Exception:
+                logging.exception("Resolution switch-complete callback failed.")
 
     def _pace_resolution_change(self, recording: bool) -> None:
         min_interval = (
@@ -1665,6 +1684,7 @@ class CinePiController:
                 )
             except Exception:
                 logging.exception("Failed to clear resolution switching state.")
+            self._notify_resolution_switch_complete()
 
         timer = threading.Timer(GUI_RESOLUTION_SWITCHING_HOLD_SECONDS, complete)
         timer.daemon = True
@@ -1695,6 +1715,7 @@ class CinePiController:
 
         self._cancel_resolution_switching_timer()
         self.redis_controller.set_value(ParameterKey.RESOLUTION_SWITCHING.value, 0)
+        self._notify_resolution_switch_complete()
 
     def _apply_resolution_mode(self, value, restore_user_fps=None, *, restart_process=False):
         try:
@@ -2376,11 +2397,60 @@ class CinePiController:
         self._active_storage_recorder_profile = self._current_storage_recorder_profile()
 
     def restart_cinemate(self):
-        """Restart the entire CineMate application."""
-        logging.info("Restarting CineMate application")
-        python = sys.executable
-        os.execl(python, python, *sys.argv)
-        
+        """Restart the entire CineMate application (F-291).
+
+        This used to os.execl() in place. Confirmed by a minimal repro under
+        F-291 (see system-review/FINDINGS.md): the Flask/SocketIO listening
+        socket is not closed by exec() (it isn't marked close-on-exec), so
+        the re-exec'd process failed to rebind its port -- "Address already
+        in use" -- and the web GUI stayed dead until an external `systemctl
+        restart`. sys.argv/sys.executable were both fine; the socket was the
+        actual bug. systemd already owns this unit's lifecycle and a real
+        restart tears the whole process down, closing every fd first, so it
+        goes through systemd instead.
+
+        A first version called `sudo systemctl restart --no-block
+        cinemate-autostart` directly -- also confirmed against real hardware
+        to be wrong: that subprocess is a child of *this* process, so it
+        lives in cinemate-autostart.service's own cgroup. The unit's
+        KillMode=control-group (systemd's default) means the SIGINT that
+        stops the old instance is swept across the whole cgroup, including
+        the very systemctl call requesting the restart -- it was observed
+        exiting -2 (killed) before the restart job was even queued, so
+        nothing ever started back up. Routing through `systemd-run` escapes
+        that cgroup: it hands the actual `systemctl restart` off to a fresh
+        transient unit of its own, which the SIGINT sweep can't touch.
+        --no-block on systemd-run itself means this call returns as soon as
+        that hand-off is queued, not once the restart finishes (see the
+        --no-block note below).
+
+        Both commands are exactly what cinemate-install.sh's
+        configure_sudoers() grants -- one narrow, argument-locked rule per
+        command, not a general privileged-exec grant.
+
+        --no-block: this call runs inside the very unit systemd is about to
+        stop. A blocking call would wait for that stop to finish, and that
+        stop is what kills the thread making this call.
+        """
+        logging.info("Restarting CineMate application via systemd")
+        try:
+            result = subprocess.run(
+                [
+                    "sudo", "-n", "systemd-run", "--no-block", "--collect",
+                    "--unit=cinemate-restart-trigger",
+                    "--", "systemctl", "restart", "cinemate-autostart",
+                ],
+                capture_output=True, text=True, timeout=10, check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            logging.error("Could not invoke systemd-run to restart cinemate-autostart: %s", exc)
+            return
+        if result.returncode != 0:
+            logging.error(
+                "systemd-run restart of cinemate-autostart exited %s: %s",
+                result.returncode, (result.stderr or result.stdout or "").strip(),
+            )
+
 
     def set_fps_double(self, value=None):
         target_double_state = not self.fps_double if value is None else value in (1, True)

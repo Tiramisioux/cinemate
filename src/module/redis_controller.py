@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging, threading, redis, psutil, time
 from enum import Enum
 import time, math
+from module.config_loader import as_bool
 
 # ───────────────────────── parameter keys ────────────────────────────
 class ParameterKey(Enum):
@@ -112,6 +113,11 @@ class ParameterKey(Enum):
     RECORDING_TC_REC     = "recording_tc_rec"    # elapsed-time time-code
     RECORDING_TC_TOD   = "recording_time_tod"    # time-of-day time-code
     FRAMES_IN_SYNC      = "frames_in_sync"
+    USER_CHANGING_FPS   = "user_changing_fps"
+    FSCK_STATUS         = "FSCK_STATUS"  # ssd_monitor's own fsck result; cinepi-raw never reads this one
+
+
+_KNOWN_PARAMETER_VALUES = {member.value for member in ParameterKey}
 
 
 def encode_log_encode_request(value) -> int:
@@ -143,6 +149,20 @@ def decode_log_encode_request(raw):
 
 # ────────────────────────── tiny pub‑sub helper ──────────────────────
 class Event:
+    """Shared pub/sub helper (F-127). Used to be four independent copies --
+    redis_controller's own, plus ssd_monitor.mount_event, usb_monitor.usb_event
+    and cinepi_multi.message -- with divergent error handling; B3.1 fixed this
+    one, B9.6a fixed the other two in place, this collapses all three into it.
+    This is the only copy with unsubscribe, and the one PI-014 exercised on
+    hardware for the redis bus.
+
+    emit() takes *args, not a single data param: ssd_monitor's mount_event and
+    usb_monitor's usb_event were already emitting several positional args
+    (mount path/device/filesystem/profile; device/model/serial/card name), and
+    every existing single-arg caller (redis_parameter_changed.emit(data),
+    cinepi_multi's message.emit(line)) keeps working unchanged -- one
+    positional arg through *args reaches the subscriber exactly as before.
+    """
     def __init__(self):
         self._handlers = []
     def subscribe(self, fn):
@@ -152,19 +172,22 @@ class Event:
             self._handlers.remove(fn)
         except ValueError:
             pass
-    def emit(self, data=None):
-        # Every subscriber runs on the single _listen thread, synchronously. An
-        # unguarded raise here used to kill that thread outright, and because
-        # get_value() serves the cache rather than redis, every surface then went
-        # on rendering its last values with no error anywhere -- the operator sees
-        # plausible frozen numbers mid-take. One bad subscriber must not silence
-        # the others or the bus. Mirrors CinePiController._notify_resolution_change.
+    def emit(self, *args):
+        # Every subscriber runs synchronously on whatever thread calls emit()
+        # (redis_controller's single _listen thread for its own event; the
+        # log-relay/USB-monitor/mount threads for the others). An unguarded
+        # raise here used to kill that thread outright, and because
+        # get_value() serves the cache rather than redis, every surface then
+        # went on rendering its last values with no error anywhere -- the
+        # operator sees plausible frozen numbers mid-take. One bad subscriber
+        # must not silence the others or the bus. Mirrors
+        # CinePiController._notify_resolution_change.
         for fn in list(self._handlers):
             try:
-                fn(data)
+                fn(*args)
             except Exception:
                 logging.exception(
-                    "Redis subscriber %s failed; continuing with the rest",
+                    "Event subscriber %s failed; continuing with the rest",
                     getattr(fn, "__qualname__", fn),
                 )
 
@@ -177,6 +200,7 @@ class RedisController:
         self.lock   = threading.Lock()
         self.cache  = {}
         self.local_updates: set[str] = set()
+        self._unknown_keys_warned: set[str] = set()
 
         self.redis_parameter_changed = Event()
 
@@ -246,14 +270,7 @@ class RedisController:
             return self.cache.get(key, default)
 
     def _storage_preroll_active(self) -> bool:
-        value = self.cache.get(ParameterKey.STORAGE_PREROLL_ACTIVE.value, "0")
-        text = str(value).strip().lower()
-        if text in ("1", "true", "yes", "on"):
-            return True
-        try:
-            return bool(int(text))
-        except (TypeError, ValueError):
-            return False
+        return as_bool(self.cache.get(ParameterKey.STORAGE_PREROLL_ACTIVE.value, "0"))
 
         # ────────────────────────── public helpers ───────────────────────
     def set_value(self, key, value):
@@ -263,6 +280,20 @@ class RedisController:
             return
 
         key_name = key.value if isinstance(key, ParameterKey) else str(key)
+
+        # F-015: the enum was convention, not enforcement -- any string was
+        # accepted silently. This makes an un-enumerated key visible without
+        # blocking the write: rejecting outright here, with no Pi available
+        # to verify every call site this touches, risks silently breaking a
+        # working recording path over a naming gap. Warn once per key so a
+        # value written every frame (e.g. framecount) can't flood the log.
+        if key_name not in _KNOWN_PARAMETER_VALUES and key_name not in self._unknown_keys_warned:
+            self._unknown_keys_warned.add(key_name)
+            logging.warning(
+                "set_value('%s', ...): not a ParameterKey member -- writing anyway, "
+                "but this key has no enum entry to keep readers in sync with it.",
+                key_name,
+            )
 
         # ─── Redis write / publish / cache ───────────────────────────
         with self.lock:

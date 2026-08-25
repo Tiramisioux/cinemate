@@ -1323,6 +1323,41 @@ configure_hostname_and_i2c() {
     sudo usermod -aG i2c "$PI_USER"
     sudo modprobe i2c-dev || true
     ensure_line_in_root_file /etc/modules 'i2c-dev'
+    configure_etc_hosts
+    configure_mdns
+}
+
+# /etc/hosts is not rewritten from scratch -- only the 127.0.1.1 line (the
+# one hostnamectl doesn't touch) is fixed in place, or added if absent.
+# Idempotent: a re-run with the same TARGET_HOSTNAME leaves the file
+# byte-identical, so write_root_file's own no-op check skips the write.
+configure_etc_hosts() {
+    local hosts_file="/etc/hosts"
+    local desired_line="127.0.1.1	$TARGET_HOSTNAME"
+    local existing=""
+
+    log "Ensuring /etc/hosts has $desired_line"
+    if sudo test -f "$hosts_file"; then
+        existing="$(sudo cat "$hosts_file")"
+    fi
+
+    if printf '%s\n' "$existing" | grep -Eq '^127\.0\.1\.1[[:space:]]'; then
+        printf '%s\n' "$existing" \
+            | sed -E "s/^127\.0\.1\.1[[:space:]].*/$(printf '%s' "$desired_line" | sed 's/[&/\]/\\&/g')/" \
+            | write_root_file "$hosts_file" 644
+    else
+        { printf '%s\n' "$existing"; printf '%s\n' "$desired_line"; } | write_root_file "$hosts_file" 644
+    fi
+}
+
+# Nothing in this repo installed or enabled avahi so <hostname>.local only
+# ever resolved when the base image happened to ship it (F-289). Both
+# packages are idempotent to (re)install; systemctl enable --now is
+# idempotent too.
+configure_mdns() {
+    log "Installing avahi for $TARGET_HOSTNAME.local resolution"
+    sudo apt install -y avahi-daemon libnss-mdns
+    sudo systemctl enable --now avahi-daemon
 }
 
 configure_console_font() {
@@ -1544,6 +1579,43 @@ EOF
     detail "Added $PI_USER to audio group; re-login required for limits to take effect"
 }
 
+CONFIG_TXT_APPLY_HELPER="/usr/local/bin/cinemate-apply-config-txt"
+
+# The settings editor runs as $PI_USER, which cannot write into root-owned
+# /boot/firmware (F-288). This is the one narrow privileged step that lets
+# it anyway: it reads only a fixed, already-pi-written staging file and
+# copies it over config.txt, preserving that file's existing owner/mode
+# rather than assuming one. It takes no arguments -- the sudoers rule below
+# grants it with none, so a compromised or buggy caller cannot redirect it
+# at an arbitrary destination.
+configure_config_txt_apply_helper() {
+    log "Installing $CONFIG_TXT_APPLY_HELPER"
+    write_root_file "$CONFIG_TXT_APPLY_HELPER" 755 <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+STAGED="/home/pi/cinemate/.settings-editor-config-txt.staged"
+DEST="/boot/firmware/config.txt"
+
+if [[ ! -f "$STAGED" ]]; then
+    echo "cinemate-apply-config-txt: no staged file at $STAGED" >&2
+    exit 1
+fi
+
+OWNER="$(stat -c '%u:%g' "$DEST" 2>/dev/null || echo '0:0')"
+MODE="$(stat -c '%a' "$DEST" 2>/dev/null || echo '644')"
+
+TMP="$(mktemp "${DEST}.XXXXXX")"
+trap 'rm -f "$TMP"' EXIT
+cp "$STAGED" "$TMP"
+chown "$OWNER" "$TMP"
+chmod "$MODE" "$TMP"
+mv -f "$TMP" "$DEST"
+trap - EXIT
+rm -f "$STAGED"
+EOF
+}
+
 configure_sudoers() {
     log "Writing sudoers drop-ins"
     backup_file /etc/sudoers.d/pi_cinemate
@@ -1560,6 +1632,7 @@ $PI_USER ALL=(ALL) NOPASSWD: $CINEMATE_DIR/src/main.py
 $PI_USER ALL=(ALL) NOPASSWD: /bin/mount, /bin/umount, /usr/bin/ntfs-3g
 $PI_USER ALL=(ALL) NOPASSWD: /sbin/mount.ext4
 $PI_USER ALL=(ALL) NOPASSWD: /usr/bin/systemd-run --no-block --collect --unit=cinemate-restart-trigger -- systemctl restart cinemate-autostart
+$PI_USER ALL=(ALL) NOPASSWD: $CONFIG_TXT_APPLY_HELPER
 EOF
     sudo visudo -cf /etc/sudoers.d/pi_cinemate >/dev/null
     detail "sudoers validation passed"
@@ -1953,6 +2026,7 @@ main() {
     section "Preparing runtime wrappers and permissions"
     configure_media_permissions
     configure_run_wrapper
+    configure_config_txt_apply_helper
     configure_sudoers
     configure_audio_rtprio
     configure_logrotate

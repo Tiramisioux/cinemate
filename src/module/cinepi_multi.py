@@ -10,8 +10,8 @@ from typing import List
 import os
 import shutil
 
-from module.config_loader import load_settings
-from module.redis_controller import ParameterKey, decode_log_encode_request
+from module.config_loader import load_settings, DEFAULT_SETTINGS_PATH
+from module.redis_controller import ParameterKey, decode_log_encode_request, Event
 from module.framebuffer import Framebuffer
 from module.sensor_detect import is_pi4_family
 from module.storage_profiles import (
@@ -22,7 +22,7 @@ from module.storage_profiles import (
 )
 
 # Path to settings file
-SETTINGS_FILE = "/home/pi/cinemate/settings.jsonc"
+SETTINGS_FILE = DEFAULT_SETTINGS_PATH
 _SETTINGS: dict | None = None
 
 
@@ -106,16 +106,6 @@ def _audio_timecode_offset_frames(settings: dict | None = None) -> int:
         logging.warning("Invalid audio.24bit.timecode_offset_frames=%r; using 0", raw_value)
         return 0
 
-
-# ───────────────────────── Event ─────────────────────────
-class Event:
-    def __init__(self):
-        self._listeners = []
-    def subscribe(self, listener):
-        self._listeners.append(listener)
-    def emit(self, data=None):
-        for l in self._listeners:
-            l(data)
 
 # ───────────────────── Camera Discovery ──────────────────
 class CameraInfo:

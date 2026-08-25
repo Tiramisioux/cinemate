@@ -7,8 +7,20 @@ ANSI_RED = "\033[1;31m"
 ANSI_YELLOW = "\033[1;33m"
 ANSI_CYAN = "\033[1;36m"
 
-_TRUE_VALUES = {"1", "true", "yes", "on"}
-_FALSE_VALUES = {"0", "false", "no", "off"}
+# F-260: this absolute path used to be hardcoded independently in six files
+# (main.py, cinepi_multi.py, cinepi_controller.py, wifi_hotspot.py,
+# simple_gui.py, app/settings_editor.py); one had already drifted out of
+# sync with a comment that tried to enumerate the others by line number.
+# services/cinemate-recovery/cinemate-recovery.py keeps its own copy
+# deliberately -- that process must import nothing from module.* (F-221) so
+# it can still run when the rest of the stack cannot.
+DEFAULT_SETTINGS_PATH = "/home/pi/cinemate/settings.jsonc"
+
+# Public: a handful of call sites need the raw membership test (e.g. a CLI
+# parser that must reject an unrecognised value outright rather than fall
+# back to a default) instead of the as_bool() default-fallback shape below.
+TRUE_VALUES = {"1", "true", "yes", "on"}
+FALSE_VALUES = {"0", "false", "no", "off"}
 
 
 class SettingsLoadError(RuntimeError):
@@ -115,7 +127,35 @@ def _format_error_context(path: Path, line: int, column: int, radius: int = 1) -
     return "\n".join(snippet)
 
 
-def _coerce_bool_setting(value, default: bool) -> bool:
+def as_bool(value, default: bool = False) -> bool:
+    """Decode a settings.jsonc / Redis boolean the same way everywhere.
+
+    This used to be four independent copies (cinepi_controller, gpio_input,
+    dynamic_resolution, mediator) that quietly disagreed -- e.g. `_as_bool(2)`
+    was `True` in gpio_input and `False` in the other three (F-126) -- plus
+    the same `("1","true","yes","on")` truth-set re-typed standalone in half
+    a dozen more places. This is the one decoder; everything routes here now.
+
+    - bool passes through unchanged.
+    - None means "not set" and returns `default` silently -- that is the
+      normal, expected shape of an absent key.
+    - int/float use Python truthiness (`bool(value)`): 2 is True, matching
+      how a settings-file author reads a truthy value, and matching what
+      gpio_input already did. (Nothing in settings.jsonc currently sends a
+      non-0/1 number through here -- checked when this was unified -- so
+      this is a decision for future values, not an observed behaviour fix.)
+    - str is matched case-insensitively against `TRUE_VALUES`/`FALSE_VALUES`
+      first (Redis stores every value as text, so this is the common path),
+      then against a numeric fallback (`bool(int(text))`) so a stray "2"
+      decodes the same way the int 2 does instead of being "unrecognised" --
+      three call sites already relied on exactly this before the merge.
+    - Anything else -- an unrecognised string, or a non-str/bool/int/float/
+      None object -- is NOT the same as an explicit false. It falls back to
+      `default`, same as an absent value, but at `debug` level (not `warning`)
+      because this runs on the 12 fps GUI redraw path and a stuck bad value
+      must not flood the log every frame -- see "fail visible" vs. the
+      redraw-path logging rule, both in the project's own conventions.
+    """
     if isinstance(value, bool):
         return value
     if value is None:
@@ -124,10 +164,17 @@ def _coerce_bool_setting(value, default: bool) -> bool:
         return bool(value)
     if isinstance(value, str):
         normalized = value.strip().lower()
-        if normalized in _TRUE_VALUES:
+        if normalized in TRUE_VALUES:
             return True
-        if normalized in _FALSE_VALUES:
+        if normalized in FALSE_VALUES:
             return False
+        try:
+            return bool(int(normalized))
+        except ValueError:
+            pass
+    logging.debug(
+        "as_bool: unrecognised value %r, defaulting to %s", value, default
+    )
     return default
 
 
@@ -135,7 +182,7 @@ def auto_storage_preroll_enabled(settings: dict) -> bool:
     """Return whether automatic storage pre-roll should run."""
 
     storage_cfg = settings.get("system", {}).get("storage", {})
-    return _coerce_bool_setting(
+    return as_bool(
         storage_cfg.get("auto_preroll") if isinstance(storage_cfg, dict) else None, True
     )
 
@@ -168,7 +215,7 @@ def _apply_settings_defaults(settings: dict) -> dict:
 
     storage_cfg = system_cfg.setdefault("storage", {})
     storage_cfg.setdefault("auto_preroll", True)
-    storage_cfg["auto_preroll"] = _coerce_bool_setting(storage_cfg.get("auto_preroll"), True)
+    storage_cfg["auto_preroll"] = as_bool(storage_cfg.get("auto_preroll"), True)
     storage_cfg.setdefault("recognized_ssds", [])
     system_cfg["storage"] = storage_cfg
 
@@ -243,7 +290,7 @@ def _apply_settings_defaults(settings: dict) -> dict:
             "free_increment": 100,
         },
         "shutter_a": {
-            "steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 360],
+            "steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360],
             "free": False,
             "free_increment": 1,
             # Own granularity used only while shutter-angle sync mode is on

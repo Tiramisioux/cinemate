@@ -2,6 +2,7 @@ import logging
 import threading
 import json
 from module.redis_controller import ParameterKey
+from module.config_loader import as_bool
 
 class Mediator:
     def __init__(self, cinepi_app, cinepi_controller, redis_listener, redis_controller, ssd_monitor, gpio_output, stream, usb_monitor):
@@ -75,14 +76,6 @@ class Mediator:
             if self.stop_recording_timer and self.stop_recording_timer.is_alive():
                 self.stop_recording_timer.cancel()        
 
-    @staticmethod
-    def _as_bool(value):
-        if isinstance(value, bool):
-            return value
-        if value is None:
-            return False
-        return str(value).strip().lower() in ("1", "true", "yes", "on")
-
     def _refresh_gpio_outputs(self):
         # REC light follows actual write status.
         self.gpio_output.set_rec_light(self._is_writing)
@@ -96,21 +89,21 @@ class Mediator:
         key = data.get('key')
 
         if key == ParameterKey.STORAGE_PREROLL_ACTIVE.value:
-            self._storage_preroll_active = self._as_bool(data.get('value'))
+            self._storage_preroll_active = as_bool(data.get('value'))
             self._refresh_gpio_outputs()
             return
 
         # Start REC tone immediately on REC command edge, but do not use REC
         # as a persistent recording-state source (REC can be edge-triggered).
         if key == ParameterKey.REC.value:
-            rec_edge = self._as_bool(data.get('value'))
+            rec_edge = as_bool(data.get('value'))
             if rec_edge and not self._storage_preroll_active:
                 self.gpio_output.set_rec_tone(1)
             return
 
         # IS_RECORDING is the authoritative persistent recording state.
         if key == ParameterKey.IS_RECORDING.value:
-            self._is_recording = self._as_bool(data.get('value'))
+            self._is_recording = as_bool(data.get('value'))
             if self._is_recording:
                 logging.info("Recording started!")
                 if not self._storage_preroll_active:
@@ -140,13 +133,13 @@ class Mediator:
             return
 
         if key == ParameterKey.DROP_FRAME_RELAY.value:
-            self._drop_frame_relay_active = self._as_bool(data.get('value'))
+            self._drop_frame_relay_active = as_bool(data.get('value'))
             self.gpio_output.relay_drop_frame_on_rec_tone(self._drop_frame_relay_active)
             return
 
         # Handle "is_writing" key changes
         if key == ParameterKey.IS_WRITING.value:
-            self._is_writing = self._as_bool(data.get('value'))
+            self._is_writing = as_bool(data.get('value'))
             if self._is_writing and hasattr(self.stream, "toggle_background_color"):
                 try:
                     self.stream.toggle_background_color()

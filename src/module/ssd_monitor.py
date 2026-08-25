@@ -26,7 +26,8 @@ except ImportError:
 # ----------------------------------------------------------------------
 # project-local imports
 # ----------------------------------------------------------------------
-from module.redis_controller import ParameterKey
+from module.redis_controller import ParameterKey, Event
+from module.config_loader import as_bool
 from module.storage_profiles import (
     DEFAULT_RECORDER_PROFILE,
     NO_STORAGE_FILESYSTEM,
@@ -41,7 +42,7 @@ from module.storage_profiles import (
 # If your recorder uses a different Redis flag, change it here.
 # ----------------------------------------------------------------------
 REDIS_KEY_IS_RECORDING = ParameterKey.IS_RECORDING.value     # "1" while cinepi-raw is running
-REDIS_KEY_FSCK_STATUS  = "FSCK_STATUS"      # "OK …"  |  "FAIL …"
+REDIS_KEY_FSCK_STATUS  = ParameterKey.FSCK_STATUS.value       # "OK …"  |  "FAIL …"
 EXT4_MOUNT_OPTIONS = "rw,noatime,nodiratime,commit=60"
 YANK_ERRNOS = {
     errno.EIO,
@@ -50,24 +51,6 @@ YANK_ERRNOS = {
     getattr(errno, "ENOTCONN", errno.EIO),
     getattr(errno, "ESTALE", errno.EIO),
 }
-
-
-# ----------------------------------------------------------------------
-# Event helper
-# ----------------------------------------------------------------------
-class Event:
-    def __init__(self) -> None:
-        self._listeners = []
-
-    def subscribe(self, fn):
-        self._listeners.append(fn)
-
-    def emit(self, *args):
-        for cb in list(self._listeners):     # shallow copy – safe against rm
-            try:
-                cb(*args)
-            except Exception as exc:
-                logging.exception("Mount-event listener failed: %s", exc)
 
 
 # ----------------------------------------------------------------------
@@ -1214,10 +1197,7 @@ class SSDMonitor:
         if self._redis:
             try:
                 raw_value = self._redis.get_value(ParameterKey.STORAGE_PREROLL_ACTIVE.value)
-                text = str(raw_value or "0").strip().lower()
-                preroll_active = text in ("1", "true", "yes", "on")
-                if not preroll_active:
-                    preroll_active = bool(int(text))
+                preroll_active = as_bool(raw_value)
             except (TypeError, ValueError, AttributeError):
                 preroll_active = False
         infos = []

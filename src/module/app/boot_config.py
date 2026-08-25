@@ -19,10 +19,21 @@ to regenerate wholesale from a from-scratch template on every save.
 """
 from __future__ import annotations
 
+import os
 import re
+import subprocess
+import tempfile
 from pathlib import Path
 
 CONFIG_TXT_PATH = "/boot/firmware/config.txt"
+
+# /boot/firmware is root-owned; the settings editor runs as an unprivileged
+# user (F-288). STAGED_CONFIG_TXT_PATH is a fixed, pi-writable location the
+# privileged helper below reads from -- fixed so the sudoers rule installed
+# by configure_sudoers() can be scoped to one exact command with no
+# arguments, rather than a general "write anywhere as root" grant.
+STAGED_CONFIG_TXT_PATH = "/home/pi/cinemate/.settings-editor-config-txt.staged"
+APPLY_CONFIG_TXT_HELPER = "/usr/local/bin/cinemate-apply-config-txt"
 
 MANAGED_BEGIN = "# >>> cinemate-install >>>"
 MANAGED_END = "# <<< cinemate-install <<<"
@@ -208,3 +219,53 @@ def apply_config_txt_state(full_text: str, state: dict) -> str:
         )
 
     return full_text[:start] + new_block + full_text[end:]
+
+
+def _atomic_write(dest: Path, text: str) -> None:
+    fd, tmp_path = tempfile.mkstemp(
+        dir=str(dest.parent), prefix=".settings-editor-", suffix=dest.suffix + ".tmp",
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fp:
+            fp.write(text)
+        os.replace(tmp_path, dest)
+    except Exception:
+        os.unlink(tmp_path)
+        raise
+
+
+def write_config_txt(text: str) -> None:
+    """Atomically replace CONFIG_TXT_PATH with *text* (F-288).
+
+    /boot/firmware is root-owned and the settings editor runs as an
+    unprivileged user, so the direct write below only succeeds when this
+    process already has root (tests, or a root-run dev shell) -- on a real
+    install it raises PermissionError before writing a byte. Only that
+    specific failure falls back to staging the text somewhere pi-writable
+    and handing it to APPLY_CONFIG_TXT_HELPER, a narrowly-scoped privileged
+    helper installed by cinemate-install.sh's configure_sudoers(). Any other
+    OSError (full disk, missing directory) is left to surface directly
+    rather than being redirected into the harder-to-debug sudo path.
+    """
+    dest = Path(CONFIG_TXT_PATH)
+    try:
+        _atomic_write(dest, text)
+        return
+    except PermissionError:
+        pass
+
+    staged = Path(STAGED_CONFIG_TXT_PATH)
+    _atomic_write(staged, text)
+    try:
+        result = subprocess.run(
+            ["sudo", "-n", APPLY_CONFIG_TXT_HELPER],
+            capture_output=True, text=True, timeout=10, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        staged.unlink(missing_ok=True)
+        raise PermissionError(f"could not invoke privileged helper: {exc}") from exc
+
+    if result.returncode != 0:
+        staged.unlink(missing_ok=True)
+        detail = (result.stderr or result.stdout or "").strip()
+        raise PermissionError(f"privileged helper exited {result.returncode}: {detail}")

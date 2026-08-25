@@ -1,16 +1,17 @@
 # Overclocking the Pi
 
 Raise the Raspberry Pi 5 RP1 image-pipeline clock to unlock higher imx585
-ClearHDR frame rates. **Pi 5 only** — the RP1 southbridge does not exist on the
-Pi 4 family, so none of this applies there.
+ClearHDR frame rates. **Pi 5 and CM5 only** — the RP1 southbridge does not
+exist on the Pi 4 family, so none of this applies there.
 
 Instructions courtesy of **Will Whang**, with thanks. See his work at
 [github.com/will127534](https://github.com/will127534).
 
-!!! warning "Pi 5 only"
+!!! warning "Pi 5 / CM5 only"
     Do not apply these steps on a Pi 4 / 400 / CM4. The device-tree overlay
     targets the RP1 (`brcm,bcm2712`) and the libcamera change assumes the PiSP
-    (Pi 5) pipeline.
+    (Pi 5) pipeline. Everything the installer does here is gated on that same
+    `bcm2712` check, so a Pi 4 install simply skips it.
 
 ## What it does
 
@@ -22,23 +23,49 @@ Instructions courtesy of **Will Whang**, with thanks. See his work at
 The RP1 overlay raises the clock; the libcamera change lifts the pixel-rate cap
 so the pipeline can actually advertise the faster modes. Both are needed.
 
-## What the Cinemate image ships
+## What the Cinemate install ships
 
-The prebuilt Cinemate image is already built overclock-ready:
+`cinemate-install.sh` does both halves of this automatically on a Pi 5 / CM5.
+You do not need the manual steps below unless you are building the stack by
+hand:
 
-- libcamera is compiled with `minPixelProcessingTime = 1.0us / 580`.
-- The `rp1-overclock` overlay is installed but **commented out** in
-  `/boot/firmware/config.txt`.
+| Step | Installer function | Result |
+|---|---|---|
+| Compile + install the overlay | `configure_rp1_overclock` | `/boot/firmware/overlays/rp1-overclock.dtbo` |
+| Add the config.txt line | `configure_boot_config` | `#dtoverlay=rp1-overclock`, **commented out** |
+| Lift the pixel-rate cap | `build_libcamera` | libcamera built at `1.0us / 580` |
 
-To enable the overclock, uncomment the overlay and reboot:
+The overclock therefore ships **installed but off**. Stock clocks stay the
+default; you opt in.
+
+### Switching it on and off
+
+Use the **Boot config** pane of the settings editor at
+`http://cinepi.local:5000/settings-editor`. The **RP1 overclock** toggle
+comments and uncomments the overlay line for you, then reboots — a reboot is
+required either way, because the clock is set by the device tree at boot.
+
+The toggle only appears on a `bcm2712` board whose `config.txt` already
+contains the overlay line. If it is missing, re-run `cinemate-install.sh` to
+add it. See [Modifying config.txt](config-txt.md) for the file itself.
+
+Equivalent from a shell:
 
 ```bash
 sudo sed -i 's/^#\s*dtoverlay=rp1-overclock/dtoverlay=rp1-overclock/' /boot/firmware/config.txt
 sudo reboot
 ```
 
-To go back to stock, re-comment the line and reboot. The rest of this page is
-for a manual build.
+To go back to stock, re-comment the line and reboot.
+
+!!! note "The mode list does not tell you whether the overclock is on"
+    `minPixelProcessingTime` is compiled into libcamera unconditionally on
+    Pi 5 / CM5, so `--list-cameras` advertises the faster imx585 modes even
+    while the overlay is commented out. Nothing clamps them. Selecting a
+    75 fps mode at stock clocks will drop frames. Confirm the clock itself
+    rather than trusting the mode list — see [Verify](#4-verify).
+
+The rest of this page is the manual build.
 
 ## 1. Build the RP1 overclock overlay
 
@@ -142,6 +169,22 @@ Reboot the Pi.
 
 ## 4. Verify
 
+First confirm the clock actually changed. This is the only check that
+distinguishes an active overclock from a commented-out overlay:
+
+```bash
+sudo grep -E '^[[:space:]]*(pll_sys|clk_sys) ' /sys/kernel/debug/clk/clk_summary
+```
+
+The rate is the fifth column:
+
+| Clock | Stock | Overclocked |
+|---|---|---|
+| `pll_sys` | `200000000` | `300000000` |
+| `clk_sys` | `200000000` | `300000000` |
+
+Then check the advertised modes:
+
 ```bash
 cinepi-raw --list-cameras
 ```
@@ -173,64 +216,3 @@ Available cameras
 Cinemate probes both lists, so the plain and ClearHDR modes appear together in
 the mode table. See [imx585 ClearHDR](clear-hdr.md).
 
-
-## RP1 overclock (Pi 5): higher sensor frame rates
-
-The RP1 I/O chip's clock limits CSI-2 throughput. Raising RP1_PLL_SYS and
-RP1_CLK_SYS from 200 to 300 MHz lifts the imx585 to 75 fps at 2K / 66.85 fps
-at 4K (SDR), and 37.5 / 33.43 fps in ClearHDR. Method by **Will Whang** —
-credit and thanks: <https://github.com/will127534>.
-
-Pi 5 / CM5 only. The Cinemate image ships the overlay compiled but **commented
-out** in `/boot/firmware/config.txt`; uncomment `#dtoverlay=rp1-overclock` to
-enable, then reboot.
-
-Manual setup: save the overlay source below as `~/rp1-overclock.dts`, then:
-
-```bash
-sudo apt install device-tree-compiler
-dtc -@ -I dts -O dtb -o rp1-overclock.dtbo ~/rp1-overclock.dts
-sudo cp rp1-overclock.dtbo /boot/firmware/overlays/
-echo '#dtoverlay=rp1-overclock' | sudo tee -a /boot/firmware/config.txt   # uncomment to enable
-```
-
-```dts
-/dts-v1/;
-/plugin/;
-
-/ {
-	compatible = "brcm,bcm2712";
-
-	fragment@0 {
-		target = <&rp1_clocks>;
-		__overlay__ {
-			/* Entire assigned-clock-rates array re-specified; only
-			 * RP1_PLL_SYS (#2) and RP1_CLK_SYS (#7) changed to 300 MHz. */
-			assigned-clock-rates = <
-				/* RP1_PLL_SYS_CORE  */ 1000000000
-				/* RP1_PLL_AUDIO_CORE*/ 1536000000
-				/* RP1_PLL_SYS       */ 300000000
-				/* RP1_PLL_SYS_SEC   */ 125000000
-				/* RP1_CLK_ETH       */ 125000000
-				/* RP1_PLL_AUDIO     */ 61440000
-				/* RP1_PLL_AUDIO_SEC */ 153600000
-				/* RP1_CLK_SYS       */ 300000000
-				/* RP1_PLL_SYS_PRI_PH*/ 100000000
-				/* RP1_CLK_SLOW_SYS  */ 50000000
-				/* RP1_CLK_SDIO_TIMER*/ 1000000
-				/* RP1_CLK_SDIO_ALT_SRC*/ 200000000
-				/* RP1_CLK_ETH_TSU   */ 50000000
-			>;
-		};
-	};
-};
-```
-
-libcamera must be told about the faster ISP: in
-`~/libcamera/src/ipa/rpi/controller/controller.cpp`, under the "pisp" section,
-change `.minPixelProcessingTime = 1.0us / 380` to `1.0us / 580`, rebuild
-libcamera (meson/ninja install as in the install guide), and reboot.
-
-Verify with `cinepi-raw --list-cameras` (expect 75 / 66.85 fps) and
-`cinepi-raw --list-cameras --hdr sensor` (expect 37.5 / 33.43 fps, with the
-SRGGB16 modes listed).

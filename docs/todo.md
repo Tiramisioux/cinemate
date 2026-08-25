@@ -3,7 +3,6 @@
 ```todo
 - 16 bit modes for imx585
 - support for imx294
-- overclocking of ISP
 - optional auto-exposure
 - rendering mode, for creating proxy files in camera (using https://github.com/mrjulesfletcher/dng_to_video)
 - automatic detection of attached sensor and dynamic dtoverlay

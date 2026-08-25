@@ -3214,6 +3214,12 @@
       var el = document.getElementById('cfg-' + key);
       if (el) el.setAttribute('aria-checked', config[key === 'rp1' ? 'rp1_overclock' : key] ? 'true' : 'false');
     });
+    /* rp1_available is false on a Pi 4, and on any board whose config.txt has
+       no dtoverlay=rp1-overclock line to flip. Showing the toggle there offers
+       a switch the save path has to reject -- hide it instead. */
+    var rp1Card = document.getElementById('cfg-rp1');
+    rp1Card = rp1Card && rp1Card.closest('.card');
+    if (rp1Card) rp1Card.hidden = (config.rp1_available === false);
     configDirty = !!markDirtyAfter;
     updateDirtyPill();
     refreshDrawer();

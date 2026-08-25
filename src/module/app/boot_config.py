@@ -211,12 +211,25 @@ def apply_config_txt_state(full_text: str, state: dict) -> str:
 
     if "rp1_overclock" in state:
         prefix = "" if state["rp1_overclock"] else "#"
-        new_block = re.sub(
+        new_block, substitutions = re.subn(
             r"^#?" + re.escape(RP1_OVERCLOCK_LINE) + r"\s*$",
             f"{prefix}{RP1_OVERCLOCK_LINE}",
             new_block,
             flags=re.MULTILINE,
         )
+        # No line to comment or uncomment. Turning the overclock *off* is
+        # still honest -- absent means off. Turning it *on* is not: the
+        # substitution changed nothing, but put_config_txt would report
+        # success and reboot, and the operator would come back to a Pi still
+        # on stock clocks with nothing explaining why. Only Pi 5 / CM5
+        # installs get this line (configure_boot_config), so this is also
+        # what a Pi 4 asking for an overclock hits.
+        if substitutions == 0 and state["rp1_overclock"]:
+            raise ValueError(
+                f"Cannot enable the RP1 overclock: no '{RP1_OVERCLOCK_LINE}' line in "
+                f"{CONFIG_TXT_PATH}. cinemate-install.sh writes it on Pi 5 / CM5 boards "
+                f"only -- re-run the installer to add it."
+            )
 
     return full_text[:start] + new_block + full_text[end:]
 

@@ -876,6 +876,7 @@
       <a href="#steps" data-nav>Value steps</a>
       <a href="#pots" data-nav>Pots &amp; free mode</a>
       <a href="#resolution" data-nav>Resolution &amp; sensor</a>
+      <a href="#fpsceilings" data-nav>Per-mode fps ceilings</a>
     </div>
     <div class="rail-group" data-page="settings">
       <div class="rail-title eyebrow">Recording</div>
@@ -1590,6 +1591,13 @@
           </div>
         </div>
       </div>
+    </section>
+    <section class="group" id="fpsceilings" data-page="settings">
+      <header class="group-head">
+        <h2>Per-mode fps ceilings</h2>
+        <p class="group-sub">A mode's advertised fps_max is an electrical property of the sensor, not a guarantee this storage/CPU can sustain it. Leave a field blank to keep using the detected value; fill one in only for a mode you've found a lower real-world ceiling for by trial. Raising above the detected value is allowed but logged as a warning -- the sensor never reported it.</p>
+      </header>
+      <div class="cards" id="fpsCeilingsList"><p class="card-help">Loading detected modes…</p></div>
     </section>
     <section class="group" id="audio" data-page="settings">
       <header class="group-head">
@@ -2339,7 +2347,123 @@
     state.hardware_controls = buildHardwareControlsState();
     if (!state.input_peripherals) state.input_peripherals = {};
     state.input_peripherals.quad_rotary_controller = buildQuadRotaryState();
+    if (!state.image_capture) state.image_capture = {};
+    state.image_capture.custom_modes = buildCustomModesState();
     return state;
+  }
+
+  /* ---------- B11.8: per-mode fps ceiling overrides ------------------
+     image_capture.custom_modes is sparse -- only modes the operator has
+     actually typed a value for get an entry, so nothing goes stale when
+     the sensor changes (F-298). A row with a blank field, or one whose
+     value matches the detected fps_max exactly, means "no override": its
+     entry (if any) is dropped rather than written out redundantly.
+     Any pre-existing custom_modes entry that does NOT match one of the
+     modes this pane lists (a genuinely new, undetected mode someone added
+     by hand) is left completely untouched -- same reasoning as B11.5's
+     hardware_controls fix: a pane must never silently drop what it
+     doesn't itself represent. */
+  function renderFpsCeilings(sensors){
+    var list = document.getElementById('fpsCeilingsList');
+    list.innerHTML = '';
+    var customModes = (lastLoadedSettings && lastLoadedSettings.image_capture
+      && lastLoadedSettings.image_capture.custom_modes) || {};
+    var any = false;
+    Object.keys(sensors).forEach(function(camera){
+      (sensors[camera] || []).forEach(function(mode){
+        any = true;
+        var override = (customModes[camera] || []).find(function(entry){
+          return Number(entry.width) === mode.width && Number(entry.height) === mode.height
+            && Number(entry.bit_depth) === mode.bit_depth && !!entry.hdr === !!mode.hdr;
+        });
+
+        var row = document.createElement('div');
+        row.className = 'card';
+        row.setAttribute('data-fps-row', '1');
+        row.setAttribute('data-camera', camera);
+        row.setAttribute('data-width', mode.width);
+        row.setAttribute('data-height', mode.height);
+        row.setAttribute('data-bit-depth', mode.bit_depth);
+        row.setAttribute('data-hdr', mode.hdr ? 'true' : 'false');
+        row.setAttribute('data-detected', mode.fps_max_detected);
+        row.setAttribute('data-search', 'fps ceiling ' + camera + ' ' + mode.width + ' ' + mode.height);
+
+        var main = document.createElement('div');
+        main.className = 'card-main';
+        var label = document.createElement('label');
+        label.className = 'card-label';
+        label.textContent = camera + ' ' + mode.width + '×' + mode.height + ' · ' + mode.bit_depth + '-bit' + (mode.hdr ? ' HDR' : '');
+        var help = document.createElement('p');
+        help.className = 'card-help';
+        help.textContent = 'Sensor reports ' + mode.fps_max_detected + ' fps.';
+        main.appendChild(label);
+        main.appendChild(help);
+
+        var control = document.createElement('div');
+        control.className = 'card-control';
+        var input = document.createElement('input');
+        input.type = 'number';
+        input.className = 'field-input num-input fps-ceiling-input';
+        input.placeholder = String(mode.fps_max_detected);
+        input.min = '0';
+        input.step = 'any';
+        if (override) input.value = override.fps_max;
+        input.addEventListener('change', function(){ markDirty(input, true); });
+        control.appendChild(input);
+        var unit = document.createTextNode(' fps');
+        control.appendChild(unit);
+
+        row.appendChild(main);
+        row.appendChild(control);
+        list.appendChild(row);
+      });
+    });
+    if (!any) list.innerHTML = '<p class="card-help">No detected sensor modes yet -- reconnect the camera or check cinepi-raw --list-cameras.</p>';
+  }
+
+  function loadFpsCeilings(){
+    return fetch('/settings-editor/api/sensor-modes').then(function(r){ return r.json(); }).then(function(res){
+      if (!res.ok) return;
+      renderFpsCeilings(res.sensors || {});
+    }).catch(function(){ /* non-fatal -- the rest of the page still works */ });
+  }
+
+  function buildCustomModesState(){
+    var out = {};
+    var customModes = (lastLoadedSettings && lastLoadedSettings.image_capture
+      && lastLoadedSettings.image_capture.custom_modes) || {};
+    // Start from every existing entry, so a genuinely custom (undetected)
+    // mode this pane has no row for survives untouched.
+    Object.keys(customModes).forEach(function(camera){
+      out[camera] = (customModes[camera] || []).slice();
+    });
+
+    document.querySelectorAll('#fpsCeilingsList [data-fps-row]').forEach(function(row){
+      var camera = row.getAttribute('data-camera');
+      var w = parseInt(row.getAttribute('data-width'), 10);
+      var h = parseInt(row.getAttribute('data-height'), 10);
+      var bd = parseInt(row.getAttribute('data-bit-depth'), 10);
+      var hdr = row.getAttribute('data-hdr') === 'true';
+      var detected = parseFloat(row.getAttribute('data-detected'));
+      var input = row.querySelector('.fps-ceiling-input');
+      var raw = (input.value || '').trim();
+
+      out[camera] = (out[camera] || []).filter(function(entry){
+        return !(Number(entry.width) === w && Number(entry.height) === h
+          && Number(entry.bit_depth) === bd && !!entry.hdr === hdr);
+      });
+
+      if (raw === '') return; // blank -- use the detected value, no entry
+      var val = parseFloat(raw);
+      if (isNaN(val) || val === detected) return; // matches detected -- redundant, no entry
+
+      var entry = { width: w, height: h, bit_depth: bd, fps_max: val };
+      if (hdr) entry.hdr = true;
+      out[camera].push(entry);
+    });
+
+    Object.keys(out).forEach(function(camera){ if (out[camera].length === 0) delete out[camera]; });
+    return out;
   }
 
   /* ---------- config.txt reconstruction ---------- */
@@ -2758,6 +2882,7 @@
       if (!res.ok){ showToast('Could not load settings.jsonc: ' + res.message); return; }
       populateSettingsForm(res.settings);
       if (res.source === 'stock') showToast('No settings.jsonc on this Pi yet — showing stock defaults');
+      loadFpsCeilings();
     }).catch(function(err){ showToast('Could not reach the server: ' + err); });
   }
 
@@ -3575,38 +3700,6 @@
     updateGroupVisibility();
     if (typeof updateBulkBar === 'function') updateBulkBar();
   });
-
-  /* ---------- live view ---------- */
-  document.getElementById('liveIsoSelect').addEventListener('change', function(){ document.getElementById('liveIso').textContent = this.value; });
-  document.getElementById('liveShutterSelect').addEventListener('change', function(){ document.getElementById('liveShutter').textContent = this.value + '°'; });
-  document.getElementById('liveFpsSelect').addEventListener('change', function(){ document.getElementById('liveFps').textContent = this.value; });
-  document.getElementById('liveWbSelect').addEventListener('change', function(){ document.getElementById('liveWb').textContent = this.value + ' K'; });
-  (function(){
-    var recBtn = document.getElementById('liveRecBtn');
-    var recLabel = document.getElementById('liveRecLabel');
-    var tally = document.getElementById('liveTally');
-    var recTimeEl = document.getElementById('liveRecTime');
-    var timer = null, seconds = 0;
-    recBtn.addEventListener('click', function(){
-      var recording = recBtn.classList.toggle('recording');
-      tally.classList.toggle('on', recording);
-      recLabel.textContent = recording ? 'Stop' : 'Record';
-      if (recording){
-        seconds = 0;
-        recTimeEl.textContent = '00:00';
-        timer = setInterval(function(){
-          seconds++;
-          var m = String(Math.floor(seconds / 60)).padStart(2, '0');
-          var s = String(seconds % 60).padStart(2, '0');
-          recTimeEl.textContent = m + ':' + s;
-        }, 1000);
-        showToast('Recording started');
-      } else {
-        clearInterval(timer);
-        showToast('Recording stopped — take saved');
-      }
-    });
-  })();
 
   /* ---------- boot sequence engine (shared by Cinemate restart & Pi reboot) ---------- */
   function runBootSequence(opts){

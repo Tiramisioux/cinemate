@@ -405,6 +405,40 @@ def get_actions():
     return jsonify({"ok": True, "actions": actions})
 
 
+@settings_editor_bp.route("/api/sensor-modes", methods=["GET"])
+def get_sensor_modes():
+    """Detected modes per camera model, for the fps-ceiling override pane
+    (F-298). sensor_detect.res_modes/sensor_resolutions already carry any
+    settings.jsonc custom_modes override merged in (that's the *effective*
+    fps_max cinepi-raw actually launches with); fps_max_detected is only
+    present on a mode _finalize_modes() overrode, and is what the sensor
+    itself reported before that override was applied -- see
+    sensor_detect.py's _finalize_modes(). Absent means "not overridden",
+    i.e. fps_max itself is the detected value.
+    """
+    sensor_detect = current_app.config.get("SENSOR_DETECT")
+    if sensor_detect is None:
+        return jsonify({"ok": True, "sensors": {}})
+
+    sensors = {}
+    for camera_name, modes in (sensor_detect.sensor_resolutions or {}).items():
+        entries = []
+        for mode in modes.values():
+            detected_fps = mode.get("fps_max_detected", mode.get("fps_max"))
+            entries.append({
+                "width": mode.get("width"),
+                "height": mode.get("height"),
+                "bit_depth": mode.get("bit_depth"),
+                "hdr": bool(mode.get("hdr", False)),
+                "fps_max_detected": detected_fps,
+                "fps_max_effective": mode.get("fps_max"),
+            })
+        entries.sort(key=lambda m: ((m["width"] or 0) * (m["height"] or 0), m["bit_depth"] or 0), reverse=True)
+        sensors[camera_name] = entries
+
+    return jsonify({"ok": True, "sensors": sensors})
+
+
 @settings_editor_bp.route("/api/raw/storage", methods=["GET"])
 def get_raw_storage():
     return jsonify({"ok": True, "storage": raw_files.storage_summary()})

@@ -3,10 +3,11 @@ import signal
 import subprocess
 import re
 import logging
-import json
 import time
 from pathlib import Path
 from typing import Any, Dict, List
+
+from module.sensor_database import load_sensor_database
 
 DEFAULT_SENSOR_DATABASE_FILE = "resources/sensors.json"
 FALLBACK_PACKING_INFO = {
@@ -103,20 +104,10 @@ class SensorDetect:
         return Path(__file__).resolve().parents[2] / path
 
     def _load_sensor_database(self) -> dict[str, Any]:
-        path = self._resolve_repo_path(self.sensor_database_file)
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except OSError as exc:
-            logging.warning("Sensor database unavailable (%s): %s", path, exc)
-            return {"schema_version": 1, "sensors": {}}
-        except json.JSONDecodeError as exc:
-            logging.warning("Sensor database is invalid JSON (%s): %s", path, exc)
-            return {"schema_version": 1, "sensors": {}}
-
-        if not isinstance(data.get("sensors"), dict):
-            logging.warning("Sensor database %s has no sensors object", path)
-            return {"schema_version": 1, "sensors": {}}
-        return data
+        # Delegates to module.sensor_database, which boot_config also uses --
+        # two loaders would mean two sets of fallback rules to keep in step,
+        # which is the drift this database exists to prevent.
+        return load_sensor_database(str(self._resolve_repo_path(self.sensor_database_file)))
 
     def _packing_info_from_database(self) -> dict[str, str]:
         packing = dict(FALLBACK_PACKING_INFO)

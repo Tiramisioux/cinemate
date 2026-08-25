@@ -8,10 +8,11 @@ boot or streams faster than the receiver can hold, and both look like "the
 camera stopped working" hours later. So the write path validates against the
 list the driver actually vouches for, and the read path round-trips it.
 
-Only imx585 has this menu. imx283's driver supports two frequencies but its
-overlay exposes no parameter; imx477 accepts any multiple of 3 MHz with no
-upper bound (nothing to offer); imx296 has no link-frequencies property at
-all. See the constants block in boot_config.py.
+Which values each sensor takes, and whether it gets a menu at all, comes from
+resources/sensors.json -- so these tests double as assertions about the
+database. imx585 and imx283 have menus; imx296 and imx519 have fixed links;
+imx477's values are recorded but its menu is gated off until the 750 MHz
+hardware gate passes.
 """
 
 import sys
@@ -26,12 +27,17 @@ sys.modules.setdefault("redis", types.SimpleNamespace(StrictRedis=object))
 sys.modules.setdefault("psutil", types.SimpleNamespace())
 
 from module.app.boot_config import (
-    IMX585_DEFAULT_LINK_FREQUENCY,
-    IMX585_LINK_FREQUENCIES,
     apply_config_txt_state,
+    link_frequency_options,
     overlay_line_for,
     parse_config_txt,
+    sensor_database,
+    supports_link_frequency,
 )
+from module.sensor_database import link_frequency_default
+
+IMX585_DEFAULT_LINK_FREQUENCY = link_frequency_default(sensor_database(), "imx585")
+IMX585_LINK_FREQUENCIES = [o["hz"] for o in link_frequency_options("imx585")]
 
 
 def config_txt(*camera_lines: str) -> str:
@@ -60,12 +66,27 @@ BASE = {"cam0_sensor": "imx585", "cam1_sensor": "none", "i2c": True, "audio": Tr
 class LinkFrequencyMenuTests(unittest.TestCase):
     def test_the_offered_values_match_the_driver(self):
         # will127534/imx585-v4l2-driver link_freqs[], minus 1188000000, which
-        # the README reports as frame-dropping on the Pi 5.
+        # the README reports as frame-dropping on the Pi 5. Sourced from
+        # resources/sensors.json, so this asserts the database is right.
         self.assertEqual(IMX585_LINK_FREQUENCIES, [
             297000000, 360000000, 445500000, 594000000, 720000000, 891000000, 1039500000,
         ])
         self.assertNotIn(1188000000, IMX585_LINK_FREQUENCIES)
         self.assertIn(IMX585_DEFAULT_LINK_FREQUENCY, IMX585_LINK_FREQUENCIES)
+
+    def test_imx283_offers_its_two_values_with_720_as_both_default_and_ceiling(self):
+        # The overlay parameter for these landed in the driver fork at
+        # 257c9cf; before that only the endpoint's 720 MHz was reachable.
+        self.assertTrue(supports_link_frequency("imx283"))
+        self.assertEqual([o["hz"] for o in link_frequency_options("imx283")],
+                         [360000000, 720000000])
+        self.assertEqual(link_frequency_default(sensor_database(), "imx283"), 720000000)
+
+    def test_sensors_with_no_menu_are_reported_as_such(self):
+        # imx296/imx519 have fixed links. imx477's values are recorded but its
+        # menu is gated off until the 750 MHz hardware gate passes.
+        for model in ("imx296", "imx519", "imx477"):
+            self.assertFalse(supports_link_frequency(model), model)
 
 
 class OverlayLineTests(unittest.TestCase):
@@ -90,9 +111,14 @@ class OverlayLineTests(unittest.TestCase):
             "dtoverlay=imx585,cam1,mono,link-frequency=891000000",
         )
 
-    def test_sensors_without_the_parameter_never_get_one(self):
-        for model in ("imx477", "imx296", "imx283"):
+    def test_sensors_without_a_menu_never_get_the_parameter(self):
+        for model in ("imx477", "imx296"):
             self.assertEqual(overlay_line_for(model, "cam0", 891000000), f"dtoverlay={model},cam0")
+
+    def test_imx283_gets_the_parameter_only_below_its_default(self):
+        self.assertEqual(overlay_line_for("imx283", "cam0", 360000000),
+                         "dtoverlay=imx283,cam0,link-frequency=360000000")
+        self.assertEqual(overlay_line_for("imx283", "cam0", 720000000), "dtoverlay=imx283,cam0")
 
 
 class RoundTripTests(unittest.TestCase):
@@ -154,10 +180,19 @@ class ValidationTests(unittest.TestCase):
     def test_asking_for_one_on_a_sensor_that_has_none_is_refused(self):
         with self.assertRaises(ValueError) as caught:
             apply_config_txt_state(
-                config_txt("dtoverlay=imx477,cam0"),
-                {**BASE, "cam0_sensor": "imx477", "cam0_link_frequency": 891000000},
+                config_txt("dtoverlay=imx296,cam0"),
+                {**BASE, "cam0_sensor": "imx296", "cam0_link_frequency": 891000000},
             )
         self.assertIn("no selectable link frequency", str(caught.exception))
+
+    def test_an_imx585_value_is_refused_on_imx283(self):
+        # The two menus barely overlap; a stale pick must not ride along.
+        with self.assertRaises(ValueError) as caught:
+            apply_config_txt_state(
+                config_txt("dtoverlay=imx283,cam0"),
+                {**BASE, "cam0_sensor": "imx283", "cam0_link_frequency": 1039500000},
+            )
+        self.assertIn("not a supported imx283 link frequency", str(caught.exception))
 
     def test_a_stale_frequency_on_an_emptied_port_does_not_fail_the_save(self):
         # Pick imx585 + 891, then set the port to none: the form can still be

@@ -93,6 +93,43 @@ Resolutions above are the modes currently defined in `resources/sensors.json`; t
 
 IMX477 is not a hardware limitation — its 12-bit modes would work the same way — it needs sensor-aware spec selection on the `cinepi-raw` side that hasn't been built yet.
 
+## CSI-2 link frequency
+
+The link frequency sets how fast the sensor pushes pixels down the MIPI lanes,
+and so what frame rate a mode can reach. Where it is selectable, Cinemate
+offers it per port in the settings editor's Boot config pane — see
+[Overclocking the Pi](overclocking.md), because on a Pi 5 the receiver has to
+be overclocked before the higher rates buy anything.
+
+`resources/sensors.json` is the source of truth for the values below.
+
+| Sensor | Lanes | Default | Selectable | Values |
+|--------|-------|---------|------------|--------|
+| IMX585 | 4 | 720 MHz | **yes** | 297 / 360 / 445.5 / 594 / 720 / 891 / 1039.5 MHz |
+| IMX283 | 4 | 720 MHz | **yes** | 360 / 720 MHz — 720 is also the ceiling |
+| IMX477 | 2 | 450 MHz | not yet | driver computes any ~3 MHz multiple (kernel ≥ 6.12.49) |
+| IMX296 | 1 | 594 MHz | no | fixed |
+| IMX519 | 2 | 408 MHz | no | fixed |
+
+**IMX585** carries per-value frame rates in
+[Overclocking the Pi](overclocking.md#imx585). 1188 MHz exists in the driver
+and is deliberately not offered: frame drops on Pi 5, unsupported on Pi 4.
+
+**IMX283**'s two values are the only two Sony ships register sequences for.
+720 MHz is both the default and the silicon ceiling, so the only selectable
+alternative is slower. The 4K modes' 44/41 fps are the link ceiling at those
+bit depths — more frame rate means a lower bit depth, not a faster link.
+Selecting the non-default value needs the `link-frequency` overlay parameter
+added in `Tiramisioux/imx283-v4l2-driver` `6.12.y` at `257c9cf`.
+
+**IMX477** is not a hardware limitation. Its driver accepts any exact multiple
+of 3 MHz and RPi's own testing found ~909 MHz stable, but it vouches for no
+upper bound, so Cinemate keeps the menu hidden until the values are verified
+on this stack.
+
+**IMX296**'s 60 fps cap is readout-limited, not link-limited; a faster link
+would buy nothing.
+
 ## Sensor size, crop factor and film-format equivalents
 
 Each mode reads out a physical area of the sensor. Binned modes keep the full field of view. Cropped modes use a smaller area, so the same lens frames tighter.

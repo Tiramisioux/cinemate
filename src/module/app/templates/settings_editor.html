@@ -2794,13 +2794,20 @@
   /* ---------- config.txt reconstruction ---------- */
   var CFG_SENSOR_LABELS = { imx477: 'IMX477', imx296: 'IMX296', imx283: 'IMX283', imx585: 'IMX585', imx585_mono: 'IMX585 mono', none: 'none' };
   function cfgSensorLabel(value){ return CFG_SENSOR_LABELS[value] || value; }
-  /* The link-frequency menu and its Mbps/fps figures come from the API
-     (boot_config.IMX585_LINK_FREQUENCY_TABLE), not from a second copy kept
-     here by hand. Only the default is seeded, so the control still renders
-     sensibly if the fetch hasn't landed yet. */
-  var cfgLinkFreqTable = [];
-  var cfgLinkFreqDefault = 720000000;
-  function cfgSupportsLinkFreq(sensor){ return sensor === 'imx585' || sensor === 'imx585_mono'; }
+  /* Link-frequency menus come from resources/sensors.json by way of the API
+     (boot_config.link_frequency_menus()). Nothing about which values exist,
+     which is default, or which sensors get a menu at all is written down
+     here -- a sensor absent from this object simply has no menu, which is
+     also how a sensor whose menu is gated off pending hardware tests
+     (imx477) arrives. */
+  var cfgLinkFreqMenus = {};
+  function cfgSupportsLinkFreq(sensor){
+    return Object.prototype.hasOwnProperty.call(cfgLinkFreqMenus, sensor);
+  }
+  function cfgLinkFreqDefaultFor(sensor){
+    var menu = cfgLinkFreqMenus[sensor];
+    return menu ? menu.default_hz : null;
+  }
   function cfgLinkFreqOf(port){
     var sel = document.getElementById('cfg-' + port + '-link-freq');
     if (!sel || !sel.value) return null;
@@ -2812,30 +2819,41 @@
     var line = 'dtoverlay=' + value.replace('_mono', '') + ',' + port + (value === 'imx585_mono' ? ',mono' : '');
     /* The overlay's own default is this same value, so writing it would put a
        number in config.txt that reads as a choice when it isn't. */
-    if (cfgSupportsLinkFreq(value) && linkFreq && linkFreq !== cfgLinkFreqDefault) {
+    if (cfgSupportsLinkFreq(value) && linkFreq && linkFreq !== cfgLinkFreqDefaultFor(value)) {
       line += ',link-frequency=' + linkFreq;
     }
     return line;
   }
-  function cfgLinkFreqLabel(entry){
+  function cfgLinkFreqLabel(entry, defaultHz){
     var mhz = entry.hz / 1000000;
     /* 445.5 and 1039.5 are the only fractional ones; don't print "720.0". */
-    var mhzText = (mhz % 1 === 0 ? mhz.toFixed(0) : mhz.toFixed(1)) + ' MHz';
-    var label = mhzText + ' · ' + entry.mbps_per_lane + ' Mbps/lane · up to ' + entry.fps_4k_4lane + ' fps at 4K';
-    return entry.hz === cfgLinkFreqDefault ? label + ' (default)' : label;
+    var label = (mhz % 1 === 0 ? mhz.toFixed(0) : mhz.toFixed(1)) + ' MHz';
+    if (entry.mbps_per_lane) label += ' · ' + entry.mbps_per_lane + ' Mbps/lane';
+    /* Only imx585 has published per-frequency frame rates. Don't invent a
+       figure for a sensor whose driver README never gave one. */
+    if (entry.fps_4k12_4lane) label += ' · up to ' + entry.fps_4k12_4lane + ' fps at 4K';
+    if (entry.hz === defaultHz) label += ' (default)';
+    if (entry.over_rp1_spec) label += ' — over RP1 spec';
+    return label;
   }
   function cfgFillLinkFreqOptions(port){
     var sel = document.getElementById('cfg-' + port + '-link-freq');
-    if (!sel || !cfgLinkFreqTable.length) return;
+    if (!sel) return;
+    var sensor = document.getElementById('cfg-' + port + '-sensor').value;
+    var menu = cfgLinkFreqMenus[sensor];
+    if (!menu || !menu.options || !menu.options.length) return;
     var previous = sel.value;
     sel.innerHTML = '';
-    cfgLinkFreqTable.forEach(function(entry){
+    menu.options.forEach(function(entry){
       var opt = document.createElement('option');
       opt.value = String(entry.hz);
-      opt.textContent = cfgLinkFreqLabel(entry);
+      opt.textContent = cfgLinkFreqLabel(entry, menu.default_hz);
       sel.appendChild(opt);
     });
-    if (previous) sel.value = previous;
+    /* Keep the previous pick only if this sensor actually offers it -- the
+       two menus do not overlap much, and a stale value would be submitted. */
+    var keeps = previous && menu.options.some(function(e){ return String(e.hz) === previous; });
+    sel.value = keeps ? previous : String(menu.default_hz);
   }
   /* Shown when the overclock is on -- that is when the higher rates buy
      anything -- and also whenever a non-default rate is already configured,
@@ -2850,8 +2868,9 @@
       if (!card) return;
       var sensor = document.getElementById('cfg-' + port + '-sensor').value;
       var sel = document.getElementById('cfg-' + port + '-link-freq');
-      var chosen = sel && sel.value ? Number(sel.value) : cfgLinkFreqDefault;
-      var nonDefault = chosen !== cfgLinkFreqDefault;
+      var defaultHz = cfgLinkFreqDefaultFor(sensor);
+      var chosen = sel && sel.value ? Number(sel.value) : defaultHz;
+      var nonDefault = defaultHz !== null && chosen !== defaultHz;
       card.hidden = !cfgSupportsLinkFreq(sensor) || (!rp1 && !nonDefault);
       if (warn) warn.hidden = rp1 || !nonDefault;
     });
@@ -3375,14 +3394,18 @@
     rp1Card = rp1Card && rp1Card.closest('.card');
     if (rp1Card) rp1Card.hidden = (config.rp1_available === false);
 
-    if (Array.isArray(config.link_frequencies) && config.link_frequencies.length) {
-      cfgLinkFreqTable = config.link_frequencies;
+    if (config.link_frequency_menus && typeof config.link_frequency_menus === 'object') {
+      cfgLinkFreqMenus = config.link_frequency_menus;
     }
-    if (config.link_frequency_default) cfgLinkFreqDefault = config.link_frequency_default;
     ['cam0', 'cam1'].forEach(function(port){
       cfgFillLinkFreqOptions(port);
       var sel = document.getElementById('cfg-' + port + '-link-freq');
-      if (sel) sel.value = String(config[port + '_link_frequency'] || cfgLinkFreqDefault);
+      if (!sel) return;
+      var stored = config[port + '_link_frequency'];
+      /* null means "the overlay default" -- resolve it per sensor rather than
+         leaving the select on whatever happened to be first. */
+      var want = String(stored || cfgLinkFreqDefaultFor(config[port + '_sensor']) || '');
+      if (want) sel.value = want;
     });
     cfgSyncLinkFreqCards();
     configDirty = !!markDirtyAfter;
@@ -3814,8 +3837,16 @@
 
   /* ---------- boot config controls ---------- */
   function markConfigDirty(){ configDirty = true; updateDirtyPill(); }
-  document.getElementById('cfg-cam0-sensor').addEventListener('change', function(){ markConfigDirty(); cfgSyncLinkFreqCards(); if (activeDrawerTab === 'config') refreshDrawer(); });
-  document.getElementById('cfg-cam1-sensor').addEventListener('change', function(){ markConfigDirty(); cfgSyncLinkFreqCards(); if (activeDrawerTab === 'config') refreshDrawer(); });
+  /* Refill before syncing: each sensor has its own menu, so switching sensor
+     has to rebuild the options, not just decide whether to show them. */
+  ['cam0', 'cam1'].forEach(function(port){
+    document.getElementById('cfg-' + port + '-sensor').addEventListener('change', function(){
+      markConfigDirty();
+      cfgFillLinkFreqOptions(port);
+      cfgSyncLinkFreqCards();
+      if (activeDrawerTab === 'config') refreshDrawer();
+    });
+  });
   ['cam0', 'cam1'].forEach(function(port){
     var sel = document.getElementById('cfg-' + port + '-link-freq');
     if (!sel) return;

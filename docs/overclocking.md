@@ -64,46 +64,76 @@ sudo reboot
 
 To go back to stock, re-comment the line and reboot.
 
-## Link frequency (imx585)
+## Link frequency
 
-Raising the RP1 clock lifts the *receiver's* ceiling. The sensor still has to
-be told to send faster, and on the imx585 that is a separate setting: the
-CSI-2 link frequency, a parameter on the sensor's own overlay line.
+Two different ceilings, and you need both raised:
 
-With the overclock on, the Boot config pane shows a **link frequency** menu
-per port. Each port has its own — cam0 and cam1 are independent.
+| Raises | Setting |
+|---|---|
+| What the **sensor sends** | CSI-2 link frequency, a parameter on the sensor's overlay line |
+| What the **receiver takes** | the RP1 overclock on this page |
 
-| Value | Mbps/lane | 4K 12-bit, 4 lanes | 2 lanes |
-|---|---|---|---|
-| 297 MHz | 594 | 20.8 fps | 10.4 fps |
-| 360 MHz | 720 | 25.0 fps | 12.5 fps |
-| 445.5 MHz | 891 | 30.0 fps | 15.0 fps |
-| 594 MHz | 1188 | 41.7 fps | 20.8 fps |
-| **720 MHz** (default) | 1440 | 50.0 fps | 25.0 fps |
-| 891 MHz | 1782 | 60.0 fps | 30.0 fps |
-| 1039.5 MHz | 2079 | 75.0 fps | 37.5 fps |
-
-Halve again for ClearHDR; double for 2×2 binned 1080p. Values and rates come
-from [will127534/imx585-v4l2-driver](https://github.com/will127534/imx585-v4l2-driver).
-
-Anything above 720 MHz only pays off with the overclock active — a stock RP1
-tops out near 43.8 fps at 4K no matter what the sensor sends. Cinemate writes
-the parameter only when it differs from the default:
+A stock RP1 tops out near 43.8 fps at 4K no matter what the sensor is told to
+do, which is why the link-frequency menus appear once the overclock is on.
+Each port has its own — cam0 and cam1 are independent. Cinemate writes the
+parameter only when it differs from the sensor's default:
 
 ```
 dtoverlay=imx585,cam0,link-frequency=1039500000
 ```
 
-The driver also defines 1188 MHz (2376 Mbps/lane). Cinemate does not offer it
-— the Pi 4 cannot use it and the Pi 5 drops frames.
+Per-sensor values live in `resources/sensors.json`. That file is the source of
+truth — the menu, the validation and the tables below all read from it. See
+[Sensors](sensors.md) for the full per-sensor tables.
 
-!!! info "Only the imx585 has this menu"
-    The other supported sensors cannot offer one. The imx283 driver accepts
-    360 and 720 MHz but its overlay exposes no `link-frequency` parameter.
-    The imx477 driver accepts *any* exact multiple of 3 MHz with no upper
-    bound, so there is no list it actually vouches for — only its 450 MHz
-    default is proven. The imx296 has no link-frequency property at all; it
-    derives its own MIPI timing.
+### imx585
+
+| Value | Mbps/lane | 4K 12-bit, 4 lanes |
+|---|---|---|
+| 297 MHz | 594 | 20.8 fps |
+| 360 MHz | 720 | 25.0 fps |
+| 445.5 MHz | 891 | 30.0 fps |
+| 594 MHz | 1188 | 41.7 fps |
+| **720 MHz** (default) | 1440 | 50.0 fps |
+| 891 MHz | 1782 | 60.0 fps |
+| 1039.5 MHz | 2079 | 75.0 fps |
+
+Halve for 2-lane, halve again for ClearHDR, double for 2×2 binned. Figures
+come from [will127534/imx585-v4l2-driver](https://github.com/will127534/imx585-v4l2-driver)
+and are advisory until measured on this stack. The driver also defines
+1188 MHz (2376 Mbps/lane); Cinemate does not offer it — the Pi 4 cannot use it
+and the Pi 5 drops frames.
+
+### imx283
+
+360 MHz (720 Mbps/lane) and **720 MHz** (1440 Mbps/lane, default). Sony ships
+exactly two register sequences and the driver rejects anything else.
+
+!!! note "720 MHz is already the ceiling here"
+    The only selectable alternative is *slower*. This closes the standing
+    question of whether a faster link would lift the 4K modes past their
+    44/41 fps: it would, but no faster link exists. More frame rate on the
+    imx283 means a lower bit depth, not a faster link.
+
+    Selecting a non-default value needs the `link-frequency` overlay
+    parameter, which exists only in `Tiramisioux/imx283-v4l2-driver` `6.12.y`
+    at `257c9cf` or later. An older overlay rejects the unknown parameter and
+    the camera will not enumerate at all — re-run the installer first.
+
+### The others
+
+| Sensor | Link | Menu |
+|---|---|---|
+| imx477 | 450 MHz default; since kernel 6.12.49 the driver computes PLL settings for any ~3 MHz multiple | **not yet** — values recorded, menu held back pending hardware verification |
+| imx296 | fixed 594 MHz, 1 lane; the 60 fps cap is readout-limited, not link-limited | no |
+| imx519 | fixed 408 MHz; the driver rejects anything else at probe | no |
+
+### Receiver ceilings
+
+| Receiver | Spec | Observed |
+|---|---|---|
+| Pi 5 / CM5 (RP1) | 1.5 Gbps/lane | 1782 Mbps/lane fine, 2079 works, 2376 drops frames. Separate drain limit: 380 MPix/s stock, 580 with the overclock |
+| Pi 4 / CM4 (Unicam) | none published | ~1.4 Gbps/lane; SDRAM-bandwidth-limited; 2376 fails |
 
 !!! note "The mode list does not tell you whether the overclock is on"
     `minPixelProcessingTime` is compiled into libcamera unconditionally on

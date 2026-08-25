@@ -113,6 +113,11 @@ class ParameterKey(Enum):
     RECORDING_TC_REC     = "recording_tc_rec"    # elapsed-time time-code
     RECORDING_TC_TOD   = "recording_time_tod"    # time-of-day time-code
     FRAMES_IN_SYNC      = "frames_in_sync"
+    USER_CHANGING_FPS   = "user_changing_fps"
+    FSCK_STATUS         = "FSCK_STATUS"  # ssd_monitor's own fsck result; cinepi-raw never reads this one
+
+
+_KNOWN_PARAMETER_VALUES = {member.value for member in ParameterKey}
 
 
 def encode_log_encode_request(value) -> int:
@@ -178,6 +183,7 @@ class RedisController:
         self.lock   = threading.Lock()
         self.cache  = {}
         self.local_updates: set[str] = set()
+        self._unknown_keys_warned: set[str] = set()
 
         self.redis_parameter_changed = Event()
 
@@ -257,6 +263,20 @@ class RedisController:
             return
 
         key_name = key.value if isinstance(key, ParameterKey) else str(key)
+
+        # F-015: the enum was convention, not enforcement -- any string was
+        # accepted silently. This makes an un-enumerated key visible without
+        # blocking the write: rejecting outright here, with no Pi available
+        # to verify every call site this touches, risks silently breaking a
+        # working recording path over a naming gap. Warn once per key so a
+        # value written every frame (e.g. framecount) can't flood the log.
+        if key_name not in _KNOWN_PARAMETER_VALUES and key_name not in self._unknown_keys_warned:
+            self._unknown_keys_warned.add(key_name)
+            logging.warning(
+                "set_value('%s', ...): not a ParameterKey member -- writing anyway, "
+                "but this key has no enum entry to keep readers in sync with it.",
+                key_name,
+            )
 
         # ─── Redis write / publish / cache ───────────────────────────
         with self.lock:

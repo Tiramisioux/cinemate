@@ -11,8 +11,11 @@ from collections import deque
 from typing import Optional
 
 from module.config_loader import as_bool
+from module.redis_controller import ParameterKey
 
-CAPTURE_GAIN_REDIS_KEY = "audio_capture_gain_db"
+# F-106: this used to re-declare ParameterKey.AUDIO_CAPTURE_GAIN_DB's value as
+# an independent string literal. Same key, one definition now.
+CAPTURE_GAIN_REDIS_KEY = ParameterKey.AUDIO_CAPTURE_GAIN_DB.value
 
 
 class Event:
@@ -39,8 +42,9 @@ class Event:
 
 
 class AudioMonitor:
-    def __init__(self, settings: Optional[dict] = None):
+    def __init__(self, settings: Optional[dict] = None, redis_controller=None):
         self.settings = settings or {}
+        self._redis_controller = redis_controller
         self.format: Optional[str] = None
         self.channels: Optional[int] = None
         self.sample_rate: Optional[int] = None
@@ -73,23 +77,17 @@ class AudioMonitor:
             return 0.0
 
     def _refresh_capture_gain_from_redis(self) -> None:
-        try:
-            import redis  # type: ignore
-        except ModuleNotFoundError:
+        if self._redis_controller is None:
             return
 
         try:
-            client = redis.StrictRedis(host="localhost", port=6379, db=0)
-            value = client.get(CAPTURE_GAIN_REDIS_KEY)
+            value = self._redis_controller.get_value(CAPTURE_GAIN_REDIS_KEY)
         except Exception as exc:
             logging.debug("Could not read %s from Redis: %s", CAPTURE_GAIN_REDIS_KEY, exc)
             return
 
-        if value in (None, b"", ""):
+        if value in (None, ""):
             return
-
-        if isinstance(value, bytes):
-            value = value.decode("utf-8", errors="replace")
 
         self.capture_gain_db = self._parse_capture_gain_db(value)
 
@@ -374,11 +372,11 @@ class AudioMonitor:
     def publish_mic_selection(self) -> None:
         if not self.can_record_audio or not self.device_alias:
             return
+        if self._redis_controller is None:
+            logging.debug("No shared Redis client available; skipping MIC_* publish.")
+            return
         try:
-            import redis  # type: ignore
-
-            client = redis.StrictRedis(host="localhost", port=6379, db=0)
-            client.mset({
+            self._redis_controller.r.mset({
                 "MIC_PCM_ALIAS": self.device_alias,
                 "MIC_FORMAT": self.format or "",
                 "MIC_CHANNELS": str(self.channels or ""),
@@ -386,22 +384,18 @@ class AudioMonitor:
                 "MIC_CARD_NAME": self.card_name or "",
             })
             logging.debug("Published MIC_* to Redis")
-        except ModuleNotFoundError:
-            logging.debug("Redis module not available; skipping MIC_* publish.")
         except Exception as exc:  # pragma: no cover - redis optional
             logging.debug("Failed to publish MIC_* to Redis: %s", exc)
 
     @staticmethod
-    def clear_mic_selection(reason: str = "") -> None:
+    def clear_mic_selection(reason: str = "", redis_controller=None) -> None:
+        if redis_controller is None:
+            logging.debug("No shared Redis client available; skipping MIC_* clear.")
+            return
         try:
-            import redis  # type: ignore
-
-            client = redis.StrictRedis(host="localhost", port=6379, db=0)
-            client.delete("MIC_PCM_ALIAS", "MIC_FORMAT", "MIC_CHANNELS", "MIC_RATE", "MIC_CARD_NAME")
+            redis_controller.r.delete("MIC_PCM_ALIAS", "MIC_FORMAT", "MIC_CHANNELS", "MIC_RATE", "MIC_CARD_NAME")
             if reason:
                 logging.debug("Cleared MIC_* from Redis: %s", reason)
-        except ModuleNotFoundError:
-            logging.debug("Redis module not available; skipping MIC_* clear.")
         except Exception as exc:  # pragma: no cover - redis optional
             logging.debug("Failed to clear MIC_* from Redis: %s", exc)
 
@@ -477,12 +471,13 @@ class AudioMonitor:
         return self.vu_levels[0], self.vu_levels[1] if len(self.vu_levels) >= 2 else 0
 
 class USBMonitor():
-    def __init__(self, ssd_monitor, settings: Optional[dict] = None):
+    def __init__(self, ssd_monitor, settings: Optional[dict] = None, redis_controller=None):
         self.context = pyudev.Context()
         self.monitor = pyudev.Monitor.from_netlink(self.context)
 
         self.ssd_monitor = ssd_monitor
         self.settings = settings or {}
+        self._redis_controller = redis_controller
 
         self.temp_sound_devices = []
         self.sound_timer = None
@@ -507,26 +502,20 @@ class USBMonitor():
         self.audio_prepare_lock = threading.Lock()
         self.audio_prepare_deferred = False
         
-        self.audio_monitor = AudioMonitor(settings=self.settings)
-        
+        self.audio_monitor = AudioMonitor(settings=self.settings, redis_controller=self._redis_controller)
+
         self.monitor.filter_by(subsystem='usb_storage')
         self.monitor_devices()
 
     def _is_recording_active(self) -> bool:
-        try:
-            import redis  # type: ignore
-        except ModuleNotFoundError:
+        if self._redis_controller is None:
             return False
 
         try:
-            client = redis.StrictRedis(host="localhost", port=6379, db=0)
-            value = client.get("is_recording")
+            value = self._redis_controller.get_value(ParameterKey.IS_RECORDING.value)
         except Exception as exc:
             logging.debug("Could not read is_recording from Redis while preparing audio monitor: %s", exc)
             return False
-
-        if isinstance(value, bytes):
-            value = value.decode("utf-8", errors="replace")
 
         return as_bool(value)
 
@@ -611,8 +600,11 @@ class USBMonitor():
             # Stop old monitor and create a fresh one bound to this mic
             with contextlib.suppress(Exception):
                 self.audio_monitor.stop()
-            AudioMonitor.clear_mic_selection("microphone changed; waiting for re-probe")
-            self.audio_monitor = AudioMonitor(settings=self.settings)
+            AudioMonitor.clear_mic_selection(
+                "microphone changed; waiting for re-probe",
+                redis_controller=self._redis_controller,
+            )
+            self.audio_monitor = AudioMonitor(settings=self.settings, redis_controller=self._redis_controller)
             self.audio_monitor.set_model_info(model, serial, card_num=card_num, card_name=card_name)
             self.current_mic_id = mic_id
             # Let ALSA settle briefly, then probe the current monitor config without owning capture.
@@ -699,7 +691,9 @@ class USBMonitor():
                 self.temp_sound_devices.clear()
                 self.usb_event.emit('mic_removed', device, model, serial)
                 self.audio_monitor.stop()
-                AudioMonitor.clear_mic_selection("microphone removed")
+                AudioMonitor.clear_mic_selection(
+                    "microphone removed", redis_controller=self._redis_controller
+                )
 
 
             elif self.usb_keyboard and self.usb_keyboard == device:

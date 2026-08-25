@@ -42,7 +42,7 @@ from module.storage_profiles import (
 # If your recorder uses a different Redis flag, change it here.
 # ----------------------------------------------------------------------
 REDIS_KEY_IS_RECORDING = ParameterKey.IS_RECORDING.value     # "1" while cinepi-raw is running
-REDIS_KEY_FSCK_STATUS  = "FSCK_STATUS"      # "OK …"  |  "FAIL …"
+REDIS_KEY_FSCK_STATUS  = ParameterKey.FSCK_STATUS.value       # "OK …"  |  "FAIL …"
 EXT4_MOUNT_OPTIONS = "rw,noatime,nodiratime,commit=60"
 YANK_ERRNOS = {
     errno.EIO,

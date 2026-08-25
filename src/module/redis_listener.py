@@ -1,4 +1,3 @@
-import redis
 import logging
 import threading
 import datetime
@@ -18,17 +17,18 @@ class RedisListener:
         redis_controller,
         ssd_monitor,
         framerate_callback=None,
-        host='localhost',
-        port=6379,
-        db=0,
         *,
         live_sync_warning_tolerance_frames: int | float = 5,
         live_sync_startup_guard_frames: int | float = 10,
         final_sync_analysis_tolerance_frames: int | float = 1,
         tc_drop_jitter_tolerance_frames: int | float = 1,
     ):
-        self.redis_client = redis.StrictRedis(host=host, port=port, db=db)
-        
+        # Share redis_controller's client instead of opening a second
+        # connection to the same host/port/db (F-105) -- pubsub() still hands
+        # back a dedicated subscription per call, so cp_stats and cp_controls
+        # each get their own, same as before.
+        self.redis_client = redis_controller.r
+
         self.pubsub_stats = self.redis_client.pubsub()
         self.pubsub_controls = self.redis_client.pubsub()
         self.channel_name_stats = "cp_stats"
@@ -1140,7 +1140,7 @@ class RedisListener:
         """Debounce-timer callback – clear the flag once the fps key
         has been stable for a while."""
         self.user_changing_fps = False
-        self.redis_controller.set_value("user_changing_fps", 0)
+        self.redis_controller.set_value(ParameterKey.USER_CHANGING_FPS.value, 0)
         logging.debug("user_changing_fps → 0 (fps stable)")
 
     def _note_fps_change(self, new_fps: float):
@@ -1150,7 +1150,7 @@ class RedisListener:
 
         self.last_fps_value = new_fps
         self.user_changing_fps = True
-        self.redis_controller.set_value("user_changing_fps", 1)
+        self.redis_controller.set_value(ParameterKey.USER_CHANGING_FPS.value, 1)
         logging.debug(f"fps changed to {new_fps} → user_changing_fps = 1")
 
         # leeway = max(0.5 s, two frame-intervals)

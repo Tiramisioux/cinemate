@@ -605,7 +605,7 @@ def initialize_system(settings, pi_model="unknown"):
     redis_controller = RedisController(conform_frame_rate=conf_rate)
     sensor_detect = SensorDetect(settings)
     ssd_monitor = SSDMonitor(redis_controller=redis_controller)
-    usb_monitor = USBMonitor(ssd_monitor, settings=settings)
+    usb_monitor = USBMonitor(ssd_monitor, settings=settings, redis_controller=redis_controller)
 
     gpio_cfg = settings["hardware_outputs"]
     rec_tone_pins = gpio_cfg.get("rec_tone_pin")

@@ -12,9 +12,10 @@ with no laptop and no SSH.
 THE ONE RULE
 ============
 STANDARD LIBRARY ONLY, plus the vendored jsonc.py sibling. No flask, no jinja,
-no redis, and nothing from src/module/. "The venv is broken" and "redis is
-down" are supported failure modes that this console exists to survive; every
-import it makes is another way for it to die exactly when it is needed.
+no redis, and nothing from src/module/. "Cinemate's Python packages are
+missing or broken" and "redis is down" are supported failure modes that this
+console exists to survive; every import it makes is another way for it to
+die exactly when it is needed.
 
 The unit deliberately has no Wants= or After= on cinemate-autostart. That
 coupling is the bug being fixed, not an oversight.
@@ -69,7 +70,7 @@ PENDING_PATH   = STATE_DIR / "config-pending.json"
 HOTSPOT_STATE  = STATE_DIR / "hotspot.state"
 FAILURE_FILE   = Path("/home/pi/.cache/cinemate/startup-failure.ansi")
 CONFIG_TXT     = Path("/boot/firmware/config.txt")
-VENV_PYTHON    = Path("/home/pi/.cinemate-env/bin/python3")
+CINEMATE_PYTHON = Path("/usr/bin/python3")
 CINEMATE_SRC   = Path("/home/pi/cinemate/src")
 
 #: Compiled-in defaults. A missing system.recovery block behaves exactly as
@@ -97,7 +98,7 @@ DEFAULT_LOG_LINES = 200
 BACKUP_KEEP = 10
 
 CONFIG_RUNG_SETTINGS, CONFIG_RUNG_CONF, CONFIG_RUNG_DEFAULTS = 1, 2, 3
-VALIDATE_RUNG_VENV, VALIDATE_RUNG_STDLIB, VALIDATE_RUNG_NONE = 1, 2, 3
+VALIDATE_RUNG_INTERPRETER, VALIDATE_RUNG_STDLIB, VALIDATE_RUNG_NONE = 1, 2, 3
 
 
 def utc_now() -> str:
@@ -360,7 +361,7 @@ class Validation(NamedTuple):
     validated: bool   # False => rung 3 fired; the write is unverified
 
 
-_VENV_VALIDATOR = """
+_INTERPRETER_VALIDATOR = """
 import sys
 sys.path.insert(0, sys.argv[1])
 from module.config_loader import SettingsLoadError, load_settings
@@ -379,18 +380,18 @@ sys.exit(0)
 def validate_settings_text(
     text: str,
     *,
-    venv_python: Path = VENV_PYTHON,
+    python_bin: Path = CINEMATE_PYTHON,
     src_dir: Path = CINEMATE_SRC,
     jsonc_module=_jsonc,
     runner: Callable = subprocess.run,
 ) -> Validation:
     """Validate candidate settings.jsonc content through the three-rung ladder.
 
-    1. venv python + module.config_loader.load_settings -> the EXACT error the
-       operator would see on tty1, with line, column and context. No duplicated
-       parsing logic.
-    2. venv missing or import fails -> vendored jsonc.py + json.loads, which
-       gives a generic parse error.
+    1. Cinemate's own interpreter + module.config_loader.load_settings -> the
+       EXACT error the operator would see on tty1, with line, column and
+       context. No duplicated parsing logic.
+    2. that interpreter missing or import fails -> vendored jsonc.py +
+       json.loads, which gives a generic parse error.
     3. neither available -> allow the write, labelled "unvalidated".
 
     Rung 3 is deliberately fail-OPEN. The file being edited is already broken;
@@ -398,7 +399,7 @@ def validate_settings_text(
     Safety comes from the backup, not from the refusal.
     """
     # -- rung 1 ------------------------------------------------------------
-    if Path(venv_python).exists() and Path(src_dir).exists():
+    if Path(python_bin).exists() and Path(src_dir).exists():
         tmp_path = None
         try:
             with tempfile.NamedTemporaryFile(
@@ -407,21 +408,21 @@ def validate_settings_text(
                 tmp.write(text)
                 tmp_path = tmp.name
             proc = runner(
-                [str(venv_python), "-c", _VENV_VALIDATOR, str(src_dir), tmp_path],
+                [str(python_bin), "-c", _INTERPRETER_VALIDATOR, str(src_dir), tmp_path],
                 capture_output=True, text=True, timeout=20, check=False,
             )
             if proc.returncode == 0:
-                return Validation(True, VALIDATE_RUNG_VENV, "Valid.", True)
+                return Validation(True, VALIDATE_RUNG_INTERPRETER, "Valid.", True)
             if proc.returncode == 2:
                 return Validation(
-                    False, VALIDATE_RUNG_VENV, proc.stdout.strip() or "Invalid.", True
+                    False, VALIDATE_RUNG_INTERPRETER, proc.stdout.strip() or "Invalid.", True
                 )
             # returncode 3 or anything else: the validator itself failed, so
             # fall through rather than reporting a bogus verdict.
-            log.warning("venv validator unusable (rc=%s): %s",
+            log.warning("interpreter validator unusable (rc=%s): %s",
                         proc.returncode, (proc.stderr or proc.stdout)[:400])
         except Exception as exc:
-            log.warning("venv validation rung unavailable: %s", exc)
+            log.warning("interpreter validation rung unavailable: %s", exc)
         finally:
             if tmp_path and os.path.exists(tmp_path):
                 try:
@@ -435,7 +436,7 @@ def validate_settings_text(
             json.loads(jsonc_module.strip_jsonc(text))
             return Validation(
                 True, VALIDATE_RUNG_STDLIB,
-                "Valid (checked without the Cinemate venv -- syntax only).", True,
+                "Valid (checked without Cinemate's Python packages -- syntax only).", True,
             )
         except Exception as exc:
             return Validation(

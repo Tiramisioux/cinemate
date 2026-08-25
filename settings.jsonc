@@ -83,7 +83,7 @@
       "phase_lock": true,
       "tuning_file_override": {
         "enabled": false,
-        "path": "resources/tuning_files/imx477.json"
+        "path": "/home/pi/cinemate/resources/tuning_files/imx477.json"
       },
       // CineMate Log target: false (off, default) | true (on, mode's default
       // target) | 10 | 12 (on, forced target where the live bit depth
@@ -104,7 +104,7 @@
       "phase_lock": true,
       "tuning_file_override": {
         "enabled": false,
-        "path": "resources/tuning_files/imx477.json"
+        "path": "/home/pi/cinemate/resources/tuning_files/imx477.json"
       },
       "log_encode": false
     },

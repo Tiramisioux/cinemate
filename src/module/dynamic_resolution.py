@@ -164,9 +164,24 @@ def choose_resolution(
     if not eligible:
         return None
 
-    selected_mode, selected_area, selected_fps_max = max(
-        eligible, key=lambda item: (item[1], item[2])
+    # F-286: two modes can share an area and differ only in bit depth (a
+    # sensor's max-resolution 10-bit and 12-bit modes always tie on area,
+    # since both sit at the sensor's ceiling). The (area, fps_max)
+    # tie-break below then prefers whichever is faster -- typically the
+    # lower bit depth -- even when the desired mode itself already
+    # sustains requested_fps and substitution has nothing to do. An
+    # explicit, sustainable request for the desired mode is honored
+    # directly, ahead of the tie-break.
+    desired_eligible = next(
+        (item for item in eligible if item[0] == desired_mode_int),
+        None,
     )
+    if desired_eligible is not None:
+        selected_mode, selected_area, selected_fps_max = desired_eligible
+    else:
+        selected_mode, selected_area, selected_fps_max = max(
+            eligible, key=lambda item: (item[1], item[2])
+        )
     desired_area = _mode_area(desired_info)
     return DynamicResolutionChoice(
         mode=selected_mode,

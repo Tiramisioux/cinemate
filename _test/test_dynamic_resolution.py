@@ -24,6 +24,23 @@ IMX585_DETECTED_ORDER_MODES = {
     1: {"width": 1928, "height": 1090, "bit_depth": 12, "fps_max": 50},
 }
 
+# Real imx477 mode table, `cinepi-raw --list-cameras` on hardware (dev 2026-08-24).
+# The 10-bit and 12-bit modes at each resolution always tie on area; only the
+# max-resolution pair matters for F-286, but the whole table is included so
+# the fixture is a faithful stand-in for the live sensor, not a minimal repro.
+IMX477_MODES = {
+    0: {"width": 1332, "height": 990, "bit_depth": 10, "fps_max": 120.50},
+    1: {"width": 2028, "height": 1080, "bit_depth": 10, "fps_max": 74.74},
+    2: {"width": 2028, "height": 1520, "bit_depth": 10, "fps_max": 53.77},
+    3: {"width": 4056, "height": 2160, "bit_depth": 10, "fps_max": 19.58},
+    4: {"width": 4056, "height": 3040, "bit_depth": 10, "fps_max": 14.00},
+    5: {"width": 1332, "height": 990, "bit_depth": 12, "fps_max": 101.68},
+    6: {"width": 2028, "height": 1080, "bit_depth": 12, "fps_max": 62.81},
+    7: {"width": 2028, "height": 1520, "bit_depth": 12, "fps_max": 45.19},
+    8: {"width": 4056, "height": 2160, "bit_depth": 12, "fps_max": 16.39},
+    9: {"width": 4056, "height": 3040, "bit_depth": 12, "fps_max": 11.72},
+}
+
 
 class DynamicResolutionTests(unittest.TestCase):
     def test_resolution_indicator_only_when_dynamic_substitute_is_active(self):
@@ -110,6 +127,38 @@ class DynamicResolutionTests(unittest.TestCase):
         self.assertIsNotNone(choice)
         self.assertEqual(choice.mode, 1)
         self.assertFalse(choice.dynamic_active)
+
+    def test_explicit_max_resolution_request_honors_bit_depth(self):
+        # F-286. imx477 at 4056x3040: 10-bit (mode 4, fps_max 14.00) and
+        # 12-bit (mode 9, fps_max 11.72) tie on area -- the sensor's max
+        # resolution, so there is no larger mode either could be beaten by.
+        # An explicit request for the 12-bit mode at a sustainable fps must
+        # return the 12-bit mode, not silently substitute the faster 10-bit
+        # one nothing asked for.
+        choice = choose_resolution(
+            sensor_modes=IMX477_MODES,
+            desired_mode=9,
+            requested_fps=10,
+        )
+
+        self.assertIsNotNone(choice)
+        self.assertEqual(choice.mode, 9)
+        self.assertEqual(IMX477_MODES[choice.mode]["bit_depth"], 12)
+        self.assertFalse(choice.dynamic_active)
+
+    def test_max_resolution_downshift_still_reaches_10bit_when_12bit_cannot_sustain_fps(self):
+        # The 12-bit mode's own ceiling is 11.72fps; requesting faster than
+        # that at the same desired mode must still fall through to the
+        # tie-break (10-bit, faster) rather than return nothing.
+        choice = choose_resolution(
+            sensor_modes=IMX477_MODES,
+            desired_mode=9,
+            requested_fps=13,
+        )
+
+        self.assertIsNotNone(choice)
+        self.assertEqual(choice.mode, 4)
+        self.assertEqual(IMX477_MODES[choice.mode]["bit_depth"], 10)
 
     def test_keeps_manual_desired_mode_when_it_is_already_the_low_one(self):
         choice = choose_resolution(

@@ -55,12 +55,32 @@
   outcome, not a bad one) and the venv decision's two follow-up checks: `PI-RESULTS-2026-08-25.md`.
   Remaining planned work: B1 (docs, zero risk, no hardware), B7 (preconditions now all met),
   the F-285 design decision (now implemented, #140 pending merge), and B9/B10 (added below).
-- **Ledger branch:** `claude/cinemate-system-review-kickoff-cilicc` — pushed: yes · PR #129 (draft)
-- **Findings:** 202 rows (F-001..F-287, with gaps — see free ID blocks below). **188 net**
-  through F-278 (F-183..F-186, F-189 merged into F-002/F-003), **+9 from Pi sessions**
-  (F-279..F-287, see below) = **197 net**. Free ID blocks: F-135..F-149, F-196..F-199,
-  F-288..F-299. Analysis is complete; F-272..F-278 were all found *while implementing the
-  fixes*, which is worth knowing — implementation is a better detector than reading was.
+- **Then: B1, B9 desk work, and B11 (2026-08-25).** B1 merged (#141). B9's five desk commits
+  merged (#143, `work/b9-desk-work`). **B11** — eleven field-reported defects, the first batch
+  that didn't come from reading — landed as five branches/PRs, all merged: #142 (B11.1/B11.2),
+  #144 (B11.3/B11.4/B11.6), #145 (B11.5), #146 (B11.8), #148 (B11.7). The ledger branch itself
+  (B11/B13/B14 plans + 19 findings, then a second commit with 7 more, F-307..F-313, documenting
+  what B11 implementation corrected) merged via **PR #149**. **`origin/dev` is now `7c8b84e7`,**
+  21 commits ahead of where this ledger branch's own history stops — **fast-forward before
+  trusting `dev`'s tip from this branch's git log alone.**
+- **The ledger branch is now fully merged into `dev` (twice — #129, then #149) and has no
+  content `dev` doesn't already have.** Continuing to commit ledger updates directly onto it
+  would just be committing onto `dev` under another name. New ledger/batch work now cuts a
+  fresh branch off `origin/dev` per batch, same as every code batch — see "the failure mode to
+  avoid" note from the operator: six branches with no PR is nothing checked, nothing mergeable.
+- **Open PR #147** (`merge-b11-into-dev`, base `13ab022` — the *pre-B11* `dev` tip) **appears
+  superseded**: every commit it carries landed individually via #142/#144/#145/#146/#148
+  already. Its `ruff` check is failing. Not closed by this session — flag for the operator
+  rather than closing PRs unasked.
+- **Findings:** 228 rows (F-001..F-313, with gaps — see free ID blocks below). F-307..F-313
+  (7 rows) were missing from `REMEDIATION-PLAN.md`'s batch section — restored in this session's
+  branch (`review/b0-coverage-invariant`): F-307/309/310/311/312 were fixed during B11
+  implementation (verified against `dev`, not just the finding text — F-311 in particular:
+  `applyActionToSlot()` really does default to `''` on `dev` now, comment cites the exact bug);
+  F-308 refutes F-289's mechanism (avahi was already present on the test device) without itself
+  needing a fix; F-313 is a citation correction with nothing downstream to correct. **F-289 is
+  reopened, not closed** — B11.2's hardening shipped but isn't a confirmed fix for the original
+  field report; root cause needs operator input, queued as **PI-017**.
 - **Open decisions:** **ADR-001 is written and `proposed`** —
   `decisions/ADR-001-gui-harmonization.md`. Reject D and E; adopt C reached through B; fix
   F-204 first. Surface 4 excluded permanently. **Reconciled 2026-08-25**: constraint 2

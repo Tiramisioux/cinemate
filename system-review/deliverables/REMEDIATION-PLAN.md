@@ -57,6 +57,7 @@ in parallel with each other; none can break a camera.
 | **B9** | One fact, one home | B9.1/B9.4 | medium | 28 | 7 |
 | **B10** | Close the ledger | B10.2 only | low | 35 + all 201 dispositioned | 7 |
 | **B11** | Field-reported defects | B11.1/2/8 | mixed | 11 | 8 |
+| **B13** | Docs vs. the code that shipped | B13.1/2 verify | none | 8 | 7 |
 
 ---
 
@@ -373,6 +374,48 @@ design pass before code. B11.8 should follow B9.5, which touches the same settin
 for the same reason B10.2 does. B11.3 needs a resolution change with the web GUI open. B11.5,
 B11.6 and B11.7 need a browser at several widths, and a phone for the hamburger. B11.8 needs a
 recording at either side of the threshold. Everything else is desk work.
+
+---
+
+### B13 · The documentation against the code that shipped
+
+*(B12 is deliberately unused — the operator numbered this batch B13.)*
+
+**B1 fixed the drift the checker could see. This batch fixes the drift it cannot.**
+`docs_drift_check.py` verifies links, citations, method names, redis keys and settings
+headings — all things with a machine-checkable counterpart. It has nothing to say about a
+paragraph that describes a virtualenv the installer stopped creating, and it reported clean
+on `13ab022` while every finding below was already true.
+
+Eight findings, F-299..F-306, from reading both doc sets against `dev` (`13ab022`) and
+cinepi-raw `dev` (`bc63598`) after eleven merged PRs.
+
+**The two that actively mislead come first.**
+
+| commit | change | closes |
+|---|---|---|
+| B13.1 | **Remove the virtualenv from the documentation.** `installation-steps.md:611-613,619-620,728` builds `~/.cinemate-env`, appends its activation to `.bashrc`, and writes the sudoers rule that #138's `configure_sudoers()` now **actively deletes**. Four more files reason about it: `:116,154` (meson picking the venv Python), `overclocking.md:116-119` (`deactivate` first), and the "broken virtualenv" failure mode in `recovery-console.md:35-36` and `hotspot-logic.md:8` | **F-299** |
+| B13.2 | **Reconcile the manual pip list with `requirements*.txt`.** The hand list at `installation-steps.md:640-646` omits **`pyserial`** (F-276's exact defect, fixed by #133) and **`lgpio`** (annotated "NOT optional" in `requirements-hardware.txt`), and installs nine packages nothing imports. Replace the list with `pip install -r requirements.txt -r requirements-hardware.txt` — one source, not two | **F-300** |
+| B13.3 | **Document the dependency layout.** `requirements.txt` / `-hardware` / `-dev`, `docs/requirements-docs.txt`, and the `versions.env` pairing manifest are live and unmentioned anywhere. Say what each is for and which the installer reads | **F-302** |
+| B13.4 | **Document the CI, in both repositories.** Five checks on every cinemate PR since #131, and cinepi-raw's first workflow from B10.6. What each protects, and that a ratchet is tightened when reality improves and never raised to make a job pass. Depends on B10.6 landing (#60) | **F-303** |
+| B13.5 | **cinepi-raw README: `python-pip` at `:17` cannot install** on any image this project targets — `:51` already gets it right with `python3-pip`. While there: add the test-suite and CI section B10.6 earns | **F-304** |
+| B13.6 | **Give the install document step-level correspondence.** `main()` runs **45 named steps**; the prose mirrors none of them and never mentions `align_pi5_kernel_baseline`, the two sensor-support steps, `configure_rp1_overclock`, `refresh_pi5_boot_handoff`, `configure_audio_rtprio` or `seed_redis_defaults` by name. Structure the document so each section names the installer function it corresponds to — that is what makes the two checkable against each other in future, and it closes F-266's missing recovery-console section at the same time | **F-301**, F-266 |
+| B13.7 | **Re-check the two claims that rest on retracted premises.** The recovery console's degradation ladder, described in terms of a virtualenv that no longer exists — **read `cinemate-recovery.py` before rewriting**, the mechanism probably survives even though the framing does not, and F-221 records this component as a strength to preserve. And `simple-gui.md:15`'s "2 GB boards" attribution, which PI-016 contradicted for the tested board | F-305, F-306 |
+
+**Why this batch exists at all, stated once:** the audit's own `docs_drift_check.py` passes
+clean on a tree where the installation guide builds an environment the installer deletes. A
+check that compares names cannot compare meaning. That is a limit of the tooling, not a
+failure of it — but it means prose against behaviour stays a **reading** task, and needs
+redoing whenever behaviour changes. #138 changed behaviour; this is the redo.
+
+**Ordering:** B13.1 and B13.2 first and together — they are the two that send a reader down a
+path that does not work. B13.5 is independent and one line plus a section. B13.6 is the real
+work and wants the installer open beside the document.
+
+**Verification:** `docs_drift_check.py` must stay clean and `mkdocs build --strict` must exit
+0 — necessary, not sufficient, since both already pass today. **The real verification for
+B13.1 and B13.2 is a clean install performed by following the document**, not the script.
+That is the only test that distinguishes a doc that is accurate from one that merely parses.
 
 ---
 

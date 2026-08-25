@@ -43,9 +43,81 @@ SENSOR_MODEL=imx585_mono CAM_PORT=cam1 ./cinemate-install.sh
 
 After installing, reboot the system and Cinemate should start automatically.
 
+## Dependency files
+
+Python dependencies are split across four files:
+
+| File | Installed by | Contents |
+|---|---|---|
+| `requirements.txt` | the installer, always; CI's `test` job | Portable runtime deps — `flask`, `flask_socketio`, `numpy`, `pillow`, `psutil`, `pyserial`, `pyudev`, `redis`, `termcolor` |
+| `requirements-hardware.txt` | the installer, always | GPIO/I²C-only deps — `gpiozero`, `lgpio` (**not optional**, despite `INSTALL_ALT_GPIO_BACKEND`), the Adafruit/Grove libraries, `evdev`, `smbus2` |
+| `requirements-dev.txt` | not installed on the Pi | Local dev tooling |
+| `docs/requirements-docs.txt` | CI's docs build only | `mkdocs` and its plugins, kept out of the runtime set entirely |
+
+`versions.env` pairs a `cinemate` revision with the `cinepi-raw` revision the installer should
+clone alongside it (`CINEMATE_REPO_REF` / `CINEPI_RAW_REPO_REF`). Both are empty by default,
+which clones each repo's current default branch — set them to pin an install to a known-good
+pair of commits.
+
+## Continuous integration
+
+Both repositories run checks on every pull request — not required reading to install Cinemate,
+but this is what has to stay green if you're contributing a change:
+
+- **cinemate** (`.github/workflows/checks.yml`): `lint` (ruff), `test` (pytest, `_test/`),
+  `shell` (shellcheck), and `drift` — four stdlib-only checks
+  (`docs_drift_check.py`, `design_token_diff.py`, `gui_field_extract.py`, `redis_key_diff.py`),
+  none of which needs hardware.
+- **cinepi-raw** (`.github/workflows/checks.yml`): unit tests (the project's seven `meson test`
+  targets) and shellcheck.
+
+A ratchet (for example `redis_key_diff.py --max-unreferenced`) only ever tightens as the
+codebase improves — raising one to make a failing check pass is never the fix; fix what it
+caught instead.
+
 ## Manual install
 
 Start from a fresh Raspberry Pi OS Lite (Bookworm) install before continuing.
+
+??? note "Installer step correspondence (F-265)"
+
+    `cinemate-install.sh` runs 27 numbered `section "..."` steps. This table maps each to
+    where it's covered below, so a failure at `[NN] <name>` in the installer's own log has
+    somewhere to look it up:
+
+    | # | Installer section | Covered by |
+    |---|---|---|
+    | 1 | Validating environment and installer configuration | not covered — OS/sudo checks, no manual equivalent |
+    | 2 | Installing bootstrap tools | partial — `apt update`/`upgrade` above; `rsync` not installed here |
+    | 3 | Aligning the Pi 5 kernel baseline | [Kernel baseline](#kernel-baseline-raspberry-pi-5-cm5) |
+    | 4 | Locating the Cinemate source tree | [Clone the Cinemate repo](#clone-the-cinemate-repo) |
+    | 5 | Installing apt dependencies | scattered — the `apt install` commands throughout this page |
+    | 6 | Enabling base system services | [Enable NetworkManager and Redis](#enable-networkmanager-and-redis) |
+    | 7 | Applying boot time optimizations | [Disable unnecessary background services](#disable-unnecessary-background-services) |
+    | 8 | Refreshing the libtiff linker fix | inline, in [libcamera](#libcamera-tiramisiouxlibcamera-cinemate-branch) |
+    | 9 | Building redis-plus-plus | inline, in the same libcamera command block |
+    | 10 | Configuring the RP1 overclock (Pi 5, optional) | linked out to [Overclocking the Pi](overclocking.md) |
+    | 11 | Building libcamera | [libcamera](#libcamera-tiramisiouxlibcamera-cinemate-branch) |
+    | 12 | Building cpp-mjpeg-streamer | [cpp-mjpeg-streamer](#cpp-mjpeg-streamer) |
+    | 13 | Building cinepi-raw | [CinePi-RAW](#cinepi-raw) |
+    | 14 | Seeding initial cinepi-raw Redis defaults | [Seed Redis with white balance default keys](#seed-redis-with-white-balance-default-keys) |
+    | 15 | Installing sensor-specific support | [IMX283 and IMX585 sensor support](#imx283-and-imx585-sensor-support) |
+    | 16 | Installing optional GPIO backend | [Alternative GPIO back-end](#alternative-gpio-back-end) |
+    | 17 | Preparing the Python environment | [Python packages](#python-packages) |
+    | 18 | Writing runtime loader configuration | not covered — `/etc/ld.so.conf.d/cinepi-raw.conf`, only shown for Pi 4 above |
+    | 19 | Configuring hostname and I2C | [Enabling I²C](#enabling-i%C2%B2c), [Setting hostname](#setting-hostname) |
+    | 20 | Writing boot configuration | [Add camera modules to config.txt](#add-camera-modules-to-configtxt) |
+    | 21 | Writing audio and preview helper files | [.asoundrc Setup](#asoundrc-setup), [Create post-processing configs](#create-post-processing-configs) |
+    | 22 | Applying optional UI and boot helpers | console font / auto-login / PiShrink / Plymouth sections |
+    | 23 | Refreshing Pi 5 boot handoff | part of [Kernel baseline](#kernel-baseline-raspberry-pi-5-cm5) |
+    | 24 | Preparing runtime wrappers and permissions | [Create the run wrapper and the config.txt apply helper](#create-the-run-wrapper-and-the-configtxt-apply-helper), sudoers, [audio real-time priority](#grant-real-time-audio-priority) |
+    | 25 | Seeding Redis defaults | [Seed Redis with default keys](#seed-redis-with-default-keys) |
+    | 26 | Installing Cinemate services | [Cinemate services](#cinemate-services) |
+    | 27 | Finishing up | not consolidated — scattered reminders (e.g. `source ~/.bashrc`) |
+
+    Rows marked "not covered" have no functional consequence if skipped by hand (diagnostics,
+    an `ld.so.conf.d` entry the Pi 4 path already covers) — see the B13.6 commit for why those
+    were deliberately left rather than padded in.
 
 ```
 sudo apt update -y
@@ -113,13 +185,7 @@ These steps build the [Tiramisioux/libcamera](https://github.com/Tiramisioux/lib
 
 **On the Pi, to update an existing install:**
 
-If you are inside `~/.cinemate-env`, meson will use the virtualenv Python and will fail with *"Python module yaml not found"* unless the helpers are present. Install them first:
-
-```shell
-pip install PyYAML ply Jinja2
-```
-
-Then update and rebuild:
+Update and rebuild:
 
 ```shell
 cd ~/libcamera && \
@@ -150,8 +216,6 @@ sudo systemctl restart cinepi-raw
 `git checkout -B cinemate origin/cinemate` resets to the latest `cinemate` tip so this command is safe to re-run. `git config core.fileMode false` silences executable-bit changes left behind by the build. `git stash` clears any remaining content changes so the checkout cannot be blocked.
 
 **Fresh install:**
-
-If you are already inside `~/.cinemate-env`, either run `deactivate` before building `libcamera` or install the Python helpers into that environment with `pip install PyYAML ply Jinja2` first.
 
 ```shell
 sudo apt install -y python3-pip python3-jinja2 libboost-dev libgnutls28-dev openssl pybind11-dev qtbase5-dev libqt5core5a meson cmake python3-yaml python3-ply libglib2.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libavdevice59 libyaml-dev
@@ -399,7 +463,7 @@ done
 Every mode a sensor supports is listed in `resources/sensors.json`, so all of them stay available to the system. Cinemate's stock `settings.jsonc` then exposes only the practical ones in the UI — for the IMX283 that is the ≥25 fps 2.7K and 4K crops (`k_steps: [3, 4]`). Add `5.5` to also show the IMX283 5K modes, or set `k_steps` to your sensor's sizes (for example `[1.5, 2, 4]` for IMX477). To check or edit the list, type `editsettings` in the Pi terminal, or edit `/home/pi/cinemate/settings.jsonc` directly:
 
 ```json
-"resolutions": {
+"image_capture": {
   "k_steps": [3, 4],
   "bit_depths": [10, 12],
   "custom_modes": {}
@@ -434,9 +498,20 @@ sudo raspi-config nonint do_i2c 0
 sudo hostnamectl set-hostname cinepi
 ```
 
+`hostnamectl` does not touch `/etc/hosts`'s `127.0.1.1` line, so fix that separately, and
+install `avahi-daemon` so `<hostname>.local` actually resolves over mDNS — nothing does this
+by default; whether it works out of the box on a given image is down to chance (F-289):
+
+```bash
+sudo sed -i -E 's/^127\.0\.1\.1[[:space:]].*/127.0.1.1\tcinepi/' /etc/hosts
+grep -q '^127\.0\.1\.1' /etc/hosts || echo -e '127.0.1.1\tcinepi' | sudo tee -a /etc/hosts
+sudo apt install -y avahi-daemon libnss-mdns
+sudo systemctl enable --now avahi-daemon
+```
+
 !!! note ""
 
-    You will find the pi as `cinepi.local` on the local network, or at the hotspot Cinemate creates
+    You will find the pi as `cinepi.local` on the local network, or at the hotspot Cinemate creates. If it still doesn't resolve from a particular device, that device's own network/mDNS resolver is the next thing to check — some guest Wi-Fi networks and VPNs block mDNS multicast entirely.
 
 ### Add camera modules to config.txt
 
@@ -605,19 +680,15 @@ sudo apt install -y \
     console-terminus
 ```
 
-#### Create a Python virtual environment
+#### Enable I²C
+
+The `pi_cinemate` sudoers drop-in is written in [Allow Cinemate to run with
+sudo](#allow-cinemate-to-run-with-sudo) below, after the repo is cloned — Cinemate's Python
+packages install to the system interpreter (`pip install --user --break-system-packages`,
+see [Python packages](#python-packages) below), so there is no virtualenv to scope an
+earlier grant to.
 
 ```bash
-python3 -m venv ~/.cinemate-env
-source /home/pi/.cinemate-env/bin/activate
-echo "source /home/pi/.cinemate-env/bin/activate" >> ~/.bashrc
-```
-
-#### Grant sudo privileges and enable I²C
-
-```bash
-echo "pi ALL=(ALL) NOPASSWD: /home/pi/.cinemate-env/bin/*" | sudo tee /etc/sudoers.d/cinemate-env
-sudo chown -R pi:pi /home/pi/.cinemate-env
 sudo chown -R pi:pi /media && chmod 755 /media
 sudo usermod -aG i2c pi
 sudo modprobe i2c-dev && echo i2c-dev | sudo tee -a /etc/modules
@@ -634,13 +705,14 @@ sudo reboot
 
     If you previously installed the `board` Python package, remove it with `pip3 uninstall board`.
 
+Clone the repo first if you haven't yet (see [Clone the Cinemate repo](#clone-the-cinemate-repo)
+below), then install from its requirements files — the portable set plus the hardware-only set
+(`lgpio`, `gpiozero`, the Adafruit/Grove libraries, and everything else GPIO/I²C-specific):
+
 ```bash
-pip install \
-    gpiozero \
-    adafruit-blinka adafruit-circuitpython-ssd1306 adafruit-circuitpython-seesaw \
-    luma.oled grove.py pigpio-encoder smbus2 rpi_hardware_pwm \
-    watchdog psutil pillow redis keyboard pyudev numpy termcolor sounddevice \
-    evdev inotify_simple sysv_ipc flask_socketio sugarpie
+pip install --user --break-system-packages \
+    -r /home/pi/cinemate/requirements.txt \
+    -r /home/pi/cinemate/requirements-hardware.txt
 ```
 
 #### Alternative GPIO back-end
@@ -660,6 +732,50 @@ sudo apt install -y git
 git clone https://github.com/Tiramisioux/cinemate.git
 ```
 
+#### Create the run wrapper and the config.txt apply helper
+
+The sudoers rule below grants two scripts NOPASSWD access — create them first:
+
+```bash
+cat > /home/pi/run_cinemate.sh <<'EOF'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+exec /usr/bin/python3 /home/pi/cinemate/src/main.py "$@"
+EOF
+chmod 755 /home/pi/run_cinemate.sh
+
+sudo tee /usr/local/bin/cinemate-apply-config-txt > /dev/null <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+STAGED="/home/pi/cinemate/.settings-editor-config-txt.staged"
+DEST="/boot/firmware/config.txt"
+
+if [[ ! -f "$STAGED" ]]; then
+    echo "cinemate-apply-config-txt: no staged file at $STAGED" >&2
+    exit 1
+fi
+
+OWNER="$(stat -c '%u:%g' "$DEST" 2>/dev/null || echo '0:0')"
+MODE="$(stat -c '%a' "$DEST" 2>/dev/null || echo '644')"
+
+TMP="$(mktemp "${DEST}.XXXXXX")"
+trap 'rm -f "$TMP"' EXIT
+cp "$STAGED" "$TMP"
+chown "$OWNER" "$TMP"
+chmod "$MODE" "$TMP"
+mv -f "$TMP" "$DEST"
+trap - EXIT
+rm -f "$STAGED"
+EOF
+sudo chmod 755 /usr/local/bin/cinemate-apply-config-txt
+```
+
+The apply helper only ever copies a fixed, already-pi-written staging file over `config.txt`,
+preserving its existing owner/mode — the settings editor's "apply config.txt" button uses it so
+a page running as `pi` can write into root-owned `/boot/firmware` (F-288) without a broad sudo
+grant.
+
 #### Allow Cinemate to run with sudo
 
 Write the `pi_cinemate` sudoers drop-in and validate it:
@@ -670,15 +786,35 @@ pi ALL=(ALL) NOPASSWD: /home/pi/run_cinemate.sh
 pi ALL=(ALL) NOPASSWD: /home/pi/cinemate/src/main.py
 pi ALL=(ALL) NOPASSWD: /bin/mount, /bin/umount, /usr/bin/ntfs-3g
 pi ALL=(ALL) NOPASSWD: /sbin/mount.ext4
+pi ALL=(ALL) NOPASSWD: /usr/bin/systemd-run --no-block --collect --unit=cinemate-restart-trigger -- systemctl restart cinemate-autostart
+pi ALL=(ALL) NOPASSWD: /usr/local/bin/cinemate-apply-config-txt
 EOF
 sudo visudo -cf /etc/sudoers.d/pi_cinemate
 ```
 
-#### Enable NetworkManager
+#### Enable NetworkManager and Redis
 
 ```bash
 sudo systemctl enable NetworkManager --now
+sudo systemctl enable redis-server --now
 ```
+
+#### Grant real-time audio priority
+
+`cinepi-audio-capture` uses `SCHED_FIFO` to stay ahead of DNG-writer I/O during a take; without
+this, `sched_setscheduler(SCHED_FIFO)` returns `EPERM` for a manual (non-systemd) run — the
+`cinemate-autostart.service` unit already carries `LimitRTPRIO=30`, this extends the same right
+to plain shell sessions:
+
+```bash
+sudo tee /etc/security/limits.d/cinemate-audio.conf > /dev/null <<'EOF'
+@audio - rtprio 80
+@audio - memlock unlimited
+EOF
+sudo usermod -aG audio pi
+```
+
+A re-login is needed for the limits change to take effect.
 
 #### Rotate logs
 
@@ -725,7 +861,6 @@ nano ~/.bashrc
 Add to the end of the file:
 
 ```shell
-alias cinemate-env='source /home/pi/.cinemate-env/bin/activate'
 alias cinemate='/home/pi/run_cinemate.sh'
 alias editboot='sudo nano /boot/firmware/config.txt'
 alias editcmdline='sudo nano /boot/firmware/cmdline.txt'
@@ -900,6 +1035,17 @@ sudo make enable    # start on boot
 ```
 
 After enabling the service, reboot the Pi. Cinemate should autostart on the next boot. If you deliberately want to test the service immediately from SSH, run `sudo systemctl start cinemate-autostart`, but the normal install path is to reboot.
+
+#### cinemate-recovery
+
+Runs as its own root systemd service, independent of `cinemate-autostart.service`, so it stays
+reachable through a Cinemate crash or a broken `settings.jsonc` — see
+[Recovery console](recovery-console.md).
+
+```bash
+cd /home/pi/cinemate/services/cinemate-recovery
+sudo make enable
+```
 
 #### Further notes
 

@@ -20,8 +20,9 @@ happened.
 | C0 | Format drive from the settings editor's RAW pane | Planned, not implemented | `C0-format-drive/PLAN.md` (ledger entry) + `FORMAT-DRIVE-PLAN.md` (full spec) + `SONNET-PROMPT.md` (kickoff prompt) | `feature/raw-pane-format-drive` off `dev` (to be cut) |
 | C1 | Long-take stability — eliminate dropped frames, keep audio in sync at the higher 12-bit modes | Runbook ready, campaign not started | `C1-longtake-stability/RUNBOOK.md` (Sonnet session prompt + protocol) + `RESULTS.md` (campaign ledger) | none — measurement campaign on the Pi's `dev` checkouts |
 | C2 | DSI / DPI panel as a camera monitor, alongside HDMI | Planned, not implemented; hardware gates unrun | `C2-dsi-display/PLAN.md` (ledger entry) + `DSI-DISPLAY-PLAN.md` (full spec) + `SONNET-PROMPT.md` (kickoff prompt) | `feature/display-connector` off `dev` (cinepi-raw) + `feature/dsi-display` off `dev` (cinemate) — both to be cut |
+| C3 | Start without a camera, and say so in the GUI | Planned, not implemented; hardware gates unrun | `C3-no-camera-start/PLAN.md` (ledger entry) + `NO-CAMERA-START-PLAN.md` (full spec) + `SONNET-PROMPT.md` (kickoff prompt) | `feature/no-camera-start` off `dev` (cinemate only, to be cut) |
 
-Next free step: **C3**.
+Next free step: **C4**.
 
 ## Adding a feature
 
@@ -52,4 +53,7 @@ system-review ledger (`system-review/deliverables/REMEDIATION-PLAN.md` on
 - **C1** was drafted as B15 the same day and moved here before it was ever committed to the
   review ledger; no stale copy exists.
 - **C2** was briefly filed as C3 on 2026-08-26, with C2 held open; the operator closed the
-  gap the same day and it was renumbered before the branch was ever pushed. No C3 exists.
+  gap the same day and it was renumbered before the branch was ever pushed. No stale copy
+  under the old number exists.
+- **C3** (no-camera start) was planned directly here on 2026-08-26 from a Fable
+  investigation thread; it is unrelated to C2's brief tenure of that number.

@@ -11,33 +11,11 @@ from collections import deque
 from typing import Optional
 
 from module.config_loader import as_bool
-from module.redis_controller import ParameterKey
+from module.redis_controller import ParameterKey, Event
 
 # F-106: this used to re-declare ParameterKey.AUDIO_CAPTURE_GAIN_DB's value as
 # an independent string literal. Same key, one definition now.
 CAPTURE_GAIN_REDIS_KEY = ParameterKey.AUDIO_CAPTURE_GAIN_DB.value
-
-
-class Event:
-    def __init__(self):
-        self._listeners = []
-
-    def subscribe(self, listener):
-        self._listeners.append(listener)
-
-    def emit(self, *args):
-        # Iterate a copy: a listener that subscribes/unsubscribes in response
-        # to its own event (mic hotswap handlers do this) would otherwise
-        # mutate self._listeners mid-iteration and raise RuntimeError, taking
-        # the whole emit -- and its caller's thread -- down with it.
-        for listener in list(self._listeners):
-            try:
-                listener(*args)
-            except Exception:
-                logging.exception(
-                    "usb_monitor listener %s failed; continuing with the rest",
-                    getattr(listener, "__qualname__", listener),
-                )
 
 
 

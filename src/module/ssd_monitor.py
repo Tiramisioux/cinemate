@@ -26,7 +26,7 @@ except ImportError:
 # ----------------------------------------------------------------------
 # project-local imports
 # ----------------------------------------------------------------------
-from module.redis_controller import ParameterKey
+from module.redis_controller import ParameterKey, Event
 from module.config_loader import as_bool
 from module.storage_profiles import (
     DEFAULT_RECORDER_PROFILE,
@@ -51,24 +51,6 @@ YANK_ERRNOS = {
     getattr(errno, "ENOTCONN", errno.EIO),
     getattr(errno, "ESTALE", errno.EIO),
 }
-
-
-# ----------------------------------------------------------------------
-# Event helper
-# ----------------------------------------------------------------------
-class Event:
-    def __init__(self) -> None:
-        self._listeners = []
-
-    def subscribe(self, fn):
-        self._listeners.append(fn)
-
-    def emit(self, *args):
-        for cb in list(self._listeners):     # shallow copy – safe against rm
-            try:
-                cb(*args)
-            except Exception as exc:
-                logging.exception("Mount-event listener failed: %s", exc)
 
 
 # ----------------------------------------------------------------------

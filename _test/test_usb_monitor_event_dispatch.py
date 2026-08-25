@@ -4,7 +4,10 @@ with no copy, so a listener that subscribes/unsubscribes in response to its
 own event -- the mic hotswap handlers do -- could raise RuntimeError and take
 the whole emit down with it. It also logged failures with traceback.print_exc()
 to stdout instead of the log file, so a raising listener was invisible outside
-a live terminal.
+a live terminal (fixed in place by B9.6a). B9.6b then collapsed the four
+independent Event classes (F-127) into one: usb_monitor.Event is now a
+re-exported alias of redis_controller.Event, not a copy -- see the identity
+check below.
 """
 
 import sys
@@ -19,11 +22,16 @@ sys.modules.setdefault(
     "pyudev",
     types.SimpleNamespace(Context=object, Monitor=object, MonitorObserver=object),
 )
+sys.modules.setdefault("redis", types.SimpleNamespace(StrictRedis=object))
 
 from module.usb_monitor import Event
+from module.redis_controller import Event as RedisControllerEvent
 
 
 class UsbMonitorEventDispatchTests(unittest.TestCase):
+    def test_is_the_shared_redis_controller_event_not_a_copy(self):
+        self.assertIs(Event, RedisControllerEvent)
+
     def test_a_raising_listener_does_not_stop_the_others(self):
         seen = []
 
@@ -62,7 +70,7 @@ class UsbMonitorEventDispatchTests(unittest.TestCase):
 
         def self_removing(*args):
             calls.append(args)
-            event._listeners.remove(self_removing)
+            event._handlers.remove(self_removing)
 
         event.subscribe(self_removing)
         event.subscribe(lambda *args: calls.append(("second", args)))
@@ -70,7 +78,7 @@ class UsbMonitorEventDispatchTests(unittest.TestCase):
         event.emit("add", "/dev/snd/card2")
 
         self.assertEqual(len(calls), 2)
-        self.assertNotIn(self_removing, event._listeners)
+        self.assertNotIn(self_removing, event._handlers)
 
 
 if __name__ == "__main__":

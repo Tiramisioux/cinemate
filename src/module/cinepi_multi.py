@@ -11,7 +11,7 @@ import os
 import shutil
 
 from module.config_loader import load_settings, DEFAULT_SETTINGS_PATH
-from module.redis_controller import ParameterKey, decode_log_encode_request
+from module.redis_controller import ParameterKey, decode_log_encode_request, Event
 from module.framebuffer import Framebuffer
 from module.sensor_detect import is_pi4_family
 from module.storage_profiles import (
@@ -106,27 +106,6 @@ def _audio_timecode_offset_frames(settings: dict | None = None) -> int:
         logging.warning("Invalid audio.24bit.timecode_offset_frames=%r; using 0", raw_value)
         return 0
 
-
-# ───────────────────────── Event ─────────────────────────
-class Event:
-    def __init__(self):
-        self._listeners = []
-    def subscribe(self, listener):
-        self._listeners.append(listener)
-    def emit(self, data=None):
-        # self.message fans out cinepi-raw's subprocess output (see :281/:299
-        # below) to every subscriber, synchronously, on the reader thread. An
-        # unguarded raise here used to kill that thread outright and silently
-        # stop the log relay. One bad listener must not take the others down
-        # with it. Mirrors RedisController's Event (module/redis_controller.py).
-        for listener in list(self._listeners):
-            try:
-                listener(data)
-            except Exception:
-                logging.exception(
-                    "cinepi_multi listener %s failed; continuing with the rest",
-                    getattr(listener, "__qualname__", listener),
-                )
 
 # ───────────────────── Camera Discovery ──────────────────
 class CameraInfo:

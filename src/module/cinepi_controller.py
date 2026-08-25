@@ -1364,7 +1364,7 @@ class CinePiController:
         Rule (single sensor is a no-op — only its own port ever records):
           • explicit ``rec cam0/cam1/both`` override wins;
           • else record both when the preview is side-by-side ``both`` OR
-            settings ``lock_dual_recording`` is true (force dual);
+            settings ``sensors.record_policy`` is ``always_both`` (force dual);
           • else record the preview's main sensor (fullscreen or pip main).
         Always clamped to the sensors actually present.
         """

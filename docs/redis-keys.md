@@ -19,10 +19,29 @@ Each entry explains which component normally writes the key and whether it makes
 | fps_actual | CinePi-raw -> Cinemate | Measured FPS from the running pipeline | No |
 | fps_last | Cinemate | Previous stable FPS value from stats | No |
 | fps_max | Cinemate startup | Maximum FPS supported by the current sensor mode | No |
+| fps_phase_lock | Cinemate startup | Runtime enable for CinePi-raw's closed-loop frame-rate phase lock, from `sensors.<cam>.phase_lock` in settings.jsonc (default on); read once at CinePi-raw startup, not live | No |
 | sensor_mode | Cinemate -> CinePi-raw startup | Active sensor resolution/mode index | Yes (causes pipeline restart) |
 | bit_depth | Cinemate startup | Sensor bit depth (10, 12 or 16) for the selected mode | No |
 | width / height | Cinemate startup | Active sensor resolution | No |
+| mode | Cinemate startup | Composite `width:height:bit_depth:packing` string for the active sensor mode | No |
+| packing | Cinemate startup | Sensor packing token for the active mode/platform: `P` (packed) or `U` (unpacked) | No |
 | lores_width / lores_height | Cinemate startup | Preview stream resolution passed to CinePi-raw | No |
+
+### Resolution switching
+
+Whether triggered manually (`set resolution`) or automatically by dynamic resolution, a
+resolution change publishes a target/in-flight state so the GUI can show a "switching"
+transition instead of a stale value.
+
+| Key | Written by | Description | Safe to change manually? |
+|-----|------------|-------------|--------------------------|
+| dynamic_resolution_enabled | Cinemate | Toggle for automatic FPS-driven resolution downgrade/upgrade (`set dynamic_resolution_enabled`); persisted and read back at startup, defaulting to on when unset | Yes |
+| dynamic_resolution_active | Cinemate | `1` while a lower resolution mode is currently substituted in to sustain the requested FPS | No |
+| dynamic_resolution_desired_mode | Cinemate | The sensor mode the user actually asked for; dynamic resolution switches away from and back to this mode as FPS allows | No |
+| resolution_switching | Cinemate | `1` while a resolution change (manual or dynamic) is in flight; cleared when CinePi-raw's raw-stream-ready log line reports the new stream at the target size, or after a 2.5 s hold timer | No |
+| resolution_target_mode | Cinemate | Sensor mode index CinePi-raw is being switched to | No |
+| resolution_target_width / resolution_target_height | Cinemate | Target resolution CinePi-raw's raw-stream-ready log line is matched against to clear `resolution_switching` | No |
+| resolution_target_bit_depth | Cinemate | Target bit depth for the in-flight resolution switch | No |
 | wb | Cinemate -> CinePi-raw | White-balance temperature in Kelvin | Yes |
 | wb_user | Cinemate | Kelvin value stored before conversion to `cg_rb` | No |
 | cg_rb | Cinemate -> CinePi-raw | White-balance gain pair `1/R,1/B` | Yes (advanced) |
@@ -69,6 +88,8 @@ Each entry explains which component normally writes the key and whether it makes
 | memory_alert | Cinemate | RAM percentage at which the watchdog auto-stopped recording (integer, set at the 80 % trip point); `0` when clear | No |
 | cam_init | CinePi-raw | Internal startup flag | No |
 | cameras | Cinemate startup | JSON list of detected cameras and port assignments | No |
+| audio_capture_gain_db | Cinemate startup | Capture gain in dB applied to the active USB mic, from `audio_capture` in settings.jsonc (per-mic-type block, e.g. `16bit.capture_gain_db`); read back by the USB hotswap monitor on mic reconnect | No |
+| trigger_mode | -- | Defined in `ParameterKey` but not currently written or read anywhere in Cinemate or CinePi-raw | -- |
 | gui_layout | Cinemate | Path to the active GUI layout preset | No |
 | pi_model | Cinemate | Raspberry Pi model string | No |
 | sensor | Cinemate startup | Active camera model key | No |

@@ -2,8 +2,6 @@
 
 Simple GUI is available on the attached HDMI output.
 
-The browser-based web UI features basic settings and interactive controls.
-
 ### Background colors
 
 | Colour | Meaning |

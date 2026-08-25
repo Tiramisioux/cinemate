@@ -371,14 +371,54 @@ class SensorDetect:
         self,
         sensors: Dict[str, List[Dict]],
     ) -> Dict[str, Dict[int, Dict]]:
-        """Add custom modes, apply the settings.jsonc filters, order and index."""
-        # ── add any user-defined custom modes ──────────────────────
+        """Add custom modes, apply the settings.jsonc filters, order and index.
+
+        F-298: a custom_modes entry whose (width, height, bit_depth, hdr)
+        matches an already-detected mode overrides that mode's fps_max in
+        place -- the sensor's advertised ceiling is an electrical property
+        and says nothing about what this storage/CPU actually sustain, so
+        it needs to be correctable, not just addable-to. Only fps_max is
+        overridable this way; the rest of the detected mode (packing,
+        gui_layout, aspect) is left alone. A non-matching entry still
+        appends a brand-new mode exactly as before -- this only changes
+        what happens when the dimensions already exist.
+        """
+        # ── add or correct user-defined custom modes ─────────────────
         for cam, extras in self.custom_modes.items():
             sensors.setdefault(cam, [])
             for extra in extras:
                 w, h = int(extra["width"]), int(extra["height"])
                 bd   = int(extra["bit_depth"])
                 fps  = extra.get("fps_max")
+                hdr_flag = bool(extra.get("hdr", False))
+                existing = next(
+                    (
+                        m for m in sensors[cam]
+                        if int(m.get("width") or 0) == w
+                        and int(m.get("height") or 0) == h
+                        and int(m.get("bit_depth") or 0) == bd
+                        and bool(m.get("hdr")) == hdr_flag
+                    ),
+                    None,
+                )
+                if existing is not None:
+                    if fps is not None:
+                        detected_fps = existing.get("fps_max")
+                        if detected_fps is not None and fps > detected_fps:
+                            logging.warning(
+                                "custom_modes override for %s %dx%d (%d-bit%s) raises "
+                                "fps_max from the detected %s to %s -- the sensor did "
+                                "not report this; if storage/CPU can't actually sustain "
+                                "it, lower the value instead of raising it.",
+                                cam, w, h, bd, " HDR" if hdr_flag else "",
+                                detected_fps, fps,
+                            )
+                        # Stash the sensor's own value before overwriting it --
+                        # the settings editor shows this as the "detected"
+                        # placeholder next to the editable effective value.
+                        existing.setdefault("fps_max_detected", detected_fps)
+                        existing["fps_max"] = fps
+                    continue
                 sensors[cam].append(
                     self._mode_from_metadata_or_detected(
                         camera_name=cam,
@@ -386,7 +426,7 @@ class SensorDetect:
                         height=h,
                         bit_depth=bd,
                         fps_max=fps,
-                        hdr=bool(extra.get("hdr", False)),
+                        hdr=hdr_flag,
                         extra=extra,
                     )
                 )

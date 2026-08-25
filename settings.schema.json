@@ -319,7 +319,26 @@
           }
         },
         "custom_modes": {
-          "type": "object"
+          "type": "object",
+          "description": "Per-camera-name list of mode overrides/additions (F-298). An entry whose width/height/bit_depth/hdr matches an already-detected mode overrides that mode's fps_max in place; a non-matching entry adds a brand-new mode.",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "width": { "type": "integer", "minimum": 1 },
+                "height": { "type": "integer", "minimum": 1 },
+                "bit_depth": { "type": "integer", "minimum": 1 },
+                "fps_max": { "type": "number", "minimum": 0 },
+                "hdr": { "type": "boolean", "default": false },
+                "aspect": { "type": "number", "minimum": 0 },
+                "gui_layout": { "type": "integer" },
+                "packing": { "type": "string" }
+              },
+              "required": ["width", "height", "bit_depth"],
+              "additionalProperties": false
+            }
+          }
         }
       },
       "additionalProperties": false

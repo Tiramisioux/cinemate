@@ -1632,6 +1632,7 @@ $PI_USER ALL=(ALL) NOPASSWD: $CINEMATE_DIR/src/main.py
 $PI_USER ALL=(ALL) NOPASSWD: /bin/mount, /bin/umount, /usr/bin/ntfs-3g
 $PI_USER ALL=(ALL) NOPASSWD: /sbin/mount.ext4
 $PI_USER ALL=(ALL) NOPASSWD: $CONFIG_TXT_APPLY_HELPER
+$PI_USER ALL=(ALL) NOPASSWD: /usr/bin/systemd-run --no-block --collect --unit=cinemate-restart-trigger -- systemctl restart cinemate-autostart
 EOF
     sudo visudo -cf /etc/sudoers.d/pi_cinemate >/dev/null
     detail "sudoers validation passed"

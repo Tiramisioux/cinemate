@@ -45,11 +45,21 @@
 - **After that:** B7 (ADR-001 steps 1–3), which should follow B3 landing. ADR-001's
   conclusion (reject D/E, adopt C) is unchanged by the reconciliation, so B7 can proceed on
   the existing plan.
+- **Then: THE FIX ROUND + THE LAST REMEDIATION PR (2026-08-25).** All five originally-cleared
+  PRs merged (#131, #130, #132, #134, cinepi-raw #59). F-283/F-284/F-286 (core) fixed and
+  merged (#135, #136, #137); F-286's tie-break follow-up and F-285's full fix are open PRs
+  (#139, #140). **The venv was removed** — an operator architecture decision, not a
+  remediation fix — landing as #138 (F-279..F-282) then #133, the **last remediation PR**,
+  rebased onto the new mechanism and merged. **B2, B3, B4, B5, B6 are now all complete.**
+  Full detail, including three desk diagnoses that needed correction on hardware (a good
+  outcome, not a bad one) and the venv decision's two follow-up checks: `PI-RESULTS-2026-08-25.md`.
+  Remaining planned work: B1 (docs, zero risk, no hardware), B7 (preconditions now all met),
+  the F-285 design decision (now implemented, #140 pending merge), and B9/B10 (added below).
 - **Ledger branch:** `claude/cinemate-system-review-kickoff-cilicc` — pushed: yes · PR #129 (draft)
-- **Findings:** 201 rows (F-001..F-286, with gaps — see free ID blocks below). **188 net**
-  through F-278 (F-183..F-186, F-189 merged into F-002/F-003), **+8 from the Pi session**
-  (F-279..F-286, see below) = **196 net**. Free ID blocks: F-135..F-149, F-196..F-199,
-  F-287..F-299. Analysis is complete; F-272..F-278 were all found *while implementing the
+- **Findings:** 202 rows (F-001..F-287, with gaps — see free ID blocks below). **188 net**
+  through F-278 (F-183..F-186, F-189 merged into F-002/F-003), **+9 from Pi sessions**
+  (F-279..F-287, see below) = **197 net**. Free ID blocks: F-135..F-149, F-196..F-199,
+  F-288..F-299. Analysis is complete; F-272..F-278 were all found *while implementing the
   fixes*, which is worth knowing — implementation is a better detector than reading was.
 - **Open decisions:** **ADR-001 is written and `proposed`** —
   `decisions/ADR-001-gui-harmonization.md`. Reject D and E; adopt C reached through B; fix
@@ -100,14 +110,20 @@ deliverable's correction banner for downstream effects. Do not re-derive any of 
   standalone cinepi-raw launch) but likely unreachable through normal `cinemate-autostart`
   operation, since cinemate's Python layer re-seeds `iso` first.
 
-**Eight new findings, F-279..F-286**, from the Pi session itself (not predicted by any
-queue item): **F-279..F-282 are fixed** on `feature/no-venv-install` (`sudo -v` hang,
-`raspi-firmware` 404, `settings.jsonc` comment destruction on every install not just via the
-web editor, a relative tuning-file path). **F-283..F-286 are open**: `systemctl restart
-cinemate-autostart` reliably hangs on `ExecStopPost=cinemate-console-handoff.sh` (F-283,
-reproduced 5+ times); the NVMe `mount`/`unmount` CLI round-trip is unreliable (F-284);
-F-285 is the hardware proof for F-025 above; F-286 is `choose_resolution()`'s tie-break
-never selecting the higher-bit-depth mode at a sensor's max resolution.
+**Nine new findings, F-279..F-287**, from the Pi sessions (not predicted by any queue item):
+**F-279..F-282 fixed and merged** (#138, `6a15ed8`: `sudo -v` hang, `raspi-firmware` 404,
+`settings.jsonc` comment destruction on every install not just via the web editor, a relative
+tuning-file path). **F-283, F-284, F-286 (core) fixed and merged** (#135 `4f765c4`, #136
+`2c73b22`, #137 `d35dfef`) **2026-08-25** — all three were desk diagnoses that needed
+correction once verified on hardware; see `PI-RESULTS-2026-08-25.md` for exactly what each
+diagnosis got right and wrong. **F-286's tie-break follow-up and F-285's full fix are open
+PRs** (#139, #140) — F-285 is the hardware proof for F-025 above, now with a proposed and
+implemented (pending merge) fix combining a dispatch lock, a movement gate, and read-back
+confirmation. **F-283 has an unfixed residual**: a second, narrower `Conflicts=getty@tty1`
+race can still land the unit `inactive` instead of `active` after some restarts (never hangs,
+never `failed`, self-recovers) — four mitigations tried and rejected, open. **F-287** (added
+2026-08-25, see `deliverables/REMEDIATION-PLAN.md`'s B9/B10 addition): cinepi-raw's seven
+`meson test` targets had no CI to run them until this session ran them by hand.
 
 **Operator decision (2026-08-25): keep F-027's 11 Redis-key concerns.** They are candidates
 for future cinemate-side implementation, not dead surface — do not propose deleting any of
@@ -138,34 +154,48 @@ thing committed there.
 
 | PR | repo | batch | state |
 |---|---|---|---|
-| #130 | cinemate | B3 correctness, 8 commits | draft · no CI (needs #131) · **SAFE — PI-014/PI-013 confirm the severity of what it fixes** |
-| #131 | cinemate | B4 style + **the CI itself**, 6 commits | draft · **5 green** · **SAFE — PI-002 confirms the suite it gates passes clean on hardware** |
-| #132 | cinemate | B2 dead code, −1,398 lines | draft · **5 green** · **SAFE — PI-001 confirms the dead templates are deployed, deletion has real effect** |
-| #133 | cinemate | B6 dependencies + `versions.env` | draft · **5 green** · **NEEDS-CHANGE — see below** |
-| #59 | cinepi-raw | B2 dead code, −1,565 lines | draft · no CI in that repo · **SAFE — PI-003 independently confirms `add-tc.patch` is a vestigial duplicate** |
+| #131 | cinemate | B4 style + **the CI itself**, 6 commits | **MERGED** `b9cd1f6` |
+| #130 | cinemate | B3 correctness, 8 commits | **MERGED** `47ef0da` (rebased onto post-#131 `dev`; resolved a real conflict where its own shutdown-stop fix collided with #132's dead-code deletion at the same lines) |
+| #132 | cinemate | B2 dead code, −1,398 lines | **MERGED** `7e05bb5` (rebased) |
+| #134 | cinemate | contract-drift ratchet re-tightened (`--max-unresolved` 1→0) after #132's deletions | **MERGED** `fcf3c23` |
+| #59 | cinepi-raw | B2 dead code, −1,565 lines | **MERGED** `bc63598` — hardware-verified first (dev vs branch, side-by-side build+run+record), per KICKOFF's one unverified merge gate |
+| #135 | cinemate | F-283 (hang/`failed` fix) | **MERGED** `4f765c4` |
+| #136 | cinemate | F-284 (`_blkid_value` empty-result fix) | **MERGED** `2c73b22` |
+| #137 | cinemate | F-286 core (explicit-request guard + toggle) | **MERGED** `d35dfef` |
+| #138 | cinemate | `feature/no-venv-install`: F-279..F-282 + the venv-removal architecture decision | **MERGED** `6a15ed8` |
+| #133 | cinemate | B6 dependencies + `versions.env` | **MERGED** `7e7515f` — rebased onto post-#138 `dev`, install mechanism rewritten to match (`"${pip_cmd[@]}" -r ...` in place of `$VENV_DIR/bin/pip`); requirements-file content and `versions.env` unchanged. **The last remediation PR** |
+| #139 | cinemate | F-286 tie-break follow-up (bit depth ranked above `fps_max` on a genuine downgrade) | open, CI green |
+| #140 | cinemate | F-285 full fix (lock + movement gate + read-back confirmation) | open, CI pending at last check |
+| #129 | cinemate | this ledger | open, intentionally — see the closeout instructions this session is running under |
 
-**Merge order: #131 first** (it carries `.github/workflows/checks.yml`); #132 and #133 are
-based on it and retarget to `dev` cleanly afterwards.
+**B2, B3, B4, B5, B6 are all complete.** #133 was the last remediation PR from the original
+eight-batch plan. Full detail on the fix round and the venv decision: `PI-RESULTS-2026-08-25.md`.
 
-**#133 is NEEDS-CHANGE (2026-08-24).** It still installs into `$VENV_DIR` via
-`pip install -r requirements.txt -r requirements-hardware.txt`. The operator has since
-removed the venv entirely, in favour of `pip install --user --break-system-packages`
-(`feature/no-venv-install`, matching the pattern `cinemate-recovery.service` already used
-deliberately). **The requirements-file content is vindicated by PI-004** — flask and
-pyserial both confirmed transitive-only on a clean install — **only the install mechanism
-conflicts.** Whoever picks up #133 needs to retarget the venv-install commands onto the
-no-venv pattern; the three-file split (`requirements.txt`/`requirements-hardware.txt`/
-`docs/requirements-docs.txt`) and its contents do not need rework.
+**The venv decision (2026-08-25) is an operator architecture call, not a fixed finding** —
+record it that way in any future summary so it doesn't read as remediation. Cinemate's Python
+packages install to the system interpreter (`pip install --user --break-system-packages`)
+instead of a dedicated virtualenv, matching the pattern `cinemate-recovery.service` already
+used deliberately. Two follow-up checks run for the record (neither gates anything): the
+apt/pip overlap is non-empty (`gpiozero`, `lgpio`, `pyudev`, `smbus2`) but not currently active
+on the dev Pi, which predates the fresh no-venv install path; and root's `sys.path` contains
+nothing under `/home/pi`, so `cinemate-recovery.service`'s isolation from
+`cinemate-autostart.service` (F-221) survives via directory separation. Both in
+`PI-RESULTS-2026-08-25.md`.
 
-~~**Everything executable without hardware is done.** What remains is **B5 — the Pi
-session** (16 queued items), and **B7** (ADR-001 steps 1–3), which should follow B3
-landing.~~ **B5 is done** (see "Ground truth from the Pi session" above). B7 remains, and
-should follow B3 landing, same as before — ADR-001's conclusion didn't change, so B7's plan
-doesn't need re-deriving, just the corrected ADR text (already reconciled) as its input.
+**B7** (ADR-001 steps 1–3) remains, and should follow B3 landing — done, above. ADR-001's
+conclusion didn't change, so B7's plan doesn't need re-deriving, just the corrected ADR text
+(already reconciled) as its input.
 
 **Verified on hardware, 2026-08-24:** #130, #131, #132, cinepi-raw #59 — see the SAFE/
 NEEDS-CHANGE column above and `PI-RESULTS-2026-08-24.md`'s "Merge verdict" section for the
 full reasoning per PR.
+
+**Verified on hardware, 2026-08-25:** merged `dev` running in both repos together (Phase C,
+the first time this combination has run); F-204's fix re-verified with the same fault
+injection PI-014 used; F-283's fix (5 consecutive restarts, none hung/`failed`); F-284's fix
+(10/10 mount cycles, was 0/10 before); F-286's fix (a real recording at the forced 12-bit
+mode, DNG TIFF tags parsed directly); F-285's fix (Grove Base HAT, both the starve and
+isolated cases). Full detail: `PI-RESULTS-2026-08-25.md`.
 
 ### B9 and B10 — added 2026-08-25, on operator instruction
 

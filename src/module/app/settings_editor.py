@@ -31,6 +31,7 @@ from module.config_loader import (
     _apply_settings_defaults,
     load_settings,
     strip_jsonc,
+    DEFAULT_SETTINGS_PATH,
 )
 from module.app import boot_config, raw_files
 from module.jsonc_edit import apply_updates
@@ -44,10 +45,7 @@ settings_editor_bp = Blueprint(
     template_folder="templates",
 )
 
-# Every settings.jsonc caller in this codebase hardcodes this same absolute
-# path (src/main.py:51, cinepi_multi.py:27, cinepi_controller.py:27,
-# wifi_hotspot.py:37) -- it is a live-hardware constant, not configurable.
-SETTINGS_FILE = "/home/pi/cinemate/settings.jsonc"
+SETTINGS_FILE = DEFAULT_SETTINGS_PATH
 
 # Shipped template (resources/settings/settings_default.jsonc) -- used as
 # (a) the GET /api/settings fallback when the live file is missing, and

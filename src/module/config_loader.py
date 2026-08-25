@@ -7,6 +7,15 @@ ANSI_RED = "\033[1;31m"
 ANSI_YELLOW = "\033[1;33m"
 ANSI_CYAN = "\033[1;36m"
 
+# F-260: this absolute path used to be hardcoded independently in six files
+# (main.py, cinepi_multi.py, cinepi_controller.py, wifi_hotspot.py,
+# simple_gui.py, app/settings_editor.py); one had already drifted out of
+# sync with a comment that tried to enumerate the others by line number.
+# services/cinemate-recovery/cinemate-recovery.py keeps its own copy
+# deliberately -- that process must import nothing from module.* (F-221) so
+# it can still run when the rest of the stack cannot.
+DEFAULT_SETTINGS_PATH = "/home/pi/cinemate/settings.jsonc"
+
 # Public: a handful of call sites need the raw membership test (e.g. a CLI
 # parser that must reject an unrecognised value outright rather than fall
 # back to a default) instead of the as_bool() default-fallback shape below.
@@ -281,7 +290,7 @@ def _apply_settings_defaults(settings: dict) -> dict:
             "free_increment": 100,
         },
         "shutter_a": {
-            "steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 360],
+            "steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360],
             "free": False,
             "free_increment": 1,
             # Own granularity used only while shutter-angle sync mode is on

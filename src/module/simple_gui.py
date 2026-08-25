@@ -5,7 +5,7 @@ import wave
 from PIL import Image, ImageDraw, ImageFont
 from module.console_display import claim_console_for_framebuffer, release_console_to_text
 from module.framebuffer import Framebuffer, acquire_framebuffer
-from module.config_loader import load_settings, as_bool
+from module.config_loader import load_settings, as_bool, DEFAULT_SETTINGS_PATH
 import logging
 from flask_socketio import SocketIO
 import re
@@ -142,7 +142,7 @@ class SimpleGUI(threading.Thread):
         self.color_mode = "normal"
         
         # Load settings, not sure when the settings will be None so left the code here
-        self.settings = settings or load_settings("/home/pi/cinemate/settings.jsonc")
+        self.settings = settings or load_settings(DEFAULT_SETTINGS_PATH)
         
         self.setup_resources()
         self.display_poll_interval = 1.0

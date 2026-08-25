@@ -17,6 +17,7 @@ from module.config_loader import (
     as_bool,
     TRUE_VALUES,
     FALSE_VALUES,
+    DEFAULT_SETTINGS_PATH,
 )
 from module.storage_profiles import recorder_profile_name_for_filesystem
 from module.dynamic_resolution import (
@@ -26,7 +27,7 @@ from module.dynamic_resolution import (
 )
 from module import parameters
 
-SETTINGS_FILE = "/home/pi/cinemate/settings.jsonc"
+SETTINGS_FILE = DEFAULT_SETTINGS_PATH
 GUI_RESOLUTION_PREVIEW_DELAY_SECONDS = 0.12
 GUI_RESOLUTION_SWITCHING_HOLD_SECONDS = 2.5
 RAW_STREAM_READY_RE = re.compile(r"\bRaw stream:\s*(\d+)x(\d+)\b", re.IGNORECASE)

@@ -11,7 +11,12 @@ import socket
 from PIL import Image, ImageDraw, ImageFont
 import glob
 
-from module.config_loader import SettingsLoadError, auto_storage_preroll_enabled, load_settings
+from module.config_loader import (
+    SettingsLoadError,
+    auto_storage_preroll_enabled,
+    load_settings,
+    DEFAULT_SETTINGS_PATH,
+)
 from module.logger import configure_logging, log_directory
 from module.redis_controller import RedisController, ParameterKey
 from module.ssd_monitor import SSDMonitor
@@ -45,7 +50,7 @@ from module.console_display import (
 from module.framebuffer import acquire_framebuffer
 
 # Constants
-SETTINGS_FILE = "/home/pi/cinemate/settings.jsonc"
+SETTINGS_FILE = DEFAULT_SETTINGS_PATH
 STARTUP_MESSAGE_MIN_DURATION = 3.0
 CLI_COLOR_RED = "\033[1;31m"
 CLI_COLOR_YELLOW = "\033[1;33m"

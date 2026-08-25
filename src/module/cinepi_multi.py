@@ -10,7 +10,7 @@ from typing import List
 import os
 import shutil
 
-from module.config_loader import load_settings
+from module.config_loader import load_settings, DEFAULT_SETTINGS_PATH
 from module.redis_controller import ParameterKey, decode_log_encode_request
 from module.framebuffer import Framebuffer
 from module.sensor_detect import is_pi4_family
@@ -22,7 +22,7 @@ from module.storage_profiles import (
 )
 
 # Path to settings file
-SETTINGS_FILE = "/home/pi/cinemate/settings.jsonc"
+SETTINGS_FILE = DEFAULT_SETTINGS_PATH
 _SETTINGS: dict | None = None
 
 

@@ -1,10 +1,10 @@
 # module/serial_handler.py
+import contextlib
 import os
 import time
 import select
 import threading
 import logging
-import queue
 import serial
 import errno
 
@@ -60,11 +60,9 @@ class SerialHandler(threading.Thread):
             )
             # Let the kernel/driver settle a moment; then drain junk.
             time.sleep(0.05)
-            try:
+            with contextlib.suppress(Exception):
                 ser.reset_input_buffer()
                 ser.reset_output_buffer()
-            except Exception:
-                pass
 
             # Filter the banner/NUL bursts that can appear on first open
             t_end = time.time() + 0.10
@@ -73,7 +71,7 @@ class SerialHandler(threading.Thread):
 
             logging.info(f"Successfully opened port {port}")
             return ser
-        except serial.SerialException as e:
+        except serial.SerialException:
             return None
 
     def _schedule_retry(self, port, immediate=False):
@@ -112,10 +110,8 @@ class SerialHandler(threading.Thread):
                 logging.warning(f"Write failed on {ser.port}: {e}")
                 dead.append(ser)
         for ser in dead:
-            try:
+            with contextlib.suppress(Exception):
                 ser.close()
-            except Exception:
-                pass
             if ser.port == '/dev/ttyACM0':
                 self.serial_connected = False
             self.serials.remove(ser)
@@ -149,20 +145,16 @@ class SerialHandler(threading.Thread):
                     logging.warning(f"Device vanished on {ser.port} (EIO). Closing and retrying later.")
                 else:
                     logging.warning(f"Read failed on {ser.port}: {e}")
-                try:
+                with contextlib.suppress(Exception):
                     ser.close()
-                except Exception:
-                    pass
                 if ser.port == '/dev/ttyACM0':
                     self.serial_connected = False
                 self.serials.remove(ser)
                 self._schedule_retry(ser.port)
             except serial.SerialException as e:
                 logging.warning(f"Serial error on {ser.port}: {e}")
-                try:
+                with contextlib.suppress(Exception):
                     ser.close()
-                except Exception:
-                    pass
                 if ser.port == '/dev/ttyACM0':
                     self.serial_connected = False
                 self.serials.remove(ser)
@@ -182,10 +174,8 @@ class SerialHandler(threading.Thread):
         # Cull ports that are no longer desired
         for ser in self.serials[:]:
             if ser.port not in self.portlist or not ser.is_open:
-                try:
+                with contextlib.suppress(Exception):
                     ser.close()
-                except Exception:
-                    pass
                 self.serials.remove(ser)
 
         self.current_ports = [s.port for s in self.serials]
@@ -219,10 +209,8 @@ class SerialHandler(threading.Thread):
         except OSError:
             pass
         for ser in self.serials[:]:
-            try:
+            with contextlib.suppress(Exception):
                 ser.close()
-            except Exception:
-                pass
         self.serials.clear()
         self.current_ports.clear()
         self.serial_connected = False

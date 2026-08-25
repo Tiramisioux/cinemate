@@ -149,11 +149,22 @@ class SSDMonitor:
         self._thread.start()
         logging.info("SSD monitoring thread started.")
 
-    def stop(self) -> None:
+    def stop(self, timeout: float = 2.0) -> None:
+        """Stop the mount-watch thread.
+
+        Used to join self._jthread as well, which raised AttributeError every
+        time: the journal thread's creation is commented out just above its
+        own loop. Having no caller was the only reason that never surfaced.
+
+        Bounded join -- shutdown must not hang on a thread that is wedged in a
+        blocking poll.
+        """
         self._stop_evt.set()
-        self._thread.join()
-        self._jthread.join()
-        logging.info("SSD monitoring stopped.")
+        self._thread.join(timeout=timeout)
+        if self._thread.is_alive():
+            logging.warning("SSD monitor thread did not stop within %.1fs", timeout)
+        else:
+            logging.info("SSD monitoring stopped.")
 
     # ------------------------------------------------------------------
     # read-only properties
@@ -286,8 +297,8 @@ class SSDMonitor:
         monitor.start()                         # non-blocking
 
         while not self._stop_evt.is_set():
-            dev = monitor.poll(self._poll_int)  # returns None on timeout
-            # In either case we resync; if an event arrived, dev is not None.
+            monitor.poll(self._poll_int)  # returns None on timeout
+            # The result is deliberately ignored: event or timeout, we resync.
             self._check_mount_status()
             self._maybe_run_fsck()
 
@@ -548,6 +559,20 @@ class SSDMonitor:
         The normal blkid path can briefly report cached pre-format metadata.
         Fresh probes first ask blkid to read the device directly and then fall
         back to the cache-backed query used elsewhere.
+
+        F-284: this process runs unprivileged (User=pi). `blkid -p` (true raw
+        probe) then always raises CalledProcessError ("Permission denied"),
+        which is caught and skipped correctly -- but its `-c /dev/null`
+        fallback needs the same raw device access and does not have it
+        either; on this hardware it exits 0 with empty stdout instead of
+        raising, since it isn't a low-level probe. A bare `return` on any
+        successful-but-empty command short-circuited before ever reaching
+        the cache-backed query that actually works (confirmed instant and
+        correct by hand, and matching stage 1's own cache-based
+        enumeration) -- so a device with an unprivileged-unreadable raw
+        node, e.g. a whole-disk filesystem with no partition table, always
+        failed LABEL lookup with `fresh=True`. Reproduced 10/10 on
+        hardware. A command must return a non-empty value to count.
         """
         commands = []
         if fresh:
@@ -559,7 +584,7 @@ class SSDMonitor:
 
         for cmd in commands:
             try:
-                return subprocess.check_output(
+                value = subprocess.check_output(
                     cmd,
                     text=True,
                     stderr=subprocess.DEVNULL,
@@ -571,6 +596,8 @@ class SSDMonitor:
                 subprocess.TimeoutExpired,
             ):
                 continue
+            if value:
+                return value
         return ""
 
     @staticmethod
@@ -621,7 +648,12 @@ class SSDMonitor:
                 FileNotFoundError,
                 subprocess.CalledProcessError,
                 subprocess.TimeoutExpired,
-            ):
+            ) as exc:
+                logging.warning(
+                    "_find_raw_device(): blkid enumeration failed (%s): %s",
+                    type(exc).__name__,
+                    exc,
+                )
                 return []
 
         candidates = [d for d in _blkid_lines() if Path(d).exists()]

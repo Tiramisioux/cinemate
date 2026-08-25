@@ -4,6 +4,7 @@ import time
 import datetime 
 import os  
 import logging  
+import contextlib
 import select
 import sys
 
@@ -92,6 +93,7 @@ class CommandExecutor(threading.Thread):
 
             # ── Resolution / anamorphic / storage ────────────────────────────────
             'set resolution'         : (cinepi_controller.set_resolution, [int, None]),
+            'set dynamic resolution' : (cinepi_controller.set_dynamic_resolution_enabled, [int, None]),
             'set anamorphic factor'  : (cinepi_controller.set_anamorphic_factor, [float, None]),
             'mount'                  : (cinepi_controller.mount,          None),
             'unmount'                : (cinepi_controller.unmount,        None),
@@ -156,7 +158,7 @@ class CommandExecutor(threading.Thread):
         try:
             rtc_time = os.popen('hwclock -r').read().strip()  # Try to read RTC time
             logging.info(f"RTC Time:    {rtc_time}")  # Display the RTC time
-        except:
+        except Exception:
             logging.info("Unable to read RTC time.")  # If unable to read RTC time, log error
 
     def set_rtc_time(self):
@@ -164,7 +166,7 @@ class CommandExecutor(threading.Thread):
         try:
             os.system('sudo hwclock --systohc')  # Try to sync RTC time with system time
             logging.info("RTC Time has been set to System Time")  # Log success
-        except:
+        except Exception:
             logging.info("Unable to set the RTC time.")  # If unable to set RTC time, log error
 
     def is_valid_arg(self, arg, expected_type):
@@ -326,11 +328,10 @@ class CommandExecutor(threading.Thread):
             prompt_shown = False
             while self.running:
                 if not prompt_shown and stdin.isatty():
-                    try:
+                    # The prompt is a courtesy; a closed stdout must not end the loop.
+                    with contextlib.suppress(Exception):
                         sys.stdout.write("\n> ")
                         sys.stdout.flush()
-                    except Exception:
-                        pass
                     prompt_shown = True
 
                 try:

@@ -1,5 +1,5 @@
-import os
 from flask import Flask
+from module.redis_controller import ParameterKey
 from flask_socketio import SocketIO
 import logging
 
@@ -22,7 +22,7 @@ def create_app(redis_controller, cinepi_controller, simple_gui, sensor_detect,
             socketio.emit('resolution_change', {
                 'sensor_mode': sensor_mode,
                 'resolution_switching': redis_controller.get_value(
-                    'resolution_switching',
+                    ParameterKey.RESOLUTION_SWITCHING.value,
                     "0",
                 ),
             })

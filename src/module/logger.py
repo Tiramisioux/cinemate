@@ -3,14 +3,41 @@ from termcolor import colored
 import queue
 import os
 
+# Only the newest entries are ever read (main.py's get_recent_log_lines takes
+# the last 40), so the queue only has to be deep enough to survive a burst.
+LOG_QUEUE_MAXSIZE = 2000
+
+
 class QueueHandler(logging.Handler):
+    """Keep the most recent log lines in memory for the startup-failure view.
+
+    Nothing drains this queue -- its only reader peeks under the mutex and
+    takes a tail -- so an unbounded queue grew for the entire life of the
+    process. On a camera left running for days that is a slow leak with no
+    upper bound.
+
+    Bounded, and full means drop the OLDEST: the newest lines are the ones
+    worth having when something has just gone wrong. Never blocks, because
+    this runs inline on whichever thread called logging.
+    """
+
     def __init__(self, log_queue):
         super().__init__()
         self.log_queue = log_queue
-        
+
     def emit(self, record):
         log_entry = self.format(record)
-        self.log_queue.put(log_entry)
+        try:
+            self.log_queue.put_nowait(log_entry)
+        except queue.Full:
+            try:
+                self.log_queue.get_nowait()
+            except queue.Empty:  # pragma: no cover - another thread drained it
+                pass
+            try:
+                self.log_queue.put_nowait(log_entry)
+            except queue.Full:  # pragma: no cover - lost a race; dropping is correct
+                pass
       
 class ColoredFormatter(logging.Formatter):
     """
@@ -72,9 +99,28 @@ class ColoredFormatter(logging.Formatter):
 
         return f"{timestamp}: {colored_record}"
 
+DEFAULT_LOG_DIR = '/home/pi/cinemate/src/logs'
+
+
+def log_directory() -> str:
+    """Where system.log lives.
+
+    The default is unchanged from the path this has always used, because
+    deployed cameras and anything reading their logs expect it. It is a
+    function rather than a literal so that main.py's log cleanup and this
+    writer cannot drift apart -- they used to state it separately -- and so a
+    dev checkout or a test run can point somewhere else without editing source.
+
+    Note for whoever revisits this: the default puts runtime state inside the
+    source tree, which is worth changing, but moving it is an operational
+    decision rather than a tidy-up.
+    """
+    return os.environ.get('CINEMATE_LOG_DIR', DEFAULT_LOG_DIR)
+
+
 # Configure the logging
 
-def configure_logging(MODULES_OUTPUT_TO_SERIAL, level=logging.INFO):
+def configure_logging(level=logging.INFO):
     # Base format (timestamp handled by formatter)
     log_format = '%(asctime)s.%(msecs)03d: %(levelname)s: %(module)s %(message)s'
     date_format = '%Y-%m-%d %H:%M:%S'
@@ -93,7 +139,7 @@ def configure_logging(MODULES_OUTPUT_TO_SERIAL, level=logging.INFO):
     logger.addHandler(console_handler)
 
     # File handler (plain text)
-    log_dir = '/home/pi/cinemate/src/logs'
+    log_dir = log_directory()
     os.makedirs(log_dir, exist_ok=True)
     file_path = os.path.join(log_dir, 'system.log')
     file_handler = logging.FileHandler(file_path)
@@ -101,7 +147,7 @@ def configure_logging(MODULES_OUTPUT_TO_SERIAL, level=logging.INFO):
     logger.addHandler(file_handler)
 
     # Queue handler for in-app UI or processing
-    log_queue = queue.Queue()
+    log_queue = queue.Queue(maxsize=LOG_QUEUE_MAXSIZE)
     queue_handler = QueueHandler(log_queue)
     queue_handler.setFormatter(formatter)
     logger.addHandler(queue_handler)

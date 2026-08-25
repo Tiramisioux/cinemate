@@ -29,6 +29,7 @@ These methods adjust ISO, shutter angle and frame rate. Increment/decrement help
 ## Resolution and preview
 
 - `set_resolution(value=None)` – Switch sensor mode. Passing `None` cycles through the available modes.
+- `set_dynamic_resolution_enabled(value=None)` – Toggle or explicitly set whether dynamic resolution may substitute a lower-resolution mode when the requested fps exceeds the desired mode's own `fps_max`. Omit the value to toggle.
 - `set_anamorphic_factor(value=None)` – Change the preview’s anamorphic stretch. Omit the value to toggle between presets.
 - `set_zoom(value=None, direction="next")` – Adjust the digital zoom factor. Without a value it steps through `preview.zoom_steps`.
 - `inc_zoom()` / `dec_zoom()` – Convenience wrappers around `set_zoom()`.

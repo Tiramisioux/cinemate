@@ -201,7 +201,7 @@ class SmartButton:
     logger = logging.getLogger('ButtonManager')
     _currently_held = None
     
-    def __init__(self, cinepi_controller, pin, pull_up, debounce_time, actions, identifier, inverse=False, combined_actions=[]):
+    def __init__(self, cinepi_controller, pin, pull_up, debounce_time, actions, identifier, inverse=False, combined_actions=None):
         self.logger = logging.getLogger(f"SmartButton{pin}")
         self.button = Button(pin, pull_up=pull_up, bounce_time=debounce_time)
         self.actions = actions
@@ -433,7 +433,6 @@ class SmartButton:
             if action_dict and isinstance(action_dict, dict):
                 self.logger.debug(f"Action dict before accessing 'method': {action_dict}")
                 action_method = action_dict.get('method')
-                action_args = action_dict.get('args', [])
                 if action_method:
                     self.trigger_action(action_dict)  # Assuming you have this method implemented
                 else:

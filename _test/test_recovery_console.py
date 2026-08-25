@@ -205,37 +205,37 @@ class ValidationLadderTests(TempCase):
     def test_rung_one_reports_the_exact_tty1_text(self):
         runner = fake_run(returncode=2, stdout="File: x\nProblem: bad thing at line 4")
         result = rc.validate_settings_text(
-            "{bad", venv_python=Path(sys.executable), src_dir=ROOT / "src",
+            "{bad", python_bin=Path(sys.executable), src_dir=ROOT / "src",
             runner=runner,
         )
         self.assertFalse(result.ok)
-        self.assertEqual(result.rung, rc.VALIDATE_RUNG_VENV)
+        self.assertEqual(result.rung, rc.VALIDATE_RUNG_INTERPRETER)
         self.assertIn("line 4", result.message)
         self.assertTrue(result.validated)
 
     def test_rung_one_accepts_valid_content(self):
         runner = fake_run(returncode=0)
         result = rc.validate_settings_text(
-            '{"a": 1}', venv_python=Path(sys.executable), src_dir=ROOT / "src",
+            '{"a": 1}', python_bin=Path(sys.executable), src_dir=ROOT / "src",
             runner=runner,
         )
         self.assertTrue(result.ok)
-        self.assertEqual(result.rung, rc.VALIDATE_RUNG_VENV)
+        self.assertEqual(result.rung, rc.VALIDATE_RUNG_INTERPRETER)
 
     def test_rung_one_really_does_use_config_loader(self):
         # End-to-end through a real interpreter, proving the embedded validator
         # script imports and reports the same error Cinemate would.
         result = rc.validate_settings_text(
             '{"system": {"a": 1 "b": 2}}',
-            venv_python=Path(sys.executable), src_dir=ROOT / "src",
+            python_bin=Path(sys.executable), src_dir=ROOT / "src",
         )
         self.assertFalse(result.ok)
-        self.assertEqual(result.rung, rc.VALIDATE_RUNG_VENV)
+        self.assertEqual(result.rung, rc.VALIDATE_RUNG_INTERPRETER)
         self.assertIn("Problem:", result.message)
 
-    def test_falls_to_rung_two_when_the_venv_is_missing(self):
+    def test_falls_to_rung_two_when_the_interpreter_is_missing(self):
         result = rc.validate_settings_text(
-            '{"a": 1,}', venv_python=self.tmp / "no-such-python",
+            '{"a": 1,}', python_bin=self.tmp / "no-such-python",
             src_dir=self.tmp,
         )
         self.assertTrue(result.ok)
@@ -243,21 +243,21 @@ class ValidationLadderTests(TempCase):
 
     def test_rung_two_rejects_broken_content(self):
         result = rc.validate_settings_text(
-            '{"a": 1 "b": 2}', venv_python=self.tmp / "gone", src_dir=self.tmp,
+            '{"a": 1 "b": 2}', python_bin=self.tmp / "gone", src_dir=self.tmp,
         )
         self.assertFalse(result.ok)
         self.assertEqual(result.rung, rc.VALIDATE_RUNG_STDLIB)
 
     def test_rung_two_accepts_jsonc(self):
         result = rc.validate_settings_text(
-            '{ // ok\n "a": 1,\n}', venv_python=self.tmp / "gone", src_dir=self.tmp,
+            '{ // ok\n "a": 1,\n}', python_bin=self.tmp / "gone", src_dir=self.tmp,
         )
         self.assertTrue(result.ok)
 
-    def test_falls_to_rung_two_when_the_venv_validator_itself_breaks(self):
+    def test_falls_to_rung_two_when_the_interpreter_validator_itself_breaks(self):
         runner = fake_run(returncode=3, stdout="ImportError: no module")
         result = rc.validate_settings_text(
-            '{"a": 1}', venv_python=Path(sys.executable), src_dir=ROOT / "src",
+            '{"a": 1}', python_bin=Path(sys.executable), src_dir=ROOT / "src",
             runner=runner,
         )
         self.assertEqual(result.rung, rc.VALIDATE_RUNG_STDLIB)
@@ -266,7 +266,7 @@ class ValidationLadderTests(TempCase):
     def test_rung_three_fails_open_and_labels_the_write(self):
         # The rung that only fires when everything else is already broken.
         result = rc.validate_settings_text(
-            "total garbage {{{", venv_python=self.tmp / "gone", src_dir=self.tmp,
+            "total garbage {{{", python_bin=self.tmp / "gone", src_dir=self.tmp,
             jsonc_module=None,
         )
         self.assertTrue(result.ok, "rung 3 must fail OPEN")
@@ -276,7 +276,7 @@ class ValidationLadderTests(TempCase):
 
     def test_rung_three_never_refuses_even_valid_looking_input(self):
         result = rc.validate_settings_text(
-            '{"a": 1}', venv_python=self.tmp / "gone", src_dir=self.tmp,
+            '{"a": 1}', python_bin=self.tmp / "gone", src_dir=self.tmp,
             jsonc_module=None,
         )
         self.assertTrue(result.ok)

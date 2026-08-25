@@ -62,9 +62,23 @@ REDIS_PLUS_PLUS_DIR="${REDIS_PLUS_PLUS_DIR:-$PI_HOME/redis-plus-plus}"
 LGPIO_DIR="${LGPIO_DIR:-$PI_HOME/lg}"
 IMX283_DRIVER_DIR="${IMX283_DRIVER_DIR:-$PI_HOME/imx283-v4l2-driver}"
 IMX585_DRIVER_DIR="${IMX585_DRIVER_DIR:-$PI_HOME/imx585-v4l2-driver}"
-VENV_DIR="${VENV_DIR:-$PI_HOME/.cinemate-env}"
+# No dedicated virtualenv: cinemate-recovery.service already runs on system
+# python3 deliberately ("the venv is broken" is a supported failure mode for
+# that service, per its own comments and test_unit_runs_system_python_not_the_venv
+# in _test/test_recovery_console.py) -- main.py now follows the same pattern
+# for a simpler, faster install with one fewer thing that can go stale.
+PYTHON_BIN="${PYTHON_BIN:-/usr/bin/python3}"
+PIP_BIN="${PIP_BIN:-/usr/bin/pip3}"
 
 CINEMATE_REPO_URL="${CINEMATE_REPO_URL:-https://github.com/Tiramisioux/cinemate.git}"
+# Optional pairing manifest: records which cinepi-raw revision goes with which
+# cinemate revision. Sourced before the defaults below so anything it sets
+# wins, and an environment variable still wins over both. Absent is fine --
+# that is the historical behaviour of tracking each default branch.
+_versions_env="$(dirname "${BASH_SOURCE[0]}")/versions.env"
+# shellcheck source=/dev/null
+[[ -f "$_versions_env" ]] && source "$_versions_env"
+
 CINEMATE_REPO_REF="${CINEMATE_REPO_REF:-}"
 CINEPI_RAW_REPO_URL="${CINEPI_RAW_REPO_URL:-https://github.com/Tiramisioux/cinepi-raw.git}"
 CINEPI_RAW_REPO_REF="${CINEPI_RAW_REPO_REF:-}"
@@ -108,7 +122,8 @@ KERNEL_BASELINE_HEADERS_META_PKG_2712="${KERNEL_BASELINE_HEADERS_META_PKG_2712:-
 RASPI_FIRMWARE_VERSION_2712="${RASPI_FIRMWARE_VERSION_2712:-1.20260521-1~bookworm}"
 KERNEL_ROLLBACK_DIR="${KERNEL_ROLLBACK_DIR:-/var/tmp/cinemate-kernel-baseline}"
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
 readonly MANAGED_BEGIN="# >>> cinemate-install >>>"
 readonly MANAGED_END="# <<< cinemate-install <<<"
 # Parallel build jobs. On boards with < 4 GB RAM (1 GB / 2 GB models) heavy
@@ -202,7 +217,14 @@ run_as_pi_clean_shell() {
 bootstrap_sudo() {
     detail "Validating sudo access"
     command -v sudo >/dev/null 2>&1 || die "sudo is required"
-    sudo -v
+    # `sudo -v` (credential-refresh mode) can require a password even when a
+    # NOPASSWD rule covers plain commands -- observed hanging forever on a
+    # stock Raspberry Pi OS image where the pi user has both the default
+    # `%sudo ALL=(ALL:ALL) ALL` group rule and a per-user `NOPASSWD: ALL`
+    # rule. `sudo -n true` exercises the same NOPASSWD path an actual
+    # installer command will use and fails fast instead of blocking on a
+    # password prompt that will never come in a non-interactive session.
+    sudo -n true 2>/dev/null || sudo true
 }
 
 validate_supported_os() {
@@ -408,7 +430,7 @@ bootstrap_base_tools() {
     sudo apt update -y
     sudo apt upgrade -y
     detail "Installing base shell/bootstrap tools"
-    sudo apt install -y git curl wget python3 python3-pip python3-venv rsync
+    sudo apt install -y git curl wget python3 python3-pip rsync
 }
 
 is_rpi2712_platform() {
@@ -430,7 +452,11 @@ align_pi5_kernel_baseline() {
     current_fw_version="$(dpkg-query -W -f='${Version}' raspi-firmware 2>/dev/null || true)"
 
     local kernel_pool_url="https://archive.raspberrypi.com/debian/pool/main/l/linux"
-    local firmware_pool_url="https://archive.raspberrypi.com/debian/pool/untested/r/raspi-firmware"
+    # "untested" only ever retains the single newest upload -- any pinned
+    # version there gets 404'd the moment the next build lands. Once a
+    # raspi-firmware build graduates it lands in "main" too and stays
+    # there, so pin against that pool instead for a pin that survives.
+    local firmware_pool_url="https://archive.raspberrypi.com/debian/pool/main/r/raspi-firmware"
     local -a urls=(
         "$kernel_pool_url/${KERNEL_BASELINE_SUPPORT_PKG_2712}_${KERNEL_BASELINE_DEB_VERSION_2712}_all.deb"
         "$kernel_pool_url/${KERNEL_BASELINE_IMAGE_REAL_PKG_2712}_${KERNEL_BASELINE_DEB_VERSION_2712}_arm64.deb"
@@ -517,7 +543,7 @@ install_apt_packages() {
     )
 
     cinemate_packages=(
-        build-essential python3-dev python3-pip python3-venv
+        build-essential python3-dev python3-pip
         i2c-tools python3-smbus python3-pyudev
         libgpiod-dev libgpiod2 python3-libgpiod gpiod
         portaudio19-dev python3-systemd
@@ -754,6 +780,16 @@ build_libcamera() {
         if grep -q 'minPixelProcessingTime = 1.0us / 380' "$controller_cpp" 2>/dev/null; then
             detail "Pi 5 overclock: libcamera minPixelProcessingTime 1.0us/380 -> 1.0us/580 (pisp)"
             run_as_pi sed -i 's#minPixelProcessingTime = 1.0us / 380#minPixelProcessingTime = 1.0us / 580#' "$controller_cpp"
+        elif grep -q 'minPixelProcessingTime = 1.0us / 580' "$controller_cpp" 2>/dev/null; then
+            detail "Pi 5 overclock: libcamera minPixelProcessingTime already at 1.0us/580"
+        else
+            # Neither value present. The grep guard makes a re-run safe, but it
+            # cannot tell "already patched" from "upstream moved this line", and
+            # the second case silently ships an overclocked RP1 without the
+            # companion fix. Say so rather than skipping quietly.
+            warn "Pi 5 overclock: could not find minPixelProcessingTime in ${controller_cpp}."
+            warn "  libcamera has probably changed upstream; the overclock companion fix was NOT applied."
+            warn "  The faster imx585 modes may not be advertised. See docs/overclocking.md."
         fi
     fi
 
@@ -904,32 +940,35 @@ install_lgpio_backend() {
 }
 
 install_python_environment() {
-    log "Creating Cinemate virtualenv"
-    if [[ ! -d "$VENV_DIR" ]]; then
-        detail "Creating new virtualenv at $VENV_DIR"
-        run_as_pi python3 -m venv "$VENV_DIR"
-    else
-        detail "Reusing existing virtualenv at $VENV_DIR"
-    fi
+    log "Installing Cinemate Python packages (system interpreter, no virtualenv)"
 
-    sudo chown -R "$PI_USER:$PI_GROUP" "$VENV_DIR"
+    # Debian 12 (Bookworm) marks the system Python "externally managed"
+    # (PEP 668) specifically to stop pip from clobbering apt-owned packages.
+    # --break-system-packages is pip's own documented escape hatch for a
+    # deliberate system-wide install, not a workaround for a bug. --user
+    # installs to ~pi/.local instead of root-owned dist-packages: no sudo
+    # needed for the install itself, and cinemate-autostart.service already
+    # runs as User=pi, so python3 finds ~/.local/lib/pythonX/site-packages
+    # automatically (PEP 370) with no PATH/PYTHONPATH changes required.
+    local pip_cmd=("$PIP_BIN" install --user --break-system-packages)
 
-    local pip_cmd="$VENV_DIR/bin/pip"
     detail "Upgrading pip tooling"
-    run_as_pi "$pip_cmd" install --upgrade pip setuptools wheel
-    run_as_pi "$pip_cmd" uninstall -y board >/dev/null 2>&1 || true
-    detail "Installing Cinemate Python packages"
-    run_as_pi "$pip_cmd" install \
-        gpiozero \
-        adafruit-blinka adafruit-circuitpython-ssd1306 adafruit-circuitpython-seesaw \
-        luma.oled grove.py pigpio-encoder smbus2 rpi_hardware_pwm \
-        watchdog psutil pillow redis keyboard pyudev numpy termcolor sounddevice \
-        evdev inotify_simple sysv_ipc flask_socketio sugarpie
-
-    if is_true "$INSTALL_ALT_GPIO_BACKEND"; then
-        detail "Installing lgpio Python package"
-        run_as_pi "$pip_cmd" install lgpio
+    run_as_pi "${pip_cmd[@]}" --upgrade pip setuptools wheel
+    run_as_pi "$PIP_BIN" uninstall -y --break-system-packages board >/dev/null 2>&1 || true
+    # Read the package list from the repo rather than restating it here. The
+    # two lists used to disagree: requirements.txt was read by nothing, and the
+    # literal that lived here had drifted from it in both directions. lgpio is
+    # in requirements-hardware.txt unconditionally -- rpi_gpio_wrapper imports
+    # it at the top of main.py's own import chain, so it is not optional
+    # whatever INSTALL_ALT_GPIO_BACKEND says about the C library below.
+    local req_dir="${CINEMATE_SOURCE_DIR:-$CINEMATE_DIR}"
+    local req="$req_dir/requirements.txt"
+    local req_hw="$req_dir/requirements-hardware.txt"
+    if [[ ! -f "$req" || ! -f "$req_hw" ]]; then
+        die "Missing $req or $req_hw -- cannot install the Python environment."
     fi
+    detail "Installing Cinemate Python packages from requirements files"
+    run_as_pi "${pip_cmd[@]}" -r "$req" -r "$req_hw"
 }
 
 configure_loader_paths() {
@@ -1481,7 +1520,7 @@ configure_run_wrapper() {
     write_user_file "$PI_HOME/run_cinemate.sh" 755 <<EOF
 #!/usr/bin/env bash
 set -Eeuo pipefail
-exec "$VENV_DIR/bin/python3" "$CINEMATE_DIR/src/main.py" "\$@"
+exec "$PYTHON_BIN" "$CINEMATE_DIR/src/main.py" "\$@"
 EOF
 }
 
@@ -1507,18 +1546,20 @@ EOF
 
 configure_sudoers() {
     log "Writing sudoers drop-ins"
-    backup_file /etc/sudoers.d/cinemate-env
     backup_file /etc/sudoers.d/pi_cinemate
-    write_root_file /etc/sudoers.d/cinemate-env 440 <<EOF
-$PI_USER ALL=(ALL) NOPASSWD: $VENV_DIR/bin/*
-EOF
+    # There is no venv/bin directory to scope a wildcard grant to any more.
+    # Remove a stale drop-in from an older venv-based install so it doesn't
+    # linger granting NOPASSWD on a path that no longer exists.
+    if [[ -e /etc/sudoers.d/cinemate-env ]]; then
+        backup_file /etc/sudoers.d/cinemate-env
+        sudo rm -f /etc/sudoers.d/cinemate-env
+    fi
     write_root_file /etc/sudoers.d/pi_cinemate 440 <<EOF
 $PI_USER ALL=(ALL) NOPASSWD: $PI_HOME/run_cinemate.sh
 $PI_USER ALL=(ALL) NOPASSWD: $CINEMATE_DIR/src/main.py
 $PI_USER ALL=(ALL) NOPASSWD: /bin/mount, /bin/umount, /usr/bin/ntfs-3g
 $PI_USER ALL=(ALL) NOPASSWD: /sbin/mount.ext4
 EOF
-    sudo visudo -cf /etc/sudoers.d/cinemate-env >/dev/null
     sudo visudo -cf /etc/sudoers.d/pi_cinemate >/dev/null
     detail "sudoers validation passed"
 }
@@ -1541,8 +1582,6 @@ configure_bashrc() {
     cat >>"$temp" <<EOF
 
 $MANAGED_BEGIN
-source "$VENV_DIR/bin/activate"
-alias cinemate-env='source "$VENV_DIR/bin/activate"'
 alias cinemate='$PI_HOME/run_cinemate.sh'
 alias editboot='sudo nano /boot/firmware/config.txt'
 alias editcmdline='sudo nano /boot/firmware/cmdline.txt'
@@ -1602,12 +1641,10 @@ EOF
 
 print_post_install_notes() {
     section "Post-install notes"
-    log "Cinemate virtualenv: $VENV_DIR"
+    log "Cinemate Python packages: installed to the system interpreter ($PYTHON_BIN), no virtualenv"
     detail "cinepi-raw rebuild helper: $PI_HOME/compile-raw.sh"
     detail "Matching rpicam utilities are installed via the cinepi-raw build under /usr/local/bin"
-    detail "New interactive shells will auto-activate the Cinemate virtualenv from $PI_HOME/.bashrc"
     detail "If you are staying in this shell, run 'source ~/.bashrc' once to load the aliases now"
-    detail "If you ever run 'deactivate', use 'cinemate-env' to reactivate the virtualenv in the current shell"
     if ((KERNEL_ALIGNMENT_REQUIRED_REBOOT)); then
         detail "Pi 5 kernel baseline was aligned to $KERNEL_BASELINE_ABI_2712; reboot once before camera testing if you did not run the installer with RUN_REBOOT=1"
     fi
@@ -1623,7 +1660,6 @@ configure_settings_json() {
 
     log "Patching settings.jsonc"
     detail "Applying hotspot + HDMI defaults to $settings_json"
-    backup_file "$settings_json"
     run_as_pi python3 - "$settings_json" "$HOTSPOT_NAME" "$HOTSPOT_PASSWORD" "$hotspot_enabled_json" "$HDMI_PORT_CAM0" "$HDMI_PORT_CAM1" <<'PY'
 import json
 import pathlib
@@ -1683,21 +1719,49 @@ enabled = sys.argv[4].lower() == "true"
 hdmi0 = int(sys.argv[5])
 hdmi1 = int(sys.argv[6])
 
-data = json.loads(_strip_jsonc(path.read_text()))
+original_text = path.read_text()
+data = json.loads(_strip_jsonc(original_text))
+
+# json.dumps() below is a lossy round-trip -- it throws away every // and
+# /* */ comment in settings.jsonc (71 of them on the stock template). Most
+# installs pass the installer's own defaults, which already match what's
+# committed in settings.jsonc, so there is nothing to patch. Detect that
+# case and skip the write entirely rather than silently gutting the file
+# on every single install regardless of whether anything changed.
 system_cfg = data.setdefault("system", {})
 wifi_cfg = system_cfg.setdefault("wifi_hotspot", {})
+sensors_cfg = data.setdefault("sensors", {})
+cam0_out = sensors_cfg.setdefault("cam0", {}).setdefault("output", {})
+cam1_out = sensors_cfg.setdefault("cam1", {}).setdefault("output", {})
+hdmi_cfg = data.setdefault("hdmi_display", {})
+
+unchanged = (
+    wifi_cfg.get("name") == ssid
+    and wifi_cfg.get("password") == password
+    and wifi_cfg.get("enabled") == enabled
+    and cam0_out.get("hdmi_port") == hdmi0
+    and cam1_out.get("hdmi_port") == hdmi1
+    and "width" in hdmi_cfg
+    and "height" in hdmi_cfg
+)
+if unchanged:
+    print("settings.jsonc already matches the requested hotspot/HDMI values -- leaving it untouched (comments intact).")
+    sys.exit(0)
+
 wifi_cfg["name"] = ssid
 wifi_cfg["password"] = password
 wifi_cfg["enabled"] = enabled
-
-sensors_cfg = data.setdefault("sensors", {})
-sensors_cfg.setdefault("cam0", {}).setdefault("output", {})["hdmi_port"] = hdmi0
-sensors_cfg.setdefault("cam1", {}).setdefault("output", {})["hdmi_port"] = hdmi1
-
-hdmi_cfg = data.setdefault("hdmi_display", {})
+cam0_out["hdmi_port"] = hdmi0
+cam1_out["hdmi_port"] = hdmi1
 hdmi_cfg.setdefault("width", 1920)
 hdmi_cfg.setdefault("height", 1080)
 
+print("WARNING: settings.jsonc needs a real value change (hotspot/HDMI settings differ "
+      "from the template) -- writing it back with json.dumps() will strip every // and "
+      "/* */ comment. Back up your comments if you rely on them; a preserving editor for "
+      "this path does not exist yet.")
+backup_path = path.with_suffix(path.suffix + ".bak")
+backup_path.write_text(original_text)
 path.write_text(json.dumps(data, indent=2) + "\n")
 PY
 }

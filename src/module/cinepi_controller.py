@@ -4,12 +4,9 @@ import threading
 import os
 import time
 import json
-from fractions import Fraction
-import math
 import subprocess
-from threading import Thread, Timer
+from threading import Timer
 import psutil
-import math
 import sys
 
 from module.redis_controller import ParameterKey, encode_log_encode_request, decode_log_encode_request
@@ -102,12 +99,14 @@ class CinePiController:
         except Exception as exc:
             logging.warning("Could not apply phase_lock setting: %s", exc)
 
-        # Dynamic resolution is always on: it substitutes a lower-resolution
-        # sensor mode when the requested fps exceeds what the desired mode's
-        # own declared fps_max (the value cinepi-raw --list-cameras reports,
-        # see sensor_detect.py) can sustain. No curated performance table,
-        # no policy -- just the sensor's own numbers.
-        self.dynamic_resolution_enabled = True
+        # Dynamic resolution substitutes a lower-resolution sensor mode when
+        # the requested fps exceeds what the desired mode's own declared
+        # fps_max (the value cinepi-raw --list-cameras reports, see
+        # sensor_detect.py) can sustain. No curated performance table, no
+        # policy -- just the sensor's own numbers. Defaults on; settable via
+        # set_dynamic_resolution_enabled / redis, and read back at startup
+        # (F-286 -- this was previously a hardcoded True with no toggle).
+        self.dynamic_resolution_enabled = self._get_startup_dynamic_resolution_enabled()
         self.dynamic_resolution_desired_mode = None
         self.dynamic_resolution_active = False
         self.dynamic_resolution_suspended = False
@@ -317,6 +316,14 @@ class CinePiController:
             return self.sensor_mode
         return desired_mode
 
+    def _get_startup_dynamic_resolution_enabled(self) -> bool:
+        value = self.redis_controller.get_value(
+            ParameterKey.DYNAMIC_RESOLUTION_ENABLED.value
+        )
+        if value is None:
+            return True
+        return self._as_bool(value)
+
     def _publish_dynamic_resolution_state(self):
         self.redis_controller.set_value(
             ParameterKey.DYNAMIC_RESOLUTION_ENABLED.value,
@@ -331,6 +338,19 @@ class CinePiController:
                 ParameterKey.DYNAMIC_RESOLUTION_DESIRED_MODE.value,
                 self.dynamic_resolution_desired_mode,
             )
+
+    def set_dynamic_resolution_enabled(self, value=None):
+        if value is not None:
+            if value in (0, False):
+                self.dynamic_resolution_enabled = False
+            elif value in (1, True):
+                self.dynamic_resolution_enabled = True
+            else:
+                raise ValueError("Invalid value. Please provide either 0, 1, True, or False.")
+        else:
+            self.dynamic_resolution_enabled = not self.dynamic_resolution_enabled
+        logging.info(f"Dynamic resolution enabled {self.dynamic_resolution_enabled}")
+        self._publish_dynamic_resolution_state()
 
     def _current_user_fps_value(self):
         value = self.redis_controller.get_value(ParameterKey.FPS_USER.value)

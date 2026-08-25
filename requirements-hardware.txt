@@ -1,0 +1,21 @@
+# Raspberry Pi-only runtime dependencies.
+#
+# These need real hardware, kernel interfaces or ARM-specific wheels, so they
+# are kept out of requirements.txt: that file has to stay installable on a
+# developer machine and in CI. The installer installs both files.
+#
+# See the note in requirements.txt about pinning.
+
+adafruit-blinka                   # provides board, busio, digitalio
+adafruit-circuitpython-seesaw     # quad rotary encoder
+adafruit-circuitpython-ssd1306    # OLED
+evdev                             # keyboard/input devices
+gpiozero                          # GPIO
+grove.py                          # Grove Base HAT ADC
+lgpio                             # rpi_gpio_wrapper imports this unguarded, so
+                                  # it is NOT optional despite the installer's
+                                  # INSTALL_ALT_GPIO_BACKEND flag calling it so
+smbus2                            # I2C
+
+# Also required, but not a pip package:
+#   python3-systemd   (apt) -- `from systemd import journal` in ssd_monitor

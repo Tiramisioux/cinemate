@@ -13,6 +13,7 @@ import logging
 import os
 import tempfile
 import threading
+from datetime import datetime, timezone
 from pathlib import Path
 
 from flask import (
@@ -32,6 +33,7 @@ from module.config_loader import (
     strip_jsonc,
 )
 from module.app import boot_config, raw_files
+from module.jsonc_edit import apply_updates
 
 logger = logging.getLogger(__name__)
 
@@ -91,12 +93,13 @@ ACTION_METHODS = [
     {"group": "ClearHDR", "value": "set_hdr_threshold_high", "label": "Set HDR threshold high", "arg": {"type": "number", "min": 0, "max": 4095}},
     {"group": "ClearHDR", "value": "set_hdr_blend", "label": "Set HDR blend", "arg": {"type": "number", "min": 0, "max": 8}},
     {"group": "ClearHDR", "value": "set_hdr_gain_adder", "label": "Set HDR gain adder", "arg": {"type": "number", "min": 0, "max": 5}},
-    {"group": "CineMate Log", "value": "set_log", "label": "Set CineMate Log target", "arg": {"type": "select", "options": ["off", "10", "12"]}},
+    {"group": "CineMate Log", "value": "set_log_encode", "label": "Set CineMate Log target", "arg": {"type": "select", "options": ["off", "10", "12"]}},
     {"group": "Zoom / anamorphic", "value": "set_zoom", "label": "Set preview zoom", "arg": {"type": "select", "options": [1, 2], "suffix": "×"}},
     {"group": "Zoom / anamorphic", "value": "inc_zoom", "label": "Zoom in one stop"},
     {"group": "Zoom / anamorphic", "value": "dec_zoom", "label": "Zoom out one stop"},
     {"group": "Zoom / anamorphic", "value": "set_anamorphic_factor", "label": "Set anamorphic desqueeze", "arg": {"type": "select", "options": [1, 1.33, 2], "suffix": "×"}},
     {"group": "Resolution / preview", "value": "set_resolution", "label": "Change resolution", "arg": {"type": "number", "placeholder": "mode #, blank = cycle"}},
+    {"group": "Resolution / preview", "value": "set_dynamic_resolution_enabled", "label": "Toggle dynamic resolution", "arg": {"type": "toggle01"}},
     {"group": "Resolution / preview", "value": "set_preview_source", "label": "Set HDMI preview source", "arg": {"type": "select", "options": ["cam0", "cam1", "cam0+cam1"]}},
     {"group": "Storage", "value": "mount", "label": "Mount storage"},
     {"group": "Storage", "value": "unmount", "label": "Unmount storage"},
@@ -170,6 +173,82 @@ def parse_settings():
     return jsonify({"ok": True, "settings": settings})
 
 
+SETTINGS_BACKUP_KEEP = 10
+
+
+def _backup_settings(dest: Path) -> Path | None:
+    """Copy *dest* aside before it is overwritten. Returns the backup path.
+
+    This deliberately reimplements what cinemate-recovery.py's backup_file()
+    does rather than importing it: that console is standard-library-only by
+    rule, must not be coupled to src/module, and is deployed to
+    /usr/local/bin -- see its module docstring. The two therefore keep
+    separate histories, and this one lives beside the settings file because
+    that directory is already known-writable by this process (put_settings
+    mkstemps into it), whereas the console's /var/lib/cinemate is root-owned.
+
+    Returns None when there is nothing to back up. A missing source is not a
+    reason to refuse the write.
+    """
+    try:
+        data = dest.read_bytes()
+    except OSError as exc:
+        logger.info("No backup taken for %s: %s", dest, exc)
+        return None
+
+    backup_dir = dest.parent / ".settings-backups"
+    try:
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        target = backup_dir / f"{dest.name}.{stamp}.bak"
+        counter = 1
+        while target.exists():  # two saves inside one second
+            target = backup_dir / f"{dest.name}.{stamp}-{counter}.bak"
+            counter += 1
+        target.write_bytes(data)
+
+        keep = sorted(backup_dir.glob(f"{dest.name}.*.bak"))[:-SETTINGS_BACKUP_KEEP]
+        for stale in keep:
+            stale.unlink(missing_ok=True)
+    except OSError as exc:
+        # Losing the backup must not lose the save -- but say so, loudly.
+        logger.error("Could not back up %s before saving: %s", dest, exc)
+        return None
+
+    return target
+
+
+def _render_settings(dest: Path, settings: dict) -> tuple[str, bool]:
+    """Produce the text to write, keeping the file's comments where possible.
+
+    Returns (text, comments_preserved). The surgical path rewrites only the
+    spans whose values changed, so comments, key order and formatting survive
+    untouched. It cannot express a structural change -- a key added or removed,
+    an array resized -- and falls back to a full json.dumps() rewrite, which is
+    correct but loses every comment. The caller must report that, not hide it.
+    """
+    full = json.dumps(settings, indent=2, ensure_ascii=False) + "\n"
+
+    try:
+        original = dest.read_text(encoding="utf-8")
+        current = json.loads(strip_jsonc(original))
+    except (OSError, ValueError) as exc:
+        # No readable file to preserve anything from -- a first write, or one
+        # the user has already broken. Either way the full rewrite is right.
+        logger.info("Rewriting %s in full (%s)", dest, exc)
+        return full, False
+
+    try:
+        edited = apply_updates(original, current, settings)
+    except Exception:  # pragma: no cover - the editor must never block a save
+        logger.exception("Surgical settings edit failed; falling back to a full rewrite")
+        return full, False
+
+    if edited is None:
+        return full, False
+    return edited, True
+
+
 @settings_editor_bp.route("/api/settings", methods=["PUT"])
 def put_settings():
     body = request.get_json(silent=True)
@@ -182,8 +261,9 @@ def put_settings():
         logger.exception("Rejected settings save: failed to normalize payload")
         return jsonify({"ok": False, "message": f"Invalid settings payload: {exc}"}), 400
 
-    text = json.dumps(settings, indent=2, ensure_ascii=False) + "\n"
     dest = Path(SETTINGS_FILE)
+    backup = _backup_settings(dest)
+    text, comments_kept = _render_settings(dest, settings)
     try:
         fd, tmp_path = tempfile.mkstemp(dir=str(dest.parent), prefix=".settings-editor-", suffix=".jsonc.tmp")
         try:
@@ -197,7 +277,12 @@ def put_settings():
         logger.exception("Failed to write %s", dest)
         return jsonify({"ok": False, "message": f"Could not write {dest}: {exc}"}), 500
 
-    logger.info("settings.jsonc saved via settings editor (%d bytes)", len(text))
+    logger.info(
+        "settings.jsonc saved via settings editor (%d bytes); comments %s; backup: %s",
+        len(text),
+        "preserved" if comments_kept else "LOST (structural change)",
+        backup or "none",
+    )
 
     cinepi_controller = current_app.config.get("CINEPI_CONTROLLER")
     restarting = False
@@ -210,7 +295,23 @@ def put_settings():
         timer.daemon = True
         timer.start()
 
-    return jsonify({"ok": True, "message": "Saved.", "restarting": restarting})
+    message = "Saved."
+    if not comments_kept:
+        # Say it out loud. Silently dropping the operator's annotations is how
+        # this went unnoticed in the first place.
+        message = (
+            "Saved, but the comments in settings.jsonc could not be kept: this change "
+            "altered the file's structure, so it was rewritten from scratch."
+            + (f" The previous version is at {backup}." if backup else "")
+        )
+
+    return jsonify({
+        "ok": True,
+        "message": message,
+        "restarting": restarting,
+        "comments_preserved": comments_kept,
+        "backup": str(backup) if backup else None,
+    })
 
 
 @settings_editor_bp.route("/api/config-txt", methods=["GET"])

@@ -89,7 +89,7 @@ class AnalogControls(threading.Thread):
         """Compute moving average for filtering."""
         return sum(buffer) / len(buffer) if buffer else None
 
-    def map_adc_to_steps(self, adc_value, min_adc=0, max_adc=1023, steps=[], dead_zone_ratio=0.1):
+    def map_adc_to_steps(self, adc_value, min_adc=0, max_adc=1023, steps=None, dead_zone_ratio=0.1):
         """Map ADC value to given steps with dead zones and hysteresis."""
         if not steps:
             return None

@@ -458,9 +458,20 @@ sudo raspi-config nonint do_i2c 0
 sudo hostnamectl set-hostname cinepi
 ```
 
+`hostnamectl` does not touch `/etc/hosts`'s `127.0.1.1` line, so fix that separately, and
+install `avahi-daemon` so `<hostname>.local` actually resolves over mDNS — nothing does this
+by default; whether it works out of the box on a given image is down to chance (F-289):
+
+```bash
+sudo sed -i -E 's/^127\.0\.1\.1[[:space:]].*/127.0.1.1\tcinepi/' /etc/hosts
+grep -q '^127\.0\.1\.1' /etc/hosts || echo -e '127.0.1.1\tcinepi' | sudo tee -a /etc/hosts
+sudo apt install -y avahi-daemon libnss-mdns
+sudo systemctl enable --now avahi-daemon
+```
+
 !!! note ""
 
-    You will find the pi as `cinepi.local` on the local network, or at the hotspot Cinemate creates
+    You will find the pi as `cinepi.local` on the local network, or at the hotspot Cinemate creates. If it still doesn't resolve from a particular device, that device's own network/mDNS resolver is the next thing to check — some guest Wi-Fi networks and VPNs block mDNS multicast entirely.
 
 ### Add camera modules to config.txt
 
@@ -681,6 +692,50 @@ sudo apt install -y git
 git clone https://github.com/Tiramisioux/cinemate.git
 ```
 
+#### Create the run wrapper and the config.txt apply helper
+
+The sudoers rule below grants two scripts NOPASSWD access — create them first:
+
+```bash
+cat > /home/pi/run_cinemate.sh <<'EOF'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+exec /usr/bin/python3 /home/pi/cinemate/src/main.py "$@"
+EOF
+chmod 755 /home/pi/run_cinemate.sh
+
+sudo tee /usr/local/bin/cinemate-apply-config-txt > /dev/null <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+STAGED="/home/pi/cinemate/.settings-editor-config-txt.staged"
+DEST="/boot/firmware/config.txt"
+
+if [[ ! -f "$STAGED" ]]; then
+    echo "cinemate-apply-config-txt: no staged file at $STAGED" >&2
+    exit 1
+fi
+
+OWNER="$(stat -c '%u:%g' "$DEST" 2>/dev/null || echo '0:0')"
+MODE="$(stat -c '%a' "$DEST" 2>/dev/null || echo '644')"
+
+TMP="$(mktemp "${DEST}.XXXXXX")"
+trap 'rm -f "$TMP"' EXIT
+cp "$STAGED" "$TMP"
+chown "$OWNER" "$TMP"
+chmod "$MODE" "$TMP"
+mv -f "$TMP" "$DEST"
+trap - EXIT
+rm -f "$STAGED"
+EOF
+sudo chmod 755 /usr/local/bin/cinemate-apply-config-txt
+```
+
+The apply helper only ever copies a fixed, already-pi-written staging file over `config.txt`,
+preserving its existing owner/mode — the settings editor's "apply config.txt" button uses it so
+a page running as `pi` can write into root-owned `/boot/firmware` (F-288) without a broad sudo
+grant.
+
 #### Allow Cinemate to run with sudo
 
 Write the `pi_cinemate` sudoers drop-in and validate it:
@@ -697,11 +752,29 @@ EOF
 sudo visudo -cf /etc/sudoers.d/pi_cinemate
 ```
 
-#### Enable NetworkManager
+#### Enable NetworkManager and Redis
 
 ```bash
 sudo systemctl enable NetworkManager --now
+sudo systemctl enable redis-server --now
 ```
+
+#### Grant real-time audio priority
+
+`cinepi-audio-capture` uses `SCHED_FIFO` to stay ahead of DNG-writer I/O during a take; without
+this, `sched_setscheduler(SCHED_FIFO)` returns `EPERM` for a manual (non-systemd) run — the
+`cinemate-autostart.service` unit already carries `LimitRTPRIO=30`, this extends the same right
+to plain shell sessions:
+
+```bash
+sudo tee /etc/security/limits.d/cinemate-audio.conf > /dev/null <<'EOF'
+@audio - rtprio 80
+@audio - memlock unlimited
+EOF
+sudo usermod -aG audio pi
+```
+
+A re-login is needed for the limits change to take effect.
 
 #### Rotate logs
 
@@ -922,6 +995,17 @@ sudo make enable    # start on boot
 ```
 
 After enabling the service, reboot the Pi. Cinemate should autostart on the next boot. If you deliberately want to test the service immediately from SSH, run `sudo systemctl start cinemate-autostart`, but the normal install path is to reboot.
+
+#### cinemate-recovery
+
+Runs as its own root systemd service, independent of `cinemate-autostart.service`, so it stays
+reachable through a Cinemate crash or a broken `settings.jsonc` — see
+[Recovery console](recovery-console.md).
+
+```bash
+cd /home/pi/cinemate/services/cinemate-recovery
+sudo make enable
+```
 
 #### Further notes
 

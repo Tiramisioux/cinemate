@@ -34,6 +34,7 @@ from module.config_loader import (
 )
 from module.app import boot_config, raw_files
 from module.jsonc_edit import apply_updates
+from module.web_api_settings import web_api_settings
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +125,8 @@ def _public_method_names(obj) -> set[str]:
 
 @settings_editor_bp.route("/")
 def index():
-    return render_template("settings_editor.html")
+    settings = current_app.config["SETTINGS"]
+    return render_template("settings_editor.html", api_token=web_api_settings(settings).get("token") or "")
 
 
 @settings_editor_bp.route("/api/settings", methods=["GET"])

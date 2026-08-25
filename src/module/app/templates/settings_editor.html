@@ -619,7 +619,7 @@
   .bulk-bar{
     display:none; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
     padding: 10px 14px; border: 1px solid var(--accent); background: var(--accent-soft);
-    border-radius: var(--radius); margin-bottom: 10px; font-size: 13px;
+    border-radius: var(--radius); margin-top: 10px; font-size: 13px;
   }
   .bulk-bar.show{ display:flex; }
   .bulk-bar .actions{ display:flex; gap:8px; }
@@ -2056,6 +2056,11 @@
         <button class="btn btn-ghost" id="refreshClips" style="margin-left:auto">Refresh</button>
       </div>
 
+      <div class="cliplist" id="clipList"></div>
+      <p class="card-help" id="clipListFooter" style="margin-top:10px"></p>
+
+      <!-- F-295: below the list, not above -- these buttons act on the
+           selection the operator just made in the list above them. -->
       <div class="bulk-bar" id="bulkBar">
         <span id="bulkCount">0 selected</span>
         <span class="actions">
@@ -2063,9 +2068,6 @@
           <button class="btn btn-danger-outline" id="bulkDelete">Delete selected</button>
         </span>
       </div>
-
-      <div class="cliplist" id="clipList"></div>
-      <p class="card-help" id="clipListFooter" style="margin-top:10px"></p>
     </section>
 
     <!-- BOOT CONFIG -->
@@ -2237,6 +2239,17 @@
 (function(){
   "use strict";
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- /api/v1/cmd -- same dispatcher as the CLI, serial and GPIO
+     paths (docs/web-api.md), matches template.html's cmd() ---------- */
+  var API_TOKEN = {{ api_token | tojson }};
+  function apiCmd(line){
+    var headers = { 'Content-Type': 'text/plain' };
+    if (API_TOKEN) { headers['X-Cinemate-Token'] = API_TOKEN; }
+    return fetch('/api/v1/cmd', { method: 'POST', headers: headers, body: line })
+      .then(function(res){ return res.text().then(function(body){ return { ok: res.ok, body: body.trim() }; }); })
+      .catch(function(err){ return { ok: false, body: err.message }; });
+  }
 
   /* ---------- state / dirty tracking ---------- */
   var dirtyEls = new Set();
@@ -3656,11 +3669,24 @@
     { t: '[cinemate] ready — iso 800 · 172.8° · 25 fps', cls: 'tag-ok' }
   ];
   restartBtn.addEventListener('click', function(){
-    runBootSequence({
-      btn: restartBtn, dot: statusDot, text: statusText, consoleEl: consoleEl, lines: bootLines,
-      busyText: 'Restarting Cinemate — <b class="din">please wait</b>',
-      readyText: 'Cinemate is running — <b class="din">READY</b>',
-      doneToast: 'Cinemate is back up'
+    // F-291: this used to only play the boot-sequence animation below and
+    // never actually asked the backend to restart anything. The animated
+    // lines are still a stylized "please wait" affordance, not a live log
+    // -- there is no streaming progress feed for this today -- but the
+    // restart itself is now real, gated on a successful /api/v1/cmd call.
+    restartBtn.disabled = true;
+    apiCmd('restart cinemate').then(function(result){
+      if (!result.ok) {
+        restartBtn.disabled = false;
+        showToast('Restart failed: ' + (result.body || 'unknown error'));
+        return;
+      }
+      runBootSequence({
+        btn: restartBtn, dot: statusDot, text: statusText, consoleEl: consoleEl, lines: bootLines,
+        busyText: 'Restarting Cinemate — <b class="din">please wait</b>',
+        readyText: 'Cinemate is running — <b class="din">READY</b>',
+        doneToast: 'Cinemate is back up'
+      });
     });
   });
 

@@ -559,6 +559,20 @@ class SSDMonitor:
         The normal blkid path can briefly report cached pre-format metadata.
         Fresh probes first ask blkid to read the device directly and then fall
         back to the cache-backed query used elsewhere.
+
+        F-284: this process runs unprivileged (User=pi). `blkid -p` (true raw
+        probe) then always raises CalledProcessError ("Permission denied"),
+        which is caught and skipped correctly -- but its `-c /dev/null`
+        fallback needs the same raw device access and does not have it
+        either; on this hardware it exits 0 with empty stdout instead of
+        raising, since it isn't a low-level probe. A bare `return` on any
+        successful-but-empty command short-circuited before ever reaching
+        the cache-backed query that actually works (confirmed instant and
+        correct by hand, and matching stage 1's own cache-based
+        enumeration) -- so a device with an unprivileged-unreadable raw
+        node, e.g. a whole-disk filesystem with no partition table, always
+        failed LABEL lookup with `fresh=True`. Reproduced 10/10 on
+        hardware. A command must return a non-empty value to count.
         """
         commands = []
         if fresh:
@@ -570,7 +584,7 @@ class SSDMonitor:
 
         for cmd in commands:
             try:
-                return subprocess.check_output(
+                value = subprocess.check_output(
                     cmd,
                     text=True,
                     stderr=subprocess.DEVNULL,
@@ -582,6 +596,8 @@ class SSDMonitor:
                 subprocess.TimeoutExpired,
             ):
                 continue
+            if value:
+                return value
         return ""
 
     @staticmethod
@@ -632,7 +648,12 @@ class SSDMonitor:
                 FileNotFoundError,
                 subprocess.CalledProcessError,
                 subprocess.TimeoutExpired,
-            ):
+            ) as exc:
+                logging.warning(
+                    "_find_raw_device(): blkid enumeration failed (%s): %s",
+                    type(exc).__name__,
+                    exc,
+                )
                 return []
 
         candidates = [d for d in _blkid_lines() if Path(d).exists()]

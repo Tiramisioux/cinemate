@@ -35,7 +35,9 @@ preview, right status rail) holds at any width or orientation, with the rails an
 shrinking smoothly on a narrow or portrait screen instead of restacking into a different layout
 — the same model `simple_gui.py` already uses for the HDMI GUI, which scales its entire
 1920×1080-authored layout by a single `disp_width/1920`, `disp_height/1080` ratio and never
-restacks either.
+restacks either. Two exceptions to the pure ratio: the clip name and the WAV badge have pixel
+floors (10px/8px) so they stay legible on a phone, where the HDMI ratio would shrink them below
+readable size.
 
 !!! note ""
 

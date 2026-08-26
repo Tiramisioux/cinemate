@@ -125,12 +125,19 @@
         }
 
         /* A transparent native select over the group keeps the platform
-           picker on touch devices while the styled text stays visible. */
+           picker on touch devices while the styled text stays visible.
+           The negative inset stretches the hit area past the group box —
+           the text is only ~18px tall on a phone, far under the ~44px
+           touch-target guideline. px, not em: em here would resolve
+           against the UA's hidden control font (13-16px depending on
+           engine), not the visible text. Invisible, so the only cost is
+           ambiguity where the top row wraps on a portrait phone: rows sit
+           4px apart there, so a lower row's select reaches ~4px into the
+           row above — a tap on those descender pixels opens the lower
+           group's picker. Recoverable, and only in the wrapped layout. */
         .group select {
             position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
+            inset: -8px -6px;
             opacity: 0;
             border: 0;
             cursor: pointer;
@@ -154,10 +161,12 @@
         /* simple_gui draws the WAV pill at 14px against clip_name's 18px
            (~0.78x) -- smaller than clip_name itself, not the generic 0.58
            top-row badge ratio, which was sized against the full-height RES
-           value instead. */
+           value instead. The px floor is browser-only: the HDMI ratio
+           lands below legibility once the clamp()ed web sizes shrink
+           (~4.9px on a phone in landscape). */
         .badge.wav {
             background: var(--box);
-            font-size: calc(var(--value-size) * 0.34);
+            font-size: max(8px, calc(var(--value-size) * 0.34));
         }
         .badge.wav.recording { background: var(--wav-rec); }
         .badge.hidden { display: none; }
@@ -334,9 +343,11 @@
            it enough room for the full "CINEPI_25-07-01_220547_F10_C00000_
            000000009" string simple_gui actually shows (uncut — the DNG
            basename minus the _camN suffix, frame counter included) rather
-           than an arbitrary width that ellipsizes it early. */
+           than an arbitrary width that ellipsizes it early. The px floor
+           is browser-only: 0.44 of the clamp()ed web size bottoms out at
+           ~6.3px on a phone in landscape, under any legible size. */
         .group.clip .value {
-            font-size: calc(var(--value-size) * 0.44);
+            font-size: max(10px, calc(var(--value-size) * 0.44));
             overflow: hidden;
             text-overflow: ellipsis;
             max-width: 70vw;

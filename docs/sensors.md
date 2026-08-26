@@ -1,4 +1,6 @@
-## Compatible sensors 
+# Camera sensors and frame rates
+
+## Compatible sensors
 
 Higher frame rates need fast storage. If you see a purple/magenta `DROP` indicator while recording, lower the FPS or switch to faster media.
 
@@ -64,7 +66,7 @@ Recording time assumes a 1 TB drive (1,000,000 MB decimal, matching Cinemate's o
 | IMX585 | 1, ClearHDR | 3856 x 2180 | 16 | off | 16.81 | 40m |
 | IMX585 | 1, ClearHDR | 3856 x 2180 | 16 | on, default (→12) | 12.61 | 53m |
 | IMX585 | 1, ClearHDR | 3856 x 2180 | 16 | on, forced (→10) | 10.51 | 1h 03m |
-| IMX585 | 1, ClearHDR + 12-bit (CCMP12) | 3856 x 2180 | 12 | refused -- stays linear* | 12.61 | 53m |
+| IMX585 | 1, ClearHDR + 12-bit (CCMP12) | 3856 x 2180 | 12 | on (→10 only)* | 10.51 | 1h 03m |
 | IMX283 | 0 | 5568 x 3664 | 12 | off | 30.60 | 22m |
 | IMX283 | 0 | 5568 x 3664 | 12 | on (→10) | 25.50 | 26m |
 | IMX283 | 1 | 2784 x 1828 | 12 | off | 7.63 | 1h 27m |
@@ -75,9 +77,9 @@ Recording time assumes a 1 TB drive (1,000,000 MB decimal, matching Cinemate's o
 | IMX283 | 4 | 5568 x 3094 | 10 | not supported (10-bit mode) | 21.54 | 31m |
 | IMX283 | 5 | 3936 x 2176 | 10 | not supported (10-bit mode) | 10.71 | 1h 02m |
 
-*12-bit ClearHDR is CCMP-companded on-sensor; log-encoding it would compand twice, so `set log` has no effect there -- use 16-bit ClearHDR for log, or turn ClearHDR off. See [CineMate Log support](#cinemate-log-support) below.
+*12-bit ClearHDR is CCMP-companded on-sensor, so it cannot take a linear 12→10 curve. `set log` still works: cinepi-raw decompands to 16-bit linear first, then applies the 16→10 curve as one composed table. Only target 10 exists on this path — `set log 12` is refused. See [CineMate Log support](#cinemate-log-support) below.
 
-Resolutions above are the modes currently defined in `resources/sensors.json`; the IMX283 rows in the [Compatible sensors](#compatible-sensors) table above list an older/alternate mode set and haven't been reconciled with this one yet.
+The IMX283 rows in this table and in [Compatible sensors](#compatible-sensors) above come from different sources and have not been reconciled: the Compatible sensors table lists what the live driver reports (`cinepi-raw --list-cameras` on the Tiramisioux `6.12.y` fork), this table lists the entries in `resources/sensors.json`. Reconciling them needs a `--list-cameras` capture from the Pi.
 
 ## CineMate Log support
 

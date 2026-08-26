@@ -19,12 +19,13 @@ happened.
 |---|---|---|---|---|
 | C0 | Format drive from the settings editor's RAW pane | Planned, not implemented | `C0-format-drive/PLAN.md` (ledger entry) + `FORMAT-DRIVE-PLAN.md` (full spec) + `SONNET-PROMPT.md` (kickoff prompt) | `feature/raw-pane-format-drive` off `dev` (to be cut) |
 | C1 | Long-take stability — eliminate dropped frames, keep audio in sync at the higher 12-bit modes | Runbook **verified 2026-08-26** (blockers fixed), campaign not started | `C1-longtake-stability/RUNBOOK.md` (Sonnet session prompt + protocol) + `RESULTS.md` (campaign ledger) + `VERIFICATION-2026-08-26.md` (pre-flight findings) | none — measurement campaign on the Pi's `dev` checkouts |
-| C2 | DSI / DPI panel as a camera monitor, alongside HDMI | Planned, not implemented; hardware gates unrun | `C2-dsi-display/PLAN.md` (ledger entry) + `DSI-DISPLAY-PLAN.md` (full spec) + `SONNET-PROMPT.md` (kickoff prompt) | `feature/display-connector` off `dev` (cinepi-raw) + `feature/dsi-display` off `dev` (cinemate) — both to be cut |
 | C3 | Start without a camera, and say so in the GUI | Planned, not implemented; hardware gates unrun | `C3-no-camera-start/PLAN.md` (ledger entry) + `NO-CAMERA-START-PLAN.md` (full spec) + `SONNET-PROMPT.md` (kickoff prompt) | `feature/no-camera-start` off `dev` (cinemate only, to be cut) |
 | C4 | Sensor autodetect — probe-and-heal the camera overlay, with on/off toggle, explicit fallback and imx585 mono checkbox | Planned, not implemented; **depends on C3**; go/no-go gate G0 unrun | `C4-sensor-autodetect/PLAN.md` (ledger entry) + `SENSOR-AUTODETECT-PLAN.md` (full spec) + `SONNET-PROMPT.md` (kickoff prompt) | `feature/sensor-autodetect` off `dev` (cinemate only, to be cut after C3 lands) |
 | C5 | Link frequency and RP1 regime — verify what shipped, then make the advertised mode ceilings reflect the live RP1 clock | Feature **shipped to `dev` unverified**; gates G0–G3 unrun; regime fix planned | `C5-link-frequency-regime/PLAN.md` (ledger entry) + `GATES.md` (four gates, predictions stated in advance) | `feature/link-frequency-regime` off `dev` (cinemate only, to be cut after G2) |
+| C2 | DSI / DPI panel as a camera monitor, alongside HDMI | Planned, not implemented; hardware gates unrun; moved to last in execution order 2026-08-26 (operator instruction) | `C2-dsi-display/PLAN.md` (ledger entry) + `DSI-DISPLAY-PLAN.md` (full spec) + `SONNET-PROMPT.md` (kickoff prompt) | `feature/display-connector` off `dev` (cinepi-raw) + `feature/dsi-display` off `dev` (cinemate) — both to be cut |
+| C6 | Docs + README correctness pass — apply the 2026-08-26 review of both repos' public doc surfaces | Review done (desk-verified against code), fixes not applied | `C6-docs-readme-review/PLAN.md` (ledger entry) + `DOCS-FIX-PLAN.md` (full fix spec) + `SONNET-PROMPT.md` (kickoff prompt); raw notes in external `development/readme-docs-review/` | `docs/c6-correctness-pass` off `dev` (cinemate) + `docs/c6-readme-pass` off `dev` (cinepi-raw, after merging `docs/b13-5-readme-fix`) — to be cut |
 
-Next free step: **C6**.
+Next free step: **C7**.
 
 ## Adding a feature
 
@@ -73,3 +74,7 @@ system-review ledger (`system-review/deliverables/REMEDIATION-PLAN.md` on
   RP1 clock — which is a feature, not review remediation. Its `GATES.md` supersedes the
   scratch copy at `development/rp1-overclock/HARDWARE-GATES.md`; that external file was the
   drafting copy and should not be worked from.
+- **C6** (docs + README correctness pass) was requested by the operator as "C4" on
+  2026-08-26, before the same day's C4 (sensor autodetect) and C5 filings were known to
+  that session; C4 was already taken, so it was filed at the next free number instead.
+  Nothing was renumbered or overwritten.

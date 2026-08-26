@@ -891,6 +891,20 @@
     // ── push: server → browser only (module/app/main/events.py) ────────
     const socket = io();
 
+    // Second, independent path to stream recovery, alongside `reload_stream`
+    // (D1): a frozen MJPEG <img> fires neither `error` nor a naturalWidth
+    // drop, so if the single reload_stream emit is missed (backgrounded tab,
+    // socket hiccup during the restart), catching resolution_switching's
+    // truthy->falsy edge here -- fed by the Redis fan-out, not the emit --
+    // gives recovery a second chance. Seeded from initial_values so page
+    // load itself is never mistaken for a falling edge.
+    let prevResolutionSwitching = false;
+    function noteResolutionSwitching() {
+        const now = truthy(V.resolution_switching);
+        if (prevResolutionSwitching && !now) { reloadStreams(); }
+        prevResolutionSwitching = now;
+    }
+
     socket.on('initial_values', (data) => {
         V = Object.assign({}, data);
         steps.iso = data.iso_steps || [];
@@ -898,6 +912,7 @@
         steps.fps = data.fps_steps || [];
         steps.wb = data.wb_steps || [];
         steps.resolutions = data.sensor_resolutions || [];
+        prevResolutionSwitching = truthy(V.resolution_switching);
         render();
     });
 
@@ -919,6 +934,7 @@
         }
         if (data.resolution_switching !== undefined) {
             V.resolution_switching = data.resolution_switching;
+            noteResolutionSwitching();
         }
         render();
     });
@@ -937,6 +953,7 @@
         if (data.sensor_mode !== undefined) { V.selected_resolution_mode = data.sensor_mode; }
         if (data.resolution_switching !== undefined) {
             V.resolution_switching = data.resolution_switching;
+            noteResolutionSwitching();
         }
         render();
     });

@@ -2,6 +2,7 @@ from flask import Flask
 from module.redis_controller import ParameterKey
 from flask_socketio import SocketIO
 import logging
+import threading
 
 def create_app(redis_controller, cinepi_controller, simple_gui, sensor_detect,
                 command_executor, settings):
@@ -34,12 +35,34 @@ def create_app(redis_controller, cinepi_controller, simple_gui, sensor_detect,
         cinepi_controller.add_resolution_change_callback(emit_resolution_change)
 
     if hasattr(cinepi_controller, 'add_resolution_switch_complete_callback'):
+        reload_browser_timer = None
+
         def emit_reload_stream():
             # Fires when the switch actually *completes* -- either evidence
             # from cinepi-raw's own "Raw stream: WxH" log line, or (if that
             # never arrives) the switching-hold fallback timer. Either way
             # the new stream exists by the time this runs (F-290).
             socketio.emit('reload_stream')
+
+            nonlocal reload_browser_timer
+            if redis_controller.get_value(ParameterKey.IS_RECORDING.value) == "1":
+                # Dynamic-resolution substitution mid-take is same-aspect, no
+                # restart -- reload_stream alone covers it, and a full page
+                # reload would kick the operator out of fullscreen mid-take.
+                return
+            if reload_browser_timer is not None:
+                # A reload is already pending for this switch -- one page
+                # reload per switch, same as reload_stream isn't re-emitted.
+                return
+
+            def fire_reload_browser():
+                nonlocal reload_browser_timer
+                reload_browser_timer = None
+                socketio.emit('reload_browser')
+
+            reload_browser_timer = threading.Timer(2.0, fire_reload_browser)
+            reload_browser_timer.daemon = True
+            reload_browser_timer.start()
 
         cinepi_controller.add_resolution_switch_complete_callback(emit_reload_stream)
 

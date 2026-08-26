@@ -267,9 +267,13 @@ class ResolutionGuiStateTests(unittest.TestCase):
 
     def test_switch_complete_timer_fallback_fires_the_callback(self):
         # The evidence path (handle_cinepi_raw_message) is the fast path;
-        # this is the fallback if that log line is never seen.
+        # this is the fallback if that log line is never seen. RESOLUTION_SWITCHING
+        # has to be published True first -- as _apply_resolution_mode always does
+        # before calling this -- or the already-complete guard treats the switch
+        # as finished and returns without scheduling.
         controller = self.controller()
         resolution_info = controller.sensor_detect.res_modes[1]
+        controller._publish_resolution_target_state(1, resolution_info, switching=True)
         complete_calls = []
         controller.add_resolution_switch_complete_callback(lambda: complete_calls.append(1))
 

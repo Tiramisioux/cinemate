@@ -1675,6 +1675,14 @@ class CinePiController:
     def _schedule_resolution_switch_complete(self, value, resolution_info):
         self._cancel_resolution_switching_timer()
 
+        if not as_bool(self.redis_controller.get_value(ParameterKey.RESOLUTION_SWITCHING.value)):
+            # restart_process=True runs self.cinepi.restart() synchronously
+            # before this is called, so handle_cinepi_raw_message can already
+            # have seen "Raw stream: WxH" and cleared switching. Scheduling
+            # here anyway would fire a second, redundant switch-complete
+            # GUI_RESOLUTION_SWITCHING_HOLD_SECONDS later.
+            return
+
         def complete():
             try:
                 self._publish_resolution_target_state(

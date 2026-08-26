@@ -1,5 +1,24 @@
 # C5 · Link frequency and RP1 regime — verify what shipped, then make the mode table honest
 
+!!! note "Status 2026-08-26 — the code half is done and the defect is closed"
+    The fix landed the same day this was filed, and took a different shape than
+    planned. Instead of Cinemate clamping `fps_max` after the fact, the ceiling is
+    now decided from the overlay switch and passed down —
+    `rp1_regime.py` → `cinepi-raw --max-pixel-rate` → `LIBCAMERA_RPI_MAX_PIXEL_RATE`
+    → `minPixelProcessingTime`. libcamera then produces an honest mode table
+    itself.
+
+    **Gate G2 passed on hardware** (imx585 mono, 2026-08-26): at the 380 default
+    the 4K mode advertises 43.80 fps where the hardcoded-580 build advertised
+    66.85 — the ratio matches `380/580` to five decimal places. That proves
+    libcamera both honours the value and applies it to enumeration, so
+    **C5.2–C5.4 below are cancelled**: there is nothing left for Cinemate to
+    correct. See `cinemate-handbook/lessons/hardware-log.md`, 2026-08-26.
+
+    Still open: G1 (imx283 overlay parameter, unbooted), G3 (imx477 750 MHz), and
+    a sustained take at 66.85 fps — only the advertised ceiling has been observed,
+    not real capture.
+
 Two ceilings govern frame rate on this stack, and Cinemate now exposes both. What it does
 not do is tell the operator when they disagree.
 
@@ -9,12 +28,12 @@ not do is tell the operator when they disagree.
   parameter.
 
 Both shipped to `dev` on 2026-08-26 (merge `9834b322`, PR #154, plus the overclock work
-through `d175b2fe`). **None of it is verified on hardware.** This step closes that, and
-then fixes the one real defect the work exposed.
+through `d175b2fe`). The defect below was found the same day and is now fixed; the
+remaining gates are G1 and G3. History below is kept as filed — see the status note.
 
-## The defect
+## The defect (fixed 2026-08-26)
 
-`libcamera`'s `minPixelProcessingTime` is compiled at `1.0us / 580` unconditionally on
+`libcamera`'s `minPixelProcessingTime` **was** compiled at `1.0us / 580` unconditionally on
 Pi 5 / CM5, and the overlay ships commented out. So `cinepi-raw --list-cameras` advertises
 the fast imx585 modes **even at stock clocks**, nothing clamps them, and selecting 75 fps
 with the overclock off drops frames silently. The mode table describes a machine the
@@ -68,7 +87,7 @@ by risk, not by topic:
 Outcomes go to `cinemate-handbook/lessons/hardware-log.md` once the operator confirms the
 interpretation, per the handbook's session method. A gate that merely ran is not a finding.
 
-## Preconditions, both outstanding
+## Preconditions (both cleared 2026-08-26)
 
 1. **The settings editor cannot write `config.txt` on the dev Pi.** It runs as `pi`;
    `/boot/firmware` is root-owned vfat (`dmask=0022`). The privileged helper
@@ -94,20 +113,23 @@ false` — the same one-line mechanism holding imx477 back — is the obvious mi
 | commit | change |
 |---|---|
 | C5.1 | Gate outcomes recorded: `GATES.md` verdicts, `sensors.json` fps figures corrected if G2 disagrees, `notes` "advisory" wording dropped |
-| C5.2 | `sensor_detect.py` · probe the live RP1 rate; expose it as a regime value |
-| C5.3 | `sensor_detect.py` · fold the regime ceiling into `fps_max` in `_mode_from_metadata_or_detected()`, alongside the existing `custom_modes` narrowing |
-| C5.4 | GUIs · surface "capped by RP1 regime" using the existing `fps_max_detected` / `fps_max_effective` presentation |
+| ~~C5.2~~ | ~~probe the live RP1 rate in `sensor_detect.py`~~ — **cancelled.** Superseded: the rate is decided in `rp1_regime.py` from the overlay switch and passed down, rather than probed. Probing was tried in libcamera first and fails on this hardware — no `rp1` node in `/proc/device-tree`, and the overlay's requested 300 MHz arrives as 333.33 MHz |
+| ~~C5.3~~ | ~~fold a regime ceiling into `fps_max`~~ — **cancelled by G2.** libcamera already applies the bound during enumeration, so `--list-cameras` is honest on its own and a second correction in Cinemate would double-count |
+| ~~C5.4~~ | ~~surface "capped by RP1 regime" in the GUIs~~ — **cancelled with C5.3.** Nothing to surface: the fps the mode table reports is already the achievable one |
 | C5.5 | Docs · `overclocking.md` drops the manual `clk_summary` check as *the* answer and describes the live behaviour instead |
 
-**Branch:** `feature/link-frequency-regime` off `dev` (cinemate only — the libcamera fork
-already reads the live clock; no cinepi-raw change). To be cut after G2.
+**Branch:** none outstanding. The work landed across all three repos rather than on one
+cinemate branch, which the original plan got wrong — it assumed the libcamera fork already
+read the live clock, when in fact that code was unpushed and, once tested, unworkable:
+cinemate `feature/rp1-pixel-rate`, cinepi-raw `feature/max-pixel-rate`, libcamera
+`feature/rp1-clock-autodetect` → its `cinemate` branch.
 
-**Verification.** Desk — the regime probe is a pure function of a device-tree read, so it
-tests Pi-free with a fake node, same `__new__` + fake pattern as
-`test_cinepi_controller_startup_sensor_mode.py`; assert that a stock regime narrows an
-imx585 4K mode to ~43.8 fps and an overclocked one does not, and that a board with no `rp1`
-node degrades to today's behaviour rather than clamping to zero. Hardware — G0–G3 above,
-then a regression pass confirming the corrected ceilings match what G2 measured.
+**Verification.** Desk — done: `_test/test_rp1_regime.py`, 13 cases, all Pi-free. The ones
+that matter are the asymmetric fallbacks, since the failure they guard is silent: overlay
+enabled but the clock still reading stock resolves *down* to 380, an unreadable clock still
+honours the switch, and no RP1 means no ceiling is passed at all. Hardware — G2 passed
+(above); G0 passed incidentally, since the settings switch drove the config.txt write that
+produced the 333 MHz clock. G1 and G3 remain.
 
 **Hardware needed:** the dev Pi, plus an imx585 (G2) and an imx283 (G1) — both already in
 the operator's kit. G1 additionally needs a Pi whose imx283 driver predates `257c9cf`, or

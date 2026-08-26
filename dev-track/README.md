@@ -26,7 +26,9 @@ happened.
 | C6 | Docs + README correctness pass — apply the 2026-08-26 review of both repos' public doc surfaces | **Fixes applied 2026-08-26** (7 commits across both repos, mkdocs --strict green), branches local pending push/PR; deferred items listed in `APPLIED-2026-08-26.md` | `C6-docs-readme-review/PLAN.md` + `DOCS-FIX-PLAN.md` + `SONNET-PROMPT.md` + `APPLIED-2026-08-26.md` (outcome record); raw notes in external `development/readme-docs-review/` | `docs/c6-correctness-pass` off `dev` (cinemate, cut) + `docs/c6-readme-pass` off `dev` (cinepi-raw, cut; `docs/b13-5-readme-fix` was already merged upstream) |
 | C7 | ClearHDR: INNO-MAKER knob defaults, SDR HCG toggle, ISO-ceiling warning; gradation curve / black level deliberately kept locked | **Implemented on branches, unverified** — gates G0–G3 unrun, cinepi-raw side not yet built on the Pi | `C7-clearhdr-defaults-controls/PLAN.md` (ledger entry, incl. gates + decision record); research plan in external `development/clearhdr-innomaker-defaults/PLAN.md` | `feature/clearhdr-controls` off `dev` (cinemate `8dfcd165` + cinepi-raw `399692f`, cut 2026-08-26) + driver fork `imx585-v4l2-driver` `6.12.y` @ `cb7c7a6` |
 
-Next free step: **C8**.
+| C8 | Web UI design review — the findings PR #160 did not fix | **Two fixes shipped** (PR [#160](https://github.com/Tiramisioux/cinemate/pull/160), merged `1675ca66`); remaining 8 findings not started, W1 needs an operator decision | `C8-web-ui-review/PLAN.md` (ledger entry incl. the W1 ADR question); harness + measurements in external `development/web-ui-review/` | `fix/web-ui-mobile` off `dev` (merged); remainder on `fix/web-ui-portrait` off `dev` (cinemate only, to be cut) |
+
+Next free step: **C9**.
 
 ## Adding a feature
 
@@ -85,3 +87,13 @@ system-review ledger (`system-review/deliverables/REMEDIATION-PLAN.md` on
   the driver fork the same day. That session initially drafted this step as C6, then found
   the docs-pass C6 filed by a parallel session mid-flight and took the next free number —
   same collision shape as C6's own filing, resolved the same way.
+- **C8** (web UI design review) is filed *after* part of it shipped, like C5 and C7, but
+  for a different reason: the operator asked for a UI review, two of its findings were
+  small and obviously right (a missing doctype/viewport meta, tap targets and font floors),
+  so those were applied and merged the same day as PR #160 — and the operator then asked
+  for "the rest" to be recorded here. So this entry is deliberately a **remainder ledger**,
+  not a plan for work that was never begun; the applied half is recorded in it only as
+  context for what the numbers in the findings table were measured against. One of its
+  findings (W1, the portrait layout) is a question for the operator against ADR-001 rather
+  than a task, and is marked as such — it argues *against* a deliberate earlier decision
+  (B11.7 / F-297) and must not be silently reverted.

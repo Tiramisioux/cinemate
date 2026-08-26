@@ -142,7 +142,11 @@
   }
   @media (max-width: 860px){
     .app{ grid-template-columns: 1fr; grid-template-areas: "topbar" "main"; }
-    .brand{ display:none; }
+    /* .brand is hidden further down, after its own base rule -- putting the
+       hide here instead loses the cascade to that later same-specificity
+       rule, and a .brand left visible is placed into a "brand" grid area
+       this narrow layout no longer defines, which spawns implicit columns
+       and overflows the page sideways. */
   }
 
   .brand{
@@ -172,7 +176,12 @@
     border-bottom: 1px solid var(--line);
     background: var(--panel);
     position: sticky; top:0; z-index: 20;
+    /* The toolbar is a nowrap flex row needing ~760px. Without these it sets
+       the whole grid's minimum width and the PAGE scrolls sideways instead;
+       scroll the toolbar inside itself, the way .page-tabs already does. */
+    min-width: 0; overflow-x: auto; scrollbar-width: none;
   }
+  .topbar::-webkit-scrollbar{ display:none; }
   .hamburger{
     display:none;
     width:34px; height:34px; border-radius: var(--radius);
@@ -255,6 +264,7 @@
   .rail-blurb{ margin:0; padding: 2px 10px; font-size: 12px; line-height:1.55; color: var(--muted); }
 
   @media (max-width: 860px){
+    .brand{ display:none; }
     .rail{
       position: fixed; inset: 56px 0 0 0; z-index: 30; width: min(78vw, 300px);
       transform: translateX(-100%); transition: transform .18s ease;
@@ -272,6 +282,10 @@
     grid-area: main;
     padding: 26px clamp(32px, 6vw, 72px) 90px;
     max-width: 980px;
+    /* Grid items default to min-width:auto, so the widest thing inside here
+       became the page's minimum width. Let the column shrink and leave the
+       few genuinely wide children (toolbar, tabs) to scroll themselves. */
+    min-width: 0;
   }
   .lede{
     max-width: 62ch;
@@ -453,7 +467,14 @@
      over the column it names, and the first gesture row starts on the same
      line as the pin select. */
   .actionrow{
-    display:grid; grid-template-columns: 140px 1fr auto; gap: 4px 16px;
+    /* One source for the column geometry: the heading strip and every
+       gesture row read these, so a label can never drift off the column it
+       names. --action-col fits the longest gesture label ("Button press",
+       97px at this font) plus the select's own padding and arrow. */
+    --pin-col: 140px;
+    --action-col: 130px;
+    --col-gap: 16px;
+    display:grid; grid-template-columns: var(--pin-col) 1fr auto; gap: 4px var(--col-gap);
     padding: 13px 16px; border-top: 1px solid var(--line); align-items:start;
   }
   .actionrow:first-child{ border-top:0; }
@@ -463,7 +484,7 @@
   .actionrow > .edit-json-link, .actionrow > .row-remove{ order: 3; }
   .actionrow-head{
     grid-column: 1 / -1;
-    display:grid; grid-template-columns: 140px 110px 1fr; gap: 0 16px;
+    display:grid; grid-template-columns: var(--pin-col) var(--action-col) 1fr; gap: 0 var(--col-gap);
     margin-bottom: 2px;
   }
   .actionrow-head span{
@@ -480,7 +501,10 @@
   .pin-picker{ display:flex; flex-direction:column; gap:5px; align-items:stretch; align-self:start; }
   .pin-picker small{ font-weight:400; font-size:9px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); text-align:center; }
   .pin-picker.pin-picker-multi{ gap:8px; }
-  .gpio-select{
+  /* Typed selector on purpose: select.field-input{min-width:140px} outranks a
+     bare class, so a plain .gpio-select rule would silently lose. It only
+     looked fine because --pin-col happens to equal that 140px floor. */
+  select.gpio-select{
     font-family:'DIN2014',sans-serif; font-weight:700; font-size:11.5px; text-align:center;
     padding: 6px 22px 6px 8px; width:100%; min-width:0; box-sizing:border-box;
   }
@@ -494,8 +518,18 @@
      let the extra cell shift every later row one column over (the scrambled
      layout the B11.5 rebuild shipped with). A fixed 110px name track keeps
      the command column aligned across rows without sharing a grid. */
-  .gesture{ display:grid; grid-template-columns: 110px 1fr auto; gap: 0 16px; align-items:center; }
-  .g-name-select{
+  /* align-items:start, not center: the command cell (.action-picker) wraps to
+     a second line on a narrow column, and centering floated the action
+     dropdown into the gap between those two lines. */
+  .gesture{
+    display:grid; grid-template-columns: var(--action-col) 1fr auto;
+    gap: 0 var(--col-gap); align-items:start;
+  }
+  /* select.field-input sets min-width:140px and outweighs a plain .class
+     rule — that is what pushed this select 30px past its 110px track and
+     over the command dropdown, leaving no gap at all. Match its specificity
+     and let the track decide the width. */
+  select.g-name-select{
     font-family:'DIN2014',sans-serif; font-weight:700; font-size: 10.5px;
     text-transform:uppercase; letter-spacing:.03em;
     width:100%; min-width:0; padding:5px 18px 5px 6px; text-overflow:ellipsis;
@@ -507,7 +541,14 @@
     text-transform:uppercase; letter-spacing:.05em; color: var(--muted); cursor:pointer;
   }
   .gesture-add .add-gesture-select:hover{ color: var(--ink); }
-  .gesture .g-name{ font-family:'DIN2014',sans-serif; font-weight:700; font-size: 10.5px; text-transform:uppercase; letter-spacing:.05em; color: var(--muted); }
+  /* The static labels ("Turn", and the blank cell on the + Add row) share a
+     row with select siblings. Since .gesture aligns to start, they need the
+     select's own border+padding as top padding or they ride 7px high. */
+  .gesture .g-name{
+    font-family:'DIN2014',sans-serif; font-weight:700; font-size: 10.5px;
+    text-transform:uppercase; letter-spacing:.05em; color: var(--muted);
+    padding-top: 6px;
+  }
   .gesture .g-action{ color: var(--ink); }
   .gesture-remove{
     width:22px; height:22px; border-radius: var(--radius); border:1px solid var(--line); background: var(--panel-2);
@@ -529,7 +570,19 @@
   }
 
   .action-picker{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0; }
-  .action-method{ font-size:12.5px; padding:6px 20px 6px 8px; min-width:0; max-width: 220px; text-overflow: ellipsis; }
+  /* .action-slot is the grid item holding .action-picker and has no rule of
+     its own, so it kept min-width:auto and refused to shrink below the
+     picker's min-content -- that, plus the select.field-input 140px floor
+     below, is what forced the command cell to wrap and overflow on narrow
+     viewports. Both need releasing; releasing only one does nothing. */
+  .action-slot{ min-width:0; }
+  select.action-method{ font-size:12.5px; padding:6px 20px 6px 8px; min-width:0; max-width: 220px; text-overflow: ellipsis; }
+  .arg-hint{ font-size:10.5px; color: var(--muted); white-space:nowrap; }
+  /* A command that needs a value but has none is a binding that fails at the
+     first press -- show it rather than let it read as configured. */
+  .action-args.needs-value select.field-input, .action-args.needs-value input.field-input{
+    border-color: var(--danger); color: var(--danger);
+  }
   .action-args{ display:inline-flex; align-items:center; gap:5px; font-size:12.5px; color:var(--muted); }
   .action-args select.field-input, .action-args input.field-input{ font-size:12.5px; padding:6px 8px; min-width:0; max-width:130px; text-overflow: ellipsis; }
   .action-args input.field-input[type="number"]{ width:64px; }
@@ -1803,7 +1856,7 @@
       </div>
       <div class="note">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-        <span>Move a control to a different pin or encoder from the dropdown — occupied ones are greyed out and it asks before remapping. Pick the command from the list (grouped like <span class="mono">cli_commands.py</span>, legal arguments only) or hit the pencil to type it by hand.</span>
+        <span>Move a control to a different pin or encoder from the dropdown — occupied ones are greyed out and it asks before remapping. Pick the command from the list (grouped like <span class="mono">cli_commands.py</span>, legal arguments only) or hit the pencil to type it by hand. The box after the command is its argument: leave it on <strong>Cycle through the list</strong> and the control steps through the values in <a href="#steps" data-nav>Value steps</a>, or pick one value to jump straight to it. Commands marked <strong>Needs a value</strong> do nothing useful until you choose one.</span>
       </div>
     </section>
     <section class="group" id="gpio" data-page="settings">
@@ -4176,51 +4229,58 @@
   }
   document.querySelectorAll('.gpio-select').forEach(initGpioSelect);
 
-  /* ---------- button/switch/rotary action pickers, sourced from cli_commands.py ---------- */
+  /* ---------- button/switch/rotary action pickers, sourced from cli_commands.py ----------
+     Second copy of settings_editor.py's ACTION_METHODS -- keep the two in
+     step. `noArg` mirrors its `no_arg` and says what happens when the action
+     is saved with no argument at all: 'cycle' steps through the list,
+     'toggle' inverts the current flag, 'required' means the method needs a
+     value (a bare positional raises TypeError, and format_drive's blank
+     falls back to exfat and formats the card). See that file's comment for
+     the per-method evidence. */
   var ACTION_METHODS = [
     { group: 'Record', value: 'rec', label: 'Start / stop recording' },
-    { group: 'ISO', value: 'set_iso', label: 'Set ISO', arg: { type: 'select', options: [100,200,400,640,800,1200,1600,2500,3200] } },
+    { group: 'ISO', value: 'set_iso', label: 'Set ISO', noArg: 'required', arg: { type: 'select', options: [100,200,400,640,800,1200,1600,2500,3200] } },
     { group: 'ISO', value: 'inc_iso', label: 'ISO up one stop' },
     { group: 'ISO', value: 'dec_iso', label: 'ISO down one stop' },
-    { group: 'ISO', value: 'set_iso_lock', label: 'Toggle ISO lock', arg: { type: 'toggle01' } },
-    { group: 'ISO', value: 'set_iso_free', label: 'Toggle ISO free mode', arg: { type: 'toggle01' } },
-    { group: 'Shutter', value: 'set_shutter_a', label: 'Set shutter angle', arg: { type: 'select', options: [1,45,90,135,172.8,180,225,270,315,346.6,360], suffix: '°' } },
+    { group: 'ISO', value: 'set_iso_lock', label: 'Toggle ISO lock', noArg: 'toggle', arg: { type: 'toggle01' } },
+    { group: 'ISO', value: 'set_iso_free', label: 'Toggle ISO free mode', noArg: 'toggle', arg: { type: 'toggle01' } },
+    { group: 'Shutter', value: 'set_shutter_a', label: 'Set shutter angle', noArg: 'required', arg: { type: 'select', options: [1,45,90,135,172.8,180,225,270,315,346.6,360], suffix: '°' } },
     { group: 'Shutter', value: 'inc_shutter_a', label: 'Shutter angle up one stop' },
     { group: 'Shutter', value: 'dec_shutter_a', label: 'Shutter angle down one stop' },
-    { group: 'Shutter', value: 'set_shutter_a_nom', label: 'Set nominal shutter angle', arg: { type: 'number', step: 0.1 } },
-    { group: 'Shutter', value: 'set_shutter_a_sync_mode', label: 'Set shutter‑sync mode', arg: { type: 'toggle01' } },
-    { group: 'Shutter', value: 'set_shutter_a_nom_lock', label: 'Toggle nominal‑shutter lock', arg: { type: 'toggle01' } },
-    { group: 'Shutter', value: 'set_shutter_a_free', label: 'Toggle shutter free mode', arg: { type: 'toggle01' } },
-    { group: 'Frame rate', value: 'set_fps', label: 'Set frame rate', arg: { type: 'select', options: [25,33,50] } },
+    { group: 'Shutter', value: 'set_shutter_a_nom', label: 'Set nominal shutter angle', noArg: 'required', arg: { type: 'number', step: 0.1, placeholder: 'angle' } },
+    { group: 'Shutter', value: 'set_shutter_a_sync_mode', label: 'Set shutter‑sync mode', noArg: 'toggle', arg: { type: 'toggle01' } },
+    { group: 'Shutter', value: 'set_shutter_a_nom_lock', label: 'Toggle nominal‑shutter lock', noArg: 'toggle', arg: { type: 'toggle01' } },
+    { group: 'Shutter', value: 'set_shutter_a_free', label: 'Toggle shutter free mode', noArg: 'toggle', arg: { type: 'toggle01' } },
+    { group: 'Frame rate', value: 'set_fps', label: 'Set frame rate', noArg: 'required', arg: { type: 'select', options: [25,33,50] } },
     { group: 'Frame rate', value: 'inc_fps', label: 'Frame rate up one stop' },
     { group: 'Frame rate', value: 'dec_fps', label: 'Frame rate down one stop' },
-    { group: 'Frame rate', value: 'set_fps_lock', label: 'Toggle FPS lock', arg: { type: 'toggle01' } },
-    { group: 'Frame rate', value: 'set_fps_free', label: 'Toggle FPS free mode', arg: { type: 'toggle01' } },
-    { group: 'Frame rate', value: 'set_fps_double', label: 'Toggle double‑fps mode', arg: { type: 'toggle01' } },
-    { group: 'Frame rate', value: 'set_shu_fps_lock', label: 'Toggle nominal shutter+fps lock', arg: { type: 'toggle01' } },
-    { group: 'White balance', value: 'set_wb', label: 'Set white balance', arg: { type: 'select', options: [3200,4400,5600], suffix: 'K' } },
+    { group: 'Frame rate', value: 'set_fps_lock', label: 'Toggle FPS lock', noArg: 'toggle', arg: { type: 'toggle01' } },
+    { group: 'Frame rate', value: 'set_fps_free', label: 'Toggle FPS free mode', noArg: 'toggle', arg: { type: 'toggle01' } },
+    { group: 'Frame rate', value: 'set_fps_double', label: 'Toggle double‑fps mode', noArg: 'toggle', arg: { type: 'toggle01' } },
+    { group: 'Frame rate', value: 'set_shu_fps_lock', label: 'Toggle nominal shutter+fps lock', noArg: 'toggle', arg: { type: 'toggle01' } },
+    { group: 'White balance', value: 'set_wb', label: 'Set white balance', noArg: 'cycle', arg: { type: 'select', options: [3200,4400,5600], suffix: 'K' } },
     { group: 'White balance', value: 'inc_wb', label: 'White balance up one stop' },
     { group: 'White balance', value: 'dec_wb', label: 'White balance down one stop' },
-    { group: 'White balance', value: 'set_wb_free', label: 'Toggle WB free mode', arg: { type: 'toggle01' } },
-    { group: 'ClearHDR', value: 'set_hdr_threshold_low', label: 'Set HDR threshold low', arg: { type: 'number', min: 0, max: 4095 } },
-    { group: 'ClearHDR', value: 'set_hdr_threshold_high', label: 'Set HDR threshold high', arg: { type: 'number', min: 0, max: 4095 } },
-    { group: 'ClearHDR', value: 'set_hdr_blend', label: 'Set HDR blend', arg: { type: 'number', min: 0, max: 8 } },
-    { group: 'ClearHDR', value: 'set_hdr_gain_adder', label: 'Set HDR gain adder', arg: { type: 'number', min: 0, max: 5 } },
-    { group: 'CineMate Log', value: 'set_log_encode', label: 'Set CineMate Log target', arg: { type: 'select', options: ['off','10','12'] } },
-    { group: 'Zoom / anamorphic', value: 'set_zoom', label: 'Set preview zoom', arg: { type: 'select', options: [1,2], suffix: '×' } },
+    { group: 'White balance', value: 'set_wb_free', label: 'Toggle WB free mode', noArg: 'toggle', arg: { type: 'toggle01' } },
+    { group: 'ClearHDR', value: 'set_hdr_threshold_low', label: 'Set HDR threshold low', noArg: 'required', arg: { type: 'number', min: 0, max: 4095, placeholder: '0–4095' } },
+    { group: 'ClearHDR', value: 'set_hdr_threshold_high', label: 'Set HDR threshold high', noArg: 'required', arg: { type: 'number', min: 0, max: 4095, placeholder: '0–4095' } },
+    { group: 'ClearHDR', value: 'set_hdr_blend', label: 'Set HDR blend', noArg: 'required', arg: { type: 'number', min: 0, max: 8, placeholder: '0–8' } },
+    { group: 'ClearHDR', value: 'set_hdr_gain_adder', label: 'Set HDR gain adder', noArg: 'required', arg: { type: 'number', min: 0, max: 5, placeholder: '0–5' } },
+    { group: 'CineMate Log', value: 'set_log_encode', label: 'Set CineMate Log target', noArg: 'toggle', arg: { type: 'select', options: ['off','10','12'] } },
+    { group: 'Zoom / anamorphic', value: 'set_zoom', label: 'Set preview zoom', noArg: 'cycle', arg: { type: 'select', options: [1,2], suffix: '×' } },
     { group: 'Zoom / anamorphic', value: 'inc_zoom', label: 'Zoom in one stop' },
     { group: 'Zoom / anamorphic', value: 'dec_zoom', label: 'Zoom out one stop' },
-    { group: 'Zoom / anamorphic', value: 'set_anamorphic_factor', label: 'Set anamorphic desqueeze', arg: { type: 'select', options: [1,1.33,2], suffix: '×' } },
-    { group: 'Resolution / preview', value: 'set_resolution', label: 'Change resolution', arg: { type: 'number', placeholder: 'mode #, blank = cycle' } },
-    { group: 'Resolution / preview', value: 'set_dynamic_resolution_enabled', label: 'Toggle dynamic resolution', arg: { type: 'toggle01' } },
-    { group: 'Resolution / preview', value: 'set_preview_source', label: 'Set HDMI preview source', arg: { type: 'select', options: ['cam0','cam1','cam0+cam1'] } },
+    { group: 'Zoom / anamorphic', value: 'set_anamorphic_factor', label: 'Set anamorphic desqueeze', noArg: 'cycle', arg: { type: 'select', options: [1,1.33,2], suffix: '×' } },
+    { group: 'Resolution / preview', value: 'set_resolution', label: 'Change resolution', noArg: 'cycle', arg: { type: 'number', placeholder: 'mode #' } },
+    { group: 'Resolution / preview', value: 'set_dynamic_resolution_enabled', label: 'Toggle dynamic resolution', noArg: 'toggle', arg: { type: 'toggle01' } },
+    { group: 'Resolution / preview', value: 'set_preview_source', label: 'Set HDMI preview source', noArg: 'cycle', arg: { type: 'select', options: ['cam0','cam1','cam0+cam1','pip_cam0','pip_cam1'] } },
     { group: 'Storage', value: 'mount', label: 'Mount storage' },
     { group: 'Storage', value: 'unmount', label: 'Unmount storage' },
     { group: 'Storage', value: 'toggle_mount', label: 'Toggle mount / unmount' },
     { group: 'Storage', value: 'erase_drive', label: 'Erase drive' },
-    { group: 'Storage', value: 'format_drive', label: 'Format drive', arg: { type: 'select', options: ['exfat','ext4','ntfs'] } },
-    { group: 'Sensor', value: 'set_filter', label: 'Toggle IR‑cut filter', arg: { type: 'toggle01' } },
-    { group: 'Locks', value: 'set_all_lock', label: 'Toggle all‑parameter lock', arg: { type: 'toggle01' } },
+    { group: 'Storage', value: 'format_drive', label: 'Format drive', noArg: 'required', arg: { type: 'select', options: ['exfat','ext4','ntfs'] } },
+    { group: 'Sensor', value: 'set_filter', label: 'Set IR‑cut filter', noArg: 'required', arg: { type: 'toggle01' } },
+    { group: 'Locks', value: 'set_all_lock', label: 'Toggle all‑parameter lock', noArg: 'toggle', arg: { type: 'toggle01' } },
     { group: 'System', value: 'restart_cinemate', label: 'Restart Cinemate' },
     { group: 'System', value: 'restart_camera', label: 'Restart camera process' },
     { group: 'System', value: 'reboot', label: 'Reboot the Pi' },
@@ -4263,23 +4323,38 @@
     return sel;
   }
 
-  function buildArgControl(spec, currentArgs){
+  /* What the blank (no-argument) choice actually does, per command. Every
+     control used to offer one option reading "(none — toggle)", which was
+     true for the flag setters and false for everything else -- worst of all
+     for Format drive, where a blank argument formats the card as exFAT. */
+  var NO_ARG_LABELS = {
+    cycle: 'Cycle through the list',
+    toggle: 'Toggle on / off',
+    required: 'Needs a value —'
+  };
+  function buildArgControl(spec, currentArgs, noArg){
     var wrap = document.createElement('span');
     wrap.className = 'action-args';
     if (!spec) return wrap;
+    var mode = noArg || 'toggle';
+    var blankLabel = NO_ARG_LABELS[mode] || NO_ARG_LABELS.toggle;
+    /* A blank on a command that needs a value is a binding that will throw
+       (or, for format_drive, quietly format) the moment the operator presses
+       the button. Mark it rather than letting it look configured. */
+    if (mode === 'required' && !currentArgs) wrap.classList.add('needs-value');
     if (spec.type === 'select' || spec.type === 'toggle01'){
       var sel = document.createElement('select');
       sel.className = 'field-input';
       sel.setAttribute('aria-label', 'Argument');
       var blank = document.createElement('option');
-      blank.value = ''; blank.textContent = '(none — toggle)';
+      blank.value = ''; blank.textContent = blankLabel;
       if (!currentArgs) blank.selected = true;
       sel.appendChild(blank);
       var options = spec.type === 'toggle01' ? ['0','1'] : spec.options;
       options.forEach(function(v){
         var opt = document.createElement('option');
         opt.value = String(v);
-        opt.textContent = String(v) + (spec.suffix || '');
+        opt.textContent = (mode === 'cycle' ? 'Set to ' : '') + String(v) + (spec.suffix || '');
         if (String(v) === String(currentArgs)) opt.selected = true;
         sel.appendChild(opt);
       });
@@ -4287,12 +4362,20 @@
     } else if (spec.type === 'number'){
       var num = document.createElement('input');
       num.type = 'number'; num.className = 'field-input';
+      num.setAttribute('aria-label', 'Argument');
       if (spec.min != null) num.min = spec.min;
       if (spec.max != null) num.max = spec.max;
       if (spec.step != null) num.step = spec.step;
       if (spec.placeholder) num.placeholder = spec.placeholder;
       if (currentArgs) num.value = currentArgs;
       wrap.appendChild(num);
+      /* A placeholder vanishes the moment a value is typed, so the operator
+         who set mode 2 can never discover the field may be emptied again.
+         A text node survives it, and never fires the change listener. */
+      var hint = document.createElement('small');
+      hint.className = 'arg-hint';
+      hint.textContent = mode === 'cycle' ? '— blank cycles' : '— required';
+      wrap.appendChild(hint);
     }
     return wrap;
   }
@@ -4307,8 +4390,9 @@
     var picker = document.createElement('span');
     picker.className = 'action-picker';
     var methodSel = buildActionMethodSelect(method);
-    var spec = ACTION_METHOD_MAP[method] && ACTION_METHOD_MAP[method].arg;
-    var argWrap = buildArgControl(spec, args);
+    var entry = ACTION_METHOD_MAP[method];
+    var spec = entry && entry.arg;
+    var argWrap = buildArgControl(spec, args, entry && entry.noArg);
     var manualBtn = document.createElement('button');
     manualBtn.type = 'button';
     manualBtn.className = 'action-manual-toggle';

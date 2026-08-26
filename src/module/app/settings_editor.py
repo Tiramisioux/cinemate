@@ -62,52 +62,86 @@ STOCK_SETTINGS_FILE = Path(__file__).resolve().parents[3] / "resources/settings/
 # 'storage_preroll' dropped (it's CLI/serial/web-API-only, bound to a
 # separate storage_preroll object, not a cinepi_controller method -- see
 # cli_commands.py's 'storage preroll' entry).
+# Every dispatcher (gpio_input.py, i2c/quad_rotary_controller.py,
+# cli_commands.py) resolves the method by getattr and calls
+# `method(*action.get("args", []))`. No argument is ever injected and arity is
+# never checked, so an action saved WITHOUT args calls the method with zero
+# arguments -- and the method's own signature is the only thing deciding what
+# happens. "no_arg" records that, per method, so the editor can say which it
+# is instead of labelling every blank the same way:
+#
+#   "cycle"    -- value=None and the body steps to the next entry in the list
+#   "toggle"   -- value=None and the body inverts the current flag
+#   "required" -- a bare positional (TypeError), or an optional parameter with
+#                 no None branch, so leaving it blank is never what you want
+#
+# The distinction is not cosmetic. Before it existed the arg control offered
+# one blank option reading "(none - toggle)" for all of them, which was untrue
+# for eleven methods -- including format_drive, where `filesystem or "exfat"`
+# means a blank argument silently formats the card.
 ACTION_METHODS = [
     {"group": "Record", "value": "rec", "label": "Start / stop recording"},
-    {"group": "ISO", "value": "set_iso", "label": "Set ISO",
+    {"group": "ISO", "value": "set_iso", "label": "Set ISO", "no_arg": "required",
      "arg": {"type": "select", "options": [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200]}},
     {"group": "ISO", "value": "inc_iso", "label": "ISO up one stop"},
     {"group": "ISO", "value": "dec_iso", "label": "ISO down one stop"},
-    {"group": "ISO", "value": "set_iso_lock", "label": "Toggle ISO lock", "arg": {"type": "toggle01"}},
-    {"group": "ISO", "value": "set_iso_free", "label": "Toggle ISO free mode", "arg": {"type": "toggle01"}},
-    {"group": "Shutter", "value": "set_shutter_a", "label": "Set shutter angle",
+    {"group": "ISO", "value": "set_iso_lock", "label": "Toggle ISO lock", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "ISO", "value": "set_iso_free", "label": "Toggle ISO free mode", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "Shutter", "value": "set_shutter_a", "label": "Set shutter angle", "no_arg": "required",
      "arg": {"type": "select", "options": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360], "suffix": "°"}},
     {"group": "Shutter", "value": "inc_shutter_a", "label": "Shutter angle up one stop"},
     {"group": "Shutter", "value": "dec_shutter_a", "label": "Shutter angle down one stop"},
-    {"group": "Shutter", "value": "set_shutter_a_nom", "label": "Set nominal shutter angle", "arg": {"type": "number", "step": 0.1}},
-    {"group": "Shutter", "value": "set_shutter_a_sync_mode", "label": "Set shutter-sync mode", "arg": {"type": "toggle01"}},
-    {"group": "Shutter", "value": "set_shutter_a_nom_lock", "label": "Toggle nominal-shutter lock", "arg": {"type": "toggle01"}},
-    {"group": "Shutter", "value": "set_shutter_a_free", "label": "Toggle shutter free mode", "arg": {"type": "toggle01"}},
-    {"group": "Frame rate", "value": "set_fps", "label": "Set frame rate", "arg": {"type": "select", "options": [25, 33, 50]}},
+    {"group": "Shutter", "value": "set_shutter_a_nom", "label": "Set nominal shutter angle", "no_arg": "required",
+     "arg": {"type": "number", "step": 0.1, "placeholder": "angle"}},
+    {"group": "Shutter", "value": "set_shutter_a_sync_mode", "label": "Set shutter-sync mode", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "Shutter", "value": "set_shutter_a_nom_lock", "label": "Toggle nominal-shutter lock", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "Shutter", "value": "set_shutter_a_free", "label": "Toggle shutter free mode", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "Frame rate", "value": "set_fps", "label": "Set frame rate", "no_arg": "required",
+     "arg": {"type": "select", "options": [25, 33, 50]}},
     {"group": "Frame rate", "value": "inc_fps", "label": "Frame rate up one stop"},
     {"group": "Frame rate", "value": "dec_fps", "label": "Frame rate down one stop"},
-    {"group": "Frame rate", "value": "set_fps_lock", "label": "Toggle FPS lock", "arg": {"type": "toggle01"}},
-    {"group": "Frame rate", "value": "set_fps_free", "label": "Toggle FPS free mode", "arg": {"type": "toggle01"}},
-    {"group": "Frame rate", "value": "set_fps_double", "label": "Toggle double-fps mode", "arg": {"type": "toggle01"}},
-    {"group": "Frame rate", "value": "set_shu_fps_lock", "label": "Toggle nominal shutter+fps lock", "arg": {"type": "toggle01"}},
-    {"group": "White balance", "value": "set_wb", "label": "Set white balance", "arg": {"type": "select", "options": [3200, 4400, 5600], "suffix": "K"}},
+    {"group": "Frame rate", "value": "set_fps_lock", "label": "Toggle FPS lock", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "Frame rate", "value": "set_fps_free", "label": "Toggle FPS free mode", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "Frame rate", "value": "set_fps_double", "label": "Toggle double-fps mode", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "Frame rate", "value": "set_shu_fps_lock", "label": "Toggle nominal shutter+fps lock", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "White balance", "value": "set_wb", "label": "Set white balance", "no_arg": "cycle",
+     "arg": {"type": "select", "options": [3200, 4400, 5600], "suffix": "K"}},
     {"group": "White balance", "value": "inc_wb", "label": "White balance up one stop"},
     {"group": "White balance", "value": "dec_wb", "label": "White balance down one stop"},
-    {"group": "White balance", "value": "set_wb_free", "label": "Toggle WB free mode", "arg": {"type": "toggle01"}},
-    {"group": "ClearHDR", "value": "set_hdr_threshold_low", "label": "Set HDR threshold low", "arg": {"type": "number", "min": 0, "max": 4095}},
-    {"group": "ClearHDR", "value": "set_hdr_threshold_high", "label": "Set HDR threshold high", "arg": {"type": "number", "min": 0, "max": 4095}},
-    {"group": "ClearHDR", "value": "set_hdr_blend", "label": "Set HDR blend", "arg": {"type": "number", "min": 0, "max": 8}},
-    {"group": "ClearHDR", "value": "set_hdr_gain_adder", "label": "Set HDR gain adder", "arg": {"type": "number", "min": 0, "max": 5}},
-    {"group": "CineMate Log", "value": "set_log_encode", "label": "Set CineMate Log target", "arg": {"type": "select", "options": ["off", "10", "12"]}},
-    {"group": "Zoom / anamorphic", "value": "set_zoom", "label": "Set preview zoom", "arg": {"type": "select", "options": [1, 2], "suffix": "×"}},
+    {"group": "White balance", "value": "set_wb_free", "label": "Toggle WB free mode", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "ClearHDR", "value": "set_hdr_threshold_low", "label": "Set HDR threshold low", "no_arg": "required",
+     "arg": {"type": "number", "min": 0, "max": 4095, "placeholder": "0-4095"}},
+    {"group": "ClearHDR", "value": "set_hdr_threshold_high", "label": "Set HDR threshold high", "no_arg": "required",
+     "arg": {"type": "number", "min": 0, "max": 4095, "placeholder": "0-4095"}},
+    {"group": "ClearHDR", "value": "set_hdr_blend", "label": "Set HDR blend", "no_arg": "required",
+     "arg": {"type": "number", "min": 0, "max": 8, "placeholder": "0-8"}},
+    {"group": "ClearHDR", "value": "set_hdr_gain_adder", "label": "Set HDR gain adder", "no_arg": "required",
+     "arg": {"type": "number", "min": 0, "max": 5, "placeholder": "0-5"}},
+    {"group": "CineMate Log", "value": "set_log_encode", "label": "Set CineMate Log target", "no_arg": "toggle",
+     "arg": {"type": "select", "options": ["off", "10", "12"]}},
+    {"group": "Zoom / anamorphic", "value": "set_zoom", "label": "Set preview zoom", "no_arg": "cycle",
+     "arg": {"type": "select", "options": [1, 2], "suffix": "×"}},
     {"group": "Zoom / anamorphic", "value": "inc_zoom", "label": "Zoom in one stop"},
     {"group": "Zoom / anamorphic", "value": "dec_zoom", "label": "Zoom out one stop"},
-    {"group": "Zoom / anamorphic", "value": "set_anamorphic_factor", "label": "Set anamorphic desqueeze", "arg": {"type": "select", "options": [1, 1.33, 2], "suffix": "×"}},
-    {"group": "Resolution / preview", "value": "set_resolution", "label": "Change resolution", "arg": {"type": "number", "placeholder": "mode #, blank = cycle"}},
-    {"group": "Resolution / preview", "value": "set_dynamic_resolution_enabled", "label": "Toggle dynamic resolution", "arg": {"type": "toggle01"}},
-    {"group": "Resolution / preview", "value": "set_preview_source", "label": "Set HDMI preview source", "arg": {"type": "select", "options": ["cam0", "cam1", "cam0+cam1"]}},
+    {"group": "Zoom / anamorphic", "value": "set_anamorphic_factor", "label": "Set anamorphic desqueeze", "no_arg": "cycle",
+     "arg": {"type": "select", "options": [1, 1.33, 2], "suffix": "×"}},
+    {"group": "Resolution / preview", "value": "set_resolution", "label": "Change resolution", "no_arg": "cycle",
+     "arg": {"type": "number", "placeholder": "mode #"}},
+    {"group": "Resolution / preview", "value": "set_dynamic_resolution_enabled", "label": "Toggle dynamic resolution", "no_arg": "toggle", "arg": {"type": "toggle01"}},
+    {"group": "Resolution / preview", "value": "set_preview_source", "label": "Set HDMI preview source", "no_arg": "cycle",
+     "arg": {"type": "select", "options": ["cam0", "cam1", "cam0+cam1", "pip_cam0", "pip_cam1"]}},
     {"group": "Storage", "value": "mount", "label": "Mount storage"},
     {"group": "Storage", "value": "unmount", "label": "Unmount storage"},
     {"group": "Storage", "value": "toggle_mount", "label": "Toggle mount / unmount"},
     {"group": "Storage", "value": "erase_drive", "label": "Erase drive"},
-    {"group": "Storage", "value": "format_drive", "label": "Format drive", "arg": {"type": "select", "options": ["exfat", "ext4", "ntfs"]}},
-    {"group": "Sensor", "value": "set_filter", "label": "Toggle IR-cut filter", "arg": {"type": "toggle01"}},
-    {"group": "Locks", "value": "set_all_lock", "label": "Toggle all-parameter lock", "arg": {"type": "toggle01"}},
+    # required, not "defaults to exfat": format_drive() falls back to exfat on
+    # a blank argument, so an unset filesystem here would format the card.
+    {"group": "Storage", "value": "format_drive", "label": "Format drive", "no_arg": "required",
+     "arg": {"type": "select", "options": ["exfat", "ext4", "ntfs"]}},
+    # set_filter's else-branch returns "Invalid value provided." -- it acts on
+    # 0 or 1 only and has no toggle branch, whatever its old label implied.
+    {"group": "Sensor", "value": "set_filter", "label": "Set IR-cut filter", "no_arg": "required", "arg": {"type": "toggle01"}},
+    {"group": "Locks", "value": "set_all_lock", "label": "Toggle all-parameter lock", "no_arg": "toggle", "arg": {"type": "toggle01"}},
     {"group": "System", "value": "restart_cinemate", "label": "Restart Cinemate"},
     {"group": "System", "value": "restart_camera", "label": "Restart camera process"},
     {"group": "System", "value": "reboot", "label": "Reboot the Pi"},

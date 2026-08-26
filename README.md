@@ -1,45 +1,21 @@
-# What is it?
-**Cinemate** is a boilerplate cinema camera system for Raspberry Pi 5. Builds upon CinePi-raw, authored by Csaba Nagy for enabling 12 bit Cinema DNG recordings using off-the-shelf components.  
+# Cinemate
 
-Cinemate provides a minimal starting point that you can extend with your own controls and accessories. 
+**Cinemate** is an open-source boilerplate for building your own digital cinema camera on a Raspberry Pi 4 or 5. It records CinemaDNG raw video using off-the-shelf parts, and provides a minimal starting point you can extend with your own controls and accessories.
 
-The project combines a Python UI with a custom fork of [cinepi-raw](https://github.com/Tiramisioux/cinepi-raw/tree/rpicam-apps_1.7_custom_encoder).
+It pairs a lightweight Python interface with a custom fork of [cinepi-raw](https://github.com/Tiramisioux/cinepi-raw), built on the [CinePi-RAW recorder by Csaba Nagy](https://github.com/cinepi).
 
-## New features in version 3.3.2
+## Features
 
-### Dual sensors
+- 10/12-bit CinemaDNG recording, plus 16-bit [ClearHDR](https://tiramisioux.github.io/cinemate/clear-hdr/) on the IMX585
+- [CineMate Log](https://tiramisioux.github.io/cinemate/cinemate-log/) — log-companded DNGs, 17–37 % smaller, decoded back to linear automatically by any DNG app
+- [Dual sensors](https://tiramisioux.github.io/cinemate/dual-sensors/) — two genlocked sensors, side-by-side / picture-in-picture HDMI preview, per-sensor recording
+- [Web GUI](https://tiramisioux.github.io/cinemate/web-gui/) on the Pi's own hotspot, plus a browser settings editor for `settings.jsonc`, `config.txt` and the RAW drive
+- [Web API](https://tiramisioux.github.io/cinemate/web-api/) — build wireless controllers and tally lights from an ESP32, Pico W or M5Stack ([Building control units](https://tiramisioux.github.io/cinemate/building-control-units/))
+- GPIO buttons, switches, rotary encoders, pots and an OLED, mapped in one settings file ([Additional hardware](https://tiramisioux.github.io/cinemate/hardware-controls/))
+- Multi-drive RAW hot-swap with a standby drive; SSD, NVMe or CFE Hat storage
+- [Recovery console](https://tiramisioux.github.io/cinemate/recovery-console/) on `:8080` that stays reachable when Cinemate itself won't start
 
-- **Automatic dual-camera** — two connected sensors are each detected and driven by their own genlocked `cinepi-raw` process (cam0 server, cam1 client), both previews on one HDMI monitor.
-- **HDMI preview switching** — new command `set preview` cycles side-by-side preview → cam0 → cam1 → picture-in-picture.
-- **Per-sensor recording** — record both sensors or just the previewed one (`sensors.record_policy` can be set in settings.jsonc), or target sensors with `rec cam0` / `rec cam1` / `rec both`. Each sensor writes its own `..._cam0` / `..._cam1` clip folder.
-
-### libcamera
-
-- Cinemate now uses its own fork of libcamera.
-
-### imx283 driver
-
-- Cinemate now uses its own fork of the imx283 driver.
-- 2 additional modes: 3840 x 2160 (4K UHD, native crop) and 2736 x 1538 (2.7K 16:9, binned).
-
-### imx585 driver
-
-- Cinemate now uses its own fork of the imx585 driver.
-
-### CinePi-RAW recorder updates
-
-- **Frame-rate phase lock** — DNG timecode and frame capture is locked to the Pi's wall clock, making audio sync more accurate.
-- **Correct Pi 4 RAW** — CSI2-packed frames decode correctly on Pi 4-family boards; raw packing (P/U) is chosen per Pi model automatically.
-- **Compiles on 2GB version of Raspberry Pi 4/5**
-- **Camera model** — set the camera model manually for each attached sensor.
-
-### Cinemate
-
-- **Storage / media** — multi-drive RAW hot-swap with a standby drive and automatic promotion. Default format is exFAT.
-
-### Raspberry Pi / Bookworm
-
-- **Boot / install** — faster boot-to-preview on Pi 4/5 (about 10-15 seconds).
+See the [changelog](https://tiramisioux.github.io/cinemate/changelog/) for what's new in version 3.3.2.
 
 ## Compatible sensors
 
@@ -48,7 +24,9 @@ The project combines a Python UI with a custom fork of [cinepi-raw](https://gith
 - IMX283 ([OneInchEye](https://www.tindie.com/products/will123321/oneincheye-v20/) by Will Whang)
 - IMX585 ([Starlight Eye](https://www.tindie.com/products/will123321/starlighteye/) by Will Whang)
 
-## Preinstalled hardware
+## Works out of the box with
+
+Drivers and mappings for these come preinstalled:
 
 - [CFE Hat](https://www.tindie.com/products/will123321/cfe-hat-for-raspberry-pi-5/)
 - [Grove Base Hat](https://wiki.seeedstudio.com/Grove_Base_Hat_for_Raspberry_Pi/)
@@ -110,8 +88,19 @@ After installing, reboot the system and Cinemate should start automatically.
 
 For the full manual install, configuration steps, and CLI reference, please see the [documentation/manual installation steps](https://tiramisioux.github.io/cinemate/installation-steps/).
 
+## First run
+
+After boot, the HDMI monitor shows the live preview with the camera GUI. To use a phone or laptop instead:
+
+1. Join the Pi's Wi-Fi hotspot **CinePi** (password `11111111`).
+2. Open `http://cinepi.local:5000` — live preview and controls. Tap the preview to start and stop recording. A clean feed without the GUI is at `cinepi.local:8000/stream`, and the settings editor at `cinepi.local:5000/settings-editor`.
+3. Attach a drive formatted `exFAT` (or `ext4`) and labelled `RAW`.
+4. For a physical record button, wire a momentary button between **GPIO7** and **GND** — physical pins 26 and 25, right next to each other.
+
+See the [Quick start](https://tiramisioux.github.io/cinemate/getting-started/) for the full walkthrough.
+
 ## Customization
-GPIO buttons and switches, rotary encoders and oled display for controlling camera settings such as recording, iso etc. are configured in the `~/cinemate/settings.jsonc` file. On the Pi, type `editsettings` in the terminal to open this file.
+GPIO buttons and switches, rotary encoders and oled display for controlling camera settings such as recording, iso etc. are configured in the `~/cinemate/settings.jsonc` file. On the Pi, type `editsettings` in the terminal to open this file, or use the settings editor at `cinepi.local:5000/settings-editor` from a browser.
 
 ## Documentation
 Full manual installation instructions, configuration guides in the [documentation](https://tiramisioux.github.io/cinemate/).
@@ -129,7 +118,7 @@ The [**Cinemate**](https://github.com/Tiramisioux/cinemate) stack is built on to
 - [**libcamera**](https://libcamera.org) – Ideas on board
 - [**cpp-mjpeg-streamer**](https://github.com/nadjieb/cpp-mjpeg-streamer) – Nadjieb Mohammadi
 - [**lgpio**](https://github.com/joan2937/lg) – Joan
-- [**PiShrink**](https://github.com/Drewsif/PiShrink) - Drew Bonasera 
+- [**PiShrink**](https://github.com/Drewsif/PiShrink) - Drew Bonasera
 
 Also thanks to Simon at [Altcinecam](https://altcinecam.com) for support and assistance!
 

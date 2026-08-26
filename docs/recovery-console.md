@@ -12,9 +12,9 @@ Connect a phone or laptop to the camera's hotspot (see [Configuring the Wi-Fi ho
 http://10.42.0.1:8080
 ```
 
-That is the fixed address of the hotspot interface itself and always works while connected to the hotspot. If your device is on the same network as the Pi some other way (Ethernet, or joined to the same Wi-Fi), `http://cinepi.local:8080` works too, via mDNS.
+That is the fixed address of the hotspot interface itself — it does not change, even when `settings.jsonc` is broken and the SSID has fallen back to a cached or default name — and it always works while connected to the hotspot. If your device reaches the Pi some other way (Ethernet, or joined to the same Wi-Fi), `http://cinepi.local:8080` works too, via mDNS.
 
-That is the fixed address of the hotspot interface — it does not change, even when `settings.jsonc` is broken and the SSID itself has fallen back to a cached or default name. The recovery console runs as its own root systemd service with no dependency on `cinemate-autostart.service`, so it stays reachable through a Cinemate crash, a corrupted install, or Redis being down.
+The recovery console runs as its own root systemd service with no dependency on `cinemate-autostart.service`, so it stays reachable through a Cinemate crash, a corrupted install, or Redis being down.
 
 ## What it can do
 

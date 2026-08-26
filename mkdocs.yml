@@ -53,10 +53,11 @@ nav:
       - Controller methods: controller-methods.md
       - Redis API: redis-guide.md
       - Redis Key reference: redis-keys.md
+      - How Cinemate launches CinePi-raw: cinepi-multi.md
       - Changelog: changelog.md
   # - Cinemate builds:
   #     - Box build: brick.md
-  - Contributing:
+  - About:
       # - Todo: todo.md
       - Acknowledgements: acknowledgments.md
   #- Download PDF: renders/Cinemate-Docs.pdf
@@ -73,29 +74,9 @@ theme:
     code: Roboto Mono
 
   language: en
-  
-  features:
-    - navigation.instant
-    - navigation.sections
-    - navigation.top
-    - toc.integrate 
-    - toc.follow
-    - content.code.copy
-    - content.code.select
-
-    # Read the Docs specific
-    - collapse_navigation: True,
-    - sticky_navigation: True,
-    - navigation_depth: 4,
-    - includehidden: True,
-    - titles_only: False
-      
-  palette:
-    - scheme: default           # WCAG-AA compliant base
 
 extra_css:
-  
-  - templates/styles.scss
+
   - stylesheets/extra.css
   # - overrides/github-markdown.css
   # - overrides/highlight.css

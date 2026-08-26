@@ -69,13 +69,9 @@ For cinepi-raw, this file defines the port used by cpp-mjpeg-streamer (default c
 
 ## Cinemate‑specific flags
 
-The Cinemate fork introduces several extra options:
+The Cinemate fork introduces extra options beyond stock `rpicam-apps`: camera-port and HDMI selection (`--cam-port`, `--hdmi-port`, `--same-hdmi`), on-sensor HDR (`--hdr`), CineMate Log (`--log-encode`), encode/disk worker count, affinity and priority tuning, WAV timecode offsets, a DNG camera-model override (`--unique-camera-model`), and a pixel-rate ceiling (`--max-pixel-rate`).
 
-| Flag               | Argument               |Description                 |
-| ------------------ | ---------------------- | -------------------------- |
-| `--cam-port`  | `cam0` \| `cam1`   | Select which CSI camera port to use.                                                        |
-| `--hdmi-port` | `0` \| `1` \| `-1` | Choose the HDMI connector for the preview (`0` = HDMI-0, `1` = HDMI-1, `-1` = auto-detect). |
-| `--same-hdmi` | *(none)*           | Force preview and GUI to share the same HDMI output.                                        |
+The full flag table with defaults is the [cinepi-raw README's "Additional flags" section](https://github.com/Tiramisioux/cinepi-raw#additional-flags) — that table is the canonical copy, so it is not duplicated here. `cinepi-raw -h` prints the same options from the binary.
 
 !!! note ""
 

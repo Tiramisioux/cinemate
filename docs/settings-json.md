@@ -104,8 +104,8 @@ Per-sensor hardware. All per-port settings live inside a `cam0` or `cam1` block 
     "output": {
       "hdmi_port": 0
     },
-    "override_camera_name": false,
-    "camera_name": "Blackmagic Pocket Cinema Camera 4K",
+    "override_camera_name": true,
+    "camera_name": "cinepi",
     "phase_lock": true,
     "tuning_file_override": { "enabled": false, "path": "resources/tuning_files/imx477.json" },
     "log_encode": false
@@ -119,8 +119,8 @@ Per-sensor hardware. All per-port settings live inside a `cam0` or `cam1` block 
     "output": {
       "hdmi_port": 1
     },
-    "override_camera_name": false,
-    "camera_name": "Blackmagic Pocket Cinema Camera 4K",
+    "override_camera_name": true,
+    "camera_name": "cinepi",
     "phase_lock": true,
     "tuning_file_override": { "enabled": false, "path": "resources/tuning_files/imx477.json" },
     "log_encode": false
@@ -158,14 +158,14 @@ Maps the camera to an HDMI connector.
 ### camera name
 
 `override_camera_name` – when `true`, the value of `camera_name` is passed to `cinepi-raw` as `--unique-camera-model` and written into the `UniqueCameraModel` DNG tag of every recorded frame. When `false`, `cinepi-raw` uses its built-in default.<br>
-`camera_name` – the string to embed when `override_camera_name` is `true`.
+`camera_name` – the string to embed when `override_camera_name` is `true`. The stock file ships `true` with `"cinepi"` — the same tag `cinepi-raw` uses on its own — so changing the embedded name is a one-line edit.
 
 ??? note "Why Blackmagic Pocket Cinema Camera 4K"
     DaVinci Resolve uses the `UniqueCameraModel` DNG tag to identify the camera and select the matching decode pipeline. When this tag matches a known Blackmagic camera, Resolve unlocks the full Camera RAW tab — including the ISO slider, colour science selection (Gen 4 / Gen 5), and the corresponding tone curve and noise reduction presets. With an unknown or missing camera model the RAW tab is limited and ISO behaves as a simple exposure offset rather than selecting a proper decode curve.
 
     Setting `camera_name` to `"Blackmagic Pocket Cinema Camera 4K"` is therefore not cosmetic — it is what makes Resolve treat the footage as genuine BRAW-adjacent DNG and apply the correct ISO-aware decode.
 
-    **Caveat once [CineMate Log](cinemate-log.md) is in use:** the Blackmagic spoof layers BMD colour science and its own tone curve on top of data that CineMate Log has already linearised via the DNG `LinearizationTable`. Keep `override_camera_name` off (the default) on any camera recording log — spoofing and log-encoding the same clip confound each other in the grade. The spoof is still fine for a camera you are recording in plain linear DNGs.
+    **Caveat once [CineMate Log](cinemate-log.md) is in use:** the Blackmagic spoof layers BMD colour science and its own tone curve on top of data that CineMate Log has already linearised via the DNG `LinearizationTable`. Keep `camera_name` at `"cinepi"` (the stock value) on any camera recording log — spoofing and log-encoding the same clip confound each other in the grade. The spoof is still fine for a camera you are recording in plain linear DNGs.
 
 ### phase_lock
 
@@ -318,7 +318,7 @@ Which resolution/bit-depth/HDR modes are practical to expose in the UI when cycl
 
 !!! note "Design: full capability vs practical exposure"
 
-    `resources/sensors.json` lists **every** mode each sensor supports, so all of them are technically available to the system. `image_capture` then exposes only the **practical** subset in the UI. Example: the IMX283 default `k_steps: [3, 4]` shows its ≥25 fps modes (2.7K and 4K) and hides the 5K modes (~18–21 fps); those 5K modes stay in `sensors.json` and reappear if you add `5.5`. `k_steps`/`bit_depths` are global across all sensors.
+    `resources/sensors.json` lists **every** mode each sensor supports, so all of them are technically available to the system. `image_capture` then exposes only the **practical** subset in the UI. `k_steps`/`bit_depths` are global across all sensors — the stock `[1.5, 2, 3, 4]` covers every sensor's everyday modes. For the IMX283 that keeps the ≥25 fps 2.7K and 4K modes (the 3 and 4 steps) and hides the 5K modes (~18–21 fps); those stay in `sensors.json` and reappear if you add `5.5`.
 
 Cinemate also always runs **dynamic resolution**: if you select a mode and then raise FPS above what that mode's own sensor-reported maximum (the same number `cinepi-raw --list-cameras` reports) can sustain, Cinemate automatically switches to the highest-resolution mode that can. FPS returns to your selected mode once you dial back down. There is no setting for this — it always uses the sensor's own reported limits, never a separate measured table.
 
@@ -522,16 +522,17 @@ Maps Grove Base HAT ADC channels to analogue dials (potentiometers), channel-fir
 
 ### quad_rotary_controller
 
-Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry maps one of the four dials to an [array](#arrays) and defines the push button actions similar to `buttons`. The stock settings include this mapping with `enabled` set to `false`; set it to `true` only when the board is connected.
+Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry maps one of the four dials to an [array](#arrays) and defines the push button actions similar to `buttons`. The stock settings ship it enabled — safe with no board attached, because the controller is hot-plugged and simply retries — set `enabled` to `false` to turn it off. The stock mapping:
 
 ```jsonc
 "quad_rotary_controller": {
   "enabled": true,
   "encoders": {
-    "0": {"setting_name": "iso", "button": {"press_action": {"method": "rec"}}},
-    "1": {"setting_name": "shutter_a", "button": {"press_action": {"method": "set_fps_double"}}},
-    "2": {
-      "setting_name": "fps",
+    "0": {"setting_name": "iso", "button": {"press_action": {"method": "set_zoom"}, "hold_action": {"method": "safe_shutdown"}}},
+    "1": {"setting_name": "shutter_a", "button": {"press_action": {"method": "set_shutter_a_sync_mode"}}},
+    "2": {"setting_name": "fps", "button": {"press_action": {"method": "set_fps_double"}}},
+    "3": {
+      "setting_name": "wb",
       "button": {
         "press_action": "None",
         "single_click_action": {"method": "set_resolution"},
@@ -539,8 +540,7 @@ Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry m
         "triple_click_action": {"method": "reboot"},
         "hold_action": {"method": "toggle_mount"}
       }
-    },
-    "3": {"setting_name": "wb", "button": {"press_action": {"method": "rec"}}}
+    }
   }
 }
 ```

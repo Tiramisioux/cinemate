@@ -1,7 +1,7 @@
 # Web GUI
 
 Cinemate includes a small Flask + Socket.IO web interface that mirrors most of the on-camera
-HDMI GUI ([hardware-controls.md](hardware-controls.md)) in a browser: the status badges and live
+HDMI GUI ([Simple GUI](simple-gui.md)) in a browser: the status badges and live
 preview match, and most HDMI fields reach the page — but not all of them. The recording-integrity
 counts (frame count, frames-in-sync, missing-frame count, drop-frame flags) and a few host/label
 fields are HDMI-only today; run `tools/gui_field_extract.py` for the current, exact list rather

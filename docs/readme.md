@@ -1,6 +1,6 @@
 # Overview
 
-**Cinemate** is an open-source boilerplate for building your own digital cinema camera on a Raspberry Pi 4 or 5. It records 12-bit CinemaDNG files using off-the-shelf parts.
+**Cinemate** is an open-source boilerplate for building your own digital cinema camera on a Raspberry Pi 4 or 5. It records CinemaDNG raw files (10/12-bit, plus 16-bit [ClearHDR](clear-hdr.md) on the IMX585) using off-the-shelf parts.
 
 It pairs a lightweight Python interface with a custom fork of [cinepi-raw](https://github.com/Tiramisioux/cinepi-raw), built on the [CinePi-RAW recorder by Csaba Nagy](https://github.com/cinepi).
 
@@ -23,6 +23,7 @@ To build the stack yourself on Raspberry Pi OS Lite (Bookworm), or to use the on
     SENSOR_MODEL=imx296 CAM_PORT=cam0 ./cinemate-install.sh
     SENSOR_MODEL=imx283 CAM_PORT=cam0 ./cinemate-install.sh
     SENSOR_MODEL=imx585 CAM_PORT=cam0 ./cinemate-install.sh
+    SENSOR_MODEL=imx585_mono CAM_PORT=cam1 ./cinemate-install.sh
     ```
 
 ## Customisation

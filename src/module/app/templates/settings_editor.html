@@ -511,7 +511,7 @@
   .actionrow.unassigned .gestures{ opacity:.4; }
 
   .gestures-wrap{ display:flex; flex-direction:column; gap:8px; min-width:0; }
-  .gestures{ display:flex; flex-direction:column; gap: 9px; }
+  .gestures{ display:flex; flex-direction:column; }
   /* Each .gesture is its own grid row (110px name | command | remove ×) —
      NOT display:contents into a shared grid: a row with a remove button has
      3 cells while the "+ Add" row has 2, and contents-style auto-placement
@@ -524,7 +524,20 @@
   .gesture{
     display:grid; grid-template-columns: var(--action-col) 1fr auto;
     gap: 0 var(--col-gap); align-items:start;
+    padding: 9px 0;
   }
+  /* One dotted rule per action+command pair. The command cell reflows onto a
+     second line whenever the column is too narrow to hold the argument
+     beside it, and without a divider that wrapped argument reads as if it
+     belonged to the row below. Padding rather than a flex gap, so the rule
+     sits midway between the two pairs it separates. */
+  /* var(--muted), not var(--line): a dotted rule only paints about half its
+     pixels, so at --line's 1.27:1 it is invisible. Dotted at --muted reads
+     roughly like a solid --line rule, and matches the dashed --muted
+     underlines already used for the Remove / View raw links. */
+  .gesture + .gesture{ border-top: 1px dotted var(--muted); }
+  .gesture:first-child{ padding-top: 0; }
+  .gesture:last-child{ padding-bottom: 0; }
   /* select.field-input sets min-width:140px and outweighs a plain .class
      rule — that is what pushed this select 30px past its 110px track and
      over the command dropdown, leaving no gap at all. Match its specificity

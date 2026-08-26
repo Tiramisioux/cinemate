@@ -21,6 +21,8 @@ Socket.IO only pushes live values back to the page; it carries no control events
 The browser UI exposes:
 
 - ISO, shutter angle, FPS, white balance, and resolution selectors
+- the page reloads automatically once a resolution change completes, unless a recording is in
+  progress
 - live preview from the MJPEG stream
 - tap/click on the preview area to toggle REC
 - CineMate Log toggle (`set log`) and storage unmount button (`unmount`)

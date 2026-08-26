@@ -562,6 +562,21 @@
     border-bottom: 1px dashed var(--muted); padding:0;
   }
   .row-remove:hover{ color: var(--danger, #c0392b); border-color: var(--danger, #c0392b); }
+  /* A phone cannot hold pin + action + command + remove side by side: at
+     375px the command select was squeezed to 28px, which is the one control
+     on the row that must stay usable. Stack instead -- pin picker, then the
+     column captions, then the gesture rows at full width. ACTION/COMMAND
+     still sit over their columns; the GPIO caption goes, since the picker is
+     now on its own line directly above with its own "button" sub-label. */
+  @media (max-width: 760px){
+    .actionrow{ grid-template-columns: 1fr; --action-col: 112px; --col-gap: 12px; }
+    .actionrow > .pin-picker, .actionrow > .pin-badge{ order: 0; justify-self: start; min-width: 168px; }
+    .actionrow > .actionrow-head{ order: 1; grid-template-columns: var(--action-col) 1fr; margin-top: 10px; }
+    .actionrow-head span:first-child{ display: none; }
+    .actionrow > .gestures-wrap{ order: 2; }
+    .actionrow > .edit-json-link, .actionrow > .row-remove{ order: 3; justify-self: start; margin-top: 10px; }
+  }
+
   .add-control-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
   .cards-subtitle{
     font-family:'DIN2014',sans-serif; font-weight:700; font-size: 10.5px;
@@ -576,14 +591,26 @@
      below, is what forced the command cell to wrap and overflow on narrow
      viewports. Both need releasing; releasing only one does nothing. */
   .action-slot{ min-width:0; }
-  select.action-method{ font-size:12.5px; padding:6px 20px 6px 8px; min-width:0; max-width: 220px; text-overflow: ellipsis; }
+  /* flex-wrap breaks a line using each item's FULL hypothetical width, before
+     any shrinking happens -- so a command select measured at its 220px cap
+     made the packer decide the argument could not fit and pushed it onto its
+     own row, even with room to spare. A small flex-basis makes the packer
+     count it small; flex-grow then spends whatever slack is left on it, up to
+     the same 220px. Result: argument stays on the command's line whenever the
+     column is wide enough, and only wraps when it genuinely cannot fit. */
+  select.action-method{
+    font-size:12.5px; padding:6px 20px 6px 8px; min-width:0; max-width: 220px;
+    flex: 1 1 130px; text-overflow: ellipsis;
+  }
   .arg-hint{ font-size:10.5px; color: var(--muted); white-space:nowrap; }
   /* A command that needs a value but has none is a binding that fails at the
      first press -- show it rather than let it read as configured. */
   .action-args.needs-value select.field-input, .action-args.needs-value input.field-input{
     border-color: var(--danger); color: var(--danger);
   }
-  .action-args{ display:inline-flex; align-items:center; gap:5px; font-size:12.5px; color:var(--muted); }
+  /* flex:none -- the argument keeps its natural width and the command select
+     absorbs the shrinking instead, so the value stays readable. */
+  .action-args{ display:inline-flex; align-items:center; gap:5px; font-size:12.5px; color:var(--muted); flex: 0 0 auto; }
   .action-args select.field-input, .action-args input.field-input{ font-size:12.5px; padding:6px 8px; min-width:0; max-width:130px; text-overflow: ellipsis; }
   .action-args input.field-input[type="number"]{ width:64px; }
   .action-manual-toggle{

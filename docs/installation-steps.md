@@ -179,7 +179,7 @@ sudo apt-get install python3-jinja2 python3-ply python3-yaml ffmpeg
 sudo apt install -y git cmake libepoxy-dev libavdevice-dev build-essential cmake libboost-program-options-dev libdrm-dev libexif-dev libcamera-dev libjpeg-dev libtiff5-dev libpng-dev redis-server libhiredis-dev libasound2-dev libjsoncpp-dev libpng-dev meson ninja-build libavcodec-dev libavdevice-dev libavformat-dev libswresample-dev ffmpeg && sudo apt-get install libjsoncpp-dev && cd ~ && git clone https://github.com/sewenew/redis-plus-plus.git && cd redis-plus-plus && mkdir build && cd build && cmake .. && make && sudo make install && cd ~
 ```
 
-### libcamera (Tiramisioux/libcamera `cinemate` branch) <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
+### libcamera (Tiramisioux/libcamera `cinemate` branch) <img src="https://img.shields.io/badge/cinemate-fork-green" height="12" >
 
 These steps build the [Tiramisioux/libcamera](https://github.com/Tiramisioux/libcamera) `cinemate` branch tip — Will Whang's IMX585 fork (base `9d0cdfe5`) mirrored here so the build no longer depends on the upstream commit staying available, plus gcc-12 build fixes for the apps. Built as-is with no extra patches. (`cinemate-install.sh` tracks this same branch.)
 
@@ -263,7 +263,7 @@ sudo ldconfig
 sudo apt install -y libspdlog-dev libjsoncpp-dev && cd /home/pi && git clone https://github.com/nadjieb/cpp-mjpeg-streamer.git && cd cpp-mjpeg-streamer && mkdir build && cd build && cmake .. && make && sudo make install && cd
 ```
 
-### CinePi-RAW <img src="https://img.shields.io/badge/cinemate-fork-gren" height="12" >
+### CinePi-RAW <img src="https://img.shields.io/badge/cinemate-fork-green" height="12" >
 
 WAV BEXT/iXML timecode metadata requires the `ffmpeg` package from the dependency step above.
 
@@ -412,8 +412,6 @@ pcm.mic_16bit { type plug; slave.pcm "mic_dsnoop_16" }
 EOF
 
 ```
-
-Exit nano editor using ctrl+x.
 
 ### IMX283 and IMX585 sensor support
 
@@ -1059,7 +1057,7 @@ Note that if you were connected to the Pi via wifi, this connection is now broke
 
 To connect again, check your available wifi networks. There should now be a network available named CinePi. Connect to it using password `11111111`
 
-Now you shuld be able to ssh to the Pi this command:
+Now you should be able to ssh to the Pi with this command:
 
 ```shell
 ssh pi@cinepi.local
@@ -1098,7 +1096,7 @@ See [Hotspot logic](hotspot-logic.md) for more details on how the hotspot works.
 ssh pi@10.42.0.1
 ```
 
-password: 1
+Log in with the password you chose in Raspberry Pi Imager. (The prebuilt image uses `pi` / `1` — see [Connecting via SSH](ssh.md).)
 
 ## Running cinemate manually
 

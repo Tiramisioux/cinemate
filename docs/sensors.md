@@ -79,7 +79,7 @@ Recording time assumes a 1 TB drive (1,000,000 MB decimal, matching Cinemate's o
 
 *12-bit ClearHDR is CCMP-companded on-sensor, so it cannot take a linear 12→10 curve. `set log` still works: cinepi-raw decompands to 16-bit linear first, then applies the 16→10 curve as one composed table. Only target 10 exists on this path — `set log 12` is refused. See [CineMate Log support](#cinemate-log-support) below.
 
-The IMX283 rows in this table and in [Compatible sensors](#compatible-sensors) above come from different sources and have not been reconciled: the Compatible sensors table lists what the live driver reports (`cinepi-raw --list-cameras` on the Tiramisioux `6.12.y` fork), this table lists the entries in `resources/sensors.json`. Reconciling them needs a `--list-cameras` capture from the Pi.
+The IMX283 rows here and in [Compatible sensors](#compatible-sensors) above quote the same modes at different sizes. This table and `resources/sensors.json` use the full readout including the optical-black margin (2784, 3936 and 5568 wide) — those are the sizes the system works from, so they are what the mode filter and the GUI show. The Compatible sensors table quotes the cropped image sizes (2736, 3840). The two have not been reconciled; doing so needs a `--list-cameras` capture from the Pi.
 
 ## CineMate Log support
 

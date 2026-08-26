@@ -32,4 +32,4 @@ Mode `0` keeps the **motion blur consistent** because the physical shutter angle
 
 Mode `1` stores the current exposure time and recalculates the shutter angle whenever the FPS is adjusted so that **exposure time** stays the same.
 
-Cinemate stores the nominal exposure time whenever the user sets a new angle; on every FPS change it recalculates the shutter angle from that stored exposure time (angle = 360° × exposure time × fps, clamped to the sensor's limits), so the image brightness stays constant through the ramp.
+Cinemate stores the nominal exposure time whenever the user sets a new angle; on every FPS change it recalculates the shutter angle from that stored exposure time (angle = 360° × exposure time × fps, clamped to 1–360°), so the image brightness stays constant through the ramp.

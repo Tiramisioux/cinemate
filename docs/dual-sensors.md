@@ -38,7 +38,7 @@ If the secondary sensor hasn't produced a frame yet, pip falls back to cam0 full
 
 Which sensor(s) record a take depends on the `sensors.record_policy` setting in [settings.jsonc](settings-json.md) and, when it is `follow_preview`, on the preview:
 
-**`"follow_preview"` (default) — recording follows the preview.** A full-screen or pip-main sensor records alone; side-by-side records both. Changing the preview while recording does not move the take — stop and start again to record on the newly previewed sensor.
+**`"follow_preview"` (default) — recording follows the preview.** A full-screen or pip-main sensor records alone; side-by-side records both. Switching the preview *during* a take only ever adds sensors: the newly previewed sensor joins the running take back-to-back and writes its own clip folder, and a sensor already recording is never dropped mid-clip.
 
 **`"always_both"` — force dual.** Both sensors always record, whatever the preview shows. A camera token on `rec` (`rec cam0` / `rec cam1` / `rec both`) overrides either policy for one take.
 

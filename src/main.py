@@ -247,15 +247,28 @@ def restore_local_console_prompt() -> bool:
     """Restore a visible tty1 prompt after Cinemate stop (SSH or local launch)."""
     systemctl = shutil.which("systemctl")
     if systemctl:
-        # Restart getty@tty1 to ensure it's running and rendering
+        # Restart getty@tty1 to ensure it's running and rendering.
+        #
+        # --job-mode=fail is load-bearing, not cosmetic. cinemate-autostart
+        # declares Conflicts=getty@tty1.service, and in systemd's default
+        # "replace" job mode this request may reverse an already-queued start
+        # job for cinemate-autostart -- during `systemctl restart` that cancels
+        # the restart's own start half, leaving the unit inactive/dead with
+        # Result=success, so Restart= never fires and nothing retries it. In
+        # "fail" mode systemd refuses the reversal and this call fails instead,
+        # which is the harmless outcome: a restarting cinemate reclaims tty1
+        # moments later. The same flag is set on the ExecStopPost handoff
+        # script, which is the other getty-start site on the stop path.
         commands = []
         sudo = shutil.which("sudo")
         if sudo:
             commands.append(
-                [sudo, "-n", systemctl, "--no-block", "--no-ask-password", "restart", "getty@tty1.service"]
+                [sudo, "-n", systemctl, "--no-block", "--no-ask-password",
+                 "--job-mode=fail", "restart", "getty@tty1.service"]
             )
         commands.append(
-            [systemctl, "--no-block", "--no-ask-password", "restart", "getty@tty1.service"]
+            [systemctl, "--no-block", "--no-ask-password",
+             "--job-mode=fail", "restart", "getty@tty1.service"]
         )
 
         for command in commands:

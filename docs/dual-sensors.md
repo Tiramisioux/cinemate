@@ -17,11 +17,11 @@ Switch which sensor(s) the monitor shows with the `set preview` command — the 
 | `set preview pip_cam1` | cam1 full-screen, cam0 as a corner inset (`pip1` alias) |
 | `set preview` | cycles both → cam0 → cam1 → pip_cam0 → pip_cam1 |
 
-A single selected sensor fills the preview area just like a single-sensor setup. The default source is `preview.default_hdmi_source` in [settings.jsonc](settings-json.md); the live value is the `hdmi_preview_source` [Redis key](redis-keys.md).
+A single selected sensor fills the preview area just like a single-sensor setup. The default source is `hdmi_display.preview.default_hdmi_source` in [settings.jsonc](settings-json.md); the live value is the `hdmi_preview_source` [Redis key](redis-keys.md).
 
 ### Picture-in-picture
 
-The two `pip_*` modes show one sensor full-screen with the other shrunk into a corner. The inset geometry is set in [settings.jsonc](settings-json.md) under `preview.pip`:
+The two `pip_*` modes show one sensor full-screen with the other shrunk into a corner. The inset geometry is set in [settings.jsonc](settings-json.md) under `hdmi_display.preview.pip`:
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -38,9 +38,9 @@ If the secondary sensor hasn't produced a frame yet, pip falls back to cam0 full
 
 Which sensor(s) record a take depends on the `sensors.record_policy` setting in [settings.jsonc](settings-json.md) and, when it is `follow_preview`, on the preview:
 
-**`false` — recording follows the preview.** _Note that if preview is changed while the Pi is recording, the recording has to be stopped and commenced again in order to start recording on the previewed sensor. Side-by-side records both._
+**`"follow_preview"` (default) — recording follows the preview.** A full-screen or pip-main sensor records alone; side-by-side records both. Changing the preview while recording does not move the take — stop and start again to record on the newly previewed sensor.
 
-**`true` — force dual.** Both sensors always record, whatever the preview shows. 
+**`"always_both"` — force dual.** Both sensors always record, whatever the preview shows. A camera token on `rec` (`rec cam0` / `rec cam1` / `rec both`) overrides either policy for one take.
 
 Each sensor writes to its own clip folder (`..._cam0` / `..._cam1`).
 

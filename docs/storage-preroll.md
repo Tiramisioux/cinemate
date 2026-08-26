@@ -2,7 +2,7 @@
 
 When starting up, or when storage media is attached, Cinemate records and discards a quick test clip to warm up the storage media.
 
-To disable it, set `"auto_storage_preroll": false` in the `settings` section of `settings.jsonc`.
+To disable it, set `"auto_preroll": false` under `system.storage` in `settings.jsonc`.
 
 You can still warm up media on demand: type `storage preroll` in the Cinemate CLI.
 

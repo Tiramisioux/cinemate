@@ -10,7 +10,7 @@ import logging
 from flask_socketio import SocketIO
 import re
 from module.utils import Utils
-from module.redis_controller import ParameterKey
+from module.redis_controller import ParameterKey, smpte_frame_base
 from module.dynamic_resolution import dynamic_resolution_indicator_active
 from module.design_tokens import DESIGN_TOKENS
 import json
@@ -784,7 +784,10 @@ class SimpleGUI(threading.Thread):
             "shutter_label":  "SHUTTER",
             "shutter_speed":  shutter_speed,
             "fps_label":      "FPS",
-            "fps":            round(float(self.redis_controller.get_value(ParameterKey.FPS_USER.value))),
+            # smpte_frame_base, not round(): the number shown here is the base
+            # the operator reads the recorded timecode against, so it has to
+            # agree with the C++ side at half-integer rates (F-253).
+            "fps":            smpte_frame_base(self.redis_controller.get_value(ParameterKey.FPS_USER.value)),
             "wb_label":       "WB",
             "color_temp":     f"{self.redis_controller.get_value(ParameterKey.WB_USER.value)} K",
             "color_temp_libcamera": f"/ {self.redis_listener.colorTemp}K",

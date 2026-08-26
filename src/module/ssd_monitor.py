@@ -52,6 +52,25 @@ YANK_ERRNOS = {
     getattr(errno, "ESTALE", errno.EIO),
 }
 
+# Eject-intent protocol, read by services/storage-automount/storage-automount.py.
+#
+# storage-automount owns /media/RAW and reacts to udev events. A plain umount
+# makes the kernel emit a "change" event for the device, which that service
+# cannot distinguish from real media activity -- so it used to re-mount and
+# re-promote the drive within about a second of a deliberate eject. That made
+# "unmount, wait, then pull the drive" unsafe: the drive an operator believed
+# was ejected was in fact mounted again before they could reach for it.
+#
+# Touching a flag file here before unmounting tells the service the unmount was
+# deliberate, so it leaves the device alone until we mount it again or it is
+# physically removed. The service creates this directory at startup (it runs as
+# root and is ordered before cinemate); if it is missing we log and carry on,
+# which just restores the previous racy behaviour rather than blocking a
+# perfectly good unmount.
+EJECT_FLAG_DIR = Path(
+    os.getenv("CINEMATE_STORAGE_RUN_DIR", "/run/cinemate-storage")
+) / "eject"
+
 
 # ----------------------------------------------------------------------
 # SSDMonitor
@@ -865,9 +884,60 @@ class SSDMonitor:
         self._check_mount_status()
         return self._is_mounted
 
+    # ------------------------------------------------------------------
+    # eject intent (see EJECT_FLAG_DIR)
+    # ------------------------------------------------------------------
+    def _eject_flag_path(self, device: Optional[str] = None) -> Optional[Path]:
+        """Flag file for the RAW device, or None if the device is unknown."""
+        dev_name = device or self._device_name or self._get_device_name()
+        if not dev_name:
+            return None
+        return EJECT_FLAG_DIR / os.path.basename(dev_name)
+
+    def _set_eject_intent(self, device: Optional[str] = None) -> None:
+        """Tell storage-automount this unmount is deliberate, before unmounting.
+
+        Best-effort by design: if the flag cannot be written the unmount still
+        proceeds, it just races with the automounter the way it always did.
+        """
+        path = self._eject_flag_path(device)
+        if path is None:
+            logging.warning(
+                "eject intent: RAW device name unknown; storage-automount may "
+                "remount the drive right after this unmount"
+            )
+            return
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.touch()
+            logging.info("eject intent: flagged %s as deliberately ejected", path.name)
+        except OSError as exc:
+            logging.warning(
+                "eject intent: could not write %s (%s); storage-automount may "
+                "remount the drive right after this unmount", path, exc
+            )
+
+    def _clear_eject_intent(self, device: Optional[str] = None) -> None:
+        """Release the drive back to storage-automount after a deliberate mount."""
+        path = self._eject_flag_path(device)
+        if path is None:
+            return
+        try:
+            path.unlink()
+            logging.info("eject intent: cleared %s", path.name)
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            logging.warning("eject intent: could not clear %s (%s)", path, exc)
+
     def unmount_drive(self) -> None:
         if not self._is_mounted:
             return
+
+        # Claim the device before unmounting, not after: storage-automount has
+        # been observed re-mounting it in under a second, so a flag written
+        # afterwards can lose the race it exists to prevent.
+        self._set_eject_intent()
 
         # flush pending write-back pages before detaching
         subprocess.call(["sync"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -918,7 +988,14 @@ class SSDMonitor:
                 fs_hint,
             )
 
-        return self._mount_raw_device(raw_dev, fstype)
+        mounted = self._mount_raw_device(raw_dev, fstype)
+        if mounted:
+            # Deliberately mounted again, so the eject intent is spent and
+            # storage-automount may manage this device normally from here.
+            # Only on success: a failed mount leaves the drive ejected, which
+            # is the state the operator actually asked for.
+            self._clear_eject_intent(raw_dev)
+        return mounted
 
     def erase_drive(self) -> bool:
         """Erase all files from the mounted RAW volume."""
@@ -1024,6 +1101,12 @@ class SSDMonitor:
 
         device = f"/dev/{dev_name}"
 
+        # Claim the device before unmounting. This matters more here than for a
+        # plain eject: without it storage-automount can remount the partition in
+        # the window between the umount below and mkfs opening the device, so
+        # mkfs would run against a live mount.
+        self._set_eject_intent(dev_name)
+
         # Flush dirty pages before attempting unmount — pending writeback is the
         # most common cause of EBUSY on a clean-unmount attempt.
         subprocess.call(["sync"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -1067,6 +1150,10 @@ class SSDMonitor:
                     "format_drive(): could not unmount %s after eviction; aborting format",
                     self._mount_path,
                 )
+                # The drive is still mounted and we are not going to format it,
+                # so release the claim rather than leaving a mounted device
+                # flagged as ejected.
+                self._clear_eject_intent(dev_name)
                 return False
 
         # Allow the kernel time to release all block-layer references before

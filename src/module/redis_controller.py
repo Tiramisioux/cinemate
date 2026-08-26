@@ -120,6 +120,30 @@ class ParameterKey(Enum):
 _KNOWN_PARAMETER_VALUES = {member.value for member in ParameterKey}
 
 
+def smpte_frame_base(fps) -> int:
+    """The integer SMPTE frame base for a (possibly fractional) frame rate.
+
+    This is the single Python definition of "base = round(fps)". Use it
+    everywhere a frame rate has to become a frame count -- do not re-derive it
+    with the built-in round(), which is banker's rounding: round(24.5) == 24
+    while the C++ side (std::lround in cinepi_sound.cpp's
+    nominalTimecodeFramerate() and in dng_encoder.cpp) yields 25. At
+    half-integer frame rates that one-frame disagreement is visible to the
+    operator as Redis/GUI timecode diverging from the timecode embedded in the
+    DNG and WAV (F-253).
+
+    Rounds half away from zero and clamps to >= 1, mirroring
+    nominalTimecodeFramerate()'s std::max(1.0, std::round(framerate)).
+    """
+    try:
+        rate = float(fps)
+    except (TypeError, ValueError):
+        return 1
+    if not math.isfinite(rate) or rate <= 0.0:
+        return 1
+    return max(1, int(math.floor(rate + 0.5)))
+
+
 def encode_log_encode_request(value) -> int:
     """False|True|10|12 -> 0|1|10|12 -- the redis-safe int encoding for
     ParameterKey.LOG_ENCODE_REQUEST (mirrors camera.camN.log_encode in
@@ -392,7 +416,7 @@ class RedisController:
         Return SMPTE time-code hh:mm:ss:ff for any positive offset in seconds.
         """
         rate = frame_rate if frame_rate is not None else self.conform_frame_rate
-        rate = int(round(rate))               # ensure integer fps
+        rate = smpte_frame_base(rate)         # ensure integer fps
 
         total_frames  = int(round(seconds_total * rate))
         frames        = total_frames % rate               # 0 … rate-1  (int)

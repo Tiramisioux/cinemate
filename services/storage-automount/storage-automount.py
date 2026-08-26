@@ -51,6 +51,27 @@ MOUNT_BASE = Path("/media")
 RAW_LABEL = "RAW"
 RAW_ACTIVE_PATH = MOUNT_BASE / RAW_LABEL  # primary recorder target (/media/RAW)
 
+# Eject-intent protocol (shared with cinemate's ssd_monitor.py).
+#
+# umount() makes the kernel emit a udev "change" event for the block device.
+# This service cannot tell that event apart from a genuine media change, so it
+# used to re-mount and re-promote a drive the operator had just deliberately
+# ejected -- typically inside a second, long before a human could physically
+# pull it. "Unmount, wait, then pull the drive" was therefore never a safe
+# sequence, which is a data-safety problem, not just an internal inconsistency.
+#
+# cinemate now touches /run/cinemate-storage/eject/<devname> *before* it
+# unmounts, and removes it when it deliberately mounts again. While that file
+# exists this service leaves the device alone. The flag is cleared here on a
+# real udev "remove" (the drive was physically pulled), so re-inserting it
+# automounts exactly as before.
+#
+# Both halves degrade safely on their own: an un-updated cinemate simply never
+# writes a flag (today's racy behaviour), and an un-updated service ignores the
+# flags. Neither can wedge a drive permanently unmounted.
+EJECT_STATE_DIR = Path(os.getenv("CINEMATE_STORAGE_RUN_DIR", "/run/cinemate-storage"))
+EJECT_FLAG_DIR = EJECT_STATE_DIR / "eject"
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Logging
 # ─────────────────────────────────────────────────────────────────────────────
@@ -515,6 +536,74 @@ def _unmount(dev: str):
     log.debug("_unmount complete for %s", dev)
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Eject intent (see EJECT_FLAG_DIR above)
+# ─────────────────────────────────────────────────────────────────────────────
+def _init_eject_dir():
+    """Create the shared eject-flag directory, writable by the cinemate user.
+
+    Only this service runs as root, and /run itself is root-owned, so cinemate
+    cannot create this directory itself. storage-automount.service is ordered
+    Before=cinemate-autostart.service, so it always exists by the time cinemate
+    needs it.
+    """
+    try:
+        EJECT_FLAG_DIR.mkdir(parents=True, exist_ok=True)
+        # The cinemate process runs as `pi` and must be able to create and
+        # remove flag files here.
+        os.chown(EJECT_STATE_DIR, PI_UID, PI_GID)
+        os.chown(EJECT_FLAG_DIR, PI_UID, PI_GID)
+        os.chmod(EJECT_FLAG_DIR, 0o755)
+    except OSError as exc:
+        log.warning("Could not prepare eject-flag dir %s (%s); deliberate "
+                    "unmounts will be re-grabbed as before", EJECT_FLAG_DIR, exc)
+
+
+def _eject_flag_path(dev: str) -> "Path":
+    """Flag file for a device node, keyed on its basename (e.g. nvme0n1p1)."""
+    return EJECT_FLAG_DIR / os.path.basename(dev)
+
+
+def _is_eject_flagged(dev: str) -> bool:
+    """True if cinemate deliberately ejected this device and has not remounted."""
+    try:
+        return _eject_flag_path(dev).exists()
+    except OSError:
+        return False
+
+
+def _clear_eject_flag(dev: str, reason: str = ""):
+    """Drop the eject flag so the device is eligible for automount again."""
+    path = _eject_flag_path(dev)
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        return
+    except OSError as exc:
+        log.warning("Could not clear eject flag %s (%s)", path, exc)
+        return
+    log.info("Cleared eject flag for %s%s", dev, f" ({reason})" if reason else "")
+
+
+def _clear_eject_flags_for(devnode: str, reason: str = ""):
+    """Clear the flag for `devnode` and for any partition of it.
+
+    A whole-disk removal arrives as /dev/nvme0n1 while the flag cinemate wrote
+    is keyed on the partition it had mounted (/dev/nvme0n1p1), so clearing only
+    the exact devnode would strand the partition flag and the drive would stay
+    ignored after a replug.
+    """
+    _clear_eject_flag(devnode, reason)
+    try:
+        existing = list(EJECT_FLAG_DIR.iterdir())
+    except OSError:
+        return
+    for flag in existing:
+        candidate = f"/dev/{flag.name}"
+        if _is_partition_of(candidate, devnode):
+            _clear_eject_flag(candidate, reason)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # RAW Arbitration
 # ─────────────────────────────────────────────────────────────────────────────
 # Exactly one RAW drive is "active" (mounted at /media/RAW, the recorder
@@ -639,6 +728,9 @@ def _promote_next() -> bool:
         key=lambda t: t[0],
     )
     ordered = [d for _, d in standbys] + [d for d in _raw_pool if d not in _mounts]
+    # Never promote a drive the operator deliberately ejected, even if it is
+    # still a pool member -- promotion would silently undo the eject.
+    ordered = [d for d in ordered if not _is_eject_flagged(d)]
     for d in ordered:
         if _promote_to_active(d):
             return True
@@ -648,6 +740,13 @@ def _promote_next() -> bool:
 
 def _add_raw(dev: str):
     """Handle a freshly-detected RAW device: become active if none, else standby."""
+    if _is_eject_flagged(dev):
+        # Deliberately ejected by the operator and not yet remounted. The udev
+        # "change" event that brought us here is almost certainly the unmount's
+        # own event; re-grabbing now is exactly the race this flag exists to
+        # stop. A physical pull clears the flag on the "remove" event.
+        log.info("Ignoring %s: deliberately ejected, awaiting remount or replug", dev)
+        return
     _register_raw_add(dev)
     with _raw_lock:
         if dev == _active_raw:
@@ -780,6 +879,14 @@ def _udev_worker():
         if not devnode:
             continue
 
+        # A deliberately ejected device stays untouched until cinemate mounts it
+        # again or it is physically pulled. Checked before the add/change split
+        # because umount's own "change" event is indistinguishable from a real
+        # media change here, and acting on it is what used to undo the eject.
+        if action in ("add", "change") and _is_eject_flagged(devnode):
+            log.debug("Ignoring %s event for deliberately ejected %s", action, devnode)
+            continue
+
         # Partition added/changed
         if action in ("add", "change") and devtype == "partition":
             label, _ = _get_filesystem_info(devnode)
@@ -806,6 +913,10 @@ def _udev_worker():
         elif action == "remove" and devtype in ("partition", "disk"):
             log.debug("%s removed: %s", devtype, devnode)
             _on_block_removed(devnode)
+            # The drive is physically gone, so the eject intent has been served.
+            # Clearing it here is what makes replugging automount normally again
+            # rather than leaving the device permanently ignored.
+            _clear_eject_flags_for(devnode, "device removed")
             log.debug("Removal handling complete for %s", devnode)
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1102,6 +1213,10 @@ def main():
     log.info("Mount base: %s", MOUNT_BASE)
     log.info("User: %d:%d", PI_UID, PI_GID)
     log.info("Log level: %s", LOG_LEVEL)
+
+    # Must exist before cinemate can signal an eject. /run is a tmpfs, so any
+    # flag left behind by an unclean shutdown is gone by the time we get here.
+    _init_eject_dir()
 
     # Initialize CFE HAT PCIe before scanning
     _cfe_hat_init()

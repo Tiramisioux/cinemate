@@ -1,4 +1,6 @@
+<!DOCTYPE html>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Cinemate — Settings</title>
 <style>
   @font-face {
@@ -439,7 +441,9 @@
   .filepath svg{ opacity:.6; flex:none; }
 
   /* Detected-modes readout on the Boot config page. */
-  .mode-table{ width:100%; border-collapse:collapse; font-size:12.5px; margin:2px 0 6px; }
+  .mode-table{ width:100%; border-collapse:collapse; font-size:12.5px; line-height:1.3; margin:2px 0 6px; }
+  /* line-height pinned: in quirks mode (pre-doctype) the UA table quirk reset it to
+     ~normal; without this, standards mode would inherit body's 1.5 and grow each row */
   .mode-table th{
     font-weight:700; color: var(--muted); padding:3px 0; text-align:left;
     border-bottom:1px solid var(--line); font-size:11px; text-transform:uppercase; letter-spacing:.04em;

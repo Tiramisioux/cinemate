@@ -183,6 +183,11 @@
             overflow-y: auto;
             overflow-x: hidden;
             scrollbar-width: thin;
+            /* draw_left_sections() starts its CAM column at y=97 on the
+               1080p canvas — roughly a box-height of air below the top row.
+               Reproduce that offset so the rails sit like the HDMI GUI's
+               instead of hugging the top bar. */
+            padding-top: calc(var(--box-height) * 1.3);
         }
         .rail:empty { display: none; }
 
@@ -939,24 +944,62 @@
     socket.on('reload_browser', () => window.location.reload());
     socket.on('reload_stream', () => reloadStreams());
 
-    // ── stream reload after a mode switch ─────────────────────────────
-    let reloadTimers = [];
+    // A socket reconnect means cinemate (and with it cinepi-raw) went away
+    // and came back — a settings-save restart, a crash — taking the MJPEG
+    // connections with it. Reconnect the previews too.
+    let socketWasConnected = false;
+    socket.on('connect', () => {
+        if (socketWasConnected) { reloadStreams(); }
+        socketWasConnected = true;
+    });
+
+    // ── stream reload ─────────────────────────────────────────────────
+    //    An MJPEG <img> dies for good the moment its connection drops —
+    //    cinepi-raw relaunching for an aspect-ratio change, a settings-save
+    //    restart, a crash — and a fixed number of retries loses the race
+    //    against a full relaunch (the old 350/1200/2500 ms schedule is how
+    //    the preview used to go black permanently). So: retry on every
+    //    error until frames actually flow again. `load` fires on the first
+    //    MJPEG frame; `error` re-arms the next attempt, so a dead server
+    //    costs one request a second until it's back.
+    function scheduleStreamReload(img, delay) {
+        clearTimeout(img._reloadTimer);
+        img._reloadTimer = setTimeout(() => {
+            img._reloadTimer = null;
+            if (img.classList.contains('hidden')) { return; }
+            img.src = img.dataset.streamBase + '?reload=' + Date.now();
+        }, delay);
+    }
     function reloadStreams() {
-        reloadTimers.forEach(clearTimeout);
-        reloadTimers = [];
         [$('stream'), $('stream-cam1')].forEach((img) => {
             if (!img || img.classList.contains('hidden')) { return; }
-            const base = img.dataset.streamBase || img.src.split('?')[0];
-            if (!base) { return; }
-            img.dataset.streamBase = base;
-            img.src = '';
-            [350, 1200, 2500].forEach((delay) => {
-                reloadTimers.push(setTimeout(() => {
-                    img.src = base + '?reload=' + Date.now();
-                }, delay));
-            });
+            scheduleStreamReload(img, 350);
         });
     }
+    $('stream').dataset.streamBase = ($('stream').getAttribute('src') || '').split('?')[0];
+    $('stream-cam1').dataset.streamBase = CAM1_STREAM;
+    [$('stream'), $('stream-cam1')].forEach((img) => {
+        img.addEventListener('error', () => {
+            if (!img.dataset.streamBase || img.classList.contains('hidden')) { return; }
+            scheduleStreamReload(img, 1000);
+        });
+        img.addEventListener('load', () => {
+            clearTimeout(img._reloadTimer);
+            img._reloadTimer = null;
+        });
+    });
+    // Watchdog for the case neither `error` nor `reload_stream` catches: a
+    // listener that accepts the request but never delivers a frame. An
+    // orphaned process squatting on :8000 does exactly that (see the
+    // port-collision note in the docs) and the page would sit black forever
+    // with no event ever firing. While the image is visible and has no
+    // decoded frame, keep re-issuing the request.
+    setInterval(() => {
+        [$('stream'), $('stream-cam1')].forEach((img) => {
+            if (!img || img.classList.contains('hidden') || !img.dataset.streamBase) { return; }
+            if (img.naturalWidth === 0 && img._reloadTimer == null) { scheduleStreamReload(img, 0); }
+        });
+    }, 4000);
 
     // ── bindings ──────────────────────────────────────────────────────
     $('s-iso').addEventListener('change', (e) => cmd('set iso ' + e.target.value));

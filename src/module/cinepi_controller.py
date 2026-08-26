@@ -1520,7 +1520,7 @@ class CinePiController:
         candidates.sort(reverse=True)
         return candidates[0][1]
 
-    def switch_resolution(self):
+    def switch_resolution(self, step=1):
         try:
             sensor_modes = sorted(
                 self.sensor_detect.res_modes.keys(),
@@ -1563,7 +1563,7 @@ class CinePiController:
                 )
                 next_sensor_mode = sensor_modes[0]
             else:
-                next_index = (current_index + 1) % num_sensor_modes
+                next_index = (current_index + step) % num_sensor_modes
                 next_sensor_mode = sensor_modes[next_index]
 
             logging.info("Switching resolution from mode %s to mode %s", current_sensor_mode, next_sensor_mode)
@@ -2218,7 +2218,16 @@ class CinePiController:
 
     def dec_fps(self):
         self.decrement_setting('fps', self.fps_steps)
-        
+
+    # The quad rotary controller turns into inc_<setting>/dec_<setting>
+    # (see i2c/quad_rotary_controller.py's _update_setting), so an encoder
+    # assigned to "resolution" cycles the mode list one step per detent.
+    def inc_resolution(self):
+        return self.switch_resolution(1)
+
+    def dec_resolution(self):
+        return self.switch_resolution(-1)
+
     def initialize_wb_cg_rb_array(self):
         """Initialize the white balance cg_rb array based on the sensor model."""
         sensor_key = self.current_sensor.replace('_mono', '')

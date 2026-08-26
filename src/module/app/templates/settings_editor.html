@@ -329,6 +329,9 @@
   }
   .card:first-child{ border-top: 0; }
   .card.is-hidden{ display:none; }
+  /* Present but not pickable — the link-frequency cards while the RP1
+     overclock is off. The select's own [disabled] handles the control. */
+  .card.is-disabled .card-main{ opacity:.45; }
   .card-main{ min-width: 0; }
   .card-label{
     display:block; font-weight: 600; font-size: 14px; margin-bottom: 2px;
@@ -442,18 +445,31 @@
   .upload-actions{ display:flex; align-items:center; gap:6px; }
 
   /* ---------- Translated action rows (buttons / switches / encoders) ----------
-     Exactly 3 direct children per .actionrow (pin-picker | gestures-wrap |
-     view-raw link) — anything else breaks the 3-column auto-placement below.
-     Visual order reads GPIO → action → method (B11.5's column model), via
-     CSS `order` rather than reshuffling the DOM. */
+     Each .actionrow is one control: a full-width heading strip
+     (.actionrow-head) naming the columns, then exactly 3 more direct
+     children (pin-picker | gestures-wrap | remove link) in a 3-column grid.
+     The heading strip repeats the content columns' widths (140px pin picker,
+     then the .gesture grid's 110px/1fr tracks) so each label sits exactly
+     over the column it names, and the first gesture row starts on the same
+     line as the pin select. */
   .actionrow{
     display:grid; grid-template-columns: 140px 1fr auto; gap: 4px 16px;
     padding: 13px 16px; border-top: 1px solid var(--line); align-items:start;
   }
   .actionrow:first-child{ border-top:0; }
+  .actionrow > .actionrow-head{ order: 0; }
   .actionrow > .pin-picker, .actionrow > .pin-badge{ order: 1; }
   .actionrow > .gestures-wrap{ order: 2; }
   .actionrow > .edit-json-link, .actionrow > .row-remove{ order: 3; }
+  .actionrow-head{
+    grid-column: 1 / -1;
+    display:grid; grid-template-columns: 140px 110px 1fr; gap: 0 16px;
+    margin-bottom: 2px;
+  }
+  .actionrow-head span{
+    font-family:'DIN2014',sans-serif; font-weight:700; font-size: 9px;
+    text-transform:uppercase; letter-spacing:.07em; color: var(--muted); opacity:.75;
+  }
   .pin-badge{
     font-family:'DIN2014',sans-serif; font-weight:700; font-size: 11.5px; color: var(--ink);
     background: var(--panel-2); border:1px solid var(--line); border-radius: var(--radius);
@@ -471,16 +487,26 @@
   .actionrow.unassigned .gestures{ opacity:.4; }
 
   .gestures-wrap{ display:flex; flex-direction:column; gap:8px; min-width:0; }
-  .gestures{ display:grid; grid-template-columns: 74px 1fr; gap: 9px 16px; align-items:center; }
-  .gestures-head{ display:grid; grid-template-columns: 74px 1fr; gap: 9px 16px; }
-  .gestures-head span{
-    font-family:'DIN2014',sans-serif; font-weight:700; font-size: 9px; text-transform:uppercase; letter-spacing:.07em; color: var(--muted); opacity:.75;
+  .gestures{ display:flex; flex-direction:column; gap: 9px; }
+  /* Each .gesture is its own grid row (110px name | command | remove ×) —
+     NOT display:contents into a shared grid: a row with a remove button has
+     3 cells while the "+ Add" row has 2, and contents-style auto-placement
+     let the extra cell shift every later row one column over (the scrambled
+     layout the B11.5 rebuild shipped with). A fixed 110px name track keeps
+     the command column aligned across rows without sharing a grid. */
+  .gesture{ display:grid; grid-template-columns: 110px 1fr auto; gap: 0 16px; align-items:center; }
+  .g-name-select{
+    font-family:'DIN2014',sans-serif; font-weight:700; font-size: 10.5px;
+    text-transform:uppercase; letter-spacing:.03em;
+    width:100%; min-width:0; padding:5px 18px 5px 6px; text-overflow:ellipsis;
   }
-  .gesture{ display:contents; }
-  /* .g-name (action name, e.g. "Press") then .action-slot (method picker) —
-     plain DOM order now that the grid tracks (74px name, 1fr method) match
-     that order; no JS reordering hack needed. */
-  .gesture-add .add-gesture-select{ color: var(--muted); }
+  .gesture-add .add-gesture-select{
+    justify-self:start; width:auto; max-width:none;
+    appearance:none; -webkit-appearance:none; border:none; background:transparent; padding:2px 0;
+    font-family:'DIN2014',sans-serif; font-weight:700; font-size: 10.5px;
+    text-transform:uppercase; letter-spacing:.05em; color: var(--muted); cursor:pointer;
+  }
+  .gesture-add .add-gesture-select:hover{ color: var(--ink); }
   .gesture .g-name{ font-family:'DIN2014',sans-serif; font-weight:700; font-size: 10.5px; text-transform:uppercase; letter-spacing:.05em; color: var(--muted); }
   .gesture .g-action{ color: var(--ink); }
   .gesture-remove{
@@ -496,6 +522,11 @@
   }
   .row-remove:hover{ color: var(--danger, #c0392b); border-color: var(--danger, #c0392b); }
   .add-control-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .cards-subtitle{
+    font-family:'DIN2014',sans-serif; font-weight:700; font-size: 10.5px;
+    text-transform:uppercase; letter-spacing:.06em; color: var(--muted);
+    margin: 20px 0 8px;
+  }
 
   .action-picker{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0; }
   .action-method{ font-size:12.5px; padding:6px 20px 6px 8px; min-width:0; max-width: 220px; text-overflow: ellipsis; }
@@ -1765,72 +1796,14 @@
         <button class="btn btn-ghost" type="button" id="addSwitch3Btn">+ Add 3‑way switch</button>
         <button class="btn btn-ghost" type="button" id="addRotaryBtn">+ Add rotary encoder</button>
       </div>
-      <div class="cards" style="margin-top:14px">
-        <div class="actionrow" data-search="quad rotary controller encoders iso shutter fps wb" data-highlight-text="quad_rotary_controller">
-          <span class="pin-badge">Quad rotary<small>i²c encoders</small></span>
-          <div class="gestures-wrap">
-            <div class="gestures-head"><span>Action</span><span>Method</span></div>
-            <div class="gestures">
-              <div class="gesture"><span class="g-name">Enc 0 · ISO</span><span class="action-slot" id="act-qr0-press" data-method="set_zoom"></span></div>
-              <div class="gesture"><span class="g-name">Enc 0 hold</span><span class="action-slot" id="act-qr0-hold" data-method="safe_shutdown"></span></div>
-              <div class="gesture gesture-add">
-                <span class="g-name">Enc 0 +</span>
-                <span class="action-args">
-                  <select class="field-input add-gesture-select" data-prefix="act-qr0" data-removable="false">
-                    <option value="" selected>Choose a gesture…</option>
-                    <option value="single">Single click</option>
-                    <option value="double">Double click</option>
-                    <option value="triple">Triple click</option>
-                  </select>
-                </span>
-              </div>
-              <div class="gesture"><span class="g-name">Enc 1 · Shutter</span><span class="action-slot" id="act-qr1-press" data-method="set_shutter_a_sync_mode"></span></div>
-              <div class="gesture gesture-add">
-                <span class="g-name">Enc 1 +</span>
-                <span class="action-args">
-                  <select class="field-input add-gesture-select" data-prefix="act-qr1" data-removable="false">
-                    <option value="" selected>Choose a gesture…</option>
-                    <option value="single">Single click</option>
-                    <option value="double">Double click</option>
-                    <option value="triple">Triple click</option>
-                    <option value="hold">Hold</option>
-                  </select>
-                </span>
-              </div>
-              <div class="gesture"><span class="g-name">Enc 2 · FPS</span><span class="action-slot" id="act-qr2-press" data-method="set_fps_double"></span></div>
-              <div class="gesture gesture-add">
-                <span class="g-name">Enc 2 +</span>
-                <span class="action-args">
-                  <select class="field-input add-gesture-select" data-prefix="act-qr2" data-removable="false">
-                    <option value="" selected>Choose a gesture…</option>
-                    <option value="single">Single click</option>
-                    <option value="double">Double click</option>
-                    <option value="triple">Triple click</option>
-                    <option value="hold">Hold</option>
-                  </select>
-                </span>
-              </div>
-              <div class="gesture"><span class="g-name">Enc 3 · WB single</span><span class="action-slot" id="act-qr3-single" data-method="set_resolution"></span></div>
-              <div class="gesture"><span class="g-name">Enc 3 double</span><span class="action-slot" id="act-qr3-double" data-method="restart_cinemate"></span></div>
-              <div class="gesture"><span class="g-name">Enc 3 triple</span><span class="action-slot" id="act-qr3-triple" data-method="reboot"></span></div>
-              <div class="gesture"><span class="g-name">Enc 3 hold</span><span class="action-slot" id="act-qr3-hold" data-method="toggle_mount"></span></div>
-              <div class="gesture gesture-add">
-                <span class="g-name">Enc 3 +</span>
-                <span class="action-args">
-                  <select class="field-input add-gesture-select" data-prefix="act-qr3" data-removable="false">
-                    <option value="" selected>Choose a gesture…</option>
-                    <option value="press">Press</option>
-                  </select>
-                </span>
-              </div>
-            </div>
-          </div>
-          <a class="edit-json-link" href="#" data-open-json>View raw</a>
-        </div>
+      <p class="cards-subtitle">Quad rotary — the 4‑encoder i²c board</p>
+      <div class="cards" id="encodersList"></div>
+      <div class="add-control-row">
+        <button class="btn btn-ghost" type="button" id="addEncoderBtn">+ Add encoder</button>
       </div>
       <div class="note">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-        <span>Move a control to a different pin from the dropdown — occupied pins are greyed out and it asks before remapping. Pick the method from the list (grouped like <span class="mono">cli_commands.py</span>, legal arguments only) or hit the pencil to type it by hand.</span>
+        <span>Move a control to a different pin or encoder from the dropdown — occupied ones are greyed out and it asks before remapping. Pick the command from the list (grouped like <span class="mono">cli_commands.py</span>, legal arguments only) or hit the pencil to type it by hand.</span>
       </div>
     </section>
     <section class="group" id="gpio" data-page="settings">
@@ -1843,15 +1816,6 @@
         <button class="btn btn-ghost" type="button" id="addGpioOutBtn">+ Add pin</button>
       </div>
       <div class="cards" style="margin-top:14px">
-        <div class="card" data-search="rec tone pin slate beep gpio 18 frequency pitch">
-          <div class="card-main">
-            <label class="card-label" for="f-tonefreq">Slate tone pitch</label>
-            <p class="card-help">Frequency of the tone driven on any pin set to "REC tone" above, at record‑start — useful as an audible sync reference.</p>
-          </div>
-          <div class="card-control">
-            <input class="field-input num-input" type="number" id="f-tonefreq" data-path="hardware_outputs.rec_tone.frequency_hz" data-type="number" data-original="1000" value="1000"> Hz
-          </div>
-        </div>
         <div class="card" data-search="rec tone duty cycle pulse width">
           <div class="card-main">
             <label class="card-label" for="f-toneduty">Slate tone duty cycle</label>
@@ -2035,16 +1999,6 @@
           </div>
         </div>
 
-        <div class="card" id="cfg-cam0-link-card" data-search="cam0 link frequency csi-2 mipi lane rate mbps imx585 starlighteye" hidden>
-          <div class="card-main">
-            <label class="card-label" for="cfg-cam0-link-freq">Camera 0 link frequency</label>
-            <p class="card-help">CSI-2 lane rate for the IMX585 on cam0 — this is what sets the frame-rate ceiling. <span class="cfg-link-warn" id="cfg-cam0-link-warn" hidden>Anything above the default needs the RP1 overclock; without it the RP1 caps out near 43.8 fps at 4K whatever the sensor sends.</span></p>
-          </div>
-          <div class="card-control">
-            <select class="field-input" id="cfg-cam0-link-freq" style="min-width:230px"></select>
-          </div>
-        </div>
-
         <div class="card" data-search="camera 1 sensor overlay dtoverlay imx585 mono dual">
           <div class="card-main">
             <label class="card-label" for="cfg-cam1-sensor">Camera 1 sensor</label>
@@ -2059,6 +2013,26 @@
               <option value="imx585">StarlightEye (IMX585, colour)</option>
               <option value="imx585_mono">StarlightEye (IMX585, mono)</option>
             </select>
+          </div>
+        </div>
+
+        <div class="card" data-search="rp1 overclock frame rate clock io die">
+          <div class="card-main">
+            <label class="card-label" for="cfg-rp1">RP1 overclock</label>
+            <p class="card-help">Raises the RP1 I/O die clock so higher sensor frame rates are reachable. Needs the overlay built first and a stable supply. The clock is set by the device tree at boot, so this only takes effect after a reboot — and it's what unlocks the link-frequency picks below.</p>
+          </div>
+          <div class="card-control">
+            <button class="toggle" id="cfg-rp1" data-cfg role="switch" aria-checked="false"></button>
+          </div>
+        </div>
+
+        <div class="card" id="cfg-cam0-link-card" data-search="cam0 link frequency csi-2 mipi lane rate mbps imx585 starlighteye" hidden>
+          <div class="card-main">
+            <label class="card-label" for="cfg-cam0-link-freq">Camera 0 link frequency</label>
+            <p class="card-help">CSI-2 lane rate for the IMX585 on cam0 — this is what sets the frame-rate ceiling. <span class="cfg-link-warn" id="cfg-cam0-link-warn" hidden>Anything above the default needs the RP1 overclock; without it the RP1 caps out near 43.8 fps at 4K whatever the sensor sends.</span></p>
+          </div>
+          <div class="card-control">
+            <select class="field-input" id="cfg-cam0-link-freq" style="min-width:230px"></select>
           </div>
         </div>
 
@@ -2077,16 +2051,6 @@
             <label class="card-label">Detected modes</label>
             <p class="card-help">What <code class="mono">cinepi-raw --list-cameras</code> reports for the sensor that is actually attached right now — not what the selections above will produce after a reboot. Frame rates are the ceiling for each mode.</p>
             <div id="cfg-modes-list"><p class="card-help">Loading detected modes…</p></div>
-          </div>
-        </div>
-
-        <div class="card" data-search="rp1 overclock frame rate clock io die">
-          <div class="card-main">
-            <label class="card-label" for="cfg-rp1">RP1 overclock</label>
-            <p class="card-help">Raises the RP1 I/O die clock so higher sensor frame rates are reachable. Needs the overlay built first and a stable supply. The clock is set by the device tree at boot, so this only takes effect after a reboot.</p>
-          </div>
-          <div class="card-control">
-            <button class="toggle" id="cfg-rp1" data-cfg role="switch" aria-checked="false"></button>
           </div>
         </div>
 
@@ -2256,10 +2220,10 @@
     if (!el || el.value === 'none') return null;
     return parseInt(el.value, 10);
   }
-  /* Reads whichever gesture slots actually exist for a given id prefix (e.g.
-     "act-qr0", or a dynamic control row's own "hwctl-N") — so buttons/
-     encoders that gained an added gesture, or never had one to begin with,
-     both reconstruct correctly with no special-casing.
+  /* Reads whichever gesture slots actually exist for a given id prefix (a
+     control row's own "hwctl-N") — so buttons/encoders that gained an added
+     gesture, or never had one to begin with, both reconstruct correctly
+     with no special-casing.
      press_action is always present (a real key, "None" if there's no Press
      row); the click-variant keys only appear if that gesture row exists,
      matching how the real file omits keys it doesn't use. */
@@ -2291,23 +2255,44 @@
     rm.setAttribute('aria-label', 'Remove ' + label + ' action');
     rm.textContent = '×';
     rm.addEventListener('click', function(){
+      var gestures = gestureEl.parentNode;
       gestureEl.remove();
       dirtyEls.delete(slotEl);
+      if (gestures) syncGestureOptions(gestures);
       markControlsDirtyIfNeeded();
       showToast(label + ' action removed');
     });
     gestureEl.appendChild(rm);
   }
 
-  function makeGestureRow(prefix, gestureKey, label, action){
+  /* One gesture row: the action itself is a dropdown (Press / Single click /
+     ...), so a configured command can be re-keyed to a different gesture in
+     place — gestures already used by the row's siblings are greyed out,
+     same occupancy model as the pin pickers. Picking a new one re-ids the
+     command slot so the save path writes the right *_action field. */
+  function makeGestureRow(prefix, gestureKey, specs, action){
     var g = document.createElement('div');
     g.className = 'gesture';
-    var name = document.createElement('span');
-    name.className = 'g-name';
-    name.textContent = label;
+    var spec = specs.filter(function(s){ return s.key === gestureKey; })[0];
+    var label = spec ? spec.label : gestureKey;
+    var name = document.createElement('select');
+    name.className = 'field-input g-name-select';
+    name.setAttribute('aria-label', 'Which gesture triggers this command');
+    specs.forEach(function(s){
+      var opt = document.createElement('option');
+      opt.value = s.key; opt.textContent = s.label;
+      if (s.key === gestureKey) opt.selected = true;
+      name.appendChild(opt);
+    });
     var slot = document.createElement('span');
     slot.className = 'action-slot';
     slot.id = prefix + '-' + gestureKey;
+    name.addEventListener('change', function(){
+      slot.id = prefix + '-' + name.value;
+      syncGestureOptions(g.parentNode);
+      markControlsDirtyIfNeeded();
+      refreshDrawer();
+    });
     g.appendChild(name);
     g.appendChild(slot);
     addGestureRemoveButton(g, slot, label);
@@ -2315,54 +2300,94 @@
     return g;
   }
 
-  function makeAddGestureRow(prefix, remainingSpecs){
+  /* The "+ Add" affordance is one select styled as a text link, sitting in
+     the command column (the operator model: "add another command to this
+     control"). Its closed face reads "+ Add"; opening it lists whichever
+     gestures aren't configured yet — syncGestureOptions() keeps that list
+     current as rows are added, removed or re-keyed. */
+  function makeAddGestureRow(prefix){
     var addRow = document.createElement('div');
     addRow.className = 'gesture gesture-add';
     var label = document.createElement('span');
     label.className = 'g-name';
-    label.textContent = '+ Add';
     var wrap = document.createElement('span');
     wrap.className = 'action-args';
     var sel = document.createElement('select');
-    sel.className = 'field-input add-gesture-select';
+    sel.className = 'add-gesture-select';
     sel.setAttribute('data-prefix', prefix);
-    var blank = document.createElement('option');
-    blank.value = ''; blank.textContent = 'Choose a gesture…'; blank.selected = true;
-    sel.appendChild(blank);
-    remainingSpecs.forEach(function(spec){
-      var opt = document.createElement('option');
-      opt.value = spec.key; opt.textContent = spec.label;
-      sel.appendChild(opt);
-    });
+    sel.setAttribute('aria-label', 'Add another action');
     wrap.appendChild(sel);
     addRow.appendChild(label);
     addRow.appendChild(wrap);
-    if (remainingSpecs.length === 0) addRow.hidden = true;
     return addRow;
   }
 
+  function gestureSpecsFor(gestures){
+    return GESTURE_SPEC_SETS[gestures.getAttribute('data-spec-set')] || [];
+  }
+  /* Recomputes, for one control's gesture list: which options are greyed in
+     each action dropdown (its siblings' picks), and what the "+ Add" select
+     still has to offer (hidden once every gesture is configured). */
+  function syncGestureOptions(gestures){
+    if (!gestures) return;
+    var specs = gestureSpecsFor(gestures);
+    if (!specs.length) return;
+    var used = {};
+    gestures.querySelectorAll('.g-name-select').forEach(function(sel){ used[sel.value] = true; });
+    gestures.querySelectorAll('.g-name-select').forEach(function(sel){
+      Array.prototype.forEach.call(sel.options, function(opt){
+        opt.disabled = !!used[opt.value] && opt.value !== sel.value;
+      });
+    });
+    var addRow = gestures.querySelector('.gesture-add');
+    if (!addRow) return;
+    var addSel = addRow.querySelector('.add-gesture-select');
+    var remaining = specs.filter(function(s){ return !used[s.key]; });
+    addSel.innerHTML = '';
+    var blank = document.createElement('option');
+    blank.value = ''; blank.textContent = '+ Add'; blank.selected = true;
+    addSel.appendChild(blank);
+    remaining.forEach(function(s){
+      var opt = document.createElement('option');
+      opt.value = s.key; opt.textContent = s.label;
+      addSel.appendChild(opt);
+    });
+    addRow.hidden = remaining.length === 0;
+  }
+
+  /* The full-width heading strip at the top of every .actionrow — GPIO/
+     Encoder/Output over the pin picker, then Action | Command over the
+     .gesture grid's two tracks. */
+  function makeActionrowHead(pinLabel, actionLabel){
+    var head = document.createElement('div');
+    head.className = 'actionrow-head';
+    [pinLabel, actionLabel, 'Command'].forEach(function(text){
+      var span = document.createElement('span');
+      span.textContent = text;
+      head.appendChild(span);
+    });
+    return head;
+  }
+
   /* Builds a .gestures block for a control row: one row per action already
-     present in `actionsByKey` (key -> action-or-"None"), plus a "+ Add" row
-     offering whichever gestures from `allSpecs` aren't shown yet. */
-  function buildGesturesBlock(prefix, allSpecs, actionsByKey){
+     present in `actionsByKey` (key -> action-or-"None"), plus the "+ Add"
+     row offering whichever gestures from the named spec set aren't shown
+     yet. */
+  function buildGesturesBlock(prefix, specSetName, actionsByKey){
+    var specs = GESTURE_SPEC_SETS[specSetName];
     var wrap = document.createElement('div');
     wrap.className = 'gestures-wrap';
-    var head = document.createElement('div');
-    head.className = 'gestures-head';
-    head.innerHTML = '<span>Action</span><span>Method</span>';
     var gestures = document.createElement('div');
     gestures.className = 'gestures';
-    var present = {};
-    allSpecs.forEach(function(spec){
+    gestures.setAttribute('data-spec-set', specSetName);
+    specs.forEach(function(spec){
       if (Object.prototype.hasOwnProperty.call(actionsByKey, spec.key)){
-        present[spec.key] = true;
-        gestures.appendChild(makeGestureRow(prefix, spec.key, spec.label, actionsByKey[spec.key]));
+        gestures.appendChild(makeGestureRow(prefix, spec.key, specs, actionsByKey[spec.key]));
       }
     });
-    var remaining = allSpecs.filter(function(spec){ return !present[spec.key]; });
-    gestures.appendChild(makeAddGestureRow(prefix, remaining));
-    wrap.appendChild(head);
+    gestures.appendChild(makeAddGestureRow(prefix));
     wrap.appendChild(gestures);
+    syncGestureOptions(gestures);
     return wrap;
   }
 
@@ -2373,10 +2398,11 @@
     btn.textContent = 'Remove';
     btn.setAttribute('aria-label', 'Remove ' + label);
     btn.addEventListener('click', function(){
-      showConfirm('Remove ' + label + '? This deletes it from hardware_controls on the next save.', function(){
+      showConfirm('Remove ' + label + '? This deletes it from the settings file on the next save.', function(){
         rowEl.remove();
         markControlsDirtyIfNeeded();
         refreshAllGpioSelects();
+        refreshAllEncoderSelects();
         showToast(label + ' removed');
       });
     });
@@ -2405,6 +2431,17 @@
     { key: 'cw', field: '__cw', label: 'Rotate CW' },
     { key: 'ccw', field: '__ccw', label: 'Rotate CCW' }
   ];
+  /* Named sets so a .gestures container can carry its own spec list as a
+     data attribute (data-spec-set) — syncGestureOptions() and the delegated
+     "+ Add" handler both resolve it from here. The quad rotary's push
+     button speaks the same gesture grammar as a GPIO button. */
+  var GESTURE_SPEC_SETS = {
+    button: BUTTON_GESTURE_SPECS,
+    switch2: SWITCH2_GESTURE_SPECS,
+    switch3: SWITCH3_GESTURE_SPECS,
+    rotary: ROTARY_GESTURE_SPECS,
+    encoder: BUTTON_GESTURE_SPECS
+  };
 
   function actionsByFieldMap(specs, obj){
     var out = {};
@@ -2420,6 +2457,7 @@
     row.setAttribute('data-control-type', type);
     row.setAttribute('data-prefix', prefix);
     row.setAttribute('data-search', searchText);
+    row.appendChild(makeActionrowHead('GPIO', 'Action'));
     row.appendChild(pinPickerEl);
     row.appendChild(gesturesEl);
     row.appendChild(makeRowRemoveButton(row, roleLabel));
@@ -2452,7 +2490,7 @@
     var pin = data ? data.pin : null;
     var picker = makeSingleGpioOutPinPicker(prefix + '-pin', 'a button', pin, 'button').wrap;
     var actions = data ? actionsByFieldMap(BUTTON_GESTURE_SPECS, data) : { press: 'None' };
-    var gestures = buildGesturesBlock(prefix, BUTTON_GESTURE_SPECS, actions);
+    var gestures = buildGesturesBlock(prefix, 'button', actions);
     var row = makeControlRow('button', prefix, picker, gestures, 'this button', 'button gpio');
     // pull_up/debounce_time have no dedicated widget (not part of the
     // operator's column model) but must still round-trip rather than
@@ -2467,7 +2505,7 @@
     var pin = data ? data.pin : null;
     var picker = makeSingleGpioOutPinPicker(prefix + '-pin', 'a 2-way switch', pin, '2‑way switch').wrap;
     var actions = data ? actionsByFieldMap(SWITCH2_GESTURE_SPECS, data) : { on: 'None', off: 'None' };
-    var gestures = buildGesturesBlock(prefix, SWITCH2_GESTURE_SPECS, actions);
+    var gestures = buildGesturesBlock(prefix, 'switch2', actions);
     return makeControlRow('switch2', prefix, picker, gestures, 'this 2-way switch', 'two way switch gpio');
   }
 
@@ -2484,7 +2522,7 @@
       picker.appendChild(small);
     });
     var actions = data ? actionsByFieldMap(SWITCH3_GESTURE_SPECS, data) : { s0: 'None', s1: 'None', s2: 'None' };
-    var gestures = buildGesturesBlock(prefix, SWITCH3_GESTURE_SPECS, actions);
+    var gestures = buildGesturesBlock(prefix, 'switch3', actions);
     return makeControlRow('switch3', prefix, picker, gestures, 'this 3-way switch', 'three way switch gpio');
   }
 
@@ -2508,7 +2546,7 @@
       ccw: Object.prototype.hasOwnProperty.call(encoderActions, 'rotate_counterclockwise') ? encoderActions.rotate_counterclockwise : undefined
     } : { rpress: 'None' };
     Object.keys(actions).forEach(function(k){ if (actions[k] === undefined) delete actions[k]; });
-    var gestures = buildGesturesBlock(prefix, ROTARY_GESTURE_SPECS, actions);
+    var gestures = buildGesturesBlock(prefix, 'rotary', actions);
     return makeControlRow('rotary', prefix, picker, gestures, 'this rotary encoder', 'rotary encoder gpio clk dt');
   }
 
@@ -2536,6 +2574,147 @@
   });
   document.getElementById('addRotaryBtn').addEventListener('click', function(){
     appendControlRow(buildRotaryRow(null));
+    markControlsDirtyIfNeeded();
+  });
+
+  /* ---------- quad rotary encoders (input_peripherals.quad_rotary_controller)
+     -- same row model as the GPIO controls: an encoder picker on the left
+     (occupied encoders greyed out, confirm before remapping), a Turn row for
+     what rotating cycles, then the push button's gestures. Turning an
+     encoder dispatches inc_<setting>/dec_<setting> on cinepi_controller
+     (see i2c/quad_rotary_controller.py's _update_setting), so this list is
+     exactly the settings with an inc_/dec_ pair -- the four classics first,
+     then the rest. */
+  var ENCODER_TURN_SETTINGS = [
+    { value: 'iso', label: 'ISO' },
+    { value: 'shutter_a', label: 'Shutter angle' },
+    { value: 'fps', label: 'Frame rate' },
+    { value: 'wb', label: 'White balance' },
+    { value: 'resolution', label: 'Resolution' },
+    { value: 'zoom', label: 'Preview zoom' },
+    { value: 'shutter_a_nom', label: 'Nominal shutter angle' },
+    { value: 'hdr_threshold_low', label: 'HDR threshold low' },
+    { value: 'hdr_threshold_high', label: 'HDR threshold high' },
+    { value: 'hdr_blend', label: 'HDR blend' },
+    { value: 'hdr_gain_adder', label: 'HDR gain adder' }
+  ];
+  var ENCODER_INDICES = ['0', '1', '2', '3'];
+
+  function currentEncoderAssignments(excludeSelect){
+    var used = {};
+    document.querySelectorAll('.enc-select').forEach(function(sel){
+      if (sel === excludeSelect || sel.value === 'none' || !sel.value) return;
+      used[sel.value] = true;
+    });
+    return used;
+  }
+  function renderEncoderOptions(select){
+    var current = select.getAttribute('data-prev-value') || select.value || 'none';
+    var used = currentEncoderAssignments(select);
+    var html = '<option value="none"' + (current === 'none' ? ' selected' : '') + '>None</option>';
+    ENCODER_INDICES.forEach(function(idx){
+      var isTaken = !!used[idx] && idx !== current;
+      var label = 'Encoder ' + idx + (isTaken ? ' — in use' : '');
+      html += '<option value="' + idx + '"' + (isTaken ? ' disabled' : '') + (idx === current ? ' selected' : '') + '>' + label + '</option>';
+    });
+    select.innerHTML = html;
+  }
+  function refreshAllEncoderSelects(){ document.querySelectorAll('.enc-select').forEach(renderEncoderOptions); }
+  function initEncoderSelect(sel){
+    sel.setAttribute('data-prev-value', sel.getAttribute('data-initial') || 'none');
+    renderEncoderOptions(sel);
+    sel.addEventListener('change', function(){
+      var next = sel.value;
+      var prev = sel.getAttribute('data-prev-value');
+      var message = next === 'none'
+        ? 'Unassign this row from encoder ' + prev + '? It stops responding until you give it an encoder again.'
+        : 'Move this row to encoder ' + next + '?' + (prev !== 'none' ? ' Encoder ' + prev + ' will be freed up.' : '');
+      showConfirm(message, function(){
+        sel.setAttribute('data-prev-value', next);
+        refreshAllEncoderSelects();
+        var row = sel.closest('.actionrow');
+        if (row) row.classList.toggle('unassigned', next === 'none');
+        markControlsDirtyIfNeeded();
+        refreshDrawer();
+        showToast(next === 'none' ? 'Encoder row unassigned' : 'Moved to encoder ' + next);
+      }, function(){
+        sel.value = prev;
+      });
+    });
+  }
+
+  function buildEncoderRow(idx, data){
+    var prefix = nextControlPrefix();
+    var picker = document.createElement('div');
+    picker.className = 'pin-picker';
+    var sel = document.createElement('select');
+    sel.className = 'field-input enc-select';
+    sel.id = prefix + '-enc';
+    sel.setAttribute('data-initial', idx != null ? String(idx) : 'none');
+    sel.setAttribute('aria-label', 'Which encoder on the quad rotary board');
+    var small = document.createElement('small');
+    small.textContent = 'i²c encoder';
+    picker.appendChild(sel);
+    picker.appendChild(small);
+
+    var button = (data && data.button) || {};
+    var actions = data ? actionsByFieldMap(BUTTON_GESTURE_SPECS, button) : { press: 'None' };
+    var gestures = buildGesturesBlock(prefix, 'encoder', actions);
+
+    /* The Turn row leads the block: what rotating this encoder cycles. */
+    var turnRow = document.createElement('div');
+    turnRow.className = 'gesture';
+    var turnName = document.createElement('span');
+    turnName.className = 'g-name';
+    turnName.textContent = 'Turn';
+    var turnSel = document.createElement('select');
+    turnSel.className = 'field-input action-method';
+    turnSel.id = prefix + '-turn';
+    turnSel.setAttribute('aria-label', 'What turning this encoder cycles');
+    var noneOpt = document.createElement('option');
+    noneOpt.value = ''; noneOpt.textContent = 'Nothing';
+    turnSel.appendChild(noneOpt);
+    ENCODER_TURN_SETTINGS.forEach(function(s){
+      var opt = document.createElement('option');
+      opt.value = s.value; opt.textContent = s.label;
+      if (data && data.setting_name === s.value) opt.selected = true;
+      turnSel.appendChild(opt);
+    });
+    /* A setting_name this page doesn't list (typed by hand into the file)
+       must survive the round-trip, same rule as custom methods. */
+    if (data && data.setting_name && !ENCODER_TURN_SETTINGS.some(function(s){ return s.value === data.setting_name; })){
+      var custom = document.createElement('option');
+      custom.value = data.setting_name; custom.textContent = data.setting_name + ' (custom)'; custom.selected = true;
+      turnSel.appendChild(custom);
+    }
+    turnSel.addEventListener('change', function(){ markControlsDirtyIfNeeded(); refreshDrawer(); });
+    turnRow.appendChild(turnName);
+    turnRow.appendChild(turnSel);
+    var gestureList = gestures.querySelector('.gestures');
+    gestureList.insertBefore(turnRow, gestureList.firstChild);
+
+    var row = document.createElement('div');
+    row.className = 'actionrow';
+    row.setAttribute('data-control-type', 'encoder');
+    row.setAttribute('data-prefix', prefix);
+    row.setAttribute('data-search', 'quad rotary controller encoder i2c iso shutter fps wb turn');
+    row.appendChild(makeActionrowHead('Encoder', 'Action'));
+    row.appendChild(picker);
+    row.appendChild(gestures);
+    row.appendChild(makeRowRemoveButton(row, 'this encoder'));
+    return row;
+  }
+
+  function appendEncoderRow(rowEl){
+    document.getElementById('encodersList').appendChild(rowEl);
+    rowEl.querySelectorAll('.enc-select').forEach(initEncoderSelect);
+  }
+
+  document.getElementById('addEncoderBtn').addEventListener('click', function(){
+    var free = ENCODER_INDICES.filter(function(idx){ return !currentEncoderAssignments(null)[idx]; });
+    if (!free.length){ showToast('All four encoders are already configured'); return; }
+    appendEncoderRow(buildEncoderRow(free[0], null));
+    refreshAllEncoderSelects();
     markControlsDirtyIfNeeded();
   });
 
@@ -2588,15 +2767,18 @@
     };
   }
   function buildQuadRotaryState(){
-    return {
-      enabled: true,
-      encoders: {
-        "0": { setting_name: "iso", button: buildButtonLikeObject('act-qr0') },
-        "1": { setting_name: "shutter_a", button: buildButtonLikeObject('act-qr1') },
-        "2": { setting_name: "fps", button: buildButtonLikeObject('act-qr2') },
-        "3": { setting_name: "wb", button: buildButtonLikeObject('act-qr3') }
-      }
-    };
+    var encoders = {};
+    document.querySelectorAll('#encodersList [data-control-type="encoder"]').forEach(function(row){
+      var prefix = row.getAttribute('data-prefix');
+      var sel = document.getElementById(prefix + '-enc');
+      if (!sel || sel.value === 'none' || !sel.value) return;
+      var entry = {};
+      var turnSel = document.getElementById(prefix + '-turn');
+      if (turnSel && turnSel.value) entry.setting_name = turnSel.value;
+      entry.button = buildButtonLikeObject(prefix);
+      encoders[sel.value] = entry;
+    });
+    return { enabled: true, encoders: encoders };
   }
 
   function buildState(){
@@ -2802,7 +2984,10 @@
      (imx477) arrives. */
   var cfgLinkFreqMenus = {};
   function cfgSupportsLinkFreq(sensor){
-    return Object.prototype.hasOwnProperty.call(cfgLinkFreqMenus, sensor);
+    /* A menu with no options must count as unsupported: showing it would put
+       an empty, unpickable select on the page. */
+    var menu = cfgLinkFreqMenus[sensor];
+    return !!(menu && menu.options && menu.options.length);
   }
   function cfgLinkFreqDefaultFor(sensor){
     var menu = cfgLinkFreqMenus[sensor];
@@ -2855,10 +3040,13 @@
     var keeps = previous && menu.options.some(function(e){ return String(e.hz) === previous; });
     sel.value = keeps ? previous : String(menu.default_hz);
   }
-  /* Shown when the overclock is on -- that is when the higher rates buy
-     anything -- and also whenever a non-default rate is already configured,
-     even with the overclock off. A rate that is in force but invisible is
-     exactly the kind of hidden state that costs an afternoon. */
+  /* Shown for every sensor that has a menu at all, but pickable only while
+     the RP1 overclock above is on -- that is when the higher rates buy
+     anything. Greyed-out rather than hidden with the overclock off, so a
+     non-default rate that is still in force stays visible (a rate that is
+     in force but invisible is exactly the kind of hidden state that costs
+     an afternoon) and so the operator can see what enabling the overclock
+     unlocks. */
   function cfgSyncLinkFreqCards(){
     var rp1El = document.getElementById('cfg-rp1');
     var rp1 = rp1El && rp1El.getAttribute('aria-checked') === 'true';
@@ -2871,7 +3059,9 @@
       var defaultHz = cfgLinkFreqDefaultFor(sensor);
       var chosen = sel && sel.value ? Number(sel.value) : defaultHz;
       var nonDefault = defaultHz !== null && chosen !== defaultHz;
-      card.hidden = !cfgSupportsLinkFreq(sensor) || (!rp1 && !nonDefault);
+      card.hidden = !cfgSupportsLinkFreq(sensor);
+      card.classList.toggle('is-disabled', !rp1);
+      if (sel) sel.disabled = !rp1;
       if (warn) warn.hidden = rp1 || !nonDefault;
     });
   }
@@ -3214,14 +3404,6 @@
     slot.setAttribute('data-original-args', args);
   }
 
-  function populateButtonLike(prefix, obj){
-    if (!obj) return;
-    applyActionToSlot(document.getElementById(prefix + '-press'), obj.press_action);
-    [['single_click_action', 'single'], ['double_click_action', 'double'], ['triple_click_action', 'triple'], ['hold_action', 'hold']].forEach(function(pair){
-      if (obj[pair[0]] !== undefined) applyActionToSlot(document.getElementById(prefix + '-' + pair[1]), obj[pair[0]]);
-    });
-  }
-
   function populateHardwareControlsAndQuadRotary(settings){
     var hw = (settings && settings.hardware_controls) || {};
 
@@ -3234,9 +3416,12 @@
 
     var qr = (settings && settings.input_peripherals && settings.input_peripherals.quad_rotary_controller) || {};
     var enc = qr.encoders || {};
-    ['0', '1', '2', '3'].forEach(function(idx){
-      if (enc[idx] && enc[idx].button) populateButtonLike('act-qr' + idx, enc[idx].button);
+    var encList = document.getElementById('encodersList');
+    encList.innerHTML = '';
+    ENCODER_INDICES.forEach(function(idx){
+      if (enc[idx]) appendEncoderRow(buildEncoderRow(idx, enc[idx]));
     });
+    refreshAllEncoderSelects();
 
     populateGpioOut(settings);
   }
@@ -3247,6 +3432,11 @@
      defaults in config_loader.py) on every save regardless of what page the
      operator was actually editing. Adding a second tally/tone pin was
      impossible for the same reason: there was nowhere to put it. */
+  /* rec_tone.frequency_hz has no [data-path] widget (the per-row Hz fields
+     come and go with their rows), so it is carried here and written back in
+     applyGpioOutToState() on every save -- including when no tone pin
+     exists, so the key never vanishes from the file. */
+  var currentToneHz = 1000;
   function buildGpioOutRow(pin, method){
     var prefix = nextControlPrefix();
     var row = document.createElement('div');
@@ -3257,9 +3447,6 @@
     var picker = makeSingleGpioOutPinPicker(prefix + '-pin', 'a GPIO output', pin, 'output').wrap;
     var gesturesWrap = document.createElement('div');
     gesturesWrap.className = 'gestures-wrap';
-    var head = document.createElement('div');
-    head.className = 'gestures-head';
-    head.innerHTML = '<span>Trigger</span><span>Method</span>';
     var gestures = document.createElement('div');
     gestures.className = 'gestures';
     var g = document.createElement('div');
@@ -3267,6 +3454,8 @@
     var name = document.createElement('span');
     name.className = 'g-name';
     name.textContent = 'While rec';
+    var cell = document.createElement('span');
+    cell.className = 'action-picker';
     var methodSel = document.createElement('select');
     methodSel.className = 'field-input gpio-out-method';
     methodSel.id = prefix + '-method';
@@ -3277,12 +3466,43 @@
       if (v === method) opt.selected = true;
       methodSel.appendChild(opt);
     });
-    methodSel.addEventListener('change', markControlsDirtyIfNeeded);
+    /* The tone pitch lives right here in the row, visible only while the
+       command is "REC tone" -- one global frequency (rec_tone.frequency_hz),
+       so every tone row's field shows and edits the same value. */
+    var freqWrap = document.createElement('span');
+    freqWrap.className = 'action-args tone-freq-wrap';
+    freqWrap.appendChild(document.createTextNode('at'));
+    var freqInput = document.createElement('input');
+    freqInput.type = 'number';
+    freqInput.className = 'field-input tone-freq';
+    freqInput.setAttribute('aria-label', 'Tone frequency in hertz');
+    freqInput.value = String(currentToneHz);
+    freqWrap.appendChild(freqInput);
+    freqWrap.appendChild(document.createTextNode('Hz'));
+    freqWrap.hidden = method !== 'tone';
+    methodSel.addEventListener('change', function(){
+      freqWrap.hidden = methodSel.value !== 'tone';
+      markControlsDirtyIfNeeded();
+    });
+    freqInput.addEventListener('change', function(){
+      var v = parseFloat(freqInput.value);
+      if (!isNaN(v) && v > 0){
+        currentToneHz = v;
+        document.querySelectorAll('#gpioOutList .tone-freq').forEach(function(inp){
+          if (inp !== freqInput) inp.value = String(v);
+        });
+      } else {
+        freqInput.value = String(currentToneHz);
+      }
+      markControlsDirtyIfNeeded();
+    });
+    cell.appendChild(methodSel);
+    cell.appendChild(freqWrap);
     g.appendChild(name);
-    g.appendChild(methodSel);
+    g.appendChild(cell);
     gestures.appendChild(g);
-    gesturesWrap.appendChild(head);
     gesturesWrap.appendChild(gestures);
+    row.appendChild(makeActionrowHead('Output', 'Trigger'));
     row.appendChild(picker);
     row.appendChild(gesturesWrap);
     row.appendChild(makeRowRemoveButton(row, 'this output pin'));
@@ -3291,6 +3511,8 @@
 
   function populateGpioOut(settings){
     var out = (settings && settings.hardware_outputs) || {};
+    var loadedHz = out.rec_tone && parseFloat(out.rec_tone.frequency_hz);
+    if (loadedHz && !isNaN(loadedHz)) currentToneHz = loadedHz;
     var list = document.getElementById('gpioOutList');
     list.innerHTML = '';
     (out.rec_out_pin || []).forEach(function(pin){
@@ -3334,6 +3556,7 @@
     state.hardware_outputs.rec_out_pin = recOutPins;
     state.hardware_outputs.rec_tone = state.hardware_outputs.rec_tone || {};
     state.hardware_outputs.rec_tone.pin = tonePins;
+    state.hardware_outputs.rec_tone.frequency_hz = currentToneHz;
     var prevOutputs = lastLoadedSettings && lastLoadedSettings.hardware_outputs;
     if (prevOutputs && prevOutputs.pwm_pin !== undefined && state.hardware_outputs.pwm_pin === undefined){
       state.hardware_outputs.pwm_pin = prevOutputs.pwm_pin;
@@ -3857,7 +4080,7 @@
       var checked = t.getAttribute('aria-checked') === 'true';
       t.setAttribute('aria-checked', String(!checked));
       markConfigDirty();
-      /* The RP1 toggle governs whether the link-frequency menus are shown. */
+      /* The RP1 toggle governs whether the link-frequency menus are pickable. */
       cfgSyncLinkFreqCards();
       if (activeDrawerTab === 'config') refreshDrawer();
     });
@@ -4009,7 +4232,7 @@
   function buildActionMethodSelect(currentMethod){
     var sel = document.createElement('select');
     sel.className = 'field-input action-method';
-    sel.setAttribute('aria-label', 'Method');
+    sel.setAttribute('aria-label', 'Command');
     var none = document.createElement('option');
     none.value = ''; none.textContent = 'No action';
     if (!currentMethod) none.selected = true;
@@ -4118,7 +4341,7 @@
       input.type = 'text';
       input.className = 'field-input action-manual-input';
       input.value = raw;
-      input.setAttribute('aria-label', 'Method and arguments, typed manually');
+      input.setAttribute('aria-label', 'Command and arguments, typed manually');
       var backBtn = document.createElement('button');
       backBtn.type = 'button';
       backBtn.className = 'action-manual-toggle';
@@ -4151,16 +4374,8 @@
   });
 
   /* ---------- "+ Add" a second (or third…) gesture onto a button/switch/
-     encoder (B11.5) — event-delegated on #app so it covers quad-rotary's
-     static rows and every dynamically-added control row the same way,
-     with no separate wiring needed per row. .g-name (74px) then
-     .action-slot (1fr) is the DOM order the CSS grid tracks expect. */
-  var GESTURE_LABELS = {
-    press: 'Press', single: 'Single', double: 'Double', triple: 'Triple', hold: 'Hold',
-    on: 'On', off: 'Off',
-    s0: 'Position 1', s1: 'Position 2', s2: 'Position 3',
-    rpress: 'Button press', rhold: 'Button hold', cw: 'Rotate CW', ccw: 'Rotate CCW'
-  };
+     encoder (B11.5) — event-delegated on #app so it covers every control
+     row the same way, with no separate wiring needed per row. */
   document.getElementById('app').addEventListener('change', function(e){
     var sel = e.target.closest('.add-gesture-select');
     if (!sel || !sel.value) return;
@@ -4168,32 +4383,14 @@
     var prefix = sel.getAttribute('data-prefix');
     var addRow = sel.closest('.gesture-add');
     var gestures = addRow.closest('.gestures');
-    var newGesture = document.createElement('div');
-    newGesture.className = 'gesture';
-    var nameSpan = document.createElement('span');
-    nameSpan.className = 'g-name';
-    nameSpan.textContent = GESTURE_LABELS[gestureKey] || gestureKey;
-    var slotSpan = document.createElement('span');
-    slotSpan.className = 'action-slot';
-    slotSpan.id = prefix + '-' + gestureKey;
-    slotSpan.setAttribute('data-method', '');
-    slotSpan.setAttribute('data-original-method', '');
-    slotSpan.setAttribute('data-original-args', '');
-    newGesture.appendChild(nameSpan);
-    newGesture.appendChild(slotSpan);
-    if (sel.getAttribute('data-removable') !== 'false'){
-      addGestureRemoveButton(newGesture, slotSpan, GESTURE_LABELS[gestureKey] || gestureKey);
-    }
+    var specs = gestureSpecsFor(gestures);
+    var spec = specs.filter(function(s){ return s.key === gestureKey; })[0];
+    var newGesture = makeGestureRow(prefix, gestureKey, specs, undefined);
     gestures.insertBefore(newGesture, addRow);
-    renderActionSlot(slotSpan);
-    checkActionDirty(slotSpan);
-    markControlsDirtyIfNeeded(sel);
-    showToast((GESTURE_LABELS[gestureKey] || gestureKey) + ' action added');
-
-    var chosenOpt = sel.querySelector('option[value="' + gestureKey + '"]');
-    if (chosenOpt) chosenOpt.remove();
     sel.value = '';
-    if (sel.options.length <= 1) addRow.remove();
+    syncGestureOptions(gestures);
+    markControlsDirtyIfNeeded();
+    showToast((spec ? spec.label : gestureKey) + ' action added');
   });
 
   /* ---------- mobile rail ---------- */

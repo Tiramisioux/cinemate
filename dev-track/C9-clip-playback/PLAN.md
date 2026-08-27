@@ -159,9 +159,19 @@ Not started, and deliberately not designed in detail before G1/G2 report:
 
 ## Phase 4 — audio, and the path deliberately not taken
 
-Audio currently plays free-running: the WAV is served, drift against skipped video frames is not
-corrected, and the UI says so. Frame-accurate A/V sync needs a **proxy transcode** (ffmpeg →
-H.264 once per take, then a native `<video>`), which was evaluated and **rejected for now**:
+**Audio is not played.** The pane serves the take's WAV at
+`/api/playback/clips/<take>/audio`, but nothing in the UI consumes it — there is no `<audio>`
+element and no audio control. (The standalone mockup had a "Play audio" toggle; the integrated
+pane does not, and the docs must not promise one.) Deciding what audio should do is part of this
+phase, not something already answered.
+
+The obvious cheap option — play the WAV free-running alongside the frames — is honest only if the
+UI says the two are not locked together: skipped video frames do not move the audio clock, so the
+two drift apart under load, and the take's own audio start offset (`CINEPI_AUDIO_START_OFFSET_*`
+in the WAV's iXML) is a further ~1-frame correction nothing currently applies.
+
+Frame-accurate A/V sync needs a **proxy transcode** (ffmpeg → H.264 once per take, then a native
+`<video>`), which was evaluated and **rejected for now**:
 
 - the Pi 5 has no hardware H.264 encoder, so a software transcode of a UHD DNG sequence costs
   minutes per take;
@@ -179,7 +189,7 @@ feature, not a way to review between setups.
 | 2 | Refuse or degrade while recording? | Refuses (409, stage greys out). G4 decides whether that was necessary |
 | 3 | Default preview scale | 1/4. Set it from G1/G2 |
 | 4 | REVIEW button on the HUD? | Not built. Operator decision |
-| 5 | Audio in scope beyond free-running? | Only via Phase 4, which is deferred |
+| 5 | Audio — play it at all, and how? | **Not played.** The WAV endpoint exists; nothing consumes it. Free-running is cheap but must be labelled as unlocked; sync needs Phase 4's proxy path |
 
 ## Risks
 

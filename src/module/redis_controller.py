@@ -297,8 +297,20 @@ class RedisController:
         return as_bool(self.cache.get(ParameterKey.STORAGE_PREROLL_ACTIVE.value, "0"))
 
         # ────────────────────────── public helpers ───────────────────────
-    def set_value(self, key, value):
-        """Write key, publish, update cache, emit consolidated log output."""
+    def set_value(self, key, value, *, force=False):
+        """Write key, publish, update cache, emit consolidated log output.
+
+        force=True publishes even when the value is unchanged. The same-value
+        early-out below is deliberate storm protection for per-frame keys
+        (framecount, fps_actual, the recording timers) -- but it also means a
+        re-issued command can never reach cinepi-raw while Redis already holds
+        that value. That is wrong in exactly one situation: the camera has
+        been reconfigured behind Redis's back (a sensor-mode switch resets
+        exposure to VMAX), so sensor state and Redis state disagree and the
+        publish itself is the payload. The mode-switch re-apply path
+        (CinePiController._reapply_camera_controls) passes force=True;
+        every other caller keeps the dedup.
+        """
         if value is None:
             logging.warning(f"Attempted to set Redis key '{key}' to None. Ignoring.")
             return
@@ -321,7 +333,7 @@ class RedisController:
 
         # ─── Redis write / publish / cache ───────────────────────────
         with self.lock:
-            if str(self.cache.get(key_name)) == str(value):
+            if not force and str(self.cache.get(key_name)) == str(value):
                 return                             # unchanged – nothing to do
             self.r.set(key_name, value)
             self.r.publish("cp_controls", key_name)

@@ -4,6 +4,11 @@ visible-but-non-blocking fix: an un-enumerated key still gets written (a
 hard reject with no Pi available to verify every call site was judged too
 risky -- see the commit message), but it now logs a warning, once per key,
 so the drift is observable instead of silent.
+
+Also locks in set_value's force= escape hatch (LIVE-RESULTS-2026-08-27 §6):
+the same-value dedup must stay the default (publish-storm protection for
+per-frame keys), but force=True must punch through it so the mode-switch
+re-apply path can make cinepi-raw re-consume a value Redis already holds.
 """
 
 import sys
@@ -27,6 +32,7 @@ class _FakePubSub:
 class _FakeStrictRedis:
     def __init__(self, *args, **kwargs):
         self._store = {}
+        self.publishes = []
 
     def keys(self, pattern="*"):
         return []
@@ -38,7 +44,7 @@ class _FakeStrictRedis:
         self._store[key] = str(value).encode()
 
     def publish(self, channel, message):
-        pass
+        self.publishes.append((channel, message))
 
     def pubsub(self):
         return _FakePubSub()
@@ -95,6 +101,57 @@ class SetValueParameterKeyEnforcementTests(unittest.TestCase):
         # call site with no Pi available to verify every one of them.
         self.controller.set_value("totally_made_up_key", "42")
         self.assertEqual(self.controller.get_value("totally_made_up_key"), "42")
+
+
+class SetValueForceRepublishTests(unittest.TestCase):
+    """The publish IS the payload: cinepi-raw reprograms the live camera only
+    when a key lands on cp_controls, so after a sensor reconfigure resets the
+    camera behind Redis's back, a same-value re-issue must be publishable."""
+
+    def setUp(self):
+        self.controller = RedisController()
+
+    def _publishes_of(self, key):
+        return [m for (_c, m) in self.controller.r.publishes if m == key]
+
+    def test_same_value_write_is_deduped_by_default(self):
+        key = ParameterKey.SHUTTER_A.value
+        self.controller.set_value(key, "180")
+        self.controller.set_value(key, "180")
+        self.assertEqual(len(self._publishes_of(key)), 1)
+
+    def test_force_republishes_an_unchanged_value(self):
+        # The exact defect shape: Redis already says 180, the sensor no
+        # longer does. Without force the re-issue was silently swallowed.
+        key = ParameterKey.SHUTTER_A.value
+        self.controller.set_value(key, "180")
+        self.controller.set_value(key, "180", force=True)
+        self.assertEqual(len(self._publishes_of(key)), 2)
+        self.assertEqual(self.controller.get_value(key), "180")
+
+    def test_force_republish_notifies_local_subscribers_too(self):
+        # GUI surfaces listen on redis_parameter_changed; a forced re-apply
+        # must reach them the same way a normal write does.
+        key = ParameterKey.ISO.value
+        self.controller.set_value(key, "800")
+        seen = []
+        self.controller.redis_parameter_changed.subscribe(seen.append)
+        self.controller.set_value(key, "800", force=True)
+        self.assertEqual(seen, [{"key": key, "value": "800"}])
+
+    def test_force_still_writes_a_changed_value_normally(self):
+        key = ParameterKey.ISO.value
+        self.controller.set_value(key, "800")
+        self.controller.set_value(key, "1600", force=True)
+        self.assertEqual(self.controller.get_value(key), "1600")
+        self.assertEqual(len(self._publishes_of(key)), 2)
+
+    def test_force_does_not_bypass_the_none_guard(self):
+        key = ParameterKey.SHUTTER_A.value
+        self.controller.set_value(key, "180")
+        self.controller.set_value(key, None, force=True)
+        self.assertEqual(self.controller.get_value(key), "180")
+        self.assertEqual(len(self._publishes_of(key)), 1)
 
 
 if __name__ == "__main__":

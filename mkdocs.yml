@@ -19,6 +19,7 @@ nav:
   - Using the camera:
       - Simple GUI: simple-gui.md
       - Web GUI: web-gui.md
+      - Playback: playback.md
       - Web API: web-api.md
       - Lenses and image circles: image-circle.md
       - Audio recording: audio-recording.md

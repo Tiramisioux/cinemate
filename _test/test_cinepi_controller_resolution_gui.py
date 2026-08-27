@@ -357,6 +357,26 @@ class ResolutionGuiStateTests(unittest.TestCase):
             ],
         )
 
+    def test_reapply_skips_cg_rb_for_a_mono_sensor(self):
+        # cg_rb is a colour red/blue gain pair -- meaningless for a mono
+        # sensor, which has no CFA to white-balance. cinepi_multi.py already
+        # omits --awbgains from a mono launch line for the same reason; the
+        # mode-switch republish should skip it too, for symmetry.
+        controller = self.controller()
+        controller.current_sensor = "imx585_mono"
+        controller.redis_controller.values[ParameterKey.ISO.value] = "800"
+        controller.redis_controller.values[ParameterKey.CG_RB.value] = "2.5,1.8"
+
+        controller._reapply_camera_controls()
+
+        self.assertEqual(
+            controller.redis_controller.forced_sets,
+            [
+                (ParameterKey.SHUTTER_A.value, "180"),
+                (ParameterKey.ISO.value, "800"),
+            ],
+        )
+
     def test_reapply_skips_keys_redis_does_not_hold(self):
         # A key never seeded (fresh boot, sensor without colour gains yet)
         # must be skipped, not published as None/empty.

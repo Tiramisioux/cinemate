@@ -28,7 +28,9 @@ happened.
 
 | C8 | Web UI design review — the findings PR #160 did not fix | **Two fixes shipped** (PR [#160](https://github.com/Tiramisioux/cinemate/pull/160), merged `1675ca66`); remaining 8 findings not started, W1 needs an operator decision | `C8-web-ui-review/PLAN.md` (ledger entry incl. the W1 ADR question); harness + measurements in external `development/web-ui-review/` | `fix/web-ui-mobile` off `dev` (merged); remainder on `fix/web-ui-portrait` off `dev` (cinemate only, to be cut) |
 
-Next free step: **C9**.
+| C9 | Clip playback — review a recorded take in the web GUI, at the conform frame rate, decoded from the CinemaDNG on the card | **First increment written and desk-verified 2026-08-27** — fifth settings-editor tab, decoder + endpoints + 9 tests, verified through the real blueprint against real DNGs; **all 8 hardware gates unrun**, and G1 (decode throughput) + G2 (storage read bandwidth) gate everything after them | `C9-clip-playback/PLAN.md` (ledger entry incl. gates, measurements, the two silent bugs found by running it, and open decisions); feasibility study, design spec, harness and mockup in external `development/playback-pane/` | `feature/clip-playback` off `dev` @ `714ef7b4` (cinemate only, cut 2026-08-27, 2 commits, not pushed) |
+
+Next free step: **C10**.
 
 ## Adding a feature
 

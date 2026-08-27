@@ -346,7 +346,7 @@ Every take gets exactly one outcome class:
 lands off the request in either direction; only `missing_frame_count` counts frames the
 system considers absent.
 
-**Every log string a class or verdict turns on.** Step 9's grep must cover all of these, and
+**Every log string a class or verdict turns on.** Step 10's grep must cover all of these, and
 each one has exactly one consequence — a term with no consequence is uncollectable evidence,
 and a consequence with no term is an undecidable class. Record the verbatim line, with its
 line number and timestamp, for every hit.
@@ -370,8 +370,9 @@ line number and timestamp, for every hit.
 
 Any other hit is still recorded in the ledger, but it does not move a class on its own.
 `xrun` and `overrun` appear in no row on purpose: no xrun *event* emits either word (see
-"Known context") — the only line in the stack containing `xrun` is the helper-missing
-fallback warning in the last row.
+"Known context"). Exactly two emitted lines contain `xrun`, and both are rig faults rather
+than capture stalls — the SCHED_FIFO-grant failure (`…raise the rtprio ulimit for
+xrun-resistant capture`) and the helper-missing fallback in the last row.
 
 Audio verdict per take (independent of the outcome class above; a missing WAV never changes
 that class). **Both legs must be checked — a padded WAV has correct duration and lost
@@ -394,7 +395,7 @@ grep -Eo 'Inserted [0-9]+ silent frame\(s\) to cover a capture shortfall of [0-9
   | awk '{n++; s+=$(NF)} END {printf "silence_fills=%d total_inserted_s=%.4f\n", n+0, s+0}'
 ```
 
-The helper only fills shortfalls larger than a quarter ALSA period (~2.5 ms at 48 kHz), a
+The helper only fills shortfalls larger than a quarter ALSA period (~5.3 ms at 48 kHz), a
 threshold chosen so SCHED_FIFO scheduling jitter cannot trigger a spurious fill — so on a
 healthy rig the expected count is **zero**, and any nonzero count is a real capture stall. A
 single fill is capped at 5 s (`maxGapFrames = rate × 5`), so a stall longer than that also
@@ -426,12 +427,20 @@ against `ts`; the slope is the measured fps and `mean_frame_interval = 1 / slope
 numbers: the target-fps expectation, the fitted-fps expectation, the fitted fps itself, and
 the residual against `wav_duration`.
 
-State the fit's resolution alongside them. `ts` is whole seconds at a 2 s cadence, so the
-fitted rate is good to roughly ±0.03 % — about ±0.1 s of expected duration on a 5-minute take,
-±0.06 s on a 10-minute one. That is enough to attribute a multi-frame-period deviation to fps
-offset; it is **not** enough to move a take across the 0.5- or 1.0-frame-period boundary. If
-the residual falls inside that band, write "consistent with fps offset, at the fit's
-resolution floor" rather than a precise value.
+State the fit's resolution alongside them. `ts` is `date +%s.%N` — **sub-second**, and read in
+the same sampler iteration immediately before `framecount` — so over a 5-minute take (~150
+paired samples) the timestamp contributes only milliseconds of uncertainty; the fit's floor is
+set by `framecount`'s ±0.5-frame quantisation, not by the clock. That is well inside half a
+frame period at every fps this campaign uses, so **the fitted expected duration is admissible
+for the audio verdict itself**, not merely for attributing a deviation. Quote the fitted slope
+with its standard error and the residual against `wav_duration`; only when the residual is
+smaller than that standard error do you write "consistent with fps offset, at the fit's
+resolution floor" instead of a precise value.
+
+What the fit cannot do is resolve a stall shorter than the 2 s sampler cadence — use the
+padding lines for that. And if you ever meet a CSV whose `ts` is whole seconds, it was not
+written by this runbook's sampler: that fit is ±1 s ≈ 25 frame periods at 25 fps, voids every
+audio verdict derived from it, and the take must be re-run with the corrected sampler.
 
 **Audio deep dive (self-contained — there is no external method file).** On FAIL with a WAV
 present:
@@ -518,7 +527,10 @@ interventions table with before/after values.
   Turn it off: `set dynamic resolution 0` (exact command — `set dynamic_resolution_enabled`
   is not a command), then confirm `redis-cli GET dynamic_resolution_enabled` reads `0`.
 - **`set fps` snaps** unless free mode is on — see "Known context". `set fps free 1`, then
-  confirm from the log line `FPS Free Mode set to True` and from the `fps` readback. There is
+  confirm by grepping the log for the prefix **`FPS Free`** only — never the whole line — and
+  from the `fps` readback. The handler logs the raw argument, so it reads `set to 1`, not
+  `set to True`; and the wording differs by branch (`FPS Free Mode` on `dev`, `FPS Free
+  Stepping` once the free-stepping rename merges). There is
   **no Redis key for free mode**: `fps_free` is re-read from `settings.jsonc` at every
   controller start and never published, so a Redis check is impossible and a missed re-issue
   is silent.
@@ -552,10 +564,19 @@ the same guards by hand. For each selected mode:
    `rec ignored` in the log, followed by `Unable to start recording; frame-limited stop not
    scheduled.` Grep for both after every `rec`; if either appears, redo the wait and resend.
 4. Record the log offset: `LINES=$(wc -l < /tmp/cinemate_cli.log)`.
-5. Start the 0.6 thread snapshot **before** `rec`, from a second ssh — a 25-frame take is only
-   1.0–2.3 s of capture, and nothing is elevated or pinned when idle:
-   `for i in $(seq 1 60); do ps -eLo pid,tid,comm,rtprio,psr | grep -Ei '[c]inepi-audio|dng-'; echo ---; sleep 0.5; done`
-   Kill the loop after the flush.
+5. Start the 0.6 thread snapshot **before** `rec`, as a **backgrounded** command over a second
+   `pi_ssh.sh` connection writing to a file on the Pi — a foreground call would block and
+   finish before step 6 ever runs, and a 25-frame take is only 1.0–2.3 s of capture with
+   nothing elevated or pinned when idle:
+   ```
+   pi_ssh.sh 'nohup bash -c "for i in \$(seq 1 120); do date +%s.%N; ps -eLo pid,tid,comm,rtprio,psr | grep -Ei \"[c]inepi-audio|dng-\"; echo ---; sleep 0.5; done" > /home/pi/c1/threads_<mode>.txt 2>&1 & echo \$!'
+   ```
+   Note the printed PID, send `rec f 25` (step 6) within a few seconds, and after step 8's
+   flush stop it with `pi_ssh.sh 'kill <pid> 2>/dev/null; true'` — the loop is bounded at 60 s
+   and self-terminates, so the kill is a tidy-up, not a requirement. `scp` the file into the
+   archive and read 0.6's two checks off it. **Confirm at least two `---` blocks fall between
+   `is_recording` going 1 and 0**; if none do, re-run this step rather than scoring 0.6 from an
+   idle sample.
 6. `session-send "rec f 25"`. Confirm it was **accepted**: the lines added after the offset
    must show the `Received: rec f 25` echo and `Armed exact frame-limited stop:`, and
    `is_recording` must go to 1. No `Armed` line means the frame limit was never set — stop the
@@ -570,7 +591,15 @@ the same guards by hand. For each selected mode:
 8. Poll until `is_writing_buf` = 0 and `is_buffering` = 0, then record: actual DNG file size
    (`stat -c%s` on one mid-take DNG), WAV presence, and that the 25 DNGs are
    sequence-continuous. Read `buffer_size` for 0.7 **now** — it is valid for this mode only
-   after this take.
+   after this take — and record `MemAvailable` (`grep MemAvailable /proc/meminfo`) captured
+   immediately **before** this take's `rec`: 0.7's runway needs the memory state the pool was
+   sized from, and that moment is gone once the session moves on.
+
+   **Resolve the take directory before touching it**, exactly as Stage 1 step 9 does:
+   `TAKE_DIR=$(dirname "$(redis-cli GET last_dng_cam0)")`, then assert it is non-empty, is not
+   the literal string `None` (`dirname None` returns `.`), starts with `/media/RAW/CINEPI_`,
+   ends in `_cam0`, and `[ -d "$TAKE_DIR" ]`. Use `$TAKE_DIR` for the `stat -c%s`, the sequence
+   check, the WAV snippet and the delete. **If any assertion fails, delete nothing and report.**
 9. **Do not delete the take until this mode's 0.3, 0.6 and 0.7 rows are all in the ledger.**
    Then delete it — the named directory only, never a wildcard.
 
@@ -585,17 +614,37 @@ want to reconfirm sequence continuity.
 to a specific piece of hardware. The burst-versus-sustained gap is a property of the NAND, so
 the number below is uninterpretable without knowing which drive produced it.
 
-Sustained speed. Confirm at least 40 GB free, then:
-`dd if=/dev/zero of=/media/RAW/c1_speedtest bs=4M count=8192 oflag=direct conv=fsync status=progress`
-then delete the file. That is 32 GiB — about one Stage 1 take, and long enough to run out of
-the drive's pSLC write cache. Expect roughly 76 s at 450 MB/s, 172 s at 200 MB/s, 344 s at
-100 MB/s.
+Sustained speed. Confirm at least 40 GB free, then capture the progress stream to a file on
+the Pi (dd writes it to stderr, CR-separated):
 
-**Take the result from `status=progress`, not from dd's final average.** If the rate steps
-down partway through and stays down, that step is the pSLC cache exhausting: record the
-**trailing rate after the step** as sustained MB/s, and the pre-step rate separately as
-`burst MB/s @ NN GB`. If no step appears, record the final average and write "no cache step
-observed". Every downstream 0.85 × threshold uses the trailing number, never the burst one.
+```
+dd if=/dev/zero of=/media/RAW/c1_speedtest bs=4M count=8192 oflag=direct conv=fsync status=progress 2> /home/pi/c1/dd_progress.txt
+```
+
+That is 32 GiB — about one Stage 1 take, and long enough to run out of the drive's pSLC write
+cache. Expect roughly 76 s at 450 MB/s, 172 s at 200 MB/s, 344 s at 100 MB/s. **This one
+command can run for ~6 minutes: give the Bash call an explicit timeout of 600000 ms.** At the
+default 120 s it is killed mid-write and the delete below never runs — if that happens, before
+anything else run `pi_ssh.sh 'rm -f /media/RAW/c1_speedtest; df -B1 /media/RAW'` and confirm
+free space is back. A leftover 32 GiB file is enough to fail 0.5's free-space check for mode A.
+
+**dd's `status=progress` prints a *cumulative average*, not an instantaneous rate** — a
+running mean never "steps down", so you cannot read the trailing rate off it directly.
+Difference adjacent samples instead:
+
+```
+tr '\r' '\n' < /home/pi/c1/dd_progress.txt | awk '/copied/{b=$1+0; t=$(NF-1)+0; if(pt && t>pt) printf "%.1f GiB  inst %.0f MB/s\n", b/1073741824, (b-pb)/(t-pt)/1e6; pb=b; pt=t}'
+```
+
+Record the **last three instantaneous rates** as the trailing sustained MB/s (the number every
+downstream `0.85 ×` threshold uses) and the **first three** as `burst MB/s @ NN GB`. If the
+instantaneous rate never drops more than 15 % below the burst figure, write "no cache step
+observed" and still use the trailing instantaneous rate — **never dd's final average**.
+
+Run it **once**. Do not run it twice and keep the lower number: two short runs both sit inside
+the cache, and averaging them hides exactly the step this measurement exists to find. A single
+confirmation run after 5 minutes idle is optional; it should agree with the trailing figure,
+not with the average.
 
 Two caveats to record alongside it, because the campaign's feasibility maths leans on it: a
 short run of zeros lands entirely inside an SSD's SLC cache and overstates sustained speed
@@ -802,7 +851,8 @@ Per-take procedure (identical every time):
      sustains the *current* `fps_user` — and `set fps` runs the same substitution, so it can
      move the mode after you set it.
    - `set fps free 1`. This one is a controller flag, **not** a Redis key — confirm it from
-     the session-log line `FPS Free Mode set to True` and from the step 4 readback.
+     the session log — grep the prefix **`FPS Free`** only (it logs `set to 1`, and the wording
+     differs by branch) — and from the step 4 readback.
 3. Set the mode: `set resolution <n>` → verify the three `resolution_target_*` readbacks
    match the plan (renumbering gotcha — re-check every session).
 4. Set fps: `set fps <test fps>`, then **read `fps` back and confirm it equals the target
@@ -878,11 +928,14 @@ Per-take procedure (identical every time):
    **8a — the take really stopped.** The anchored region must show
    `Exact frame-limited stop reached: slot <x>/<N>; stopping recording.` **followed by**
    `Stopped recording`, **and** `redis-cli GET is_recording` must read `0`. A `Stopped
-   recording` with **no** preceding `Exact frame-limited stop reached` means a watchdog ended
-   the take: classify `AUTO-STOP-GUARD` and take the guard's name from the warning line
-   immediately above it — `RAM frame buffer NN% ≥ 90%! Stopping recording.` (write-backlog) or
-   `RAM NN.N% ≥ 80%! Stopping recording.` (system RAM). cinepi-raw's pool stop logs
-   `RAM pool exhausted` instead and leaves `memory_alert` untouched.
+   recording` with **no** preceding `Exact frame-limited stop reached` means the take did not
+   end on its frame limit — look for a guard warning immediately above it:
+   `RAM frame buffer NN% ≥ 90%! Stopping recording.` (write-backlog) or
+   `RAM NN.N% ≥ 80%! Stopping recording.` (system RAM). **Only with one of those lines present
+   is the take `AUTO-STOP-GUARD`; a `Stopped recording` with no guard line at all is
+   `ABORTED-OTHER`**, per the outcome-class table — do not infer a guard that left no trace.
+   cinepi-raw's pool stop logs `RAM pool exhausted — recording stopped` instead, leaves
+   `memory_alert` untouched, and never reaches `Stopped recording` — it presents as a hang.
 
    **8b — flush idle.** Poll until `is_writing_buf`, `is_buffering` **and** `buffer` all read
    0, twice in a row 2 s apart. All three: cinemate's own flush gate
@@ -938,11 +991,12 @@ Per-take procedure (identical every time):
       seconds and would silently hide exactly the mid-take failures this campaign exists to
       find. Copy it with
       `pi_expect.exp "$PI_PASSWORD" scp … pi@cinepi.local:/tmp/cinemate_cli.log <archive>/session-log.txt`.
-      **This must happen before the next `session-start` and before any `cinemate_dev.py
-      stop`** — both `rm -f /tmp/cinemate_cli.log`.
+      **Copy it before the next `session-start`, and before any `cinemate_dev.py stop` or
+      `session-stop`** — all three run `rm -f /tmp/cinemate_cli.log`, and the take's only
+      full record goes with it.
       Then grep the copied file and record every hit **with its line number**:
       ```
-      grep -Ein 'write.*fail|FAILED|Error writing to file|Capture read failed|WAV writer|silent frame|shortfall|drop|SYNC|memory|index gap|Missing frames|Frame count low|Sensor ran fast|Stopping recording|RAM pool exhausted|did not go idle' <archive>/session-log.txt
+      grep -Ein 'write.*fail|FAILED|Error writing to file|Capture read failed|WAV writer|silent frame|shortfall|drop|SYNC|memory|index gap|DNG index slot|Missing frames|Frame count low|Sensor ran fast|Stopping recording|RAM pool exhausted|did not go idle|helper not found|falling back to plain arecord|exited before capture actually started' <archive>/session-log.txt
       ```
       Match ASCII substrings only — the real warnings contain `≥` and `—`, which are fragile
       to type into a shell pattern. To place a hit inside the take, quote the nearest
@@ -1057,11 +1111,17 @@ were merged to `dev` from the Stage 1 review. If fixes were merged: update the P
 standard sync contract (operator-run or agent-run per their instruction), rebuild
 (`python3 ~/.claude/skills/cinemate-dev/scripts/cinemate_dev.py build-raw` if cinepi-raw
 changed), and record the new commits and the rebuild on the Stage 2 preconditions line in
-`RESULTS.md` — Stage 2 then doubles as the fix re-verification. `build-raw` runs
-`sudo meson install`, so it **replaces the installed binaries**, including
-`/usr/local/bin/cinepi-audio-capture`: after any rebuild, re-run 0.6's audio RT-scheduling
-check before the first Stage 2 take and record the result. A grant applied to the binary
-itself in Phase 0 does not survive a reinstall.
+`RESULTS.md` — Stage 2 then doubles as the fix re-verification.
+
+`build-raw` runs `sudo meson install` and replaces `/usr/local/bin/cinepi-audio-capture`, but
+**the RT grant is not on the binary** — it is the limits.d drop-in plus `audio` group
+membership (see 0.6), so a rebuild cannot revoke it. Do **not** attempt 0.6's `ps` check at
+idle before Stage 2: nothing is elevated when idle, so it reads as a failure on a healthy rig.
+Verify the grant on the **first Stage 2 take** from the session log alone — the anchored region
+must show `Capture thread elevated to SCHED_FIFO priority 80` and `Capture thread pinned to
+CPU 3 (of 4 available)`. Record that line on the Stage 2 preconditions line. If instead
+`Could not set SCHED_FIFO capture priority` appears, stop after that take, apply 0.6's limits.d
+remedy, and re-run the take under an `r1` id.
 
 Protocol = Stage 1's per-take procedure with:
 
@@ -1115,7 +1175,7 @@ paste-ready message pattern as Gate 1.
 - The plan table mirrors this ledger: whenever you change the **Status** line at the top of
   `RESULTS.md` (Phase 0 complete, STOP GATE 1, STOP GATE 2), edit the **State** cell of the
   **C1 row only** in `dev-track/README.md` to match, in the same commit — same
-  `git -C /Users/patrikeriksson/Documents/cinemate/cinemate` form as step 12:
+  `git -C /Users/patrikeriksson/Documents/cinemate/cinemate` form as step 13:
   `add dev-track/README.md dev-track/C1-longtake-stability/RESULTS.md`. That cell is
   overwritten in place — the append-only / strike-through rule above governs `RESULTS.md`,
   not the plan table. Leave every other row alone.

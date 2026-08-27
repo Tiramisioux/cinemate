@@ -71,17 +71,22 @@ the take (runbook "Known context").
 | Item | Value | Source |
 |---|---|---|
 | `/media/RAW` source / fstype | | `findmnt -no SOURCE,FSTYPE /media/RAW` |
-| Drive model | | `cat /sys/block/<dev>/device/model` |
-| Free bytes | | `df -B1 /media/RAW` |
-| dd run 1 MB/s | | `dd … bs=4M count=1024 oflag=direct conv=fsync` |
-| dd run 2 MB/s | | same |
-| dd run 3 MB/s (only if runs 1–2 differ > 25 %) | | same |
-| **Sustained MB/s used downstream** (lower of the runs) | | |
-| Runs differ > 25 %? (itself a finding) | | |
+| Drive model / capacity / % used | | `cat /sys/block/<dev>/device/model`, `df -h /media/RAW` |
+| Free bytes before dd (≥ 40 GB required) | | `df -B1 /media/RAW` |
+| burst MB/s @ NN GB (first three instantaneous samples) | | `dd … bs=4M count=8192 oflag=direct conv=fsync status=progress` |
+| **Trailing sustained MB/s — used downstream** (last three instantaneous samples) | | same run |
+| Cache step observed? (y/n, at what GB — "no cache step observed" if none) | | same run |
+| Optional confirmation run after 5 min idle | | same |
+| `c1_speedtest` deleted, free space restored? | | `rm -f`, `df -B1 /media/RAW` |
 
-Caveats recorded alongside the number (runbook 0.4): 4 GiB of zeros may sit inside an SSD's
-SLC cache and overstate sustained speed; `oflag=direct` bypasses the page cache while the real
-DNG writer does not. Treat the figure as an optimistic ceiling: —
+**Run the test once, at 32 GiB.** Do not run it twice and keep the lower number — runbook 0.4
+forbids it, and the number that matters is the trailing instantaneous rate, never dd's final
+cumulative average (which is a running mean and hides the pSLC step).
+
+Caveat to record alongside the figure: 32 GiB of zeros is about one Stage 1 take, long enough
+to exhaust the drive's pSLC cache; `oflag=direct` bypasses the Pi's page cache but **not** the
+drive's own, and the real DNG writer does not use `O_DIRECT`. Treat even the trailing figure as
+an optimistic ceiling: —
 
 ### 0.6 Audio preflight
 
@@ -115,19 +120,29 @@ prediction in 0.10 must cite.
 `buffer_size` is published once per encoder setup, at the first recorded frame — read it
 during or right after that mode's 0.3 validation take and say which take it came from.
 
-| Mode | MemAvailable at read | `buffer_size` (frames) | read from which take | runway_s = buffer_size / fps |
+| Mode | MemAvailable at read | `buffer_size` (frames) | read from which take | runway_s = 0.90 × buffer_size / fps |
 |---|---|---|---|---|
 | A | | | | |
 | B | | | | |
 | C | | | | |
+
+The 0.90 is cinemate's `BUFFER_LIMIT_PERCENT`: the write-backlog guard fires at 90 % of
+`buffer_size`, so this is an **upper bound** that the system-RAM (80 %) and encoder-pool guards
+can preempt (runbook 0.7).
 
 Any mode under ~2 s of runway (flag it in 0.10): —
 
 Idle temp: — · `get_throttled` at idle: — · not `0x0` ⇒ flag, under-voltage invalidates
 everything downstream.
 
-0.9 instrumentation: `command -v exiftool` → — · `df -h /tmp` filesystem → — · `/tmp` on tmpfs
-is a confound for buffer-pressure readings, note it here: —
+0.9 instrumentation: `command -v exiftool` → — · `command -v ffprobe` → — · analyzer `"tools"`
+block verbatim (`python3 /home/pi/c1/analyze_cinepi_media.py /media/RAW --json | head -8`)
+→ — · `df -h /tmp` filesystem → — · `/tmp` on tmpfs is a confound for buffer-pressure readings,
+note it here: — · sampler + analyzer present on the Pi (`ls -l /home/pi/c1/`) → — · Mac archive
+root created (`development/pi-test-takes/c1/`) → —
+
+A missing binary is tooling state, not a media defect, and gates no verdict — but it decides
+which analyzer fields are populated for the rest of the campaign, so record it verbatim.
 
 ### 0.10 Predictions (write BEFORE Stage 1 — Stage 1 rows only)
 
@@ -151,10 +166,12 @@ Config interventions log (each: what, why, when, how to reverse, re-verified?):
 ## Stage 1 — 5-minute takes
 
 One row per take. Class + audio verdict definitions: runbook "Outcome classes". Classes are
-`COMPLETE-CLEAN`, `COMPLETE-WITH-LOSS`, `AUTO-STOP-GUARD`, `ABORTED-OTHER` — for
-`AUTO-STOP-GUARD`, name the guard and quote its log line in the note.
+`COMPLETE-CLEAN`, `COMPLETE-OVERSHOOT`, `COMPLETE-WITH-LOSS`, `AUTO-STOP-GUARD`,
+`ABORTED-OTHER`. A `COMPLETE-OVERSHOOT` (DNG count above the request, otherwise clean) counts
+as **clean** in the Gate 1 summary and contributes **0** to `frames lost total` — never a
+negative number. For `AUTO-STOP-GUARD`, name the guard and quote its log line in the note.
 
-| Take | Mode | fps target | `set fps free 1`? | fps readback | res readback OK? | frames req | DNGs on disk | seq gaps (missing_indices / first–last idx) | missing_frame_count | warnings in log (hit count; verbatim in note) | class (name the guard if AUTO-STOP-GUARD) | WAV Δ (ms) | padding lines / total silence ms | audio | buffer max / shape | temp max (sampler CSV) | verdict vs prediction |
+| Take | Mode | fps target | pins re-issued? (fps free 1 / dyn-res GET = 0) | fps readback | res readback OK? | frames req | DNGs on disk | seq gaps (missing_indices / first–last idx) | missing_frame_count | warnings in log (hit count; verbatim in note) | class (name the guard if AUTO-STOP-GUARD) | WAV Δ (ms) | padding lines / total silence s (runbook's silence_fills one-liner prints seconds) | audio | buffer max / shape | temp max (sampler CSV) | verdict vs prediction |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | S1-C1 | | | | | | | | | | | | | | | | | |
 | S1-C2 | | | | | | | | | | | | | | | | | |
@@ -227,7 +244,7 @@ Predictions (written/re-confirmed after the Stage 1 review, before the first S2 
 | B × S2 | | | | | |
 | C × S2 | | | | | |
 
-| Take | Mode | fps target | `set fps free 1`? | fps readback | res readback OK? | frames req | DNGs on disk | seq gaps (missing_indices / first–last idx) | missing_frame_count | warnings in log (hit count; verbatim in note) | class (name the guard if AUTO-STOP-GUARD) | WAV Δ (ms) | padding lines / total silence ms | audio | buffer max / shape | temp max (sampler CSV) | verdict vs prediction |
+| Take | Mode | fps target | pins re-issued? (fps free 1 / dyn-res GET = 0) | fps readback | res readback OK? | frames req | DNGs on disk | seq gaps (missing_indices / first–last idx) | missing_frame_count | warnings in log (hit count; verbatim in note) | class (name the guard if AUTO-STOP-GUARD) | WAV Δ (ms) | padding lines / total silence s (runbook's silence_fills one-liner prints seconds) | audio | buffer max / shape | temp max (sampler CSV) | verdict vs prediction |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | S2-C1 | | | | | | | | | | | | | | | | | |
 | S2-C2 | | | | | | | | | | | | | | | | | |

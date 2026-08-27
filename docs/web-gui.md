@@ -44,19 +44,38 @@ ride up with it; that is the only movement.
 
 | Group | Controls |
 |---|---|
-| LIVE VALUES | HDR threshold low/high, HDR blend, HDR gain adder, zoom, nominal shutter angle |
+| EXPOSURE | ISO, nominal shutter angle, FPS, white balance |
+| CLEARHDR | HDR threshold low/high, HDR blend, HDR gain adder — **only on a sensor with ClearHDR modes** |
+| PREVIEW | Zoom |
 | MODES | ISO/shutter/FPS/combined/all locks, shutter-angle sync, FPS double, dynamic resolution, IR filter |
-| FREE STEPPING | Free stepping for ISO, shutter, FPS, WB and each of the four HDR knobs |
+| FREE STEPPING | Free stepping for ISO, shutter, FPS and WB, plus the four HDR knobs on a ClearHDR sensor |
 | SELECT | Anamorphic factor, HDMI preview source (dual-sensor rigs only) |
 | ACTIONS | `mount`, `toggle mount`, `storage preroll`, `set rtc time` |
 
 Notes:
 
-- The HDR knobs are the imx585 ClearHDR live controls. They only do something on a ClearHDR mode;
+- The CLEARHDR group is absent entirely on a sensor without ClearHDR modes (imx477, imx283 …).
+  On an imx585 it is present, but the knobs only do something while a ClearHDR mode is selected;
   see [clear-hdr.md](clear-hdr.md).
 - Anamorphic factor restarts the camera. Everything else in the drawer applies live.
 - Free stepping changes a parameter's `inc`/`dec` granularity, not its value: it swaps that
   parameter's step table in `settings.jsonc` for continuous stepping by its `free_increment`.
+- ISO, shutter angle, FPS and white balance are also in the top row as steppers. The sliders are
+  the same commands — use whichever suits the gesture.
+- A slider is one of two kinds, decided by what its command does with an arbitrary value:
+
+    | Kind | Controls | Behaviour |
+    |---|---|---|
+    | Continuous | ISO, zoom | The command clamps to a range, so any position on the track is reachable |
+    | Step table | Shutter angle, FPS, WB | The command snaps to a table, so the slider offers exactly that table's values and nothing else |
+
+    The step tables are live. Change the frame rate and the shutter slider re-grids to the new
+    flicker-free angles; change sensor mode and the FPS slider re-grids to the new ceiling; toggle a
+    free-stepping button and the affected slider swaps its preset table for a continuous grid.
+- A slider greys out and stops accepting input when its parameter is locked (`ISO LOCK`, `SHUTTER
+  LOCK`, `FPS LOCK`, `ALL LOCK`) — a locked parameter drops the write silently, so the row says so
+  rather than appearing to accept a value. The FPS slider also greys out while a resolution switch
+  is in flight, because that is the one setter that can block for seconds.
 - Each slider has a `↺` arrow that restores that control's startup value from `settings.jsonc`
   (`image_capture.hdr.*` for the HDR knobs, `hdmi_display.preview.default_zoom` for zoom, 180° for
   nominal shutter angle). It greys out when the value is already the default.

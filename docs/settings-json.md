@@ -223,7 +223,7 @@ Frame-rate conform target, flicker-free input, and sync tolerances.
 
 ## arrays
 
-One block per cycle-able camera parameter: ISO, shutter angle, frame rate, white balance, and the four ClearHDR live knobs. `steps` is the preset table Cinemate steps through; `free` switches to a continuous runtime range instead — for potentiometers, rotary encoders, CLI inc/dec commands, and the web GUI. `free_increment` sets the step size free mode counts in (bounds are fixed per parameter; only the increment is configurable).
+One block per cycle-able camera parameter: ISO, shutter angle, frame rate, white balance, and the four ClearHDR live knobs. `steps` is the preset table Cinemate steps through; `free` switches to a continuous runtime range instead — for potentiometers, rotary encoders, CLI inc/dec commands, and the web GUI. `free_increment` sets the step size free stepping counts in (bounds are fixed per parameter; only the increment is configurable).
 
 | parameter | free range | `free_increment` default |
 |---|---|---|
@@ -235,7 +235,7 @@ One block per cycle-able camera parameter: ISO, shutter angle, frame rate, white
 | `hdr_blend` | 0–8 | 1 |
 | `hdr_gain_adder` | 0–5 | 1 |
 
-`shutter_a` has one more field, `sync_increment` (default 0.1°): the granularity used only while [shutter-angle sync mode](cli-commands.md) (`set shutter a sync`) is on, tracking exposure time continuously across fps changes. It's independent of `free_increment` — the two used to share a single hardcoded 0.1° value, so toggling sync mode and toggling free mode looked identical; they're now separate knobs for two different jobs (sync mode's continuous exposure tracking vs. free mode's manual pot/encoder control).
+`shutter_a` has one more field, `sync_increment` (default 0.1°): the granularity used only while [shutter-angle sync mode](cli-commands.md) (`set shutter a sync`) is on, tracking exposure time continuously across fps changes. It's independent of `free_increment` — the two used to share a single hardcoded 0.1° value, so toggling sync mode and toggling free stepping looked identical; they're now separate knobs for two different jobs (sync mode's continuous exposure tracking vs. free stepping's manual pot/encoder control).
 
 ```jsonc
 "arrays": {

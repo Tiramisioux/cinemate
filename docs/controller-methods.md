@@ -10,7 +10,7 @@ CineMate exposes most of its runtime features through the `CinePiController` cla
 
 ## Exposure settings
 
-These methods adjust ISO, shutter angle and frame rate. Increment/decrement helpers step through the arrays defined in `settings.jsonc` unless free mode is active.
+These methods adjust ISO, shutter angle and frame rate. Increment/decrement helpers step through the arrays defined in `settings.jsonc` unless free stepping is active.
 
 - `set_iso(value)` – Set ISO to a specific value.
 - `inc_iso()` / `dec_iso()` – Step ISO up or down.
@@ -24,7 +24,7 @@ These methods adjust ISO, shutter angle and frame rate. Increment/decrement help
 ## White balance
 
 - `set_wb(kelvin=None, direction='next')` – Set white balance to a specific Kelvin temperature or cycle through the active WB step table if no value is given.
-- `inc_wb()` / `dec_wb()` – Move to the next or previous white balance step. In WB free mode this is 100 K per step.
+- `inc_wb()` / `dec_wb()` – Move to the next or previous white balance step. In WB free stepping this is 100 K per step.
 
 ## Resolution and preview
 
@@ -62,7 +62,7 @@ These helpers prevent accidental changes or keep shutter speed in sync with FPS:
 
 ## Free‑mode toggles
 
-When free mode is enabled, the preset arrays from `settings.jsonc` are ignored and you can dial any value supported by the sensor.
+When free stepping is enabled, the preset arrays from `settings.jsonc` are ignored and you can dial any value supported by the sensor.
 
 - `set_iso_free(value=None)`
 - `set_shutter_a_free(value=None)`

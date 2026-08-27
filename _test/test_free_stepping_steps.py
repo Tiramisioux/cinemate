@@ -1,6 +1,6 @@
-"""Coverage for parameters.free_mode_steps() and the CinePiController
+"""Coverage for parameters.free_stepping_steps() and the CinePiController
 _rebuild_*_steps methods that use it to expand a parameter's step table to
-a configurable-granularity continuous range once its free mode is on.
+a configurable-granularity continuous range once its free stepping is on.
 """
 
 import sys
@@ -26,26 +26,26 @@ from module.analog_controls import AnalogControls
 class FreeModeStepsTests(unittest.TestCase):
     def test_evenly_divisible_range(self):
         self.assertEqual(
-            parameters.free_mode_steps(100, 3200, 100),
+            parameters.free_stepping_steps(100, 3200, 100),
             list(range(100, 3201, 100)),
         )
 
     def test_always_includes_the_exact_max_even_when_increment_does_not_divide_evenly(self):
-        self.assertEqual(parameters.free_mode_steps(0, 10, 3), [0, 3, 6, 9, 10])
+        self.assertEqual(parameters.free_stepping_steps(0, 10, 3), [0, 3, 6, 9, 10])
 
     def test_fractional_increment(self):
-        self.assertEqual(parameters.free_mode_steps(1, 2, 0.5), [1, 1.5, 2])
+        self.assertEqual(parameters.free_stepping_steps(1, 2, 0.5), [1, 1.5, 2])
 
     def test_whole_number_results_are_returned_as_int_not_float(self):
-        steps = parameters.free_mode_steps(0, 5, 1)
+        steps = parameters.free_stepping_steps(0, 5, 1)
         self.assertTrue(all(isinstance(v, int) for v in steps))
 
     def test_zero_or_negative_increment_falls_back_to_one(self):
-        self.assertEqual(parameters.free_mode_steps(0, 3, 0), [0, 1, 2, 3])
-        self.assertEqual(parameters.free_mode_steps(0, 3, -5), [0, 1, 2, 3])
+        self.assertEqual(parameters.free_stepping_steps(0, 3, 0), [0, 1, 2, 3])
+        self.assertEqual(parameters.free_stepping_steps(0, 3, -5), [0, 1, 2, 3])
 
     def test_non_numeric_increment_falls_back_to_one(self):
-        self.assertEqual(parameters.free_mode_steps(0, 3, "not a number"), [0, 1, 2, 3])
+        self.assertEqual(parameters.free_stepping_steps(0, 3, "not a number"), [0, 1, 2, 3])
 
 
 def make_stub():
@@ -93,27 +93,27 @@ class RebuildStepsHonourFreeIncrementTests(unittest.TestCase):
         CinePiController._rebuild_iso_steps(stub)
         self.assertEqual(stub.iso_steps, [100, 200, 400])
 
-    def test_free_mode_uses_the_configured_increment(self):
+    def test_free_stepping_uses_the_configured_increment(self):
         stub = make_stub()
         stub.iso_free = True
         stub.iso_free_increment = 50
         CinePiController._rebuild_iso_steps(stub)
         self.assertEqual(stub.iso_steps, list(range(100, 3201, 50)))
 
-    def test_shutter_a_free_mode_uses_the_configured_increment(self):
+    def test_shutter_a_free_stepping_uses_the_configured_increment(self):
         stub = make_stub()
         stub.shutter_a_free = True
         CinePiController._rebuild_shutter_steps(stub)
         self.assertEqual(stub.shutter_a_steps, list(range(1, 361)))
 
-    def test_fps_free_mode_is_bounded_by_fps_max(self):
+    def test_fps_free_stepping_is_bounded_by_fps_max(self):
         stub = make_stub()
         stub.fps_free = True
         CinePiController._rebuild_fps_steps(stub)
         self.assertEqual(stub.fps_steps[-1], stub.fps_max)
         self.assertEqual(stub.fps_steps, list(range(1, stub.fps_max + 1)))
 
-    def test_wb_free_mode_uses_the_configured_increment(self):
+    def test_wb_free_stepping_uses_the_configured_increment(self):
         stub = make_stub()
         stub.wb_free = True
         CinePiController._rebuild_wb_steps(stub)
@@ -130,8 +130,8 @@ class RebuildStepsHonourFreeIncrementTests(unittest.TestCase):
         self.assertEqual(stub.hdr_blend_steps, [0, 4, 8])
         self.assertEqual(stub.hdr_gain_adder_steps, [0, 2, 5])
 
-    def test_hdr_knobs_free_mode_expand_to_the_full_hardware_range(self):
-        # free_mode_steps always includes the exact max, so this reaches the
+    def test_hdr_knobs_free_stepping_expand_to_the_full_hardware_range(self):
+        # free_stepping_steps always includes the exact max, so this reaches the
         # true hardware ceiling (4095) rather than stopping at 4080 the way
         # a plain range(0, 4096, 16) would.
         stub = make_stub()
@@ -147,7 +147,7 @@ class RebuildStepsHonourFreeIncrementTests(unittest.TestCase):
 
 
 class ShutterASyncGranularityTests(unittest.TestCase):
-    """sync mode (`set shutter a sync`) and free mode used to share one
+    """sync mode (`set shutter a sync`) and free stepping used to share one
     hardcoded 0.1 degree literal, so toggling either looked identical. They
     now read separate settings -- these lock in that sync mode keeps its own
     granularity regardless of what free_increment is set to."""
@@ -157,8 +157,8 @@ class ShutterASyncGranularityTests(unittest.TestCase):
         stub.shutter_a_free_increment = 1     # deliberately different...
         stub.shutter_a_sync_increment = 0.1   # ...from this, to tell them apart
         CinePiController.set_shutter_a_sync_mode(stub, 1)
-        self.assertEqual(stub.shutter_angle_steps, parameters.free_mode_steps(1, 360, 0.1))
-        self.assertNotEqual(stub.shutter_angle_steps, parameters.free_mode_steps(1, 360, 1))
+        self.assertEqual(stub.shutter_angle_steps, parameters.free_stepping_steps(1, 360, 0.1))
+        self.assertNotEqual(stub.shutter_angle_steps, parameters.free_stepping_steps(1, 360, 1))
 
     def test_sync_mode_off_falls_back_to_the_static_table(self):
         stub = make_stub()
@@ -183,16 +183,16 @@ def make_analog_controls_for_shutter_a(**controller_overrides):
 
 
 class AnalogControlsShutterAPrecedenceTests(unittest.TestCase):
-    def test_sync_mode_wins_over_free_mode_when_both_are_on(self):
+    def test_sync_mode_wins_over_free_stepping_when_both_are_on(self):
         ac = make_analog_controls_for_shutter_a(
             shutter_a_free=True, shutter_a_sync_mode=1,
             shutter_a_free_increment=1, shutter_a_sync_increment=0.1,
         )
-        self.assertEqual(ac._get_steps('shutter_a'), parameters.free_mode_steps(1, 360, 0.1))
+        self.assertEqual(ac._get_steps('shutter_a'), parameters.free_stepping_steps(1, 360, 0.1))
 
-    def test_free_mode_alone_uses_free_increment(self):
+    def test_free_stepping_alone_uses_free_increment(self):
         ac = make_analog_controls_for_shutter_a(shutter_a_free=True, shutter_a_free_increment=1)
-        self.assertEqual(ac._get_steps('shutter_a'), parameters.free_mode_steps(1, 360, 1))
+        self.assertEqual(ac._get_steps('shutter_a'), parameters.free_stepping_steps(1, 360, 1))
 
     def test_neither_free_nor_sync_returns_the_static_table(self):
         ac = make_analog_controls_for_shutter_a()

@@ -63,7 +63,7 @@ class AnalogControls(threading.Thread):
         self.wb_steps = wb_steps or []
         # HDR knob step tables are read live from the controller via
         # _get_steps() (see below) instead of cached here, so a settings.jsonc
-        # free_increment change or a live free-mode toggle takes effect
+        # free_increment change or a live free-stepping toggle takes effect
         # without restarting this thread.
 
         # Rolling buffers for filtering
@@ -148,7 +148,7 @@ class AnalogControls(threading.Thread):
         """
         Return the *current* legal step table for iso / shutter / fps / wb.
 
-        • honours the free-mode flags that the controller may toggle later  
+        • honours the free-stepping flags that the controller may toggle later  
         • honours shutter-sync rules for fps and shutter_a  
         • always uses the controller’s *live* tables – never the cached copies
         """
@@ -162,21 +162,21 @@ class AnalogControls(threading.Thread):
             # it's tracking exposure time continuously across fps changes,
             # not just offering free-roam manual control.
             if c.shutter_a_sync_mode == 1:
-                return parameters.free_mode_steps(1, 360, c.shutter_a_sync_increment)
+                return parameters.free_stepping_steps(1, 360, c.shutter_a_sync_increment)
             if c.shutter_a_free:
-                return parameters.free_mode_steps(1, 360, c.shutter_a_free_increment)
+                return parameters.free_stepping_steps(1, 360, c.shutter_a_free_increment)
             return c.shutter_a_steps_dynamic        # includes flicker-free angles
 
         if kind == 'fps':
             # NOTE: fps_max is set in CinePiController via int(get_fps_max()),
             # which truncates the raw sensor capability (e.g. 49.97 Hz) to 49.
-            # Thus, even in free mode, the range is 1..49, not up to 50.
+            # Thus, even in free stepping, the range is 1..49, not up to 50.
             if c.fps_free or c.shutter_a_sync_mode == 1:
-                return parameters.free_mode_steps(1, c.fps_max, c.fps_free_increment)
+                return parameters.free_stepping_steps(1, c.fps_max, c.fps_free_increment)
             return c.fps_steps                      # snapped list
 
         if kind == 'wb':
-            return c.wb_steps                       # free-mode handled in controller
+            return c.wb_steps                       # free-stepping handled in controller
 
         if kind in ('hdr_threshold_low', 'hdr_threshold_high', 'hdr_blend', 'hdr_gain_adder'):
             return getattr(c, f'{kind}_steps')      # already rebuilt by update_steps()
@@ -248,7 +248,7 @@ class AnalogControls(threading.Thread):
                     steps=self._get_steps('shutter_a')
                 )
 
-                # ── debounce: ignore sub-degree jitter, but only in sync / free mode
+                # ── debounce: ignore sub-degree jitter, but only in sync / free stepping
                 MIN_DEG_DELTA = (1.0 if self.cinepi_controller.shutter_a_sync_mode == 1
                                     or self.cinepi_controller.shutter_a_free
                                 else 0.1)

@@ -25,15 +25,18 @@ class FakeRedis:
             ParameterKey.IS_RECORDING.value: "0",
         }
         self.sets = []
+        self.forced_sets = []
 
     def get_value(self, key, default=None):
         key = key.value if isinstance(key, ParameterKey) else key
         return self.values.get(key, default)
 
-    def set_value(self, key, value):
+    def set_value(self, key, value, *, force=False):
         key = key.value if isinstance(key, ParameterKey) else key
         self.values[key] = value
         self.sets.append((key, value))
+        if force:
+            self.forced_sets.append((key, value))
 
 
 class FakeSensorDetect:
@@ -282,6 +285,65 @@ class ResolutionGuiStateTests(unittest.TestCase):
         self.assertEqual(complete_calls, [])  # not fired until the timer actually runs
         complete_fn()
         self.assertEqual(complete_calls, [1])
+
+    def test_switch_complete_force_republishes_camera_facing_keys(self):
+        # LIVE-RESULTS-2026-08-27 §6: a mode switch resets the sensor's
+        # exposure to VMAX while Redis keeps the old shutter_a, and the
+        # operator's re-issued identical value is swallowed by set_value's
+        # same-value dedup. Once the new stream is up, the camera-facing
+        # keys must be force-republished so cinepi-raw reprograms the sensor.
+        controller = self.controller()
+        controller.redis_controller.values[ParameterKey.ISO.value] = "800"
+        controller.redis_controller.values[ParameterKey.CG_RB.value] = "2.5,1.8"
+        resolution_info = controller.sensor_detect.res_modes[1]
+        controller._publish_resolution_target_state(1, resolution_info, switching=True)
+        controller._resolution_switching_timer = mock.Mock()
+
+        controller.handle_cinepi_raw_message(
+            "[2026-05-31 18:00:31.405] [event_loop] [info] Raw stream: 3856x2180 : 7712 : SRGGB16"
+        )
+
+        self.assertEqual(
+            controller.redis_controller.forced_sets,
+            [
+                (ParameterKey.SHUTTER_A.value, "180"),
+                (ParameterKey.ISO.value, "800"),
+                (ParameterKey.CG_RB.value, "2.5,1.8"),
+            ],
+        )
+
+    def test_timer_fallback_also_force_republishes_camera_facing_keys(self):
+        # The fallback path must re-apply too: if the raw-stream log line is
+        # never seen, the sensor was still reconfigured and still reset.
+        controller = self.controller()
+        controller.redis_controller.values[ParameterKey.ISO.value] = "800"
+        resolution_info = controller.sensor_detect.res_modes[1]
+        controller._publish_resolution_target_state(1, resolution_info, switching=True)
+
+        with mock.patch.object(cinepi_controller_module.threading, "Timer") as fake_timer_cls:
+            fake_timer_cls.return_value = mock.Mock()
+            controller._schedule_resolution_switch_complete(1, resolution_info)
+            complete_fn = fake_timer_cls.call_args.args[1]
+
+        self.assertEqual(controller.redis_controller.forced_sets, [])
+        complete_fn()
+        self.assertEqual(
+            controller.redis_controller.forced_sets,
+            [
+                (ParameterKey.SHUTTER_A.value, "180"),
+                (ParameterKey.ISO.value, "800"),
+            ],
+        )
+
+    def test_reapply_skips_keys_redis_does_not_hold(self):
+        # A key never seeded (fresh boot, sensor without colour gains yet)
+        # must be skipped, not published as None/empty.
+        controller = self.controller()
+        del controller.redis_controller.values[ParameterKey.SHUTTER_A.value]
+
+        controller._reapply_camera_controls()
+
+        self.assertEqual(controller.redis_controller.forced_sets, [])
 
     def test_nonmatching_raw_stream_log_does_not_clear_resolution_switching(self):
         controller = self.controller()

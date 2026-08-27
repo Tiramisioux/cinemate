@@ -33,17 +33,20 @@ RAW_STREAM_READY_RE = re.compile(r"\bRaw stream:\s*(\d+)x(\d+)\b", re.IGNORECASE
 
 # Keys cinepi-raw applies to the LIVE camera only when the key is published on
 # cp_controls (SetControls handlers in cinepi_controller.cpp): shutter_a ->
-# ExposureTime, iso -> AnalogueGain, cg_rb -> ColourGains. A camera
-# reconfigure resets those sensor controls while Redis keeps the operator's
-# values, so they must be re-published after every mode switch. zoom is
-# deliberately absent: cinepi-raw's zoom handler keeps its own last-value
-# dedup, so a same-value republish is dropped on that side regardless. The
-# ClearHDR knobs are also absent: cinepi-raw re-applies those itself when a
-# ClearHDR mode is selected.
+# ExposureTime, iso -> AnalogueGain, cg_rb -> ColourGains, zoom ->
+# ScalerCrop. A camera reconfigure resets those sensor/ISP controls while
+# Redis keeps the operator's values, so they must be re-published after every
+# mode switch. zoom requires the companion cinepi-raw fix (branch
+# fix/mode-switch-control-reapply): its handler dedups against the last
+# APPLIED zoom, and that baseline is now cleared on every camera restart so
+# this republish reprograms the crop instead of being dropped. The ClearHDR
+# knobs are absent: cinepi-raw re-applies those itself when a ClearHDR mode
+# is selected.
 CAMERA_CONTROL_REAPPLY_KEYS = (
     ParameterKey.SHUTTER_A,
     ParameterKey.ISO,
     ParameterKey.CG_RB,
+    ParameterKey.ZOOM,
 )
 
 

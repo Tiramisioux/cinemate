@@ -335,6 +335,24 @@ class ResolutionGuiStateTests(unittest.TestCase):
             ],
         )
 
+    def test_reapply_republishes_zoom_when_present(self):
+        # zoom joins the re-apply set now that cinepi-raw clears its
+        # last-applied-zoom dedup baseline on every camera restart: the
+        # restart resets the ISP's ScalerCrop to full frame, so the
+        # operator's zoom must be force-republished to reprogram the crop.
+        controller = self.controller()
+        controller.redis_controller.values[ParameterKey.ZOOM.value] = "2.0"
+
+        controller._reapply_camera_controls()
+
+        self.assertEqual(
+            controller.redis_controller.forced_sets,
+            [
+                (ParameterKey.SHUTTER_A.value, "180"),
+                (ParameterKey.ZOOM.value, "2.0"),
+            ],
+        )
+
     def test_reapply_skips_keys_redis_does_not_hold(self):
         # A key never seeded (fresh boot, sensor without colour gains yet)
         # must be skipped, not published as None/empty.

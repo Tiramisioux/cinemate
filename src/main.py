@@ -16,6 +16,7 @@ from module.config_loader import (
     auto_storage_preroll_enabled,
     clearhdr_startup_values,
     load_settings,
+    DEFAULT_CONFORM_FRAME_RATE,
     DEFAULT_SETTINGS_PATH,
 )
 from module.logger import configure_logging, log_directory
@@ -616,7 +617,8 @@ def start_hotspot(settings) -> None:
 
 def initialize_system(settings, pi_model="unknown"):
     """Initialize core system components."""
-    conf_rate = settings.get("settings", {}).get("conform_frame_rate", 24)
+    conf_rate = settings.get("settings", {}).get(
+        "conform_frame_rate", DEFAULT_CONFORM_FRAME_RATE)
     redis_controller = RedisController(conform_frame_rate=conf_rate)
     sensor_detect = SensorDetect(settings)
     ssd_monitor = SSDMonitor(redis_controller=redis_controller)

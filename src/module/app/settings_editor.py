@@ -28,6 +28,7 @@ from flask import (
 )
 
 from module.config_loader import (
+    DEFAULT_CONFORM_FRAME_RATE,
     SettingsLoadError,
     _apply_settings_defaults,
     load_settings,
@@ -488,10 +489,11 @@ def get_sensor_modes():
 
 @settings_editor_bp.route("/api/playback/clips", methods=["GET"])
 def get_playback_clips():
-    conform = 24
+    conform = DEFAULT_CONFORM_FRAME_RATE
     settings = current_app.config.get("SETTINGS") or {}
     try:
-        conform = int(settings.get("settings", {}).get("conform_frame_rate", 24))
+        conform = int(settings.get("settings", {}).get(
+            "conform_frame_rate", DEFAULT_CONFORM_FRAME_RATE))
     except (TypeError, ValueError):
         logger.debug("playback: unreadable conform_frame_rate, using %s", conform)
     return jsonify({"ok": True, "clips": playback.list_clips(),

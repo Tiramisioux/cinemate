@@ -16,6 +16,14 @@ ANSI_CYAN = "\033[1;36m"
 # it can still run when the rest of the stack cannot.
 DEFAULT_SETTINGS_PATH = "/home/pi/cinemate/settings.jsonc"
 
+# The conform frame rate used when settings.jsonc does not name one. Exported
+# because the same value was previously restated at four other call sites and
+# had already drifted from the shipped configs (F-251: schema and this loader
+# said 24, both shipped .jsonc files said 25, with no arbiter). Import it rather
+# than writing the number again; settings.schema.json carries a sixth copy that
+# cannot import, so _test/test_conform_frame_rate_default.py pins them together.
+DEFAULT_CONFORM_FRAME_RATE = 25
+
 # Public: a handful of call sites need the raw membership test (e.g. a CLI
 # parser that must reject an unrecognised value outright rather than fall
 # back to a default) instead of the as_bool() default-fallback shape below.
@@ -360,7 +368,7 @@ def _apply_settings_defaults(settings: dict) -> dict:
 
     # ── settings: frame-rate conform + flicker-free input + sync tuning ────
     settings_cfg = settings.setdefault("settings", {})
-    settings_cfg.setdefault("conform_frame_rate", 24)
+    settings_cfg.setdefault("conform_frame_rate", DEFAULT_CONFORM_FRAME_RATE)
     settings_cfg.setdefault("light_hz", [50, 60])
 
     tol_cfg = settings_cfg.setdefault("sync_tolerances", {})

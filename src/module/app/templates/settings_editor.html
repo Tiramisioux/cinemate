@@ -4302,7 +4302,7 @@
       .then(function(r){ return r.json(); })
       .then(function(res){
         if (!res || !res.ok) return;
-        pbConform = res.conform_frame_rate || 24;
+        pbConform = res.conform_frame_rate || 25;   /* config_loader.DEFAULT_CONFORM_FRAME_RATE */
         pbRenderToken = res.render_token || '0';
         pbEl('pbConformLabel').textContent = pbConform;
         pbClips = res.clips || [];

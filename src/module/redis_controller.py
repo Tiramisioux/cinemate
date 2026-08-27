@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging, threading, redis, psutil, time
 from enum import Enum
 import time, math
-from module.config_loader import as_bool
+from module.config_loader import DEFAULT_CONFORM_FRAME_RATE, as_bool
 
 # ───────────────────────── parameter keys ────────────────────────────
 class ParameterKey(Enum):
@@ -218,7 +218,8 @@ class Event:
 # ────────────────────────── main controller class ────────────────────
 class RedisController:
 
-    def __init__(self, host="localhost", port=6379, db=0, channel="cp_controls", conform_frame_rate: int = 24):
+    def __init__(self, host="localhost", port=6379, db=0, channel="cp_controls",
+                 conform_frame_rate: int = DEFAULT_CONFORM_FRAME_RATE):
         self.r      = redis.StrictRedis(host=host, port=port, db=db)
         self.ps     = self.r.pubsub(); self.ps.subscribe(channel)
         self.lock   = threading.Lock()

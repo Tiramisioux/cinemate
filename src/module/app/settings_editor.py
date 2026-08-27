@@ -21,6 +21,7 @@ from flask import (
     after_this_request,
     current_app,
     jsonify,
+    make_response,
     render_template,
     request,
     send_file,
@@ -33,7 +34,7 @@ from module.config_loader import (
     strip_jsonc,
     DEFAULT_SETTINGS_PATH,
 )
-from module.app import boot_config, raw_files
+from module.app import boot_config, playback, raw_files
 from module.jsonc_edit import apply_updates
 from module.redis_controller import ParameterKey
 from module.web_api_settings import web_api_settings
@@ -154,6 +155,24 @@ def _public_method_names(obj) -> set[str]:
         name for name, member in inspect.getmembers(obj)
         if not name.startswith("_") and callable(member)
     }
+
+
+def _is_recording() -> bool:
+    """True while a take is being written.
+
+    `is_recording` is the authoritative gate -- the `rec` key bounces during a
+    take. Treated as "not recording" when Redis is unreachable: this only gates
+    playback, and refusing to play because the status bus is down would be a
+    worse failure than allowing it.
+    """
+    redis_controller = current_app.config.get("REDIS_CONTROLLER")
+    if redis_controller is None:
+        return False
+    try:
+        return str(redis_controller.get_value(ParameterKey.IS_RECORDING.value)) == "1"
+    except Exception:
+        logger.debug("playback: could not read is_recording", exc_info=True)
+        return False
 
 
 @settings_editor_bp.route("/")
@@ -465,6 +484,64 @@ def get_sensor_modes():
         sensors[camera_name] = entries
 
     return jsonify({"ok": True, "sensors": sensors})
+
+
+@settings_editor_bp.route("/api/playback/clips", methods=["GET"])
+def get_playback_clips():
+    conform = 24
+    settings = current_app.config.get("SETTINGS") or {}
+    try:
+        conform = int(settings.get("settings", {}).get("conform_frame_rate", 24))
+    except (TypeError, ValueError):
+        logger.debug("playback: unreadable conform_frame_rate, using %s", conform)
+    return jsonify({"ok": True, "clips": playback.list_clips(),
+                    "conform_frame_rate": conform,
+                    "render_token": playback.RENDER_TOKEN,
+                    "recording": _is_recording()})
+
+
+@settings_editor_bp.route("/api/playback/clips/<name>/frame/<int:index>", methods=["GET"])
+def get_playback_frame(name, index):
+    # Playback loses to recording, always. Reading a take off the card while
+    # another is being written to it is the shape of the storage contention that
+    # has cost audio sync before, so the pane is refused rather than throttled.
+    if _is_recording():
+        return jsonify({"ok": False, "message": "Recording — playback held"}), 409
+
+    try:
+        scale = int(request.args.get("scale", 4))
+        quality = max(40, min(95, int(request.args.get("q", 80))))
+    except ValueError:
+        return jsonify({"ok": False, "message": "scale and q must be integers"}), 400
+    if scale not in (2, 4, 8, 16):
+        return jsonify({"ok": False, "message": "scale must be 2, 4, 8 or 16"}), 400
+    mono = request.args.get("mono") in ("1", "true", "yes")
+
+    try:
+        data, width, height = playback.frame_jpeg(
+            name, index, scale=scale, mono=mono, quality=quality)
+    except playback.Busy:
+        # Tell the client to drop this frame rather than wait for it; holding the
+        # clock is what keeps playback honest about its rate.
+        return jsonify({"ok": False, "message": "busy"}), 503
+    except playback.PlaybackError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 404
+
+    response = make_response(data)
+    response.headers["Content-Type"] = "image/jpeg"
+    response.headers["X-Frame-Size"] = f"{width}x{height}"
+    # A decoded frame is a pure function of (take, index, scale, mono, q) and
+    # takes are immutable once written, so this is safe to cache hard.
+    response.headers["Cache-Control"] = "private, max-age=3600, immutable"
+    return response
+
+
+@settings_editor_bp.route("/api/playback/clips/<name>/audio", methods=["GET"])
+def get_playback_audio(name):
+    path = playback.wav_path(name)
+    if path is None:
+        return jsonify({"ok": False, "message": "no audio for this take"}), 404
+    return send_file(path, mimetype="audio/wav", conditional=True)
 
 
 @settings_editor_bp.route("/api/raw/storage", methods=["GET"])

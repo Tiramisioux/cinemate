@@ -975,6 +975,79 @@
 
   #app.skin-hud .rail a.active{ background: var(--accent-soft); color: var(--accent); }
   #app.skin-hud .rail-title{ color: #6b6b6b; }
+
+  /* ---------- playback pane ----------
+     The clip HUD deliberately borrows template.html's own values (label grey
+     136, value 249, box grey 136, DROP purple 120/40/180) rather than the app
+     shell's tokens: the point is that reading a recorded take looks like
+     reading the live camera. Keep these in step with simple_gui's colours. */
+  .takestrip{ display:flex; gap:10px; overflow-x:auto; padding-bottom:10px; scrollbar-width:thin; min-width:0; }
+  .take{ flex:0 0 176px; width:176px; min-width:0; overflow:hidden; border:1px solid var(--line);
+         background: var(--panel); cursor:pointer; text-align:left; padding:0; color:inherit; font:inherit; }
+  .take:hover{ border-color: var(--muted); }
+  .take[aria-current="true"]{ border-color: var(--ok); box-shadow: inset 0 0 0 1px var(--ok); }
+  .take:focus-visible{ outline:none; box-shadow: var(--focus); }
+  .take-thumb{ width:100%; aspect-ratio:16/9; object-fit:cover; display:block; background:#000;
+               border-bottom:1px solid var(--line); }
+  .take-body{ padding:8px 10px; min-width:0; }
+  .take-name{ font-family: ui-monospace, monospace; font-size:11px; font-weight:600;
+              overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .take-meta{ font-size:11px; color: var(--muted); margin-top:3px; }
+  .take-badges{ display:flex; gap:4px; margin-top:6px; flex-wrap:wrap; }
+
+  .pb-stage{ position:relative; background:#000; border:2px solid rgb(249,249,249);
+             aspect-ratio:16/9; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+  .pb-stage img{ width:100%; height:100%; object-fit:contain; display:block; }
+  .pb-stage.is-locked img{ opacity:.25; filter:grayscale(1); }
+  .pb-overlay{ position:absolute; inset:0; pointer-events:none; padding:10px 12px; }
+  .pb-ov-row{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .pb-ov-name{ font-size:11px; color:rgb(249,249,249); background:rgba(0,0,0,.55); padding:3px 7px;
+               max-width:70%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pb-ov-tc{ font-size:13px; font-variant-numeric: tabular-nums; color:rgb(249,249,249);
+             background:rgba(0,0,0,.55); padding:3px 7px; }
+  .pb-lock{ position:absolute; inset:0; display:none; flex-direction:column; align-items:center;
+            justify-content:center; gap:10px; background:rgba(0,0,0,.6); text-align:center; padding:20px; }
+  .pb-stage.is-locked .pb-lock{ display:flex; }
+  .pb-lock-title{ font-weight:700; font-size:15px; letter-spacing:.06em; text-transform:uppercase; color: var(--danger); }
+  .pb-lock-body{ font-size:12.5px; color:rgb(249,249,249); max-width:44ch; }
+
+  .pb-scrubwrap{ margin-top:10px; position:relative; }
+  .pb-filmstrip{ display:flex; height:38px; overflow:hidden; border:1px solid var(--line); background:#000; }
+  .pb-filmstrip img{ height:100%; width:auto; flex:1 1 0; object-fit:cover; min-width:0; opacity:.55; }
+  .pb-scrub{ position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
+  .pb-playhead{ position:absolute; top:0; bottom:0; width:2px; background:rgb(249,249,249);
+                box-shadow:0 0 0 1px rgba(0,0,0,.8); pointer-events:none; }
+
+  .pb-transport{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .pb-count{ font-size:15px; font-variant-numeric: tabular-nums; }
+  .pb-count .of{ color: var(--muted); font-size:12.5px; }
+
+  .pb-hud{ display:flex; flex-wrap:wrap; gap:22px; align-items:flex-start; border:1px solid var(--line);
+           background: var(--panel); padding:14px 16px; }
+  .pb-hud-item{ display:flex; flex-direction:column; gap:2px; }
+  .pb-hud-label{ font-weight:400; font-size:11px; color:rgb(136,136,136); text-transform:uppercase; letter-spacing:.06em; }
+  .pb-hud-value{ font-weight:700; font-size:20px; line-height:1.05; color:rgb(249,249,249); font-variant-numeric: tabular-nums; }
+  .pb-hud-boxes{ display:flex; gap:6px; align-items:center; margin-left:auto; }
+  .pb-box{ width:46px; height:30px; background:rgb(136,136,136); color:#000; font-weight:700; font-size:15px;
+           display:flex; align-items:center; justify-content:center; }
+  .pb-box.badge{ font-size:12px; background:rgb(205,205,205); }
+  .pb-box.drop{ background:rgb(120,40,180); color:#fff; }
+  .pb-box.off{ background:transparent; color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
+
+  .pb-rate{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; border:1px solid var(--line);
+            border-top:0; background: var(--panel); padding:12px 16px; }
+  .pb-rate-item{ display:flex; flex-direction:column; gap:1px; min-width:96px; }
+  .pb-rate-k{ font-weight:400; font-size:10.5px; color:rgb(136,136,136); text-transform:uppercase; letter-spacing:.08em; }
+  .pb-rate-v{ font-family: ui-monospace, monospace; font-size:14px; font-variant-numeric: tabular-nums; }
+  .pb-rate-v.ok{ color: var(--ok); }
+  .pb-rate-v.warn{ color: var(--restart); }
+  .pb-rate-v.bad{ color: rgb(120,40,180); font-weight:700; }
+
+  @media (max-width: 560px){
+    .pb-hud{ gap:14px; }
+    .pb-hud-value{ font-size:17px; }
+    .pb-hud-boxes{ margin-left:0; width:100%; }
+  }
 </style>
 
 <div class="app skin-hud" id="app">
@@ -1051,6 +1124,10 @@
       <div class="rail-title eyebrow">RAW files</div>
       <p class="rail-blurb">Everything on the active storage device — browse, sort and pull takes off over Wi‑Fi. Nothing here needs Cinemate to restart.</p>
     </div>
+    <div class="rail-group" data-page="playback">
+      <div class="rail-title eyebrow">Playback</div>
+      <p class="rail-blurb">Review takes off the card at the conform frame rate. Reads only — playback is held while a take is recording, so it can never cost you one.</p>
+    </div>
     <div class="rail-group" data-page="live">
       <div class="rail-title eyebrow">Live view</div>
       <p class="rail-blurb">The shooting screen — image, ISO/shutter/fps/WB, and everything <span class="mono">simple_gui.py</span> already draws on the HDMI overlay, mirrored to the browser.</p>
@@ -1062,11 +1139,13 @@
       <button type="button" data-page-tab="config" role="tab">config.txt<span class="tab-hint">boot &amp; sensors</span></button>
       <button type="button" data-page-tab="settings" role="tab" class="active" aria-selected="true">settings.jsonc<span class="tab-hint">cameras, audio, controls</span></button>
       <button type="button" data-page-tab="raw" role="tab">RAW files<span class="tab-hint">browse &amp; download</span></button>
+      <button type="button" data-page-tab="playback" role="tab">Playback<span class="tab-hint">review takes</span></button>
       <button type="button" data-page-tab="live" role="tab">Live view<span class="tab-hint">shoot now</span></button>
     </div>
     <p class="lede" data-page-lede="config" hidden><strong>This edits <code class="mono">config.txt</code> on the boot partition</strong> — sensor overlays, hardware buses, the RP1 overclock. It's a different file from Cinemate's own settings, and every change here needs a reboot, not just a restart.</p>
     <p class="lede" data-page-lede="settings"><strong>This edits <code class="mono">settings.jsonc</code> on the camera</strong> — every field below is one line in that file. Change something, the file preview updates live, and nothing touches the SD card until you save. Restarting Cinemate applies it.</p>
     <p class="lede" data-page-lede="raw" hidden><strong>Browse what's on the active storage device</strong> and pull takes off over Wi‑Fi — no card swap, no file to save, nothing to restart.</p>
+    <p class="lede" data-page-lede="playback" hidden><strong>Watch a take back on the camera</strong> — frames are decoded from the CinemaDNG on the card as you play, so nothing is transcoded and nothing is written back. Playback runs at the conform frame rate, so a take shot faster than the conform reads as slow motion, exactly as it will on the timeline.</p>
     <p class="lede" data-page-lede="live" hidden><strong>The shooting screen</strong> — the same image and readouts <span class="mono">simple_gui.py</span> already draws on the HDMI overlay, mirrored to the browser so you can shoot from off the rig.</p>
 
     <!-- WELCOME -->
@@ -2064,6 +2143,100 @@
           <button class="btn btn-primary" id="bulkDownload">Download selected</button>
           <button class="btn btn-danger-outline" id="bulkDelete">Delete selected</button>
         </span>
+      </div>
+    </section>
+
+    <!-- PLAYBACK -->
+    <section class="group" id="playback" data-page="playback">
+      <header class="group-head">
+        <h2>Playback</h2>
+        <p class="group-sub">Frames are decoded from the CinemaDNG as you play — this is a review preview for framing, focus and motion, not a grade.</p>
+      </header>
+
+      <p class="eyebrow" style="margin-top:0">Takes on card</p>
+      <div class="takestrip" id="pbTakeStrip"></div>
+      <p class="card-help" id="pbTakeFooter"></p>
+
+      <div class="pb-stage" id="pbStage">
+        <img id="pbFrame" alt="Current frame">
+        <div class="pb-overlay">
+          <div class="pb-ov-row">
+            <span class="pb-ov-name mono" id="pbName">—</span>
+            <span class="pb-ov-tc mono" id="pbTc">00:00:00:00</span>
+          </div>
+        </div>
+        <div class="pb-lock">
+          <span class="pb-lock-title">Playback held — recording</span>
+          <span class="pb-lock-body">Reading the card while a take is being written to it risks audio xruns and dropped frames. Playback resumes when recording stops.</span>
+        </div>
+      </div>
+
+      <div class="pb-scrubwrap">
+        <div class="pb-filmstrip" id="pbFilmstrip"></div>
+        <div class="pb-playhead" id="pbPlayhead" style="left:0%"></div>
+        <input class="pb-scrub" id="pbScrub" type="range" min="0" max="0" value="0" step="1" aria-label="Scrub through take">
+      </div>
+
+      <div class="pb-transport">
+        <button class="icon-action" id="pbStart" title="First frame" aria-label="First frame"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg></button>
+        <button class="icon-action" id="pbPrev" title="Previous frame" aria-label="Previous frame"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <button class="btn btn-primary" id="pbPlay" style="min-width:104px;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="pbPlayIcon"><polygon points="5 3 19 12 5 21 5 3"/></svg><span id="pbPlayLabel">PLAY</span></button>
+        <button class="icon-action" id="pbNext" title="Next frame" aria-label="Next frame"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+        <button class="icon-action" id="pbEnd" title="Last frame" aria-label="Last frame"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg></button>
+        <button class="icon-action" id="pbLoop" title="Loop" aria-label="Loop" aria-pressed="false"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
+        <span style="flex:1"></span>
+        <span class="pb-count mono"><span id="pbFrameNo">0</span><span class="of" id="pbFrameTotal"> / 0</span></span>
+      </div>
+
+      <p class="eyebrow">Take metadata — read from the DNG, not from live state</p>
+      <div class="pb-hud">
+        <div class="pb-hud-item"><span class="pb-hud-label">FPS</span><span class="pb-hud-value" id="pbMetaFps">—</span></div>
+        <div class="pb-hud-item"><span class="pb-hud-label">Resolution</span><span class="pb-hud-value" id="pbMetaRes">—</span></div>
+        <div class="pb-hud-item"><span class="pb-hud-label">Depth</span><span class="pb-hud-value" id="pbMetaDepth">—</span></div>
+        <div class="pb-hud-item"><span class="pb-hud-label">Sensor</span><span class="pb-hud-value" id="pbMetaSensor">—</span></div>
+        <div class="pb-hud-boxes" id="pbMetaBoxes"></div>
+      </div>
+      <div class="pb-rate">
+        <div class="pb-rate-item"><span class="pb-rate-k">Recorded</span><span class="pb-rate-v" id="pbRateRec">—</span></div>
+        <div class="pb-rate-item"><span class="pb-rate-k">Conform</span><span class="pb-rate-v" id="pbRateConform">—</span></div>
+        <div class="pb-rate-item"><span class="pb-rate-k">Playing at</span><span class="pb-rate-v" id="pbRateSpeed">—</span></div>
+        <div class="pb-rate-item"><span class="pb-rate-k">Achieved</span><span class="pb-rate-v" id="pbRateActual">—</span></div>
+        <div class="pb-rate-item"><span class="pb-rate-k">Frames skipped</span><span class="pb-rate-v" id="pbRateSkipped">0</span></div>
+      </div>
+      <div class="note" style="margin-top:14px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <span><strong>Achieved rate is measured, not assumed.</strong> The player holds the clock and skips frames the camera could not decode in time, and shows the count — rather than letting the take quietly run slow.</span>
+      </div>
+
+      <p class="eyebrow">Playback settings</p>
+      <div class="cards">
+        <div class="card" data-search="conform frame rate playback speed slow motion">
+          <div class="card-main">
+            <div class="card-label">Use conform frame rate <span class="mono" id="pbConformLabel">—</span></div>
+            <div class="card-help">Plays every take on the project's conform rate, from <span class="mono">settings.conform_frame_rate</span>. A take shot faster than the conform rate plays as slow motion — the same speed it will run on the timeline. Off plays each take at the rate it was shot.</div>
+          </div>
+          <div class="card-control"><button class="toggle" role="switch" aria-checked="true" id="pbToggleConform"></button></div>
+        </div>
+        <div class="card" data-search="preview scale resolution decode quality">
+          <div class="card-main">
+            <div class="card-label">Preview scale</div>
+            <div class="card-help">Decode cost and card read bandwidth both fall with scale. A half is the finest a Bayer cell allows without interpolating.</div>
+          </div>
+          <div class="card-control">
+            <select class="field-input" id="pbScale">
+              <option value="2">1/2</option>
+              <option value="4" selected>1/4</option>
+              <option value="8">1/8</option>
+            </select>
+          </div>
+        </div>
+        <div class="card" data-search="monochrome mono sensor colour color">
+          <div class="card-main">
+            <div class="card-label">Monochrome sensor</div>
+            <div class="card-help">cinepi-raw tags every frame with a colour filter array even on a mono sensor, so nothing on the card distinguishes them. Set it per take.</div>
+          </div>
+          <div class="card-control"><button class="toggle" role="switch" aria-checked="false" id="pbToggleMono"></button></div>
+        </div>
       </div>
     </section>
 
@@ -4095,10 +4268,279 @@
     if (names.length > 1) showToast('Downloading ' + names.length + ' takes one at a time…');
   });
 
+  /* ---------- playback pane ----------
+     Frames come from /api/playback/clips/<take>/frame/<i>, decoded on the
+     camera. Two rules drive the shape of everything below:
+
+     1. Playback is paced against the FRAME clock, not the display refresh:
+        each tick works out which frame is due by wall clock and sleeps until
+        the next falls due. That is what makes 25 fps play as 25 fps on a 60 Hz
+        screen instead of beating against it.
+     2. Under load the clock wins and frames are skipped -- and the skip count
+        is shown. A take quietly running at 18 fps while the UI says 25 is the
+        "plausible wrong number" this project's own rules forbid. */
+  var pbClips = [], pbClip = null, pbConform = 24, pbRenderToken = '0';
+  var pbState = { i:0, playing:false, loop:false, conform:true, mono:false, scale:4,
+                  skipped:0, timer:null, t0:0, startFrame:0, windowAt:0, shown:0 };
+
+  function pbEl(id){ return document.getElementById(id); }
+  function pbFrameUrl(name, i, scale){
+    /* v= is a cache key, not a parameter the camera reads: frames are served
+       immutable, so the token is what stops a browser serving frames rendered
+       by a decoder that has since been updated. */
+    return '/settings-editor/api/playback/clips/' + encodeURIComponent(name) +
+           '/frame/' + i + '?scale=' + scale + (pbState.mono ? '&mono=1' : '') +
+           '&v=' + pbRenderToken;
+  }
+  function pbRate(){
+    if (!pbClip || !pbClip.fps) return pbConform;
+    return pbState.conform ? pbConform : pbClip.fps;
+  }
+
+  function refreshPlaybackPane(){
+    fetch('/settings-editor/api/playback/clips')
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res || !res.ok) return;
+        pbConform = res.conform_frame_rate || 24;
+        pbRenderToken = res.render_token || '0';
+        pbEl('pbConformLabel').textContent = pbConform;
+        pbClips = res.clips || [];
+        pbRenderTakes();
+        pbSetLocked(!!res.recording);
+        if (pbClips.length) pbSelectTake(0);
+      })
+      .catch(function(){ /* best-effort, same as the RAW pane */ });
+  }
+
+  function pbRenderTakes(){
+    var strip = pbEl('pbTakeStrip');
+    strip.innerHTML = '';
+    pbClips.forEach(function(c, idx){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'take';
+      b.setAttribute('aria-current', idx === 0 ? 'true' : 'false');
+      var badges = '<span class="chip">' + (c.storage || 'RAW') + '</span>';
+      if (c.hdr) badges += '<span class="chip chip-restart">HDR</span>';
+      if (c.has_wav) badges += '<span class="chip chip-live">WAV</span>';
+      var factor = c.fps ? pbConform / c.fps : 1;
+      if (c.fps && Math.abs(factor - 1) > 0.001){
+        badges += '<span class="chip">' + factor.toFixed(2) + '× ' + (factor < 1 ? 'SLOMO' : 'FAST') + '</span>';
+      }
+      b.innerHTML =
+        '<img class="take-thumb" alt="" loading="lazy">' +
+        '<div class="take-body"><div class="take-name">' + c.name + '</div>' +
+        '<div class="take-meta">' + (c.frame_count || 0) + ' frames · ' +
+        (c.fps ? c.fps.toFixed(3) + ' fps' : 'rate unknown') + '</div>' +
+        '<div class="take-badges">' + badges + '</div></div>';
+      b.addEventListener('click', function(){ pbSelectTake(idx); });
+      strip.appendChild(b);
+      if (c.frame_count) pbQueueThumb(b.querySelector('.take-thumb'), pbFrameUrl(c.name, 0, 8));
+    });
+    pbEl('pbTakeFooter').textContent = pbClips.length
+      ? 'Showing ' + pbClips.length + ' take' + (pbClips.length === 1 ? '' : 's') + ' across mounted storage.'
+      : 'No takes found on mounted storage.';
+  }
+
+  /* Thumbnails load one at a time. The camera caps concurrent decodes and
+     answers 503 past that, so firing a stripful at once would mostly bounce --
+     and would compete with playback for the same cores. */
+  var pbThumbQueue = [], pbThumbBusy = false;
+  function pbQueueThumb(img, url){ pbThumbQueue.push([img, url]); pbPumpThumbs(); }
+  function pbPumpThumbs(){
+    if (pbThumbBusy || !pbThumbQueue.length) return;
+    pbThumbBusy = true;
+    var job = pbThumbQueue.shift();
+    var probe = new Image();
+    probe.onload = function(){ job[0].src = job[1]; pbThumbBusy = false; pbPumpThumbs(); };
+    probe.onerror = function(){ pbThumbBusy = false; pbPumpThumbs(); };
+    probe.src = job[1];
+  }
+
+  function pbSelectTake(idx){
+    pbPause();
+    pbClip = pbClips[idx];
+    if (!pbClip) return;
+    [].forEach.call(pbEl('pbTakeStrip').children, function(el, i){
+      el.setAttribute('aria-current', i === idx ? 'true' : 'false');
+    });
+    pbState.skipped = 0;
+    pbEl('pbName').textContent = pbClip.name;
+    pbEl('pbMetaFps').textContent = pbClip.fps ? pbClip.fps.toFixed(3) : '—';
+    pbEl('pbMetaRes').textContent = pbClip.width ? pbClip.width + '×' + pbClip.height : '—';
+    pbEl('pbMetaDepth').textContent = pbClip.bits ? pbClip.bits + '-bit' : '—';
+    pbEl('pbMetaSensor').textContent = pbClip.sensor || '—';
+    pbEl('pbScrub').max = Math.max(0, (pbClip.frame_count || 1) - 1);
+    pbEl('pbFrameTotal').textContent = ' / ' + Math.max(0, (pbClip.frame_count || 1) - 1);
+    pbLabelScales();
+    pbBuildFilmstrip();
+    pbApplyRate();
+    pbShow(0);
+  }
+
+  /* Scale options carry the pixel size they actually produce for THIS take --
+     the same divisor means very different frames on a 2K sensor and on UHD,
+     and that difference is what decides whether playback holds the rate. */
+  function pbLabelScales(){
+    [].forEach.call(pbEl('pbScale').options, function(opt){
+      var d = parseInt(opt.value, 10);
+      opt.textContent = '1/' + d + (pbClip && pbClip.width
+        ? ' · ' + Math.floor(pbClip.width / d) + '×' + Math.floor(pbClip.height / d) : '');
+    });
+  }
+
+  function pbBuildFilmstrip(){
+    var fs = pbEl('pbFilmstrip');
+    fs.innerHTML = '';
+    if (!pbClip || !pbClip.frame_count) return;
+    var n = Math.min(16, pbClip.frame_count);
+    for (var j = 0; j < n; j++){
+      var i = Math.floor(j * (pbClip.frame_count - 1) / Math.max(1, n - 1));
+      var img = document.createElement('img');
+      img.alt = '';
+      fs.appendChild(img);
+      pbQueueThumb(img, pbFrameUrl(pbClip.name, i, 8));
+    }
+  }
+
+  function pbApplyRate(){
+    if (!pbClip) return;
+    var target = pbRate();
+    pbEl('pbRateRec').textContent = pbClip.fps ? pbClip.fps.toFixed(3) + ' fps' : 'unknown';
+    pbEl('pbRateConform').textContent = pbState.conform ? pbConform + ' fps' : 'off';
+    var factor = pbClip.fps ? target / pbClip.fps : 1;
+    var el = pbEl('pbRateSpeed');
+    el.textContent = factor.toFixed(2) + '×' +
+      (Math.abs(factor - 1) < 0.001 ? '' : (factor < 1 ? ' SLOMO' : ' FAST'));
+    el.className = 'pb-rate-v' + (Math.abs(factor - 1) < 0.001 ? '' : ' warn');
+    pbRenderBoxes();
+  }
+
+  function pbRenderBoxes(){
+    if (!pbClip) return;
+    var boxes = [];
+    if (pbClip.bits) boxes.push('<span class="pb-box badge">' + pbClip.bits + 'b</span>');
+    boxes.push('<span class="pb-box badge">' + (pbClip.mode_label || '—') + '</span>');
+    /* A LinearizationTable means a curve is baked in, but tag 0xC618 cannot say
+       whether it is the CCMP decompand, CineMate Log, or the two composed --
+       so this says "curve", never "log". */
+    var curved = pbClip.encoding === 'companded';
+    boxes.push('<span class="pb-box ' + (curved ? 'badge' : 'off') + '">' + (curved ? 'CRV' : 'LIN') + '</span>');
+    boxes.push('<span class="pb-box ' + (pbClip.has_wav ? '' : 'off') + '">' + (pbClip.has_wav ? 'WAV' : '—') + '</span>');
+    if (pbClip.fps && pbState.conform && Math.abs(pbRate() / pbClip.fps - 1) > 0.001){
+      boxes.push('<span class="pb-box badge" title="Conformed to ' + pbConform + ' fps">CNF</span>');
+    }
+    if (pbState.playing && pbState.actualFps && pbState.actualFps < pbRate() * 0.97){
+      boxes.push('<span class="pb-box drop" title="Playback could not hold the rate">DROP</span>');
+    }
+    pbEl('pbMetaBoxes').innerHTML = boxes.join('');
+  }
+
+  function pbShow(i){
+    if (!pbClip) return;
+    var total = pbClip.frame_count || 1;
+    pbState.i = Math.max(0, Math.min(total - 1, i));
+    pbEl('pbFrame').src = pbFrameUrl(pbClip.name, pbState.i, pbState.scale);
+    pbEl('pbScrub').value = pbState.i;
+    pbEl('pbPlayhead').style.left = (total > 1 ? pbState.i / (total - 1) * 100 : 0) + '%';
+    pbEl('pbFrameNo').textContent = pbState.i;
+    pbEl('pbTc').textContent = pbTimecode(pbState.i);
+    pbEl('pbRateSkipped').textContent = pbState.skipped;
+  }
+
+  function pbTimecode(i){
+    var r = Math.max(1, Math.round(pbRate()));
+    var s = Math.floor(i / r), f = i % r;
+    function p(n){ return String(n).padStart(2, '0'); }
+    return p(Math.floor(s / 3600)) + ':' + p(Math.floor(s / 60) % 60) + ':' + p(s % 60) + ':' + p(f);
+  }
+
+  function pbTick(){
+    if (!pbState.playing || !pbClip) return;
+    var now = performance.now();
+    var target = pbRate();
+    var total = pbClip.frame_count || 1;
+
+    var want = pbState.startFrame + Math.floor((now - pbState.t0) / 1000 * target);
+    if (want - pbState.i > 1) pbState.skipped += (want - pbState.i - 1);
+
+    if (want >= total){
+      if (!pbState.loop){ pbShow(total - 1); pbPause(); return; }
+      want = 0; pbState.startFrame = 0; pbState.t0 = now;
+    }
+    if (want !== pbState.i){ pbShow(want); pbState.shown++; }
+
+    if (now - pbState.windowAt > 500){
+      var fps = pbState.shown / ((now - pbState.windowAt) / 1000);
+      pbState.actualFps = fps; pbState.shown = 0; pbState.windowAt = now;
+      var el = pbEl('pbRateActual');
+      el.textContent = fps.toFixed(2) + ' fps';
+      el.className = 'pb-rate-v ' + (fps >= target * 0.97 ? 'ok' : fps >= target * 0.85 ? 'warn' : 'bad');
+      pbRenderBoxes();
+    }
+
+    var due = pbState.t0 + ((pbState.i + 1 - pbState.startFrame) / target) * 1000;
+    pbState.timer = setTimeout(pbTick, Math.max(0, due - performance.now()));
+  }
+
+  function pbPlay(){
+    if (!pbClip || pbEl('pbStage').classList.contains('is-locked')) return;
+    pbState.playing = true;
+    pbState.t0 = performance.now(); pbState.windowAt = pbState.t0;
+    pbState.startFrame = pbState.i; pbState.shown = 0;
+    pbEl('pbPlayLabel').textContent = 'PAUSE';
+    pbEl('pbPlayIcon').innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+    pbState.timer = setTimeout(pbTick, 0);
+  }
+  function pbPause(){
+    pbState.playing = false;
+    if (pbState.timer) clearTimeout(pbState.timer);
+    pbEl('pbPlayLabel').textContent = 'PLAY';
+    pbEl('pbPlayIcon').innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
+  }
+  function pbSetLocked(locked){
+    pbEl('pbStage').classList.toggle('is-locked', locked);
+    if (locked) pbPause();
+  }
+
+  pbEl('pbPlay').addEventListener('click', function(){ pbState.playing ? pbPause() : pbPlay(); });
+  pbEl('pbPrev').addEventListener('click', function(){ pbPause(); pbShow(pbState.i - 1); });
+  pbEl('pbNext').addEventListener('click', function(){ pbPause(); pbShow(pbState.i + 1); });
+  pbEl('pbStart').addEventListener('click', function(){ pbPause(); pbShow(0); });
+  pbEl('pbEnd').addEventListener('click', function(){ pbPause(); pbShow((pbClip && pbClip.frame_count || 1) - 1); });
+  pbEl('pbLoop').addEventListener('click', function(){
+    pbState.loop = !pbState.loop;
+    this.setAttribute('aria-pressed', String(pbState.loop));
+    this.classList.toggle('is-on', pbState.loop);
+  });
+  pbEl('pbScrub').addEventListener('input', function(){ pbPause(); pbShow(parseInt(this.value, 10)); });
+  pbEl('pbScale').addEventListener('change', function(){
+    pbState.scale = parseInt(this.value, 10); pbShow(pbState.i);
+  });
+  pbEl('pbToggleConform').addEventListener('click', function(){
+    pbState.conform = this.getAttribute('aria-checked') !== 'true';
+    this.setAttribute('aria-checked', String(pbState.conform));
+    pbPause(); pbState.skipped = 0; pbApplyRate(); pbShow(pbState.i);
+    showToast(pbState.conform ? 'Conformed to ' + pbConform + ' fps' : 'Playing at the recorded rate');
+  });
+  pbEl('pbToggleMono').addEventListener('click', function(){
+    pbState.mono = this.getAttribute('aria-checked') !== 'true';
+    this.setAttribute('aria-checked', String(pbState.mono));
+    pbBuildFilmstrip(); pbShow(pbState.i);
+  });
+
+  /* A backgrounded tab has its timers clamped to about 1 Hz, so playback there
+     would report a skip count that is an artefact of the tab, not of the
+     camera. Stop rather than lie about it. */
+  document.addEventListener('visibilitychange', function(){
+    if (document.hidden && pbState.playing){ pbPause(); showToast('Paused — tab was backgrounded'); }
+  });
+
   /* ---------- initial load ---------- */
   loadSettings();
   loadConfigTxt();
   refreshRawPane();
+  refreshPlaybackPane();
 
   /* ---------- toast ---------- */
   var toastTimer;
@@ -4571,7 +5013,7 @@
     var saveBtn = document.getElementById('saveBtn');
     var openJsonBtn = document.getElementById('openJson');
     var openJsonLabel = document.getElementById('openJsonLabel');
-    var noFilePage = activePage === 'live' || activePage === 'raw';
+    var noFilePage = activePage === 'live' || activePage === 'raw' || activePage === 'playback';
     saveBtn.hidden = noFilePage;
     openJsonBtn.hidden = noFilePage;
     document.getElementById('revertBtn').hidden = noFilePage;

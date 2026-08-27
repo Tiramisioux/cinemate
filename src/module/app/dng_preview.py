@@ -322,14 +322,20 @@ def _to_rgb(raw, letters, col_step):
     return np.stack([plane("R"), plane("G"), plane("B")], axis=-1)
 
 
+def output_size(meta, scale):
+    """The (width, height) ``decode_frame`` will produce at ``scale``."""
+    return int(meta.get("width", 0)) // scale, int(meta.get("height", 0)) // scale
+
+
 def decode_frame(path, meta=None, scale=4, quality=80, auto_levels=False,
                  mono=False, gamma=1 / 2.2):
     """Decode one DNG to JPEG bytes.
 
-    ``scale`` is the reduction factor: 4 means a quarter of the sensor's width
-    (one pixel per Bayer cell), 8 an eighth, and so on. Values below 4 are not
-    supported -- there is no interpolating demosaic here, so a Bayer cell is the
-    smallest unit that yields a colour pixel.
+    ``scale`` is a linear divisor of the sensor dimensions: 2 gives half width
+    and half height, 4 a quarter, 8 an eighth. 2 is the floor -- collapsing a
+    2x2 Bayer cell to one pixel already halves both dimensions, and there is no
+    interpolating demosaic here, so a cell is the smallest unit that yields a
+    colour pixel.
 
     ``mono`` forces greyscale. cinepi-raw tags every frame with a colour CFA
     even on a monochrome sensor, so nothing on disk distinguishes the two and
@@ -337,14 +343,14 @@ def decode_frame(path, meta=None, scale=4, quality=80, auto_levels=False,
 
     Returns ``(jpeg_bytes, (width, height))``.
     """
-    if scale < 4 or scale % 4:
-        raise ValueError("scale must be a multiple of 4")
+    if scale < 2 or scale % 2:
+        raise ValueError("scale must be an even number >= 2")
     if meta is None:
         meta = read_metadata(path)
     if meta.get("compression", 1) != 1:
         raise DngError("compressed DNG frames are not supported")
 
-    cell_step = scale // 4  # extra Bayer cells to skip beyond the 2x2 collapse
+    cell_step = scale // 2  # Bayer cells to advance per output pixel
     raw = _load_rows(path, meta, row_step=cell_step)
     letters = None if mono else _cfa_letters(meta)
     rgb = _to_rgb(raw, letters, col_step=cell_step)

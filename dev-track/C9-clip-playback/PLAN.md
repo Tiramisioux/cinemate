@@ -75,9 +75,11 @@ image. It is an operator toggle, and must stay one until something on disk says 
 25 fps conform plays at **half speed**, because that is what it will do on the timeline. A toggle
 turns it off to watch a take as shot.
 
-This makes C9 the **first real consumer** of that setting — `docs/settings-json.md` currently says
-it is "not really used by CineMate except for calculating the recording timecode tracker in redis
-but might be used in future updates." That doc line should be updated when this lands.
+This makes C9 the **first real consumer** of that setting. `docs/settings-json.md` used to say it
+was "not really used by CineMate except for calculating the recording timecode tracker in redis
+but might be used in future updates" — **corrected on the implementation branch** (`b7e5eb43`),
+which also records two things that were true but undocumented: the timecode base is rounded to a
+whole number (23.976 → a 24-frame base), and the setting has no effect on capture at all.
 
 Two consequences worth not rediscovering:
 
@@ -150,7 +152,7 @@ Not started, and deliberately not designed in detail before G1/G2 report:
 - **Decode-ahead** — a bounded prefetch ring, sized in frames rather than bytes so the 2 GB board
   cannot be pushed into the auto-stop.
 - **Playback-while-recording** — refuse (current behaviour) or degrade to metadata-only, per G4.
-- **A `docs/` page**, plus the `docs/settings-json.md` correction about `conform_frame_rate`.
+- **A `docs/` page** for the pane itself (the `docs/settings-json.md` correction is already done).
 - **Reachability** — whether the HUD gets a REVIEW button deep-linking to the last take. It would
   make the pane one tap from the shooting screen, at the cost of a link between two surfaces that
   currently have none. Operator decision.

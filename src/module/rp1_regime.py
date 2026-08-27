@@ -36,22 +36,46 @@ overlay had already taken effect) without ever tripping it visibly. Rather than
 carry a veto that can no longer distinguish the case it exists for, ``clk_sys``
 is read for the info log line only and has no effect on the decision in either
 direction -- config.txt's overlay line decides, full stop.
+
+BUT A LINE CAN BE TRUE AND STILL NOT DESCRIBE RUNNING HARDWARE: the overlay
+only takes effect on reboot, and the settings-editor toggle writes the file
+and restarts cinemate without necessarily rebooting the board. Removing the
+clk_sys veto reintroduced exactly the "edited, not yet rebooted" over-
+statement the veto used to catch a different way: overlay enabled + no
+reboot yet -> 580 handed to a board still running stock, silently corrupting
+wide modes per the direction-of-error section above. clk_sys cannot be the
+discriminator any more (see above), but config.txt's own mtime against the
+current boot time still works, because the reboot itself is what invalidates
+staleness: if the file was modified at or after boot, whatever it currently
+says has not yet been acted on by a reboot, so the overlay line cannot be
+believed to describe the *running* hardware regardless of what it says.
+Ambiguity here still fails toward stock (see boot_time()'s +slack_s), and an
+unreadable mtime or boot time makes the guard abstain rather than guess --
+the overlay line stands alone, exactly as before this guard existed.
 """
 from __future__ import annotations
 
 import logging
 import re
 import subprocess
+import time
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 CONFIG_TXT_PATH = "/boot/firmware/config.txt"
 CLK_SUMMARY_PATH = "/sys/kernel/debug/clk/clk_summary"
+UPTIME_PATH = "/proc/uptime"
 
 # Measured on a CM5: stock 200 MHz -> 380 MPix/s, overlay -> 580 MPix/s.
 PIXEL_RATE_STOCK = 380.0
 PIXEL_RATE_OVERCLOCKED = 580.0
+
+# /boot/firmware is VFAT (2s mtime granularity) and the Pi has no RTC, so a
+# boundary this close cannot be resolved more finely than that anyway --
+# widen it slightly and always resolve a near-tie toward "edited after boot"
+# (the stock-rate direction), never toward believing the overlay.
+EDITED_AFTER_BOOT_SLACK_S = 3.0
 
 _OVERLAY_LINE_RE = re.compile(r"^\s*dtoverlay=rp1-overclock\s*$", re.MULTILINE)
 _CLK_SYS_RE = re.compile(r"^\s+clk_sys\s+\S+\s+\S+\s+\S+\s+(\d+)", re.MULTILINE)
@@ -98,6 +122,35 @@ def measured_clk_sys_hz() -> int | None:
     return int(match.group(1)) if match else None
 
 
+def config_txt_mtime() -> float | None:
+    """config.txt's last-modified time, epoch seconds, or None if unreadable.
+
+    Behind its own function (rather than inlined in pixel_rate()) so tests
+    can fake it without touching a real file -- see _test/test_rp1_regime.py.
+    """
+    try:
+        return Path(CONFIG_TXT_PATH).stat().st_mtime
+    except OSError:
+        return None
+
+
+def boot_time() -> float | None:
+    """Epoch seconds the running kernel booted, or None if unreadable.
+
+    Derived from /proc/uptime rather than a boot-id file or systemd query --
+    both this and the wall clock it's subtracted from can drift slightly
+    (no RTC on a Pi without one), which is exactly the ambiguity
+    EDITED_AFTER_BOOT_SLACK_S exists to absorb, always toward the safe
+    (stock) side. Behind its own function for the same testability reason as
+    config_txt_mtime().
+    """
+    try:
+        uptime_s = float(Path(UPTIME_PATH).read_text(encoding="ascii").split()[0])
+    except (OSError, ValueError, IndexError):
+        return None
+    return time.time() - uptime_s
+
+
 def pixel_rate() -> float | None:
     """MPix/s ceiling to hand cinepi-raw, or None when the question is moot.
 
@@ -105,19 +158,37 @@ def pixel_rate() -> float | None:
     unconstrained (zero) bound in libcamera, and passing a number there would
     invent a limit that does not exist.
 
-    config.txt's overlay line is the operator's stated intent and the only
-    input to this decision, in either direction: enabled means the overclocked
-    rate, commented out or absent means stock, unreadable falls to stock (see
-    overlay_enabled()). The live clock is read below and logged alongside the
-    answer, but never changes it -- see the module docstring for why a value
-    that no longer discriminates stock from overclocked on this kernel cannot
-    be allowed to override the switch either way.
+    config.txt's overlay line is the operator's stated intent, but the switch
+    only takes effect on reboot -- toggling it via the settings editor writes
+    the file and restarts cinemate, neither of which reboots the board. If
+    the file was modified at or after the current boot, the line describes
+    an intent that has not yet been acted on, not the running hardware, so
+    it is not believed regardless of what it says: resolves to the stock
+    rate, exactly like every other ambiguity here. The live clock is read
+    below and logged alongside the answer, but never changes the decision --
+    see the module docstring for why a value that no longer discriminates
+    stock from overclocked on this kernel cannot be allowed to override the
+    switch either way. An unreadable mtime or boot time makes this guard
+    abstain (the overlay line stands alone), matching the existing
+    unreadable-input philosophy elsewhere in this module.
     """
     if not is_rp1_platform():
         return None
 
     requested_overclock = overlay_enabled()
     measured = measured_clk_sys_hz()
+
+    if requested_overclock:
+        mtime = config_txt_mtime()
+        booted = boot_time()
+        if mtime is not None and booted is not None and mtime >= booted - EDITED_AFTER_BOOT_SLACK_S:
+            logger.warning(
+                "config.txt enables rp1-overclock but was modified at or after the current "
+                "boot (mtime %.0f, booted %.0f) -- using the stock %.0f MPix/s ceiling. "
+                "Reboot for the overlay to take effect.",
+                mtime, booted, PIXEL_RATE_STOCK,
+            )
+            return PIXEL_RATE_STOCK
 
     rate = PIXEL_RATE_OVERCLOCKED if requested_overclock else PIXEL_RATE_STOCK
     logger.info(

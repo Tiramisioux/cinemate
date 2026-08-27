@@ -215,13 +215,20 @@ So every ambiguous case resolves downward:
 | Situation | Ceiling used |
 |---|---|
 | No RP1 (Pi 4 family) | none passed — libcamera's own default stands |
-| Overlay off | 380 MPix/s |
-| Overlay on, clock confirms it | 580 MPix/s |
-| Overlay on but clock still reads stock — *edited, not yet rebooted* | 380 MPix/s, with a warning naming the reboot |
-| Clock unreadable (no root for debugfs) | the switch is believed |
+| Overlay off in config.txt | 380 MPix/s |
+| Overlay on in config.txt | 580 MPix/s |
+| config.txt unreadable | 380 MPix/s (assumes stock) |
 
-The clock check is a threshold, not an equality test, precisely because the
-requested 300 MHz is not the 333.33 MHz that comes out.
+config.txt's overlay line is the only input to this decision. An earlier
+revision also read the live `clk_sys` rate and used a threshold to veto an
+enabled overlay back down to 380 when the clock still looked stock — the
+*edited, not yet rebooted* case. That assumed stock and overclocked clocks
+read distinctly (~200 MHz / ~333 MHz on an earlier 6.12.93 session). A later
+session on the same kernel measured `clk_sys` at ~333 MHz in *both* regimes,
+which silently defeated the veto's threshold in either direction rather than
+tripping it visibly. `clk_sys` is still read and logged alongside the chosen
+rate, but purely as an observation for a human comparing it against
+config.txt by hand — it no longer feeds the decision.
 
 ### Checking which regime is live
 
@@ -239,9 +246,14 @@ printf 'config.txt  : rp1-overclock %s\n' "$ovl"
 printf 'cinepi-raw  : %s\n' "${rate:-no --max-pixel-rate (libcamera default)}"
 ```
 
-Read the three lines together: the clock is ground truth, `config.txt` is
-intent, and the argument is what the pipeline was actually told. Intent
-disagreeing with the clock means you have not rebooted since toggling.
+Read the three lines together: `config.txt` is what cinemate believes and
+acts on, the argument is what the pipeline was actually told (and should
+match `config.txt` exactly), and the clock is a live, human-checked
+cross-reference only — cinemate's own decision does not read it. Intent
+disagreeing with the clock usually means you have not rebooted since
+toggling, but on this kernel `clk_sys` alone cannot confirm that; treat it as
+a hint; if you have not rebooted since editing config.txt, reboot before
+extending your capture plan to the ceiling you just enabled.
 
 The rest of this page is the manual build.
 
@@ -348,23 +360,30 @@ Reboot the Pi.
 
 ## 4. Verify
 
-First confirm the clock actually changed. This is the only check that
-distinguishes an active overclock from a commented-out overlay:
+Confirm cinemate's own decision, not the clock — on a 6.12.93 kernel
+`clk_sys` has been measured at ~333 MHz in *both* regimes, so it can no
+longer distinguish an active overclock from a commented-out overlay (see
+"Checking which regime is live" above). Check `config.txt` and the actual
+`cinepi-raw` launch argument agree instead:
+
+```bash
+grep -q '^dtoverlay=rp1-overclock' /boot/firmware/config.txt && echo enabled || echo stock
+pid=$(pgrep -x cinepi-raw | head -1)
+tr '\0' '\n' < /proc/$pid/cmdline 2>/dev/null | grep -A1 -x -- '--max-pixel-rate'
+```
+
+Stock is `380`, overclocked is `580`. If you want to read the clock anyway as
+a secondary sanity check:
 
 ```bash
 sudo grep -E '^[[:space:]]*(pll_sys|clk_sys) ' /sys/kernel/debug/clk/clk_summary
 ```
 
-The rate is the fifth column:
-
-| Clock | Stock | Overclocked |
-|---|---|---|
-| `pll_sys` | `200000000` | `333333333` |
-| `clk_sys` | `200000000` | `333333333` |
-
-**333333333, not 300000000.** The overlay asks for 300 MHz; the clock driver
-rounds to the nearest rate it can make from the 1 GHz PLL core. That is
-expected, and measured on a CM5 at 6.12.93.
+The rate is the fifth column. **333333333, not 300000000** — the overlay asks
+for 300 MHz; the clock driver rounds to the nearest rate it can make from the
+1 GHz PLL core. That figure alone does not tell you which regime is active on
+this kernel; it was only ever a reliable discriminator on an earlier
+6.12.93 session that measured stock at `200000000`.
 
 Then check the advertised modes:
 

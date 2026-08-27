@@ -23,6 +23,19 @@ to be what limits the line time -- with nothing logged, because the one warning
 on that path fires when the *sensor* cannot supply enough blanking, which a
 too-high rate makes less likely to trigger. Everything here therefore fails
 towards the stock rate.
+
+THE CONFIG.TXT LINE IS THE ONLY AUTHORITY. An earlier revision of this module
+also read the live ``clk_sys`` rate and used it to veto an enabled overlay back
+down to stock when the measured clock looked too low for the switch to have
+taken effect yet. That veto assumed ``clk_sys`` reads distinctly per regime
+(measured ~200 MHz stock / ~333 MHz overclocked on an earlier 6.12.93 session).
+A later session on the same kernel measured ``clk_sys`` at ~333 MHz in *both*
+regimes -- the reading no longer discriminates stock from overclocked at all,
+which silently defeated the veto's threshold (a stock board reads as if the
+overlay had already taken effect) without ever tripping it visibly. Rather than
+carry a veto that can no longer distinguish the case it exists for, ``clk_sys``
+is read for the info log line only and has no effect on the decision in either
+direction -- config.txt's overlay line decides, full stop.
 """
 from __future__ import annotations
 
@@ -39,11 +52,6 @@ CLK_SUMMARY_PATH = "/sys/kernel/debug/clk/clk_summary"
 # Measured on a CM5: stock 200 MHz -> 380 MPix/s, overlay -> 580 MPix/s.
 PIXEL_RATE_STOCK = 380.0
 PIXEL_RATE_OVERCLOCKED = 580.0
-
-# The overlay asks for 300 MHz and the hardware lands on 333.33 MHz, so this is
-# a threshold rather than an equality test. Anything meaningfully above stock
-# counts as the overclocked regime.
-OVERCLOCK_CLK_THRESHOLD_HZ = 250_000_000
 
 _OVERLAY_LINE_RE = re.compile(r"^\s*dtoverlay=rp1-overclock\s*$", re.MULTILINE)
 _CLK_SYS_RE = re.compile(r"^\s+clk_sys\s+\S+\s+\S+\s+\S+\s+(\d+)", re.MULTILINE)
@@ -97,12 +105,13 @@ def pixel_rate() -> float | None:
     unconstrained (zero) bound in libcamera, and passing a number there would
     invent a limit that does not exist.
 
-    config.txt is the operator's stated intent and the switch that sets it
-    forces a reboot, so it is normally authoritative. Where the live clock can
-    also be read, it is used to *veto* an overclocked answer the hardware does
-    not support -- the dangerous direction is claiming 580 on a board running
-    stock clocks, which is exactly what a config.txt edited but not yet
-    rebooted looks like.
+    config.txt's overlay line is the operator's stated intent and the only
+    input to this decision, in either direction: enabled means the overclocked
+    rate, commented out or absent means stock, unreadable falls to stock (see
+    overlay_enabled()). The live clock is read below and logged alongside the
+    answer, but never changes it -- see the module docstring for why a value
+    that no longer discriminates stock from overclocked on this kernel cannot
+    be allowed to override the switch either way.
     """
     if not is_rp1_platform():
         return None
@@ -110,18 +119,9 @@ def pixel_rate() -> float | None:
     requested_overclock = overlay_enabled()
     measured = measured_clk_sys_hz()
 
-    if requested_overclock and measured is not None:
-        if measured < OVERCLOCK_CLK_THRESHOLD_HZ:
-            logger.warning(
-                "config.txt enables rp1-overclock but clk_sys reads %d Hz -- "
-                "using the stock %.0f MPix/s ceiling. Reboot for the overlay to take effect.",
-                measured, PIXEL_RATE_STOCK,
-            )
-            return PIXEL_RATE_STOCK
-
     rate = PIXEL_RATE_OVERCLOCKED if requested_overclock else PIXEL_RATE_STOCK
     logger.info(
-        "RP1 regime: %s (clk_sys %s) -> %.0f MPix/s",
+        "RP1 regime: %s (clk_sys %s, observation only) -> %.0f MPix/s",
         "overclocked" if requested_overclock else "stock",
         f"{measured} Hz" if measured is not None else "unreadable",
         rate,

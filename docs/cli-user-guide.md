@@ -65,22 +65,17 @@ For cinepi-raw, this file defines the port used by cpp-mjpeg-streamer (default c
 
 !!! note ""
 
-    If you have more than one camera connected to the Pi, and activated in `boot/firmware/config.txt`, the camera connected to physical cam0 will use `/home/pi/post-processing0.json` and the camera connected to cam1 will use `/home/pi/post-processing1.json`.
+    If you have more than one camera connected to the Pi, and activated in `/boot/firmware/config.txt`, the camera connected to physical cam0 will use `/home/pi/post-processing0.json` and the camera connected to cam1 will use `/home/pi/post-processing1.json`.
 
 ## Cinemate‑specific flags
 
-The Cinemate fork introduces several extra options:
+The Cinemate fork introduces extra options beyond stock `rpicam-apps`: camera-port and HDMI selection (`--cam-port`, `--hdmi-port`, `--same-hdmi`), on-sensor HDR (`--hdr`), CineMate Log (`--log-encode`), encode/disk worker count, affinity and priority tuning, WAV timecode offsets, a DNG camera-model override (`--unique-camera-model`), and a pixel-rate ceiling (`--max-pixel-rate`).
 
-| Flag               | Argument               |Description                 |
-| ------------------ | ---------------------- | -------------------------- |
-| `--cam-port`  | `cam0` \| `cam1`   | Select which CSI camera port to use.                                                        |
-| `--hdmi-port` | `0` \| `1` \| `-1` | Choose the HDMI connector for the preview (`0` = HDMI-0, `1` = HDMI-1, `-1` = auto-detect). |
-| `--same-hdmi` | *(none)*           | Force both capture and controller GUI to share the same HDMI output.                        |
-| `--keep16`    | `true` \| `false`  | Save full 16-bit DNGs instead of 12-bit packed files.                                       |
+The full flag table with defaults is the [cinepi-raw README's "Additional flags" section](https://github.com/Tiramisioux/cinepi-raw#additional-flags) — that table is the canonical copy, so it is not duplicated here. `cinepi-raw -h` prints the same options from the binary.
 
 !!! note ""
 
-    At this moment though, Cinemate is 12bit only. The flag is for future updates of the IMX585 16bit clear HDR modes.
+    DNGs are 12-bit, except in true 16-bit sensor modes (IMX585 ClearHDR), which write 16-bit. The `--keep16` flag was removed — the 4 bits it kept in SDR modes are padding.
 
 ## Example commands
 

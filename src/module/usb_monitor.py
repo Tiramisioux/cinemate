@@ -1,105 +1,28 @@
+import contextlib
 import pyudev
 import logging
-import traceback
 import threading
 import re
 
 import subprocess
-import time
 import shlex
 
 from collections import deque
 from typing import Optional
 
-CAPTURE_GAIN_REDIS_KEY = "audio_capture_gain_db"
+from module.config_loader import as_bool
+from module.redis_controller import ParameterKey, Event
+
+# F-106: this used to re-declare ParameterKey.AUDIO_CAPTURE_GAIN_DB's value as
+# an independent string literal. Same key, one definition now.
+CAPTURE_GAIN_REDIS_KEY = ParameterKey.AUDIO_CAPTURE_GAIN_DB.value
 
 
-class Event:
-    def __init__(self):
-        self._listeners = []
-
-    def subscribe(self, listener):
-        self._listeners.append(listener)
-
-    def emit(self, *args):
-        for listener in self._listeners:
-            try:
-                listener(*args)
-            except Exception as e:
-                logging.error(f"Error while invoking listener: {e}")
-                traceback.print_exc()  # Print the traceback for better debugging
-
-
-class USBDriveMonitor:
-    def __init__(self, ssd_monitor):
-        self.context = pyudev.Context()
-        self.monitor = pyudev.Monitor.from_netlink(self.context)
-        self.monitor.filter_by(subsystem='block')
-        self.ssd_monitor = ssd_monitor
-        self.device_processing_lock = threading.Lock()
-        self.processed_devices = {}  # Tracks devices and their last processed time
-        
-        self.usb_mic_level = 0
-    
-
-        self.check_mounted_devices_on_startup()  # Check for already mounted devices
-
-    def is_usb_mounted_at(self, path):
-        try:
-            output = subprocess.check_output(['findmnt', '-n', '-o', 'SOURCE', path], stderr=subprocess.STDOUT).decode().strip()
-            if '/dev/sd' in output:
-                self.ssd_monitor.disk_mounted = True
-                return True
-        except subprocess.CalledProcessError:
-            self.ssd_monitor.disk_mounted = False
-
-        return False
-
-    def device_key(self, device):
-        return (device.get('ID_MODEL', 'Unknown'), device.get('ID_SERIAL_SHORT', 'Unknown'))
-
-    def is_within_cooldown(self, device_key):
-        current_time = time.time()
-        with self.device_processing_lock:
-            last_processed = self.processed_devices.get(device_key, 0)
-            return current_time - last_processed < 5
-
-    def mark_device_processed(self, device_key):
-        with self.device_processing_lock:
-            self.processed_devices[device_key] = time.time()
-
-    def check_mounted_devices_on_startup(self):
-        for device in self.context.list_devices(subsystem='block'):
-            if self.is_usb_mounted_at('/media/RAW'):
-                device_key = self.device_key(device)
-                logging.info(f"SSD already mounted at startup: Model={device_key[0]}, Serial={device_key[1]}")
-                self.ssd_monitor.update_on_add(device_key[0], device_key[1])
-                break
-
-    def start_monitoring(self):
-        for device in iter(self.monitor.poll, None):
-            device_key = self.device_key(device)
-
-            if device.action == 'add':
-                if self.is_within_cooldown(device_key):
-                    logging.debug(f"Device {device_key} within cooldown period, skipping detection.")
-                    continue
-
-                self.mark_device_processed(device_key)
-                logging.info(f"USB device connected: Model={device_key[0]}, Serial={device_key[1]}")
-
-                for _ in range(10):
-                    if self.is_usb_mounted_at('/media/RAW'):
-                        self.ssd_monitor.update_on_add(device_key[0], device_key[1])
-                        break
-                    time.sleep(1)
-            elif device.action == 'remove':
-                self.ssd_monitor.update_on_remove("Detected USB disconnection.")
-                self.ssd_monitor.on_ssd_removed()
 
 class AudioMonitor:
-    def __init__(self, settings: Optional[dict] = None):
+    def __init__(self, settings: Optional[dict] = None, redis_controller=None):
         self.settings = settings or {}
+        self._redis_controller = redis_controller
         self.format: Optional[str] = None
         self.channels: Optional[int] = None
         self.sample_rate: Optional[int] = None
@@ -120,7 +43,7 @@ class AudioMonitor:
         self.card_name: Optional[str] = None
         self.capture_gain_control: Optional[str] = None
         self.capture_gain_db = self._parse_capture_gain_db(
-            self.settings.get("audio", {}).get("capture_gain_db", 0.0)
+            self.settings.get("audio_capture", {}).get("capture_gain_db", 0.0)
         )
 
     @staticmethod
@@ -132,23 +55,17 @@ class AudioMonitor:
             return 0.0
 
     def _refresh_capture_gain_from_redis(self) -> None:
-        try:
-            import redis  # type: ignore
-        except ModuleNotFoundError:
+        if self._redis_controller is None:
             return
 
         try:
-            client = redis.StrictRedis(host="localhost", port=6379, db=0)
-            value = client.get(CAPTURE_GAIN_REDIS_KEY)
+            value = self._redis_controller.get_value(CAPTURE_GAIN_REDIS_KEY)
         except Exception as exc:
             logging.debug("Could not read %s from Redis: %s", CAPTURE_GAIN_REDIS_KEY, exc)
             return
 
-        if value in (None, b"", ""):
+        if value in (None, ""):
             return
-
-        if isinstance(value, bytes):
-            value = value.decode("utf-8", errors="replace")
 
         self.capture_gain_db = self._parse_capture_gain_db(value)
 
@@ -215,7 +132,7 @@ class AudioMonitor:
         # Re-read gain from the per-toolchain sub-object now that bit_depth is known.
         # Falls back to the legacy flat key for Pi-local settings files that haven't
         # been updated yet.
-        audio_cfg = self.settings.get("audio", {})
+        audio_cfg = self.settings.get("audio_capture", {})
         toolchain_key = "24bit" if self.bit_depth == 24 else "16bit"
         if toolchain_key in audio_cfg and "capture_gain_db" in audio_cfg[toolchain_key]:
             self.capture_gain_db = self._parse_capture_gain_db(
@@ -433,11 +350,11 @@ class AudioMonitor:
     def publish_mic_selection(self) -> None:
         if not self.can_record_audio or not self.device_alias:
             return
+        if self._redis_controller is None:
+            logging.debug("No shared Redis client available; skipping MIC_* publish.")
+            return
         try:
-            import redis  # type: ignore
-
-            client = redis.StrictRedis(host="localhost", port=6379, db=0)
-            client.mset({
+            self._redis_controller.r.mset({
                 "MIC_PCM_ALIAS": self.device_alias,
                 "MIC_FORMAT": self.format or "",
                 "MIC_CHANNELS": str(self.channels or ""),
@@ -445,22 +362,18 @@ class AudioMonitor:
                 "MIC_CARD_NAME": self.card_name or "",
             })
             logging.debug("Published MIC_* to Redis")
-        except ModuleNotFoundError:
-            logging.debug("Redis module not available; skipping MIC_* publish.")
         except Exception as exc:  # pragma: no cover - redis optional
             logging.debug("Failed to publish MIC_* to Redis: %s", exc)
 
     @staticmethod
-    def clear_mic_selection(reason: str = "") -> None:
+    def clear_mic_selection(reason: str = "", redis_controller=None) -> None:
+        if redis_controller is None:
+            logging.debug("No shared Redis client available; skipping MIC_* clear.")
+            return
         try:
-            import redis  # type: ignore
-
-            client = redis.StrictRedis(host="localhost", port=6379, db=0)
-            client.delete("MIC_PCM_ALIAS", "MIC_FORMAT", "MIC_CHANNELS", "MIC_RATE", "MIC_CARD_NAME")
+            redis_controller.r.delete("MIC_PCM_ALIAS", "MIC_FORMAT", "MIC_CHANNELS", "MIC_RATE", "MIC_CARD_NAME")
             if reason:
                 logging.debug("Cleared MIC_* from Redis: %s", reason)
-        except ModuleNotFoundError:
-            logging.debug("Redis module not available; skipping MIC_* clear.")
         except Exception as exc:  # pragma: no cover - redis optional
             logging.debug("Failed to clear MIC_* from Redis: %s", exc)
 
@@ -536,12 +449,13 @@ class AudioMonitor:
         return self.vu_levels[0], self.vu_levels[1] if len(self.vu_levels) >= 2 else 0
 
 class USBMonitor():
-    def __init__(self, ssd_monitor, settings: Optional[dict] = None):
+    def __init__(self, ssd_monitor, settings: Optional[dict] = None, redis_controller=None):
         self.context = pyudev.Context()
         self.monitor = pyudev.Monitor.from_netlink(self.context)
 
         self.ssd_monitor = ssd_monitor
         self.settings = settings or {}
+        self._redis_controller = redis_controller
 
         self.temp_sound_devices = []
         self.sound_timer = None
@@ -566,34 +480,22 @@ class USBMonitor():
         self.audio_prepare_lock = threading.Lock()
         self.audio_prepare_deferred = False
         
-        self.audio_monitor = AudioMonitor(settings=self.settings)
-        
+        self.audio_monitor = AudioMonitor(settings=self.settings, redis_controller=self._redis_controller)
+
         self.monitor.filter_by(subsystem='usb_storage')
         self.monitor_devices()
 
     def _is_recording_active(self) -> bool:
-        try:
-            import redis  # type: ignore
-        except ModuleNotFoundError:
+        if self._redis_controller is None:
             return False
 
         try:
-            client = redis.StrictRedis(host="localhost", port=6379, db=0)
-            value = client.get("is_recording")
+            value = self._redis_controller.get_value(ParameterKey.IS_RECORDING.value)
         except Exception as exc:
             logging.debug("Could not read is_recording from Redis while preparing audio monitor: %s", exc)
             return False
 
-        if isinstance(value, bytes):
-            value = value.decode("utf-8", errors="replace")
-
-        text = str(value or "").strip().lower()
-        if text in ("1", "true", "yes", "on"):
-            return True
-        try:
-            return bool(int(text))
-        except (TypeError, ValueError):
-            return False
+        return as_bool(value)
 
     def _cancel_audio_prepare_timer(self) -> None:
         with self.audio_prepare_lock:
@@ -674,12 +576,13 @@ class USBMonitor():
         if mic_has_changed:
             logging.info(f"Microphone changed from {self.current_mic_id} → {mic_id}")
             # Stop old monitor and create a fresh one bound to this mic
-            try:
+            with contextlib.suppress(Exception):
                 self.audio_monitor.stop()
-            except Exception:
-                pass
-            AudioMonitor.clear_mic_selection("microphone changed; waiting for re-probe")
-            self.audio_monitor = AudioMonitor(settings=self.settings)
+            AudioMonitor.clear_mic_selection(
+                "microphone changed; waiting for re-probe",
+                redis_controller=self._redis_controller,
+            )
+            self.audio_monitor = AudioMonitor(settings=self.settings, redis_controller=self._redis_controller)
             self.audio_monitor.set_model_info(model, serial, card_num=card_num, card_name=card_name)
             self.current_mic_id = mic_id
             # Let ALSA settle briefly, then probe the current monitor config without owning capture.
@@ -707,8 +610,6 @@ class USBMonitor():
 
         model = device.get('ID_MODEL', '')
         serial = device.get('ID_SERIAL', '')
-        vendor_id = device.get('ID_VENDOR_ID', None)
-        product_id = device.get('ID_MODEL_ID', None)
         model_upper = model.upper()
         device_id = device.device_path
 
@@ -768,7 +669,9 @@ class USBMonitor():
                 self.temp_sound_devices.clear()
                 self.usb_event.emit('mic_removed', device, model, serial)
                 self.audio_monitor.stop()
-                AudioMonitor.clear_mic_selection("microphone removed")
+                AudioMonitor.clear_mic_selection(
+                    "microphone removed", redis_controller=self._redis_controller
+                )
 
 
             elif self.usb_keyboard and self.usb_keyboard == device:

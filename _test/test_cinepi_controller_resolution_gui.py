@@ -73,6 +73,13 @@ class FakeSensorDetect:
     def get_fps_correction_factor(self, _sensor, _mode, _fps=None):
         return 1.0
 
+    def resolve_effective_bit_depth(self, _camera_name, native_bit_depth, *, log_requested=False, hdr=False):
+        """These tests are about resolution-switch GUI/pacing behavior, not
+        CineMate Log's bit-depth math -- a trivial pass-through is enough to
+        let _recompute_file_size() (wired into every resolution switch since
+        671f327f) run without crashing."""
+        return native_bit_depth
+
 
 class ResolutionGuiStateTests(unittest.TestCase):
     def controller(self):
@@ -81,6 +88,9 @@ class ResolutionGuiStateTests(unittest.TestCase):
         controller.sensor_detect = FakeSensorDetect()
         controller.current_sensor = "imx585"
         controller.sensor_mode = 0
+        # _recompute_file_size() (671f327f) reads settings.camera.cam0.log_encode
+        # as the pre-first-toggle seed -- off, like these tests' unrelated focus.
+        controller.settings = {"camera": {"cam0": {"log_encode": False}, "cam1": {}}}
         controller.dynamic_resolution_enabled = True
         controller.dynamic_resolution_desired_mode = 0
         controller.dynamic_resolution_active = False
@@ -98,6 +108,7 @@ class ResolutionGuiStateTests(unittest.TestCase):
         controller.update_steps = lambda: None
         controller._notify_resolution_change = controller.notifications.append
         controller._resolution_switching_timer = None
+        controller._resolution_switch_complete_callbacks = []
 
         def refresh_fps_max():
             controller.fps_max = 50
@@ -150,14 +161,16 @@ class ResolutionGuiStateTests(unittest.TestCase):
         self.assertEqual(controller.notifications, [1])
         controller._cancel_resolution_switching_timer()
 
-    def test_resolution_change_needs_restart_only_on_aspect_change(self):
+    def test_resolution_change_needs_restart_on_aspect_bitdepth_or_hdr(self):
         controller = self.controller()
-        # Currently running 1928x1090 (~1.769) — seed redis as the live mode.
+        # Currently running 1928x1090 (~1.769) 12-bit non-HDR — seed redis.
         controller.redis_controller.set_value(ParameterKey.WIDTH.value, 1928)
         controller.redis_controller.set_value(ParameterKey.HEIGHT.value, 1090)
+        controller.redis_controller.set_value(ParameterKey.BIT_DEPTH.value, 12)
+        controller.redis_controller.set_value(ParameterKey.HDR.value, 0)
         controller._is_recording = lambda: False
 
-        # Same-aspect target (mode 1 = 3856x2180, also ~1.769) → no restart.
+        # Same aspect, same bit depth, same HDR (mode 1 = 3856x2180 12-bit) → no restart.
         self.assertFalse(controller._resolution_change_needs_restart(1))
 
         # Different-aspect target (1.33) → restart so the preview is rebuilt.
@@ -167,9 +180,26 @@ class ResolutionGuiStateTests(unittest.TestCase):
         }
         self.assertTrue(controller._resolution_change_needs_restart(2))
 
+        # Same aspect but 16-bit ClearHDR (mode 3 = 3856x2180 16-bit HDR) →
+        # restart: bit depth and --hdr sensor are launch args, so a live
+        # reconfigure would keep writing 12-bit DNGs.
+        controller.sensor_detect.res_modes[3] = {
+            "width": 3856, "height": 2180, "bit_depth": 16, "hdr": True,
+            "gui_layout": 1, "file_size": 16, "fps_max": 22,
+        }
+        self.assertTrue(controller._resolution_change_needs_restart(3))
+
+        # Same aspect, same bit depth, but ClearHDR toggled on (12-bit HDR) →
+        # restart so cinepi-raw relaunches with --hdr sensor.
+        controller.sensor_detect.res_modes[4] = {
+            "width": 3856, "height": 2180, "bit_depth": 12, "hdr": True,
+            "gui_layout": 1, "file_size": 12, "fps_max": 33,
+        }
+        self.assertTrue(controller._resolution_change_needs_restart(4))
+
         # While recording, never restart — record-through is preserved.
         controller._is_recording = lambda: True
-        self.assertFalse(controller._resolution_change_needs_restart(2))
+        self.assertFalse(controller._resolution_change_needs_restart(3))
 
     def test_switch_resolution_logs_and_toggles_from_desired_mode_when_dynamic_active(self):
         controller = self.controller()
@@ -203,6 +233,59 @@ class ResolutionGuiStateTests(unittest.TestCase):
             controller.redis_controller.get_value(ParameterKey.RESOLUTION_SWITCHING.value),
             0,
         )
+
+    def test_raw_stream_ready_log_fires_switch_complete_not_switch_started(self):
+        # F-290: reload_stream must ride the completion signal, not the one
+        # that fires when the switch starts (the browser would reconnect to
+        # a stream cinepi-raw hasn't finished restarting yet).
+        controller = self.controller()
+        resolution_info = controller.sensor_detect.res_modes[1]
+        controller._publish_resolution_target_state(1, resolution_info, switching=True)
+        controller._resolution_switching_timer = mock.Mock()
+        complete_calls = []
+        controller.add_resolution_switch_complete_callback(lambda: complete_calls.append(1))
+
+        controller.handle_cinepi_raw_message(
+            "[2026-05-31 18:00:31.405] [event_loop] [info] Raw stream: 3856x2180 : 7712 : SRGGB16"
+        )
+
+        self.assertEqual(complete_calls, [1])
+
+    def test_nonmatching_raw_stream_log_does_not_fire_switch_complete(self):
+        controller = self.controller()
+        resolution_info = controller.sensor_detect.res_modes[1]
+        controller._publish_resolution_target_state(1, resolution_info, switching=True)
+        controller._resolution_switching_timer = mock.Mock()
+        complete_calls = []
+        controller.add_resolution_switch_complete_callback(lambda: complete_calls.append(1))
+
+        controller.handle_cinepi_raw_message(
+            "[2026-05-31 18:00:31.405] [event_loop] [info] Raw stream: 1928x1090 : 3904 : SRGGB16"
+        )
+
+        self.assertEqual(complete_calls, [])
+
+    def test_switch_complete_timer_fallback_fires_the_callback(self):
+        # The evidence path (handle_cinepi_raw_message) is the fast path;
+        # this is the fallback if that log line is never seen. RESOLUTION_SWITCHING
+        # has to be published True first -- as _apply_resolution_mode always does
+        # before calling this -- or the already-complete guard treats the switch
+        # as finished and returns without scheduling.
+        controller = self.controller()
+        resolution_info = controller.sensor_detect.res_modes[1]
+        controller._publish_resolution_target_state(1, resolution_info, switching=True)
+        complete_calls = []
+        controller.add_resolution_switch_complete_callback(lambda: complete_calls.append(1))
+
+        with mock.patch.object(cinepi_controller_module.threading, "Timer") as fake_timer_cls:
+            fake_timer = mock.Mock()
+            fake_timer_cls.return_value = fake_timer
+            controller._schedule_resolution_switch_complete(1, resolution_info)
+            complete_fn = fake_timer_cls.call_args.args[1]
+
+        self.assertEqual(complete_calls, [])  # not fired until the timer actually runs
+        complete_fn()
+        self.assertEqual(complete_calls, [1])
 
     def test_nonmatching_raw_stream_log_does_not_clear_resolution_switching(self):
         controller = self.controller()

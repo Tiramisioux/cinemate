@@ -3,17 +3,16 @@ import logging
 import re
 import json
 import time
-from pathlib import Path
 from queue import Queue
 from threading import Thread
 from typing import List, Optional
-from threading import Event as ThreadEvent
 from typing import List
-import os, signal
+import os
 import shutil
 
-from module.config_loader import load_settings
-from module.redis_controller import ParameterKey
+from module import rp1_regime
+from module.config_loader import load_settings, DEFAULT_SETTINGS_PATH
+from module.redis_controller import ParameterKey, decode_log_encode_request, Event
 from module.framebuffer import Framebuffer
 from module.sensor_detect import is_pi4_family
 from module.storage_profiles import (
@@ -24,7 +23,7 @@ from module.storage_profiles import (
 )
 
 # Path to settings file
-SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
+SETTINGS_FILE = DEFAULT_SETTINGS_PATH
 _SETTINGS: dict | None = None
 
 
@@ -69,7 +68,7 @@ def _seed_default_zoom(redis_ctl):
     Write preview.default_zoom to Redis once per boot, but
     only if the key doesn’t exist yet.
     """
-    preview_cfg  = _settings().get("preview", {})
+    preview_cfg  = _settings().get("hdmi_display", {}).get("preview", {})
     default_zoom = float(preview_cfg.get("default_zoom", 1.0))
 
     if redis_ctl.get_value(ParameterKey.ZOOM.value) is None:
@@ -81,7 +80,7 @@ def _seed_default_zoom(redis_ctl):
 
 def _plain_arecord_timecode_offset_frames(settings: dict | None = None) -> int:
     """Timecode offset for the 16-bit mic path (audio.16bit.timecode_offset_frames)."""
-    audio_cfg = (settings if settings is not None else _settings()).get("audio", {})
+    audio_cfg = (settings if settings is not None else _settings()).get("audio_capture", {})
     raw_value = (
         audio_cfg["16bit"].get("timecode_offset_frames", 0)
         if "16bit" in audio_cfg
@@ -96,7 +95,7 @@ def _plain_arecord_timecode_offset_frames(settings: dict | None = None) -> int:
 
 def _audio_timecode_offset_frames(settings: dict | None = None) -> int:
     """Timecode offset for the 24-bit USB dsnoop capture path (audio.24bit.timecode_offset_frames)."""
-    audio_cfg = (settings if settings is not None else _settings()).get("audio", {})
+    audio_cfg = (settings if settings is not None else _settings()).get("audio_capture", {})
     raw_value = (
         audio_cfg["24bit"].get("timecode_offset_frames", 0)
         if "24bit" in audio_cfg
@@ -108,16 +107,6 @@ def _audio_timecode_offset_frames(settings: dict | None = None) -> int:
         logging.warning("Invalid audio.24bit.timecode_offset_frames=%r; using 0", raw_value)
         return 0
 
-
-# ───────────────────────── Event ─────────────────────────
-class Event:
-    def __init__(self):
-        self._listeners = []
-    def subscribe(self, listener):
-        self._listeners.append(listener)
-    def emit(self, data=None):
-        for l in self._listeners:
-            l(data)
 
 # ───────────────────── Camera Discovery ──────────────────
 class CameraInfo:
@@ -225,7 +214,7 @@ class CinePiProcess(Thread):
         
         # load per-camera settings (geometry, output, fps-correction flag)
         settings = _settings()
-        camera_cfg = settings.get('camera', {}) or {}
+        camera_cfg = settings.get('sensors', {}) or {}
         cam_cfg = camera_cfg.get(self.cam.port, {})
         self.geometry = cam_cfg.get('geometry', {})
         self.output   = cam_cfg.get('output', {})
@@ -322,9 +311,10 @@ class CinePiProcess(Thread):
         to shared memory. Returns the file path for ``--post-process-file``.
         """
         role = 'primary' if self.primary else 'secondary'
-        # Picture-in-picture inset geometry comes from settings.json preview.pip
-        # and is baked into the post-process file the primary reads at Configure.
-        pip_cfg = (_settings().get('preview', {}) or {}).get('pip', {}) or {}
+        # Picture-in-picture inset geometry comes from settings.jsonc
+        # hdmi_display.preview.pip and is baked into the post-process file
+        # the primary reads at Configure.
+        pip_cfg = (_settings().get('hdmi_display', {}) or {}).get('preview', {}).get('pip', {}) or {}
         cfg = {
             'sharedContext': {},
             'mjpegPreview': {'port': 8000 + int(self.cam.index)},
@@ -522,11 +512,40 @@ class CinePiProcess(Thread):
         # * Skip --tuning-file on Pi 4.  All other models keep it. *
         if not self._is_pi4():
             args += ["--tuning-file", tune]
-            
+
+        # ── PiSP pixel-rate ceiling. libcamera's bound is a compile-time
+        # constant, so a build made for the rp1-overclock overlay advertises
+        # rates a stock-clock board cannot drain — and overrunning it corrupts
+        # wide modes with nothing logged. Decide here, where the overlay switch
+        # is visible, and pass the answer down. None on boards with no RP1.
+        max_pixel_rate = rp1_regime.pixel_rate()
+        if max_pixel_rate is not None:
+            args += ["--max-pixel-rate", str(max_pixel_rate)]
+
+
         zoom_init = self.redis_controller.get_value(ParameterKey.ZOOM.value)
-        
+
         if zoom_init and float(zoom_init) != 1.0:
             args += ['--zoom', str(zoom_init)]
+
+        # ── Dual HDMI output: mirror the one sensor's preview (with GUI) on
+        # both HDMI connectors via cinepi-raw's --same-hdmi. Single-sensor
+        # only — the dual-sensor compositor already owns both-feed layouts.
+        dual_out = _settings().get('hdmi_display', {}).get('mirror_to_both_ports', False)
+        if dual_out and not self.multi:
+            args += ['--same-hdmi']
+
+        # ── imx585 ClearHDR: launch with sensor HDR when the hdr state is on.
+        # wide_dynamic_range changes the sensor's mode list, so it must be a
+        # launch flag (cinepi-raw resets its camera manager around it); the
+        # live knobs (hdr_threshold/hdr_blend/hdr_gain_adder) travel via Redis.
+        # Read once into a local: the log-encode resolve further down needs the
+        # same value, and a second Redis read could see a different one if the
+        # key changes mid-launch — which would let --hdr sensor and
+        # --log-encode disagree about whether the source is companded.
+        hdr_on = str(self.redis_controller.get_value(ParameterKey.HDR.value) or "0") == "1"
+        if hdr_on:
+            args += ['--hdr', 'sensor']
 
         # ── if running in multi-camera mode, pass --sync server/client ──
         if self.multi:
@@ -578,7 +597,7 @@ class CinePiProcess(Thread):
         # (visible as a one-tick hole in the DNG timecode). The base value is
         # per storage profile — slower/spikier filesystems (exFAT, NTFS) get
         # more headroom than ext4 — and can be overridden globally via
-        # settings.json camera.raw_buffer_count. Each extra buffer is ~25 MB of
+        # settings.jsonc camera.raw_buffer_count. Each extra buffer is ~25 MB of
         # CMA at 4K; too high exhausts CMA and the camera fails to start, so
         # confirm headroom with `grep Cma /proc/meminfo` before raising.
         try:
@@ -587,7 +606,7 @@ class CinePiProcess(Thread):
             buffer_count = 8
         try:
             override = int(
-                (_settings().get("camera", {}) or {}).get("raw_buffer_count", 0) or 0
+                (_settings().get("sensors", {}) or {}).get("raw_buffer_count", 0) or 0
             )
             if override > 0:
                 buffer_count = override
@@ -605,14 +624,64 @@ class CinePiProcess(Thread):
         )
         args += ["--buffer-count", str(buffer_count)]
 
-        # unique camera model override — per-cam (camera.cam0 / camera.cam1)
-        camera_cfg = _settings().get("camera", {}) or {}
+        # unique camera model override — per-cam (sensors.cam0 / sensors.cam1)
+        camera_cfg = _settings().get("sensors", {}) or {}
         cam_cfg = camera_cfg.get(self.cam.port, {})
         if cam_cfg.get("override_camera_name", False):
             name = str(cam_cfg.get("camera_name", "") or "").strip()
             if name:
                 args += ["--unique-camera-model", name]
                 logging.info("[%s] DNG UniqueCameraModel overridden: %s", self.cam.port, name)
+
+        # ── CineMate Log: log-companded DNG output (--log-encode) ──────────
+        # Target only; cinepi-raw resolves the SOURCE from the live mode and
+        # refuses (recording linear) if no spec matches. The live `set log`
+        # request is shared across every launched camera via redis, like
+        # --hdr sensor; camera.camN.log_encode in settings.jsonc is only the
+        # boot-time seed, read until the first `set log` of a session writes
+        # the redis key. We resolve here (not in cinepi-raw) so the reason is
+        # visible at launch instead of buried in its log, and we publish the
+        # per-cam result so the GUI badge reflects what was actually
+        # launched, never merely requested.
+        raw_log_request = self.redis_controller.get_value(ParameterKey.LOG_ENCODE_REQUEST.value)
+        if raw_log_request is None:
+            log_requested = cam_cfg.get("log_encode", False)
+        else:
+            log_requested = decode_log_encode_request(raw_log_request)
+        log_target = None
+        if log_requested:
+            log_target = self.sensor_detect.resolve_log_encode_target(
+                model_key, bit_depth,
+                requested=None if log_requested is True else log_requested,
+                hdr=hdr_on,
+            )
+            if log_target:
+                args += ["--log-encode", str(log_target)]
+                logging.info(
+                    "[%s] CineMate Log: %d-bit source -> %d-bit log",
+                    self.cam.port, bit_depth, log_target,
+                )
+            elif hdr_on and bit_depth == 12 and log_requested not in (True, 10):
+                # 12-bit ClearHDR (CCMP) composes with log at target 10 only —
+                # cinepi-raw decompands to 16-bit linear first, then applies
+                # the 16-to-10 curve (get_ccmp_composed_log_lut()). The bare
+                # toggle and an explicit 10 both resolve above; only a forced
+                # target other than 10 (there is no composed 16-to-12 path)
+                # reaches here, so name that specifically rather than the
+                # generic message below.
+                logging.warning(
+                    "[%s] CineMate Log target %r requested but NOT applied: "
+                    "12-bit ClearHDR only composes with the CCMP decompand at "
+                    "target 10. Recording linear 12-bit.",
+                    self.cam.port, log_requested,
+                )
+            else:
+                logging.warning(
+                    "[%s] CineMate Log requested (%r) but not applied at "
+                    "%d-bit -- unsupported sensor/source-depth, recording linear",
+                    self.cam.port, log_requested, bit_depth,
+                )
+        self.redis_controller.set_value(f'log_encode_{self.cam.port}', log_target or 0)
 
         return args
 

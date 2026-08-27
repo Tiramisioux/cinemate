@@ -19,7 +19,8 @@ nav:
   - Using the camera:
       - Simple GUI: simple-gui.md
       - Web GUI: web-gui.md
-      # - Lenses and image circles: image-circle.md   # hidden until manually reviewed
+      - Web API: web-api.md
+      - Lenses and image circles: image-circle.md
       - Audio recording: audio-recording.md
       - Digital zoom: digital-zoom.md
       - Speed ramping & shutter angle synchronization: speed-ramping.md
@@ -27,13 +28,17 @@ nav:
   - Configuring:
       - Settings file: settings-json.md
       - Camera sensors and frame rates: sensors.md
+      - ClearHDR (imx585): clear-hdr.md
+      - CineMate Log (imx585 / imx283): cinemate-log.md
       - Dual sensors: dual-sensors.md
       - Additional hardware: hardware-controls.md
+      - Building control units: building-control-units.md
       - Bookworm config.txt: config-txt.md
       - Configuring the Wi-Fi hotspot: hotspot-logic.md
   - System maintenance:
       - Connecting via SSH: ssh.md
       - System services: system-services.md
+      - Recovery console: recovery-console.md
       - Backing up the SD card: backing-up-sd-card.md
   - Troubleshooting: troubleshooting.md
   - Advanced:
@@ -41,20 +46,19 @@ nav:
       - Simple GUI refresh tuning: simple-gui-refresh-tuning.md
       - Manual installation: installation-steps.md
       - Compiling cinepi-raw: compiling-cinepi-raw.md
+      - Overclocking the Pi: overclocking.md
   - Reference:
       - Cinemate terminal commands: cli-commands.md
       - CinePi RAW terminal commands: cli-user-guide.md
+      - Controller methods: controller-methods.md
       - Redis API: redis-guide.md
       - Redis Key reference: redis-keys.md
+      - How Cinemate launches CinePi-raw: cinepi-multi.md
       - Changelog: changelog.md
-      # - Overclocking the Pi: overclocking.md
   # - Cinemate builds:
-  #     - Bare bones build: bare-bones-build.md
   #     - Box build: brick.md
-  - Contributing:
+  - About:
       # - Todo: todo.md
-      # - Contributors: contributors.md
-      # - Contributing to the project: contributing.md
       - Acknowledgements: acknowledgments.md
   #- Download PDF: renders/Cinemate-Docs.pdf
 # Theme
@@ -70,29 +74,9 @@ theme:
     code: Roboto Mono
 
   language: en
-  
-  features:
-    - navigation.instant
-    - navigation.sections
-    - navigation.top
-    - toc.integrate 
-    - toc.follow
-    - content.code.copy
-    - content.code.select
-
-    # Read the Docs specific
-    - collapse_navigation: True,
-    - sticky_navigation: True,
-    - navigation_depth: 4,
-    - includehidden: True,
-    - titles_only: False
-      
-  palette:
-    - scheme: default           # WCAG-AA compliant base
 
 extra_css:
-  
-  - templates/styles.scss
+
   - stylesheets/extra.css
   # - overrides/github-markdown.css
   # - overrides/highlight.css

@@ -5,35 +5,44 @@ import wave
 from PIL import Image, ImageDraw, ImageFont
 from module.console_display import claim_console_for_framebuffer, release_console_to_text
 from module.framebuffer import Framebuffer, acquire_framebuffer
-from module.config_loader import load_settings
-import subprocess
+from module.config_loader import load_settings, as_bool, DEFAULT_SETTINGS_PATH
 import logging
-from sugarpie import pisugar
 from flask_socketio import SocketIO
 import re
-from statistics import mean
 from module.utils import Utils
-from module.redis_controller import ParameterKey
+from module.redis_controller import ParameterKey, smpte_frame_base
 from module.dynamic_resolution import dynamic_resolution_indicator_active
+from module.design_tokens import DESIGN_TOKENS
 import json
 import re
 
 RECORDER_VU_REDIS_KEY    = "audio_vu"
-WAV_RECORDING_COLOR      = (210, 210, 210)   # bright grey while WAV is actively recording
-DROP_WARNING_COLOR = (120, 40, 180)
-SYNC_WARNING_COLOR = (255, 0, 255)
-SYNC_FLASH_COLOR = "magenta"
-RESOLUTION_SWITCHING_COLOR = (176, 176, 176)
+WAV_RECORDING_COLOR      = DESIGN_TOKENS["wav_rec"]   # bright grey while WAV is actively recording
+DROP_WARNING_COLOR = DESIGN_TOKENS["drop"]
+SYNC_WARNING_COLOR = DESIGN_TOKENS["sync"]
+SYNC_FLASH_COLOR = "magenta"  # PIL named colour -- no CSS/design-token counterpart
+RESOLUTION_SWITCHING_COLOR = DESIGN_TOKENS["res_switching"]
 PREVIEW_PADDING_X = 94
 PREVIEW_PADDING_Y = 50
 PREVIEW_GUIDE_OUTLINE_WIDTH = 2
-
-
-def _to_bool(value) -> bool:
-    """Return *value* as bool, accepting common string variants."""
-    if isinstance(value, str):
-        return value.strip().lower() in {"1", "true", "yes", "on"}
-    return bool(value)
+# Top info row (1920-ref geometry). The six label+value groups are justified
+# with equal gaps between TOP_ROW_LEFT_X and RES_RIGHT_ANCHOR (the preview-guide
+# "white" line), so the row stays evenly spaced and the RES group ends on the
+# line — including its trailing SDR/HDR badge on ClearHDR sensors.
+TOP_ROW_LEFT_X = 90         # left edge of the first group (FPS)
+RES_RIGHT_ANCHOR = 1823     # right edge of the last group (RES / its badge)
+TOP_ROW_INTRA_GAP = 12      # label → value gap inside one group
+# SDR/HDR badge (drawn like the WAV badge: rounded box, black text). Shown only
+# when the sensor exposes BOTH plain and ClearHDR modes; on SDR-only sensors
+# (e.g. imx477) the class is self-evident and no badge is drawn.
+HDR_BADGE_GAP = 12          # RES value → badge gap
+HDR_BADGE_FONT_SIZE = 24    # 1920-ref badge text size
+SDR_BADGE_COLOR = DESIGN_TOKENS["sdr_badge"]   # dark grey
+HDR_BADGE_COLOR = DESIGN_TOKENS["hdr_badge"]   # lighter grey
+# CineMate Log per-cam badge (drawn via _draw_status_box, like DROP/SYNC).
+# Grey, distinct from both the plain CAM box grey (136,136,136) and the
+# DROP/SYNC alarm colours -- this is a calm mode indicator, not a warning.
+LOG_BADGE_COLOR = DESIGN_TOKENS["log_badge"]
 
 
 def _to_int(value, default=None):
@@ -41,6 +50,14 @@ def _to_int(value, default=None):
         return int(float(value))
     except (TypeError, ValueError):
         return default
+
+
+def _log_badge_text(target) -> str:
+    """"" for 0/None/unparsable, else "LOG10"/"LOG12" -- the CAM-section
+    badge text for a log_encode_camN redis value (what that camera was
+    actually LAUNCHED with)."""
+    n = _to_int(target, 0) or 0
+    return f"LOG{n}" if n else ""
 
 
 def _calculate_preview_guide_rect(
@@ -126,7 +143,7 @@ class SimpleGUI(threading.Thread):
         self.color_mode = "normal"
         
         # Load settings, not sure when the settings will be None so left the code here
-        self.settings = settings or load_settings("/home/pi/cinemate/src/settings.json")
+        self.settings = settings or load_settings(DEFAULT_SETTINGS_PATH)
         
         self.setup_resources()
         self.display_poll_interval = 1.0
@@ -164,9 +181,9 @@ class SimpleGUI(threading.Thread):
 
         # Buffer VU meter and hatch line toggles from settings
         if settings is not None:
-            hdmi_cfg = settings.get("hdmi_gui", {})
-            self.show_buffer_vu = _to_bool(hdmi_cfg.get("buffer_vu_meter", True))
-            self.vu_meter_hatch_lines = _to_bool(hdmi_cfg.get("vu_meter_hatch_lines", True))
+            overlays_cfg = settings.get("hdmi_display", {}).get("overlays", {})
+            self.show_buffer_vu = as_bool(overlays_cfg.get("buffer_vu_meter", True))
+            self.vu_meter_hatch_lines = as_bool(overlays_cfg.get("vu_meter_hatch_lines", True))
         else:
             self.show_buffer_vu = True
             self.vu_meter_hatch_lines = True
@@ -247,12 +264,14 @@ class SimpleGUI(threading.Thread):
             self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value) or 1920)
             self.height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value) or 1080)
             self.bit_depth = int(self.redis_controller.get_value(ParameterKey.BIT_DEPTH.value) or 10)
+            self.hdr = as_bool(self.redis_controller.get_value(ParameterKey.HDR.value, 0))
             #logging.info(f"Loaded sensor values from Redis: width={self.width}, height={self.height}, bit_depth={self.bit_depth}")
         except ValueError:
             logging.error("Failed to load sensor values from Redis, using default values.")
             self.width = 1920
             self.height = 1080
             self.bit_depth = 12
+            self.hdr = False
 
     # Method to set the current background color
     def set_background_color(self, color):
@@ -372,8 +391,8 @@ class SimpleGUI(threading.Thread):
 
     def _display_restart_allowed(self) -> bool:
         return not (
-            _to_bool(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) or 0)
-            or _to_bool(self.redis_controller.get_value(ParameterKey.IS_WRITING.value) or 0)
+            as_bool(self.redis_controller.get_value(ParameterKey.IS_RECORDING.value) or 0)
+            or as_bool(self.redis_controller.get_value(ParameterKey.IS_WRITING.value) or 0)
         )
 
     def _maybe_restart_camera_for_display_attach(self):
@@ -495,8 +514,8 @@ class SimpleGUI(threading.Thread):
             "aspect": {"normal": "black", "inverse": "black"},
             "color_temp_libcamera": {"normal": (136,136,136), "inverse": "black"},
             # "shutter_a_sync_mode": {"normal": "white", "inverse": "black"},
-            "lock": {"normal": (255, 0, 0, 255), "inverse": "black"},
-            "low_voltage": {"normal": (218,149,77), "inverse": "black"},
+            "lock": {"normal": DESIGN_TOKENS["lock"] + (255,), "inverse": "black"},
+            "low_voltage": {"normal": DESIGN_TOKENS["voltage"], "inverse": "black"},
         
             "ram_label": {"normal": (136,136,136), "inverse": "black"},
             "ram_load": {"normal": (249,249,249), "inverse": "black"},
@@ -627,21 +646,23 @@ class SimpleGUI(threading.Thread):
         cpu_load = self._slow_values.get("cpu_load", "0%")
         cpu_temp = self._slow_values.get("cpu_temp", "--")
 
+        # Keep the previous reading rather than blanking the GUI. debug, not
+        # warning: this sits on the redraw path and would flood at 12 fps.
         try:
             cpu_load = Utils.cpu_load()
         except Exception:
-            pass
+            logging.debug("cpu_load unavailable; keeping the last value", exc_info=True)
 
         try:
             cpu_temp = Utils.cpu_temp()
         except Exception:
-            pass
+            logging.debug("cpu_temp unavailable; keeping the last value", exc_info=True)
 
         if self.ssd_monitor:
             try:
                 latest_recording_info = self.ssd_monitor.get_latest_recording_info()
             except Exception:
-                pass
+                logging.debug("No latest-recording info this pass", exc_info=True)
 
         self._slow_values.update({
             "cpu_load": cpu_load,
@@ -681,7 +702,7 @@ class SimpleGUI(threading.Thread):
         self._maybe_refresh_slow_values()
         self.load_sensor_values_from_redis()
         resolution_value = self.estimate_resolution_in_k()
-        resolution_switching = _to_bool(
+        resolution_switching = as_bool(
             self.redis_controller.get_value(ParameterKey.RESOLUTION_SWITCHING.value, 0)
         )
         display_width = self.width
@@ -763,11 +784,16 @@ class SimpleGUI(threading.Thread):
             "shutter_label":  "SHUTTER",
             "shutter_speed":  shutter_speed,
             "fps_label":      "FPS",
-            "fps":            round(float(self.redis_controller.get_value(ParameterKey.FPS_USER.value))),
+            # smpte_frame_base, not round(): the number shown here is the base
+            # the operator reads the recorded timecode against, so it has to
+            # agree with the C++ side at half-integer rates (F-253).
+            "fps":            smpte_frame_base(self.redis_controller.get_value(ParameterKey.FPS_USER.value)),
             "wb_label":       "WB",
             "color_temp":     f"{self.redis_controller.get_value(ParameterKey.WB_USER.value)} K",
             "color_temp_libcamera": f"/ {self.redis_listener.colorTemp}K",
             "res_label":      "RES",
+            # ClearHDR state is shown as a rounded SDR/HDR badge after the RES
+            # value (see _draw_hdr_badge), not as a text suffix here.
             "res":            f"{display_width}×{display_height} :{display_bit_depth}b",
             "resolution_switching": resolution_switching,
 
@@ -808,6 +834,27 @@ class SimpleGUI(threading.Thread):
             "missing_frame_count": int(self.redis_controller.get_value(ParameterKey.MISSING_FRAME_COUNT.value) or 0),
 
         }
+        # CineMate Log per-cam badge text. Read from log_encode_camN -- what
+        # that camera was actually LAUNCHED with, published by
+        # CinePiProcess._build_args() -- never from settings or the live
+        # `set log` request, so the badge can't show a target that isn't
+        # actually running yet (the launch-only-flag/live-mode trap).
+        values["log_badge_cam0"] = _log_badge_text(
+            self.redis_controller.get_value(ParameterKey.LOG_ENCODE_CAM0.value)
+        )
+        values["log_badge_cam1"] = _log_badge_text(
+            self.redis_controller.get_value(ParameterKey.LOG_ENCODE_CAM1.value)
+        )
+        # Badge/lock state the framebuffer GUI reads off self and the
+        # controller. Published here too so the web GUI renders the same
+        # badges from this one dict instead of re-deriving them.
+        values["hdr_badge"] = self._hdr_badge_text()
+        values["iso_lock"] = bool(self.cinepi_controller.iso_lock)
+        values["shutter_a_nom_lock"] = bool(self.cinepi_controller.shutter_a_nom_lock)
+        values["fps_lock"] = bool(self.cinepi_controller.fps_lock)
+        # Drives the green SHUTTER/FPS tint below, and the same tint in the
+        # web GUI.
+        values["shutter_a_sync"] = self.cinepi_controller.shutter_a_sync_mode != 0
         # drop_frame_latched drives the persistent UI warning overlay.
         # Option 1: live drop_frame pulse = TC hole advisory (flashes during recording).
         # Option 2: drop_frame_during_last_take = only set when files are genuinely
@@ -867,14 +914,96 @@ class SimpleGUI(threading.Thread):
                 except (TypeError, ValueError):
                     pass
 
+        # update_smoothed_vu_levels() (called each draw tick in run(),
+        # before populate_values()) already keeps these current -- publish
+        # them so the web GUI can draw the same meter draw_right_vu_meter()
+        # draws here, with identical ballistics.
+        values["vu_levels"] = list(self.vu_smoothed)
+        values["vu_peaks"] = list(self.vu_peaks)
+
         # ── Zoom factor (preview punch-in) ────────────────────────────────
-        default_zoom = float(self.settings.get("preview", {}).get("default_zoom", 1.0))
+        default_zoom = float(self.settings.get("hdmi_display", {}).get("preview", {}).get("default_zoom", 1.0))
         try:
             z = float(self.redis_controller.get_value(ParameterKey.ZOOM.value) or 1.0)
         except (TypeError, ValueError):
             z = 1.0
         values["zoom_is_default"] = abs(z - default_zoom) <= 1e-3
         values["zoom_factor"] = f"{z:.1f}"
+
+        # ── live-control state for the web GUI's EXPERIMENT drawer ────────
+        # The framebuffer GUI draws none of these; they are published so the
+        # browser's slider/toggle panel tracks the value a pot, the quad
+        # rotary, the CLI or serial last set, instead of drifting to whatever
+        # the browser itself last sent. get_value() is a local cache lookup,
+        # not a Redis round trip, so this costs nothing per draw tick.
+        controller = self.cinepi_controller
+
+        def _num(key, default=0):
+            try:
+                return float(self.redis_controller.get_value(key))
+            except (TypeError, ValueError):
+                return default
+
+        # The four cycle-able step tables, as the controller holds them right
+        # now -- not as events.py computed them once at connect. They change
+        # with the frame rate (flicker-free angles), with the sensor mode (the
+        # fps ceiling) and with a free-stepping toggle, and only the
+        # fps-driven rebuild was being re-pushed; the ISO and WB lists went
+        # stale until the browser reconnected. draw_gui() diffs this dict field
+        # by field, so an unchanged list is not re-emitted -- this costs a list
+        # comparison per draw tick, not a push.
+        #
+        # shutter_a_steps_dynamic and fps_steps_dynamic, not their non-dynamic
+        # siblings: those two are the tables set_shutter_a_nom() and set_fps()
+        # actually snap an incoming value against, which is what lets a browser
+        # control offer only values that will stick.
+        values["iso_steps"] = list(getattr(controller, "iso_steps", None) or [])
+        values["shutter_a_steps"] = list(
+            getattr(controller, "shutter_a_steps_dynamic", None)
+            or getattr(controller, "shutter_a_steps", None) or []
+        )
+        values["fps_steps"] = list(
+            getattr(controller, "fps_steps_dynamic", None)
+            or getattr(controller, "fps_steps", None) or []
+        )
+        values["wb_steps"] = list(getattr(controller, "wb_steps", None) or [])
+        # color_temp above is "5600 K", a display string. Publish the bare
+        # number too, so a control can round-trip a value through it.
+        values["wb"] = _num(ParameterKey.WB_USER.value, 5600)
+
+        # Whether this sensor has ClearHDR modes at all, so a surface can hide
+        # the ClearHDR controls rather than offering four knobs that write
+        # redis keys nothing on an imx477 or imx283 will ever read.
+        #
+        # Deliberately NOT _sensor_has_sdr_and_hdr(): that one answers "are
+        # both classes present", which is the right question for the SDR/HDR
+        # badge (on a single-class sensor the badge would be noise) and the
+        # wrong one here. A sensor exposing only HDR modes has ClearHDR and
+        # would have had its controls hidden.
+        values["hdr_capable"] = self._sensor_has_hdr_modes()
+
+        values["zoom"] = z
+        values["hdr_threshold_low"] = int(_num(ParameterKey.HDR_THRESHOLD_LOW.value))
+        values["hdr_threshold_high"] = int(_num(ParameterKey.HDR_THRESHOLD_HIGH.value))
+        values["hdr_blend"] = int(_num(ParameterKey.HDR_BLEND.value))
+        values["hdr_gain_adder"] = int(_num(ParameterKey.HDR_GAIN_ADDER.value))
+        values["ir_filter"] = int(_num(ParameterKey.IR_FILTER.value))
+        values["anamorphic_factor_value"] = _num(ParameterKey.ANAMORPHIC_FACTOR.value, 1.0)
+        values["hdmi_preview_source"] = str(
+            self.redis_controller.get_value(ParameterKey.HDMI_PREVIEW_SOURCE.value) or "both"
+        )
+        # From redis, not from the controller: the controller keeps no live
+        # shutter_a_nom attribute -- set_shutter_a_nom() writes
+        # self.shutter_angle_nom and the redis key.
+        values["shutter_a_nom"] = _num(ParameterKey.SHUTTER_A_NOM.value, 180.0)
+        # set_shu_fps_lock() has no state of its own -- it drives the two
+        # underlying locks together, so "on" is both of them being on.
+        values["shu_fps_lock"] = bool(controller.shutter_a_nom_lock) and bool(controller.fps_lock)
+        for flag in ("all_lock", "fps_double", "dynamic_resolution_enabled",
+                     "iso_free", "shutter_a_free", "fps_free", "wb_free",
+                     "hdr_threshold_low_free", "hdr_threshold_high_free",
+                     "hdr_blend_free", "hdr_gain_adder_free"):
+            values[flag] = bool(getattr(controller, flag, False))
 
         try:
             preroll_active = int(
@@ -1164,8 +1293,8 @@ class SimpleGUI(threading.Thread):
         box_font   = self._get_font("bold", 26)
 
         BOX_H, BOX_W  = 40, 60
-        BOX_COLOR     = (136, 136, 136)
-        ZOOM_HIGHLIGHT_COLOR = (255, 221, 0)
+        BOX_COLOR     = DESIGN_TOKENS["box"]
+        ZOOM_HIGHLIGHT_COLOR = DESIGN_TOKENS["zoom_hi"]
         TEXT_COLOR    = (0,   0,   0)
 
         label_x       = 19
@@ -1221,6 +1350,17 @@ class SimpleGUI(threading.Thread):
                     draw.text((tx, ty), part, font=part_font, fill=TEXT_COLOR)
 
                     y += BOX_H + BOX_GAP
+
+            if section == self.left_section_layout[0] and values.get("log_badge_cam0"):
+                self._draw_status_box(
+                    draw,
+                    [box_x, y, box_x + BOX_W, y + BOX_H],
+                    values["log_badge_cam0"],
+                    LOG_BADGE_COLOR,
+                    box_font,
+                    TEXT_COLOR,
+                )
+                y += BOX_H + BOX_GAP
 
             if section == self.left_section_layout[0] and values.get("drop_frame_latched"):
                 self._draw_status_box(
@@ -1317,7 +1457,7 @@ class SimpleGUI(threading.Thread):
         box_font   = self._get_font("bold", 24)
 
         BOX_H, BOX_W  = 40, 60
-        BOX_COLOR     = (136, 136, 136)
+        BOX_COLOR     = DESIGN_TOKENS["box"]
         TEXT_COLOR    = (0,   0,   0)
 
         box_pad_x     = self.disp_width - 15 - BOX_W
@@ -1355,6 +1495,17 @@ class SimpleGUI(threading.Thread):
                     ty = y         + (BOX_H - th)//2
                     draw.text((tx, ty), part, font=part_font, fill=TEXT_COLOR)
                     y += BOX_H + BOX_GAP
+
+            if values.get("log_badge_cam1"):
+                self._draw_status_box(
+                    draw,
+                    [box_pad_x, y, box_pad_x + BOX_W, y + BOX_H],
+                    values["log_badge_cam1"],
+                    LOG_BADGE_COLOR,
+                    box_font,
+                    TEXT_COLOR,
+                )
+                y += BOX_H + BOX_GAP
 
             if values.get("drop_frame_latched"):
                 self._draw_status_box(
@@ -1499,8 +1650,132 @@ class SimpleGUI(threading.Thread):
             draw.line([(base_x, y), (base_x + BAR_W, y)], fill=(136,136,136))
 
 
+    # Top info-row groups, in display order: (label_key, value_key).
+    TOP_ROW_GROUPS = (
+        ("fps_label", "fps"),
+        ("shutter_label", "shutter_speed"),
+        ("exposure_label", "exposure_time"),
+        ("iso_label", "iso"),
+        ("wb_label", "color_temp"),
+        ("res_label", "res"),
+    )
+
+    def _sensor_has_hdr_modes(self):
+        """True when the active sensor exposes any ClearHDR mode.
+
+        This is the capability question — "can this camera do ClearHDR at all"
+        — and it is what gates the ClearHDR controls. Distinct from
+        _sensor_has_sdr_and_hdr() below, which asks whether both classes are
+        present; conflating the two hides the controls on a sensor that only
+        has HDR modes.
+        """
+        modes = getattr(self.sensor_detect, "res_modes", {}) or {}
+        return any(bool(m.get("hdr", False)) for m in modes.values())
+
+    def _sensor_has_sdr_and_hdr(self):
+        """True when the active sensor exposes both plain and ClearHDR modes.
+
+        Only then is the SDR/HDR badge meaningful; on SDR-only sensors (imx477,
+        imx283 …) the class is self-evident so the badge is suppressed.
+        """
+        modes = getattr(self.sensor_detect, "res_modes", {}) or {}
+        has_sdr = any(not bool(m.get("hdr", False)) for m in modes.values())
+        return self._sensor_has_hdr_modes() and has_sdr
+
+    def _measure_layout_text(self, draw, key, values, shrink_x, shrink_y):
+        info = self.layout[key]
+        font_size = info.get("size", 12) * min(min(shrink_x, shrink_y), 1)
+        font = self._get_font(info.get("font", "bold"), font_size)
+        bbox = draw.textbbox((0, 0), str(values.get(key, "")), font=font)
+        return bbox[2] - bbox[0]
+
+    def _hdr_badge_text(self) -> str:
+        """"HDR"/"SDR" when the sensor exposes both classes, else "".
+
+        Published in populate_values() as `hdr_badge` so the web GUI renders
+        the same badge from the same decision the framebuffer GUI draws.
+        """
+        if not self._sensor_has_sdr_and_hdr():
+            return ""
+        return "HDR" if bool(getattr(self, "hdr", False)) else "SDR"
+
+    def _hdr_badge(self, draw, shrink_x, shrink_y):
+        """Build the SDR/HDR badge spec (or None when it should be hidden)."""
+        text = self._hdr_badge_text()
+        if not text:
+            return None
+        is_hdr = text == "HDR"
+        font_size = max(1, int(round(HDR_BADGE_FONT_SIZE * min(min(shrink_x, shrink_y), 1))))
+        font = self._get_font("bold", font_size)
+        bbox = draw.textbbox((0, 0), text, font=font)
+        pad_x = max(3, int(6 * shrink_x))
+        pad_y = max(2, int(4 * shrink_y))
+        return {
+            "text": text,
+            "font": font,
+            "bbox": bbox,
+            "text_w": bbox[2] - bbox[0],
+            "text_h": bbox[3] - bbox[1],
+            "pad_x": pad_x,
+            "pad_y": pad_y,
+            "width": (bbox[2] - bbox[0]) + 2 * pad_x,
+            "color": HDR_BADGE_COLOR if is_hdr else SDR_BADGE_COLOR,
+        }
+
+    def _top_row_layout(self, draw, values, shrink_x, shrink_y, badge):
+        """Justify the six top-row groups with equal gaps between
+        TOP_ROW_LEFT_X and RES_RIGHT_ANCHOR. Returns (x_by_key, badge_x)."""
+        intra = TOP_ROW_INTRA_GAP * shrink_x
+        groups = []
+        for label_key, value_key in self.TOP_ROW_GROUPS:
+            label_w = self._measure_layout_text(draw, label_key, values, shrink_x, shrink_y)
+            value_w = self._measure_layout_text(draw, value_key, values, shrink_x, shrink_y)
+            group_w = label_w + intra + value_w
+            if value_key == "res" and badge is not None:
+                group_w += HDR_BADGE_GAP * shrink_x + badge["width"]
+            groups.append((label_key, value_key, label_w, value_w, group_w))
+
+        total_w = sum(g[4] for g in groups)
+        left = TOP_ROW_LEFT_X * shrink_x
+        right = RES_RIGHT_ANCHOR * shrink_x
+        gap = (right - left - total_w) / (len(groups) - 1) if len(groups) > 1 else 0
+
+        x_by_key = {}
+        badge_x = None
+        cursor = left
+        for label_key, value_key, label_w, value_w, group_w in groups:
+            x_by_key[label_key] = cursor
+            value_x = cursor + label_w + intra
+            x_by_key[value_key] = value_x
+            if value_key == "res" and badge is not None:
+                badge_x = value_x + value_w + HDR_BADGE_GAP * shrink_x
+            cursor += group_w + gap
+        return x_by_key, badge_x
+
+    def _draw_hdr_badge(self, draw, badge, badge_x, shrink_x, shrink_y, res_text):
+        """Draw the SDR/HDR rounded badge, vertically centred on the RES value."""
+        res_info = self.layout["res"]
+        res_font = self._get_font(
+            res_info.get("font", "bold"),
+            res_info.get("size", 41) * min(min(shrink_x, shrink_y), 1),
+        )
+        res_bbox = draw.textbbox((0, 0), str(res_text or ""), font=res_font)
+        res_top = res_info["pos"][1] * shrink_y + res_bbox[1]
+        res_h = res_bbox[3] - res_bbox[1]
+
+        box_h = badge["text_h"] + 2 * badge["pad_y"]
+        box_x0 = badge_x
+        box_y0 = res_top + (res_h - box_h) / 2
+        box_x1 = box_x0 + badge["width"]
+        box_y1 = box_y0 + box_h
+        radius = max(2, int(3 * min(shrink_x, shrink_y)))
+        draw.rounded_rectangle([(box_x0, box_y0), (box_x1, box_y1)], radius=radius, fill=badge["color"])
+        text_x = box_x0 + badge["pad_x"] - badge["bbox"][0]
+        text_y = box_y0 + badge["pad_y"] - badge["bbox"][1]
+        draw.text((text_x, text_y), badge["text"], font=badge["font"], fill=(0, 0, 0))
+
     def draw_gui(self, values):
-        
+
         # ── shrink clip-name text when two cameras are active ─────────────────────────
         show_wav = bool(values.get("mic_wav_recording") or values.get("mic_wav_saved"))
         self._adjust_clip_layout(self.draw_right_col, show_wav=show_wav)
@@ -1508,7 +1783,6 @@ class SimpleGUI(threading.Thread):
         previous_background_color = self.get_background_color()
 
         # ─── choose background colour & colour-mode ────────────────────
-        prev_bg = self.get_background_color()      # ← fixed () call
         
         try:
             preroll_active = int(
@@ -1578,7 +1852,9 @@ class SimpleGUI(threading.Thread):
                 try:
                     self.emit_gui_data_change(changed_data)
                 except Exception:
-                    pass
+                    # The framebuffer draw below must happen even if no browser
+                    # is listening. debug: this is per-frame.
+                    logging.debug("Could not push GUI delta to the browser", exc_info=True)
         self.previous_values = current_values.copy()
 
         fb = self.fb
@@ -1610,7 +1886,7 @@ class SimpleGUI(threading.Thread):
         shrink_x = disp_width / 1920
         shrink_y = disp_height / 1080
         
-        line_color = (249, 249, 249) if values.get("zoom_is_default", True) else (255, 221, 0)
+        line_color = DESIGN_TOKENS["guide"] if values.get("zoom_is_default", True) else DESIGN_TOKENS["zoom_hi"]
 
         # Match CinePi._build_args() and DrmPreview::Show(): place the preview
         # window from the raw aspect, then fit the visible lores/anamorphic
@@ -1644,6 +1920,12 @@ class SimpleGUI(threading.Thread):
 
         }
 
+        # Justify the six top-row groups with equal gaps and reserve room for the
+        # SDR/HDR badge; the loop below overrides each top-row element's x from
+        # this map, then the badge is drawn after the loop.
+        hdr_badge = self._hdr_badge(draw, shrink_x, shrink_y)
+        top_row_x, hdr_badge_x = self._top_row_layout(draw, values, shrink_x, shrink_y, hdr_badge)
+
         for element, info in current_layout.items():
             if values.get(element) is None:
                 continue
@@ -1661,11 +1943,19 @@ class SimpleGUI(threading.Thread):
                 x = position[0] + info["width"] - text_width
                 position = (x, position[1])
 
+            # Equal-gap top row: override x with the justified position.
+            if element in top_row_x:
+                position[0] = top_row_x[element]
+
             if element in lock_mapping and getattr(self.cinepi_controller, lock_mapping[element]):
                 # Only draw inside the box
                 self.draw_rounded_box(draw, value, position, font_size, 5, "black", "white", image)
             else:
                 draw.text(position, value, font=font, fill=color)
+
+        # ── SDR/HDR badge after the RES value (ClearHDR sensors only) ────────────
+        if hdr_badge is not None and hdr_badge_x is not None and values.get("res") is not None:
+            self._draw_hdr_badge(draw, hdr_badge, hdr_badge_x, shrink_x, shrink_y, str(values.get("res", "")))
 
         # ── grey CAMx placeholder on whichever line hasn't recorded a clip yet ───
         if self.draw_right_col:
@@ -1725,12 +2015,6 @@ class SimpleGUI(threading.Thread):
             vu_bar_h = max(_MIN_BAR_H, min(_MAX_BAR_H, available))
             self.draw_framebuffer_vu_meter(draw, bar_height=vu_bar_h)
 
-        vu = self.vu_smoothed  # Or .usb_monitor.audio_monitor.vu_levels if you want raw
-        # if vu:
-        #     levels = " | ".join([f"Ch{i+1}={v:.1f}%" for i, v in enumerate(vu)])
-        #     logging.info(f"Mic levels: {levels}")
-        # else:
-        #     logging.info("Mic level: No VU data available.")
 
         if self.draw_right_col:
             self.draw_right_sections(draw, values)
@@ -1753,7 +2037,6 @@ class SimpleGUI(threading.Thread):
 
         # Reduce the top padding by reduce_top and increase the bottom by the same amount
         upper_left = ((position[0] - padding), position[1] - (padding - reduce_top)-6) 
-        bottom_right = (upper_left[0] + text_width + 2 * padding, upper_left[1] + text_height + 2 * padding + reduce_top)
         radius = 5
         radius_2x = radius * 2
 

@@ -1,16 +1,15 @@
-import redis
 import logging
 import threading
 import datetime
 import json
 from collections import deque
 from module.redis_controller import ParameterKey
+from module.config_loader import as_bool
 
 import os
 import re
 import time
 import math
-import statistics
 
 class RedisListener:
     def __init__(
@@ -18,17 +17,18 @@ class RedisListener:
         redis_controller,
         ssd_monitor,
         framerate_callback=None,
-        host='localhost',
-        port=6379,
-        db=0,
         *,
         live_sync_warning_tolerance_frames: int | float = 5,
         live_sync_startup_guard_frames: int | float = 10,
         final_sync_analysis_tolerance_frames: int | float = 1,
         tc_drop_jitter_tolerance_frames: int | float = 1,
     ):
-        self.redis_client = redis.StrictRedis(host=host, port=port, db=db)
-        
+        # Share redis_controller's client instead of opening a second
+        # connection to the same host/port/db (F-105) -- pubsub() still hands
+        # back a dedicated subscription per call, so cp_stats and cp_controls
+        # each get their own, same as before.
+        self.redis_client = redis_controller.r
+
         self.pubsub_stats = self.redis_client.pubsub()
         self.pubsub_controls = self.redis_client.pubsub()
         self.channel_name_stats = "cp_stats"
@@ -550,7 +550,7 @@ class RedisListener:
                     return len(ready)
                 return len(data) or 1
         except Exception:
-            pass
+            logging.debug("Could not read the camera list; falling back", exc_info=True)
 
         return 1
 
@@ -562,17 +562,7 @@ class RedisListener:
         except Exception:
             return False
 
-        if value is None:
-            return False
-
-        text = str(value).strip().lower()
-        if text in ("1", "true", "yes", "on"):
-            return True
-
-        try:
-            return bool(int(text))
-        except (TypeError, ValueError):
-            return False
+        return as_bool(value)
 
     def _determine_expected_fps(self) -> float | None:
         if self.fps_at_rec_start is not None and self.fps_at_rec_start > 0:
@@ -1150,7 +1140,7 @@ class RedisListener:
         """Debounce-timer callback – clear the flag once the fps key
         has been stable for a while."""
         self.user_changing_fps = False
-        self.redis_controller.set_value("user_changing_fps", 0)
+        self.redis_controller.set_value(ParameterKey.USER_CHANGING_FPS.value, 0)
         logging.debug("user_changing_fps → 0 (fps stable)")
 
     def _note_fps_change(self, new_fps: float):
@@ -1160,7 +1150,7 @@ class RedisListener:
 
         self.last_fps_value = new_fps
         self.user_changing_fps = True
-        self.redis_controller.set_value("user_changing_fps", 1)
+        self.redis_controller.set_value(ParameterKey.USER_CHANGING_FPS.value, 1)
         logging.debug(f"fps changed to {new_fps} → user_changing_fps = 1")
 
         # leeway = max(0.5 s, two frame-intervals)
@@ -1182,7 +1172,7 @@ class RedisListener:
                 if self._coerce_int(self.redis_controller.get_value(key)) == 1:
                     return True
             except Exception:
-                pass
+                logging.debug("Unreadable flag %s; trying the next", key, exc_info=True)
         # Fallback when the redis flags are momentarily unset: prefer the
         # framesInFlight gauge (encode_queue_ + disk_buffer_) so a still-draining
         # compression backlog keeps this True even when bufferSize (disk-only)
@@ -1555,7 +1545,7 @@ class RedisListener:
                     if not base or os.path.basename(d) == base:
                         return os.path.abspath(d)
             except Exception:
-                pass
+                logging.debug("Could not inspect a candidate folder", exc_info=True)
 
         # Last attempt: if hint is relative and exists from CWD
         if hint:
@@ -1612,7 +1602,6 @@ class RedisListener:
         file's mtime is older than settle_s (no in-flight files).
         """
         last = None
-        last_latest_mtime = None
         for _ in range(max_attempts):
             cnt, li, ln, latest_mtime = self._scan_dngs_once(folder_path)
             now = time.time()
@@ -1624,7 +1613,6 @@ class RedisListener:
                     return cnt, li, ln
 
             last = cnt
-            last_latest_mtime = latest_mtime
             time.sleep(settle_s)
 
         # final return after attempts
@@ -1791,10 +1779,6 @@ class RedisListener:
                         paused_seconds,
                     )
 
-        drop_detected_this_take = (
-            self.drop_frame_count_current_take > 0
-            or segment_index_hole_frames_total > 0
-        )
         live_drop_holes_total = (
             self.drop_frame_count_current_take * max(1, sensor_count_effective)
             if self.drop_frame_count_current_take > 0

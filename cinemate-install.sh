@@ -46,6 +46,7 @@ ENABLE_SUPPORT_SERVICES="${ENABLE_SUPPORT_SERVICES:-1}"
 ENABLE_STORAGE_AUTOMOUNT_SERVICE="${ENABLE_STORAGE_AUTOMOUNT_SERVICE:-1}"
 ENABLE_WIFI_HOTSPOT_SERVICE="${ENABLE_WIFI_HOTSPOT_SERVICE:-1}"
 ENABLE_REDIS_LOG_MAINTENANCE_SERVICE="${ENABLE_REDIS_LOG_MAINTENANCE_SERVICE:-1}"
+ENABLE_RECOVERY_CONSOLE_SERVICE="${ENABLE_RECOVERY_CONSOLE_SERVICE:-1}"
 ENABLE_AUTOSTART="${ENABLE_AUTOSTART:-1}"
 START_AUTOSTART_NOW="${START_AUTOSTART_NOW:-0}"
 RUN_REBOOT="${RUN_REBOOT:-0}"
@@ -61,9 +62,23 @@ REDIS_PLUS_PLUS_DIR="${REDIS_PLUS_PLUS_DIR:-$PI_HOME/redis-plus-plus}"
 LGPIO_DIR="${LGPIO_DIR:-$PI_HOME/lg}"
 IMX283_DRIVER_DIR="${IMX283_DRIVER_DIR:-$PI_HOME/imx283-v4l2-driver}"
 IMX585_DRIVER_DIR="${IMX585_DRIVER_DIR:-$PI_HOME/imx585-v4l2-driver}"
-VENV_DIR="${VENV_DIR:-$PI_HOME/.cinemate-env}"
+# No dedicated virtualenv: cinemate-recovery.service already runs on system
+# python3 deliberately ("the venv is broken" is a supported failure mode for
+# that service, per its own comments and test_unit_runs_system_python_not_the_venv
+# in _test/test_recovery_console.py) -- main.py now follows the same pattern
+# for a simpler, faster install with one fewer thing that can go stale.
+PYTHON_BIN="${PYTHON_BIN:-/usr/bin/python3}"
+PIP_BIN="${PIP_BIN:-/usr/bin/pip3}"
 
 CINEMATE_REPO_URL="${CINEMATE_REPO_URL:-https://github.com/Tiramisioux/cinemate.git}"
+# Optional pairing manifest: records which cinepi-raw revision goes with which
+# cinemate revision. Sourced before the defaults below so anything it sets
+# wins, and an environment variable still wins over both. Absent is fine --
+# that is the historical behaviour of tracking each default branch.
+_versions_env="$(dirname "${BASH_SOURCE[0]}")/versions.env"
+# shellcheck source=/dev/null
+[[ -f "$_versions_env" ]] && source "$_versions_env"
+
 CINEMATE_REPO_REF="${CINEMATE_REPO_REF:-}"
 CINEPI_RAW_REPO_URL="${CINEPI_RAW_REPO_URL:-https://github.com/Tiramisioux/cinepi-raw.git}"
 CINEPI_RAW_REPO_REF="${CINEPI_RAW_REPO_REF:-}"
@@ -92,17 +107,23 @@ IMX585_DRIVER_REPO_URL="${IMX585_DRIVER_REPO_URL:-https://github.com/Tiramisioux
 IMX585_DRIVER_REPO_REF="${IMX585_DRIVER_REPO_REF:-6.12.y}"
 IR_FILTER_URL="${IR_FILTER_URL:-https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter}"
 PISHRINK_URL="${PISHRINK_URL:-https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh}"
-KERNEL_BASELINE_ABI_2712="${KERNEL_BASELINE_ABI_2712:-6.12.25+rpt-rpi-2712}"
-KERNEL_BASELINE_DEB_VERSION_2712="${KERNEL_BASELINE_DEB_VERSION_2712:-6.12.25-1+rpt1}"
-KERNEL_BASELINE_SUPPORT_PKG_2712="${KERNEL_BASELINE_SUPPORT_PKG_2712:-linux-support-6.12.25+rpt}"
-KERNEL_BASELINE_IMAGE_REAL_PKG_2712="${KERNEL_BASELINE_IMAGE_REAL_PKG_2712:-linux-image-6.12.25+rpt-rpi-2712}"
+# Pi 5 kernel baseline. 6.12.93+rpt is the oldest baseline validated for
+# imx585 ClearHDR: earlier kernels (including the previous 6.12.25 pin) ship
+# an rp1-cfe driver that corrupts 16-bit CSI-2 capture (fixed mid-2025 by
+# "cfe: Avoid unpack operation for 16-bit formats" and the 16-bit hardware
+# mismatch workaround). 10/12-bit capture is unaffected either way.
+KERNEL_BASELINE_ABI_2712="${KERNEL_BASELINE_ABI_2712:-6.12.93+rpt-rpi-2712}"
+KERNEL_BASELINE_DEB_VERSION_2712="${KERNEL_BASELINE_DEB_VERSION_2712:-6.12.93-1+rpt1}"
+KERNEL_BASELINE_SUPPORT_PKG_2712="${KERNEL_BASELINE_SUPPORT_PKG_2712:-linux-support-6.12.93+rpt}"
+KERNEL_BASELINE_IMAGE_REAL_PKG_2712="${KERNEL_BASELINE_IMAGE_REAL_PKG_2712:-linux-image-6.12.93+rpt-rpi-2712}"
 KERNEL_BASELINE_IMAGE_META_PKG_2712="${KERNEL_BASELINE_IMAGE_META_PKG_2712:-linux-image-rpi-2712}"
-KERNEL_BASELINE_HEADERS_REAL_PKG_2712="${KERNEL_BASELINE_HEADERS_REAL_PKG_2712:-linux-headers-6.12.25+rpt-rpi-2712}"
+KERNEL_BASELINE_HEADERS_REAL_PKG_2712="${KERNEL_BASELINE_HEADERS_REAL_PKG_2712:-linux-headers-6.12.93+rpt-rpi-2712}"
 KERNEL_BASELINE_HEADERS_META_PKG_2712="${KERNEL_BASELINE_HEADERS_META_PKG_2712:-linux-headers-rpi-2712}"
-RASPI_FIRMWARE_VERSION_2712="${RASPI_FIRMWARE_VERSION_2712:-1.20250430-1}"
+RASPI_FIRMWARE_VERSION_2712="${RASPI_FIRMWARE_VERSION_2712:-1.20260521-1~bookworm}"
 KERNEL_ROLLBACK_DIR="${KERNEL_ROLLBACK_DIR:-/var/tmp/cinemate-kernel-baseline}"
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
 readonly MANAGED_BEGIN="# >>> cinemate-install >>>"
 readonly MANAGED_END="# <<< cinemate-install <<<"
 # Parallel build jobs. On boards with < 4 GB RAM (1 GB / 2 GB models) heavy
@@ -196,7 +217,14 @@ run_as_pi_clean_shell() {
 bootstrap_sudo() {
     detail "Validating sudo access"
     command -v sudo >/dev/null 2>&1 || die "sudo is required"
-    sudo -v
+    # `sudo -v` (credential-refresh mode) can require a password even when a
+    # NOPASSWD rule covers plain commands -- observed hanging forever on a
+    # stock Raspberry Pi OS image where the pi user has both the default
+    # `%sudo ALL=(ALL:ALL) ALL` group rule and a per-user `NOPASSWD: ALL`
+    # rule. `sudo -n true` exercises the same NOPASSWD path an actual
+    # installer command will use and fails fast instead of blocking on a
+    # password prompt that will never come in a non-interactive session.
+    sudo -n true 2>/dev/null || sudo true
 }
 
 validate_supported_os() {
@@ -316,7 +344,7 @@ print_configuration_summary() {
     detail "Libcamera: $LIBCAMERA_REPO_URL @ $LIBCAMERA_REPO_REF"
     detail "Hotspot: $HOTSPOT_NAME (enabled=$HOTSPOT_ENABLED)"
     detail "Optional features: lgpio=$INSTALL_ALT_GPIO_BACKEND console_font=$INSTALL_CONSOLE_FONT console_autologin=$ENABLE_CONSOLE_AUTOLOGIN pishrink=$INSTALL_PISHRINK plymouth=$INSTALL_PLYMOUTH imx283_driver=$INSTALL_IMX283_DRIVER imx585_driver=$INSTALL_IMX585_DRIVER ir_filter=$INSTALL_IR_FILTER_HELPER"
-    detail "Services: support=$ENABLE_SUPPORT_SERVICES storage=$ENABLE_STORAGE_AUTOMOUNT_SERVICE wifi=$ENABLE_WIFI_HOTSPOT_SERVICE redis_log=$ENABLE_REDIS_LOG_MAINTENANCE_SERVICE autostart=$ENABLE_AUTOSTART start_now=$START_AUTOSTART_NOW"
+    detail "Services: support=$ENABLE_SUPPORT_SERVICES storage=$ENABLE_STORAGE_AUTOMOUNT_SERVICE wifi=$ENABLE_WIFI_HOTSPOT_SERVICE redis_log=$ENABLE_REDIS_LOG_MAINTENANCE_SERVICE recovery=$ENABLE_RECOVERY_CONSOLE_SERVICE autostart=$ENABLE_AUTOSTART start_now=$START_AUTOSTART_NOW"
 }
 
 is_commitish_ref() {
@@ -402,7 +430,7 @@ bootstrap_base_tools() {
     sudo apt update -y
     sudo apt upgrade -y
     detail "Installing base shell/bootstrap tools"
-    sudo apt install -y git curl wget python3 python3-pip python3-venv rsync
+    sudo apt install -y git curl wget python3 python3-pip rsync
 }
 
 is_rpi2712_platform() {
@@ -424,7 +452,11 @@ align_pi5_kernel_baseline() {
     current_fw_version="$(dpkg-query -W -f='${Version}' raspi-firmware 2>/dev/null || true)"
 
     local kernel_pool_url="https://archive.raspberrypi.com/debian/pool/main/l/linux"
-    local firmware_pool_url="https://archive.raspberrypi.com/debian/pool/untested/r/raspi-firmware"
+    # "untested" only ever retains the single newest upload -- any pinned
+    # version there gets 404'd the moment the next build lands. Once a
+    # raspi-firmware build graduates it lands in "main" too and stays
+    # there, so pin against that pool instead for a pin that survives.
+    local firmware_pool_url="https://archive.raspberrypi.com/debian/pool/main/r/raspi-firmware"
     local -a urls=(
         "$kernel_pool_url/${KERNEL_BASELINE_SUPPORT_PKG_2712}_${KERNEL_BASELINE_DEB_VERSION_2712}_all.deb"
         "$kernel_pool_url/${KERNEL_BASELINE_IMAGE_REAL_PKG_2712}_${KERNEL_BASELINE_DEB_VERSION_2712}_arm64.deb"
@@ -511,7 +543,7 @@ install_apt_packages() {
     )
 
     cinemate_packages=(
-        build-essential python3-dev python3-pip python3-venv
+        build-essential python3-dev python3-pip
         i2c-tools python3-smbus python3-pyudev
         libgpiod-dev libgpiod2 python3-libgpiod gpiod
         portaudio19-dev python3-systemd
@@ -645,6 +677,67 @@ remove_build_zram() {
 }
 trap remove_build_zram EXIT
 
+configure_rp1_overclock() {
+    # Will Whang's RP1 SYS/PLL 300 MHz overclock raises the imx585 ClearHDR
+    # frame-rate ceiling. Pi 5 (bcm2712) only — the RP1 does not exist on the
+    # Pi 4 family. This compiles and installs the device-tree overlay; it is
+    # left commented out in config.txt (configure_boot_config) so stock clocks
+    # remain the default. The companion libcamera pixel-rate cap is lifted in
+    # build_libcamera. Runs before the libcamera build so the whole overclock
+    # is in place when libcamera compiles. Thanks to Will Whang
+    # (https://github.com/will127534).
+    if ! is_rpi2712_platform; then
+        detail "Skipping RP1 overclock overlay on non-Pi 5 hardware"
+        return 0
+    fi
+
+    detail "Installing device-tree-compiler"
+    sudo apt install -y device-tree-compiler
+
+    local dts dtbo overlays_dir=/boot/firmware/overlays
+    dts="$(mktemp --suffix=.dts)"
+    dtbo="$(mktemp --suffix=.dtbo)"
+    cat >"$dts" <<'DTS'
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2712";
+
+	fragment@0 {
+		target = <&rp1_clocks>;
+		__overlay__ {
+			/*
+			 * Re-specify the entire assigned-clock-rates array.
+			 * Only the items for RP1_PLL_SYS (index #2) and
+			 * RP1_CLK_SYS (index #7) have been changed to 300000000.
+			 */
+			assigned-clock-rates = <
+				/* RP1_PLL_SYS_CORE  */ 1000000000
+				/* RP1_PLL_AUDIO_CORE*/ 1536000000
+				/* RP1_PLL_SYS       */ 300000000
+				/* RP1_PLL_SYS_SEC   */ 125000000
+				/* RP1_CLK_ETH       */ 125000000
+				/* RP1_PLL_AUDIO     */ 61440000
+				/* RP1_PLL_AUDIO_SEC */ 153600000
+				/* RP1_CLK_SYS       */ 300000000
+				/* RP1_PLL_SYS_PRI_PH*/ 100000000
+				/* RP1_CLK_SLOW_SYS  */ 50000000
+				/* RP1_CLK_SDIO_TIMER*/ 1000000
+				/* RP1_CLK_SDIO_ALT_SRC*/ 200000000
+				/* RP1_CLK_ETH_TSU   */ 50000000
+			>;
+		};
+	};
+};
+DTS
+
+    detail "Compiling rp1-overclock.dtbo into $overlays_dir (disabled by default)"
+    dtc -@ -I dts -O dtb -o "$dtbo" "$dts"
+    sudo install -m 644 "$dtbo" "$overlays_dir/rp1-overclock.dtbo"
+    rm -f "$dts" "$dtbo"
+}
+
 build_libcamera() {
     # The build step below runs chmod +x on every .py/.sh file.  On Linux,
     # git tracks permission bits, so those mode changes show up as dirty and
@@ -676,6 +769,28 @@ build_libcamera() {
             # the base ref) by accepting the patch's version of the file.
             run_as_pi git -C "$LIBCAMERA_DIR" cherry-pick -X theirs "$patch"
         done
+    fi
+
+    # Pi 5 overclock companion: lift the PiSP minimum pixel-processing time so
+    # the overclocked RP1 can advertise the faster imx585 modes. Applied after
+    # the checkout/stash above so a re-run cannot leave it half-applied; the
+    # grep guard keeps it idempotent. Pairs with configure_rp1_overclock.
+    if is_rpi2712_platform; then
+        local controller_cpp="$LIBCAMERA_DIR/src/ipa/rpi/controller/controller.cpp"
+        if grep -q 'minPixelProcessingTime = 1.0us / 380' "$controller_cpp" 2>/dev/null; then
+            detail "Pi 5 overclock: libcamera minPixelProcessingTime 1.0us/380 -> 1.0us/580 (pisp)"
+            run_as_pi sed -i 's#minPixelProcessingTime = 1.0us / 380#minPixelProcessingTime = 1.0us / 580#' "$controller_cpp"
+        elif grep -q 'minPixelProcessingTime = 1.0us / 580' "$controller_cpp" 2>/dev/null; then
+            detail "Pi 5 overclock: libcamera minPixelProcessingTime already at 1.0us/580"
+        else
+            # Neither value present. The grep guard makes a re-run safe, but it
+            # cannot tell "already patched" from "upstream moved this line", and
+            # the second case silently ships an overclocked RP1 without the
+            # companion fix. Say so rather than skipping quietly.
+            warn "Pi 5 overclock: could not find minPixelProcessingTime in ${controller_cpp}."
+            warn "  libcamera has probably changed upstream; the overclock companion fix was NOT applied."
+            warn "  The faster imx585 modes may not be advertised. See docs/overclocking.md."
+        fi
     fi
 
     log "Building libcamera"
@@ -758,7 +873,9 @@ if [[ "\$cr_mem_mb" -gt 0 && "\$cr_mem_mb" -lt 3000 && "\$cr_swap_lines" -le 1 ]
     if [[ -n "\$CR_ZRAM_DEV" ]] && sudo mkswap "\$CR_ZRAM_DEV" >/dev/null 2>&1 && sudo swapon -p 100 "\$CR_ZRAM_DEV" 2>/dev/null; then
         printf '[compile-raw] Low-RAM board (%s MB): added 4 GB zram build swap on %s (removed on exit)\n' "\$cr_mem_mb" "\$CR_ZRAM_DEV"
     else
-        [[ -n "\$CR_ZRAM_DEV" ]] && sudo zramctl --reset "\$CR_ZRAM_DEV" 2>/dev/null || true
+        if [[ -n "\$CR_ZRAM_DEV" ]]; then
+            sudo zramctl --reset "\$CR_ZRAM_DEV" 2>/dev/null || true
+        fi
         CR_ZRAM_DEV=""
         printf '[compile-raw] WARNING: could not set up zram build swap; low-RAM build may OOM\n'
     fi
@@ -825,32 +942,35 @@ install_lgpio_backend() {
 }
 
 install_python_environment() {
-    log "Creating Cinemate virtualenv"
-    if [[ ! -d "$VENV_DIR" ]]; then
-        detail "Creating new virtualenv at $VENV_DIR"
-        run_as_pi python3 -m venv "$VENV_DIR"
-    else
-        detail "Reusing existing virtualenv at $VENV_DIR"
-    fi
+    log "Installing Cinemate Python packages (system interpreter, no virtualenv)"
 
-    sudo chown -R "$PI_USER:$PI_GROUP" "$VENV_DIR"
+    # Debian 12 (Bookworm) marks the system Python "externally managed"
+    # (PEP 668) specifically to stop pip from clobbering apt-owned packages.
+    # --break-system-packages is pip's own documented escape hatch for a
+    # deliberate system-wide install, not a workaround for a bug. --user
+    # installs to ~pi/.local instead of root-owned dist-packages: no sudo
+    # needed for the install itself, and cinemate-autostart.service already
+    # runs as User=pi, so python3 finds ~/.local/lib/pythonX/site-packages
+    # automatically (PEP 370) with no PATH/PYTHONPATH changes required.
+    local pip_cmd=("$PIP_BIN" install --user --break-system-packages)
 
-    local pip_cmd="$VENV_DIR/bin/pip"
     detail "Upgrading pip tooling"
-    run_as_pi "$pip_cmd" install --upgrade pip setuptools wheel
-    run_as_pi "$pip_cmd" uninstall -y board >/dev/null 2>&1 || true
-    detail "Installing Cinemate Python packages"
-    run_as_pi "$pip_cmd" install \
-        gpiozero \
-        adafruit-blinka adafruit-circuitpython-ssd1306 adafruit-circuitpython-seesaw \
-        luma.oled grove.py pigpio-encoder smbus2 rpi_hardware_pwm \
-        watchdog psutil pillow redis keyboard pyudev numpy termcolor sounddevice \
-        evdev inotify_simple sysv_ipc flask_socketio sugarpie
-
-    if is_true "$INSTALL_ALT_GPIO_BACKEND"; then
-        detail "Installing lgpio Python package"
-        run_as_pi "$pip_cmd" install lgpio
+    run_as_pi "${pip_cmd[@]}" --upgrade pip setuptools wheel
+    run_as_pi "$PIP_BIN" uninstall -y --break-system-packages board >/dev/null 2>&1 || true
+    # Read the package list from the repo rather than restating it here. The
+    # two lists used to disagree: requirements.txt was read by nothing, and the
+    # literal that lived here had drifted from it in both directions. lgpio is
+    # in requirements-hardware.txt unconditionally -- rpi_gpio_wrapper imports
+    # it at the top of main.py's own import chain, so it is not optional
+    # whatever INSTALL_ALT_GPIO_BACKEND says about the C library below.
+    local req_dir="${CINEMATE_SOURCE_DIR:-$CINEMATE_DIR}"
+    local req="$req_dir/requirements.txt"
+    local req_hw="$req_dir/requirements-hardware.txt"
+    if [[ ! -f "$req" || ! -f "$req_hw" ]]; then
+        die "Missing $req or $req_hw -- cannot install the Python environment."
     fi
+    detail "Installing Cinemate Python packages from requirements files"
+    run_as_pi "${pip_cmd[@]}" -r "$req" -r "$req_hw"
 }
 
 configure_loader_paths() {
@@ -895,7 +1015,14 @@ configure_boot_config() {
     backup_file "$config_txt"
     temp="$(mktemp)"
 
-    python3 - "$temp" "$MANAGED_BEGIN" "$MANAGED_END" "$DTO_OVERLAY" "$CAMERA_AUTO_DETECT" "$BT_OVERLAY" "$ENABLE_CFE_HAT_PCIE" "$SENSOR_MODEL" <<'PY'
+    # Pi 5 (bcm2712) ships the RP1 overclock overlay commented out; see
+    # configure_rp1_overclock. Non-Pi-5 images omit the line entirely.
+    local overclock_available=0
+    if is_rpi2712_platform; then
+        overclock_available=1
+    fi
+
+    python3 - "$temp" "$MANAGED_BEGIN" "$MANAGED_END" "$DTO_OVERLAY" "$CAMERA_AUTO_DETECT" "$BT_OVERLAY" "$ENABLE_CFE_HAT_PCIE" "$SENSOR_MODEL" "$overclock_available" <<'PY'
 import pathlib
 import sys
 
@@ -907,6 +1034,7 @@ camera_auto_detect = sys.argv[5]
 bt_overlay = sys.argv[6]
 enable_pcie = sys.argv[7].lower() in {"1", "true", "yes", "on"}
 sensor_model = sys.argv[8]
+overclock_available = sys.argv[9].lower() in {"1", "true", "yes", "on"}
 
 def camera_section(label, key, default_auto_detect, default_overlay):
     active = key == sensor_model
@@ -997,6 +1125,22 @@ block += [
     "# Run as fast as firmware / board allows",
     "arm_boost=1",
     "",
+]
+
+if overclock_available:
+    # Will Whang's RP1 SYS/PLL 300 MHz overclock (Pi 5 only). The overlay is
+    # installed by configure_rp1_overclock and libcamera is already built for
+    # it; only this line is the opt-in switch. Left commented so stock clocks
+    # are the default. Thanks to Will Whang (https://github.com/will127534).
+    block += [
+        "# ---- RP1 overclock (Pi 5, optional) ----",
+        "# Raises imx585 ClearHDR frame rates. Uncomment and reboot to enable;",
+        "# re-comment and reboot to return to stock. See docs/overclocking.md.",
+        "#dtoverlay=rp1-overclock",
+        "",
+    ]
+
+block += [
     "[cm4]",
     "# Enable host mode on the 2711 built-in XHCI USB controller.",
     "# This line should be removed if the legacy DWC2 controller is required",
@@ -1181,6 +1325,41 @@ configure_hostname_and_i2c() {
     sudo usermod -aG i2c "$PI_USER"
     sudo modprobe i2c-dev || true
     ensure_line_in_root_file /etc/modules 'i2c-dev'
+    configure_etc_hosts
+    configure_mdns
+}
+
+# /etc/hosts is not rewritten from scratch -- only the 127.0.1.1 line (the
+# one hostnamectl doesn't touch) is fixed in place, or added if absent.
+# Idempotent: a re-run with the same TARGET_HOSTNAME leaves the file
+# byte-identical, so write_root_file's own no-op check skips the write.
+configure_etc_hosts() {
+    local hosts_file="/etc/hosts"
+    local desired_line="127.0.1.1	$TARGET_HOSTNAME"
+    local existing=""
+
+    log "Ensuring /etc/hosts has $desired_line"
+    if sudo test -f "$hosts_file"; then
+        existing="$(sudo cat "$hosts_file")"
+    fi
+
+    if printf '%s\n' "$existing" | grep -Eq '^127\.0\.1\.1[[:space:]]'; then
+        printf '%s\n' "$existing" \
+            | sed -E "s/^127\.0\.1\.1[[:space:]].*/$(printf '%s' "$desired_line" | sed 's/[&/\]/\\&/g')/" \
+            | write_root_file "$hosts_file" 644
+    else
+        { printf '%s\n' "$existing"; printf '%s\n' "$desired_line"; } | write_root_file "$hosts_file" 644
+    fi
+}
+
+# Nothing in this repo installed or enabled avahi so <hostname>.local only
+# ever resolved when the base image happened to ship it (F-289). Both
+# packages are idempotent to (re)install; systemctl enable --now is
+# idempotent too.
+configure_mdns() {
+    log "Installing avahi for $TARGET_HOSTNAME.local resolution"
+    sudo apt install -y avahi-daemon libnss-mdns
+    sudo systemctl enable --now avahi-daemon
 }
 
 configure_console_font() {
@@ -1378,7 +1557,7 @@ configure_run_wrapper() {
     write_user_file "$PI_HOME/run_cinemate.sh" 755 <<EOF
 #!/usr/bin/env bash
 set -Eeuo pipefail
-exec "$VENV_DIR/bin/python3" "$CINEMATE_DIR/src/main.py" "\$@"
+exec "$PYTHON_BIN" "$CINEMATE_DIR/src/main.py" "\$@"
 EOF
 }
 
@@ -1402,20 +1581,61 @@ EOF
     detail "Added $PI_USER to audio group; re-login required for limits to take effect"
 }
 
+CONFIG_TXT_APPLY_HELPER="/usr/local/bin/cinemate-apply-config-txt"
+
+# The settings editor runs as $PI_USER, which cannot write into root-owned
+# /boot/firmware (F-288). This is the one narrow privileged step that lets
+# it anyway: it reads only a fixed, already-pi-written staging file and
+# copies it over config.txt, preserving that file's existing owner/mode
+# rather than assuming one. It takes no arguments -- the sudoers rule below
+# grants it with none, so a compromised or buggy caller cannot redirect it
+# at an arbitrary destination.
+configure_config_txt_apply_helper() {
+    log "Installing $CONFIG_TXT_APPLY_HELPER"
+    write_root_file "$CONFIG_TXT_APPLY_HELPER" 755 <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+STAGED="/home/pi/cinemate/.settings-editor-config-txt.staged"
+DEST="/boot/firmware/config.txt"
+
+if [[ ! -f "$STAGED" ]]; then
+    echo "cinemate-apply-config-txt: no staged file at $STAGED" >&2
+    exit 1
+fi
+
+OWNER="$(stat -c '%u:%g' "$DEST" 2>/dev/null || echo '0:0')"
+MODE="$(stat -c '%a' "$DEST" 2>/dev/null || echo '644')"
+
+TMP="$(mktemp "${DEST}.XXXXXX")"
+trap 'rm -f "$TMP"' EXIT
+cp "$STAGED" "$TMP"
+chown "$OWNER" "$TMP"
+chmod "$MODE" "$TMP"
+mv -f "$TMP" "$DEST"
+trap - EXIT
+rm -f "$STAGED"
+EOF
+}
+
 configure_sudoers() {
     log "Writing sudoers drop-ins"
-    backup_file /etc/sudoers.d/cinemate-env
     backup_file /etc/sudoers.d/pi_cinemate
-    write_root_file /etc/sudoers.d/cinemate-env 440 <<EOF
-$PI_USER ALL=(ALL) NOPASSWD: $VENV_DIR/bin/*
-EOF
+    # There is no venv/bin directory to scope a wildcard grant to any more.
+    # Remove a stale drop-in from an older venv-based install so it doesn't
+    # linger granting NOPASSWD on a path that no longer exists.
+    if [[ -e /etc/sudoers.d/cinemate-env ]]; then
+        backup_file /etc/sudoers.d/cinemate-env
+        sudo rm -f /etc/sudoers.d/cinemate-env
+    fi
     write_root_file /etc/sudoers.d/pi_cinemate 440 <<EOF
 $PI_USER ALL=(ALL) NOPASSWD: $PI_HOME/run_cinemate.sh
 $PI_USER ALL=(ALL) NOPASSWD: $CINEMATE_DIR/src/main.py
 $PI_USER ALL=(ALL) NOPASSWD: /bin/mount, /bin/umount, /usr/bin/ntfs-3g
 $PI_USER ALL=(ALL) NOPASSWD: /sbin/mount.ext4
+$PI_USER ALL=(ALL) NOPASSWD: /usr/bin/systemd-run --no-block --collect --unit=cinemate-restart-trigger -- systemctl restart cinemate-autostart
+$PI_USER ALL=(ALL) NOPASSWD: $CONFIG_TXT_APPLY_HELPER
 EOF
-    sudo visudo -cf /etc/sudoers.d/cinemate-env >/dev/null
     sudo visudo -cf /etc/sudoers.d/pi_cinemate >/dev/null
     detail "sudoers validation passed"
 }
@@ -1438,12 +1658,10 @@ configure_bashrc() {
     cat >>"$temp" <<EOF
 
 $MANAGED_BEGIN
-source "$VENV_DIR/bin/activate"
-alias cinemate-env='source "$VENV_DIR/bin/activate"'
 alias cinemate='$PI_HOME/run_cinemate.sh'
 alias editboot='sudo nano /boot/firmware/config.txt'
 alias editcmdline='sudo nano /boot/firmware/cmdline.txt'
-alias editsettings='sudo nano $CINEMATE_DIR/src/settings.json'
+alias editsettings='sudo nano $CINEMATE_DIR/settings.jsonc'
 $MANAGED_END
 EOF
 
@@ -1451,14 +1669,58 @@ EOF
     rm -f "$temp"
 }
 
+configure_nano_jsonc_highlighting() {
+    log "Adding nano syntax highlighting for settings.jsonc"
+    backup_file /usr/share/nano/jsonc.nanorc
+    write_root_file /usr/share/nano/jsonc.nanorc 644 <<'EOF'
+## JSONC (JSON with // and /* */ comments) syntax highlighting for nano.
+## nano's stock JSON rule (where present) only matches "\.json$", which does
+## not match settings.jsonc -- this file adds that match on its own so it
+## survives a nano package update overwriting the stock rule.
+syntax "jsonc" "\.jsonc$"
+comment "//"
+
+# String values (generic -- listed first so the more specific "key" rule
+# below paints over the key portion of "key": value pairs).
+color green "\"(\\.|[^\"])*\""
+
+# Object keys: a quoted string immediately followed by a colon.
+color cyan "\"(\\.|[^\"])*\"[[:space:]]*:"
+
+# Numbers.
+color magenta "-?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?"
+
+# true / false / null.
+color yellow "\<(true|false|null)\>"
+
+# Structural punctuation.
+color brightwhite "[]{}[,:]"
+
+# // line comments.
+color white "//.*"
+
+# /* block comments */ (can span multiple lines).
+color white start="/\*" end="\*/"
+EOF
+
+    local nanorc="/etc/nanorc"
+    local active_include='^[[:space:]]*include[[:space:]]+"?/usr/share/nano/(\*\.nanorc|jsonc\.nanorc)"?[[:space:]]*$'
+    if [[ -f "$nanorc" ]] && sudo grep -qE "$active_include" "$nanorc"; then
+        detail "$nanorc already includes /usr/share/nano/*.nanorc"
+        return 0
+    fi
+
+    detail "Adding jsonc.nanorc include to $nanorc"
+    [[ -f "$nanorc" ]] && backup_file "$nanorc"
+    printf '\ninclude "/usr/share/nano/jsonc.nanorc"\n' | sudo tee -a "$nanorc" >/dev/null
+}
+
 print_post_install_notes() {
     section "Post-install notes"
-    log "Cinemate virtualenv: $VENV_DIR"
+    log "Cinemate Python packages: installed to the system interpreter ($PYTHON_BIN), no virtualenv"
     detail "cinepi-raw rebuild helper: $PI_HOME/compile-raw.sh"
     detail "Matching rpicam utilities are installed via the cinepi-raw build under /usr/local/bin"
-    detail "New interactive shells will auto-activate the Cinemate virtualenv from $PI_HOME/.bashrc"
     detail "If you are staying in this shell, run 'source ~/.bashrc' once to load the aliases now"
-    detail "If you ever run 'deactivate', use 'cinemate-env' to reactivate the virtualenv in the current shell"
     if ((KERNEL_ALIGNMENT_REQUIRED_REBOOT)); then
         detail "Pi 5 kernel baseline was aligned to $KERNEL_BASELINE_ABI_2712; reboot once before camera testing if you did not run the installer with RUN_REBOOT=1"
     fi
@@ -1466,19 +1728,65 @@ print_post_install_notes() {
 }
 
 configure_settings_json() {
-    local settings_json="$CINEMATE_DIR/src/settings.json"
+    local settings_json="$CINEMATE_DIR/settings.jsonc"
     local hotspot_enabled_json=false
 
-    [[ -f "$settings_json" ]] || die "Missing settings.json at $settings_json"
+    [[ -f "$settings_json" ]] || die "Missing settings.jsonc at $settings_json"
     is_true "$HOTSPOT_ENABLED" && hotspot_enabled_json=true
 
-    log "Patching settings.json"
+    log "Patching settings.jsonc"
     detail "Applying hotspot + HDMI defaults to $settings_json"
-    backup_file "$settings_json"
     run_as_pi python3 - "$settings_json" "$HOTSPOT_NAME" "$HOTSPOT_PASSWORD" "$hotspot_enabled_json" "$HDMI_PORT_CAM0" "$HDMI_PORT_CAM1" <<'PY'
 import json
 import pathlib
 import sys
+
+
+def _strip_jsonc(text):
+    # Minimal mirror of module.config_loader.strip_jsonc() -- duplicated
+    # rather than imported because this heredoc runs under the system
+    # python3, outside the cinemate package/venv. Keep in sync by hand.
+    out = []
+    i, n = 0, len(text)
+    in_string = escape = False
+    while i < n:
+        c = text[i]
+        if in_string:
+            out.append(c)
+            if escape:
+                escape = False
+            elif c == "\\":
+                escape = True
+            elif c == '"':
+                in_string = False
+            i += 1
+            continue
+        if c == '"':
+            in_string = True
+            out.append(c)
+            i += 1
+            continue
+        if c == "/" and i + 1 < n and text[i + 1] == "/":
+            while i < n and text[i] != "\n":
+                i += 1
+            continue
+        if c == "/" and i + 1 < n and text[i + 1] == "*":
+            i += 2
+            while i < n and not (text[i] == "*" and i + 1 < n and text[i + 1] == "/"):
+                i += 1
+            i += 2
+            continue
+        if c == ",":
+            j = i + 1
+            while j < n and text[j] in " \t\r\n":
+                j += 1
+            if j < n and text[j] in "}]":
+                i += 1
+                continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
 
 path = pathlib.Path(sys.argv[1])
 ssid = sys.argv[2]
@@ -1487,23 +1795,72 @@ enabled = sys.argv[4].lower() == "true"
 hdmi0 = int(sys.argv[5])
 hdmi1 = int(sys.argv[6])
 
-data = json.loads(path.read_text())
+original_text = path.read_text()
+data = json.loads(_strip_jsonc(original_text))
+
+# json.dumps() below is a lossy round-trip -- it throws away every // and
+# /* */ comment in settings.jsonc (71 of them on the stock template). Most
+# installs pass the installer's own defaults, which already match what's
+# committed in settings.jsonc, so there is nothing to patch. Detect that
+# case and skip the write entirely rather than silently gutting the file
+# on every single install regardless of whether anything changed.
 system_cfg = data.setdefault("system", {})
 wifi_cfg = system_cfg.setdefault("wifi_hotspot", {})
+sensors_cfg = data.setdefault("sensors", {})
+cam0_out = sensors_cfg.setdefault("cam0", {}).setdefault("output", {})
+cam1_out = sensors_cfg.setdefault("cam1", {}).setdefault("output", {})
+hdmi_cfg = data.setdefault("hdmi_display", {})
+
+unchanged = (
+    wifi_cfg.get("name") == ssid
+    and wifi_cfg.get("password") == password
+    and wifi_cfg.get("enabled") == enabled
+    and cam0_out.get("hdmi_port") == hdmi0
+    and cam1_out.get("hdmi_port") == hdmi1
+    and "width" in hdmi_cfg
+    and "height" in hdmi_cfg
+)
+if unchanged:
+    print("settings.jsonc already matches the requested hotspot/HDMI values -- leaving it untouched (comments intact).")
+    sys.exit(0)
+
 wifi_cfg["name"] = ssid
 wifi_cfg["password"] = password
 wifi_cfg["enabled"] = enabled
+cam0_out["hdmi_port"] = hdmi0
+cam1_out["hdmi_port"] = hdmi1
+hdmi_cfg.setdefault("width", 1920)
+hdmi_cfg.setdefault("height", 1080)
 
-output_cfg = data.setdefault("output", {})
-output_cfg.setdefault("cam0", {})["hdmi_port"] = hdmi0
-output_cfg.setdefault("cam1", {})["hdmi_port"] = hdmi1
-
-hdmi_display = data.setdefault("hdmi_display", {})
-hdmi_display.setdefault("width", 1920)
-hdmi_display.setdefault("height", 1080)
-
+print("WARNING: settings.jsonc needs a real value change (hotspot/HDMI settings differ "
+      "from the template) -- writing it back with json.dumps() will strip every // and "
+      "/* */ comment. Back up your comments if you rely on them; a preserving editor for "
+      "this path does not exist yet.")
+backup_path = path.with_suffix(path.suffix + ".bak")
+backup_path.write_text(original_text)
 path.write_text(json.dumps(data, indent=2) + "\n")
 PY
+}
+
+write_recovery_conf() {
+    # Rung 2 of the recovery console's own config ladder
+    # (docs/recovery-console.md): read when settings.jsonc will not parse,
+    # which is precisely the console's primary use case. Flat key=value so it
+    # is trivial to read without a JSON parser at all.
+    local conf_path="/etc/cinemate-recovery.conf"
+
+    log "Writing $conf_path"
+    [[ -f "$conf_path" ]] && backup_file "$conf_path"
+    sudo tee "$conf_path" >/dev/null <<EOF
+# Written by cinemate-install.sh. Fallback config for cinemate-recovery.service
+# when settings.jsonc cannot be parsed. See docs/recovery-console.md.
+enabled=true
+port=8080
+token=
+allow_config_txt=false
+config_confirm_timeout_s=300
+EOF
+    sudo chmod 644 "$conf_path"
 }
 
 seed_redis_defaults() {
@@ -1555,6 +1912,14 @@ install_cinemate_services() {
             sudo make -C "$CINEMATE_SOURCE_DIR/services" start-redis-log-maintenance
         else
             detail "Skipping redis-log-maintenance.timer"
+        fi
+
+        if is_true "$ENABLE_RECOVERY_CONSOLE_SERVICE"; then
+            log "Installing and enabling cinemate-recovery.service"
+            write_recovery_conf
+            sudo make -C "$CINEMATE_SOURCE_DIR/services" enable-cinemate-recovery
+        else
+            detail "Skipping cinemate-recovery.service"
         fi
     else
         detail "Skipping support services"
@@ -1623,6 +1988,8 @@ main() {
     section "Building redis-plus-plus"
     build_redis_plus_plus
     ensure_build_zram   # compressed-RAM build swap on < 4 GB boards; removed after
+    section "Configuring the RP1 overclock (Pi 5, optional)"
+    configure_rp1_overclock
     section "Building libcamera"
     build_libcamera
     section "Building cpp-mjpeg-streamer"
@@ -1661,10 +2028,12 @@ main() {
     section "Preparing runtime wrappers and permissions"
     configure_media_permissions
     configure_run_wrapper
+    configure_config_txt_apply_helper
     configure_sudoers
     configure_audio_rtprio
     configure_logrotate
     configure_bashrc
+    configure_nano_jsonc_highlighting
     configure_settings_json
     section "Seeding Redis defaults"
     seed_redis_defaults

@@ -1,3 +1,7 @@
+# shellcheck shell=bash
+# shellcheck disable=SC2317  # `return || exit` is the sourced-or-executed
+# idiom: whichever half applies, the other looks unreachable to a linter.
+# Sourced from /etc/profile.d/, so no shebang: the shell is the login shell.
 failure_file="${CINEMATE_STARTUP_FAILURE_FILE:-/home/pi/.cache/cinemate/startup-failure.ansi}"
 
 case $- in
@@ -5,11 +9,11 @@ case $- in
     *) return 0 2>/dev/null || exit 0 ;;
 esac
 
-if [[ "$(tty 2>/dev/null)" != "/dev/tty1" ]]; then
+if [ "$(tty 2>/dev/null)" != "/dev/tty1" ]; then
     return 0 2>/dev/null || exit 0
 fi
 
-if [[ -s "${failure_file}" ]]; then
+if [ -s "${failure_file}" ]; then
     printf '\033[2J\033[H'
     cat "${failure_file}"
     printf '\033[0m\033[?25h\n'

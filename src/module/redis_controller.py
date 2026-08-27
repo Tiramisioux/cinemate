@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging, threading, redis, psutil, time
 from enum import Enum
 import time, math
+from module.config_loader import as_bool
 
 # ───────────────────────── parameter keys ────────────────────────────
 class ParameterKey(Enum):
@@ -33,6 +34,11 @@ class ParameterKey(Enum):
     FPS_PHASE_LOCK    = "fps_phase_lock"
     FRAMECOUNT        = "framecount"
     GUI_LAYOUT        = "gui_layout"
+    HDR               = "hdr"             # 1 = ClearHDR active (imx585): cinepi-raw launches with --hdr sensor
+    HDR_THRESHOLD_LOW  = "hdr_threshold_low"   # 0..4095 — ClearHDR data-selection threshold, low
+    HDR_THRESHOLD_HIGH = "hdr_threshold_high"  # 0..4095 — ClearHDR data-selection threshold, high
+    HDR_BLEND         = "hdr_blend"       # 0..8 — ClearHDR blending mode (driver menu index)
+    HDR_GAIN_ADDER    = "hdr_gain_adder"  # 0..5 — ClearHDR gain adder (driver menu index, 2 = +12 dB)
     HEIGHT            = "height"
     IR_FILTER         = "ir_filter"
     IS_BUFFERING      = "is_buffering"
@@ -87,7 +93,18 @@ class ParameterKey(Enum):
     EXPOSURE_TIME       = 'exposure_time'
     LAST_DNG_CAM1       = "last_dng_cam1"
     LAST_DNG_CAM0       = "last_dng_cam0"
-    
+
+    # CineMate Log (--log-encode). REQUEST is the live `set log` state,
+    # shared across every launched camera like HDR's ParameterKey.HDR --
+    # each camera's _build_args() resolves it independently against its own
+    # sensor/live bit depth. LOG_ENCODE_CAM0/CAM1 are per-camera and hold
+    # what that camera was actually LAUNCHED with (0 = off/not applied, else
+    # the resolved target 10/12) -- the badge reads these, never REQUEST,
+    # so it never shows a target that isn't actually running yet.
+    LOG_ENCODE_REQUEST = "log_encode_request"
+    LOG_ENCODE_CAM0    = "log_encode_cam0"
+    LOG_ENCODE_CAM1    = "log_encode_cam1"
+
     ZOOM                = "zoom"  # digital zoom factor for streams 0 & 2
     HDMI_PREVIEW_SOURCE = "hdmi_preview_source"  # dual-sensor HDMI: both / cam0 / cam1 / pip_cam0 / pip_cam1
     RECORD_CAMS         = "record_cams"          # which sensors record this take: cam0+cam1 / cam0 / cam1
@@ -96,17 +113,107 @@ class ParameterKey(Enum):
     RECORDING_TC_REC     = "recording_tc_rec"    # elapsed-time time-code
     RECORDING_TC_TOD   = "recording_time_tod"    # time-of-day time-code
     FRAMES_IN_SYNC      = "frames_in_sync"
+    USER_CHANGING_FPS   = "user_changing_fps"
+    FSCK_STATUS         = "FSCK_STATUS"  # ssd_monitor's own fsck result; cinepi-raw never reads this one
+
+
+_KNOWN_PARAMETER_VALUES = {member.value for member in ParameterKey}
+
+
+def smpte_frame_base(fps) -> int:
+    """The integer SMPTE frame base for a (possibly fractional) frame rate.
+
+    This is the single Python definition of "base = round(fps)". Use it
+    everywhere a frame rate has to become a frame count -- do not re-derive it
+    with the built-in round(), which is banker's rounding: round(24.5) == 24
+    while the C++ side (std::lround in cinepi_sound.cpp's
+    nominalTimecodeFramerate() and in dng_encoder.cpp) yields 25. At
+    half-integer frame rates that one-frame disagreement is visible to the
+    operator as Redis/GUI timecode diverging from the timecode embedded in the
+    DNG and WAV (F-253).
+
+    Rounds half away from zero and clamps to >= 1, mirroring
+    nominalTimecodeFramerate()'s std::max(1.0, std::round(framerate)).
+    """
+    try:
+        rate = float(fps)
+    except (TypeError, ValueError):
+        return 1
+    if not math.isfinite(rate) or rate <= 0.0:
+        return 1
+    return max(1, int(math.floor(rate + 0.5)))
+
+
+def encode_log_encode_request(value) -> int:
+    """False|True|10|12 -> 0|1|10|12 -- the redis-safe int encoding for
+    ParameterKey.LOG_ENCODE_REQUEST (mirrors camera.camN.log_encode in
+    settings.jsonc). Unparsable input encodes as 0 (off)."""
+    if value is False:
+        return 0
+    if value is True:
+        return 1
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def decode_log_encode_request(raw):
+    """Inverse of encode_log_encode_request. None/unparsable -> False."""
+    try:
+        n = int(raw)
+    except (TypeError, ValueError):
+        return False
+    if n <= 0:
+        return False
+    if n == 1:
+        return True
+    return n
 
 
 # ────────────────────────── tiny pub‑sub helper ──────────────────────
 class Event:
+    """Shared pub/sub helper (F-127). Used to be four independent copies --
+    redis_controller's own, plus ssd_monitor.mount_event, usb_monitor.usb_event
+    and cinepi_multi.message -- with divergent error handling; B3.1 fixed this
+    one, B9.6a fixed the other two in place, this collapses all three into it.
+    This is the only copy with unsubscribe, and the one PI-014 exercised on
+    hardware for the redis bus.
+
+    emit() takes *args, not a single data param: ssd_monitor's mount_event and
+    usb_monitor's usb_event were already emitting several positional args
+    (mount path/device/filesystem/profile; device/model/serial/card name), and
+    every existing single-arg caller (redis_parameter_changed.emit(data),
+    cinepi_multi's message.emit(line)) keeps working unchanged -- one
+    positional arg through *args reaches the subscriber exactly as before.
+    """
     def __init__(self):
         self._handlers = []
     def subscribe(self, fn):
         self._handlers.append(fn)
-    def emit(self, data=None):
-        for fn in self._handlers:
-            fn(data)
+    def unsubscribe(self, fn):
+        try:
+            self._handlers.remove(fn)
+        except ValueError:
+            pass
+    def emit(self, *args):
+        # Every subscriber runs synchronously on whatever thread calls emit()
+        # (redis_controller's single _listen thread for its own event; the
+        # log-relay/USB-monitor/mount threads for the others). An unguarded
+        # raise here used to kill that thread outright, and because
+        # get_value() serves the cache rather than redis, every surface then
+        # went on rendering its last values with no error anywhere -- the
+        # operator sees plausible frozen numbers mid-take. One bad subscriber
+        # must not silence the others or the bus. Mirrors
+        # CinePiController._notify_resolution_change.
+        for fn in list(self._handlers):
+            try:
+                fn(*args)
+            except Exception:
+                logging.exception(
+                    "Event subscriber %s failed; continuing with the rest",
+                    getattr(fn, "__qualname__", fn),
+                )
 
 # ────────────────────────── main controller class ────────────────────
 class RedisController:
@@ -117,6 +224,7 @@ class RedisController:
         self.lock   = threading.Lock()
         self.cache  = {}
         self.local_updates: set[str] = set()
+        self._unknown_keys_warned: set[str] = set()
 
         self.redis_parameter_changed = Event()
 
@@ -129,6 +237,15 @@ class RedisController:
         self._thread = threading.Thread(target=self._listen, daemon=True)
         self._thread.start()
 
+    def listener_alive(self) -> bool:
+        """Is the pub/sub listener still running?
+
+        If this is False the cache is frozen: get_value() keeps answering, but
+        with whatever it last saw. Nothing here restarts the thread -- callers
+        that care should surface it rather than paper over it.
+        """
+        return bool(self._thread and self._thread.is_alive())
+
     # ─────────────────────── initial cache fill ─────────────────────
     def _prime_cache(self):
         for key in self.r.keys("*"):
@@ -139,28 +256,37 @@ class RedisController:
     # ─────────────────────── background listener ────────────────────
     def _listen(self):
         for msg in self.ps.listen():
-            if msg["type"] != "message":
-                continue
-            key = msg["data"].decode()
-            with self.lock:
-                # suppress echo of own writes
-                if key in self.local_updates:
-                    self.local_updates.remove(key)
-                value = (self.r.get(key) or b"").decode()
-                self.cache[key] = value
+            try:
+                self._handle_message(msg)
+            except Exception:
+                # Same reasoning as Event.emit: losing this thread freezes all
+                # live state silently. A bad message is survivable; a dead
+                # listener is not.
+                logging.exception("Redis listener failed on message %r; continuing", msg)
 
-            if key == ParameterKey.IS_RECORDING.value:
-                if value == "0":
-                    self._stop_recording_timer()
-            elif key == ParameterKey.REC.value:
-                if value == "1":
-                    # Start timer on first frame of take; don't restart if already running
-                    # (rec can bounce 0→1 during pipeline stalls without ending the take)
-                    if not (self._rec_timer_thread and self._rec_timer_thread.is_alive()):
-                        self._start_recording_timer()
-            # notify subscribers – no log spam here
-            if key != ParameterKey.FPS_ACTUAL.value:
-                self.redis_parameter_changed.emit({"key": key, "value": value})
+    def _handle_message(self, msg):
+        if msg["type"] != "message":
+            return
+        key = msg["data"].decode()
+        with self.lock:
+            # suppress echo of own writes
+            if key in self.local_updates:
+                self.local_updates.remove(key)
+            value = (self.r.get(key) or b"").decode()
+            self.cache[key] = value
+
+        if key == ParameterKey.IS_RECORDING.value:
+            if value == "0":
+                self._stop_recording_timer()
+        elif key == ParameterKey.REC.value:
+            if value == "1":
+                # Start timer on first frame of take; don't restart if already running
+                # (rec can bounce 0→1 during pipeline stalls without ending the take)
+                if not (self._rec_timer_thread and self._rec_timer_thread.is_alive()):
+                    self._start_recording_timer()
+        # notify subscribers – no log spam here
+        if key != ParameterKey.FPS_ACTUAL.value:
+            self.redis_parameter_changed.emit({"key": key, "value": value})
 
     # ───────────────────────── public helpers ───────────────────────
     def get_value(self, key, default=None):
@@ -168,14 +294,7 @@ class RedisController:
             return self.cache.get(key, default)
 
     def _storage_preroll_active(self) -> bool:
-        value = self.cache.get(ParameterKey.STORAGE_PREROLL_ACTIVE.value, "0")
-        text = str(value).strip().lower()
-        if text in ("1", "true", "yes", "on"):
-            return True
-        try:
-            return bool(int(text))
-        except (TypeError, ValueError):
-            return False
+        return as_bool(self.cache.get(ParameterKey.STORAGE_PREROLL_ACTIVE.value, "0"))
 
         # ────────────────────────── public helpers ───────────────────────
     def set_value(self, key, value):
@@ -185,6 +304,20 @@ class RedisController:
             return
 
         key_name = key.value if isinstance(key, ParameterKey) else str(key)
+
+        # F-015: the enum was convention, not enforcement -- any string was
+        # accepted silently. This makes an un-enumerated key visible without
+        # blocking the write: rejecting outright here, with no Pi available
+        # to verify every call site this touches, risks silently breaking a
+        # working recording path over a naming gap. Warn once per key so a
+        # value written every frame (e.g. framecount) can't flood the log.
+        if key_name not in _KNOWN_PARAMETER_VALUES and key_name not in self._unknown_keys_warned:
+            self._unknown_keys_warned.add(key_name)
+            logging.warning(
+                "set_value('%s', ...): not a ParameterKey member -- writing anyway, "
+                "but this key has no enum entry to keep readers in sync with it.",
+                key_name,
+            )
 
         # ─── Redis write / publish / cache ───────────────────────────
         with self.lock:
@@ -283,7 +416,7 @@ class RedisController:
         Return SMPTE time-code hh:mm:ss:ff for any positive offset in seconds.
         """
         rate = frame_rate if frame_rate is not None else self.conform_frame_rate
-        rate = int(round(rate))               # ensure integer fps
+        rate = smpte_frame_base(rate)         # ensure integer fps
 
         total_frames  = int(round(seconds_total * rate))
         frames        = total_frames % rate               # 0 … rate-1  (int)

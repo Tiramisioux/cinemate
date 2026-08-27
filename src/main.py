@@ -5,16 +5,19 @@ import time
 import signal
 import atexit
 import subprocess
-import traceback
 import os
-import json
 import shutil
 import socket
 from PIL import Image, ImageDraw, ImageFont
 import glob
 
-from module.config_loader import SettingsLoadError, auto_storage_preroll_enabled, load_settings
-from module.logger import configure_logging
+from module.config_loader import (
+    SettingsLoadError,
+    auto_storage_preroll_enabled,
+    load_settings,
+    DEFAULT_SETTINGS_PATH,
+)
+from module.logger import configure_logging, log_directory
 from module.redis_controller import RedisController, ParameterKey
 from module.ssd_monitor import SSDMonitor
 from module.usb_monitor import USBMonitor
@@ -25,8 +28,10 @@ from module.sensor_detect import SensorDetect
 from module.redis_listener import RedisListener
 from module.gpio_input import ComponentInitializer
 from module.battery_monitor import BatteryMonitor
-from module.wifi_hotspot import WiFiHotspotManager
+from module.wifi_hotspot import WiFiHotspotManager, hotspot_service_active
 from module.cli_commands import CommandExecutor
+from module.status_broadcast import StatusBroadcaster
+from module.web_api_settings import web_api_settings
 from module.storage_preroll import StoragePreroll
 from module.dmesg_monitor import DmesgMonitor
 from module.app import create_app
@@ -45,8 +50,7 @@ from module.console_display import (
 from module.framebuffer import acquire_framebuffer
 
 # Constants
-MODULES_OUTPUT_TO_SERIAL = ['cinepi_controller']
-SETTINGS_FILE = "/home/pi/cinemate/src/settings.json"
+SETTINGS_FILE = DEFAULT_SETTINGS_PATH
 STARTUP_MESSAGE_MIN_DURATION = 3.0
 CLI_COLOR_RED = "\033[1;31m"
 CLI_COLOR_YELLOW = "\033[1;33m"
@@ -243,15 +247,28 @@ def restore_local_console_prompt() -> bool:
     """Restore a visible tty1 prompt after Cinemate stop (SSH or local launch)."""
     systemctl = shutil.which("systemctl")
     if systemctl:
-        # Restart getty@tty1 to ensure it's running and rendering
+        # Restart getty@tty1 to ensure it's running and rendering.
+        #
+        # --job-mode=fail is load-bearing, not cosmetic. cinemate-autostart
+        # declares Conflicts=getty@tty1.service, and in systemd's default
+        # "replace" job mode this request may reverse an already-queued start
+        # job for cinemate-autostart -- during `systemctl restart` that cancels
+        # the restart's own start half, leaving the unit inactive/dead with
+        # Result=success, so Restart= never fires and nothing retries it. In
+        # "fail" mode systemd refuses the reversal and this call fails instead,
+        # which is the harmless outcome: a restarting cinemate reclaims tty1
+        # moments later. The same flag is set on the ExecStopPost handoff
+        # script, which is the other getty-start site on the stop path.
         commands = []
         sudo = shutil.which("sudo")
         if sudo:
             commands.append(
-                [sudo, "-n", systemctl, "--no-block", "--no-ask-password", "restart", "getty@tty1.service"]
+                [sudo, "-n", systemctl, "--no-block", "--no-ask-password",
+                 "--job-mode=fail", "restart", "getty@tty1.service"]
             )
         commands.append(
-            [systemctl, "--no-block", "--no-ask-password", "restart", "getty@tty1.service"]
+            [systemctl, "--no-block", "--no-ask-password",
+             "--job-mode=fail", "restart", "getty@tty1.service"]
         )
 
         for command in commands:
@@ -558,7 +575,7 @@ def setup_logging(debug_mode):
     logging_level = logging.DEBUG if debug_mode else logging.INFO
 
     # Ensure logs directory exists
-    log_dir = '/home/pi/cinemate/src/logs'
+    log_dir = log_directory()
     os.makedirs(log_dir, exist_ok=True)
 
     # Clear existing log files
@@ -576,10 +593,21 @@ def setup_logging(debug_mode):
         root_logger.removeHandler(handler)
 
     # Configure new logging handlers (file, serial, etc.)
-    return configure_logging(MODULES_OUTPUT_TO_SERIAL, logging_level)
+    return configure_logging(logging_level)
 
 def start_hotspot(settings) -> None:
-    """Start hotspot if enabled in *settings*."""
+    """Start the hotspot if enabled in *settings* and nothing else owns it.
+
+    wifi-hotspot.service reconciles the same hotspot every 60 s, survives a
+    Cinemate crash, and applies the credential ladder. When it is running it is
+    the single owner and we stand down -- two owners with no ordering between
+    them was the race described in docs/hotspot-logic.md. In-app creation stays
+    as the fallback for installs where that service was never enabled.
+    """
+    if hotspot_service_active():
+        logging.info("wifi-hotspot.service owns the hotspot - skipping in-app creation")
+        return
+
     wifi_mgr = WiFiHotspotManager(settings=settings)
     if not wifi_mgr.enabled:
         logging.info("Wi-Fi hotspot disabled in settings")
@@ -595,9 +623,9 @@ def initialize_system(settings, pi_model="unknown"):
     redis_controller = RedisController(conform_frame_rate=conf_rate)
     sensor_detect = SensorDetect(settings)
     ssd_monitor = SSDMonitor(redis_controller=redis_controller)
-    usb_monitor = USBMonitor(ssd_monitor, settings=settings)
+    usb_monitor = USBMonitor(ssd_monitor, settings=settings, redis_controller=redis_controller)
 
-    gpio_cfg = settings["gpio_output"]
+    gpio_cfg = settings["hardware_outputs"]
     rec_tone_pins = gpio_cfg.get("rec_tone_pin")
     if rec_tone_pins in (None, []):
         # Backward compatibility: if no explicit rec_tone_pin is configured,
@@ -642,13 +670,11 @@ def run_application(args, log_queue):
     splash_thread = splash_stop = None
     splash_visible_started_at = None
     startup_ready_notified = False
-    timekeeper = None
 
-    welcome_text = settings.get("welcome_message", "THIS IS A COOL MACHINE")
-    show_welcome_message = bool(
-        settings.get("show_welcome_message", settings.get("show_startup_message", True))
-    )
-    welcome_image = settings.get("welcome_image")
+    welcome_cfg = settings.get("system", {}).get("welcome", {})
+    welcome_text = welcome_cfg.get("message", "THIS IS A COOL MACHINE")
+    show_welcome_message = bool(welcome_cfg.get("show", True))
+    welcome_image = welcome_cfg.get("image")
     plymouth_active_at_startup = plymouth_is_running()
     defer_startup_message_until_after_plymouth = show_welcome_message and plymouth_active_at_startup
     restart_camera_after_startup_handoff = plymouth_active_at_startup
@@ -670,7 +696,6 @@ def run_application(args, log_queue):
     # Detect Raspberry Pi model
     pi_model = get_raspberry_pi_model()
     logging.info(f"Detected Raspberry Pi model: {pi_model}")
-    set
 
     # Start WiFi hotspot if configured
     start_hotspot(settings)
@@ -685,8 +710,8 @@ def run_application(args, log_queue):
     redis_controller.set_value(ParameterKey.PI_MODEL.value, pi_model)
 
     # Set redis anamorphic factor to default value
-    redis_controller.set_value(ParameterKey.ANAMORPHIC_FACTOR.value, settings["anamorphic_preview"]["default_anamorphic_factor"])
-    _audio_cfg = settings.get("audio", {})
+    redis_controller.set_value(ParameterKey.ANAMORPHIC_FACTOR.value, settings["hdmi_display"]["preview"]["anamorphic"]["default_factor"])
+    _audio_cfg = settings.get("audio_capture", {})
     redis_controller.set_value(
         ParameterKey.AUDIO_CAPTURE_GAIN_DB.value,
         (_audio_cfg.get("16bit") or {}).get("capture_gain_db",
@@ -696,14 +721,24 @@ def run_application(args, log_queue):
     # Default zoom factor
     redis_controller.set_value(
         ParameterKey.ZOOM.value,
-        settings.get("preview", {}).get("default_zoom", 1.0)
+        settings.get("hdmi_display", {}).get("preview", {}).get("default_zoom", 1.0)
 )
 
     # Default dual-sensor HDMI preview source (both / cam0 / cam1)
     redis_controller.set_value(
         ParameterKey.HDMI_PREVIEW_SOURCE.value,
-        settings.get("preview", {}).get("default_hdmi_source", "both")
+        settings.get("hdmi_display", {}).get("preview", {}).get("default_hdmi_source", "both")
 )
+
+    # ClearHDR live-knob startup values (image_capture.hdr). Cinepi-raw
+    # re-applies these from Redis once a ClearHDR mode is actually selected;
+    # seeding them here just means the first `set hdr threshold/blend/gain
+    # adder` read (pot, quad, CLI) already sees the configured default.
+    _hdr_cfg = settings.get("image_capture", {}).get("hdr", {})
+    redis_controller.set_value(ParameterKey.HDR_THRESHOLD_LOW.value, _hdr_cfg.get("threshold_low", 0))
+    redis_controller.set_value(ParameterKey.HDR_THRESHOLD_HIGH.value, _hdr_cfg.get("threshold_high", 0))
+    redis_controller.set_value(ParameterKey.HDR_BLEND.value, _hdr_cfg.get("blend", 0))
+    redis_controller.set_value(ParameterKey.HDR_GAIN_ADDER.value, _hdr_cfg.get("gain_adder", 1))
 
     # Reset recording time
     redis_controller.set_value(ParameterKey.RECORDING_TIME.value, 0)
@@ -722,13 +757,13 @@ def run_application(args, log_queue):
 
     cinepi_controller = CinePiController(
         cinepi, redis_controller, ssd_monitor, sensor_detect,
-        iso_steps=settings["arrays"]["iso_steps"],
-        shutter_a_steps=settings["arrays"]["shutter_a_steps"],
-        fps_steps=settings["arrays"]["fps_steps"],
-        wb_steps=settings["arrays"]["wb_steps"],
+        iso_steps=settings["arrays"]["iso"]["steps"],
+        shutter_a_steps=settings["arrays"]["shutter_a"]["steps"],
+        fps_steps=settings["arrays"]["fps"]["steps"],
+        wb_steps=settings["arrays"]["wb"]["steps"],
         light_hz=settings["settings"]["light_hz"],
-        anamorphic_steps=settings["anamorphic_preview"]["anamorphic_steps"],
-        default_anamorphic_factor=settings["anamorphic_preview"]["default_anamorphic_factor"]
+        anamorphic_steps=settings["hdmi_display"]["preview"]["anamorphic"]["steps"],
+        default_anamorphic_factor=settings["hdmi_display"]["preview"]["anamorphic"]["default_factor"]
     )
 
     storage_preroll = StoragePreroll(
@@ -739,7 +774,7 @@ def run_application(args, log_queue):
         auto_enabled=auto_storage_preroll_enabled(settings),
     )
 
-    gpio_cfg = settings.get("gpio_output", {})
+    gpio_cfg = settings.get("hardware_outputs", {})
     rec_tone_pins = gpio_cfg.get("rec_tone_pin")
     if rec_tone_pins in (None, []):
         rec_tone_pins = gpio_cfg.get("pwm_pin")
@@ -751,7 +786,9 @@ def run_application(args, log_queue):
         else:
             reserved_output_pins.update(int(pin) for pin in rec_tone_pins)
 
-    gpio_input = ComponentInitializer(
+    # Held, not used: ComponentInitializer registers the GPIO callbacks in
+    # __init__ and must outlive this scope.
+    gpio_input = ComponentInitializer(  # noqa: F841
         cinepi_controller,
         settings,
         reserved_output_pins=reserved_output_pins,
@@ -784,21 +821,50 @@ def run_application(args, log_queue):
     t = threading.Thread(target=_relay_rec_over_serial, args=(redis_controller, serial_handler), daemon=True)
     t.start()
 
+    # UDP status broadcast for tally lights / displays on the hotspot.
+    # Independent of the HTTP server's network_available() gate: it
+    # recomputes the subnet broadcast address on every send, so it starts
+    # working as soon as wlan0 is addressed, with or without the web server.
+    status_broadcaster = None
+    web_api_cfg = web_api_settings(settings)
+    if web_api_cfg["broadcast"].get("enabled", True):
+        status_broadcaster = StatusBroadcaster(
+            redis_controller,
+            web_api_cfg["broadcast"].get("keys", []),
+            port=web_api_cfg["broadcast"].get("port", 8888),
+            hz=web_api_cfg["broadcast"].get("hz", 5),
+        )
+        status_broadcaster.start()
 
     # Initialize USB monitoring
     usb_monitor.check_initial_devices()
 
-    # Setup Analog Controls
-    analog_controls = AnalogControls(
+    # Setup Analog Controls. input_peripherals.pots is a channel-first list
+    # ({"channel": ..., "setting": "iso"}); AnalogControls itself still
+    # takes one named channel per parameter, so resolve that lookup here.
+    pot_channel_by_setting = {
+        p.get("setting"): p.get("channel")
+        for p in settings.get("input_peripherals", {}).get("pots", [])
+        if p.get("setting")
+    }
+    # Held, not used -- starts its own polling thread.
+    analog_controls = AnalogControls(  # noqa: F841
         cinepi_controller, redis_controller,
-        settings["analog_controls"]["iso_pot"],
-        settings["analog_controls"]["shutter_a_pot"],
-        settings["analog_controls"]["fps_pot"],
-        settings["analog_controls"]["wb_pot"],
-        settings["arrays"]["iso_steps"],
-        settings["arrays"]["shutter_a_steps"],
-        settings["arrays"]["fps_steps"],
-        settings["arrays"]["wb_steps"]
+        pot_channel_by_setting.get("iso", "None"),
+        pot_channel_by_setting.get("shutter_a", "None"),
+        pot_channel_by_setting.get("fps", "None"),
+        pot_channel_by_setting.get("wb", "None"),
+        settings["arrays"]["iso"]["steps"],
+        settings["arrays"]["shutter_a"]["steps"],
+        settings["arrays"]["fps"]["steps"],
+        settings["arrays"]["wb"]["steps"],
+        hdr_threshold_low_pot=pot_channel_by_setting.get("hdr_threshold_low", "None"),
+        hdr_threshold_high_pot=pot_channel_by_setting.get("hdr_threshold_high", "None"),
+        hdr_blend_pot=pot_channel_by_setting.get("hdr_blend", "None"),
+        hdr_gain_adder_pot=pot_channel_by_setting.get("hdr_gain_adder", "None"),
+        # F-268/F-285: share CommandExecutor's dispatch lock so pot writes
+        # serialise against explicit CLI/serial/HTTP commands.
+        dispatch_lock=command_executor._dispatch_lock,
     )
 
     # Mount CFE card if not mounted
@@ -840,14 +906,14 @@ def run_application(args, log_queue):
         logging.info("Restarting cinepi-raw after startup handoff so preview binds above Cinemate")
         cinepi_controller.restart_camera(preview_enabled=True)
 
-    settings_cfg = settings.get("settings", {})
+    tol_cfg = settings.get("settings", {}).get("sync_tolerances", {})
     redis_listener = RedisListener(
         redis_controller,
         ssd_monitor,
-        live_sync_warning_tolerance_frames=settings_cfg.get("live_sync_warning_tolerance_frames", 5),
-        live_sync_startup_guard_frames=settings_cfg.get("live_sync_startup_guard_frames", 10),
-        final_sync_analysis_tolerance_frames=settings_cfg.get("final_sync_analysis_tolerance_frames", 1),
-        tc_drop_jitter_tolerance_frames=settings_cfg.get("tc_drop_jitter_tolerance_frames", 1),
+        live_sync_warning_tolerance_frames=tol_cfg.get("live_sync_warning_frames", 5),
+        live_sync_startup_guard_frames=tol_cfg.get("live_sync_startup_guard_frames", 10),
+        final_sync_analysis_tolerance_frames=tol_cfg.get("final_sync_analysis_frames", 1),
+        tc_drop_jitter_tolerance_frames=tol_cfg.get("tc_drop_jitter_frames", 1),
     )
     redis_listener.set_recording_stop_callback(cinepi_controller.stop_recording)
     cinepi_controller.attach_redis_listener(redis_listener)
@@ -868,12 +934,12 @@ def run_application(args, log_queue):
         settings=settings,
     )
 
-    if settings.get("i2c_oled", {}).get("enabled", False):
+    if settings.get("output_peripherals", {}).get("oled", {}).get("enabled", False):
         i2c_oled = I2cOled(settings, redis_controller)
         i2c_oled.start()
 
     quad_rotary = None
-    qcfg = settings.get("quad_rotary_controller", {})
+    qcfg = settings.get("input_peripherals", {}).get("quad_rotary_controller", {})
     if qcfg.get("enabled", False) and qcfg.get("encoders"):
         quad_rotary = QuadRotaryController(cinepi_controller, settings)
         quad_rotary.start()
@@ -881,14 +947,18 @@ def run_application(args, log_queue):
     # Start Streaming if a network connection is available
     stream = None
     if network_available():
-        app, socketio = create_app(redis_controller, cinepi_controller, simple_gui, sensor_detect)
+        app, socketio = create_app(
+            redis_controller, cinepi_controller, simple_gui, sensor_detect,
+            command_executor, settings,
+        )
         stream = threading.Thread(target=socketio.run, args=(app,), kwargs={'host': '0.0.0.0', 'port': 5000, 'allow_unsafe_werkzeug': True})
         stream.start()
         logging.info("Stream module loaded")
     else:
         logging.error("No network connection found. Stream module not loaded")
 
-    mediator = Mediator(cinepi, cinepi_controller, redis_listener, redis_controller, ssd_monitor, gpio_output, stream, usb_monitor)
+    # Held, not used -- Mediator subscribes to redis events in __init__.
+    mediator = Mediator(cinepi, cinepi_controller, redis_listener, redis_controller, ssd_monitor, gpio_output, stream, usb_monitor)  # noqa: F841
 
     logging.info("--- Initialization Complete ---")
 
@@ -931,9 +1001,11 @@ def run_application(args, log_queue):
         # Stop peripherals
 
         if hasattr(dmesg_monitor, "stop"):
-            dmesg_monitor.stop() 
+            dmesg_monitor.stop()
         if hasattr(command_executor, "stop"):
             command_executor.stop()
+        if status_broadcaster is not None:
+            status_broadcaster.stop()
         gui_stopped = False
         if simple_gui:
             gui_stopped = simple_gui.stop(
@@ -946,6 +1018,7 @@ def run_application(args, log_queue):
             restore_local_console_prompt()
         join_thread(dmesg_monitor, "DmesgMonitor")
         join_thread(command_executor, "CommandExecutor")
+        join_thread(status_broadcaster, "StatusBroadcaster")
         if hasattr(cinepi, "shutdown"):
             cinepi.shutdown()
         if hasattr(serial_handler, "stop"):
@@ -970,8 +1043,23 @@ def run_application(args, log_queue):
             splash_stop.set()
             splash_thread.join()
             
-        if timekeeper and hasattr(timekeeper, "stop"):
-            timekeeper.stop()
+        # SSDMonitor owns a thread of its own and was never stopped here.
+        # USBMonitor deliberately is not in this list: it has no stop() at all,
+        # so giving it one is a design change rather than a cleanup fix.
+        if ssd_monitor is not None and hasattr(ssd_monitor, "stop"):
+            try:
+                ssd_monitor.stop()
+            except Exception:
+                logging.exception("SSD monitor did not stop cleanly")
+
+        # Last, because everything above may still want to read redis state on
+        # its way out. Without this the pub/sub thread outlived the process's
+        # own shutdown; it is a daemon, so nothing noticed.
+        if redis_controller is not None and hasattr(redis_controller, "stop_listener"):
+            try:
+                redis_controller.stop_listener()
+            except Exception:
+                logging.exception("Redis listener did not stop cleanly")
 
         if not shutdown_in_progress and not gui_stopped:
             release_console_to_text()
@@ -1011,7 +1099,7 @@ def main():
     try:
         return run_application(args, log_queue)
     except SettingsLoadError as exc:
-        systemd_status("Cinemate startup failed: invalid settings.json")
+        systemd_status("Cinemate startup failed: invalid settings.jsonc")
         logging.error("Cinemate startup aborted: %s", exc.detail)
         report_startup_failure("Cinemate could not start", exc.format_for_cli())
         return 1

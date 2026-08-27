@@ -75,6 +75,11 @@ disable_overscan=1
 # Run as fast as firmware / board allows
 arm_boost=1
 
+# ---- RP1 overclock (Pi 5, optional) ----
+# Raises imx585 ClearHDR frame rates. Uncomment and reboot to enable;
+# re-comment and reboot to return to stock. See docs/overclocking.md.
+#dtoverlay=rp1-overclock
+
 [cm4]
 # Enable host mode on the 2711 built-in XHCI USB controller.
 # This line should be removed if the legacy DWC2 controller is required
@@ -92,6 +97,7 @@ dtparam=pciex1_gen=3
 auto_initramfs=1
 avoid_warnings=1
 disable_splash=1
+hdmi_ignore_cec_init=1
 dtparam=i2c1=on
 dtoverlay=disable-bt
 # <<< cinemate-install <<<

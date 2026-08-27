@@ -107,9 +107,9 @@ detect_camera() {
 
     # Run cinepi-raw --list-cameras and capture output
     local output
-    local exit_code=0
-
-    output=$(cinepi-raw --list-cameras 2>&1) || exit_code=$?
+    # Readiness is decided by what the listing says, not by the exit status:
+    # cinepi-raw can exit non-zero and still have printed a usable camera line.
+    output=$(cinepi-raw --list-cameras 2>&1) || true
 
     # Check if we got any camera output
     # cinepi-raw lists cameras as: "0 : imx283 [5472x3648 ...] (...)"

@@ -7,7 +7,9 @@ import shlex  # Add this import
 import warnings
 import logging
 import time
-    
+
+from module.config_loader import as_bool
+
 class ComponentInitializer:
     def __init__(self, cinepi_controller, settings, reserved_output_pins=None):
         self.cinepi_controller = cinepi_controller
@@ -22,10 +24,11 @@ class ComponentInitializer:
         self.initialize_components()
         
     def initialize_components(self):
-        combined_actions = self.settings.get('combined_actions', [])
-        
+        controls_cfg = self.settings.get('hardware_controls', {})
+        combined_actions = controls_cfg.get('combined_actions', [])
+
         # Initialize Buttons
-        for button_config in self.settings.get('buttons', []):
+        for button_config in controls_cfg.get('buttons', []):
             pin = int(button_config['pin'])
             if pin in self.reserved_output_pins:
                 self.logger.warning(
@@ -51,7 +54,7 @@ class ComponentInitializer:
             smart_button = SmartButton(
                 cinepi_controller=self.cinepi_controller,
                 pin=pin,
-                pull_up=self._as_bool(button_config.get('pull_up'), default=True),
+                pull_up=as_bool(button_config.get('pull_up'), default=True),
                 debounce_time=float(button_config['debounce_time']),
                 actions=button_config,
                 identifier=str(pin),
@@ -61,7 +64,7 @@ class ComponentInitializer:
             self.smart_buttons_list.append(smart_button)  # Store SmartButton instance
         
         # Initialize Two-Way Switches
-        for switch_config in self.settings.get('two_way_switches', []):
+        for switch_config in controls_cfg.get('two_way_switches', []):
             pin = int(switch_config['pin'])
             if pin in self.reserved_output_pins:
                 self.logger.warning(
@@ -83,7 +86,7 @@ class ComponentInitializer:
             
         # Initialize three-way switches
         self.three_way_switches = []
-        for switch_config in self.settings.get('three_way_switches', []):
+        for switch_config in controls_cfg.get('three_way_switches', []):
             pins = switch_config['pins']
             self.logger.info(f"Three-way switch on pins {pins}:")
             for i in range(3):
@@ -97,8 +100,8 @@ class ComponentInitializer:
             self.three_way_switches.append(three_way_switch)
         
         # Initialize Rotary Encoders with Buttons
-        for encoder_config in self.settings.get('rotary_encoders', []):
-            if not self._as_bool(encoder_config.get('enabled', True), default=True):
+        for encoder_config in controls_cfg.get('rotary_encoders', []):
+            if not as_bool(encoder_config.get('enabled', True), default=True):
                 self.logger.info("Skipping disabled rotary encoder config: %s", encoder_config)
                 continue
 
@@ -133,7 +136,7 @@ class ComponentInitializer:
             smart_button = SmartButton(
                 cinepi_controller=self.cinepi_controller,
                 pin=button_pin,
-                pull_up=self._as_bool(encoder_config.get('pull_up'), default=True),
+                pull_up=as_bool(encoder_config.get('pull_up'), default=True),
                 debounce_time=float(encoder_config.get('debounce_time', 0.05)),
                 actions=button_actions,
                 identifier=str(button_pin),
@@ -157,18 +160,6 @@ class ComponentInitializer:
             return action_config.get('method')
         else:
             return None
-
-    @staticmethod
-    def _as_bool(value, default=False):
-        if isinstance(value, bool):
-            return value
-        if value is None:
-            return default
-        if isinstance(value, (int, float)):
-            return bool(value)
-        if isinstance(value, str):
-            return value.strip().lower() in {"1", "true", "yes", "on"}
-        return bool(value)
 
     @staticmethod
     def _is_noop_action(action):
@@ -200,7 +191,7 @@ class SmartButton:
     logger = logging.getLogger('ButtonManager')
     _currently_held = None
     
-    def __init__(self, cinepi_controller, pin, pull_up, debounce_time, actions, identifier, inverse=False, combined_actions=[]):
+    def __init__(self, cinepi_controller, pin, pull_up, debounce_time, actions, identifier, inverse=False, combined_actions=None):
         self.logger = logging.getLogger(f"SmartButton{pin}")
         self.button = Button(pin, pull_up=pull_up, bounce_time=debounce_time)
         self.actions = actions
@@ -432,7 +423,6 @@ class SmartButton:
             if action_dict and isinstance(action_dict, dict):
                 self.logger.debug(f"Action dict before accessing 'method': {action_dict}")
                 action_method = action_dict.get('method')
-                action_args = action_dict.get('args', [])
                 if action_method:
                     self.trigger_action(action_dict)  # Assuming you have this method implemented
                 else:

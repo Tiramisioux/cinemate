@@ -14,7 +14,7 @@ For quick 2× changes Cinemate also implements `set_fps_double` which toggles be
 
 ```json
 {
-  "pin": 18,
+  "pin": 16,
   "pull_up": true,
   "debounce_time": 0.1,
   "press_action": {"method": "set_fps_double"}
@@ -32,4 +32,4 @@ Mode `0` keeps the **motion blur consistent** because the physical shutter angle
 
 Mode `1` stores the current exposure time and recalculates the shutter angle whenever the FPS is adjusted so that **exposure time** stays the same.
 
-Cinemate updates the nominal exposure time when the user sets a new angle. FPS is recalculated from the stored exposure time:
+Cinemate stores the nominal exposure time whenever the user sets a new angle; on every FPS change it recalculates the shutter angle from that stored exposure time (angle = 360° × exposure time × fps, clamped to 1–360°), so the image brightness stays constant through the ramp.

@@ -2,399 +2,1782 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MJPEG Stream with Overlay</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>CineMate</title>
     <style>
-        body {
+        /* ── simple_gui's type and palette ───────────────────────────────
+           Same two faces the framebuffer GUI draws with (resources/fonts,
+           copied into app/static), and the same colour constants, so the
+           browser and the on-camera monitor read as one instrument. */
+        @font-face {
+            font-family: 'DIN2014';
+            font-weight: 400;
+            src: url("{{ url_for('static', filename='DIN2014-Regular.ttf') }}") format('truetype');
+        }
+        @font-face {
+            font-family: 'DIN2014';
+            font-weight: 700;
+            src: url("{{ url_for('static', filename='DIN2014-Bold.ttf') }}") format('truetype');
+        }
+
+        /* Every token below except --box-text and --sync-tint (no Python
+               counterpart -- see src/module/design_tokens.py's own docstring
+               for why) is generated from src/module/design_tokens.py's
+               DESIGN_TOKENS dict, name-for-name (underscores -> hyphens).
+               tools/design_token_diff.py --strict fails if this block drifts
+               from that source. */
+        :root {
+            --label: rgb(136, 136, 136);
+            --box: rgb(136, 136, 136);
+            --value: rgb(249, 249, 249);
+            --guide: rgb(249, 249, 249);
+            --box-text: #000;
+            --zoom-hi: rgb(255, 221, 0);
+            --drop: rgb(120, 40, 180);
+            --sync: rgb(255, 0, 255);
+            --log-badge: rgb(205, 205, 205);
+            --hdr-badge: rgb(205, 205, 205);
+            --sdr-badge: rgb(120, 120, 120);
+            --wav-rec: rgb(210, 210, 210);
+            --res-switching: rgb(176, 176, 176);
+            --sync-tint: lightgreen;
+            --lock: rgb(255, 0, 0);
+            --voltage: rgb(218, 149, 77);
+
+            --gap: clamp(8px, 1.4vw, 22px);
+            --value-size: clamp(1.05rem, 2.05vw, 1.9rem);
+            --label-size: clamp(0.72rem, 1.45vw, 1.35rem);
+            --box-size: clamp(38px, 3.6vw, 60px);
+            --box-height: clamp(28px, 2.5vw, 40px);
+        }
+
+        /* draw_gui() switches every label and value to black once the
+           background leaves "black" (color_mode = "inverse"). */
+        /* The preview guide keeps its own colour in every mode — draw_gui()
+           picks it from zoom state, not from color_mode. */
+        body.inverse {
+            --label: #000;
+            --value: #000;
+            --sync-tint: #000;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
             margin: 0;
             padding: 0;
-            font-family: 'Arial', sans-serif;
-            background-color: {{ background_color }};
-        }
-        .top-bar, .bottom-bar {
-            background-color: black;
-            font-size: 16px;
-            color: #fff;
-            padding: 10px;
-            display: flex;
-            justify-content: space-evenly;
-            align-items: center;
-            gap: 10px;
-        }
-        .bottom-bar > div {
-            flex: 1;
-            text-align: center;
-        }
-        .bottom-bar button {
-            flex: 0 0 auto;
-        }
-        .top-bar select, .bottom-bar select {
-            margin-left: 10px;
-            padding: 8px;
-            font-size: 16px;
-            border: none;
-            background-color: #111;
-            color: #fff;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .top-bar select:focus, .bottom-bar select:focus {
-            outline: none;
-        }
-        #resolution-select.resolution-switching {
-            color: #aaa;
-        }
-        #resolution-select.resolution-switching option {
-            color: #fff;
-        }
-        #stream-container {
-            background-color: black;
-            position: relative;
-            width: 100%;
-            height: 100%;
-            padding-bottom: 46.25%;
             overflow: hidden;
-            margin: 0;
+            font-family: 'DIN2014', 'Arial Narrow', Arial, sans-serif;
+            background-color: {{ background_color or 'black' }};
+            color: var(--value);
+            -webkit-text-size-adjust: 100%;
+            transition: background-color 90ms linear;
         }
-        #stream {
+
+        #app {
+            height: 100%;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            padding: calc(var(--gap) * 0.6) var(--gap);
+            gap: calc(var(--gap) * 0.5);
+        }
+
+        /* ── top info row ────────────────────────────────────────────────
+           simple_gui justifies six label+value groups between
+           TOP_ROW_LEFT_X and RES_RIGHT_ANCHOR; space-between is the same
+           idea, and it wraps on a phone instead of overflowing. */
+        #top-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: calc(var(--gap) * 0.5) var(--gap);
+        }
+
+        .group {
+            position: relative;
+            display: flex;
+            align-items: baseline;
+            gap: 0.35em;
+            white-space: nowrap;
+        }
+        .group .label {
+            font-weight: 400;
+            font-size: var(--label-size);
+            color: var(--label);
+        }
+        .group .value {
+            font-weight: 700;
+            font-size: var(--value-size);
+            color: var(--value);
+            line-height: 1.05;
+        }
+        .group.tinted .value { color: var(--sync-tint); }
+        .group.switching .value { color: var(--res-switching); }
+
+        /* draw_rounded_box(): a locked parameter is drawn inverted. */
+        .group.locked .value {
+            background: #fff;
+            color: #000;
+            border-radius: 5px;
+            padding: 0 0.22em;
+        }
+
+        /* A transparent native select over the group keeps the platform
+           picker on touch devices while the styled text stays visible.
+           The negative inset stretches the hit area past the group box —
+           the text is only ~18px tall on a phone, far under the ~44px
+           touch-target guideline. px, not em: em here would resolve
+           against the UA's hidden control font (13-16px depending on
+           engine), not the visible text. Invisible, so the only cost is
+           ambiguity where the top row wraps on a portrait phone: rows sit
+           4px apart there, so a lower row's select reaches ~4px into the
+           row above — a tap on those descender pixels opens the lower
+           group's picker. Recoverable, and only in the wrapped layout. */
+        .group select {
             position: absolute;
-            top: 0;
+            inset: -8px -6px;
+            opacity: 0;
+            border: 0;
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .group.selectable { cursor: pointer; }
+
+        .badge {
+            display: inline-block;
+            align-self: center;
+            font-weight: 700;
+            font-size: calc(var(--value-size) * 0.58);
+            line-height: 1;
+            color: #000;
+            border-radius: 3px;
+            padding: 0.28em 0.45em;
+        }
+        .badge.hdr { background: var(--hdr-badge); }
+        .badge.sdr { background: var(--sdr-badge); }
+        /* simple_gui draws the WAV pill at 14px against clip_name's 18px
+           (~0.78x) -- smaller than clip_name itself, not the generic 0.58
+           top-row badge ratio, which was sized against the full-height RES
+           value instead. The px floor is browser-only: the HDMI ratio
+           lands below legibility once the clamp()ed web sizes shrink
+           (~4.9px on a phone in landscape). */
+        .badge.wav {
+            background: var(--box);
+            font-size: max(8px, calc(var(--value-size) * 0.34));
+        }
+        .badge.wav.recording { background: var(--wav-rec); }
+        .badge.hidden { display: none; }
+
+        /* ── stage: left rail · preview · right rail ─────────────────── */
+        #stage {
+            min-height: 0;
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: stretch;
+            gap: var(--gap);
+        }
+
+        /* Unlike simple_gui's fixed 1920x1080 canvas, the rail's content
+           height is not bounded — two sensors plus every warning/lock box
+           can outgrow the stage row on a short viewport. Scroll rather
+           than clip, so a real status (e.g. the storage filesystem badge)
+           never silently disappears. */
+        .rail {
+            display: flex;
+            flex-direction: column;
+            gap: calc(var(--gap) * 0.5);
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+            /* draw_left_sections() starts its CAM column at y=97 on the
+               1080p canvas — roughly a box-height of air below the top row.
+               Reproduce that offset so the rails sit like the HDMI GUI's
+               instead of hugging the top bar. */
+            padding-top: calc(var(--box-height) * 1.3);
+        }
+        .rail:empty { display: none; }
+
+        .section { display: flex; flex-direction: column; align-items: center; }
+        .section + .section { margin-top: calc(var(--gap) * 0.7); }
+        .section .section-label {
+            font-weight: 400;
+            font-size: var(--label-size);
+            color: var(--value);
+            margin-bottom: 0.1em;
+        }
+        .section .boxes {
+            display: flex;
+            flex-direction: column;
+            gap: calc(var(--gap) * 0.35);
+        }
+
+        .box {
+            width: var(--box-size);
+            height: var(--box-height);
+            background: var(--box);
+            color: var(--box-text);
+            font-weight: 700;
+            font-size: calc(var(--box-height) * 0.62);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+        /* aspect and anamorphic get the inset outline simple_gui draws */
+        .box.outlined { box-shadow: inset 0 0 0 2px #000; }
+        .box.small { font-size: calc(var(--box-height) * 0.48); }
+        .box.zoom-active { background: var(--zoom-hi); }
+        .box.log { background: var(--log-badge); }
+        .box.drop { background: var(--drop); }
+        .box.sync { background: var(--sync); position: relative; }
+        /* _draw_status_box(crossed=True) strikes the SYNC box through */
+        .box.sync::after {
+            content: '';
+            position: absolute;
+            inset: 4px;
+            background: linear-gradient(to bottom right,
+                transparent calc(50% - 1.5px), #000 calc(50% - 1.5px),
+                #000 calc(50% + 1.5px), transparent calc(50% + 1.5px));
+        }
+
+        /* ── mic input VU meter (draw_right_vu_meter) ──────────────────
+           Bars are built once per channel-count change and updated in
+           place afterward (height/colour/peak only) so the CSS transition
+           actually animates instead of snapping on every ~83ms push. Sits
+           at the bottom of the right rail via margin-top:auto, the same
+           bottom-right corner simple_gui anchors it to. */
+        #vu-meter {
+            display: flex;
+            align-items: flex-end;
+            gap: clamp(4px, 0.5vw, 8px);
+            margin-top: auto;
+            padding-top: calc(var(--gap) * 0.6);
+        }
+        #vu-meter.hidden { display: none; }
+        .vu-channel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .vu-track {
+            position: relative;
+            width: clamp(8px, 0.6vw, 14px);
+            height: clamp(70px, 16vh, 180px);
+            background: rgb(50, 50, 50);
+            overflow: hidden;
+        }
+        .vu-fill {
+            position: absolute;
             left: 0;
+            right: 0;
+            bottom: 0;
+            height: 0%;
+            background: rgb(0, 200, 0);
+            transition: height 90ms linear, background-color 90ms linear;
+        }
+        .vu-peak {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0%;
+            height: 2px;
+            background: #fff;
+            transition: bottom 90ms linear;
+        }
+        .vu-channel .label {
+            font-weight: 400;
+            font-size: var(--label-size);
+            color: var(--label);
+        }
+
+        #preview-wrap {
+            min-width: 0;
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* The guide box is drawn on the frame, not the <img>, so the border
+           hugs the picture instead of the letterbox — the browser analogue
+           of _calculate_preview_guide_rect(). sizePreview() sets the pixel
+           size from the live aspect; CSS alone cannot fit a ratio inside
+           both a max width and a max height without breaking one of them. */
+        #preview-frame {
+            position: relative;
+            border: 2px solid var(--guide);
+            background: #000;
+            cursor: pointer;
+            display: flex;
+        }
+        #preview-frame.dual { gap: 2px; }
+        #preview-frame img {
+            flex: 1 1 0;
+            min-width: 0;
             width: 100%;
             height: 100%;
             object-fit: contain;
-            background-color: black;
+            display: block;
+            background: #000;
+        }
+        #preview-frame img.hidden { display: none; }
+
+        /* ── bottom row ──────────────────────────────────────────────── */
+        /* Same field order as simple_gui's bottom row, but a size down so
+           MEDIA … RAM and the action buttons stay on one line on a laptop. */
+        #bottom-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: calc(var(--gap) * 0.4) calc(var(--gap) * 0.8);
+            --value-size: clamp(0.9rem, 1.5vw, 1.4rem);
+            --label-size: clamp(0.65rem, 1.05vw, 1rem);
+        }
+        #bottom-row .spacer { flex: 1 1 auto; }
+        /* simple_gui's layout dict draws clip_name at size 18 against 41 for
+           its neighbours (disk_space, cpu_load, …) — ~0.44 of them, not a
+           font a browser would pick on its own. Match that ratio, and give
+           it enough room for the full "CINEPI_25-07-01_220547_F10_C00000_
+           000000009" string simple_gui actually shows (uncut — the DNG
+           basename minus the _camN suffix, frame counter included) rather
+           than an arbitrary width that ellipsizes it early. The px floor
+           is browser-only: 0.44 of the clamp()ed web size bottoms out at
+           ~6.3px on a phone in landscape, under any legible size. */
+        .group.clip .value {
+            font-size: max(10px, calc(var(--value-size) * 0.44));
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 70vw;
+        }
+        .clip-lines { display: flex; flex-direction: column; gap: 0.1em; }
+        .warn { font-weight: 700; font-size: var(--value-size); }
+        .warn.lock { color: var(--lock); }
+        .warn.voltage { color: var(--voltage); }
+
+        #buffer-meter {
+            width: clamp(46px, 6vw, 96px);
+            height: calc(var(--value-size) * 0.42);
+            background: rgba(136, 136, 136, 0.35);
+            box-shadow: inset 0 0 0 1px var(--label);
+        }
+        #buffer-fill { height: 100%; width: 0%; background: var(--label); }
+
+        #bottom {
+            display: flex;
+            flex-direction: column;
+            gap: calc(var(--gap) * 0.45);
+        }
+        #button-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: calc(var(--gap) * 0.5);
+            padding-top: calc(var(--gap) * 0.45);
+            border-top: 1px dashed var(--label);
+        }
+
+        button {
+            font-family: inherit;
+            font-weight: 700;
+            font-size: calc(var(--value-size) * 0.62);
+            color: var(--value);
+            background: transparent;
+            border: 2px solid var(--label);
+            border-radius: 4px;
+            padding: 0.3em 0.7em;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        button:active { background: var(--label); color: #000; }
+        button.on { background: var(--log-badge); border-color: var(--log-badge); color: #000; }
+        button[disabled] { opacity: 0.45; cursor: default; }
+
+        /* ── EXPERIMENT drawer ────────────────────────────────────────────
+           Every control cli_commands.py exposes that the instrument layout
+           above deliberately does not — the ClearHDR knobs, the locks, the
+           free-stepping modes. Collapsed by default so the page still reads
+           as a camera.
+
+           The height cap plus its own scrollbar is what keeps the picture
+           pinned: #stage is the only 1fr row in #app and the page itself
+           never scrolls, so opening this panel shrinks the preview rather
+           than pushing it off the top. Whatever the drawer doesn't take,
+           the preview keeps.
+
+           Opening it deliberately does NOT reflow anything. #top-row stays
+           pixel-identical, the rails keep their column direction and their
+           x/width, and no element changes order or flow. The only thing that
+           moves is the height of the 1fr row — the preview scales down inside
+           it and the bottom rows ride up with it. If you are tempted to
+           restack the rails when the drawer opens: don't. A layout that
+           rearranges itself under the operator mid-shot is worse than a
+           smaller picture. The one restack in this file is the width-driven
+           media query at the end, which is a different screen, not a
+           different mode of the same screen. */
+        #experiment {
+            max-height: min(46vh, 460px);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scrollbar-width: thin;
+            display: flex;
+            flex-direction: column;
+            gap: calc(var(--gap) * 0.55);
+            /* The fixed right padding is for the panel's own scrollbar. An
+               overlay scrollbar (macOS, iOS, Android) reserves no width and
+               scrollbar-gutter does not apply to one, so without a gutter of
+               our own the last column's value renders underneath it. */
+            padding: calc(var(--gap) * 0.5) 14px 0 0;
+            border-top: 1px dashed var(--label);
+            --value-size: clamp(0.85rem, 1.3vw, 1.15rem);
+            --label-size: clamp(0.6rem, 1vw, 0.9rem);
+        }
+
+        .xp-group { display: flex; flex-direction: column; gap: calc(var(--gap) * 0.3); }
+        .xp-title {
+            font-weight: 700;
+            font-size: var(--label-size);
+            letter-spacing: 0.09em;
+            color: var(--label);
+        }
+
+        /* One slider per row, full panel width, at every size. A multi-column
+           grid fits more rows on screen but makes each track a few hundred
+           pixels wide — and track length IS the resolution of the control. A
+           0–4095 HDR threshold across 240px is ~17 counts per pixel; across
+           the full width it is a quarter of that. These are fine-adjustment
+           knobs, so the width is the feature. */
+        .xp-sliders {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: calc(var(--gap) * 0.2);
+        }
+        .xp-slider { display: flex; align-items: center; gap: 0.55em; }
+        .xp-slider .label {
+            font-size: var(--label-size);
+            color: var(--label);
+            flex: 0 0 7em;
+            white-space: nowrap;
+        }
+        .xp-slider input[type="range"] {
+            flex: 1 1 auto;
+            min-width: 0;
+            height: 1.7em;
+            accent-color: var(--value);
+        }
+        /* Locked parameter, or a step table that has not arrived yet. Dim the
+           whole row so the reason reads as "this control is unavailable"
+           rather than "this slider is broken"; the input's title says which. */
+        /* pointer-events, not just opacity: a disabled <input> ignores clicks
+           but the reset button beside it does not, and a live arrow on a row
+           the UI is showing as unavailable is worse than no arrow. */
+        .xp-slider.disabled { opacity: 0.4; pointer-events: none; }
+        .xp-slider.disabled input[type="range"] { cursor: not-allowed; }
+        .xp-slider .value {
+            font-weight: 700;
+            font-size: var(--value-size);
+            color: var(--value);
+            flex: 0 0 3.4em;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Reset-to-default arrow. Borderless so a row of them doesn't read as
+           a row of buttons competing with the MODES toggles below, but sized
+           to the 44px touch target a phone needs. */
+        .xp-reset {
+            flex: 0 0 auto;
+            border: 0;
+            background: transparent;
+            color: var(--label);
+            font-size: calc(var(--value-size) * 1.15);
+            line-height: 1;
+            padding: 0;
+            width: 1.9em;
+            height: 1.9em;
+            min-width: 44px;
+            min-height: 32px;
+            cursor: pointer;
+        }
+        .xp-reset:hover { color: var(--value); }
+        .xp-reset:active { background: transparent; color: var(--value); }
+        /* Nothing to restore — the value is already the default. */
+        .xp-reset[disabled] { opacity: 0.25; cursor: default; }
+        /* No default is configured for this parameter at all. Hide it but keep
+           its box, so the value column stays aligned down the panel — display:
+           none would let those rows' tracks run longer than the others'. */
+        .xp-reset.absent { visibility: hidden; pointer-events: none; }
+
+        .xp-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: calc(var(--gap) * 0.35);
+        }
+        .xp-row button {
+            font-size: var(--value-size);
+            border-width: 1px;
+            padding: 0.28em 0.6em;
+        }
+
+        .xp-select { display: flex; align-items: center; gap: 0.45em; }
+        .xp-select .label { font-size: var(--label-size); color: var(--label); }
+        .xp-select select {
+            font-family: inherit;
+            font-weight: 700;
+            font-size: var(--value-size);
+            color: var(--value);
+            background: transparent;
+            border: 1px solid var(--label);
+            border-radius: 4px;
+            padding: 0.28em 0.4em;
+        }
+        /* A native picker draws its list on a system-coloured sheet, not on
+           our black page — leave the options readable there. */
+        .xp-select select option { color: #000; background: #fff; }
+
+        .hidden { display: none !important; }
+
+        /* Toast for a rejected command — the API answers "err <reason>"
+           and silently dropping that would be worse than a brief banner. */
+        #toast {
+            position: fixed;
+            left: 50%;
+            bottom: calc(var(--gap) * 2);
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            border: 1px solid var(--label);
+            border-radius: 4px;
+            padding: 0.5em 0.9em;
+            font-size: 0.95rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 140ms linear;
+            z-index: 20;
+        }
+        #toast.show { opacity: 1; }
+
+        /* ── narrow screens: scale, don't reflow (B11.7 / F-297) ──────────
+           This used to restack #stage into rows and turn each .rail into a
+           horizontal strip above/below the preview at <=900px or portrait
+           -- the one thing that made the web GUI stop resembling the HDMI
+           GUI at narrow widths (simple_gui.py scales its whole 1920x1080
+           layout by a single disp_width/1920, disp_height/1080 ratio; it
+           never restacks). #stage's 3-column grid (left rail | preview |
+           right rail) and .rail's own column direction are the same at
+           every width now -- --gap/--box-size/--box-height/--value-size/
+           --label-size are already clamp()-based (top of this file), so
+           the rails and top-row text shrink smoothly as the viewport
+           narrows instead of the layout restructuring at a breakpoint.
+           minmax(0, 1fr) on #stage's center column absorbs whatever's left
+           for the preview once both rails have taken their (now small)
+           clamped width. Only genuinely orientation-neutral narrow-screen
+           tweaks remain here. */
+        @media (max-width: 900px), (orientation: portrait) {
+            #button-row { justify-content: center; }
+            .vu-track { height: clamp(50px, 12vh, 100px); }
+            /* Leave the preview more than half the screen on a phone — the
+               drawer exists to watch the picture change, not to replace it. */
+            #experiment { max-height: 40vh; }
+            .xp-slider .label { flex: 0 0 6em; }
         }
     </style>
 </head>
 <body>
-    <div class="top-bar">
-        <div>FPS:
-            <select id="fps-select">
-                {% for fps_value in fps_values %}
-                    <option value="{{ fps_value }}" {% if fps_value == current_fps %}selected{% endif %}>{{ fps_value }}</option>
-                {% endfor %}
-            </select>
+<div id="app">
+
+    <div id="top-row">
+        <div class="group selectable" id="g-fps">
+            <span class="label" id="l-fps"></span><span class="value" id="v-fps"></span>
+            <select id="s-fps" aria-label="Frame rate"></select>
         </div>
-        <div>Shutter Angle:
-            <select id="shutter-speed-select">
-                {% for shutter_speed_value in shutter_speed_values %}
-                    <option value="{{ shutter_speed_value }}" {% if shutter_speed_value == current_shutter_a %}selected{% endif %}>{{ shutter_speed_value }}</option>
-                {% endfor %}
-            </select>
+        <div class="group selectable" id="g-shutter">
+            <span class="label" id="l-shutter"></span><span class="value" id="v-shutter"></span>
+            <select id="s-shutter" aria-label="Shutter angle"></select>
         </div>
-        <div>Exposure: <span id="exposure-time"></span></div>
-        <div>ISO:
-            <select id="iso-select">
-                {% for iso_value in iso_values %}
-                    <option value="{{ iso_value }}" {% if iso_value == current_iso %}selected{% endif %}>{{ iso_value }}</option>
-                {% endfor %}
-            </select>
+        <div class="group" id="g-exp">
+            <span class="label" id="l-exp"></span><span class="value" id="v-exp"></span>
         </div>
-        <div>WB:
-            <select id="wb-select">
-                {% for wb_value in wb_steps %}
-                    <option value="{{ wb_value }}" {% if wb_value == current_wb %}selected{% endif %}>{{ wb_value }}K</option>
-                {% endfor %}
-            </select>
+        <div class="group selectable" id="g-iso">
+            <span class="label" id="l-iso"></span><span class="value" id="v-iso"></span>
+            <select id="s-iso" aria-label="ISO"></select>
         </div>
-        <div>Resolution:
-            <select id="resolution-select">
-                {% for resolution in resolution_values %}
-                    <option value="{{ resolution.mode }}">{{ resolution.width }}x{{ resolution.height }}</option>
-                {% endfor %}
-            </select>
+        <div class="group selectable" id="g-wb">
+            <span class="label" id="l-wb"></span><span class="value" id="v-wb"></span>
+            <select id="s-wb" aria-label="White balance"></select>
+        </div>
+        <div class="group selectable" id="g-res">
+            <span class="label" id="l-res"></span><span class="value" id="v-res"></span>
+            <span class="badge hidden" id="v-hdr-badge"></span>
+            <select id="s-res" aria-label="Resolution"></select>
         </div>
     </div>
-    <div id="stream-container">
-        <img id="stream" src="{{ stream_url }}" alt="Stream">
+
+    <div id="stage">
+        <div class="rail" id="rail-left"></div>
+        <div id="preview-wrap">
+            <div id="preview-frame" title="Tap to toggle record">
+                <img id="stream" src="{{ stream_url }}" alt="Camera preview">
+                <img id="stream-cam1" class="hidden" alt="Camera 1 preview">
+            </div>
+        </div>
+        <div class="rail hidden" id="rail-right">
+            <div id="rail-right-sections"></div>
+            <div class="hidden" id="vu-meter"></div>
+        </div>
     </div>
-    <div class="bottom-bar">
-        <button id="unmount-btn">Unmount</button>
-        <div><span id="disk-space"></span></div>
-        <div>WRITE: <span id="write-speed"></span></div>
-        <div>FRAMES BUFFERED: <span id="buffer-used"></span></div>
-        <div>BUFFER SIZE: <span id="buffer-size"></span></div>
-        <div>CPU: <span id="cpu-load"></span></div>
-        <div>RAM: <span id="ram-load"></span></div>
-        <div>TEMP: <span id="cpu-temp"></span></div>
-        <button id="fullscreen-btn" style="margin-left:auto;">Enter Fullscreen</button>
+
+    <div id="bottom">
+        <div id="bottom-row">
+            <div class="group"><span class="label">MEDIA</span><span class="value" id="v-disk"></span></div>
+            <div class="group"><span class="value" id="v-write"></span></div>
+            <div class="group"><span class="label">BUF</span><span class="value" id="v-buffer"></span>
+                <div id="buffer-meter"><div id="buffer-fill"></div></div>
+            </div>
+            <div class="group"><span class="value" id="v-rectime"></span></div>
+            <div class="group clip">
+                <div class="clip-lines">
+                    <span class="value hidden" id="v-clip-cam1"></span>
+                    <span class="value" id="v-clip"></span>
+                </div>
+                <span class="badge wav hidden" id="v-wav">WAV</span>
+            </div>
+            <span class="warn lock hidden" id="v-lock">LOCK</span>
+            <span class="warn voltage hidden" id="v-voltage">VOLTAGE</span>
+
+            <div class="spacer"></div>
+
+            <div class="group"><span class="label">CPU</span><span class="value" id="v-cpu"></span></div>
+            <div class="group"><span class="label">TEMP</span><span class="value" id="v-temp"></span></div>
+            <div class="group"><span class="label">RAM</span><span class="value" id="v-ram"></span></div>
+            <div class="group hidden" id="g-battery"><span class="label">BATT</span><span class="value" id="v-battery"></span></div>
+        </div>
+
+        <div id="button-row">
+            <button id="btn-experiment" title="Show every remaining CLI control as a live widget">EXPERIMENT</button>
+            <button id="btn-log" title="set log — toggles CineMate Log, restarts the camera when idle">LOG</button>
+            <button id="btn-unmount" title="unmount">UNMOUNT</button>
+            <button id="btn-fullscreen">FULLSCREEN</button>
+        </div>
+
+        <!-- Built from the spec tables in the script below, not written out
+             here, so adding a control is one row rather than markup plus a
+             binding plus a render line. -->
+        <div id="experiment" class="hidden"></div>
     </div>
-    <script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
-    <script>
-        const socket = io();
+</div>
 
-        function updateShutterSpeedOptions(shutter_a_steps, current_shutter_a) {
-            const shutterSpeedSelect = document.getElementById('shutter-speed-select');
-            shutterSpeedSelect.innerHTML = '';
-            shutter_a_steps.forEach(angle => {
-                const option = document.createElement('option');
-                option.value = angle;
-                option.textContent = angle;
-                if (angle == current_shutter_a) {
-                    option.selected = true;
-                }
-                shutterSpeedSelect.appendChild(option);
+<div id="toast"></div>
+
+<script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
+<script>
+(function () {
+    'use strict';
+
+    // ── control: every action is a CLI command line posted to the web API
+    //    (docs/web-api.md). Same dispatcher as the CLI, serial and GPIO
+    //    paths, so the browser cannot drift from them.
+    const API = '/api/v1/cmd';
+    const TOKEN = {{ api_token | tojson }};
+    const CAM1_STREAM = {{ stream_url_cam1 | tojson }};
+
+    const toastEl = document.getElementById('toast');
+    let toastTimer = null;
+    function toast(msg) {
+        toastEl.textContent = msg;
+        toastEl.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
+    }
+
+    async function cmd(line) {
+        const headers = { 'Content-Type': 'text/plain' };
+        if (TOKEN) { headers['X-Cinemate-Token'] = TOKEN; }
+        try {
+            const res = await fetch(API, { method: 'POST', headers, body: line });
+            const body = (await res.text()).trim();
+            if (!res.ok) { toast(line + ' → ' + (body || res.status)); }
+            // A 200 whose body is more than bare "ok" is the API telling us the
+            // command ran but the value did not stick — most often a pot
+            // writing the same parameter right behind us. Without this the
+            // slider would just spring back with no explanation.
+            else if (body.length > 2) { toast(line + ' → ' + body.slice(3)); }
+            return res.ok;
+        } catch (err) {
+            toast(line + ' → ' + err.message);
+            return false;
+        }
+    }
+
+    // ── state: the populate_values() dict, arriving whole as
+    //    `initial_values` and as deltas as `gui_data_change`.
+    let V = {};
+    let steps = {
+        iso: [], shutter_a: [], fps: [], wb: [], resolutions: [],
+        // EXPERIMENT drawer only. Unlike the lists above, these are not
+        // recomputed from the live frame rate — they come straight from
+        // settings.jsonc and arrive once, with the snapshot.
+        anamorphic: [], ranges: {}, defaults: {},
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const text = (id, value) => {
+        const el = $(id);
+        const s = (value === undefined || value === null) ? '' : String(value);
+        if (el.textContent !== s) { el.textContent = s; }
+    };
+    const show = (el, on) => el.classList.toggle('hidden', !on);
+    const truthy = (v) => v === true || v === 1 || v === '1' ||
+        (typeof v === 'string' && ['true', 'yes', 'on'].includes(v.trim().toLowerCase()));
+
+    function fillSelect(sel, options, current) {
+        const wanted = options.map((o) => String(o.value)).join(' ');
+        if (sel.dataset.filled !== wanted) {
+            sel.innerHTML = '';
+            options.forEach((o) => {
+                const opt = document.createElement('option');
+                opt.value = o.value;
+                opt.textContent = o.text;
+                sel.appendChild(opt);
             });
+            sel.dataset.filled = wanted;
+        }
+        if (current !== undefined && current !== null) { sel.value = String(current); }
+    }
+
+    // ── left / right rails: same sections, order and box contents as
+    //    draw_left_sections() / draw_right_sections().
+    function box(content, classes) {
+        const el = document.createElement('div');
+        el.className = 'box' + (classes ? ' ' + classes : '');
+        el.textContent = content;
+        return el;
+    }
+
+    // _format_sensor_name() returns "585" or "585\nMONO"; simple_gui draws
+    // one box per line, with MONO a size down so it fits.
+    function boxes(value, classes) {
+        if (value === undefined || value === null || value === '') { return []; }
+        return String(value).split('\n').filter(Boolean).map((part) => {
+            const extra = (part === 'MONO' || part.length > 3) ? ' small' : '';
+            return box(part, (classes || '') + extra);
+        });
+    }
+
+    function section(label, boxes) {
+        if (!boxes.length) { return null; }
+        const wrap = document.createElement('div');
+        wrap.className = 'section';
+        const lbl = document.createElement('div');
+        lbl.className = 'section-label';
+        lbl.textContent = label;
+        const holder = document.createElement('div');
+        holder.className = 'boxes';
+        boxes.forEach((b) => holder.appendChild(b));
+        wrap.appendChild(lbl);
+        wrap.appendChild(holder);
+        return wrap;
+    }
+
+    function warningBoxes() {
+        // F-211: the framebuffer GUI's DROP/SYNC boxes are a fixed on-camera
+        // size and only ever show the word, never a count -- there is no
+        // room. The browser has room. drop_frame_count is already published
+        // (populate_values(), aliases tc_hole_count) and unused here; show
+        // it. frames_off_sync has no equivalent published count today -- the
+        // frame-difference number that latches it (redis_listener.py) is
+        // only logged, never set_value()'d -- so SYNC stays word-only rather
+        // than this display change quietly growing into new live-path
+        // telemetry with no Pi available to verify it.
+        const out = [];
+        if (V.drop_frame_latched) {
+            const count = Number(V.drop_frame_count) || 0;
+            const label = count > 0 ? `DROP ${count}` : 'DROP';
+            out.push(box(label, 'drop' + (label.length > 4 ? ' small' : '')));
+        }
+        if (V.frames_off_sync) { out.push(box('SYNC', 'sync')); }
+        return out;
+    }
+
+    function renderLeftRail() {
+        const rail = $('rail-left');
+        const sections = [];
+
+        const cam = boxes(String(V.sensor || '').toUpperCase());
+        if (V.aspect) { cam.push(box(V.aspect, 'outlined')); }
+        if (V.log_badge_cam0) { cam.push(box(V.log_badge_cam0, 'log small')); }
+        warningBoxes().forEach((b) => cam.push(b));
+        sections.push(section('CAM', cam));
+
+        const mon = [];
+        if (V.zoom_factor) {
+            mon.push(box(V.zoom_factor, V.zoom_is_default ? '' : 'zoom-active'));
+        }
+        if (V.anamorphic_factor) { mon.push(box(V.anamorphic_factor, 'outlined small')); }
+        sections.push(section('MON', mon));
+
+        if (V.mic_connected) {
+            const aud = [];
+            if (V.mic_sample_rate) { aud.push(box(V.mic_sample_rate, '')); }
+            if (V.mic_bit_depth) { aud.push(box(V.mic_bit_depth, '')); }
+            sections.push(section('AUD', aud));
         }
 
-        function updateFpsOptions(fps_steps, current_fps) {
-            const fpsSelect = document.getElementById('fps-select');
-            fpsSelect.innerHTML = '';
-            fps_steps.forEach(fps => {
-                const option = document.createElement('option');
-                option.value = fps;
-                option.textContent = fps;
-                if (fps == current_fps) {
-                    option.selected = true;
-                }
-                fpsSelect.appendChild(option);
+        const sys = [];
+        if (V.usb_connected) { sys.push(box('SER', '')); }
+        if (V.mic_connected) { sys.push(box('MIC', '')); }
+        if (V.keyboard_connected) { sys.push(box('KEY', '')); }
+        const storage = String(V.storage_type || '').toUpperCase();
+        if (storage && storage !== 'NONE') {
+            boxes(storage).forEach((b) => sys.push(b));
+            const fs = String(V.storage_filesystem || '').toLowerCase();
+            if (fs && !['none', 'unknown', ''].includes(fs)) {
+                sys.push(box({ exfat: 'exFAT', ntfs: 'NTFS' }[fs] || fs, 'small'));
+            }
+        }
+        sections.push(section('SYS', sys));
+
+        rail.replaceChildren(...sections.filter(Boolean));
+    }
+
+    function renderRightRail() {
+        const sections = $('rail-right-sections');
+        if (!V.sensor_cam1) { sections.replaceChildren(); return; }
+        const cam = boxes(String(V.sensor_cam1).toUpperCase());
+        if (V.aspect_cam1) { cam.push(box(V.aspect_cam1, 'outlined')); }
+        if (V.exposure_time) { cam.push(box(V.exposure_time, 'small')); }
+        if (V.log_badge_cam1) { cam.push(box(V.log_badge_cam1, 'log small')); }
+        warningBoxes().forEach((b) => cam.push(b));
+        sections.replaceChildren(section('CAM1', cam));
+    }
+
+    // ── mic input VU meter (draw_right_vu_meter) ────────────────────────
+    // Bar skeleton is rebuilt only when the channel count changes; every
+    // other tick just updates height/colour/peak in place so the CSS
+    // transition actually animates. Matches simple_gui's own thresholds
+    // (<60 green, <85 yellow, else red) and its "L"/"R" vs. numeric
+    // channel labels.
+    function vuColor(level) {
+        if (level < 60) return 'rgb(0, 255, 0)';
+        if (level < 85) return 'rgb(255, 255, 0)';
+        return 'rgb(255, 0, 0)';
+    }
+
+    let vuChannelCount = -1;
+
+    function buildVuChannel(label) {
+        const ch = document.createElement('div');
+        ch.className = 'vu-channel';
+        const track = document.createElement('div');
+        track.className = 'vu-track';
+        const fill = document.createElement('div');
+        fill.className = 'vu-fill';
+        const peak = document.createElement('div');
+        peak.className = 'vu-peak';
+        track.appendChild(fill);
+        track.appendChild(peak);
+        const lbl = document.createElement('span');
+        lbl.className = 'label';
+        lbl.textContent = label;
+        ch.appendChild(track);
+        ch.appendChild(lbl);
+        return ch;
+    }
+
+    function renderVuMeter() {
+        const container = $('vu-meter');
+        const levels = Array.isArray(V.vu_levels) ? V.vu_levels : [];
+
+        if (!levels.length) {
+            show(container, false);
+            vuChannelCount = -1;
+            return;
+        }
+
+        const peaks = Array.isArray(V.vu_peaks) && V.vu_peaks.length === levels.length
+            ? V.vu_peaks : levels;
+
+        if (levels.length !== vuChannelCount) {
+            const labels = levels.length === 2 ? ['L', 'R'] : levels.map((_, i) => String(i + 1));
+            container.replaceChildren(...labels.map(buildVuChannel));
+            vuChannelCount = levels.length;
+        }
+
+        const channels = container.children;
+        for (let i = 0; i < levels.length; i++) {
+            const level = Math.max(0, Math.min(100, Number(levels[i]) || 0));
+            const peak = Math.max(0, Math.min(100, Number(peaks[i]) || 0));
+            const track = channels[i].querySelector('.vu-track');
+            track.querySelector('.vu-fill').style.height = level + '%';
+            track.querySelector('.vu-fill').style.background = vuColor(level);
+            track.querySelector('.vu-peak').style.bottom = peak + '%';
+        }
+
+        show(container, true);
+    }
+
+    function updateRailRightVisibility() {
+        const hasSections = $('rail-right-sections').children.length > 0;
+        const hasVu = !$('vu-meter').classList.contains('hidden');
+        show($('rail-right'), hasSections || hasVu);
+    }
+
+    // ── preview frame: aspect from the live sensor geometry × anamorphic,
+    //    matching the lores stream the guide box wraps in simple_gui.
+    let previewAspect = 16 / 9;
+
+    function sizePreview() {
+        const wrap = $('preview-wrap');
+        const frame = $('preview-frame');
+        const avail = wrap.getBoundingClientRect();
+        if (!avail.width || !avail.height) { return; }
+        // Fit the ratio inside the available box, letterbox or pillarbox
+        // whichever the box calls for — the same choice _build_args() and
+        // DrmPreview::Show() make for the on-camera preview window.
+        let w = avail.width;
+        let h = w / previewAspect;
+        if (h > avail.height) {
+            h = avail.height;
+            w = h * previewAspect;
+        }
+        frame.style.width = Math.floor(w) + 'px';
+        frame.style.height = Math.floor(h) + 'px';
+    }
+
+    function renderPreview() {
+        const frame = $('preview-frame');
+        const dual = Boolean(V.sensor_cam1);
+        const cam1 = $('stream-cam1');
+        frame.classList.toggle('dual', dual);
+        show(cam1, dual);
+        if (dual && !cam1.src) { cam1.src = CAM1_STREAM; }
+
+        const aspect = parseFloat(V.aspect);
+        const ana = parseFloat(String(V.anamorphic_factor || '1').replace(/[^0-9.]/g, ''));
+        if (aspect > 0) {
+            previewAspect = aspect * (ana > 0 ? ana : 1) * (dual ? 2 : 1);
+        }
+        frame.style.borderColor = V.zoom_is_default === false
+            ? 'var(--zoom-hi)' : 'var(--guide)';
+        sizePreview();
+    }
+
+    window.addEventListener('resize', sizePreview);
+
+    function renderTopRow() {
+        // Labels come from populate_values() too (fps_label, shutter_label,
+        // exposure_label, iso_label, wb_label, res_label) -- the web GUI has
+        // no state of its own, so these render whatever the HDMI GUI sent
+        // instead of a second hardcoded copy of the same six words (F-257).
+        text('l-fps', V.fps_label);
+        text('l-shutter', V.shutter_label);
+        text('l-exp', V.exposure_label);
+        text('l-iso', V.iso_label);
+        text('l-wb', V.wb_label);
+        text('l-res', V.res_label);
+
+        text('v-fps', V.fps);
+        text('v-shutter', V.shutter_speed);
+        text('v-exp', V.exposure_time);
+        text('v-iso', V.iso);
+        text('v-wb', V.color_temp);
+        text('v-res', V.res);
+
+        // shutter-sync tints FPS and SHUTTER green, exactly as
+        // populate_values() recolours them for the framebuffer GUI.
+        $('g-fps').classList.toggle('tinted', Boolean(V.shutter_a_sync));
+        $('g-shutter').classList.toggle('tinted', Boolean(V.shutter_a_sync));
+        $('g-fps').classList.toggle('locked', Boolean(V.fps_lock));
+        $('g-shutter').classList.toggle('locked', Boolean(V.shutter_a_nom_lock));
+        $('g-iso').classList.toggle('locked', Boolean(V.iso_lock));
+        $('g-res').classList.toggle('switching', truthy(V.resolution_switching));
+
+        const badge = $('v-hdr-badge');
+        const badgeText = V.hdr_badge || '';
+        show(badge, Boolean(badgeText));
+        if (badgeText) {
+            badge.textContent = badgeText;
+            badge.className = 'badge ' + (badgeText === 'HDR' ? 'hdr' : 'sdr');
+        }
+    }
+
+    function renderBottomRow() {
+        text('v-disk', V.disk_space);
+        text('v-write', V.write_speed);
+        text('v-rectime', V.recording_time);
+        text('v-cpu', V.cpu_load);
+        text('v-temp', V.cpu_temp);
+        text('v-ram', V.ram_load);
+
+        const used = parseInt(V.buffer_used, 10) || 0;
+        const size = parseInt(V.buffer_size, 10) || 0;
+        text('v-buffer', size ? used + '/' + size : '');
+        $('buffer-fill').style.width = size ? Math.min(100, (used / size) * 100) + '%' : '0%';
+
+        text('v-clip', V.clip_name);
+        const cam1Clip = $('v-clip-cam1');
+        show(cam1Clip, Boolean(V.sensor_cam1));
+        text('v-clip-cam1', V.clip_name_cam1);
+
+        const wav = $('v-wav');
+        show(wav, Boolean(V.mic_wav_recording || V.mic_wav_saved));
+        wav.classList.toggle('recording', Boolean(V.mic_wav_recording));
+
+        show($('v-lock'), Boolean(V.lock));
+        show($('v-voltage'), Boolean(V.low_voltage));
+        show($('g-battery'), Boolean(V.battery_level));
+        text('v-battery', V.battery_level);
+
+        // The LOG button reflects log_encode_cam0 — what the camera was
+        // actually launched with, not the pending request.
+        $('btn-log').classList.toggle('on', Boolean(V.log_badge_cam0));
+        $('btn-log').textContent = V.log_badge_cam0 || 'LOG';
+    }
+
+    function renderSelectors() {
+        fillSelect($('s-iso'), steps.iso.map((v) => ({ value: v, text: v })), V.iso);
+        fillSelect($('s-shutter'), steps.shutter_a.map((v) => ({ value: v, text: v })),
+            steps.shutter_a.find((v) => String(v) === String(parseFloat(V.shutter_speed))));
+        fillSelect($('s-fps'), steps.fps.map((v) => ({ value: v, text: v })), V.fps);
+        fillSelect($('s-wb'), steps.wb.map((v) => ({ value: v, text: v + 'K' })), V.wb);
+        fillSelect($('s-res'),
+            steps.resolutions.map((r) => ({ value: r.mode, text: r.resolution })),
+            V.selected_resolution_mode);
+    }
+
+    // ── EXPERIMENT drawer ─────────────────────────────────────────────
+    // Everything cli_commands.py dispatches that the instrument layout
+    // above does not already expose, minus the destructive four the API
+    // blocks by default anyway (erase / format / reboot / shutdown) and
+    // the restarts. Each widget posts the same command line the CLI would,
+    // so none of this is a second implementation of a control — it is the
+    // same dispatcher, reached from a slider.
+    //
+    // `key` names a field in the populate_values() dict, which is what lets
+    // a widget follow a change made from a pot, the quad rotary, serial or
+    // the CLI instead of only reflecting what this browser last sent.
+    // A slider is one of two shapes, and which one is not a style choice — it
+    // follows from what the setter does with an arbitrary value:
+    //
+    //   CONTINUOUS (min/max/step)  — the setter clamps or accepts verbatim, so
+    //     every knob position is reachable and the value comes back unchanged.
+    //   STEP-LIST (steps: '<name>') — the setter SNAPS to the nearest entry of
+    //     a table. The knob indexes that same table, so every position is a
+    //     fixed point of the setter. Get this wrong and the value latch never
+    //     matches: the knob freezes for the full grace period and then jumps,
+    //     which is worse than an instant snap-back because the operator has
+    //     already moved on.
+    //
+    // The step tables are the live ones, republished by populate_values()
+    // whenever they change — including when a free-stepping toggle rebuilds
+    // them — so a step-list slider re-grids itself instead of going stale.
+    // Ordered exposure-first: the four an operator reaches for constantly,
+    // then the ClearHDR knobs, then the monitor-only one. The ClearHDR group
+    // is present only on a sensor that actually has ClearHDR modes — on an
+    // imx477 or imx283 those four commands write redis keys nothing will ever
+    // read, so offering them would be four controls that appear to do nothing.
+    const XP_SLIDER_GROUPS = [
+        {
+            title: 'EXPOSURE',
+            sliders: [
+                // set_iso() only clamps to [min, max] of the ISO table — it
+                // never snaps — so this one is genuinely continuous. dp MUST
+                // stay 0: the command is typed `int`, and "800.0" comes back
+                // as a bad argument.
+                // boundsFrom, not steps: set_iso() clamps to the ends of the
+                // ISO table but does not snap to its entries, so the travel is
+                // continuous between the table's first and last value. Reading
+                // the ends off the live table means widening arrays.iso.steps
+                // widens the slider instead of silently disagreeing with it.
+                { label: 'ISO',         cmd: 'set iso',           key: 'iso',           min: 100, max: 3200, step: 1,
+                  boundsFrom: 'iso', lockKey: 'iso_lock', lockLabel: 'ISO is locked' },
+                // set_shutter_a_nom() snaps to the flicker-free angle table in
+                // normal mode and accepts verbatim in free/sync mode. Indexing
+                // the table is correct in BOTH: free stepping rebuilds it as a
+                // fine continuous grid, which the setter then takes verbatim.
+                { label: 'SHUTTER NOM', cmd: 'set shutter a nom', key: 'shutter_a_nom', steps: 'shutter_a', dp: 1,
+                  lockKey: 'shutter_a_nom_lock', lockLabel: 'Shutter angle is locked' },
+                // set_fps() snaps into fps_steps_dynamic. Its setter can also
+                // trigger a sensor-mode change and block for up to two seconds
+                // inside the request, so this one gets a slower throttle and
+                // stops sending while a resolution switch is in flight.
+                { label: 'FPS',         cmd: 'set fps',           key: 'fps',           steps: 'fps',
+                  lockKey: 'fps_lock', lockLabel: 'Frame rate is locked',
+                  busyKey: 'resolution_switching', throttle: 600 },
+                // set_wb() snaps to wb_steps unconditionally, in every mode.
+                { label: 'WB',          cmd: 'set wb',            key: 'wb',            steps: 'wb' },
+            ],
+        },
+        {
+            title: 'CLEARHDR',
+            // populate_values()'s hdr_capable — the same test the SDR/HDR
+            // badge is drawn from (does this sensor expose both classes?).
+            visibleKey: 'hdr_capable',
+            sliders: [
+                { label: 'HDR LOW',   cmd: 'set hdr threshold low',  key: 'hdr_threshold_low',  min: 0, max: 4095, step: 1 },
+                { label: 'HDR HIGH',  cmd: 'set hdr threshold high', key: 'hdr_threshold_high', min: 0, max: 4095, step: 1 },
+                { label: 'HDR BLEND', cmd: 'set hdr blend',          key: 'hdr_blend',          min: 0, max: 8,    step: 1 },
+                { label: 'HDR GAIN',  cmd: 'set hdr gain adder',     key: 'hdr_gain_adder',     min: 0, max: 5,    step: 1 },
+            ],
+        },
+        {
+            title: 'PREVIEW',
+            sliders: [
+                // set_zoom() clamps to the span of preview.zoom_steps, so the
+                // real bounds arrive with initial_values; these are the
+                // settings.jsonc defaults, used only until then.
+                { label: 'ZOOM', cmd: 'set zoom', key: 'zoom', min: 0.5, max: 2, step: 0.1, dp: 1, range: 'zoom' },
+            ],
+        },
+    ];
+
+    const XP_TOGGLES = [
+        { label: 'ISO LOCK',     cmd: 'set iso lock',               key: 'iso_lock' },
+        { label: 'SHUTTER LOCK', cmd: 'set shutter a nom lock',     key: 'shutter_a_nom_lock' },
+        { label: 'FPS LOCK',     cmd: 'set fps lock',               key: 'fps_lock' },
+        // Explicit 1/0, like IR FILTER. set_shu_fps_lock() with no argument
+        // inverts the two underlying locks INDEPENDENTLY, and shu_fps_lock is
+        // derived as "both on" — so from a mixed state (one lock on, one off)
+        // a bare toggle just swaps which one is on and the indicator can never
+        // light. Sending the target state makes it reachable from anywhere.
+        { label: 'SHU+FPS LOCK', cmd: 'set shutter a nom fps lock', key: 'shu_fps_lock', explicit: true },
+        { label: 'ALL LOCK',     cmd: 'set all lock',               key: 'all_lock' },
+        { label: 'SHUTTER SYNC', cmd: 'set shutter a sync',         key: 'shutter_a_sync' },
+        { label: 'FPS DOUBLE',   cmd: 'set fps double',             key: 'fps_double' },
+        { label: 'DYN RES',      cmd: 'set dynamic resolution',     key: 'dynamic_resolution_enabled' },
+        // set_filter() is the one toggle with no no-argument path — called
+        // bare it logs "Invalid value provided" and does nothing — so send
+        // the opposite of the live state explicitly. imx585 only; on any
+        // other sensor the controller returns early and nothing moves.
+        { label: 'IR FILTER',    cmd: 'set filter',                 key: 'ir_filter', explicit: true },
+    ];
+
+    // Free stepping replaces a parameter's step table with continuous stepping
+    // in units of its free_increment — inc/dec granularity, not a value.
+    const XP_FREE = [
+        { label: 'ISO',       cmd: 'set iso free',                key: 'iso_free' },
+        { label: 'SHUTTER',   cmd: 'set shutter a free',          key: 'shutter_a_free' },
+        { label: 'FPS',       cmd: 'set fps free',                key: 'fps_free' },
+        { label: 'WB',        cmd: 'set wb free',                 key: 'wb_free' },
+        // Same sensor gate as the CLEARHDR slider group: these tune the step
+        // size of knobs that do not exist on an SDR-only sensor.
+        { label: 'HDR LOW',   cmd: 'set hdr threshold low free',  key: 'hdr_threshold_low_free',  visibleKey: 'hdr_capable' },
+        { label: 'HDR HIGH',  cmd: 'set hdr threshold high free', key: 'hdr_threshold_high_free', visibleKey: 'hdr_capable' },
+        { label: 'HDR BLEND', cmd: 'set hdr blend free',          key: 'hdr_blend_free',          visibleKey: 'hdr_capable' },
+        { label: 'HDR GAIN',  cmd: 'set hdr gain adder free',     key: 'hdr_gain_adder_free',     visibleKey: 'hdr_capable' },
+    ];
+
+    const XP_ACTIONS = [
+        { label: 'MOUNT',        cmd: 'mount' },
+        { label: 'TOGGLE MOUNT', cmd: 'toggle mount' },
+        { label: 'PREROLL',      cmd: 'storage preroll' },
+        { label: 'SET RTC',      cmd: 'set rtc time' },
+    ];
+
+    // set_preview_source()'s cycle order. Only visible with two sensors.
+    const PREVIEW_SOURCES = ['both', 'cam0', 'cam1', 'pip_cam0', 'pip_cam1'];
+
+    // A range input fires on every pixel of a drag. The API's default ceiling
+    // is 20 commands/sec per client (web_api_settings) and every accepted
+    // line takes CommandExecutor's dispatch lock, so coalesce to one send per
+    // interval and always deliver the value the drag actually ended on.
+    function throttle(send, interval) {
+        let pending = null;
+        let timer = null;
+        const flush = () => {
+            if (pending === null) { timer = null; return; }
+            const value = pending;
+            pending = null;
+            send(value);
+            timer = setTimeout(flush, interval);
+        };
+        return (value) => {
+            pending = value;
+            if (timer === null) { flush(); }
+        };
+    }
+
+    const xpSliders = [];
+    const xpToggles = [];
+    const xpConditionalGroups = [];
+    let xpBuilt = false;
+
+    function xpGroup(title, body) {
+        const wrap = document.createElement('div');
+        wrap.className = 'xp-group';
+        const heading = document.createElement('div');
+        heading.className = 'xp-title';
+        heading.textContent = title;
+        wrap.appendChild(heading);
+        wrap.appendChild(body);
+        return wrap;
+    }
+
+    function xpRow(className) {
+        const row = document.createElement('div');
+        row.className = className;
+        return row;
+    }
+
+    // The live step table behind a step-list slider, or null for a continuous
+    // one. Empty until the first push, which is why callers check the length.
+    function sliderSteps(spec) {
+        return spec.steps ? (steps[spec.steps] || []) : null;
+    }
+
+    function buildSlider(spec) {
+        const row = xpRow('xp-slider');
+        const label = document.createElement('span');
+        label.className = 'label';
+        label.textContent = spec.label;
+
+        const input = document.createElement('input');
+        input.type = 'range';
+        if (!spec.steps) {
+            input.min = spec.min;
+            input.max = spec.max;
+            input.step = spec.step;
+        }
+        input.setAttribute('aria-label', spec.label);
+        input.title = spec.cmd;
+
+        const out = document.createElement('span');
+        out.className = 'value';
+
+        const format = (v) => Number(v).toFixed(spec.dp || 0);
+        const send = throttle((v) => cmd(spec.cmd + ' ' + v), spec.throttle || 150);
+
+        // What the knob's current position means. For a step-list slider the
+        // input holds an INDEX, not the value.
+        const knobValue = () => {
+            const list = sliderSteps(spec);
+            if (!list) { return input.value; }
+            return list.length ? list[Math.round(Number(input.value))] : null;
+        };
+
+        // Put the knob on `value` — nearest table entry for a step-list
+        // slider, since the live value can sit off the grid (a pot, or a table
+        // that was rebuilt under it).
+        const placeKnob = (value) => {
+            const list = sliderSteps(spec);
+            if (!list) { input.value = value; return; }
+            if (!list.length) { return; }
+            let best = 0;
+            let bestDistance = Infinity;
+            list.forEach((candidate, i) => {
+                const distance = Math.abs(Number(candidate) - Number(value));
+                if (distance < bestDistance) { bestDistance = distance; best = i; }
             });
-        }
+            input.value = best;
+        };
 
-        function updateWBOptions(wb_steps, current_wb) {
-            const wbSelect = document.getElementById('wb-select');
-            wbSelect.innerHTML = '';
-            wb_steps.forEach(wb => {
-                const option = document.createElement('option');
-                option.value = wb;
-                option.textContent = `${wb}K`;
-                if (wb == current_wb) {
-                    option.selected = true;
-                }
-                wbSelect.appendChild(option);
-            });
-        }
+        // Hold the knob where the user put it until the camera agrees.
+        //
+        // A plain "ignore state for N ms" guard is not enough: state pushes
+        // ride the HDMI GUI's redraw loop, which measures nearer 7.5 Hz than
+        // 12 and stalls outright under load, so any fixed window is sometimes
+        // shorter than the round trip and the slider snaps back to the old
+        // value a moment after release. Instead latch the requested value and
+        // keep showing it until the pushed state matches it — then let go.
+        //
+        // PENDING_GRACE is the giving-up point, not the normal path: if the
+        // value has not come back by then the write genuinely did not stick
+        // (out of range for the mode, wrong sensor, a pot overriding it), and
+        // showing the live value is the honest answer.
+        const PENDING_GRACE = 4000;
+        const entry = { spec, row, input, out, format, placeKnob, pending: null, pendingAt: 0 };
 
-        function isSwitching(value) {
-            const normalized = String(value).trim().toLowerCase();
-            return value === true || normalized === '1' || normalized === 'true';
-        }
+        // Latch what we asked for. `reposition` is false when the user's own
+        // gesture already put the knob there — moving it again mid-drag would
+        // fight the finger.
+        const latch = (value, reposition) => {
+            if (value === null || value === undefined) { return false; }
+            if (reposition) { placeKnob(value); }
+            entry.pending = format(value);
+            entry.pendingAt = Date.now();
+            out.textContent = entry.pending;
+            return true;
+        };
 
-        function updateResolutionSelection(mode, switching) {
-            const resolutionSelect = document.getElementById('resolution-select');
-            if (!resolutionSelect) {
-                return;
-            }
-            if (mode !== undefined && mode !== null) {
-                resolutionSelect.value = mode;
-            }
-            resolutionSelect.classList.toggle('resolution-switching', isSwitching(switching));
-        }
+        // A setter that can block for seconds inside the request (set_fps
+        // crossing a sensor mode) must not be handed a queue of drag values —
+        // they would pile up behind the dispatch lock and come back as 503s.
+        const busy = () => Boolean(spec.busyKey && truthy(V[spec.busyKey]));
 
-        socket.on('initial_values', data => {
-            document.getElementById('iso-select').value = data.iso;
-            updateShutterSpeedOptions(data.shutter_a_steps, data.shutter_a);
-            updateFpsOptions(data.fps_steps, data.fps);
-            updateWBOptions(data.wb_steps, data.wb);
-
-            document.body.style.backgroundColor = data.background_color;
-            document.getElementById('disk-space').innerText = data.disk_space;
-            document.getElementById('write-speed').innerText = data.write_speed;
-            document.getElementById('buffer-used').innerText = data.buffer_used;
-            document.getElementById('buffer-size').innerText = data.buffer_size;
-            document.getElementById('cpu-load').innerText = data.cpu_load;
-            document.getElementById('ram-load').innerText = data.ram_load;
-            document.getElementById('cpu-temp').innerText = data.cpu_temp;
-            document.getElementById('exposure-time').innerText = data.exposure_time;
-            const resolutionSelect = document.getElementById('resolution-select');
-            resolutionSelect.innerHTML = '';
-            data.sensor_resolutions.forEach(res => {
-                const option = document.createElement('option');
-                option.value = res.mode;
-                option.textContent = res.resolution;
-                resolutionSelect.appendChild(option);
-            });
-            updateResolutionSelection(data.selected_resolution_mode, data.resolution_switching);
+        // `change` exists to guarantee the released value is sent even if the
+        // throttle swallowed the last `input`. But throttle() fires on the
+        // leading edge, so a plain click sends once from `input` and again
+        // from `change` — two identical lines, two of the API's 20/sec slots,
+        // and two entries behind a dispatch lock a slow setter can hold for
+        // two seconds, the second of which comes back 503 "busy" for a command
+        // that in fact applied. So `change` only speaks when it has something
+        // new to say.
+        input.addEventListener('input', () => {
+            if (busy()) { return; }
+            if (latch(knobValue(), false)) { entry.lastSent = entry.pending; send(entry.pending); }
+        });
+        input.addEventListener('change', () => {
+            if (busy()) { return; }
+            if (!latch(knobValue(), false)) { return; }
+            if (entry.pending === entry.lastSent) { return; }
+            entry.lastSent = entry.pending;
+            cmd(spec.cmd + ' ' + entry.pending);
         });
 
-        socket.on('parameter_change', data => {
-            if (data.iso !== undefined) {
-                document.getElementById('iso-select').value = data.iso;
-            }
-            if (data.shutter_a !== undefined) {
-                const currentShutter = data.shutter_a;
-                document.getElementById('shutter-speed-select').value = currentShutter;
-                socket.emit('request_shutter_a_steps', {}, (response) => {
-                    updateShutterSpeedOptions(response.shutter_a_steps, currentShutter);
-                });
-            }
-            if (data.fps !== undefined) {
-                document.getElementById('fps-select').value = data.fps;
-            }
-            if (data.wb !== undefined) {
-                document.getElementById('wb-select').value = data.wb;
-            }
-            if (data.selected_resolution_mode !== undefined) {
-                updateResolutionSelection(data.selected_resolution_mode, data.resolution_switching);
-            }
-            if (data.sensor_mode !== undefined) {
-                updateResolutionSelection(data.sensor_mode, data.resolution_switching);
-            }
-            if (data.resolution_switching !== undefined) {
-                updateResolutionSelection(data.selected_resolution_mode, data.resolution_switching);
-            }
-            if (data.buffer !== undefined) {
-                document.getElementById('buffer-used').innerText = data.buffer;
-            }
+        const reset = document.createElement('button');
+        reset.className = 'xp-reset';
+        reset.textContent = '↺';
+        reset.setAttribute('aria-label', 'Reset ' + spec.label + ' to default');
+        reset.addEventListener('click', () => {
+            const fallback = steps.defaults[spec.key];
+            if (fallback === undefined) { return; }
+            // Route through the knob so a step-list slider sends the nearest
+            // table entry rather than a default that may sit off the grid.
+            placeKnob(fallback);
+            if (!latch(knobValue(), false)) { return; }
+            entry.lastSent = entry.pending;
+            cmd(spec.cmd + ' ' + entry.pending);
         });
+        entry.reset = reset;
+        entry.grace = PENDING_GRACE;
 
-        socket.on('resolution_change', data => {
-            if (data.sensor_mode !== undefined) {
-                updateResolutionSelection(data.sensor_mode, data.resolution_switching);
-            }
-        });
+        row.appendChild(label);
+        row.appendChild(input);
+        row.appendChild(out);
+        row.appendChild(reset);
+        xpSliders.push(entry);
+        return row;
+    }
 
-        socket.on('shutter_a_update', data => {
-            updateShutterSpeedOptions(data.shutter_a_steps, data.current_shutter_a);
-        });
-
-        socket.on('fps_update', data => {
-            updateFpsOptions(data.fps_steps, data.fps_actual);
-        });
-
-        socket.on('gui_data_change', data => {
-            if (data.disk_space !== undefined) {
-                document.getElementById('disk-space').innerText = data.disk_space;
-            }
-            if (data.write_speed !== undefined) {
-                document.getElementById('write-speed').innerText = data.write_speed;
-            }
-            if (data.buffer_used !== undefined) {
-                document.getElementById('buffer-used').innerText = data.buffer_used;
-            }
-            if (data.buffer_size !== undefined) {
-                document.getElementById('buffer-size').innerText = data.buffer_size;
-            }
-            if (data.cpu_load !== undefined) {
-                document.getElementById('cpu-load').innerText = data.cpu_load;
-            }
-            if (data.ram_load !== undefined) {
-                document.getElementById('ram-load').innerText = data.ram_load;
-            }
-            if (data.cpu_temp !== undefined) {
-                document.getElementById('cpu-temp').innerText = data.cpu_temp;
-            }
-            if (data.exposure_time !== undefined) {
-                document.getElementById('exposure-time').innerText = data.exposure_time;
-            }
-        });
-
-        socket.on('background_color_change', data => {
-            updateBackgroundColor(data.background_color);
-        });
-
-        function updateBackgroundColor(color) {
-            document.body.style.backgroundColor = color;
-            const elementsToChange = document.querySelectorAll('*:not(button)');
-            elementsToChange.forEach(element => {
-                element.style.backgroundColor = color;
-            });
-        }
-
-        document.getElementById('iso-select').addEventListener('change', function() {
-            const iso = this.value;
-            socket.emit('change_iso', { iso });
-        });
-
-        document.getElementById('shutter-speed-select').addEventListener('change', function() {
-            const shutterAngle = this.value;
-            socket.emit('change_shutter_a', { shutter_a: shutterAngle });
-        });
-
-        document.getElementById('fps-select').addEventListener('change', function() {
-            const fps = this.value;
-            socket.emit('change_fps', { fps });
-        });
-
-        document.getElementById('wb-select').addEventListener('change', function() {
-            const wb = this.value;
-            socket.emit('change_wb', { wb });
-        });
-
-        document.getElementById('resolution-select').addEventListener('change', function() {
-            const resolutionMode = this.value;
-            socket.emit('change_resolution', { mode: resolutionMode });
-        });
-
-        document.getElementById('unmount-btn').addEventListener('click', function() {
-            socket.emit('unmount');
-        });
-
-        document.getElementById('stream-container').addEventListener('click', function() {
-            socket.emit('container_tap');
-        });
-
-        socket.on('reload_stream', () => {
-            reloadStream();
-        });
-
-        let streamReloadTimers = [];
-
-        function clearStreamReloadTimers() {
-            streamReloadTimers.forEach((timer) => clearTimeout(timer));
-            streamReloadTimers = [];
-        }
-
-        function reloadStream() {
-            const streamElement = document.getElementById('stream');
-            if (!streamElement) {
-                return;
-            }
-
-            const baseSrc = streamElement.dataset.streamBase || streamElement.src.split('?')[0];
-            if (!baseSrc) {
-                return;
-            }
-
-            streamElement.dataset.streamBase = baseSrc;
-            clearStreamReloadTimers();
-            streamElement.onload = clearStreamReloadTimers;
-            streamElement.src = '';
-            [350, 1200, 2500].forEach((delay) => {
-                const timer = setTimeout(() => {
-                    streamElement.src = `${baseSrc}?reload=${Date.now()}`;
-                }, delay);
-                streamReloadTimers.push(timer);
-            });
-        }
-
-        socket.on('reload_browser', () => {
-            window.location.reload();
-        });
-
-        function toggleFullScreen() {
-            const elem = document.documentElement;
-            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                if (elem.requestFullscreen) {
-                    elem.requestFullscreen();
-                } else if (elem.webkitRequestFullscreen) {
-                    elem.webkitRequestFullscreen();
-                }
+    function buildToggle(spec) {
+        const btn = document.createElement('button');
+        btn.textContent = spec.label;
+        btn.title = spec.cmd;
+        btn.addEventListener('click', () => {
+            if (spec.explicit) {
+                cmd(spec.cmd + ' ' + (truthy(V[spec.key]) ? '0' : '1'));
             } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
+                cmd(spec.cmd);
+            }
+        });
+        xpToggles.push({ spec, btn });
+        return btn;
+    }
+
+    function buildExperiment() {
+        const sliderGroups = XP_SLIDER_GROUPS.map((group) => {
+            const rows = xpRow('xp-sliders');
+            group.sliders.forEach((s) => rows.appendChild(buildSlider(s)));
+            const wrap = xpGroup(group.title, rows);
+            if (group.visibleKey) { xpConditionalGroups.push({ el: wrap, key: group.visibleKey }); }
+            return wrap;
+        });
+
+        const modes = xpRow('xp-row');
+        XP_TOGGLES.forEach((s) => modes.appendChild(buildToggle(s)));
+
+        const free = xpRow('xp-row');
+        XP_FREE.forEach((s) => free.appendChild(buildToggle(s)));
+
+        const selects = xpRow('xp-row');
+
+        const anaWrap = document.createElement('div');
+        anaWrap.className = 'xp-select';
+        const anaLabel = document.createElement('span');
+        anaLabel.className = 'label';
+        anaLabel.textContent = 'ANAMORPHIC';
+        const anaSel = document.createElement('select');
+        anaSel.id = 'xp-anamorphic';
+        // set_anamorphic_factor() restarts cinepi-raw, unlike everything
+        // else in this drawer. Say so rather than letting it look free.
+        anaSel.title = 'set anamorphic factor — restarts the camera';
+        anaSel.addEventListener('change', (e) => cmd('set anamorphic factor ' + e.target.value));
+        const anaReset = document.createElement('button');
+        anaReset.className = 'xp-reset';
+        anaReset.id = 'xp-anamorphic-reset';
+        anaReset.textContent = '↺';
+        anaReset.setAttribute('aria-label', 'Reset anamorphic factor to default');
+        anaReset.addEventListener('click', () => {
+            const value = steps.defaults.anamorphic_factor_value;
+            if (value !== undefined) { cmd('set anamorphic factor ' + value); }
+        });
+        anaWrap.appendChild(anaLabel);
+        anaWrap.appendChild(anaSel);
+        anaWrap.appendChild(anaReset);
+        selects.appendChild(anaWrap);
+
+        const srcWrap = document.createElement('div');
+        srcWrap.className = 'xp-select';
+        srcWrap.id = 'xp-preview-wrap';
+        const srcLabel = document.createElement('span');
+        srcLabel.className = 'label';
+        srcLabel.textContent = 'HDMI PREVIEW';
+        const srcSel = document.createElement('select');
+        srcSel.id = 'xp-preview-source';
+        srcSel.title = 'set preview — dual-sensor HDMI source';
+        fillSelect(srcSel, PREVIEW_SOURCES.map((v) => ({ value: v, text: v.toUpperCase() })));
+        srcSel.addEventListener('change', (e) => cmd('set preview ' + e.target.value));
+        srcWrap.appendChild(srcLabel);
+        srcWrap.appendChild(srcSel);
+        selects.appendChild(srcWrap);
+
+        const actions = xpRow('xp-row');
+        XP_ACTIONS.forEach((spec) => {
+            const btn = document.createElement('button');
+            btn.textContent = spec.label;
+            btn.title = spec.cmd;
+            btn.addEventListener('click', () => cmd(spec.cmd));
+            actions.appendChild(btn);
+        });
+
+        $('experiment').replaceChildren(
+            ...sliderGroups,
+            xpGroup('MODES', modes),
+            xpGroup('FREE STEPPING', free),
+            xpGroup('SELECT', selects),
+            xpGroup('ACTIONS', actions)
+        );
+        xpBuilt = true;
+    }
+
+    function renderExperiment() {
+        if (!xpBuilt || $('experiment').classList.contains('hidden')) { return; }
+        const now = Date.now();
+
+        // A whole group can be irrelevant to the attached sensor (ClearHDR on
+        // an imx477). Hide the group, but keep rendering its rows — they cost
+        // nothing and are correct the moment the group comes back.
+        xpConditionalGroups.forEach(({ el, key }) => show(el, truthy(V[key])));
+
+        xpSliders.forEach((entry) => {
+            const spec = entry.spec;
+            const list = sliderSteps(spec);
+
+            if (list) {
+                // Re-grid to the live table. It changes with the frame rate
+                // (flicker-free angles), with the sensor mode (fps ceiling)
+                // and with a free-stepping toggle.
+                entry.input.min = 0;
+                entry.input.max = Math.max(0, list.length - 1);
+                entry.input.step = 1;
+            } else {
+                const bounds = spec.range && steps.ranges[spec.range];
+                if (bounds) {
+                    entry.input.min = bounds.min;
+                    entry.input.max = bounds.max;
+                    entry.input.step = bounds.step;
+                }
+                // Continuous, but with the travel bounded by a step table's
+                // ends — which is exactly what a clamping setter enforces.
+                const table = spec.boundsFrom && steps[spec.boundsFrom];
+                if (table && table.length) {
+                    entry.input.min = Math.min(...table);
+                    entry.input.max = Math.max(...table);
                 }
             }
-        }
 
-        document.getElementById('fullscreen-btn').addEventListener('click', function() {
-            toggleFullScreen();
-            updateFullscreenButton();
+            // A row can be unusable for three reasons, and every one of them
+            // has to disable the input rather than just refuse the send:
+            //
+            //  locked  — the setter drops the write silently and answers 200.
+            //  busy    — the parameter is mid-reconfigure (set_fps crossing a
+            //            sensor mode). A drag here is not merely ignored: the
+            //            state pushes keep arriving, so placeKnob() yanks the
+            //            knob back under the finger and the value the gesture
+            //            ended on is discarded with no indication why.
+            //  no table — a step-list slider before its table has arrived.
+            const locked = Boolean(spec.lockKey && truthy(V[spec.lockKey]));
+            const switching = Boolean(spec.busyKey && truthy(V[spec.busyKey]));
+            const unusable = locked || switching || (list !== null && list.length === 0);
+            entry.input.disabled = unusable;
+            entry.row.classList.toggle('disabled', unusable);
+            entry.input.title = locked ? (spec.lockLabel || 'Locked')
+                : switching ? 'Changing resolution…'
+                : (list && !list.length) ? 'Waiting for the step table'
+                : spec.cmd;
+
+            const fallback = steps.defaults[spec.key];
+            // Hide rather than grey out when there is nothing to restore. A
+            // permanently disabled arrow reads as a broken control; several of
+            // these parameters genuinely have no configured default.
+            entry.reset.classList.toggle('absent', fallback === undefined);
+            if (fallback !== undefined) {
+                entry.reset.title = 'Reset to ' + entry.format(fallback);
+            }
+
+            const value = V[spec.key];
+            if (value === undefined || value === null) { return; }
+            const live = entry.format(value);
+
+            let inFlight = false;
+            if (entry.pending !== null) {
+                // Camera caught up, or we have waited long enough to stop
+                // pretending. Either way, stop latching.
+                if (entry.pending === live || now - entry.pendingAt > entry.grace) {
+                    entry.pending = null;
+                } else {
+                    inFlight = true;
+                }
+            }
+
+            // Grey the arrow against what the row is SHOWING, not against the
+            // live value — otherwise dragging away from the default leaves the
+            // arrow disabled for the whole round trip, exactly when the user
+            // is most likely to reach for it.
+            // Compare as formatted text: the live value arrives as a float and
+            // the default as whatever settings.jsonc holds, so 1 and 1.0 must
+            // not read as "not yet default".
+            // `unusable` is in here too: without it the arrow stays clickable
+            // on a locked row, latches a value the setter drops, and shows it
+            // as truth — with the arrow greyed as if the reset had worked —
+            // for the full grace period. That is the exact freeze-then-jump
+            // the lock branch above exists to prevent.
+            const showing = inFlight ? entry.pending : live;
+            entry.reset.disabled = unusable
+                || fallback === undefined
+                || entry.format(fallback) === showing;
+
+            if (inFlight) { return; }   // leave the knob where the user put it
+
+            entry.placeKnob(value);
+            entry.out.textContent = live;
         });
 
-        function updateFullscreenButton() {
-            const isInFullScreen = document.fullscreenElement !== null || document.webkitFullscreenElement !== null;
-            document.getElementById('fullscreen-btn').textContent = isInFullScreen ? 'Exit Fullscreen' : 'Enter Fullscreen';
-        }
-
-        document.getElementById('fullscreen-btn').addEventListener('touchstart', function(event) {
-            event.preventDefault();
-            toggleFullScreen();
-            updateFullscreenButton();
+        xpToggles.forEach(({ spec, btn }) => {
+            if (spec.visibleKey) { show(btn, truthy(V[spec.visibleKey])); }
+            btn.classList.toggle('on', truthy(V[spec.key]));
         });
-    </script>
+
+        fillSelect($('xp-anamorphic'),
+            steps.anamorphic.map((v) => ({ value: v, text: v + 'X' })),
+            V.anamorphic_factor_value);
+        const anaDefault = steps.defaults.anamorphic_factor_value;
+        $('xp-anamorphic-reset').disabled = anaDefault === undefined
+            || Number(anaDefault) === Number(V.anamorphic_factor_value);
+        $('xp-anamorphic-reset').title = anaDefault === undefined
+            ? 'No default configured' : 'Reset to ' + anaDefault + 'X';
+        // Single-sensor rigs have no HDMI preview source to pick.
+        show($('xp-preview-wrap'), Boolean(V.sensor_cam1));
+        $('xp-preview-source').value = V.hdmi_preview_source || 'both';
+    }
+
+    function render() {
+        document.body.style.backgroundColor = V.background_color || 'black';
+        // color_mode = "inverse" for every non-idle background in draw_gui()
+        document.body.classList.toggle('inverse',
+            Boolean(V.background_color) && V.background_color !== 'black');
+        renderTopRow();
+        renderBottomRow();
+        renderLeftRail();
+        renderRightRail();
+        renderVuMeter();
+        updateRailRightVisibility();
+        renderPreview();
+        renderSelectors();
+        renderExperiment();
+    }
+
+    // ── push: server → browser only (module/app/main/events.py) ────────
+    const socket = io();
+
+    // Second, independent path to stream recovery, alongside `reload_stream`
+    // (D1): a frozen MJPEG <img> fires neither `error` nor a naturalWidth
+    // drop, so if the single reload_stream emit is missed (backgrounded tab,
+    // socket hiccup during the restart), catching resolution_switching's
+    // truthy->falsy edge here -- fed by the Redis fan-out, not the emit --
+    // gives recovery a second chance. Seeded from initial_values so page
+    // load itself is never mistaken for a falling edge.
+    let prevResolutionSwitching = false;
+    function noteResolutionSwitching() {
+        const now = truthy(V.resolution_switching);
+        if (prevResolutionSwitching && !now) { reloadStreams(); }
+        prevResolutionSwitching = now;
+    }
+
+    // The four cycle-able step tables. populate_values() republishes each one
+    // whenever it actually changes — a frame-rate change re-derives the
+    // flicker-free angles, a sensor-mode change moves the fps ceiling, a
+    // free-stepping toggle swaps a preset table for a continuous grid — and
+    // the delta diff means an unchanged table costs nothing. Absorb them from
+    // deltas too, or the selects and the step-list sliders go stale the moment
+    // one is rebuilt and only recover on reconnect.
+    const STEP_LISTS = {
+        iso_steps: 'iso', shutter_a_steps: 'shutter_a',
+        fps_steps: 'fps', wb_steps: 'wb',
+    };
+
+    function absorbSteps(data) {
+        Object.keys(STEP_LISTS).forEach((field) => {
+            if (Array.isArray(data[field])) { steps[STEP_LISTS[field]] = data[field]; }
+        });
+    }
+
+    socket.on('initial_values', (data) => {
+        V = Object.assign({}, data);
+        absorbSteps(data);
+        steps.resolutions = data.sensor_resolutions || [];
+        prevResolutionSwitching = truthy(V.resolution_switching);
+        const ranges = data.control_ranges || {};
+        steps.anamorphic = ranges.anamorphic_steps || [];
+        steps.ranges = { zoom: ranges.zoom };
+        steps.defaults = ranges.defaults || {};
+        render();
+    });
+
+    socket.on('gui_data_change', (data) => {
+        Object.assign(V, data);
+        absorbSteps(data);
+        render();
+    });
+
+    socket.on('background_color_change', (data) => {
+        V.background_color = data.background_color;
+        render();
+    });
+
+    socket.on('parameter_change', (data) => {
+        if (data.iso !== undefined) { V.iso = data.iso; }
+        if (data.wb !== undefined) { V.wb = data.wb; }
+        if (data.selected_resolution_mode !== undefined) {
+            V.selected_resolution_mode = data.selected_resolution_mode;
+        }
+        if (data.resolution_switching !== undefined) {
+            V.resolution_switching = data.resolution_switching;
+            noteResolutionSwitching();
+        }
+        render();
+    });
+
+    socket.on('shutter_a_update', (data) => {
+        steps.shutter_a = data.shutter_a_steps || steps.shutter_a;
+        render();
+    });
+
+    socket.on('fps_update', (data) => {
+        steps.fps = data.fps_steps || steps.fps;
+        render();
+    });
+
+    socket.on('resolution_change', (data) => {
+        if (data.sensor_mode !== undefined) { V.selected_resolution_mode = data.sensor_mode; }
+        if (data.resolution_switching !== undefined) {
+            V.resolution_switching = data.resolution_switching;
+            noteResolutionSwitching();
+        }
+        render();
+    });
+
+    socket.on('reload_browser', () => window.location.reload());
+    socket.on('reload_stream', () => reloadStreams());
+
+    // A socket reconnect means cinemate (and with it cinepi-raw) went away
+    // and came back — a settings-save restart, a crash — taking the MJPEG
+    // connections with it. Reconnect the previews too.
+    let socketWasConnected = false;
+    socket.on('connect', () => {
+        if (socketWasConnected) { reloadStreams(); }
+        socketWasConnected = true;
+    });
+
+    // ── stream reload ─────────────────────────────────────────────────
+    //    An MJPEG <img> dies for good the moment its connection drops —
+    //    cinepi-raw relaunching for an aspect-ratio change, a settings-save
+    //    restart, a crash — and a fixed number of retries loses the race
+    //    against a full relaunch (the old 350/1200/2500 ms schedule is how
+    //    the preview used to go black permanently). So: retry on every
+    //    error until frames actually flow again. `load` fires on the first
+    //    MJPEG frame; `error` re-arms the next attempt, so a dead server
+    //    costs one request a second until it's back.
+    function scheduleStreamReload(img, delay) {
+        clearTimeout(img._reloadTimer);
+        img._reloadTimer = setTimeout(() => {
+            img._reloadTimer = null;
+            if (img.classList.contains('hidden')) { return; }
+            img.src = img.dataset.streamBase + '?reload=' + Date.now();
+        }, delay);
+    }
+    function reloadStreams() {
+        [$('stream'), $('stream-cam1')].forEach((img) => {
+            if (!img || img.classList.contains('hidden')) { return; }
+            scheduleStreamReload(img, 350);
+        });
+    }
+    $('stream').dataset.streamBase = ($('stream').getAttribute('src') || '').split('?')[0];
+    $('stream-cam1').dataset.streamBase = CAM1_STREAM;
+    [$('stream'), $('stream-cam1')].forEach((img) => {
+        img.addEventListener('error', () => {
+            if (!img.dataset.streamBase || img.classList.contains('hidden')) { return; }
+            scheduleStreamReload(img, 1000);
+        });
+        img.addEventListener('load', () => {
+            clearTimeout(img._reloadTimer);
+            img._reloadTimer = null;
+        });
+    });
+    // Watchdog for the case neither `error` nor `reload_stream` catches: a
+    // listener that accepts the request but never delivers a frame. An
+    // orphaned process squatting on :8000 does exactly that (see the
+    // port-collision note in the docs) and the page would sit black forever
+    // with no event ever firing. While the image is visible and has no
+    // decoded frame, keep re-issuing the request.
+    setInterval(() => {
+        [$('stream'), $('stream-cam1')].forEach((img) => {
+            if (!img || img.classList.contains('hidden') || !img.dataset.streamBase) { return; }
+            if (img.naturalWidth === 0 && img._reloadTimer == null) { scheduleStreamReload(img, 0); }
+        });
+    }, 4000);
+
+    // ── bindings ──────────────────────────────────────────────────────
+    $('s-iso').addEventListener('change', (e) => cmd('set iso ' + e.target.value));
+    $('s-shutter').addEventListener('change', (e) => cmd('set shutter a ' + e.target.value));
+    $('s-fps').addEventListener('change', (e) => cmd('set fps ' + e.target.value));
+    $('s-wb').addEventListener('change', (e) => cmd('set wb ' + e.target.value));
+    $('s-res').addEventListener('change', (e) => cmd('set resolution ' + e.target.value));
+
+    $('preview-frame').addEventListener('click', () => cmd('rec'));
+    $('btn-log').addEventListener('click', () => cmd('set log'));
+    $('btn-unmount').addEventListener('click', () => cmd('unmount'));
+
+    // Built on first open rather than at load: a camera that never opens the
+    // drawer pays nothing for it, and renderExperiment() no-ops while it is
+    // closed instead of touching ~30 widgets on every state push.
+    $('btn-experiment').addEventListener('click', () => {
+        const panel = $('experiment');
+        if (!xpBuilt) { buildExperiment(); }
+        const open = panel.classList.toggle('hidden');
+        $('btn-experiment').classList.toggle('on', !open);
+        render();
+    });
+
+    // The drawer changes the preview's available box without a window
+    // resize, and so does an orientation change or a phone's URL bar
+    // collapsing. Re-fit off the box itself rather than off the events that
+    // happen to change it. sizePreview() only writes to #preview-frame, a
+    // child, so this cannot feed itself.
+    if (window.ResizeObserver) {
+        new ResizeObserver(sizePreview).observe($('preview-wrap'));
+    }
+
+    const fsBtn = $('btn-fullscreen');
+    function toggleFullScreen() {
+        const el = document.documentElement;
+        const active = document.fullscreenElement || document.webkitFullscreenElement;
+        if (!active) {
+            (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+        } else {
+            (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+        }
+    }
+    fsBtn.addEventListener('click', toggleFullScreen);
+    document.addEventListener('fullscreenchange', () => {
+        fsBtn.textContent = document.fullscreenElement ? 'EXIT FULLSCREEN' : 'FULLSCREEN';
+    });
+
+    render();
+}());
+</script>
 </body>
 </html>

@@ -1,11 +1,21 @@
 # Import required modules
-import threading  
-import time  
-import datetime 
-import os  
-import logging  
+import threading
+import time
+import datetime
+import os
+import logging
+import contextlib
 import select
 import sys
+
+from module import parameters
+
+# F-285: reverse index from a registered setter's method name (e.g.
+# "set_iso") back to its Parameter, so handle_received_data can read back
+# what a command actually set without a per-command mapping. Built once;
+# parameters.REGISTRY does not change at runtime.
+_PARAM_BY_SETTER = {p.setter: p for p in parameters.REGISTRY.values()}
+
 
 class CommandExecutor(threading.Thread):
     def __init__(self, cinepi_controller, cinepi_app, storage_preroll=None):
@@ -14,6 +24,11 @@ class CommandExecutor(threading.Thread):
         self.cinepi_app = cinepi_app
         self.storage_preroll = storage_preroll
         self.running = True  # Flag to control the thread's execution
+        # Serialises dispatch across CLI, serial and HTTP callers. Held for
+        # the duration of handle_received_data() so all three inbound
+        # transports get the same ordering guarantee the CLI/serial paths
+        # already had by construction (single-threaded callers).
+        self._dispatch_lock = threading.Lock()
 
         # ---------------------------------------------------------------------------
         # CLI COMMAND TABLE
@@ -55,6 +70,31 @@ class CommandExecutor(threading.Thread):
             'inc fps'                : (cinepi_controller.inc_fps,        None),
             'dec fps'                : (cinepi_controller.dec_fps,        None),
 
+            # ── imx585 ClearHDR ───────────────────────────────────────────────────
+            #  Startup values come from capture.resolutions.hdr in settings.jsonc.
+            #  These commands apply live to the sensor while streaming. inc/dec
+            #  step through arrays.hdr_*.steps, or free_increment when that
+            #  knob's free stepping is on (see 'set hdr ... free' below).
+            'set hdr threshold low'  : (cinepi_controller.set_hdr_threshold_low, int),
+            'inc hdr threshold low'  : (cinepi_controller.inc_hdr_threshold_low, None),
+            'dec hdr threshold low'  : (cinepi_controller.dec_hdr_threshold_low, None),
+            'set hdr threshold high' : (cinepi_controller.set_hdr_threshold_high, int),
+            'inc hdr threshold high' : (cinepi_controller.inc_hdr_threshold_high, None),
+            'dec hdr threshold high' : (cinepi_controller.dec_hdr_threshold_high, None),
+            'set hdr blend'          : (cinepi_controller.set_hdr_blend,     int),
+            'inc hdr blend'          : (cinepi_controller.inc_hdr_blend,     None),
+            'dec hdr blend'          : (cinepi_controller.dec_hdr_blend,     None),
+            'set hdr gain adder'     : (cinepi_controller.set_hdr_gain_adder, int),
+            'inc hdr gain adder'     : (cinepi_controller.inc_hdr_gain_adder, None),
+            'dec hdr gain adder'     : (cinepi_controller.dec_hdr_gain_adder, None),
+
+            # ── CineMate Log (--log-encode) ───────────────────────────────────────
+            #  "set log" toggles on/off, using each live camera's own bit-depth
+            #  default target. "set log 10" / "set log 12" force that target where
+            #  the live bit depth supports it; "set log off" forces off. Restarts
+            #  the camera when idle, deferred while recording.
+            'set log'                : (cinepi_controller.set_log_encode,    [int, str]),
+
             # ── White balance (Kelvin or step) ────────────────────────────────────
             'set wb'                 : (cinepi_controller.set_wb,         [int, None]),
             'inc wb'                 : (cinepi_controller.inc_wb,         None),
@@ -62,6 +102,7 @@ class CommandExecutor(threading.Thread):
 
             # ── Resolution / anamorphic / storage ────────────────────────────────
             'set resolution'         : (cinepi_controller.set_resolution, [int, None]),
+            'set dynamic resolution' : (cinepi_controller.set_dynamic_resolution_enabled, [int, None]),
             'set anamorphic factor'  : (cinepi_controller.set_anamorphic_factor, [float, None]),
             'mount'                  : (cinepi_controller.mount,          None),
             'unmount'                : (cinepi_controller.unmount,        None),
@@ -91,11 +132,15 @@ class CommandExecutor(threading.Thread):
             'restart camera'         : (cinepi_app.restart,        None),
             'restart cinemate'       : (cinepi_controller.restart_cinemate,        None),
 
-            # ── Free-mode toggles ────────────────────────────────────────────────
+            # ── Free-stepping toggles ────────────────────────────────────────────────
             'set iso free'           : (cinepi_controller.set_iso_free,   [int, str]),
             'set shutter a free'     : (cinepi_controller.set_shutter_a_free, [int, str]),
             'set fps free'           : (cinepi_controller.set_fps_free,   [int, str]),
             'set wb free'            : (cinepi_controller.set_wb_free,    [int, str]),
+            'set hdr threshold low free' : (cinepi_controller.set_hdr_threshold_low_free, [int, str]),
+            'set hdr threshold high free': (cinepi_controller.set_hdr_threshold_high_free, [int, str]),
+            'set hdr blend free'     : (cinepi_controller.set_hdr_blend_free, [int, str]),
+            'set hdr gain adder free': (cinepi_controller.set_hdr_gain_adder_free, [int, str]),
 
             # ── Sensor-specific ──────────────────────────────────────────────────
             'set filter'             : (cinepi_controller.set_filter,     [int]), #Toggle IR-cut filter on StarlightEye sensors
@@ -122,7 +167,7 @@ class CommandExecutor(threading.Thread):
         try:
             rtc_time = os.popen('hwclock -r').read().strip()  # Try to read RTC time
             logging.info(f"RTC Time:    {rtc_time}")  # Display the RTC time
-        except:
+        except Exception:
             logging.info("Unable to read RTC time.")  # If unable to read RTC time, log error
 
     def set_rtc_time(self):
@@ -130,7 +175,7 @@ class CommandExecutor(threading.Thread):
         try:
             os.system('sudo hwclock --systohc')  # Try to sync RTC time with system time
             logging.info("RTC Time has been set to System Time")  # Log success
-        except:
+        except Exception:
             logging.info("Unable to set the RTC time.")  # If unable to set RTC time, log error
 
     def is_valid_arg(self, arg, expected_type):
@@ -149,13 +194,51 @@ class CommandExecutor(threading.Thread):
         except ValueError:
             return False
 
+    def _confirm_or_ok(self, func, requested_value):
+        """F-285: read back what *func* actually set, if it maps to a
+        registered Parameter, instead of blindly reporting success.
+
+        A command can execute without error and still not stick -- most
+        concretely, AnalogControls' pot thread writing the same parameter
+        moments later. Without this, the API told the operator "ok" while
+        the live value was already something else, with nothing anywhere
+        recording the mismatch. Commands with no matching Parameter (most
+        of the table) are unaffected: this only ever adds information, and
+        only for parameters that have a canonical redis key to check.
+        """
+        param = _PARAM_BY_SETTER.get(getattr(func, "__name__", None))
+        if param is None:
+            return True, ""
+
+        actual = self.cinepi_controller.redis_controller.get_value(param.redis_key)
+        try:
+            matches = float(actual) == float(requested_value)
+        except (TypeError, ValueError):
+            matches = str(actual) == str(requested_value)
+
+        if matches:
+            return True, ""
+
+        logging.warning(
+            f"set {param.name} {requested_value} did not stick; live value is {actual!r}"
+        )
+        return True, f"requested {requested_value}, live value is {actual}"
+
     def handle_received_data(self, data):
-        """Handles received input data and executes corresponding commands."""
+        """Handles received input data and executes corresponding commands.
+
+        Returns ``(ok, message)``. ``ok`` is False for anything that should
+        surface as a 4xx over the web API; ``message`` is one of a small
+        fixed vocabulary ("unknown command", "bad argument", "missing
+        argument", "busy") on failure, or "" (occasionally a handler-supplied
+        string) on success. The CLI and serial callers ignore this return
+        value, so their console behaviour is unchanged.
+        """
         logging.info(f"Received: {data.strip()}")  # Log the received data
         input_command = data.strip().split()  # Split the input into parts
 
         if not input_command:
-            return  # If there's no input, just return
+            return False, "unknown command"  # If there's no input, just return
 
         # Reconstruct the full command name by trying all possible matches
         command_name = None
@@ -171,37 +254,50 @@ class CommandExecutor(threading.Thread):
 
         if not command_name:
             logging.info(f"Command '{data.strip()}' not found")
-            return
+            return False, "unknown command"
 
-        func, expected_types = self.commands[command_name]
+        if not self._dispatch_lock.acquire(timeout=2.0):
+            logging.warning(f"Command '{data.strip()}' dropped: dispatch lock busy")
+            return False, "busy"
 
-        if command_name == 'rec':
-            self.handle_rec_command(command_args)
-            return
+        try:
+            func, expected_types = self.commands[command_name]
 
-        # Handle commands with arguments or those that can be called without arguments
-        if isinstance(expected_types, list):  # If the command can take multiple types
-            if command_args:  # Arguments provided
-                arg = command_args[0]
-                for expected_type in filter(None, expected_types):
-                    if self.is_valid_arg(arg, expected_type):
-                        func(expected_type(arg))  # Call function with converted argument
-                        return
-                logging.info(f"Invalid argument type for command '{command_name}'")
-            else:
-                func()  # Call the function without arguments
-        else:  # Single expected type or no argument
-            if command_args:  # Arguments provided
-                arg = command_args[0]
-                if self.is_valid_arg(arg, expected_types):
-                    func(expected_types(arg))  # Call function with converted argument
-                    return
-                logging.info(f"Invalid argument type for command '{command_name}'")
-            else:
-                if expected_types is None:  # No arguments expected
-                    func()  # Call the function without arguments
+            if command_name == 'rec':
+                return self.handle_rec_command(command_args)
+
+            # Handle commands with arguments or those that can be called without arguments
+            if isinstance(expected_types, list):  # If the command can take multiple types
+                if command_args:  # Arguments provided
+                    arg = command_args[0]
+                    for expected_type in filter(None, expected_types):
+                        if self.is_valid_arg(arg, expected_type):
+                            converted = expected_type(arg)
+                            func(converted)  # Call function with converted argument
+                            return self._confirm_or_ok(func, converted)
+                    logging.info(f"Invalid argument type for command '{command_name}'")
+                    return False, "bad argument"
                 else:
-                    logging.info(f"Command '{command_name}' requires an argument")
+                    func()  # Call the function without arguments
+                    return True, ""
+            else:  # Single expected type or no argument
+                if command_args:  # Arguments provided
+                    arg = command_args[0]
+                    if self.is_valid_arg(arg, expected_types):
+                        converted = expected_types(arg)
+                        func(converted)  # Call function with converted argument
+                        return self._confirm_or_ok(func, converted)
+                    logging.info(f"Invalid argument type for command '{command_name}'")
+                    return False, "bad argument"
+                else:
+                    if expected_types is None:  # No arguments expected
+                        func()  # Call the function without arguments
+                        return True, ""
+                    else:
+                        logging.info(f"Command '{command_name}' requires an argument")
+                        return False, "missing argument"
+        finally:
+            self._dispatch_lock.release()
 
     def stop(self):
 
@@ -211,7 +307,7 @@ class CommandExecutor(threading.Thread):
 
     # Dual-sensor record target. An optional leading token on `rec` forces
     # which sensor(s) capture the take, overriding the preview-follows /
-    # lock_dual_recording policy for that one take.
+    # sensors.record_policy policy for that one take.
     _REC_CAM_TOKENS = {
         "cam0": "cam0", "0": "cam0", "a": "cam0",
         "cam1": "cam1", "1": "cam1", "b": "cam1",
@@ -221,7 +317,8 @@ class CommandExecutor(threading.Thread):
     def handle_rec_command(self, args):
         """Handle recording command: optional leading camera target
         (``cam0`` | ``cam1`` | ``both``/``dual``) followed by optional timed
-        arguments (``s``/``f`` <amount>)."""
+        arguments (``s``/``f`` <amount>). Returns ``(ok, message)`` — see
+        ``handle_received_data``."""
         override = None
         if args and args[0].lower() in self._REC_CAM_TOKENS:
             override = self._REC_CAM_TOKENS[args[0].lower()]
@@ -229,35 +326,36 @@ class CommandExecutor(threading.Thread):
 
         if not args:
             self.cinepi_controller.rec(record_override=override)
-            return
+            return True, ""
 
         mode = args[0].lower()
 
         if mode in {"s", "sec", "secs", "second", "seconds"}:
             if len(args) < 2:
                 logging.info("Timed recording in seconds requires a duration argument.")
-                return
+                return False, "missing argument"
             try:
                 seconds = float(args[1])
             except ValueError:
                 logging.info("Invalid seconds value for timed recording.")
-                return
+                return False, "bad argument"
             self.cinepi_controller.rec(mode, seconds, record_override=override)
-            return
+            return True, ""
 
         if mode in {"f", "frame", "frames"}:
             if len(args) < 2:
                 logging.info("Timed recording in frames requires a frame count.")
-                return
+                return False, "missing argument"
             try:
                 frames = int(args[1])
             except ValueError:
                 logging.info("Invalid frame count for timed recording.")
-                return
+                return False, "bad argument"
             self.cinepi_controller.rec(mode, frames, record_override=override)
-            return
+            return True, ""
 
         logging.info("Unknown rec argument. Use cam0/cam1/both, or 's'/'f' with a duration.")
+        return False, "bad argument"
 
     def run(self):
             """Thread run function to continuously process input commands."""
@@ -271,11 +369,10 @@ class CommandExecutor(threading.Thread):
             prompt_shown = False
             while self.running:
                 if not prompt_shown and stdin.isatty():
-                    try:
+                    # The prompt is a courtesy; a closed stdout must not end the loop.
+                    with contextlib.suppress(Exception):
                         sys.stdout.write("\n> ")
                         sys.stdout.flush()
-                    except Exception:
-                        pass
                     prompt_shown = True
 
                 try:

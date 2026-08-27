@@ -1,4 +1,4 @@
-import logging, os, threading, time
+import logging, threading, time
 from pathlib import Path
 from typing import TypedDict
 
@@ -23,7 +23,7 @@ class I2cOled(threading.Thread):
         super().__init__(daemon=True)
         logging.info("I2cOled from %s LOADED", __file__)
 
-        s = settings.get("i2c_oled", {})
+        s = settings.get("output_peripherals", {}).get("oled", {})
         self.width    = s.get("width", 128)
         self.height   = s.get("height", 64)
         self.font_sz  = s.get("font_size", 10)

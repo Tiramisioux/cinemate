@@ -1,0 +1,5 @@
+# Development and CI only. Not installed on a camera.
+
+pytest         # _test/ -- the whole suite is portable and needs no Pi
+jsonschema     # settings.schema.json strictness test
+ruff           # lint, see ruff.toml

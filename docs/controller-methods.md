@@ -10,7 +10,7 @@ CineMate exposes most of its runtime features through the `CinePiController` cla
 
 ## Exposure settings
 
-These methods adjust ISO, shutter angle and frame rate. Increment/decrement helpers step through the arrays defined in `settings.json` unless free mode is active.
+These methods adjust ISO, shutter angle and frame rate. Increment/decrement helpers step through the arrays defined in `settings.jsonc` unless free stepping is active.
 
 - `set_iso(value)` – Set ISO to a specific value.
 - `inc_iso()` / `dec_iso()` – Step ISO up or down.
@@ -24,15 +24,16 @@ These methods adjust ISO, shutter angle and frame rate. Increment/decrement help
 ## White balance
 
 - `set_wb(kelvin=None, direction='next')` – Set white balance to a specific Kelvin temperature or cycle through the active WB step table if no value is given.
-- `inc_wb()` / `dec_wb()` – Move to the next or previous white balance step. In WB free mode this is 100 K per step.
+- `inc_wb()` / `dec_wb()` – Move to the next or previous white balance step. In WB free stepping this is 100 K per step.
 
 ## Resolution and preview
 
 - `set_resolution(value=None)` – Switch sensor mode. Passing `None` cycles through the available modes.
+- `set_dynamic_resolution_enabled(value=None)` – Toggle or explicitly set whether dynamic resolution may substitute a lower-resolution mode when the requested fps exceeds the desired mode's own `fps_max`. Omit the value to toggle.
 - `set_anamorphic_factor(value=None)` – Change the preview’s anamorphic stretch. Omit the value to toggle between presets.
-- `set_zoom(value=None, direction="next")` – Adjust the digital zoom factor. Without a value it steps through `preview.zoom_steps`.
+- `set_zoom(value=None, direction="next")` – Adjust the digital zoom factor. Without a value it steps through `hdmi_display.preview.zoom_steps`.
 - `inc_zoom()` / `dec_zoom()` – Convenience wrappers around `set_zoom()`.
-- `set_preview_source(value=None)` – Dual-sensor HDMI preview source: `cam0`, `cam1`, or `cam0+cam1` (`both`). Omit the value to cycle. No effect with a single sensor.
+- `set_preview_source(value=None)` – Dual-sensor HDMI preview source: `both` (`cam0+cam1`), `cam0`, `cam1`, `pip_cam0` (`pip`/`pip0`), or `pip_cam1` (`pip1`). Omit the value to cycle through all five. No effect with a single sensor.
 
 ## Storage control
 
@@ -61,7 +62,7 @@ These helpers prevent accidental changes or keep shutter speed in sync with FPS:
 
 ## Free‑mode toggles
 
-When free mode is enabled, the preset arrays from `settings.json` are ignored and you can dial any value supported by the sensor.
+When free stepping is enabled, the preset arrays from `settings.jsonc` are ignored and you can dial any value supported by the sensor.
 
 - `set_iso_free(value=None)`
 - `set_shutter_a_free(value=None)`

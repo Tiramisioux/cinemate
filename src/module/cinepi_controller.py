@@ -173,7 +173,6 @@ class CinePiController:
         self.fps_temp = 24
         self.fps_temp_old = 24
 
-        self.shutter_a_nom = 180
         self.exposure_time_saved = 1/24
         self.current_sensor = self.sensor_detect.camera_model
         self.redis_controller.set_value(ParameterKey.SENSOR.value, self.sensor_detect.camera_model)

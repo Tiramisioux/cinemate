@@ -373,6 +373,137 @@
         button.on { background: var(--log-badge); border-color: var(--log-badge); color: #000; }
         button[disabled] { opacity: 0.45; cursor: default; }
 
+        /* ── EXPERIMENT drawer ────────────────────────────────────────────
+           Every control cli_commands.py exposes that the instrument layout
+           above deliberately does not — the ClearHDR knobs, the locks, the
+           free-stepping modes. Collapsed by default so the page still reads
+           as a camera.
+
+           The height cap plus its own scrollbar is what keeps the picture
+           pinned: #stage is the only 1fr row in #app and the page itself
+           never scrolls, so opening this panel shrinks the preview rather
+           than pushing it off the top. Whatever the drawer doesn't take,
+           the preview keeps.
+
+           Opening it deliberately does NOT reflow anything. #top-row stays
+           pixel-identical, the rails keep their column direction and their
+           x/width, and no element changes order or flow. The only thing that
+           moves is the height of the 1fr row — the preview scales down inside
+           it and the bottom rows ride up with it. If you are tempted to
+           restack the rails when the drawer opens: don't. A layout that
+           rearranges itself under the operator mid-shot is worse than a
+           smaller picture. The one restack in this file is the width-driven
+           media query at the end, which is a different screen, not a
+           different mode of the same screen. */
+        #experiment {
+            max-height: min(46vh, 460px);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scrollbar-width: thin;
+            display: flex;
+            flex-direction: column;
+            gap: calc(var(--gap) * 0.55);
+            /* The fixed right padding is for the panel's own scrollbar. An
+               overlay scrollbar (macOS, iOS, Android) reserves no width and
+               scrollbar-gutter does not apply to one, so without a gutter of
+               our own the last column's value renders underneath it. */
+            padding: calc(var(--gap) * 0.5) 14px 0 0;
+            border-top: 1px dashed var(--label);
+            --value-size: clamp(0.85rem, 1.3vw, 1.15rem);
+            --label-size: clamp(0.6rem, 1vw, 0.9rem);
+        }
+
+        .xp-group { display: flex; flex-direction: column; gap: calc(var(--gap) * 0.3); }
+        .xp-title {
+            font-weight: 700;
+            font-size: var(--label-size);
+            letter-spacing: 0.09em;
+            color: var(--label);
+        }
+
+        /* One slider per row, full panel width, at every size. A multi-column
+           grid fits more rows on screen but makes each track a few hundred
+           pixels wide — and track length IS the resolution of the control. A
+           0–4095 HDR threshold across 240px is ~17 counts per pixel; across
+           the full width it is a quarter of that. These are fine-adjustment
+           knobs, so the width is the feature. */
+        .xp-sliders {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: calc(var(--gap) * 0.2);
+        }
+        .xp-slider { display: flex; align-items: center; gap: 0.55em; }
+        .xp-slider .label {
+            font-size: var(--label-size);
+            color: var(--label);
+            flex: 0 0 7em;
+            white-space: nowrap;
+        }
+        .xp-slider input[type="range"] {
+            flex: 1 1 auto;
+            min-width: 0;
+            height: 1.7em;
+            accent-color: var(--value);
+        }
+        .xp-slider .value {
+            font-weight: 700;
+            font-size: var(--value-size);
+            color: var(--value);
+            flex: 0 0 3.4em;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Reset-to-default arrow. Borderless so a row of them doesn't read as
+           a row of buttons competing with the MODES toggles below, but sized
+           to the 44px touch target a phone needs. */
+        .xp-reset {
+            flex: 0 0 auto;
+            border: 0;
+            background: transparent;
+            color: var(--label);
+            font-size: calc(var(--value-size) * 1.15);
+            line-height: 1;
+            padding: 0;
+            width: 1.9em;
+            height: 1.9em;
+            min-width: 44px;
+            min-height: 32px;
+            cursor: pointer;
+        }
+        .xp-reset:hover { color: var(--value); }
+        .xp-reset:active { background: transparent; color: var(--value); }
+        /* Nothing to restore — the value is already the default. */
+        .xp-reset[disabled] { opacity: 0.25; cursor: default; }
+
+        .xp-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: calc(var(--gap) * 0.35);
+        }
+        .xp-row button {
+            font-size: var(--value-size);
+            border-width: 1px;
+            padding: 0.28em 0.6em;
+        }
+
+        .xp-select { display: flex; align-items: center; gap: 0.45em; }
+        .xp-select .label { font-size: var(--label-size); color: var(--label); }
+        .xp-select select {
+            font-family: inherit;
+            font-weight: 700;
+            font-size: var(--value-size);
+            color: var(--value);
+            background: transparent;
+            border: 1px solid var(--label);
+            border-radius: 4px;
+            padding: 0.28em 0.4em;
+        }
+        /* A native picker draws its list on a system-coloured sheet, not on
+           our black page — leave the options readable there. */
+        .xp-select select option { color: #000; background: #fff; }
+
         .hidden { display: none !important; }
 
         /* Toast for a rejected command — the API answers "err <reason>"
@@ -418,6 +549,10 @@
                meter into leftover cross-space unevenly, so drop it. */
             #vu-meter { margin-top: 0; padding-top: 0; }
             .vu-track { height: clamp(50px, 12vh, 100px); }
+            /* Leave the preview more than half the screen on a phone — the
+               drawer exists to watch the picture change, not to replace it. */
+            #experiment { max-height: 40vh; }
+            .xp-slider .label { flex: 0 0 6em; }
         }
     </style>
 </head>
@@ -492,10 +627,16 @@
         </div>
 
         <div id="button-row">
+            <button id="btn-experiment" title="Show every remaining CLI control as a live widget">EXPERIMENT</button>
             <button id="btn-log" title="set log — toggles CineMate Log, restarts the camera when idle">LOG</button>
             <button id="btn-unmount" title="unmount">UNMOUNT</button>
             <button id="btn-fullscreen">FULLSCREEN</button>
         </div>
+
+        <!-- Built from the spec tables in the script below, not written out
+             here, so adding a control is one row rather than markup plus a
+             binding plus a render line. -->
+        <div id="experiment" class="hidden"></div>
     </div>
 </div>
 
@@ -529,6 +670,11 @@
             const res = await fetch(API, { method: 'POST', headers, body: line });
             const body = (await res.text()).trim();
             if (!res.ok) { toast(line + ' → ' + (body || res.status)); }
+            // A 200 whose body is more than bare "ok" is the API telling us the
+            // command ran but the value did not stick — most often a pot
+            // writing the same parameter right behind us. Without this the
+            // slider would just spring back with no explanation.
+            else if (body.length > 2) { toast(line + ' → ' + body.slice(3)); }
             return res.ok;
         } catch (err) {
             toast(line + ' → ' + err.message);
@@ -539,7 +685,13 @@
     // ── state: the populate_values() dict, arriving whole as
     //    `initial_values` and as deltas as `gui_data_change`.
     let V = {};
-    let steps = { iso: [], shutter_a: [], fps: [], wb: [], resolutions: [] };
+    let steps = {
+        iso: [], shutter_a: [], fps: [], wb: [], resolutions: [],
+        // EXPERIMENT drawer only. Unlike the lists above, these are not
+        // recomputed from the live frame rate — they come straight from
+        // settings.jsonc and arrive once, with the snapshot.
+        anamorphic: [], ranges: {}, defaults: {},
+    };
 
     const $ = (id) => document.getElementById(id);
     const text = (id, value) => {
@@ -842,6 +994,331 @@
             V.selected_resolution_mode);
     }
 
+    // ── EXPERIMENT drawer ─────────────────────────────────────────────
+    // Everything cli_commands.py dispatches that the instrument layout
+    // above does not already expose, minus the destructive four the API
+    // blocks by default anyway (erase / format / reboot / shutdown) and
+    // the restarts. Each widget posts the same command line the CLI would,
+    // so none of this is a second implementation of a control — it is the
+    // same dispatcher, reached from a slider.
+    //
+    // `key` names a field in the populate_values() dict, which is what lets
+    // a widget follow a change made from a pot, the quad rotary, serial or
+    // the CLI instead of only reflecting what this browser last sent.
+    const XP_SLIDERS = [
+        { label: 'HDR LOW',     cmd: 'set hdr threshold low',  key: 'hdr_threshold_low',  min: 0,   max: 4095, step: 1 },
+        { label: 'HDR HIGH',    cmd: 'set hdr threshold high', key: 'hdr_threshold_high', min: 0,   max: 4095, step: 1 },
+        { label: 'HDR BLEND',   cmd: 'set hdr blend',          key: 'hdr_blend',          min: 0,   max: 8,    step: 1 },
+        { label: 'HDR GAIN',    cmd: 'set hdr gain adder',     key: 'hdr_gain_adder',     min: 0,   max: 5,    step: 1 },
+        // set_zoom() clamps to the span of preview.zoom_steps, so the real
+        // bounds arrive with initial_values; these are the settings.jsonc
+        // defaults, used only until then.
+        { label: 'ZOOM',        cmd: 'set zoom',               key: 'zoom',               min: 0.5, max: 2,    step: 0.1, dp: 1, range: 'zoom' },
+        { label: 'SHUTTER NOM', cmd: 'set shutter a nom',      key: 'shutter_a_nom',      min: 1,   max: 360,  step: 0.1, dp: 1 },
+    ];
+
+    const XP_TOGGLES = [
+        { label: 'ISO LOCK',     cmd: 'set iso lock',               key: 'iso_lock' },
+        { label: 'SHUTTER LOCK', cmd: 'set shutter a nom lock',     key: 'shutter_a_nom_lock' },
+        { label: 'FPS LOCK',     cmd: 'set fps lock',               key: 'fps_lock' },
+        { label: 'SHU+FPS LOCK', cmd: 'set shutter a nom fps lock', key: 'shu_fps_lock' },
+        { label: 'ALL LOCK',     cmd: 'set all lock',               key: 'all_lock' },
+        { label: 'SHUTTER SYNC', cmd: 'set shutter a sync',         key: 'shutter_a_sync' },
+        { label: 'FPS DOUBLE',   cmd: 'set fps double',             key: 'fps_double' },
+        { label: 'DYN RES',      cmd: 'set dynamic resolution',     key: 'dynamic_resolution_enabled' },
+        // set_filter() is the one toggle with no no-argument path — called
+        // bare it logs "Invalid value provided" and does nothing — so send
+        // the opposite of the live state explicitly. imx585 only; on any
+        // other sensor the controller returns early and nothing moves.
+        { label: 'IR FILTER',    cmd: 'set filter',                 key: 'ir_filter', explicit: true },
+    ];
+
+    // Free stepping replaces a parameter's step table with continuous stepping
+    // in units of its free_increment — inc/dec granularity, not a value.
+    const XP_FREE = [
+        { label: 'ISO',       cmd: 'set iso free',                key: 'iso_free' },
+        { label: 'SHUTTER',   cmd: 'set shutter a free',          key: 'shutter_a_free' },
+        { label: 'FPS',       cmd: 'set fps free',                key: 'fps_free' },
+        { label: 'WB',        cmd: 'set wb free',                 key: 'wb_free' },
+        { label: 'HDR LOW',   cmd: 'set hdr threshold low free',  key: 'hdr_threshold_low_free' },
+        { label: 'HDR HIGH',  cmd: 'set hdr threshold high free', key: 'hdr_threshold_high_free' },
+        { label: 'HDR BLEND', cmd: 'set hdr blend free',          key: 'hdr_blend_free' },
+        { label: 'HDR GAIN',  cmd: 'set hdr gain adder free',     key: 'hdr_gain_adder_free' },
+    ];
+
+    const XP_ACTIONS = [
+        { label: 'MOUNT',        cmd: 'mount' },
+        { label: 'TOGGLE MOUNT', cmd: 'toggle mount' },
+        { label: 'PREROLL',      cmd: 'storage preroll' },
+        { label: 'SET RTC',      cmd: 'set rtc time' },
+    ];
+
+    // set_preview_source()'s cycle order. Only visible with two sensors.
+    const PREVIEW_SOURCES = ['both', 'cam0', 'cam1', 'pip_cam0', 'pip_cam1'];
+
+    // A range input fires on every pixel of a drag. The API's default ceiling
+    // is 20 commands/sec per client (web_api_settings) and every accepted
+    // line takes CommandExecutor's dispatch lock, so coalesce to one send per
+    // interval and always deliver the value the drag actually ended on.
+    function throttle(send, interval) {
+        let pending = null;
+        let timer = null;
+        const flush = () => {
+            if (pending === null) { timer = null; return; }
+            const value = pending;
+            pending = null;
+            send(value);
+            timer = setTimeout(flush, interval);
+        };
+        return (value) => {
+            pending = value;
+            if (timer === null) { flush(); }
+        };
+    }
+
+    const xpSliders = [];
+    const xpToggles = [];
+    let xpBuilt = false;
+
+    function xpGroup(title, body) {
+        const wrap = document.createElement('div');
+        wrap.className = 'xp-group';
+        const heading = document.createElement('div');
+        heading.className = 'xp-title';
+        heading.textContent = title;
+        wrap.appendChild(heading);
+        wrap.appendChild(body);
+        return wrap;
+    }
+
+    function xpRow(className) {
+        const row = document.createElement('div');
+        row.className = className;
+        return row;
+    }
+
+    function buildSlider(spec) {
+        const row = xpRow('xp-slider');
+        const label = document.createElement('span');
+        label.className = 'label';
+        label.textContent = spec.label;
+
+        const input = document.createElement('input');
+        input.type = 'range';
+        input.min = spec.min;
+        input.max = spec.max;
+        input.step = spec.step;
+        input.setAttribute('aria-label', spec.label);
+        input.title = spec.cmd;
+
+        const out = document.createElement('span');
+        out.className = 'value';
+
+        const format = (v) => Number(v).toFixed(spec.dp || 0);
+        const send = throttle((v) => cmd(spec.cmd + ' ' + v), 150);
+
+        // Hold the knob where the user put it until the camera agrees.
+        //
+        // A plain "ignore state for N ms" guard is not enough: state pushes
+        // ride the HDMI GUI's redraw loop, which measures nearer 7.5 Hz than
+        // 12 and stalls outright under load, so any fixed window is sometimes
+        // shorter than the round trip and the slider snaps back to the old
+        // value a moment after release. Instead latch the requested value and
+        // keep showing it until the pushed state matches it — then let go.
+        //
+        // PENDING_GRACE is the giving-up point, not the normal path: if the
+        // value has not come back by then the write genuinely did not stick
+        // (out of range for the mode, wrong sensor, a pot overriding it), and
+        // showing the live value is the honest answer.
+        const PENDING_GRACE = 4000;
+        const entry = { spec, input, out, format, pending: null, pendingAt: 0 };
+
+        const request = (value) => {
+            entry.pending = format(value);
+            entry.pendingAt = Date.now();
+            input.value = value;
+            out.textContent = entry.pending;
+        };
+
+        input.addEventListener('input', () => {
+            request(input.value);
+            send(entry.pending);
+        });
+        input.addEventListener('change', () => {
+            request(input.value);
+            cmd(spec.cmd + ' ' + entry.pending);
+        });
+
+        const reset = document.createElement('button');
+        reset.className = 'xp-reset';
+        reset.textContent = '↺';
+        reset.setAttribute('aria-label', 'Reset ' + spec.label + ' to default');
+        reset.addEventListener('click', () => {
+            const value = steps.defaults[spec.key];
+            if (value === undefined) { return; }
+            request(value);
+            cmd(spec.cmd + ' ' + entry.pending);
+        });
+        entry.reset = reset;
+        entry.grace = PENDING_GRACE;
+
+        row.appendChild(label);
+        row.appendChild(input);
+        row.appendChild(out);
+        row.appendChild(reset);
+        xpSliders.push(entry);
+        return row;
+    }
+
+    function buildToggle(spec) {
+        const btn = document.createElement('button');
+        btn.textContent = spec.label;
+        btn.title = spec.cmd;
+        btn.addEventListener('click', () => {
+            if (spec.explicit) {
+                cmd(spec.cmd + ' ' + (truthy(V[spec.key]) ? '0' : '1'));
+            } else {
+                cmd(spec.cmd);
+            }
+        });
+        xpToggles.push({ spec, btn });
+        return btn;
+    }
+
+    function buildExperiment() {
+        const sliders = xpRow('xp-sliders');
+        XP_SLIDERS.forEach((s) => sliders.appendChild(buildSlider(s)));
+
+        const modes = xpRow('xp-row');
+        XP_TOGGLES.forEach((s) => modes.appendChild(buildToggle(s)));
+
+        const free = xpRow('xp-row');
+        XP_FREE.forEach((s) => free.appendChild(buildToggle(s)));
+
+        const selects = xpRow('xp-row');
+
+        const anaWrap = document.createElement('div');
+        anaWrap.className = 'xp-select';
+        const anaLabel = document.createElement('span');
+        anaLabel.className = 'label';
+        anaLabel.textContent = 'ANAMORPHIC';
+        const anaSel = document.createElement('select');
+        anaSel.id = 'xp-anamorphic';
+        // set_anamorphic_factor() restarts cinepi-raw, unlike everything
+        // else in this drawer. Say so rather than letting it look free.
+        anaSel.title = 'set anamorphic factor — restarts the camera';
+        anaSel.addEventListener('change', (e) => cmd('set anamorphic factor ' + e.target.value));
+        const anaReset = document.createElement('button');
+        anaReset.className = 'xp-reset';
+        anaReset.id = 'xp-anamorphic-reset';
+        anaReset.textContent = '↺';
+        anaReset.setAttribute('aria-label', 'Reset anamorphic factor to default');
+        anaReset.addEventListener('click', () => {
+            const value = steps.defaults.anamorphic_factor_value;
+            if (value !== undefined) { cmd('set anamorphic factor ' + value); }
+        });
+        anaWrap.appendChild(anaLabel);
+        anaWrap.appendChild(anaSel);
+        anaWrap.appendChild(anaReset);
+        selects.appendChild(anaWrap);
+
+        const srcWrap = document.createElement('div');
+        srcWrap.className = 'xp-select';
+        srcWrap.id = 'xp-preview-wrap';
+        const srcLabel = document.createElement('span');
+        srcLabel.className = 'label';
+        srcLabel.textContent = 'HDMI PREVIEW';
+        const srcSel = document.createElement('select');
+        srcSel.id = 'xp-preview-source';
+        srcSel.title = 'set preview — dual-sensor HDMI source';
+        fillSelect(srcSel, PREVIEW_SOURCES.map((v) => ({ value: v, text: v.toUpperCase() })));
+        srcSel.addEventListener('change', (e) => cmd('set preview ' + e.target.value));
+        srcWrap.appendChild(srcLabel);
+        srcWrap.appendChild(srcSel);
+        selects.appendChild(srcWrap);
+
+        const actions = xpRow('xp-row');
+        XP_ACTIONS.forEach((spec) => {
+            const btn = document.createElement('button');
+            btn.textContent = spec.label;
+            btn.title = spec.cmd;
+            btn.addEventListener('click', () => cmd(spec.cmd));
+            actions.appendChild(btn);
+        });
+
+        $('experiment').replaceChildren(
+            xpGroup('LIVE VALUES', sliders),
+            xpGroup('MODES', modes),
+            xpGroup('FREE STEPPING', free),
+            xpGroup('SELECT', selects),
+            xpGroup('ACTIONS', actions)
+        );
+        xpBuilt = true;
+    }
+
+    function renderExperiment() {
+        if (!xpBuilt || $('experiment').classList.contains('hidden')) { return; }
+        const now = Date.now();
+
+        xpSliders.forEach((entry) => {
+            const bounds = entry.spec.range && steps.ranges[entry.spec.range];
+            if (bounds) {
+                entry.input.min = bounds.min;
+                entry.input.max = bounds.max;
+                entry.input.step = bounds.step;
+            }
+            const fallback = steps.defaults[entry.spec.key];
+            entry.reset.title = fallback === undefined
+                ? 'No default configured'
+                : 'Reset to ' + entry.format(fallback);
+
+            const value = V[entry.spec.key];
+            if (value === undefined || value === null) { return; }
+            const live = entry.format(value);
+
+            let inFlight = false;
+            if (entry.pending !== null) {
+                // Camera caught up, or we have waited long enough to stop
+                // pretending. Either way, stop latching.
+                if (entry.pending === live || now - entry.pendingAt > entry.grace) {
+                    entry.pending = null;
+                } else {
+                    inFlight = true;
+                }
+            }
+
+            // Grey the arrow against what the row is SHOWING, not against the
+            // live value — otherwise dragging away from the default leaves the
+            // arrow disabled for the whole round trip, exactly when the user
+            // is most likely to reach for it.
+            // Compare as formatted text: the live value arrives as a float and
+            // the default as whatever settings.jsonc holds, so 1 and 1.0 must
+            // not read as "not yet default".
+            const showing = inFlight ? entry.pending : live;
+            entry.reset.disabled = fallback === undefined
+                || entry.format(fallback) === showing;
+
+            if (inFlight) { return; }   // leave the knob where the user put it
+
+            entry.input.value = value;
+            entry.out.textContent = live;
+        });
+
+        xpToggles.forEach(({ spec, btn }) => btn.classList.toggle('on', truthy(V[spec.key])));
+
+        fillSelect($('xp-anamorphic'),
+            steps.anamorphic.map((v) => ({ value: v, text: v + 'X' })),
+            V.anamorphic_factor_value);
+        const anaDefault = steps.defaults.anamorphic_factor_value;
+        $('xp-anamorphic-reset').disabled = anaDefault === undefined
+            || Number(anaDefault) === Number(V.anamorphic_factor_value);
+        $('xp-anamorphic-reset').title = anaDefault === undefined
+            ? 'No default configured' : 'Reset to ' + anaDefault + 'X';
+        // Single-sensor rigs have no HDMI preview source to pick.
+        show($('xp-preview-wrap'), Boolean(V.sensor_cam1));
+        $('xp-preview-source').value = V.hdmi_preview_source || 'both';
+    }
+
     function render() {
         document.body.style.backgroundColor = V.background_color || 'black';
         // color_mode = "inverse" for every non-idle background in draw_gui()
@@ -855,6 +1332,7 @@
         updateRailRightVisibility();
         renderPreview();
         renderSelectors();
+        renderExperiment();
     }
 
     // ── push: server → browser only (module/app/main/events.py) ────────
@@ -867,6 +1345,10 @@
         steps.fps = data.fps_steps || [];
         steps.wb = data.wb_steps || [];
         steps.resolutions = data.sensor_resolutions || [];
+        const ranges = data.control_ranges || {};
+        steps.anamorphic = ranges.anamorphic_steps || [];
+        steps.ranges = { zoom: ranges.zoom };
+        steps.defaults = ranges.defaults || {};
         render();
     });
 
@@ -942,6 +1424,26 @@
     $('preview-frame').addEventListener('click', () => cmd('rec'));
     $('btn-log').addEventListener('click', () => cmd('set log'));
     $('btn-unmount').addEventListener('click', () => cmd('unmount'));
+
+    // Built on first open rather than at load: a camera that never opens the
+    // drawer pays nothing for it, and renderExperiment() no-ops while it is
+    // closed instead of touching ~30 widgets on every state push.
+    $('btn-experiment').addEventListener('click', () => {
+        const panel = $('experiment');
+        if (!xpBuilt) { buildExperiment(); }
+        const open = panel.classList.toggle('hidden');
+        $('btn-experiment').classList.toggle('on', !open);
+        render();
+    });
+
+    // The drawer changes the preview's available box without a window
+    // resize, and so does an orientation change or a phone's URL bar
+    // collapsing. Re-fit off the box itself rather than off the events that
+    // happen to change it. sizePreview() only writes to #preview-frame, a
+    // child, so this cannot feed itself.
+    if (window.ResizeObserver) {
+        new ResizeObserver(sizePreview).observe($('preview-wrap'));
+    }
 
     const fsBtn = $('btn-fullscreen');
     function toggleFullScreen() {

@@ -52,6 +52,36 @@ def register_events(socketio, redis_controller, cinepi_controller, simple_gui, s
 
         initial_values.update(simple_gui.populate_values())
 
+        # Ranges/option lists for the EXPERIMENT drawer. Sent once, with the
+        # snapshot, because they come from settings.jsonc and only change on a
+        # cinemate restart -- unlike iso/shutter/fps/wb, none of them is
+        # recomputed from the live frame rate.
+        preview_cfg = simple_gui.settings.get('hdmi_display', {}).get('preview', {})
+        zoom_steps = [float(z) for z in preview_cfg.get('zoom_steps', [0.5, 1.0, 1.5, 2.0])] or [1.0]
+        hdr_cfg = simple_gui.settings.get('image_capture', {}).get('hdr', {})
+        initial_values['control_ranges'] = {
+            # set_zoom() clamps to the configured span; the slider offers the
+            # whole span rather than only the cycle-able steps, which is the
+            # point of the drawer.
+            'zoom': {'min': min(zoom_steps), 'max': max(zoom_steps), 'step': 0.1},
+            'anamorphic_steps': list(cinepi_controller.anamorphic_steps),
+            # What the drawer's reset arrows restore. These are the same
+            # startup values main.py seeds at boot, so "reset" means "back to
+            # what this camera came up with", not to some second opinion about
+            # what the default ought to be.
+            'defaults': {
+                'hdr_threshold_low': hdr_cfg.get('threshold_low', 0),
+                'hdr_threshold_high': hdr_cfg.get('threshold_high', 0),
+                'hdr_blend': hdr_cfg.get('blend', 0),
+                'hdr_gain_adder': hdr_cfg.get('gain_adder', 1),
+                'zoom': preview_cfg.get('default_zoom', 1.0),
+                'anamorphic_factor_value': cinepi_controller.default_anamorphic_factor,
+                # No settings key for this one; 180° is the convention and the
+                # value CinePiController itself starts from.
+                'shutter_a_nom': 180.0,
+            },
+        }
+
         initial_values['sensor_resolutions'] = sensor_detect.get_available_resolutions()
         initial_values['current_sensor'] = sensor_detect.camera_model
         initial_values['selected_resolution_mode'] = selected_resolution_mode()

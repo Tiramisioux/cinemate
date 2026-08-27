@@ -9,7 +9,7 @@ Each entry explains which component normally writes the key and whether it makes
 | anamorphic_factor | Cinemate | Preview squeeze factor for anamorphic lenses | Yes (publish key to apply) |
 | iso | Cinemate -> CinePi-raw | Sensor gain in ISO | Yes |
 | shutter_a | Cinemate -> CinePi-raw | Active shutter angle in degrees | Yes |
-| shutter_angle_nom | Cinemate | Nominal shutter angle before sync/free-mode adjustments | Yes |
+| shutter_angle_nom | Cinemate | Nominal shutter angle before sync/free-stepping adjustments | Yes |
 | shutter_a_sync_mode | Cinemate | Keep exposure constant when changing FPS | Yes |
 | shutter_angle_actual | Cinemate | Calculated shutter angle actually applied after clamping/sync | No |
 | shutter_angle_transient | Cinemate | Temporary value used during ramps | No |

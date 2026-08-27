@@ -1027,7 +1027,7 @@
     <div class="rail-group" data-page="settings">
       <div class="rail-title eyebrow">Exposure &amp; steps</div>
       <a href="#steps" data-nav>Value steps</a>
-      <a href="#pots" data-nav>Pots &amp; free mode</a>
+      <a href="#pots" data-nav>Pots &amp; free stepping</a>
       <a href="#resolution" data-nav>Resolution &amp; sensor</a>
       <a href="#fpsceilings" data-nav>Per-mode fps ceilings</a>
     </div>
@@ -1417,10 +1417,10 @@
         <p class="group-sub">The click‑stops each control cycles through, and — for the four with a pot channel assigned in Pots below — the free‑running range between the lowest and highest stop.</p>
       </header>
       <div class="cards">
-        <div class="card" data-search="iso steps values stops sensitivity free mode increment continuous">
+        <div class="card" data-search="iso steps values stops sensitivity free stepping increment continuous">
           <div class="card-main">
             <label class="card-label">ISO stops</label>
-            <p class="card-help">Values the ISO control steps through, in order. Free mode lets an assigned pot sweep ISO continuously between the lowest and highest stop here instead of snapping to one — Increment sets how finely it quantizes while sweeping.</p>
+            <p class="card-help">Values the ISO control steps through, in order. Free stepping lets an assigned pot sweep ISO continuously between the lowest and highest stop here instead of snapping to one — Increment sets how finely it quantizes while sweeping.</p>
           </div>
           <div class="card-control" style="display:flex; flex-direction:column; gap:10px; align-items:flex-end">
             <div class="steplist" data-chip-path="arrays.iso.steps" data-chip-type="number" data-chip-original="[100,200,400,640,800,1200,1600,2500,3200]">
@@ -1437,7 +1437,7 @@
             </div>
             <div style="display:flex; gap:14px; align-items:flex-end">
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free mode</span>
+                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
                 <button class="toggle" id="f-isofree" data-path="arrays.iso.free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
               </label>
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
@@ -1447,10 +1447,10 @@
             </div>
           </div>
         </div>
-        <div class="card" data-search="shutter angle steps values stops degrees free mode increment continuous">
+        <div class="card" data-search="shutter angle steps values stops degrees free stepping increment continuous">
           <div class="card-main">
             <label class="card-label">Shutter angle stops</label>
-            <p class="card-help">Values the shutter angle control steps through, in degrees. Free mode sweeps continuously between the lowest and highest stop here — Increment sets the degree step while sweeping.</p>
+            <p class="card-help">Values the shutter angle control steps through, in degrees. Free stepping sweeps continuously between the lowest and highest stop here — Increment sets the degree step while sweeping.</p>
           </div>
           <div class="card-control" style="display:flex; flex-direction:column; gap:10px; align-items:flex-end">
             <div class="steplist" data-chip-path="arrays.shutter_a.steps" data-chip-type="number" data-chip-original="[1,45,90,135,172.8,180,225,270,315,346.6,360]">
@@ -1469,7 +1469,7 @@
             </div>
             <div style="display:flex; gap:14px; align-items:flex-end">
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free mode</span>
+                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
                 <button class="toggle" id="f-shutfree" data-path="arrays.shutter_a.free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
               </label>
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
@@ -1479,10 +1479,10 @@
             </div>
           </div>
         </div>
-        <div class="card" data-search="fps steps values stops frame rate free mode increment continuous">
+        <div class="card" data-search="fps steps values stops frame rate free stepping increment continuous">
           <div class="card-main">
             <label class="card-label">Frame‑rate stops</label>
-            <p class="card-help">Values the FPS control steps through. Free mode sweeps continuously between the lowest and highest stop here — Increment sets the fps step while sweeping.</p>
+            <p class="card-help">Values the FPS control steps through. Free stepping sweeps continuously between the lowest and highest stop here — Increment sets the fps step while sweeping.</p>
           </div>
           <div class="card-control" style="display:flex; flex-direction:column; gap:10px; align-items:flex-end">
             <div class="steplist" data-chip-path="arrays.fps.steps" data-chip-type="number" data-chip-original="[25,33,50]">
@@ -1493,7 +1493,7 @@
             </div>
             <div style="display:flex; gap:14px; align-items:flex-end">
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free mode</span>
+                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
                 <button class="toggle" id="f-fpsfree" data-path="arrays.fps.free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
               </label>
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
@@ -1503,10 +1503,10 @@
             </div>
           </div>
         </div>
-        <div class="card" data-search="white balance wb steps values stops kelvin free mode increment continuous">
+        <div class="card" data-search="white balance wb steps values stops kelvin free stepping increment continuous">
           <div class="card-main">
             <label class="card-label">White balance stops</label>
-            <p class="card-help">Values the WB control steps through, in Kelvin. Free mode (on by default) sweeps continuously between the lowest and highest stop here — Increment sets the Kelvin step while sweeping.</p>
+            <p class="card-help">Values the WB control steps through, in Kelvin. Free stepping (on by default) sweeps continuously between the lowest and highest stop here — Increment sets the Kelvin step while sweeping.</p>
           </div>
           <div class="card-control" style="display:flex; flex-direction:column; gap:10px; align-items:flex-end">
             <div class="steplist" data-chip-path="arrays.wb.steps" data-chip-type="number" data-chip-original="[3200,4400,5600]">
@@ -1517,7 +1517,7 @@
             </div>
             <div style="display:flex; gap:14px; align-items:flex-end">
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free mode</span>
+                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
                 <button class="toggle" id="f-wbfree" data-path="arrays.wb.free" data-type="bool" data-original="true" role="switch" aria-checked="true"></button>
               </label>
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
@@ -1530,7 +1530,7 @@
         <div class="card" data-search="anamorphic factor steps desqueeze preview">
           <div class="card-main">
             <label class="card-label">Anamorphic desqueeze stops</label>
-            <p class="card-help">Preview desqueeze factors available on the anamorphic control. No pot or free mode — this one's step‑only.</p>
+            <p class="card-help">Preview desqueeze factors available on the anamorphic control. No pot or free stepping — this one's step‑only.</p>
           </div>
           <div class="card-control steplist" data-chip-path="hdmi_display.preview.anamorphic.steps" data-chip-type="number" data-chip-original="[1,1.33,2]">
             <span class="step-chip">1.0×<button data-remove>×</button></span>
@@ -1543,14 +1543,14 @@
     </section>
     <section class="group" id="pots" data-page="settings">
       <header class="group-head">
-        <h2>Pots &amp; free mode</h2>
+        <h2>Pots &amp; free stepping</h2>
         <p class="group-sub">Which Grove Base HAT channel drives each parameter. ISO/shutter/FPS/WB's free‑mode range and increment live with their step list in Value steps above; ClearHDR's stay here since those knobs aren't array settings.</p>
       </header>
       <div class="cards">
         <div class="card" data-search="iso pot analog channel">
           <div class="card-main">
             <label class="card-label" for="f-isopot">ISO</label>
-            <p class="card-help">No effect until a channel is picked — free mode and increment are set in Value steps above.</p>
+            <p class="card-help">No effect until a channel is picked — free stepping and increment are set in Value steps above.</p>
           </div>
           <div class="card-control">
             <select class="field-input" id="f-isopot" style="min-width:112px"><option>None</option><option selected>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
@@ -1559,7 +1559,7 @@
         <div class="card" data-search="shutter pot analog channel">
           <div class="card-main">
             <label class="card-label" for="f-shutpot">Shutter angle</label>
-            <p class="card-help">Same idea — free mode and increment are set in Value steps above.</p>
+            <p class="card-help">Same idea — free stepping and increment are set in Value steps above.</p>
           </div>
           <div class="card-control">
             <select class="field-input" id="f-shutpot" style="min-width:112px"><option>None</option><option>Channel 0</option><option>Channel 1</option><option selected>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
@@ -1568,7 +1568,7 @@
         <div class="card" data-search="fps pot analog channel">
           <div class="card-main">
             <label class="card-label" for="f-fpspot">Frame rate</label>
-            <p class="card-help">Same idea — free mode and increment are set in Value steps above.</p>
+            <p class="card-help">Same idea — free stepping and increment are set in Value steps above.</p>
           </div>
           <div class="card-control">
             <select class="field-input" id="f-fpspot" style="min-width:112px"><option>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option selected>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
@@ -1577,22 +1577,22 @@
         <div class="card" data-search="wb pot analog channel white balance">
           <div class="card-main">
             <label class="card-label" for="f-wbpot">White balance</label>
-            <p class="card-help">Same idea — free mode and increment are set in Value steps above.</p>
+            <p class="card-help">Same idea — free stepping and increment are set in Value steps above.</p>
           </div>
           <div class="card-control">
             <select class="field-input" id="f-wbpot" style="min-width:112px"><option>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option selected>Channel 6</option><option>Channel 7</option></select>
           </div>
         </div>
-        <div class="card" data-search="hdr threshold low pot analog channel clearhdr free mode increment continuous">
+        <div class="card" data-search="hdr threshold low pot analog channel clearhdr free stepping increment continuous">
           <div class="card-main">
             <label class="card-label" for="f-hdrpot-thlow">ClearHDR threshold low</label>
-            <p class="card-help">Grove Base HAT channel for a physical knob on this value (range 0–4095). Free mode sweeps continuously across that range instead of jumping by the increment below.</p>
+            <p class="card-help">Grove Base HAT channel for a physical knob on this value (range 0–4095). Free stepping sweeps continuously across that range instead of jumping by the increment below.</p>
           </div>
           <div class="card-control" style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
             <select class="field-input" id="f-hdrpot-thlow" style="min-width:112px"><option selected>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
             <div style="display:flex; gap:14px; align-items:flex-end">
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free mode</span>
+                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
                 <button class="toggle" id="f-hdrpot-thlow-free" data-path="image_capture.hdr.threshold_low_free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
               </label>
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
@@ -1602,7 +1602,7 @@
             </div>
           </div>
         </div>
-        <div class="card" data-search="hdr threshold high pot analog channel clearhdr free mode increment continuous">
+        <div class="card" data-search="hdr threshold high pot analog channel clearhdr free stepping increment continuous">
           <div class="card-main">
             <label class="card-label" for="f-hdrpot-thhigh">ClearHDR threshold high</label>
             <p class="card-help">Same idea (range 0–4095).</p>
@@ -1611,7 +1611,7 @@
             <select class="field-input" id="f-hdrpot-thhigh" style="min-width:112px"><option selected>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
             <div style="display:flex; gap:14px; align-items:flex-end">
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free mode</span>
+                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
                 <button class="toggle" id="f-hdrpot-thhigh-free" data-path="image_capture.hdr.threshold_high_free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
               </label>
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
@@ -1621,7 +1621,7 @@
             </div>
           </div>
         </div>
-        <div class="card" data-search="hdr blend pot analog channel clearhdr free mode increment continuous">
+        <div class="card" data-search="hdr blend pot analog channel clearhdr free stepping increment continuous">
           <div class="card-main">
             <label class="card-label" for="f-hdrpot-blend">ClearHDR blend</label>
             <p class="card-help">Same idea (range 0–8).</p>
@@ -1630,7 +1630,7 @@
             <select class="field-input" id="f-hdrpot-blend" style="min-width:112px"><option selected>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
             <div style="display:flex; gap:14px; align-items:flex-end">
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free mode</span>
+                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
                 <button class="toggle" id="f-hdrpot-blend-free" data-path="image_capture.hdr.blend_free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
               </label>
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
@@ -1640,7 +1640,7 @@
             </div>
           </div>
         </div>
-        <div class="card" data-search="hdr gain adder pot analog channel clearhdr free mode increment continuous">
+        <div class="card" data-search="hdr gain adder pot analog channel clearhdr free stepping increment continuous">
           <div class="card-main">
             <label class="card-label" for="f-hdrpot-gainadder">ClearHDR gain adder</label>
             <p class="card-help">Same idea (range 0–5).</p>
@@ -1649,7 +1649,7 @@
             <select class="field-input" id="f-hdrpot-gainadder" style="min-width:112px"><option selected>None</option><option>Channel 0</option><option>Channel 1</option><option>Channel 2</option><option>Channel 3</option><option>Channel 4</option><option>Channel 5</option><option>Channel 6</option><option>Channel 7</option></select>
             <div style="display:flex; gap:14px; align-items:flex-end">
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
-                <span class="live-cap" style="color:var(--muted)">Free mode</span>
+                <span class="live-cap" style="color:var(--muted)">Free stepping</span>
                 <button class="toggle" id="f-hdrpot-gainadder-free" data-path="image_capture.hdr.gain_adder_free" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
               </label>
               <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
@@ -2022,7 +2022,7 @@
 
     <!-- STEPS -->
 
-    <!-- POTS & FREE MODE -->
+    <!-- POTS & FREE STEPPING -->
 
     <!-- RESOLUTION -->
 
@@ -4287,25 +4287,25 @@
     { group: 'ISO', value: 'inc_iso', label: 'ISO up one stop' },
     { group: 'ISO', value: 'dec_iso', label: 'ISO down one stop' },
     { group: 'ISO', value: 'set_iso_lock', label: 'Toggle ISO lock', noArg: 'toggle', arg: { type: 'toggle01' } },
-    { group: 'ISO', value: 'set_iso_free', label: 'Toggle ISO free mode', noArg: 'toggle', arg: { type: 'toggle01' } },
+    { group: 'ISO', value: 'set_iso_free', label: 'Toggle ISO free stepping', noArg: 'toggle', arg: { type: 'toggle01' } },
     { group: 'Shutter', value: 'set_shutter_a', label: 'Set shutter angle', noArg: 'required', arg: { type: 'select', options: [1,45,90,135,172.8,180,225,270,315,346.6,360], suffix: '°' } },
     { group: 'Shutter', value: 'inc_shutter_a', label: 'Shutter angle up one stop' },
     { group: 'Shutter', value: 'dec_shutter_a', label: 'Shutter angle down one stop' },
     { group: 'Shutter', value: 'set_shutter_a_nom', label: 'Set nominal shutter angle', noArg: 'required', arg: { type: 'number', step: 0.1, placeholder: 'angle' } },
     { group: 'Shutter', value: 'set_shutter_a_sync_mode', label: 'Set shutter‑sync mode', noArg: 'toggle', arg: { type: 'toggle01' } },
     { group: 'Shutter', value: 'set_shutter_a_nom_lock', label: 'Toggle nominal‑shutter lock', noArg: 'toggle', arg: { type: 'toggle01' } },
-    { group: 'Shutter', value: 'set_shutter_a_free', label: 'Toggle shutter free mode', noArg: 'toggle', arg: { type: 'toggle01' } },
+    { group: 'Shutter', value: 'set_shutter_a_free', label: 'Toggle shutter free stepping', noArg: 'toggle', arg: { type: 'toggle01' } },
     { group: 'Frame rate', value: 'set_fps', label: 'Set frame rate', noArg: 'required', arg: { type: 'select', options: [25,33,50] } },
     { group: 'Frame rate', value: 'inc_fps', label: 'Frame rate up one stop' },
     { group: 'Frame rate', value: 'dec_fps', label: 'Frame rate down one stop' },
     { group: 'Frame rate', value: 'set_fps_lock', label: 'Toggle FPS lock', noArg: 'toggle', arg: { type: 'toggle01' } },
-    { group: 'Frame rate', value: 'set_fps_free', label: 'Toggle FPS free mode', noArg: 'toggle', arg: { type: 'toggle01' } },
+    { group: 'Frame rate', value: 'set_fps_free', label: 'Toggle FPS free stepping', noArg: 'toggle', arg: { type: 'toggle01' } },
     { group: 'Frame rate', value: 'set_fps_double', label: 'Toggle double‑fps mode', noArg: 'toggle', arg: { type: 'toggle01' } },
     { group: 'Frame rate', value: 'set_shu_fps_lock', label: 'Toggle nominal shutter+fps lock', noArg: 'toggle', arg: { type: 'toggle01' } },
     { group: 'White balance', value: 'set_wb', label: 'Set white balance', noArg: 'cycle', arg: { type: 'select', options: [3200,4400,5600], suffix: 'K' } },
     { group: 'White balance', value: 'inc_wb', label: 'White balance up one stop' },
     { group: 'White balance', value: 'dec_wb', label: 'White balance down one stop' },
-    { group: 'White balance', value: 'set_wb_free', label: 'Toggle WB free mode', noArg: 'toggle', arg: { type: 'toggle01' } },
+    { group: 'White balance', value: 'set_wb_free', label: 'Toggle WB free stepping', noArg: 'toggle', arg: { type: 'toggle01' } },
     { group: 'ClearHDR', value: 'set_hdr_threshold_low', label: 'Set HDR threshold low', noArg: 'required', arg: { type: 'number', min: 0, max: 4095, placeholder: '0–4095' } },
     { group: 'ClearHDR', value: 'set_hdr_threshold_high', label: 'Set HDR threshold high', noArg: 'required', arg: { type: 'number', min: 0, max: 4095, placeholder: '0–4095' } },
     { group: 'ClearHDR', value: 'set_hdr_blend', label: 'Set HDR blend', noArg: 'required', arg: { type: 'number', min: 0, max: 8, placeholder: '0–8' } },

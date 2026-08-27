@@ -930,6 +930,81 @@ class SimpleGUI(threading.Thread):
         values["zoom_is_default"] = abs(z - default_zoom) <= 1e-3
         values["zoom_factor"] = f"{z:.1f}"
 
+        # ── live-control state for the web GUI's EXPERIMENT drawer ────────
+        # The framebuffer GUI draws none of these; they are published so the
+        # browser's slider/toggle panel tracks the value a pot, the quad
+        # rotary, the CLI or serial last set, instead of drifting to whatever
+        # the browser itself last sent. get_value() is a local cache lookup,
+        # not a Redis round trip, so this costs nothing per draw tick.
+        controller = self.cinepi_controller
+
+        def _num(key, default=0):
+            try:
+                return float(self.redis_controller.get_value(key))
+            except (TypeError, ValueError):
+                return default
+
+        # The four cycle-able step tables, as the controller holds them right
+        # now -- not as events.py computed them once at connect. They change
+        # with the frame rate (flicker-free angles), with the sensor mode (the
+        # fps ceiling) and with a free-stepping toggle, and only the
+        # fps-driven rebuild was being re-pushed; the ISO and WB lists went
+        # stale until the browser reconnected. draw_gui() diffs this dict field
+        # by field, so an unchanged list is not re-emitted -- this costs a list
+        # comparison per draw tick, not a push.
+        #
+        # shutter_a_steps_dynamic and fps_steps_dynamic, not their non-dynamic
+        # siblings: those two are the tables set_shutter_a_nom() and set_fps()
+        # actually snap an incoming value against, which is what lets a browser
+        # control offer only values that will stick.
+        values["iso_steps"] = list(getattr(controller, "iso_steps", None) or [])
+        values["shutter_a_steps"] = list(
+            getattr(controller, "shutter_a_steps_dynamic", None)
+            or getattr(controller, "shutter_a_steps", None) or []
+        )
+        values["fps_steps"] = list(
+            getattr(controller, "fps_steps_dynamic", None)
+            or getattr(controller, "fps_steps", None) or []
+        )
+        values["wb_steps"] = list(getattr(controller, "wb_steps", None) or [])
+        # color_temp above is "5600 K", a display string. Publish the bare
+        # number too, so a control can round-trip a value through it.
+        values["wb"] = _num(ParameterKey.WB_USER.value, 5600)
+
+        # Whether this sensor has ClearHDR modes at all, so a surface can hide
+        # the ClearHDR controls rather than offering four knobs that write
+        # redis keys nothing on an imx477 or imx283 will ever read.
+        #
+        # Deliberately NOT _sensor_has_sdr_and_hdr(): that one answers "are
+        # both classes present", which is the right question for the SDR/HDR
+        # badge (on a single-class sensor the badge would be noise) and the
+        # wrong one here. A sensor exposing only HDR modes has ClearHDR and
+        # would have had its controls hidden.
+        values["hdr_capable"] = self._sensor_has_hdr_modes()
+
+        values["zoom"] = z
+        values["hdr_threshold_low"] = int(_num(ParameterKey.HDR_THRESHOLD_LOW.value))
+        values["hdr_threshold_high"] = int(_num(ParameterKey.HDR_THRESHOLD_HIGH.value))
+        values["hdr_blend"] = int(_num(ParameterKey.HDR_BLEND.value))
+        values["hdr_gain_adder"] = int(_num(ParameterKey.HDR_GAIN_ADDER.value))
+        values["ir_filter"] = int(_num(ParameterKey.IR_FILTER.value))
+        values["anamorphic_factor_value"] = _num(ParameterKey.ANAMORPHIC_FACTOR.value, 1.0)
+        values["hdmi_preview_source"] = str(
+            self.redis_controller.get_value(ParameterKey.HDMI_PREVIEW_SOURCE.value) or "both"
+        )
+        # From redis, not from the controller: the controller keeps no live
+        # shutter_a_nom attribute -- set_shutter_a_nom() writes
+        # self.shutter_angle_nom and the redis key.
+        values["shutter_a_nom"] = _num(ParameterKey.SHUTTER_A_NOM.value, 180.0)
+        # set_shu_fps_lock() has no state of its own -- it drives the two
+        # underlying locks together, so "on" is both of them being on.
+        values["shu_fps_lock"] = bool(controller.shutter_a_nom_lock) and bool(controller.fps_lock)
+        for flag in ("all_lock", "fps_double", "dynamic_resolution_enabled",
+                     "iso_free", "shutter_a_free", "fps_free", "wb_free",
+                     "hdr_threshold_low_free", "hdr_threshold_high_free",
+                     "hdr_blend_free", "hdr_gain_adder_free"):
+            values[flag] = bool(getattr(controller, flag, False))
+
         try:
             preroll_active = int(
                 self.redis_controller.get_value(
@@ -1585,6 +1660,18 @@ class SimpleGUI(threading.Thread):
         ("res_label", "res"),
     )
 
+    def _sensor_has_hdr_modes(self):
+        """True when the active sensor exposes any ClearHDR mode.
+
+        This is the capability question — "can this camera do ClearHDR at all"
+        — and it is what gates the ClearHDR controls. Distinct from
+        _sensor_has_sdr_and_hdr() below, which asks whether both classes are
+        present; conflating the two hides the controls on a sensor that only
+        has HDR modes.
+        """
+        modes = getattr(self.sensor_detect, "res_modes", {}) or {}
+        return any(bool(m.get("hdr", False)) for m in modes.values())
+
     def _sensor_has_sdr_and_hdr(self):
         """True when the active sensor exposes both plain and ClearHDR modes.
 
@@ -1592,9 +1679,8 @@ class SimpleGUI(threading.Thread):
         imx283 …) the class is self-evident so the badge is suppressed.
         """
         modes = getattr(self.sensor_detect, "res_modes", {}) or {}
-        has_hdr = any(bool(m.get("hdr", False)) for m in modes.values())
         has_sdr = any(not bool(m.get("hdr", False)) for m in modes.values())
-        return has_hdr and has_sdr
+        return self._sensor_has_hdr_modes() and has_sdr
 
     def _measure_layout_text(self, draw, key, values, shrink_x, shrink_y):
         info = self.layout[key]

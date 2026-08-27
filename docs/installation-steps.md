@@ -394,7 +394,7 @@ cd
 ```
 
 ```shell
-git clone https://github.com/Tiramisioux/imx585-v4l2-driver.git --branch 6.12.y
+git clone https://github.com/Tiramisioux/imx585-v4l2-driver.git --branch innomaker-v1.0
 cd imx585-v4l2-driver/
 ./setup.sh
 sudo dkms autoinstall -k "$(uname -r)"
@@ -402,7 +402,7 @@ cd
 ```
 
 !!! note ""
-    The IMX283 and IMX585 DKMS drivers used here are based on Will Whang's work and installed from Tiramisioux forks (`6.12.y` branch of each). The [IMX283 fork](https://github.com/Tiramisioux/imx283-v4l2-driver) adds UHD 4K (3840×2160, 10-bit) and 2.7K 16:9 (2736×1538, 12-bit) readout modes on top of the upstream `6.12.y` base; the [IMX585 fork](https://github.com/Tiramisioux/imx585-v4l2-driver) mirrors upstream `6.12.y` unchanged. For the original drivers and startup guides, visit https://github.com/will127534/imx283-v4l2-driver and https://github.com/will127534/imx585-v4l2-driver
+    The IMX283 and IMX585 DKMS drivers used here are based on Will Whang's work and installed from Tiramisioux forks (`6.12.y` branch of each). The [IMX283 fork](https://github.com/Tiramisioux/imx283-v4l2-driver) adds UHD 4K (3840×2160, 10-bit) and 2.7K 16:9 (2736×1538, 12-bit) readout modes on top of the upstream `6.12.y` base; the [IMX585 fork](https://github.com/Tiramisioux/imx585-v4l2-driver) installs its `innomaker-v1.0` branch — upstream `main`, byte-identical to the INNO-MAKER v1.0 vendor driver: active-area modes (1920×1080 / 3840×2160 / 3840×2200 16-bit ClearHDR), the `ccmp` overlay parameter, and the invalid binned-ClearHDR combination gated out. For a mono imx585 the installer additionally applies the `scripts/patch-rp1-cfe.sh` kernel patch — without it, mono 16-bit capture records garbage (see [ClearHDR](clear-hdr.md#mono-sensor-imx585_mono)). For the original drivers and startup guides, visit https://github.com/will127534/imx283-v4l2-driver and https://github.com/will127534/imx585-v4l2-driver
 
 #### Cinemate IMX283 and IMX585 tuning overrides
 

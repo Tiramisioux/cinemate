@@ -1,5 +1,10 @@
 # Kickoff prompt for the implementing session
 
+> **SPENT — do not use.** This prompt was consumed on 2026-08-26. C0 is implemented
+> (`e54e691b`), merged to `dev` (PR #152) and hardware-verified the same day. Handing it to a
+> session would make it re-implement finished work. Kept for provenance only — see
+> [`PLAN.md`](PLAN.md) for the status block and the one remaining regression spot-check.
+
 Paste everything below the line into a fresh Sonnet thread.
 
 ---

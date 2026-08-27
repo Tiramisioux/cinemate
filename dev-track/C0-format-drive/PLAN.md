@@ -1,5 +1,27 @@
 # C0 · Format drive from the settings editor's RAW pane
 
+> **STATUS: DONE — implemented, merged and hardware-verified. Nothing here is open work.**
+>
+> | | |
+> |---|---|
+> | Implementation | `e54e691b` on `feature/raw-pane-format-drive`, merged to `dev` via [PR #152](https://github.com/Tiramisioux/cinemate/pull/152) |
+> | Shipped | `POST /settings-editor/api/raw/format` (`settings_editor.py`), the control on the active storage card (`settings_editor.html`), and `_test/test_settings_editor_format.py` — exactly the three files the spec called for, implementing all six settled design decisions |
+> | Hardware | **Full destructive checklist passed 2026-08-26**, operator-confirmed: all three filesystems format and remount from the browser, a take records on the fresh drive, format-while-recording refused with 409, a concurrent CLI command reports `busy` and *recovers*, the CLI `format` path unregressed, no mount fight with `storage-automount.service`. Entry in `cinemate-handbook/lessons/hardware-log.md` (2026-08-26) |
+> | Not established | which fstype string NTFS actually reported, and how long a format held the dispatch lock — both unreported on the day. Do not infer them |
+>
+> `FORMAT-DRIVE-PLAN.md` and `SONNET-PROMPT.md` beside this file are **historical**: the code
+> is the truth now, exactly as their own provenance banners predicted. Do not hand the kickoff
+> prompt to a session — the work it describes is finished.
+>
+> **One small follow-up.** C0 was verified at `e54e691b` (off `dev` `953477e8`).
+> `settings_editor.html` and `settings_editor.py` have changed several times since —
+> control-row layout, phone stacking, the dotted action/command rule, the `free mode` →
+> `free stepping` rename, and a hardening of the *generic* action catalogue's `format_drive`
+> entry to `"no_arg": "required"` (a blank argument used to silently format as exFAT). The
+> format endpoint itself is untouched, but the pane around its control is not what was tested.
+> That warrants a **regression spot-check** — open the RAW pane, confirm the control renders
+> and is styled, format once — not a re-run of the destructive checklist.
+>
 > **Provenance:** moved 2026-08-25 from the review ledger
 > (`system-review/deliverables/REMEDIATION-PLAN.md` §3 on
 > `claude/cinemate-system-review-kickoff-cilicc`, commit `84bcb98b`, where it was batch **B14**) to this development

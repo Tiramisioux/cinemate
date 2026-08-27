@@ -74,7 +74,7 @@ class CommandExecutor(threading.Thread):
             #  Startup values come from capture.resolutions.hdr in settings.jsonc.
             #  These commands apply live to the sensor while streaming. inc/dec
             #  step through arrays.hdr_*.steps, or free_increment when that
-            #  knob's free mode is on (see 'set hdr ... free' below).
+            #  knob's free stepping is on (see 'set hdr ... free' below).
             'set hdr threshold low'  : (cinepi_controller.set_hdr_threshold_low, int),
             'inc hdr threshold low'  : (cinepi_controller.inc_hdr_threshold_low, None),
             'dec hdr threshold low'  : (cinepi_controller.dec_hdr_threshold_low, None),
@@ -132,7 +132,7 @@ class CommandExecutor(threading.Thread):
             'restart camera'         : (cinepi_app.restart,        None),
             'restart cinemate'       : (cinepi_controller.restart_cinemate,        None),
 
-            # ── Free-mode toggles ────────────────────────────────────────────────
+            # ── Free-stepping toggles ────────────────────────────────────────────────
             'set iso free'           : (cinepi_controller.set_iso_free,   [int, str]),
             'set shutter a free'     : (cinepi_controller.set_shutter_a_free, [int, str]),
             'set fps free'           : (cinepi_controller.set_fps_free,   [int, str]),

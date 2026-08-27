@@ -24,12 +24,12 @@ from typing import Callable, Optional
 logger = logging.getLogger(__name__)
 
 
-def free_mode_steps(min_value, max_value, increment):
-    """Build the fine step table a parameter's free mode expands to.
+def free_stepping_steps(min_value, max_value, increment):
+    """Build the fine step table a parameter's free stepping expands to.
 
     Shared by every ``_rebuild_*_steps``/``_get_steps`` call site that
     replaces a coarse ``arrays.<name>.steps`` table with a (near-)continuous
-    range once free mode is on, so the granularity comes from one formula
+    range once free stepping is on, so the granularity comes from one formula
     instead of a hardcoded literal re-typed at each call site. *max_value*
     is always included even when it is not an exact multiple of *increment*
     above *min_value*.

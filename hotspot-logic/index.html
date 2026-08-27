@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
         <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
@@ -60,6 +59,10 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
@@ -75,14 +78,22 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Configuring the Wi-Fi hotspot</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#credential-fallback-ladder">Credential fallback ladder</a>
+    </li>
     </ul>
                   </li>
               </ul>
@@ -91,6 +102,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
@@ -109,6 +122,8 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
+                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
@@ -116,14 +131,18 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <p class="caption"><span class="caption-text">About</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -156,12 +175,23 @@
 <div class="markdown-body">
   <h1 id="configuring-the-wi-fi-hotspot">Configuring the Wi-Fi hotspot<a class="headerlink" href="#configuring-the-wi-fi-hotspot" title="Permanent link">#</a></h1>
 <p>The built-in hotspot lets you use any device (phone/tablet/computer) for preview/controlling the camera.</p>
-<p>There are two layers involved:</p>
+<p>There are three layers involved, each able to keep the hotspot up if the one above it is not running:</p>
 <ul>
-<li><strong>At app startup:</strong> when <code>system.wifi_hotspot.enabled</code> is <code>true</code>, Cinemate can create the hotspot itself with <code>nmcli device wifi hotspot</code> using the SSID and password from <code>settings.json</code>.</li>
-<li><strong>As a background service:</strong> <code>wifi-hotspot.service</code> is a simple watchdog that recreates the hotspot if it is supposed to be on and NetworkManager no longer reports an active hotspot.</li>
+<li><strong>NetworkManager itself:</strong> the AP connection profile is persisted with <code>connection.autoconnect=yes</code>, so the hotspot comes up at boot before any Cinemate Python has run at all — even if both layers below are dead.</li>
+<li><strong>As a background service:</strong> <code>wifi-hotspot.service</code> reconciles the hotspot every 60 seconds. It runs as its own root systemd unit with no dependency on <code>cinemate-autostart.service</code>, so it keeps working through a Cinemate crash, a corrupted install, or a <code>settings.jsonc</code> that fails to parse.</li>
+<li><strong>At app startup:</strong> when <code>system.wifi_hotspot.enabled</code> is <code>true</code>, Cinemate also creates the hotspot itself with <code>nmcli device wifi hotspot</code>. If <code>wifi-hotspot.service</code> is already active it stands down, so there is exactly one owner of the hotspot at any time.</li>
 </ul>
 <p>This is handy when shooting in the field. Connect your phone or laptop directly to the hotspot and browse to the GUI to control the camera. If the Pi was previously connected to another Wi-Fi network, that Wi-Fi connection is replaced by the hotspot.</p>
+<h2 id="credential-fallback-ladder">Credential fallback ladder<a class="headerlink" href="#credential-fallback-ladder" title="Permanent link">#</a></h2>
+<p><code>wifi-hotspot.service</code> resolves the SSID and password on every reconcile pass through three rungs, applied in order:</p>
+<ol>
+<li><strong><code>settings.jsonc</code> parses</strong> — use <code>system.wifi_hotspot.name</code> / <code>.password</code>, and cache the result as the new last-known-good.</li>
+<li><strong><code>settings.jsonc</code> does not parse</strong> — use the cached last-known-good credentials instead of falling straight to the compiled-in default.</li>
+<li><strong>No usable cache</strong> — fall back to the compiled-in <code>CinePi</code> / <code>11111111</code>.</li>
+</ol>
+<p>This matters because a broken <code>settings.jsonc</code> is exactly the moment you most need to reach the camera. Without the cache rung, a single stray comma in <code>settings.jsonc</code> would silently rename your network back to <code>CinePi</code>, with no indication of why. With it, the hotspot keeps the SSID you last configured, and the reason for any fallback is recorded — not buried in a journal.</p>
+<p>The active rung is published to <code>/var/lib/cinemate/hotspot.state</code> on every pass, and the <a href="../recovery-console/">recovery console</a> displays it on its status page, so you can learn <em>"you are on the cached SSID because settings.jsonc is broken"</em> without SSH.</p>
+<p>Restoring a valid <code>settings.jsonc</code> returns the hotspot to rung 1 — and the configured SSID — within one reconcile pass (up to 60 seconds), no reboot needed.</p>
 <p>During development you may want the Pi to join your normal Wi-Fi so it has internet access. Set <code>system.wifi_hotspot.enabled</code> to <code>false</code> and configure Wi-Fi through <code>raspi-config</code> or the desktop tools.</p>
 <p>If you plug an Ethernet cable into the Pi, you can keep the hotspot running while also having a wired connection for internet and local networking.</p>
 <div class="admonition note">

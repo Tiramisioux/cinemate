@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
         <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
@@ -60,6 +59,10 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
@@ -75,9 +78,15 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
@@ -89,6 +98,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
@@ -106,6 +117,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
@@ -142,14 +155,18 @@
     </li>
     </ul>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <p class="caption"><span class="caption-text">About</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -217,43 +234,13 @@
 </code></pre></div>
 <p>For cinepi-raw, this file defines the port used by cpp-mjpeg-streamer (default cinepi.local:8000)</p>
 <div class="admonition note">
-<p>If you have more than one camera connected to the Pi, and activated in <code>boot/firmware/config.txt</code>, the camera connected to physical cam0 will use <code>/home/pi/post-processing0.json</code> and the camera connected to cam1 will use <code>/home/pi/post-processing1.json</code>.</p>
+<p>If you have more than one camera connected to the Pi, and activated in <code>/boot/firmware/config.txt</code>, the camera connected to physical cam0 will use <code>/home/pi/post-processing0.json</code> and the camera connected to cam1 will use <code>/home/pi/post-processing1.json</code>.</p>
 </div>
 <h2 id="cinematespecific-flags">Cinemate‑specific flags<a class="headerlink" href="#cinematespecific-flags" title="Permanent link">#</a></h2>
-<p>The Cinemate fork introduces several extra options:</p>
-<table>
-<thead>
-<tr>
-<th>Flag</th>
-<th>Argument</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--cam-port</code></td>
-<td><code>cam0</code> | <code>cam1</code></td>
-<td>Select which CSI camera port to use.</td>
-</tr>
-<tr>
-<td><code>--hdmi-port</code></td>
-<td><code>0</code> | <code>1</code> | <code>-1</code></td>
-<td>Choose the HDMI connector for the preview (<code>0</code> = HDMI-0, <code>1</code> = HDMI-1, <code>-1</code> = auto-detect).</td>
-</tr>
-<tr>
-<td><code>--same-hdmi</code></td>
-<td><em>(none)</em></td>
-<td>Force both capture and controller GUI to share the same HDMI output.</td>
-</tr>
-<tr>
-<td><code>--keep16</code></td>
-<td><code>true</code> | <code>false</code></td>
-<td>Save full 16-bit DNGs instead of 12-bit packed files.</td>
-</tr>
-</tbody>
-</table>
+<p>The Cinemate fork introduces extra options beyond stock <code>rpicam-apps</code>: camera-port and HDMI selection (<code>--cam-port</code>, <code>--hdmi-port</code>, <code>--same-hdmi</code>), on-sensor HDR (<code>--hdr</code>), CineMate Log (<code>--log-encode</code>), encode/disk worker count, affinity and priority tuning, WAV timecode offsets, a DNG camera-model override (<code>--unique-camera-model</code>), and a pixel-rate ceiling (<code>--max-pixel-rate</code>).</p>
+<p>The full flag table with defaults is the <a href="https://github.com/Tiramisioux/cinepi-raw#additional-flags">cinepi-raw README's "Additional flags" section</a> — that table is the canonical copy, so it is not duplicated here. <code>cinepi-raw -h</code> prints the same options from the binary.</p>
 <div class="admonition note">
-<p>At this moment though, Cinemate is 12bit only. The flag is for future updates of the IMX585 16bit clear HDR modes.</p>
+<p>DNGs are 12-bit, except in true 16-bit sensor modes (IMX585 ClearHDR), which write 16-bit. The <code>--keep16</code> flag was removed — the 4 bits it kept in SDR modes are padding.</p>
 </div>
 <h2 id="example-commands">Example commands<a class="headerlink" href="#example-commands" title="Permanent link">#</a></h2>
 <p>Below are sample commands for different sensors and modes. </p>
@@ -304,7 +291,7 @@ cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
         <a href="../cli-commands/" class="btn btn-neutral float-left" title="Cinemate terminal commands"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../redis-guide/" class="btn btn-neutral float-right" title="Redis API">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../controller-methods/" class="btn btn-neutral float-right" title="Controller methods">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -334,7 +321,7 @@ cinepi-raw<span class="w"> </span>--mode<span class="w"> </span><span class="m">
       <span><a href="../cli-commands/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../redis-guide/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../controller-methods/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

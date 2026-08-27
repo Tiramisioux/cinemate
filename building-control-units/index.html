@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/building-control-units/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Building control units - Cinemate Docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Building control units";
+        var mkdocs_page_input_path = "building-control-units.md";
+        var mkdocs_page_url = "/cinemate/building-control-units/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Cinemate Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Overview</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Quick start</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Using the camera</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Configuring</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Building control units</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#what-you-need">What you need</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#before-you-write-firmware">Before you write firmware</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#esp32-record-button-and-tally-light">ESP32 — record button and tally light</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#m5stickc-button-display-tally">M5StickC — button, display, tally</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#raspberry-pi-pico-w-micropython">Raspberry Pi Pico W — MicroPython</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#another-raspberry-pi-or-any-computer">Another Raspberry Pi, or any computer</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#control-patterns">Control patterns</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#rate-limit-encoders-on-the-device">Rate-limit encoders on the device</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#handle-a-camera-that-is-not-there-yet">Handle a camera that is not there yet</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#confirm-state-after-a-restart-command">Confirm state after a restart command</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#design-rules">Design rules</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#see-also">See also</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">System maintenance</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Advanced</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">About</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Cinemate Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Configuring</li>
+      <li class="breadcrumb-item active">Building control units</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/building-control-units.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+<div class="markdown-body">
+  <h1 id="building-control-units">Building control units<a class="headerlink" href="#building-control-units" title="Permanent link">#</a></h1>
+<p>Build a wireless camera controller — a record button, a tally light, an ISO knob, a full remote — out of an ESP32, an M5Stack, a Raspberry Pi Pico W, or another Pi. The device joins the camera's Wi-Fi hotspot and sends the same commands you would type into the Cinemate CLI.</p>
+<p>You need three things on the device, and nothing else:</p>
+<ol>
+<li>Join the hotspot</li>
+<li><code>POST</code> a command string</li>
+<li>Listen for the UDP status line</li>
+</ol>
+<h2 id="what-you-need">What you need<a class="headerlink" href="#what-you-need" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Camera</td>
+<td>Cinemate with <code>system.wifi_hotspot.enabled</code> set to <code>true</code></td>
+</tr>
+<tr>
+<td>Controller</td>
+<td>Any Wi-Fi microcontroller — ESP32, ESP8266, M5Stack, Pico W, or a Pi</td>
+</tr>
+<tr>
+<td>Network</td>
+<td>The camera's own hotspot. No router, no internet.</td>
+</tr>
+<tr>
+<td>Camera address</td>
+<td><code>10.42.0.1</code>, port <code>5000</code> for commands, <code>8888/udp</code> for status</td>
+</tr>
+</tbody>
+</table>
+<p>No library is required beyond the board's own Wi-Fi and HTTP support. There is no SDK to install and no JSON parser to link.</p>
+<h2 id="before-you-write-firmware">Before you write firmware<a class="headerlink" href="#before-you-write-firmware" title="Permanent link">#</a></h2>
+<p>Prove the camera answers, from a laptop joined to the <code>CinePi</code> hotspot:</p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>http://10.42.0.1:5000/api/v1/hello
+curl<span class="w"> </span>-d<span class="w"> </span><span class="s2">"rec"</span><span class="w"> </span>http://10.42.0.1:5000/api/v1/cmd
+nc<span class="w"> </span>-ul<span class="w"> </span><span class="m">8888</span>
+</code></pre></div>
+<p>If those three work, every example below will work. If they do not, fix that first — see <a href="#troubleshooting">Troubleshooting</a>.</p>
+<h2 id="esp32-record-button-and-tally-light">ESP32 — record button and tally light<a class="headerlink" href="#esp32-record-button-and-tally-light" title="Permanent link">#</a></h2>
+<p>The complete controller. One momentary button to GND, one LED.</p>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;WiFi.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;HTTPClient.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;WiFiUdp.h&gt;</span>
+
+<span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">SSID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"CinePi"</span><span class="p">;</span>
+<span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">PASS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"11111111"</span><span class="p">;</span>
+<span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">CAM</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s">"http://10.42.0.1:5000"</span><span class="p">;</span>
+
+<span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">PIN_BUTTON</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w">    </span><span class="c1">// momentary to GND</span>
+<span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">PIN_TALLY</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w">    </span><span class="c1">// LED to GND through a resistor</span>
+
+<span class="n">WiFiUDP</span><span class="w"> </span><span class="n">udp</span><span class="p">;</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">sendCmd</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">line</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">HTTPClient</span><span class="w"> </span><span class="n">http</span><span class="p">;</span>
+<span class="w">  </span><span class="n">http</span><span class="p">.</span><span class="n">begin</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="n">CAM</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">"/api/v1/cmd"</span><span class="p">);</span>
+<span class="w">  </span><span class="n">http</span><span class="p">.</span><span class="n">addHeader</span><span class="p">(</span><span class="s">"Content-Type"</span><span class="p">,</span><span class="w"> </span><span class="s">"text/plain"</span><span class="p">);</span>
+<span class="w">  </span><span class="n">http</span><span class="p">.</span><span class="n">setTimeout</span><span class="p">(</span><span class="mi">1500</span><span class="p">);</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="n">code</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">http</span><span class="p">.</span><span class="n">POST</span><span class="p">(</span><span class="n">line</span><span class="p">);</span>
+<span class="w">  </span><span class="n">Serial</span><span class="p">.</span><span class="n">printf</span><span class="p">(</span><span class="s">"%s -&gt; %d %s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span><span class="w"> </span><span class="n">line</span><span class="p">,</span><span class="w"> </span><span class="n">code</span><span class="p">,</span><span class="w"> </span><span class="n">http</span><span class="p">.</span><span class="n">getString</span><span class="p">().</span><span class="n">c_str</span><span class="p">());</span>
+<span class="w">  </span><span class="n">http</span><span class="p">.</span><span class="n">end</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">setup</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">Serial</span><span class="p">.</span><span class="n">begin</span><span class="p">(</span><span class="mi">115200</span><span class="p">);</span>
+<span class="w">  </span><span class="n">pinMode</span><span class="p">(</span><span class="n">PIN_BUTTON</span><span class="p">,</span><span class="w"> </span><span class="n">INPUT_PULLUP</span><span class="p">);</span>
+<span class="w">  </span><span class="n">pinMode</span><span class="p">(</span><span class="n">PIN_TALLY</span><span class="p">,</span><span class="w"> </span><span class="n">OUTPUT</span><span class="p">);</span>
+
+<span class="w">  </span><span class="n">WiFi</span><span class="p">.</span><span class="n">begin</span><span class="p">(</span><span class="n">SSID</span><span class="p">,</span><span class="w"> </span><span class="n">PASS</span><span class="p">);</span>
+<span class="w">  </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">WiFi</span><span class="p">.</span><span class="n">status</span><span class="p">()</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">WL_CONNECTED</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">delay</span><span class="p">(</span><span class="mi">250</span><span class="p">);</span><span class="w"> </span><span class="n">Serial</span><span class="p">.</span><span class="n">print</span><span class="p">(</span><span class="s">"."</span><span class="p">);</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="n">Serial</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="n">WiFi</span><span class="p">.</span><span class="n">localIP</span><span class="p">());</span>
+
+<span class="w">  </span><span class="n">udp</span><span class="p">.</span><span class="n">begin</span><span class="p">(</span><span class="mi">8888</span><span class="p">);</span><span class="w">                       </span><span class="c1">// status broadcast</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">loop</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="c1">// button → toggle record</span>
+<span class="w">  </span><span class="k">static</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="n">last</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">HIGH</span><span class="p">;</span>
+<span class="w">  </span><span class="k">static</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">lastEdge</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">bool</span><span class="w"> </span><span class="n">now</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">digitalRead</span><span class="p">(</span><span class="n">PIN_BUTTON</span><span class="p">);</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">now</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">last</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">millis</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">lastEdge</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">50</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">      </span><span class="c1">// 50 ms debounce</span>
+<span class="w">    </span><span class="n">lastEdge</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">millis</span><span class="p">();</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">now</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">LOW</span><span class="p">)</span><span class="w"> </span><span class="n">sendCmd</span><span class="p">(</span><span class="s">"rec"</span><span class="p">);</span>
+<span class="w">    </span><span class="n">last</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">now</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="c1">// broadcast → tally</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">udp</span><span class="p">.</span><span class="n">parsePacket</span><span class="p">()</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">buf</span><span class="p">[</span><span class="mi">512</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">len</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">udp</span><span class="p">.</span><span class="n">read</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">    </span><span class="n">buf</span><span class="p">[</span><span class="n">len</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">strstr</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="s">"rec="</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="w"> </span><span class="n">digitalWrite</span><span class="p">(</span><span class="n">PIN_TALLY</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="sc">'1'</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="n">HIGH</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">LOW</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>That is the whole thing. <code>sendCmd</code> accepts any <a href="../cli-commands/">Cinemate command</a>: <code>"set iso 800"</code>, <code>"inc fps"</code>, <code>"set wb 5600"</code>, <code>"rec f 48"</code>.</p>
+<p>The tally reads the broadcast rather than polling. It costs the camera nothing extra whether you build one tally light or ten.</p>
+<h2 id="m5stickc-button-display-tally">M5StickC — button, display, tally<a class="headerlink" href="#m5stickc-button-display-tally" title="Permanent link">#</a></h2>
+<p>The M5StickC has a button, a screen and an LED already, so it makes a good handheld remote with no wiring at all.</p>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;M5StickCPlus.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;WiFi.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;HTTPClient.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;WiFiUdp.h&gt;</span>
+
+<span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">SSID</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"CinePi"</span><span class="p">;</span>
+<span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">PASS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"11111111"</span><span class="p">;</span>
+<span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">CAM</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s">"http://10.42.0.1:5000"</span><span class="p">;</span>
+
+<span class="n">WiFiUDP</span><span class="w"> </span><span class="n">udp</span><span class="p">;</span>
+<span class="n">String</span><span class="w"> </span><span class="n">iso</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"-"</span><span class="p">,</span><span class="w"> </span><span class="n">fps</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"-"</span><span class="p">,</span><span class="w"> </span><span class="n">tc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"--:--:--:--"</span><span class="p">;</span>
+<span class="kt">bool</span><span class="w"> </span><span class="n">recording</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">sendCmd</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">line</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">HTTPClient</span><span class="w"> </span><span class="n">http</span><span class="p">;</span>
+<span class="w">  </span><span class="n">http</span><span class="p">.</span><span class="n">begin</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="n">CAM</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">"/api/v1/cmd"</span><span class="p">);</span>
+<span class="w">  </span><span class="n">http</span><span class="p">.</span><span class="n">addHeader</span><span class="p">(</span><span class="s">"Content-Type"</span><span class="p">,</span><span class="w"> </span><span class="s">"text/plain"</span><span class="p">);</span>
+<span class="w">  </span><span class="n">http</span><span class="p">.</span><span class="n">setTimeout</span><span class="p">(</span><span class="mi">1500</span><span class="p">);</span>
+<span class="w">  </span><span class="n">http</span><span class="p">.</span><span class="n">POST</span><span class="p">(</span><span class="n">line</span><span class="p">);</span>
+<span class="w">  </span><span class="n">http</span><span class="p">.</span><span class="n">end</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="c1">// pull one "key=value" out of the broadcast line</span>
+<span class="n">String</span><span class="w"> </span><span class="nf">field</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">key</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">strstr</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="n">key</span><span class="p">);</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">p</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s">"-"</span><span class="p">;</span>
+<span class="w">  </span><span class="n">p</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">strlen</span><span class="p">(</span><span class="n">key</span><span class="p">);</span>
+<span class="w">  </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">e</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">strchr</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="w"> </span><span class="sc">' '</span><span class="p">);</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">e</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="n">String</span><span class="p">(</span><span class="n">p</span><span class="p">).</span><span class="n">substring</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">e</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">p</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">String</span><span class="p">(</span><span class="n">p</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">draw</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">M5</span><span class="p">.</span><span class="n">Lcd</span><span class="p">.</span><span class="n">fillScreen</span><span class="p">(</span><span class="n">recording</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="n">RED</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">BLACK</span><span class="p">);</span>
+<span class="w">  </span><span class="n">M5</span><span class="p">.</span><span class="n">Lcd</span><span class="p">.</span><span class="n">setCursor</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">);</span><span class="w">  </span><span class="n">M5</span><span class="p">.</span><span class="n">Lcd</span><span class="p">.</span><span class="n">setTextSize</span><span class="p">(</span><span class="mi">3</span><span class="p">);</span>
+<span class="w">  </span><span class="n">M5</span><span class="p">.</span><span class="n">Lcd</span><span class="p">.</span><span class="n">print</span><span class="p">(</span><span class="n">recording</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s">"REC"</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">"---"</span><span class="p">);</span>
+<span class="w">  </span><span class="n">M5</span><span class="p">.</span><span class="n">Lcd</span><span class="p">.</span><span class="n">setTextSize</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+<span class="w">  </span><span class="n">M5</span><span class="p">.</span><span class="n">Lcd</span><span class="p">.</span><span class="n">setCursor</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">);</span><span class="w">  </span><span class="n">M5</span><span class="p">.</span><span class="n">Lcd</span><span class="p">.</span><span class="n">print</span><span class="p">(</span><span class="s">"ISO "</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">iso</span><span class="p">);</span>
+<span class="w">  </span><span class="n">M5</span><span class="p">.</span><span class="n">Lcd</span><span class="p">.</span><span class="n">setCursor</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="mi">75</span><span class="p">);</span><span class="w">  </span><span class="n">M5</span><span class="p">.</span><span class="n">Lcd</span><span class="p">.</span><span class="n">print</span><span class="p">(</span><span class="n">fps</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">" fps"</span><span class="p">);</span>
+<span class="w">  </span><span class="n">M5</span><span class="p">.</span><span class="n">Lcd</span><span class="p">.</span><span class="n">setCursor</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">);</span><span class="w"> </span><span class="n">M5</span><span class="p">.</span><span class="n">Lcd</span><span class="p">.</span><span class="n">print</span><span class="p">(</span><span class="n">tc</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">setup</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">M5</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span>
+<span class="w">  </span><span class="n">M5</span><span class="p">.</span><span class="n">Lcd</span><span class="p">.</span><span class="n">setRotation</span><span class="p">(</span><span class="mi">3</span><span class="p">);</span>
+<span class="w">  </span><span class="n">WiFi</span><span class="p">.</span><span class="n">begin</span><span class="p">(</span><span class="n">SSID</span><span class="p">,</span><span class="w"> </span><span class="n">PASS</span><span class="p">);</span>
+<span class="w">  </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">WiFi</span><span class="p">.</span><span class="n">status</span><span class="p">()</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">WL_CONNECTED</span><span class="p">)</span><span class="w"> </span><span class="n">delay</span><span class="p">(</span><span class="mi">250</span><span class="p">);</span>
+<span class="w">  </span><span class="n">udp</span><span class="p">.</span><span class="n">begin</span><span class="p">(</span><span class="mi">8888</span><span class="p">);</span>
+<span class="w">  </span><span class="n">draw</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">loop</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">M5</span><span class="p">.</span><span class="n">update</span><span class="p">();</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">M5</span><span class="p">.</span><span class="n">BtnA</span><span class="p">.</span><span class="n">wasPressed</span><span class="p">())</span><span class="w"> </span><span class="n">sendCmd</span><span class="p">(</span><span class="s">"rec"</span><span class="p">);</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">M5</span><span class="p">.</span><span class="n">BtnB</span><span class="p">.</span><span class="n">wasPressed</span><span class="p">())</span><span class="w"> </span><span class="n">sendCmd</span><span class="p">(</span><span class="s">"inc iso"</span><span class="p">);</span>
+
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">udp</span><span class="p">.</span><span class="n">parsePacket</span><span class="p">()</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">buf</span><span class="p">[</span><span class="mi">512</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">len</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">udp</span><span class="p">.</span><span class="n">read</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">    </span><span class="n">buf</span><span class="p">[</span><span class="n">len</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="n">recording</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">field</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="s">"rec="</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">"1"</span><span class="p">;</span>
+<span class="w">    </span><span class="n">iso</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">field</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="s">"iso="</span><span class="p">);</span>
+<span class="w">    </span><span class="n">fps</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">field</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="s">"fps="</span><span class="p">);</span>
+<span class="w">    </span><span class="n">tc</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">field</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="w"> </span><span class="s">"tc="</span><span class="p">);</span>
+<span class="w">    </span><span class="n">draw</span><span class="p">();</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<h2 id="raspberry-pi-pico-w-micropython">Raspberry Pi Pico W — MicroPython<a class="headerlink" href="#raspberry-pi-pico-w-micropython" title="Permanent link">#</a></h2>
+<p>No external libraries. Raw sockets only, so it works on any build.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">network</span><span class="o">,</span><span class="w"> </span><span class="nn">socket</span><span class="o">,</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">machine</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pin</span>
+
+<span class="n">SSID</span><span class="p">,</span> <span class="n">PASS</span> <span class="o">=</span> <span class="s2">"CinePi"</span><span class="p">,</span> <span class="s2">"11111111"</span>
+<span class="n">HOST</span><span class="p">,</span> <span class="n">PORT</span> <span class="o">=</span> <span class="s2">"10.42.0.1"</span><span class="p">,</span> <span class="mi">5000</span>
+
+<span class="n">button</span> <span class="o">=</span> <span class="n">Pin</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="n">Pin</span><span class="o">.</span><span class="n">IN</span><span class="p">,</span> <span class="n">Pin</span><span class="o">.</span><span class="n">PULL_UP</span><span class="p">)</span>
+<span class="n">tally</span>  <span class="o">=</span> <span class="n">Pin</span><span class="p">(</span><span class="s2">"LED"</span><span class="p">,</span> <span class="n">Pin</span><span class="o">.</span><span class="n">OUT</span><span class="p">)</span>
+
+<span class="n">wlan</span> <span class="o">=</span> <span class="n">network</span><span class="o">.</span><span class="n">WLAN</span><span class="p">(</span><span class="n">network</span><span class="o">.</span><span class="n">STA_IF</span><span class="p">)</span>
+<span class="n">wlan</span><span class="o">.</span><span class="n">active</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">wlan</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">SSID</span><span class="p">,</span> <span class="n">PASS</span><span class="p">)</span>
+<span class="k">while</span> <span class="ow">not</span> <span class="n">wlan</span><span class="o">.</span><span class="n">isconnected</span><span class="p">():</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"ip"</span><span class="p">,</span> <span class="n">wlan</span><span class="o">.</span><span class="n">ifconfig</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">cmd</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>
+    <span class="n">body</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="n">HOST</span><span class="p">,</span> <span class="n">PORT</span><span class="p">))</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="sa">b</span><span class="s2">"POST /api/v1/cmd HTTP/1.1</span><span class="se">\r\n</span><span class="s2">Host: "</span> <span class="o">+</span> <span class="n">HOST</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span> <span class="o">+</span>
+               <span class="sa">b</span><span class="s2">"</span><span class="se">\r\n</span><span class="s2">Content-Type: text/plain</span><span class="se">\r\n</span><span class="s2">Content-Length: "</span> <span class="o">+</span>
+               <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">body</span><span class="p">))</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span> <span class="o">+</span> <span class="sa">b</span><span class="s2">"</span><span class="se">\r\n</span><span class="s2">Connection: close</span><span class="se">\r\n\r\n</span><span class="s2">"</span> <span class="o">+</span> <span class="n">body</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">s</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="mi">128</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<span class="n">udp</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_DGRAM</span><span class="p">)</span>
+<span class="n">udp</span><span class="o">.</span><span class="n">bind</span><span class="p">((</span><span class="s2">"0.0.0.0"</span><span class="p">,</span> <span class="mi">8888</span><span class="p">))</span>
+<span class="n">udp</span><span class="o">.</span><span class="n">setblocking</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="n">last</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">button</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">last</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">now</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">cmd</span><span class="p">(</span><span class="s2">"rec"</span><span class="p">)</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep_ms</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
+    <span class="n">last</span> <span class="o">=</span> <span class="n">now</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">data</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">udp</span><span class="o">.</span><span class="n">recvfrom</span><span class="p">(</span><span class="mi">512</span><span class="p">)</span>
+        <span class="n">tally</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="sa">b</span><span class="s2">"rec=1"</span> <span class="ow">in</span> <span class="n">data</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep_ms</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+</code></pre></div>
+<p>If your build ships <code>requests</code>, the command function collapses to one line:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
+<span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">"http://10.42.0.1:5000/api/v1/cmd"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="s2">"rec"</span><span class="p">)</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</code></pre></div>
+<h2 id="another-raspberry-pi-or-any-computer">Another Raspberry Pi, or any computer<a class="headerlink" href="#another-raspberry-pi-or-any-computer" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">requests</span><span class="o">,</span><span class="w"> </span><span class="nn">socket</span>
+
+<span class="n">CAM</span> <span class="o">=</span> <span class="s2">"http://10.42.0.1:5000/api/v1"</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">cmd</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">CAM</span><span class="si">}</span><span class="s2">/cmd"</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">line</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+
+<span class="n">cmd</span><span class="p">(</span><span class="s2">"set iso 800"</span><span class="p">)</span>
+<span class="n">cmd</span><span class="p">(</span><span class="s2">"set fps 24"</span><span class="p">)</span>
+<span class="n">cmd</span><span class="p">(</span><span class="s2">"rec"</span><span class="p">)</span>
+
+<span class="c1"># status broadcast, parsed into a dict</span>
+<span class="n">s</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_DGRAM</span><span class="p">)</span>
+<span class="n">s</span><span class="o">.</span><span class="n">bind</span><span class="p">((</span><span class="s2">""</span><span class="p">,</span> <span class="mi">8888</span><span class="p">))</span>
+<span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">recvfrom</span><span class="p">(</span><span class="mi">512</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">kv</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"="</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">kv</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()))</span>
+</code></pre></div>
+<h2 id="control-patterns">Control patterns<a class="headerlink" href="#control-patterns" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Send</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Momentary REC button</td>
+<td><code>rec</code></td>
+<td>Toggles. Debounce 50 ms on the device.</td>
+</tr>
+<tr>
+<td>Timed take button</td>
+<td><code>rec f 48</code></td>
+<td>Records exactly 48 frame slots, then stops itself</td>
+</tr>
+<tr>
+<td>Rotary encoder</td>
+<td><code>inc iso</code> / <code>dec iso</code></td>
+<td><strong>Rate-limit on the device.</strong> See below.</td>
+</tr>
+<tr>
+<td>Latching switch</td>
+<td><code>set fps lock 1</code> / <code>set fps lock 0</code></td>
+<td>Send the explicit <code>0</code>/<code>1</code>, not the bare toggle, so switch and camera cannot drift apart</td>
+</tr>
+<tr>
+<td>Preset button</td>
+<td><code>set iso 800</code>, then <code>set fps 24</code>, then <code>set shutter a 180</code></td>
+<td>Three requests. Leave ~20 ms between them.</td>
+</tr>
+<tr>
+<td>Menu on a display</td>
+<td><code>GET /api/v1/commands</code></td>
+<td>Build the menu from the camera's live command list instead of hardcoding it</td>
+</tr>
+<tr>
+<td>Tally light</td>
+<td>UDP <code>rec=</code></td>
+<td>Use the broadcast, not polling</td>
+</tr>
+<tr>
+<td>Storage warning</td>
+<td>UDP <code>space=</code></td>
+<td>Megabytes remaining</td>
+</tr>
+<tr>
+<td>Dropped-frame alarm</td>
+<td>UDP <code>drops=</code></td>
+<td>Non-zero means the last take dropped frames</td>
+</tr>
+</tbody>
+</table>
+<h3 id="rate-limit-encoders-on-the-device">Rate-limit encoders on the device<a class="headerlink" href="#rate-limit-encoders-on-the-device" title="Permanent link">#</a></h3>
+<p>A rotary encoder can emit fifty steps per second. The camera rejects anything over <code>max_commands_per_sec</code> (default 20) with <code>429</code>, and you lose steps.</p>
+<p>Accumulate on the device and send at most one command every 50 ms:</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// in the encoder ISR: detents += direction;</span>
+<span class="k">static</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">lastSend</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">detents</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">millis</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">lastSend</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">50</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">sendCmd</span><span class="p">(</span><span class="n">detents</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s">"inc iso"</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">"dec iso"</span><span class="p">);</span>
+<span class="w">  </span><span class="n">detents</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="p">(</span><span class="n">detents</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="mi">-1</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">  </span><span class="n">lastSend</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">millis</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="handle-a-camera-that-is-not-there-yet">Handle a camera that is not there yet<a class="headerlink" href="#handle-a-camera-that-is-not-there-yet" title="Permanent link">#</a></h3>
+<p>The camera may reboot, or be switched on after the controller. Never block forever on a request.</p>
+<ul>
+<li>Set an HTTP timeout of 1–2 seconds. Do not use the default.</li>
+<li>Treat any failure as "camera absent" and show it — a dim tally, a dash on the display.</li>
+<li>Re-check with <code>GET /api/v1/hello</code> every few seconds until it answers.</li>
+<li>The UDP broadcast needs no reconnect. Packets simply resume.</li>
+</ul>
+<h3 id="confirm-state-after-a-restart-command">Confirm state after a restart command<a class="headerlink" href="#confirm-state-after-a-restart-command" title="Permanent link">#</a></h3>
+<p><code>set resolution</code> and <code>set log</code> restart the camera. The <code>200 ok</code> arrives before the restart finishes. Do not assume the value took. Read it back:</p>
+<div class="highlight"><pre><span></span><code>GET /api/v1/get/sensor_mode
+</code></pre></div>
+<h2 id="design-rules">Design rules<a class="headerlink" href="#design-rules" title="Permanent link">#</a></h2>
+<ul>
+<li><strong>Send the command string, not a parameter.</strong> <code>POST "set iso 800"</code> — there is no <code>/iso</code> endpoint, by design. The command vocabulary is the API, so your firmware keeps working as commands are added.</li>
+<li><strong>Prefer the UDP broadcast over polling.</strong> One packet feeds every device. Polling multiplies load by the number of controllers.</li>
+<li><strong>Use <code>/api/v1/get/&lt;key&gt;</code> when you need one value on demand.</strong> It returns bare text, so no JSON parser and no heap allocation.</li>
+<li><strong>Use <code>?keys=</code> on <code>/status</code>.</strong> A full snapshot is several kilobytes and will strain a Pico.</li>
+<li><strong>Do not hold an SSE connection unless you need every change.</strong> Each one occupies a thread on the camera, and there are only four.</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Likely cause</th>
+<th>Check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Device joins Wi-Fi, all requests time out</td>
+<td>Web server never started — it only starts if the interface had an IP when Cinemate booted</td>
+<td>Restart Cinemate after the hotspot is up. See <a href="../hotspot-logic/">Wi-Fi hotspot</a>.</td>
+</tr>
+<tr>
+<td><code>curl</code> works from a laptop, fails from the ESP32</td>
+<td>URL encoding</td>
+<td>Use <code>POST</code> with a plain body, not <code>GET</code> with spaces in the query</td>
+</tr>
+<tr>
+<td><code>400 err unknown command</code></td>
+<td>Typo, or a command that does not exist in this version</td>
+<td><code>GET /api/v1/commands</code> lists exactly what this camera accepts</td>
+</tr>
+<tr>
+<td><code>403 err blocked</code></td>
+<td><code>format</code>, <code>erase</code>, <code>reboot</code> or <code>shutdown</code> with <code>allow_destructive</code> false</td>
+<td>Intentional. See the <a href="../web-api/">Web API</a> settings table.</td>
+</tr>
+<tr>
+<td><code>429 err rate limited</code></td>
+<td>Encoder flooding</td>
+<td>Rate-limit on the device</td>
+</tr>
+<tr>
+<td><code>503 err too many clients</code></td>
+<td>More than four SSE connections</td>
+<td>Switch those devices to the UDP broadcast</td>
+</tr>
+<tr>
+<td>No UDP packets</td>
+<td>Broadcast disabled, or the device is not on the hotspot subnet</td>
+<td>Confirm with <code>nc -ul 8888</code> from a laptop on <code>CinePi</code></td>
+</tr>
+<tr>
+<td>Commands land but nothing happens</td>
+<td>The command was accepted and ignored — e.g. <code>set iso</code> while ISO is locked</td>
+<td>Check the lock state: <code>GET /api/v1/get/iso</code> before and after</td>
+</tr>
+<tr>
+<td>Tally lags by a second</td>
+<td>Polling instead of the broadcast</td>
+<td>Switch to UDP</td>
+</tr>
+</tbody>
+</table>
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">#</a></h2>
+<ul>
+<li><a href="../web-api/">Web API</a> — the full endpoint reference</li>
+<li><a href="../cli-commands/">Cinemate terminal commands</a> — every command you can send</li>
+<li><a href="../redis-keys/">Redis Key reference</a> — every key you can read</li>
+<li><a href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a></li>
+<li><a href="../hardware-controls/">Additional hardware</a> — for wired buttons and encoders on the Pi's own GPIO</li>
+</ul>
+</div>
+
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../hardware-controls/" class="btn btn-neutral float-left" title="Additional hardware"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../config-txt/" class="btn btn-neutral float-right" title="Bookworm config.txt">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tiramisioux/cinemate" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../hardware-controls/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../config-txt/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
+      <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

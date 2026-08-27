@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
         <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
@@ -60,6 +59,10 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Digital zoom</a>
@@ -81,9 +84,15 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
@@ -95,6 +104,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
@@ -113,6 +124,8 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
+                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
@@ -120,14 +133,18 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <p class="caption"><span class="caption-text">About</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -188,9 +205,9 @@
 </tr>
 </tbody>
 </table>
-<p>You can also map these to a button or rotary encoder in <code>settings.json</code>.</p>
+<p>You can also map these to a button or rotary encoder in <code>settings.jsonc</code>.</p>
 <h2 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">#</a></h2>
-<p>The zoom behaviour lives in the <code>preview</code> section of <a href="../settings-json/"><code>settings.json</code></a>:</p>
+<p>The zoom behaviour lives in the <code>hdmi_display.preview</code> section of <a href="../settings-json/"><code>settings.jsonc</code></a>:</p>
 <ul>
 <li><code>default_zoom</code> – the zoom factor applied at startup (default <code>1.0</code>).</li>
 <li><code>zoom_steps</code> – the list of factors that <code>set zoom</code>, <code>inc zoom</code>, and <code>dec zoom</code> cycle through.</li>

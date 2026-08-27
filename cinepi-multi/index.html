@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
         <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
@@ -60,6 +59,10 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
@@ -75,9 +78,15 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
@@ -89,6 +98,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
@@ -107,21 +118,31 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
+                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
-              <ul>
+              <ul class="current">
                   <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">How Cinemate launches CinePi-raw</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#building-the-cinepi-raw-command">Building the cinepi-raw command</a>
+    </li>
+    </ul>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <p class="caption"><span class="caption-text">About</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -140,6 +161,7 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Reference</li>
       <li class="breadcrumb-item active">How Cinemate launches CinePi-raw</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/cinepi-multi.md" class="icon icon-github"> Edit on GitHub</a>
@@ -152,7 +174,7 @@
               
 <div class="markdown-body">
   <h1 id="how-cinemate-launches-cinepi-raw">How Cinemate launches CinePi-raw<a class="headerlink" href="#how-cinemate-launches-cinepi-raw" title="Permanent link">#</a></h1>
-<p><code>src/module/cinepi_multi.py</code> starts one <code>cinepi-raw</code> process per detected camera. It combines camera discovery from <code>sensor_detect.py</code>, Redis state, and user settings from <code>settings.json</code> to build the command line for each process.</p>
+<p><code>src/module/cinepi_multi.py</code> starts one <code>cinepi-raw</code> process per detected camera. It combines camera discovery from <code>sensor_detect.py</code>, Redis state, and user settings from <code>settings.jsonc</code> to build the command line for each process.</p>
 <h2 id="building-the-cinepi-raw-command">Building the <code>cinepi-raw</code> command<a class="headerlink" href="#building-the-cinepi-raw-command" title="Permanent link">#</a></h2>
 <p>For each detected camera, the manager creates a <code>CinePiProcess</code>. <code>_build_args()</code> assembles flags for:</p>
 <ul>
@@ -177,6 +199,10 @@
 
             </div>
           </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../redis-keys/" class="btn btn-neutral float-left" title="Redis Key reference"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../changelog/" class="btn btn-neutral float-right" title="Changelog">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
 
   <hr/>
 
@@ -202,6 +228,10 @@
         </span>
     
     
+      <span><a href="../redis-keys/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../changelog/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

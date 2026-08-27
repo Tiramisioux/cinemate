@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
         <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
@@ -60,7 +59,13 @@
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Web GUI</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#the-experiment-drawer">The EXPERIMENT drawer</a>
+    </li>
     </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
@@ -77,9 +82,15 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
@@ -91,6 +102,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
@@ -109,6 +122,8 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
+                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
@@ -116,14 +131,18 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <p class="caption"><span class="caption-text">About</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -155,22 +174,148 @@
               
 <div class="markdown-body">
   <h1 id="web-gui">Web GUI<a class="headerlink" href="#web-gui" title="Permanent link">#</a></h1>
-<p>Cinemate includes a small Flask + Socket.IO web interface that mirrors the live preview and exposes the main camera controls in a browser.</p>
+<p>Cinemate includes a small Flask + Socket.IO web interface that mirrors most of the on-camera
+HDMI GUI (<a href="../simple-gui/">Simple GUI</a>) in a browser: the status badges and live
+preview match, and most HDMI fields reach the page — but not all of them. The recording-integrity
+counts (frame count, frames-in-sync, missing-frame count, drop-frame flags) and a few host/label
+fields are HDMI-only today; run <code>tools/gui_field_extract.py</code> for the current, exact list rather
+than trusting a number here, since it moves as fields get added to either side.</p>
 <ul>
 <li>the control UI listens on port <code>5000</code>, with the URL <code>http://cinepi.local:5000/</code>.</li>
 <li>the clean MJPEG preview stream is available on port <code>8000</code> with the URL <code>http://cinepi.local:8000/stream</code>.</li>
 </ul>
+<p>Every control action posts a CLI command line to <a href="../web-api/"><code>/api/v1/cmd</code></a> — the same dispatcher
+the CLI and serial paths use, so the browser cannot drift from them. GPIO, the analog pots, the
+quad rotary encoder, storage pre-roll and the on-camera HDMI GUI call the controller directly and
+bypass this dispatcher. The pots now serialise against it through a shared lock, closing the
+pot-vs-explicit-set race where a moving pot could out-write an explicit <code>set</code> — but the other
+bypassing paths do not, and a GPIO press can still race a web command with nothing between them.
+Socket.IO only pushes live values back to the page; it carries no control events.</p>
 <p>The browser UI exposes:</p>
 <ul>
 <li>ISO, shutter angle, FPS, white balance, and resolution selectors</li>
+<li>the page reloads automatically once a resolution change completes, unless a recording is in
+  progress</li>
 <li>live preview from the MJPEG stream</li>
 <li>tap/click on the preview area to toggle REC</li>
-<li>storage unmount button</li>
+<li>CineMate Log toggle (<code>set log</code>) and storage unmount button (<code>unmount</code>)</li>
 <li>fullscreen toggle</li>
-<li>live stats such as free space, write speed, buffered frames, buffer size, CPU load, RAM load, temperature, and exposure time</li>
+<li>the EXPERIMENT drawer (below)</li>
+<li>the same status rail as the HDMI GUI: sensor/aspect/log/DROP/SYNC badges, zoom and anamorphic
+  factor, connected USB/mic/keyboard, storage type and filesystem</li>
+<li>live stats such as free space, write speed, buffered frames, buffer size, CPU load, RAM load,
+  temperature, and exposure time</li>
+</ul>
+<p>The layout scales rather than reflows: the same three-column arrangement (left status rail,
+preview, right status rail) holds at any width or orientation, with the rails and top-row text
+shrinking smoothly on a narrow or portrait screen instead of restacking into a different layout
+— the same model <code>simple_gui.py</code> already uses for the HDMI GUI, which scales its entire
+1920×1080-authored layout by a single <code>disp_width/1920</code>, <code>disp_height/1080</code> ratio and never
+restacks either. Two exceptions to the pure ratio: the clip name and the WAV badge have pixel
+floors (10px/8px) so they stay legible on a phone, where the HDMI ratio would shrink them below
+readable size.</p>
+<h2 id="the-experiment-drawer">The EXPERIMENT drawer<a class="headerlink" href="#the-experiment-drawer" title="Permanent link">#</a></h2>
+<p><code>EXPERIMENT</code> opens a panel at the bottom of the page holding the controls the instrument layout
+above does not show. It is collapsed by default. The preview stays put while it is open — the
+drawer scrolls inside its own height cap rather than pushing the picture off the top — so a
+change can be watched on the stream as it is made.</p>
+<p>Opening the drawer does not reflow the page. The top row does not move, the status rails keep
+their layout, and nothing changes order. The preview scales down to make room and the bottom rows
+ride up with it; that is the only movement.</p>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Controls</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EXPOSURE</td>
+<td>ISO, nominal shutter angle, FPS, white balance</td>
+</tr>
+<tr>
+<td>CLEARHDR</td>
+<td>HDR threshold low/high, HDR blend, HDR gain adder — <strong>only on a sensor with ClearHDR modes</strong></td>
+</tr>
+<tr>
+<td>PREVIEW</td>
+<td>Zoom</td>
+</tr>
+<tr>
+<td>MODES</td>
+<td>ISO/shutter/FPS/combined/all locks, shutter-angle sync, FPS double, dynamic resolution, IR filter</td>
+</tr>
+<tr>
+<td>FREE STEPPING</td>
+<td>Free stepping for ISO, shutter, FPS and WB, plus the four HDR knobs on a ClearHDR sensor</td>
+</tr>
+<tr>
+<td>SELECT</td>
+<td>Anamorphic factor, HDMI preview source (dual-sensor rigs only)</td>
+</tr>
+<tr>
+<td>ACTIONS</td>
+<td><code>mount</code>, <code>toggle mount</code>, <code>storage preroll</code>, <code>set rtc time</code></td>
+</tr>
+</tbody>
+</table>
+<p>Notes:</p>
+<ul>
+<li>The CLEARHDR group is absent entirely on a sensor without ClearHDR modes (imx477, imx283 …).
+  On an imx585 it is present, but the knobs only do something while a ClearHDR mode is selected;
+  see <a href="../clear-hdr/">clear-hdr.md</a>.</li>
+<li>Anamorphic factor restarts the camera. Everything else in the drawer applies live.</li>
+<li>Free stepping changes a parameter's <code>inc</code>/<code>dec</code> granularity, not its value: it swaps that
+  parameter's step table in <code>settings.jsonc</code> for continuous stepping by its <code>free_increment</code>.</li>
+<li>ISO, shutter angle, FPS and white balance are also in the top row as steppers. The sliders are
+  the same commands — use whichever suits the gesture.</li>
+<li>
+<p>A slider is one of two kinds, decided by what its command does with an arbitrary value:</p>
+<table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>Controls</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Continuous</td>
+<td>ISO, zoom</td>
+<td>The command clamps to a range, so any position on the track is reachable</td>
+</tr>
+<tr>
+<td>Step table</td>
+<td>Shutter angle, FPS, WB</td>
+<td>The command snaps to a table, so the slider offers exactly that table's values and nothing else</td>
+</tr>
+</tbody>
+</table>
+<p>The step tables are live. Change the frame rate and the shutter slider re-grids to the new
+flicker-free angles; change sensor mode and the FPS slider re-grids to the new ceiling; toggle a
+free-stepping button and the affected slider swaps its preset table for a continuous grid.
+- A slider greys out and stops accepting input when its parameter is locked (<code>ISO LOCK</code>, <code>SHUTTER
+  LOCK</code>, <code>FPS LOCK</code>, <code>ALL LOCK</code>) — a locked parameter drops the write silently, so the row says so
+  rather than appearing to accept a value. The FPS slider also greys out while a resolution switch
+  is in flight, because that is the one setter that can block for seconds.
+- Each slider has a <code>↺</code> arrow that restores that control's startup value from <code>settings.jsonc</code>
+  (<code>image_capture.hdr.*</code> for the HDR knobs, <code>hdmi_display.preview.default_zoom</code> for zoom, 180° for
+  nominal shutter angle). It greys out when the value is already the default.
+- Sliders show the live value, so one moves when a pot, the quad rotary, serial or the CLI changes
+  the same parameter. A slider you have just moved holds where you put it until the camera reports
+  the same value back — it does not spring back mid-round-trip. If the value never comes back the
+  write did not stick, and after a few seconds the slider returns to the true value; the reason
+  appears as a banner (<code>requested 8, live value is 4</code>).
+- <code>erase</code>, <code>format</code>, <code>reboot</code> and <code>shutdown</code> are deliberately absent — they are the four commands
+  the web API blocks unless <code>allow_destructive</code> is set. Use the
+  <a href="../cli-commands/">CLI</a> for those.</p>
+</li>
 </ul>
 <div class="admonition note">
-<p>When using dual sensors, the second camera's preview stream is served on port <code>8001</code>. The control UI stays on port <code>5000</code>.</p>
+<p>When using dual sensors, the second camera's preview stream is served on port <code>8001</code> and shown
+side-by-side with cam0, with its own status column. The control UI stays on port <code>5000</code>.</p>
 </div>
 </div>
 
@@ -178,7 +323,7 @@
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
         <a href="../simple-gui/" class="btn btn-neutral float-left" title="Simple GUI"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../audio-recording/" class="btn btn-neutral float-right" title="Audio recording">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../web-api/" class="btn btn-neutral float-right" title="Web API">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -208,7 +353,7 @@
       <span><a href="../simple-gui/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../audio-recording/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../web-api/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

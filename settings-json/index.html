@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
         <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
@@ -60,6 +59,10 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
@@ -73,12 +76,22 @@
               <ul class="current">
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Settings file</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#welcome-message">welcome message</a>
-    </li>
     <li class="toctree-l2"><a class="reference internal" href="#system">system</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#camera">camera</a>
         <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#welcome">welcome</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#wifi_hotspot">wifi_hotspot</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#web_api">web_api</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#storage">storage</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#sensors">sensors</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#record_policy">record_policy</a>
+    </li>
     <li class="toctree-l3"><a class="reference internal" href="#geometry">geometry</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#output">output</a>
@@ -87,57 +100,69 @@
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#phase_lock">phase_lock</a>
     </li>
+    <li class="toctree-l3"><a class="reference internal" href="#tuning_file_override">tuning_file_override</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#log_encode">log_encode</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#database_file">database_file</a>
+    </li>
         </ul>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#hdmi_gui">hdmi_gui</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#hdmi_display">hdmi_display</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#preview">preview</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#lock_dual_recording">lock_dual_recording</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#audio">audio</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#anamorphic_preview">anamorphic_preview</a>
-    </li>
-    <li class="toctree-l2"><a class="reference internal" href="#gpio_output">gpio_output</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#settings">settings</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#arrays">arrays</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#analog_controls">analog_controls</a>
+    <li class="toctree-l2"><a class="reference internal" href="#image_capture">image_capture</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#free_mode">free_mode</a>
+    <li class="toctree-l2"><a class="reference internal" href="#audio_capture">audio_capture</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#resolutions">resolutions</a>
+    <li class="toctree-l2"><a class="reference internal" href="#hdmi_display">hdmi_display</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#overlays">overlays</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#sensors">sensors</a>
+    <li class="toctree-l3"><a class="reference internal" href="#preview">preview</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#dynamic_resolution">dynamic_resolution</a>
+        </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#buttons">buttons</a>
+    <li class="toctree-l2"><a class="reference internal" href="#hardware_controls">hardware_controls</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#buttons">buttons</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#two_way_switches">two_way_switches</a>
+    <li class="toctree-l3"><a class="reference internal" href="#two_way_switches">two_way_switches</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#three_way_switches">three_way_switches</a>
+    <li class="toctree-l3"><a class="reference internal" href="#three_way_switches">three_way_switches</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#combined_actions">combined_actions</a>
+    <li class="toctree-l3"><a class="reference internal" href="#rotary_encoders">rotary_encoders</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#rotary_encoders">rotary_encoders</a>
+    <li class="toctree-l3"><a class="reference internal" href="#combined_actions">combined_actions</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#quad_rotary_controller">quad_rotary_controller</a>
+        </ul>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#i2c_oled">i2c_oled</a>
+    <li class="toctree-l2"><a class="reference internal" href="#input_peripherals">input_peripherals</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#pots">pots</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#quad_rotary_controller">quad_rotary_controller</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#hardware_outputs">hardware_outputs</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#output_peripherals">output_peripherals</a>
     </li>
     </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
@@ -149,6 +174,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
@@ -167,6 +194,8 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
+                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
@@ -174,14 +203,18 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <p class="caption"><span class="caption-text">About</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -212,77 +245,161 @@
             <div class="section" itemprop="articleBody">
               
 <div class="markdown-body">
-  <h1 id="settingsjson-file">Settings.json file<a class="headerlink" href="#settingsjson-file" title="Permanent link">#</a></h1>
-<p>This file controls how the camera behaves and how your buttons, switches and displays are mapped. It lives in <code>~/cinemate/src/settings.json</code>. You can edit it with any text editor; the settings take effect the next time you start Cinemate.</p>
+  <h1 id="settingsjsonc-file">Settings.jsonc file<a class="headerlink" href="#settingsjsonc-file" title="Permanent link">#</a></h1>
+<p>This file controls how the camera behaves and how your buttons, switches and displays are mapped. It lives in <code>~/cinemate/settings.jsonc</code>. You can edit it with any text editor; the settings take effect the next time you start Cinemate.</p>
 <div class="admonition note">
-<p>The prebuilt image works out of the box. You do <strong>not</strong> need to edit <code>settings.json</code> to start shooting. This page is a reference for when you want to customise hardware controls and behaviour.</p>
+<p>The prebuilt image works out of the box. You do <strong>not</strong> need to edit <code>settings.jsonc</code> to start shooting. This page is a reference for when you want to customise hardware controls and behaviour.</p>
 </div>
-<p>The image ships with a stock <code>settings.json</code> that already holds working defaults for every section below — button and switch mappings, preview, and audio (for example, a 2-frame audio timecode offset on both microphone paths). Edit it only to change a mapping or tune behaviour.</p>
+<p>The image ships with a stock <code>settings.jsonc</code> that already holds working defaults for every section below — button and switch mappings, preview, and audio (for example, a 2-frame audio timecode offset on both microphone paths). Edit it only to change a mapping or tune behaviour.</p>
 <div class="admonition tip">
 <p>For easy editing of settings on the preinstalled image file, type <code>editsettings</code> anywhere in Raspberry Pi terminal.</p>
 </div>
-<p>The configuration is structured as JSON. Each top‑level key describes a feature area of the system. Below is a tour of every section and what the options do.</p>
-<h2 id="welcome-message">welcome message<a class="headerlink" href="#welcome-message" title="Permanent link">#</a></h2>
-<p>Text or image displayed briefly when Cinemate starts.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;show_welcome_message&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="nt">&quot;welcome_image&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<span class="nt">&quot;welcome_message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;THIS IS A COOL MACHINE&quot;</span>
-</code></pre></div>
-<p>Set <code>show_welcome_message</code> to <code>true</code> to display the configured startup splash for at least 3 seconds. Set it to <code>false</code> to skip the startup message entirely. If the key is missing, Cinemate defaults to showing the startup message. Older installs that still use <code>show_startup_message</code> continue to work as a fallback.</p>
-<p>If Plymouth is active during boot, Cinemate waits until the spinner hands off before it shows the welcome message so the screen transition stays clean.
-Set <code>welcome_image</code> to the path of a bitmap file to show a logo instead of text. </p>
-<p>Example path: <code>/home/pi/welcome_image.bmp</code>. </p>
-<p>If <code>welcome_image</code> is set, it overrides the text message.</p>
+<p>The configuration is JSON with <code>//</code> and <code>/* */</code> comments and trailing commas allowed (JSONC) — the shipped file uses both to annotate the trickier keys in place. Each top‑level key describes a feature area of the system:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Covers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#system"><code>system</code></a></td>
+<td>Splash screen, Wi‑Fi hotspot, web API, storage behaviour</td>
+</tr>
+<tr>
+<td><a href="#sensors"><code>sensors</code></a></td>
+<td>Per-sensor hardware: geometry, HDMI output, name spoofing, phase lock, CineMate Log, sensor database</td>
+</tr>
+<tr>
+<td><a href="#settings"><code>settings</code></a></td>
+<td>Frame-rate conform target, flicker-free input, sync tolerances</td>
+</tr>
+<tr>
+<td><a href="#arrays"><code>arrays</code></a></td>
+<td>One block per cycle-able camera parameter: ISO, shutter angle, FPS, white balance</td>
+</tr>
+<tr>
+<td><a href="#image_capture"><code>image_capture</code></a></td>
+<td>Resolution / bit-depth / HDR filters</td>
+</tr>
+<tr>
+<td><a href="#audio_capture"><code>audio_capture</code></a></td>
+<td>Capture gain and timecode offset, per microphone path</td>
+</tr>
+<tr>
+<td><a href="#hdmi_display"><code>hdmi_display</code></a></td>
+<td>Everything the operator sees: HDMI canvas, GUI overlays, preview zoom/source/pip/anamorphic</td>
+</tr>
+<tr>
+<td><a href="#hardware_controls"><code>hardware_controls</code></a></td>
+<td>Direct-GPIO physical inputs, channel-first: buttons, switches, rotary encoders, combined actions</td>
+</tr>
+<tr>
+<td><a href="#input_peripherals"><code>input_peripherals</code></a></td>
+<td>Grove Base HAT analog pots + the Adafruit quad I2C rotary encoder board</td>
+</tr>
+<tr>
+<td><a href="#hardware_outputs"><code>hardware_outputs</code></a></td>
+<td>Direct-GPIO outputs Cinemate drives: REC tally/relay pins, REC sync tone</td>
+</tr>
+<tr>
+<td><a href="#output_peripherals"><code>output_peripherals</code></a></td>
+<td>The optional I2C OLED status screen</td>
+</tr>
+</tbody>
+</table>
 <h2 id="system">system<a class="headerlink" href="#system" title="Permanent link">#</a></h2>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;system&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;wifi_hotspot&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CinePi&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;password&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;11111111&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
-<span class="w">  </span><span class="p">}</span>
-<span class="p">}</span>
+<p>Splash screen, network, and storage behaviour.</p>
+<div class="highlight"><pre><span></span><code>"system": {
+  "welcome": {
+    "show": true,
+    "message": "THIS IS A COOL MACHINE",
+    "image": null
+  },
+  "wifi_hotspot": {
+    "name": "CinePi",
+    "password": "11111111",
+    "enabled": true
+  },
+  "web_api": {
+    "enabled": true,
+    "token": "",
+    "allow_destructive": false,
+    "max_commands_per_sec": 20,
+    "max_sse_clients": 4,
+    "broadcast": { "enabled": true, "port": 8888, "hz": 5, "keys": ["is_recording", "iso"] }
+  },
+  "storage": {
+    "auto_preroll": true
+  }
+}
 </code></pre></div>
-<p><code>name</code> – the Wi‑Fi network name (SSID) broadcast by the Pi when hotspot mode is enabled.
-<code>password</code> – password for joining the hotspot.
+<h3 id="welcome">welcome<a class="headerlink" href="#welcome" title="Permanent link">#</a></h3>
+<p>Text or image displayed briefly when Cinemate starts.</p>
+<p><code>show</code> – <code>true</code> to display the configured startup splash for at least 3 seconds, <code>false</code> to skip it entirely. If Plymouth is active during boot, Cinemate waits until the spinner hands off before it shows the welcome message so the screen transition stays clean.<br>
+<code>message</code> – the splash text.<br>
+<code>image</code> – path to a bitmap file to show a logo instead of text, e.g. <code>/home/pi/welcome_image.bmp</code>. Overrides <code>message</code> when set.</p>
+<h3 id="wifi_hotspot">wifi_hotspot<a class="headerlink" href="#wifi_hotspot" title="Permanent link">#</a></h3>
+<p><code>name</code> – the Wi‑Fi network name (SSID) broadcast by the Pi when hotspot mode is enabled.<br>
+<code>password</code> – password for joining the hotspot.<br>
 <code>enabled</code> – set to <code>true</code> to start the hotspot automatically on boot. If set to <code>false</code>, Cinemate can still serve its web UI on whatever network the Pi is connected to, as long as <code>wlan0</code> or <code>eth0</code> already has an IP address when Cinemate starts.</p>
 <p>Use the hotspot when you need a direct connection in the field. Disable it during development so the Pi can join your regular Wi‑Fi and reach the internet. If you are connected to the Pi via Ethernet you can keep the hotspot on.</p>
-<h2 id="camera">camera<a class="headerlink" href="#camera" title="Permanent link">#</a></h2>
-<p>All per-port settings live inside a <code>cam0</code> or <code>cam1</code> block so every option for a given camera port is visible in one place. <code>raw_buffer_count</code> is the only global key.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;camera&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;raw_buffer_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;cam0&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;geometry&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;rotate_180&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;horizontal_flip&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;vertical_flip&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
-<span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;output&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;hdmi_port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
-<span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;override_camera_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;camera_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Blackmagic Pocket Cinema Camera 4K&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;phase_lock&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
-<span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;cam1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;geometry&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;rotate_180&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;horizontal_flip&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;vertical_flip&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
-<span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;output&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;hdmi_port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
-<span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;override_camera_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;camera_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Blackmagic Pocket Cinema Camera 4K&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;phase_lock&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
-<span class="w">  </span><span class="p">}</span>
-<span class="p">}</span>
+<h3 id="web_api">web_api<a class="headerlink" href="#web_api" title="Permanent link">#</a></h3>
+<p>Wireless control API for microcontrollers (ESP32/Pico/M5Stack etc.) over the hotspot — same commands as the Cinemate CLI, over HTTP, plus a UDP status broadcast for tally lights and displays. See <a href="../web-api/">Web API</a> and <a href="../building-control-units/">Building control units</a>.</p>
+<p><code>enabled</code> – turns the API off entirely when <code>false</code>.<br>
+<code>token</code> – when set, requests must carry it in <code>X-Cinemate-Token</code>. Leave <code>""</code> only on a trusted/isolated hotspot.<br>
+<code>allow_destructive</code> – when <code>false</code> (default), blocks <code>reboot</code>/<code>shutdown</code>/<code>erase</code>/<code>format</code> over the API. The hotspot password ships as <code>11111111</code>, so this defaults closed.<br>
+<code>max_commands_per_sec</code> – per-client rate limit.<br>
+<code>max_sse_clients</code> – concurrent <code>/events</code> connections.<br>
+<code>broadcast</code> – the UDP status line: <code>enabled</code>, <code>port</code>, <code>hz</code> (rate), and <code>keys</code> (which Redis keys appear in the broadcast).</p>
+<h3 id="storage">storage<a class="headerlink" href="#storage" title="Permanent link">#</a></h3>
+<p><code>auto_preroll</code> – controls the short automatic warm-up recording that prepares mounted media before the first real take. Set it to <code>true</code> to run the warm-up on startup and when RAW storage mounts. Set it to <code>false</code> to skip only the automatic startup and mount-triggered pre-rolls. Manual <code>storage preroll</code> CLI runs remain available either way. See <a href="../storage-preroll/">Storage pre-roll</a>.</p>
+<h2 id="sensors">sensors<a class="headerlink" href="#sensors" title="Permanent link">#</a></h2>
+<p>Per-sensor hardware. All per-port settings live inside a <code>cam0</code> or <code>cam1</code> block so every option for a given camera port is visible in one place. <code>raw_buffer_count</code>, <code>record_policy</code>, and <code>database_file</code> are the global keys.</p>
+<div class="highlight"><pre><span></span><code>"sensors": {
+  "raw_buffer_count": 0,
+  "record_policy": "follow_preview",
+  "cam0": {
+    "geometry": {
+      "rotate_180": false,
+      "horizontal_flip": false,
+      "vertical_flip": false
+    },
+    "output": {
+      "hdmi_port": 0
+    },
+    "override_camera_name": true,
+    "camera_name": "cinepi",
+    "phase_lock": true,
+    "tuning_file_override": { "enabled": false, "path": "resources/tuning_files/imx477.json" },
+    "log_encode": false
+  },
+  "cam1": {
+    "geometry": {
+      "rotate_180": false,
+      "horizontal_flip": false,
+      "vertical_flip": false
+    },
+    "output": {
+      "hdmi_port": 1
+    },
+    "override_camera_name": true,
+    "camera_name": "cinepi",
+    "phase_lock": true,
+    "tuning_file_override": { "enabled": false, "path": "resources/tuning_files/imx477.json" },
+    "log_encode": false
+  },
+  "database_file": "resources/sensors.json"
+}
 </code></pre></div>
 <p><code>raw_buffer_count</code> – how many frames <code>cinepi-raw</code> keeps in RAM as a write-burst absorber. Leave it at <code>0</code> (default); the active storage profile picks the right depth automatically.</p>
 <details class="note">
 <summary>raw_buffer_count / CMA buffer tuning</summary>
 <p>The sensor produces frames at a fixed rate but storage write speed is uneven — exFAT can stall during cluster allocation or directory updates. Frames that land during a stall are held in the RAM ring until the disk catches up; no frames are dropped as long as the stall is shorter than the buffer depth. More buffers = more RAM used, but more tolerance for storage hiccups. <code>0</code> (default) lets the active storage profile pick the right depth for your sensor, filesystem, and storage type — this is almost always correct. Raise it only if you see single-frame TC holes (<code>DROP</code> flashing) and <code>grep Cma /proc/meminfo</code> confirms spare CMA headroom (~25 MB per extra buffer at 4K).</p>
 </details>
+<h3 id="record_policy">record_policy<a class="headerlink" href="#record_policy" title="Permanent link">#</a></h3>
+<p>Dual-sensor record policy. <code>"follow_preview"</code> (default) makes recording follow the HDMI preview: a full-screen or pip-main sensor records alone, side-by-side records both. <code>"always_both"</code> forces both sensors to record every take regardless of the preview. A camera token on <code>rec</code> (<code>rec cam0</code> / <code>rec cam1</code> / <code>rec both</code>) overrides either policy for one take. No effect with a single sensor. See <a href="../dual-sensors/#recording">Dual sensors › Recording</a>.</p>
 <h3 id="geometry">geometry<a class="headerlink" href="#geometry" title="Permanent link">#</a></h3>
 <p>Controls image orientation for the camera mounted on this port. These settings let you mount cameras in any orientation and still get an upright preview and recording.</p>
 <p><code>rotate_180</code> – flip the image upside-down.<br>
@@ -296,11 +413,12 @@ Set <code>welcome_image</code> to the path of a bitmap file to show a logo inste
 </div>
 <h3 id="camera-name">camera name<a class="headerlink" href="#camera-name" title="Permanent link">#</a></h3>
 <p><code>override_camera_name</code> – when <code>true</code>, the value of <code>camera_name</code> is passed to <code>cinepi-raw</code> as <code>--unique-camera-model</code> and written into the <code>UniqueCameraModel</code> DNG tag of every recorded frame. When <code>false</code>, <code>cinepi-raw</code> uses its built-in default.<br>
-<code>camera_name</code> – the string to embed when <code>override_camera_name</code> is <code>true</code>.</p>
+<code>camera_name</code> – the string to embed when <code>override_camera_name</code> is <code>true</code>. The stock file ships <code>true</code> with <code>"cinepi"</code> — the same tag <code>cinepi-raw</code> uses on its own — so changing the embedded name is a one-line edit.</p>
 <details class="note">
 <summary>Why Blackmagic Pocket Cinema Camera 4K</summary>
 <p>DaVinci Resolve uses the <code>UniqueCameraModel</code> DNG tag to identify the camera and select the matching decode pipeline. When this tag matches a known Blackmagic camera, Resolve unlocks the full Camera RAW tab — including the ISO slider, colour science selection (Gen 4 / Gen 5), and the corresponding tone curve and noise reduction presets. With an unknown or missing camera model the RAW tab is limited and ISO behaves as a simple exposure offset rather than selecting a proper decode curve.</p>
 <p>Setting <code>camera_name</code> to <code>"Blackmagic Pocket Cinema Camera 4K"</code> is therefore not cosmetic — it is what makes Resolve treat the footage as genuine BRAW-adjacent DNG and apply the correct ISO-aware decode.</p>
+<p><strong>Caveat once <a href="../cinemate-log/">CineMate Log</a> is in use:</strong> the Blackmagic spoof layers BMD colour science and its own tone curve on top of data that CineMate Log has already linearised via the DNG <code>LinearizationTable</code>. Keep <code>camera_name</code> at <code>"cinepi"</code> (the stock value) on any camera recording log — spoofing and log-encoding the same clip confound each other in the grade. The spoof is still fine for a camera you are recording in plain linear DNGs.</p>
 </details>
 <h3 id="phase_lock">phase_lock<a class="headerlink" href="#phase_lock" title="Permanent link">#</a></h3>
 <p><code>phase_lock</code> – <code>true</code> (default) keeps audio and video aligned over long takes by locking the recorded frame cadence to the Pi clock. Leave it on.</p>
@@ -310,121 +428,126 @@ Set <code>welcome_image</code> to the path of a bitmap file to show a logo inste
 <p>Cinemate writes this per-camera flag to the shared <code>fps_phase_lock</code> runtime key, which <code>cinepi-raw</code> reads (it is off by default in <code>cinepi-raw</code> itself when run standalone). The loop is VBLANK-only and holds the recorded cadence on the nominal FPS directly, so no per-sensor FPS-correction table is needed.</p>
 <p><strong>Multi-camera genlock.</strong> <code>phase_lock</code> can stay <code>true</code> on a multi-camera <code>--sync</code> (beam-splitter / genlock) rig. <code>cinepi-raw</code> infers its role from <code>--sync</code>: the master (<code>--sync server</code>) runs the phase lock and disciplines the pair to the Pi clock, while the <code>--sync client</code> automatically suppresses its own phase lock and lets libcamera's <code>rpi.sync</code> hold the relative camera-to-camera (A→B) alignment. One setting works for single and dual — no per-camera differentiation. See <a href="../dual-sensors/">Dual sensors</a>.</p>
 </div>
-<h2 id="hdmi_gui">hdmi_gui<a class="headerlink" href="#hdmi_gui" title="Permanent link">#</a></h2>
-<p>Controls optional HDMI GUI overlays.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;hdmi_gui&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;buffer_vu_meter&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;vu_meter_hatch_lines&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
-<span class="p">}</span>
-</code></pre></div>
-<p><code>buffer_vu_meter</code> – show or hide the vertical RAM-buffer meter on the HDMI GUI.
-<br><code>vu_meter_hatch_lines</code> – draw hatch lines inside the buffer meter fill.</p>
-<h2 id="hdmi_display">hdmi_display<a class="headerlink" href="#hdmi_display" title="Permanent link">#</a></h2>
-<p>Sets the preferred HDMI GUI canvas size.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;hdmi_display&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1920</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1080</span>
-<span class="p">}</span>
-</code></pre></div>
-<p>Use this to tell Cinemate what size GUI canvas you want to target. If the active framebuffer is smaller, Cinemate now falls back to the active framebuffer size instead of drawing a clipped <code>1920x1080</code> layout into a smaller mode.</p>
-<h2 id="preview">preview<a class="headerlink" href="#preview" title="Permanent link">#</a></h2>
-<p>Adjusts zoom levels for the HDMI/browser preview.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;preview&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;default_zoom&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;zoom_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.5</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;default_hdmi_source&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;both&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;pip&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;scale&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.28</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;corner&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lower_right&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;margin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.03</span>
-<span class="w">  </span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div>
-<p><code>default_zoom</code> – magnification factor used at startup.<br><code>zoom_steps</code> – list of zoom factors you can cycle through with the <code>set_zoom_step</code> command.<br><code>default_hdmi_source</code> – dual-sensor HDMI preview source at startup: <code>both</code>, <code>cam0</code>, <code>cam1</code>, <code>pip_cam0</code>, or <code>pip_cam1</code>. Switch it live with <a href="../cli-commands/"><code>set preview</code></a>. No effect with a single sensor.</p>
-<p><code>pip</code> – picture-in-picture inset geometry for the <code>pip_cam0</code> / <code>pip_cam1</code> preview modes.<br><code>scale</code> – inset size as a fraction of the main pane (default <code>0.28</code>).<br><code>corner</code> – <code>lower_right</code>, <code>lower_left</code>, <code>upper_right</code>, or <code>upper_left</code> (default <code>lower_right</code>).<br><code>margin</code> – gap from the edge as a fraction of the pane (default <code>0.03</code>). See <a href="../dual-sensors/#picture-in-picture">Dual sensors</a>.</p>
-<h2 id="lock_dual_recording">lock_dual_recording<a class="headerlink" href="#lock_dual_recording" title="Permanent link">#</a></h2>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;lock_dual_recording&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
-</code></pre></div>
-<p>Dual-sensor record policy. <code>false</code> (default) makes recording follow the HDMI preview: a full-screen or pip-main sensor records alone, side-by-side records both. <code>true</code> forces both sensors to record every take regardless of the preview. A camera token on <code>rec</code> (<code>rec cam0</code> / <code>rec cam1</code> / <code>rec both</code>) overrides either mode for one take. No effect with a single sensor. See <a href="../dual-sensors/#recording">Dual sensors › Recording</a>.</p>
-<h2 id="audio">audio<a class="headerlink" href="#audio" title="Permanent link">#</a></h2>
-<p>Audio capture options shared by idle monitoring and recorded WAV input level. The stock file applies a 2-frame timecode offset on both paths.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;audio&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;24bit&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;capture_gain_db&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">6.0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;timecode_offset_frames&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span>
-<span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;16bit&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;capture_gain_db&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">6.0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;timecode_offset_frames&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span>
-<span class="w">  </span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div>
-<p>Settings are split by the bit depth negotiated with the connected microphone. <code>24bit</code> applies when the mic supports 24-bit stereo capture (<code>mic_24bit</code> ALSA alias); <code>16bit</code> applies when only 16-bit mono is available (<code>mic_16bit</code> alias).</p>
-<p><code>capture_gain_db</code> – target ALSA capture gain in decibels applied when the microphone is detected. <code>0.0</code> means unity gain. Positive values boost the capture level, negative values attenuate it. For 16-bit mics this value is also passed into <code>cinepi-raw</code> via Redis so that a post-take software gain can be applied to the WAV if the hardware exposes no writable ALSA control.</p>
-<p><code>timecode_offset_frames</code> – frame offset applied to the WAV timecode metadata after each take. A <strong>positive</strong> value moves the WAV timecode later (use when audio arrives <em>early</em> relative to video); a negative value moves it earlier. Only the embedded timecode is shifted — the PCM is never moved. <code>24bit.timecode_offset_frames</code> is used whenever the capture helper is active (both 24-bit and 16-bit mics going through the helper). <code>16bit.timecode_offset_frames</code> applies to 16-bit mics specifically, overriding the 24-bit value for that path.</p>
-<p>Some USB microphones expose a writable ALSA capture control and some do not. When the mic supports it, Cinemate applies <code>capture_gain_db</code> via <code>amixer</code> when the microphone is detected. If the device exposes no compatible control, the setting is silently skipped and the log will note that the mic likely has fixed hardware gain.</p>
-<h2 id="anamorphic_preview">anamorphic_preview<a class="headerlink" href="#anamorphic_preview" title="Permanent link">#</a></h2>
-<p>For stretching the preview when using anamorphic lenses.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;anamorphic_preview&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;default_anamorphic_factor&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;anamorphic_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mf">1.33</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">]</span>
-<span class="p">}</span>
-</code></pre></div>
-<p><code>default_anamorphic_factor</code> – factor loaded when Cinemate starts.
-<br><code>anamorphic_steps</code> – selectable squeeze factors; values above <code>1.0</code> widen the image.</p>
-<h2 id="gpio_output">gpio_output<a class="headerlink" href="#gpio_output" title="Permanent link">#</a></h2>
-<p>Defines pins used for visual feedback or sync signals.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;gpio_output&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;pwm_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">19</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;rec_out_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="mi">21</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;rec_tone_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">18</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;rec_tone_frequency_hz&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;rec_tone_duty_cycle&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">50</span>
-<span class="p">}</span>
-</code></pre></div>
-<ul>
-<li>
-<p><code>pwm_pin</code> – outputs a strobe for shutter sync or external devices.</p>
-</li>
-<li>
-<p><code>rec_out_pin</code> – list of pins pulled high while recording (useful for tally LEDs).</p>
-</li>
-<li>
-<p><code>rec_tone_pin</code> – optional tone output pin(s) used as recording sync tone. You can pass a single pin or a list of pins.
-  GPIO <code>18</code> and <code>19</code> use <strong>hardware PWM</strong> (preferred for stable tone generation). Any other pin uses <strong>software PWM</strong> fallback. The tone starts as soon as recording is requested (<code>is_recording = 1</code>), even before REC-light write confirmation, stops once writing stops (<code>is_writing = 0</code>), and is muted during storage pre-roll. If <code>rec_tone_pin</code> is unset or an empty list, Cinemate falls back to <code>pwm_pin</code> for backward compatibility.</p>
-</li>
-<li>
-<p><code>rec_tone_frequency_hz</code> – tone frequency in hertz.</p>
-</li>
-<li>
-<p><code>rec_tone_duty_cycle</code> – PWM duty cycle percentage (<code>0–100</code>).</p>
-</li>
-<li><code>rec_tone_relay_drop_frames</code> – when <code>true</code>, each live drop-frame pulse (<code>drop_frame_relay = 1</code>) briefly mutes REC tone output for about one frame, then resumes automatically.</li>
-</ul>
+<h3 id="tuning_file_override">tuning_file_override<a class="headerlink" href="#tuning_file_override" title="Permanent link">#</a></h3>
+<p><code>enabled</code> – use <code>path</code> instead of the libcamera tuning file Cinemate would otherwise pick for the detected sensor.<br>
+<code>path</code> – tuning file to use when <code>enabled</code> is <code>true</code>.</p>
+<h3 id="log_encode">log_encode<a class="headerlink" href="#log_encode" title="Permanent link">#</a></h3>
+<p><code>log_encode</code> – this camera's <a href="../cinemate-log/">CineMate Log</a> setting: <code>false</code> (default, off), <code>true</code> (on, using the live sensor mode's default target), or <code>10</code> / <code>12</code> to force that target explicitly when the live mode supports it. Only imx585 and imx283 support it; the setting is ignored on every other sensor. See <a href="../cinemate-log/">CineMate Log</a> for the full picture, including the <code>set log</code> CLI command and the per-camera <code>LOG10</code>/<code>LOG12</code> badge on the Simple GUI.</p>
+<h3 id="database_file">database_file<a class="headerlink" href="#database_file" title="Permanent link">#</a></h3>
+<p>Points Cinemate at the sensor metadata database. It lists the <strong>full</strong> set of modes each sensor supports — every mode stays available to the system — alongside known packing modes and documentation metadata. The <a href="#image_capture">image_capture</a> filter selects which of those modes appear in the UI.</p>
+<p><code>database_file</code> – JSON file containing compatible sensor metadata. The default file is <code>resources/sensors.json</code>.</p>
 <h2 id="settings">settings<a class="headerlink" href="#settings" title="Permanent link">#</a></h2>
-<p>General options for runtime behaviour.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;settings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;auto_storage_preroll&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;light_hz&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="mi">60</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;conform_frame_rate&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;live_sync_warning_tolerance_frames&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;final_sync_analysis_tolerance_frames&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
-<span class="p">}</span>
+<p>Frame-rate conform target, flicker-free input, and sync tolerances.</p>
+<div class="highlight"><pre><span></span><code>"settings": {
+  "conform_frame_rate": 25,
+  "light_hz": [50, 60],
+  "sync_tolerances": {
+    "live_sync_warning_frames": 5,
+    "live_sync_startup_guard_frames": 10,
+    "final_sync_analysis_frames": 1,
+    "tc_drop_jitter_frames": 1
+  }
+}
 </code></pre></div>
-<p><code>auto_storage_preroll</code> – controls the short automatic warm-up recording that prepares mounted media before the first real take. Set it to <code>true</code> to run the warm-up on startup and when RAW storage mounts. Set it to <code>false</code> to skip only the automatic startup and mount-triggered pre-rolls. Manual <code>storage preroll</code> CLI runs remain available either way.
-<br>
-<code>light_hz</code> – list of mains frequencies used to calculate flicker‑free shutter angles. These are added to the shutter angle array and also dynamically calculated upon each fps change. This way, there is always a flicker free shutter angle value close by, when toggling through shutter angles, either via the cli or using buttons/pots/rotary encoder.
-<br><code>conform_frame_rate</code> – frame rate intendend for project conforming in post. This setting is not really used by CineMate except for calculating the recording timecode tracker in redis but might be used in future updates.
-<br><code>live_sync_warning_tolerance_frames</code> – frame-slot tolerance for the live magenta <code>SYNC</code> warning during a take. The default is <code>2</code>, so brief +/- 2 frame live drift is allowed before the warning latches.
-<br><code>final_sync_analysis_tolerance_frames</code> – frame tolerance for the end-of-take DNG count analysis after buffered frames have flushed. The default is <code>1</code>, keeping the final result stricter than the live warning.</p>
+<p><code>conform_frame_rate</code> – frame rate intended for project conforming in post. This setting is not really used by CineMate except for calculating the recording timecode tracker in redis but might be used in future updates.<br>
+<code>light_hz</code> – list of mains frequencies used to calculate flicker‑free shutter angles. These are added to the shutter angle steps (see <a href="#arrays">arrays</a>) and also dynamically calculated upon each fps change. This way, there is always a flicker free shutter angle value close by, when toggling through shutter angles, either via the cli or using buttons/pots/rotary encoder.</p>
+<p><code>sync_tolerances</code>:</p>
+<p><br><code>live_sync_warning_frames</code> – frame-slot tolerance for the live magenta <code>SYNC</code> warning during a take.
+<br><code>live_sync_startup_guard_frames</code> – grace period, in frames, right after recording starts before the live warning can latch.
+<br><code>final_sync_analysis_frames</code> – frame tolerance for the end-of-take DNG count analysis after buffered frames have flushed. Kept stricter than the live warning by default.
+<br><code>tc_drop_jitter_frames</code> – tolerance for late-but-present frames (TC holes) before they count as a sync concern.</p>
 <h2 id="arrays">arrays<a class="headerlink" href="#arrays" title="Permanent link">#</a></h2>
-<p>Preset lists for exposure and frame‑rate settings. Cinemate will step through these values unless you enable free mode, either in the settings file or during runtime.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;arrays&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;iso_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="mi">400</span><span class="p">,</span><span class="w"> </span><span class="mi">640</span><span class="p">,</span><span class="w"> </span><span class="mi">800</span><span class="p">,</span><span class="w"> </span><span class="mi">1200</span><span class="p">,</span><span class="w"> </span><span class="mi">1600</span><span class="p">,</span><span class="w"> </span><span class="mi">2500</span><span class="p">,</span><span class="w"> </span><span class="mi">3200</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;shutter_a_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">45</span><span class="p">,</span><span class="w"> </span><span class="mi">90</span><span class="p">,</span><span class="w"> </span><span class="mi">135</span><span class="p">,</span><span class="w"> </span><span class="mf">172.8</span><span class="p">,</span><span class="w"> </span><span class="mi">180</span><span class="p">,</span><span class="w"> </span><span class="mi">225</span><span class="p">,</span><span class="w"> </span><span class="mi">270</span><span class="p">,</span><span class="w"> </span><span class="mi">315</span><span class="p">,</span><span class="w"> </span><span class="mf">346.6</span><span class="p">,</span><span class="w"> </span><span class="mi">360</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;fps_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="mi">16</span><span class="p">,</span><span class="w"> </span><span class="mi">18</span><span class="p">,</span><span class="w"> </span><span class="mi">24</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="mi">33</span><span class="p">,</span><span class="w"> </span><span class="mi">40</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;wb_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">3200</span><span class="p">,</span><span class="w"> </span><span class="mi">4400</span><span class="p">,</span><span class="w"> </span><span class="mi">5600</span><span class="p">]</span>
-<span class="p">}</span>
+<p>One block per cycle-able camera parameter: ISO, shutter angle, frame rate, white balance, and the four ClearHDR live knobs. <code>steps</code> is the preset table Cinemate steps through; <code>free</code> switches to a continuous runtime range instead — for potentiometers, rotary encoders, CLI inc/dec commands, and the web GUI. <code>free_increment</code> sets the step size free stepping counts in (bounds are fixed per parameter; only the increment is configurable).</p>
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>free range</th>
+<th><code>free_increment</code> default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>iso</code></td>
+<td>100–3200</td>
+<td>100</td>
+</tr>
+<tr>
+<td><code>shutter_a</code></td>
+<td>1–360°</td>
+<td>1°</td>
+</tr>
+<tr>
+<td><code>fps</code></td>
+<td>1–<code>fps_max</code></td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>wb</code></td>
+<td>2800–6500 K</td>
+<td>100 K</td>
+</tr>
+<tr>
+<td><code>hdr_threshold_low</code> / <code>hdr_threshold_high</code></td>
+<td>0–4095</td>
+<td>16</td>
+</tr>
+<tr>
+<td><code>hdr_blend</code></td>
+<td>0–8</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>hdr_gain_adder</code></td>
+<td>0–5</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p><code>shutter_a</code> has one more field, <code>sync_increment</code> (default 0.1°): the granularity used only while <a href="../cli-commands/">shutter-angle sync mode</a> (<code>set shutter a sync</code>) is on, tracking exposure time continuously across fps changes. It's independent of <code>free_increment</code> — the two used to share a single hardcoded 0.1° value, so toggling sync mode and toggling free stepping looked identical; they're now separate knobs for two different jobs (sync mode's continuous exposure tracking vs. free stepping's manual pot/encoder control).</p>
+<div class="highlight"><pre><span></span><code>"arrays": {
+  "iso": {
+    "steps": [100, 200, 400, 640, 800, 1200, 1600, 2500, 3200],
+    "free": false,
+    "free_increment": 100
+  },
+  "shutter_a": {
+    "steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360],
+    "free": false,
+    "free_increment": 1,
+    "sync_increment": 0.1
+  },
+  "fps": {
+    "steps": [1, 2, 4, 8, 12, 16, 18, 24, 25, 33, 40, 50],
+    "free": true,
+    "free_increment": 1
+  },
+  "wb": {
+    "steps": [3200, 4400, 5600],
+    "free": false,
+    "free_increment": 100
+  },
+  "hdr_threshold_low": {
+    "steps": [0, 512, 1024, 1536, 2048, 2560, 3072, 3584, 4095],
+    "free": false,
+    "free_increment": 16
+  },
+  "hdr_threshold_high": {
+    "steps": [0, 512, 1024, 1536, 2048, 2560, 3072, 3584, 4095],
+    "free": false,
+    "free_increment": 16
+  },
+  "hdr_blend": {
+    "steps": [0, 1, 2, 3, 4, 5, 6, 7, 8],
+    "free": false,
+    "free_increment": 1
+  },
+  "hdr_gain_adder": {
+    "steps": [0, 1, 2, 3, 4, 5],
+    "free": false,
+    "free_increment": 1
+  }
+}
 </code></pre></div>
 <details class="note">
 <summary>How to think about ISO</summary>
@@ -432,201 +555,233 @@ Set <code>welcome_image</code> to the path of a bitmap file to show a logo inste
 <p>Once your DNGs are in Resolve's Camera RAW tab, the pixel values are fixed. ISO there is a decode-time parameter: in Gen 4 color science it selects a different log curve that shifts contrast as well as brightness; in Gen 5 it acts as a linear gain equivalent to the Exposure slider. Either way, correcting a wrong ISO in Resolve costs no additional quality — provided the sensor data was not catastrophically over- or underexposed at capture.</p>
 <p>References: <a href="https://blackmagiccameraapk.pro/blackmagic-raw-explained/">BRAW decode</a> · <a href="https://forum.blackmagicdesign.com/viewtopic.php?f=2&amp;t=130645&amp;start=50">Gen 4 vs Gen 5</a> · <a href="https://forum.blackmagicdesign.com/viewtopic.php?f=2&amp;t=123096">ISO vs Exposure</a> · <a href="https://www.steakunderwater.com/VFXPedia/__man/Resolve18-6/DaVinciResolve18_Manual_files/part202.htm">Resolve Camera RAW manual</a></p>
 </details>
-<h2 id="analog_controls">analog_controls<a class="headerlink" href="#analog_controls" title="Permanent link">#</a></h2>
-<p>Maps Grove Base HAT ADC channels to analogue dials (potentiometers). Use <code>null</code> to disable a dial.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;analog_controls&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;iso_pot&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;shutter_a_pot&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;fps_pot&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;wb_pot&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;None&quot;</span>
-<span class="p">}</span>
+<h2 id="image_capture">image_capture<a class="headerlink" href="#image_capture" title="Permanent link">#</a></h2>
+<p>Which resolution/bit-depth/HDR modes are practical to expose in the UI when cycling resolutions. This is a filter, not the mode list itself: every mode a sensor supports lives in the sensor database (<code>resources/sensors.json</code>, see <a href="#database_file">sensors.database_file</a> above), and <code>image_capture</code> selects the useful subset to show. Hidden modes stay technically available to the system.</p>
+<div class="highlight"><pre><span></span><code>"image_capture": {
+  "k_steps": [1.5, 2, 3, 4],
+  "bit_depths": [10, 12, 16],
+  "hdr": {
+    "sdr": true,
+    "imx585_clear_hdr": true,
+    "threshold_low": 0,
+    "threshold_high": 0,
+    "blend": 0,
+    "gain_adder": 1
+  },
+  "custom_modes": {}
+}
 </code></pre></div>
-<div class="admonition info">
-<p>When using a Grove Base Hat with potentiometers, make sure to define only channels actually connected to potentiometers, since noise from unused connectors might trigger false readings.</p>
-</div>
-<h2 id="free_mode">free_mode<a class="headerlink" href="#free_mode" title="Permanent link">#</a></h2>
-<p>When enabled, ignores the preset arrays and exposes the expanded runtime step tables used by potentiometers, rotary encoders, CLI commands, and the web GUI. White balance free mode uses 100 K steps from 2800 K through 6500 K.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;free_mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;iso_free&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;shutter_a_free&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;fps_free&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;wb_free&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
-<span class="p">}</span>
-</code></pre></div>
-<h2 id="resolutions">resolutions<a class="headerlink" href="#resolutions" title="Permanent link">#</a></h2>
-<p>Choose which sensor modes are practical to expose in the UI when cycling resolutions. This is a filter, not the mode list itself: every mode a sensor supports lives in the sensor database (<code>resources/sensors.json</code>, see <a href="#sensors">sensors</a> below), and <code>resolutions</code> selects the useful subset to show. Hidden modes stay technically available to the system.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;resolutions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;k_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">1.5</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;bit_depths&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;custom_modes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span>
-<span class="p">}</span>
-</code></pre></div>
-<p><code>k_steps</code> – K‑style categories for allowed widths. Modes are grouped to the nearest half‑K. Example: 1332×990 counts as <strong>1.5 K</strong>.
-<br><code>bit_depths</code> – list of bit depths to expose.
-<br><code>custom_modes</code> – optional extra modes per sensor if the driver advertises none.</p>
+<p><code>k_steps</code> – K‑style categories for allowed widths. Modes are grouped to the nearest half‑K. Example: 1332×990 counts as <strong>1.5 K</strong>.<br>
+<code>bit_depths</code> – list of bit depths to expose. <code>16</code> covers the imx585 ClearHDR 16-bit modes (see <a href="../clear-hdr/">ClearHDR</a>).<br>
+<code>hdr.sdr</code> / <code>hdr.imx585_clear_hdr</code> – whitelist of the ClearHDR flag. Both <code>true</code> (default) exposes the plain and the imx585 ClearHDR modes; set <code>imx585_clear_hdr</code> to <code>false</code> to hide the HDR modes, or <code>sdr</code> to <code>false</code> to show only them. Cinemate detects the HDR modes by probing <code>cinepi-raw --list-cameras --hdr sensor</code> alongside the plain list. imx585 has HDR modes at <strong>both</strong> 12-bit and 16-bit, and they are labelled <code>HDR</code> (simple GUI) / <code>:HDR</code> (web GUI). The legacy <code>[false, true]</code> list form still works.<br>
+<code>hdr.threshold_low</code> / <code>hdr.threshold_high</code> / <code>hdr.blend</code> / <code>hdr.gain_adder</code> – startup values for the four ClearHDR live knobs, seeded into Redis at launch. Adjust them afterwards without a restart via <code>set hdr threshold low/high</code>, <code>set hdr blend</code>, <code>set hdr gain adder</code>, or a pot/quad-rotary channel. See <a href="../clear-hdr/#live-knobs">ClearHDR</a> for what each one does.<br>
+<code>custom_modes</code> – per-camera-name list of mode overrides and additions, keyed by sensor name. <code>fps_max</code> (from <code>cinepi-raw --list-cameras</code>) is an electrical property of the sensor — it says nothing about what your storage and CPU can actually sustain at that mode, and only trial recording can find that ceiling. An entry whose <code>width</code>/<code>height</code>/<code>bit_depth</code>/<code>hdr</code> matches an already-detected mode <strong>corrects that mode's <code>fps_max</code> in place</strong>; a non-matching entry <strong>adds</strong> a brand-new mode instead. Settings editor → <em>Per-mode fps ceilings</em> lists every sensor-detected mode with the override pre-filled if one exists — leave a field blank (or equal to the detected value) to record no override, or lower it to whatever your storage profile actually sustains. Raising it above the detected value is allowed but logged as a warning. <code>choose_resolution()</code> needs no separate logic for this: it always selects on <code>fps_max</code>, which is now the effective (overridden or detected) value.</p>
 <div class="admonition note">
 <p class="admonition-title">Design: full capability vs practical exposure</p>
-<p><code>resources/sensors.json</code> lists <strong>every</strong> mode each sensor supports, so all of them are technically available to the system. <code>resolutions</code> then exposes only the <strong>practical</strong> subset in the UI. Example: the IMX283 default <code>k_steps: [3, 4]</code> shows its ≥25 fps modes (2.7K and 4K) and hides the 5K modes (~18–21 fps); those 5K modes stay in <code>sensors.json</code> and reappear if you add <code>5.5</code>. <code>k_steps</code>/<code>bit_depths</code> are global across all sensors.</p>
+<p><code>resources/sensors.json</code> lists <strong>every</strong> mode each sensor supports, so all of them are technically available to the system. <code>image_capture</code> then exposes only the <strong>practical</strong> subset in the UI. <code>k_steps</code>/<code>bit_depths</code> are global across all sensors — the stock <code>[1.5, 2, 3, 4]</code> covers every sensor's everyday modes. For the IMX283 that keeps the ≥25 fps 2.7K and 4K modes (the 3 and 4 steps) and hides the 5K modes (~18–21 fps); those stay in <code>sensors.json</code> and reappear if you add <code>5.5</code>.</p>
 </div>
-<h2 id="sensors">sensors<a class="headerlink" href="#sensors" title="Permanent link">#</a></h2>
-<p>Points Cinemate at the sensor metadata database. It lists the <strong>full</strong> set of modes each sensor supports — every mode stays available to the system — alongside known packing modes, documentation metadata, and sustainable FPS annotations. The <a href="#resolutions">resolutions</a> filter selects which of those modes appear in the UI.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;sensors&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;database_file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;resources/sensors.json&quot;</span>
-<span class="p">}</span>
+<p>Cinemate also always runs <strong>dynamic resolution</strong>: if you select a mode and then raise FPS above what that mode's own sensor-reported maximum (the same number <code>cinepi-raw --list-cameras</code> reports) can sustain, Cinemate automatically switches to the highest-resolution mode that can. FPS returns to your selected mode once you dial back down. There is no setting for this — it always uses the sensor's own reported limits, never a separate measured table.</p>
+<h2 id="audio_capture">audio_capture<a class="headerlink" href="#audio_capture" title="Permanent link">#</a></h2>
+<p>Audio capture options shared by idle monitoring and recorded WAV input level. The stock file applies a 2-frame timecode offset on both paths.</p>
+<div class="highlight"><pre><span></span><code>"audio_capture": {
+  "24bit": {
+    "capture_gain_db": 6.0,
+    "timecode_offset_frames": 2
+  },
+  "16bit": {
+    "capture_gain_db": 6.0,
+    "timecode_offset_frames": 2
+  }
+}
 </code></pre></div>
-<p><code>database_file</code> – JSON file containing compatible sensor metadata. The default file is <code>resources/sensors.json</code>.</p>
-<h2 id="dynamic_resolution">dynamic_resolution<a class="headerlink" href="#dynamic_resolution" title="Permanent link">#</a></h2>
-<p>Automatically chooses the highest measured sustainable resolution for the user-selected frame rate, detected sensor, storage type, and storage filesystem.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;dynamic_resolution&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;profile&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;default&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;profiles_file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;resources/dynamic_resolution_profiles.json&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;highest_sustainable_resolution&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;safety_margin_fps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;match_tolerance_px&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">32</span>
-<span class="p">}</span>
+<p>Settings are split by the bit depth negotiated with the connected microphone. <code>24bit</code> applies when the mic supports 24-bit stereo capture (<code>mic_24bit</code> ALSA alias); <code>16bit</code> applies when only 16-bit mono is available (<code>mic_16bit</code> alias).</p>
+<p><code>capture_gain_db</code> – target ALSA capture gain in decibels applied when the microphone is detected. <code>0.0</code> means unity gain. Positive values boost the capture level, negative values attenuate it. For 16-bit mics this value is also passed into <code>cinepi-raw</code> via Redis so that a post-take software gain can be applied to the WAV if the hardware exposes no writable ALSA control.</p>
+<p><code>timecode_offset_frames</code> – frame offset applied to the WAV timecode metadata after each take. A <strong>positive</strong> value moves the WAV timecode later (use when audio arrives <em>early</em> relative to video); a negative value moves it earlier. Only the embedded timecode is shifted — the PCM is never moved. <code>24bit.timecode_offset_frames</code> is used whenever the capture helper is active (both 24-bit and 16-bit mics going through the helper). <code>16bit.timecode_offset_frames</code> applies to 16-bit mics specifically, overriding the 24-bit value for that path.</p>
+<p>Some USB microphones expose a writable ALSA capture control and some do not. When the mic supports it, Cinemate applies <code>capture_gain_db</code> via <code>amixer</code> when the microphone is detected. If the device exposes no compatible control, the setting is silently skipped and the log will note that the mic likely has fixed hardware gain.</p>
+<h2 id="hdmi_display">hdmi_display<a class="headerlink" href="#hdmi_display" title="Permanent link">#</a></h2>
+<p>Everything the operator sees: the HDMI canvas, GUI overlays, and preview zoom/source/pip/anamorphic.</p>
+<div class="highlight"><pre><span></span><code>"hdmi_display": {
+  "width": 1920,
+  "height": 1080,
+  "mirror_to_both_ports": false,
+  "overlays": {
+    "buffer_vu_meter": false,
+    "vu_meter_hatch_lines": true
+  },
+  "preview": {
+    "default_zoom": 1.0,
+    "zoom_steps": [1.0, 1.5, 2.0],
+    "default_hdmi_source": "both",
+    "pip": {
+      "scale": 0.28,
+      "corner": "lower_right",
+      "margin": 0.03
+    },
+    "anamorphic": {
+      "default_factor": 1,
+      "steps": [1, 1.33, 2.0]
+    }
+  }
+}
 </code></pre></div>
-<p><code>enabled</code> – set to <code>true</code> to allow Cinemate to switch resolution automatically when the current desired resolution cannot sustain the selected FPS.
-<br><code>profile</code> – named standard measurement profile to load from <code>profiles_file</code>. The stock profile is <code>default</code>.
-<br><code>profiles_file</code> – JSON file containing measured sustainable-FPS rows. The stock file is <code>resources/dynamic_resolution_profiles.json</code>.
-<br><code>policy</code> – selection strategy. The current policy, <code>highest_sustainable_resolution</code>, chooses the largest measured mode that can sustain the requested FPS.
-<br><code>safety_margin_fps</code> – subtract this many FPS from every measured row before deciding whether it is safe.
-<br><code>match_tolerance_px</code> – pixel tolerance used when matching measured rows to driver modes. This lets a measured <code>3856 x 2180</code> row match a nearby driver mode such as <code>3840 x 2160</code>.</p>
-<details class="note">
-<summary>How dynamic resolution decides, and the profile-row schema</summary>
-<p>Cinemate remembers the user's desired resolution. If you select a 4K mode and then raise FPS above that mode's measured sustainable limit, Cinemate switches to the highest measured mode that can sustain the FPS. When FPS returns to the desired mode's measured limit or below, Cinemate switches back. If no matching profile row exists for the detected sensor, storage type, filesystem, desired mode, and requested FPS, Cinemate leaves the current resolution unchanged.</p>
-<p>When dynamic resolution is enabled, the maximum FPS shown by Cinemate comes from the measured dynamic-resolution profile for the current sensor, storage type, and filesystem, but only when the desired mode itself has a measured row. When dynamic resolution is disabled, maximum FPS comes from the sensor readout reported by <code>cinepi-raw</code>, as before.</p>
-<p>The storage type comes from the mounted RAW device and is usually <code>ssd</code>, <code>cfe</code>, <code>nvme</code>, or <code>unknown</code>. The filesystem comes from the mounted RAW volume and is usually <code>ext4</code>, <code>exfat</code>, or <code>ntfs</code>.</p>
-<p>Each profile row has this shape:</p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;sensor&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;imx585&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;sensor_aliases&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;imx585_mono&quot;</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;storage_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;cfe&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;filesystem&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ext4&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;media_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CFE Hat / NVMe&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3856</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2180</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;bit_depth&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;sustainable_fps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">40</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;max_fps_no_buffer&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">40</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;test_duration_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;buffer_peak_frames&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;drop_frames&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;confidence&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;empirical&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;notes&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;4K desired-mode threshold for dynamic resolution.&quot;</span>
-<span class="p">}</span>
-</code></pre></div>
-<p><code>sustainable_fps</code> is the preferred field for new rows and means recording without dropped frames. <code>max_fps_no_buffer</code> is still accepted for older rows and for rows where you have verified no buffer growth as well.</p>
-<p>Dynamic-resolution limits are determined by the selected stock JSON profile only. To change the lookup table, update <code>resources/dynamic_resolution_profiles.json</code>.</p>
-</details>
-<h2 id="buttons">buttons<a class="headerlink" href="#buttons" title="Permanent link">#</a></h2>
+<p><code>width</code> / <code>height</code> – the GUI canvas size Cinemate targets. If the active framebuffer is smaller, Cinemate falls back to the active framebuffer size instead of drawing a clipped layout into a smaller mode.<br>
+<code>mirror_to_both_ports</code> – single-sensor only: mirror the one sensor's preview (with GUI) onto both HDMI connectors via cinepi-raw's <code>--same-hdmi</code>. The dual-sensor compositor already owns both-feed layouts, so this has no effect with two sensors attached.</p>
+<h3 id="overlays">overlays<a class="headerlink" href="#overlays" title="Permanent link">#</a></h3>
+<p><code>buffer_vu_meter</code> – show or hide the vertical RAM-buffer meter on the HDMI GUI.<br>
+<code>vu_meter_hatch_lines</code> – draw hatch lines inside the buffer meter fill.</p>
+<h3 id="preview">preview<a class="headerlink" href="#preview" title="Permanent link">#</a></h3>
+<p><code>default_zoom</code> – magnification factor used at startup.<br>
+<code>zoom_steps</code> – list of zoom factors you can cycle through with <code>set zoom</code>.<br>
+<code>default_hdmi_source</code> – dual-sensor HDMI preview source at startup: <code>both</code>, <code>cam0</code>, <code>cam1</code>, <code>pip_cam0</code>, or <code>pip_cam1</code>. Switch it live with <a href="../cli-commands/"><code>set preview</code></a>. No effect with a single sensor.<br>
+<code>pip</code> – picture-in-picture inset geometry for the <code>pip_cam0</code> / <code>pip_cam1</code> preview modes. <code>scale</code> – inset size as a fraction of the main pane (default <code>0.28</code>). <code>corner</code> – <code>lower_right</code>, <code>lower_left</code>, <code>upper_right</code>, or <code>upper_left</code> (default <code>lower_right</code>). <code>margin</code> – gap from the edge as a fraction of the pane (default <code>0.03</code>). See <a href="../dual-sensors/#picture-in-picture">Dual sensors</a>.<br>
+<code>anamorphic</code> – stretching the preview for anamorphic lenses. <code>default_factor</code> – factor loaded when Cinemate starts. <code>steps</code> – selectable squeeze factors; values above <code>1.0</code> widen the image.</p>
+<h2 id="hardware_controls">hardware_controls<a class="headerlink" href="#hardware_controls" title="Permanent link">#</a></h2>
+<p>Direct-GPIO physical inputs, channel-first: which pin it's on, then what it does.</p>
+<h3 id="buttons">buttons<a class="headerlink" href="#buttons" title="Permanent link">#</a></h3>
 <p>Defines GPIO push buttons. Each entry describes one button and the actions it triggers.</p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;pull_up&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;debounce_time&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;press_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rec&quot;</span><span class="p">}</span>
-<span class="p">}</span>
+<div class="highlight"><pre><span></span><code>{
+  "pin": 5,
+  "pull_up": true,
+  "debounce_time": 0.1,
+  "press_action": {"method": "rec"}
+}
 </code></pre></div>
 <p><code>pin</code> – BCM pin number the button is connected to.<br><code>pull_up</code> – set <code>true</code> if the pin idles high (internal pull‑up). Use <code>false</code> for pull‑down wiring.<br><code>debounce_time</code> – ignore additional presses within this time window (seconds).<br><code>press_action</code>, <code>single_click_action</code>, <code>double_click_action</code>, <code>triple_click_action</code>, <code>hold_action</code> – actions to perform for each type of interaction. Actions call Cinemate CLI commands with optional <code>args</code>.</p>
 <div class="admonition info">
 <p>Some push-buttons are wired closed = logic 1 and open = 0. At start-up, CineMate automatically detects buttons in state <code>true</code> and reverses them. This way the user can use any type of push buttons, both 1-0-1 and 0-1-0 types.</p>
 </div>
-<h2 id="two_way_switches">two_way_switches<a class="headerlink" href="#two_way_switches" title="Permanent link">#</a></h2>
+<h3 id="two_way_switches">two_way_switches<a class="headerlink" href="#two_way_switches" title="Permanent link">#</a></h3>
 <p>Latching on/off switches. Cinemate triggers an action whenever the state changes.</p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">27</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;state_on_action&quot;</span><span class="p">:</span><span class="w">  </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_all_lock&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">]},</span>
-<span class="w">  </span><span class="nt">&quot;state_off_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_all_lock&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">]}</span>
-<span class="p">}</span>
+<div class="highlight"><pre><span></span><code>{
+  "pin": 27,
+  "state_on_action":  {"method": "set_all_lock", "args": [1]},
+  "state_off_action": {"method": "set_all_lock", "args": [0]}
+}
 </code></pre></div>
-<h2 id="three_way_switches">three_way_switches<a class="headerlink" href="#three_way_switches" title="Permanent link">#</a></h2>
+<h3 id="three_way_switches">three_way_switches<a class="headerlink" href="#three_way_switches" title="Permanent link">#</a></h3>
 <p>Three-position switches made from three GPIO inputs. Cinemate checks which pin is active and then runs the matching action.</p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;pins&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="mi">13</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;state_0_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_fps&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">24</span><span class="p">]},</span>
-<span class="w">  </span><span class="nt">&quot;state_1_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_fps&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">25</span><span class="p">]},</span>
-<span class="w">  </span><span class="nt">&quot;state_2_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_fps&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">50</span><span class="p">]}</span>
-<span class="p">}</span>
+<div class="highlight"><pre><span></span><code>{
+  "pins": [5, 6, 13],
+  "state_0_action": {"method": "set_fps", "args": [24]},
+  "state_1_action": {"method": "set_fps", "args": [25]},
+  "state_2_action": {"method": "set_fps", "args": [50]}
+}
 </code></pre></div>
 <p><code>pins</code> – the three GPIO inputs that represent the switch positions.
 <br><code>state_0_action</code>, <code>state_1_action</code>, <code>state_2_action</code> – commands to run for each detected position.</p>
 <p>If none of the three inputs is active, the switch is treated as being in an undefined position and no action is run.</p>
-<h2 id="combined_actions">combined_actions<a class="headerlink" href="#combined_actions" title="Permanent link">#</a></h2>
+<h3 id="rotary_encoders">rotary_encoders<a class="headerlink" href="#rotary_encoders" title="Permanent link">#</a></h3>
+<p>Rotary encoders used for fine adjustment of settings. These can be wired straight to the GPIO pins of the Pi. The optional <code>button_pin</code> uses the same action grammar as <code>buttons</code>.</p>
+<div class="highlight"><pre><span></span><code>{
+  "enabled": true,
+  "clk_pin": 9,
+  "dt_pin": 11,
+  "button_pin": 10,
+  "pull_up": true,
+  "debounce_time": 0.05,
+  "button_actions": {
+    "press_action": {"method": "set_iso_lock"},
+    "hold_action": "None"
+  },
+  "encoder_actions": {
+    "rotate_clockwise":        {"method": "inc_iso"},
+    "rotate_counterclockwise": {"method": "dec_iso"}
+  }
+}
+</code></pre></div>
+<p><br><code>enabled</code> – optional per-encoder switch; set <code>false</code> to keep an example in the file without claiming pins at startup. The stock file ships one disabled example.
+<br><code>clk_pin</code> and <code>dt_pin</code> – the two pins of the encoder.
+<br><code>button_pin</code> – optional BCM pin for the encoder push button.
+<br><code>button_actions</code> – optional press/click/hold actions for the encoder push button.
+<br><code>encoder_actions</code> – commands to run when turning the dial.</p>
+<h3 id="combined_actions">combined_actions<a class="headerlink" href="#combined_actions" title="Permanent link">#</a></h3>
 <p>Combined actions let one button act as a modifier for another button.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;combined_actions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">  </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;hold_button_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;action_button_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">26</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;action_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;press&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_pwm_mode&quot;</span><span class="p">}</span>
-<span class="w">  </span><span class="p">}</span>
-<span class="p">]</span>
+<div class="highlight"><pre><span></span><code>"combined_actions": [
+  {
+    "hold_button_pin": 10,
+    "action_button_pin": 26,
+    "action_type": "press",
+    "action": {"method": "set_pwm_mode"}
+  }
+]
 </code></pre></div>
 <p><code>hold_button_pin</code> – button that must already be held.
 <br><code>action_button_pin</code> – second button that triggers the combined action.
 <br><code>action_type</code> – either <code>press</code> or <code>release</code>.
 <br><code>action</code> – Cinemate command to run when the hold/action combination matches.</p>
 <p>Combined actions only fire while the hold button is still held down. If the modifier button is not active, the normal per-button actions continue to run.</p>
-<h2 id="rotary_encoders">rotary_encoders<a class="headerlink" href="#rotary_encoders" title="Permanent link">#</a></h2>
-<p>Rotary encoders used for fine adjustment of settings. These can be wired straight to the GPIO pins of the Pi. The optional <code>button_pin</code> uses the same action grammar as the <code>buttons</code> section.</p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;clk_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;dt_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">11</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;button_pin&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;pull_up&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;debounce_time&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.05</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;button_actions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;press_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_iso_lock&quot;</span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;hold_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;None&quot;</span>
-<span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;encoder_actions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;rotate_clockwise&quot;</span><span class="p">:</span><span class="w">        </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;inc_iso&quot;</span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;rotate_counterclockwise&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dec_iso&quot;</span><span class="p">}</span>
-<span class="w">  </span><span class="p">}</span>
-<span class="p">}</span>
+<h2 id="input_peripherals">input_peripherals<a class="headerlink" href="#input_peripherals" title="Permanent link">#</a></h2>
+<p>Grove Base HAT analog pots and the Adafruit quad I2C rotary encoder board — separate from <a href="#hardware_controls">hardware_controls</a> because these are their own peripheral boards, not pins wired straight to the Pi's GPIO header.</p>
+<h3 id="pots">pots<a class="headerlink" href="#pots" title="Permanent link">#</a></h3>
+<p>Maps Grove Base HAT ADC channels to analogue dials (potentiometers), channel-first: which channel, then which <a href="#arrays">array</a> it drives.</p>
+<div class="highlight"><pre><span></span><code>"pots": [
+  { "channel": 0, "setting": "iso" },
+  { "channel": 2, "setting": "shutter_a" },
+  { "channel": 4, "setting": "fps" }
+]
 </code></pre></div>
-<p><br><code>enabled</code> – optional per-encoder switch; set <code>false</code> to keep an example in the file without claiming pins at startup.
-<br><code>clk_pin</code> and <code>dt_pin</code> – the two pins of the encoder.
-<br><code>button_pin</code> – optional BCM pin for the encoder push button.
-<br><code>button_actions</code> – optional press/click/hold actions for the encoder push button.
-<br><code>encoder_actions</code> – commands to run when turning the dial.</p>
-<h2 id="quad_rotary_controller">quad_rotary_controller<a class="headerlink" href="#quad_rotary_controller" title="Permanent link">#</a></h2>
-<p>Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry maps one of the four dials to a setting and defines the push button actions similar to the <code>buttons</code> section. The stock settings include this mapping with <code>enabled</code> set to <code>false</code>; set it to <code>true</code> only when the board is connected.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;quad_rotary_controller&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;encoders&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;0&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;setting_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;iso&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;button&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;press_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rec&quot;</span><span class="p">}}},</span>
-<span class="w">    </span><span class="nt">&quot;1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;setting_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;shutter_a&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;button&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;press_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_fps_double&quot;</span><span class="p">}}},</span>
-<span class="w">    </span><span class="nt">&quot;2&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;setting_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fps&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;button&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;press_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;None&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;single_click_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_resolution&quot;</span><span class="p">},</span>
-<span class="w">        </span><span class="nt">&quot;double_click_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;restart_cinemate&quot;</span><span class="p">},</span>
-<span class="w">        </span><span class="nt">&quot;triple_click_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;reboot&quot;</span><span class="p">},</span>
-<span class="w">        </span><span class="nt">&quot;hold_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;toggle_mount&quot;</span><span class="p">}</span>
-<span class="w">      </span><span class="p">}</span>
-<span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;3&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;setting_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wb&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;button&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;press_action&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rec&quot;</span><span class="p">}}}</span>
-<span class="w">  </span><span class="p">}</span>
-<span class="p">}</span>
+<p><code>channel</code> – the Grove Base HAT ADC channel the pot is wired to.<br>
+<code>setting</code> – which entry in <a href="#arrays"><code>arrays</code></a> the pot drives (<code>iso</code>, <code>shutter_a</code>, <code>fps</code>, <code>wb</code>, or an HDR knob name like <code>hdr_threshold_low</code>).</p>
+<div class="admonition info">
+<p>Only list channels actually connected to potentiometers — noise from unused connectors might trigger false readings.</p>
+</div>
+<h3 id="quad_rotary_controller">quad_rotary_controller<a class="headerlink" href="#quad_rotary_controller" title="Permanent link">#</a></h3>
+<p>Support for the Adafruit Neopixel Quad I2C rotary encoder breakout. Each entry maps one of the four dials to an <a href="#arrays">array</a> and defines the push button actions similar to <code>buttons</code>. The stock settings ship it enabled — safe with no board attached, because the controller is hot-plugged and simply retries — set <code>enabled</code> to <code>false</code> to turn it off. The stock mapping:</p>
+<div class="highlight"><pre><span></span><code>"quad_rotary_controller": {
+  "enabled": true,
+  "encoders": {
+    "0": {"setting_name": "iso", "button": {"press_action": {"method": "set_zoom"}, "hold_action": {"method": "safe_shutdown"}}},
+    "1": {"setting_name": "shutter_a", "button": {"press_action": {"method": "set_shutter_a_sync_mode"}}},
+    "2": {"setting_name": "fps", "button": {"press_action": {"method": "set_fps_double"}}},
+    "3": {
+      "setting_name": "wb",
+      "button": {
+        "press_action": "None",
+        "single_click_action": {"method": "set_resolution"},
+        "double_click_action": {"method": "restart_cinemate"},
+        "triple_click_action": {"method": "reboot"},
+        "hold_action": {"method": "toggle_mount"}
+      }
+    }
+  }
+}
 </code></pre></div>
-<p><code>enabled</code> – turn the quad rotary controller on or off.<br><code>encoders</code> – mapping of each dial to a setting and button actions.</p>
-<h2 id="i2c_oled">i2c_oled<a class="headerlink" href="#i2c_oled" title="Permanent link">#</a></h2>
-<p>Configuration for the optional OLED status screen. This can be useful for presenting extra information appart from the HDMI/web display.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;i2c_oled&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">64</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;font_size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;values&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;write_speed_to_drive&quot;</span><span class="p">]</span>
-<span class="p">}</span>
+<p><code>enabled</code> – turn the quad rotary controller on or off.<br><code>encoders</code> – mapping of each dial (channel <code>"0"</code>–<code>"3"</code>) to a <code>setting_name</code> from <a href="#arrays"><code>arrays</code></a> and button actions. An encoder with no <code>setting_name</code> is valid too — its button can still drive its own actions without cycling a parameter.</p>
+<h2 id="hardware_outputs">hardware_outputs<a class="headerlink" href="#hardware_outputs" title="Permanent link">#</a></h2>
+<p>Direct-GPIO outputs Cinemate drives: the REC tally/relay pin(s) and the REC sync tone.</p>
+<div class="highlight"><pre><span></span><code>"hardware_outputs": {
+  "pwm_pin": 19,
+  "rec_out_pin": [6, 21],
+  "rec_tone": {
+    "pin": [18],
+    "frequency_hz": 1000,
+    "duty_cycle": 50,
+    "relay_drop_frames": false
+  }
+}
 </code></pre></div>
-<p><code>enabled</code> – turn the OLED display on or off.
-<code>width / height</code> – pixel dimensions of your screen.
-<code>font_size</code> – size of the displayed text.
+<p><code>pwm_pin</code> – outputs a strobe for shutter sync or external devices.<br>
+<code>rec_out_pin</code> – list of pins pulled high while recording (useful for tally LEDs).</p>
+<p><code>rec_tone</code>:</p>
+<p><br><code>pin</code> – optional tone output pin(s) used as recording sync tone. You can pass a single pin or a list of pins. GPIO <code>18</code> and <code>19</code> use <strong>hardware PWM</strong> (preferred for stable tone generation). Any other pin uses <strong>software PWM</strong> fallback. The tone starts as soon as recording is requested (<code>is_recording = 1</code>), even before REC-light write confirmation, stops once writing stops (<code>is_writing = 0</code>), and is muted during storage pre-roll. If <code>pin</code> is unset or an empty list, Cinemate falls back to <code>pwm_pin</code> for backward compatibility.
+<br><code>frequency_hz</code> – tone frequency in hertz.
+<br><code>duty_cycle</code> – PWM duty cycle percentage (<code>0–100</code>).
+<br><code>relay_drop_frames</code> – when <code>true</code>, each live drop-frame pulse (<code>drop_frame_relay = 1</code>) briefly mutes REC tone output for about one frame, then resumes automatically.</p>
+<h2 id="output_peripherals">output_peripherals<a class="headerlink" href="#output_peripherals" title="Permanent link">#</a></h2>
+<p>The optional I2C OLED status screen — separate from <a href="#hardware_outputs">hardware_outputs</a> because it's its own I2C peripheral board, not a pin wired straight to the Pi's GPIO header. This can be useful for presenting extra information apart from the HDMI/web display.</p>
+<div class="highlight"><pre><span></span><code>"output_peripherals": {
+  "oled": {
+    "enabled": true,
+    "width": 128,
+    "height": 64,
+    "font_size": 30,
+    "values": ["write_speed_to_drive"]
+  }
+}
+</code></pre></div>
+<p><code>enabled</code> – turn the OLED display on or off.<br>
+<code>width</code> / <code>height</code> – pixel dimensions of your screen.<br>
+<code>font_size</code> – size of the displayed text.<br>
 <code>values</code> – list of Redis keys or pseudo‑keys to show (for example <code>cpu_temp</code>).</p>
 <p>Available keys come from <code>src/module/i2c/i2c_oled.py</code>. Here are some examples:</p>
 <p><code>iso</code>, <code>fps</code> – basic camera settings.<br>

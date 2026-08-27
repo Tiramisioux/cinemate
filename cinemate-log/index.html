@@ -3,9 +3,9 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/config-txt/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/cinemate-log/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Bookworm config.txt - Cinemate Docs</title>
+    <title>CineMate Log (imx585 / imx283) - Cinemate Docs</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -14,9 +14,9 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Bookworm config.txt";
-        var mkdocs_page_input_path = "config-txt.md";
-        var mkdocs_page_url = "/cinemate/config-txt/";
+        var mkdocs_page_name = "CineMate Log (imx585 / imx283)";
+        var mkdocs_page_input_path = "cinemate-log.md";
+        var mkdocs_page_url = "/cinemate/cinemate-log/";
       </script>
     
     <!--[if lt IE 9]>
@@ -80,7 +80,25 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">CineMate Log (imx585 / imx283)</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#lut-none-use-no-lut-at-all">LUT: none. Use no LUT at all.</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#which-sensors-support-it">Which sensors support it</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#turning-it-on">Turning it on</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#in-settingsjsonc">In settings.jsonc</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#live-with-set-log">Live, with set log</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#the-log-badge">The LOG badge</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#grading">Grading</a>
+    </li>
+    </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
@@ -88,11 +106,7 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
                   </li>
-                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Bookworm config.txt</a>
-    <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#example-configtxt">Example config.txt</a>
-    </li>
-    </ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
                   </li>
@@ -162,9 +176,9 @@
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
           <li class="breadcrumb-item">Configuring</li>
-      <li class="breadcrumb-item active">Bookworm config.txt</li>
+      <li class="breadcrumb-item active">CineMate Log (imx585 / imx283)</li>
     <li class="wy-breadcrumbs-aside">
-          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/config-txt.md" class="icon icon-github"> Edit on GitHub</a>
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/cinemate-log.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
   </ul>
   <hr/>
@@ -173,118 +187,106 @@
             <div class="section" itemprop="articleBody">
               
 <div class="markdown-body">
-  <h1 id="modifying-configtxt">Modifying config.txt<a class="headerlink" href="#modifying-configtxt" title="Permanent link">#</a></h1>
-<div class="admonition tip">
-<p>For easy editing of <code>config.txt</code> on the preinstalled image file, type <code>editboot</code> anywhere in Raspberry Pi terminal.</p>
-</div>
-<p>If using a manual install without the above alias, type:</p>
-<div class="highlight"><pre><span></span><code>sudo nano /boot/firmware/config.txt
+  <h1 id="cinemate-log">CineMate Log<a class="headerlink" href="#cinemate-log" title="Permanent link">#</a></h1>
+<p>CineMate Log log-compands the linear sensor signal down to a smaller DNG code depth on the way to disk, and writes a DNG <code>LinearizationTable</code> (tag <code>0xC618</code>) so any DNG-aware app decodes it back to linear automatically. It exists to shrink file size — a 16-bit ClearHDR frame drops ≈ 17–37 %, a 12-bit SDR frame ≈ 17 % — with no change to how the footage grades.</p>
+<h2 id="lut-none-use-no-lut-at-all">LUT: none. Use no LUT at all.<a class="headerlink" href="#lut-none-use-no-lut-at-all" title="Permanent link">#</a></h2>
+<p>CineMate Log is <strong>not</strong> a viewing gamma like S-Log3 or V-Log. It is a storage format, and the DNG <code>LinearizationTable</code> undoes it <strong>inside the raw decoder</strong>, before the image reaches your node graph. By the time you see the clip it is already scene-linear, with BlackLevel and WhiteLevel intact.</p>
+<p>So there is no "CineMate Log → Rec.709" LUT, and there should never be one. Applying a log-to-linear LUT or CST input gamma would decode the curve a second time.</p>
+<table>
+<thead>
+<tr>
+<th>you want</th>
+<th>do this</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>decode the log</td>
+<td>nothing — the raw decoder already did it</td>
+</tr>
+<tr>
+<td>input gamma, in a CST or RCM</td>
+<td><strong>Linear</strong></td>
+</tr>
+<tr>
+<td>a viewable image</td>
+<td>lift exposure first, then a CST <strong>Linear → Rec.709 Gamma 2.4</strong></td>
+</tr>
+<tr>
+<td>settings for the log clip</td>
+<td>whatever you'd set on a linear recording from the same camera, verbatim</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Leave <code>UniqueCameraModel</code> as <code>cinepi</code></strong> (the default — see <a href="../settings-json/#camera-name">Settings file → camera name</a>). Resolve picks its decode pipeline from that tag; an unknown model gets a generic decode with nothing layered on, which is exactly what a log-companded, already-linearised DNG needs. Spoofing it to a Blackmagic model unlocks a fuller Camera RAW tab but layers BMD colour science and their tone curve on top of your linear data — that confounds the curve, not helps it.</p>
+<h2 id="which-sensors-support-it">Which sensors support it<a class="headerlink" href="#which-sensors-support-it" title="Permanent link">#</a></h2>
+<p>Support is decided by the sensor's black level, not chosen — see <a href="../sensors/#cinemate-log-support">Camera sensors and frame rates → CineMate Log support</a> for the full table. Short version:</p>
+<table>
+<thead>
+<tr>
+<th>Sensor</th>
+<th>Live mode</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IMX585</td>
+<td>ClearHDR 16-bit</td>
+<td>12 (default) or 10</td>
+</tr>
+<tr>
+<td>IMX585</td>
+<td>12-bit (SDR or 12-bit ClearHDR)</td>
+<td>10 only</td>
+</tr>
+<tr>
+<td>IMX283</td>
+<td>12-bit modes</td>
+<td>10 only</td>
+</tr>
+<tr>
+<td>everything else</td>
+<td>any</td>
+<td>not supported</td>
+</tr>
+</tbody>
+</table>
+<p>The flag is per-camera and launch-only; the sensor mode is live. Cinemate re-resolves the target every time <code>cinepi-raw</code> (re)starts for <strong>any</strong> reason — a resolution switch, a ClearHDR toggle, or a direct <code>set log</code> — against whatever bit depth is live at that moment, so the two never drift out of sync mid-session.</p>
+<h2 id="turning-it-on">Turning it on<a class="headerlink" href="#turning-it-on" title="Permanent link">#</a></h2>
+<h3 id="in-settingsjsonc">In <code>settings.jsonc</code><a class="headerlink" href="#in-settingsjsonc" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nt">"sensors"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"cam0"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"log_encode"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
 </code></pre></div>
-<p>Uncomment the section for the sensor being used, and make sure to comment out the others. The clean-install default is <code>imx477</code> on <code>cam0</code>. For IMX296, IMX283, or IMX585, uncomment that sensor section and set the camera port to the physical connector you are using. Reboot the Pi for changes to take effect.</p>
-<h3 id="example-configtxt">Example config.txt<a class="headerlink" href="#example-configtxt" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># &gt;&gt;&gt; cinemate-install &gt;&gt;&gt;</span>
-<span class="c1"># Managed by cinemate-install.sh</span>
-<span class="c1"># For more options and information see</span>
-<span class="c1"># http://rptl.io/configtxt</span>
-<span class="c1"># Some settings may impact device functionality. See link above for details</span>
-
-<span class="c1"># Uncomment some or all of these to enable the optional hardware interfaces</span>
-<span class="nv">dtparam</span><span class="o">=</span><span class="nv">i2c_arm</span><span class="o">=</span>on
-<span class="c1">#dtparam=i2s=on</span>
-<span class="c1">#dtparam=spi=on</span>
-
-<span class="c1"># Enable audio (loads snd_bcm2835)</span>
-<span class="nv">dtparam</span><span class="o">=</span><span class="nv">audio</span><span class="o">=</span>on
-
-<span class="c1"># ---- Camera section ----</span>
-
-<span class="c1"># Raspberry Pi HQ camera (IMX477, clean-install default on cam0)</span>
-<span class="nv">camera_auto_detect</span><span class="o">=</span><span class="m">1</span>
-<span class="nv">dtoverlay</span><span class="o">=</span>imx477,cam0
-
-<span class="c1"># Raspberry Pi GS camera (IMX296, 10-bit RAW)</span>
-<span class="c1">#camera_auto_detect=1</span>
-<span class="c1">#dtoverlay=imx296,cam0</span>
-
-<span class="c1"># OneInchEye (IMX283)</span>
-<span class="c1">#camera_auto_detect=0</span>
-<span class="c1">#dtoverlay=imx283,cam0</span>
-
-<span class="c1"># StarlightEye color (IMX585)</span>
-<span class="c1">#camera_auto_detect=0</span>
-<span class="c1">#dtoverlay=imx585,cam0</span>
-
-<span class="c1"># StarlightEye Mono (IMX585 mono)</span>
-<span class="c1">#camera_auto_detect=0</span>
-<span class="c1">#dtoverlay=imx585,cam1,mono</span>
-
-<span class="c1"># ---- End camera section ----</span>
-
-<span class="c1"># Automatically load overlays for detected DSI displays</span>
-<span class="nv">display_auto_detect</span><span class="o">=</span><span class="m">1</span>
-
-<span class="c1"># Automatically load initramfs files, if found</span>
-<span class="nv">auto_initramfs</span><span class="o">=</span><span class="m">1</span>
-
-<span class="c1"># Enable DRM VC4 V3D driver</span>
-<span class="nv">dtoverlay</span><span class="o">=</span>vc4-kms-v3d
-<span class="nv">max_framebuffers</span><span class="o">=</span><span class="m">2</span>
-
-<span class="c1"># Don't have the firmware create an initial video= setting in cmdline.txt.</span>
-<span class="c1"># Use the kernel's default instead.</span>
-<span class="nv">disable_fw_kms_setup</span><span class="o">=</span><span class="m">1</span>
-
-<span class="c1"># Run in 64-bit mode</span>
-<span class="nv">arm_64bit</span><span class="o">=</span><span class="m">1</span>
-
-<span class="c1"># Disable compensation for displays with overscan</span>
-<span class="nv">disable_overscan</span><span class="o">=</span><span class="m">1</span>
-
-<span class="c1"># Run as fast as firmware / board allows</span>
-<span class="nv">arm_boost</span><span class="o">=</span><span class="m">1</span>
-
-<span class="c1"># ---- RP1 overclock (Pi 5, optional) ----</span>
-<span class="c1"># Raises imx585 ClearHDR frame rates. Uncomment and reboot to enable;</span>
-<span class="c1"># re-comment and reboot to return to stock. See docs/overclocking.md.</span>
-<span class="c1">#dtoverlay=rp1-overclock</span>
-
-<span class="o">[</span>cm4<span class="o">]</span>
-<span class="c1"># Enable host mode on the 2711 built-in XHCI USB controller.</span>
-<span class="c1"># This line should be removed if the legacy DWC2 controller is required</span>
-<span class="c1"># (e.g. for USB device mode) or if USB support is not required.</span>
-<span class="nv">otg_mode</span><span class="o">=</span><span class="m">1</span>
-
-<span class="o">[</span>cm5<span class="o">]</span>
-<span class="nv">dtoverlay</span><span class="o">=</span>dwc2,dr_mode<span class="o">=</span>host
-
-<span class="c1"># CFE Hat PCIe 3.0</span>
-<span class="nv">dtparam</span><span class="o">=</span>pciex1
-<span class="nv">dtparam</span><span class="o">=</span><span class="nv">pciex1_gen</span><span class="o">=</span><span class="m">3</span>
-
-<span class="o">[</span>all<span class="o">]</span>
-<span class="nv">auto_initramfs</span><span class="o">=</span><span class="m">1</span>
-<span class="nv">avoid_warnings</span><span class="o">=</span><span class="m">1</span>
-<span class="nv">disable_splash</span><span class="o">=</span><span class="m">1</span>
-<span class="nv">hdmi_ignore_cec_init</span><span class="o">=</span><span class="m">1</span>
-<span class="nv">dtparam</span><span class="o">=</span><span class="nv">i2c1</span><span class="o">=</span>on
-<span class="nv">dtoverlay</span><span class="o">=</span>disable-bt
-<span class="c1"># &lt;&lt;&lt; cinemate-install &lt;&lt;&lt;</span>
+<p><code>false</code> (default, off) · <code>true</code> (on, uses the live mode's default target) · <code>10</code> / <code>12</code> (on, forces that target when the live mode supports it). See <a href="../settings-json/#log_encode">Settings file → log_encode</a> for the full description. This is the boot-time value — once you run <code>set log</code> in a session, the live request takes over until the next reboot.</p>
+<h3 id="live-with-set-log">Live, with <code>set log</code><a class="headerlink" href="#live-with-set-log" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>set log        # toggle on/off, using the live mode's default target
+set log 10     # force target 10 (e.g. 16to10 instead of ClearHDR's 16to12 default)
+set log 12     # force target 12
+set log off    # force off
 </code></pre></div>
-<p>Exit the editor by pressing Ctrl+X.</p>
-<div class="admonition note">
-<p>For a dual sensor setup, attach to cam0 and cam1 and add overlays for both camera ports.</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Example</span>
-<span class="nv">dtoverlay</span><span class="o">=</span>imx296,cam0
-<span class="nv">dtoverlay</span><span class="o">=</span>imx296,mono,cam1
-</code></pre></div>
-</div>
+<p>Restarts the camera when idle, exactly like <code>set resolution</code>. If you run it mid-take, the request is stored and applied on the <strong>next</strong> restart — CineMate never splits a running recording. An explicit target that the live mode doesn't support (e.g. <code>set log 12</code> while in a 12-bit mode) is rejected and logged, never silently swapped for a different depth.</p>
+<h2 id="the-log-badge">The LOG badge<a class="headerlink" href="#the-log-badge" title="Permanent link">#</a></h2>
+<p>A grey <code>LOG10</code> / <code>LOG12</code> box appears in each camera's CAM section on the Simple GUI once that camera's <code>cinepi-raw</code> has actually launched with the flag. It reflects what's <strong>running</strong>, not what's requested — since the flag only takes effect on the next restart, the badge can lag a <code>set log</code> command by the length of that restart, on purpose. No badge means that camera is recording linear.</p>
+<h2 id="grading">Grading<a class="headerlink" href="#grading" title="Permanent link">#</a></h2>
+<p>The arithmetic is byte-identical to a reference Python encoder on real sensor pixels (both <code>16→10</code>/<code>16→12</code> and <code>12→10</code>), so a grading complaint should be diagnosed as a setup problem before a curve problem:</p>
+<ol>
+<li><strong>Is your decoder applying the <code>LinearizationTable</code> at all?</strong> If a log clip renders solid black, it isn't — a decoder that skips the table subtracts a linear-domain BlackLevel from data that never reaches it.</li>
+<li><strong>BlackLevel / WhiteLevel</strong> are tagged in the <strong>linear (table-output) domain</strong>, not the stored bit depth — 3200/65535 for a 16-bit source, 200/4095 for 12-bit. A decoder that assumes they match the stored depth will misread them.</li>
+<li><strong>Exposure difference between clips you're comparing.</strong> A log take and its linear reference shot minutes apart are different photons; match exposure and white balance before judging shape, and decode both <strong>Using → Clip</strong> so no project-wide setting favours one.</li>
+<li><strong>The curve.</strong> Last, and least likely — it's already gated byte-identical to the reference encoder.</li>
+</ol>
+<p>Do not compare a log take and a linear take with a per-pixel diff tool — that's only valid between two files built from the <em>same</em> captured frame; shot noise alone will blow past any sane budget between two separate takes.</p>
 </div>
 
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../building-control-units/" class="btn btn-neutral float-left" title="Building control units"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../hotspot-logic/" class="btn btn-neutral float-right" title="Configuring the Wi-Fi hotspot">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../clear-hdr/" class="btn btn-neutral float-left" title="ClearHDR (imx585)"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../dual-sensors/" class="btn btn-neutral float-right" title="Dual sensors">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -311,10 +313,10 @@
         </span>
     
     
-      <span><a href="../building-control-units/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../clear-hdr/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../hotspot-logic/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../dual-sensors/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

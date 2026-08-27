@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="css/theme.css" />
     <link rel="stylesheet" href="css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="templates/styles.scss" rel="stylesheet" />
         <link href="stylesheets/extra.css" rel="stylesheet" />
         <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
@@ -62,6 +61,10 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="web-gui/">Web GUI</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="web-api/">Web API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="image-circle/">Lenses and image circles</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="audio-recording/">Audio recording</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="digital-zoom/">Digital zoom</a>
@@ -77,9 +80,15 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="sensors/">Camera sensors and frame rates</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="dual-sensors/">Dual sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="building-control-units/">Building control units</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="config-txt/">Bookworm config.txt</a>
                   </li>
@@ -91,6 +100,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="ssh/">Connecting via SSH</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="recovery-console/">Recovery console</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="backing-up-sd-card/">Backing up the SD card</a>
                   </li>
@@ -109,6 +120,8 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="overclocking/">Overclocking the Pi</a>
+                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
@@ -116,14 +129,18 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="controller-methods/">Controller methods</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="redis-guide/">Redis API</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="redis-keys/">Redis Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="cinepi-multi/">How Cinemate launches CinePi-raw</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="changelog/">Changelog</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <p class="caption"><span class="caption-text">About</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="acknowledgments/">Acknowledgements</a>
                   </li>
@@ -154,7 +171,7 @@
               
 <div class="markdown-body">
   <h1 id="cinemate-docs">Cinemate Docs<a class="headerlink" href="#cinemate-docs" title="Permanent link">#</a></h1>
-<p>Welcome to the <strong>Cinemate</strong> project — an open-source boilerplate for building your own digital cinema camera using a Raspberry Pi 4 or 5. It combines a lightweight Python interface with the <a href="https://github.com/cinepi">CinePi‑raw recorder by Csaba Nagy</a> for capturing 12‑bit CinemaDNG footage.</p>
+<p>Welcome to the <strong>Cinemate</strong> project — an open-source boilerplate for building your own digital cinema camera using a Raspberry Pi 4 or 5. It combines a lightweight Python interface with the <a href="https://github.com/cinepi">CinePi‑raw recorder by Csaba Nagy</a> for capturing CinemaDNG raw footage (10/12-bit, plus 16-bit ClearHDR on the IMX585).</p>
 <p>To begin, follow the steps in <a href="getting-started/">Quick start</a>. Later sections cover customising your build. For more background, see the <a href="readme/">Overview</a>.</p>
 <p>For sharing your build with others, inspiration and discussion, make sure to join the <a href="https://discord.gg/Hr4dfhuK">CinePi Discord</a>.</p>
 </div>
@@ -213,5 +230,5 @@
 
 <!--
 MkDocs version : 1.6.1
-Build Date UTC : 2026-07-09 22:30:12.008933+00:00
+Build Date UTC : 2026-08-27 15:42:29.847935+00:00
 -->

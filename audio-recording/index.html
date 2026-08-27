@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
         <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
@@ -60,13 +59,17 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Audio recording</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#supported-microhones">Supported microhones</a>
+    <li class="toctree-l2"><a class="reference internal" href="#supported-microphones">Supported microphones</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#using-the-microphone">Using the microphone</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#settingsjson-audio-section">settings.json audio section</a>
+    <li class="toctree-l2"><a class="reference internal" href="#settingsjsonc-audio_capture-section">settings.jsonc audio_capture section</a>
     </li>
     </ul>
                   </li>
@@ -83,9 +86,15 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
@@ -97,6 +106,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
@@ -115,6 +126,8 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
+                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
@@ -122,14 +135,18 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <p class="caption"><span class="caption-text">About</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -161,7 +178,7 @@
               
 <div class="markdown-body">
   <h1 id="audio-recording">Audio recording<a class="headerlink" href="#audio-recording" title="Permanent link">#</a></h1>
-<h2 id="supported-microhones">Supported microhones<a class="headerlink" href="#supported-microhones" title="Permanent link">#</a></h2>
+<h2 id="supported-microphones">Supported microphones<a class="headerlink" href="#supported-microphones" title="Permanent link">#</a></h2>
 <p>Cinemate has been tested with RODE VideoMic NTG 24 bit microphone and simple 16 bit USB microphones.</p>
 <h2 id="using-the-microphone">Using the microphone<a class="headerlink" href="#using-the-microphone" title="Permanent link">#</a></h2>
 <ol>
@@ -170,21 +187,21 @@
 <li>When recording <code>.wav</code> is written next to the <code>.dng</code> frames in the same take folder and a white "wav" label shows up next to the clip name below the preview.</li>
 </ol>
 <p>Timecode is readable by DaVinci Resolve, which treats the <code>.dng</code> sequence and <code>.wav</code> as one clip.</p>
-<h2 id="settingsjson-audio-section"><code>settings.json</code> audio section<a class="headerlink" href="#settingsjson-audio-section" title="Permanent link">#</a></h2>
-<div class="highlight"><pre><span></span><code><span class="nt">&quot;audio&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;24bit&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;capture_gain_db&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;timecode_offset_frames&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<h2 id="settingsjsonc-audio_capture-section"><code>settings.jsonc</code> audio_capture section<a class="headerlink" href="#settingsjsonc-audio_capture-section" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code><span class="nt">"audio_capture"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"24bit"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"capture_gain_db"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"timecode_offset_frames"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;16bit&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;capture_gain_db&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;timecode_offset_frames&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">  </span><span class="nt">"16bit"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"capture_gain_db"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"timecode_offset_frames"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
 <ul>
 <li><strong><code>24bit</code></strong> — settings for the 24-bit USB dsnoop path (<code>mic_24bit</code> alias, e.g. RØDE VideoMic NTG).</li>
-<li><strong><code>16bit</code></strong> — settings for the 16-bit plain-<code>arecord</code> fallback path (generic USB PnP mics).</li>
+<li><strong><code>16bit</code></strong> — settings for 16-bit mono capture (<code>mic_16bit</code> alias, generic USB PnP mics). Both mic types go through the same capture helper; this block overrides the <code>24bit</code> values for 16-bit mics.</li>
 </ul>
 <p><code>capture_gain_db</code> is applied after Cinemate probes which path is active and knows the bit depth. <code>0.0</code> = unity gain; positive values boost, negative attenuate. </p>
 <p><code>timecode_offset_frames</code> enables manual offset of the embedded timecode. This can be useful if you see a constant offset in the sound. See also <a href="../audio-sync/">Audio sync &amp; drift</a>.</p>
@@ -193,7 +210,7 @@
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../web-gui/" class="btn btn-neutral float-left" title="Web GUI"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../image-circle/" class="btn btn-neutral float-left" title="Lenses and image circles"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../digital-zoom/" class="btn btn-neutral float-right" title="Digital zoom">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -221,7 +238,7 @@
         </span>
     
     
-      <span><a href="../web-gui/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../image-circle/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../digital-zoom/" style="color: #fcfcfc">Next &raquo;</a></span>

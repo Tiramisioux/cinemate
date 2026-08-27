@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
         <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
@@ -60,6 +59,10 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
@@ -75,9 +78,15 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
@@ -89,6 +98,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
@@ -107,6 +118,8 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
+                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul class="current">
@@ -122,14 +135,18 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <p class="caption"><span class="caption-text">About</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -161,8 +178,9 @@
               
 <div class="markdown-body">
   <h1 id="commands-reference">Commands reference<a class="headerlink" href="#commands-reference" title="Permanent link">#</a></h1>
-<p>By typing <code>cinemate</code>in the Raspberry Pi CLI we can start Cinemate manually. This will stop any autostarted instance of Cinemate, show the camera startup sequence and provide the Cinemate "pseudo CLI" where can type commands for changing the camera controls and also to start and stop recording.</p>
+<p>By typing <code>cinemate</code> in the Raspberry Pi CLI we can start Cinemate manually. This will stop any autostarted instance of Cinemate, show the camera startup sequence and provide the Cinemate "pseudo CLI" where can type commands for changing the camera controls and also to start and stop recording.</p>
 <p>These commands can also be sent to the Pi as serial via the Tx/Rx pins or via USB. This can be useful for creating external controllers.</p>
+<p>The same commands can be sent wirelessly over the camera's Wi-Fi hotspot — see the <a href="../web-api/">Web API</a> and <a href="../building-control-units/">Building control units</a>.</p>
 <div class="admonition note">
 <p>Commands without an explicit argument toggle the current state when possible (e.g. <code>set fps lock</code> flips the lock; <code>set fps lock 1</code> forces it on).</p>
 </div>
@@ -195,7 +213,7 @@
 <td><code>inc iso</code> / <code>dec iso</code></td>
 <td>-</td>
 <td></td>
-<td>Step ISO up or down</td>
+<td>Step ISO up or down; <code>arrays.iso.free_increment</code> in free stepping</td>
 </tr>
 <tr>
 <td><code>set shutter a &lt;angle&gt;</code></td>
@@ -207,7 +225,7 @@
 <td><code>inc shutter a</code> / <code>dec shutter a</code></td>
 <td>-</td>
 <td></td>
-<td>Cycle through shutter angles</td>
+<td>Cycle through shutter angles; <code>arrays.shutter_a.free_increment</code> in free stepping</td>
 </tr>
 <tr>
 <td><code>set shutter a nom &lt;angle&gt;</code></td>
@@ -231,7 +249,61 @@
 <td><code>inc fps</code> / <code>dec fps</code></td>
 <td>-</td>
 <td></td>
-<td>Step through FPS list</td>
+<td>Step through FPS list; <code>arrays.fps.free_increment</code> in free stepping</td>
+</tr>
+<tr>
+<td><code>set hdr threshold low &lt;n&gt;</code></td>
+<td>int</td>
+<td><code>set hdr threshold low 500</code></td>
+<td>ClearHDR HG→LG data-selection threshold, low side (0–4095), applied live (<a href="../clear-hdr/">ClearHDR</a>)</td>
+</tr>
+<tr>
+<td><code>inc hdr threshold low</code> / <code>dec hdr threshold low</code></td>
+<td>-</td>
+<td></td>
+<td>Step the low threshold; <code>arrays.hdr_threshold_low.free_increment</code> in free stepping</td>
+</tr>
+<tr>
+<td><code>set hdr threshold high &lt;n&gt;</code></td>
+<td>int</td>
+<td><code>set hdr threshold high 3000</code></td>
+<td>ClearHDR HG→LG data-selection threshold, high side (0–4095), applied live</td>
+</tr>
+<tr>
+<td><code>inc hdr threshold high</code> / <code>dec hdr threshold high</code></td>
+<td>-</td>
+<td></td>
+<td>Step the high threshold; <code>arrays.hdr_threshold_high.free_increment</code> in free stepping</td>
+</tr>
+<tr>
+<td><code>set hdr blend &lt;n&gt;</code></td>
+<td>int</td>
+<td><code>set hdr blend 2</code></td>
+<td>ClearHDR blending mode 0–8, applied live</td>
+</tr>
+<tr>
+<td><code>inc hdr blend</code> / <code>dec hdr blend</code></td>
+<td>-</td>
+<td></td>
+<td>Step blending mode; <code>arrays.hdr_blend.free_increment</code> in free stepping</td>
+</tr>
+<tr>
+<td><code>set hdr gain adder &lt;n&gt;</code></td>
+<td>int</td>
+<td><code>set hdr gain adder 2</code></td>
+<td>ClearHDR low-gain gain adder 0–5 (2 = +12 dB), applied live</td>
+</tr>
+<tr>
+<td><code>inc hdr gain adder</code> / <code>dec hdr gain adder</code></td>
+<td>-</td>
+<td></td>
+<td>Step gain adder; <code>arrays.hdr_gain_adder.free_increment</code> in free stepping</td>
+</tr>
+<tr>
+<td><code>set log [&lt;10\|12\|off&gt;]</code></td>
+<td>int, string or none</td>
+<td><code>set log</code> / <code>set log 10</code> / <code>set log off</code></td>
+<td>Toggle <a href="../cinemate-log/">CineMate Log</a> on/off using the live mode's default target, or force <code>10</code>/<code>12</code> explicitly where the live mode supports it; restarts the camera when idle, deferred while recording</td>
 </tr>
 <tr>
 <td><code>set wb [&lt;Kelvin&gt;]</code></td>
@@ -243,13 +315,19 @@
 <td><code>inc wb</code> / <code>dec wb</code></td>
 <td>-</td>
 <td></td>
-<td>Step white balance; 100 K steps in free mode</td>
+<td>Step white balance; <code>arrays.wb.free_increment</code> (100 K default) in free stepping</td>
 </tr>
 <tr>
 <td><code>set resolution [&lt;mode&gt;]</code></td>
 <td>int or none</td>
 <td><code>set resolution 2</code></td>
 <td>Apply or cycle sensor mode</td>
+</tr>
+<tr>
+<td><code>set dynamic resolution [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set dynamic resolution 0</code></td>
+<td>Enable/disable/toggle dynamic resolution substitution</td>
 </tr>
 <tr>
 <td><code>set anamorphic factor [&lt;float&gt;]</code></td>
@@ -333,7 +411,7 @@
 <td><code>set shutter a sync [0/1]</code></td>
 <td>0/1 or none</td>
 <td><code>set shutter a sync 1</code></td>
-<td>Enable exposure sync mode</td>
+<td>Enable exposure sync mode; pots/encoders then step in <code>arrays.shutter_a.sync_increment</code> (0.1° default), independent of <code>free_increment</code></td>
 </tr>
 <tr>
 <td><code>set iso lock [0/1]</code></td>
@@ -380,7 +458,7 @@
 <tr>
 <td><code>restart camera</code></td>
 <td>-</td>
-<td>`</td>
+<td></td>
 <td>Restart the libcamera pipeline</td>
 </tr>
 <tr>
@@ -393,25 +471,49 @@
 <td><code>set iso free [0/1]</code></td>
 <td>0/1 or none</td>
 <td><code>set iso free 1</code></td>
-<td>Allow any ISO instead of presets</td>
+<td>Allow any ISO in 100-unit steps (100–3200), instead of presets</td>
 </tr>
 <tr>
 <td><code>set shutter a free [0/1]</code></td>
 <td>0/1 or none</td>
 <td><code>set shutter a free 0</code></td>
-<td>Allow any shutter angle</td>
+<td>Allow any shutter angle in 1° steps (1–360°)</td>
 </tr>
 <tr>
 <td><code>set fps free [0/1]</code></td>
 <td>0/1 or none</td>
 <td><code>set fps free 1</code></td>
-<td>Allow any FPS</td>
+<td>Allow any FPS in 1 fps steps (1–<code>fps_max</code>)</td>
 </tr>
 <tr>
 <td><code>set wb free [0/1]</code></td>
 <td>0/1 or none</td>
 <td><code>set wb free</code></td>
 <td>Use 100 K WB steps from 2800 K to 6500 K</td>
+</tr>
+<tr>
+<td><code>set hdr threshold low free [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set hdr threshold low free 1</code></td>
+<td>Use 16-unit steps across the full 0–4095 range</td>
+</tr>
+<tr>
+<td><code>set hdr threshold high free [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set hdr threshold high free 1</code></td>
+<td>Use 16-unit steps across the full 0–4095 range</td>
+</tr>
+<tr>
+<td><code>set hdr blend free [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set hdr blend free 1</code></td>
+<td>Use 1-unit steps across the full 0–8 range</td>
+</tr>
+<tr>
+<td><code>set hdr gain adder free [0/1]</code></td>
+<td>0/1 or none</td>
+<td><code>set hdr gain adder free 1</code></td>
+<td>Use 1-unit steps across the full 0–5 range</td>
 </tr>
 <tr>
 <td><code>set filter &lt;0/1&gt;</code></td>
@@ -421,6 +523,7 @@
 </tr>
 </tbody>
 </table>
+<p>All step sizes above are the shipped defaults and are configurable per parameter via <code>arrays.&lt;name&gt;.free_increment</code> in <a href="../settings-json/#arrays">settings.jsonc</a>.</p>
 <h2 id="timed-recording-shortcuts">Timed recording shortcuts<a class="headerlink" href="#timed-recording-shortcuts" title="Permanent link">#</a></h2>
 <p>Use the timed modes to walk away from the camera while it captures a precisely bounded take.</p>
 <ul>
@@ -436,14 +539,14 @@
 <li><code>format [ext4|exfat|ntfs]</code> reformats the drive with the chosen filesystem (<code>exfat</code> by default), remounts it and refreshes the free-space monitor.</li>
 </ul>
 <h2 id="storage-pre-roll-warm-up">Storage pre-roll warm-up<a class="headerlink" href="#storage-pre-roll-warm-up" title="Permanent link">#</a></h2>
-<p><code>storage preroll</code> triggers the same warm-up clip that Cinemate runs automatically on startup or when you mount new storage. During the pre-roll, Cinemate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take. The manual command stays available even when <code>settings.auto_storage_preroll</code> is set to <code>false</code> in <code>settings.json</code>.</p>
+<p><code>storage preroll</code> triggers the same warm-up clip that Cinemate runs automatically on startup or when you mount new storage. During the pre-roll, Cinemate temporarily drives the sensor at its maximum FPS, records a short burst, waits for buffers to flush and removes the test clip so the media is primed for the next real take. The manual command stays available even when <code>system.storage.auto_preroll</code> is set to <code>false</code> in <code>settings.jsonc</code>.</p>
 <p>See <a href="../storage-preroll/">Storage pre-roll warm-up</a> for a detailed walkthrough of the workflow and tips on when to run it manually.</p>
 </div>
 
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../compiling-cinepi-raw/" class="btn btn-neutral float-left" title="Compiling cinepi-raw"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../overclocking/" class="btn btn-neutral float-left" title="Overclocking the Pi"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../cli-user-guide/" class="btn btn-neutral float-right" title="CinePi RAW terminal commands">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -471,7 +574,7 @@
         </span>
     
     
-      <span><a href="../compiling-cinepi-raw/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../overclocking/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../cli-user-guide/" style="color: #fcfcfc">Next &raquo;</a></span>

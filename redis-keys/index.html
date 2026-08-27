@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
         <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
@@ -60,6 +59,10 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
@@ -75,9 +78,15 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
@@ -89,6 +98,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
@@ -107,6 +118,8 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
+                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul class="current">
@@ -114,16 +127,22 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Redis Key reference</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#resolution-switching">Resolution switching</a>
+    </li>
     </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <p class="caption"><span class="caption-text">About</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -188,7 +207,7 @@
 <tr>
 <td>shutter_angle_nom</td>
 <td>Cinemate</td>
-<td>Nominal shutter angle before sync/free-mode adjustments</td>
+<td>Nominal shutter angle before sync/free-stepping adjustments</td>
 <td>Yes</td>
 </tr>
 <tr>
@@ -234,6 +253,12 @@
 <td>No</td>
 </tr>
 <tr>
+<td>user_changing_fps</td>
+<td>Cinemate (RedisListener)</td>
+<td><code>1</code> while an fps change is debouncing; cleared once <code>fps</code> has been stable for a while</td>
+<td>No</td>
+</tr>
+<tr>
 <td>fps_last</td>
 <td>Cinemate</td>
 <td>Previous stable FPS value from stats</td>
@@ -246,6 +271,12 @@
 <td>No</td>
 </tr>
 <tr>
+<td>fps_phase_lock</td>
+<td>Cinemate startup</td>
+<td>Runtime enable for CinePi-raw's closed-loop frame-rate phase lock, from <code>sensors.&lt;cam&gt;.phase_lock</code> in settings.jsonc (default on); read once at CinePi-raw startup, not live</td>
+<td>No</td>
+</tr>
+<tr>
 <td>sensor_mode</td>
 <td>Cinemate -&gt; CinePi-raw startup</td>
 <td>Active sensor resolution/mode index</td>
@@ -254,7 +285,7 @@
 <tr>
 <td>bit_depth</td>
 <td>Cinemate startup</td>
-<td>Sensor bit depth (10 or 12) for the selected mode</td>
+<td>Sensor bit depth (10, 12 or 16) for the selected mode</td>
 <td>No</td>
 </tr>
 <tr>
@@ -264,9 +295,79 @@
 <td>No</td>
 </tr>
 <tr>
+<td>mode</td>
+<td>Cinemate startup</td>
+<td>Composite <code>width:height:bit_depth:packing</code> string for the active sensor mode</td>
+<td>No</td>
+</tr>
+<tr>
+<td>packing</td>
+<td>Cinemate startup</td>
+<td>Sensor packing token for the active mode/platform: <code>P</code> (packed) or <code>U</code> (unpacked)</td>
+<td>No</td>
+</tr>
+<tr>
 <td>lores_width / lores_height</td>
 <td>Cinemate startup</td>
 <td>Preview stream resolution passed to CinePi-raw</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<h3 id="resolution-switching">Resolution switching<a class="headerlink" href="#resolution-switching" title="Permanent link">#</a></h3>
+<p>Whether triggered manually (<code>set resolution</code>) or automatically by dynamic resolution, a
+resolution change publishes a target/in-flight state so the GUI can show a "switching"
+transition instead of a stale value.</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Written by</th>
+<th>Description</th>
+<th>Safe to change manually?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>dynamic_resolution_enabled</td>
+<td>Cinemate</td>
+<td>Toggle for automatic FPS-driven resolution downgrade/upgrade (<code>set dynamic resolution</code>); persisted and read back at startup, defaulting to on when unset</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>dynamic_resolution_active</td>
+<td>Cinemate</td>
+<td><code>1</code> while a lower resolution mode is currently substituted in to sustain the requested FPS</td>
+<td>No</td>
+</tr>
+<tr>
+<td>dynamic_resolution_desired_mode</td>
+<td>Cinemate</td>
+<td>The sensor mode the user actually asked for; dynamic resolution switches away from and back to this mode as FPS allows</td>
+<td>No</td>
+</tr>
+<tr>
+<td>resolution_switching</td>
+<td>Cinemate</td>
+<td><code>1</code> while a resolution change (manual or dynamic) is in flight; cleared when CinePi-raw's raw-stream-ready log line reports the new stream at the target size, or after a 2.5 s hold timer</td>
+<td>No</td>
+</tr>
+<tr>
+<td>resolution_target_mode</td>
+<td>Cinemate</td>
+<td>Sensor mode index CinePi-raw is being switched to</td>
+<td>No</td>
+</tr>
+<tr>
+<td>resolution_target_width / resolution_target_height</td>
+<td>Cinemate</td>
+<td>Target resolution CinePi-raw's raw-stream-ready log line is matched against to clear <code>resolution_switching</code></td>
+<td>No</td>
+</tr>
+<tr>
+<td>resolution_target_bit_depth</td>
+<td>Cinemate</td>
+<td>Target bit depth for the in-flight resolution switch</td>
 <td>No</td>
 </tr>
 <tr>
@@ -304,6 +405,48 @@
 <td>Cinemate -&gt; CinePi-raw</td>
 <td>Toggle IR-cut filter (IMX585 only)</td>
 <td>Yes</td>
+</tr>
+<tr>
+<td>hdr</td>
+<td>Cinemate -&gt; CinePi-raw startup</td>
+<td>ClearHDR state (imx585): <code>1</code> makes CinePi-raw launch with <code>--hdr sensor</code>. Set automatically when a ClearHDR sensor mode is selected; changing it requires a camera restart</td>
+<td>No (select an HDR mode via <code>set resolution</code>)</td>
+</tr>
+<tr>
+<td>hdr_threshold_low</td>
+<td>Cinemate -&gt; CinePi-raw</td>
+<td>ClearHDR data-selection threshold, low side (0–4095). Applied live to the sensor (as a pair with <code>hdr_threshold_high</code>), and re-applied at every CinePi-raw start</td>
+<td>Yes (publish key to apply)</td>
+</tr>
+<tr>
+<td>hdr_threshold_high</td>
+<td>Cinemate -&gt; CinePi-raw</td>
+<td>ClearHDR data-selection threshold, high side (0–4095). Applied live to the sensor (as a pair with <code>hdr_threshold_low</code>), and re-applied at every CinePi-raw start</td>
+<td>Yes (publish key to apply)</td>
+</tr>
+<tr>
+<td>hdr_blend</td>
+<td>Cinemate -&gt; CinePi-raw</td>
+<td>ClearHDR HG/LG blending mode, driver menu 0–8 (0 = HG 1/2 + LG 1/2). Applied live</td>
+<td>Yes (publish key to apply)</td>
+</tr>
+<tr>
+<td>hdr_gain_adder</td>
+<td>Cinemate -&gt; CinePi-raw</td>
+<td>ClearHDR low-gain path gain adder, driver menu 0–5 (2 = +12 dB). Applied live</td>
+<td>Yes (publish key to apply)</td>
+</tr>
+<tr>
+<td>log_encode_request</td>
+<td>Cinemate</td>
+<td><a href="../cinemate-log/">CineMate Log</a> request, shared across every launched camera like <code>hdr</code>: <code>0</code> off, <code>1</code> on (use the live mode's default target), <code>10</code> / <code>12</code> force that target. Set by <code>set log</code>; each camera resolves it independently against its own sensor at the next restart</td>
+<td>No (use <code>set log</code>)</td>
+</tr>
+<tr>
+<td>log_encode_cam0 / log_encode_cam1</td>
+<td>CinePi-raw (per camera) startup</td>
+<td>The target that camera was actually <strong>launched</strong> with: <code>0</code> = off/not applied, else <code>10</code> or <code>12</code>. Drives the Simple GUI <code>LOG10</code>/<code>LOG12</code> badge — deliberately not the same as <code>log_encode_request</code>, so the badge never shows a target that isn't running yet</td>
+<td>No</td>
 </tr>
 <tr>
 <td>is_recording</td>
@@ -480,6 +623,12 @@
 <td>No</td>
 </tr>
 <tr>
+<td>FSCK_STATUS</td>
+<td>Cinemate (SSD monitor)</td>
+<td>Result of the periodic filesystem check run after mount, e.g. <code>OK ...</code> / <code>FAIL ...</code>; cinemate-internal, cinepi-raw never reads it</td>
+<td>No</td>
+</tr>
+<tr>
 <td>file_size</td>
 <td>Cinemate</td>
 <td>Bytes per frame for the current mode</td>
@@ -488,7 +637,7 @@
 <tr>
 <td>memory_alert</td>
 <td>Cinemate</td>
-<td><code>1</code> if RAM usage is high</td>
+<td>RAM percentage at which the watchdog auto-stopped recording (integer, set at the 80 % trip point); <code>0</code> when clear</td>
 <td>No</td>
 </tr>
 <tr>
@@ -502,6 +651,18 @@
 <td>Cinemate startup</td>
 <td>JSON list of detected cameras and port assignments</td>
 <td>No</td>
+</tr>
+<tr>
+<td>audio_capture_gain_db</td>
+<td>Cinemate startup</td>
+<td>Capture gain in dB applied to the active USB mic, from <code>audio_capture</code> in settings.jsonc (per-mic-type block, e.g. <code>16bit.capture_gain_db</code>); read back by the USB hotswap monitor on mic reconnect</td>
+<td>No</td>
+</tr>
+<tr>
+<td>trigger_mode</td>
+<td>--</td>
+<td>Defined in <code>ParameterKey</code> but not currently written or read anywhere in Cinemate or CinePi-raw</td>
+<td>--</td>
 </tr>
 <tr>
 <td>gui_layout</td>
@@ -529,7 +690,7 @@
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
         <a href="../redis-guide/" class="btn btn-neutral float-left" title="Redis API"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../changelog/" class="btn btn-neutral float-right" title="Changelog">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../cinepi-multi/" class="btn btn-neutral float-right" title="How Cinemate launches CinePi-raw">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -559,7 +720,7 @@
       <span><a href="../redis-guide/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../changelog/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../cinepi-multi/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

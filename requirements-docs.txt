@@ -1,0 +1,11 @@
+# Documentation build only, used by .github/workflows/docs.yml.
+# Kept out of the runtime requirements: a camera does not build its own docs.
+
+mkdocs
+mkdocs-material
+mkdocs-pdf-export-plugin
+mkdocs-git-revision-date-localized-plugin
+mkdocs-macros-plugin
+mkdocs-with-pdf==0.9.3
+schemdraw<0.18
+schemdraw-markdown

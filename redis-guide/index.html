@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
         <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
@@ -60,6 +59,10 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
@@ -75,9 +78,15 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
@@ -89,6 +98,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
@@ -107,12 +118,16 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
+                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul class="current">
                   <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Redis API</a>
     <ul class="current">
@@ -128,10 +143,12 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <p class="caption"><span class="caption-text">About</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -165,7 +182,7 @@
   <h1 id="redis-api-quick-start">Redis API quick start<a class="headerlink" href="#redis-api-quick-start" title="Permanent link">#</a></h1>
 <h2 id="redis-cli">Redis-cli<a class="headerlink" href="#redis-cli" title="Permanent link">#</a></h2>
 <div class="highlight"><pre><span></span><code><span class="c1"># List all keys</span>
-redis-cli<span class="w"> </span>KEYS<span class="w"> </span><span class="s1">&#39;*&#39;</span>
+redis-cli<span class="w"> </span>KEYS<span class="w"> </span><span class="s1">'*'</span>
 
 <span class="c1"># Read the current ISO value</span>
 redis-cli<span class="w"> </span>GET<span class="w"> </span>iso
@@ -198,15 +215,15 @@ redis-cli<span class="w"> </span>PUBLISH<span class="w"> </span>cp_controls<span
 <p>Every frame, CinePi-raw sends a small JSON object containing live statistics.</p>
 <div class="highlight"><pre><span></span><code><span class="w">    </span><span class="n">Json</span><span class="o">::</span><span class="n">Value</span><span class="w"> </span><span class="n">data</span><span class="p">;</span>
 <span class="w">    </span><span class="n">Json</span><span class="o">::</span><span class="n">Value</span><span class="w"> </span><span class="n">histo</span><span class="p">;</span>
-<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;framerate&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">completed_request</span><span class="o">-&gt;</span><span class="n">framerate</span><span class="p">;</span>
-<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;colorTemp&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">colorTemp</span><span class="p">;</span>
-<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;focus&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">focus</span><span class="p">;</span>
-<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;frameCount&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">app_</span><span class="o">-&gt;</span><span class="n">GetEncoder</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">getFrameCount</span><span class="p">();</span>
-<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;bufferSize&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">app_</span><span class="o">-&gt;</span><span class="n">GetEncoder</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">bufferSize</span><span class="p">();</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"framerate"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">completed_request</span><span class="o">-&gt;</span><span class="n">framerate</span><span class="p">;</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"colorTemp"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">colorTemp</span><span class="p">;</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"focus"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">focus</span><span class="p">;</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"frameCount"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">app_</span><span class="o">-&gt;</span><span class="n">GetEncoder</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">getFrameCount</span><span class="p">();</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"bufferSize"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">app_</span><span class="o">-&gt;</span><span class="n">GetEncoder</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">bufferSize</span><span class="p">();</span>
 <span class="w">    </span><span class="c1">// per-camera timestamps in nanoseconds</span>
-<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;timestamp&quot;</span><span class="p">]</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">timestamp</span><span class="p">;</span><span class="w">       </span><span class="c1">// single sensor</span>
-<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;timestamp_cam0&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">timestamp_cam0</span><span class="p">;</span><span class="w">  </span><span class="c1">// multi-sensor</span>
-<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">&quot;timestamp_cam1&quot;</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">timestamp_cam1</span><span class="p">;</span><span class="w">  </span><span class="c1">// multi-sensor</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"timestamp"</span><span class="p">]</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">timestamp</span><span class="p">;</span><span class="w">       </span><span class="c1">// single sensor</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"timestamp_cam0"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">timestamp_cam0</span><span class="p">;</span><span class="w">  </span><span class="c1">// multi-sensor</span>
+<span class="w">    </span><span class="n">data</span><span class="p">[</span><span class="s">"timestamp_cam1"</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">info</span><span class="p">.</span><span class="n">timestamp_cam1</span><span class="p">;</span><span class="w">  </span><span class="c1">// multi-sensor</span>
 <span class="w">    </span><span class="n">redis_</span><span class="o">-&gt;</span><span class="n">publish</span><span class="p">(</span><span class="n">CHANNEL_STATS</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="p">.</span><span class="n">toStyledString</span><span class="p">());</span>
 </code></pre></div>
 <p>Cinemate's <code>RedisListener</code> parses these messages and updates keys such as:</p>
@@ -225,13 +242,13 @@ redis-cli<span class="w"> </span>PUBLISH<span class="w"> </span>cp_controls<span
 <h2 id="controlling-the-camera-from-your-own-script">Controlling the camera from your own script<a class="headerlink" href="#controlling-the-camera-from-your-own-script" title="Permanent link">#</a></h2>
 <p>Below is a very small example using <code>redis-py</code>.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">redis</span>
-<span class="n">r</span> <span class="o">=</span> <span class="n">redis</span><span class="o">.</span><span class="n">Redis</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">6379</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">r</span> <span class="o">=</span> <span class="n">redis</span><span class="o">.</span><span class="n">Redis</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s1">'localhost'</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">6379</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
 <span class="c1"># toggle recording</span>
-<span class="n">current</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;is_recording&#39;</span><span class="p">)</span>
-<span class="n">new_value</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;0&#39;</span> <span class="k">if</span> <span class="n">current</span> <span class="o">==</span> <span class="sa">b</span><span class="s1">&#39;1&#39;</span> <span class="k">else</span> <span class="sa">b</span><span class="s1">&#39;1&#39;</span>
-<span class="n">r</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;is_recording&#39;</span><span class="p">,</span> <span class="n">new_value</span><span class="p">)</span>
-<span class="n">r</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s1">&#39;cp_controls&#39;</span><span class="p">,</span> <span class="s1">&#39;is_recording&#39;</span><span class="p">)</span>
+<span class="n">current</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'is_recording'</span><span class="p">)</span>
+<span class="n">new_value</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">'0'</span> <span class="k">if</span> <span class="n">current</span> <span class="o">==</span> <span class="sa">b</span><span class="s1">'1'</span> <span class="k">else</span> <span class="sa">b</span><span class="s1">'1'</span>
+<span class="n">r</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">'is_recording'</span><span class="p">,</span> <span class="n">new_value</span><span class="p">)</span>
+<span class="n">r</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s1">'cp_controls'</span><span class="p">,</span> <span class="s1">'is_recording'</span><span class="p">)</span>
 </code></pre></div>
 <div class="admonition info">
 <p class="admonition-title">Info</p>
@@ -242,7 +259,7 @@ redis-cli<span class="w"> </span>PUBLISH<span class="w"> </span>cp_controls<span
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../cli-user-guide/" class="btn btn-neutral float-left" title="CinePi RAW terminal commands"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../controller-methods/" class="btn btn-neutral float-left" title="Controller methods"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../redis-keys/" class="btn btn-neutral float-right" title="Redis Key reference">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -270,7 +287,7 @@ redis-cli<span class="w"> </span>PUBLISH<span class="w"> </span>cp_controls<span
         </span>
     
     
-      <span><a href="../cli-user-guide/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../controller-methods/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../redis-keys/" style="color: #fcfcfc">Next &raquo;</a></span>

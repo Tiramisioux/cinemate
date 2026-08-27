@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
         <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
@@ -60,6 +59,10 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
@@ -75,9 +78,15 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
@@ -89,6 +98,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Backing up the SD card</a>
     <ul class="current">
@@ -115,6 +126,8 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
+                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
@@ -122,14 +135,18 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <p class="caption"><span class="caption-text">About</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -162,27 +179,27 @@
 <div class="markdown-body">
   <h1 id="backing-up-the-sd-card">Backing up the SD card<a class="headerlink" href="#backing-up-the-sd-card" title="Permanent link">#</a></h1>
 <h2 id="create-a-compressed-image-using-pishrink">Create a compressed image using PiShrink<a class="headerlink" href="#create-a-compressed-image-using-pishrink" title="Permanent link">#</a></h2>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>bash<span class="w"> </span>-Eeuo<span class="w"> </span>pipefail<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;</span>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>bash<span class="w"> </span>-Eeuo<span class="w"> </span>pipefail<span class="w"> </span>-c<span class="w"> </span><span class="s1">'</span>
 <span class="hll"><span class="s1">  # Timestamp like 2025-07-19_19-38-33</span>
 </span><span class="hll"><span class="s1">  ts=$(date +%F_%H-%M-%S)</span>
 </span>
 <span class="s1">  # Paths on /media/RAW</span>
-<span class="s1">  raw=&quot;/media/RAW/Cinemate_${ts}.img&quot;         # working image</span>
-<span class="s1">  final=&quot;/media/RAW/cinemate_${ts}.img.xz&quot;    # desired end-result</span>
+<span class="s1">  raw="/media/RAW/Cinemate_${ts}.img"         # working image</span>
+<span class="s1">  final="/media/RAW/cinemate_${ts}.img.xz"    # desired end-result</span>
 
 <span class="s1">  # 1 ─ Image the SD-card (pads bad blocks, keeps sparsity)</span>
-<span class="s1">  dd if=/dev/mmcblk0 of=&quot;$raw&quot; \</span>
+<span class="s1">  dd if=/dev/mmcblk0 of="$raw" \</span>
 <span class="s1">     bs=4M conv=noerror,sync,sparse status=progress</span>
 
 <span class="s1">  # 2 ─ Shrink + parallel-xz compress **in place**</span>
-<span class="s1">  /usr/local/bin/pishrink.sh -s -v -Z -a &quot;$raw&quot;</span>
+<span class="s1">  /usr/local/bin/pishrink.sh -s -v -Z -a "$raw"</span>
 
 <span class="s1">  # 3 ─ Rename the freshly-made .xz to the lowercase style you want</span>
-<span class="s1">  mv &quot;${raw}.xz&quot; &quot;$final&quot;</span>
+<span class="s1">  mv "${raw}.xz" "$final"</span>
 
 <span class="s1">  # 4 ─ Remove the now-unused raw image</span>
-<span class="s1">  rm -f &quot;$raw&quot;</span>
-<span class="s1">&#39;</span>
+<span class="s1">  rm -f "$raw"</span>
+<span class="s1">'</span>
 </code></pre></div>
 <h2 id="check-the-name-of-the-resulting-file">Check the name of the resulting file<a class="headerlink" href="#check-the-name-of-the-resulting-file" title="Permanent link">#</a></h2>
 <div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/media/RAW
@@ -206,7 +223,7 @@ scp<span class="w"> </span>pi@cinepi.local:/media/RAW/cinemate_2025-07-29_13-37-
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../system-services/" class="btn btn-neutral float-left" title="System services"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../recovery-console/" class="btn btn-neutral float-left" title="Recovery console"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../troubleshooting/" class="btn btn-neutral float-right" title="Troubleshooting">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -234,7 +251,7 @@ scp<span class="w"> </span>pi@cinepi.local:/media/RAW/cinemate_2025-07-29_13-37-
         </span>
     
     
-      <span><a href="../system-services/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../recovery-console/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../troubleshooting/" style="color: #fcfcfc">Next &raquo;</a></span>

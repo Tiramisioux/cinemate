@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
         <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
@@ -60,6 +59,10 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
@@ -75,9 +78,15 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
@@ -90,6 +99,8 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
               </ul>
@@ -98,7 +109,7 @@
                 </li>
               </ul>
               <p class="caption"><span class="caption-text">Advanced</span></p>
-              <ul>
+              <ul class="current">
                   <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
@@ -107,6 +118,52 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Overclocking the Pi</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#what-it-does">What it does</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#what-the-cinemate-install-ships">What the Cinemate install ships</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#switching-it-on-and-off">Switching it on and off</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#link-frequency">Link frequency</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#imx585">imx585</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#imx283">imx283</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#the-others">The others</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#receiver-ceilings">Receiver ceilings</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#how-it-works">How it works</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#the-clock">The clock</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#the-pixel-rate-ceiling">The pixel-rate ceiling</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#why-it-is-passed-rather-than-detected">Why it is passed rather than detected</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#why-the-errors-are-not-symmetric">Why the errors are not symmetric</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#checking-which-regime-is-live">Checking which regime is live</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#1-build-the-rp1-overclock-overlay">1. Build the RP1 overclock overlay</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#2-the-libcamera-side">2. The libcamera side</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#3-rebuild-libcamera">3. Rebuild libcamera</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#4-verify">4. Verify</a>
+    </li>
+    </ul>
+                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
@@ -114,14 +171,18 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <p class="caption"><span class="caption-text">About</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -140,6 +201,7 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Advanced</li>
       <li class="breadcrumb-item active">Overclocking the Pi</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/overclocking.md" class="icon icon-github"> Edit on GitHub</a>
@@ -152,10 +214,497 @@
               
 <div class="markdown-body">
   <h1 id="overclocking-the-pi">Overclocking the Pi<a class="headerlink" href="#overclocking-the-pi" title="Permanent link">#</a></h1>
+<p>Raise the Raspberry Pi 5 RP1 image-pipeline clock to unlock higher imx585
+ClearHDR frame rates. <strong>Pi 5 and CM5 only</strong> — the RP1 southbridge does not
+exist on the Pi 4 family, so none of this applies there.</p>
+<p>Instructions courtesy of <strong>Will Whang</strong>, with thanks. See his work at
+<a href="https://github.com/will127534">github.com/will127534</a>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Pi 5 / CM5 only</p>
+<p>Do not apply these steps on a Pi 4 / 400 / CM4. The device-tree overlay
+targets the RP1 (<code>brcm,bcm2712</code>) and the libcamera change assumes the PiSP
+(Pi 5) pipeline. Everything the installer does here is gated on that same
+<code>bcm2712</code> check, so a Pi 4 install simply skips it.</p>
+</div>
+<h2 id="what-it-does">What it does<a class="headerlink" href="#what-it-does" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Change</th>
+<th>Stock</th>
+<th>Overclocked</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RP1 <code>PLL_SYS</code> / <code>CLK_SYS</code></td>
+<td>200 MHz</td>
+<td><strong>333.33 MHz</strong> (the overlay asks for 300)</td>
+</tr>
+<tr>
+<td>PiSP pixel-rate ceiling</td>
+<td>380 MPix/s</td>
+<td>580 MPix/s</td>
+</tr>
+</tbody>
+</table>
+<p>The overlay raises the clock. The pixel-rate ceiling tells libcamera how much
+the pipeline can actually drain, and Cinemate sets it to match. Both are
+needed, and they must agree — see <a href="#how-it-works">How it works</a>.</p>
+<h2 id="what-the-cinemate-install-ships">What the Cinemate install ships<a class="headerlink" href="#what-the-cinemate-install-ships" title="Permanent link">#</a></h2>
+<p><code>cinemate-install.sh</code> does all of this automatically on a Pi 5 / CM5. You do
+not need the manual steps at the end of this page unless you are building the
+stack by hand:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Installer function</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Compile + install the overlay</td>
+<td><code>configure_rp1_overclock</code></td>
+<td><code>/boot/firmware/overlays/rp1-overclock.dtbo</code></td>
+</tr>
+<tr>
+<td>Add the config.txt line</td>
+<td><code>configure_boot_config</code></td>
+<td><code>#dtoverlay=rp1-overclock</code>, <strong>commented out</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The overclock therefore ships <strong>installed but off</strong>. Stock clocks stay the
+default; you opt in. The pixel-rate ceiling needs no install step — Cinemate
+works it out at every launch from whether the overlay is enabled.</p>
+<h3 id="switching-it-on-and-off">Switching it on and off<a class="headerlink" href="#switching-it-on-and-off" title="Permanent link">#</a></h3>
+<p>Use the <strong>Boot config</strong> pane of the settings editor at
+<code>http://cinepi.local:5000/settings-editor</code>. The <strong>RP1 overclock</strong> toggle
+comments and uncomments the overlay line for you.</p>
+<div class="admonition warning">
+<p class="admonition-title">Both directions need a reboot</p>
+<p>The RP1 clock is set from the device tree at boot, so nothing changes
+until the Pi restarts — switching <strong>on</strong> and switching <strong>off</strong> both
+require it. Restarting Cinemate alone does not pick it up. Saving from
+the settings editor reboots for you (<strong>Save &amp; reboot Pi</strong>, roughly 25
+seconds); from a shell you reboot yourself.</p>
+</div>
+<p>The toggle only appears on a <code>bcm2712</code> board whose <code>config.txt</code> already
+contains the overlay line. If it is missing, re-run <code>cinemate-install.sh</code> to
+add it. See <a href="../config-txt/">Modifying config.txt</a> for the file itself.</p>
+<p>Equivalent from a shell:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>sed<span class="w"> </span>-i<span class="w"> </span><span class="s1">'s/^#\s*dtoverlay=rp1-overclock/dtoverlay=rp1-overclock/'</span><span class="w"> </span>/boot/firmware/config.txt
+sudo<span class="w"> </span>reboot
+</code></pre></div>
+<p>To go back to stock, re-comment the line and reboot.</p>
+<h2 id="link-frequency">Link frequency<a class="headerlink" href="#link-frequency" title="Permanent link">#</a></h2>
+<p>Two different ceilings, and you need both raised:</p>
+<table>
+<thead>
+<tr>
+<th>Raises</th>
+<th>Setting</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>What the <strong>sensor sends</strong></td>
+<td>CSI-2 link frequency, a parameter on the sensor's overlay line</td>
+</tr>
+<tr>
+<td>What the <strong>receiver takes</strong></td>
+<td>the RP1 overclock on this page</td>
+</tr>
+</tbody>
+</table>
+<p>A stock RP1 tops out near 43.8 fps at 4K no matter what the sensor is told to
+do, which is why the link-frequency menus appear once the overclock is on.
+Each port has its own — cam0 and cam1 are independent. Cinemate writes the
+parameter only when it differs from the sensor's default:</p>
+<div class="highlight"><pre><span></span><code>dtoverlay=imx585,cam0,link-frequency=1039500000
+</code></pre></div>
+<p>Per-sensor values live in <code>resources/sensors.json</code>. That file is the source of
+truth — the menu, the validation and the tables below all read from it. See
+<a href="../sensors/">Sensors</a> for the full per-sensor tables.</p>
+<h3 id="imx585">imx585<a class="headerlink" href="#imx585" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Mbps/lane</th>
+<th>4K 12-bit, 4 lanes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>297 MHz</td>
+<td>594</td>
+<td>20.8 fps</td>
+</tr>
+<tr>
+<td>360 MHz</td>
+<td>720</td>
+<td>25.0 fps</td>
+</tr>
+<tr>
+<td>445.5 MHz</td>
+<td>891</td>
+<td>30.0 fps</td>
+</tr>
+<tr>
+<td>594 MHz</td>
+<td>1188</td>
+<td>41.7 fps</td>
+</tr>
+<tr>
+<td><strong>720 MHz</strong> (default)</td>
+<td>1440</td>
+<td>50.0 fps</td>
+</tr>
+<tr>
+<td>891 MHz</td>
+<td>1782</td>
+<td>60.0 fps</td>
+</tr>
+<tr>
+<td>1039.5 MHz</td>
+<td>2079</td>
+<td>75.0 fps</td>
+</tr>
+</tbody>
+</table>
+<p>Halve for 2-lane, halve again for ClearHDR, double for 2×2 binned. Figures
+come from <a href="https://github.com/will127534/imx585-v4l2-driver">will127534/imx585-v4l2-driver</a>
+and are advisory until measured on this stack. The driver also defines
+1188 MHz (2376 Mbps/lane); Cinemate does not offer it — the Pi 4 cannot use it
+and the Pi 5 drops frames.</p>
+<h3 id="imx283">imx283<a class="headerlink" href="#imx283" title="Permanent link">#</a></h3>
+<p>360 MHz (720 Mbps/lane) and <strong>720 MHz</strong> (1440 Mbps/lane, default). Sony ships
+exactly two register sequences and the driver rejects anything else.</p>
+<div class="admonition note">
+<p class="admonition-title">720 MHz is already the ceiling here</p>
+<p>The only selectable alternative is <em>slower</em>. This closes the standing
+question of whether a faster link would lift the 4K modes past their
+44/41 fps: it would, but no faster link exists. More frame rate on the
+imx283 means a lower bit depth, not a faster link.</p>
+<p>Selecting a non-default value needs the <code>link-frequency</code> overlay
+parameter, which exists only in <code>Tiramisioux/imx283-v4l2-driver</code> <code>6.12.y</code>
+at <code>257c9cf</code> or later. An older overlay rejects the unknown parameter and
+the camera will not enumerate at all — re-run the installer first.</p>
+</div>
+<h3 id="the-others">The others<a class="headerlink" href="#the-others" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Sensor</th>
+<th>Link</th>
+<th>Menu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>imx477</td>
+<td>450 MHz default; since kernel 6.12.49 the driver computes PLL settings for any ~3 MHz multiple</td>
+<td><strong>not yet</strong> — values recorded, menu held back pending hardware verification</td>
+</tr>
+<tr>
+<td>imx296</td>
+<td>fixed 594 MHz, 1 lane; the 60 fps cap is readout-limited, not link-limited</td>
+<td>no</td>
+</tr>
+<tr>
+<td>imx519</td>
+<td>fixed 408 MHz; the driver rejects anything else at probe</td>
+<td>no</td>
+</tr>
+</tbody>
+</table>
+<h3 id="receiver-ceilings">Receiver ceilings<a class="headerlink" href="#receiver-ceilings" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Receiver</th>
+<th>Spec</th>
+<th>Observed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pi 5 / CM5 (RP1)</td>
+<td>1.5 Gbps/lane</td>
+<td>1782 Mbps/lane fine, 2079 works, 2376 drops frames. Separate drain limit: 380 MPix/s stock, 580 with the overclock</td>
+</tr>
+<tr>
+<td>Pi 4 / CM4 (Unicam)</td>
+<td>none published</td>
+<td>~1.4 Gbps/lane; SDRAM-bandwidth-limited; 2376 fails</td>
+</tr>
+</tbody>
+</table>
+<h2 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">#</a></h2>
+<p>Two independent limits, and raising one without the other buys nothing:</p>
+<table>
+<thead>
+<tr>
+<th>Limit</th>
+<th>What it caps</th>
+<th>Raised by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CSI-2 link frequency</td>
+<td>how fast the <strong>sensor sends</strong></td>
+<td>a parameter on the sensor's overlay line</td>
+</tr>
+<tr>
+<td>PiSP pixel rate</td>
+<td>how fast the <strong>receiver drains</strong></td>
+<td>the RP1 overclock, via the clock</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-clock">The clock<a class="headerlink" href="#the-clock" title="Permanent link">#</a></h3>
+<p>The overlay re-specifies the RP1 <code>assigned-clock-rates</code> array, changing
+<code>RP1_PLL_SYS</code> and <code>RP1_CLK_SYS</code> from 200 MHz to 300 MHz. The clock driver then
+picks the nearest rate it can synthesise from the 1 GHz PLL core, which is
+<strong>333.33 MHz</strong> — a third of a gigahertz, not the 300 MHz requested. Both the
+request and the result are normal; do not treat 333333333 as a fault.</p>
+<h3 id="the-pixel-rate-ceiling">The pixel-rate ceiling<a class="headerlink" href="#the-pixel-rate-ceiling" title="Permanent link">#</a></h3>
+<p>The PiSP has a CSI2-to-ISP-FE bottleneck that scales with that clock. libcamera
+expresses it as <code>minPixelProcessingTime</code>, and the IPA uses it to stretch each
+mode's minimum line length so the front end can keep up.</p>
+<p>Cinemate decides the value and passes it down the stack:</p>
+<div class="highlight"><pre><span></span><code>settings editor "RP1 overclock" switch
+        │  writes
+        ▼
+/boot/firmware/config.txt        dtoverlay=rp1-overclock
+        │  read at launch by
+        ▼
+cinemate   src/module/rp1_regime.py        → 380 or 580 MPix/s
+        │  --max-pixel-rate
+        ▼
+cinepi-raw core/options.cpp                → setenv()
+        │  LIBCAMERA_RPI_MAX_PIXEL_RATE
+        ▼
+libcamera  src/ipa/rpi/controller/controller.cpp
+                                           → minPixelProcessingTime
+</code></pre></div>
+<p>One switch drives the whole chain, so the overlay and the ceiling cannot end up
+describing different regimes. The same value is passed to the <code>--list-cameras</code>
+probe that builds the mode table, so what Cinemate offers you and what it
+records with are computed under the same limit.</p>
+<h3 id="why-it-is-passed-rather-than-detected">Why it is passed rather than detected<a class="headerlink" href="#why-it-is-passed-rather-than-detected" title="Permanent link">#</a></h3>
+<p>libcamera cannot work the rate out for itself. Both obvious ways of asking the
+hardware were tried on a CM5 running 6.12.93 and both fail:</p>
+<ul>
+<li><strong>There is no <code>rp1</code> node in <code>/proc/device-tree</code>.</strong> Not an empty one — none at
+  all, and no <code>assigned-clock-rates</code> array anywhere in the tree. A device-tree
+  walk finds nothing.</li>
+<li><strong>The overlay requests 300 MHz and the clock is 333.33 MHz</strong>, so any lookup
+  keyed on the requested value misses.</li>
+</ul>
+<p>Both failures land silently on the stock rate, which costs frame rate rather
+than correctness — safe, but wrong and invisible. Hence an explicit value.</p>
+<h3 id="why-the-errors-are-not-symmetric">Why the errors are not symmetric<a class="headerlink" href="#why-the-errors-are-not-symmetric" title="Permanent link">#</a></h3>
+<p>Setting the ceiling <strong>too low</strong> costs frame rate and nothing else: the IPA pads
+the line length further and the sensor runs slower.</p>
+<p>Setting it <strong>too high</strong> corrupts. The IPA pads less than the hardware needs,
+the CSI2-to-ISP-FE FIFO overruns mid-line, and modes wide enough for this bound
+to be what limits the line time return static — with nothing logged, because
+the one warning on that path fires when the <em>sensor</em> cannot supply enough
+blanking, which a too-high rate makes <em>less</em> likely to trigger. Narrow modes
+are unaffected, since their line rate is sensor-limited and well under either
+bound, which is what makes the symptom look like a sensor-mode bug.</p>
+<p>So every ambiguous case resolves downward:</p>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Ceiling used</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No RP1 (Pi 4 family)</td>
+<td>none passed — libcamera's own default stands</td>
+</tr>
+<tr>
+<td>Overlay off</td>
+<td>380 MPix/s</td>
+</tr>
+<tr>
+<td>Overlay on, clock confirms it</td>
+<td>580 MPix/s</td>
+</tr>
+<tr>
+<td>Overlay on but clock still reads stock — <em>edited, not yet rebooted</em></td>
+<td>380 MPix/s, with a warning naming the reboot</td>
+</tr>
+<tr>
+<td>Clock unreadable (no root for debugfs)</td>
+<td>the switch is believed</td>
+</tr>
+</tbody>
+</table>
+<p>The clock check is a threshold, not an equality test, precisely because the
+requested 300 MHz is not the 333.33 MHz that comes out.</p>
+<h3 id="checking-which-regime-is-live">Checking which regime is live<a class="headerlink" href="#checking-which-regime-is-live" title="Permanent link">#</a></h3>
+<p>libcamera's own log line is suppressed in normal operation — cinepi-raw calls
+<code>logSetTarget(LoggingTargetNone)</code> unless <code>--verbose</code>, and always for
+<code>--list-cameras</code> — so read the arguments instead:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">clk</span><span class="o">=</span><span class="k">$(</span>sudo<span class="w"> </span>-n<span class="w"> </span>awk<span class="w"> </span><span class="s1">'/^[[:space:]]+clk_sys[[:space:]]/{print $5; exit}'</span><span class="w"> </span>/sys/kernel/debug/clk/clk_summary<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="k">)</span>
+<span class="nv">pid</span><span class="o">=</span><span class="k">$(</span>pgrep<span class="w"> </span>-x<span class="w"> </span>cinepi-raw<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-1<span class="k">)</span>
+<span class="nv">rate</span><span class="o">=</span><span class="k">$(</span>tr<span class="w"> </span><span class="s1">'\0'</span><span class="w"> </span><span class="s1">'\n'</span><span class="w"> </span>&lt;<span class="w"> </span>/proc/<span class="nv">$pid</span>/cmdline<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-A1<span class="w"> </span>-x<span class="w"> </span>--<span class="w"> </span><span class="s1">'--max-pixel-rate'</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tail<span class="w"> </span>-1<span class="k">)</span>
+grep<span class="w"> </span>-q<span class="w"> </span><span class="s1">'^dtoverlay=rp1-overclock'</span><span class="w"> </span>/boot/firmware/config.txt<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nv">ovl</span><span class="o">=</span>enabled<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nv">ovl</span><span class="o">=</span>stock
+<span class="nb">printf</span><span class="w"> </span><span class="s1">'RP1 clk_sys : %s Hz\n'</span><span class="w"> </span><span class="s2">"</span><span class="si">${</span><span class="nv">clk</span><span class="k">:-</span><span class="nv">unreadable</span><span class="si">}</span><span class="s2">"</span>
+<span class="nb">printf</span><span class="w"> </span><span class="s1">'config.txt  : rp1-overclock %s\n'</span><span class="w"> </span><span class="s2">"</span><span class="nv">$ovl</span><span class="s2">"</span>
+<span class="nb">printf</span><span class="w"> </span><span class="s1">'cinepi-raw  : %s\n'</span><span class="w"> </span><span class="s2">"</span><span class="si">${</span><span class="nv">rate</span><span class="k">:-</span><span class="nv">no</span><span class="p"> --max-pixel-rate (libcamera default)</span><span class="si">}</span><span class="s2">"</span>
+</code></pre></div>
+<p>Read the three lines together: the clock is ground truth, <code>config.txt</code> is
+intent, and the argument is what the pipeline was actually told. Intent
+disagreeing with the clock means you have not rebooted since toggling.</p>
+<p>The rest of this page is the manual build.</p>
+<h2 id="1-build-the-rp1-overclock-overlay">1. Build the RP1 overclock overlay<a class="headerlink" href="#1-build-the-rp1-overclock-overlay" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>device-tree-compiler
+</code></pre></div>
+<p>Create <code>~/rp1-overclock.dts</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="cp">/dts-v1/</span><span class="p">;</span>
+<span class="cp">/plugin/</span><span class="p">;</span>
+
+<span class="nf">/</span><span class="cm"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kr">compatible</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"brcm,bcm2712"</span><span class="p">;</span>
+
+<span class="w">    </span><span class="nf">fragment</span><span class="o">@</span><span class="mi">0</span><span class="cm"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">target</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&lt;&amp;</span><span class="na">rp1_clocks</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="w">        </span><span class="nf">__overlay__</span><span class="cm"> </span><span class="p">{</span>
+<span class="w">            </span><span class="cm">/*</span>
+<span class="cm">             * Re-specify the entire assigned-clock-rates array.</span>
+<span class="cm">             * Only the items for RP1_PLL_SYS (index #2) and</span>
+<span class="cm">             * RP1_CLK_SYS (index #7) have been changed to 300000000.</span>
+<span class="cm">             */</span>
+<span class="w">            </span><span class="n">assigned-clock-rates</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&lt;</span>
+<span class="w">                </span><span class="cm">/* RP1_PLL_SYS_CORE  */</span><span class="w"> </span><span class="mi">1000000000</span>
+<span class="w">                </span><span class="cm">/* RP1_PLL_AUDIO_CORE*/</span><span class="w"> </span><span class="mi">1536000000</span>
+<span class="w">                </span><span class="cm">/* RP1_PLL_SYS       */</span><span class="w"> </span><span class="mi">300000000</span>
+<span class="w">                </span><span class="cm">/* RP1_PLL_SYS_SEC   */</span><span class="w"> </span><span class="mi">125000000</span>
+<span class="w">                </span><span class="cm">/* RP1_CLK_ETH       */</span><span class="w"> </span><span class="mi">125000000</span>
+<span class="w">                </span><span class="cm">/* RP1_PLL_AUDIO     */</span><span class="w"> </span><span class="mi">61440000</span>
+<span class="w">                </span><span class="cm">/* RP1_PLL_AUDIO_SEC */</span><span class="w"> </span><span class="mi">153600000</span>
+<span class="w">                </span><span class="cm">/* RP1_CLK_SYS       */</span><span class="w"> </span><span class="mi">300000000</span>
+<span class="w">                </span><span class="cm">/* RP1_PLL_SYS_PRI_PH*/</span><span class="w"> </span><span class="mi">100000000</span>
+<span class="w">                </span><span class="cm">/* RP1_CLK_SLOW_SYS  */</span><span class="w"> </span><span class="mi">50000000</span>
+<span class="w">                </span><span class="cm">/* RP1_CLK_SDIO_TIMER*/</span><span class="w"> </span><span class="mi">1000000</span>
+<span class="w">                </span><span class="cm">/* RP1_CLK_SDIO_ALT_SRC*/</span><span class="w"> </span><span class="mi">200000000</span>
+<span class="w">                </span><span class="cm">/* RP1_CLK_ETH_TSU   */</span><span class="w"> </span><span class="mi">50000000</span>
+<span class="w">            </span><span class="o">&gt;</span><span class="p">;</span>
+<span class="w">        </span><span class="p">};</span>
+<span class="w">    </span><span class="p">};</span>
+<span class="p">};</span>
+</code></pre></div>
+<p>Compile it and install it into the boot overlays directory:</p>
+<div class="highlight"><pre><span></span><code>dtc<span class="w"> </span>-@<span class="w"> </span>-I<span class="w"> </span>dts<span class="w"> </span>-O<span class="w"> </span>dtb<span class="w"> </span>-o<span class="w"> </span>rp1-overclock.dtbo<span class="w"> </span>~/rp1-overclock.dts
+sudo<span class="w"> </span>cp<span class="w"> </span>rp1-overclock.dtbo<span class="w"> </span>/boot/firmware/overlays/
+</code></pre></div>
+<p>Then add the overlay to <code>/boot/firmware/config.txt</code>:</p>
+<div class="highlight"><pre><span></span><code>dtoverlay=rp1-overclock
+</code></pre></div>
+<h2 id="2-the-libcamera-side">2. The libcamera side<a class="headerlink" href="#2-the-libcamera-side" title="Permanent link">#</a></h2>
+<p>Nothing to patch. The <code>cinemate</code> branch of
+<a href="https://github.com/Tiramisioux/libcamera">Tiramisioux/libcamera</a> reads the
+ceiling from <code>LIBCAMERA_RPI_MAX_PIXEL_RATE</code> and defaults to the stock
+380 MPix/s when it is unset, so one build is correct in both regimes.</p>
+<p>Earlier revisions hardcoded <code>minPixelProcessingTime = 1.0us / 580</code> here. If you
+are looking at an older checkout you will find that edit described as a manual
+step — do not reapply it. A build pinned at 580 advertises rates a stock-clock
+board cannot drain, and overrunning that bound corrupts wide modes silently
+(see <a href="#why-the-errors-are-not-symmetric">Why the errors are not symmetric</a>).</p>
+<p>If you want to override the value by hand for bring-up:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">LIBCAMERA_RPI_MAX_PIXEL_RATE</span><span class="o">=</span><span class="m">580</span><span class="w"> </span>cinepi-raw<span class="w"> </span>--verbose<span class="w"> </span>...
+</code></pre></div>
+<p>Cinemate passes <code>--max-pixel-rate</code> on every launch, so in normal operation you
+never set this yourself.</p>
+<h2 id="3-rebuild-libcamera">3. Rebuild libcamera<a class="headerlink" href="#3-rebuild-libcamera" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>libcamera<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+git<span class="w"> </span>config<span class="w"> </span>core.fileMode<span class="w"> </span><span class="nb">false</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+meson<span class="w"> </span>setup<span class="w"> </span>build<span class="w"> </span>--wipe<span class="w"> </span>--buildtype<span class="o">=</span>release<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Dpipelines<span class="o">=</span>rpi/vc4,rpi/pisp<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Dipas<span class="o">=</span>rpi/vc4,rpi/pisp<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Dv4l2<span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Dgstreamer<span class="o">=</span>enabled<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Dtest<span class="o">=</span><span class="nb">false</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Dlc-compliance<span class="o">=</span>disabled<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Dcam<span class="o">=</span>disabled<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Dqcam<span class="o">=</span>disabled<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Ddocumentation<span class="o">=</span>disabled<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-Dpycamera<span class="o">=</span>disabled<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+ninja<span class="w"> </span>-C<span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+sudo<span class="w"> </span>ninja<span class="w"> </span>-C<span class="w"> </span>build<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="se">\</span>
+sudo<span class="w"> </span>ldconfig
+</code></pre></div>
+<p>Reboot the Pi.</p>
+<h2 id="4-verify">4. Verify<a class="headerlink" href="#4-verify" title="Permanent link">#</a></h2>
+<p>First confirm the clock actually changed. This is the only check that
+distinguishes an active overclock from a commented-out overlay:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s1">'^[[:space:]]*(pll_sys|clk_sys) '</span><span class="w"> </span>/sys/kernel/debug/clk/clk_summary
+</code></pre></div>
+<p>The rate is the fifth column:</p>
+<table>
+<thead>
+<tr>
+<th>Clock</th>
+<th>Stock</th>
+<th>Overclocked</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pll_sys</code></td>
+<td><code>200000000</code></td>
+<td><code>333333333</code></td>
+</tr>
+<tr>
+<td><code>clk_sys</code></td>
+<td><code>200000000</code></td>
+<td><code>333333333</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>333333333, not 300000000.</strong> The overlay asks for 300 MHz; the clock driver
+rounds to the nearest rate it can make from the 1 GHz PLL core. That is
+expected, and measured on a CM5 at 6.12.93.</p>
+<p>Then check the advertised modes:</p>
+<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>--list-cameras
+</code></pre></div>
+<p>With the imx585 and the overclock active you should see:</p>
+<div class="highlight"><pre><span></span><code>Available cameras
+-----------------
+0 : imx585 [3840x2160 12-bit RGGB] (/base/axi/pcie@1000120000/rp1/i2c@88000/imx585@1a)
+    Modes: 'SRGGB12_CSI2P' : 1928x1090 [75.00 fps - (0, 0)/3840x2160 crop]
+                             3856x2180 [66.85 fps - (0, 0)/3840x2160 crop]
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>cinepi-raw<span class="w"> </span>--list-cameras<span class="w"> </span>--hdr<span class="w"> </span>sensor
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>Available cameras
+-----------------
+0 : imx585 [3840x2160 16-bit RGGB] (/base/axi/pcie@1000120000/rp1/i2c@88000/imx585@1a)
+    Modes: 'SRGGB12_CSI2P' : 1928x1090 [37.50 fps - (0, 0)/3840x2160 crop]
+                             3856x2180 [33.43 fps - (0, 0)/3840x2160 crop]
+           'SRGGB16' : 1928x1090 [37.50 fps - (0, 0)/3840x2160 crop]
+                       3856x2180 [33.43 fps - (0, 0)/3840x2160 crop]
+</code></pre></div>
+<p>Cinemate probes both lists, so the plain and ClearHDR modes appear together in
+the mode table. See <a href="../clear-hdr/">imx585 ClearHDR</a>.</p>
 </div>
 
             </div>
           </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../compiling-cinepi-raw/" class="btn btn-neutral float-left" title="Compiling cinepi-raw"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../cli-commands/" class="btn btn-neutral float-right" title="Cinemate terminal commands">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
 
   <hr/>
 
@@ -181,6 +730,10 @@
         </span>
     
     
+      <span><a href="../compiling-cinepi-raw/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../cli-commands/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

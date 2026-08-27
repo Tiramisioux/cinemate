@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
         <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
@@ -66,6 +65,10 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
@@ -81,9 +84,15 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
@@ -95,6 +104,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
@@ -113,6 +124,8 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
+                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
@@ -120,14 +133,18 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <p class="caption"><span class="caption-text">About</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -160,7 +177,6 @@
 <div class="markdown-body">
   <h1 id="simple-gui">Simple GUI<a class="headerlink" href="#simple-gui" title="Permanent link">#</a></h1>
 <p>Simple GUI is available on the attached HDMI output.</p>
-<p>The browser-based web UI features basic settings and interactive controls.</p>
 <h3 id="background-colors">Background colors<a class="headerlink" href="#background-colors" title="Permanent link">#</a></h3>
 <table>
 <thead>
@@ -196,16 +212,16 @@
 </tr>
 <tr>
 <td><strong>Yellow</strong></td>
-<td>RAM load has passed the safety threshold; the GUI asks the controller to stop recording.</td>
+<td>RAM load has passed the safety threshold (80 %); recording is auto-stopped. On a 4 GB CM5, headroom stays comfortable even at UHD/4K ClearHDR (measured ~73% peak usage); genuine 2 GB boards remain unmeasured and may trip this sooner — see <a href="../getting-started/#hardware-requirements">Quick start</a>.</td>
 </tr>
 </tbody>
 </table>
 <h2 id="indicators">Indicators<a class="headerlink" href="#indicators" title="Permanent link">#</a></h2>
 <ul>
-<li>The buffer meter in the lower-left corner shows used vs total frame buffer. Optional hatch lines can be enabled in <code>settings.json</code> under <code>hdmi_gui</code>.</li>
+<li>The buffer meter in the lower-left corner shows used vs total frame buffer. Optional hatch lines can be enabled in <code>settings.jsonc</code> under <code>hdmi_display.overlays</code>.</li>
 <li>During storage pre-roll, the GUI hides recording time and clip names.</li>
 <li>If zoom is anything other than the configured default, the zoom box is highlighted yellow.</li>
-<li>If dynamic resolution is substituting a measured sustainable mode for the current FPS, the resolution numbers turn green.</li>
+<li>If dynamic resolution is substituting a lower-resolution mode to reach the current FPS, the resolution numbers turn green.</li>
 <li>If shutter angle sync is activated, the shutter value is green.</li>
 <li>If fps is modified by double fps being activated, the number turns green.</li>
 <li>When a compatible USB microphone is connected, the right side shows VU meters plus sample rate, bit depth, and a <code>WAV</code> badge once the latest take contains both DNG frames and a WAV sidecar.</li>

@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
         <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
@@ -60,6 +59,10 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
@@ -75,6 +78,10 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Dual sensors</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#hdmi-preview">HDMI preview</a>
@@ -89,6 +96,8 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
@@ -99,6 +108,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
@@ -117,6 +128,8 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
+                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
@@ -124,14 +137,18 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <p class="caption"><span class="caption-text">About</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -201,9 +218,9 @@
 </tr>
 </tbody>
 </table>
-<p>A single selected sensor fills the preview area just like a single-sensor setup. The default source is <code>preview.default_hdmi_source</code> in <a href="../settings-json/">settings.json</a>; the live value is the <code>hdmi_preview_source</code> <a href="../redis-keys/">Redis key</a>.</p>
+<p>A single selected sensor fills the preview area just like a single-sensor setup. The default source is <code>hdmi_display.preview.default_hdmi_source</code> in <a href="../settings-json/">settings.jsonc</a>; the live value is the <code>hdmi_preview_source</code> <a href="../redis-keys/">Redis key</a>.</p>
 <h3 id="picture-in-picture">Picture-in-picture<a class="headerlink" href="#picture-in-picture" title="Permanent link">#</a></h3>
-<p>The two <code>pip_*</code> modes show one sensor full-screen with the other shrunk into a corner. The inset geometry is set in <a href="../settings-json/">settings.json</a> under <code>preview.pip</code>:</p>
+<p>The two <code>pip_*</code> modes show one sensor full-screen with the other shrunk into a corner. The inset geometry is set in <a href="../settings-json/">settings.jsonc</a> under <code>hdmi_display.preview.pip</code>:</p>
 <table>
 <thead>
 <tr>
@@ -235,20 +252,20 @@
 <p>One monitor, both feeds. DRM master is exclusive per GPU, so the primary <code>cinepi-raw</code> process owns the display and composites both sensors; the secondary runs with <code>--nopreview</code> and hands its frame to the primary.</p>
 </div>
 <h2 id="recording">Recording<a class="headerlink" href="#recording" title="Permanent link">#</a></h2>
-<p>Which sensor(s) record a take depends on the <code>lock_dual_recording</code> setting in <a href="../settings-json/">settings.json</a> and, when it is off, on the preview:</p>
-<p><strong><code>false</code> — recording follows the preview.</strong> <em>Note that if preview is changed while the Pi is recording, the recording has to be stopped and commenced again in order to start recording on the previewed sensor. Side-by-side records both.</em></p>
-<p><strong><code>true</code> — force dual.</strong> Both sensors always record, whatever the preview shows. </p>
+<p>Which sensor(s) record a take depends on the <code>sensors.record_policy</code> setting in <a href="../settings-json/">settings.jsonc</a> and, when it is <code>follow_preview</code>, on the preview:</p>
+<p><strong><code>"follow_preview"</code> (default) — recording follows the preview.</strong> A full-screen or pip-main sensor records alone; side-by-side records both. Switching the preview <em>during</em> a take only ever adds sensors: the newly previewed sensor joins the running take back-to-back and writes its own clip folder, and a sensor already recording is never dropped mid-clip.</p>
+<p><strong><code>"always_both"</code> — force dual.</strong> Both sensors always record, whatever the preview shows. A camera token on <code>rec</code> (<code>rec cam0</code> / <code>rec cam1</code> / <code>rec both</code>) overrides either policy for one take.</p>
 <p>Each sensor writes to its own clip folder (<code>..._cam0</code> / <code>..._cam1</code>).</p>
 <div class="admonition note">
 <p>When using the cam1 with the official Raspberry Pi CM carrier board, make sure to connect the JC GPIO pins as described here: <a href="https://www.raspberrypi.com/documentation/computers/compute-module.html#connect-two-cameras">https://www.raspberrypi.com/documentation/computers/compute-module.html#connect-two-cameras</a></p>
 </div>
-<p>You can override geometry, HDMI port, camera name, and FPS correction for each port independently in <code>settings.json</code> under <code>camera.cam0</code> and <code>camera.cam1</code>. See <a href="../settings-json/#camera">settings</a>.</p>
+<p>You can override geometry, HDMI port, camera name, and FPS correction for each port independently in <code>settings.jsonc</code> under <code>sensors.cam0</code> and <code>sensors.cam1</code>. See <a href="../settings-json/#sensors">settings</a>.</p>
 </div>
 
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../sensors/" class="btn btn-neutral float-left" title="Camera sensors and frame rates"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../cinemate-log/" class="btn btn-neutral float-left" title="CineMate Log (imx585 / imx283)"><span class="icon icon-circle-arrow-left"></span> Previous</a>
         <a href="../hardware-controls/" class="btn btn-neutral float-right" title="Additional hardware">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
@@ -276,7 +293,7 @@
         </span>
     
     
-      <span><a href="../sensors/" style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../cinemate-log/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
       <span><a href="../hardware-controls/" style="color: #fcfcfc">Next &raquo;</a></span>

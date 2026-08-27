@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="../templates/styles.scss" rel="stylesheet" />
         <link href="../stylesheets/extra.css" rel="stylesheet" />
         <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
     
@@ -76,6 +75,10 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
@@ -91,9 +94,15 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../clear-hdr/">ClearHDR (imx585)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
                   </li>
@@ -105,6 +114,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
                   </li>
@@ -123,6 +134,8 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
+                  </li>
               </ul>
               <p class="caption"><span class="caption-text">Reference</span></p>
               <ul>
@@ -130,14 +143,18 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
+                  </li>
                   <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
                   </li>
               </ul>
-              <p class="caption"><span class="caption-text">Contributing</span></p>
+              <p class="caption"><span class="caption-text">About</span></p>
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
                   </li>
@@ -168,7 +185,7 @@
               
 <div class="markdown-body">
   <h1 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">#</a></h1>
-<p><strong>Cinemate</strong> is an open-source boilerplate for building your own digital cinema camera on a Raspberry Pi 4 or 5. It records 12-bit CinemaDNG files using off-the-shelf parts.</p>
+<p><strong>Cinemate</strong> is an open-source boilerplate for building your own digital cinema camera on a Raspberry Pi 4 or 5. It records CinemaDNG raw files (10/12-bit, plus 16-bit <a href="../clear-hdr/">ClearHDR</a> on the IMX585) using off-the-shelf parts.</p>
 <p>It pairs a lightweight Python interface with a custom fork of <a href="https://github.com/Tiramisioux/cinepi-raw">cinepi-raw</a>, built on the <a href="https://github.com/cinepi">CinePi-RAW recorder by Csaba Nagy</a>.</p>
 <div style="text-align: center;">
   <img src="/cinemate/images/camera-stack3.png" alt="Camera stack exploded" width="60%" />
@@ -184,6 +201,7 @@
 <div class="highlight"><pre><span></span><code><span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx296<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam0<span class="w"> </span>./cinemate-install.sh
 <span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx283<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam0<span class="w"> </span>./cinemate-install.sh
 <span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx585<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam0<span class="w"> </span>./cinemate-install.sh
+<span class="nv">SENSOR_MODEL</span><span class="o">=</span>imx585_mono<span class="w"> </span><span class="nv">CAM_PORT</span><span class="o">=</span>cam1<span class="w"> </span>./cinemate-install.sh
 </code></pre></div>
 </details>
 <h2 id="customisation">Customisation<a class="headerlink" href="#customisation" title="Permanent link">#</a></h2>

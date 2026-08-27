@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://tiramisioux.github.io/cinemate/clear-hdr/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>ClearHDR (imx585) - Cinemate Docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../stylesheets/extra.css" rel="stylesheet" />
+        <link href="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "ClearHDR (imx585)";
+        var mkdocs_page_input_path = "clear-hdr.md";
+        var mkdocs_page_url = "/cinemate/clear-hdr/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Cinemate Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../readme/">Overview</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../getting-started/">Quick start</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Using the camera</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui/">Simple GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-gui/">Web GUI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../web-api/">Web API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../image-circle/">Lenses and image circles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-recording/">Audio recording</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../digital-zoom/">Digital zoom</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../speed-ramping/">Speed ramping & shutter angle synchronization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../storage-preroll/">Storage pre-roll warm-up</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Configuring</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../settings-json/">Settings file</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../sensors/">Camera sensors and frame rates</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">ClearHDR (imx585)</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#requirements">Requirements</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#what-changes-when-clearhdr-is-on">What changes when ClearHDR is on</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#clearhdr-modes-in-the-mode-table">ClearHDR modes in the mode table</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#default-knob-values">Default knob values</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#live-knobs">Live knobs</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#threshold-where-the-hand-off-sits">Threshold — where the hand-off sits</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#blend-the-mix-inside-the-zone">Blend — the mix inside the zone</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#gain-adder-where-the-knee-lands">Gain adder — where the knee lands</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#symptom-knob">Symptom → knob</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#magenta-highlights">Magenta highlights</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#exposure-workflow">Exposure workflow</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../dual-sensors/">Dual sensors</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hardware-controls/">Additional hardware</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../building-control-units/">Building control units</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../config-txt/">Bookworm config.txt</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../hotspot-logic/">Configuring the Wi-Fi hotspot</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">System maintenance</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../ssh/">Connecting via SSH</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../system-services/">System services</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../recovery-console/">Recovery console</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../backing-up-sd-card/">Backing up the SD card</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../troubleshooting/">Troubleshooting</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Advanced</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../audio-sync/">Audio sync & drift</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../simple-gui-refresh-tuning/">Simple GUI refresh tuning</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../installation-steps/">Manual installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../compiling-cinepi-raw/">Compiling cinepi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../overclocking/">Overclocking the Pi</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-commands/">Cinemate terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-user-guide/">CinePi RAW terminal commands</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../controller-methods/">Controller methods</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-guide/">Redis API</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../redis-keys/">Redis Key reference</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../cinepi-multi/">How Cinemate launches CinePi-raw</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../changelog/">Changelog</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">About</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../acknowledgments/">Acknowledgements</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Cinemate Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Configuring</li>
+      <li class="breadcrumb-item active">ClearHDR (imx585)</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/tiramisioux/cinemate/blob/main/docs/clear-hdr.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+<div class="markdown-body">
+  <h1 id="clearhdr-imx585">ClearHDR (imx585)<a class="headerlink" href="#clearhdr-imx585" title="Permanent link">#</a></h1>
+<p>ClearHDR is the imx585's on-sensor single-frame HDR. The sensor merges a high-gain (HG) and a low-gain (LG) readout internally and outputs one 16-bit linear Bayer frame. Cinemate records it as true 16-bit CinemaDNGs — BlackLevel 3200, WhiteLevel 65535, no LUT needed in post.</p>
+<h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>Needed</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kernel</td>
+<td>≥ 6.12.93+rpt (the Cinemate baseline)</td>
+<td>older <code>rp1-cfe</code> corrupts 16-bit CSI-2 capture; 10/12-bit is unaffected</td>
+</tr>
+<tr>
+<td>Sensor driver</td>
+<td>Tiramisioux <code>imx585-v4l2-driver</code>, branch <code>6.12.y</code></td>
+<td>exposes <code>wide_dynamic_range</code> and the 16-bit modes</td>
+</tr>
+<tr>
+<td>libcamera</td>
+<td>Tiramisioux <code>libcamera</code>, branch <code>cinemate</code></td>
+<td>16-bit endian swap handling</td>
+</tr>
+<tr>
+<td>Exposure</td>
+<td>manual</td>
+<td>ISP statistics are invalid at 16-bit, so auto exposure and auto white balance cannot run</td>
+</tr>
+</tbody>
+</table>
+<h2 id="what-changes-when-clearhdr-is-on">What changes when ClearHDR is on<a class="headerlink" href="#what-changes-when-clearhdr-is-on" title="Permanent link">#</a></h2>
+<ul>
+<li>Frame rates halve versus the plain modes (≈ 33 fps at 4K, ≈ 37 fps at 2K on an overclocked RP1).</li>
+<li>Analogue gain caps at code 80 ≈ 15.8× (ISO 1580).</li>
+<li>Each 3856×2180 DNG is ≈ 16.9 MB. Storage bandwidth: 15 fps ≈ 252 MB/s, 20 fps ≈ 336 MB/s — plan drives accordingly. The minutes-left display uses the 16.9 MB figure automatically.</li>
+<li>Auto exposure and auto white balance cannot run in the 16-bit modes (ISP statistics are invalid at 16-bit). Set exposure manually.</li>
+<li>Highlights near the HG→LG hand-off can render magenta in flat greys — sensor-side merge behaviour, not a capture defect. See <a href="#magenta-highlights">Magenta highlights</a>.</li>
+</ul>
+<h2 id="clearhdr-modes-in-the-mode-table">ClearHDR modes in the mode table<a class="headerlink" href="#clearhdr-modes-in-the-mode-table" title="Permanent link">#</a></h2>
+<p>Cinemate probes the sensor <strong>twice</strong> at startup — <code>cinepi-raw --list-cameras</code>
+and <code>cinepi-raw --list-cameras --hdr sensor</code> — and merges both results, so the
+plain and the ClearHDR modes live in the same mode table. Selecting a ClearHDR
+mode launches cinepi-raw with <code>--hdr sensor</code>; selecting a plain mode launches
+without it. No separate toggle is needed.</p>
+<p>The imx585 exposes ClearHDR at <strong>both</strong> 12-bit and 16-bit, so the table is
+ordered plain modes first, then 12-bit HDR, then 16-bit HDR:</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Resolution</th>
+<th>Bit depth</th>
+<th>HDR</th>
+<th>~fps (overclocked)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>1928×1090</td>
+<td>12-bit</td>
+<td>—</td>
+<td>75</td>
+</tr>
+<tr>
+<td>1</td>
+<td>3856×2180</td>
+<td>12-bit</td>
+<td>—</td>
+<td>66.85</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1928×1090</td>
+<td>12-bit</td>
+<td>HDR</td>
+<td>37.50</td>
+</tr>
+<tr>
+<td>3</td>
+<td>3856×2180</td>
+<td>12-bit</td>
+<td>HDR</td>
+<td>33.43</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1928×1090</td>
+<td>16-bit</td>
+<td>HDR</td>
+<td>37.50</td>
+</tr>
+<tr>
+<td>5</td>
+<td>3856×2180</td>
+<td>16-bit</td>
+<td>HDR</td>
+<td>33.43</td>
+</tr>
+</tbody>
+</table>
+<p>HDR modes are labelled so they read distinctly from the plain modes:</p>
+<ul>
+<li><strong>Simple (HDMI) GUI</strong> — <code>HDR</code> after the bit depth, e.g. <code>1928×1090 :12b HDR</code>.</li>
+<li><strong>Web GUI</strong> — <code>:HDR</code> appended in the resolution dropdown, e.g. <code>1928 : 1090 : 12b :HDR</code>.</li>
+</ul>
+<p>To hide the ClearHDR modes entirely, set the <code>hdr</code> whitelist in
+<code>settings.jsonc</code> → <code>image_capture</code>:</p>
+<div class="highlight"><pre><span></span><code>"image_capture": {
+  "hdr": {"sdr": true, "imx585_clear_hdr": false}
+}
+</code></pre></div>
+<p>Both <code>true</code> (the default) exposes both; <code>"imx585_clear_hdr": false</code> hides
+the HDR modes; <code>"sdr": false</code> shows only them. It works like the
+neighbouring <code>bit_depths</code> and <code>k_steps</code> whitelists (the legacy
+<code>[false, true]</code> list form still works too). Frame rates depend on the RP1
+clock — see <a href="../overclocking/">Overclocking the Pi</a>.</p>
+<h2 id="default-knob-values">Default knob values<a class="headerlink" href="#default-knob-values" title="Permanent link">#</a></h2>
+<p><code>image_capture.hdr</code> also carries the startup values for the four live
+knobs below — Cinemate seeds them into Redis at launch, and cinepi-raw
+applies them whenever a ClearHDR mode is selected:</p>
+<div class="highlight"><pre><span></span><code>"hdr": {
+  "sdr": true,
+  "imx585_clear_hdr": true,
+  "threshold_low": 0,
+  "threshold_high": 0,
+  "blend": 0,
+  "gain_adder": 1
+}
+</code></pre></div>
+<p>The shipped default (threshold 0,0 · blend 0 · gain adder +6 dB, menu 1) is
+a lower noise floor than the driver's own +12 dB default. Edit these four
+values directly in <code>settings.jsonc</code> to change what a fresh boot starts
+with; use the live knobs below to change them without a restart.</p>
+<h2 id="live-knobs">Live knobs<a class="headerlink" href="#live-knobs" title="Permanent link">#</a></h2>
+<p>The merge behaviour is tunable <strong>while streaming</strong> — no restart. Each command writes a Redis key that cinepi-raw applies to the sensor as a V4L2 control.</p>
+<p>Per pixel, the sensor picks a source by level: HG below the first threshold, LG (lifted by the gain adder) above the second, a blend of both in between. HG carries the clean shadows and mids; LG carries the highlight headroom. Both readouts share one exposure, so no setting here can introduce motion ghosting.</p>
+<table>
+<thead>
+<tr>
+<th>CLI command</th>
+<th>Redis key</th>
+<th>Range</th>
+<th>What it does</th>
+<th>Visual impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>set hdr threshold low 500</code></td>
+<td><code>hdr_threshold_low</code></td>
+<td>0–4095</td>
+<td>raw level below which the sensor reads pure HG</td>
+<td>lower = earlier hand-off, more highlight headroom, noisier mids; higher = more range stays clean HG</td>
+</tr>
+<tr>
+<td><code>set hdr threshold high 3000</code></td>
+<td><code>hdr_threshold_high</code></td>
+<td>0–4095</td>
+<td>raw level above which the sensor reads pure LG</td>
+<td>lower = highlight detail kicks in sooner; higher = highlights closer to the plateau before LG takes over</td>
+</tr>
+<tr>
+<td><code>set hdr blend 2</code></td>
+<td><code>hdr_blend</code></td>
+<td>0–8</td>
+<td>HG:LG mix inside the transition zone (0 = HG 1/2 + LG 1/2, per the driver menu)</td>
+<td>HG-heavy = cleaner transition tones; LG-heavy = highlight detail holds longer through the zone, more grain there</td>
+</tr>
+<tr>
+<td><code>set hdr gain adder 2</code></td>
+<td><code>hdr_gain_adder</code></td>
+<td>0–5</td>
+<td>digital gain on the low-gain path in the merge (2 = +12 dB, the driver default); shifts where the blend knee lands in the output range</td>
+<td>lower = highlights darker, flatter, cleaner — lift in the grade; higher = brighter highlight rendering, more grain in the highlights</td>
+</tr>
+</tbody>
+</table>
+<p><code>hdr_threshold_low</code> and <code>hdr_threshold_high</code> are two Redis keys, but the sensor
+control underneath is a single hardware pair — cinepi-raw always reads both
+keys and writes them together, so either one applies the pair live regardless
+of which changed.</p>
+<p>The same keys work directly over Redis, e.g. from a custom controller:</p>
+<div class="highlight"><pre><span></span><code>redis-cli<span class="w"> </span><span class="nb">set</span><span class="w"> </span>hdr_threshold_low<span class="w"> </span><span class="m">500</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>redis-cli<span class="w"> </span>publish<span class="w"> </span>cp_controls<span class="w"> </span>hdr_threshold_low
+redis-cli<span class="w"> </span><span class="nb">set</span><span class="w"> </span>hdr_blend<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>redis-cli<span class="w"> </span>publish<span class="w"> </span>cp_controls<span class="w"> </span>hdr_blend
+</code></pre></div>
+<h3 id="threshold-where-the-hand-off-sits">Threshold — where the hand-off sits<a class="headerlink" href="#threshold-where-the-hand-off-sits" title="Permanent link">#</a></h3>
+<p>Both values are raw 12-bit levels compared against the HG signal (the vendor manual calls them the HG saturation cutoff). The pair brackets the transition zone:</p>
+<ul>
+<li><strong>First value</strong> — below it, pure HG. Raising it keeps more of the range on the clean high-gain data.</li>
+<li><strong>Second value</strong> — above it, pure LG. Lowering it protects highlights earlier.</li>
+<li><strong>The gap</strong> — the blend zone. Wide (<code>500,3000</code>) = gradual hand-off. Narrow = abrupt seam that can show as a band or colour step in smooth gradients.</li>
+<li><code>0,0</code> — no explicit bracket (the vendor default, and Cinemate's shipped default); the sensor applies its internal hand-off.</li>
+</ul>
+<h3 id="blend-the-mix-inside-the-zone">Blend — the mix inside the zone<a class="headerlink" href="#blend-the-mix-inside-the-zone" title="Permanent link">#</a></h3>
+<p>Driver menu values, HG : LG weight in the transition zone:</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Mix</th>
+<th>Value</th>
+<th>Mix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>HG 1/2, LG 1/2</td>
+<td>5</td>
+<td>HG 1/2, LG 1/2 (2nd)</td>
+</tr>
+<tr>
+<td>1</td>
+<td>HG 3/4, LG 1/4</td>
+<td>6</td>
+<td>HG 1/16, LG 15/16</td>
+</tr>
+<tr>
+<td>2</td>
+<td>HG 1/2, LG 1/2</td>
+<td>7</td>
+<td>HG 1/8, LG 7/8</td>
+</tr>
+<tr>
+<td>3</td>
+<td>HG 7/8, LG 1/8</td>
+<td>8</td>
+<td>HG 1/4, LG 3/4</td>
+</tr>
+<tr>
+<td>4</td>
+<td>HG 15/16, LG 1/16</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>The datasheet lists three 50/50 entries — 0, 2 and 5 behave the same.</p>
+<ul>
+<li><strong>HG-heavy (1, 3, 4)</strong> — transition tones stay on the cleaner high-gain data. Smoothest choice when the zone lands on faces or detailed mids.</li>
+<li><strong>LG-heavy (6, 7, 8)</strong> — highlight data dominates through the zone. Maximum highlight separation near the top; the low-gain grain shows earlier.</li>
+</ul>
+<h3 id="gain-adder-where-the-knee-lands">Gain adder — where the knee lands<a class="headerlink" href="#gain-adder-where-the-knee-lands" title="Permanent link">#</a></h3>
+<p>Menu 0–5 = <strong>+0, +6, +12, +18, +24, +29.1 dB</strong> of digital gain on the low-gain path. 2 (+12 dB) is the driver default; Cinemate ships 1 (+6 dB) for a lower noise floor.</p>
+<ul>
+<li>Lower values place highlights lower in the output range: darker and flatter out of camera, but cleanest — bring them up in the grade.</li>
+<li>Higher values render highlights brighter and push the blend knee up the range, amplifying low-gain read noise in exactly the tones ClearHDR is protecting.</li>
+</ul>
+<h3 id="symptom-knob">Symptom → knob<a class="headerlink" href="#symptom-knob" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>You see</th>
+<th>Try</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Magenta in bright flat areas</td>
+<td>try <code>set hdr threshold low 500</code>, <code>set hdr threshold high 3000</code>, <code>set hdr blend 2</code>, <code>set hdr gain adder 2</code> — see <a href="#magenta-highlights">Magenta highlights</a></td>
+</tr>
+<tr>
+<td>Grainy mids or faces</td>
+<td>higher thresholds, HG-heavier blend (3, 4), or a lower gain adder</td>
+</tr>
+<tr>
+<td>A band or step where tones change character</td>
+<td>widen the gap between the two threshold values</td>
+</tr>
+<tr>
+<td>Highlights too dark and flat out of camera</td>
+<td>higher gain adder — costs highlight grain</td>
+</tr>
+<tr>
+<td>Grainy highlights</td>
+<td>lower gain adder; lift in the grade instead</td>
+</tr>
+</tbody>
+</table>
+<h2 id="magenta-highlights">Magenta highlights<a class="headerlink" href="#magenta-highlights" title="Permanent link">#</a></h2>
+<p>Bright flat areas near the hand-off can render pink. The band comes from the sensor's merge, not from Cinemate — it shows in plain <code>libcamera-still</code> raws on a stock Pi stack too, and a Raspberry Pi engineer confirmed it sits in the raw data: the sensor combines the two readouts inconsistently when some colour channels saturate before others (<a href="https://forums.raspberrypi.com/viewtopic.php?t=388520">forum thread</a>).</p>
+<p>What happens:</p>
+<ul>
+<li>At the hand-off the merged channels converge to a plateau <strong>below</strong> WhiteLevel. On an overexposed Cinemate test frame the plateau measured ≈ 20 000 of 65 535, and the level moves with gain.</li>
+<li>A raw developer desaturates clipped highlights only at WhiteLevel. The plateau never reaches it, so white-balance gains stay applied — red and blue land above green and the patch reads pink instead of white.</li>
+</ul>
+<p>Handling it:</p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Exposure</td>
+<td>keep important neutrals out of the hand-off band; in HDR modes err darker rather than brighter</td>
+</tr>
+<tr>
+<td>Knobs</td>
+<td>try threshold 500,3000 · blend 2 · gain adder +12 dB (menu 2) as a starting point, and move the hand-off away from the affected tones</td>
+</tr>
+<tr>
+<td>Grade</td>
+<td>treat the plateau as the clip point: highlight reconstruction/desaturation, or pull the shot's effective white level down to the plateau</td>
+</tr>
+</tbody>
+</table>
+<p>The plateau level depends on gain and knob settings, so handle it per shot in the grade — the DNG WhiteLevel tag stays 65535.</p>
+<h2 id="exposure-workflow">Exposure workflow<a class="headerlink" href="#exposure-workflow" title="Permanent link">#</a></h2>
+<p>Auto exposure and auto white balance are off in 16-bit modes (the ISP cannot compute statistics on 16-bit data). Set ISO, shutter and white balance manually — the normal Cinemate controls (<code>set iso</code>, <code>set shutter a</code>, <code>set wb</code>) keep working; they are always manual values in Cinemate anyway. A practical 4K indoor starting point: ISO 800, shutter 8 ms, 15 fps.</p>
+</div>
+
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../sensors/" class="btn btn-neutral float-left" title="Camera sensors and frame rates"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../cinemate-log/" class="btn btn-neutral float-right" title="CineMate Log (imx585 / imx283)">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/tiramisioux/cinemate" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../sensors/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../cinemate-log/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="https://unpkg.com/highlightjs-copy@1/dist/highlightjs-copy.min.js"></script>
+      <script src="../js/ko-fi-widget.js"></script>
+      <script src="../js/copybutton-init.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

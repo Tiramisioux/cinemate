@@ -930,6 +930,43 @@ class SimpleGUI(threading.Thread):
         values["zoom_is_default"] = abs(z - default_zoom) <= 1e-3
         values["zoom_factor"] = f"{z:.1f}"
 
+        # ── live-control state for the web GUI's EXPERIMENT drawer ────────
+        # The framebuffer GUI draws none of these; they are published so the
+        # browser's slider/toggle panel tracks the value a pot, the quad
+        # rotary, the CLI or serial last set, instead of drifting to whatever
+        # the browser itself last sent. get_value() is a local cache lookup,
+        # not a Redis round trip, so this costs nothing per draw tick.
+        controller = self.cinepi_controller
+
+        def _num(key, default=0):
+            try:
+                return float(self.redis_controller.get_value(key))
+            except (TypeError, ValueError):
+                return default
+
+        values["zoom"] = z
+        values["hdr_threshold_low"] = int(_num(ParameterKey.HDR_THRESHOLD_LOW.value))
+        values["hdr_threshold_high"] = int(_num(ParameterKey.HDR_THRESHOLD_HIGH.value))
+        values["hdr_blend"] = int(_num(ParameterKey.HDR_BLEND.value))
+        values["hdr_gain_adder"] = int(_num(ParameterKey.HDR_GAIN_ADDER.value))
+        values["ir_filter"] = int(_num(ParameterKey.IR_FILTER.value))
+        values["anamorphic_factor_value"] = _num(ParameterKey.ANAMORPHIC_FACTOR.value, 1.0)
+        values["hdmi_preview_source"] = str(
+            self.redis_controller.get_value(ParameterKey.HDMI_PREVIEW_SOURCE.value) or "both"
+        )
+        # From redis, not from the controller: the controller keeps no live
+        # shutter_a_nom attribute -- set_shutter_a_nom() writes
+        # self.shutter_angle_nom and the redis key.
+        values["shutter_a_nom"] = _num(ParameterKey.SHUTTER_A_NOM.value, 180.0)
+        # set_shu_fps_lock() has no state of its own -- it drives the two
+        # underlying locks together, so "on" is both of them being on.
+        values["shu_fps_lock"] = bool(controller.shutter_a_nom_lock) and bool(controller.fps_lock)
+        for flag in ("all_lock", "fps_double", "dynamic_resolution_enabled",
+                     "iso_free", "shutter_a_free", "fps_free", "wb_free",
+                     "hdr_threshold_low_free", "hdr_threshold_high_free",
+                     "hdr_blend_free", "hdr_gain_adder_free"):
+            values[flag] = bool(getattr(controller, flag, False))
+
         try:
             preroll_active = int(
                 self.redis_controller.get_value(

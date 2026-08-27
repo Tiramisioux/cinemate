@@ -388,6 +388,7 @@
     padding: 7px 9px; min-width: 84px;
   }
   .field-input:focus-visible, select.field-input:focus-visible{ outline:none; box-shadow: var(--focus); }
+  .field-input:disabled, select.field-input:disabled{ opacity:.5; cursor:default; }
   select.field-input{ min-width: 140px; }
   input[type="text"].wide, input[type="password"].wide{ min-width: 220px; }
   .num-input{ width: 84px; text-align: right; font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; }
@@ -760,7 +761,7 @@
   .capacity-track{ height:8px; border-radius:999px; background: var(--panel-2); border:1px solid var(--line); overflow:hidden; }
   .capacity-fill{ height:100%; background: var(--accent); border-radius:999px 0 0 999px; }
   .storage-format{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-  .storage-format .btn:disabled, .storage-format select:disabled{ opacity:.5; cursor:default; }
+  .storage-format .btn:disabled{ opacity:.5; cursor:default; }
 
   .clip-toolbar{
     display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;

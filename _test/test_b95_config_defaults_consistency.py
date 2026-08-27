@@ -243,6 +243,28 @@ class ConformFrameRateDefaultTests(unittest.TestCase):
         settings = _apply_settings_defaults({"settings": {self.KEY: 23.976}})
         self.assertEqual(settings["settings"][self.KEY], 23.976)
 
+    def test_the_templates_javascript_copies_agree(self):
+        """The pane's JS holds two copies of the rate and cannot import Python.
+
+        Both are reachable. `pbConform`'s initializer stands until the clip
+        index resolves and survives a failed or not-ok fetch, and `pbRate()`
+        paces playback off it -- so a stale copy runs takes at the wrong speed
+        while the readout names a different one. The sweep below cannot see
+        either: it reads .py files, and one of these lines does not even
+        contain the key.
+        """
+        template = (ROOT / "src/module/app/templates/settings_editor.html").read_text(
+            encoding="utf-8")
+        literals = re.findall(r"pbConform\s*=\s*(?:[a-zA-Z_.]+\s*\|\|\s*)?([0-9]+(?:\.[0-9]+)?)",
+                              template)
+        self.assertTrue(literals, "expected the playback JS to carry a conform fallback")
+        for value in literals:
+            self.assertEqual(
+                float(value), float(DEFAULT_CONFORM_FRAME_RATE),
+                "settings_editor.html restates the conform rate as "
+                f"{value}, but the default is {DEFAULT_CONFORM_FRAME_RATE}",
+            )
+
     def test_no_call_site_restates_the_number(self):
         """A bare literal fallback is how this drifted in the first place."""
         offenders = []

@@ -4279,7 +4279,12 @@
      2. Under load the clock wins and frames are skipped -- and the skip count
         is shown. A take quietly running at 18 fps while the UI says 25 is the
         "plausible wrong number" this project's own rules forbid. */
-  var pbClips = [], pbClip = null, pbConform = 24, pbRenderToken = '0';
+  /* Both conform literals below are config_loader.DEFAULT_CONFORM_FRAME_RATE.
+     This initializer is reachable, not decorative: it stands until the clip
+     index resolves, and stays if that fetch fails or answers not-ok -- and
+     pbRate() paces playback off it. A stale value here would run takes at the
+     wrong speed while the readout named a different one. */
+  var pbClips = [], pbClip = null, pbConform = 25, pbRenderToken = '0';
   var pbState = { i:0, playing:false, loop:false, conform:true, mono:false, scale:4,
                   skipped:0, timer:null, t0:0, startFrame:0, windowAt:0, shown:0 };
 

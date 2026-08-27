@@ -406,9 +406,13 @@ class CinePiProcess(Thread):
         # side-by-side strip. Either way the simple_gui columns keep their room.
         dox, doy, dpw, dph = px, py, aw, ah
 
-        # gains, shutter
-        cg_rb = self.redis_controller.get_value(ParameterKey.CG_RB.value) or '2.5,2.2'
-        
+        # gains, shutter. cg_rb is a colour red/blue gain pair -- meaningless
+        # for a mono sensor, which has no CFA to white-balance, so it is only
+        # fetched when it will actually be used below.
+        cg_rb = None if self.cam.is_mono else (
+            self.redis_controller.get_value(ParameterKey.CG_RB.value) or '2.5,2.2'
+        )
+
         # file paths
         tune = f'/home/pi/libcamera/src/ipa/rpi/pisp/data/{model_key}.json'
         if self.tuning_file_override.get('enabled') and self.tuning_file_override.get('path'):
@@ -464,9 +468,15 @@ class CinePiProcess(Thread):
             "--vflip",        str(vf),
             "--post-process-file", post,
             "--shutter", "20000",
-            "--awb", "auto",
-            "--awbgains", cg_rb,
         ]
+
+        # AWB is a colour-sensor concept: a mono tuning has no CFA and no
+        # measured colour gains for --awbgains to carry, so both are omitted
+        # entirely for a mono camera rather than sent with a meaningless
+        # colour gain pair (see cinepi/ccmp_preview.hpp's mono path in
+        # cinepi-raw for the same distinction on the preview side).
+        if not self.cam.is_mono:
+            args += ["--awb", "auto", "--awbgains", cg_rb]
 
         plain_arecord_timecode_offset = _plain_arecord_timecode_offset_frames()
         if plain_arecord_timecode_offset != 0:

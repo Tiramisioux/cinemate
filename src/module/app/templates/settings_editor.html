@@ -3576,38 +3576,6 @@
     if (typeof updateBulkBar === 'function') updateBulkBar();
   });
 
-  /* ---------- live view ---------- */
-  document.getElementById('liveIsoSelect').addEventListener('change', function(){ document.getElementById('liveIso').textContent = this.value; });
-  document.getElementById('liveShutterSelect').addEventListener('change', function(){ document.getElementById('liveShutter').textContent = this.value + '°'; });
-  document.getElementById('liveFpsSelect').addEventListener('change', function(){ document.getElementById('liveFps').textContent = this.value; });
-  document.getElementById('liveWbSelect').addEventListener('change', function(){ document.getElementById('liveWb').textContent = this.value + ' K'; });
-  (function(){
-    var recBtn = document.getElementById('liveRecBtn');
-    var recLabel = document.getElementById('liveRecLabel');
-    var tally = document.getElementById('liveTally');
-    var recTimeEl = document.getElementById('liveRecTime');
-    var timer = null, seconds = 0;
-    recBtn.addEventListener('click', function(){
-      var recording = recBtn.classList.toggle('recording');
-      tally.classList.toggle('on', recording);
-      recLabel.textContent = recording ? 'Stop' : 'Record';
-      if (recording){
-        seconds = 0;
-        recTimeEl.textContent = '00:00';
-        timer = setInterval(function(){
-          seconds++;
-          var m = String(Math.floor(seconds / 60)).padStart(2, '0');
-          var s = String(seconds % 60).padStart(2, '0');
-          recTimeEl.textContent = m + ':' + s;
-        }, 1000);
-        showToast('Recording started');
-      } else {
-        clearInterval(timer);
-        showToast('Recording stopped — take saved');
-      }
-    });
-  })();
-
   /* ---------- boot sequence engine (shared by Cinemate restart & Pi reboot) ---------- */
   function runBootSequence(opts){
     opts.btn.disabled = true;

@@ -467,6 +467,14 @@
             height: 1.7em;
             accent-color: var(--value);
         }
+        /* Locked parameter, or a step table that has not arrived yet. Dim the
+           whole row so the reason reads as "this control is unavailable"
+           rather than "this slider is broken"; the input's title says which. */
+        /* pointer-events, not just opacity: a disabled <input> ignores clicks
+           but the reset button beside it does not, and a live arrow on a row
+           the UI is showing as unavailable is worse than no arrow. */
+        .xp-slider.disabled { opacity: 0.4; pointer-events: none; }
+        .xp-slider.disabled input[type="range"] { cursor: not-allowed; }
         .xp-slider .value {
             font-weight: 700;
             font-size: var(--value-size);
@@ -497,6 +505,10 @@
         .xp-reset:active { background: transparent; color: var(--value); }
         /* Nothing to restore — the value is already the default. */
         .xp-reset[disabled] { opacity: 0.25; cursor: default; }
+        /* No default is configured for this parameter at all. Hide it but keep
+           its box, so the value column stays aligned down the panel — display:
+           none would let those rows' tracks run longer than the others'. */
+        .xp-reset.absent { visibility: hidden; pointer-events: none; }
 
         .xp-row {
             display: flex;
@@ -1047,23 +1059,91 @@
     // `key` names a field in the populate_values() dict, which is what lets
     // a widget follow a change made from a pot, the quad rotary, serial or
     // the CLI instead of only reflecting what this browser last sent.
-    const XP_SLIDERS = [
-        { label: 'HDR LOW',     cmd: 'set hdr threshold low',  key: 'hdr_threshold_low',  min: 0,   max: 4095, step: 1 },
-        { label: 'HDR HIGH',    cmd: 'set hdr threshold high', key: 'hdr_threshold_high', min: 0,   max: 4095, step: 1 },
-        { label: 'HDR BLEND',   cmd: 'set hdr blend',          key: 'hdr_blend',          min: 0,   max: 8,    step: 1 },
-        { label: 'HDR GAIN',    cmd: 'set hdr gain adder',     key: 'hdr_gain_adder',     min: 0,   max: 5,    step: 1 },
-        // set_zoom() clamps to the span of preview.zoom_steps, so the real
-        // bounds arrive with initial_values; these are the settings.jsonc
-        // defaults, used only until then.
-        { label: 'ZOOM',        cmd: 'set zoom',               key: 'zoom',               min: 0.5, max: 2,    step: 0.1, dp: 1, range: 'zoom' },
-        { label: 'SHUTTER NOM', cmd: 'set shutter a nom',      key: 'shutter_a_nom',      min: 1,   max: 360,  step: 0.1, dp: 1 },
+    // A slider is one of two shapes, and which one is not a style choice — it
+    // follows from what the setter does with an arbitrary value:
+    //
+    //   CONTINUOUS (min/max/step)  — the setter clamps or accepts verbatim, so
+    //     every knob position is reachable and the value comes back unchanged.
+    //   STEP-LIST (steps: '<name>') — the setter SNAPS to the nearest entry of
+    //     a table. The knob indexes that same table, so every position is a
+    //     fixed point of the setter. Get this wrong and the value latch never
+    //     matches: the knob freezes for the full grace period and then jumps,
+    //     which is worse than an instant snap-back because the operator has
+    //     already moved on.
+    //
+    // The step tables are the live ones, republished by populate_values()
+    // whenever they change — including when a free-stepping toggle rebuilds
+    // them — so a step-list slider re-grids itself instead of going stale.
+    // Ordered exposure-first: the four an operator reaches for constantly,
+    // then the ClearHDR knobs, then the monitor-only one. The ClearHDR group
+    // is present only on a sensor that actually has ClearHDR modes — on an
+    // imx477 or imx283 those four commands write redis keys nothing will ever
+    // read, so offering them would be four controls that appear to do nothing.
+    const XP_SLIDER_GROUPS = [
+        {
+            title: 'EXPOSURE',
+            sliders: [
+                // set_iso() only clamps to [min, max] of the ISO table — it
+                // never snaps — so this one is genuinely continuous. dp MUST
+                // stay 0: the command is typed `int`, and "800.0" comes back
+                // as a bad argument.
+                // boundsFrom, not steps: set_iso() clamps to the ends of the
+                // ISO table but does not snap to its entries, so the travel is
+                // continuous between the table's first and last value. Reading
+                // the ends off the live table means widening arrays.iso.steps
+                // widens the slider instead of silently disagreeing with it.
+                { label: 'ISO',         cmd: 'set iso',           key: 'iso',           min: 100, max: 3200, step: 1,
+                  boundsFrom: 'iso', lockKey: 'iso_lock', lockLabel: 'ISO is locked' },
+                // set_shutter_a_nom() snaps to the flicker-free angle table in
+                // normal mode and accepts verbatim in free/sync mode. Indexing
+                // the table is correct in BOTH: free stepping rebuilds it as a
+                // fine continuous grid, which the setter then takes verbatim.
+                { label: 'SHUTTER NOM', cmd: 'set shutter a nom', key: 'shutter_a_nom', steps: 'shutter_a', dp: 1,
+                  lockKey: 'shutter_a_nom_lock', lockLabel: 'Shutter angle is locked' },
+                // set_fps() snaps into fps_steps_dynamic. Its setter can also
+                // trigger a sensor-mode change and block for up to two seconds
+                // inside the request, so this one gets a slower throttle and
+                // stops sending while a resolution switch is in flight.
+                { label: 'FPS',         cmd: 'set fps',           key: 'fps',           steps: 'fps',
+                  lockKey: 'fps_lock', lockLabel: 'Frame rate is locked',
+                  busyKey: 'resolution_switching', throttle: 600 },
+                // set_wb() snaps to wb_steps unconditionally, in every mode.
+                { label: 'WB',          cmd: 'set wb',            key: 'wb',            steps: 'wb' },
+            ],
+        },
+        {
+            title: 'CLEARHDR',
+            // populate_values()'s hdr_capable — the same test the SDR/HDR
+            // badge is drawn from (does this sensor expose both classes?).
+            visibleKey: 'hdr_capable',
+            sliders: [
+                { label: 'HDR LOW',   cmd: 'set hdr threshold low',  key: 'hdr_threshold_low',  min: 0, max: 4095, step: 1 },
+                { label: 'HDR HIGH',  cmd: 'set hdr threshold high', key: 'hdr_threshold_high', min: 0, max: 4095, step: 1 },
+                { label: 'HDR BLEND', cmd: 'set hdr blend',          key: 'hdr_blend',          min: 0, max: 8,    step: 1 },
+                { label: 'HDR GAIN',  cmd: 'set hdr gain adder',     key: 'hdr_gain_adder',     min: 0, max: 5,    step: 1 },
+            ],
+        },
+        {
+            title: 'PREVIEW',
+            sliders: [
+                // set_zoom() clamps to the span of preview.zoom_steps, so the
+                // real bounds arrive with initial_values; these are the
+                // settings.jsonc defaults, used only until then.
+                { label: 'ZOOM', cmd: 'set zoom', key: 'zoom', min: 0.5, max: 2, step: 0.1, dp: 1, range: 'zoom' },
+            ],
+        },
     ];
 
     const XP_TOGGLES = [
         { label: 'ISO LOCK',     cmd: 'set iso lock',               key: 'iso_lock' },
         { label: 'SHUTTER LOCK', cmd: 'set shutter a nom lock',     key: 'shutter_a_nom_lock' },
         { label: 'FPS LOCK',     cmd: 'set fps lock',               key: 'fps_lock' },
-        { label: 'SHU+FPS LOCK', cmd: 'set shutter a nom fps lock', key: 'shu_fps_lock' },
+        // Explicit 1/0, like IR FILTER. set_shu_fps_lock() with no argument
+        // inverts the two underlying locks INDEPENDENTLY, and shu_fps_lock is
+        // derived as "both on" — so from a mixed state (one lock on, one off)
+        // a bare toggle just swaps which one is on and the indicator can never
+        // light. Sending the target state makes it reachable from anywhere.
+        { label: 'SHU+FPS LOCK', cmd: 'set shutter a nom fps lock', key: 'shu_fps_lock', explicit: true },
         { label: 'ALL LOCK',     cmd: 'set all lock',               key: 'all_lock' },
         { label: 'SHUTTER SYNC', cmd: 'set shutter a sync',         key: 'shutter_a_sync' },
         { label: 'FPS DOUBLE',   cmd: 'set fps double',             key: 'fps_double' },
@@ -1082,10 +1162,12 @@
         { label: 'SHUTTER',   cmd: 'set shutter a free',          key: 'shutter_a_free' },
         { label: 'FPS',       cmd: 'set fps free',                key: 'fps_free' },
         { label: 'WB',        cmd: 'set wb free',                 key: 'wb_free' },
-        { label: 'HDR LOW',   cmd: 'set hdr threshold low free',  key: 'hdr_threshold_low_free' },
-        { label: 'HDR HIGH',  cmd: 'set hdr threshold high free', key: 'hdr_threshold_high_free' },
-        { label: 'HDR BLEND', cmd: 'set hdr blend free',          key: 'hdr_blend_free' },
-        { label: 'HDR GAIN',  cmd: 'set hdr gain adder free',     key: 'hdr_gain_adder_free' },
+        // Same sensor gate as the CLEARHDR slider group: these tune the step
+        // size of knobs that do not exist on an SDR-only sensor.
+        { label: 'HDR LOW',   cmd: 'set hdr threshold low free',  key: 'hdr_threshold_low_free',  visibleKey: 'hdr_capable' },
+        { label: 'HDR HIGH',  cmd: 'set hdr threshold high free', key: 'hdr_threshold_high_free', visibleKey: 'hdr_capable' },
+        { label: 'HDR BLEND', cmd: 'set hdr blend free',          key: 'hdr_blend_free',          visibleKey: 'hdr_capable' },
+        { label: 'HDR GAIN',  cmd: 'set hdr gain adder free',     key: 'hdr_gain_adder_free',     visibleKey: 'hdr_capable' },
     ];
 
     const XP_ACTIONS = [
@@ -1120,6 +1202,7 @@
 
     const xpSliders = [];
     const xpToggles = [];
+    const xpConditionalGroups = [];
     let xpBuilt = false;
 
     function xpGroup(title, body) {
@@ -1139,6 +1222,12 @@
         return row;
     }
 
+    // The live step table behind a step-list slider, or null for a continuous
+    // one. Empty until the first push, which is why callers check the length.
+    function sliderSteps(spec) {
+        return spec.steps ? (steps[spec.steps] || []) : null;
+    }
+
     function buildSlider(spec) {
         const row = xpRow('xp-slider');
         const label = document.createElement('span');
@@ -1147,9 +1236,11 @@
 
         const input = document.createElement('input');
         input.type = 'range';
-        input.min = spec.min;
-        input.max = spec.max;
-        input.step = spec.step;
+        if (!spec.steps) {
+            input.min = spec.min;
+            input.max = spec.max;
+            input.step = spec.step;
+        }
         input.setAttribute('aria-label', spec.label);
         input.title = spec.cmd;
 
@@ -1157,7 +1248,31 @@
         out.className = 'value';
 
         const format = (v) => Number(v).toFixed(spec.dp || 0);
-        const send = throttle((v) => cmd(spec.cmd + ' ' + v), 150);
+        const send = throttle((v) => cmd(spec.cmd + ' ' + v), spec.throttle || 150);
+
+        // What the knob's current position means. For a step-list slider the
+        // input holds an INDEX, not the value.
+        const knobValue = () => {
+            const list = sliderSteps(spec);
+            if (!list) { return input.value; }
+            return list.length ? list[Math.round(Number(input.value))] : null;
+        };
+
+        // Put the knob on `value` — nearest table entry for a step-list
+        // slider, since the live value can sit off the grid (a pot, or a table
+        // that was rebuilt under it).
+        const placeKnob = (value) => {
+            const list = sliderSteps(spec);
+            if (!list) { input.value = value; return; }
+            if (!list.length) { return; }
+            let best = 0;
+            let bestDistance = Infinity;
+            list.forEach((candidate, i) => {
+                const distance = Math.abs(Number(candidate) - Number(value));
+                if (distance < bestDistance) { bestDistance = distance; best = i; }
+            });
+            input.value = best;
+        };
 
         // Hold the knob where the user put it until the camera agrees.
         //
@@ -1173,21 +1288,42 @@
         // (out of range for the mode, wrong sensor, a pot overriding it), and
         // showing the live value is the honest answer.
         const PENDING_GRACE = 4000;
-        const entry = { spec, input, out, format, pending: null, pendingAt: 0 };
+        const entry = { spec, row, input, out, format, placeKnob, pending: null, pendingAt: 0 };
 
-        const request = (value) => {
+        // Latch what we asked for. `reposition` is false when the user's own
+        // gesture already put the knob there — moving it again mid-drag would
+        // fight the finger.
+        const latch = (value, reposition) => {
+            if (value === null || value === undefined) { return false; }
+            if (reposition) { placeKnob(value); }
             entry.pending = format(value);
             entry.pendingAt = Date.now();
-            input.value = value;
             out.textContent = entry.pending;
+            return true;
         };
 
+        // A setter that can block for seconds inside the request (set_fps
+        // crossing a sensor mode) must not be handed a queue of drag values —
+        // they would pile up behind the dispatch lock and come back as 503s.
+        const busy = () => Boolean(spec.busyKey && truthy(V[spec.busyKey]));
+
+        // `change` exists to guarantee the released value is sent even if the
+        // throttle swallowed the last `input`. But throttle() fires on the
+        // leading edge, so a plain click sends once from `input` and again
+        // from `change` — two identical lines, two of the API's 20/sec slots,
+        // and two entries behind a dispatch lock a slow setter can hold for
+        // two seconds, the second of which comes back 503 "busy" for a command
+        // that in fact applied. So `change` only speaks when it has something
+        // new to say.
         input.addEventListener('input', () => {
-            request(input.value);
-            send(entry.pending);
+            if (busy()) { return; }
+            if (latch(knobValue(), false)) { entry.lastSent = entry.pending; send(entry.pending); }
         });
         input.addEventListener('change', () => {
-            request(input.value);
+            if (busy()) { return; }
+            if (!latch(knobValue(), false)) { return; }
+            if (entry.pending === entry.lastSent) { return; }
+            entry.lastSent = entry.pending;
             cmd(spec.cmd + ' ' + entry.pending);
         });
 
@@ -1196,9 +1332,13 @@
         reset.textContent = '↺';
         reset.setAttribute('aria-label', 'Reset ' + spec.label + ' to default');
         reset.addEventListener('click', () => {
-            const value = steps.defaults[spec.key];
-            if (value === undefined) { return; }
-            request(value);
+            const fallback = steps.defaults[spec.key];
+            if (fallback === undefined) { return; }
+            // Route through the knob so a step-list slider sends the nearest
+            // table entry rather than a default that may sit off the grid.
+            placeKnob(fallback);
+            if (!latch(knobValue(), false)) { return; }
+            entry.lastSent = entry.pending;
             cmd(spec.cmd + ' ' + entry.pending);
         });
         entry.reset = reset;
@@ -1228,8 +1368,13 @@
     }
 
     function buildExperiment() {
-        const sliders = xpRow('xp-sliders');
-        XP_SLIDERS.forEach((s) => sliders.appendChild(buildSlider(s)));
+        const sliderGroups = XP_SLIDER_GROUPS.map((group) => {
+            const rows = xpRow('xp-sliders');
+            group.sliders.forEach((s) => rows.appendChild(buildSlider(s)));
+            const wrap = xpGroup(group.title, rows);
+            if (group.visibleKey) { xpConditionalGroups.push({ el: wrap, key: group.visibleKey }); }
+            return wrap;
+        });
 
         const modes = xpRow('xp-row');
         XP_TOGGLES.forEach((s) => modes.appendChild(buildToggle(s)));
@@ -1289,7 +1434,7 @@
         });
 
         $('experiment').replaceChildren(
-            xpGroup('LIVE VALUES', sliders),
+            ...sliderGroups,
             xpGroup('MODES', modes),
             xpGroup('FREE STEPPING', free),
             xpGroup('SELECT', selects),
@@ -1302,19 +1447,68 @@
         if (!xpBuilt || $('experiment').classList.contains('hidden')) { return; }
         const now = Date.now();
 
-        xpSliders.forEach((entry) => {
-            const bounds = entry.spec.range && steps.ranges[entry.spec.range];
-            if (bounds) {
-                entry.input.min = bounds.min;
-                entry.input.max = bounds.max;
-                entry.input.step = bounds.step;
-            }
-            const fallback = steps.defaults[entry.spec.key];
-            entry.reset.title = fallback === undefined
-                ? 'No default configured'
-                : 'Reset to ' + entry.format(fallback);
+        // A whole group can be irrelevant to the attached sensor (ClearHDR on
+        // an imx477). Hide the group, but keep rendering its rows — they cost
+        // nothing and are correct the moment the group comes back.
+        xpConditionalGroups.forEach(({ el, key }) => show(el, truthy(V[key])));
 
-            const value = V[entry.spec.key];
+        xpSliders.forEach((entry) => {
+            const spec = entry.spec;
+            const list = sliderSteps(spec);
+
+            if (list) {
+                // Re-grid to the live table. It changes with the frame rate
+                // (flicker-free angles), with the sensor mode (fps ceiling)
+                // and with a free-stepping toggle.
+                entry.input.min = 0;
+                entry.input.max = Math.max(0, list.length - 1);
+                entry.input.step = 1;
+            } else {
+                const bounds = spec.range && steps.ranges[spec.range];
+                if (bounds) {
+                    entry.input.min = bounds.min;
+                    entry.input.max = bounds.max;
+                    entry.input.step = bounds.step;
+                }
+                // Continuous, but with the travel bounded by a step table's
+                // ends — which is exactly what a clamping setter enforces.
+                const table = spec.boundsFrom && steps[spec.boundsFrom];
+                if (table && table.length) {
+                    entry.input.min = Math.min(...table);
+                    entry.input.max = Math.max(...table);
+                }
+            }
+
+            // A row can be unusable for three reasons, and every one of them
+            // has to disable the input rather than just refuse the send:
+            //
+            //  locked  — the setter drops the write silently and answers 200.
+            //  busy    — the parameter is mid-reconfigure (set_fps crossing a
+            //            sensor mode). A drag here is not merely ignored: the
+            //            state pushes keep arriving, so placeKnob() yanks the
+            //            knob back under the finger and the value the gesture
+            //            ended on is discarded with no indication why.
+            //  no table — a step-list slider before its table has arrived.
+            const locked = Boolean(spec.lockKey && truthy(V[spec.lockKey]));
+            const switching = Boolean(spec.busyKey && truthy(V[spec.busyKey]));
+            const unusable = locked || switching || (list !== null && list.length === 0);
+            entry.input.disabled = unusable;
+            entry.row.classList.toggle('disabled', unusable);
+            entry.input.title = locked ? (spec.lockLabel || 'Locked')
+                : switching ? 'Changing resolution…'
+                : (list && !list.length) ? 'Waiting for the step table'
+                : spec.cmd;
+
+            const fallback = steps.defaults[spec.key];
+            // Hide rather than grey out when there is nothing to restore. A
+            // permanently disabled arrow reads as a broken control; several of
+            // these parameters genuinely have no configured default.
+            entry.reset.classList.toggle('absent', fallback === undefined);
+            if (fallback !== undefined) {
+                entry.reset.title = 'Reset to ' + entry.format(fallback);
+            }
+
+            const value = V[spec.key];
             if (value === undefined || value === null) { return; }
             const live = entry.format(value);
 
@@ -1336,17 +1530,26 @@
             // Compare as formatted text: the live value arrives as a float and
             // the default as whatever settings.jsonc holds, so 1 and 1.0 must
             // not read as "not yet default".
+            // `unusable` is in here too: without it the arrow stays clickable
+            // on a locked row, latches a value the setter drops, and shows it
+            // as truth — with the arrow greyed as if the reset had worked —
+            // for the full grace period. That is the exact freeze-then-jump
+            // the lock branch above exists to prevent.
             const showing = inFlight ? entry.pending : live;
-            entry.reset.disabled = fallback === undefined
+            entry.reset.disabled = unusable
+                || fallback === undefined
                 || entry.format(fallback) === showing;
 
             if (inFlight) { return; }   // leave the knob where the user put it
 
-            entry.input.value = value;
+            entry.placeKnob(value);
             entry.out.textContent = live;
         });
 
-        xpToggles.forEach(({ spec, btn }) => btn.classList.toggle('on', truthy(V[spec.key])));
+        xpToggles.forEach(({ spec, btn }) => {
+            if (spec.visibleKey) { show(btn, truthy(V[spec.visibleKey])); }
+            btn.classList.toggle('on', truthy(V[spec.key]));
+        });
 
         fillSelect($('xp-anamorphic'),
             steps.anamorphic.map((v) => ({ value: v, text: v + 'X' })),
@@ -1394,12 +1597,27 @@
         prevResolutionSwitching = now;
     }
 
+    // The four cycle-able step tables. populate_values() republishes each one
+    // whenever it actually changes — a frame-rate change re-derives the
+    // flicker-free angles, a sensor-mode change moves the fps ceiling, a
+    // free-stepping toggle swaps a preset table for a continuous grid — and
+    // the delta diff means an unchanged table costs nothing. Absorb them from
+    // deltas too, or the selects and the step-list sliders go stale the moment
+    // one is rebuilt and only recover on reconnect.
+    const STEP_LISTS = {
+        iso_steps: 'iso', shutter_a_steps: 'shutter_a',
+        fps_steps: 'fps', wb_steps: 'wb',
+    };
+
+    function absorbSteps(data) {
+        Object.keys(STEP_LISTS).forEach((field) => {
+            if (Array.isArray(data[field])) { steps[STEP_LISTS[field]] = data[field]; }
+        });
+    }
+
     socket.on('initial_values', (data) => {
         V = Object.assign({}, data);
-        steps.iso = data.iso_steps || [];
-        steps.shutter_a = data.shutter_a_steps || [];
-        steps.fps = data.fps_steps || [];
-        steps.wb = data.wb_steps || [];
+        absorbSteps(data);
         steps.resolutions = data.sensor_resolutions || [];
         prevResolutionSwitching = truthy(V.resolution_switching);
         const ranges = data.control_ranges || {};
@@ -1411,6 +1629,7 @@
 
     socket.on('gui_data_change', (data) => {
         Object.assign(V, data);
+        absorbSteps(data);
         render();
     });
 

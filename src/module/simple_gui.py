@@ -944,6 +944,44 @@ class SimpleGUI(threading.Thread):
             except (TypeError, ValueError):
                 return default
 
+        # The four cycle-able step tables, as the controller holds them right
+        # now -- not as events.py computed them once at connect. They change
+        # with the frame rate (flicker-free angles), with the sensor mode (the
+        # fps ceiling) and with a free-stepping toggle, and only the
+        # fps-driven rebuild was being re-pushed; the ISO and WB lists went
+        # stale until the browser reconnected. draw_gui() diffs this dict field
+        # by field, so an unchanged list is not re-emitted -- this costs a list
+        # comparison per draw tick, not a push.
+        #
+        # shutter_a_steps_dynamic and fps_steps_dynamic, not their non-dynamic
+        # siblings: those two are the tables set_shutter_a_nom() and set_fps()
+        # actually snap an incoming value against, which is what lets a browser
+        # control offer only values that will stick.
+        values["iso_steps"] = list(getattr(controller, "iso_steps", None) or [])
+        values["shutter_a_steps"] = list(
+            getattr(controller, "shutter_a_steps_dynamic", None)
+            or getattr(controller, "shutter_a_steps", None) or []
+        )
+        values["fps_steps"] = list(
+            getattr(controller, "fps_steps_dynamic", None)
+            or getattr(controller, "fps_steps", None) or []
+        )
+        values["wb_steps"] = list(getattr(controller, "wb_steps", None) or [])
+        # color_temp above is "5600 K", a display string. Publish the bare
+        # number too, so a control can round-trip a value through it.
+        values["wb"] = _num(ParameterKey.WB_USER.value, 5600)
+
+        # Whether this sensor has ClearHDR modes at all, so a surface can hide
+        # the ClearHDR controls rather than offering four knobs that write
+        # redis keys nothing on an imx477 or imx283 will ever read.
+        #
+        # Deliberately NOT _sensor_has_sdr_and_hdr(): that one answers "are
+        # both classes present", which is the right question for the SDR/HDR
+        # badge (on a single-class sensor the badge would be noise) and the
+        # wrong one here. A sensor exposing only HDR modes has ClearHDR and
+        # would have had its controls hidden.
+        values["hdr_capable"] = self._sensor_has_hdr_modes()
+
         values["zoom"] = z
         values["hdr_threshold_low"] = int(_num(ParameterKey.HDR_THRESHOLD_LOW.value))
         values["hdr_threshold_high"] = int(_num(ParameterKey.HDR_THRESHOLD_HIGH.value))
@@ -1622,6 +1660,18 @@ class SimpleGUI(threading.Thread):
         ("res_label", "res"),
     )
 
+    def _sensor_has_hdr_modes(self):
+        """True when the active sensor exposes any ClearHDR mode.
+
+        This is the capability question — "can this camera do ClearHDR at all"
+        — and it is what gates the ClearHDR controls. Distinct from
+        _sensor_has_sdr_and_hdr() below, which asks whether both classes are
+        present; conflating the two hides the controls on a sensor that only
+        has HDR modes.
+        """
+        modes = getattr(self.sensor_detect, "res_modes", {}) or {}
+        return any(bool(m.get("hdr", False)) for m in modes.values())
+
     def _sensor_has_sdr_and_hdr(self):
         """True when the active sensor exposes both plain and ClearHDR modes.
 
@@ -1629,9 +1679,8 @@ class SimpleGUI(threading.Thread):
         imx283 …) the class is self-evident so the badge is suppressed.
         """
         modes = getattr(self.sensor_detect, "res_modes", {}) or {}
-        has_hdr = any(bool(m.get("hdr", False)) for m in modes.values())
         has_sdr = any(not bool(m.get("hdr", False)) for m in modes.values())
-        return has_hdr and has_sdr
+        return self._sensor_has_hdr_modes() and has_sdr
 
     def _measure_layout_text(self, draw, key, values, shrink_x, shrink_y):
         info = self.layout[key]

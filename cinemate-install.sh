@@ -101,10 +101,16 @@ LGPIO_REPO_REF="${LGPIO_REPO_REF:-}"
 # and 2.7K 16:9 (mode 2A) readout modes on top of the upstream 6.12.y base.
 IMX283_DRIVER_REPO_URL="${IMX283_DRIVER_REPO_URL:-https://github.com/Tiramisioux/imx283-v4l2-driver.git}"
 IMX283_DRIVER_REPO_REF="${IMX283_DRIVER_REPO_REF:-6.12.y}"
-# Tiramisioux fork of Will Whang's driver; 6.12.y branch mirrors the upstream
-# 6.12.y base (kept in sync as a self-hosted install source).
+# Tiramisioux fork of Will Whang's driver. innomaker-v1.0 = upstream main
+# (verified byte-identical to the INNO-MAKER v1.0 vendor driver package,
+# 2026-08-27): WINMODE active-area modes (1920x1080 binned, 3840x2160 12-bit,
+# 3840x2200 16-bit ClearHDR), gates the invalid binned-ClearHDR combo, and its
+# overlay carries the `ccmp` parameter that enables 12-bit CCMP ClearHDR.
+# Pairs with the rp1-cfe Y16 patch (scripts/patch-rp1-cfe.sh) for mono 16-bit.
+# The old `6.12.y` branch (readout dims 3856x2180/1928x1090, no ccmp param)
+# stays selectable via this env var but is no longer the supported default.
 IMX585_DRIVER_REPO_URL="${IMX585_DRIVER_REPO_URL:-https://github.com/Tiramisioux/imx585-v4l2-driver.git}"
-IMX585_DRIVER_REPO_REF="${IMX585_DRIVER_REPO_REF:-6.12.y}"
+IMX585_DRIVER_REPO_REF="${IMX585_DRIVER_REPO_REF:-innomaker-v1.0}"
 IR_FILTER_URL="${IR_FILTER_URL:-https://raw.githubusercontent.com/will127534/StarlightEye/master/software/IRFilter}"
 PISHRINK_URL="${PISHRINK_URL:-https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh}"
 # Pi 5 kernel baseline. 6.12.93+rpt is the oldest baseline validated for
@@ -992,13 +998,20 @@ resolve_sensor_overlay() {
             CAMERA_AUTO_DETECT=1
             DTO_OVERLAY="${SENSOR_MODEL},${cam_port}"
             ;;
-        imx283|imx585)
+        imx283)
             CAMERA_AUTO_DETECT=0
             DTO_OVERLAY="${SENSOR_MODEL},${cam_port}"
             ;;
+        imx585)
+            CAMERA_AUTO_DETECT=0
+            # ccmp enables 12-bit CCMP ClearHDR (gated off by default in the
+            # innomaker-v1.0 driver); the parameter only exists in that
+            # branch's overlay, so driver and overlay must move together.
+            DTO_OVERLAY="imx585,${cam_port},ccmp"
+            ;;
         imx585_mono)
             CAMERA_AUTO_DETECT=0
-            DTO_OVERLAY="imx585,${cam_port},mono"
+            DTO_OVERLAY="imx585,${cam_port},mono,ccmp"
             ;;
         *)
             die "Unsupported SENSOR_MODEL: $SENSOR_MODEL"
@@ -1449,6 +1462,19 @@ install_imx585_support() {
     if is_rpi2712_platform; then
         detail "Ensuring DKMS builds IMX585 for the pinned Pi 5 kernel baseline"
         sudo dkms autoinstall -k "$KERNEL_BASELINE_ABI_2712"
+    fi
+
+    # Mono 16-bit (Y16) needs the rp1-cfe csi_dt patch: the kernel's Bayer
+    # 16-bit entries carry the "RP1 HW mismatch" workaround (csi_dt=0) but the
+    # Y16 entry was missed upstream, so unpatched mono 16-bit capture delivers
+    # COMP1-structured garbage. Warn-don't-die: every other mode works without
+    # it, and the script is rerunnable (docs/clear-hdr.md, mono section).
+    if [[ "$SENSOR_MODEL" == "imx585_mono" ]]; then
+        log "Applying the rp1-cfe Y16 csi_dt kernel patch (mono 16-bit capture)"
+        if ! "$CINEMATE_SOURCE_DIR/scripts/patch-rp1-cfe.sh"; then
+            warn "rp1-cfe patch failed -- 16-bit ClearHDR will record garbage on mono"
+            warn "until scripts/patch-rp1-cfe.sh succeeds. See docs/clear-hdr.md."
+        fi
     fi
 }
 

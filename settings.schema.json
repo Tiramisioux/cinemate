@@ -293,16 +293,16 @@
               "default": true
             },
             "threshold_low": {
-              "type": "integer",
+              "type": ["integer", "null"],
               "minimum": 0,
               "maximum": 4095,
-              "default": 0
+              "default": null
             },
             "threshold_high": {
-              "type": "integer",
+              "type": ["integer", "null"],
               "minimum": 0,
               "maximum": 4095,
-              "default": 0
+              "default": null
             },
             "blend": {
               "type": "integer",

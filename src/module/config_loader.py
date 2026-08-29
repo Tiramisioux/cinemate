@@ -233,6 +233,47 @@ def storage_preroll_enabled(settings: dict) -> bool:
     return auto_storage_preroll_enabled(settings)
 
 
+def clearhdr_startup_values(settings: dict) -> dict:
+    """Startup values for the ClearHDR live knobs, keyed by Redis key.
+
+    The two data-selection thresholds only come back as numbers when
+    ``image_capture.hdr`` actually configures them. Left unset they come back
+    as ``""``, which means "write nothing" rather than "write zero":
+    cinepi-raw skips the sensor write entirely while both are empty, so the
+    imx585 driver keeps the pair it boots with (EXP_TH_H 0x0FFF,
+    EXP_TH_L 0x0000).
+
+    That distinction is the point of this helper. EXP_TH_H == EXP_TH_L selects
+    the AppNote's weighted-blend fallback, which leaves the ClearHDR combiner
+    clamped near the black level on ordinary scenes; the driver carries a
+    comment saying exactly that, and defaults to the rule-based range instead.
+    Seeding 0/0 wrote that rejected configuration over the driver's own
+    default on every boot.
+
+    The empty string is written rather than skipped so a 0 persisted into
+    Redis by an earlier build is cleared on upgrade instead of surviving it.
+
+    ``blend`` and ``gain_adder`` keep their previous defaults: 0 is the
+    driver's own blend value, and 1 (+6 dB) is a deliberate choice over the
+    driver's +12 dB.
+    """
+
+    hdr_cfg = settings.get("image_capture", {}).get("hdr", {})
+    if not isinstance(hdr_cfg, dict):
+        hdr_cfg = {}
+
+    def threshold(name):
+        value = hdr_cfg.get(name)
+        return "" if value is None else value
+
+    return {
+        "hdr_threshold_low": threshold("threshold_low"),
+        "hdr_threshold_high": threshold("threshold_high"),
+        "hdr_blend": hdr_cfg.get("blend", 0),
+        "hdr_gain_adder": hdr_cfg.get("gain_adder", 1),
+    }
+
+
 def _apply_settings_defaults(settings: dict) -> dict:
     # ── system: splash, network, storage behavior ──────────────────────────
     system_cfg = settings.setdefault("system", {})

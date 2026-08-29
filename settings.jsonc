@@ -190,11 +190,18 @@
       // Startup values for the ClearHDR live knobs (0-4095 / 0-8 / 0-5).
       // Applied when a ClearHDR mode is selected; adjust live afterwards
       // with `set hdr threshold low/high`, `set hdr blend`, `set hdr gain
-      // adder`, or a pot/quad-rotary channel. 16-bit linear, HG 1/2 + LG
-      // 1/2 blend, +6 dB gain adder (menu 1) -- a lower noise floor than
-      // the driver's +12 dB default.
-      "threshold_low": 0,
-      "threshold_high": 0,
+      // adder`, or a pot/quad-rotary channel. HG 1/2 + LG 1/2 blend, +6 dB
+      // gain adder (menu 1) -- a lower noise floor than the driver's +12 dB
+      // default.
+      //
+      // null on the two thresholds means "leave the sensor driver's own
+      // pair alone" (EXP_TH_H 0x0FFF, EXP_TH_L 0x0000). Do not set both to
+      // the same value: equal thresholds select the AppNote's weighted-blend
+      // fallback, where the ClearHDR combiner output stays clamped near the
+      // black level and every HDR frame comes out flat. Set both, or
+      // neither.
+      "threshold_low": null,
+      "threshold_high": null,
       "blend": 0,
       "gain_adder": 1
     },

@@ -35,6 +35,20 @@ def _settings() -> dict:
 
 _READY_RX   = re.compile(r"Encoder configured")      # line printed by DngEncoder
 _READY_WAIT = 2.0                                   # seconds to wait for all cams
+
+# ClearHDR self-heal: round-8 investigation (2026-08-29) found the imx585
+# ClearHDR combiner can start up latched into a flat pedestal (~4.9% of
+# full-scale, confirmed identical in both 12-bit CCMP and 16-bit linear
+# ClearHDR, ruling out a decompand/software cause) with every sensor
+# register reading correct -- the defect is not visible to anything this
+# process can configure. The only confirmed recovery is a mode bounce
+# (switch away, then back); a live light-level shock also clears it, but
+# that isn't something software can trigger. Neither recovery mechanism is
+# proven 100% reliable (one boot needed it, a second boot never got stuck
+# at all), hence the attempt cap and the loud warning if it persists.
+_CLEARHDR_SELF_HEAL_MAX_ATTEMPTS = 2
+_CLEARHDR_SELF_HEAL_SETTLE_S = 1.5   # let >=20 frames settle at any sane fps
+_CLEARHDR_SELF_HEAL_STREAM_URL = "http://127.0.0.1:8000/stream"
 # Pi-4-family (VC4/Unicam) detection lives in sensor_detect as the single
 # canonical implementation; alias it here so existing call sites keep working.
 # Per-sensor packed-vs-unpacked is data-driven from sensors.json
@@ -730,7 +744,7 @@ class CinePiManager:
         self.stop_all()
         
     # ────────────────────────── start / stop ──────────────────────────
-    def start_all(self, preview_enabled: Optional[bool] = None) -> None:
+    def start_all(self, preview_enabled: Optional[bool] = None, _run_self_heal: bool = True) -> None:
         """Discover sensors, launch one *cinepi-raw* each, wait for readiness."""
         if preview_enabled is not None:
             self.preview_enabled = bool(preview_enabled)
@@ -861,7 +875,87 @@ class CinePiManager:
 
         # record-path housekeeping that was already there
         self.redis_controller.set_value(ParameterKey.LAST_DNG_CAM0.value, "None")
-        self.redis_controller.set_value(ParameterKey.LAST_DNG_CAM1.value, "None")  
+        self.redis_controller.set_value(ParameterKey.LAST_DNG_CAM1.value, "None")
+
+        # ────────────────────────────────────────────────────────────────
+        # NEW ✱ 6. ClearHDR self-heal (see _CLEARHDR_SELF_HEAL_* above)
+        # ────────────────────────────────────────────────────────────────
+        if _run_self_heal:
+            self._clearhdr_self_heal_if_stuck()
+
+    # ───────────── ClearHDR self-heal (round-8 mitigation) ─────────────
+    def _clearhdr_self_heal_if_stuck(self, attempt: int = 0) -> None:
+        """If ClearHDR is active and the live preview looks like the known
+        flat-pedestal failure, bounce to a different sensor mode and back --
+        the only recovery confirmed this round -- then re-check. Mitigation
+        only: the underlying cause is still unknown (see hardware-log.md,
+        2026-08-29 ClearHDR pedestal entries)."""
+        if str(self.redis_controller.get_value(ParameterKey.HDR.value)) != "1":
+            return  # not ClearHDR, nothing to check
+
+        time.sleep(_CLEARHDR_SELF_HEAL_SETTLE_S)
+
+        if not self._preview_frame_is_degenerate():
+            return  # healthy
+
+        if attempt >= _CLEARHDR_SELF_HEAL_MAX_ATTEMPTS:
+            logging.warning(
+                "ClearHDR self-heal: still looks stuck (flat pedestal) after "
+                "%d mode-bounce attempt(s) -- giving up. This is a known, "
+                "not-yet-root-caused defect (round 8, 2026-08-29); a power "
+                "cycle or a manual resolution switch may clear it.",
+                attempt,
+            )
+            return
+
+        stuck_mode = int(self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value) or 0)
+        # Any *different* mode has cleared it in testing so far -- 0 is
+        # always a valid fallback target since it's the SDR default.
+        kick_mode = 0 if stuck_mode != 0 else 1
+        logging.warning(
+            "ClearHDR self-heal: preview looks like the known flat-pedestal "
+            "failure -- bouncing mode %d -> %d -> %d to try to clear it "
+            "(attempt %d/%d).",
+            stuck_mode, kick_mode, stuck_mode,
+            attempt + 1, _CLEARHDR_SELF_HEAL_MAX_ATTEMPTS,
+        )
+        self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, kick_mode)
+        self.start_all(preview_enabled=self.preview_enabled, _run_self_heal=False)   # away
+        self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, stuck_mode)
+        self.start_all(preview_enabled=self.preview_enabled, _run_self_heal=False)   # back
+        self._clearhdr_self_heal_if_stuck(attempt=attempt + 1)                       # re-check, bounded by attempt
+
+    def _preview_frame_is_degenerate(self) -> bool:
+        """Grab one frame from the live MJPEG preview (the same stream the
+        web GUI's <img> tag consumes, see app/main/routes.py's stream_url)
+        and check for the signature tools/verify_take.py uses on recorded
+        DNGs: a scan row collapsed to only a handful of unique values.
+        Preview and recording are different, non-calibration-comparable
+        render paths (ccmpPreviewStage vs the ISP path), but a genuinely
+        flat sensor output stays flat through either -- this only needs to
+        detect flatness, not compare absolute levels.
+        """
+        import urllib.request
+        from io import BytesIO
+        try:
+            import numpy as np
+            from PIL import Image
+        except ImportError:
+            logging.debug("ClearHDR self-heal probe skipped: PIL/numpy unavailable")
+            return False
+
+        try:
+            with urllib.request.urlopen(_CLEARHDR_SELF_HEAL_STREAM_URL, timeout=2) as resp:
+                data = resp.read(200_000)
+            start, end = data.find(b"\xff\xd8"), data.find(b"\xff\xd9")
+            if start < 0 or end < 0:
+                return False  # couldn't isolate a frame -- don't false-positive
+            frame = np.array(Image.open(BytesIO(data[start:end + 2])).convert("L"))
+            row = frame[frame.shape[0] // 2]
+            return len(np.unique(row)) <= 5
+        except Exception:
+            logging.debug("ClearHDR self-heal preview probe failed", exc_info=True)
+            return False  # fail open -- never block startup on a probe error
 
     # ───────────────────────── teardown ────────────────────────────
     def stop_all(self) -> None:

@@ -1,0 +1,66 @@
+From: CineMate mono ClearHDR investigation, 2026-08-27
+Subject: [PATCH] media: rp1_cfe: give Y16 the same 16-bit HW-mismatch guard as Bayer16
+
+UNTESTED. Desk-authored against a fetched copy of the upstream file (see
+below); not compiled, not loaded, not run on any hardware. The operator
+applies and verifies this — see build-rp1-cfe.md in this directory.
+
+Every 16-bit Bayer entry in this table (SBGGR16/SGBRG16/SGRBG16/SRGGB16)
+carries `.csi_dt = 0` with the comment "Avoid RP1 HW mismatch for 16-bit
+modes." The V4L2_PIX_FMT_Y16 entry (the mono sensor's 16-bit format) was
+never given the same treatment and still carries
+`.csi_dt = MIPI_CSI2_DT_RAW16`.
+
+Byte-level DNG forensics on a mono imx585 (cinemate handbook hardware log,
+2026-08-27 evening entry) found every mono 16-bit take -- both 1928x1090 and
+3856x2180, both link rates tested -- carrying a repeating 16-byte motif
+consistent with PiSP COMP1-structured blocks landing in a buffer that is
+labeled and consumed as uncompressed R16, on top of libcamera's software
+16-bit endian swap. The kernel-side asymmetry above is the diagnosed root
+cause: the four Bayer 16-bit entries were deliberately patched to avoid this
+exact RP1 hardware mismatch, and the Y16 entry was missed when that fix
+was made.
+
+This patch is the minimal, symmetric fix: give V4L2_PIX_FMT_Y16 the same
+`.csi_dt = 0` treatment as its Bayer16 siblings, with the same comment.
+
+Base file fetched 2026-08-27 from:
+  https://raw.githubusercontent.com/raspberrypi/linux/rpi-6.12.y/drivers/media/platform/raspberrypi/rp1_cfe/cfe_fmts.h
+
+Apply from the root of a raspberrypi/linux checkout on the rpi-6.12.y branch:
+  git apply --check development/mono-clearhdr-fixes/rp1-cfe-y16-csi-dt0.patch
+  git apply development/mono-clearhdr-fixes/rp1-cfe-y16-csi-dt0.patch
+or:
+  patch -p1 < development/mono-clearhdr-fixes/rp1-cfe-y16-csi-dt0.patch
+
+See build-rp1-cfe.md for how to rebuild just this module against the
+installed 6.12.93 headers without rebuilding the whole kernel, and for the
+revert path.
+
+Known consequence of this fix, not a defect in it: with csi_dt = 0 the CFE
+accepts every CSI-2 data type rather than gating on RAW16 specifically, so
+mono 16-bit will start capturing the sensor's 20-row optical-black prepend
+that csi_dt = MIPI_CSI2_DT_RAW16 was silently discarding. That prepend is
+exactly what the 2200-row 16-bit mode on the `innomaker-v1.0` driver branch
+(upstream will127534 main) expects, versus the 2180-row entry the `6.12.y`
+driver branch carries today -- so this patch is expected to pair with the
+`innomaker-v1.0` driver branch, not `6.12.y`, for 16-bit modes. See the
+README in this directory.
+
+---
+ drivers/media/platform/raspberrypi/rp1_cfe/cfe_fmts.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/raspberrypi/rp1_cfe/cfe_fmts.h b/drivers/media/platform/raspberrypi/rp1_cfe/cfe_fmts.h
+index 000000000..000000000 100644
+--- a/drivers/media/platform/raspberrypi/rp1_cfe/cfe_fmts.h
++++ b/drivers/media/platform/raspberrypi/rp1_cfe/cfe_fmts.h
+@@ -283,7 +283,7 @@ static const struct cfe_fmt formats[] = {
+ 		.fourcc = V4L2_PIX_FMT_Y16,
+ 		.code = MEDIA_BUS_FMT_Y16_1X16,
+ 		.depth = 16,
+-		.csi_dt = MIPI_CSI2_DT_RAW16,
++		.csi_dt = 0, /* Avoid RP1 HW mismatch for 16-bit modes. */
+ 		.flags = CFE_FORMAT_FLAG_FE_OUT,
+ 		.remap = { V4L2_PIX_FMT_Y16, V4L2_PIX_FMT_PISP_COMP1_MONO },
+ 	},

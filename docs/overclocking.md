@@ -216,19 +216,36 @@ So every ambiguous case resolves downward:
 |---|---|
 | No RP1 (Pi 4 family) | none passed — libcamera's own default stands |
 | Overlay off in config.txt | 380 MPix/s |
-| Overlay on in config.txt | 580 MPix/s |
+| Overlay on in config.txt, applied by a reboot since | 580 MPix/s |
+| Overlay on in config.txt, but *edited, not yet rebooted* | 380 MPix/s, with a warning naming the reboot |
 | config.txt unreadable | 380 MPix/s (assumes stock) |
 
-config.txt's overlay line is the only input to this decision. An earlier
-revision also read the live `clk_sys` rate and used a threshold to veto an
-enabled overlay back down to 380 when the clock still looked stock — the
-*edited, not yet rebooted* case. That assumed stock and overclocked clocks
+config.txt's overlay line decides the *direction*; whether it has actually
+been applied is a separate question answered by comparing the file's mtime
+against the current boot time (`rp1_regime.config_txt_mtime()` /
+`boot_time()`, the latter derived from `/proc/uptime`). If the file was
+modified at or after boot, the reboot that would apply it hasn't happened
+yet, so the enabled line does not describe the *running* hardware regardless
+of what it says — this matters in practice because the settings-editor RP1
+toggle writes config.txt and restarts cinemate without rebooting the board,
+so "toggle on" and "actually overclocked" can disagree for as long as the
+operator forgets to reboot. A near-tie (within a few seconds either side of
+boot — VFAT's own mtime granularity is 2s and the Pi has no RTC) resolves
+toward the guard firing, i.e. toward 380, never toward believing the
+overlay.
+
+An earlier revision used a different discriminator for the same case: the
+live `clk_sys` rate, thresholded to veto an enabled overlay back down to 380
+when the clock still looked stock. That assumed stock and overclocked clocks
 read distinctly (~200 MHz / ~333 MHz on an earlier 6.12.93 session). A later
 session on the same kernel measured `clk_sys` at ~333 MHz in *both* regimes,
-which silently defeated the veto's threshold in either direction rather than
-tripping it visibly. `clk_sys` is still read and logged alongside the chosen
-rate, but purely as an observation for a human comparing it against
-config.txt by hand — it no longer feeds the decision.
+which silently defeated that veto's threshold in either direction rather than
+tripping it visibly — `clk_sys` was demoted to a logged observation with no
+effect on the decision, and the mtime-vs-boot-time guard above replaced it as
+the thing that actually still discriminates *edited, not yet rebooted* on
+this kernel. `clk_sys` is still read and logged alongside the chosen rate,
+purely as a live cross-reference for a human — cinemate's own decision does
+not read it.
 
 ### Checking which regime is live
 
@@ -247,13 +264,16 @@ printf 'cinepi-raw  : %s\n' "${rate:-no --max-pixel-rate (libcamera default)}"
 ```
 
 Read the three lines together: `config.txt` is what cinemate believes and
-acts on, the argument is what the pipeline was actually told (and should
-match `config.txt` exactly), and the clock is a live, human-checked
-cross-reference only — cinemate's own decision does not read it. Intent
-disagreeing with the clock usually means you have not rebooted since
-toggling, but on this kernel `clk_sys` alone cannot confirm that; treat it as
-a hint; if you have not rebooted since editing config.txt, reboot before
-extending your capture plan to the ceiling you just enabled.
+acts on (subject to the mtime-vs-boot-time guard above), the argument is what
+the pipeline was actually told, and the clock is a live, human-checked
+cross-reference only — cinemate's own decision does not read it, precisely
+because it cannot confirm a reboot on this kernel. If the argument doesn't
+match what `config.txt` currently says, check whether the guard fired
+(`journalctl` for "was modified at or after the current boot") before
+suspecting anything else — that is the expected, safe outcome of not having
+rebooted since the last edit, not a bug. If you have not rebooted since
+editing config.txt, reboot before extending your capture plan to the ceiling
+you just enabled.
 
 The rest of this page is the manual build.
 

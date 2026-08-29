@@ -1186,8 +1186,20 @@ class CinePiController:
         actually up: publishing right after cam_init would race cinepi-raw's
         deferred reconfigure (its handler only sets cameraInit_ = true) and
         the controls would be reset again underneath us.
+
+        CG_RB is skipped for a mono sensor: it is a colour red/blue gain
+        pair, meaningless for a sensor with no CFA to white-balance --
+        cinepi_multi.py already omits --awbgains from a mono launch line for
+        the same reason (round-1 mono fix), and republishing it here would
+        be reprogramming a control the sensor was never given in the first
+        place. self.current_sensor ending in "_mono" is the same convention
+        detect_camera_model() already uses elsewhere in this file (e.g. the
+        tuning-file/wb-array lookups a few methods down).
         """
+        mono = bool(self.current_sensor) and self.current_sensor.endswith("_mono")
         for key in CAMERA_CONTROL_REAPPLY_KEYS:
+            if mono and key is ParameterKey.CG_RB:
+                continue
             value = self.redis_controller.get_value(key.value)
             if value is None or str(value) == "":
                 continue

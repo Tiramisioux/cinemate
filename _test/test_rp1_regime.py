@@ -16,6 +16,15 @@ tells them apart: it is demoted to a logged observation with no effect on the
 decision, and these tests assert exactly that -- the measured value must not
 move the answer in either direction, including in the case the old veto
 existed for (overlay enabled, clock reading low).
+
+Removing that veto reintroduced the "edited, not yet rebooted" over-statement
+a different way: the settings-editor toggle writes config.txt and restarts
+cinemate without necessarily rebooting, so overlay-enabled-but-not-yet-applied
+is a realistic path again. config_txt_mtime() vs boot_time() is the
+replacement discriminator -- PixelRateTests._rate() defaults both to a
+"comfortably rebooted" pair (mtime well before boot) so every pre-existing
+test above is unaffected by the guard's addition; the MtimeGuardTests class
+below exercises the guard itself.
 """
 
 import sys
@@ -53,11 +62,15 @@ class OverlayDetectionTests(unittest.TestCase):
 
 
 class PixelRateTests(unittest.TestCase):
-    def _rate(self, config_txt, measured, rp1=True):
+    # mtime well before boot -- "comfortably rebooted" -- so every test below
+    # that doesn't pass its own mtime/booted is unaffected by the mtime guard.
+    def _rate(self, config_txt, measured, rp1=True, mtime=100.0, booted=1_000.0):
         with mock.patch.object(rp1_regime, "is_rp1_platform", return_value=rp1), \
              mock.patch.object(rp1_regime, "overlay_enabled",
                                return_value=rp1_regime.overlay_enabled(config_txt)), \
-             mock.patch.object(rp1_regime, "measured_clk_sys_hz", return_value=measured):
+             mock.patch.object(rp1_regime, "measured_clk_sys_hz", return_value=measured), \
+             mock.patch.object(rp1_regime, "config_txt_mtime", return_value=mtime), \
+             mock.patch.object(rp1_regime, "boot_time", return_value=booted):
             return rp1_regime.pixel_rate()
 
     def test_boards_without_an_rp1_get_no_ceiling_at_all(self):
@@ -90,6 +103,87 @@ class PixelRateTests(unittest.TestCase):
 
     def test_the_overclocked_rate_is_the_higher_one(self):
         self.assertGreater(rp1_regime.PIXEL_RATE_OVERCLOCKED, rp1_regime.PIXEL_RATE_STOCK)
+
+
+class MtimeGuardTests(unittest.TestCase):
+    """config.txt's overlay line only describes the RUNNING hardware once a
+    reboot has applied it. mtime >= boot time means it hasn't yet."""
+
+    def _rate(self, config_txt, mtime, booted):
+        with mock.patch.object(rp1_regime, "is_rp1_platform", return_value=True), \
+             mock.patch.object(rp1_regime, "overlay_enabled",
+                               return_value=rp1_regime.overlay_enabled(config_txt)), \
+             mock.patch.object(rp1_regime, "measured_clk_sys_hz", return_value=None), \
+             mock.patch.object(rp1_regime, "config_txt_mtime", return_value=mtime), \
+             mock.patch.object(rp1_regime, "boot_time", return_value=booted):
+            return rp1_regime.pixel_rate()
+
+    def test_edited_after_boot_with_overlay_on_yields_stock_with_a_warning(self):
+        # The reintroduced over-statement case: toggle -> cinemate restarts ->
+        # no reboot -> config.txt's mtime is after the boot it hasn't taken
+        # effect since yet.
+        with self.assertLogs(rp1_regime.logger, level="WARNING") as captured:
+            rate = self._rate(ENABLED, mtime=500.0, booted=200.0)
+        self.assertEqual(rate, rp1_regime.PIXEL_RATE_STOCK)
+        self.assertIn("modified at or after", "\n".join(captured.output))
+
+    def test_edited_before_boot_with_overlay_on_yields_overclocked(self):
+        self.assertEqual(
+            self._rate(ENABLED, mtime=100.0, booted=200.0),
+            rp1_regime.PIXEL_RATE_OVERCLOCKED,
+        )
+
+    def test_edited_after_boot_with_overlay_off_still_yields_stock(self):
+        # No promotion either way -- the guard only ever pushes DOWN, so it
+        # has nothing to do when the overlay is already off.
+        self.assertEqual(
+            self._rate(COMMENTED, mtime=500.0, booted=200.0),
+            rp1_regime.PIXEL_RATE_STOCK,
+        )
+
+    def test_a_near_tie_across_the_slack_window_still_vetoes(self):
+        # mtime 1s before boot -- inside EDITED_AFTER_BOOT_SLACK_S, and VFAT's
+        # own 2s mtime granularity means this ordering isn't reliable anyway.
+        # Ambiguity resolves toward vetoing (stock), not toward believing the
+        # overlay.
+        self.assertEqual(
+            self._rate(ENABLED, mtime=199.0, booted=200.0),
+            rp1_regime.PIXEL_RATE_STOCK,
+        )
+
+    def test_unreadable_mtime_leaves_the_switch_standing(self):
+        self.assertEqual(
+            self._rate(ENABLED, mtime=None, booted=200.0),
+            rp1_regime.PIXEL_RATE_OVERCLOCKED,
+        )
+
+    def test_unreadable_boot_time_leaves_the_switch_standing(self):
+        self.assertEqual(
+            self._rate(ENABLED, mtime=500.0, booted=None),
+            rp1_regime.PIXEL_RATE_OVERCLOCKED,
+        )
+
+
+class BootTimeHelperTests(unittest.TestCase):
+    def test_config_txt_mtime_reads_the_real_stat(self):
+        # Not mocked here on purpose -- confirms the real Path().stat() call
+        # works, the mocking above only ever replaces it for pixel_rate()'s
+        # own tests.
+        mtime = rp1_regime.config_txt_mtime()
+        self.assertIsNone(mtime)  # this test box has no /boot/firmware/config.txt
+
+    def test_boot_time_is_derived_from_uptime(self):
+        with mock.patch.object(rp1_regime.Path, "read_text", return_value="12345.67 0.0\n"), \
+             mock.patch.object(rp1_regime.time, "time", return_value=1_000_000.0):
+            self.assertAlmostEqual(rp1_regime.boot_time(), 1_000_000.0 - 12345.67, places=3)
+
+    def test_an_unreadable_uptime_is_not_an_error(self):
+        with mock.patch.object(rp1_regime.Path, "read_text", side_effect=OSError):
+            self.assertIsNone(rp1_regime.boot_time())
+
+    def test_a_malformed_uptime_is_not_an_error(self):
+        with mock.patch.object(rp1_regime.Path, "read_text", return_value="not-a-number\n"):
+            self.assertIsNone(rp1_regime.boot_time())
 
 
 class ClockParsingTests(unittest.TestCase):

@@ -7,15 +7,17 @@ ClearHDR is the imx585's on-sensor single-frame HDR. The sensor merges a high-ga
 | Piece | Needed | Why |
 |-------|--------|-----|
 | Kernel | ≥ 6.12.93+rpt (the Cinemate baseline) | older `rp1-cfe` corrupts 16-bit CSI-2 capture; 10/12-bit is unaffected |
-| Sensor driver | Tiramisioux `imx585-v4l2-driver`, branch `6.12.y` | exposes `wide_dynamic_range` and the 16-bit modes |
+| Sensor driver | Tiramisioux `imx585-v4l2-driver`, branch `innomaker-v1.0` | exposes `wide_dynamic_range`, the 3840×2200 16-bit mode, and the `ccmp` overlay parameter; gates the invalid binned-ClearHDR combo |
+| Overlay | `dtoverlay=imx585,...,ccmp` in config.txt | without `ccmp` the 12-bit CCMP ClearHDR mode does not exist on this driver (the installer writes it) |
 | libcamera | Tiramisioux `libcamera`, branch `cinemate` | 16-bit endian swap handling |
+| Kernel patch (mono only) | `scripts/patch-rp1-cfe.sh` | the stock kernel's Y16 format entry misses the 16-bit workaround — see [Mono sensor](#mono-sensor-imx585_mono) |
 | Exposure | manual | ISP statistics are invalid at 16-bit, so auto exposure and auto white balance cannot run |
 
 ## What changes when ClearHDR is on
 
 - Frame rates halve versus the plain modes (≈ 33 fps at 4K, ≈ 37 fps at 2K on an overclocked RP1).
 - Analogue gain caps at code 80 ≈ 15.8× (ISO 1580).
-- Each 3856×2180 DNG is ≈ 16.9 MB. Storage bandwidth: 15 fps ≈ 252 MB/s, 20 fps ≈ 336 MB/s — plan drives accordingly. The minutes-left display uses the 16.9 MB figure automatically.
+- Each 3840×2200 16-bit DNG is ≈ 16.9 MB. Storage bandwidth: 15 fps ≈ 252 MB/s, 20 fps ≈ 336 MB/s — plan drives accordingly. The minutes-left display uses the 16.9 MB figure automatically.
 - Auto exposure and auto white balance cannot run in the 16-bit modes (ISP statistics are invalid at 16-bit). Set exposure manually.
 - Highlights near the HG→LG hand-off can render magenta in flat greys — sensor-side merge behaviour, not a capture defect. See [Magenta highlights](#magenta-highlights).
 
@@ -28,16 +30,21 @@ mode launches cinepi-raw with `--hdr sensor`; selecting a plain mode launches
 without it. No separate toggle is needed.
 
 The imx585 exposes ClearHDR at **both** 12-bit and 16-bit, so the table is
-ordered plain modes first, then 12-bit HDR, then 16-bit HDR:
+ordered plain modes first, then 12-bit HDR, then 16-bit HDR. On the
+`innomaker-v1.0` driver (active-area dims) the mono table is:
 
-| Mode | Resolution | Bit depth | HDR | ~fps (overclocked) |
-|------|-----------|-----------|-----|--------------------|
-| 0 | 1928×1090 | 12-bit | — | 75 |
-| 1 | 3856×2180 | 12-bit | — | 66.85 |
-| 2 | 1928×1090 | 12-bit | HDR | 37.50 |
-| 3 | 3856×2180 | 12-bit | HDR | 33.43 |
-| 4 | 1928×1090 | 16-bit | HDR | 37.50 |
-| 5 | 3856×2180 | 16-bit | HDR | 33.43 |
+| Mode | Resolution | Bit depth | HDR |
+|------|-----------|-----------|-----|
+| 0 | 1920×1080 | 12-bit | — |
+| 1 | 3840×2160 | 12-bit | — |
+| 2 | 3840×2160 | 12-bit | HDR (CCMP) |
+| 3 | 3840×2200 | 16-bit | HDR |
+
+There is no binned ClearHDR row — the driver gates that combination out
+(invalid on the sensor; on mono it records pure black level). The colour
+sensor's table adds RAW10 plain modes. Frame-rate ceilings depend on the
+link rate and the RP1 clock regime — see
+[Overclocking the Pi](overclocking.md).
 
 HDR modes are labelled so they read distinctly from the plain modes:
 
@@ -171,3 +178,17 @@ The plateau level depends on gain and knob settings, so handle it per shot in th
 ## Exposure workflow
 
 Auto exposure and auto white balance are off in 16-bit modes (the ISP cannot compute statistics on 16-bit data). Set ISO, shutter and white balance manually — the normal Cinemate controls (`set iso`, `set shutter a`, `set wb`) keep working; they are always manual values in Cinemate anyway. A practical 4K indoor starting point: ISO 800, shutter 8 ms, 15 fps.
+
+## Mono sensor (imx585_mono)
+
+Verified working 2026-08-27 — all ClearHDR modes record real data on the mono
+variant. Three mono-specific facts:
+
+| Fact | Detail |
+|------|--------|
+| Kernel patch required for 16-bit | The stock rpi-6.12.y kernel gives every Bayer 16-bit format the "RP1 HW mismatch" workaround (`csi_dt = 0`) but missed the mono `Y16` entry. Unpatched, mono 16-bit records PiSP-COMP1-structured garbage (stripes on flat scenes, noise on detailed ones). The installer applies `scripts/patch-rp1-cfe.sh` automatically for `SENSOR_MODEL=imx585_mono`; rerun it after any kernel package upgrade (the upgrade silently restores the stock module). |
+| 16-bit frames are 3840×2200 | The sensor prepends ~20 optical-black rows to its RAW16 output; the top rows of every 16-bit DNG sit at the 3200 pedestal. Expected geometry, not a defect. |
+| No binned ClearHDR | Binned (2K) ClearHDR is an invalid sensor configuration on mono — the sensor emits pure black-level regardless of exposure (AppNote §2 p.6). The `innomaker-v1.0` driver removes the combination from the mode table; only full-res 12-bit CCMP and 16-bit ClearHDR are offered. |
+
+Mono launches also drop `--awb`/`--awbgains` (no CFA to balance) and use the
+`imx585_mono.json` tuning automatically.

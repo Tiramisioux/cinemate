@@ -127,6 +127,46 @@ def _format_error_context(path: Path, line: int, column: int, radius: int = 1) -
     return "\n".join(snippet)
 
 
+def normalize_log_encode(value, default: bool = False):
+    """Decode a `log_encode` flag to its native type: bool, or an int target.
+
+    `log_encode` is the one settings key whose options are not all one type --
+    False | True | 10 | 12 -- so it cannot go through `as_bool`, and a plain
+    string passes through the launch path silently wrong rather than loudly:
+    `if log_requested:` in cinepi_multi makes the string "false" TRUTHY, so a
+    corrupted "false" reads as log-on, while "true" is passed on as an explicit
+    target, matches no valid bit depth, and records linear with only a warning.
+
+    The settings editor used to write exactly those strings (its log_encode
+    select was `data-type="string"`), so files already on cameras carry them.
+    Normalising on load means such a file heals itself on the next start
+    instead of needing a hand edit.
+
+    - bool and int pass through unchanged (an out-of-range int is left alone;
+      `SensorDetect.resolve_log_encode_target()` is what validates targets).
+    - A string matching TRUE_VALUES/FALSE_VALUES decodes via `as_bool`.
+    - Any other numeric string becomes that int, so "10"/"12" behave as 10/12.
+    - Anything unrecognised falls back to `default`, same as an absent key.
+    """
+    if isinstance(value, bool) or isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return default
+        if text.lower() in TRUE_VALUES or text.lower() in FALSE_VALUES:
+            return as_bool(text, default=default)
+        try:
+            return int(text)
+        except ValueError:
+            logging.debug(
+                "normalize_log_encode: unrecognised value %r, defaulting to %s",
+                value, default,
+            )
+            return default
+    return default
+
+
 def as_bool(value, default: bool = False) -> bool:
     """Decode a settings.jsonc / Redis boolean the same way everywhere.
 
@@ -256,7 +296,7 @@ def _apply_settings_defaults(settings: dict) -> dict:
         # 10 | 12 (on, forced target). Off by default -- log changes recorded
         # output. Resolved against the live sensor + bit depth at launch via
         # SensorDetect.resolve_log_encode_target(); never a raw flag value.
-        cam.setdefault("log_encode", False)
+        cam["log_encode"] = normalize_log_encode(cam.get("log_encode", False))
     sensors_cfg.setdefault("database_file", "resources/sensors.json")
     settings["sensors"] = sensors_cfg
 

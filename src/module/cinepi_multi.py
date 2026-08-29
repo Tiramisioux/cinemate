@@ -41,14 +41,18 @@ _READY_WAIT = 2.0                                   # seconds to wait for all ca
 # full-scale, confirmed identical in both 12-bit CCMP and 16-bit linear
 # ClearHDR, ruling out a decompand/software cause) with every sensor
 # register reading correct -- the defect is not visible to anything this
-# process can configure. The only confirmed recovery is a mode bounce
-# (switch away, then back); a live light-level shock also clears it, but
-# that isn't something software can trigger. Neither recovery mechanism is
-# proven 100% reliable (one boot needed it, a second boot never got stuck
-# at all), hence the attempt cap and the loud warning if it persists.
+# process can configure. Confirmed recoveries, in increasing order of cost:
+# a large analogue-gain swing (mirrors the light-level shock -- flashing a
+# light at the sensor, or covering it -- that has reliably cleared it by
+# hand; a mode bounce alone was tried live on 2026-08-29 and did NOT clear
+# it, so gain-shock is tried first, not as a fallback), then a mode bounce
+# (switch away, then back). Neither is proven 100% reliable, hence the
+# attempt cap and the loud warning if it persists.
 _CLEARHDR_SELF_HEAL_MAX_ATTEMPTS = 2
 _CLEARHDR_SELF_HEAL_SETTLE_S = 1.5   # let >=20 frames settle at any sane fps
 _CLEARHDR_SELF_HEAL_STREAM_URL = "http://127.0.0.1:8000/stream"
+_CLEARHDR_SELF_HEAL_GAIN_SHOCK_VALUES = (0, 80)   # analogue_gain min, max (imx585.c ANA_GAIN range)
+_CLEARHDR_SELF_HEAL_GAIN_SHOCK_SETTLE_S = 0.4
 # Pi-4-family (VC4/Unicam) detection lives in sensor_detect as the single
 # canonical implementation; alias it here so existing call sites keep working.
 # Per-sensor packed-vs-unpacked is data-driven from sensors.json
@@ -886,10 +890,11 @@ class CinePiManager:
     # ───────────── ClearHDR self-heal (round-8 mitigation) ─────────────
     def _clearhdr_self_heal_if_stuck(self, attempt: int = 0) -> None:
         """If ClearHDR is active and the live preview looks like the known
-        flat-pedestal failure, bounce to a different sensor mode and back --
-        the only recovery confirmed this round -- then re-check. Mitigation
-        only: the underlying cause is still unknown (see hardware-log.md,
-        2026-08-29 ClearHDR pedestal entries)."""
+        flat-pedestal failure, try to clear it -- a gain shock first
+        (attempt 0 only, cheap, no process relaunch), then a mode bounce as
+        a fallback -- and re-check after each. Mitigation only: the
+        underlying cause is still unknown (see hardware-log.md, 2026-08-29
+        ClearHDR pedestal entries)."""
         if str(self.redis_controller.get_value(ParameterKey.HDR.value)) != "1":
             return  # not ClearHDR, nothing to check
 
@@ -898,12 +903,24 @@ class CinePiManager:
         if not self._preview_frame_is_degenerate():
             return  # healthy
 
+        if attempt == 0:
+            logging.warning(
+                "ClearHDR self-heal: preview looks like the known flat-pedestal "
+                "failure -- trying an analogue-gain shock before a mode bounce."
+            )
+            self._shock_analog_gain()
+            time.sleep(_CLEARHDR_SELF_HEAL_SETTLE_S)
+            if not self._preview_frame_is_degenerate():
+                logging.info("ClearHDR self-heal: gain shock cleared it.")
+                return
+
         if attempt >= _CLEARHDR_SELF_HEAL_MAX_ATTEMPTS:
             logging.warning(
                 "ClearHDR self-heal: still looks stuck (flat pedestal) after "
-                "%d mode-bounce attempt(s) -- giving up. This is a known, "
-                "not-yet-root-caused defect (round 8, 2026-08-29); a power "
-                "cycle or a manual resolution switch may clear it.",
+                "a gain shock and %d mode-bounce attempt(s) -- giving up. "
+                "This is a known, not-yet-root-caused defect (round 8, "
+                "2026-08-29); a power cycle or covering/flashing light at "
+                "the sensor by hand may still clear it.",
                 attempt,
             )
             return
@@ -913,9 +930,8 @@ class CinePiManager:
         # always a valid fallback target since it's the SDR default.
         kick_mode = 0 if stuck_mode != 0 else 1
         logging.warning(
-            "ClearHDR self-heal: preview looks like the known flat-pedestal "
-            "failure -- bouncing mode %d -> %d -> %d to try to clear it "
-            "(attempt %d/%d).",
+            "ClearHDR self-heal: still stuck -- bouncing mode %d -> %d -> %d "
+            "to try to clear it (attempt %d/%d).",
             stuck_mode, kick_mode, stuck_mode,
             attempt + 1, _CLEARHDR_SELF_HEAL_MAX_ATTEMPTS,
         )
@@ -924,6 +940,43 @@ class CinePiManager:
         self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, stuck_mode)
         self.start_all(preview_enabled=self.preview_enabled, _run_self_heal=False)   # back
         self._clearhdr_self_heal_if_stuck(attempt=attempt + 1)                       # re-check, bounded by attempt
+
+    def _shock_analog_gain(self) -> None:
+        """Drive analogue_gain through a large swing (min then max) on
+        whichever imx585 subdev accepts it -- the same subdev-discovery
+        pattern _set_wide_dynamic_range() uses in cinepi_controller.py,
+        reimplemented here since CinePiManager has no v4l2 handle of its
+        own. analogue_gain is not __v4l2_ctrl_grab-bound during streaming
+        (only vflip/hflip/hdr_mode are, per imx585.c), so this does not
+        race cinepi-raw's process lifetime the way the WDR control does.
+        Re-publishes the current ISO afterwards so cinepi-raw's own ISO
+        handler re-applies the operator's actual requested value -- this
+        bypasses that handler's control of the sensor temporarily, so it
+        must hand back cleanly rather than leaving the shock's value live.
+        """
+        for value in _CLEARHDR_SELF_HEAL_GAIN_SHOCK_VALUES:
+            applied = False
+            for idx in range(16):
+                dev = f"/dev/v4l-subdev{idx}"
+                if not os.path.exists(dev):
+                    continue
+                probe = subprocess.run(
+                    ["v4l2-ctl", "-d", dev, "--set-ctrl", f"analogue_gain={value}"],
+                    capture_output=True, text=True,
+                )
+                if probe.returncode == 0:
+                    applied = True
+                    break
+            if not applied:
+                logging.debug(
+                    "ClearHDR self-heal gain shock: no subdev accepted analogue_gain=%d",
+                    value,
+                )
+            time.sleep(_CLEARHDR_SELF_HEAL_GAIN_SHOCK_SETTLE_S)
+
+        # Hand control back to cinepi-raw's normal ISO path -- re-publish
+        # (not re-write) the key so its handler re-applies the real value.
+        self.redis_controller.r.publish("cp_controls", ParameterKey.ISO.value)
 
     def _preview_frame_is_degenerate(self) -> bool:
         """Grab one frame from the live MJPEG preview (the same stream the

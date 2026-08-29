@@ -2,14 +2,18 @@
 start up latched into a flat pedestal (~4.9% of full-scale, confirmed
 identical in both 12-bit CCMP and 16-bit linear ClearHDR -- see
 development/mono-clearhdr-fixes/ROUND8-RESULTS.md) with every sensor register
-reading correct. The only confirmed recovery is a mode bounce. This is a
-mitigation, not a fix -- the underlying cause is unknown.
+reading correct. Confirmed recoveries: a large analogue-gain swing (tried
+first -- mirrors the light-level shock, flashing a light or covering the
+sensor, that has reliably cleared it by hand) and a mode bounce (tried as a
+fallback -- confirmed live on 2026-08-29 to sometimes NOT clear it on its
+own, hence gain-shock-first, not mode-bounce-only). This is a mitigation,
+not a fix -- the underlying cause is unknown.
 
-These tests isolate CinePiManager._clearhdr_self_heal_if_stuck() and
-_preview_frame_is_degenerate() from the rest of start_all() (sensor
-discovery, subprocess launch, the "ready" wait) by calling them directly
-against a bare CinePiManager instance -- none of that machinery is
-exercised or needed for this seam.
+These tests isolate CinePiManager._clearhdr_self_heal_if_stuck(),
+_shock_analog_gain(), and _preview_frame_is_degenerate() from the rest of
+start_all() (sensor discovery, subprocess launch, the "ready" wait) by
+calling them directly against a bare CinePiManager instance -- none of that
+machinery is exercised or needed for this seam.
 """
 
 import sys
@@ -67,11 +71,49 @@ class ClearHdrSelfHealGatingTests(unittest.TestCase):
         start_all.assert_not_called()
 
 
+class ClearHdrSelfHealGainShockOrderingTests(unittest.TestCase):
+    def test_tries_gain_shock_before_any_mode_bounce(self):
+        mgr = make_manager(hdr="1", sensor_mode=3)
+        # Degenerate initially, still degenerate right after the gain shock
+        # (checked once more before falling back to a bounce), then fixed
+        # by the first bounce.
+        with mock.patch.object(mgr, "_preview_frame_is_degenerate", side_effect=[True, True, False]), \
+             mock.patch.object(mgr, "_shock_analog_gain") as shock, \
+             mock.patch.object(mgr, "start_all") as start_all, \
+             mock.patch("module.cinepi_multi.time.sleep"):
+            mgr._clearhdr_self_heal_if_stuck()
+
+        shock.assert_called_once()
+        self.assertEqual(start_all.call_count, 2)  # one bounce, away + back
+
+    def test_gain_shock_alone_can_resolve_it_with_no_mode_bounce_at_all(self):
+        mgr = make_manager(hdr="1", sensor_mode=3)
+        with mock.patch.object(mgr, "_preview_frame_is_degenerate", side_effect=[True, False]), \
+             mock.patch.object(mgr, "_shock_analog_gain") as shock, \
+             mock.patch.object(mgr, "start_all") as start_all, \
+             mock.patch("module.cinepi_multi.time.sleep"):
+            mgr._clearhdr_self_heal_if_stuck()
+
+        shock.assert_called_once()
+        start_all.assert_not_called()
+
+    def test_gain_shock_is_only_tried_once_not_on_every_bounce_attempt(self):
+        mgr = make_manager(hdr="1", sensor_mode=3)
+        with mock.patch.object(mgr, "_preview_frame_is_degenerate", return_value=True), \
+             mock.patch.object(mgr, "_shock_analog_gain") as shock, \
+             mock.patch.object(mgr, "start_all"), \
+             mock.patch("module.cinepi_multi.time.sleep"):
+            mgr._clearhdr_self_heal_if_stuck()
+
+        shock.assert_called_once()
+
+
 class ClearHdrSelfHealBounceTests(unittest.TestCase):
     def test_a_degenerate_preview_triggers_exactly_one_bounce_away_and_back(self):
         mgr = make_manager(hdr="1", sensor_mode=3)
-        # Fixed by the second self-heal check (attempt=1): healthy afterwards.
-        with mock.patch.object(mgr, "_preview_frame_is_degenerate", side_effect=[True, False]), \
+        # Still degenerate after the gain shock, fixed by the following bounce.
+        with mock.patch.object(mgr, "_preview_frame_is_degenerate", side_effect=[True, True, False]), \
+             mock.patch.object(mgr, "_shock_analog_gain"), \
              mock.patch.object(mgr, "start_all") as start_all, \
              mock.patch("module.cinepi_multi.time.sleep"):
             mgr._clearhdr_self_heal_if_stuck()
@@ -98,14 +140,48 @@ class ClearHdrSelfHealBounceTests(unittest.TestCase):
         """
         mgr = make_manager(hdr="1", sensor_mode=3)
         with mock.patch.object(mgr, "_preview_frame_is_degenerate", return_value=True), \
+             mock.patch.object(mgr, "_shock_analog_gain"), \
              mock.patch.object(mgr, "start_all") as start_all, \
              mock.patch("module.cinepi_multi.logging.warning") as warn, \
              mock.patch("module.cinepi_multi.time.sleep"):
             mgr._clearhdr_self_heal_if_stuck()
 
         self.assertEqual(start_all.call_count, 2 * _CLEARHDR_SELF_HEAL_MAX_ATTEMPTS)
-        # One "still stuck, giving up" warning, plus one per bounce attempt.
-        self.assertEqual(warn.call_count, _CLEARHDR_SELF_HEAL_MAX_ATTEMPTS + 1)
+        # One "trying a gain shock" warning, one "still stuck -- bouncing" per
+        # bounce attempt, plus one final "still stuck, giving up" warning.
+        self.assertEqual(warn.call_count, _CLEARHDR_SELF_HEAL_MAX_ATTEMPTS + 2)
+
+
+class ShockAnalogGainTests(unittest.TestCase):
+    def test_drives_gain_to_min_then_max_and_republishes_iso(self):
+        mgr = make_manager()
+        mgr.redis_controller.r = mock.MagicMock()
+
+        with mock.patch("module.cinepi_multi.os.path.exists", side_effect=lambda p: p == "/dev/v4l-subdev0"), \
+             mock.patch("module.cinepi_multi.subprocess.run") as run, \
+             mock.patch("module.cinepi_multi.time.sleep"):
+            run.return_value = mock.MagicMock(returncode=0)
+            mgr._shock_analog_gain()
+
+        gain_calls = [c for c in run.call_args_list if "analogue_gain" in c.args[0][-1]]
+        self.assertEqual(len(gain_calls), 2)
+        self.assertIn("analogue_gain=0", gain_calls[0].args[0][-1])
+        self.assertIn("analogue_gain=80", gain_calls[1].args[0][-1])
+        mgr.redis_controller.r.publish.assert_called_once_with("cp_controls", ParameterKey.ISO.value)
+
+    def test_no_subdev_accepting_the_control_still_republishes_iso(self):
+        """Fail open: if nothing accepts the control, don't leave the sensor
+        without its ISO re-applied -- still hand control back."""
+        mgr = make_manager()
+        mgr.redis_controller.r = mock.MagicMock()
+
+        with mock.patch("module.cinepi_multi.os.path.exists", return_value=False), \
+             mock.patch("module.cinepi_multi.subprocess.run") as run, \
+             mock.patch("module.cinepi_multi.time.sleep"):
+            mgr._shock_analog_gain()
+
+        run.assert_not_called()
+        mgr.redis_controller.r.publish.assert_called_once_with("cp_controls", ParameterKey.ISO.value)
 
 
 class PreviewFrameDegenerateTests(unittest.TestCase):

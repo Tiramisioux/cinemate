@@ -601,6 +601,7 @@ class CinePiController:
         """
         value = 1 if enable else 0
         last_errors = {}
+        saw_any_subdev = False
         for attempt in range(5):
             applied = False
             last_errors = {}
@@ -608,6 +609,7 @@ class CinePiController:
                 dev = f"/dev/v4l-subdev{idx}"
                 if not os.path.exists(dev):
                     continue
+                saw_any_subdev = True
                 probe = subprocess.run(
                     ["v4l2-ctl", "-d", dev, "--set-ctrl", f"wide_dynamic_range={value}"],
                     capture_output=True, text=True,
@@ -625,6 +627,16 @@ class CinePiController:
             logging.warning(
                 "No sensor subdev accepted wide_dynamic_range (imx585 ClearHDR) "
                 f"after retrying: {last_errors}"
+            )
+        elif saw_any_subdev:
+            # F-wdr-retry-silent-no-driver: every subdev rejected the control
+            # with "unknown control" -- the one unambiguously genuine failure
+            # (no imx585 driver bound at all) -- and last_errors is reset per
+            # attempt, so this case used to fall through and return False
+            # having logged nothing. The old pre-retry code logged it.
+            logging.warning(
+                "No sensor subdev accepted wide_dynamic_range (imx585 ClearHDR): "
+                "no subdev reported the control at all (imx585 driver not bound?)"
             )
         return False
 
@@ -2025,11 +2037,22 @@ class CinePiController:
         # Redis value with it. The real sensor control (shutter_a) was never
         # wrong; only this attribute, and everything reading it, went stale.
         self.shutter_angle_actual = safe_value
-        # keep nominal angle in sync when not using sync mode
 
         if self.shutter_a_sync_mode == 0:
+            # keep nominal angle in sync when not using sync mode
             self.shutter_angle_nom = safe_value
-        
+            self.redis_controller.set_value(ParameterKey.SHUTTER_A_NOM.value, safe_value)
+        else:
+            # F-shutter-sync-nominal-stale: mirror of the actual-attribute fix
+            # above. In sync mode, set_fps() derives shutter_angle_actual from
+            # exposure_time_nominal (cinepi_controller.py ~line 1056), not from
+            # whatever this call just accepted. Leaving it stale here means the
+            # next fps change -- every mode switch triggers one -- resurrects
+            # the exposure_time_nominal from BEFORE this call (often still the
+            # 180 degree startup default) even though the sensor is now at
+            # safe_value degrees: sensor at 1 degree, GUI snapping back to 180.
+            self.exposure_time_nominal = (safe_value / 360.0) / self.current_fps
+
         self.exposure_time_seconds = (safe_value / 360.0) / self.current_fps
 
         self.exposure_time_fractions = self.seconds_to_fraction_text(

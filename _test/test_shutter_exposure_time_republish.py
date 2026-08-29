@@ -118,22 +118,66 @@ class ShutterActualAttributeStalenessTests(unittest.TestCase):
         )
 
     def test_a_subsequent_fps_change_snaps_from_the_just_set_angle_not_a_stale_one(self):
-        """Reproduces the hardware bug directly: set_fps()'s motion-blur-constant
-        snap (cinepi_controller.py:1025-1027) reads self.shutter_angle_actual, so
-        if set_shutter_a() left it stale, the next fps change -- which every mode
-        switch triggers -- resurrects the stale value instead of snapping the
-        angle that was actually just requested.
+        """Reproduces the hardware bug directly by calling the real
+        set_fps(), not by re-implementing its snap inline. The previous
+        version of this test never called set_fps() at all -- it recomputed
+        the snap by hand against the static c.shutter_a_steps, so it passed
+        regardless of whether set_fps() itself (which actually reads
+        self.shutter_a_steps_dynamic, not shutter_a_steps) was correct.
         """
         c = make_controller(fps=25)
-        c.shutter_angle_actual = 180.0  # stale
+        c.settings = {
+            "arrays": {
+                "shutter_a": {"steps": [1, 45.0, 90.0, 180.0, 270.0, 360.0]},
+                "fps": {"steps": [1, 25, 50]},
+            }
+        }
+        c.fps_lock = False
+        c.lock_override = False
+        c.fps_free = False
+        c.dynamic_resolution_enabled = False
+        c.dynamic_resolution_active = False
+        c.dynamic_resolution_desired_mode = None
+        c.user_fps = 25
+        c.fps_max = 50
+        c.redis_controller.set_value(ParameterKey.FPS_MAX.value, "50")
+        c.shutter_angle_actual = 180.0  # stale, as if left over from an earlier session
 
         c.set_shutter_a(90.0)
+        c.set_fps(25)
 
-        # The exact snap set_fps() performs, using whichever value
-        # shutter_angle_actual holds after set_shutter_a().
-        snapped = min(c.shutter_a_steps, key=lambda x: abs(x - c.shutter_angle_actual))
+        self.assertEqual(c.shutter_angle_actual, 90.0)
 
-        self.assertEqual(snapped, 90.0)
+    def test_sync_mode_set_shutter_a_survives_a_subsequent_fps_change(self):
+        """Mirror of the test above for shutter_a_sync_mode == 1. set_fps()'s
+        sync branch (cinepi_controller.py ~line 1056) derives
+        shutter_angle_actual from self.exposure_time_nominal, not from
+        whatever set_shutter_a() just accepted -- so leaving that attribute
+        stale resurrects the pre-existing nominal angle (often the 180 degree
+        startup default) on the very next fps change, which every mode switch
+        triggers. Confirmed on hardware: `set shutter a 1` correctly set
+        shutter_a=1, but the following mode switch (which changes fps)
+        silently reverted shutter_angle_actual to 180 while shutter_a (the
+        key cinepi-raw actually reads) stayed at 1.
+        """
+        c = make_controller(fps=25)
+        c.fps_lock = False
+        c.lock_override = False
+        c.fps_free = False
+        c.dynamic_resolution_enabled = False
+        c.dynamic_resolution_active = False
+        c.dynamic_resolution_desired_mode = None
+        c.user_fps = 25
+        c.redis_controller.set_value(ParameterKey.FPS_MAX.value, "50")
+        c.shutter_a_sync_mode = 1
+        c.shutter_angle_nom = 180.0
+        c.shutter_angle_actual = 180.0
+        c.exposure_time_nominal = (180.0 / 360.0) / 25  # stale startup default
+
+        c.set_shutter_a(1.0)
+        c.set_fps(25)  # e.g. triggered by a mode switch
+
+        self.assertEqual(c.shutter_angle_actual, 1.0)
 
 
 if __name__ == "__main__":

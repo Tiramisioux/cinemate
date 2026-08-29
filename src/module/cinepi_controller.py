@@ -584,23 +584,49 @@ class CinePiController:
         Returns True when at least one subdev took the control. The control
         changes the sensor's mode list, so callers must re-detect modes and
         restart cinepi-raw afterwards.
+
+        This races the outgoing cinepi-raw process's teardown: this call
+        fires from _publish_resolution_gui_state(), which runs before the
+        relaunch that will actually own the new mode, so the subdev is often
+        still held by the process this resolution change is about to
+        replace. Confirmed on hardware (round 6): the identical `v4l2-ctl
+        --set-ctrl wide_dynamic_range=1` on the imx585 subdev succeeds
+        silently when run standalone with no process contention, yet this
+        method logged "no subdev accepted" on effectively every resolution
+        change all session -- not a real incompatibility, a race it wasn't
+        retrying. Every attempt logging a warning also drowned out any
+        genuine failure (wrong subdev, control truly rejected) in the noise.
+        A short retry lets the common transient case actually succeed
+        instead of just failing quietly faster.
         """
         value = 1 if enable else 0
-        applied = False
-        for idx in range(16):
-            dev = f"/dev/v4l-subdev{idx}"
-            if not os.path.exists(dev):
-                continue
-            probe = subprocess.run(
-                ["v4l2-ctl", "-d", dev, "--set-ctrl", f"wide_dynamic_range={value}"],
-                capture_output=True, text=True,
+        last_errors = {}
+        for attempt in range(5):
+            applied = False
+            last_errors = {}
+            for idx in range(16):
+                dev = f"/dev/v4l-subdev{idx}"
+                if not os.path.exists(dev):
+                    continue
+                probe = subprocess.run(
+                    ["v4l2-ctl", "-d", dev, "--set-ctrl", f"wide_dynamic_range={value}"],
+                    capture_output=True, text=True,
+                )
+                if probe.returncode == 0:
+                    logging.info(f"wide_dynamic_range={value} set on {dev}")
+                    applied = True
+                elif "unknown control" not in probe.stderr.lower():
+                    last_errors[dev] = probe.stderr.strip()
+            if applied:
+                return True
+            if attempt < 4:
+                time.sleep(0.05)
+        if last_errors:
+            logging.warning(
+                "No sensor subdev accepted wide_dynamic_range (imx585 ClearHDR) "
+                f"after retrying: {last_errors}"
             )
-            if probe.returncode == 0:
-                logging.info(f"wide_dynamic_range={value} set on {dev}")
-                applied = True
-        if not applied:
-            logging.warning("No sensor subdev accepted wide_dynamic_range (imx585 ClearHDR)")
-        return applied
+        return False
 
     def set_hdr_threshold_low(self, value):
         """Set the ClearHDR data-selection threshold, low side (0–4095). Applied live."""
@@ -1988,9 +2014,17 @@ class CinePiController:
 
         # Commit the final value outside the lock
         self.redis_controller.set_value(ParameterKey.SHUTTER_A.value, safe_value)
-        
+
         # also update the "actual" key so GUI reflects CLI changes
         self.redis_controller.set_value(ParameterKey.SHUTTER_A_ACTUAL.value, safe_value)
+        # F-shutter-actual-attr-stale: set_fps()'s "keep motion-blur constant"
+        # snap and update_shutter_angle_for_fps() both read this attribute,
+        # not the Redis key -- leaving it stale here means the next fps
+        # change (every mode switch triggers one) re-derives a snapped angle
+        # from whatever this was BEFORE this call and overwrites the correct
+        # Redis value with it. The real sensor control (shutter_a) was never
+        # wrong; only this attribute, and everything reading it, went stale.
+        self.shutter_angle_actual = safe_value
         # keep nominal angle in sync when not using sync mode
 
         if self.shutter_a_sync_mode == 0:
@@ -2002,6 +2036,14 @@ class CinePiController:
             self.exposure_time_seconds
         )
         logging.info(f"Shutter angle set to {safe_value}°, exposure time: {self.exposure_time_seconds:.6f}s ({self.exposure_time_fractions})")
+
+        # F-shutter-exposure-stale: this key drives the web GUI's exposure
+        # readout; it must be republished on every shutter change, not just
+        # on an fps change, or the display goes stale while the sensor's
+        # actual exposure (shutter_a, above) keeps updating correctly.
+        self.redis_controller.set_value(
+            ParameterKey.EXPOSURE_TIME.value, self.exposure_time_seconds
+        )
 
 
     def set_shutter_a_nom(self, value):
@@ -2065,6 +2107,13 @@ class CinePiController:
                     
                 # ensure main shutter_a value is updated for preview and web UI
                 self.redis_controller.set_value(ParameterKey.SHUTTER_A.value, safe_value)
+
+                # F-shutter-exposure-stale: republish so the web GUI's
+                # exposure readout doesn't go stale on a nominal-angle-only
+                # change (see set_shutter_a() for the same fix).
+                self.redis_controller.set_value(
+                    ParameterKey.EXPOSURE_TIME.value, self.exposure_time_seconds
+                )
 
     def set_shu_fps_lock(self, value=None):
         if value is not None:

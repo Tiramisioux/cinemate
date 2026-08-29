@@ -7,10 +7,15 @@ nothing logged anywhere, because the one warning on that path fires when the
 *sensor* cannot supply enough blanking, which a too-high rate makes less likely
 to trigger, not more.
 
-So every ambiguous case here has to resolve downward. The case that matters
-most is a config.txt with the overlay enabled on a board that has not rebooted
-yet: stated intent says 580, the hardware is still running stock, and believing
-the file would corrupt wide modes silently.
+So every ambiguous case here has to resolve downward, and config.txt's overlay
+line is the only thing this module trusts to decide. A live ``clk_sys`` read
+used to veto an enabled overlay back to stock when the clock looked too low --
+that assumed stock and overclocked read distinctly. On kernel 6.12.93 the
+measured rate is ~333 MHz in *both* regimes, so the veto's threshold no longer
+tells them apart: it is demoted to a logged observation with no effect on the
+decision, and these tests assert exactly that -- the measured value must not
+move the answer in either direction, including in the case the old veto
+existed for (overlay enabled, clock reading low).
 """
 
 import sys
@@ -66,21 +71,22 @@ class PixelRateTests(unittest.TestCase):
     def test_overlay_off_gives_the_stock_rate(self):
         self.assertEqual(self._rate(COMMENTED, STOCK_HZ), rp1_regime.PIXEL_RATE_STOCK)
 
-    def test_overlay_on_but_not_rebooted_yet_is_vetoed_down_to_stock(self):
-        # The dangerous case, and the whole reason the live clock is consulted.
-        self.assertEqual(self._rate(ENABLED, STOCK_HZ), rp1_regime.PIXEL_RATE_STOCK)
-
     def test_an_unreadable_clock_still_honours_the_switch(self):
         # debugfs needs root and sudo may be unavailable; the operator's stated
         # intent stands rather than the feature silently doing nothing.
         self.assertEqual(self._rate(ENABLED, None), rp1_regime.PIXEL_RATE_OVERCLOCKED)
 
-    def test_the_threshold_accepts_the_rate_the_overlay_actually_produces(self):
-        # The overlay asks for 300MHz; the hardware lands on 333.33MHz. An
-        # equality test against 300000000 would veto every real overclock.
-        self.assertGreater(OVERCLOCKED_HZ, rp1_regime.OVERCLOCK_CLK_THRESHOLD_HZ)
-        self.assertLess(STOCK_HZ, rp1_regime.OVERCLOCK_CLK_THRESHOLD_HZ)
-        self.assertEqual(self._rate(ENABLED, 300_000_000), rp1_regime.PIXEL_RATE_OVERCLOCKED)
+    def test_a_low_measured_clock_no_longer_vetoes_an_enabled_overlay(self):
+        # This used to be vetoed down to stock -- the exact case the old
+        # threshold existed for. Demoted to observation-only: config.txt's
+        # switch alone decides, so this now honours the overlay.
+        self.assertEqual(self._rate(ENABLED, STOCK_HZ), rp1_regime.PIXEL_RATE_OVERCLOCKED)
+
+    def test_a_high_measured_clock_does_not_promote_a_disabled_overlay(self):
+        # The 6.12.93 case the fix targets: clk_sys reads ~333 MHz even when
+        # config.txt's overlay line is commented out. The switch must still
+        # win, in this direction too.
+        self.assertEqual(self._rate(COMMENTED, OVERCLOCKED_HZ), rp1_regime.PIXEL_RATE_STOCK)
 
     def test_the_overclocked_rate_is_the_higher_one(self):
         self.assertGreater(rp1_regime.PIXEL_RATE_OVERCLOCKED, rp1_regime.PIXEL_RATE_STOCK)

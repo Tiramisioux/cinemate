@@ -31,6 +31,24 @@ GUI_RESOLUTION_PREVIEW_DELAY_SECONDS = 0.12
 GUI_RESOLUTION_SWITCHING_HOLD_SECONDS = 2.5
 RAW_STREAM_READY_RE = re.compile(r"\bRaw stream:\s*(\d+)x(\d+)\b", re.IGNORECASE)
 
+# Keys cinepi-raw applies to the LIVE camera only when the key is published on
+# cp_controls (SetControls handlers in cinepi_controller.cpp): shutter_a ->
+# ExposureTime, iso -> AnalogueGain, cg_rb -> ColourGains, zoom ->
+# ScalerCrop. A camera reconfigure resets those sensor/ISP controls while
+# Redis keeps the operator's values, so they must be re-published after every
+# mode switch. zoom requires the companion cinepi-raw fix (branch
+# fix/mode-switch-control-reapply): its handler dedups against the last
+# APPLIED zoom, and that baseline is now cleared on every camera restart so
+# this republish reprograms the crop instead of being dropped. The ClearHDR
+# knobs are absent: cinepi-raw re-applies those itself when a ClearHDR mode
+# is selected.
+CAMERA_CONTROL_REAPPLY_KEYS = (
+    ParameterKey.SHUTTER_A,
+    ParameterKey.ISO,
+    ParameterKey.CG_RB,
+    ParameterKey.ZOOM,
+)
+
 
 def _safe_int(value):
     try:
@@ -1118,11 +1136,36 @@ class CinePiController:
         # is deliberately a separate hook from _notify_resolution_change: that one
         # fires when the switch *starts*, so the browser can show "switching..."
         # immediately, well before there is a new stream to reconnect to (F-290).
+        try:
+            self._reapply_camera_controls()
+        except Exception:
+            logging.exception("Camera-control re-apply after resolution switch failed.")
         for callback in list(self._resolution_switch_complete_callbacks):
             try:
                 callback()
             except Exception:
                 logging.exception("Resolution switch-complete callback failed.")
+
+    def _reapply_camera_controls(self) -> None:
+        """Force-republish the camera-facing control keys after a reconfigure.
+
+        A mode switch (seamless cam_init reconfigure or a full cinepi-raw
+        restart) resets the sensor's exposure/gain/colour state to defaults
+        while Redis still holds the operator's values. cinepi-raw only
+        reprograms the live camera when a key is published on cp_controls, and
+        set_value's same-value dedup swallows a re-issued identical value --
+        so the operator's `set shutter a 180` after a mode switch was a
+        silent no-op and camera state diverged from Redis state
+        (LIVE-RESULTS-2026-08-27 §6). This runs once the new stream is
+        actually up: publishing right after cam_init would race cinepi-raw's
+        deferred reconfigure (its handler only sets cameraInit_ = true) and
+        the controls would be reset again underneath us.
+        """
+        for key in CAMERA_CONTROL_REAPPLY_KEYS:
+            value = self.redis_controller.get_value(key.value)
+            if value is None or str(value) == "":
+                continue
+            self.redis_controller.set_value(key.value, value, force=True)
 
     def _pace_resolution_change(self, recording: bool) -> None:
         min_interval = (

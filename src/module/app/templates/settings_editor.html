@@ -388,6 +388,7 @@
     padding: 7px 9px; min-width: 84px;
   }
   .field-input:focus-visible, select.field-input:focus-visible{ outline:none; box-shadow: var(--focus); }
+  .field-input:disabled, select.field-input:disabled{ opacity:.5; cursor:default; }
   select.field-input{ min-width: 140px; }
   input[type="text"].wide, input[type="password"].wide{ min-width: 220px; }
   .num-input{ width: 84px; text-align: right; font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; }
@@ -760,7 +761,7 @@
   .capacity-track{ height:8px; border-radius:999px; background: var(--panel-2); border:1px solid var(--line); overflow:hidden; }
   .capacity-fill{ height:100%; background: var(--accent); border-radius:999px 0 0 999px; }
   .storage-format{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-  .storage-format .btn:disabled, .storage-format select:disabled{ opacity:.5; cursor:default; }
+  .storage-format .btn:disabled{ opacity:.5; cursor:default; }
 
   .clip-toolbar{
     display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
@@ -1246,7 +1247,7 @@
             <p class="card-help">Records log instead of linear. "On" uses this mode's own default target; force 10 or 12‑bit where the live bit depth supports it.</p>
           </div>
           <div class="card-control">
-            <select class="field-input" id="f-c0-log" data-path="sensors.cam0.log_encode" data-type="string" data-original="false">
+            <select class="field-input" id="f-c0-log" data-path="sensors.cam0.log_encode" data-type="json" data-original="false">
               <option value="false" selected>Off</option>
               <option value="true">On (mode default)</option>
               <option value="10">Force 10‑bit</option>
@@ -1312,7 +1313,7 @@
             <p class="card-help">Same idea as cam0 — records log instead of linear, target forced or auto per mode.</p>
           </div>
           <div class="card-control">
-            <select class="field-input" id="f-c1-log" data-path="sensors.cam1.log_encode" data-type="string" data-original="false">
+            <select class="field-input" id="f-c1-log" data-path="sensors.cam1.log_encode" data-type="json" data-original="false">
               <option value="false" selected>Off</option>
               <option value="true">On (mode default)</option>
               <option value="10">Force 10‑bit</option>
@@ -2293,6 +2294,15 @@
     var type = el.getAttribute('data-type');
     if (type === 'bool') return el.getAttribute('aria-checked') === 'true';
     if (type === 'number') return parseFloat(el.value);
+    // 'json' is for selects whose options are not all one type -- e.g.
+    // log_encode is false | true | 10 | 12. Writing those out as strings
+    // corrupts them: settings.jsonc gets "true"/"false", and a non-empty
+    // string is truthy, so "false" reads as log-on and "true" never matches
+    // a valid target. Parse each option's JSON literal instead.
+    if (type === 'json'){
+      try { return JSON.parse(el.value); }
+      catch (e) { return el.value; }
+    }
     return el.value;
   }
 
@@ -4573,6 +4583,16 @@
   var pageTabButtons = document.querySelectorAll('[data-page-tab]');
   var pageLedes = document.querySelectorAll('[data-page-lede]');
   function setActivePage(page){
+    /* loadConfigTxt() only ever ran once, at page load (see the bottom of
+       this script). config.txt can change underneath an open tab without
+       any of this page's own doing -- an SSH edit, a save from a different
+       browser tab, cinemate-recovery's confirm-or-revert timeout -- and the
+       form kept showing whatever it fetched at load, including a toggle
+       (e.g. RP1 overclock) that no longer matches the file on disk. Refetch
+       on every arrival at the config page instead, skipped only when there
+       are unsaved edits already in progress (configDirty) so this can't
+       silently discard those. */
+    if (page === 'config' && activePage !== 'config' && !configDirty) loadConfigTxt();
     activePage = page;
     pageTabButtons.forEach(function(b){
       var isActive = b.getAttribute('data-page-tab') === page;

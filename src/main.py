@@ -14,6 +14,7 @@ import glob
 from module.config_loader import (
     SettingsLoadError,
     auto_storage_preroll_enabled,
+    clearhdr_startup_values,
     load_settings,
     DEFAULT_SETTINGS_PATH,
 )
@@ -734,11 +735,10 @@ def run_application(args, log_queue):
     # re-applies these from Redis once a ClearHDR mode is actually selected;
     # seeding them here just means the first `set hdr threshold/blend/gain
     # adder` read (pot, quad, CLI) already sees the configured default.
-    _hdr_cfg = settings.get("image_capture", {}).get("hdr", {})
-    redis_controller.set_value(ParameterKey.HDR_THRESHOLD_LOW.value, _hdr_cfg.get("threshold_low", 0))
-    redis_controller.set_value(ParameterKey.HDR_THRESHOLD_HIGH.value, _hdr_cfg.get("threshold_high", 0))
-    redis_controller.set_value(ParameterKey.HDR_BLEND.value, _hdr_cfg.get("blend", 0))
-    redis_controller.set_value(ParameterKey.HDR_GAIN_ADDER.value, _hdr_cfg.get("gain_adder", 1))
+    # An unconfigured threshold seeds "" -- write nothing, keep the driver's
+    # own pair. See clearhdr_startup_values() for why 0/0 was not harmless.
+    for _hdr_key, _hdr_value in clearhdr_startup_values(settings).items():
+        redis_controller.set_value(_hdr_key, _hdr_value)
 
     # Reset recording time
     redis_controller.set_value(ParameterKey.RECORDING_TIME.value, 0)

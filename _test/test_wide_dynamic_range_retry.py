@@ -31,21 +31,30 @@ class WideDynamicRangeRetryTests(unittest.TestCase):
         c = make_controller()
         attempts = {"n": 0}
 
-        def fake_run(cmd, capture_output, text):
-            attempts["n"] += 1
-            ok = attempts["n"] >= 3  # fails twice, then succeeds
-            return types.SimpleNamespace(
-                returncode=0 if ok else 1,
-                stderr="" if ok else "Device or resource busy",
-            )
+        # Exactly one subdev exists, so each OUTER retry attempt makes exactly
+        # one subprocess.run call. Before the fix, attempts["n"] could also be
+        # driven past 3 by the inner 16-subdev loop alone (with every subdev
+        # reporting "exists"), letting this test pass without the outer retry
+        # loop ever running more than once.
+        with mock.patch(
+            "module.cinepi_controller.os.path.exists",
+            side_effect=lambda p: p == "/dev/v4l-subdev0",
+        ):
 
-        with mock.patch("module.cinepi_controller.os.path.exists", return_value=True), \
-             mock.patch("module.cinepi_controller.subprocess.run", side_effect=fake_run), \
-             mock.patch("module.cinepi_controller.time.sleep"):
-            result = c._set_wide_dynamic_range(True)
+            def fake_run(cmd, capture_output, text):
+                attempts["n"] += 1
+                ok = attempts["n"] >= 3  # fails twice, then succeeds
+                return types.SimpleNamespace(
+                    returncode=0 if ok else 1,
+                    stderr="" if ok else "Device or resource busy",
+                )
+
+            with mock.patch("module.cinepi_controller.subprocess.run", side_effect=fake_run), \
+                 mock.patch("module.cinepi_controller.time.sleep"):
+                result = c._set_wide_dynamic_range(True)
 
         self.assertTrue(result)
-        self.assertGreaterEqual(attempts["n"], 3)
+        self.assertEqual(attempts["n"], 3)
 
     def test_gives_up_after_exhausting_retries(self):
         c = make_controller()
@@ -63,7 +72,13 @@ class WideDynamicRangeRetryTests(unittest.TestCase):
         self.assertTrue(mock_sleep.called)
         mock_warn.assert_called_once()
 
-    def test_unknown_control_on_unrelated_subdevs_is_not_reported_as_an_error(self):
+    def test_all_subdevs_reporting_unknown_control_is_reported_not_silent(self):
+        """No imx585 driver bound at all -- every subdev says "unknown
+        control" -- is the one unambiguously genuine failure. last_errors is
+        reset at the top of every attempt and only ever collects non-"unknown
+        control" errors, so this case must not fall through silently: the
+        pre-retry code logged it, and this must too.
+        """
         c = make_controller()
 
         def fake_run(cmd, capture_output, text):
@@ -76,7 +91,7 @@ class WideDynamicRangeRetryTests(unittest.TestCase):
             result = c._set_wide_dynamic_range(True)
 
         self.assertFalse(result)
-        mock_warn.assert_not_called()
+        mock_warn.assert_called_once()
 
 
 if __name__ == "__main__":

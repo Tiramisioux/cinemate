@@ -104,6 +104,8 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#exposure-workflow">Exposure workflow</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#mono-sensor-imx585_mono">Mono sensor (imx585_mono)</a>
+    </li>
     </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../cinemate-log/">CineMate Log (imx585 / imx283)</a>
@@ -214,13 +216,23 @@
 </tr>
 <tr>
 <td>Sensor driver</td>
-<td>Tiramisioux <code>imx585-v4l2-driver</code>, branch <code>6.12.y</code></td>
-<td>exposes <code>wide_dynamic_range</code> and the 16-bit modes</td>
+<td>Tiramisioux <code>imx585-v4l2-driver</code>, branch <code>innomaker-v1.0</code></td>
+<td>exposes <code>wide_dynamic_range</code>, the 3840×2200 16-bit mode, and the <code>ccmp</code> overlay parameter; gates the invalid binned-ClearHDR combo</td>
+</tr>
+<tr>
+<td>Overlay</td>
+<td><code>dtoverlay=imx585,...,ccmp</code> in config.txt</td>
+<td>without <code>ccmp</code> the 12-bit CCMP ClearHDR mode does not exist on this driver (the installer writes it)</td>
 </tr>
 <tr>
 <td>libcamera</td>
 <td>Tiramisioux <code>libcamera</code>, branch <code>cinemate</code></td>
 <td>16-bit endian swap handling</td>
+</tr>
+<tr>
+<td>Kernel patch (mono only)</td>
+<td><code>scripts/patch-rp1-cfe.sh</code></td>
+<td>the stock kernel's Y16 format entry misses the 16-bit workaround — see <a href="#mono-sensor-imx585_mono">Mono sensor</a></td>
 </tr>
 <tr>
 <td>Exposure</td>
@@ -233,7 +245,7 @@
 <ul>
 <li>Frame rates halve versus the plain modes (≈ 33 fps at 4K, ≈ 37 fps at 2K on an overclocked RP1).</li>
 <li>Analogue gain caps at code 80 ≈ 15.8× (ISO 1580).</li>
-<li>Each 3856×2180 DNG is ≈ 16.9 MB. Storage bandwidth: 15 fps ≈ 252 MB/s, 20 fps ≈ 336 MB/s — plan drives accordingly. The minutes-left display uses the 16.9 MB figure automatically.</li>
+<li>Each 3840×2200 16-bit DNG is ≈ 16.9 MB. Storage bandwidth: 15 fps ≈ 252 MB/s, 20 fps ≈ 336 MB/s — plan drives accordingly. The minutes-left display uses the 16.9 MB figure automatically.</li>
 <li>Auto exposure and auto white balance cannot run in the 16-bit modes (ISP statistics are invalid at 16-bit). Set exposure manually.</li>
 <li>Highlights near the HG→LG hand-off can render magenta in flat greys — sensor-side merge behaviour, not a capture defect. See <a href="#magenta-highlights">Magenta highlights</a>.</li>
 </ul>
@@ -244,7 +256,8 @@ plain and the ClearHDR modes live in the same mode table. Selecting a ClearHDR
 mode launches cinepi-raw with <code>--hdr sensor</code>; selecting a plain mode launches
 without it. No separate toggle is needed.</p>
 <p>The imx585 exposes ClearHDR at <strong>both</strong> 12-bit and 16-bit, so the table is
-ordered plain modes first, then 12-bit HDR, then 16-bit HDR:</p>
+ordered plain modes first, then 12-bit HDR, then 16-bit HDR. On the
+<code>innomaker-v1.0</code> driver (active-area dims) the mono table is:</p>
 <table>
 <thead>
 <tr>
@@ -252,54 +265,40 @@ ordered plain modes first, then 12-bit HDR, then 16-bit HDR:</p>
 <th>Resolution</th>
 <th>Bit depth</th>
 <th>HDR</th>
-<th>~fps (overclocked)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>0</td>
-<td>1928×1090</td>
+<td>1920×1080</td>
 <td>12-bit</td>
 <td>—</td>
-<td>75</td>
 </tr>
 <tr>
 <td>1</td>
-<td>3856×2180</td>
+<td>3840×2160</td>
 <td>12-bit</td>
 <td>—</td>
-<td>66.85</td>
 </tr>
 <tr>
 <td>2</td>
-<td>1928×1090</td>
+<td>3840×2160</td>
 <td>12-bit</td>
-<td>HDR</td>
-<td>37.50</td>
+<td>HDR (CCMP)</td>
 </tr>
 <tr>
 <td>3</td>
-<td>3856×2180</td>
-<td>12-bit</td>
-<td>HDR</td>
-<td>33.43</td>
-</tr>
-<tr>
-<td>4</td>
-<td>1928×1090</td>
+<td>3840×2200</td>
 <td>16-bit</td>
 <td>HDR</td>
-<td>37.50</td>
-</tr>
-<tr>
-<td>5</td>
-<td>3856×2180</td>
-<td>16-bit</td>
-<td>HDR</td>
-<td>33.43</td>
 </tr>
 </tbody>
 </table>
+<p>There is no binned ClearHDR row — the driver gates that combination out
+(invalid on the sensor; on mono it records pure black level). The colour
+sensor's table adds RAW10 plain modes. Frame-rate ceilings depend on the
+link rate and the RP1 clock regime — see
+<a href="../overclocking/">Overclocking the Pi</a>.</p>
 <p>HDR modes are labelled so they read distinctly from the plain modes:</p>
 <ul>
 <li><strong>Simple (HDMI) GUI</strong> — <code>HDR</code> after the bit depth, e.g. <code>1928×1090 :12b HDR</code>.</li>
@@ -512,6 +511,33 @@ redis-cli<span class="w"> </span><span class="nb">set</span><span class="w"> </s
 <p>The plateau level depends on gain and knob settings, so handle it per shot in the grade — the DNG WhiteLevel tag stays 65535.</p>
 <h2 id="exposure-workflow">Exposure workflow<a class="headerlink" href="#exposure-workflow" title="Permanent link">#</a></h2>
 <p>Auto exposure and auto white balance are off in 16-bit modes (the ISP cannot compute statistics on 16-bit data). Set ISO, shutter and white balance manually — the normal Cinemate controls (<code>set iso</code>, <code>set shutter a</code>, <code>set wb</code>) keep working; they are always manual values in Cinemate anyway. A practical 4K indoor starting point: ISO 800, shutter 8 ms, 15 fps.</p>
+<h2 id="mono-sensor-imx585_mono">Mono sensor (imx585_mono)<a class="headerlink" href="#mono-sensor-imx585_mono" title="Permanent link">#</a></h2>
+<p>Verified working 2026-08-27 — all ClearHDR modes record real data on the mono
+variant. Three mono-specific facts:</p>
+<table>
+<thead>
+<tr>
+<th>Fact</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kernel patch required for 16-bit</td>
+<td>The stock rpi-6.12.y kernel gives every Bayer 16-bit format the "RP1 HW mismatch" workaround (<code>csi_dt = 0</code>) but missed the mono <code>Y16</code> entry. Unpatched, mono 16-bit records PiSP-COMP1-structured garbage (stripes on flat scenes, noise on detailed ones). The installer applies <code>scripts/patch-rp1-cfe.sh</code> automatically for <code>SENSOR_MODEL=imx585_mono</code>; rerun it after any kernel package upgrade (the upgrade silently restores the stock module).</td>
+</tr>
+<tr>
+<td>16-bit frames are 3840×2200</td>
+<td>The sensor prepends ~20 optical-black rows to its RAW16 output; the top rows of every 16-bit DNG sit at the 3200 pedestal. Expected geometry, not a defect.</td>
+</tr>
+<tr>
+<td>No binned ClearHDR</td>
+<td>Binned (2K) ClearHDR is an invalid sensor configuration on mono — the sensor emits pure black-level regardless of exposure (AppNote §2 p.6). The <code>innomaker-v1.0</code> driver removes the combination from the mode table; only full-res 12-bit CCMP and 16-bit ClearHDR are offered.</td>
+</tr>
+</tbody>
+</table>
+<p>Mono launches also drop <code>--awb</code>/<code>--awbgains</code> (no CFA to balance) and use the
+<code>imx585_mono.json</code> tuning automatically.</p>
 </div>
 
             </div>

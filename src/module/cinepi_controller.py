@@ -1976,9 +1976,17 @@ class CinePiController:
 
         # Commit the final value outside the lock
         self.redis_controller.set_value(ParameterKey.SHUTTER_A.value, safe_value)
-        
+
         # also update the "actual" key so GUI reflects CLI changes
         self.redis_controller.set_value(ParameterKey.SHUTTER_A_ACTUAL.value, safe_value)
+        # F-shutter-actual-attr-stale: set_fps()'s "keep motion-blur constant"
+        # snap and update_shutter_angle_for_fps() both read this attribute,
+        # not the Redis key -- leaving it stale here means the next fps
+        # change (every mode switch triggers one) re-derives a snapped angle
+        # from whatever this was BEFORE this call and overwrites the correct
+        # Redis value with it. The real sensor control (shutter_a) was never
+        # wrong; only this attribute, and everything reading it, went stale.
+        self.shutter_angle_actual = safe_value
         # keep nominal angle in sync when not using sync mode
 
         if self.shutter_a_sync_mode == 0:

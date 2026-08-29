@@ -1991,6 +1991,14 @@ class CinePiController:
         )
         logging.info(f"Shutter angle set to {safe_value}°, exposure time: {self.exposure_time_seconds:.6f}s ({self.exposure_time_fractions})")
 
+        # F-shutter-exposure-stale: this key drives the web GUI's exposure
+        # readout; it must be republished on every shutter change, not just
+        # on an fps change, or the display goes stale while the sensor's
+        # actual exposure (shutter_a, above) keeps updating correctly.
+        self.redis_controller.set_value(
+            ParameterKey.EXPOSURE_TIME.value, self.exposure_time_seconds
+        )
+
 
     def set_shutter_a_nom(self, value):
         logging.info(f"Entering set_shutter_a_nom() with value: {value}")
@@ -2053,6 +2061,13 @@ class CinePiController:
                     
                 # ensure main shutter_a value is updated for preview and web UI
                 self.redis_controller.set_value(ParameterKey.SHUTTER_A.value, safe_value)
+
+                # F-shutter-exposure-stale: republish so the web GUI's
+                # exposure readout doesn't go stale on a nominal-angle-only
+                # change (see set_shutter_a() for the same fix).
+                self.redis_controller.set_value(
+                    ParameterKey.EXPOSURE_TIME.value, self.exposure_time_seconds
+                )
 
     def set_shu_fps_lock(self, value=None):
         if value is not None:

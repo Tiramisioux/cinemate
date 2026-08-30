@@ -765,6 +765,9 @@ def run_application(args, log_queue):
         anamorphic_steps=settings["hdmi_display"]["preview"]["anamorphic"]["steps"],
         default_anamorphic_factor=settings["hdmi_display"]["preview"]["anamorphic"]["default_factor"]
     )
+    # Back-reference so CinePiManager's ClearHDR self-heal can call the real
+    # set_shutter_a() (see cinepi_multi.py's CinePiManager.__init__).
+    cinepi.controller = cinepi_controller
 
     storage_preroll = StoragePreroll(
         cinepi_controller=cinepi_controller,

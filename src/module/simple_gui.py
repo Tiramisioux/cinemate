@@ -853,8 +853,17 @@ class SimpleGUI(threading.Thread):
         values["shutter_a_nom_lock"] = bool(self.cinepi_controller.shutter_a_nom_lock)
         values["fps_lock"] = bool(self.cinepi_controller.fps_lock)
         # Drives the green SHUTTER/FPS tint below, and the same tint in the
-        # web GUI.
-        values["shutter_a_sync"] = self.cinepi_controller.shutter_a_sync_mode != 0
+        # web GUI. Also true while a ClearHDR self-heal shutter kick is in
+        # flight, so the brief system-driven shutter change reads the same
+        # way sync mode's system-driven exposure already does, rather than
+        # looking like an unexplained flicker. This tints FPS green too even
+        # though fps isn't touched by the kick -- an accepted, minor,
+        # purely-cosmetic side effect of reusing the existing single flag
+        # instead of adding a second one.
+        values["shutter_a_sync"] = (
+            self.cinepi_controller.shutter_a_sync_mode != 0
+            or bool(getattr(self.cinepi_controller, "clearhdr_self_heal_active", False))
+        )
         # drop_frame_latched drives the persistent UI warning overlay.
         # Option 1: live drop_frame pulse = TC hole advisory (flashes during recording).
         # Option 2: drop_frame_during_last_take = only set when files are genuinely

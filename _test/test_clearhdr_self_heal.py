@@ -60,12 +60,23 @@ class FakeController:
         self.shutter_angle_nom = value
 
 
-def make_manager(hdr="1", sensor_mode=3, controller=True):
+class FakeSensorDetect:
+    """Stand-in for the real sensor_detect.get_hdr(camera_model, mode) --
+    a per-mode-table lookup, independent of anything in Redis."""
+
+    def __init__(self, hdr_modes):
+        self.hdr_modes = set(hdr_modes)  # set of sensor_mode ints that are HDR
+
+    def get_hdr(self, camera_model, sensor_mode):
+        return sensor_mode in self.hdr_modes
+
+
+def make_manager(hdr="1", sensor_mode=3, controller=True, sensor_detect=None):
     redis_controller = FakeRedis({
         ParameterKey.HDR.value: hdr,
         ParameterKey.SENSOR_MODE.value: sensor_mode,
     })
-    mgr = CinePiManager(redis_controller, sensor_detect=None)
+    mgr = CinePiManager(redis_controller, sensor_detect=sensor_detect)
     if controller:
         mgr.controller = FakeController()
     return mgr
@@ -87,6 +98,50 @@ class ClearHdrSelfHealGatingTests(unittest.TestCase):
              mock.patch("module.cinepi_multi.time.sleep"):
             mgr._clearhdr_self_heal_if_stuck()
         start_all.assert_not_called()
+
+
+class ClearHdrSelfHealModeDerivedHdrCheckTests(unittest.TestCase):
+    """Regression coverage for a bug caught live on hardware (2026-08-30):
+    the Redis ``hdr`` key is only ever written by set_resolution()
+    (cinepi_controller.py:1714), not by start_all() itself, so it can lag
+    behind whichever sensor_mode was *actually* just launched. Self-heal
+    fired on a plain SDR mode-0 launch because a stale hdr=1 from an earlier
+    session was still sitting in Redis. These tests pin the fix: when
+    camera_model/launched_mode are known, use sensor_detect's per-mode
+    table, not the Redis flag."""
+
+    def test_ignores_a_stale_redis_hdr_flag_when_the_launched_mode_is_not_hdr(self):
+        # Redis says hdr=1 (stale, left over from an earlier ClearHDR
+        # session) but the mode that was *actually* just launched (0) is
+        # not one of the sensor's HDR modes.
+        sensor_detect = FakeSensorDetect(hdr_modes={3, 4})
+        mgr = make_manager(hdr="1", sensor_mode=0, sensor_detect=sensor_detect)
+        with mock.patch.object(mgr, "_preview_frame_is_degenerate") as probe, \
+             mock.patch("module.cinepi_multi.time.sleep") as sleep:
+            mgr._clearhdr_self_heal_if_stuck(camera_model="imx585_mono", launched_mode=0)
+        probe.assert_not_called()
+        sleep.assert_not_called()
+
+    def test_checks_even_if_the_stale_redis_hdr_flag_says_zero(self):
+        # The inverse: Redis says hdr=0 (stale) but the launched mode (3) is
+        # actually one of the sensor's HDR modes -- must still check.
+        sensor_detect = FakeSensorDetect(hdr_modes={3, 4})
+        mgr = make_manager(hdr="0", sensor_mode=3, sensor_detect=sensor_detect)
+        with mock.patch.object(mgr, "_preview_frame_is_degenerate", return_value=False) as probe, \
+             mock.patch("module.cinepi_multi.time.sleep"):
+            mgr._clearhdr_self_heal_if_stuck(camera_model="imx585_mono", launched_mode=3)
+        probe.assert_called_once()
+
+    def test_falls_back_to_the_redis_flag_when_mode_info_is_not_available(self):
+        """Defensive fallback for a caller that doesn't pass
+        camera_model/launched_mode (or no sensor_detect at all) -- still
+        checks rather than silently skipping, using the old, imperfect
+        signal instead of nothing."""
+        mgr = make_manager(hdr="1", sensor_mode=3, sensor_detect=None)
+        with mock.patch.object(mgr, "_preview_frame_is_degenerate", return_value=False) as probe, \
+             mock.patch("module.cinepi_multi.time.sleep"):
+            mgr._clearhdr_self_heal_if_stuck()  # no camera_model/launched_mode
+        probe.assert_called_once()
 
 
 class ClearHdrSelfHealShutterKickOrderingTests(unittest.TestCase):

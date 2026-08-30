@@ -893,10 +893,12 @@ class CinePiManager:
         # NEW ✱ 6. ClearHDR self-heal (see _CLEARHDR_SELF_HEAL_* above)
         # ────────────────────────────────────────────────────────────────
         if _run_self_heal:
-            self._clearhdr_self_heal_if_stuck()
+            self._clearhdr_self_heal_if_stuck(camera_model=pk, launched_mode=sensor_mode)
 
     # ───────────── ClearHDR self-heal (round-8 mitigation) ─────────────
-    def _clearhdr_self_heal_if_stuck(self, attempt: int = 0) -> None:
+    def _clearhdr_self_heal_if_stuck(
+        self, camera_model=None, launched_mode=None, attempt: int = 0
+    ) -> None:
         """If ClearHDR is active and the live preview looks like the known
         flat-pedestal failure, try to clear it -- a brief shutter-angle kick
         first (attempt 0 only, cheap, no process relaunch), then a mode
@@ -911,8 +913,27 @@ class CinePiManager:
         has been a large transient through the sensor's light/exposure path,
         never a gain change specifically -- shutter fits that pattern more
         directly and is what's actually been verified.
+
+        camera_model/launched_mode come from start_all()'s own just-computed
+        values, not a re-read of Redis. Fixed live on 2026-08-30: the
+        ``hdr`` Redis key is only ever written by set_resolution()
+        (cinepi_controller.py:1714), not by start_all() itself, so it can
+        lag behind whichever sensor_mode was *actually* just launched --
+        confirmed on hardware, self-heal fired on a plain SDR mode-0 launch
+        because ``hdr`` was still "1" from an earlier session. sensor_detect
+        already carries a reliable per-mode HDR flag; use that instead of
+        trusting a value nothing here just wrote.
         """
-        if str(self.redis_controller.get_value(ParameterKey.HDR.value)) != "1":
+        is_hdr = False
+        if camera_model is not None and launched_mode is not None and self.sensor_detect is not None:
+            is_hdr = bool(self.sensor_detect.get_hdr(camera_model, launched_mode))
+        else:
+            # Only reachable from a caller that didn't pass camera_model/
+            # launched_mode -- falls back to the possibly-stale Redis flag
+            # rather than skipping the check outright.
+            is_hdr = str(self.redis_controller.get_value(ParameterKey.HDR.value)) == "1"
+
+        if not is_hdr:
             return  # not ClearHDR, nothing to check
 
         time.sleep(_CLEARHDR_SELF_HEAL_SETTLE_S)
@@ -956,7 +977,9 @@ class CinePiManager:
         self.start_all(preview_enabled=self.preview_enabled, _run_self_heal=False)   # away
         self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, stuck_mode)
         self.start_all(preview_enabled=self.preview_enabled, _run_self_heal=False)   # back
-        self._clearhdr_self_heal_if_stuck(attempt=attempt + 1)                       # re-check, bounded by attempt
+        self._clearhdr_self_heal_if_stuck(                                           # re-check, bounded by attempt
+            camera_model=camera_model, launched_mode=stuck_mode, attempt=attempt + 1
+        )
 
     def _shock_shutter_angle(self) -> None:
         """Briefly drive the shutter angle to its minimum (1 degree) and

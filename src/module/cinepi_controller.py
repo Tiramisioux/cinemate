@@ -180,6 +180,11 @@ class CinePiController:
         self.iso_lock = False
         self.shutter_a_nom_lock = False
         self.fps_lock = False
+        # Set true only around CinePiManager's ClearHDR self-heal shutter
+        # kick (cinepi_multi.py) -- reuses the existing shutter_a_sync green
+        # tint (see simple_gui.py) to show the operator this shutter change
+        # came from the system, not from them, without a new UI mechanism.
+        self.clearhdr_self_heal_active = False
         
         # Dictionary to store calculated values for different fps
         self.calculated_values = {}

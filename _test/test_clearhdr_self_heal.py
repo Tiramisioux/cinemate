@@ -2,15 +2,15 @@
 start up latched into a flat pedestal (~4.9% of full-scale, confirmed
 identical in both 12-bit CCMP and 16-bit linear ClearHDR -- see
 development/mono-clearhdr-fixes/ROUND8-RESULTS.md) with every sensor register
-reading correct. Confirmed recoveries: a large analogue-gain swing (tried
-first -- mirrors the light-level shock, flashing a light or covering the
-sensor, that has reliably cleared it by hand) and a mode bounce (tried as a
-fallback -- confirmed live on 2026-08-29 to sometimes NOT clear it on its
-own, hence gain-shock-first, not mode-bounce-only). This is a mitigation,
-not a fix -- the underlying cause is unknown.
+reading correct. Confirmed recoveries, in the order tried: a brief shutter
+kick to 1 degree and back (tried first -- a mode bounce alone was tried live
+on 2026-08-29 and did NOT clear a stuck session, and neither did an earlier
+analogue-gain-shock version of this self-heal; setting shutter to 1 degree
+by hand did), then a mode bounce as a last-resort fallback. This is a
+mitigation, not a fix -- the underlying cause is unknown.
 
 These tests isolate CinePiManager._clearhdr_self_heal_if_stuck(),
-_shock_analog_gain(), and _preview_frame_is_degenerate() from the rest of
+_shock_shutter_angle(), and _preview_frame_is_degenerate() from the rest of
 start_all() (sensor discovery, subprocess launch, the "ready" wait) by
 calling them directly against a bare CinePiManager instance -- none of that
 machinery is exercised or needed for this seam.
@@ -45,12 +45,30 @@ class FakeRedis:
         self.values[key] = value
 
 
-def make_manager(hdr="1", sensor_mode=3):
+class FakeController:
+    """Minimal stand-in for CinePiController -- only what
+    _shock_shutter_angle() touches: set_shutter_a() and the
+    clearhdr_self_heal_active flag it toggles around the kick."""
+
+    def __init__(self, shutter_angle_nom=45.0):
+        self.shutter_angle_nom = shutter_angle_nom
+        self.clearhdr_self_heal_active = False
+        self.set_shutter_a_calls = []
+
+    def set_shutter_a(self, value):
+        self.set_shutter_a_calls.append(value)
+        self.shutter_angle_nom = value
+
+
+def make_manager(hdr="1", sensor_mode=3, controller=True):
     redis_controller = FakeRedis({
         ParameterKey.HDR.value: hdr,
         ParameterKey.SENSOR_MODE.value: sensor_mode,
     })
-    return CinePiManager(redis_controller, sensor_detect=None)
+    mgr = CinePiManager(redis_controller, sensor_detect=None)
+    if controller:
+        mgr.controller = FakeController()
+    return mgr
 
 
 class ClearHdrSelfHealGatingTests(unittest.TestCase):
@@ -71,14 +89,14 @@ class ClearHdrSelfHealGatingTests(unittest.TestCase):
         start_all.assert_not_called()
 
 
-class ClearHdrSelfHealGainShockOrderingTests(unittest.TestCase):
-    def test_tries_gain_shock_before_any_mode_bounce(self):
+class ClearHdrSelfHealShutterKickOrderingTests(unittest.TestCase):
+    def test_tries_shutter_kick_before_any_mode_bounce(self):
         mgr = make_manager(hdr="1", sensor_mode=3)
-        # Degenerate initially, still degenerate right after the gain shock
-        # (checked once more before falling back to a bounce), then fixed
-        # by the first bounce.
+        # Degenerate initially, still degenerate right after the shutter
+        # kick (checked once more before falling back to a bounce), then
+        # fixed by the first bounce.
         with mock.patch.object(mgr, "_preview_frame_is_degenerate", side_effect=[True, True, False]), \
-             mock.patch.object(mgr, "_shock_analog_gain") as shock, \
+             mock.patch.object(mgr, "_shock_shutter_angle") as shock, \
              mock.patch.object(mgr, "start_all") as start_all, \
              mock.patch("module.cinepi_multi.time.sleep"):
             mgr._clearhdr_self_heal_if_stuck()
@@ -86,10 +104,10 @@ class ClearHdrSelfHealGainShockOrderingTests(unittest.TestCase):
         shock.assert_called_once()
         self.assertEqual(start_all.call_count, 2)  # one bounce, away + back
 
-    def test_gain_shock_alone_can_resolve_it_with_no_mode_bounce_at_all(self):
+    def test_shutter_kick_alone_can_resolve_it_with_no_mode_bounce_at_all(self):
         mgr = make_manager(hdr="1", sensor_mode=3)
         with mock.patch.object(mgr, "_preview_frame_is_degenerate", side_effect=[True, False]), \
-             mock.patch.object(mgr, "_shock_analog_gain") as shock, \
+             mock.patch.object(mgr, "_shock_shutter_angle") as shock, \
              mock.patch.object(mgr, "start_all") as start_all, \
              mock.patch("module.cinepi_multi.time.sleep"):
             mgr._clearhdr_self_heal_if_stuck()
@@ -97,10 +115,10 @@ class ClearHdrSelfHealGainShockOrderingTests(unittest.TestCase):
         shock.assert_called_once()
         start_all.assert_not_called()
 
-    def test_gain_shock_is_only_tried_once_not_on_every_bounce_attempt(self):
+    def test_shutter_kick_is_only_tried_once_not_on_every_bounce_attempt(self):
         mgr = make_manager(hdr="1", sensor_mode=3)
         with mock.patch.object(mgr, "_preview_frame_is_degenerate", return_value=True), \
-             mock.patch.object(mgr, "_shock_analog_gain") as shock, \
+             mock.patch.object(mgr, "_shock_shutter_angle") as shock, \
              mock.patch.object(mgr, "start_all"), \
              mock.patch("module.cinepi_multi.time.sleep"):
             mgr._clearhdr_self_heal_if_stuck()
@@ -111,9 +129,9 @@ class ClearHdrSelfHealGainShockOrderingTests(unittest.TestCase):
 class ClearHdrSelfHealBounceTests(unittest.TestCase):
     def test_a_degenerate_preview_triggers_exactly_one_bounce_away_and_back(self):
         mgr = make_manager(hdr="1", sensor_mode=3)
-        # Still degenerate after the gain shock, fixed by the following bounce.
+        # Still degenerate after the shutter kick, fixed by the following bounce.
         with mock.patch.object(mgr, "_preview_frame_is_degenerate", side_effect=[True, True, False]), \
-             mock.patch.object(mgr, "_shock_analog_gain"), \
+             mock.patch.object(mgr, "_shock_shutter_angle"), \
              mock.patch.object(mgr, "start_all") as start_all, \
              mock.patch("module.cinepi_multi.time.sleep"):
             mgr._clearhdr_self_heal_if_stuck()
@@ -140,48 +158,74 @@ class ClearHdrSelfHealBounceTests(unittest.TestCase):
         """
         mgr = make_manager(hdr="1", sensor_mode=3)
         with mock.patch.object(mgr, "_preview_frame_is_degenerate", return_value=True), \
-             mock.patch.object(mgr, "_shock_analog_gain"), \
+             mock.patch.object(mgr, "_shock_shutter_angle"), \
              mock.patch.object(mgr, "start_all") as start_all, \
              mock.patch("module.cinepi_multi.logging.warning") as warn, \
              mock.patch("module.cinepi_multi.time.sleep"):
             mgr._clearhdr_self_heal_if_stuck()
 
         self.assertEqual(start_all.call_count, 2 * _CLEARHDR_SELF_HEAL_MAX_ATTEMPTS)
-        # One "trying a gain shock" warning, one "still stuck -- bouncing" per
-        # bounce attempt, plus one final "still stuck, giving up" warning.
+        # One "trying a shutter kick" warning, one "still stuck -- bouncing"
+        # per bounce attempt, plus one final "still stuck, giving up" warning.
         self.assertEqual(warn.call_count, _CLEARHDR_SELF_HEAL_MAX_ATTEMPTS + 2)
 
 
-class ShockAnalogGainTests(unittest.TestCase):
-    def test_drives_gain_to_min_then_max_and_republishes_iso(self):
+class ShockShutterAngleTests(unittest.TestCase):
+    def test_kicks_to_one_degree_then_restores_the_original_angle(self):
         mgr = make_manager()
-        mgr.redis_controller.r = mock.MagicMock()
+        mgr.controller = FakeController(shutter_angle_nom=45.0)
 
-        with mock.patch("module.cinepi_multi.os.path.exists", side_effect=lambda p: p == "/dev/v4l-subdev0"), \
-             mock.patch("module.cinepi_multi.subprocess.run") as run, \
-             mock.patch("module.cinepi_multi.time.sleep"):
-            run.return_value = mock.MagicMock(returncode=0)
-            mgr._shock_analog_gain()
+        with mock.patch("module.cinepi_multi.time.sleep"):
+            mgr._shock_shutter_angle()
 
-        gain_calls = [c for c in run.call_args_list if "analogue_gain" in c.args[0][-1]]
-        self.assertEqual(len(gain_calls), 2)
-        self.assertIn("analogue_gain=0", gain_calls[0].args[0][-1])
-        self.assertIn("analogue_gain=80", gain_calls[1].args[0][-1])
-        mgr.redis_controller.r.publish.assert_called_once_with("cp_controls", ParameterKey.ISO.value)
+        self.assertEqual(mgr.controller.set_shutter_a_calls, [1.0, 45.0])
 
-    def test_no_subdev_accepting_the_control_still_republishes_iso(self):
-        """Fail open: if nothing accepts the control, don't leave the sensor
-        without its ISO re-applied -- still hand control back."""
+    def test_toggles_the_self_heal_active_flag_around_the_kick_not_after(self):
+        """The flag (drives the GUI's green shutter/fps tint, see
+        simple_gui.py) must be True while set_shutter_a(1.0) actually runs,
+        not just before/after it -- otherwise the GUI could show a plain
+        white "1" for the one frame that matters."""
         mgr = make_manager()
-        mgr.redis_controller.r = mock.MagicMock()
+        flag_during_kick = None
 
-        with mock.patch("module.cinepi_multi.os.path.exists", return_value=False), \
-             mock.patch("module.cinepi_multi.subprocess.run") as run, \
-             mock.patch("module.cinepi_multi.time.sleep"):
-            mgr._shock_analog_gain()
+        def fake_set_shutter_a(value):
+            nonlocal flag_during_kick
+            if value == 1.0:
+                flag_during_kick = mgr.controller.clearhdr_self_heal_active
 
-        run.assert_not_called()
-        mgr.redis_controller.r.publish.assert_called_once_with("cp_controls", ParameterKey.ISO.value)
+        mgr.controller.set_shutter_a = fake_set_shutter_a
+        with mock.patch("module.cinepi_multi.time.sleep"):
+            mgr._shock_shutter_angle()
+
+        self.assertTrue(flag_during_kick)
+        self.assertFalse(mgr.controller.clearhdr_self_heal_active)  # cleared afterward
+
+    def test_restores_the_original_angle_even_if_the_kick_itself_raises(self):
+        mgr = make_manager()
+        controller = FakeController(shutter_angle_nom=180.0)
+        calls = []
+
+        def fake_set_shutter_a(value):
+            calls.append(value)
+            if value == 1.0:
+                raise RuntimeError("simulated sensor write failure")
+
+        controller.set_shutter_a = fake_set_shutter_a
+        mgr.controller = controller
+
+        with mock.patch("module.cinepi_multi.time.sleep"):
+            with self.assertRaises(RuntimeError):
+                mgr._shock_shutter_angle()
+
+        self.assertEqual(calls, [1.0, 180.0])  # restore still ran
+        self.assertFalse(controller.clearhdr_self_heal_active)  # flag still cleared
+
+    def test_no_controller_reference_is_a_safe_no_op(self):
+        mgr = make_manager(controller=False)
+        self.assertIsNone(mgr.controller)
+        with mock.patch("module.cinepi_multi.time.sleep") as sleep:
+            mgr._shock_shutter_angle()  # must not raise
+        sleep.assert_not_called()
 
 
 class PreviewFrameDegenerateTests(unittest.TestCase):

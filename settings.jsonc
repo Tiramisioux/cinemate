@@ -203,7 +203,24 @@
       "threshold_low": null,
       "threshold_high": null,
       "blend": 0,
-      "gain_adder": 1
+      "gain_adder": 1,
+      // Automatic recovery from the flat-pedestal ClearHDR startup defect
+      // (round 8, 2026-08-29): probe the live preview after every launch and,
+      // if it looks flat, try a brief shutter-angle kick and then a bounded
+      // mode bounce. Default false, deliberately.
+      //
+      // The root cause is still unknown, and every action this can take is
+      // unproven on hardware: the mode bounce and an earlier gain shock were
+      // both live-tested and failed, and the shutter kick's automated form has
+      // never run on the rig (only the manual shutter-to-1-degree version is
+      // operator-confirmed). The detector cannot tell the defect from a
+      // genuinely flat scene -- a lens cap or an unlit set shares the same
+      // low-unique-value signature -- so a false positive costs roughly two
+      // extra start_all() cycles (~6-10 s) at an arbitrary moment.
+      //
+      // Turn this on only to reproduce or study the defect. See
+      // development/mono-clearhdr-fixes/ROUND9-RESULTS.md.
+      "self_heal": false
     },
     "custom_modes": {}
   },

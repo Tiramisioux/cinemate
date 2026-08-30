@@ -748,7 +748,7 @@ def run_application(args, log_queue):
     ssd_monitor.refresh()
     
     # Initialize CinePi application
-    cinepi = CinePi(redis_controller, sensor_detect)
+    cinepi = CinePi(redis_controller, sensor_detect, settings=settings)
     
     cinepi.start_all()
 

@@ -233,6 +233,23 @@ def storage_preroll_enabled(settings: dict) -> bool:
     return auto_storage_preroll_enabled(settings)
 
 
+def clearhdr_self_heal_enabled(settings: dict) -> bool:
+    """Return whether the ClearHDR flat-pedestal self-heal may run.
+
+    Defaults to False. The self-heal fires from ``CinePiManager.start_all()``,
+    which every cold start and every resolution switch funnels through, and
+    none of the recovery actions it can take has been shown to work on
+    hardware -- the mode bounce and an earlier analogue-gain shock were both
+    live-tested and failed. Its detector also has no way to distinguish the
+    defect from a legitimately flat or dark scene. Off unless asked for.
+    """
+
+    hdr_cfg = settings.get("image_capture", {}).get("hdr", {})
+    return as_bool(
+        hdr_cfg.get("self_heal") if isinstance(hdr_cfg, dict) else None, False
+    )
+
+
 def clearhdr_startup_values(settings: dict) -> dict:
     """Startup values for the ClearHDR live knobs, keyed by Redis key.
 

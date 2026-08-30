@@ -325,6 +325,141 @@ class PreviewFrameDegenerateTests(unittest.TestCase):
         with mock.patch("urllib.request.urlopen", side_effect=OSError("connection refused")):
             self.assertFalse(mgr._preview_frame_is_degenerate())
 
+    def test_the_real_multipart_stream_framing_isolates_exactly_one_frame(self):
+        """Round 9, 2026-08-30: the /stream framing was captured live off the
+        rig rather than inferred. cinepi-raw (not the cinemate Flask app)
+        serves it on :8000 as multipart MJPEG -- each part is a
+        ``--nadjiebmjpegstreamer`` boundary line plus Content-Type and
+        Content-Length headers, then the JPEG payload.
+
+        Demonstrated to fail against the pre-fix ``data.find(b"\\xff\\xd9")``:
+        with a mid-frame start the old search returned end=85532 against
+        start=85608, an empty slice, so the probe fell into its except branch
+        and reported healthy on a flat frame.
+        """
+        import numpy as np
+        flat = self._fake_jpeg_bytes(np.full((480, 640), 40, dtype=np.uint8))
+        rng = np.random.default_rng(0)
+        varied = self._fake_jpeg_bytes(
+            rng.integers(0, 256, size=(480, 640), dtype=np.uint8)
+        )
+
+        def part(payload):
+            return (
+                b"--nadjiebmjpegstreamer\r\n"
+                b"Content-Type: image/jpeg\r\n"
+                b"Content-Length: " + str(len(payload)).encode() + b"\r\n\r\n"
+                + payload
+            )
+
+        # A live MJPEG read almost never lands on a part boundary -- urlopen
+        # connects mid-frame, so the buffer opens with the tail of whatever
+        # frame was in flight, including that frame's EOI. Searching for EOI
+        # from offset 0 therefore finds an EOI that sits *before* the first
+        # SOI, the slice comes out empty, PIL raises, and the probe fails open
+        # -- silently never detecting anything while looking installed and
+        # healthy. That is the exact "silent no-op" failure round 8 flagged as
+        # the real risk of the inferred framing. Searching from SOI fixes it.
+        stream = varied[len(varied) // 2:] + part(flat) + part(varied)
+
+        mgr = make_manager()
+        fake_response = mock.MagicMock()
+        fake_response.read.return_value = stream
+        fake_response.__enter__.return_value = fake_response
+        fake_response.__exit__.return_value = False
+
+        with mock.patch("urllib.request.urlopen", return_value=fake_response):
+            self.assertTrue(mgr._preview_frame_is_degenerate())
+            self.assertEqual(mgr._last_preview_unique_values, 1)
+
+    def test_the_measured_unique_count_is_recorded_for_the_warning(self):
+        """The WARNING the self-heal logs quotes the figure it acted on, so
+        the probe has to leave it somewhere retrievable rather than collapsing
+        straight to a bool."""
+        import numpy as np
+        flat = self._fake_jpeg_bytes(np.full((480, 640), 40, dtype=np.uint8))
+
+        mgr = make_manager()
+        fake_response = mock.MagicMock()
+        fake_response.read.return_value = flat
+        fake_response.__enter__.return_value = fake_response
+        fake_response.__exit__.return_value = False
+
+        with mock.patch("urllib.request.urlopen", return_value=fake_response):
+            mgr._preview_frame_is_degenerate()
+        self.assertEqual(mgr._last_preview_unique_values, 1)
+
+        # A probe failure records None, not a stale count from last time.
+        with mock.patch("urllib.request.urlopen", side_effect=OSError("gone")):
+            mgr._preview_frame_is_degenerate()
+        self.assertIsNone(mgr._last_preview_unique_values)
+
+
+class ClearHdrSelfHealSettingsGateTests(unittest.TestCase):
+    """Round 9, 2026-08-30: the self-heal is off unless asked for.
+
+    It hooks into start_all(), which every cold start and every resolution
+    switch runs, and none of its recovery actions is proven -- the mode bounce
+    and an earlier gain shock were both live-tested and failed, and the
+    shutter kick's automated form has never run on hardware.
+    """
+
+    def _manager(self, settings):
+        return CinePiManager(FakeRedis(), sensor_detect=None, settings=settings)
+
+    def test_off_when_settings_are_not_supplied_at_all(self):
+        mgr = CinePiManager(FakeRedis(), sensor_detect=None)
+        self.assertFalse(mgr.clearhdr_self_heal_enabled)
+
+    def test_off_by_default_when_the_key_is_absent(self):
+        mgr = self._manager({"image_capture": {"hdr": {}}})
+        self.assertFalse(mgr.clearhdr_self_heal_enabled)
+
+    def test_on_only_when_explicitly_enabled(self):
+        mgr = self._manager({"image_capture": {"hdr": {"self_heal": True}}})
+        self.assertTrue(mgr.clearhdr_self_heal_enabled)
+
+    def test_the_gate_blocks_the_self_heal_when_off(self):
+        mgr = self._manager({"image_capture": {"hdr": {"self_heal": False}}})
+        with mock.patch.object(mgr, "_clearhdr_self_heal_if_stuck") as heal:
+            mgr._maybe_clearhdr_self_heal(camera_model="imx585", launched_mode=3)
+        heal.assert_not_called()
+
+    def test_the_gate_passes_the_launched_mode_through_when_on(self):
+        mgr = self._manager({"image_capture": {"hdr": {"self_heal": True}}})
+        with mock.patch.object(mgr, "_clearhdr_self_heal_if_stuck") as heal:
+            mgr._maybe_clearhdr_self_heal(camera_model="imx585", launched_mode=3)
+        heal.assert_called_once_with(camera_model="imx585", launched_mode=3)
+
+
+class ClearHdrSelfHealSettingsLoaderTests(unittest.TestCase):
+    def test_default_is_false(self):
+        from module.config_loader import clearhdr_self_heal_enabled
+        self.assertFalse(clearhdr_self_heal_enabled({}))
+        self.assertFalse(clearhdr_self_heal_enabled({"image_capture": {}}))
+        self.assertFalse(clearhdr_self_heal_enabled({"image_capture": {"hdr": {}}}))
+
+    def test_decodes_the_usual_settings_boolean_spellings(self):
+        from module.config_loader import clearhdr_self_heal_enabled
+        for raw, expected in (
+            (True, True), (False, False),
+            ("true", True), ("false", False),
+            ("1", True), ("0", False),
+        ):
+            with self.subTest(raw=raw):
+                self.assertIs(
+                    clearhdr_self_heal_enabled(
+                        {"image_capture": {"hdr": {"self_heal": raw}}}
+                    ),
+                    expected,
+                )
+
+    def test_a_non_dict_hdr_block_does_not_raise(self):
+        from module.config_loader import clearhdr_self_heal_enabled
+        self.assertFalse(
+            clearhdr_self_heal_enabled({"image_capture": {"hdr": "nonsense"}})
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

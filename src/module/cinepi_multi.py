@@ -11,7 +11,11 @@ import os
 import shutil
 
 from module import rp1_regime
-from module.config_loader import load_settings, DEFAULT_SETTINGS_PATH
+from module.config_loader import (
+    load_settings,
+    DEFAULT_SETTINGS_PATH,
+    clearhdr_self_heal_enabled,
+)
 from module.redis_controller import ParameterKey, decode_log_encode_request, Event
 from module.framebuffer import Framebuffer
 from module.sensor_detect import is_pi4_family
@@ -42,17 +46,24 @@ _READY_WAIT = 2.0                                   # seconds to wait for all ca
 # ClearHDR, ruling out a decompand/software cause) with every sensor
 # register reading correct -- the defect is not visible to anything this
 # process can configure. Confirmed recoveries, in increasing order of cost:
-# a large analogue-gain swing (mirrors the light-level shock -- flashing a
-# light at the sensor, or covering it -- that has reliably cleared it by
-# hand; a mode bounce alone was tried live on 2026-08-29 and did NOT clear
-# it, so gain-shock is tried first, not as a fallback), then a mode bounce
-# (switch away, then back). Neither is proven 100% reliable, hence the
-# attempt cap and the loud warning if it persists.
+# a brief shutter-angle kick to 1 degree and back (mirrors the light-level
+# shock -- flashing a light at the sensor, or covering it -- that has
+# reliably cleared it by hand; an analogue-gain shock was tried first and
+# did NOT reliably clear it, the shutter kick did, live on 2026-08-29), then
+# a mode bounce (switch away, then back -- also tried alone that day and did
+# NOT clear it, hence it's the last resort, not the first). Neither
+# mechanism is proven 100% reliable, hence the attempt cap and the loud
+# warning if it persists.
 _CLEARHDR_SELF_HEAL_MAX_ATTEMPTS = 2
 _CLEARHDR_SELF_HEAL_SETTLE_S = 1.5   # let >=20 frames settle at any sane fps
 _CLEARHDR_SELF_HEAL_STREAM_URL = "http://127.0.0.1:8000/stream"
-_CLEARHDR_SELF_HEAL_GAIN_SHOCK_VALUES = (0, 80)   # analogue_gain min, max (imx585.c ANA_GAIN range)
-_CLEARHDR_SELF_HEAL_GAIN_SHOCK_SETTLE_S = 0.4
+_CLEARHDR_SELF_HEAL_SHUTTER_KICK_DEGREES = 1.0
+_CLEARHDR_SELF_HEAL_SHUTTER_KICK_SETTLE_S = 0.5
+# A mid scan row at or below this many unique values reads as flat. A real
+# filling take measured 1 across the whole frame (2026-08-30); a healthy one
+# measured in the hundreds. A capped lens or an unlit set also lands here --
+# the count alone cannot separate the defect from a legitimately flat scene.
+_CLEARHDR_SELF_HEAL_MAX_UNIQUE_VALUES = 5
 # Pi-4-family (VC4/Unicam) detection lives in sensor_detect as the single
 # canonical implementation; alias it here so existing call sites keep working.
 # Per-sensor packed-vs-unpacked is data-driven from sensors.json
@@ -729,9 +740,25 @@ class CinePiManager:
     the very first REC edge is seen by every camera.
     """
 
-    def __init__(self, redis_controller, sensor_detect):
+    def __init__(self, redis_controller, sensor_detect, settings=None):
         self.redis_controller = redis_controller
         self.sensor_detect    = sensor_detect
+        # image_capture.hdr.self_heal, read once at construction. Off unless
+        # explicitly enabled -- see clearhdr_self_heal_enabled()'s docstring
+        # for why a mitigation whose actions are all unproven does not run by
+        # default. None settings (unit tests) means off.
+        self.clearhdr_self_heal_enabled = (
+            clearhdr_self_heal_enabled(settings) if settings is not None else False
+        )
+        # Unique-value count from the most recent preview probe, so the
+        # self-heal can report the figure it actually acted on.
+        self._last_preview_unique_values: Optional[int] = None
+        # Set by main.py once CinePiController exists (this manager is built
+        # first). Only the ClearHDR self-heal uses it, to call the real
+        # set_shutter_a() -- clamping, attribute sync, exposure republish --
+        # rather than writing SHUTTER_A to Redis directly and skipping all of
+        # that. May be None (e.g. in unit tests); self-heal no-ops without it.
+        self.controller = None
         self.processes: List[CinePiProcess] = []
         self.message = Event()                        # fan-out for log relay
         self.preview_enabled = True
@@ -885,17 +912,61 @@ class CinePiManager:
         # NEW ✱ 6. ClearHDR self-heal (see _CLEARHDR_SELF_HEAL_* above)
         # ────────────────────────────────────────────────────────────────
         if _run_self_heal:
-            self._clearhdr_self_heal_if_stuck()
+            self._maybe_clearhdr_self_heal(camera_model=pk, launched_mode=sensor_mode)
 
     # ───────────── ClearHDR self-heal (round-8 mitigation) ─────────────
-    def _clearhdr_self_heal_if_stuck(self, attempt: int = 0) -> None:
+    def _maybe_clearhdr_self_heal(self, camera_model=None, launched_mode=None) -> None:
+        """Settings gate in front of the self-heal.
+
+        start_all() is the choke point for every cold start and every
+        resolution switch, so anything hooked in here runs constantly. The
+        self-heal stays off unless image_capture.hdr.self_heal is explicitly
+        true -- see clearhdr_self_heal_enabled() for the reasoning.
+        """
+        if not self.clearhdr_self_heal_enabled:
+            return
+        self._clearhdr_self_heal_if_stuck(
+            camera_model=camera_model, launched_mode=launched_mode
+        )
+
+    def _clearhdr_self_heal_if_stuck(
+        self, camera_model=None, launched_mode=None, attempt: int = 0
+    ) -> None:
         """If ClearHDR is active and the live preview looks like the known
-        flat-pedestal failure, try to clear it -- a gain shock first
-        (attempt 0 only, cheap, no process relaunch), then a mode bounce as
-        a fallback -- and re-check after each. Mitigation only: the
-        underlying cause is still unknown (see hardware-log.md, 2026-08-29
-        ClearHDR pedestal entries)."""
-        if str(self.redis_controller.get_value(ParameterKey.HDR.value)) != "1":
+        flat-pedestal failure, try to clear it -- a brief shutter-angle kick
+        first (attempt 0 only, cheap, no process relaunch), then a mode
+        bounce as a fallback -- and re-check after each. Mitigation only:
+        the underlying cause is still unknown (see hardware-log.md,
+        2026-08-29 ClearHDR pedestal entries).
+
+        An earlier version of this tried an analogue-gain shock instead of
+        the shutter kick (round 8, same day) -- dropped after the operator
+        found it didn't clear a live stuck session while briefly setting
+        shutter to 1 degree did. Every confirmed-working recovery this round
+        has been a large transient through the sensor's light/exposure path,
+        never a gain change specifically -- shutter fits that pattern more
+        directly and is what's actually been verified.
+
+        camera_model/launched_mode come from start_all()'s own just-computed
+        values, not a re-read of Redis. Fixed live on 2026-08-30: the
+        ``hdr`` Redis key is only ever written by set_resolution()
+        (cinepi_controller.py:1714), not by start_all() itself, so it can
+        lag behind whichever sensor_mode was *actually* just launched --
+        confirmed on hardware, self-heal fired on a plain SDR mode-0 launch
+        because ``hdr`` was still "1" from an earlier session. sensor_detect
+        already carries a reliable per-mode HDR flag; use that instead of
+        trusting a value nothing here just wrote.
+        """
+        is_hdr = False
+        if camera_model is not None and launched_mode is not None and self.sensor_detect is not None:
+            is_hdr = bool(self.sensor_detect.get_hdr(camera_model, launched_mode))
+        else:
+            # Only reachable from a caller that didn't pass camera_model/
+            # launched_mode -- falls back to the possibly-stale Redis flag
+            # rather than skipping the check outright.
+            is_hdr = str(self.redis_controller.get_value(ParameterKey.HDR.value)) == "1"
+
+        if not is_hdr:
             return  # not ClearHDR, nothing to check
 
         time.sleep(_CLEARHDR_SELF_HEAL_SETTLE_S)
@@ -905,19 +976,24 @@ class CinePiManager:
 
         if attempt == 0:
             logging.warning(
-                "ClearHDR self-heal: preview looks like the known flat-pedestal "
-                "failure -- trying an analogue-gain shock before a mode bounce."
+                "ClearHDR self-heal: preview mid scan row collapsed to %s unique "
+                "value(s) (threshold %d) -- this matches the known flat-pedestal "
+                "failure, but a capped lens or an unlit scene looks identical. "
+                "Trying a brief shutter-angle kick before a mode bounce. Disable "
+                "with image_capture.hdr.self_heal=false.",
+                self._last_preview_unique_values,
+                _CLEARHDR_SELF_HEAL_MAX_UNIQUE_VALUES,
             )
-            self._shock_analog_gain()
+            self._shock_shutter_angle()
             time.sleep(_CLEARHDR_SELF_HEAL_SETTLE_S)
             if not self._preview_frame_is_degenerate():
-                logging.info("ClearHDR self-heal: gain shock cleared it.")
+                logging.info("ClearHDR self-heal: shutter kick cleared it.")
                 return
 
         if attempt >= _CLEARHDR_SELF_HEAL_MAX_ATTEMPTS:
             logging.warning(
                 "ClearHDR self-heal: still looks stuck (flat pedestal) after "
-                "a gain shock and %d mode-bounce attempt(s) -- giving up. "
+                "a shutter kick and %d mode-bounce attempt(s) -- giving up. "
                 "This is a known, not-yet-root-caused defect (round 8, "
                 "2026-08-29); a power cycle or covering/flashing light at "
                 "the sensor by hand may still clear it.",
@@ -930,8 +1006,10 @@ class CinePiManager:
         # always a valid fallback target since it's the SDR default.
         kick_mode = 0 if stuck_mode != 0 else 1
         logging.warning(
-            "ClearHDR self-heal: still stuck -- bouncing mode %d -> %d -> %d "
-            "to try to clear it (attempt %d/%d).",
+            "ClearHDR self-heal: still stuck at %s unique value(s) -- bouncing "
+            "mode %d -> %d -> %d to try to clear it (attempt %d/%d). Each bounce "
+            "costs two cinepi-raw restarts.",
+            self._last_preview_unique_values,
             stuck_mode, kick_mode, stuck_mode,
             attempt + 1, _CLEARHDR_SELF_HEAL_MAX_ATTEMPTS,
         )
@@ -939,54 +1017,58 @@ class CinePiManager:
         self.start_all(preview_enabled=self.preview_enabled, _run_self_heal=False)   # away
         self.redis_controller.set_value(ParameterKey.SENSOR_MODE.value, stuck_mode)
         self.start_all(preview_enabled=self.preview_enabled, _run_self_heal=False)   # back
-        self._clearhdr_self_heal_if_stuck(attempt=attempt + 1)                       # re-check, bounded by attempt
+        self._clearhdr_self_heal_if_stuck(                                           # re-check, bounded by attempt
+            camera_model=camera_model, launched_mode=stuck_mode, attempt=attempt + 1
+        )
 
-    def _shock_analog_gain(self) -> None:
-        """Drive analogue_gain through a large swing (min then max) on
-        whichever imx585 subdev accepts it -- the same subdev-discovery
-        pattern _set_wide_dynamic_range() uses in cinepi_controller.py,
-        reimplemented here since CinePiManager has no v4l2 handle of its
-        own. analogue_gain is not __v4l2_ctrl_grab-bound during streaming
-        (only vflip/hflip/hdr_mode are, per imx585.c), so this does not
-        race cinepi-raw's process lifetime the way the WDR control does.
-        Re-publishes the current ISO afterwards so cinepi-raw's own ISO
-        handler re-applies the operator's actual requested value -- this
-        bypasses that handler's control of the sensor temporarily, so it
-        must hand back cleanly rather than leaving the shock's value live.
+    def _shock_shutter_angle(self) -> None:
+        """Briefly drive the shutter angle to its minimum (1 degree) and
+        back -- confirmed live on the rig (2026-08-29) to clear the stuck
+        ClearHDR state after the mode-bounce-only self-heal (this round's
+        earlier version) failed to. Goes through the real
+        CinePiController.set_shutter_a(), not a direct Redis write, so
+        clamping, shutter_angle_actual/nom sync, and the exposure_time
+        republish all happen exactly as they would for an operator-driven
+        change -- see this round's shutter-staleness fixes (PR #173) for
+        why bypassing that method is exactly the class of bug to avoid.
+        No-ops if main.py hasn't wired a controller back-reference (e.g. in
+        unit tests) rather than raising.
         """
-        for value in _CLEARHDR_SELF_HEAL_GAIN_SHOCK_VALUES:
-            applied = False
-            for idx in range(16):
-                dev = f"/dev/v4l-subdev{idx}"
-                if not os.path.exists(dev):
-                    continue
-                probe = subprocess.run(
-                    ["v4l2-ctl", "-d", dev, "--set-ctrl", f"analogue_gain={value}"],
-                    capture_output=True, text=True,
-                )
-                if probe.returncode == 0:
-                    applied = True
-                    break
-            if not applied:
-                logging.debug(
-                    "ClearHDR self-heal gain shock: no subdev accepted analogue_gain=%d",
-                    value,
-                )
-            time.sleep(_CLEARHDR_SELF_HEAL_GAIN_SHOCK_SETTLE_S)
+        controller = self.controller
+        if controller is None:
+            logging.debug("ClearHDR self-heal: no controller reference, skipping shutter kick")
+            return
 
-        # Hand control back to cinepi-raw's normal ISO path -- re-publish
-        # (not re-write) the key so its handler re-applies the real value.
-        self.redis_controller.r.publish("cp_controls", ParameterKey.ISO.value)
+        original = getattr(controller, "shutter_angle_nom", None)
+        controller.clearhdr_self_heal_active = True
+        try:
+            controller.set_shutter_a(_CLEARHDR_SELF_HEAL_SHUTTER_KICK_DEGREES)
+            time.sleep(_CLEARHDR_SELF_HEAL_SHUTTER_KICK_SETTLE_S)
+        finally:
+            if original is not None:
+                controller.set_shutter_a(original)
+            controller.clearhdr_self_heal_active = False
 
-    def _preview_frame_is_degenerate(self) -> bool:
-        """Grab one frame from the live MJPEG preview (the same stream the
-        web GUI's <img> tag consumes, see app/main/routes.py's stream_url)
-        and check for the signature tools/verify_take.py uses on recorded
-        DNGs: a scan row collapsed to only a handful of unique values.
-        Preview and recording are different, non-calibration-comparable
-        render paths (ccmpPreviewStage vs the ISP path), but a genuinely
-        flat sensor output stays flat through either -- this only needs to
-        detect flatness, not compare absolute levels.
+    def _preview_frame_unique_values(self) -> Optional[int]:
+        """Unique-value count over the body of one live preview frame, or None
+        if a frame could not be measured at all.
+
+        The stream is multipart MJPEG: each part carries a ``--<boundary>``
+        line plus ``Content-Type``/``Content-Length`` headers before the JPEG
+        payload. Searching for SOI/EOI skips those headers and isolates
+        exactly one frame -- verified byte-for-byte against a live capture on
+        2026-08-30 (SOI at offset 75, EOI at 15100, giving 15027 bytes, which
+        matched that part's declared Content-Length exactly).
+
+        Measured over the body, skipping the top 5%, rather than over a single
+        mid scan row. The preview draws an OSD strip across the top, which
+        supplies real variation even when every image row is a flat pedestal;
+        conversely a live frame was measured on 2026-08-30 whose mid row read
+        1 unique value while the whole frame read 145, all of it from that
+        strip. One row at a fixed offset answers neither question reliably.
+
+        None is returned rather than a count on any failure, so callers fail
+        open instead of treating an unmeasurable stream as flat.
         """
         import urllib.request
         from io import BytesIO
@@ -995,20 +1077,51 @@ class CinePiManager:
             from PIL import Image
         except ImportError:
             logging.debug("ClearHDR self-heal probe skipped: PIL/numpy unavailable")
-            return False
+            return None
 
         try:
             with urllib.request.urlopen(_CLEARHDR_SELF_HEAL_STREAM_URL, timeout=2) as resp:
                 data = resp.read(200_000)
-            start, end = data.find(b"\xff\xd8"), data.find(b"\xff\xd9")
+            start = data.find(b"\xff\xd8")
+            end = data.find(b"\xff\xd9", start + 2) if start >= 0 else -1
             if start < 0 or end < 0:
-                return False  # couldn't isolate a frame -- don't false-positive
+                return None  # couldn't isolate a frame -- don't false-positive
             frame = np.array(Image.open(BytesIO(data[start:end + 2])).convert("L"))
-            row = frame[frame.shape[0] // 2]
-            return len(np.unique(row)) <= 5
+            body = frame[max(1, frame.shape[0] // 20):, :]
+            return int(len(np.unique(body)))
         except Exception:
             logging.debug("ClearHDR self-heal preview probe failed", exc_info=True)
-            return False  # fail open -- never block startup on a probe error
+            return None  # fail open -- never block startup on a probe error
+
+    def _preview_frame_is_degenerate(self) -> bool:
+        """True when the live preview shows the known flat-pedestal signature:
+        a mid scan row collapsed to only a handful of unique values, the same
+        check tools/verify_take.py applies to recorded DNGs.
+
+        Preview and recording are different, non-calibration-comparable render
+        paths (ccmpPreviewStage vs the ISP path), but a genuinely flat sensor
+        output stays flat through either -- this only needs to detect flatness,
+        not compare absolute levels.
+
+        This signature is known NOT to discriminate, and that is measured, not
+        feared. On 2026-08-30 two ClearHDR streams were scored on this rig with
+        both the preview and the recorded DNGs:
+
+          - healthy: DNG verdict REAL, mid row 94 unique values, mean
+            3456/4095 -- preview body read **1** unique value
+          - filling: DNG verdict fill, mid row 1 unique value at 3200/65535
+            (the 4.88% pedestal) -- preview body read **1** unique value
+
+        Same preview reading, opposite sensor states. On a lensless bench rig
+        the sensor sees a near-uniform field, so an 8-bit JPEG preview
+        quantises a healthy but low-contrast scene to a single value; a capped
+        lens or an unlit set does the same. Until a measure exists that
+        separates those, this probe cannot justify taking an automatic
+        recovery action, which is the reason the self-heal defaults off.
+        """
+        uniq = self._preview_frame_unique_values()
+        self._last_preview_unique_values = uniq
+        return uniq is not None and uniq <= _CLEARHDR_SELF_HEAL_MAX_UNIQUE_VALUES
 
     # ───────────────────────── teardown ────────────────────────────
     def stop_all(self) -> None:

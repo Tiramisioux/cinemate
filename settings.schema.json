@@ -315,6 +315,11 @@
               "minimum": 0,
               "maximum": 5,
               "default": 1
+            },
+            "self_heal": {
+              "type": "boolean",
+              "default": false,
+              "description": "Automatically probe the live preview after each launch and try to recover the flat-pedestal ClearHDR startup defect. Off by default: the root cause is unknown, every recovery action is unproven on hardware, and the detector cannot distinguish the defect from a genuinely flat or dark scene."
             }
           }
         },

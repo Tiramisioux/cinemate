@@ -372,6 +372,52 @@ class PreviewFrameDegenerateTests(unittest.TestCase):
             self.assertTrue(mgr._preview_frame_is_degenerate())
             self.assertEqual(mgr._last_preview_unique_values, 1)
 
+    def test_a_flat_mid_row_on_an_otherwise_real_frame_is_not_degenerate(self):
+        """The probe measures the body, not one row at a fixed offset.
+
+        Measured on the rig 2026-08-30: a live preview frame whose mid row read
+        1 unique value while the whole frame read 145. A single-row check calls
+        that degenerate and would bounce a healthy session. Reproduced here as
+        a frame that is flat across its middle band but carries real structure
+        above and below it.
+
+        Demonstrated to fail against the pre-fix single-row measure
+        (``row = frame[frame.shape[0] // 2]``), which reports degenerate.
+        """
+        import numpy as np
+        rng = np.random.default_rng(1)
+        frame = rng.integers(0, 256, size=(480, 640), dtype=np.uint8)
+        frame[200:280, :] = 40          # flat band straddling the mid row
+        jpeg_bytes = self._fake_jpeg_bytes(frame)
+
+        mgr = make_manager()
+        fake_response = mock.MagicMock()
+        fake_response.read.return_value = jpeg_bytes
+        fake_response.__enter__.return_value = fake_response
+        fake_response.__exit__.return_value = False
+
+        with mock.patch("urllib.request.urlopen", return_value=fake_response):
+            self.assertFalse(mgr._preview_frame_is_degenerate())
+
+    def test_the_top_osd_strip_alone_does_not_make_a_flat_frame_look_healthy(self):
+        """The inverse confound: the preview's top OSD strip carries real
+        variation even when every image row is a flat pedestal. Skipping the
+        top 5% keeps that strip from masking a genuine fill."""
+        import numpy as np
+        rng = np.random.default_rng(2)
+        frame = np.full((480, 640), 16, dtype=np.uint8)
+        frame[:20, :] = rng.integers(0, 256, size=(20, 640), dtype=np.uint8)
+        jpeg_bytes = self._fake_jpeg_bytes(frame)
+
+        mgr = make_manager()
+        fake_response = mock.MagicMock()
+        fake_response.read.return_value = jpeg_bytes
+        fake_response.__enter__.return_value = fake_response
+        fake_response.__exit__.return_value = False
+
+        with mock.patch("urllib.request.urlopen", return_value=fake_response):
+            self.assertTrue(mgr._preview_frame_is_degenerate())
+
     def test_the_measured_unique_count_is_recorded_for_the_warning(self):
         """The WARNING the self-heal logs quotes the figure it acted on, so
         the probe has to leave it somewhere retrievable rather than collapsing

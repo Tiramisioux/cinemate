@@ -1050,8 +1050,8 @@ class CinePiManager:
             controller.clearhdr_self_heal_active = False
 
     def _preview_frame_unique_values(self) -> Optional[int]:
-        """Unique-value count of a mid scan row from one live preview frame,
-        or None if a frame could not be measured at all.
+        """Unique-value count over the body of one live preview frame, or None
+        if a frame could not be measured at all.
 
         The stream is multipart MJPEG: each part carries a ``--<boundary>``
         line plus ``Content-Type``/``Content-Length`` headers before the JPEG
@@ -1059,6 +1059,13 @@ class CinePiManager:
         exactly one frame -- verified byte-for-byte against a live capture on
         2026-08-30 (SOI at offset 75, EOI at 15100, giving 15027 bytes, which
         matched that part's declared Content-Length exactly).
+
+        Measured over the body, skipping the top 5%, rather than over a single
+        mid scan row. The preview draws an OSD strip across the top, which
+        supplies real variation even when every image row is a flat pedestal;
+        conversely a live frame was measured on 2026-08-30 whose mid row read
+        1 unique value while the whole frame read 145, all of it from that
+        strip. One row at a fixed offset answers neither question reliably.
 
         None is returned rather than a count on any failure, so callers fail
         open instead of treating an unmeasurable stream as flat.
@@ -1080,8 +1087,8 @@ class CinePiManager:
             if start < 0 or end < 0:
                 return None  # couldn't isolate a frame -- don't false-positive
             frame = np.array(Image.open(BytesIO(data[start:end + 2])).convert("L"))
-            row = frame[frame.shape[0] // 2]
-            return int(len(np.unique(row)))
+            body = frame[max(1, frame.shape[0] // 20):, :]
+            return int(len(np.unique(body)))
         except Exception:
             logging.debug("ClearHDR self-heal preview probe failed", exc_info=True)
             return None  # fail open -- never block startup on a probe error
@@ -1096,10 +1103,21 @@ class CinePiManager:
         output stays flat through either -- this only needs to detect flatness,
         not compare absolute levels.
 
-        Note this cannot distinguish the defect from a legitimately flat
-        scene. A capped lens or an unlit set produces the same signature; on
-        2026-08-30 a real filling take measured 1 unique value across the
-        entire frame. That ambiguity is why the self-heal is off by default.
+        This signature is known NOT to discriminate, and that is measured, not
+        feared. On 2026-08-30 two ClearHDR streams were scored on this rig with
+        both the preview and the recorded DNGs:
+
+          - healthy: DNG verdict REAL, mid row 94 unique values, mean
+            3456/4095 -- preview body read **1** unique value
+          - filling: DNG verdict fill, mid row 1 unique value at 3200/65535
+            (the 4.88% pedestal) -- preview body read **1** unique value
+
+        Same preview reading, opposite sensor states. On a lensless bench rig
+        the sensor sees a near-uniform field, so an 8-bit JPEG preview
+        quantises a healthy but low-contrast scene to a single value; a capped
+        lens or an unlit set does the same. Until a measure exists that
+        separates those, this probe cannot justify taking an automatic
+        recovery action, which is the reason the self-heal defaults off.
         """
         uniq = self._preview_frame_unique_values()
         self._last_preview_unique_values = uniq

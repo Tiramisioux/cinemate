@@ -27,8 +27,9 @@ happened.
 | C7 | ClearHDR: INNO-MAKER knob defaults, SDR HCG toggle, ISO-ceiling warning; gradation curve / black level deliberately kept locked | **Implemented on branches, unverified** — gates G0–G3 unrun, cinepi-raw side not yet built on the Pi | `C7-clearhdr-defaults-controls/PLAN.md` (ledger entry, incl. gates + decision record); research plan in external `development/clearhdr-innomaker-defaults/PLAN.md` | `feature/clearhdr-controls` off `dev` (cinemate `8dfcd165` + cinepi-raw `399692f`, cut 2026-08-26) + driver fork `imx585-v4l2-driver` `6.12.y` @ `cb7c7a6` |
 
 | C8 | Web UI design review — the findings PR #160 did not fix | **Two fixes shipped** (PR [#160](https://github.com/Tiramisioux/cinemate/pull/160), merged `1675ca66`); remaining 8 findings not started, W1 needs an operator decision | `C8-web-ui-review/PLAN.md` (ledger entry incl. the W1 ADR question); harness + measurements in external `development/web-ui-review/` | `fix/web-ui-mobile` off `dev` (merged); remainder on `fix/web-ui-portrait` off `dev` (cinemate only, to be cut) |
+| C9 | Restore working 12-bit ClearHDR — deployment pairing, the three fixed-but-undeployed defects, the boot-latched pedestal fill, and four regression traps | **Filed 2026-08-31, nothing implemented**; gates G0–G6 unrun | `C9-clearhdr-12bit-restore/PLAN.md` (ledger entry incl. gates, hypotheses and scope record); curve provenance on cinemate branch `docs/ccmp12-workspace` @ `21f1f1b` (`innomaker585/ccmp12-lut/`) | none yet — L0 is a merge of cinepi-raw `dev` → `main` plus a `versions.env` pairing, not a feature branch |
 
-Next free step: **C9**.
+Next free step: **C10**.
 
 ## Adding a feature
 

@@ -535,8 +535,28 @@ class SensorDetect:
     def _list_cameras(self, hdr: bool = False) -> str:
         """Run ``cinepi-raw --list-cameras`` (optionally with ``--hdr sensor``).
 
-        Returns stdout, or "" when the run fails. The HDR run is best-effort:
-        a cinepi-raw build without ClearHDR support just yields no extra modes.
+        Returns stdout, or "" when the run fails.
+
+        The HDR run used to be treated as unconditionally best-effort -- "a
+        cinepi-raw build without ClearHDR support just yields no extra modes"
+        -- and the exit code was never looked at. Since cinepi-raw 58cf8cc
+        that is no longer a safe assumption: ``Options::Parse()`` now *throws*
+        when the sensor does not confirm ``wide_dynamic_range=1`` within its
+        retry window, rather than launching against a combiner that is off.
+        A thrown probe writes to stderr and exits non-zero with an empty
+        stdout, which is byte-for-byte indistinguishable here from a build
+        that simply has no ClearHDR -- so the ClearHDR modes vanish from the
+        mode table with nothing logged, and the operator sees a camera that
+        no longer offers 12-bit ClearHDR at all.
+
+        The contention is real and expected on this path: cinemate's own
+        ``CinePiController._set_wide_dynamic_range()`` writes the same subdev
+        control from ``_publish_resolution_gui_state()``, and round-6 hardware
+        notes record it losing that race on effectively every resolution
+        change. So this run failing is a diagnosable event, not background
+        noise, and it is logged as one. Behaviour on failure is unchanged --
+        still "" and still best-effort -- because a real missing-ClearHDR
+        build must keep working; the difference is that it now says so.
         """
         # Probe under the same pixel-rate ceiling the real launch will use, so
         # the mode table cannot advertise a frame rate the configured RP1
@@ -551,6 +571,22 @@ class SensorDetect:
         except Exception as exc:  # pragma: no cover - defensive
             logging.warning("'%s' failed: %s", cmd, exc)
             return ""
+        if proc.returncode != 0:
+            stderr = (proc.stderr or "").strip()
+            logging.warning(
+                "'%s' exited %d%s%s",
+                cmd,
+                proc.returncode,
+                ": " + stderr if stderr else " with no diagnostic on stderr",
+                (
+                    " -- the ClearHDR modes will be missing from the mode table "
+                    "this session. A wide_dynamic_range refusal here is the "
+                    "invalid-combo BLC-fill guard (cinepi-raw 58cf8cc), not a "
+                    "build without ClearHDR support."
+                    if hdr
+                    else ""
+                ),
+            )
         return proc.stdout or ""
 
 

@@ -1,67 +1,121 @@
 # C9 · Restore working 12-bit ClearHDR
 
-!!! note "Status 2026-08-31 — filed, nothing implemented, all gates unrun"
-    Desk research only. Written against cinemate `origin/dev` @ `db2f483` and cinepi-raw
-    `origin/dev` @ `24fd76a`. No Pi time. Every prediction below is stated in advance so a
-    hardware session can falsify it, per the C5/C7 method.
+!!! note "Status 2026-08-31 — target is `dev`; one fix pushed, gates unrun"
+    **Goal: 12-bit ClearHDR working on `dev` again.** Written against cinemate `origin/dev`
+    @ `db2f483` and cinepi-raw `origin/dev` @ `24fd76a`. No Pi time. Every prediction below
+    is stated in advance so a hardware session can falsify it, per the C5/C7 method.
+
+    One fix is implemented: the probe-failure diagnostic in §R. Everything else is analysis.
 
 ## What this is
 
-12-bit ClearHDR does not currently work. This step is the restore path.
+12-bit ClearHDR worked on `dev` at the `milestone-mono-clearhdr-2026-08-27` tag and does not
+now. This step is the restore path, targeting `dev`.
 
-The important finding up front: **this is not one defect.** It is three independent
-problems stacked on top of each other, and they have to be cleared in order, because the
-first one makes the other two impossible to observe.
+The important finding up front: **this is not one defect.** It is four independent problems,
+and they have to be cleared in order, because the earlier ones make the later ones impossible
+to observe.
 
 | Layer | Problem | State |
 |---|---|---|
-| L0 | A fresh install deploys July code that has no imx585 ClearHDR at all | **not fixed** — desk work, blocking |
-| L1 | Three ClearHDR defects, all root-caused and fixed on `dev`, none on `main` | fixed, **not deployed** |
+| R | A ClearHDR probe failure is swallowed, so the HDR modes vanish silently | **fix pushed**, needs the Pi to confirm the cause |
+| L0 | `dev` is not what a camera runs unless it is explicitly asked for | not fixed — one-line operator config |
+| L1 | Three ClearHDR defects, root-caused and fixed **on `dev`** | fixed; `main` does not have them |
 | L2 | A boot-latched combiner pedestal fill | **root cause unknown** |
-| L3 | Four regression traps that can silently re-break it | **not fixed** |
+| L3 | Four regression traps that can silently re-break it | one fixed below, three open |
 
 ---
 
-## L0 — A fresh install cannot do ClearHDR at all
+## R — The regression on `dev` since the milestone
 
-`cinemate-install.sh:84` sets `CINEPI_RAW_REPO_REF="${CINEPI_RAW_REPO_REF:-}"`, empty.
-`ensure_repo()` (`:397-409`) with an empty ref runs a plain `git clone`, which lands on the
-default branch — cinepi-raw **`main`**, still at `774402c` (2026-07-08), 59 commits behind
-`dev`.
+This is the new finding, and it is the leading explanation for "it worked and now it doesn't".
 
-On that tree, `core/options.cpp:211` reads:
+**What changed.** cinepi-raw `58cf8cc` (2026-08-29, `dev` only — after the milestone tag)
+made `Options::Parse()` **throw** when the sensor does not confirm `wide_dynamic_range=1`
+within its retry window (5 attempts, ~200 ms), rather than launching against a combiner that
+is off. That was the right call — it replaced silent pedestal-fill recordings with a loud
+refusal.
 
-```cpp
-if ((hdr == "sensor" || hdr == "auto") && cam_id == "imx708")
+**Why it fires.** The subdev is under contention at exactly that moment. cinemate's own
+`CinePiController._set_wide_dynamic_range()` writes the same control from
+`_publish_resolution_gui_state()`, before the relaunch that will own the new mode — and its
+docstring records the round-6 hardware finding verbatim: it "logged 'no subdev accepted' on
+effectively every resolution change all session". Two independent writers, one control, and
+cinepi-raw's own re-enable is the one that now has a hard deadline.
+
+**Why nobody saw it.** `sensor_detect._list_cameras()` ran the probe and returned
+`proc.stdout or ""` — **the exit code was never checked and stderr was discarded**. A thrown
+HDR probe exits non-zero with an empty stdout, which was byte-for-byte indistinguishable from
+the legitimate "this build has no ClearHDR" case the function was written for. So:
+
+    probe throws -> stdout "" -> parsed as {} -> _merge_mode_lists adds nothing
+                 -> the ClearHDR modes are simply absent from the mode table, silently
+
+The operator sees a camera that no longer offers 12-bit ClearHDR, with nothing in the log.
+On a real launch (not the probe) the same throw kills the process outright.
+
+This fits the symptom change exactly: before `58cf8cc` the failure produced bad images
+(pedestal fill); after it, the modes disappear or the launch dies. The milestone tag predates
+the throw.
+
+**Fixed here:** `_list_cameras()` now checks the exit code and logs stderr, and on the HDR run
+names the likely cause and its consequence. Behaviour is deliberately unchanged — still `""`,
+still best-effort, because a genuine no-ClearHDR build must keep working. The difference is
+that it now says so. `_test/test_sensor_detect_probe_failure.py` pins both directions,
+including that a healthy probe stays silent.
+
+**This is a diagnostic, not a cure.** It does not fix the race. It converts an invisible
+failure into a visible one, which is the prerequisite for every gate below — without it, G0
+and G4 cannot distinguish "no ClearHDR support" from "ClearHDR refused to start".
+
+### What still needs doing on the cinepi-raw side
+
+I have read-only access to cinepi-raw, so these are recommendations, not pushed changes:
+
+1. **Widen or back off the retry.** 5 × 50 ms is short against a process teardown. Either
+   extend it, or have cinemate stop writing `wide_dynamic_range` altogether and leave the
+   control to cinepi-raw, which forces it off and back on anyway — cinemate's write is
+   discarded by design at `Options::Parse()`, so it buys nothing and supplies the contention.
+   *Removing cinemate's writer is the cleaner fix and is cinemate-side, so it can be done here.*
+2. **The empty-guard asymmetry in `apply_hdr_thresholds`.** The startup restore path is
+   correctly gated (`cinepi_controller.cpp:297`: skip when both keys are empty). The live
+   handler is not: `build_hdr_threshold_pair` turns `""` into `0`, and `{0,0}` passes its own
+   `high < low` guard, so a publish of an unset threshold **writes the degenerate pair** that
+   `bfea0be` exists to prevent. `22a1845` says the two handlers "share one applier so the
+   guard cannot drift" — the `high >= low` guard is shared, the empty check is not.
+
+---
+
+## L0 — `dev` is not what a camera runs
+
+`cinemate-install.sh:84` and `:82` leave `CINEPI_RAW_REPO_REF` and `CINEMATE_REPO_REF` empty.
+`ensure_repo()` (`:397-409`) with an empty ref runs a plain `git clone`, landing on each
+repo's default branch — **`main`**.
+
+That matters more for cinepi-raw than for cinemate. cinepi-raw `main` is `774402c`
+(2026-07-08), 59 commits behind `dev`, and `core/options.cpp:211` gates sensor HDR to
+`imx708` — imx585 is not in it, so there is no ClearHDR at all. cinemate `main` is closer but
+still lacks every end-of-August fix: `git diff origin/dev..origin/main` shows it missing
+`test_clearhdr_threshold_defaults.py`, `test_wide_dynamic_range_retry.py`,
+`test_clearhdr_self_heal.py` and 58 lines of `config_loader.py`.
+
+Note `main` and `dev` have **diverged** — `main` is 3 merge commits ahead of `dev` as well as
+24 behind, so this is not a fast-forward.
+
+**For the stated goal, L0 is one line of operator config**, not a merge:
+
+```sh
+CINEMATE_REPO_REF=dev CINEPI_RAW_REPO_REF=dev ./cinemate-install.sh
 ```
 
-imx585 is not in it. So on a camera installed today there is no `wide_dynamic_range` write,
-no ClearHDR mode enumeration, no CCMP LUT, no `LinearizationTable`, no `ccmpPreview` stage,
-and none of the L1 fixes. **12-bit ClearHDR is not broken on a fresh install — it is absent.**
-
-`versions.env:36` says it plainly: `Last verified pairing: (none recorded yet)`.
-
-cinemate's own `main` is much closer (24 commits behind `dev`, and `02b2bec` — the milestone
-commit — is on it), but it still ships the degenerate threshold pair at
-`settings.jsonc:196-197`.
-
-### L0 fix
-
-1. Merge cinepi-raw `dev` → `main` (59 commits, 8 CI-covered unit suites) **or**, if `main`
-   is to stay a release branch, set an explicit pairing in `versions.env`:
-   `CINEPI_RAW_REPO_REF=dev` and `CINEMATE_REPO_REF=dev`.
-   *Recommendation: merge.* A pin to `dev` records a moving target as a "verified pairing",
-   which is the thing `versions.env` exists to prevent.
-2. Merge cinemate `dev` → `main` so the L1 threshold fixes ship.
-3. Fill in `versions.env`'s pairing block with the two resulting shas, the date, and what
-   was verified — the file's own instructions at `:25-27`.
-
-**This is desk work and it blocks everything else.** Until it is done, no hardware
-observation of 12-bit ClearHDR is meaningful, because the camera is running July code.
+Merging `dev` → `main` is the separate release question and is deliberately **not** part of
+this step. But `versions.env:36` still reads `Last verified pairing: (none recorded yet)`, and
+that should be filled in the moment a working combination is found — it is the whole point of
+the file.
 
 ---
 
-## L1 — Root-caused, fixed on `dev`, not deployed
+## L1 — Root-caused and fixed on `dev`
 
 Three separate defects, each hardware-motivated, each already closed:
 
@@ -96,7 +150,8 @@ was writing the prohibited state as documented.
 Fixed: cinepi-raw `22a1845` — order corrected, pair validated before any write, violating
 pair refused with a warning. Confirmed over I2C on hardware before changing anything.
 
-**L1 needs no new code. It needs L0.**
+**L1 needs no new code on `dev`.** It needs L0 (be running `dev`) and R (be able to
+see it when ClearHDR refuses to start).
 
 ---
 
@@ -196,10 +251,17 @@ camera. Pre-checks first, per the hardware-session method: `uname -r` ≥ 6.12.9
 `free -g`, both repos' shas recorded, `v4l2-ctl --list-ctrls-menus` captured **before**
 anything is changed.
 
-- **G0 — the camera is running the right code.** `git -C ~/cinepi-raw rev-parse HEAD`
-  resolves to a tree containing `imx585` in `core/options.cpp`'s HDR gate, and
-  `ccmp_lut.hpp` exists. *Prediction: on an unmodified install today, both fail.* This gate
-  exists to make L0 visible rather than assumed.
+- **G0 — the camera is running `dev`.** `git -C ~/cinepi-raw rev-parse --abbrev-ref HEAD`
+  and the same for `~/cinemate`. The cinepi-raw tree must contain `imx585` in
+  `core/options.cpp`'s HDR gate and have `cinepi/ccmp_lut.hpp`.
+  *Prediction: on an install that never set the REPO_REFs, both are on `main` and both
+  checks fail.* This gate exists to make L0 visible rather than assumed.
+- **GR — the probe failure is now visible (tests R).** Start cinemate and read the log.
+  *Prediction: either the ClearHDR modes are present, or there is now a `cinepi-raw
+  --list-cameras ... --hdr sensor' exited N` warning naming `wide_dynamic_range`.* The
+  outcome that falsifies R's hypothesis is modes missing **with no warning** — that would
+  mean the probe exited 0 and something else drops them. Run this before G2/G3: it is the
+  instrument the rest depend on.
 - **G1 — the stack builds and its own tests pass.** `ninja -C ~/cinepi-raw/build` then
   `meson test -C ~/cinepi-raw/build` — 8 suites including `ccmp_lut`, `ccmp_log_compose`,
   `ccmp_preview`, `ccmp_gate`. Float determinism against the golden tables is not automatic

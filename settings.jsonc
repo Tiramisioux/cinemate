@@ -136,7 +136,7 @@
     },
     "shutter_a": {
       "steps": [1, 45, 90, 135, 172.8, 180, 225, 270, 315, 346.6, 360],
-      "free": false,
+      "free": true,
       "free_increment": 1,
       // Separate, finer granularity used only while `set shutter a sync` is
       // on -- sync mode tracks exposure time continuously across fps
@@ -253,7 +253,7 @@
     },
     "preview": {
       "default_zoom": 1.0,
-      "zoom_steps": [1.0, 2.0],
+      "zoom_steps": [1.0, 1.5, 2.0],
       // Dual-sensor HDMI preview source at startup: both | cam0 | cam1 |
       // pip_cam0 | pip_cam1. Switch live with `set preview`. No effect with
       // a single sensor.
@@ -313,7 +313,7 @@
     // dt_pin/button_pin at startup. Set it true (and wire the pins) to use it.
     "rotary_encoders": [
       {
-        "enabled": false,
+        "enabled": true,
         "clk_pin": 9,
         "dt_pin": 11,
         "button_pin": 10,

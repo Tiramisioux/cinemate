@@ -549,17 +549,26 @@ class SensorDetect:
         mode table with nothing logged, and the operator sees a camera that
         no longer offers 12-bit ClearHDR at all.
 
-        cinemate no longer writes ``wide_dynamic_range`` itself -- that second
-        writer was removed precisely because it contended with this probe and
-        with the launch -- so a refusal here is now the sensor's own answer,
-        not cinemate racing itself. That makes it worth logging rather than
-        swallowing. Behaviour on failure is unchanged -- still "" and still
-        best-effort -- because a real missing-ClearHDR build must keep
-        working; the difference is that it now says so.
+        A refusal here is the sensor's own answer. cinepi-raw throws when NO
+        subdev confirms the control, which covers: the imx585 driver not being
+        bound or not being the branch that exposes it, every
+        ``open(/dev/v4l-subdevN, O_RDWR)`` failing on permissions, a stale
+        cinepi-raw holding the subdev (``_kill_stale_cinepi_raw()`` above
+        handles that one), or a genuine sensor refusal. Note it does NOT cover
+        "wrote but the sensor did not take it": ``set_subdev_hdr_ctrl`` sets
+        ``confirmed`` on a successful ``VIDIOC_S_CTRL`` without reading the
+        control back.
 
-        ``_kill_stale_cinepi_raw()`` above removes the other known holder of
-        that subdev before this runs, so a failure that survives both is a
-        real one.
+        It is specifically NOT cinemate racing itself. ``detect_camera_model()``
+        runs from ``SensorDetect.__init__`` at ``main.py:621``, before
+        ``CinePiController`` is constructed at ``:754``, so the
+        ``_set_wide_dynamic_range()`` that used to live there could never have
+        contended with this probe -- it did not exist yet. (That writer is gone
+        now regardless; see PLAN.md section R.)
+
+        Behaviour on failure is unchanged -- still "" and still best-effort --
+        because a real missing-ClearHDR build must keep working; the difference
+        is that it now says so.
         """
         # Probe under the same pixel-rate ceiling the real launch will use, so
         # the mode table cannot advertise a frame rate the configured RP1
@@ -583,9 +592,11 @@ class SensorDetect:
                 ": " + stderr if stderr else " with no diagnostic on stderr",
                 (
                     " -- the ClearHDR modes will be missing from the mode table "
-                    "this session. A wide_dynamic_range refusal here is the "
-                    "invalid-combo BLC-fill guard (cinepi-raw 58cf8cc), not a "
-                    "build without ClearHDR support."
+                    "this session. If the message names wide_dynamic_range, that "
+                    "is cinepi-raw 58cf8cc refusing to launch because no sensor "
+                    "subdev confirmed the control: check that the imx585 driver "
+                    "is bound and is the innomaker-v1.0 branch, and that the "
+                    "config.txt overlay still carries the ccmp parameter."
                     if hdr
                     else ""
                 ),

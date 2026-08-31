@@ -8,6 +8,9 @@
     Two fixes are implemented, both in §R: the probe-failure diagnostic, and the removal
     of cinemate's second `wide_dynamic_range` writer. Everything else is analysis.
 
+    **Audited 2026-08-31** by an independent pass. §R's original causal claim was falsified
+    and is corrected in place; L0 gained a worse failure mode; §P and Prevention are new.
+
 ## What this is
 
 12-bit ClearHDR worked on `dev` at the `milestone-mono-clearhdr-2026-08-27` tag and does not
@@ -19,11 +22,12 @@ to observe.
 
 | Layer | Problem | State |
 |---|---|---|
-| R | Two writers race one subdev control, and the resulting probe failure is swallowed | **both fixes pushed**, needs the Pi to confirm the cause |
+| R | A ClearHDR launch/probe refusal is swallowed, so the HDR modes vanish silently | **fix pushed**; cause still unidentified — G0/GR discriminate |
 | L0 | `dev` is not what a camera runs unless it is explicitly asked for | not fixed — one-line operator config |
 | L1 | Three ClearHDR defects, root-caused and fixed **on `dev`** | fixed; `main` does not have them |
 | L2 | A boot-latched combiner pedestal fill | **root cause unknown** |
 | L3 | Four regression traps that can silently re-break it | one fixed below, three open |
+| P | **Why it keeps breaking** — seven recurring patterns, and the machinery that would stop them | analysis + 9 named additions, none implemented |
 
 ---
 
@@ -37,12 +41,37 @@ within its retry window (5 attempts, ~200 ms), rather than launching against a c
 is off. That was the right call — it replaced silent pedestal-fill recordings with a loud
 refusal.
 
-**Why it fires.** The subdev is under contention at exactly that moment. cinemate's own
-`CinePiController._set_wide_dynamic_range()` writes the same control from
-`_publish_resolution_gui_state()`, before the relaunch that will own the new mode — and its
-docstring records the round-6 hardware finding verbatim: it "logged 'no subdev accepted' on
-effectively every resolution change all session". Two independent writers, one control, and
-cinepi-raw's own re-enable is the one that now has a hard deadline.
+**Why it fires.** cinepi-raw throws when **no subdev confirms the control**, which covers
+several unrelated causes: the imx585 driver not bound or not the branch that exposes
+`wide_dynamic_range`; every `open(/dev/v4l-subdevN, O_RDWR)` failing on permissions; a stale
+cinepi-raw still holding the subdev; or a genuine sensor refusal. G0 and GR exist to tell
+these apart — the driver-branch case is the most likely and the cheapest to check.
+
+⚠ **`58cf8cc` does less than its title says.** It is titled *"verify wide_dynamic_range
+actually landed before trusting it"*, but `set_subdev_hdr_ctrl` (`core/options.cpp:141-148`)
+sets `confirmed` on a successful `VIDIOC_S_CTRL` and **never reads the control back** — the
+only `G_CTRL` is the pre-write one. So "wrote but the sensor didn't take it" still passes
+silently; the throw covers ioctl errors and no-subdev-found, not a sensor that ignored the
+write. §R's earlier wording and gate G4 both assumed a confirmation the code does not
+perform. A `VIDIOC_G_CTRL` read-back after the write is the cinepi-raw-side fix.
+
+⚠ **Correction, 2026-08-31.** This section first claimed cinemate's own
+`_set_wide_dynamic_range()` supplied the contention that trips the throw, and that it raced
+the `--hdr sensor` probe. **The probe half is impossible** and the launch half is unproven:
+
+- `_list_cameras()` is reached only from `detect_camera_model()`, which runs from
+  `SensorDetect.__init__` — constructed at `main.py:621`. `CinePiController`, which owned the
+  writer, is constructed at `main.py:754`. At probe time the writer did not exist.
+  (`check_camera()` is the only other caller of `detect_camera_model()` and has zero callers.)
+- On the launch path the two writes are separated by `_pace_resolution_change` (≥0.25 s),
+  a `time.sleep(0.12)`, and `CinePiManager.restart()`, which itself shells out a full
+  `cinepi-raw --list-cameras` (`cinepi_multi.py:186`) that runs `set_subdev_hdr_ctrl(0)`.
+  cinemate's write is overwritten well before the launch that throws.
+
+The removal in 87fa315 is still right — the writer was dead weight, it fired mid-take without
+a relaunch, and it was a second writer on a control with no declared owner (see §P1 below).
+But it is **a cleanup, not the identified cause of the regression.** The commit messages of
+7097e3d and 87fa315 state the superseded story; this section is the correction of record.
 
 **Why nobody saw it.** `sensor_detect._list_cameras()` ran the probe and returned
 `proc.stdout or ""` — **the exit code was never checked and stderr was discarded**. A thrown
@@ -104,12 +133,22 @@ I have read-only access to cinepi-raw, so these are recommendations, not pushed 
 `ensure_repo()` (`:397-409`) with an empty ref runs a plain `git clone`, landing on each
 repo's default branch — **`main`**.
 
-That matters more for cinepi-raw than for cinemate. cinepi-raw `main` is `774402c`
-(2026-07-08), 59 commits behind `dev`, and `core/options.cpp:211` gates sensor HDR to
-`imx708` — imx585 is not in it, so there is no ClearHDR at all. cinemate `main` is closer but
-still lacks every end-of-August fix: `git diff origin/dev..origin/main` shows it missing
+**On a Pi 5 / CM5 a main+main install does not produce a camera at all — never mind ClearHDR.**
+cinemate `main` passes `--max-pixel-rate` on both probes (`sensor_detect.py:511`) and on every
+launch (`cinepi_multi.py:533`), from `24a3968` (2026-08-29). cinepi-raw `main` has been frozen
+since 2026-07-08 and has **no such option** (`git show origin/main:core/options.cpp | grep
+max.pixel.rate` → nothing) and no `allow_unregistered`, so boost throws `unknown_option` and
+every `cinepi-raw` invocation exits 255 before printing anything. `rp1_regime.pixel_rate()` is
+non-`None` on any bcm2712 board, so the flag is always passed. This is a two-day-old break and
+a better candidate than anything in §R for a recent "it worked and now it doesn't" on a
+default install.
+
+Beneath that: cinepi-raw `main` gates sensor HDR to `imx708` (`core/options.cpp:211`), so
+there is no imx585 ClearHDR even if the flag problem is removed. cinemate `main` is closer but
+lacks every end-of-August fix — `git diff origin/dev..origin/main` shows it missing
 `test_clearhdr_threshold_defaults.py`, `test_wide_dynamic_range_retry.py`,
-`test_clearhdr_self_heal.py` and 58 lines of `config_loader.py`.
+`test_clearhdr_self_heal.py` and 58 lines of `config_loader.py`, and still shipping
+`threshold_low/high = 0/0`.
 
 Note `main` and `dev` have **diverged** — `main` is 3 merge commits ahead of `dev` as well as
 24 behind, so this is not a fast-forward.
@@ -256,6 +295,99 @@ threshold low 500 / high 3000`, the pair whose order was inverted until `22a1845
 
 ---
 
+## P — Why this keeps breaking
+
+Four independent ClearHDR outages in seven weeks is a pattern, not bad luck. The patterns
+below are ranked by how much breakage they actually caused, each with instances.
+
+### P1 — Every piece of ClearHDR-deciding state lives outside both programs, and no repo names an owner
+
+Four things decide whether 12-bit ClearHDR works, and **not one of them is in either repo**:
+
+| State | Where it really lives | How it broke |
+|---|---|---|
+| `wide_dynamic_range` | the sensor subdev | cinepi-raw took ownership at `b0bbd1a` (07-12); cinemate added a second writer at `ee49253` (07-14), **two days later**. It survived 48 days and three repairs (`c1831a1` added a retry to a write that should not have existed; `a05c97e` then restored a log line that retry had silenced) before `87fa315` deleted it. |
+| the `dtoverlay` line | `/boot/firmware/config.txt` | `02b2bec` taught the installer to write `,ccmp` and never taught `boot_config.overlay_line_for()` to keep it. One settings-editor save deletes the 12-bit mode. Still open (L3-1). |
+| the threshold pair | the driver's own defaults | cinemate re-seeded `0/0` over them on every boot until `bfea0be`. |
+| the imx585 driver branch | a DKMS build on the Pi | `02b2bec` flipped the pin to `innomaker-v1.0`; every later fix assumes it, and **neither repo pins or tests the driver sha**. The ccmp12 workspace measured the *other* branch. |
+
+This one pattern accounts for three of the four mechanisms in this plan.
+
+### P2 — Cross-repo contracts are unpinned, untested, and currently broken
+
+`versions.env:36` still reads `Last verified pairing: (none recorded yet)`. CI clones
+cinepi-raw at a hardcoded `--branch dev` (`.github/workflows/checks.yml`), not from
+`versions.env`, so no recorded pairing is ever what CI tests. The live consequence is L0's
+`--max-pixel-rate` break: the same fix (`bfea0be`/`9f744fb`) was even authored twice and
+reached `main` zero times.
+
+### P3 — Silent failure is the default, and the guard written against it was gated onto the wrong branch
+
+`05d896b` (08-17) added a fail-loudly guard **for exactly this failure mode** and gated it on
+`if hdr_out.strip():` (`sensor_detect.py:634`). Twelve days later `58cf8cc` made the probe
+throw — which returns empty stdout, which skips the guard. Same shape still open elsewhere:
+`_finalize_modes` prunes ClearHDR modes with a bare `continue`, warning only if *every* mode
+goes; `cinepi_multi.py:277` logs a launch exit at INFO and inspects no return code, so G4's
+"throws loudly" prediction is currently uncheckable on the cinemate side.
+
+### P4 — Causal stories get asserted without a discriminating measurement, then encoded as fact
+
+`58cf8cc` turned a tolerated failure fatal with no audit of the other repo — and does not do
+what its title claims (no read-back). `22a1845` rediscovered the prohibited-pair mechanism,
+noted that escaping it "needs a large light transient at the sensor, which no software path
+can produce" — the exact recovery signature rounds 8/9 recorded — then declared "same symptom,
+different route" on a single register read. **And this plan did it too**: §R's first version
+asserted a probe-contention story that `main.py:621` vs `:754` falsifies in a minute. Each of
+these becomes a load-bearing premise for the next session.
+
+### P5 — Mitigation-first debugging with no instrument that separates the defect from health
+
+Six commits in 36 hours (`db3b4d4` → `65e60a8` → `f7cedba` → `e3963cb` → `24ee25f` →
+`53bec8b`), ending with the discovery that the detector reads **1 unique value for a healthy
+stream and 1 for a filling one** — it could not tell them apart — and the feature shipping
+disabled. G2 and G3 are the work that should have preceded `db3b4d4`.
+
+### P6 — The answer was already written down, on a branch no session sees
+
+`origin/docs/ccmp12-workspace` @ `21f1f1b` (committed 08-10) records the prohibited
+`EXP_TH_H < EXP_TH_L` state and that the sensor "only outputs the BLC pedestal", with a stated
+next action. That branch forked at `9c57ef4` (07-07) and is not an ancestor of `dev`.
+`22a1845` rediscovered it **20 days later**, after four hardware rounds spent on mitigations.
+Reinforcing it: `SKILL-PAYLOAD.md`, the LLM-facing briefing, returns **zero** hits for
+`ccmp|clearhdr|wide_dynamic|linearization|decompand`; `FINDINGS.md` (228 rows), both
+`PI-RESULTS` files and `PI-VERIFICATION-QUEUE.md` contain no ClearHDR entry. **"Verified" in
+this project has never once meant ClearHDR was verified.**
+
+### P7 — Duplicated facts drift apart
+
+Five-plus copies of the ClearHDR defaults. `app/main/events.py:73-74` still hardcodes
+`threshold_low: 0` under a comment claiming it matches `main.py`. `overlay_line_for()`'s
+docstring says it "matches concept.html's `cfgOverlayLine()` exactly" — so the `,ccmp` fix
+has to land in two languages. C7's cinemate half is simply gone: `8dfcd165` is not a valid
+object and no `feature/clearhdr-controls` exists on the cinemate remote.
+
+---
+
+## Prevention — what to add, beyond fixing this instance
+
+The machinery already exists: `checks.yml` runs the full pytest suite, `docs_drift_check.py`,
+`design_token_diff.py`, `link_frequency_drift_check.py`, and clones cinepi-raw to run
+`redis_key_diff.py`. This class of fact just sits outside its reach.
+
+| # | Add | Closes |
+|---|---|---|
+| 1 | `docs/state-ownership.md` in both repos: one table naming the single writer of `wide_dynamic_range`, `IMX585_CID_HDR_DATASEL_TH`, `hdr_blend`, `hdr_gain_adder`, `hcg`, the `dtoverlay` line, the driver branch | P1 |
+| 2 | `tools/control_ownership_check.py` in CI — generalise `test_no_cinemate_wide_dynamic_range_writer.py` from one control to "no sensor subdev control has two writers" | P1 |
+| 3 | `_test/test_boot_config_overlay_roundtrip.py` — every `DTO_OVERLAY=` literal in the installer must round-trip through `_model_from_overlay_value()` → `overlay_line_for()`. **Fails today.** | L3-1, P1 |
+| 4 | Make CI clone cinepi-raw at `CINEPI_RAW_REPO_REF` and **fail when it is empty** — the only check that would have caught the `--max-pixel-rate` break | P2 |
+| 5 | A launch-side mirror of `7097e3d`: non-zero `returncode` in `CinePiProcess.run()` logs at ERROR with stderr tail, plus a Redis key the GUI surfaces | P3 |
+| 6 | A `VIDIOC_G_CTRL` read-back in cinepi-raw's `set_subdev_hdr_ctrl` before setting `confirmed` | P4 |
+| 7 | `dev-track/C9-clearhdr-12bit-restore/RESULTS.md` as the gate-outcome destination — `cinemate-handbook/lessons/hardware-log.md` exists in neither repo | P6 |
+| 8 | Merge `innomaker585/ccmp12-lut/` forward, and add a ClearHDR section to `SKILL-PAYLOAD.md` with a `docs_drift_check` assertion so it cannot silently freeze again. G5 depends on `tools/verify_dng_table.py` from that branch and never says to check it out | P6 |
+| 9 | Add G0/GR/G1–G6 to `PI-VERIFICATION-QUEUE.md` | P6 |
+
+---
+
 ## Verification gates
 
 Run in order; stop at the first failure. Gates 0–3 need no chart and no operator at the
@@ -273,8 +405,8 @@ anything is changed.
   --list-cameras ... --hdr sensor' exited N` warning naming `wide_dynamic_range`.* The
   outcome that falsifies R's hypothesis is modes missing **with no warning** — that would
   mean the probe exited 0 and something else drops them. Run this before G2/G3: it is the
-  instrument the rest depend on. With cinemate's writer removed, a refusal here is now the
-  sensor's own answer rather than cinemate racing itself.
+  instrument the rest depend on. A refusal here names one of §R's causes; G0 settles the
+  driver-branch one.
 - **G1 — the stack builds and its own tests pass.** `ninja -C ~/cinepi-raw/build` then
   `meson test -C ~/cinepi-raw/build` — 8 suites including `ccmp_lut`, `ccmp_log_compose`,
   `ccmp_preview`, `ccmp_gate`. Float determinism against the golden tables is not automatic

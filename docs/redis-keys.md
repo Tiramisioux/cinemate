@@ -16,9 +16,9 @@ Each entry explains which component normally writes the key and whether it makes
 | exposure_time | Cinemate | Current exposure time in seconds | No |
 | fps | Cinemate -> CinePi-raw | Target frames per second | Yes |
 | fps_user | Cinemate | User-selected FPS value stored by the UI/controller | No |
-| fps_actual | CinePi-raw -> Cinemate | Measured FPS from the running pipeline | No |
+| fps_actual | Cinemate (RedisListener) | Measured frame rate: the mean of the last 100 inter-frame intervals CinePi-raw reports on `cp_stats`. Reports cam0 on dual-sensor rigs | No |
 | user_changing_fps | Cinemate (RedisListener) | `1` while an fps change is debouncing; cleared once `fps` has been stable for a while | No |
-| fps_last | Cinemate | Previous stable FPS value from stats | No |
+| fps_last | Cinemate | FPS at the previous shutdown, restored as the startup FPS | No |
 | fps_max | Cinemate startup | Maximum FPS supported by the current sensor mode | No |
 | fps_phase_lock | Cinemate startup | Runtime enable for CinePi-raw's closed-loop frame-rate phase lock, from `sensors.<cam>.phase_lock` in settings.jsonc (default on); read once at CinePi-raw startup, not live | No |
 | sensor_mode | Cinemate -> CinePi-raw startup | Active sensor resolution/mode index | Yes (causes pipeline restart) |
@@ -93,5 +93,5 @@ transition instead of a stale value.
 | audio_capture_gain_db | Cinemate startup | Capture gain in dB applied to the active USB mic, from `audio_capture` in settings.jsonc (per-mic-type block, e.g. `16bit.capture_gain_db`); read back by the USB hotswap monitor on mic reconnect | No |
 | trigger_mode | -- | Defined in `ParameterKey` but not currently written or read anywhere in Cinemate or CinePi-raw | -- |
 | gui_layout | Cinemate | Path to the active GUI layout preset | No |
-| pi_model | Cinemate | Raspberry Pi model string | No |
+| pi_model | Cinemate startup | Platform family, not the full board name: `pi5` (Pi 5 / 500 / CM5), `pi4` (Pi 4 / 400 / CM4), `other`, or `unknown` | No |
 | sensor | Cinemate startup | Active camera model key | No |

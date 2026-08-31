@@ -577,73 +577,23 @@ class CinePiController:
     # Live knobs (threshold / blend / gain adder) are plain sensor controls:
     # setting the Redis key publishes on cp_controls and cinepi-raw applies
     # them to the sensor while streaming. Their startup values come from
-    # capture.resolutions.hdr in settings.jsonc (seeded in main.py). Toggling
-    # ClearHDR itself (wide_dynamic_range) changes the sensor's mode list --
-    # _publish_resolution_gui_state() sets it alongside the hdr Redis key on
-    # every resolution change, so it needs a restart to take effect exactly
-    # like the --hdr sensor launch flag it accompanies.
-
-    def _set_wide_dynamic_range(self, enable: bool) -> bool:
-        """Set wide_dynamic_range on every sensor subdev that accepts it.
-
-        Returns True when at least one subdev took the control. The control
-        changes the sensor's mode list, so callers must re-detect modes and
-        restart cinepi-raw afterwards.
-
-        This races the outgoing cinepi-raw process's teardown: this call
-        fires from _publish_resolution_gui_state(), which runs before the
-        relaunch that will actually own the new mode, so the subdev is often
-        still held by the process this resolution change is about to
-        replace. Confirmed on hardware (round 6): the identical `v4l2-ctl
-        --set-ctrl wide_dynamic_range=1` on the imx585 subdev succeeds
-        silently when run standalone with no process contention, yet this
-        method logged "no subdev accepted" on effectively every resolution
-        change all session -- not a real incompatibility, a race it wasn't
-        retrying. Every attempt logging a warning also drowned out any
-        genuine failure (wrong subdev, control truly rejected) in the noise.
-        A short retry lets the common transient case actually succeed
-        instead of just failing quietly faster.
-        """
-        value = 1 if enable else 0
-        last_errors = {}
-        saw_any_subdev = False
-        for attempt in range(5):
-            applied = False
-            last_errors = {}
-            for idx in range(16):
-                dev = f"/dev/v4l-subdev{idx}"
-                if not os.path.exists(dev):
-                    continue
-                saw_any_subdev = True
-                probe = subprocess.run(
-                    ["v4l2-ctl", "-d", dev, "--set-ctrl", f"wide_dynamic_range={value}"],
-                    capture_output=True, text=True,
-                )
-                if probe.returncode == 0:
-                    logging.info(f"wide_dynamic_range={value} set on {dev}")
-                    applied = True
-                elif "unknown control" not in probe.stderr.lower():
-                    last_errors[dev] = probe.stderr.strip()
-            if applied:
-                return True
-            if attempt < 4:
-                time.sleep(0.05)
-        if last_errors:
-            logging.warning(
-                "No sensor subdev accepted wide_dynamic_range (imx585 ClearHDR) "
-                f"after retrying: {last_errors}"
-            )
-        elif saw_any_subdev:
-            # F-wdr-retry-silent-no-driver: every subdev rejected the control
-            # with "unknown control" -- the one unambiguously genuine failure
-            # (no imx585 driver bound at all) -- and last_errors is reset per
-            # attempt, so this case used to fall through and return False
-            # having logged nothing. The old pre-retry code logged it.
-            logging.warning(
-                "No sensor subdev accepted wide_dynamic_range (imx585 ClearHDR): "
-                "no subdev reported the control at all (imx585 driver not bound?)"
-            )
-        return False
+    # capture.resolutions.hdr in settings.jsonc (seeded in main.py).
+    #
+    # ClearHDR itself (the wide_dynamic_range subdev control) is deliberately
+    # NOT written from cinemate. cinepi-raw's Options::Parse() forces it off,
+    # enumerates, then turns it back on for --hdr sensor and re-enumerates --
+    # so it owns the control end to end, and set_resolution() only has to get
+    # the hdr Redis key right for the launch line.
+    #
+    # There used to be a _set_wide_dynamic_range() here, writing the control
+    # with v4l2-ctl on every resolution change. It fired from set_resolution()
+    # before the relaunch that would actually own the new mode, so it wrote
+    # while the outgoing cinepi-raw still held the subdev. Round-6 hardware
+    # notes record it losing that race on effectively every resolution change
+    # all session, and a retry loop was added for it (c1831a1). The retry made
+    # the noise go away; it did not make the write useful. cinepi-raw 58cf8cc
+    # then made an unconfirmed wide_dynamic_range=1 fatal, at which point a
+    # second writer on that control stopped being merely pointless.
 
     def set_hdr_threshold_low(self, value):
         """Set the ClearHDR data-selection threshold, low side (0–4095). Applied live."""
@@ -1705,14 +1655,18 @@ class CinePiController:
         self.redis_controller.set_value(ParameterKey.BIT_DEPTH.value, str(bit_depth_new))
         # ClearHDR (imx585): the mode carries the HDR flag, so selecting a
         # 12-bit-HDR or 16-bit-HDR mode turns the hdr key on and cinepi-raw
-        # launches with --hdr sensor; a plain mode turns it back off. Also
-        # set the wide_dynamic_range sensor control directly here (not just
-        # via --hdr sensor at cinepi-raw launch) so ClearHDR activates
-        # correctly regardless of which path picked the mode -- GUI, CLI
-        # `set resolution`, a pot, or the quad rotary.
+        # launches with --hdr sensor; a plain mode turns it back off.
+        #
+        # cinemate does NOT write the wide_dynamic_range subdev control here.
+        # cinepi-raw owns it: Options::Parse() forces it to 0, enumerates, then
+        # sets it back to 1 for --hdr sensor, so anything written here is
+        # discarded at the next launch -- and every SDR<->HDR transition is a
+        # relaunch by _resolution_change_needs_restart(). Writing it anyway put
+        # a second process on the same control at exactly the moment cinepi-raw
+        # needs it, which cinepi-raw 58cf8cc now treats as fatal. See that
+        # commit and dev-track/C9-clearhdr-12bit-restore/PLAN.md §R.
         hdr_new = bool(resolution_info.get('hdr', False))
         self.redis_controller.set_value(ParameterKey.HDR.value, 1 if hdr_new else 0)
-        self._set_wide_dynamic_range(hdr_new)
         self.redis_controller.set_value(ParameterKey.PACKING.value, str(packing_new))
         self.redis_controller.set_value(ParameterKey.GUI_LAYOUT.value, str(gui_layout_new))
         self.redis_controller.set_value(

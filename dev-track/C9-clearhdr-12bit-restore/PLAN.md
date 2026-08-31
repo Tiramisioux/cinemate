@@ -1,11 +1,12 @@
 # C9 · Restore working 12-bit ClearHDR
 
-!!! note "Status 2026-08-31 — target is `dev`; one fix pushed, gates unrun"
+!!! note "Status 2026-08-31 — target is `dev`; two fixes pushed, gates unrun"
     **Goal: 12-bit ClearHDR working on `dev` again.** Written against cinemate `origin/dev`
     @ `db2f483` and cinepi-raw `origin/dev` @ `24fd76a`. No Pi time. Every prediction below
     is stated in advance so a hardware session can falsify it, per the C5/C7 method.
 
-    One fix is implemented: the probe-failure diagnostic in §R. Everything else is analysis.
+    Two fixes are implemented, both in §R: the probe-failure diagnostic, and the removal
+    of cinemate's second `wide_dynamic_range` writer. Everything else is analysis.
 
 ## What this is
 
@@ -18,7 +19,7 @@ to observe.
 
 | Layer | Problem | State |
 |---|---|---|
-| R | A ClearHDR probe failure is swallowed, so the HDR modes vanish silently | **fix pushed**, needs the Pi to confirm the cause |
+| R | Two writers race one subdev control, and the resulting probe failure is swallowed | **both fixes pushed**, needs the Pi to confirm the cause |
 | L0 | `dev` is not what a camera runs unless it is explicitly asked for | not fixed — one-line operator config |
 | L1 | Three ClearHDR defects, root-caused and fixed **on `dev`** | fixed; `main` does not have them |
 | L2 | A boot-latched combiner pedestal fill | **root cause unknown** |
@@ -72,12 +73,23 @@ and G4 cannot distinguish "no ClearHDR support" from "ClearHDR refused to start"
 
 I have read-only access to cinepi-raw, so these are recommendations, not pushed changes:
 
-1. **Widen or back off the retry.** 5 × 50 ms is short against a process teardown. Either
-   extend it, or have cinemate stop writing `wide_dynamic_range` altogether and leave the
-   control to cinepi-raw, which forces it off and back on anyway — cinemate's write is
-   discarded by design at `Options::Parse()`, so it buys nothing and supplies the contention.
-   *Removing cinemate's writer is the cleaner fix and is cinemate-side, so it can be done here.*
-2. **The empty-guard asymmetry in `apply_hdr_thresholds`.** The startup restore path is
+1. ~~**Remove cinemate's second writer.**~~ **Done.** `CinePiController._set_wide_dynamic_range()`
+   and its call from `_publish_resolution_gui_state()` are gone. cinepi-raw owns the control
+   end to end — `Options::Parse()` forces it to 0, enumerates, sets it back to 1 for
+   `--hdr sensor` and re-enumerates — so cinemate's write was discarded at the next launch
+   anyway, and every SDR↔HDR transition is a relaunch by `_resolution_change_needs_restart()`.
+   It bought nothing and supplied the contention. `set_resolution()`'s remaining contract is
+   the `hdr` Redis key, which decides the launch flag.
+   *This also removes a write that fired mid-take: `_is_recording()` short-circuits the
+   restart decision but did not short-circuit the WDR write, so a mode change during a
+   recording toggled the sensor's mode list with no relaunch to match it.*
+   `_test/test_no_cinemate_wide_dynamic_range_writer.py` guards against it coming back —
+   across all of `src/`, not just the one call path.
+2. **Widen the retry, if the race persists.** 5 × 50 ms is short against a process teardown.
+   With cinemate's writer gone the only remaining contender is a stale cinepi-raw, which
+   `sensor_detect._kill_stale_cinepi_raw()` already handles — so if GR still shows refusals,
+   the retry window is the next thing to look at. cinepi-raw-side, unpushed.
+3. **The empty-guard asymmetry in `apply_hdr_thresholds`.** The startup restore path is
    correctly gated (`cinepi_controller.cpp:297`: skip when both keys are empty). The live
    handler is not: `build_hdr_threshold_pair` turns `""` into `0`, and `{0,0}` passes its own
    `high < low` guard, so a publish of an unset threshold **writes the degenerate pair** that
@@ -261,7 +273,8 @@ anything is changed.
   --list-cameras ... --hdr sensor' exited N` warning naming `wide_dynamic_range`.* The
   outcome that falsifies R's hypothesis is modes missing **with no warning** — that would
   mean the probe exited 0 and something else drops them. Run this before G2/G3: it is the
-  instrument the rest depend on.
+  instrument the rest depend on. With cinemate's writer removed, a refusal here is now the
+  sensor's own answer rather than cinemate racing itself.
 - **G1 — the stack builds and its own tests pass.** `ninja -C ~/cinepi-raw/build` then
   `meson test -C ~/cinepi-raw/build` — 8 suites including `ccmp_lut`, `ccmp_log_compose`,
   `ccmp_preview`, `ccmp_gate`. Float determinism against the golden tables is not automatic

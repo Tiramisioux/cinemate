@@ -30,6 +30,16 @@ PI4_MODEL_MARKERS = (
     "Compute Module 4",
 )
 
+# Raspberry Pi models that run the RP1 camera receiver. "Compute Module 5" is
+# the marker that matters in practice -- CineMate's own dev unit is a CM5, and
+# /proc/device-tree/model reports it as "Raspberry Pi Compute Module 5", which
+# does not contain the string "Raspberry Pi 5".
+PI5_MODEL_MARKERS = (
+    "Raspberry Pi 5",
+    "Raspberry Pi 500",
+    "Compute Module 5",
+)
+
 # DNG frame-size model, calibrated against real captures (imx585 3856x2180
 # linear/log at 10/12/16-bit -- see innomaker585/pi-2026-08-05-goodkernel/).
 # cinepi-raw packs pixel data tightly at N bits/row ((width*bits+7)//8 bytes),
@@ -67,6 +77,32 @@ def is_pi4_family() -> bool:
     """True on any Raspberry Pi 4 / 400 / CM4 (VC4/Unicam) platform."""
     model = read_pi_model()
     return any(marker in model for marker in PI4_MODEL_MARKERS)
+
+
+def is_pi5_family() -> bool:
+    """True on any Raspberry Pi 5 / 500 / CM5 (RP1) platform."""
+    model = read_pi_model()
+    return any(marker in model for marker in PI5_MODEL_MARKERS)
+
+
+def pi_family() -> str:
+    """Coarse platform family: 'pi5', 'pi4', 'other', or 'unknown'.
+
+    Matching is by family marker, not by the exact board name, because the
+    boards CineMate actually ships on are Compute Modules: a CM5 reports
+    "Raspberry Pi Compute Module 5 Rev 1.0", which contains neither
+    "Raspberry Pi 5" nor "Raspberry Pi 4". Substring checks against the
+    consumer board names alone therefore classify every CM as 'other' and send
+    Pi-5-only code down the legacy path.
+    """
+    model = read_pi_model()
+    if not model:
+        return "unknown"
+    if any(marker in model for marker in PI5_MODEL_MARKERS):
+        return "pi5"
+    if any(marker in model for marker in PI4_MODEL_MARKERS):
+        return "pi4"
+    return "other"
 
 
 class SensorDetect:

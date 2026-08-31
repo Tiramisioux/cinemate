@@ -25,7 +25,7 @@ from module.usb_monitor import USBMonitor
 from module.gpio_output import GPIOOutput
 from module.cinepi_controller import CinePiController
 from module.simple_gui import SimpleGUI
-from module.sensor_detect import SensorDetect
+from module.sensor_detect import SensorDetect, pi_family
 from module.redis_listener import RedisListener
 from module.gpio_input import ComponentInitializer
 from module.battery_monitor import BatteryMonitor
@@ -530,17 +530,13 @@ def blank_framebuffer(fb):
         logging.warning(f"Failed to blank framebuffer cleanly: {exc}")
 
 def get_raspberry_pi_model():
-    try:
-        with open('/proc/device-tree/model', 'r') as f:
-            model = f.read()
-            if 'Raspberry Pi 5' in model:
-                return 'pi5'
-            elif 'Raspberry Pi 4' in model:
-                return 'pi4'
-            else:
-                return 'other'
-    except FileNotFoundError:
-        return 'unknown'
+    """Platform family for the pi_model Redis key and the GPIO tone output.
+
+    Delegates to sensor_detect, which owns the canonical model markers, so the
+    launch command, the GUI/telemetry and the PWM channel mapping cannot drift
+    apart on which board this is.
+    """
+    return pi_family()
 
 def check_hotspot_status():
     """Return True if a Wi-Fi hotspot connection is active."""

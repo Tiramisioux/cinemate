@@ -190,9 +190,9 @@
       // Startup values for the ClearHDR live knobs (0-4095 / 0-8 / 0-5).
       // Applied when a ClearHDR mode is selected; adjust live afterwards
       // with `set hdr threshold low/high`, `set hdr blend`, `set hdr gain
-      // adder`, or a pot/quad-rotary channel. HG 1/2 + LG 1/2 blend, +6 dB
-      // gain adder (menu 1) -- a lower noise floor than the driver's +12 dB
-      // default.
+      // adder`, or a pot/quad-rotary channel. HG 1/16 + LG 15/16 blend
+      // (menu 5), +6 dB gain adder (menu 1) -- a lower noise floor than the
+      // driver's +12 dB default.
       //
       // null on the two thresholds means "leave the sensor driver's own
       // pair alone" (EXP_TH_H 0x0FFF, EXP_TH_L 0x0000). Do not set both to
@@ -202,7 +202,7 @@
       // neither.
       "threshold_low": null,
       "threshold_high": null,
-      "blend": 0,
+      "blend": 5,
       "gain_adder": 1,
       // Automatic recovery from the flat-pedestal ClearHDR startup defect
       // (round 8, 2026-08-29): probe the live preview after every launch and,

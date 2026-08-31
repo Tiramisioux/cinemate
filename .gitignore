@@ -219,3 +219,6 @@ branches/
 # Local copied camera media and benchmarks
 pi-test-takes/
 pi-test-takes-speed-bench/
+
+# Settings editor runtime backups
+.settings-backups/

@@ -1,37 +1,141 @@
-# C9 · Restore working 12-bit ClearHDR
+# C9 · Restore 12-bit ClearHDR with working CCMP tone mapping
 
-!!! note "Status 2026-08-31 — target is `dev`; two fixes pushed, gates unrun"
-    **Goal: 12-bit ClearHDR working on `dev` again.** Written against cinemate `origin/dev`
-    @ `db2f483` and cinepi-raw `origin/dev` @ `24fd76a`. No Pi time. Every prediction below
-    is stated in advance so a hardware session can falsify it, per the C5/C7 method.
+!!! note "Status 2026-08-31 — target is the mid-August CCMP state on `dev`; gates unrun"
+    **Goal: 12-bit ClearHDR with correct CCMP tone mapping, as it worked in early-to-mid
+    August** — not the 2026-08-27 mono milestone. The last known-good CCMP state is cinepi-raw
+    `4b9c9f6` (2026-08-13); nothing touched the CCMP path between then and 2026-08-26.
 
-    Two fixes are implemented, both in §R: the probe-failure diagnostic, and the removal
-    of cinemate's second `wide_dynamic_range` writer. Everything else is analysis.
+    Two fixes are pushed (§S), but they address ClearHDR *starting*, not the tone mapping.
+    The tone-mapping regression in §R is analysis only — nothing implemented, no Pi time.
 
-    **Audited 2026-08-31** by an independent pass. §R's original causal claim was falsified
-    and is corrected in place; L0 gained a worse failure mode; §P and Prevention are new.
+    **Revised 2026-08-31** after the operator retargeted from the 08-27 mono milestone to the
+    July / early-August functionality. An earlier audit also falsified §S's original causal
+    claim; that correction stands.
 
 ## What this is
 
-12-bit ClearHDR worked on `dev` at the `milestone-mono-clearhdr-2026-08-27` tag and does not
-now. This step is the restore path, targeting `dev`.
+The target is the state in which **12-bit ClearHDR DNGs carry their CCMP12 decompand
+`LinearizationTable` and the preview is decompanded** — the chart renders neutral instead of
+purple. That was reached on cinepi-raw between `4aef539` (2026-08-09, the curve) and `4b9c9f6`
+(2026-08-13, CCMP composed with CineMate Log), and evidenced in the measurement workspace by
+`evidence/decode_anchored_asn.png`: *"the after. The purple is gone and the greys match."*
 
-The important finding up front: **this is not one defect.** It is four independent problems,
-and they have to be cleared in order, because the earlier ones make the later ones impossible
-to observe.
+Restoring it is a different problem from the one this plan originally addressed. There are two
+independent failures, and they need separating because they have different symptoms:
 
-| Layer | Problem | State |
+| | Symptom | Section |
 |---|---|---|
-| R | A ClearHDR launch/probe refusal is swallowed, so the HDR modes vanish silently | **fix pushed**; cause still unidentified — G0/GR discriminate |
-| L0 | `dev` is not what a camera runs unless it is explicitly asked for | not fixed — one-line operator config |
-| L1 | Three ClearHDR defects, root-caused and fixed **on `dev`** | fixed; `main` does not have them |
-| L2 | A boot-latched combiner pedestal fill | **root cause unknown** |
-| L3 | Four regression traps that can silently re-break it | one fixed below, three open |
-| P | **Why it keeps breaking** — seven recurring patterns, and the machinery that would stop them | analysis + 9 named additions, none implemented |
+| **Tone mapping lost** | ClearHDR records, but 12-bit takes render **magenta / purple** — companded data with no table | **§R** — the target |
+| **ClearHDR won't start** | the HDR modes are absent from the table, or the launch dies | §S — two fixes pushed |
+| **Pedestal fill** | ClearHDR starts, frames are flat at black level | §L2 — root cause unknown |
+
+Everything else (§L0, §L1, §L3) is ground that has to be solid for any of the three.
 
 ---
 
-## R — The regression on `dev` since the milestone
+## R — The tone-mapping regression (the target)
+
+**Last known good: cinepi-raw `4b9c9f6`, 2026-08-13.** Between that and `bd39389` (08-26)
+nothing touched the CCMP path — only docs, a dead-source deletion, CI, and a Redis perf change.
+Then **three changes landed on 2026-08-27**, all of which bear on the same relationship: the
+sensor's reported dimensions decide whether a CCMP table is attached at all.
+
+### R1 — The CCMP gate now fails closed, and cannot disambiguate a mono sensor
+
+`1f3383d` (the `milestone-mono-clearhdr-2026-08-27` tag itself) added `mode_trusted` to the gate:
+
+```cpp
+// cinepi/ccmp_gate.hpp
+return (hdr == "sensor" || hdr == "auto") && sensor_mode_bit_depth == 12 && sensor_mode_trusted;
+```
+
+with `mode_trusted = (requested_width == cfg.size.width && requested_height == cfg.size.height)`
+(`cinepi_raw.cpp:146`). When it is false, **no `LinearizationTable` is written**, and
+`ccmpPreviewStage` returns instead of decompanding.
+
+That was a deliberate, defensible choice — the commit reasons that a linear take mislabelled
+with a decompand table is silently wrong everywhere, while a companded take missing its table
+"renders magenta but is recoverable in post". **The magenta is the accepted cost of the guard.**
+It is also exactly the symptom being reported.
+
+And the gate's own header says it cannot do the job on this sensor:
+
+> *"The R16 container is ambiguous between true 16-bit and mono 12-in-16, and dims alone cannot
+> disambiguate it either (both land on 3856x2180 on this driver) — reading the sensor subdev's
+> actual media-bus code would settle it and is a later, separate fix, out of scope here."*
+
+So on `imx585_mono` the trusted check is known-insufficient by its own author, and its failure
+mode is the reported symptom. **This is the leading hypothesis.**
+
+### R2 — The driver changed the geometry out from under it, the same day
+
+`02b2bec` (cinemate, 2026-08-27) flipped `IMX585_DRIVER_REPO_REF` from `6.12.y` to
+`innomaker-v1.0`. Those drivers report **different dimensions**:
+
+| | 6.12.y (what CCMP was measured on) | innomaker-v1.0 (what ships now) |
+|---|---|---|
+| full-res 12-bit | 3856×2180 | 3840×2160 (active-area dims) |
+| binned 12-bit | 1928×1090 | **binned ClearHDR removed** — driver gates the combo out |
+| 16-bit | — | 3840×2200 |
+
+The workspace's 159 takes, both golden tables and `verify_dng_table.py`'s expectations are all
+on the **left** column. `resources/sensors.json` still carries the left column's static modes
+(1928×1090, 3856×2180). Anything comparing a requested dimension against a configured one is
+now comparing across that change.
+
+The compander itself is in the sensor, so the *curve* should be unaffected by a geometry change
+— but three things that gate its use are not: `SensorBinning()` (derived from
+`PixelArrayActiveAreas` ratios), `mode_trusted` (a dims equality), and the b=4 table (whose
+mode no longer exists).
+
+### R3 — The binning/bit-depth snapshot changed source
+
+`042c68f` moved `SensorBinning()` and the encoder's bit-depth snapshot off `options->mode` and
+onto the validated stream, to close a real race ("observed on hardware: a CCMP12 decompand b=4
+table attached while the sensor actually ran a full-res (b=1) mode"). Correct in itself, but it
+is the third same-day change to how dims reach the CCMP decision.
+
+### The discriminator
+
+One measurement separates all of this, and it is offline:
+
+**Record ~2 s of 12-bit ClearHDR, copy one DNG off the Pi, and run
+`tools/verify_dng_table.py` from `origin/docs/ccmp12-workspace`.**
+
+| Result | Meaning |
+|---|---|
+| No `LinearizationTable` (tag 0xC618) at all | R1 — the gate refused. Look for the `Requested mode WxH does not match the configured raw stream` WARN in the cinepi-raw log; it names the reason. |
+| Table present, matches a golden | Tone mapping is fine — the complaint is §S or §L2, not §R |
+| Table present, matches the *other* golden (b=1 vs b=4) | R3 — binning derived wrong |
+| Table present, matches neither | R2 — geometry changed the curve's inputs; the goldens need re-measuring on `innomaker-v1.0` |
+
+Note `verify_dng_table.py` needs numpy, which is not on the Pi — run it on the machine that
+holds the workspace. And the workspace is on a branch that is **not an ancestor of `dev`**
+(`origin/docs/ccmp12-workspace` @ `21f1f1b`); check it out first.
+
+### If the gate is the cause
+
+Three options, cheapest first:
+
+1. **Make the request match.** If cinemate is asking for dimensions the `innomaker-v1.0` driver
+   does not deliver, the fix is in cinemate's mode table, not cinepi-raw's gate. Cheapest and
+   most likely.
+2. **Disambiguate properly.** Read the sensor subdev's media-bus code (`Y12_1X12` vs `Y16_1X16`)
+   instead of comparing dims — the fix `1f3383d` explicitly deferred. cinepi-raw-side.
+3. **Pin the old driver.** `IMX585_DRIVER_REPO_REF=6.12.y` restores the geometry the goldens
+   were measured on. A diagnostic, not a destination — it gives up the `ccmp` overlay parameter
+   and the mono gating that `02b2bec` was added for.
+
+### Bisect anchor
+
+If the discriminator is ambiguous, the range is short: **`4b9c9f6..origin/dev` contains only
+six commits that touch CCMP** (`bd39389`, `042c68f`, `13155a6`, `1f3383d`, plus `58cf8cc` and
+`22a1845` which do not). Building `4b9c9f6` on the Pi and recording one take answers "did the
+tone mapping survive the driver change" directly.
+
+---
+
+## S — ClearHDR will not start (a separate failure, two fixes pushed)
 
 This is the new finding, and it is the leading explanation for "it worked and now it doesn't".
 
@@ -384,17 +488,32 @@ The machinery already exists: `checks.yml` runs the full pytest suite, `docs_dri
 | 6 | A `VIDIOC_G_CTRL` read-back in cinepi-raw's `set_subdev_hdr_ctrl` before setting `confirmed` | P4 |
 | 7 | `dev-track/C9-clearhdr-12bit-restore/RESULTS.md` as the gate-outcome destination — `cinemate-handbook/lessons/hardware-log.md` exists in neither repo | P6 |
 | 8 | Merge `innomaker585/ccmp12-lut/` forward, and add a ClearHDR section to `SKILL-PAYLOAD.md` with a `docs_drift_check` assertion so it cannot silently freeze again. G5 depends on `tools/verify_dng_table.py` from that branch and never says to check it out | P6 |
-| 9 | Add G0/GR/G1–G6 to `PI-VERIFICATION-QUEUE.md` | P6 |
+| 9 | Add GT/G0/GR/G1–G6 to `PI-VERIFICATION-QUEUE.md` | P6 |
+| 10 | **Pin the imx585 driver sha in `versions.env`** and record it beside the cinemate/cinepi-raw pairing. `02b2bec` changed the sensor's reported geometry with nothing recording which driver the CCMP goldens were measured against — the single largest untracked variable in this subsystem | P1, P2, §R2 |
+| 11 | Re-measure or re-validate the CCMP goldens against whichever driver is pinned, and record the geometry they assume in `ccmp_decode.py`'s manifest | §R2, P7 |
 
 ---
 
 ## Verification gates
 
-Run in order; stop at the first failure. Gates 0–3 need no chart and no operator at the
-camera. Pre-checks first, per the hardware-session method: `uname -r` ≥ 6.12.93,
-`free -g`, both repos' shas recorded, `v4l2-ctl --list-ctrls-menus` captured **before**
+**Gate GT is the one that matters for this target — run it first.** The rest establish the
+ground it stands on. Stop at the first failure. None of these need a chart.
+
+Pre-checks first, per the hardware-session method: `uname -r` ≥ 6.12.93, `free -g`, both
+repos' shas recorded, the **imx585 driver branch and sha recorded** (§R2 — this is now a
+first-class variable, not background), and `v4l2-ctl --list-ctrls-menus` captured **before**
 anything is changed.
 
+- **GT — is a CCMP table being written at all? (tests §R, the target)** Record ~2 s of
+  12-bit ClearHDR; copy one DNG off the Pi; run `tools/verify_dng_table.py` from
+  `origin/docs/ccmp12-workspace` (needs numpy — run it where the workspace lives, not on the
+  Pi). Read the cinepi-raw log for `Requested mode {}x{} does not match the configured raw
+  stream` at the same time.
+  *Prediction, if R1 is right: no `LinearizationTable` in the DNG, and that WARN present with
+  the two dimension pairs that disagree.* The outcomes that falsify R1: a table present and
+  matching a golden (then the complaint is §S or §L2, not §R), or no table **and no WARN**
+  (then the gate is not the refuser and something else drops it).
+  This is the whole diagnosis in one measurement; everything below is context for reading it.
 - **G0 — the camera is running `dev`.** `git -C ~/cinepi-raw rev-parse --abbrev-ref HEAD`
   and the same for `~/cinemate`. The cinepi-raw tree must contain `imx585` in
   `core/options.cpp`'s HDR gate and have `cinepi/ccmp_lut.hpp`.
@@ -423,12 +542,15 @@ anything is changed.
   with a confirmed WDR enable or throws loudly — never a silent pedestal launch.* Then
   `v4l2-ctl` readback shows the driver's own `EXP_TH_H=0x0FFF / EXP_TH_L=0x0000` pair, not
   `0/0`.
-- **G5 — the DNG is correct.** Record ~2 s at both resolutions; run
-  `tools/verify_dng_table.py` from the `ccmp12-lut` workspace against both goldens.
-  *Prediction: byte-identical to the b=1 golden at 3856×2180 and the b=4 golden at
-  1928×1090, BlackLevel 200, WhiteLevel 63265 / 62704.* A `b=1` reading on **both** modes
-  means `PixelArrayActiveAreas` is not reporting what the binning derivation assumes —
-  stop and report.
+- **G5 — the DNG is correct at both resolutions.** GT covers one mode; this repeats it at
+  the other, if the driver still offers one. Run `tools/verify_dng_table.py` against both
+  goldens.
+  *Prediction on the 6.12.y geometry: byte-identical to the b=1 golden at 3856×2180 and the
+  b=4 golden at 1928×1090, BlackLevel 200, WhiteLevel 63265 / 62704.* ⚠ On
+  `innomaker-v1.0` there is **no binned ClearHDR mode**, so the b=4 golden is unreachable and
+  the full-res dims are 3840×2160, not 3856×2180 — see §R2. A `b=1` reading on both modes (if
+  two exist) means `PixelArrayActiveAreas` is not reporting what the binning derivation
+  assumes; stop and report.
 - **G6 — the overlay trap.** Save the Boot config page unchanged from the web editor, then
   `grep dtoverlay /boot/firmware/config.txt`. *Prediction: `,ccmp` is gone.* Fix before
   closing this step.

@@ -68,10 +68,16 @@ Four places will bite you:
    `CONTROL_KEY_THUMBNAIL` / `CONTROL_KEY_THUMBNAIL_SIZE` (`cinepi_state.hpp:39-40`) are read at
    startup into `options_->thumbnail` / `thumbnailSize` (`cinepi_controller.cpp:206-207`) and have
    live pub/sub handlers (`:572-579`), and **nothing reads either option**. Make `thumbnail` the
-   mode — **0 off, 1 mono, 2 colour** — and keep `thumbnail_size` as the size knob, matching the
-   right-shift `thumbnailFactor` already threaded through
-   `RPiCamApp::ConfigureVideo(flags, thumbnailFactor)` (`rpicam_app.cpp:597,659-661`), which
-   `cinepi_raw.cpp:71` passes as 0 today.
+   mode — **0 off, 1 mono, 2 colour** — and implement `thumbnail_size` as a downscale of the Y
+   plane **inside `dng_save()`**. Do *not* reuse `thumbnailFactor`: `rpicam_app.cpp:603` sets
+   `alias_lores_to_video = have_raw_stream && have_lores_stream`, CineMate always passes
+   `--lores-width`/`--lores-height` (`cinepi_multi.py:492-493`) and always records raw, so the
+   `alias_lores_to_video` branch at `:647` always wins and the right-shift at `:659-661` is dead on
+   this path — and what it sizes is `configuration_->at(0)`, the stream feeding the HDMI and MJPEG
+   previews, so driving it from a playback setting would resize the operator's live preview.
+   Note too that the live `CONTROL_KEY_THUMBNAIL_SIZE` handler sets `cameraInit_ = true`
+   (`cinepi_controller.cpp:580`) — changing the size restarts the camera, and the verb's help text
+   must say so.
 
 C9.0b is one line and has hardware evidence behind it: `cinepi_controller.cpp:137` seeds
 `CONTROL_KEY_THUMBNAIL` with `thumbnail_size_` where it means `CONTROL_KEY_THUMBNAIL_SIZE`. That is

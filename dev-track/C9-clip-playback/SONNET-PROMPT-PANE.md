@@ -19,7 +19,8 @@ Paste everything below the line into a fresh Sonnet thread.
 
 Bring C9's playback pane — the **fallback** half, which decodes raw DNGs for takes that carry no
 embedded thumbnail — to the state its hardware gates can actually run from: the
-`conform_frame_rate` docs correction landed on a branch that is not one laptop, `feature/clip-playback`
+`conform_frame_rate` docs correction landed on a branch that is not one laptop,
+`feature/clip-playback`
 rebased onto current `dev` and green, six recorded defects fixed, the drift check the step owes
 ADR-001, and `tools/playback_bench.py` — the harness G1, G2 and G9 are written against.
 
@@ -37,7 +38,7 @@ and the current source disagree, the source wins — say so, and say where.
 
 **Before you write anything, answer one question and report it.** Read the decode path in
 `src/module/app/dng_preview.py` and establish whether it applies the DNG `LinearizationTable` and
-subtracts `BlackLevel` in the **table's output domain**. `docs/cinemate-log.md:63` records what
+subtracts `BlackLevel` in the **table's output domain**. `docs/cinemate-log.md:66` records what
 happens if it does not: a log clip renders **solid black**, because a linear-domain BlackLevel is
 subtracted from data that never reaches it. If the table is not applied, that is a seventh defect
 and it is the most important one — fix it in C9.3 and tell me, rather than letting G9 confirm a
@@ -51,7 +52,8 @@ Ground rules:
   absolute paths.
 - **Never `git add -A`** (LFS pointer trap) — stage named files only.
 - Do not merge to `dev`, do not push without asking, and **do not touch the Pi**. You are
-  producing the desk-verifiable half; gates G0–G9 run later on hardware.
+    producing the desk-verifiable half; the twelve gates in five sessions run later on
+  hardware, and none of them is your job.
 - The settings-editor template's JS is ES5 (`var`, `function(){}`) — match it. The file embeds
   base64 font data: filter greps with `awk 'length($0) < 250'`.
 - Commit messages: `c9.<n>: <scope> — <one-line outcome>`.
@@ -79,7 +81,8 @@ Five places will bite you, all detailed in the plan; re-read those sections befo
    entries to the `ACTION_METHODS` array either.
 3. **The topbar will lie on the new tab.** `syncTopbarForPage()` reads
    `var noFilePage = activePage === 'live' || activePage === 'raw';` — `settings_editor.html:4574`
-   on `dev` @ `c0eb9ff7`, but grep the symbol rather than the line, because the rebase moves it — a `playback` page falls
+      on `dev` @ `c0eb9ff7`, but grep the symbol rather than the line, because the rebase moves
+   it — a `playback` page falls
    through as a *file* page and offers Save changes / Revert / Download / Upload as if it edited
    settings.jsonc. Add it, or invert the predicate to a whitelist of file-backed pages.
 4. **Do not build a second take enumerator.** `raw_files.py` already has `_media_roots()`,
@@ -108,7 +111,8 @@ decision through the route.
 
 Also fix the sixth defect while you are in the template: the Live tab embeds
 `<iframe id="liveEmbedFrame" … src="/">` (`settings_editor.html:2226` on `dev`) and nothing ever
-clears its `src` — `setActivePage()` only hides it, so once the operator has visited Live view the shooting
+clears its `src` — `setActivePage()` only hides it, so once the operator has visited Live view
+the shooting
 screen's MJPEG stream and its Socket.IO connection stay live behind every other tab, on the same
 Wi-Fi link that playback needs. Clear it on leave, restore it on entry.
 
@@ -157,7 +161,8 @@ Done means:
 5. A closing summary listing: files touched per commit; the `LinearizationTable` verdict; what the
    rebase conflicted on and how you resolved it; and the exact manual Pi commands for the
    operator's Session A (`git fetch`, `git switch feature/clip-playback`, `git pull --ff-only`,
-   restart cinemate — Python-only, no rebuild), with G0's baseline readback and each of G0/G1/G3/G5/G6's
+      restart cinemate — Python-only, no rebuild), with G0's baseline readback and each of
+   G0/G1/G3/G5/G6's
    predictions written out so I can record pass/fail against them.
 
 Stop after that summary. Do not start a Pi session, do not run hardware gates, do not merge. Stop

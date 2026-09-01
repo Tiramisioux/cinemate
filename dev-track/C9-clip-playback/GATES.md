@@ -19,7 +19,7 @@ G0 is cheap and validates the desk analysis before any number is trusted.
 |---|---|---|
 | **A** — no hardware change | G0, G1 (isolated + loaded), G3, G5, G6 | takes already on the card, a phone on the hotspot |
 | **B** — imx585 attached, shooting | G7, G9, G8, then G1 re-run on fresh UHD/ClearHDR takes | a sensor swap and a shooting session |
-| **C** — destructive | G4, then G2's three-filesystem loop **last** | consent to spoil a take and to reformat `/media/RAW` |
+| **C** — destructive | G4, then G2's three-filesystem loop **last** | a USB microphone attached, consent to spoil a take, and consent to reformat `/media/RAW` (destroying every take on it) |
 | **D** — optional, blocked | G5 on 2 GB | a 2 GB CM5, which the operator does not currently have |
 | **E** — after Phase 0 | G10, G11 | a cinepi-raw build on the Pi, and the operator's post software for G10's compatibility half |
 
@@ -70,9 +70,20 @@ the plan reasoned from a 2 GB board that is 4 GB, and its branch is 1381 commits
 filesystem and PCIe link state can only be read on the Pi, and reading them costs a minute against
 gates that cost a session.
 
-**Procedure.** Desk first: rebase `feature/clip-playback` onto current `dev`, run the six checks
-(`ruff check src/`; `python -m pytest _test/ -q -p no:randomly`; the three `tools/` checks with
-their CI thresholds), push it. Then on the Pi, after `git fetch && git switch feature/clip-playback
+**Procedure.** Desk first: rebase `feature/clip-playback` onto current `dev`, run the six checks exactly as
+CI runs them (`.github/workflows/checks.yml`) — there are **four** `tools/` checks, not three, and
+the job's own comment says so:
+
+```bash
+ruff check src/
+python -m pytest _test/ -q -p no:randomly
+python3 tools/docs_drift_check.py  --repo . --strict
+python3 tools/design_token_diff.py --repo . --strict
+python3 tools/gui_field_extract.py --repo . --max-unresolved 0
+python3 tools/redis_key_diff.py --max-unreferenced 12   # needs ../cinepi-raw checked out
+```
+
+Then push it. Then on the Pi, after `git fetch && git switch feature/clip-playback
 && git pull --ff-only`:
 
 ```bash
@@ -80,7 +91,7 @@ uname -r; free -m; grep Revision /proc/cpuinfo
 findmnt -no SOURCE,FSTYPE,OPTIONS /media/RAW
 grep -n pciex1 /boot/firmware/config.txt; sudo lspci -vv | grep -A2 LnkSta
 redis-cli GET sensor
-python3 -c "import numpy, PIL, werkzeug; print(numpy.__version__, PIL.__version__, werkzeug.__version__)"
+python3 -c "from importlib.metadata import version; print('numpy', version('numpy'), 'pillow', version('pillow'), 'werkzeug', version('werkzeug'), 'flask', version('flask'))"
 git -C ~/cinemate rev-parse --short HEAD
 ```
 
@@ -89,7 +100,10 @@ Then run the plan's own metadata reader against one real take on the card and pr
 `LinearizationTable`, `CFAPattern`, `FrameRate`.
 
 **Prediction.** Kernel ≥ 6.12.93, 4048 MB, `/dev/nvme0n1 ext4`, `dtparam=pciex1_gen=3` present and
-the link negotiated Gen3 x1, `sensor` reads `imx477`, numpy 2.x. The tag dump confirms
+the link negotiated Gen3 x1, `sensor` reads `imx477`, numpy 2.x and Flask/Werkzeug 3.x.
+(`werkzeug.__version__` was removed in Werkzeug 3.0 — reading it raises `AttributeError` and, in a
+single statement, takes the numpy and Pillow readings down with it. Hence `importlib.metadata`,
+which is what G3 already uses.) The tag dump confirms
 `StripOffsets == 8` and `RowsPerStrip ==` height — which is the cheapest empirical check of the
 cinepi-raw layout claims this plan has been asserting from an external workspace.
 
@@ -132,9 +146,13 @@ isolated.
 ## G2 — storage read bandwidth, and what the drive actually transfers
 
 **Belief being tested.** Two claims, one of which has never been tested anywhere in this stack.
-First, that `/media/RAW` reads at ≥ 160 MB/s (UHD at 1/4) and ≥ 80 MB/s (2K at 1/2) — the plan's
-requirements are 158 and 79, so state the bar as **≥ 1.15× the required rate** rather than two
-inconsistent roundings. Second, and more important: that a row-selective read *transfers* less than
+First, that `/media/RAW` reads at **≥ 160 MB/s** (UHD at 1/4) and **≥ 80 MB/s**
+(2K at 1/2). Those are the plan's requirements of 158 and 79 rounded up to the nearest ten — the
+same 1.013× in both cases, so it is one consistent rounding and **not a safety margin**. Since the
+158 figure is decode-side I/O only and excludes JPEG encode, Flask and the network, treat a result
+between the bar and 1.15× the requirement (182 and 91 MB/s) as a **marginal pass** that constrains
+the default scale rather than clearing it. Second, and more important: that a row-selective
+read *transfers* less than
 a whole frame. Nothing in this stack tunes `read_ahead_kb`, so at a ~5.8 kB row stride under the
 128 kB default the block layer may move the entire 12.6 MB regardless.
 
@@ -147,11 +165,27 @@ is a property of this kernel, this filesystem and this drive.
 cumulative average that can never show a cache step, so use C1's awk differencer:
 
 ```bash
-sudo sh -c 'sync; echo 3 > /proc/sys/vm/drop_caches'
-cat /media/RAW/<take>/*.dng > /tmp/c9_seq.bin      # ~30 frames, long enough to leave any cache
-dd if=/tmp/c9_seq.bin of=/dev/null bs=4M iflag=direct status=progress 2> /tmp/c9_dd.txt
-tr '\r' '\n' < /tmp/c9_dd.txt | awk '/copied/{b=$1+0; t=$(NF-1)+0; if (pt) printf "%.1f MB/s\n", (b-pb)/1048576/(t-pt); pb=b; pt=t}'
+ls /media/RAW/<take>/*.dng | head -30 | xargs cat > /media/RAW/c9_seq.bin   # stays on the drive under test
+ls -l /media/RAW/c9_seq.bin                                                # record the size, not a frame count
+sudo sh -c 'sync; echo 3 > /proc/sys/vm/drop_caches'                       # AFTER staging, not before
+dd if=/media/RAW/c9_seq.bin of=/dev/null bs=4M iflag=direct status=progress 2> /tmp/c9_dd.txt
+tr '\r' '\n' < /tmp/c9_dd.txt | awk '/copied/{b=$1+0; t=$(NF-3)+0; if (pt && t>pt) printf "%.1f MB/s\n", (b-pb)/1e6/(t-pt); pb=b; pt=t}'
+rm -f /media/RAW/c9_seq.bin                                                # before any reformat
 ```
+
+Two things in that block are corrections, not style. **The staging file must live on
+`/media/RAW`**: the whole NVMe *is* the RAW volume (no partition table, per the baseline), so `/`
+and `/tmp` are on other media — reading a staged file from `/tmp` measures the boot card, or RAM if
+it is a tmpfs, and `iflag=direct` may simply fail there. And **`$(NF-3)` is the elapsed-seconds
+field**, not `$(NF-1)`: a progress line reads `… copied, 0.134985 s, 31.1 GB/s`, so `$(NF-1)` is
+dd's own rate and differencing it is meaningless. C1's differencer at `RUNBOOK.md:636` has the same
+`$(NF-1)` error but keeps an `if(pt && t>pt)` guard that hides it by printing nothing; drop the
+guard as well and mawk prints `inf MB/s`. Verify the one-liner against
+`dd if=/dev/zero of=/dev/null bs=1M count=4000 status=progress` before taking it near the Pi — it
+must print a plausible series, not `inf` and not a division error. The divisor is `1e6`, not
+`1048576`: the plan's 158 and 79 MB/s requirements are decimal (6.3 MB/frame × 25), and dd's own
+rate column is decimal too, so dividing by 1048576 would report 95.4 for a 100 MB/s stream and fail
+a drive that passes.
 
 *(b) Decoder-realistic.* Cold cache, then `tools/playback_bench.py --io`, which samples
 `/proc/diskstats` around N decoded frames at each scale and reports **bytes read from the device
@@ -169,7 +203,8 @@ calls, and that cost is filesystem-dependent.
 
 **Prediction.** (a) A drive measured *writing* 170–190 MB/s reads at or above that on ext4, so the
 UHD bar passes with room; if the sequential read comes in under 160 MB/s the surprise is the drive,
-not the decoder. exFAT is close behind; NTFS is slower and is already documented as unsuitable for
+not the decoder, and anything under 182 is a marginal pass. exFAT is close behind; NTFS is
+slower and is already documented as unsuitable for
 sustained recording, so a poor NTFS result is consistent with what the code believes and is not a
 finding. (b) Device bytes at 1/4 land **well above** the 6.3 MB the plan credits — plausibly the
 full 12.6 MB — because readahead does not know which rows will be discarded.
@@ -222,7 +257,14 @@ unpinned and may land on the isolated audio core).
 
 **Why hardware.** Contention on a real drive and a real scheduler, with a real microphone attached.
 
-**Procedure.** Record a control take, then an identical take with playback attempted throughout. For
+**Procedure.** Confirm audio capture is actually armed first, or the observable is vacuous:
+`arecord -l` must list a capture device, and the session log must show the helper starting rather
+than `Audio device present: no` or `cinepi-audio-capture helper not found`. With no capture device
+`usb_monitor.py:243-259` leaves `can_record_audio` false, nothing emits a silence-fill line, and
+the grep below returns zero **by construction** — that is NOT-RUN-because, not a pass. Record the
+`arecord -l` output in the result row.
+
+Then record a control take, and an identical take with playback attempted throughout. For
 each, capture: `write_speed_to_drive` and the frames-written count; `ps -eLo pid,comm,rtprio,psr`
 during the take, so the decode threads' core placement is on record; and the session log grepped
 for the **silence-fill line**, not for xruns:
@@ -263,8 +305,15 @@ leaves resident for the *next* take.
 
 **Procedure.** Sample the number the guard actually uses — `psutil.virtual_memory().percent`, which
 is derived from `MemAvailable` and therefore excludes reclaimable page cache — at 1 s cadence
-during playback at each scale, alongside the cinemate process RSS (`ps -o rss=,pcpu= -p $(pgrep -f
-main.py)`). Then start a take immediately after a playback session and watch the same numbers
+during playback at each scale, alongside the cinemate process RSS — guarded, because an empty
+`pgrep` makes `ps -p` fall back to its
+default selection and silently reports an unrelated process as cinemate:
+
+```bash
+pid=$(pgrep -f '/home/pi/cinemate/src/main.py') || { echo 'cinemate not running — sample void'; exit 1; }
+[ "$(echo "$pid" | wc -l)" -eq 1 ] || echo "WARNING: $(echo "$pid" | wc -l) matches"
+ps -o pid=,rss=,pcpu= -p $pid
+```. Then start a take immediately after a playback session and watch the same numbers
 through it.
 
 **Prediction.** `free -m`'s *free* column collapses (PI-016 already saw 2583 → 1093 MB during a
@@ -323,12 +372,15 @@ by `set log`, resolved at the next camera restart. `rec f 25` each, camera resta
 `describe_mode()` on one DNG from each.
 
 **Prediction.** 12-bit no table → SDR; 16-bit no table → ClearHDR 16-bit linear; 12-bit with a table
-at WhiteLevel 62704/63265 → ClearHDR 12-bit companded; log over 12-bit ClearHDR → **indistinguishable
+at WhiteLevel 62704/63265 → ClearHDR 12-bit companded; log over 12-bit ClearHDR →
+**indistinguishable
 from the previous row**, badged `CRV`. That fourth row passes by confirming an ambiguity, which is
 unusual enough to state plainly so a later reader does not score it as a failure.
 
-**If it disagrees** — that is, if the log take *is* separable from the companded one — then a `LOG`
-badge has a signal on disk to justify it and open decision 6 in the plan reopens. Capture
+**If it disagrees** — that is, if the log take *is* separable from the companded one — then the plan's standing
+`CRV`-only rule under "Two facts the DNG does not record" — do not add a `LOG` badge without a new
+signal on disk — is satisfied, and the badge becomes a new open decision rather than a rule
+violation. Capture
 `redis-cli GET sensor` in the result row: it carries the `_mono` suffix, which is what the pane's
 mono toggle defaults from.
 
@@ -343,8 +395,14 @@ honours the tag gets colour right on flipped footage.
 at launch (`cinepi_multi.py:438-473`); there is no live toggle and no way to simulate it.
 
 **Procedure.** For each of (off,off), (on,off), (off,on), (on,on) under `sensors.cam0.geometry` in
-settings.jsonc — and, if time allows, `rotate_180`, which the gate as filed did not mention —
-restart the camera, `rec f 10`, and read tag 0x828E out of one DNG. Four restarts, four short takes.
+settings.jsonc — and, if time allows, `rotate_180`, which the gate as filed did not mention — edit
+the file, then **restart cinemate, not the camera**: `scripts/pi_cinemate_cli.sh stop` then `start`.
+`cinepi_multi.py` caches settings.jsonc for the life of the process (`_SETTINGS`, `:26-33`, with no
+invalidation anywhere in `src/`), and `CinePiProcess.__init__` reads its geometry from that cached
+dict, so `restart camera` rebuilds cinepi-raw from the **old** geometry and all four takes come out
+identical. After each start re-issue `set fps free 1` and `set dynamic resolution 0`, then
+`rec f 10`, and confirm the flip actually reached the sensor by checking `--hflip`/`--vflip` on the
+launch line before reading tag 0x828E out of one DNG.
 
 **Prediction.** `CFAPattern` changes with the flips, and a decoder that reads the tag per take is
 correct with no further work.
@@ -359,7 +417,7 @@ on disk records the flip.
 ## G9 — the decoder renders a real image, not a black one
 
 **Belief being tested.** That `dng_preview.py` applies the `LinearizationTable` and subtracts
-`BlackLevel` in the **table's output domain**. This is not established. `docs/cinemate-log.md:63`
+`BlackLevel` in the **table's output domain**. This is not established. `docs/cinemate-log.md:66`
 names it as the first diagnostic for a grading complaint and states the failure exactly: a decoder
 that skips the table renders a log clip **solid black**, because it subtracts a linear-domain
 BlackLevel from data that never reaches it. Every other C9 gate measures speed or classification;

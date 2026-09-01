@@ -211,7 +211,12 @@ Frame-rate conform target, flicker-free input, and sync tolerances.
 }
 ```
 
-`conform_frame_rate` – frame rate intended for project conforming in post. This setting is not really used by CineMate except for calculating the recording timecode tracker in redis but might be used in future updates.<br>
+`conform_frame_rate` – the frame rate footage is intended to be conformed to in post. Two things on the camera use it:
+
+<br>*Timecode* – the SMPTE frame base for the time-of-day and recording-elapsed timecodes published to redis. Rounded to a whole number, so 23.976 gives a 24-frame base.
+<br>*Playback* – reserved as the timebase for the settings editor's clip-playback feature: once that lands, a take shot above the conform rate will play as slow motion, at the speed it runs on the timeline, and one shot below it plays fast.
+
+<br>It has no effect on recording. Takes are always captured at the camera's own `fps` — the conform rate only decides how they are counted, and, once playback lands, played back.<br>
 `light_hz` – list of mains frequencies used to calculate flicker‑free shutter angles. These are added to the shutter angle steps (see [arrays](#arrays)) and also dynamically calculated upon each fps change. This way, there is always a flicker free shutter angle value close by, when toggling through shutter angles, either via the cli or using buttons/pots/rotary encoder.
 
 `sync_tolerances`:

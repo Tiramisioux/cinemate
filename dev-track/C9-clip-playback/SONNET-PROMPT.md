@@ -18,7 +18,9 @@ or colour, and surface that toggle in CineMate. Then land the one-paragraph
 The plan is at:
 `/Users/patrikeriksson/Documents/cinemate/cinemate/dev-track/C9-clip-playback/PLAN.md` — read
 **Phase 0** in full, plus [`GATES.md`](GATES.md) beside it for G10 and G11, which are what this
-work will be judged by. Both are on branch `feature/dev-track`.
+work will be judged by. Both are on branch `feature/c9-clip-playback-plan` (PR #181), or on
+`dev` once that merges. Do **not** read the copies on `feature/dev-track`: they predate the
+correction pass and contain known-bad commands and a wrong `thumbnail_size` design.
 
 Read the plan before touching anything, and read
 `/Users/patrikeriksson/Documents/cinemate/cinemate-handbook/README.md` plus

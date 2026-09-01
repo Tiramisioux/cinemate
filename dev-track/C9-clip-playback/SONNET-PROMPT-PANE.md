@@ -26,7 +26,9 @@ ADR-001, and `tools/playback_bench.py` — the harness G1, G2 and G9 are written
 
 The plan and its gates are at:
 `/Users/patrikeriksson/Documents/cinemate/cinemate/dev-track/C9-clip-playback/PLAN.md` and
-`GATES.md` beside it, on branch `feature/dev-track`.
+`GATES.md` beside it, on branch `feature/c9-clip-playback-plan` (PR #181), or on `dev` once that
+merges. The copies on `feature/dev-track` are stale — they predate the correction pass — so do
+not read them.
 
 Read both in full before touching anything, and read
 `/Users/patrikeriksson/Documents/cinemate/cinemate-handbook/README.md` plus

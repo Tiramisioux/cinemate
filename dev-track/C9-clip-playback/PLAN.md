@@ -577,7 +577,8 @@ feature, not a way to review between setups.
 **not pushed** and 1381 commits behind `dev`), plus a cinepi-raw branch off its `dev` for Phase 0,
 still to be cut — C9 is a two-repo step as of 2026-09-01. The gates need it on the Pi, so it has to
 be pushed before Session A — which is also the only way the `conform_frame_rate` docs fix stops
-living in one place. Planning commits stay here on `feature/dev-track` as `c9:`; the hardware
+living in one place. Planning commits are on `feature/c9-clip-playback-plan` as `c9:` (PR #181, cut off `dev`
+2026-09-01 so it merges clean; the `feature/dev-track` copies are stale); the hardware
 session reports as `c9-pi:`.
 
 **Verification.** Desk — done at `714ef7b4`: 9 tests in `_test/test_dng_preview.py`, the real

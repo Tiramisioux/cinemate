@@ -96,8 +96,27 @@ def make_gui(cameras_json="[]"):
     gui.vu_smoothed = []
     gui.vu_peaks = []
     gui.draw_right_col = False
+    gui.color_mode = "normal"
+    gui.current_background_color = "black"
+    gui.show_buffer_vu = True
+    gui.vu_meter_hatch_lines = True
+    gui._frames_off_sync_prev = False
+    gui._sync_flash_until = 0.0
+    gui.background_color_changed = False
+    gui.disp_width = 0
+    gui.disp_height = 0
+    gui.fb = None
+    gui._font_cache = {}
     gui.setup_resources()
     return gui
+
+
+class FakeFramebuffer:
+    def __init__(self, size=(1920, 1080)):
+        self.size = size
+
+    def show(self, image):
+        pass
 
 
 class PopulateValuesNoCameraTests(unittest.TestCase):
@@ -121,6 +140,28 @@ class PopulateValuesNoCameraTests(unittest.TestCase):
         values = gui.populate_values()
 
         self.assertEqual(values["fps"], 24)
+
+    def test_draw_gui_does_not_throw_with_width_height_unset(self):
+        # Audit finding: draw_gui() re-reads WIDTH/HEIGHT straight from Redis
+        # (not the already-guarded self.width/self.height populate_values()
+        # just set) to get the freshest sensor resolution for the preview
+        # guide rect. On a genuinely fresh Redis -- no camera has ever
+        # reported these -- that used to be int(None). draw_gui() runs every
+        # frame from run()'s draw loop, which has no per-iteration exception
+        # catch, same risk class as the fps_user guard above.
+        gui = make_gui(cameras_json="[]")
+        gui.fb = FakeFramebuffer()
+        gui.disp_width = 1920
+        gui.disp_height = 1080
+
+        values = gui.populate_values()
+        self.assertNotIn(ParameterKey.WIDTH.value, gui.redis_controller.values)
+        self.assertNotIn(ParameterKey.HEIGHT.value, gui.redis_controller.values)
+
+        gui.draw_gui(values)  # must not raise
+
+        self.assertEqual(gui.width, 1920)
+        self.assertEqual(gui.height, 1080)
 
     def test_camera_present_leaves_camera_missing_false(self):
         gui = make_gui(

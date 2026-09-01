@@ -1906,9 +1906,15 @@ class SimpleGUI(threading.Thread):
         # Draw left-hand labels and boxes dynamically
         left_bottom_y = self.draw_left_sections(draw, values)
 
-        # Get sensor resolution
-        self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value))
-        self.height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value))
+        # Get sensor resolution. No camera ever having reported WIDTH/HEIGHT
+        # (fresh Redis, no camera) must not throw here -- draw_gui() runs
+        # every frame from run()'s draw loop, which has no per-iteration
+        # exception catch (see populate_values()'s fps_user guard for the
+        # same concern). Fall back to self.width/self.height, already
+        # guarded moments earlier this frame by load_sensor_values_from_redis()
+        # inside populate_values().
+        self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value) or self.width)
+        self.height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value) or self.height)
         try:
             anamorphic_factor = float(
                 self.redis_controller.get_value(ParameterKey.ANAMORPHIC_FACTOR.value) or 1.0

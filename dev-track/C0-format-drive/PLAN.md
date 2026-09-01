@@ -13,14 +13,14 @@
 > is the truth now, exactly as their own provenance banners predicted. Do not hand the kickoff
 > prompt to a session — the work it describes is finished.
 >
-> **One small follow-up.** C0 was verified at `e54e691b` (off `dev` `953477e8`).
-> `settings_editor.html` and `settings_editor.py` have changed several times since —
-> control-row layout, phone stacking, the dotted action/command rule, the `free mode` →
+> **Regression spot-check — CLOSED 2026-09-01.** After `settings_editor.html`/`.py` churn
+> (control-row layout, phone stacking, the dotted action/command rule, the `free mode` →
 > `free stepping` rename, and a hardening of the *generic* action catalogue's `format_drive`
-> entry to `"no_arg": "required"` (a blank argument used to silently format as exFAT). The
-> format endpoint itself is untouched, but the pane around its control is not what was tested.
-> That warrants a **regression spot-check** — open the RAW pane, confirm the control renders
-> and is styled, format once — not a re-run of the destructive checklist.
+> entry to `"no_arg": "required"`), the operator confirmed on the Pi that all three
+> filesystems — exFAT, ext4, NTFS — still format and remount clean from the browser control.
+> The two facts the 2026-08-26 run left unestablished (which fstype string NTFS reports,
+> how long a format holds the dispatch lock) were **not** captured in this pass and remain
+> open — see the "Not established" row above.
 >
 > **Provenance:** moved 2026-08-25 from the review ledger
 > (`system-review/deliverables/REMEDIATION-PLAN.md` §3 on

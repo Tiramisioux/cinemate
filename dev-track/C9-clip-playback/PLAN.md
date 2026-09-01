@@ -167,7 +167,7 @@ Three consequences worth not rediscovering:
 Caveat: `conform_frame_rate` is a known multi-source drift (F-251) — and there are **six** sites,
 not four: `settings.schema.json:200` and `config_loader.py:218` and `redis_controller.py:174` and
 `main.py:604` all say 24; `settings.jsonc:118` and `resources/settings/settings_default.jsonc:50`
-say 25; and `settings_editor.html:1215` shows the operator `data-original="25"`. The pane reads
+say 25; and the settings tab's `#f-conform` field shows the operator `data-original="25"` (`:1370` on `dev`). The pane reads
 the live value and displays it; it must not restate a default. **Name the source:** the value in
 effect is `current_app.config['SETTINGS']['settings']['conform_frame_rate']` — the same dict
 `main.py:604` constructed `RedisController` from, i.e. the *running* value, which diverges from
@@ -242,7 +242,7 @@ None of these were visible in the harness. Each is one line to a few lines, and 
 of thing that reads as working:
 
 1. **`syncTopbarForPage` will offer Save / Revert / Upload / Download on the playback tab.**
-   `settings_editor.html:3535` reads `var noFilePage = activePage === 'live' || activePage === 'raw';`
+   `syncTopbarForPage()` reads `var noFilePage = activePage === 'live' || activePage === 'raw';` (`settings_editor.html:4574` on `dev` @ `c0eb9ff7` — grep the symbol, the line moves)
    — a `playback` page falls through as a *file* page and claims to edit settings.jsonc.
 2. **`playback.py` must not re-scan directories.** `raw_files.py` already has `_media_roots()`,
    `_is_take_dir()`, `_take_info()`, `list_takes()` (mtime-sorted, `has_wav` per take) and a
@@ -257,8 +257,8 @@ of thing that reads as working:
    file and treat every hit as an offered controller action. A scale-option list written as
    `{"value": "quarter"}` fails CI twice, with a message pointing at the JS catalogue. Use `id`,
    `divisor` or `scale`, or keep option lists in `playback.py`.
-5. **The Live tab's MJPEG stream never stops.** `settings_editor.html:2199` embeds
-   `<iframe src="/">` and nothing ever clears its `src` — `setActivePage` only hides it. Once the
+5. **The Live tab's MJPEG stream never stops.** the template embeds `<iframe id="liveEmbedFrame" … src="/">` (`:2226` on `dev`) and nothing
+   ever clears its `src` — `setActivePage` only hides it. Once the
    operator has visited Live view, playback competes with a live MJPEG stream on the same Wi-Fi
    link for the rest of the session, which is most of G6's margin. Clear the src on leave, restore
    on entry.

@@ -77,6 +77,14 @@ SYSTEM_SHUTDOWN_TARGETS = frozenset(
 CINEMATE_LOCKFILE = "/tmp/cinemate.lock"
 
 
+def camera_present_from_cameras_value(raw) -> bool:
+    """True when start_all()'s ParameterKey.CAMERAS write indicates at least
+    one discovered camera. That key is written unconditionally, before the
+    early-return that follows when discovery finds nothing, and is JSON
+    "[]" for both a no-camera boot and a Redis key that was never set."""
+    return raw not in (None, "[]")
+
+
 def _release_run_lock() -> None:
     try:
         os.remove(CINEMATE_LOCKFILE)
@@ -748,6 +756,10 @@ def run_application(args, log_queue):
     
     cinepi.start_all()
 
+    camera_present = camera_present_from_cameras_value(
+        redis_controller.get_value(ParameterKey.CAMERAS.value)
+    )
+
     # cinepi.set_log_level('INFO')
     # cinepi.message.subscribe(handle_vu_output)
 
@@ -901,9 +913,13 @@ def run_application(args, log_queue):
         splash_thread.join()
         claim_console_for_framebuffer()
 
-    if restart_camera_after_startup_handoff:
+    if restart_camera_after_startup_handoff and camera_present:
         logging.info("Restarting cinepi-raw after startup handoff so preview binds above Cinemate")
         cinepi_controller.restart_camera(preview_enabled=True)
+    elif restart_camera_after_startup_handoff:
+        logging.info(
+            "No camera detected -- skipping post-Plymouth preview restart"
+        )
 
     tol_cfg = settings.get("settings", {}).get("sync_tolerances", {})
     redis_listener = RedisListener(

@@ -113,6 +113,18 @@ class StoragePreroll:
             )
             return False
 
+        # No camera: there is no recorder process, so an automatic pre-roll
+        # would be a pointless stress-write cycle that records nothing.
+        # Manual requests (force=True) stay available and let
+        # start_recording() log why it can't record, same as any other
+        # recording command in the degraded state.
+        if not force and self.sensor_detect.camera_model is None:
+            logging.info(
+                "Skipping automatic storage pre-roll (%s): no camera detected",
+                reason,
+            )
+            return False
+
         with self._active_lock:
             if self._active:
                 return False

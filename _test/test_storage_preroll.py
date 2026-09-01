@@ -76,6 +76,43 @@ class StoragePrerollTests(unittest.TestCase):
         self.assertFalse(preroll.mark_startup_ready())
         self.assertFalse(preroll.trigger(reason="test", delay=0.0))
 
+    def test_auto_trigger_skipped_when_no_camera_detected(self):
+        ssd_monitor = FakeSsdMonitor()
+        preroll = StoragePreroll(
+            cinepi_controller=FakeController(),
+            redis_controller=FakeRedis(),
+            ssd_monitor=ssd_monitor,
+            sensor_detect=types.SimpleNamespace(camera_model=None),
+        )
+
+        self.assertFalse(preroll.trigger(reason="mount", delay=0.0))
+        self.assertFalse(preroll._active)
+
+    def test_manual_preroll_bypasses_no_camera_gate(self):
+        ssd_monitor = FakeSsdMonitor()
+        preroll = StoragePreroll(
+            cinepi_controller=FakeController(),
+            redis_controller=FakeRedis(),
+            ssd_monitor=ssd_monitor,
+            sensor_detect=types.SimpleNamespace(camera_model=None),
+        )
+        calls = []
+        preroll._run_with_delay = lambda delay, reason: calls.append(reason)
+
+        self.assertTrue(preroll.trigger(reason="cli", delay=0.0, force=True))
+
+    def test_auto_trigger_proceeds_when_camera_present(self):
+        ssd_monitor = FakeSsdMonitor()
+        preroll = StoragePreroll(
+            cinepi_controller=FakeController(),
+            redis_controller=FakeRedis(),
+            ssd_monitor=ssd_monitor,
+            sensor_detect=types.SimpleNamespace(camera_model="imx585"),
+        )
+        preroll._run_with_delay = lambda delay, reason: None
+
+        self.assertTrue(preroll.trigger(reason="mount", delay=0.0))
+
     def test_manual_preroll_can_bypass_auto_disabled(self):
         ssd_monitor = FakeSsdMonitor()
         preroll = StoragePreroll(

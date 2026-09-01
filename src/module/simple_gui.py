@@ -1323,7 +1323,7 @@ class SimpleGUI(threading.Thread):
         scale = max(0.4, min(shrink_x, shrink_y, 1))
         lines = [
             ("CAMERA NOT FOUND", DESIGN_TOKENS["value"], 40),
-            ("Reconnect, then run: restart cinemate", DESIGN_TOKENS["label"], 22),
+            ("Check camera cable and cinemate settings", DESIGN_TOKENS["label"], 22),
             ("POWER OFF BEFORE CONNECTING OR DISCONNECTING THE CAMERA",
              NO_CAM_WARNING_COLOR, 26),
         ]

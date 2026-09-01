@@ -1013,7 +1013,17 @@ sudo make enable
 
 #### Further notes
 
-`sudo make install` also places `/usr/local/bin/camera-ready.sh`, `/usr/local/bin/cinemate-startup-failure-display.sh`, and `/usr/local/bin/cinemate-console-handoff.sh` on the system. The camera-ready helper waits for `cinepi-raw` to report a camera before systemd launches Cinemate, the startup-failure helper preserves early crash diagnostics on `tty1`, and the console-handoff helper restores the CLI on a normal Cinemate stop while leaving `tty1` available for Plymouth during full system shutdown.
+`sudo make install` also places `/usr/local/bin/camera-ready.sh`, `/usr/local/bin/cinemate-startup-failure-display.sh`, and `/usr/local/bin/cinemate-console-handoff.sh` on the system. The camera-ready helper waits up to 30 seconds for `cinepi-raw` to report a camera before systemd launches Cinemate — but that wait is now advisory, not a startup gate: if no camera ever shows up, Cinemate still starts, with a `NO CAM` indicator in both GUIs (see [Troubleshooting](troubleshooting.md)) rather than failing to boot. The startup-failure helper preserves early crash diagnostics on `tty1`, and the console-handoff helper restores the CLI on a normal Cinemate stop while leaving `tty1` available for Plymouth during full system shutdown.
+
+!!! note "Updating an existing install"
+
+    `cinemate-autostart.service` changed to make the camera-ready gate advisory. On a Pi that was set up before this change, pick up the new unit file with:
+
+    ```shell
+    cd /home/pi/cinemate/
+    sudo make install   # re-copies the service file and reloads systemd
+    sudo systemctl restart cinemate-autostart   # or reboot
+    ```
 
 You now have a 12 bit RAW image capturing system on your Raspberry Pi!
 

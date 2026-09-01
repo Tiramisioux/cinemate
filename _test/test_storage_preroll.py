@@ -82,7 +82,22 @@ class StoragePrerollTests(unittest.TestCase):
             cinepi_controller=FakeController(),
             redis_controller=FakeRedis(),
             ssd_monitor=ssd_monitor,
-            sensor_detect=types.SimpleNamespace(camera_model=None),
+            sensor_detect=types.SimpleNamespace(camera_model=None, res_modes={}),
+        )
+
+        self.assertFalse(preroll.trigger(reason="mount", delay=0.0))
+        self.assertFalse(preroll._active)
+
+    def test_auto_trigger_skipped_when_wrong_sensor_selected(self):
+        # A physically attached but unconfigured/mismatched sensor: a real
+        # camera_model string, but no entry for it in sensor_resolutions,
+        # so res_modes ends up empty exactly like the no-camera case.
+        ssd_monitor = FakeSsdMonitor()
+        preroll = StoragePreroll(
+            cinepi_controller=FakeController(),
+            redis_controller=FakeRedis(),
+            ssd_monitor=ssd_monitor,
+            sensor_detect=types.SimpleNamespace(camera_model="imx283", res_modes={}),
         )
 
         self.assertFalse(preroll.trigger(reason="mount", delay=0.0))
@@ -94,7 +109,7 @@ class StoragePrerollTests(unittest.TestCase):
             cinepi_controller=FakeController(),
             redis_controller=FakeRedis(),
             ssd_monitor=ssd_monitor,
-            sensor_detect=types.SimpleNamespace(camera_model=None),
+            sensor_detect=types.SimpleNamespace(camera_model=None, res_modes={}),
         )
         calls = []
         preroll._run_with_delay = lambda delay, reason: calls.append(reason)
@@ -107,7 +122,9 @@ class StoragePrerollTests(unittest.TestCase):
             cinepi_controller=FakeController(),
             redis_controller=FakeRedis(),
             ssd_monitor=ssd_monitor,
-            sensor_detect=types.SimpleNamespace(camera_model="imx585"),
+            sensor_detect=types.SimpleNamespace(
+                camera_model="imx585", res_modes={0: {"width": 1928}}
+            ),
         )
         preroll._run_with_delay = lambda delay, reason: None
 

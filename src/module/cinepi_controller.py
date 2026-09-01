@@ -324,16 +324,20 @@ class CinePiController:
         return raw
 
     def _apply_startup_fps(self):
-        """Apply self.fps at startup via set_fps(), unless no camera was
-        detected. With no camera, set_fps() would recompute fps_max from a
-        fps-less sensor (_sensor_readout_fps_max() -> 1) and clamp fps/
+        """Apply self.fps at startup via set_fps(), unless there is no valid
+        mode table for the detected camera. Not the same test as "no camera
+        detected": a physically attached but wrong/unconfigured sensor
+        (camera_model set to a string that isn't a key in
+        sensor_resolutions) leaves res_modes == {} exactly like no camera at
+        all does, and set_fps() would recompute fps_max from that same
+        fps-less state (_sensor_readout_fps_max() -> 1) and clamp fps/
         fps_user to that 1, which cleanup() then persists as fps_last on
-        exit -- corrupting the stored frame rate for the next with-camera
-        boot. Leave fps/fps_user exactly as read/seeded by _read_or_seed()."""
-        if self.sensor_detect.camera_model is None:
+        exit -- corrupting the stored frame rate for the next good boot.
+        Leave fps/fps_user exactly as read/seeded by _read_or_seed()."""
+        if not self.sensor_detect.res_modes:
             logging.info(
-                "No camera detected -- skipping startup set_fps() to avoid "
-                "clamping fps/fps_user to fps_max=1"
+                "No usable camera mode table -- skipping startup set_fps() "
+                "to avoid clamping fps/fps_user to fps_max=1"
             )
             return
         prev_dynamic_suspended = self.dynamic_resolution_suspended
@@ -2410,7 +2414,14 @@ class CinePiController:
 
     def initialize_wb_cg_rb_array(self):
         """Initialize the white balance cg_rb array based on the sensor model."""
-        sensor_key = self.current_sensor.replace('_mono', '')
+        # No camera: current_sensor is None. Falls through to the generic
+        # default_ct_curve below (sensor_key matches neither imx283 nor
+        # imx585) -- the tuning-file load further down already tolerates
+        # this same None via its broad except Exception, but this earlier
+        # .replace() call did not, and crashed startup outright (hardware-
+        # confirmed 2026-09-01: AttributeError: 'NoneType' object has no
+        # attribute 'replace').
+        sensor_key = (self.current_sensor or "").replace('_mono', '')
 
         if sensor_key == 'imx283':
             default_ct_curve = [

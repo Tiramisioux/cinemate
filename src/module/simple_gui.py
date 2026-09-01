@@ -1312,6 +1312,40 @@ class SimpleGUI(threading.Thread):
         if crossed:
             draw.line([(x0 + 5, y0 + 5), (x1 - 5, y1 - 5)], fill=text_color, width=3)
 
+    def _draw_no_camera_message(self, draw, rect, shrink_x, shrink_y):
+        """Centred warning in the empty preview area (rect), shown only
+        while camera_missing. The power-off line is the important one:
+        hot-swapping the camera ribbon under power can damage the sensor or
+        the board -- same warning as the docs' hardware tip."""
+        x0, y0, x1, y1 = rect
+        max_w = max(10, (x1 - x0) - 40)
+        scale = max(0.4, min(shrink_x, shrink_y, 1))
+        lines = [
+            ("CAMERA NOT FOUND", NO_CAM_WARNING_COLOR, 40),
+            ("POWER OFF BEFORE CONNECTING OR DISCONNECTING THE CAMERA",
+             DESIGN_TOKENS["value"], 26),
+            ("Reconnect, then run: restart cinemate", DESIGN_TOKENS["label"], 22),
+        ]
+
+        rendered = []
+        for text, color, base_size in lines:
+            size = max(10, base_size * scale)
+            font = self._get_font("bold", size)
+            tw, th = draw.textbbox((0, 0), text, font=font)[2:]
+            while tw > max_w and size > 10:
+                size -= 2
+                font = self._get_font("bold", size)
+                tw, th = draw.textbbox((0, 0), text, font=font)[2:]
+            rendered.append((text, color, font, tw, th))
+
+        gap = 12 * scale
+        total_h = sum(th for *_, th in rendered) + gap * (len(rendered) - 1)
+        cx = (x0 + x1) / 2
+        y = (y0 + y1) / 2 - total_h / 2
+        for text, color, font, tw, th in rendered:
+            draw.text((cx - tw / 2, y), text, font=font, fill=color)
+            y += th + gap
+
     def draw_left_sections(self, draw, values):
         label_font = self._get_font("regular", 26)
         box_font   = self._get_font("bold", 26)
@@ -1950,6 +1984,13 @@ class SimpleGUI(threading.Thread):
                 anamorphic_factor,
             )
             draw.rectangle(outline_rect, outline=line_color, width=PREVIEW_GUIDE_OUTLINE_WIDTH)
+            if values.get("camera_missing"):
+                # No cinepi-raw process is running to fill this area, so
+                # it's otherwise just blank background -- use it for the
+                # power-off warning. Hot-swapping the camera ribbon under
+                # power can damage the sensor or the board (same warning as
+                # the docs' "power down before changing hardware" tip).
+                self._draw_no_camera_message(draw, outline_rect, shrink_x, shrink_y)
 
         current_layout = self.layout
 

@@ -163,6 +163,37 @@ class PopulateValuesNoCameraTests(unittest.TestCase):
         self.assertEqual(gui.width, 1920)
         self.assertEqual(gui.height, 1080)
 
+    def test_draw_no_camera_message_renders_the_power_off_warning(self):
+        from PIL import Image, ImageDraw
+
+        gui = make_gui(cameras_json="[]")
+        image = Image.new("RGBA", (1920, 1080), (0, 0, 0, 255))
+        draw = ImageDraw.Draw(image)
+        rect = (94, 50, 1826, 1030)  # a realistic outline_rect
+
+        gui._draw_no_camera_message(draw, rect, 1.0, 1.0)
+
+        # Smoke check: something other than the black background was
+        # actually painted inside the rect (not just a no-op).
+        region = image.crop(rect)
+        blank = Image.new(region.mode, region.size, (0, 0, 0, 255))
+        self.assertNotEqual(region.tobytes(), blank.tobytes())
+
+    def test_draw_gui_shows_no_camera_message_only_when_camera_missing(self):
+        gui = make_gui(
+            cameras_json='[{"port": "cam0", "model": "imx585", "mono": false}]'
+        )
+        gui.fb = FakeFramebuffer()
+        gui.disp_width = 1920
+        gui.disp_height = 1080
+        calls = []
+        gui._draw_no_camera_message = lambda *a, **k: calls.append(a)
+
+        values = gui.populate_values()
+        gui.draw_gui(values)
+
+        self.assertEqual(calls, [])
+
     def test_camera_present_leaves_camera_missing_false(self):
         gui = make_gui(
             cameras_json='[{"port": "cam0", "model": "imx585", "mono": false}]'

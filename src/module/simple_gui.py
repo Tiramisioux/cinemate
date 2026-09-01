@@ -1313,18 +1313,19 @@ class SimpleGUI(threading.Thread):
             draw.line([(x0 + 5, y0 + 5), (x1 - 5, y1 - 5)], fill=text_color, width=3)
 
     def _draw_no_camera_message(self, draw, rect, shrink_x, shrink_y):
-        """Centred warning in the empty preview area (rect), shown only
-        while camera_missing. The power-off line is the important one:
-        hot-swapping the camera ribbon under power can damage the sensor or
-        the board -- same warning as the docs' hardware tip."""
+        """Centred message in the empty preview area (rect), shown only
+        while camera_missing: title, recovery hint, then the power-off
+        warning last -- hot-swapping the camera ribbon under power can
+        damage the sensor or the board, same warning as the docs' hardware
+        tip, kept in the alarm colour so it doesn't blend in as a footnote."""
         x0, y0, x1, y1 = rect
         max_w = max(10, (x1 - x0) - 40)
         scale = max(0.4, min(shrink_x, shrink_y, 1))
         lines = [
-            ("CAMERA NOT FOUND", NO_CAM_WARNING_COLOR, 40),
-            ("POWER OFF BEFORE CONNECTING OR DISCONNECTING THE CAMERA",
-             DESIGN_TOKENS["value"], 26),
+            ("CAMERA NOT FOUND", DESIGN_TOKENS["value"], 40),
             ("Reconnect, then run: restart cinemate", DESIGN_TOKENS["label"], 22),
+            ("POWER OFF BEFORE CONNECTING OR DISCONNECTING THE CAMERA",
+             NO_CAM_WARNING_COLOR, 26),
         ]
 
         rendered = []
@@ -1338,7 +1339,7 @@ class SimpleGUI(threading.Thread):
                 tw, th = draw.textbbox((0, 0), text, font=font)[2:]
             rendered.append((text, color, font, tw, th))
 
-        gap = 12 * scale
+        gap = 32 * scale
         total_h = sum(th for *_, th in rendered) + gap * (len(rendered) - 1)
         cx = (x0 + x1) / 2
         y = (y0 + y1) / 2 - total_h / 2

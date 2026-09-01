@@ -25,8 +25,32 @@ before any further build.
     anything. Gates moved out to [`GATES.md`](GATES.md), where they carry predictions stated in
     advance; G0 and G9 are new, G1–G8 keep the numbers they were filed under.
 
-## Why it is possible at all
+!!! note "Direction changed 2026-09-01 — thumbnail-first, with the raw decoder as the fallback"
+    Operator steer: *"I am not expecting playback of raw files. I am thinking that the system can
+    use the thumbnails instead."* Checked against `cinepi-raw` @ `774402c` rather than assumed —
+    the answer is that the thumbnail does not exist yet, but nearly everything needed to make one
+    does, and it is a far better basis for this feature than decoding raw.
 
+    | | |
+    |---|---|
+    | There is no thumbnail today | `dng_encoder.cpp:781-785` assigns `thumbWidth`/`thumbHeight`/`thumbSamplesPerPixel`/`thumbBitsPerSample`/`thumbPhotometric` into `dng_info`, and **nothing reads them** — no TIFF tag is emitted from any of the five. The lores buffer reaches `dng_save` as `lomem`/`loinfo`/`losize`, all three marked `[[maybe_unused]]`. The encoder says so itself at `:842`: "DNG writer: raw-only frames; embedded lores thumbnail disabled" |
+    | The frame is already there | `cinepi_raw.cpp:215` passes `app.LoresStream()` into `EncodeBuffer` on every frame — the same lores stream that already feeds the HDMI preview and the MJPEG stream. Nothing new has to be produced, only written |
+    | It is already the right size | CineMate launches with `--lores-width`/`--lores-height` from `sensor_detect._calc_lores()`, which caps height at 720 and preserves aspect: **1272×720** for both UHD and 2K. That is *larger* than the 964×545 the raw path strains to produce at 1/4 |
+    | The cost collapses | An 8-bit mono 1272×720 plane is ~0.92 MB. At 25 fps that is **~23 MB/s**, against 158 MB/s for the raw path at 1/4 — and no demosaic, no `LinearizationTable`, no bit-unpacking, so the black-log-clip failure (G9) cannot happen on this path at all |
+
+    **So C9 becomes thumbnail-first with the raw decoder retained as the fallback** (operator
+    decision, 2026-09-01), which keeps every take reviewable: the thumbnail only ever exists in
+    footage shot after the cinepi-raw change lands. Mono and colour both ship, behind a toggle
+    (operator decision, same day).
+
+    What that costs, and none of it is free: C9 stops being a cinemate-only Python step and
+    becomes a **two-repo step** like C2 and C7, with a cinepi-raw build on the Pi. And the
+    writer is hand-rolled — `IFDBuilder` (`ifd_builder.hpp`, 221 lines) emits exactly **one** IFD
+    and patches its offset into the header at byte 4 — so this is not a flag flip. See Phase 0.
+
+## Why the raw fallback is possible at all
+
+The decoder stays, because a thumbnail only ever exists in takes shot after Phase 0 lands.
 Three properties of what `dng_encoder.cpp` writes, all confirmed against real frames (the six
 imx585 mode-matrix samples, a real UHD imx585 still, and a genuine 50-frame imx477 take):
 
@@ -127,7 +151,10 @@ Log curve share tag 0xC618 and compose into one table when log runs over 12-bit 
 therefore badges `CRV` ("a curve is baked in"), never `LOG`. Do not add a `LOG` badge later
 without a new signal on disk to justify it.
 
-**Mono is undetectable *from the file*.** `mono_` is hardcoded false and every frame carries a
+**Mono is undetectable *from the file*.** Confirmed in source, and worse than the plan said: `mono_`
+exists **twice** — a file-scope global at `dng_encoder.cpp:129` (`bool mono_ = false;`, comment "add
+as a private member of DngEncoder") shadowing the real member at `dng_encoder.hpp:137` — and neither
+is ever assigned, while `mono_formats` at `:124` is deliberately empty. So `phot = mono_ ? PHOTOMETRIC_MINISBLACK : PHOTOMETRIC_CFA` (`:1024`) always takes the CFA branch and every frame carries a
 colour CFA even on the mono rig, so demosaicing mono footage through a Bayer pattern produces a
 convincing wrong image. It must stay an operator toggle. But the *running system* knows:
 `sensor_detect.py:251-256` appends `_mono` when `--list-cameras` reports it, `boot_config.py:35`
@@ -175,9 +202,60 @@ the file whenever settings.jsonc was edited without a restart. Reading the file 
 an edited-but-unapplied rate, which is exactly the drift the pane exists not to restate. Say
 "running value" in the HUD. And clamp: the schema permits `0`, which reaches `1 / rate`.
 
-## Phase 1 — the first increment (written, desk-verified, **not landed**)
+## Phase 0 — enable the thumbnail in cinepi-raw
 
-Branch `feature/clip-playback` off `dev` @ `714ef7b4`. Two commits, **not pushed**.
+New, and now the first thing that happens. Everything else in C9 improves once this lands, and
+nothing else in C9 depends on it — the pane works without it, more slowly and only in colour.
+
+**The change.** `dng_save()` builds one IFD with `IFDBuilder` and patches its offset into the TIFF
+header (`dng_encoder.cpp:1017-1137`). The thumbnail needs a second IFD carrying the lores plane,
+which means `IFDBuilder` grows multi-IFD support — it currently writes one directory and a
+next-IFD pointer, so the mechanism is there but unused.
+
+**Layout is a real decision, not a detail.** Upstream `image/dng.cpp:418-462` puts the thumbnail
+in IFD0 with the raw in a SubIFD, and says why in its own comment: *"put it first to help software
+that only reads the first IFD"*. That is the standard DNG shape and the one post tools expect —
+but it **moves the raw image out of IFD0**, which is where every existing CineMate DNG has it and
+where `dng_preview.py`, the fallback decoder, currently looks. Chaining the thumbnail as IFD1
+instead leaves existing readers untouched and is invisible to tools that stop at IFD0. Decide it
+against what the operator's post software does, not from the spec alone (open decision 7), and
+note that upstream's writer is **libtiff** while cinepi-raw's is hand-rolled — it is a design
+reference, not code to lift.
+
+**The controls already exist and are inert.** `CONTROL_KEY_THUMBNAIL` and
+`CONTROL_KEY_THUMBNAIL_SIZE` (`cinepi_state.hpp:39-40`) are read at startup, pushed into
+`options_->thumbnail`/`thumbnailSize` (`cinepi_controller.cpp:206-207`), have live pub/sub
+handlers (`:572-579`) — and **nothing reads either option**. PI-008 found them resident on the Pi
+with real-looking values (`thumbnail=3`, `thumbnail_size=50`), which is why F-027 flagged them as
+possibly "a feature someone wants and never finished". This is that feature.
+
+Give them meaning rather than inventing keys: `thumbnail` becomes the mode — **0 off, 1 mono,
+2 colour** — which is the toggle the operator asked for, and `thumbnail_size` stays the size knob,
+matching the right-shift `thumbnailFactor` already threaded through
+`RPiCamApp::ConfigureVideo(flags, thumbnailFactor)` (`rpicam_app.cpp:597,659-661`), which
+`cinepi_raw.cpp:71` passes as 0 today.
+
+**One bug to fix on the way past.** `cinepi_controller.cpp:137` seeds `CONTROL_KEY_THUMBNAIL` with
+`thumbnail_size_` where it means `CONTROL_KEY_THUMBNAIL_SIZE`. That is why the Pi reads
+`thumbnail=3`: 3 is `CP_DEF_THUMBNAIL_SIZE`, not `CP_DEF_THUMBNAIL`, which is 1. One line, and it
+has hardware evidence behind it.
+
+| | |
+|---|---|
+| Repo | `cinepi-raw`, branch off `dev` — plus a matching cinemate commit for the toggle's settings key, CLI verb and settings-editor control |
+| Deploy | A cinepi-raw **rebuild** on the Pi, not a Python restart. This is what makes C9 a two-repo step |
+| Write cost | ~0.92 MB/frame mono at 1272×720, ~2.7 MB colour — about +7% and +22% on a UHD 12-bit frame, on the *write* path during recording, which is the contended one. G10 measures it |
+| Reach | New takes only. Everything already on a card decodes through the fallback |
+
+## Phase 1 — the pane (written, desk-verified, **not landed**)
+
+Branch `feature/clip-playback` off `dev` @ `714ef7b4`. Two commits, **not pushed**. Written as a
+raw-decoding pane; it becomes the **fallback half** of a thumbnail-first pane, which is an
+addition to it rather than a rewrite of it — the clip index, the player, the HUD, the conform
+logic, the 409 lockout and the cache scheme are all indifferent to where the pixels came from.
+What changes is one branch in the frame route: serve the embedded thumbnail when the take has
+one, decode when it does not, and **say which in the HUD** — an operator must never wonder
+whether they are looking at a 720p mono proxy or a demosaiced quarter-res frame.
 
 | Path | What |
 |---|---|
@@ -287,17 +365,22 @@ Pi as last recorded without a hardware change first.
 | **G7** | Mode inference on fresh takes, including a log take | B |
 | **G8** | CFA orientation under flips | B |
 | **G9** | **Rendered-pixel correctness** — the `LinearizationTable` is actually applied | B |
+| **G10** | **The thumbnail lands** — present, right size, readable by the pane *and* by the operator's post software | E (after Phase 0) |
+| **G11** | **What the thumbnail costs to write** — frames written and audio, mono and colour, against a control take | E |
 
-G1 and G2 gate everything after them: together they decide which modes get real-time playback and
-therefore what the default preview scale should be. G9 gates whether the pane is honest at all on
-the modes it most exists for.
+The order of what gates what has changed with the direction. **G10 and G11 now decide the
+feature**: if the thumbnail lands and is cheap, playback is a solved problem and the pane's
+default path never demosaics anything. G1 and G2 drop from go/no-go to **fallback-quality gates**
+— they decide how well older footage reviews, not whether C9 works. G9 likewise only ever applies
+to the fallback path; a thumbnail cannot render black, because there is no table to skip.
 
 ## Phase 3 — after the gates
 
 Not started. The design is deliberately not fixed before G1/G2 report — but the **rules** that
 will fix it are, so the answers are read off the measurements rather than argued afterwards:
 
-- **Default scale.** Set it to the largest scale whose G1 decode time is ≤ `1000 /
+- **Default scale — fallback path only.** The thumbnail has one size, so this is now a question
+  about older footage alone. Set it to the largest scale whose G1 decode time is ≤ `1000 /
   conform_frame_rate` ms at 2 workers **and** whose G2 device-bytes figure is ≤ 70% of the
   measured sequential ceiling. If no scale satisfies both for UHD, UHD defaults to scrub-only and
   2K keeps a real-time default — the pane already shows the achieved rate and the skip count, so
@@ -392,17 +475,25 @@ feature, not a way to review between setups.
 |---|---|---|---|
 | 1 | ~~Tab or a section on the RAW page?~~ | **Settled 2026-08-27: a fifth tab, and built** | — |
 | 2 | Refuse or degrade while recording? | Refuses (409, stage greys out) | G4. Note the prior has weakened: the ALSA-contention root cause is recorded as *fixed*, and NVMe does not share the mic's bus. The stronger arguments for refusing are now that no core is free during a take, that every media profile sets the I/O scheduler to `none` (no kernel arbitration between the read and write streams), and that the WAV is unfinalised mid-take anyway |
-| 3 | Default preview scale | 1/4, a guess | The G1/G2 rule in Phase 3 — not a judgement call once both report |
+| 3 | Default preview scale, fallback path | 1/4, a guess | The G1/G2 rule in Phase 3. Applies only to takes with no thumbnail |
 | 4 | REVIEW button on the shooting screen? | Not built | Operator decision. Costs a `location.hash` reader and the first surface-2 → surface-3 link; costs no controller method |
 | 5 | Audio — play it at all, and how? | **Not played.** The WAV endpoint exists; nothing consumes it | Operator decision, informed by the four facts above. Free-running is cheap but must apply the 5-frame offset and be labelled as unlocked; sync needs Phase 4's proxy path |
-| 6 | Does the decoder apply the `LinearizationTable`? | **Not established** | G9. Until it reports, the pane's behaviour on every companded and log take is unknown, and the failure mode is a black frame |
+| 6 | Does the decoder apply the `LinearizationTable`? | **Not established** | G9. Until it reports, the *fallback* path's behaviour on every companded and log take is unknown, and the failure mode is a black frame. The thumbnail path is immune |
+| 7 | Thumbnail as IFD0 (raw to a SubIFD) or chained as IFD1? | **Open, and it decides Phase 0's shape** | What the operator's post software actually does with each. IFD0 is the standard DNG shape and what upstream does deliberately; IFD1 leaves every existing reader — including `dng_preview.py` — untouched. Test both against Resolve before choosing |
+| 8 | Does the pane say which path a frame came from? | **Yes** — decided with the direction | Not a question, recorded so it is not dropped: a 720p mono proxy and a demosaiced quarter-res frame must never be indistinguishable in the HUD |
 
 ## Risks
 
-- **The verdict rests on one unmeasured number** (G1). If the Pi is worse than ~6× this Mac,
-  real-time UHD playback drops to 1/8 or to scrub-only. The pane degrades honestly either way —
-  it shows the achieved rate and the skip count rather than running slow — but the feature's
-  value changes.
+- **The headline risk has moved.** It used to be G1: if the Pi were worse than ~6× this Mac,
+  real-time UHD playback dropped to 1/8 or scrub-only. On the thumbnail path that risk is gone —
+  ~23 MB/s and no demosaic. It is replaced by two smaller ones: that Phase 0's second IFD is more
+  work than it looks in a hand-rolled TIFF writer on the per-frame encode path, and that the
+  thumbnail's write cost is not free on a system whose binding constraint is already storage. G1
+  still matters, but only for how well *older* footage reviews.
+- **Phase 0 writes to the recording hot path.** `dng_save` runs per frame in the encoder threads,
+  and this adds bytes to it. A bug there does not produce a bad preview — it produces a bad take.
+  That asymmetry is why G11 compares against a control take and why the toggle's off position must
+  be a genuine no-op, byte-identical to today's output.
 - **G1 as filed measures a box the process never is.** The isolated decoder on an idle Pi is a
   ceiling, not a prediction: the same process is measured at 31.8–33.5% CPU during a take and its
   HDMI GUI redraw already runs at ~7.5 Hz against a 12 fps target. A playback feature that drops
@@ -431,6 +522,9 @@ feature, not a way to review between setups.
 
 | commit | change |
 |---|---|
+| C9.0a | **cinepi-raw** · `IFDBuilder` gains multi-IFD support; `dng_save` emits the lores plane as a thumbnail IFD, mono or colour per `thumbnail` (0 off / 1 mono / 2 colour), sized by `thumbnail_size`. Off is byte-identical to today |
+| C9.0b | **cinepi-raw** · fix `cinepi_controller.cpp:137` seeding `CONTROL_KEY_THUMBNAIL` with `thumbnail_size_` |
+| C9.0c | **cinemate** · the toggle: a settings key, a CLI verb, a settings-editor control, writing the `thumbnail` redis key |
 | C9.1 | `docs/settings-json.md` · `conform_frame_rate` is used, by the timecode tracker and now by playback; the timecode base is a whole number; no effect on capture. **Lands first and on its own** — it is correct today, it is the one piece of C9 that exists in a single place, and it does not depend on the rebase |
 | C9.2 | Rebase `feature/clip-playback` onto current `dev`; re-run the full check set; re-report the count |
 | C9.3 | The six defects above — topbar predicate, `raw_files` reuse, cache key, the `"value"` collision, the Live iframe, the 409 signal set |
@@ -438,8 +532,9 @@ feature, not a way to review between setups.
 | C9.5 | `tools/playback_bench.py` — the G1/G2 harness: per-scale decode medians at 1/2/4 workers, device bytes per frame from `/proc/diskstats`, and a rendered-luma check for G9. Runs on the Pi from the repo checkout with no new dependencies |
 | C9.6 | Gate outcomes recorded: `GATES.md` verdicts, Phase 3's default scale set from the G1/G2 rule, Phase 3 items struck where a gate cancels them |
 
-**Branch:** `feature/clip-playback` off `dev` @ `714ef7b4` (cinemate only, cut 2026-08-27, 2
-commits, **not pushed** and 1381 commits behind `dev`). The gates need it on the Pi, so it has to
+**Branch:** `feature/clip-playback` off `dev` @ `714ef7b4` (cinemate, cut 2026-08-27, 2 commits,
+**not pushed** and 1381 commits behind `dev`), plus a cinepi-raw branch off its `dev` for Phase 0,
+still to be cut — C9 is a two-repo step as of 2026-09-01. The gates need it on the Pi, so it has to
 be pushed before Session A — which is also the only way the `conform_frame_rate` docs fix stops
 living in one place. Planning commits stay here on `feature/dev-track` as `c9:`; the hardware
 session reports as `c9-pi:`.
@@ -449,7 +544,8 @@ blueprint through `harness.py`, ruff and the drift checks; **stale**, and re-gro
 defects and one unestablished behaviour (G9) that the harness could not see. Hardware — nothing.
 None of G0–G9 has run; `cinepi.local` was unreachable on the day.
 
-**Hardware needed:** the dev Pi for every gate. An **imx585** for G1's UHD/ClearHDR figures and for
+**Hardware needed:** the dev Pi for every gate, and for Phase 0 a **cinepi-raw build on it** —
+the first C9 step that is not a Python restart. An **imx585** for G1's UHD/ClearHDR figures and for
 G7/G9 entirely — the attached sensor of record is an imx477, which has no 3856×2180 mode, no
 ClearHDR and no log support, so those gates are not merely unrun but unrunnable as filed. A phone
 on the hotspot for G6. A **2 GB CM5** for G5 as written; ADR-001 records the dev unit is 4 GB, so

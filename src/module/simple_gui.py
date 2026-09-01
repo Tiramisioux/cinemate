@@ -20,6 +20,7 @@ RECORDER_VU_REDIS_KEY    = "audio_vu"
 WAV_RECORDING_COLOR      = DESIGN_TOKENS["wav_rec"]   # bright grey while WAV is actively recording
 DROP_WARNING_COLOR = DESIGN_TOKENS["drop"]
 SYNC_WARNING_COLOR = DESIGN_TOKENS["sync"]
+NO_CAM_WARNING_COLOR = DESIGN_TOKENS["no_cam"]
 SYNC_FLASH_COLOR = "magenta"  # PIL named colour -- no CSS/design-token counterpart
 RESOLUTION_SWITCHING_COLOR = DESIGN_TOKENS["res_switching"]
 PREVIEW_PADDING_X = 94
@@ -787,7 +788,12 @@ class SimpleGUI(threading.Thread):
             # smpte_frame_base, not round(): the number shown here is the base
             # the operator reads the recorded timecode against, so it has to
             # agree with the C++ side at half-integer rates (F-253).
-            "fps":            smpte_frame_base(self.redis_controller.get_value(ParameterKey.FPS_USER.value)),
+            # `or 24` guards a fresh Redis directly: run() has no
+            # per-iteration exception handling, so this read must never
+            # throw regardless of whether cinepi_controller.py has seeded
+            # fps_user yet (it does, but this is belt-and-braces on a
+            # thread that cannot die).
+            "fps":            smpte_frame_base(self.redis_controller.get_value(ParameterKey.FPS_USER.value) or 24),
             "wb_label":       "WB",
             "color_temp":     f"{self.redis_controller.get_value(ParameterKey.WB_USER.value)} K",
             "color_temp_libcamera": f"/ {self.redis_listener.colorTemp}K",
@@ -834,6 +840,15 @@ class SimpleGUI(threading.Thread):
             "missing_frame_count": int(self.redis_controller.get_value(ParameterKey.MISSING_FRAME_COUNT.value) or 0),
 
         }
+        # No camera detected: `cameras` is the shared state signal both GUI
+        # surfaces ride (start_all() writes it to "[]" before aborting).
+        # camera_missing drives the CAM-section warning badge below; "NO
+        # CAM" reaches the web GUI for free through V.sensor (see
+        # template.html) since sensor_left is already "" on an empty
+        # cam_list and this overwrites it.
+        values["camera_missing"] = not bool(cam_list)
+        if values["camera_missing"]:
+            values["sensor"] = "NO CAM"
         # CineMate Log per-cam badge text. Read from log_encode_camN -- what
         # that camera was actually LAUNCHED with, published by
         # CinePiProcess._build_args() -- never from settings or the live
@@ -1359,6 +1374,17 @@ class SimpleGUI(threading.Thread):
                     draw.text((tx, ty), part, font=part_font, fill=TEXT_COLOR)
 
                     y += BOX_H + BOX_GAP
+
+            if section == self.left_section_layout[0] and values.get("camera_missing"):
+                self._draw_status_box(
+                    draw,
+                    [box_x, y, box_x + BOX_W, y + BOX_H],
+                    "NO CAM",
+                    NO_CAM_WARNING_COLOR,
+                    box_font,
+                    TEXT_COLOR,
+                )
+                y += BOX_H + BOX_GAP
 
             if section == self.left_section_layout[0] and values.get("log_badge_cam0"):
                 self._draw_status_box(

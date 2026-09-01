@@ -35,6 +35,7 @@
             --zoom-hi: rgb(255, 221, 0);
             --drop: rgb(120, 40, 180);
             --sync: rgb(255, 0, 255);
+            --no-cam: rgb(220, 30, 30);
             --log-badge: rgb(205, 205, 205);
             --hdr-badge: rgb(205, 205, 205);
             --sdr-badge: rgb(120, 120, 120);
@@ -231,6 +232,7 @@
         .box.small { font-size: calc(var(--box-height) * 0.48); }
         .box.zoom-active { background: var(--zoom-hi); }
         .box.log { background: var(--log-badge); }
+        .box.no-cam { background: var(--no-cam); }
         .box.drop { background: var(--drop); }
         .box.sync { background: var(--sync); position: relative; }
         /* _draw_status_box(crossed=True) strikes the SYNC box through */
@@ -793,6 +795,11 @@
         // than this display change quietly growing into new live-path
         // telemetry with no Pi available to verify it.
         const out = [];
+        if (V.camera_missing) {
+            const noCam = box('NO CAM', 'no-cam small');
+            noCam.title = 'No camera detected — connect the camera, then run: restart cinemate';
+            out.push(noCam);
+        }
         if (V.drop_frame_latched) {
             const count = Number(V.drop_frame_count) || 0;
             const label = count > 0 ? `DROP ${count}` : 'DROP';

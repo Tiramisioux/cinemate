@@ -57,6 +57,13 @@ def _safe_int(value):
         return None
 
 
+# Startup defaults for the fps/shutter keys read during __init__, seeded back
+# to Redis only when the key is missing (fresh Redis / no camera has ever
+# started) -- never overwrites a value a previous session already stored.
+STARTUP_FPS_DEFAULT = 24
+STARTUP_SHUTTER_A_DEFAULT = 180
+
+
 class CinePiController:
     def __init__(self,
                  cinepi,
@@ -135,9 +142,11 @@ class CinePiController:
         self.dynamic_resolution_suspended = False
         
         self.wb_cg_rb_array = {}  # Initialize as an empty dictionary
-        
-        self.fps = int(round(float(self.redis_controller.get_value(ParameterKey.FPS_LAST.value))))
-        self.current_fps = float(self.redis_controller.get_value(ParameterKey.FPS_USER.value))
+
+        self.fps = int(round(float(
+            self._read_or_seed(ParameterKey.FPS_LAST, STARTUP_FPS_DEFAULT))))
+        self.current_fps = float(
+            self._read_or_seed(ParameterKey.FPS_USER, STARTUP_FPS_DEFAULT))
         
         self.shutter_a_steps_dynamic = self.calculate_dynamic_shutter_angles(self.fps)
 
@@ -194,7 +203,8 @@ class CinePiController:
         self.exposure_time_seconds = None
         self.exposure_time_fractions = None
         self.fps_multiplier = 1
-        self.fps_saved = float(self.redis_controller.get_value(ParameterKey.FPS.value))
+        self.fps_saved = float(
+            self._read_or_seed(ParameterKey.FPS, STARTUP_FPS_DEFAULT))
         self.fps_double = False
         self.ramp_up_speed = 0.2
         self.ramp_down_speed = 0.2
@@ -241,7 +251,9 @@ class CinePiController:
             self.dynamic_resolution_desired_mode = self.sensor_mode
         self.fps_max = self._refresh_fps_max()
         self.gui_layout = self.sensor_detect.get_gui_layout(self.current_sensor, self.sensor_mode)
-        self.exposure_time_s = float(self.redis_controller.get_value(ParameterKey.SHUTTER_A.value)) / 360 * (1 / self.fps) 
+        self.exposure_time_s = float(
+            self._read_or_seed(ParameterKey.SHUTTER_A, STARTUP_SHUTTER_A_DEFAULT)
+        ) / 360 * (1 / self.fps)
         self.exposure_time_saved = self.exposure_time_s
         self._recompute_file_size()
 
@@ -297,14 +309,40 @@ class CinePiController:
         # pre-roll should stress the selected mode before dynamic resolution
         # restores the user's FPS and chooses a mode whose own fps_max
         # supports it.
+        self._apply_startup_fps()
+        logging.info(f"Initialized fps: {self.fps}")
+        
+    def _read_or_seed(self, key, default):
+        """Read a Redis value, writing `default` back only when the key is
+        absent (fresh Redis). A key that already holds a value -- including
+        one from a prior no-camera boot -- is returned untouched, so a warm
+        Redis boots byte-identical."""
+        raw = self.redis_controller.get_value(key.value)
+        if raw is None:
+            self.redis_controller.set_value(key.value, default)
+            return default
+        return raw
+
+    def _apply_startup_fps(self):
+        """Apply self.fps at startup via set_fps(), unless no camera was
+        detected. With no camera, set_fps() would recompute fps_max from a
+        fps-less sensor (_sensor_readout_fps_max() -> 1) and clamp fps/
+        fps_user to that 1, which cleanup() then persists as fps_last on
+        exit -- corrupting the stored frame rate for the next with-camera
+        boot. Leave fps/fps_user exactly as read/seeded by _read_or_seed()."""
+        if self.sensor_detect.camera_model is None:
+            logging.info(
+                "No camera detected -- skipping startup set_fps() to avoid "
+                "clamping fps/fps_user to fps_max=1"
+            )
+            return
         prev_dynamic_suspended = self.dynamic_resolution_suspended
         self.dynamic_resolution_suspended = True
         try:
             self.set_fps(self.fps)
         finally:
             self.dynamic_resolution_suspended = prev_dynamic_suspended
-        logging.info(f"Initialized fps: {self.fps}")
-        
+
     def _get_startup_sensor_mode(self) -> int:
         value = self.redis_controller.get_value(ParameterKey.SENSOR_MODE.value)
         try:
@@ -727,7 +765,10 @@ class CinePiController:
         `set log` toggle) -- see _publish_resolution_gui_state() and
         set_log_encode().
         """
-        resolution_info = self.sensor_detect.res_modes[self.sensor_mode]
+        resolution_info = self.sensor_detect.res_modes.get(self.sensor_mode)
+        if resolution_info is None:
+            # No camera -- res_modes is {} for the whole degraded session.
+            return
         native_bit_depth = resolution_info.get('bit_depth')
         hdr = bool(resolution_info.get('hdr', False))
         if log_requested is None:

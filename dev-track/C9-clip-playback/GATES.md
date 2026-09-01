@@ -5,11 +5,15 @@ running, then record the verdict in `cinemate-handbook/lessons/hardware-log.md` 
 Did not work / Why / Confirmed by) once the operator confirms the interpretation. A command
 exiting cleanly is not a finding.
 
-Ten gates, grouped into four sessions rather than listed as peers, because four of them need
-hardware the dev Pi does not currently have plugged in. **G1 and G2 gate everything after them** —
-together they decide which modes get real-time playback and therefore the default preview scale.
-G0 is cheap and validates the desk analysis before any number is trusted; G9 decides whether the
-pane is honest at all on the modes it most exists for.
+Twelve gates, grouped into five sessions rather than listed as peers, because four of them need
+hardware the dev Pi does not currently have plugged in.
+
+**G10 and G11 decide the feature.** Since the 2026-09-01 direction change the pane is
+thumbnail-first: if the thumbnail lands and is cheap to write, playback never demosaics anything
+and the hard questions evaporate. G1 and G2 remain, demoted from go/no-go to **fallback-quality
+gates** — they decide how well footage shot before Phase 0 reviews, not whether C9 works. G9 is
+likewise fallback-only: a thumbnail has no `LinearizationTable` to skip, so it cannot render black.
+G0 is cheap and validates the desk analysis before any number is trusted.
 
 | Session | Gates | Needs |
 |---|---|---|
@@ -17,10 +21,11 @@ pane is honest at all on the modes it most exists for.
 | **B** — imx585 attached, shooting | G7, G9, G8, then G1 re-run on fresh UHD/ClearHDR takes | a sensor swap and a shooting session |
 | **C** — destructive | G4, then G2's three-filesystem loop **last** | consent to spoil a take and to reformat `/media/RAW` |
 | **D** — optional, blocked | G5 on 2 GB | a 2 GB CM5, which the operator does not currently have |
+| **E** — after Phase 0 | G10, G11 | a cinepi-raw build on the Pi, and the operator's post software for G10's compatibility half |
 
 `G1`–`G8` keep the numbers they were filed under on 2026-08-27. `G0` (baseline) and `G9`
-(rendered-pixel correctness) are new, added 2026-09-01 when the plan was re-grounded; nothing was
-renumbered.
+(rendered-pixel correctness) were added 2026-09-01 when the plan was re-grounded; `G10` and
+`G11` the same day, when the direction changed to thumbnail-first. Nothing was renumbered.
 
 Every gate is driven from the Mac with `scripts/pi_ssh.sh '<command>'` (`pi@cinepi.local`,
 `PI_PASSWORD` from the environment only, never on a command line), and files move with
@@ -377,3 +382,58 @@ is **not** a failure of this gate.
 not being applied, and the pane is dishonest on exactly the modes it most exists for. That blocks
 Phase 3 outright — before any default-scale decision, because a fast black frame is worse than a
 slow correct one.
+
+---
+
+## G10 — the thumbnail lands, and post still opens the file
+
+**Belief being tested.** That Phase 0 produces a DNG carrying a readable thumbnail at the expected
+size, **and that the operator's post software still opens the take**. The second half is the one
+that can kill the approach: cinepi-raw's writer is hand-rolled, the change adds a second IFD, and
+whichever layout Phase 0 picks — thumbnail as IFD0 with the raw in a SubIFD, or the thumbnail
+chained as IFD1 — changes a file that until now has had exactly one IFD.
+
+**Why hardware.** It needs a real take from a rebuilt cinepi-raw, and a real NLE.
+
+**Procedure.** With Phase 0 built on the Pi, shoot three short takes: `thumbnail=0`, `1`, `2`.
+For each, dump the IFD structure of one frame (the C9 metadata reader, extended to walk every
+IFD), and record: how many IFDs, which carries the raw, thumbnail dimensions, samples per pixel,
+bit depth, photometric, and total frame bytes. Then open all three takes in the operator's post
+software and in one other DNG reader, and confirm each resolves to the same image as a
+pre-Phase-0 take of the same scene.
+
+**Prediction.** `thumbnail=0` is **byte-identical** to a pre-Phase-0 frame — that is the gate's
+control, and a difference there is a defect regardless of everything else. `1` adds ~0.92 MB at
+1272×720 mono, `2` ~2.7 MB in colour. All three open in post and show the raw image, not the
+thumbnail, as the primary.
+
+**If it disagrees:** if post shows the *thumbnail* as the image, or refuses the file, the layout
+is wrong — switch to the other arrangement (open decision 7) and re-run before touching anything
+else. This gate blocks Phase 0 from landing; a preview feature that costs the operator their
+footage's readability in post is not a trade worth making.
+
+---
+
+## G11 — what the thumbnail costs to write
+
+**Belief being tested.** That adding the thumbnail to the recording path does not cost frames or
+audio. Storage is this system's binding constraint — measured writes are 170–190 MB/s sustained at
+4056×3040 12-bit — and `dng_save` runs per frame in the encoder threads. Mono adds ~7% to a UHD
+frame, colour ~22%.
+
+**Why hardware.** It is a contention question on a real drive at a real frame rate.
+
+**Procedure.** Three takes at the highest rate the attached sensor sustains, long enough to be
+past any cache (600 frames, as PI-016 used): `thumbnail=0`, `1`, `2`. For each record frames
+written against frames requested, `drop_frame` throughout, `write_speed_to_drive` sustained, and
+the session log grepped for the silence-fill line exactly as G4 does — **not** for xruns.
+
+**Prediction.** `0` matches PI-016's control (598/600, `drop_frame=0`, 170–190 MB/s). `1` writes
+~7% more with no dropped frames and no silence-fills. `2` writes ~22% more and is the one that
+might not hold at 4K — if anything fails, it fails here.
+
+**If it disagrees:** the toggle is the mitigation, and it is why the toggle exists rather than a
+build-time constant. If colour costs frames at 4K but not at 2K, that is a documented limit, not a
+reason to drop colour — record it and say so in the pane. If **mono** costs frames, Phase 0 is
+too expensive as designed and the thumbnail needs to be smaller (`thumbnail_size`), which is what
+that knob is for.

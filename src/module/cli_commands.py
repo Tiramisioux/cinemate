@@ -94,6 +94,7 @@ class CommandExecutor(threading.Thread):
             #  the live bit depth supports it; "set log off" forces off. Restarts
             #  the camera when idle, deferred while recording.
             'set log'                : (cinepi_controller.set_log_encode,    [int, str]),
+            'set thumbnail'          : (cinepi_controller.set_thumbnail,     int),
 
             # ── White balance (Kelvin or step) ────────────────────────────────────
             'set wb'                 : (cinepi_controller.set_wb,         [int, None]),

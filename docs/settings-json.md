@@ -306,6 +306,7 @@ Which resolution/bit-depth/HDR modes are practical to expose in the UI when cycl
     "blend": 0,
     "gain_adder": 1
   },
+  "thumbnail": 0,
   "custom_modes": {}
 }
 ```
@@ -314,6 +315,7 @@ Which resolution/bit-depth/HDR modes are practical to expose in the UI when cycl
 `bit_depths` – list of bit depths to expose. `16` covers the imx585 ClearHDR 16-bit modes (see [ClearHDR](clear-hdr.md)).<br>
 `hdr.sdr` / `hdr.imx585_clear_hdr` – whitelist of the ClearHDR flag. Both `true` (default) exposes the plain and the imx585 ClearHDR modes; set `imx585_clear_hdr` to `false` to hide the HDR modes, or `sdr` to `false` to show only them. Cinemate detects the HDR modes by probing `cinepi-raw --list-cameras --hdr sensor` alongside the plain list. imx585 has HDR modes at **both** 12-bit and 16-bit, and they are labelled `HDR` (simple GUI) / `:HDR` (web GUI). The legacy `[false, true]` list form still works.<br>
 `hdr.threshold_low` / `hdr.threshold_high` / `hdr.blend` / `hdr.gain_adder` – startup values for the four ClearHDR live knobs, seeded into Redis at launch. Adjust them afterwards without a restart via `set hdr threshold low/high`, `set hdr blend`, `set hdr gain adder`, or a pot/quad-rotary channel. See [ClearHDR](clear-hdr.md#live-knobs) for what each one does.<br>
+`thumbnail` – embedded DNG thumbnail mode: `0` off, `1` mono, `2` colour. Written per frame by cinepi-raw's DNG encoder from the same lores plane the HDMI/MJPEG preview already uses, alongside (not instead of) the raw image. Seeded into Redis at launch; adjust it afterwards without a restart via `set thumbnail`. New takes only — footage recorded before a rebuilt cinepi-raw supports this, or with the mode off, has no thumbnail and always falls back to a full raw decode for review. Off by default.<br>
 `custom_modes` – per-camera-name list of mode overrides and additions, keyed by sensor name. `fps_max` (from `cinepi-raw --list-cameras`) is an electrical property of the sensor — it says nothing about what your storage and CPU can actually sustain at that mode, and only trial recording can find that ceiling. An entry whose `width`/`height`/`bit_depth`/`hdr` matches an already-detected mode **corrects that mode's `fps_max` in place**; a non-matching entry **adds** a brand-new mode instead. Settings editor → *Per-mode fps ceilings* lists every sensor-detected mode with the override pre-filled if one exists — leave a field blank (or equal to the detected value) to record no override, or lower it to whatever your storage profile actually sustains. Raising it above the detected value is allowed but logged as a warning. `choose_resolution()` needs no separate logic for this: it always selects on `fps_max`, which is now the effective (overridden or detected) value.
 
 !!! note "Design: full capability vs practical exposure"

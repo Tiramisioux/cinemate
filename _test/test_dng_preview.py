@@ -205,6 +205,38 @@ class DngPreviewTest(unittest.TestCase):
             f"near-white companded patch rendered {rendered:.1f}/255 -- at or "
             "below the ~71 ceiling of a decode that skips the table")
 
+    def test_black_level_is_not_put_through_the_table_twice(self):
+        """Under a table BOTH levels are already in its output domain.
+
+        Passing BlackLevel through the curve as if it were a stored code
+        lands it above the frame's whole linearised range on real footage --
+        tag 3200, curve maps 3200 to 11391, frame maxes out at 10817 -- so
+        every pixel goes negative, clips, and the take renders solid black.
+        Caught on pi-test-takes/CINEPI_26-08-27_223236_F03_C00000_cam0.
+
+        The earlier synthetic curve could not catch this: it mapped the
+        pedestal to itself, so lut[black] == black and both readings agreed.
+        This one is shaped like the real thing, where they do not.
+        """
+        # Output domain 2721..65535, as cinepi-raw's 16-bit ClearHDR curve is.
+        lut = [min(65535, 2721 + int(i * 15.4)) for i in range(4096)]
+        # Stored codes around 500 -> ~10.4k linear, comfortably above the
+        # tagged black of 3200 but far below lut[3200] (~10.4k+ ... 51k).
+        p = build_dng(self.dir / "levels.dng", bits=12, white=65535,
+                      black=3200, linearization=lut, fill=500)
+
+        jpeg, _ = dng_preview.decode_frame(p, None, scale=2, mono=True)
+        rendered = np.asarray(Image.open(io.BytesIO(jpeg))).astype(float)
+
+        self.assertLess(
+            (rendered == 0).mean(), 1.0,
+            "frame rendered entirely black -- BlackLevel is being taken "
+            "through the LinearizationTable as though it were a stored code")
+
+        black, white = dng_preview._black_white(dng_preview.read_metadata(p))
+        self.assertEqual((black, white), (3200.0, 65535.0),
+                         "levels must be used exactly as tagged under a table")
+
     def test_a_frame_with_no_table_is_untouched_by_linearisation(self):
         """The control for the test above: linear frames must not change."""
         p = build_dng(self.dir / "linear.dng", bits=12, white=4095, black=200,

@@ -213,15 +213,20 @@ def _black_white(meta):
         white = (1 << int(meta.get("bits", 16))) - 1
     white = float(white)
 
-    # Under a LinearizationTable these levels live in the table's OUTPUT
-    # domain, which is the domain _linearize() has already put the pixels in
-    # by the time they are applied. BlackLevel is tagged as a stored code, so
-    # it goes through the curve; WhiteLevel is the curve's own maximum.
-    table = meta.get("linearization_table")
-    if table:
-        lut = np.asarray(table, np.uint16)
-        white = float(lut.max())
-        black = float(lut[min(int(black), len(lut) - 1)])
+    # Under a LinearizationTable BOTH levels are already tagged in the table's
+    # OUTPUT domain -- which is the domain _linearize() has put the pixels in
+    # by the time these are applied -- so neither goes through the curve.
+    # cinepi-raw writes them that way on purpose (dng_encoder.cpp takes
+    # BlackLevel from the curve's own black_level() and WhiteLevel from its
+    # white_level()), and docs/cinemate-log.md:67 states it for readers: "3200
+    # / 65535 for a 16-bit source, 200 / 4095 for 12-bit".
+    #
+    # Putting BlackLevel through the table again is not a small error. On a
+    # real 16-bit ClearHDR take the tag is 3200 and the curve maps 3200 to
+    # 11391, which is above that frame's entire linearised range (max 10817):
+    # every pixel goes negative, clips, and the take renders solid black with
+    # nothing logged. Measured on
+    # pi-test-takes/CINEPI_26-08-27_223236_F03_C00000_cam0.
     return black, white
 
 

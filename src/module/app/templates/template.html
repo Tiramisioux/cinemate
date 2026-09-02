@@ -35,6 +35,7 @@
             --zoom-hi: rgb(255, 221, 0);
             --drop: rgb(120, 40, 180);
             --sync: rgb(255, 0, 255);
+            --no-cam: rgb(220, 30, 30);
             --log-badge: rgb(205, 205, 205);
             --hdr-badge: rgb(205, 205, 205);
             --sdr-badge: rgb(120, 120, 120);
@@ -324,6 +325,39 @@
             background: #000;
         }
         #preview-frame img.hidden { display: none; }
+
+        /* No live stream to sit on top of while no camera is detected --
+           the preview area is otherwise just black. Mirrors simple_gui's
+           _draw_no_camera_message() in the same empty space. */
+        #no-cam-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.4em;
+            text-align: center;
+            padding: 1em;
+            background: rgba(0, 0, 0, 0.55);
+            pointer-events: none;
+        }
+        #no-cam-overlay.hidden { display: none; }
+        #no-cam-overlay .line { line-height: 1.3; }
+        #no-cam-overlay .title {
+            color: var(--value);
+            font-weight: 700;
+            font-size: clamp(1rem, 2.6vw, 1.8rem);
+        }
+        #no-cam-overlay .warn {
+            color: var(--no-cam);
+            font-weight: 700;
+            font-size: clamp(0.8rem, 1.8vw, 1.2rem);
+        }
+        #no-cam-overlay .hint {
+            color: var(--label);
+            font-size: clamp(0.7rem, 1.4vw, 1rem);
+        }
 
         /* ── bottom row ──────────────────────────────────────────────── */
         /* Same field order as simple_gui's bottom row, but a size down so
@@ -622,6 +656,11 @@
             <div id="preview-frame" title="Tap to toggle record">
                 <img id="stream" src="{{ stream_url }}" alt="Camera preview">
                 <img id="stream-cam1" class="hidden" alt="Camera 1 preview">
+                <div id="no-cam-overlay" class="hidden">
+                    <div class="line title">CAMERA NOT FOUND</div>
+                    <div class="line hint">Check camera cable and cinemate settings</div>
+                    <div class="line warn">BE SURE TO DISCONNECT POWER BEFORE CONNECTING/DISCONNECTING CAMERA SENSOR BOARD</div>
+                </div>
             </div>
         </div>
         <div class="rail hidden" id="rail-right">
@@ -792,6 +831,12 @@
         // only logged, never set_value()'d -- so SYNC stays word-only rather
         // than this display change quietly growing into new live-path
         // telemetry with no Pi available to verify it.
+        // No NO CAM badge here: the CAMERA NOT FOUND overlay already fills
+        // the preview area, and V.sensor is empty so the CAM box isn't
+        // rendered either. Same presentation choice as the framebuffer GUI
+        // (see populate_values()) -- these two surfaces share state, so
+        // letting the badge live on in one of them is exactly the kind of
+        // drift that starts here.
         const out = [];
         if (V.drop_frame_latched) {
             const count = Number(V.drop_frame_count) || 0;
@@ -954,6 +999,7 @@
         frame.classList.toggle('dual', dual);
         show(cam1, dual);
         if (dual && !cam1.src) { cam1.src = CAM1_STREAM; }
+        show($('no-cam-overlay'), Boolean(V.camera_missing));
 
         const aspect = parseFloat(V.aspect);
         const ana = parseFloat(String(V.anamorphic_factor || '1').replace(/[^0-9.]/g, ''));
@@ -1737,7 +1783,17 @@
     $('s-wb').addEventListener('change', (e) => cmd('set wb ' + e.target.value));
     $('s-res').addEventListener('change', (e) => cmd('set resolution ' + e.target.value));
 
-    $('preview-frame').addEventListener('click', () => cmd('rec'));
+    // Tap-to-record, gated on the camera. The CAMERA NOT FOUND overlay sits
+    // inside #preview-frame with pointer-events: none, so a tap anywhere on
+    // that message would otherwise pass straight through to this handler and
+    // fire `rec`. The controller refuses it either way (start_recording()
+    // gates on the sensor mode table), but a tap that silently does nothing
+    // is worse than one that was never sent -- this keeps the request off
+    // the wire and out of the log.
+    $('preview-frame').addEventListener('click', () => {
+        if (V.camera_missing) { return; }
+        cmd('rec');
+    });
     $('btn-log').addEventListener('click', () => cmd('set log'));
     $('btn-unmount').addEventListener('click', () => cmd('unmount'));
 

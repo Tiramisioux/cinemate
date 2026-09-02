@@ -23,6 +23,7 @@ from module.redis_controller import RedisController, ParameterKey
 from module.ssd_monitor import SSDMonitor
 from module.usb_monitor import USBMonitor
 from module.gpio_output import GPIOOutput
+from module.installed_files import log_installed_file_drift
 from module.cinepi_controller import CinePiController
 from module.simple_gui import SimpleGUI
 from module.sensor_detect import SensorDetect, pi_family
@@ -75,6 +76,17 @@ SYSTEM_SHUTDOWN_TARGETS = frozenset(
     }
 )
 CINEMATE_LOCKFILE = "/tmp/cinemate.lock"
+# This file is <repo>/src/main.py, so the repo root is one level up.
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def camera_present_from_cameras_value(raw) -> bool:
+    """True when start_all()'s ParameterKey.CAMERAS write indicates at least
+    one discovered camera. That key is written unconditionally, before the
+    early-return that follows when discovery finds nothing, so it is JSON
+    "[]" on a no-camera boot, and None if the key was never written (fresh
+    Redis) -- which is why both are checked here."""
+    return raw not in (None, "[]")
 
 
 def _release_run_lock() -> None:
@@ -694,6 +706,16 @@ def run_application(args, log_queue):
     pi_model = get_raspberry_pi_model()
     logging.info(f"Detected Raspberry Pi model: {pi_model}")
 
+    # The systemd unit and the /usr/local/bin helpers are COPIED into place
+    # by `sudo make install`, not symlinked -- so an operator who updates by
+    # pulling keeps whatever was installed the day they ran the installer.
+    # Warn, loudly and with the exact remedy; never act. (This is advisory
+    # only: it must not be able to stop a boot.)
+    try:
+        log_installed_file_drift(REPO_ROOT)
+    except Exception as exc:
+        logging.debug("Installed-file drift check skipped: %s", exc)
+
     # Start WiFi hotspot if configured
     start_hotspot(settings)
 
@@ -747,6 +769,10 @@ def run_application(args, log_queue):
     cinepi = CinePi(redis_controller, sensor_detect, settings=settings)
     
     cinepi.start_all()
+
+    camera_present = camera_present_from_cameras_value(
+        redis_controller.get_value(ParameterKey.CAMERAS.value)
+    )
 
     # cinepi.set_log_level('INFO')
     # cinepi.message.subscribe(handle_vu_output)
@@ -901,9 +927,13 @@ def run_application(args, log_queue):
         splash_thread.join()
         claim_console_for_framebuffer()
 
-    if restart_camera_after_startup_handoff:
+    if restart_camera_after_startup_handoff and camera_present:
         logging.info("Restarting cinepi-raw after startup handoff so preview binds above Cinemate")
         cinepi_controller.restart_camera(preview_enabled=True)
+    elif restart_camera_after_startup_handoff:
+        logging.info(
+            "No camera detected -- skipping post-Plymouth preview restart"
+        )
 
     tol_cfg = settings.get("settings", {}).get("sync_tolerances", {})
     redis_listener = RedisListener(

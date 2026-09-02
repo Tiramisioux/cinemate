@@ -53,6 +53,13 @@ def _to_int(value, default=None):
         return default
 
 
+def _to_float(value, default=None):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def _log_badge_text(target) -> str:
     """"" for 0/None/unparsable, else "LOG10"/"LOG12" -- the CAM-section
     badge text for a log_encode_camN redis value (what that camera was
@@ -1154,9 +1161,20 @@ class SimpleGUI(threading.Thread):
         self.colors["battery_level"]["normal"] = "lightgreen" if self.battery_monitor.charging else "white"
 
         if self.ssd_monitor.space_left and self.ssd_monitor.is_mounted:
-            mins = (self.ssd_monitor.space_left * 1000) / (self.cinepi_controller.file_size *
-                                                        float(self.cinepi_controller.fps) * 60)
-            values["disk_space"] = f"{round(mins)} MIN"
+            # file_size is 0.0 whenever there is no usable sensor mode table
+            # (no camera, or a sensor missing from sensor_resolutions -- see
+            # CinePiController._recompute_file_size). Minutes-remaining would
+            # then be a division by zero, and any placeholder frame size we
+            # substituted would show the operator a recording duration
+            # computed from a sensor that isn't attached. Show the free space
+            # itself instead: still true, and visibly not a duration.
+            file_size = self.cinepi_controller.file_size
+            fps = _to_float(self.cinepi_controller.fps, 0.0)
+            if file_size and fps > 0:
+                mins = (self.ssd_monitor.space_left * 1000) / (file_size * fps * 60)
+                values["disk_space"] = f"{round(mins)} MIN"
+            else:
+                values["disk_space"] = f"{self.ssd_monitor.space_left:.0f} GB"
             values["write_speed"] = f"{self.ssd_monitor.write_speed_mb_s:.0f} MB/s"
         else:
             values["disk_space"] = "NO DISK"

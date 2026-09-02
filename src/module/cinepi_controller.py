@@ -143,6 +143,19 @@ class CinePiController:
         
         self.wb_cg_rb_array = {}  # Initialize as an empty dictionary
 
+        # Megabytes per frame for the active mode. Assigned for real by
+        # _recompute_file_size(), which returns without assigning anything
+        # when there is no usable mode table (no camera, or a sensor that
+        # isn't in sensor_resolutions) -- so it needs a default here or the
+        # attribute never exists at all for the whole degraded session, and
+        # SimpleGUI.populate_values() dies on the first frame with
+        # AttributeError (hardware-confirmed 2026-09-02). 0.0 means "no
+        # usable frame size": readers must not divide by it -- see the
+        # disk_space branch in populate_values(), which shows free space in
+        # GB rather than a minutes-remaining figure derived from a sensor
+        # that isn't attached.
+        self.file_size = 0.0
+
         self.fps = int(round(float(
             self._read_or_seed(ParameterKey.FPS_LAST, STARTUP_FPS_DEFAULT))))
         self.current_fps = float(
@@ -772,6 +785,10 @@ class CinePiController:
         resolution_info = self.sensor_detect.res_modes.get(self.sensor_mode)
         if resolution_info is None:
             # No camera -- res_modes is {} for the whole degraded session.
+            # Leave self.file_size at its __init__ default of 0.0 ("no
+            # usable frame size") and write nothing to redis: the stored
+            # file_size belongs to the last real mode and is not ours to
+            # overwrite from a state with no sensor in it.
             return
         native_bit_depth = resolution_info.get('bit_depth')
         hdr = bool(resolution_info.get('hdr', False))

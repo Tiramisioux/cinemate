@@ -780,7 +780,7 @@
 
   .cliplist{ border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); overflow:hidden; }
   .cliprow{
-    display:grid; grid-template-columns: 22px 120px 1fr auto auto; gap: 16px; align-items:center;
+    display:grid; grid-template-columns: 22px 150px 1fr auto auto; gap: 16px; align-items:center;
     padding: 13px 16px; border-top: 1px solid var(--line);
   }
   .cliprow:first-child{ border-top:0; }
@@ -790,11 +790,14 @@
   /* A quick per-take frame check, not a player -- the real transport lives
      on the Playback pane. Between the checkbox and the name, wide enough to
      scrub with some precision without crowding the name/badges column next
-     to it. Degrades to an empty, non-interactive strip for a take with no
-     embedded thumbnail (raw decode is not used as a fallback here either):
-     the img's onerror marks .is-empty. */
+     to it. Stretched (align-self, not the row's own align-items:center) so
+     its top and bottom line up with the name/meta/badges stack beside it
+     rather than sitting as a shorter fixed-height box centered against it.
+     Degrades to an empty, non-interactive strip for a take with no embedded
+     thumbnail (raw decode is not used as a fallback here either): the img's
+     onerror marks .is-empty. */
   .clip-thumb{
-    position:relative; width:100%; height:40px; border-radius:4px; overflow:hidden;
+    position:relative; width:100%; align-self:stretch; border-radius:4px; overflow:hidden;
     background: var(--panel-2); border:1px solid var(--line); cursor:pointer;
   }
   .clip-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
@@ -837,6 +840,7 @@
   @media (max-width: 640px){
     .cliprow{ grid-template-columns: 20px 1fr; }
     .clip-thumb{ grid-column: 1 / -1; width:100%; height:34px; margin-top:8px; }
+    .clip-info{ grid-column: 1 / -1; margin-top:8px; }
     .clip-size, .clip-actions{ grid-column: 1 / -1; justify-self:start; margin-top:6px; }
   }
 
@@ -2156,7 +2160,6 @@
     <section class="group" id="clips" data-page="raw">
       <header class="group-head">
         <h2>Clips &amp; downloads</h2>
-        <p class="group-sub">Browse what's on the active storage device and pull takes off over Wi‑Fi — no card swap needed.</p>
       </header>
 
       <div id="storageCards"><p class="card-help">Loading storage…</p></div>
@@ -4299,7 +4302,7 @@
           '</button>' +
           '<div class="clip-thumb-scrub"><div class="clip-thumb-scrub-fill"></div></div>' +
         '</div>' +
-        '<div>' +
+        '<div class="clip-info">' +
           '<div class="clip-name">' + escapeHtml(t.name) + '</div>' +
           '<div class="clip-meta">' + formatDate(t.mtime) + ' — ' + t.frame_count + ' frames</div>' +
           '<div class="clip-badges">' +

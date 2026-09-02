@@ -41,6 +41,7 @@ class ParameterKey(Enum):
     HDR_GAIN_ADDER    = "hdr_gain_adder"  # 0..5 — ClearHDR gain adder (driver menu index, 2 = +12 dB)
     HEIGHT            = "height"
     THUMBNAIL         = "thumbnail"       # 0 off / 1 mono / 2 colour — embedded DNG thumbnail (cinepi-raw CONTROL_KEY_THUMBNAIL)
+    THUMBNAIL_SIZE    = "thumbnail_size"  # right-shift downscale of the thumbnail plane, 0 = full lores size (cinepi-raw CONTROL_KEY_THUMBNAIL_SIZE; changing it restarts the camera). Not exposed via CLI/settings-editor here — seeded only, so a resident pre-Phase-0 value (PI-008) doesn't collapse the thumbnail (see cinepi-raw's sync() guard, C-2)
     IR_FILTER         = "ir_filter"
     IS_BUFFERING      = "is_buffering"
     IS_MOUNTED        = "is_mounted"

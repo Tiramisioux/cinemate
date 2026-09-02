@@ -752,6 +752,13 @@ def run_application(args, log_queue):
         ParameterKey.THUMBNAIL.value,
         thumbnail_startup_value(settings)
     )
+    # thumbnail_size (0 = full lores plane size) is not exposed via CLI or
+    # settings-editor -- seeded only, so a stale pre-Phase-0 resident value
+    # (PI-008: thumbnail_size=50) doesn't survive a fresh boot and collapse
+    # the thumbnail before cinepi-raw's own sync() guard (C-2) would catch
+    # it. CineMate owns this key now that it means something; nothing in
+    # settings.jsonc governs it yet.
+    redis_controller.set_value(ParameterKey.THUMBNAIL_SIZE.value, 0)
 
     # Reset recording time
     redis_controller.set_value(ParameterKey.RECORDING_TIME.value, 0)

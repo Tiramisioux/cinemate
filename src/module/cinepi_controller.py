@@ -685,6 +685,22 @@ class CinePiController:
         self.redis_controller.set_value(ParameterKey.HDR_GAIN_ADDER.value, v)
         logging.info(f"ClearHDR gain adder set to menu index {v}")
 
+    def set_thumbnail(self, value):
+        """Set the embedded DNG preview mode: 0 off, 1 mono, 2 colour.
+
+        Restarts the camera -- cinepi-raw sizes the per-frame encoder buffer
+        for the thumbnail once at startup, so a live mode change re-launches
+        it against a freshly-sized buffer rather than risk outrunning one
+        sized for a different mode.
+        """
+        try:
+            v = max(0, min(2, int(value)))
+        except (TypeError, ValueError):
+            logging.error("thumbnail expects an integer 0..2 (0 off, 1 mono, 2 colour)")
+            return
+        self.redis_controller.set_value(ParameterKey.THUMBNAIL.value, v)
+        logging.info(f"DNG thumbnail mode set to {v}")
+
     def inc_hdr_threshold_low(self):
         self.increment_setting('hdr_threshold_low', self.hdr_threshold_low_steps)
 

@@ -182,6 +182,14 @@
   "image_capture": {
     "k_steps": [1.5, 2, 3, 4],
     "bit_depths": [10, 12, 16],
+    // Embedded DNG preview, written by cinepi-raw's DNG writer on every
+    // recorded frame: 0 off, 1 mono (the lores Y plane, ~0.92 MB/frame at
+    // full lores size), 2 colour (lores Y+U+V converted to RGB,
+    // ~2.7 MB/frame). Off by default -- it costs write bandwidth on the
+    // recording hot path (see docs/settings-json.md). Adjust live afterwards
+    // with `set thumbnail <mode>`; changing it restarts the camera, because
+    // the per-frame buffer is sized for it at startup.
+    "thumbnail": 0,
     "hdr": {
       // ClearHDR (imx585) whitelist. Both true exposes the plain and the
       // HDR modes; set "imx585_clear_hdr" false to hide the HDR modes.

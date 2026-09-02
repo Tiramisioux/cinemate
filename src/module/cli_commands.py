@@ -95,6 +95,11 @@ class CommandExecutor(threading.Thread):
             #  the camera when idle, deferred while recording.
             'set log'                : (cinepi_controller.set_log_encode,    [int, str]),
 
+            # ── Embedded DNG preview (image_capture.thumbnail) ─────────────────────
+            #  0 off, 1 mono, 2 colour. Restarts the camera -- the per-frame
+            #  encoder buffer is sized for the mode at startup.
+            'set thumbnail'          : (cinepi_controller.set_thumbnail,    int),
+
             # ── White balance (Kelvin or step) ────────────────────────────────────
             'set wb'                 : (cinepi_controller.set_wb,         [int, None]),
             'inc wb'                 : (cinepi_controller.inc_wb,         None),

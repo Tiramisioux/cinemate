@@ -727,6 +727,15 @@ def run_application(args, log_queue):
         settings.get("hdmi_display", {}).get("preview", {}).get("default_hdmi_source", "both")
 )
 
+    # Default embedded-DNG-thumbnail mode (image_capture.thumbnail). Seeding
+    # it here means cinepi-raw's first camera launch already reads the
+    # configured mode instead of falling back to CP_DEF_THUMBNAIL; `set
+    # thumbnail <mode>` changes it live afterwards.
+    redis_controller.set_value(
+        ParameterKey.THUMBNAIL.value,
+        settings.get("image_capture", {}).get("thumbnail", 0)
+    )
+
     # ClearHDR live-knob startup values (image_capture.hdr). Cinepi-raw
     # re-applies these from Redis once a ClearHDR mode is actually selected;
     # seeding them here just means the first `set hdr threshold/blend/gain

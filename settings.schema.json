@@ -280,6 +280,12 @@
             "type": "integer"
           }
         },
+        "thumbnail": {
+          "type": "integer",
+          "enum": [0, 1, 2],
+          "default": 0,
+          "description": "Embedded DNG preview mode written by cinepi-raw's DNG writer: 0 off, 1 mono (lores Y plane), 2 colour (lores YUV converted to RGB). Adjust live with `set thumbnail <mode>`; changing it restarts the camera."
+        },
         "hdr": {
           "type": "object",
           "description": "ClearHDR (imx585) whitelist plus startup values for the live knobs. sdr/imx585_clear_hdr both true exposes the plain and the HDR modes; set imx585_clear_hdr false to hide the HDR modes. threshold_low/high (0-4095), blend (0-8), gain_adder (0-5) seed the ClearHDR knobs when a ClearHDR mode is selected -- adjust live afterwards with `set hdr threshold low/high`, `set hdr blend`, `set hdr gain adder`, or a pot/quad-rotary channel.",

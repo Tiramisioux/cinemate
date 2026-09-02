@@ -75,6 +75,8 @@ class ParameterKey(Enum):
     SENSOR_MODE       = "sensor_mode"
     SHUTTER_A         = "shutter_a"
 
+    THUMBNAIL         = "thumbnail"  # 0..2 -- embedded DNG preview mode (off/mono/colour), cinepi-raw's DNG writer
+
     SPACE_LEFT        = "space_left"
     STORAGE_TYPE      = "storage_type"
     STORAGE_FILESYSTEM = "storage_filesystem"

@@ -567,6 +567,62 @@ class ResolutionChangeIsRefusedWithNoCameraTests(unittest.TestCase):
         )
 
 
+class FakeFramebuffer:
+    def __init__(self, size=(1920, 1080)):
+        self.size = size
+
+    def show(self, image):
+        pass
+
+
+class DrawGuiShowsTheCameraNotFoundMessageTests(unittest.TestCase):
+    """Review item 7: the call site itself had no test.
+
+    Deleting the `if values.get("camera_missing"): self._draw_no_camera_message(...)`
+    block from draw_gui() left the whole suite green -- the existing tests
+    cover the negative case (camera present -> never called) and
+    _draw_no_camera_message() in isolation, but nothing checked that draw_gui()
+    calls it when a camera IS missing. The message is the only on-screen
+    indicator since c3.17 removed the NO CAM badge, so losing it silently
+    means a no-camera boot shows nothing at all.
+    """
+
+    def _gui_ready_to_draw(self):
+        redis_controller = FakeRedis()
+        controller = build_real_controller(redis_controller=redis_controller)
+        gui = build_gui_for(controller, redis_controller)
+        gui.fb = FakeFramebuffer()
+        gui.disp_width = 1920
+        gui.disp_height = 1080
+        return gui
+
+    def test_draw_gui_draws_the_message_exactly_once(self):
+        gui = self._gui_ready_to_draw()
+        calls = []
+        gui._draw_no_camera_message = lambda *args, **kwargs: calls.append(args)
+
+        gui.draw_gui(gui.populate_values())
+
+        self.assertEqual(len(calls), 1)
+
+    def test_it_is_drawn_into_the_preview_outline_rect(self):
+        # The rect matters: this message fills the area cinepi-raw's preview
+        # would otherwise occupy. Drawn anywhere else it would overlap the
+        # value rails.
+        gui = self._gui_ready_to_draw()
+        calls = []
+        gui._draw_no_camera_message = lambda *args, **kwargs: calls.append(args)
+
+        gui.draw_gui(gui.populate_values())
+
+        _draw, rect, _shrink_x, _shrink_y = calls[0]
+        x0, y0, x1, y1 = rect
+        self.assertGreater(x1, x0)
+        self.assertGreater(y1, y0)
+        self.assertLessEqual(x1, gui.disp_width)
+        self.assertLessEqual(y1, gui.disp_height)
+
+
 class GuiReadsOnlyAttributesTheControllerAlwaysHasTests(unittest.TestCase):
     """The generalisation of D1, so it cannot come back in a new attribute.
 

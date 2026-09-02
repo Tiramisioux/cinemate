@@ -1956,10 +1956,10 @@
             <input class="field-input num-input" type="number" min="1" max="99" id="f-toneduty" data-path="hardware_outputs.rec_tone.duty_cycle" data-type="number" data-original="50" value="50"> %
           </div>
         </div>
-        <div class="card" data-search="rec tone relay drop frames">
+        <div class="card" data-search="rec tone relay drop frames mute dropped frame marker">
           <div class="card-main">
-            <label class="card-label" for="f-relaydrop">Drop a frame for the relay</label>
-            <p class="card-help">If your tally uses a mechanical relay, this holds the first frame briefly so the relay has time to physically click over.</p>
+            <label class="card-label" for="f-relaydrop">Mute the tone on a dropped frame</label>
+            <p class="card-help">When the camera drops a frame, cut the slate tone for about one frame, then resume. The gap is audible on the recorded scratch track, so a dropped frame is findable by ear in the edit.</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-relaydrop" data-path="hardware_outputs.rec_tone.relay_drop_frames" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>

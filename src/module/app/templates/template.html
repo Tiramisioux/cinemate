@@ -758,18 +758,58 @@
         (typeof v === 'string' && ['true', 'yes', 'on'].includes(v.trim().toLowerCase()));
 
     function fillSelect(sel, options, current) {
-        const wanted = options.map((o) => String(o.value)).join(' ');
+        // The disabled flags are part of the cache key: a free-stepping toggle
+        // can leave the value list identical while changing which entries are
+        // selectable, and without this the list would not repaint.
+        const wanted = options.map((o) => String(o.value) + (o.disabled ? '!' : '')).join(' ');
         if (sel.dataset.filled !== wanted) {
             sel.innerHTML = '';
             options.forEach((o) => {
                 const opt = document.createElement('option');
                 opt.value = o.value;
                 opt.textContent = o.text;
+                if (o.disabled) { opt.disabled = true; }
                 sel.appendChild(opt);
             });
             sel.dataset.filled = wanted;
         }
         if (current !== undefined && current !== null) { sel.value = String(current); }
+    }
+
+    // Free stepping replaces a preset table with a fine grid — 1-360 in whole
+    // degrees for SHUTTER — and the setter then accepts any value verbatim
+    // instead of snapping to the table (cinepi_controller: "In sync mode, or
+    // free-stepping, just accept it verbatim"; the fps setter clamps to
+    // 1..fps_max the same way). So the interior entries stop being the legal
+    // set and become an arbitrary sample of a continuum. Grey them, leaving
+    // the two ends, so the picker reads as the range it actually is; the value
+    // itself is dialled with the EXPERIMENT slider, a pot, an encoder or the
+    // CLI, and the live value still shows even while greyed because a
+    // disabled <option> can be selected programmatically.
+    //
+    // Only SHUTTER and FPS. NOT WB: set_wb picks the closest entry of wb_steps
+    // unconditionally and every entry has a real cg_rb pair, so under WB free
+    // stepping the interior IS the exact legal set. NOT ISO: set_iso clamps
+    // and never snaps in any mode, so iso_free changes what is offered, not
+    // what is accepted. Greying either would state something untrue.
+    // `current` is threaded in because a free grid need not contain the live
+    // value: toggle free stepping on while SHUTTER sits at a preset 172.8 and
+    // the 1-degree grid has no such entry, so the <select> would fall back to
+    // its first option and read 1 while the camera runs at 172.8. Any value is
+    // legal in this mode, so the honest thing is to carry it.
+    function freeStepBounds(list, isFree, current) {
+        const opts = list.map((v, i) => ({
+            value: v,
+            text: v,
+            disabled: Boolean(isFree) && list.length > 2 && i > 0 && i < list.length - 1,
+        }));
+        const live = parseFloat(current);
+        if (isFree && isFinite(live) && !list.some((v) => Number(v) === live)) {
+            const at = opts.findIndex((o) => Number(o.value) > live);
+            opts.splice(at < 0 ? opts.length : at, 0,
+                { value: live, text: live, disabled: false });
+        }
+        return opts;
     }
 
     // ── left / right rails: same sections, order and box contents as
@@ -1063,9 +1103,12 @@
 
     function renderSelectors() {
         fillSelect($('s-iso'), steps.iso.map((v) => ({ value: v, text: v })), V.iso);
-        fillSelect($('s-shutter'), steps.shutter_a.map((v) => ({ value: v, text: v })),
-            steps.shutter_a.find((v) => String(v) === String(parseFloat(V.shutter_speed))));
-        fillSelect($('s-fps'), steps.fps.map((v) => ({ value: v, text: v })), V.fps);
+        const liveShutter = parseFloat(V.shutter_speed);
+        fillSelect($('s-shutter'),
+            freeStepBounds(steps.shutter_a, truthy(V.shutter_a_free), liveShutter),
+            steps.shutter_a.find((v) => String(v) === String(liveShutter))
+                ?? (truthy(V.shutter_a_free) && isFinite(liveShutter) ? liveShutter : undefined));
+        fillSelect($('s-fps'), freeStepBounds(steps.fps, truthy(V.fps_free), V.fps), V.fps);
         fillSelect($('s-wb'), steps.wb.map((v) => ({ value: v, text: v + 'K' })), V.wb);
         fillSelect($('s-res'),
             steps.resolutions.map((r) => ({ value: r.mode, text: r.resolution })),

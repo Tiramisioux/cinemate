@@ -120,6 +120,17 @@ def bench_decode(take: Path, scales, workers, iterations) -> None:
                 samples.append((time.perf_counter() - start) * 1000.0 / n)
             out_w, out_h = dng_preview.output_size(
                 dng_preview.read_metadata(frames[0]), scale)
+            # decode_once() -> decode_frame() reads the file itself
+            # (_load_rows() opens and seeks it), so this figure is decode
+            # wall-clock INCLUDING that read, not CPU-only -- and whether
+            # each read came off the OS page cache or the device is not
+            # something this process controls or can drop on demand
+            # without root. `batch` cycles through `frames` every len(frames)
+            # iterations, so later iterations at len(frames) < workers*
+            # iterations are increasingly likely to be page-cache-warm even
+            # on a cold-booted Pi. Reporting the first iteration separately
+            # from the rest of the distribution is what lets a reader see
+            # that difference instead of it hiding inside one median.
             emit({
                 "gate": "G1",
                 "measurement": "decode",
@@ -127,9 +138,11 @@ def bench_decode(take: Path, scales, workers, iterations) -> None:
                 "scale": scale,
                 "workers": n,
                 "iterations": iterations,
+                "ms_per_frame_first": round(samples[0], 2),
                 "ms_per_frame_median": round(statistics.median(samples), 2),
                 "ms_per_frame_min": round(min(samples), 2),
                 "ms_per_frame_max": round(max(samples), 2),
+                "includes_file_io": True,
                 "output": f"{out_w}x{out_h}",
                 "numpy": np.__version__,
                 "python": sys.version.split()[0],
@@ -221,6 +234,22 @@ def bench_io(take: Path, scale: int, count: int) -> None:
             "device_vs_file_ratio": round(
                 per_frame / max(frames[0].stat().st_size, 1), 2),
         })
+        # read_bytes == 0 means the block device transferred NOTHING for
+        # `count` decoded frames -- every row-selective read still moves at
+        # least a few KB off a real device, so this is the OS page cache
+        # serving the read, not the row-selective decode being free. A
+        # naive read of device_vs_file_ratio would score this the best
+        # possible outcome (0.0, "less than the row-selective ideal")
+        # when it is actually a measurement of nothing. Cannot be
+        # corrected for without root (no way to drop caches from here) --
+        # flagged so a reader doesn't mistake it for a storage result.
+        # Same confound `--decode` documents via ms_per_frame_first.
+        if read_bytes == 0:
+            record["cache_warm_suspected"] = True
+            note(f"{take.name}: 0 device bytes read for {len(frames)} frames -- "
+                "page cache is almost certainly warm; this run says nothing "
+                "about device bandwidth. Re-run after a reboot, or on a take "
+                "not touched by an earlier --decode/--render pass.")
     else:
         record["device_bytes_per_frame"] = None
         record["skipped"] = f"/proc/diskstats unavailable ({source})"

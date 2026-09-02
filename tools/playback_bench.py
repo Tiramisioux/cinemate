@@ -11,6 +11,14 @@ repo checkout, over SSH, with no services running and nothing to set up.
     python3 tools/playback_bench.py --decode /media/RAW/<take>
     python3 tools/playback_bench.py --io     /media/RAW/<take>
     python3 tools/playback_bench.py --render /media/RAW/<take> [more takes...]
+    python3 tools/playback_bench.py --meta   /media/RAW/<take> [more takes...]
+
+--meta (G0/G10) walks the IFD chain of one frame per take and reports it --
+IFD count, which one carries the raw image, and the thumbnail's own
+dimensions/samples-per-pixel/bit depth/photometric/byte count when a
+second IFD (cinepi-raw's embedded DNG thumbnail, C9 Phase 0) is present.
+Both gates ask for exactly this: "dump the IFD structure ... with the C9
+metadata reader."
 
 Output is one JSON object per line on stdout and nothing else, so a run pastes
 into GATES.md as-is. Progress and complaints go to stderr.
@@ -273,6 +281,88 @@ def bench_render(take: Path, scale: int, out_dir: Path) -> None:
     })
 
 
+# ------------------------------------------------------------------ metadata
+
+def walk_ifd_chain(path: Path) -> list[dict]:
+    """Every IFD in ``path``, in file order, each as a plain dict of its tags
+    plus ``_offset`` and ``_next_ifd_offset``.
+
+    What G0 and G10 both ask for -- "dump the IFD structure of one frame,
+    extended to walk every IFD" -- and dng_preview.read_metadata() alone
+    cannot answer, because it merges IFD1 into meta["thumbnail"] rather
+    than reporting it as a separate structure with its own offset. Reuses
+    dng_preview._parse_ifd() (the same tag table, the same next-IFD
+    field) rather than re-implementing IFD parsing a second time.
+    """
+    import struct as _struct
+
+    ifds = []
+    with open(path, "rb") as handle:
+        header = handle.read(8)
+        if len(header) < 8 or header[:2] not in (b"II", b"MM"):
+            raise dng_preview.DngError("not a TIFF/DNG file")
+        end = "<" if header[:2] == b"II" else ">"
+        magic, offset = _struct.unpack(end + "HI", header[2:8])
+        if magic != 42:
+            raise dng_preview.DngError("not a TIFF/DNG file")
+
+        seen = set()
+        while offset and offset not in seen:
+            seen.add(offset)   # guard against a corrupt chain looping forever
+            handle.seek(offset)
+            tail = handle.read(dng_preview._IFD_TAIL_BYTES)
+            if not tail:
+                break
+            tags, next_offset = dng_preview._parse_ifd(tail, offset, base=offset)
+            tags["_offset"] = offset
+            tags["_next_ifd_offset"] = next_offset
+            ifds.append(tags)
+            offset = next_offset
+
+    return ifds
+
+
+def bench_meta(take: Path, frame_index: int) -> None:
+    """G0 / G10: the full IFD chain of one frame, exactly as a DNG reader
+    would walk it -- IFD count, which one carries the raw image (samples_
+    per_pixel==1, photometric CFA == 32803), and the thumbnail's own
+    dimensions/samples_per_pixel/bit depth/photometric/byte count when a
+    second IFD is present.
+    """
+    frames = frames_in(take)
+    if not 0 <= frame_index < len(frames):
+        raise SystemExit(f"frame {frame_index} outside 0..{len(frames) - 1} for {take}")
+    path = frames[frame_index]
+
+    ifds = walk_ifd_chain(path)
+    emit({
+        "gate": "G0/G10",
+        "measurement": "meta",
+        "take": take.name,
+        "frame": path.name,
+        "file_bytes": path.stat().st_size,
+        "ifd_count": len(ifds),
+        "ifds": [
+            {
+                "index": i,
+                "offset": tags["_offset"],
+                "next_ifd_offset": tags["_next_ifd_offset"],
+                "width": tags.get("width"),
+                "height": tags.get("height"),
+                "bits": tags.get("bits"),
+                "samples_per_pixel": tags.get("samples_per_pixel"),
+                "photometric": tags.get("photometric"),
+                "compression": tags.get("compression"),
+                "strip_offset": tags.get("strip_offset"),
+                "strip_bytes": tags.get("strip_bytes"),
+                "rows_per_strip": tags.get("rows_per_strip"),
+                "has_linearization_table": bool(tags.get("linearization_table")),
+            }
+            for i, tags in enumerate(ifds)
+        ],
+    })
+
+
 # ------------------------------------------------------------------- driving
 
 def int_list(text: str) -> list[int]:
@@ -287,6 +377,7 @@ def main(argv=None) -> int:
     mode.add_argument("--decode", action="store_true", help="G1: decode throughput")
     mode.add_argument("--io", action="store_true", help="G2: device bytes per frame")
     mode.add_argument("--render", action="store_true", help="G9: rendered-pixel sanity")
+    mode.add_argument("--meta", action="store_true", help="G0/G10: dump the IFD chain")
     parser.add_argument("takes", nargs="+", type=Path, help="take directories")
     parser.add_argument("--scales", type=int_list, default=list(DEFAULT_SCALES))
     parser.add_argument("--workers", type=int_list, default=list(DEFAULT_WORKERS))
@@ -297,6 +388,8 @@ def main(argv=None) -> int:
                         help="frames to decode for --io (default 20)")
     parser.add_argument("--out-dir", type=Path, default=Path("playback_bench_out"),
                         help="where --render writes its PNGs")
+    parser.add_argument("--frame", type=int, default=0,
+                        help="frame index for --meta (default 0, the first frame)")
     args = parser.parse_args(argv)
 
     for take in args.takes:
@@ -308,6 +401,8 @@ def main(argv=None) -> int:
                 bench_decode(take, args.scales, args.workers, args.iterations)
             elif args.io:
                 bench_io(take, args.scale, args.count)
+            elif args.meta:
+                bench_meta(take, args.frame)
             else:
                 bench_render(take, args.scale, args.out_dir)
         except (dng_preview.DngError, OSError) as exc:

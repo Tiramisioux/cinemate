@@ -178,11 +178,11 @@ def frame_source(meta: dict) -> str:
     so this is deliberately the only place that decides, rather than a test
     repeated down the route.
 
-    The thumbnail side is not implemented yet: it needs cinepi-raw's Phase 0
-    change (a thumbnail chained as IFD1) both landed and actually present in
-    the take, and a take shot before that will never have one. Until the
-    reader lands this always answers SOURCE_DECODE, which is the correct
-    answer for every frame currently on any card.
+    Answers SOURCE_THUMBNAIL when dng_preview.read_metadata() found a second
+    IFD chained after the raw image (cinepi-raw's embedded DNG thumbnail,
+    C9 Phase 0) -- which requires both a rebuilt cinepi-raw and the toggle
+    having been on when the take was recorded. Every take shot before that,
+    or with the toggle off, has no second IFD and answers SOURCE_DECODE.
     """
     if meta.get("thumbnail"):
         return SOURCE_THUMBNAIL
@@ -216,10 +216,12 @@ def frame_jpeg(name: str, index: int, scale: int = 4, mono: bool = False,
     try:
         meta = dng_preview.read_metadata(path)
         source = frame_source(meta)
-        if source == SOURCE_THUMBNAIL:      # not reachable until the reader lands
-            raise PlaybackError("embedded thumbnail path is not implemented")
-        data, (width, height) = dng_preview.decode_frame(
-            path, meta, scale=scale, mono=mono, quality=quality)
+        if source == SOURCE_THUMBNAIL:
+            data, (width, height) = dng_preview.decode_thumbnail(
+                path, meta, quality=quality)
+        else:
+            data, (width, height) = dng_preview.decode_frame(
+                path, meta, scale=scale, mono=mono, quality=quality)
         return data, width, height, source
     except dng_preview.DngError as exc:
         raise PlaybackError(str(exc)) from exc

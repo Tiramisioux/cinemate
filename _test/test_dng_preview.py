@@ -44,8 +44,18 @@ SHORT, LONG, RATIONAL = 3, 4, 5
 
 def build_dng(path, width=64, height=32, bits=12, white=None, black=200,
               cfa=(0, 1, 1, 2), linearization=None, frame_rate=25.0,
-              photometric=32803, fill=0x400):
-    """Write a minimal DNG in the shape cinepi-raw emits."""
+              photometric=32803, fill=0x400, thumbnail=None):
+    """Write a minimal DNG in the shape cinepi-raw emits.
+
+    ``thumbnail``, when given, is a dict with ``width``, ``height``,
+    ``samples_per_pixel`` (1 mono / 3 colour) and ``fill`` (one byte,
+    repeated), and chains a second IFD after IFD0 -- the shape
+    dng_encoder.cpp's IFD1 actually has (C9 Phase 0): NewSubfileType 1,
+    the given dimensions, 8-bit, PhotometricInterpretation MINISBLACK (1)
+    or RGB (2), one strip placed right after the thumbnail's own pixel
+    data, chained via IFD0's next-IFD field. IFD0 itself is untouched --
+    same as dng_save() leaves it whenever a thumbnail is chained after it.
+    """
     if white is None:
         white = (1 << bits) - 1
 
@@ -101,12 +111,66 @@ def build_dng(path, width=64, height=32, bits=12, white=None, black=200,
     out += b"II" + struct.pack("<HI", 42, ifd_offset)
     out += strip
     out += struct.pack("<H", len(entries))
+    next_ifd_field_pos = None
     for tag, typ, count, value in entries:
         if isinstance(value, tuple):
             value = struct.pack("<I", extra_base + value[1])
         out += struct.pack("<HHI", tag, typ, count) + value
-    out += struct.pack("<I", 0)
+    next_ifd_field_pos = len(out)
+    out += struct.pack("<I", 0)   # patched below if `thumbnail` chains after
     out += extra
+
+    if thumbnail is not None:
+        tw = thumbnail["width"]
+        th = thumbnail["height"]
+        tspp = thumbnail.get("samples_per_pixel", 1)
+        tfill = thumbnail.get("fill", 0x80)
+        tphot = 2 if tspp == 3 else 1   # RGB : MINISBLACK, matching dng_save()
+
+        thumb_off = len(out)
+        thumb_data = bytes([tfill]) * (tw * th * tspp)
+        out += thumb_data
+        thumb_size = len(thumb_data)
+
+        t_entries = []
+        t_extra = bytearray()
+        ifd1_offset = thumb_off + thumb_size
+
+        def t_add(tag, typ, count, packed):
+            nonlocal t_extra
+            if len(packed) <= 4:
+                t_entries.append((tag, typ, count, packed.ljust(4, b"\0")))
+            else:
+                t_entries.append((tag, typ, count, ("EXTRA", len(t_extra))))
+                t_extra += packed
+
+        t_add(254, LONG, 1, struct.pack("<I", 1))              # NewSubfileType
+        t_add(256, LONG, 1, struct.pack("<I", tw))
+        t_add(257, LONG, 1, struct.pack("<I", th))
+        t_add(258, SHORT, tspp, b"".join(struct.pack("<H", 8) for _ in range(tspp)))
+        t_add(259, SHORT, 1, struct.pack("<H", 1))              # uncompressed
+        t_add(262, SHORT, 1, struct.pack("<H", tphot))
+        t_add(273, LONG, 1, struct.pack("<I", thumb_off))
+        t_add(277, SHORT, 1, struct.pack("<H", tspp))
+        t_add(278, LONG, 1, struct.pack("<I", th))              # RowsPerStrip
+        t_add(279, LONG, 1, struct.pack("<I", thumb_size))
+        t_add(284, SHORT, 1, struct.pack("<H", 1))              # PlanarConfig
+
+        t_entries.sort(key=lambda e: e[0])
+        t_ifd_size = 2 + 12 * len(t_entries) + 4
+        t_extra_base = ifd1_offset + t_ifd_size
+
+        out += struct.pack("<H", len(t_entries))
+        for tag, typ, count, value in t_entries:
+            if isinstance(value, tuple):
+                value = struct.pack("<I", t_extra_base + value[1])
+            out += struct.pack("<HHI", tag, typ, count) + value
+        out += struct.pack("<I", 0)   # IFD1 is the last IFD
+        out += t_extra
+
+        # Chain IFD0 -> IFD1, exactly the after-the-fact patch dng_save()
+        # does once IFD1's own offset is known.
+        struct.pack_into("<I", out, next_ifd_field_pos, ifd1_offset)
 
     Path(path).write_bytes(bytes(out))
     return path
@@ -259,6 +323,101 @@ class DngPreviewTest(unittest.TestCase):
         Path(p).write_bytes(data[:100])
         with self.assertRaises(dng_preview.DngError):
             dng_preview.decode_frame(p, meta, scale=2)
+
+
+class ThumbnailReaderTest(unittest.TestCase):
+    """C9's other half: cinepi-raw writes IFD1 (Phase 0), this reads it.
+
+    playback.frame_source() answered SOURCE_DECODE for every frame until
+    this landed -- meta["thumbnail"] was never set because _parse_ifd()
+    never looked past IFD0's own entries. These pin the reading half of
+    the same contract build_dng()'s thumbnail= builds.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_no_thumbnail_is_absent_not_falsy(self):
+        """The common case -- every take on a card today. Distinguishing
+        "key absent" from "key present but empty" matters because
+        frame_source() only checks truthiness, but a future caller might not."""
+        p = build_dng(self.dir / "plain.dng", width=64, height=32)
+        meta = dng_preview.read_metadata(p)
+        self.assertNotIn("thumbnail", meta)
+
+    def test_mono_thumbnail_is_read(self):
+        p = build_dng(self.dir / "mono.dng", width=64, height=32,
+                      thumbnail={"width": 16, "height": 8, "samples_per_pixel": 1, "fill": 0x40})
+        meta = dng_preview.read_metadata(p)
+        self.assertIn("thumbnail", meta)
+        thumb = meta["thumbnail"]
+        self.assertEqual((thumb["width"], thumb["height"]), (16, 8))
+        self.assertEqual(thumb["samples_per_pixel"], 1)
+        self.assertEqual(thumb["strip_bytes"], 16 * 8)
+        # IFD0's own tags are untouched by a thumbnail being present.
+        self.assertEqual((meta["width"], meta["height"]), (64, 32))
+
+    def test_colour_thumbnail_is_read(self):
+        p = build_dng(self.dir / "colour.dng", width=64, height=32,
+                      thumbnail={"width": 16, "height": 8, "samples_per_pixel": 3, "fill": 0x60})
+        meta = dng_preview.read_metadata(p)
+        thumb = meta["thumbnail"]
+        self.assertEqual(thumb["samples_per_pixel"], 3)
+        self.assertEqual(thumb["strip_bytes"], 16 * 8 * 3)
+        self.assertEqual(thumb["photometric"], 2)  # RGB
+
+    def test_frame_source_answers_thumbnail_when_present(self):
+        from module.app import playback
+
+        p = build_dng(self.dir / "with_thumb.dng", width=64, height=32,
+                      thumbnail={"width": 16, "height": 8, "samples_per_pixel": 1})
+        meta = dng_preview.read_metadata(p)
+        self.assertEqual(playback.frame_source(meta), playback.SOURCE_THUMBNAIL)
+
+        p2 = build_dng(self.dir / "no_thumb.dng", width=64, height=32)
+        meta2 = dng_preview.read_metadata(p2)
+        self.assertEqual(playback.frame_source(meta2), playback.SOURCE_DECODE)
+
+    def test_decode_thumbnail_returns_the_bytes_verbatim(self):
+        p = build_dng(self.dir / "d.dng", width=64, height=32,
+                      thumbnail={"width": 4, "height": 2, "samples_per_pixel": 1, "fill": 0xAB})
+        meta = dng_preview.read_metadata(p)
+        jpeg, size = dng_preview.decode_thumbnail(p, meta)
+        self.assertEqual(size, (4, 2))
+        self.assertEqual(jpeg[:2], b"\xff\xd8")  # a real JPEG, not raw bytes passed through
+        rendered = np.asarray(Image.open(io.BytesIO(jpeg)))
+        # JPEG is lossy -- a flat 0xAB fill should still land within a few
+        # levels of itself, not decode to something structurally different.
+        self.assertLess(abs(int(rendered.mean()) - 0xAB), 5)
+
+    def test_decode_thumbnail_refuses_without_one(self):
+        p = build_dng(self.dir / "no_thumb2.dng", width=64, height=32)
+        meta = dng_preview.read_metadata(p)
+        with self.assertRaises(dng_preview.DngError):
+            dng_preview.decode_thumbnail(p, meta)
+
+    def test_a_next_ifd_pointer_past_eof_does_not_crash_metadata_reading(self):
+        """A corrupt/truncated file's IFD0 tags must still come back -- a
+        thumbnail is a bonus, its absence or corruption is never fatal to
+        reading the frame's own metadata (or, upstream, to falling back to
+        the raw decode)."""
+        p = build_dng(self.dir / "corrupt.dng", width=64, height=32,
+                      thumbnail={"width": 16, "height": 8, "samples_per_pixel": 1})
+        data = bytearray(Path(p).read_bytes())
+        # Point IFD0's next-IFD field far past EOF instead of at IFD1.
+        ifd0_offset = struct.unpack_from("<I", data, 4)[0]
+        count = struct.unpack_from("<H", data, ifd0_offset)[0]
+        next_field = ifd0_offset + 2 + 12 * count
+        struct.pack_into("<I", data, next_field, len(data) + 10_000_000)
+        Path(p).write_bytes(bytes(data))
+
+        meta = dng_preview.read_metadata(p)  # must not raise
+        self.assertEqual((meta["width"], meta["height"]), (64, 32))
+        self.assertNotIn("thumbnail", meta)
 
 
 if __name__ == "__main__":

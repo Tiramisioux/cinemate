@@ -66,6 +66,8 @@ Everything in this row is read from the take's own DNG files, not from what the 
 
     There is no HDR flag in a CinemaDNG file. `SDR` / `HDR` is worked out from the white level, which is why it stays correct across all of CineMate's capture modes. For the same reason `CRV` cannot say *which* curve is present: ClearHDR's companding and [CineMate Log](cinemate-log.md) are written to the same DNG tag, and when both apply they are combined into one. The badge reports that a curve exists, not which one.
 
+**Source** says where the picture came from: `Thumbnail` for a take that carries cinepi-raw's embedded DNG thumbnail (the fixed-size mono or colour plane it writes alongside the raw image, when built with the toggle on), `Raw decode` for one demosaiced from the raw image at the preview scale below. Never guess which you are looking at — a 720p thumbnail and a demosaiced quarter-res frame are different pictures of the same take, and only a raw decode is affected by the preview scale or monochrome-sensor settings. Source is a property of the take, not of any one frame: cinepi-raw's toggle cannot change mid-take, so every frame in a take answers the same way.
+
 ## Rate readouts
 
 | Readout | Meaning |

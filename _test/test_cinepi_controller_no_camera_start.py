@@ -207,7 +207,15 @@ class InitializeWbCgRbArrayNoCameraTests(unittest.TestCase):
     None and initialize_wb_cg_rb_array()'s first line --
     self.current_sensor.replace('_mono', '') -- threw AttributeError before
     the try/except even started, crashing startup with 'Cinemate crashed
-    during startup: NoneType object has no attribute replace'."""
+    during startup: NoneType object has no attribute replace'.
+
+    C3.9 guarded that first call but this test then asserted the wrong
+    outcome: a *second* .replace() on the same None, building the tuning
+    file path, threw before `ct_curve = default_ct_curve` was reached, the
+    broad except swallowed it, and wb_cg_rb_array was left {} -- so the test
+    locked in "white balance has no curve at all" as the expected result.
+    It isn't a fallback: set_wb() then misses for every temperature and
+    writes neither cg_rb nor wb_user."""
 
     def test_no_camera_does_not_throw(self):
         controller = make_controller(FakeRedis(), FakeSensorDetect(camera_model=None))
@@ -216,7 +224,18 @@ class InitializeWbCgRbArrayNoCameraTests(unittest.TestCase):
 
         controller.initialize_wb_cg_rb_array()  # must not raise
 
-        self.assertEqual(controller.wb_cg_rb_array, {})
+        self.assertEqual(sorted(controller.wb_cg_rb_array), [5600])
+
+    def test_no_camera_still_yields_a_usable_curve(self):
+        controller = make_controller(FakeRedis(), FakeSensorDetect(camera_model=None))
+        controller.current_sensor = None
+        controller.wb_steps = [3200, 5600, 6500]
+
+        controller.initialize_wb_cg_rb_array()
+
+        self.assertEqual(sorted(controller.wb_cg_rb_array), [3200, 5600, 6500])
+        for gains in controller.wb_cg_rb_array.values():
+            self.assertEqual(len(gains), 2)
 
 
 if __name__ == "__main__":

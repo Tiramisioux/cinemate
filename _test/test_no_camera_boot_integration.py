@@ -214,6 +214,29 @@ class RealInitNoCameraTests(unittest.TestCase):
         self.assertEqual(redis_controller.writes_to(ParameterKey.FILE_SIZE), [])
 
 
+class WhiteBalanceCurveNoCameraTests(unittest.TestCase):
+    """D3: with no sensor there is no tuning file to read, but there is still
+    a generic default ct_curve. An empty wb_cg_rb_array is not a fallback --
+    set_wb() then misses for every temperature and writes nothing at all."""
+
+    def test_wb_cg_rb_array_is_populated_with_no_camera(self):
+        controller = build_real_controller()
+
+        self.assertTrue(controller.wb_cg_rb_array)
+        self.assertEqual(
+            sorted(controller.wb_cg_rb_array), sorted(controller.wb_steps)
+        )
+
+    def test_set_wb_actually_writes_with_no_camera(self):
+        redis_controller = FakeRedis()
+        controller = build_real_controller(redis_controller=redis_controller)
+
+        controller.set_wb(controller.wb_steps[0])
+
+        self.assertTrue(redis_controller.writes_to(ParameterKey.CG_RB))
+        self.assertTrue(redis_controller.writes_to(ParameterKey.WB_USER))
+
+
 class PopulateValuesAgainstRealControllerTests(unittest.TestCase):
     """D1 regression, driven the way the Pi drives it: the real
     populate_values() reading the real controller."""

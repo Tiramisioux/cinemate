@@ -2431,13 +2431,21 @@ class CinePiController:
 
     def initialize_wb_cg_rb_array(self):
         """Initialize the white balance cg_rb array based on the sensor model."""
-        # No camera: current_sensor is None. Falls through to the generic
-        # default_ct_curve below (sensor_key matches neither imx283 nor
-        # imx585) -- the tuning-file load further down already tolerates
-        # this same None via its broad except Exception, but this earlier
-        # .replace() call did not, and crashed startup outright (hardware-
-        # confirmed 2026-09-01: AttributeError: 'NoneType' object has no
-        # attribute 'replace').
+        # No camera (or a sensor with no tuning file): current_sensor is
+        # None, so sensor_key is "" and matches neither imx283 nor imx585 --
+        # default_ct_curve below is the generic one.
+        #
+        # C3.9 guarded this .replace() because it crashed startup outright
+        # (hardware-confirmed 2026-09-01), but its claim that None then
+        # "falls through to the generic default_ct_curve" was wrong: the
+        # second .replace() on the same None, in the tuning-file path below,
+        # threw before `ct_curve = default_ct_curve` was ever reached. The
+        # broad `except Exception` caught it and left wb_cg_rb_array as {},
+        # which is not a fallback -- set_wb()'s lookup then misses for every
+        # temperature, logs "White balance value not found", and writes
+        # neither cg_rb nor wb_user. White balance had no curve at all
+        # (hardware-confirmed 2026-09-02: "Failed to initialize
+        # wb_cg_rb_array: 'NoneType' object has no attribute 'replace'").
         sensor_key = (self.current_sensor or "").replace('_mono', '')
 
         if sensor_key == 'imx283':
@@ -2482,28 +2490,41 @@ class CinePiController:
         self.wb_cg_rb_array = {}  # Ensuring it is initialized as a dictionary
 
         try:
-            tuning_file_path = (
-                f"/home/pi/libcamera/src/ipa/rpi/pisp/data/"
-                f"{self.current_sensor.replace('_mono', '')}.json"
-            )
-            logging.info(f"Loading tuning file from: {tuning_file_path}")
+            # Start from the default and let the tuning file override it, so
+            # every failure below -- no sensor, no tuning file, no rpi.awb
+            # block, no ct_curve in it -- lands on a usable curve instead of
+            # an empty array. Anything that throws past this point still
+            # reaches the handlers at the bottom, but nothing on the
+            # no-camera path throws any more.
+            ct_curve = default_ct_curve
 
-            with open(tuning_file_path, 'r') as file:
-                data = json.load(file)
-                logging.info("Tuning data loaded successfully.")
-
-            awb_data = next((algo['rpi.awb'] for algo in data['algorithms'] if 'rpi.awb' in algo), None)
-            if not awb_data:
-                logging.warning("'rpi.awb' algorithm data not found, using default ct_curve.")
-                ct_curve = default_ct_curve
+            if not sensor_key:
+                logging.info(
+                    "No sensor detected -- using the default ct_curve for "
+                    "white balance (no tuning file to read)."
+                )
             else:
-                logging.info(f"'rpi.awb' data found: {awb_data}")
-                ct_curve = awb_data.get('ct_curve', None)
-                if not ct_curve:
-                    logging.warning("'ct_curve' not found in 'rpi.awb' data, using default ct_curve.")
-                    ct_curve = default_ct_curve
+                tuning_file_path = (
+                    f"/home/pi/libcamera/src/ipa/rpi/pisp/data/"
+                    f"{sensor_key}.json"
+                )
+                logging.info(f"Loading tuning file from: {tuning_file_path}")
+
+                with open(tuning_file_path, 'r') as file:
+                    data = json.load(file)
+                    logging.info("Tuning data loaded successfully.")
+
+                awb_data = next((algo['rpi.awb'] for algo in data['algorithms'] if 'rpi.awb' in algo), None)
+                if not awb_data:
+                    logging.warning("'rpi.awb' algorithm data not found, using default ct_curve.")
                 else:
-                    logging.info(f"Retrieved ct_curve: {ct_curve}")
+                    logging.info(f"'rpi.awb' data found: {awb_data}")
+                    tuning_ct_curve = awb_data.get('ct_curve', None)
+                    if not tuning_ct_curve:
+                        logging.warning("'ct_curve' not found in 'rpi.awb' data, using default ct_curve.")
+                    else:
+                        ct_curve = tuning_ct_curve
+                        logging.info(f"Retrieved ct_curve: {ct_curve}")
 
             temperatures = ct_curve[0::3]
             r_values = ct_curve[1::3]

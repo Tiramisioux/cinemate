@@ -438,6 +438,9 @@
 
   .filepath{
     font-size: 12px; color: var(--muted); display:flex; align-items:center; gap:6px;
+    /* A resolved absolute path is far longer than the relative form this
+       showed before, and .card-control is not a min-width:0 flex item. */
+    min-width:0; overflow-wrap:anywhere;
   }
   .filepath svg{ opacity:.6; flex:none; }
 
@@ -1741,7 +1744,14 @@
             <p class="card-help">Source file describing every supported sensor's modes. Edit only if you're adding hardware support.</p>
           </div>
           <div class="card-control">
-            <span class="filepath mono"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>resources/sensors.json</span>
+            <span class="filepath mono"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>{{ sensor_db_path }}</span>
+            <!-- The card is read-only, but the key still has to round-trip:
+                 buildState() only collects [data-path] elements, so without
+                 this field a Save posts no sensors.database_file at all and
+                 _apply_settings_defaults setdefaults it back to the stock
+                 "resources/sensors.json" -- silently discarding an
+                 operator's override. -->
+            <input type="hidden" data-path="sensors.database_file">
           </div>
         </div>
       </div>
@@ -2220,12 +2230,12 @@
     <section class="group" id="live" data-page="live">
       <header class="group-head">
         <h2>Live view</h2>
-        <p class="group-sub">The real Cinemate live-camera page, embedded and scaled to fit this column. Every control here is the genuine on-camera preview + <span class="mono">/api/v1/cmd</span> control surface — nothing here is a mockup.</p>
+        <p class="group-sub">The real Cinemate live-camera page, embedded at this column’s width. Every control here is the genuine on-camera preview + <span class="mono">/api/v1/cmd</span> control surface — nothing here is a mockup.</p>
       </header>
       <div class="live-embed-wrap">
         <iframe id="liveEmbedFrame" class="live-embed-frame" src="/" title="Cinemate live camera preview" loading="lazy"></iframe>
       </div>
-      <p class="card-help" style="margin-top:14px">Opens <a class="mono" href="/" target="_blank" rel="noopener">/</a> in a scaled frame. If controls feel cramped, open it in its own tab full-size.</p>
+      <p class="card-help" style="margin-top:14px;max-width:60ch">This is the page on port <span class="mono">5000</span> with <span class="mono">/settings-editor</span> dropped off the address — <a href="/" target="_blank" rel="noopener">open it in its own tab</a> if the controls feel cramped in here. The clean feed, no controls over it, is on port <span class="mono">8000</span> at <span class="mono">/stream</span> — same address, <span class="mono">8001</span> for cam1 on a dual‑sensor rig.</p>
     </section>
 
   </main>

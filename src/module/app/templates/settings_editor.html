@@ -2194,6 +2194,7 @@
         <div class="pb-hud-item"><span class="pb-hud-label">Resolution</span><span class="pb-hud-value" id="pbMetaRes">—</span></div>
         <div class="pb-hud-item"><span class="pb-hud-label">Depth</span><span class="pb-hud-value" id="pbMetaDepth">—</span></div>
         <div class="pb-hud-item"><span class="pb-hud-label">Sensor</span><span class="pb-hud-value" id="pbMetaSensor">—</span></div>
+        <div class="pb-hud-item"><span class="pb-hud-label">Source</span><span class="pb-hud-value" id="pbMetaSource">—</span></div>
         <div class="pb-hud-boxes" id="pbMetaBoxes"></div>
       </div>
       <div class="pb-rate">
@@ -4375,6 +4376,11 @@
     pbEl('pbMetaRes').textContent = pbClip.width ? pbClip.width + '×' + pbClip.height : '—';
     pbEl('pbMetaDepth').textContent = pbClip.bits ? pbClip.bits + '-bit' : '—';
     pbEl('pbMetaSensor').textContent = pbClip.sensor || '—';
+    /* Open decision 8: never let a 720p embedded proxy and a demosaiced
+       quarter-res frame look like the same picture in the HUD. */
+    pbEl('pbMetaSource').textContent =
+      pbClip.source === 'thumbnail' ? 'Thumbnail' :
+      pbClip.source === 'decode' ? 'Raw decode' : '—';
     pbEl('pbScrub').max = Math.max(0, (pbClip.frame_count || 1) - 1);
     pbEl('pbFrameTotal').textContent = ' / ' + Math.max(0, (pbClip.frame_count || 1) - 1);
     pbLabelScales();
@@ -5029,6 +5035,24 @@
   }
   var pageTabButtons = document.querySelectorAll('[data-page-tab]');
   var pageLedes = document.querySelectorAll('[data-page-lede]');
+  /* Live-view iframe lifecycle. Kept next to setActivePage because that is
+     the only thing that calls it, and the src it restores is the one the
+     markup shipped with rather than a second copy of the URL. */
+  var liveEmbedSrc = null;
+  function syncLiveEmbed(page){
+    var frame = document.getElementById('liveEmbedFrame');
+    if (!frame) return;
+    if (liveEmbedSrc === null) liveEmbedSrc = frame.getAttribute('src') || '/';
+    if (page === 'live'){
+      if (frame.getAttribute('src') !== liveEmbedSrc) frame.setAttribute('src', liveEmbedSrc);
+    } else if (frame.getAttribute('src')){
+      /* removeAttribute rather than src='': an empty src re-resolves to the
+         current document in some browsers, which reloads this page inside
+         its own iframe instead of stopping anything. */
+      frame.removeAttribute('src');
+    }
+  }
+
   function setActivePage(page){
     /* loadConfigTxt() only ever ran once, at page load (see the bottom of
        this script). config.txt can change underneath an open tab without
@@ -5040,6 +5064,12 @@
        are unsaved edits already in progress (configDirty) so this can't
        silently discard those. */
     if (page === 'config' && activePage !== 'config' && !configDirty) loadConfigTxt();
+    /* The Live tab embeds the shooting screen in an iframe, and hiding an
+       iframe does not stop it: its MJPEG stream and its Socket.IO connection
+       stay live behind every other tab for the rest of the session. That is
+       the same Wi-Fi link playback needs, so drop the src on the way out and
+       put it back on the way in. */
+    syncLiveEmbed(page);
     activePage = page;
     pageTabButtons.forEach(function(b){
       var isActive = b.getAttribute('data-page-tab') === page;

@@ -21,12 +21,16 @@ actually emits -- little-endian, single uncompressed strip at offset 8, IFD at
 the tail.
 """
 
+import io
 import struct
 import sys
 import tempfile
 import types
 import unittest
 from pathlib import Path
+
+import numpy as np
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -171,6 +175,44 @@ class DngPreviewTest(unittest.TestCase):
         colour, _ = dng_preview.decode_frame(p, None, scale=2, mono=False)
         mono, _ = dng_preview.decode_frame(p, None, scale=2, mono=True)
         self.assertNotEqual(colour, mono)
+
+    def test_linearization_table_is_applied_to_the_pixels(self):
+        """A companded frame must be linearised before the levels are applied.
+
+        Skipping the table subtracts a linear-domain BlackLevel from codes that
+        never went through the curve (docs/cinemate-log.md:63). The ceiling that
+        imposes is what this pins: with 12-bit codes (max 4095) and a table
+        whose output white is 62704, an un-linearised decode cannot put any
+        pixel above (4095-200)/(62704-200) = 6.2% before gamma, i.e. ~71/255
+        after it -- however bright the subject actually was. A near-white patch
+        therefore lands under 100 when the table is skipped and well above it
+        when it is applied.
+        """
+        white = 62704
+        # Expanding curve in cinepi-raw's shape: the pedestal maps to itself so
+        # BlackLevel stays meaningful in the output domain, full scale maps to
+        # the tagged WhiteLevel.
+        lut = [min(white, int(200 + (white - 200) * ((i - 200) / 3895.0) ** 2.2))
+               if i > 200 else i for i in range(4096)]
+        bright = build_dng(self.dir / "companded.dng", bits=12, white=white,
+                           black=200, linearization=lut, fill=3600)
+
+        jpeg, _ = dng_preview.decode_frame(bright, None, scale=2, mono=True)
+        rendered = np.asarray(Image.open(io.BytesIO(jpeg))).astype(float).mean()
+
+        self.assertGreater(
+            rendered, 100.0,
+            f"near-white companded patch rendered {rendered:.1f}/255 -- at or "
+            "below the ~71 ceiling of a decode that skips the table")
+
+    def test_a_frame_with_no_table_is_untouched_by_linearisation(self):
+        """The control for the test above: linear frames must not change."""
+        p = build_dng(self.dir / "linear.dng", bits=12, white=4095, black=200,
+                      fill=2048, linearization=None)
+        jpeg, _ = dng_preview.decode_frame(p, None, scale=2, mono=True)
+        rendered = np.asarray(Image.open(io.BytesIO(jpeg))).astype(float).mean()
+        expected = (((2048 - 200) / (4095 - 200)) ** (1 / 2.2)) * 255
+        self.assertAlmostEqual(rendered, expected, delta=3.0)
 
     def test_a_non_dng_is_refused_rather_than_misread(self):
         junk = self.dir / "junk.bin"

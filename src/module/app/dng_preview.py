@@ -213,8 +213,10 @@ def _black_white(meta):
         white = (1 << int(meta.get("bits", 16))) - 1
     white = float(white)
 
-    # Under a LinearizationTable the stored codes are companded: the levels
-    # describe the table's output domain, so take them through the table too.
+    # Under a LinearizationTable these levels live in the table's OUTPUT
+    # domain, which is the domain _linearize() has already put the pixels in
+    # by the time they are applied. BlackLevel is tagged as a stored code, so
+    # it goes through the curve; WhiteLevel is the curve's own maximum.
     table = meta.get("linearization_table")
     if table:
         lut = np.asarray(table, np.uint16)
@@ -301,6 +303,29 @@ def _load_rows(path, meta, row_step):
     return out.reshape(len(wanted), width)
 
 
+def _linearize(raw, meta):
+    """Apply the DNG LinearizationTable (tag 50712) to the stored sample codes.
+
+    Under a table the stored codes are companded and the level tags describe
+    the table's *output*. Skipping this step subtracts a linear-domain
+    BlackLevel from data that never reaches it -- the failure
+    docs/cinemate-log.md:63 names, where a log clip renders black. For 12-bit
+    ClearHDR (stored codes cap at 4095, tagged WhiteLevel 62704) it caps the
+    brightest possible pixel at 4095/62504, i.e. ~6.5% of full scale before
+    gamma, so nothing in the frame can render above roughly a quarter.
+
+    Runs before the Bayer cells are collapsed, and has to: the curve is per
+    stored code, and _to_rgb averages the two greens -- linearising an average
+    of companded codes is not the same number as averaging their linearised
+    values.
+    """
+    table = meta.get("linearization_table")
+    if not table:
+        return raw
+    lut = np.asarray(table, np.float32)
+    return lut[np.clip(raw, 0, len(lut) - 1)]
+
+
 def _to_rgb(raw, letters, col_step):
     """Collapse each 2x2 Bayer cell to one pixel. ``raw`` is already row-reduced."""
     step = 2 * col_step
@@ -352,6 +377,7 @@ def decode_frame(path, meta=None, scale=4, quality=80, auto_levels=False,
 
     cell_step = scale // 2  # Bayer cells to advance per output pixel
     raw = _load_rows(path, meta, row_step=cell_step)
+    raw = _linearize(raw, meta)
     letters = None if mono else _cfa_letters(meta)
     rgb = _to_rgb(raw, letters, col_step=cell_step)
 

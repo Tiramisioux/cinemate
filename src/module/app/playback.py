@@ -138,6 +138,11 @@ def clip_info(name: str) -> dict:
         "encoding": encoding,
         "mode_label": label,
         "sensor": meta.get("model", ""),
+        # Whether a take carries thumbnails is a property of the take, not of
+        # a frame -- cinepi-raw's toggle cannot change mid-take -- so the HUD
+        # reads it from here. The per-frame X-Frame-Source header carries the
+        # same answer for anything looking at one response on its own.
+        "source": frame_source(meta),
     })
     return info
 
@@ -158,9 +163,38 @@ def list_clips() -> list[dict]:
     return clips
 
 
+# How a frame reached the browser. Two paths, and an operator must never have
+# to guess which one they are looking at: a 720p mono proxy and a demosaiced
+# quarter-res frame are different pictures of the same take, and only one of
+# them is worth judging focus on. Reported per frame, all the way to the HUD.
+SOURCE_THUMBNAIL = "thumbnail"   # the embedded lores plane cinepi-raw writes
+SOURCE_DECODE = "decode"         # demosaiced from the raw image
+
+
+def frame_source(meta: dict) -> str:
+    """Which path will serve this frame -- the one seam the decision lives in.
+
+    Everything else in the pane is indifferent to where the pixels came from,
+    so this is deliberately the only place that decides, rather than a test
+    repeated down the route.
+
+    The thumbnail side is not implemented yet: it needs cinepi-raw's Phase 0
+    change (a thumbnail chained as IFD1) both landed and actually present in
+    the take, and a take shot before that will never have one. Until the
+    reader lands this always answers SOURCE_DECODE, which is the correct
+    answer for every frame currently on any card.
+    """
+    if meta.get("thumbnail"):
+        return SOURCE_THUMBNAIL
+    return SOURCE_DECODE
+
+
 def frame_jpeg(name: str, index: int, scale: int = 4, mono: bool = False,
-               quality: int = 80) -> tuple[bytes, int, int]:
-    """Decode frame ``index`` (a position, not a filename number) of a take.
+               quality: int = 80) -> tuple[bytes, int, int, str]:
+    """Serve frame ``index`` (a position, not a filename number) of a take.
+
+    Returns ``(jpeg, width, height, source)`` where ``source`` is one of the
+    ``SOURCE_*`` constants -- see ``frame_source``.
 
     Raises ``Busy`` when every decode slot is taken -- the caller should turn
     that into a 503 so the client drops the frame and asks for the next one,
@@ -176,12 +210,17 @@ def frame_jpeg(name: str, index: int, scale: int = 4, mono: bool = False,
     if not 0 <= index < len(names):
         raise PlaybackError(f"frame {index} outside 0..{len(names) - 1}")
 
+    path = take_dir / names[index]
     if not _decode_slots.acquire(blocking=False):
         raise Busy("all decode slots in use")
     try:
+        meta = dng_preview.read_metadata(path)
+        source = frame_source(meta)
+        if source == SOURCE_THUMBNAIL:      # not reachable until the reader lands
+            raise PlaybackError("embedded thumbnail path is not implemented")
         data, (width, height) = dng_preview.decode_frame(
-            take_dir / names[index], scale=scale, mono=mono, quality=quality)
-        return data, width, height
+            path, meta, scale=scale, mono=mono, quality=quality)
+        return data, width, height, source
     except dng_preview.DngError as exc:
         raise PlaybackError(str(exc)) from exc
     finally:

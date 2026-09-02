@@ -158,22 +158,49 @@ def _public_method_names(obj) -> set[str]:
     }
 
 
-def _is_recording() -> bool:
-    """True while a take is being written.
+# Every state in which the card is being written at rate. is_recording alone
+# is not that set: the post-take buffer flush (is_writing_buf / is_buffering)
+# and storage pre-roll all move frames to disk, and pre-roll in particular
+# writes at full rate with is_recording still 0. These are exactly the
+# storage-contention windows the playback lockout exists for.
+_PLAYBACK_BLOCKING_KEYS = (
+    ParameterKey.IS_RECORDING,
+    ParameterKey.IS_WRITING_BUF,
+    ParameterKey.IS_BUFFERING,
+    ParameterKey.STORAGE_PREROLL_ACTIVE,
+)
 
-    `is_recording` is the authoritative gate -- the `rec` key bounces during a
-    take. Treated as "not recording" when Redis is unreachable: this only gates
-    playback, and refusing to play because the status bus is down would be a
-    worse failure than allowing it.
+
+def _playback_blocked() -> tuple[bool, str]:
+    """Whether the card is too busy to serve playback, and why.
+
+    Fails CLOSED, unlike the read it replaced. RedisController.get_value()
+    returns a local cache kept fresh by one background listener thread; if
+    that thread has died every read keeps succeeding and every value is
+    frozen (the handbook's trap 1, hardware-confirmed as F-204). A frozen
+    "0" would let the pane start decoding in the middle of a take, which is
+    the one thing this gate exists to prevent -- so a dead listener, or an
+    unreadable bus, refuses rather than allows.
     """
     redis_controller = current_app.config.get("REDIS_CONTROLLER")
     if redis_controller is None:
-        return False
+        return False, ""          # no bus wired at all: desk/test use
     try:
-        return str(redis_controller.get_value(ParameterKey.IS_RECORDING.value)) == "1"
+        if not redis_controller.listener_alive():
+            return True, "Camera status is stale — playback held"
+        for key in _PLAYBACK_BLOCKING_KEYS:
+            if str(redis_controller.get_value(key.value)).strip() == "1":
+                return True, f"Busy ({key.value}) — playback held"
     except Exception:
-        logger.debug("playback: could not read is_recording", exc_info=True)
-        return False
+        logger.debug("playback: could not read the recording state", exc_info=True)
+        return True, "Camera status unavailable — playback held"
+    return False, ""
+
+
+def _is_recording() -> bool:
+    """Whether playback is currently refused. Reported in the clip index so the
+    pane can grey the stage out before it asks for a frame."""
+    return _playback_blocked()[0]
 
 
 @settings_editor_bp.route("/")
@@ -507,8 +534,9 @@ def get_playback_frame(name, index):
     # Playback loses to recording, always. Reading a take off the card while
     # another is being written to it is the shape of the storage contention that
     # has cost audio sync before, so the pane is refused rather than throttled.
-    if _is_recording():
-        return jsonify({"ok": False, "message": "Recording — playback held"}), 409
+    blocked, reason = _playback_blocked()
+    if blocked:
+        return jsonify({"ok": False, "message": reason}), 409
 
     try:
         scale = int(request.args.get("scale", 4))
@@ -520,7 +548,7 @@ def get_playback_frame(name, index):
     mono = request.args.get("mono") in ("1", "true", "yes")
 
     try:
-        data, width, height = playback.frame_jpeg(
+        data, width, height, source = playback.frame_jpeg(
             name, index, scale=scale, mono=mono, quality=quality)
     except playback.Busy:
         # Tell the client to drop this frame rather than wait for it; holding the
@@ -532,6 +560,9 @@ def get_playback_frame(name, index):
     response = make_response(data)
     response.headers["Content-Type"] = "image/jpeg"
     response.headers["X-Frame-Size"] = f"{width}x{height}"
+    # Which path produced this frame (open decision 8). The HUD shows it, so a
+    # 720p proxy is never mistaken for a demosaiced frame or the other way.
+    response.headers["X-Frame-Source"] = source
     # A decoded frame is a pure function of (take, index, scale, mono, q) and
     # takes are immutable once written, so this is safe to cache hard.
     response.headers["Cache-Control"] = "private, max-age=3600, immutable"

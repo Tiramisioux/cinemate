@@ -104,6 +104,8 @@
       "sdr": true,
       "imx585_clear_hdr": true
     },
+    // 0 off / 1 mono / 2 colour -- see settings.jsonc's comment.
+    "thumbnail": 2,
     "custom_modes": {}
   },
   "audio_capture": {

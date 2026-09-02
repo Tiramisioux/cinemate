@@ -239,6 +239,12 @@
       // development/mono-clearhdr-fixes/ROUND9-RESULTS.md.
       "self_heal": false
     },
+    // Embedded DNG thumbnail written by cinepi-raw's DNG encoder: 0 off,
+    // 1 mono, 2 colour (`set thumbnail`, live, no camera restart). Colour
+    // by default -- verified on hardware (G10/G11) and the standard
+    // playback path; raw decode is far more demanding on the Pi and is no
+    // longer the pane's fallback. New takes only.
+    "thumbnail": 2,
     "custom_modes": {}
   },
 

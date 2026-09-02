@@ -745,12 +745,42 @@
 
   .cliplist{ border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); overflow:hidden; }
   .cliprow{
-    display:grid; grid-template-columns: 22px 1fr auto auto; gap: 16px; align-items:center;
+    display:grid; grid-template-columns: 22px 150px 1fr auto auto; gap: 16px; align-items:center;
     padding: 13px 16px; border-top: 1px solid var(--line);
   }
   .cliprow:first-child{ border-top:0; }
   .cliprow.is-hidden{ display:none; }
   .cliprow input[type="checkbox"]{ width:16px; height:16px; accent-color: var(--accent); }
+
+  /* A quick per-take frame check, not a player -- the real transport lives
+     on the Playback pane. Between the checkbox and the name, wide enough to
+     scrub with some precision without crowding the name/badges column next
+     to it. Stretched (align-self, not the row's own align-items:center) so
+     its top and bottom line up with the name/meta/badges stack beside it
+     rather than sitting as a shorter fixed-height box centered against it.
+     Degrades to an empty, non-interactive strip for a take with no embedded
+     thumbnail (raw decode is not used as a fallback here either): the img's
+     onerror marks .is-empty. */
+  .clip-thumb{
+    position:relative; width:100%; align-self:stretch; border-radius:4px; overflow:hidden;
+    background: var(--panel-2); border:1px solid var(--line); cursor:pointer;
+  }
+  .clip-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .clip-thumb.is-empty{ cursor:default; }
+  .clip-thumb.is-empty img{ visibility:hidden; }
+  .clip-thumb-play{
+    position:absolute; left:3px; bottom:3px; width:16px; height:16px; border-radius:50%;
+    background:rgba(0,0,0,.6); border:none; display:flex; align-items:center; justify-content:center;
+    color:#fff; padding:0; cursor:pointer;
+  }
+  .clip-thumb-play svg{ margin-left:1px; }
+  .clip-thumb.is-empty .clip-thumb-play{ display:none; }
+  .clip-thumb-scrub{
+    position:absolute; left:0; right:0; bottom:0; height:7px; cursor:col-resize;
+    background:rgba(0,0,0,.3);
+  }
+  .clip-thumb.is-empty .clip-thumb-scrub{ display:none; }
+  .clip-thumb-scrub-fill{ position:absolute; left:0; top:0; bottom:0; width:0%; background: var(--accent); }
   .clip-name{ font-family: ui-monospace, monospace; font-size: 12.5px; font-weight:600; }
   .clip-meta{ font-size: 12px; color: var(--muted); margin-top:3px; }
   .clip-badges{ display:flex; gap:6px; margin-top:7px; flex-wrap:wrap; }
@@ -782,7 +812,9 @@
 
   @media (max-width: 640px){
     .cliprow{ grid-template-columns: 20px 1fr; }
-    .clip-size, .clip-actions{ grid-column: 2; justify-self:start; }
+    .clip-thumb{ grid-column: 1 / -1; width:100%; height:34px; margin-top:8px; }
+    .clip-info{ grid-column: 1 / -1; margin-top:8px; }
+    .clip-size, .clip-actions{ grid-column: 1 / -1; justify-self:start; margin-top:6px; }
   }
 
   /* ---------- Live view ----------
@@ -926,6 +958,79 @@
 
   #app.skin-hud .rail a.active{ background: var(--accent-soft); color: var(--accent); }
   #app.skin-hud .rail-title{ color: #6b6b6b; }
+
+  /* ---------- playback pane ----------
+     The clip HUD deliberately borrows template.html's own values (label grey
+     136, value 249, box grey 136, DROP purple 120/40/180) rather than the app
+     shell's tokens: the point is that reading a recorded take looks like
+     reading the live camera. Keep these in step with simple_gui's colours. */
+  .takestrip{ display:flex; gap:10px; overflow-x:auto; padding-bottom:10px; scrollbar-width:thin; min-width:0; }
+  .take{ flex:0 0 176px; width:176px; min-width:0; overflow:hidden; border:1px solid var(--line);
+         background: var(--panel); cursor:pointer; text-align:left; padding:0; color:inherit; font:inherit; }
+  .take:hover{ border-color: var(--muted); }
+  .take[aria-current="true"]{ border-color: var(--ok); box-shadow: inset 0 0 0 1px var(--ok); }
+  .take:focus-visible{ outline:none; box-shadow: var(--focus); }
+  .take-thumb{ width:100%; aspect-ratio:16/9; object-fit:cover; display:block; background:#000;
+               border-bottom:1px solid var(--line); }
+  .take-body{ padding:8px 10px; min-width:0; }
+  .take-name{ font-family: ui-monospace, monospace; font-size:11px; font-weight:600;
+              overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .take-meta{ font-size:11px; color: var(--muted); margin-top:3px; }
+  .take-badges{ display:flex; gap:4px; margin-top:6px; flex-wrap:wrap; }
+
+  .pb-stage{ position:relative; background:#000; border:2px solid rgb(249,249,249);
+             aspect-ratio:16/9; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+  .pb-stage img{ width:100%; height:100%; object-fit:contain; display:block; }
+  .pb-stage.is-locked img{ opacity:.25; filter:grayscale(1); }
+  .pb-overlay{ position:absolute; inset:0; pointer-events:none; padding:10px 12px; }
+  .pb-ov-row{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .pb-ov-name{ font-size:11px; color:rgb(249,249,249); background:rgba(0,0,0,.55); padding:3px 7px;
+               max-width:70%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pb-ov-tc{ font-size:13px; font-variant-numeric: tabular-nums; color:rgb(249,249,249);
+             background:rgba(0,0,0,.55); padding:3px 7px; }
+  .pb-lock{ position:absolute; inset:0; display:none; flex-direction:column; align-items:center;
+            justify-content:center; gap:10px; background:rgba(0,0,0,.6); text-align:center; padding:20px; }
+  .pb-stage.is-locked .pb-lock{ display:flex; }
+  .pb-lock-title{ font-weight:700; font-size:15px; letter-spacing:.06em; text-transform:uppercase; color: var(--danger); }
+  .pb-lock-body{ font-size:12.5px; color:rgb(249,249,249); max-width:44ch; }
+
+  .pb-scrubwrap{ margin-top:10px; position:relative; }
+  .pb-filmstrip{ display:flex; height:38px; overflow:hidden; border:1px solid var(--line); background:#000; }
+  .pb-filmstrip img{ height:100%; width:auto; flex:1 1 0; object-fit:cover; min-width:0; opacity:.55; }
+  .pb-scrub{ position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
+  .pb-playhead{ position:absolute; top:0; bottom:0; width:2px; background:rgb(249,249,249);
+                box-shadow:0 0 0 1px rgba(0,0,0,.8); pointer-events:none; }
+
+  .pb-transport{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .pb-count{ font-size:15px; font-variant-numeric: tabular-nums; }
+  .pb-count .of{ color: var(--muted); font-size:12.5px; }
+
+  .pb-hud{ display:flex; flex-wrap:wrap; gap:22px; align-items:flex-start; border:1px solid var(--line);
+           background: var(--panel); padding:14px 16px; }
+  .pb-hud-item{ display:flex; flex-direction:column; gap:2px; }
+  .pb-hud-label{ font-weight:400; font-size:11px; color:rgb(136,136,136); text-transform:uppercase; letter-spacing:.06em; }
+  .pb-hud-value{ font-weight:700; font-size:20px; line-height:1.05; color:rgb(249,249,249); font-variant-numeric: tabular-nums; }
+  .pb-hud-boxes{ display:flex; gap:6px; align-items:center; margin-left:auto; }
+  .pb-box{ width:46px; height:30px; background:rgb(136,136,136); color:#000; font-weight:700; font-size:15px;
+           display:flex; align-items:center; justify-content:center; }
+  .pb-box.badge{ font-size:12px; background:rgb(205,205,205); }
+  .pb-box.drop{ background:rgb(120,40,180); color:#fff; }
+  .pb-box.off{ background:transparent; color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
+
+  .pb-rate{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; border:1px solid var(--line);
+            border-top:0; background: var(--panel); padding:12px 16px; }
+  .pb-rate-item{ display:flex; flex-direction:column; gap:1px; min-width:96px; }
+  .pb-rate-k{ font-weight:400; font-size:10.5px; color:rgb(136,136,136); text-transform:uppercase; letter-spacing:.08em; }
+  .pb-rate-v{ font-family: ui-monospace, monospace; font-size:14px; font-variant-numeric: tabular-nums; }
+  .pb-rate-v.ok{ color: var(--ok); }
+  .pb-rate-v.warn{ color: var(--restart); }
+  .pb-rate-v.bad{ color: rgb(120,40,180); font-weight:700; }
+
+  @media (max-width: 560px){
+    .pb-hud{ gap:14px; }
+    .pb-hud-value{ font-size:17px; }
+    .pb-hud-boxes{ margin-left:0; width:100%; }
+  }
 </style>
 
 <div class="app skin-hud" id="app">
@@ -1004,6 +1109,10 @@
       <div class="rail-title eyebrow">RAW files</div>
       <p class="rail-blurb">Everything on the active storage device — browse, sort and pull takes off over Wi‑Fi. Nothing here needs Cinemate to restart.</p>
     </div>
+    <div class="rail-group" data-page="playback">
+      <div class="rail-title eyebrow">Playback</div>
+      <p class="rail-blurb">Review takes off the card at the conform frame rate. Reads only — playback is held while a take is recording, so it can never cost you one.</p>
+    </div>
     <div class="rail-group" data-page="live">
       <div class="rail-title eyebrow">Live view</div>
       <p class="rail-blurb">The shooting screen — image, ISO/shutter/fps/WB, and everything <span class="mono">simple_gui.py</span> already draws on the HDMI overlay, mirrored to the browser.</p>
@@ -1014,13 +1123,15 @@
     <div class="page-tabs" role="tablist" aria-label="Cinemate app pages">
       <button type="button" data-page-tab="config" role="tab">config.txt<span class="tab-hint">boot &amp; sensors</span></button>
       <button type="button" data-page-tab="settings" role="tab" class="active" aria-selected="true">settings.jsonc<span class="tab-hint">cameras, audio, controls</span></button>
-      <button type="button" data-page-tab="raw" role="tab">RAW files<span class="tab-hint">browse &amp; download</span></button>
       <button type="button" data-page-tab="live" role="tab">Live view<span class="tab-hint">shoot now</span></button>
+      <button type="button" data-page-tab="playback" role="tab">Playback<span class="tab-hint">review takes</span></button>
+      <button type="button" data-page-tab="raw" role="tab">RAW files<span class="tab-hint">browse &amp; download</span></button>
     </div>
-    <p class="lede" data-page-lede="config" hidden><strong>This edits <code class="mono">config.txt</code> on the boot partition</strong> — sensor overlays, hardware buses, the RP1 overclock. It's a different file from Cinemate's own settings, and every change here needs a reboot, not just a restart.</p>
-    <p class="lede" data-page-lede="settings"><strong>This edits <code class="mono">settings.jsonc</code> on the camera</strong> — every field below is one line in that file. Change something, the file preview updates live, and nothing touches the SD card until you save. Restarting Cinemate applies it.</p>
-    <p class="lede" data-page-lede="raw" hidden><strong>Browse what's on the active storage device</strong> and pull takes off over Wi‑Fi — no card swap, no file to save, nothing to restart.</p>
-    <p class="lede" data-page-lede="live" hidden><strong>The shooting screen</strong> — the same image and readouts <span class="mono">simple_gui.py</span> already draws on the HDMI overlay, mirrored to the browser so you can shoot from off the rig.</p>
+    <p class="lede" data-page-lede="config" hidden></p>
+    <p class="lede" data-page-lede="settings"><strong>This edits <code class="mono">/home/pi/cinemate/settings.jsonc</code> on the camera</strong> — every field below is one line in that file. Change something, the file preview updates live, and nothing touches the SD card until you save. Restarting Cinemate applies it.</p>
+    <p class="lede" data-page-lede="live" hidden></p>
+    <p class="lede" data-page-lede="playback" hidden></p>
+    <p class="lede" data-page-lede="raw" hidden></p>
 
     <!-- WELCOME -->
     <section class="group" id="welcome" data-page="settings">
@@ -1688,6 +1799,20 @@
             </label>
           </div>
         </div>
+        <!-- No visible card here: the embedded DNG thumbnail is now the
+             standard playback path (image_capture.thumbnail defaults to 2,
+             colour), not an operator-facing toggle -- the 0/1/2 field with
+             its "off / mono / colour, applied live" explanation was found
+             confusing now that "off" isn't really a supported playback
+             configuration (playback.py's raw-decode fallback is disabled).
+             Still adjustable via `set thumbnail` (CLI) if you want mono for
+             a lighter write cost. This hidden input is NOT decorative: it
+             is what keeps buildState() from silently dropping
+             image_capture.thumbnail from settings.jsonc on the next editor
+             save (B-2's exact bug, reintroduced by removing the visible
+             field without this) -- every [data-path] element participates
+             in the save payload whether or not it is shown. -->
+        <input type="hidden" data-path="image_capture.thumbnail" data-type="number" data-original="2" value="2">
         <div class="card" data-search="sensor database file resources sensors json advanced">
           <div class="card-main">
             <label class="card-label">Sensor database</label>
@@ -2006,7 +2131,6 @@
     <section class="group" id="clips" data-page="raw">
       <header class="group-head">
         <h2>Clips &amp; downloads</h2>
-        <p class="group-sub">Browse what's on the active storage device and pull takes off over Wi‑Fi — no card swap needed.</p>
       </header>
 
       <div id="storageCards"><p class="card-help">Loading storage…</p></div>
@@ -2035,6 +2159,90 @@
           <button class="btn btn-primary" id="bulkDownload">Download selected</button>
           <button class="btn btn-danger-outline" id="bulkDelete">Delete selected</button>
         </span>
+      </div>
+    </section>
+
+    <!-- PLAYBACK -->
+    <section class="group" id="playback" data-page="playback">
+      <header class="group-head">
+        <h2>Playback</h2>
+        <p class="group-sub">Frames are decoded from the CinemaDNG as you play — this is a review preview for framing, focus and motion, not a grade.</p>
+      </header>
+
+      <p class="eyebrow" style="margin-top:0">Takes on card</p>
+      <div class="takestrip" id="pbTakeStrip"></div>
+
+      <div class="pb-stage" id="pbStage">
+        <img id="pbFrame" alt="Current frame">
+        <div class="pb-overlay">
+          <div class="pb-ov-row">
+            <span class="pb-ov-name mono" id="pbName">—</span>
+            <span class="pb-ov-tc mono" id="pbTc">00:00:00:00</span>
+          </div>
+        </div>
+        <div class="pb-lock">
+          <span class="pb-lock-title" id="pbLockTitle">Playback held — recording</span>
+          <span class="pb-lock-body" id="pbLockBody">Reading the card while a take is being written to it risks audio xruns and dropped frames. Playback resumes when recording stops.</span>
+        </div>
+      </div>
+
+      <div class="pb-scrubwrap">
+        <div class="pb-filmstrip" id="pbFilmstrip"></div>
+        <div class="pb-playhead" id="pbPlayhead" style="left:0%"></div>
+        <input class="pb-scrub" id="pbScrub" type="range" min="0" max="0" value="0" step="1" aria-label="Scrub through take">
+      </div>
+
+      <div class="pb-transport">
+        <button class="icon-action" id="pbStart" title="First frame" aria-label="First frame"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg></button>
+        <button class="icon-action" id="pbPrev" title="Previous frame" aria-label="Previous frame"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <button class="btn btn-primary" id="pbPlay" style="min-width:104px;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="pbPlayIcon"><polygon points="5 3 19 12 5 21 5 3"/></svg><span id="pbPlayLabel">PLAY</span></button>
+        <button class="icon-action" id="pbNext" title="Next frame" aria-label="Next frame"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+        <button class="icon-action" id="pbEnd" title="Last frame" aria-label="Last frame"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg></button>
+        <button class="icon-action" id="pbLoop" title="Loop" aria-label="Loop" aria-pressed="false"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
+        <span style="flex:1"></span>
+        <span class="pb-count mono"><span id="pbFrameNo">0</span><span class="of" id="pbFrameTotal"> / 0</span></span>
+      </div>
+
+      <div class="pb-hud">
+        <div class="pb-hud-item"><span class="pb-hud-label">FPS</span><span class="pb-hud-value" id="pbMetaFps">—</span></div>
+        <div class="pb-hud-item"><span class="pb-hud-label">Resolution</span><span class="pb-hud-value" id="pbMetaRes">—</span></div>
+        <div class="pb-hud-item"><span class="pb-hud-label">Depth</span><span class="pb-hud-value" id="pbMetaDepth">—</span></div>
+        <div class="pb-hud-item"><span class="pb-hud-label">Sensor</span><span class="pb-hud-value" id="pbMetaSensor">—</span></div>
+        <div class="pb-hud-item"><span class="pb-hud-label">Source</span><span class="pb-hud-value" id="pbMetaSource">—</span></div>
+        <div class="pb-hud-boxes" id="pbMetaBoxes"></div>
+      </div>
+      <div class="pb-rate">
+        <div class="pb-rate-item"><span class="pb-rate-k">Recorded</span><span class="pb-rate-v" id="pbRateRec">—</span></div>
+        <div class="pb-rate-item"><span class="pb-rate-k">Conform</span><span class="pb-rate-v" id="pbRateConform">—</span></div>
+        <div class="pb-rate-item"><span class="pb-rate-k">Playing at</span><span class="pb-rate-v" id="pbRateSpeed">—</span></div>
+        <div class="pb-rate-item"><span class="pb-rate-k">Achieved</span><span class="pb-rate-v" id="pbRateActual">—</span></div>
+        <div class="pb-rate-item"><span class="pb-rate-k">Frames skipped</span><span class="pb-rate-v" id="pbRateSkipped">0</span></div>
+      </div>
+      <div class="note" style="margin-top:14px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <span><strong>Achieved rate is measured, not assumed.</strong> The player holds the clock and skips frames the camera could not decode in time, and shows the count — rather than letting the take quietly run slow.</span>
+      </div>
+
+      <p class="eyebrow">Playback settings</p>
+      <div class="cards">
+        <div class="card" data-search="conform frame rate playback speed slow motion">
+          <div class="card-main">
+            <div class="card-label">Use conform frame rate <span class="mono" id="pbConformLabel">—</span></div>
+            <div class="card-help">Plays every take on the project's conform rate, from <span class="mono">settings.conform_frame_rate</span>. A take shot faster than the conform rate plays as slow motion — the same speed it will run on the timeline. Off plays each take at the rate it was shot.</div>
+          </div>
+          <div class="card-control"><button class="toggle" role="switch" aria-checked="true" id="pbToggleConform"></button></div>
+        </div>
+        <!-- Preview scale and Monochrome sensor were removed: both only
+             ever affected decode_frame() (the raw-decode path), which is
+             now disabled (playback.py's _RAW_DECODE_FALLBACK_ENABLED) --
+             they controlled nothing for a thumbnail-sourced frame and just
+             sat there as dead, confusing UI. decode_frame(scale=, mono=)
+             itself is untouched; pbScale/pbToggleMono's ids are gone too,
+             so re-adding them needs new markup, not just flipping a flag,
+             if this is ever revisited. pbState.scale/pbState.mono stay at
+             their fixed defaults (4, false) purely because pbFrameUrl()
+             still puts them in the query string the server-side route
+             validates -- values a thumbnail-sourced response ignores. -->
       </div>
     </section>
 
@@ -2191,7 +2399,6 @@
     <section class="group" id="live" data-page="live">
       <header class="group-head">
         <h2>Live view</h2>
-        <p class="group-sub">The real Cinemate live-camera page, embedded at this column’s width. Every control here is the genuine on-camera preview + <span class="mono">/api/v1/cmd</span> control surface — nothing here is a mockup.</p>
       </header>
       <div class="live-embed-wrap">
         <iframe id="liveEmbedFrame" class="live-embed-frame" src="/" title="Cinemate live camera preview" loading="lazy"></iframe>
@@ -4017,6 +4224,113 @@
     });
   }
 
+  /* A quick per-take frame check on the RAW files pane -- not a player,
+     the real transport is the Playback pane (pbJumpToTake() below bridges
+     to it). Reuses pbFrameUrl()/the same /frame/<index> route the
+     Playback pane's own take-strip thumbnails already call; pbRenderToken/
+     pbState are module-scope and initialised at page load regardless of
+     whether the Playback tab has ever been opened, so this is safe to use
+     from here. Only one row auto-previews at a time (clipThumbAuto) --
+     the server's decode-slot pool is shared and small, and letting every
+     row on a long card auto-advance at once would just make them all 503
+     each other. */
+  var clipThumbAuto = null;   // { thumbEl, interval }
+  function clipThumbStopAuto(){
+    if (clipThumbAuto){
+      clearInterval(clipThumbAuto.interval);
+      var btn = clipThumbAuto.thumbEl.querySelector('.clip-thumb-play');
+      if (btn) btn.setAttribute('aria-pressed', 'false');
+      clipThumbAuto = null;
+    }
+  }
+
+  function wireClipThumb(el, take){
+    var img = el.querySelector('img');
+    var fill = el.querySelector('.clip-thumb-scrub-fill');
+    var frames = take.frame_count || 0;
+    if (frames < 1){ el.classList.add('is-empty'); return; }
+
+    // Coalescing loader for interactive requests (scrub/play): a fast
+    // drag fires many wanted indices per second, but only one request is
+    // ever in flight -- newer wants simply replace older ones rather than
+    // queuing, so the thumbnail catches up to wherever the pointer
+    // actually is instead of animating through every position it passed.
+    // The FIRST load is the exception -- see below.
+    var lastIndex = -1, wantIndex = 0, fetchInFlight = false, ready = false;
+    function frameAt(i){
+      if (!ready) return;   // initial load still queued -- see pbQueueThumb() below
+      i = Math.max(0, Math.min(frames - 1, i));
+      wantIndex = i;
+      if (fetchInFlight || i === lastIndex) return;
+      fetchInFlight = true;
+      lastIndex = i;
+      img.src = pbFrameUrl(take.name, i, 8) + '&q=40';
+    }
+    img.addEventListener('load', function(){
+      fetchInFlight = false;
+      if (ready && wantIndex !== lastIndex) frameAt(wantIndex);
+    });
+    img.addEventListener('error', function(){
+      fetchInFlight = false;
+      if (ready && wantIndex !== lastIndex) frameAt(wantIndex);
+    });
+    // A row full of thumbnails all wanting frame 0 the instant the RAW
+    // files pane loads is exactly the stampede pbQueueThumb()/
+    // pbPumpThumbs() already exists to avoid for the Playback pane's own
+    // take-strip (the server's decode-slot pool is small and shared) --
+    // reuse it here rather than a second serialization scheme, or firing
+    // every row's probe at once and reading 503s as "no thumbnail."
+    pbQueueThumb(img, pbFrameUrl(take.name, 0, 8) + '&q=40', function(){
+      el.classList.add('is-empty');
+    });
+    img.addEventListener('load', function onFirstLoad(){
+      lastIndex = 0; ready = true;
+      img.removeEventListener('load', onFirstLoad);
+    }, { once: true });
+
+    var scrub = el.querySelector('.clip-thumb-scrub');
+    var dragging = false;
+    function scrubTo(clientX){
+      var r = scrub.getBoundingClientRect();
+      var frac = r.width ? Math.max(0, Math.min(1, (clientX - r.left) / r.width)) : 0;
+      fill.style.width = (frac * 100) + '%';
+      frameAt(Math.round(frac * (frames - 1)));
+    }
+    scrub.addEventListener('pointerdown', function(e){
+      if (el.classList.contains('is-empty')) return;
+      dragging = true;
+      clipThumbStopAuto();
+      scrubTo(e.clientX);
+      e.stopPropagation();
+      try { scrub.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    scrub.addEventListener('pointermove', function(e){ if (dragging) scrubTo(e.clientX); });
+    scrub.addEventListener('pointerup', function(){ dragging = false; });
+    scrub.addEventListener('click', function(e){ e.stopPropagation(); });
+
+    var playBtn = el.querySelector('.clip-thumb-play');
+    playBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      if (el.classList.contains('is-empty') || frames < 2) return;
+      if (clipThumbAuto && clipThumbAuto.thumbEl === el){ clipThumbStopAuto(); return; }
+      clipThumbStopAuto();
+      playBtn.setAttribute('aria-pressed', 'true');
+      var n = Math.min(frames, 24);   // a quick flip through the take, not a real playback rate
+      var step = 0;
+      clipThumbAuto = { thumbEl: el, interval: setInterval(function(){
+        step = (step + 1) % n;
+        fill.style.width = (step / (n - 1) * 100) + '%';
+        frameAt(Math.floor(step * (frames - 1) / Math.max(1, n - 1)));
+      }, 220) };
+    });
+
+    el.addEventListener('click', function(){
+      if (el.classList.contains('is-empty')) return;
+      clipThumbStopAuto();
+      pbJumpToTake(take.name);
+    });
+  }
+
   function renderClipList(){
     var list = document.getElementById('clipList');
     var footer = document.getElementById('clipListFooter');
@@ -4039,11 +4353,18 @@
       row.setAttribute('data-size', String(t.size_bytes || 0));
       row.innerHTML =
         '<input type="checkbox" class="clip-check">' +
-        '<div>' +
-          '<div class="clip-name">' + t.name + '</div>' +
+        '<div class="clip-thumb" data-frames="' + (t.frame_count || 0) + '">' +
+          '<img alt="" loading="lazy">' +
+          '<button type="button" class="clip-thumb-play" title="Preview frames" aria-label="Preview frames">' +
+            '<svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
+          '</button>' +
+          '<div class="clip-thumb-scrub"><div class="clip-thumb-scrub-fill"></div></div>' +
+        '</div>' +
+        '<div class="clip-info">' +
+          '<div class="clip-name">' + escapeHtml(t.name) + '</div>' +
           '<div class="clip-meta">' + formatDate(t.mtime) + ' — ' + t.frame_count + ' frames</div>' +
           '<div class="clip-badges">' +
-            '<span class="chip">' + t.storage + '</span>' +
+            '<span class="chip">' + escapeHtml(t.storage) + '</span>' +
             (t.has_wav ? '<span class="chip chip-live">WAV</span>' : '') +
           '</div>' +
         '</div>' +
@@ -4057,6 +4378,7 @@
           '<span class="clip-progress-text" data-progress-text>Starting…</span>' +
           '<button class="icon-action" data-cancel-download title="Cancel" aria-label="Cancel download">' + CANCEL_ICON + '</button>' +
         '</div>';
+      wireClipThumb(row.querySelector('.clip-thumb'), t);
       list.appendChild(row);
     });
 
@@ -4375,10 +4697,388 @@
     });
   });
 
+  /* ---------- playback pane ----------
+     Frames come from /api/playback/clips/<take>/frame/<i>, decoded on the
+     camera. Two rules drive the shape of everything below:
+
+     1. Playback is paced against the FRAME clock, not the display refresh:
+        each tick works out which frame is due by wall clock and sleeps until
+        the next falls due. That is what makes 25 fps play as 25 fps on a 60 Hz
+        screen instead of beating against it.
+     2. Under load the clock wins and frames are skipped -- and the skip count
+        is shown. A take quietly running at 18 fps while the UI says 25 is the
+        "plausible wrong number" this project's own rules forbid. */
+  /* Both conform literals below are config_loader.DEFAULT_CONFORM_FRAME_RATE.
+     This initializer is reachable, not decorative: it stands until the clip
+     index resolves, and stays if that fetch fails or answers not-ok -- and
+     pbRate() paces playback off it. A stale value here would run takes at the
+     wrong speed while the readout named a different one. */
+  var pbClips = [], pbClip = null, pbConform = 25, pbRenderToken = '0';
+  var pbState = { i:0, playing:false, loop:false, conform:true, mono:false, scale:4,
+                  skipped:0, timer:null, t0:0, startFrame:0, windowAt:0, shown:0,
+                  /* Two independent reasons the stage can be locked -- kept
+                     separate so pbCheckRecording()'s 3s poll (which only
+                     knows about recording state) can't un-lock a take that
+                     is locked because IT has no thumbnail, and so selecting
+                     a different, playable take can't be blocked by a stale
+                     recording-lock check. See pbApplyLock(). */
+                  recordingLocked:false, noThumbnail:false };
+
+  function pbEl(id){ return document.getElementById(id); }
+  function pbFrameUrl(name, i, scale){
+    /* v= is a cache key, not a parameter the camera reads: frames are served
+       immutable, so the token is what stops a browser serving frames rendered
+       by a decoder that has since been updated. */
+    return '/settings-editor/api/playback/clips/' + encodeURIComponent(name) +
+           '/frame/' + i + '?scale=' + scale + (pbState.mono ? '&mono=1' : '') +
+           '&v=' + pbRenderToken;
+  }
+  function pbRate(){
+    if (!pbClip || !pbClip.fps) return pbConform;
+    return pbState.conform ? pbConform : pbClip.fps;
+  }
+
+  function refreshPlaybackPane(){
+    fetch('/settings-editor/api/playback/clips')
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res || !res.ok) return;
+        pbConform = res.conform_frame_rate || 25;   /* config_loader.DEFAULT_CONFORM_FRAME_RATE */
+        pbRenderToken = res.render_token || '0';
+        pbEl('pbConformLabel').textContent = pbConform;
+        pbClips = res.clips || [];   // shooting order, oldest first (playback.list_clips())
+        pbRenderTakes();
+        pbSetLocked(!!res.recording);
+        // Default to the most recently shot take (the last one in shooting
+        // order), not the first -- opening the pane is almost always "I
+        // just shot this, let me check it," and the strip's own left-to-
+        // right layout already shows the full shooting order for anyone
+        // who wants an earlier one.
+        if (pbClips.length) pbSelectTake(pbClips.length - 1);
+      })
+      .catch(function(){ /* best-effort, same as the RAW pane */ });
+  }
+
+  /* refreshPlaybackPane() only ever runs once, at page load -- nothing
+     re-checked the recording flag afterwards, so a take started while the
+     pane was already open left the stage unlocked, frames failing 409 with
+     no visible feedback (an <img>'s onerror cannot read a JSON body, so it
+     can't even tell a 409 apart from any other failure), and nothing
+     recovering once recording stopped -- the opposite of what the docs
+     promise ("the picture greys out ... becomes available again as soon
+     as recording stops"). This is the lightweight recheck: same recording
+     flag the initial load already reads, without pbRenderTakes()/
+     pbSelectTake() resetting the operator's place in the take strip. */
+  function pbCheckRecording(){
+    fetch('/settings-editor/api/playback/clips')
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res || !res.ok) return;
+        var wasRecordingLocked = pbState.recordingLocked;
+        pbSetLocked(!!res.recording);
+        // Resume only if THIS was what was locking us -- a take with no
+        // thumbnail must stay locked once recording clears, not flip to
+        // retrying frame loads that will keep failing.
+        if (wasRecordingLocked && !res.recording && !pbState.noThumbnail && pbClip) pbShow(pbState.i);
+      })
+      .catch(function(){ /* best-effort; the next poll or the next frame's onerror tries again */ });
+  }
+  pbEl('pbFrame').onerror = function(){
+    pbPause();
+    pbCheckRecording();
+  };
+  /* "Achieved" used to count pbShow() calls -- i.e. .src assignments -- not
+     frames the browser actually finished loading, so a camera that was
+     refusing or too slow to decode still reported the full target rate
+     with zero skips, and G3 reads this number as its primary observable.
+     Counting onload instead measures what the name promises: frames that
+     actually arrived, in the same windowed-average pbTick() already computes. */
+  pbEl('pbFrame').onload = function(){ pbState.shown++; };
+  setInterval(pbCheckRecording, 3000);
+
+  function pbRenderTakes(){
+    var strip = pbEl('pbTakeStrip');
+    strip.innerHTML = '';
+    pbClips.forEach(function(c, idx){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'take';
+      b.setAttribute('aria-current', idx === 0 ? 'true' : 'false');
+      /* c.name is a take DIRECTORY NAME off the card, not a value this
+         page generated -- escapeHtml() every piece of it before it goes
+         into innerHTML. The page inlines the API token and has no CSP, so
+         a crafted directory name (a card handed over, or written by
+         anything else with access to /media/RAW) landing here unescaped
+         is stored XSS with a route straight to /api/v1/cmd, take-delete
+         and format. c.storage is camera-controlled (a mount label, not
+         attacker-writable) but escaped too -- it costs nothing here. */
+      var badges = '<span class="chip">' + escapeHtml(c.storage || 'RAW') + '</span>';
+      if (c.hdr) badges += '<span class="chip chip-restart">HDR</span>';
+      if (c.has_wav) badges += '<span class="chip chip-live">WAV</span>';
+      var factor = c.fps ? pbConform / c.fps : 1;
+      if (c.fps && Math.abs(factor - 1) > 0.001){
+        badges += '<span class="chip">' + factor.toFixed(2) + '× ' + (factor < 1 ? 'SLOMO' : 'FAST') + '</span>';
+      }
+      b.innerHTML =
+        '<img class="take-thumb" alt="" loading="lazy">' +
+        '<div class="take-body"><div class="take-name">' + escapeHtml(c.name) + '</div>' +
+        '<div class="take-meta">' + (c.frame_count || 0) + ' frames · ' +
+        (c.fps ? c.fps.toFixed(3) + ' fps' : 'rate unknown') + '</div>' +
+        '<div class="take-badges">' + badges + '</div></div>';
+      b.addEventListener('click', function(){ pbSelectTake(idx); });
+      strip.appendChild(b);
+      if (c.frame_count) pbQueueThumb(b.querySelector('.take-thumb'), pbFrameUrl(c.name, 0, 8));
+    });
+  }
+
+  /* Thumbnails load one at a time. The camera caps concurrent decodes and
+     answers 503 past that, so firing a stripful at once would mostly bounce --
+     and would compete with playback for the same cores. */
+  var pbThumbQueue = [], pbThumbBusy = false;
+  function pbQueueThumb(img, url, onFail){ pbThumbQueue.push([img, url, onFail]); pbPumpThumbs(); }
+  function pbPumpThumbs(){
+    if (pbThumbBusy || !pbThumbQueue.length) return;
+    pbThumbBusy = true;
+    var job = pbThumbQueue.shift();
+    var probe = new Image();
+    probe.onload = function(){ job[0].src = job[1]; pbThumbBusy = false; pbPumpThumbs(); };
+    probe.onerror = function(){ if (job[2]) job[2](); pbThumbBusy = false; pbPumpThumbs(); };
+    probe.src = job[1];
+  }
+
+  function pbSelectTake(idx){
+    pbPause();
+    pbClip = pbClips[idx];
+    if (!pbClip) return;
+    [].forEach.call(pbEl('pbTakeStrip').children, function(el, i){
+      el.setAttribute('aria-current', i === idx ? 'true' : 'false');
+      // The default selection is now the newest take -- the last, rightmost
+      // one in shooting order -- so it needs to be scrolled into view on a
+      // card with enough takes to overflow the strip, not just the first.
+      if (i === idx) el.scrollIntoView({ block: 'nearest', inline: 'nearest',
+                                         behavior: reduceMotion ? 'auto' : 'smooth' });
+    });
+    pbState.skipped = 0;
+    pbEl('pbName').textContent = pbClip.name;
+    pbEl('pbMetaFps').textContent = pbClip.fps ? pbClip.fps.toFixed(3) : '—';
+    pbEl('pbMetaRes').textContent = pbClip.width ? pbClip.width + '×' + pbClip.height : '—';
+    pbEl('pbMetaDepth').textContent = pbClip.bits ? pbClip.bits + '-bit' : '—';
+    pbEl('pbMetaSensor').textContent = pbClip.sensor || '—';
+    /* Open decision 8: never let a 720p embedded proxy and a demosaiced
+       quarter-res frame look like the same picture in the HUD.
+       source === 'decode' means "no embedded thumbnail" here, not "raw
+       decode is happening" -- that path is disabled (see playback.py's
+       _RAW_DECODE_FALLBACK_ENABLED), so the label says so rather than
+       claiming a fallback that will not actually serve anything. */
+    pbEl('pbMetaSource').textContent =
+      pbClip.source === 'thumbnail' ? 'Thumbnail' :
+      pbClip.source === 'decode' ? 'No thumbnail' : '—';
+    pbEl('pbScrub').max = Math.max(0, (pbClip.frame_count || 1) - 1);
+    pbEl('pbFrameTotal').textContent = ' / ' + Math.max(0, (pbClip.frame_count || 1) - 1);
+    pbApplyRate();
+
+    // A take with no embedded thumbnail cannot be played at all right now
+    // (raw decode is disabled) -- lock the stage with a clear reason
+    // instead of attempting frame/filmstrip requests that will all 404.
+    pbState.noThumbnail = pbClip.source !== 'thumbnail';
+    pbApplyLock();
+    if (pbState.noThumbnail){
+      pbEl('pbFrame').removeAttribute('src');
+      pbEl('pbFilmstrip').innerHTML = '';
+    } else {
+      pbBuildFilmstrip();
+      pbShow(0);
+    }
+  }
+
+  /* The RAW files pane's scrub thumbnail is a quick check, not a transport --
+     clicking it hands off to the real Playback pane on the same take. */
+  function pbJumpToTake(name){
+    setActivePage('playback');
+    for (var i = 0; i < pbClips.length; i++){
+      if (pbClips[i].name === name){ pbSelectTake(i); return; }
+    }
+  }
+
+  function pbBuildFilmstrip(){
+    var fs = pbEl('pbFilmstrip');
+    fs.innerHTML = '';
+    if (!pbClip || !pbClip.frame_count) return;
+    var n = Math.min(16, pbClip.frame_count);
+    for (var j = 0; j < n; j++){
+      var i = Math.floor(j * (pbClip.frame_count - 1) / Math.max(1, n - 1));
+      var img = document.createElement('img');
+      img.alt = '';
+      fs.appendChild(img);
+      pbQueueThumb(img, pbFrameUrl(pbClip.name, i, 8));
+    }
+  }
+
+  function pbApplyRate(){
+    if (!pbClip) return;
+    var target = pbRate();
+    pbEl('pbRateRec').textContent = pbClip.fps ? pbClip.fps.toFixed(3) + ' fps' : 'unknown';
+    pbEl('pbRateConform').textContent = pbState.conform ? pbConform + ' fps' : 'off';
+    var factor = pbClip.fps ? target / pbClip.fps : 1;
+    var el = pbEl('pbRateSpeed');
+    el.textContent = factor.toFixed(2) + '×' +
+      (Math.abs(factor - 1) < 0.001 ? '' : (factor < 1 ? ' SLOMO' : ' FAST'));
+    el.className = 'pb-rate-v' + (Math.abs(factor - 1) < 0.001 ? '' : ' warn');
+    pbRenderBoxes();
+  }
+
+  function pbRenderBoxes(){
+    if (!pbClip) return;
+    var boxes = [];
+    if (pbClip.bits) boxes.push('<span class="pb-box badge">' + pbClip.bits + 'b</span>');
+    boxes.push('<span class="pb-box badge">' + (pbClip.mode_label || '—') + '</span>');
+    /* A LinearizationTable means a curve is baked in, but tag 0xC618 cannot say
+       whether it is the CCMP decompand, CineMate Log, or the two composed --
+       so this says "curve", never "log". LOG10 is the one exception: bits==10
+       with a table is unambiguous (see describe_mode()'s docstring), so it can
+       say more than "a curve exists" -- and pbClip.bits already shows the
+       ORIGINAL depth this was shot at (12/16), not the 10-bit storage
+       encoding, so this badge is what says the compression happened at all. */
+    var curved = pbClip.encoding === 'companded';
+    boxes.push('<span class="pb-box ' + (curved ? 'badge' : 'off') + '">' + (curved ? 'CRV' : 'LIN') + '</span>');
+    if (pbClip.log10) boxes.push('<span class="pb-box badge">LOG10</span>');
+    boxes.push('<span class="pb-box ' + (pbClip.has_wav ? '' : 'off') + '">' + (pbClip.has_wav ? 'WAV' : '—') + '</span>');
+    if (pbClip.fps && pbState.conform && Math.abs(pbRate() / pbClip.fps - 1) > 0.001){
+      boxes.push('<span class="pb-box badge" title="Conformed to ' + pbConform + ' fps">CNF</span>');
+    }
+    /* Property of the RECORDING (a gap in cinepi-raw's own frame-index
+       suffix), not of this playback session's render speed -- dropping
+       frames on decode was much more likely when raw decode was the only
+       path; the thumbnail path is cheap enough that it is rarely the
+       bottleneck, so the badge is more useful pointed at the take itself.
+       null means "couldn't be determined", not "zero" -- no badge either way. */
+    if (pbClip.dropped_frames){
+      boxes.push('<span class="pb-box drop" title="' + pbClip.dropped_frames +
+        ' frame(s) missing from the recording itself">DROP ' + pbClip.dropped_frames + '</span>');
+    }
+    pbEl('pbMetaBoxes').innerHTML = boxes.join('');
+  }
+
+  function pbShow(i){
+    if (!pbClip) return;
+    var total = pbClip.frame_count || 1;
+    pbState.i = Math.max(0, Math.min(total - 1, i));
+    pbEl('pbFrame').src = pbFrameUrl(pbClip.name, pbState.i, pbState.scale);
+    pbEl('pbScrub').value = pbState.i;
+    pbEl('pbPlayhead').style.left = (total > 1 ? pbState.i / (total - 1) * 100 : 0) + '%';
+    pbEl('pbFrameNo').textContent = pbState.i;
+    pbEl('pbTc').textContent = pbTimecode(pbState.i);
+    pbEl('pbRateSkipped').textContent = pbState.skipped;
+  }
+
+  function pbTimecode(i){
+    var r = Math.max(1, Math.round(pbRate()));
+    var s = Math.floor(i / r), f = i % r;
+    function p(n){ return String(n).padStart(2, '0'); }
+    return p(Math.floor(s / 3600)) + ':' + p(Math.floor(s / 60) % 60) + ':' + p(s % 60) + ':' + p(f);
+  }
+
+  function pbTick(){
+    if (!pbState.playing || !pbClip) return;
+    var now = performance.now();
+    var target = pbRate();
+    var total = pbClip.frame_count || 1;
+
+    var want = pbState.startFrame + Math.floor((now - pbState.t0) / 1000 * target);
+    if (want - pbState.i > 1) pbState.skipped += (want - pbState.i - 1);
+
+    if (want >= total){
+      if (!pbState.loop){ pbShow(total - 1); pbPause(); return; }
+      want = 0; pbState.startFrame = 0; pbState.t0 = now;
+    }
+    if (want !== pbState.i){ pbShow(want); }
+
+    if (now - pbState.windowAt > 500){
+      var fps = pbState.shown / ((now - pbState.windowAt) / 1000);
+      pbState.actualFps = fps; pbState.shown = 0; pbState.windowAt = now;
+      var el = pbEl('pbRateActual');
+      el.textContent = fps.toFixed(2) + ' fps';
+      el.className = 'pb-rate-v ' + (fps >= target * 0.97 ? 'ok' : fps >= target * 0.85 ? 'warn' : 'bad');
+      pbRenderBoxes();
+    }
+
+    var due = pbState.t0 + ((pbState.i + 1 - pbState.startFrame) / target) * 1000;
+    pbState.timer = setTimeout(pbTick, Math.max(0, due - performance.now()));
+  }
+
+  function pbPlay(){
+    if (!pbClip || pbEl('pbStage').classList.contains('is-locked')) return;
+    pbState.playing = true;
+    pbState.t0 = performance.now(); pbState.windowAt = pbState.t0;
+    pbState.startFrame = pbState.i; pbState.shown = 0;
+    pbEl('pbPlayLabel').textContent = 'PAUSE';
+    pbEl('pbPlayIcon').innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+    pbState.timer = setTimeout(pbTick, 0);
+  }
+  function pbPause(){
+    pbState.playing = false;
+    if (pbState.timer) clearTimeout(pbState.timer);
+    pbEl('pbPlayLabel').textContent = 'PLAY';
+    pbEl('pbPlayIcon').innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
+  }
+  var PB_LOCK_RECORDING = ['Playback held — recording',
+    'Reading the card while a take is being written to it risks audio xruns and dropped frames. Playback resumes when recording stops.'];
+  var PB_LOCK_NO_THUMBNAIL = ['No embedded thumbnail',
+    'This take has no thumbnail — recorded with the toggle off, or before a rebuilt cinepi-raw supported it. Raw decode is far more demanding on the Pi and is not currently used as a fallback.'];
+
+  /* The single place that reconciles the two independent lock reasons
+     (pbState.recordingLocked, driven by pbCheckRecording()'s poll; and
+     pbState.noThumbnail, driven by pbSelectTake() and fixed per selected
+     take) into the one visible lock overlay. Recording takes the message
+     when both are true -- it's the more urgent, more dynamic one. */
+  function pbApplyLock(){
+    var locked = pbState.recordingLocked || pbState.noThumbnail;
+    var msg = pbState.recordingLocked ? PB_LOCK_RECORDING : PB_LOCK_NO_THUMBNAIL;
+    pbEl('pbLockTitle').textContent = msg[0];
+    pbEl('pbLockBody').textContent = msg[1];
+    pbEl('pbStage').classList.toggle('is-locked', locked);
+    if (locked) pbPause();
+  }
+
+  /* Recording-state half only -- called by refreshPlaybackPane() and
+     pbCheckRecording()'s poll. Must never touch pbState.noThumbnail: that
+     poll runs every 3s regardless of which take is selected, and a take
+     with no thumbnail stays locked for that reason even while nothing is
+     recording. */
+  function pbSetLocked(locked){
+    pbState.recordingLocked = locked;
+    pbApplyLock();
+  }
+
+  pbEl('pbPlay').addEventListener('click', function(){ pbState.playing ? pbPause() : pbPlay(); });
+  pbEl('pbPrev').addEventListener('click', function(){ pbPause(); pbShow(pbState.i - 1); });
+  pbEl('pbNext').addEventListener('click', function(){ pbPause(); pbShow(pbState.i + 1); });
+  pbEl('pbStart').addEventListener('click', function(){ pbPause(); pbShow(0); });
+  pbEl('pbEnd').addEventListener('click', function(){ pbPause(); pbShow((pbClip && pbClip.frame_count || 1) - 1); });
+  pbEl('pbLoop').addEventListener('click', function(){
+    pbState.loop = !pbState.loop;
+    this.setAttribute('aria-pressed', String(pbState.loop));
+    this.classList.toggle('is-on', pbState.loop);
+  });
+  pbEl('pbScrub').addEventListener('input', function(){ pbPause(); pbShow(parseInt(this.value, 10)); });
+  pbEl('pbToggleConform').addEventListener('click', function(){
+    pbState.conform = this.getAttribute('aria-checked') !== 'true';
+    this.setAttribute('aria-checked', String(pbState.conform));
+    pbPause(); pbState.skipped = 0; pbApplyRate(); pbShow(pbState.i);
+    showToast(pbState.conform ? 'Conformed to ' + pbConform + ' fps' : 'Playing at the recorded rate');
+  });
+
+  /* A backgrounded tab has its timers clamped to about 1 Hz, so playback there
+     would report a skip count that is an artefact of the tab, not of the
+     camera. Stop rather than lie about it. */
+  document.addEventListener('visibilitychange', function(){
+    if (document.hidden && pbState.playing){ pbPause(); showToast('Paused — tab was backgrounded'); }
+  });
+
   /* ---------- initial load ---------- */
   loadSettings();
   loadConfigTxt();
   refreshRawPane();
+  refreshPlaybackPane();
 
   /* ---------- toast ---------- */
   var toastTimer;
@@ -4601,6 +5301,7 @@
     { group: 'ClearHDR', value: 'set_hdr_blend', label: 'Set HDR blend', noArg: 'required', arg: { type: 'number', min: 0, max: 8, placeholder: '0–8' } },
     { group: 'ClearHDR', value: 'set_hdr_gain_adder', label: 'Set HDR gain adder', noArg: 'required', arg: { type: 'number', min: 0, max: 5, placeholder: '0–5' } },
     { group: 'CineMate Log', value: 'set_log_encode', label: 'Set CineMate Log target', noArg: 'toggle', arg: { type: 'select', options: ['off','10','12'] } },
+    { group: 'Thumbnail', value: 'set_thumbnail', label: 'Set DNG thumbnail mode', noArg: 'required', arg: { type: 'select', options: [0,1,2] } },
     { group: 'Zoom / anamorphic', value: 'set_zoom', label: 'Set preview zoom', noArg: 'cycle', arg: { type: 'select', options: [1,2], suffix: '×' } },
     { group: 'Zoom / anamorphic', value: 'inc_zoom', label: 'Zoom in one stop' },
     { group: 'Zoom / anamorphic', value: 'dec_zoom', label: 'Zoom out one stop' },
@@ -4851,7 +5552,7 @@
     var saveBtn = document.getElementById('saveBtn');
     var openJsonBtn = document.getElementById('openJson');
     var openJsonLabel = document.getElementById('openJsonLabel');
-    var noFilePage = activePage === 'live' || activePage === 'raw';
+    var noFilePage = activePage === 'live' || activePage === 'raw' || activePage === 'playback';
     saveBtn.hidden = noFilePage;
     openJsonBtn.hidden = noFilePage;
     document.getElementById('revertBtn').hidden = noFilePage;
@@ -4862,13 +5563,31 @@
   }
   var pageTabButtons = document.querySelectorAll('[data-page-tab]');
   var pageLedes = document.querySelectorAll('[data-page-lede]');
+  /* Live-view iframe lifecycle. Kept next to setActivePage because that is
+     the only thing that calls it, and the src it restores is the one the
+     markup shipped with rather than a second copy of the URL. */
+  var liveEmbedSrc = null;
+  function syncLiveEmbed(page){
+    var frame = document.getElementById('liveEmbedFrame');
+    if (!frame) return;
+    if (liveEmbedSrc === null) liveEmbedSrc = frame.getAttribute('src') || '/';
+    if (page === 'live'){
+      if (frame.getAttribute('src') !== liveEmbedSrc) frame.setAttribute('src', liveEmbedSrc);
+    } else if (frame.getAttribute('src')){
+      /* removeAttribute rather than src='': an empty src re-resolves to the
+         current document in some browsers, which reloads this page inside
+         its own iframe instead of stopping anything. */
+      frame.removeAttribute('src');
+    }
+  }
+
   /* Which page a reload lands on. The rail's links already put a section id
      in the hash (#cam0, #steps, ...) and every section declares its page via
      data-page, so the hash alone answers this -- a separate storage key would
      be a second source of truth that can contradict a URL like
      .../settings-editor/#cam0 with no principled winner. An unknown or stale
      id falls back to the default rather than showing nothing. */
-  var PAGE_LANDING = { config: 'bootconfig', settings: 'welcome', raw: 'clips', live: 'live' };
+  var PAGE_LANDING = { config: 'bootconfig', settings: 'welcome', raw: 'clips', live: 'live', playback: 'playback' };
   var DEFAULT_PAGE = 'settings';
   function pageFromHash(){
     var id = (location.hash || '').slice(1);
@@ -4891,6 +5610,12 @@
        are unsaved edits already in progress (configDirty) so this can't
        silently discard those. */
     if (page === 'config' && activePage !== 'config' && !configDirty && !opts.skipConfigLoad) loadConfigTxt();
+    /* The Live tab embeds the shooting screen in an iframe, and hiding an
+       iframe does not stop it: its MJPEG stream and its Socket.IO connection
+       stay live behind every other tab for the rest of the session. That is
+       the same Wi-Fi link playback needs, so drop the src on the way out and
+       put it back on the way in. */
+    syncLiveEmbed(page);
     activePage = page;
     pageTabButtons.forEach(function(b){
       var isActive = b.getAttribute('data-page-tab') === page;

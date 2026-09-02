@@ -21,23 +21,26 @@ from flask import (
     Response,
     current_app,
     jsonify,
+    make_response,
     render_template,
     request,
+    send_file,
     send_from_directory,
     stream_with_context,
 )
 
 from module.sensor_database import resolve_database_path
 from module.config_loader import (
+    DEFAULT_CONFORM_FRAME_RATE,
     SettingsLoadError,
     _apply_settings_defaults,
     load_settings,
     strip_jsonc,
     DEFAULT_SETTINGS_PATH,
 )
-from module.app import boot_config, raw_files
+from module.app import boot_config, playback, raw_files
 from module.jsonc_edit import apply_updates
-from module.redis_controller import ParameterKey
+from module.redis_controller import ParameterKey, smpte_frame_base
 from module.web_api_settings import web_api_settings
 
 logger = logging.getLogger(__name__)
@@ -121,6 +124,8 @@ ACTION_METHODS = [
      "arg": {"type": "number", "min": 0, "max": 5, "placeholder": "0-5"}},
     {"group": "CineMate Log", "value": "set_log_encode", "label": "Set CineMate Log target", "no_arg": "toggle",
      "arg": {"type": "select", "options": ["off", "10", "12"]}},
+    {"group": "Thumbnail", "value": "set_thumbnail", "label": "Set DNG thumbnail mode", "no_arg": "required",
+     "arg": {"type": "select", "options": [0, 1, 2]}},
     {"group": "Zoom / anamorphic", "value": "set_zoom", "label": "Set preview zoom", "no_arg": "cycle",
      "arg": {"type": "select", "options": [1, 2], "suffix": "×"}},
     {"group": "Zoom / anamorphic", "value": "inc_zoom", "label": "Zoom in one stop"},
@@ -156,6 +161,51 @@ def _public_method_names(obj) -> set[str]:
         name for name, member in inspect.getmembers(obj)
         if not name.startswith("_") and callable(member)
     }
+
+
+# Every state in which the card is being written at rate. is_recording alone
+# is not that set: the post-take buffer flush (is_writing_buf / is_buffering)
+# and storage pre-roll all move frames to disk, and pre-roll in particular
+# writes at full rate with is_recording still 0. These are exactly the
+# storage-contention windows the playback lockout exists for.
+_PLAYBACK_BLOCKING_KEYS = (
+    ParameterKey.IS_RECORDING,
+    ParameterKey.IS_WRITING_BUF,
+    ParameterKey.IS_BUFFERING,
+    ParameterKey.STORAGE_PREROLL_ACTIVE,
+)
+
+
+def _playback_blocked() -> tuple[bool, str]:
+    """Whether the card is too busy to serve playback, and why.
+
+    Fails CLOSED, unlike the read it replaced. RedisController.get_value()
+    returns a local cache kept fresh by one background listener thread; if
+    that thread has died every read keeps succeeding and every value is
+    frozen (the handbook's trap 1, hardware-confirmed as F-204). A frozen
+    "0" would let the pane start decoding in the middle of a take, which is
+    the one thing this gate exists to prevent -- so a dead listener, or an
+    unreadable bus, refuses rather than allows.
+    """
+    redis_controller = current_app.config.get("REDIS_CONTROLLER")
+    if redis_controller is None:
+        return False, ""          # no bus wired at all: desk/test use
+    try:
+        if not redis_controller.listener_alive():
+            return True, "Camera status is stale — playback held"
+        for key in _PLAYBACK_BLOCKING_KEYS:
+            if str(redis_controller.get_value(key.value)).strip() == "1":
+                return True, f"Busy ({key.value}) — playback held"
+    except Exception:
+        logger.debug("playback: could not read the recording state", exc_info=True)
+        return True, "Camera status unavailable — playback held"
+    return False, ""
+
+
+def _is_recording() -> bool:
+    """Whether playback is currently refused. Reported in the clip index so the
+    pane can grey the stage out before it asks for a frame."""
+    return _playback_blocked()[0]
 
 
 @settings_editor_bp.route("/")
@@ -478,6 +528,90 @@ def get_sensor_modes():
         sensors[camera_name] = entries
 
     return jsonify({"ok": True, "sensors": sensors})
+
+
+@settings_editor_bp.route("/api/playback/clips", methods=["GET"])
+def get_playback_clips():
+    conform = DEFAULT_CONFORM_FRAME_RATE
+    settings = current_app.config.get("SETTINGS") or {}
+    raw_conform = settings.get("settings", {}).get(
+        "conform_frame_rate", DEFAULT_CONFORM_FRAME_RATE)
+    try:
+        # smpte_frame_base(), not int(): the same "round to a whole frame
+        # base" rule redis_controller._format_timecode() applies to this
+        # exact setting (F-253 already records four sites with three
+        # different rounding rules -- a plain int() truncation here would
+        # have been a fifth, and 23.976 -> 23 both paced playback ~4% slow
+        # and disagreed with the redis/DNG frame base of 24). float() first
+        # so a genuinely unreadable value falls back to
+        # DEFAULT_CONFORM_FRAME_RATE below rather than smpte_frame_base()'s
+        # own internal fallback of 1 -- a 1 fps pane on a typo is a worse
+        # failure mode than the shipped default.
+        conform = smpte_frame_base(float(raw_conform))
+    except (TypeError, ValueError):
+        logger.debug("playback: unreadable conform_frame_rate, using %s", conform)
+    return jsonify({"ok": True, "clips": playback.list_clips(),
+                    "conform_frame_rate": conform,
+                    "render_token": playback.RENDER_TOKEN,
+                    "recording": _is_recording()})
+
+
+@settings_editor_bp.route("/api/playback/clips/<name>/frame/<int:index>", methods=["GET"])
+def get_playback_frame(name, index):
+    # Playback loses to recording, always. Reading a take off the card while
+    # another is being written to it is the shape of the storage contention that
+    # has cost audio sync before, so the pane is refused rather than throttled.
+    blocked, reason = _playback_blocked()
+    if blocked:
+        return jsonify({"ok": False, "message": reason}), 409
+
+    try:
+        scale = int(request.args.get("scale", 4))
+        quality = max(40, min(95, int(request.args.get("q", 80))))
+    except ValueError:
+        return jsonify({"ok": False, "message": "scale and q must be integers"}), 400
+    if scale not in (2, 4, 8, 16):
+        return jsonify({"ok": False, "message": "scale must be 2, 4, 8 or 16"}), 400
+    mono = request.args.get("mono") in ("1", "true", "yes")
+
+    try:
+        data, width, height, source = playback.frame_jpeg(
+            name, index, scale=scale, mono=mono, quality=quality)
+    except playback.Busy:
+        # Tell the client to drop this frame rather than wait for it; holding the
+        # clock is what keeps playback honest about its rate.
+        return jsonify({"ok": False, "message": "busy"}), 503
+    except playback.PlaybackError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 404
+
+    response = make_response(data)
+    response.headers["Content-Type"] = "image/jpeg"
+    response.headers["X-Frame-Size"] = f"{width}x{height}"
+    # Which path produced this frame (open decision 8). The HUD shows it, so a
+    # 720p proxy is never mistaken for a demosaiced frame or the other way.
+    response.headers["X-Frame-Source"] = source
+    # A decoded frame is a pure function of (take, index, scale, mono, q) and
+    # takes are immutable once written, so this is safe to cache hard.
+    response.headers["Cache-Control"] = "private, max-age=3600, immutable"
+    return response
+
+
+@settings_editor_bp.route("/api/playback/clips/<name>/audio", methods=["GET"])
+def get_playback_audio(name):
+    # Same lockout as get_playback_frame() -- this route had none, so a
+    # hotspot client could stream a take's WAV off the card mid-recording,
+    # exactly the storage contention the frame lockout exists to prevent.
+    # A WAV is also unfinalised mid-take by construction (its data-chunk
+    # size is only written on a clean stop), so serving it during a take
+    # was never just a performance question.
+    blocked, reason = _playback_blocked()
+    if blocked:
+        return jsonify({"ok": False, "message": reason}), 409
+
+    path = playback.wav_path(name)
+    if path is None:
+        return jsonify({"ok": False, "message": "no audio for this take"}), 404
+    return send_file(path, mimetype="audio/wav", conditional=True)
 
 
 @settings_editor_bp.route("/api/raw/storage", methods=["GET"])

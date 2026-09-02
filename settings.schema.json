@@ -210,7 +210,7 @@
       "properties": {
         "conform_frame_rate": {
           "type": "number",
-          "default": 24
+          "default": 25
         },
         "light_hz": {
           "type": "array",
@@ -333,6 +333,13 @@
               "description": "Automatically probe the live preview after each launch and try to recover the flat-pedestal ClearHDR startup defect. Off by default: the root cause is unknown, every recovery action is unproven on hardware, and the detector cannot distinguish the defect from a genuinely flat or dark scene."
             }
           }
+        },
+        "thumbnail": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2,
+          "default": 2,
+          "description": "Embedded DNG thumbnail mode written by cinepi-raw's DNG encoder: 0 off, 1 mono, 2 colour (`set thumbnail`, live, no camera restart). Colour by default -- verified on hardware (G10/G11) and the standard playback path; raw decode is far more demanding on the Pi and is no longer the Playback pane's fallback. New takes only -- a take recorded with this off (or before a rebuilt cinepi-raw shipped it) has no thumbnail and is not currently playable in the pane."
         },
         "custom_modes": {
           "type": "object",

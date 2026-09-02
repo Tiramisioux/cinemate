@@ -15,8 +15,10 @@ from module.config_loader import (
     SettingsLoadError,
     auto_storage_preroll_enabled,
     clearhdr_startup_values,
+    thumbnail_startup_value,
     rec_tone_config,
     load_settings,
+    DEFAULT_CONFORM_FRAME_RATE,
     DEFAULT_SETTINGS_PATH,
 )
 from module.https_settings import ssl_context_for
@@ -630,7 +632,8 @@ def start_hotspot(settings) -> None:
 
 def initialize_system(settings, pi_model="unknown"):
     """Initialize core system components."""
-    conf_rate = settings.get("settings", {}).get("conform_frame_rate", 24)
+    conf_rate = settings.get("settings", {}).get(
+        "conform_frame_rate", DEFAULT_CONFORM_FRAME_RATE)
     redis_controller = RedisController(conform_frame_rate=conf_rate)
     sensor_detect = SensorDetect(settings)
     ssd_monitor = SSDMonitor(redis_controller=redis_controller)
@@ -760,6 +763,27 @@ def run_application(args, log_queue):
     # own pair. See clearhdr_startup_values() for why 0/0 was not harmless.
     for _hdr_key, _hdr_value in clearhdr_startup_values(settings).items():
         redis_controller.set_value(_hdr_key, _hdr_value)
+
+    # Embedded DNG thumbnail mode (image_capture.thumbnail): 0 off, 1 mono,
+    # 2 colour. cinepi-raw's own compiled-in default (CP_DEF_THUMBNAIL) is 0
+    # if this key is never seeded at all -- for a standalone launch with no
+    # CineMate in front of it. Seeding it here means the shipped default is
+    # what a fresh boot actually applies. thumbnail_startup_value() clamps
+    # the same way set_thumbnail() does (B-1): the raw settings.jsonc value
+    # used to reach redis unvalidated, where a bool crashed at startup and a
+    # non-numeric string crashed cinepi-raw's sync() instead of set_thumbnail's
+    # int(value) coercion ever running on it.
+    redis_controller.set_value(
+        ParameterKey.THUMBNAIL.value,
+        thumbnail_startup_value(settings)
+    )
+    # thumbnail_size (0 = full lores plane size) is not exposed via CLI or
+    # settings-editor -- seeded only, so a stale pre-Phase-0 resident value
+    # (PI-008: thumbnail_size=50) doesn't survive a fresh boot and collapse
+    # the thumbnail before cinepi-raw's own sync() guard (C-2) would catch
+    # it. CineMate owns this key now that it means something; nothing in
+    # settings.jsonc governs it yet.
+    redis_controller.set_value(ParameterKey.THUMBNAIL_SIZE.value, 0)
 
     # Reset recording time
     redis_controller.set_value(ParameterKey.RECORDING_TIME.value, 0)

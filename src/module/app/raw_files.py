@@ -213,6 +213,34 @@ def resolve_take(name: str, *, storage: str | None = None) -> Path | None:
     return None
 
 
+def safe_take_children(take_dir: Path, pattern: str) -> list[Path]:
+    """``take_dir.glob(pattern)``, with any entry that resolves outside
+    ``take_dir`` dropped.
+
+    resolve_take() hardens the take DIRECTORY against traversal (a
+    symlinked directory name can't escape the media root), but says
+    nothing about what's inside it once resolved. A symlink placed inside
+    an otherwise-legitimate take directory -- *.dng or *.wav pointing at,
+    say, /etc/passwd or a credentials file -- would glob and later open
+    exactly like a real frame, because open() follows symlinks by
+    default. Every caller that lists a take's own files for later
+    reading (playback's frame/WAV serving) should go through this rather
+    than take_dir.glob() directly.
+    """
+    try:
+        real_dir = take_dir.resolve()
+    except OSError:
+        return []
+    safe = []
+    for p in take_dir.glob(pattern):
+        try:
+            if p.resolve().parent == real_dir:
+                safe.append(p)
+        except OSError:
+            continue
+    return safe
+
+
 def active_take_names(redis_controller) -> set[str]:
     """Take names currently being written to, so a delete route can refuse
     them. last_dng_cam0/cam1 hold a full DNG path and are only reset to

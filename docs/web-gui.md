@@ -107,3 +107,7 @@ Notes:
 
     When using dual sensors, the second camera's preview stream is served on port `8001` and shown
     side-by-side with cam0, with its own status column. The control UI stays on port `5000`.
+
+The preview on this page is the live camera. To watch back a take you have already shot, see
+[Playback](playback.md), which decodes the recorded CinemaDNG files from the card and plays them
+at the conform frame rate.

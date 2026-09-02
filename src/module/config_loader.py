@@ -16,6 +16,14 @@ ANSI_CYAN = "\033[1;36m"
 # it can still run when the rest of the stack cannot.
 DEFAULT_SETTINGS_PATH = "/home/pi/cinemate/settings.jsonc"
 
+# The conform frame rate used when settings.jsonc does not name one. Exported
+# because the same value was previously restated at four other call sites and
+# had already drifted from the shipped configs (F-251: schema and this loader
+# said 24, both shipped .jsonc files said 25, with no arbiter). Import it rather
+# than writing the number again; settings.schema.json carries a sixth copy that
+# cannot import, so _test/test_conform_frame_rate_default.py pins them together.
+DEFAULT_CONFORM_FRAME_RATE = 25
+
 # Public: a handful of call sites need the raw membership test (e.g. a CLI
 # parser that must reject an unrecognised value outright rather than fall
 # back to a default) instead of the as_bool() default-fallback shape below.
@@ -291,6 +299,34 @@ def clearhdr_startup_values(settings: dict) -> dict:
     }
 
 
+def thumbnail_startup_value(settings: dict) -> int:
+    """Validated startup value for image_capture.thumbnail, keyed by Redis key.
+
+    main.py used to pass settings.get("image_capture", {}).get("thumbnail", 0)
+    straight to redis_controller.set_value() with no validation -- unlike
+    set_thumbnail() (cinepi_controller.py), which clamps int(value) to 0..2.
+    A hand-edited settings.jsonc with "thumbnail": true crashed Cinemate at
+    startup (redis-py rejects a bool where set_thumbnail() would have
+    coerced it), a non-numeric string reached cinepi-raw's sync() and its
+    then-unguarded stoi(), and 3 passed through where the CLI path clamps
+    to 2 -- so the same raw value in the file meant "off" via one path and
+    "colour" via the other. This applies the exact same clamp as
+    set_thumbnail() so both paths agree, and so a malformed value degrades
+    to a safe default instead of reaching either process unvalidated.
+
+    Defaults to 2 (colour), not 0: the embedded thumbnail is now the
+    standard playback path, and playback.py's raw-decode fallback is
+    disabled (too demanding on the Pi, operator decision after G10/G11) --
+    so a take recorded with thumbnail=0, or a parse failure that used to
+    fall back to 0, would otherwise be unplayable in the pane.
+    """
+    raw = settings.get("image_capture", {}).get("thumbnail", 2)
+    try:
+        return max(0, min(2, int(raw)))
+    except (TypeError, ValueError):
+        return 2
+
+
 REC_TONE_DEFAULTS = {
     "pin": [],
     "frequency_hz": 1000,
@@ -389,7 +425,7 @@ def _apply_settings_defaults(settings: dict) -> dict:
 
     # ── settings: frame-rate conform + flicker-free input + sync tuning ────
     settings_cfg = settings.setdefault("settings", {})
-    settings_cfg.setdefault("conform_frame_rate", 24)
+    settings_cfg.setdefault("conform_frame_rate", DEFAULT_CONFORM_FRAME_RATE)
     settings_cfg.setdefault("light_hz", [50, 60])
 
     tol_cfg = settings_cfg.setdefault("sync_tolerances", {})
@@ -474,6 +510,9 @@ def _apply_settings_defaults(settings: dict) -> dict:
         # modes; set "imx585_clear_hdr" false to hide the HDR modes. See
         # SensorDetect._hdr_whitelist.
         "hdr": {"sdr": True, "imx585_clear_hdr": True},
+        # 2 (colour): the embedded thumbnail is the standard playback path
+        # now, not an opt-in -- see thumbnail_startup_value()'s docstring.
+        "thumbnail": 2,
         "custom_modes": {},
     }
     for k, v in image_capture_defaults.items():

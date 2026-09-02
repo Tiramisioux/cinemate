@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging, threading, redis, psutil, time
 from enum import Enum
 import time, math
-from module.config_loader import as_bool
+from module.config_loader import DEFAULT_CONFORM_FRAME_RATE, as_bool
 
 # ───────────────────────── parameter keys ────────────────────────────
 class ParameterKey(Enum):
@@ -40,6 +40,8 @@ class ParameterKey(Enum):
     HDR_BLEND         = "hdr_blend"       # 0..8 — ClearHDR blending mode (driver menu index)
     HDR_GAIN_ADDER    = "hdr_gain_adder"  # 0..5 — ClearHDR gain adder (driver menu index, 2 = +12 dB)
     HEIGHT            = "height"
+    THUMBNAIL         = "thumbnail"       # 0 off / 1 mono / 2 colour — embedded DNG thumbnail (cinepi-raw CONTROL_KEY_THUMBNAIL)
+    THUMBNAIL_SIZE    = "thumbnail_size"  # right-shift downscale of the thumbnail plane, 0 = full lores size (cinepi-raw CONTROL_KEY_THUMBNAIL_SIZE; changing it restarts the camera). Not exposed via CLI/settings-editor here — seeded only, so a resident pre-Phase-0 value (PI-008) doesn't collapse the thumbnail (see cinepi-raw's sync() guard, C-2)
     IR_FILTER         = "ir_filter"
     IS_BUFFERING      = "is_buffering"
     IS_MOUNTED        = "is_mounted"
@@ -218,7 +220,8 @@ class Event:
 # ────────────────────────── main controller class ────────────────────
 class RedisController:
 
-    def __init__(self, host="localhost", port=6379, db=0, channel="cp_controls", conform_frame_rate: int = 24):
+    def __init__(self, host="localhost", port=6379, db=0, channel="cp_controls",
+                 conform_frame_rate: int = DEFAULT_CONFORM_FRAME_RATE):
         self.r      = redis.StrictRedis(host=host, port=port, db=db)
         self.ps     = self.r.pubsub(); self.ps.subscribe(channel)
         self.lock   = threading.Lock()

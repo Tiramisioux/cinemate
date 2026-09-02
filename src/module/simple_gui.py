@@ -23,6 +23,10 @@ SYNC_WARNING_COLOR = DESIGN_TOKENS["sync"]
 NO_CAM_WARNING_COLOR = DESIGN_TOKENS["no_cam"]
 SYNC_FLASH_COLOR = "magenta"  # PIL named colour -- no CSS/design-token counterpart
 RESOLUTION_SWITCHING_COLOR = DESIGN_TOKENS["res_switching"]
+# GUI-loop fault logging: how long to wait before re-logging a fault that
+# keeps reproducing on the same line. The first occurrence is always logged
+# in full; see SimpleGUI._handle_frame_error().
+FRAME_ERROR_LOG_INTERVAL_S = 60.0
 PREVIEW_PADDING_X = 94
 PREVIEW_PADDING_Y = 50
 PREVIEW_GUIDE_OUTLINE_WIDTH = 2
@@ -205,6 +209,9 @@ class SimpleGUI(threading.Thread):
         self._slow_dirty = True
         self._last_draw_ts = 0.0
         self._last_slow_refresh_ts = 0.0
+        # (exception type, "file:line") -> (times seen, last logged monotonic)
+        # for run()'s per-frame fault rate limiter. See _handle_frame_error().
+        self._frame_error_state = {}
         self._font_cache = {}
         self._cached_cams_json = None
         self._cached_cams = []
@@ -2247,6 +2254,50 @@ class SimpleGUI(threading.Thread):
         return True
 
 
+    def _handle_frame_error(self, exc):
+        """Log one bad GUI frame and let the loop carry on.
+
+        Rate-limited by (exception type, raising file:line): a fault that
+        reproduces every frame would otherwise fill the journal at the
+        refresh rate. The first occurrence of each distinct fault is logged
+        loudly with its full traceback -- that is the line an operator or a
+        future session needs -- and repeats are summarised at most once per
+        FRAME_ERROR_LOG_INTERVAL_S with a suppressed count.
+        """
+        tb = exc.__traceback__
+        while tb is not None and tb.tb_next is not None:
+            tb = tb.tb_next
+        if tb is None:
+            where = "unknown"
+        else:
+            frame = tb.tb_frame
+            where = f"{os.path.basename(frame.f_code.co_filename)}:{tb.tb_lineno}"
+        key = (type(exc).__name__, where)
+
+        now = time.monotonic()
+        seen_count, last_logged_ts = self._frame_error_state.get(key, (0, 0.0))
+        seen_count += 1
+
+        if seen_count == 1:
+            logging.error(
+                "SimpleGUI frame failed at %s -- the GUI thread is continuing; "
+                "the display will keep updating but this frame was dropped.",
+                where,
+                exc_info=exc,
+            )
+            self._frame_error_state[key] = (seen_count, now)
+            return
+
+        if (now - last_logged_ts) >= FRAME_ERROR_LOG_INTERVAL_S:
+            logging.error(
+                "SimpleGUI frame still failing at %s (%s): %s -- %s occurrences "
+                "so far, suppressing repeats.",
+                where, type(exc).__name__, exc, seen_count,
+            )
+            self._frame_error_state[key] = (seen_count, now)
+        else:
+            self._frame_error_state[key] = (seen_count, last_logged_ts)
+
     def run(self):
         try:
             self.vu_left_peak = 0
@@ -2256,38 +2307,58 @@ class SimpleGUI(threading.Thread):
             self.vu_decay_factor = 0.2
 
             while self._running:
-                now = time.monotonic()
-                if self.check_display():
-                    self._fast_dirty = True
-                self._maybe_restart_camera_for_display_attach()
+                # One bad frame must not end the session. Before this catch,
+                # run() was a single try/finally with no except: any throw
+                # anywhere in the loop body ran _teardown_display() and left
+                # the thread dead, with nothing to restart it, nothing to
+                # tell the operator, and the framebuffer frozen on whatever
+                # was last drawn -- which on a no-camera boot was the welcome
+                # message (hardware-confirmed 2026-09-02). The web GUI has no
+                # state of its own and freezes with it. Exceptions here are
+                # `Exception` only, so KeyboardInterrupt/SystemExit still
+                # unwind to the finally: below and tear the display down.
+                try:
+                    now = time.monotonic()
+                    if self.check_display():
+                        self._fast_dirty = True
+                    self._maybe_restart_camera_for_display_attach()
 
-                if (
-                    not self._slow_values
-                    or (now - self._last_slow_refresh_ts) >= self.slow_refresh_interval
-                ):
-                    self._slow_dirty = True
+                    if (
+                        not self._slow_values
+                        or (now - self._last_slow_refresh_ts) >= self.slow_refresh_interval
+                    ):
+                        self._slow_dirty = True
 
-                has_work = self._fast_dirty or self._slow_dirty or self._vu_active()
-                if not has_work:
-                    self._redraw_event.wait(timeout=0.1)
-                    self._redraw_event.clear()
-                    continue
+                    has_work = self._fast_dirty or self._slow_dirty or self._vu_active()
+                    if not has_work:
+                        self._redraw_event.wait(timeout=0.1)
+                        self._redraw_event.clear()
+                        continue
 
-                due_in = max(0.0, self.min_frame_interval - (now - self._last_draw_ts))
-                if due_in > 0:
-                    self._redraw_event.wait(timeout=due_in)
-                    self._redraw_event.clear()
-                    continue
+                    due_in = max(0.0, self.min_frame_interval - (now - self._last_draw_ts))
+                    if due_in > 0:
+                        self._redraw_event.wait(timeout=due_in)
+                        self._redraw_event.clear()
+                        continue
 
-                if self._slow_dirty:
-                    self._refresh_slow_values()
+                    if self._slow_dirty:
+                        self._refresh_slow_values()
 
-                self.update_smoothed_vu_levels()
-                values = self.populate_values()
-                self.draw_gui(values)
-                self._fast_dirty = False
-                self._slow_dirty = False
-                self._last_draw_ts = time.monotonic()
+                    self.update_smoothed_vu_levels()
+                    values = self.populate_values()
+                    self.draw_gui(values)
+                    self._fast_dirty = False
+                    self._slow_dirty = False
+                    self._last_draw_ts = time.monotonic()
+                except Exception as exc:
+                    self._handle_frame_error(exc)
+                    # Leave the loop in the same shape a completed frame
+                    # leaves it in, so a permanently failing frame retries at
+                    # the normal refresh cadence instead of spinning the CPU
+                    # at full speed on the due_in == 0 path.
+                    self._fast_dirty = False
+                    self._slow_dirty = False
+                    self._last_draw_ts = time.monotonic()
         finally:
             self._teardown_display(
                 clear_framebuffer=self._clear_framebuffer_on_exit,

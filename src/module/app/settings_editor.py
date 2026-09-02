@@ -27,6 +27,7 @@ from flask import (
     stream_with_context,
 )
 
+from module.sensor_database import resolve_database_path
 from module.config_loader import (
     SettingsLoadError,
     _apply_settings_defaults,
@@ -160,7 +161,18 @@ def _public_method_names(obj) -> set[str]:
 @settings_editor_bp.route("/")
 def index():
     settings = current_app.config["SETTINGS"]
-    return render_template("settings_editor.html", api_token=web_api_settings(settings).get("token") or "")
+    # The resolved path, not the relative form settings.jsonc carries.
+    # sensors.database_file is operator-settable, and /home/pi/cinemate is a
+    # symlink on a source install (cinemate-install.sh), which Path.resolve()
+    # follows -- so the only truthful answer comes from the same helper the
+    # loader itself uses.
+    return render_template(
+        "settings_editor.html",
+        api_token=web_api_settings(settings).get("token") or "",
+        sensor_db_path=str(
+            resolve_database_path((settings.get("sensors") or {}).get("database_file"))
+        ),
+    )
 
 
 @settings_editor_bp.route("/api/settings", methods=["GET"])

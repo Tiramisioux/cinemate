@@ -49,6 +49,18 @@
   }
 
   *{ box-sizing: border-box; }
+  /* The page hides 15 things with `el.hidden`, and every one of them carries
+     an author `display` rule -- .card is grid, .pill and .btn are flex,
+     .action-args is inline-flex. An author display declaration beats the UA
+     stylesheet's `[hidden]{display:none}` whatever the specificity, so none of
+     them actually hid: measured on this page, a hidden #saveBtn stayed
+     109px wide, the unsaved-count pill 98px, a .card 834px, and the REC-tone
+     "at [1000] Hz" field rendered on every tally row, where a frequency is
+     meaningless (tally pins never get a PWM object -- gpio_output.py writes a
+     bare level). One author rule restores the attribute's meaning for all of
+     them; !important is what makes it beat the class rules. */
+  [hidden]{ display:none !important; }
+  .cliprow.is-busy{ opacity:.5; pointer-events:none; }
   html,body{ height:auto; }
   body{
     margin:0;
@@ -395,6 +407,9 @@
 
   .filepath{
     font-size: 12px; color: var(--muted); display:flex; align-items:center; gap:6px;
+    /* A resolved absolute path is far longer than the relative form this
+       showed before, and .card-control is not a min-width:0 flex item. */
+    min-width:0; overflow-wrap:anywhere;
   }
   .filepath svg{ opacity:.6; flex:none; }
 
@@ -1658,16 +1673,16 @@
         <div class="card" data-search="hdr threshold low high blend gain adder clearhdr knobs">
           <div class="card-main">
             <label class="card-label">ClearHDR startup knobs</label>
-            <p class="card-help">Applied when a ClearHDR mode is selected. Adjust live afterwards with <span class="mono">set hdr …</span> or a pot/quad‑rotary channel.</p>
+            <p class="card-help">Applied when a ClearHDR mode is selected. Adjust live afterwards with <span class="mono">set hdr …</span> or a pot/quad‑rotary channel. Leave a threshold blank to keep the sensor driver’s own pair (low 0, high 4095) — setting both to the same value flattens the image.</p>
           </div>
           <div class="card-control" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
             <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
               <span class="live-cap" style="color:var(--muted)">Threshold low</span>
-              <input class="field-input num-input" type="number" id="f-hdr-thlow" data-path="image_capture.hdr.threshold_low" data-type="number" data-original="0" value="0" style="width:70px">
+              <input class="field-input num-input" type="number" id="f-hdr-thlow" data-path="image_capture.hdr.threshold_low" data-type="number" data-original="" value="" placeholder="driver" style="width:70px">
             </label>
             <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
               <span class="live-cap" style="color:var(--muted)">Threshold high</span>
-              <input class="field-input num-input" type="number" id="f-hdr-thhigh" data-path="image_capture.hdr.threshold_high" data-type="number" data-original="0" value="0" style="width:70px">
+              <input class="field-input num-input" type="number" id="f-hdr-thhigh" data-path="image_capture.hdr.threshold_high" data-type="number" data-original="" value="" placeholder="driver" style="width:70px">
             </label>
             <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
               <span class="live-cap" style="color:var(--muted)">Blend</span>
@@ -1685,7 +1700,14 @@
             <p class="card-help">Source file describing every supported sensor's modes. Edit only if you're adding hardware support.</p>
           </div>
           <div class="card-control">
-            <span class="filepath mono"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>resources/sensors.json</span>
+            <span class="filepath mono"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>{{ sensor_db_path }}</span>
+            <!-- The card is read-only, but the key still has to round-trip:
+                 buildState() only collects [data-path] elements, so without
+                 this field a Save posts no sensors.database_file at all and
+                 _apply_settings_defaults setdefaults it back to the stock
+                 "resources/sensors.json" -- silently discarding an
+                 operator's override. -->
+            <input type="hidden" data-path="sensors.database_file">
           </div>
         </div>
       </div>
@@ -1693,7 +1715,7 @@
     <section class="group" id="fpsceilings" data-page="settings">
       <header class="group-head">
         <h2>Per-mode fps ceilings</h2>
-        <p class="group-sub">A mode's advertised fps_max is an electrical property of the sensor, not a guarantee this storage/CPU can sustain it. Leave a field blank to keep using the detected value; fill one in only for a mode you've found a lower real-world ceiling for by trial. Raising above the detected value is allowed but logged as a warning -- the sensor never reported it.</p>
+        <p class="group-sub">These are what <span class="mono">cinepi-raw --list-cameras</span> reported on this board, not a fixed property of the sensor: the figure is clamped by the RP1 pixel rate, so enabling the RP1 overclock can raise it (imx585 4K 12-bit reads 43 stock, 50 overclocked), and it is rounded <em>down</em> to a whole frame — 43 can mean 43.98. It is also not a guarantee this storage/CPU can sustain it. Leave a field blank to keep using the detected value; fill one in only for a mode you've found a lower real-world ceiling for by trial. Raising above the detected value is allowed but logged as a warning — the sensor never reported it.</p>
       </header>
       <div class="cards" id="fpsCeilingsList"><p class="card-help">Loading detected modes…</p></div>
     </section>
@@ -1857,7 +1879,18 @@
       <div class="add-control-row">
         <button class="btn btn-ghost" type="button" id="addGpioOutBtn">+ Add pin</button>
       </div>
-      <div class="cards" style="margin-top:14px">
+      <!-- Both cards describe the slate tone, so they only mean anything once
+           a pin above is set to REC tone. Hidden together by syncToneCards(). -->
+      <div class="cards" style="margin-top:14px" id="toneCards">
+        <div class="card" data-search="rec tone frequency hz pitch slate">
+          <div class="card-main">
+            <label class="card-label" for="f-tonehz">Slate tone frequency</label>
+            <p class="card-help">Pitch of the tone, in hertz. One value for every pin set to REC tone.</p>
+          </div>
+          <div class="card-control">
+            <input class="field-input num-input" type="number" min="1" max="20000" id="f-tonehz" data-path="hardware_outputs.rec_tone.frequency_hz" data-type="number" data-original="1000" value="1000"> Hz
+          </div>
+        </div>
         <div class="card" data-search="rec tone duty cycle pulse width">
           <div class="card-main">
             <label class="card-label" for="f-toneduty">Slate tone duty cycle</label>
@@ -1867,10 +1900,10 @@
             <input class="field-input num-input" type="number" min="1" max="99" id="f-toneduty" data-path="hardware_outputs.rec_tone.duty_cycle" data-type="number" data-original="50" value="50"> %
           </div>
         </div>
-        <div class="card" data-search="rec tone relay drop frames">
+        <div class="card" data-search="rec tone relay drop frames mute dropped frame marker">
           <div class="card-main">
-            <label class="card-label" for="f-relaydrop">Drop a frame for the relay</label>
-            <p class="card-help">If your tally uses a mechanical relay, this holds the first frame briefly so the relay has time to physically click over.</p>
+            <label class="card-label" for="f-relaydrop">Mute the tone on a dropped frame</label>
+            <p class="card-help">When the camera drops a frame, cut the slate tone for about one frame, then resume. The gap is audible on the recorded scratch track, so a dropped frame is findable by ear in the edit.</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-relaydrop" data-path="hardware_outputs.rec_tone.relay_drop_frames" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
@@ -2005,6 +2038,7 @@
       <div class="bulk-bar" id="bulkBar">
         <span id="bulkCount">0 selected</span>
         <span class="actions">
+          <button class="btn btn-primary" id="bulkDownloadFolder" hidden>Download into a folder…</button>
           <button class="btn btn-primary" id="bulkDownload">Download selected</button>
           <button class="btn btn-danger-outline" id="bulkDelete">Delete selected</button>
         </span>
@@ -2164,12 +2198,12 @@
     <section class="group" id="live" data-page="live">
       <header class="group-head">
         <h2>Live view</h2>
-        <p class="group-sub">The real Cinemate live-camera page, embedded and scaled to fit this column. Every control here is the genuine on-camera preview + <span class="mono">/api/v1/cmd</span> control surface — nothing here is a mockup.</p>
+        <p class="group-sub">The real Cinemate live-camera page, embedded at this column’s width. Every control here is the genuine on-camera preview + <span class="mono">/api/v1/cmd</span> control surface — nothing here is a mockup.</p>
       </header>
       <div class="live-embed-wrap">
         <iframe id="liveEmbedFrame" class="live-embed-frame" src="/" title="Cinemate live camera preview" loading="lazy"></iframe>
       </div>
-      <p class="card-help" style="margin-top:14px">Opens <a class="mono" href="/" target="_blank" rel="noopener">/</a> in a scaled frame. If controls feel cramped, open it in its own tab full-size.</p>
+      <p class="card-help" style="margin-top:14px;max-width:60ch">This is the page on port <span class="mono">5000</span> with <span class="mono">/settings-editor</span> dropped off the address — <a href="/" target="_blank" rel="noopener">open it in its own tab</a> if the controls feel cramped in here. The clean feed, no controls over it, is on port <span class="mono">8000</span> at <span class="mono">/stream</span> — same address, <span class="mono">8001</span> for cam1 on a dual‑sensor rig.</p>
     </section>
 
   </main>
@@ -3483,11 +3517,37 @@
      defaults in config_loader.py) on every save regardless of what page the
      operator was actually editing. Adding a second tally/tone pin was
      impossible for the same reason: there was nowhere to put it. */
-  /* rec_tone.frequency_hz has no [data-path] widget (the per-row Hz fields
-     come and go with their rows), so it is carried here and written back in
-     applyGpioOutToState() on every save -- including when no tone pin
-     exists, so the key never vanishes from the file. */
+  /* One frequency for every tone pin. It now has a permanent [data-path]
+     card (#f-tonehz) so buildState round-trips it even with no tone pin
+     mapped, but the per-row "at [x] Hz" fields come and go with their rows,
+     so the live value is still mirrored here and pushed both ways by
+     syncToneHz(). */
   var currentToneHz = 1000;
+
+  /* Write the shared frequency to the card and to every visible row field,
+     without re-entering their own change handlers. */
+  function syncToneHz(hz, skipEl){
+    currentToneHz = hz;
+    var card = document.getElementById('f-tonehz');
+    if (card && card !== skipEl) card.value = String(hz);
+    document.querySelectorAll('.tone-freq-wrap input').forEach(function(inp){
+      if (inp !== skipEl) inp.value = String(hz);
+    });
+  }
+
+  /* The frequency and duty-cycle cards describe the tone, so they are only
+     meaningful once some pin is set to REC tone. Now that [hidden] actually
+     hides (see the rule at the top of this stylesheet), this works. */
+  function syncToneCards(){
+    var cards = document.getElementById('toneCards');
+    if (!cards) return;
+    var anyTone = false;
+    document.querySelectorAll('#gpioOutList [data-control-type="gpio-out"]').forEach(function(row){
+      var el = document.getElementById(row.getAttribute('data-prefix') + '-method');
+      if (el && el.value === 'tone') anyTone = true;
+    });
+    cards.hidden = !anyTone;
+  }
   function buildGpioOutRow(pin, method){
     var prefix = nextControlPrefix();
     var row = document.createElement('div');
@@ -3533,15 +3593,13 @@
     freqWrap.hidden = method !== 'tone';
     methodSel.addEventListener('change', function(){
       freqWrap.hidden = methodSel.value !== 'tone';
+      syncToneCards();
       markControlsDirtyIfNeeded();
     });
     freqInput.addEventListener('change', function(){
       var v = parseFloat(freqInput.value);
       if (!isNaN(v) && v > 0){
-        currentToneHz = v;
-        document.querySelectorAll('#gpioOutList .tone-freq').forEach(function(inp){
-          if (inp !== freqInput) inp.value = String(v);
-        });
+        syncToneHz(v, freqInput);
       } else {
         freqInput.value = String(currentToneHz);
       }
@@ -3563,7 +3621,7 @@
   function populateGpioOut(settings){
     var out = (settings && settings.hardware_outputs) || {};
     var loadedHz = out.rec_tone && parseFloat(out.rec_tone.frequency_hz);
-    if (loadedHz && !isNaN(loadedHz)) currentToneHz = loadedHz;
+    if (loadedHz && !isNaN(loadedHz)) syncToneHz(loadedHz);
     var list = document.getElementById('gpioOutList');
     list.innerHTML = '';
     (out.rec_out_pin || []).forEach(function(pin){
@@ -3576,14 +3634,34 @@
       list.appendChild(row);
       row.querySelectorAll('.gpio-select').forEach(initGpioSelect);
     });
+    syncToneCards();
   }
+
+  /* One frequency, two places to type it. */
+  (function(){
+    var card = document.getElementById('f-tonehz');
+    if (!card) return;
+    card.addEventListener('change', function(){
+      var v = parseFloat(card.value);
+      if (!isNaN(v) && v > 0) { syncToneHz(v, card); }
+      else { card.value = String(currentToneHz); }
+    });
+  })();
 
   document.getElementById('addGpioOutBtn').addEventListener('click', function(){
     var row = buildGpioOutRow(null, 'tally');
     document.getElementById('gpioOutList').appendChild(row);
     row.querySelectorAll('.gpio-select').forEach(initGpioSelect);
+    syncToneCards();
     markControlsDirtyIfNeeded();
   });
+
+  /* Removing the last tone row must retire the cards too, and rows are
+     removed by a generic button that knows nothing about tones. */
+  if (window.MutationObserver) {
+    new MutationObserver(syncToneCards)
+      .observe(document.getElementById('gpioOutList'), { childList: true });
+  }
 
   /* Called after buildState()'s generic [data-path] walk already populated
      state.hardware_outputs.rec_tone.{frequency_hz,duty_cycle,relay_drop_frames}
@@ -3607,7 +3685,10 @@
     state.hardware_outputs.rec_out_pin = recOutPins;
     state.hardware_outputs.rec_tone = state.hardware_outputs.rec_tone || {};
     state.hardware_outputs.rec_tone.pin = tonePins;
-    state.hardware_outputs.rec_tone.frequency_hz = currentToneHz;
+    var hzCard = document.getElementById('f-tonehz');
+    var cardHz = hzCard && parseFloat(hzCard.value);
+    state.hardware_outputs.rec_tone.frequency_hz =
+      (cardHz && !isNaN(cardHz)) ? cardHz : currentToneHz;
     var prevOutputs = lastLoadedSettings && lastLoadedSettings.hardware_outputs;
     if (prevOutputs && prevOutputs.pwm_pin !== undefined && state.hardware_outputs.pwm_pin === undefined){
       state.hardware_outputs.pwm_pin = prevOutputs.pwm_pin;
@@ -4163,11 +4244,25 @@
       btn.addEventListener('click', function(){
         var name = btn.closest('.cliprow').getAttribute('data-name');
         showConfirm('Delete take "' + name + '"? This cannot be undone.', function(){
+          /* rmtree is thousands of unlinks and refreshRawPane() behind it
+             stats every file on the card, so the row stays on screen well
+             after the take is gone. Without this the operator taps twice and
+             the second one used to report a failure for a delete that
+             worked. */
+          if (btn.disabled) { return; }
+          btn.disabled = true;
+          var row = btn.closest('.cliprow');
+          if (row) { row.classList.add('is-busy'); }
           fetch('/settings-editor/api/raw/takes/' + encodeURIComponent(name), { method: 'DELETE' })
             .then(function(r){ return r.json(); }).then(function(res){
               showToast(res.ok ? 'Deleted ' + name : 'Delete failed: ' + res.message);
-              if (res.ok) refreshRawPane();
-            }).catch(function(err){ showToast('Delete failed: ' + err); });
+              if (res.ok) { refreshRawPane(); }
+              else { btn.disabled = false; if (row) { row.classList.remove('is-busy'); } }
+            }).catch(function(err){
+              showToast('Delete failed: ' + err);
+              btn.disabled = false;
+              if (row) { row.classList.remove('is-busy'); }
+            });
         }, null, { title: 'Delete this take?', okLabel: 'Delete', danger: true });
       });
     });
@@ -4203,6 +4298,58 @@
     var row = document.querySelector('.cliprow[data-name="' + CSS.escape(names[0]) + '"]');
     if (row) { startTakeDownload(names[0], row.getAttribute('data-storage'), row); }
   });
+
+  /* ---------- download straight into a chosen folder ----------
+     showDirectoryPicker() is the only browser API that can write into a
+     directory the operator names, and it exists only on a SECURE context --
+     so on plain HTTP it is undefined and this button stays hidden, with the
+     plain per-take download still there. Turn on system.https in
+     settings.jsonc to get it. It is also Chromium-only today: Safari and
+     Firefox expose neither, on http or https.
+
+     It also sidesteps the bulk-download race below: each take is fetched and
+     written to completion before the next one starts, instead of n top-level
+     navigations 800 ms apart cancelling each other. */
+  var folderDownloadSupported = (typeof window.showDirectoryPicker === 'function');
+  (function(){
+    var btn = document.getElementById('bulkDownloadFolder');
+    if (!btn) { return; }
+    btn.hidden = !folderDownloadSupported;
+    if (!folderDownloadSupported) { return; }
+    btn.addEventListener('click', function(){
+      var names = selectedClipNames();
+      if (!names.length) { return; }
+      var dir;
+      window.showDirectoryPicker({ mode: 'readwrite', startIn: 'downloads' })
+        .then(function(handle){
+          dir = handle;
+          btn.disabled = true;
+          return names.reduce(function(chain, name, i){
+            return chain.then(function(){
+              showToast('Saving ' + (i + 1) + ' of ' + names.length + ': ' + name);
+              return fetch('/settings-editor/api/raw/takes/' +
+                           encodeURIComponent(name) + '/download')
+                .then(function(res){
+                  if (!res.ok) { throw new Error(name + ' — ' + res.status); }
+                  return dir.getFileHandle(name + '.zip', { create: true })
+                    .then(function(fh){ return fh.createWritable(); })
+                    .then(function(w){ return res.body.pipeTo(w); });
+                });
+            });
+          }, Promise.resolve());
+        })
+        .then(function(){
+          if (dir) { showToast('Saved ' + names.length +
+                               (names.length === 1 ? ' take' : ' takes')); }
+        })
+        .catch(function(err){
+          // AbortError is the operator dismissing the picker, not a failure.
+          if (err && err.name === 'AbortError') { return; }
+          showToast('Download failed: ' + (err && err.message ? err.message : err));
+        })
+        .then(function(){ btn.disabled = false; });
+    });
+  })();
 
   /* ---------- initial load ---------- */
   loadSettings();
@@ -4691,7 +4838,25 @@
   }
   var pageTabButtons = document.querySelectorAll('[data-page-tab]');
   var pageLedes = document.querySelectorAll('[data-page-lede]');
-  function setActivePage(page){
+  /* Which page a reload lands on. The rail's links already put a section id
+     in the hash (#cam0, #steps, ...) and every section declares its page via
+     data-page, so the hash alone answers this -- a separate storage key would
+     be a second source of truth that can contradict a URL like
+     .../settings-editor/#cam0 with no principled winner. An unknown or stale
+     id falls back to the default rather than showing nothing. */
+  var PAGE_LANDING = { config: 'bootconfig', settings: 'welcome', raw: 'clips', live: 'live' };
+  var DEFAULT_PAGE = 'settings';
+  function pageFromHash(){
+    var id = (location.hash || '').slice(1);
+    if (!id) return DEFAULT_PAGE;
+    var el = document.getElementById(id);
+    var group = el && el.closest('.group[data-page]');
+    var page = group && group.getAttribute('data-page');
+    return Object.prototype.hasOwnProperty.call(PAGE_LANDING, page) ? page : DEFAULT_PAGE;
+  }
+
+  function setActivePage(page, opts){
+    opts = opts || {};
     /* loadConfigTxt() only ever ran once, at page load (see the bottom of
        this script). config.txt can change underneath an open tab without
        any of this page's own doing -- an SSH edit, a save from a different
@@ -4701,7 +4866,7 @@
        on every arrival at the config page instead, skipped only when there
        are unsaved edits already in progress (configDirty) so this can't
        silently discard those. */
-    if (page === 'config' && activePage !== 'config' && !configDirty) loadConfigTxt();
+    if (page === 'config' && activePage !== 'config' && !configDirty && !opts.skipConfigLoad) loadConfigTxt();
     activePage = page;
     pageTabButtons.forEach(function(b){
       var isActive = b.getAttribute('data-page-tab') === page;
@@ -4714,7 +4879,13 @@
     });
     updateGroupVisibility();
     syncTopbarForPage();
-    window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+    /* pushState, not replaceState: the rail's anchors push real history
+       entries, so replacing here would silently destroy the deep-link the
+       operator is standing on (at #steps, a tab click would rewrite that
+       entry and Back would skip past it). A tab click is a navigation the
+       operator made; giving it its own entry keeps Back meaning "undo that". */
+    if (!opts.keepHash) history.pushState(null, '', '#' + PAGE_LANDING[page]);
+    if (!opts.keepScroll) window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
   }
   pageTabButtons.forEach(function(b){ b.addEventListener('click', function(){ setActivePage(b.getAttribute('data-page-tab')); }); });
   document.querySelectorAll('[data-goto-page]').forEach(function(a){
@@ -4840,7 +5011,25 @@
   styleTag.textContent = '@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}';
   document.head.appendChild(styleTag);
 
-  setActivePage('settings');
+  /* Restore the page the operator was on. Only the page: the section is
+     already handled -- on a fresh load the browser's fragment scroll lands on
+     the hash, and on a reload Chrome restores the exact prior offset, which is
+     finer than any scrollIntoView we could do. keepHash so this does not
+     rewrite the URL it just read; keepScroll so it does not fight either of
+     those; skipConfigLoad because config.txt is fetched unconditionally above. */
+  setActivePage(pageFromHash(), { keepHash: true, keepScroll: true, skipConfigLoad: true });
+  /* Back/forward across panes. The browser's fragment scroll fires BEFORE
+     hashchange, so at that moment the target section is still display:none and
+     the scroll is a no-op on a box-less element; scroll again once the page
+     that owns it is visible. */
+  window.addEventListener('hashchange', function(){
+    var page = pageFromHash();
+    if (page !== activePage){
+      setActivePage(page, { keepHash: true, keepScroll: true });
+      var target = document.getElementById((location.hash || '').slice(1));
+      if (target) target.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
+  });
   refreshDrawer();
 })();
 </script>

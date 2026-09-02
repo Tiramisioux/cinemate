@@ -15,6 +15,23 @@
       // its web UI on wlan0/eth0 if that interface already has an IP.
       "enabled": true
     },
+    "https": {
+      // Serve the web UI over TLS instead of plain HTTP. Off by default, and
+      // not simply "more secure": cinepi.local and the hotspot's 10.42.0.1
+      // can never hold a publicly-trusted certificate, so this always means a
+      // self-signed one and a browser interstitial on first visit.
+      //
+      // Turn it on when you need a secure browser context -- the RAW pane's
+      // "download into a folder" uses the File System Access API, which
+      // browsers only expose on a secure origin.
+      //
+      // The certificate is minted on first start if missing, and re-issued
+      // when it expires. Relative paths resolve against the repo root.
+      "enabled": false,
+      "cert_file": "resources/certs/cinemate.crt",
+      "key_file": "resources/certs/cinemate.key",
+      "valid_days": 3650
+    },
     "web_api": {
       // Wireless control API (ESP32/Pico/M5Stack etc. over the hotspot).
       "enabled": true,

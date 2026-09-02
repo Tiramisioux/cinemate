@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import io
 import logging
+import errno
 import shutil
 import threading
 import zipfile
@@ -143,15 +144,14 @@ def storage_summary() -> list[dict]:
     return summaries
 
 
-def resolve_take(name: str, *, storage: str | None = None) -> Path | None:
-    """Resolve *name* (a bare take dir name, no path separators) to its
-    real path under one of the known media roots. Refuses anything that
-    would escape that root (path traversal) or isn't actually a take dir.
-    *storage*, if given, restricts the match to that root's label (e.g.
-    "RAW1") -- needed when the same take name exists on more than one
-    mounted drive."""
+def _candidate_paths(name: str, *, storage: str | None = None):
+    """Every path *name* could denote under a mounted media root, whether or
+    not it currently looks like a take. Refuses anything that would escape
+    that root (path traversal). *storage*, if given, restricts the match to
+    that root's label (e.g. "RAW1") -- needed when the same take name exists
+    on more than one mounted drive."""
     if not name or "/" in name or "\\" in name or name in (".", ".."):
-        return None
+        return
     for root in _media_roots():
         if storage and root.name != storage:
             continue
@@ -164,6 +164,17 @@ def resolve_take(name: str, *, storage: str | None = None) -> Path | None:
             # path" on a %00-smuggled name -- previously escaped this
             # function entirely and surfaced as a 500.
             continue
+        yield candidate
+
+
+def resolve_take(name: str, *, storage: str | None = None) -> Path | None:
+    """Resolve *name* (a bare take dir name, no path separators) to its
+    real path under one of the known media roots. Refuses anything that
+    would escape that root (path traversal) or isn't actually a take dir.
+    *storage*, if given, restricts the match to that root's label (e.g.
+    "RAW1") -- needed when the same take name exists on more than one
+    mounted drive."""
+    for candidate in _candidate_paths(name, storage=storage):
         if _is_take_dir(candidate):
             return candidate
     return None
@@ -186,16 +197,54 @@ def active_take_names(redis_controller) -> set[str]:
 
 
 def delete_take(name: str, *, storage: str | None = None) -> tuple[bool, str]:
-    path = resolve_take(name, storage=storage)
+    """Delete a take. Idempotent: a take that is already gone is a success.
+
+    Deleting is slow (thousands of unlinks) and the pane refresh behind it is
+    slower still, so the row stays on screen well after the take is gone and a
+    second tap is easy. Reporting "not found" there told the operator a delete
+    had failed when it had in fact succeeded -- and turned one already-gone
+    name in a bulk selection into "Some deletes failed".
+
+    _candidate_paths rather than resolve_take, because a take whose *.dng
+    files were already removed by a partial delete is not an _is_take_dir any
+    more: it would neither list nor delete, and sat on the card forever.
+
+    *storage*, if given, confines the delete to that root's label; without it
+    the first mounted root that still holds *name* wins (/media/RAW before
+    /media/RAW1). The recording interlock lives in the route, not here.
+    """
+    path = next(iter(_candidate_paths(name, storage=storage)), None)
     if path is None:
+        # Not a legal take name at all (traversal, separators) -- or no
+        # mounted root carries the requested *storage* label -- a real
+        # client error, unlike a name that is simply gone.
         return False, f"Take '{name}' not found"
-    try:
-        shutil.rmtree(path)
-    except OSError as exc:
-        logger.exception("Failed to delete take %s", path)
-        return False, str(exc)
-    logger.info("Deleted take %s", path)
-    return True, "Deleted"
+
+    for candidate in _candidate_paths(name, storage=storage):
+        if not candidate.exists():
+            continue
+        try:
+            shutil.rmtree(candidate)
+        except OSError as exc:
+            logger.exception("Failed to delete take %s", candidate)
+            return False, _friendly_delete_error(exc, candidate)
+        logger.info("Deleted take %s", candidate)
+        return True, "Deleted"
+
+    logger.info("Take %s was already gone", name)
+    return True, "Already deleted"
+
+
+def _friendly_delete_error(exc: OSError, path: Path) -> str:
+    """A raw errno string is not something to put in front of an operator."""
+    if exc.errno == errno.EROFS:
+        return ("The card is mounted read-only, so nothing can be deleted "
+                "from it. Unmount and check the filesystem, then remount.")
+    if exc.errno in (errno.EACCES, errno.EPERM):
+        return "No permission to delete that take from the card."
+    if exc.errno == errno.EBUSY:
+        return "That take is in use right now. Stop recording and try again."
+    return f"Could not delete that take: {exc.strerror or exc}"
 
 
 class _StreamSink(io.RawIOBase):

@@ -490,8 +490,18 @@
             overflow-y: auto;
             overscroll-behavior: contain;
             scrollbar-width: thin;
-            display: flex;
-            flex-direction: column;
+            /* Columns, not one stack. The drawer's groups were laid out full
+               width at every size, so on a 1440px screen seven groups of
+               ~60px stacked into 570px of content inside a 367px box and a
+               third of the panel was unreachable. auto-fit uses the width
+               that was already there instead of taking height from the
+               preview: measured at 1440x800, content 570 -> 514, and the
+               groups that carry sliders keep the full width below. Below
+               ~340px + gap it resolves to one column, i.e. exactly today's
+               layout on a phone. */
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            align-content: start;
             gap: calc(var(--gap) * 0.55);
             /* The fixed right padding is for the panel's own scrollbar. An
                overlay scrollbar (macOS, iOS, Android) reserves no width and
@@ -504,6 +514,11 @@
         }
 
         .xp-group { display: flex; flex-direction: column; gap: calc(var(--gap) * 0.3); }
+        /* A slider group always spans the whole row. The rule below ("track
+           length IS the resolution of the control") is the reason: letting a
+           0-4095 threshold fall into a 340px column would put ~19 counts on
+           every pixel. Measured at 1440x800: 1148px of track either way. */
+        .xp-group.xp-wide { grid-column: 1 / -1; }
         .xp-title {
             font-weight: 700;
             font-size: var(--label-size);
@@ -521,6 +536,15 @@
             display: grid;
             grid-template-columns: minmax(0, 1fr);
             gap: calc(var(--gap) * 0.2);
+        }
+        /* Overlay scrollbars (macOS, iOS, Android) reserve no width and paint
+           nothing until a scroll is already under way, so a clipped drawer
+           reads as a finished one. Columns close the gap on a desktop but not
+           at 800x480 or a landscape phone; fade the last rows there so the
+           remainder is visible as missing. */
+        #experiment.more-below {
+            -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.2em), transparent);
+            mask-image: linear-gradient(to bottom, #000 calc(100% - 2.2em), transparent);
         }
         .xp-slider { display: flex; align-items: center; gap: 0.55em; }
         .xp-slider .label {
@@ -805,18 +829,58 @@
         (typeof v === 'string' && ['true', 'yes', 'on'].includes(v.trim().toLowerCase()));
 
     function fillSelect(sel, options, current) {
-        const wanted = options.map((o) => String(o.value)).join(' ');
+        // The disabled flags are part of the cache key: a free-stepping toggle
+        // can leave the value list identical while changing which entries are
+        // selectable, and without this the list would not repaint.
+        const wanted = options.map((o) => String(o.value) + (o.disabled ? '!' : '')).join(' ');
         if (sel.dataset.filled !== wanted) {
             sel.innerHTML = '';
             options.forEach((o) => {
                 const opt = document.createElement('option');
                 opt.value = o.value;
                 opt.textContent = o.text;
+                if (o.disabled) { opt.disabled = true; }
                 sel.appendChild(opt);
             });
             sel.dataset.filled = wanted;
         }
         if (current !== undefined && current !== null) { sel.value = String(current); }
+    }
+
+    // Free stepping replaces a preset table with a fine grid — 1-360 in whole
+    // degrees for SHUTTER — and the setter then accepts any value verbatim
+    // instead of snapping to the table (cinepi_controller: "In sync mode, or
+    // free-stepping, just accept it verbatim"; the fps setter clamps to
+    // 1..fps_max the same way). So the interior entries stop being the legal
+    // set and become an arbitrary sample of a continuum. Grey them, leaving
+    // the two ends, so the picker reads as the range it actually is; the value
+    // itself is dialled with the EXPERIMENT slider, a pot, an encoder or the
+    // CLI, and the live value still shows even while greyed because a
+    // disabled <option> can be selected programmatically.
+    //
+    // Only SHUTTER and FPS. NOT WB: set_wb picks the closest entry of wb_steps
+    // unconditionally and every entry has a real cg_rb pair, so under WB free
+    // stepping the interior IS the exact legal set. NOT ISO: set_iso clamps
+    // and never snaps in any mode, so iso_free changes what is offered, not
+    // what is accepted. Greying either would state something untrue.
+    // `current` is threaded in because a free grid need not contain the live
+    // value: toggle free stepping on while SHUTTER sits at a preset 172.8 and
+    // the 1-degree grid has no such entry, so the <select> would fall back to
+    // its first option and read 1 while the camera runs at 172.8. Any value is
+    // legal in this mode, so the honest thing is to carry it.
+    function freeStepBounds(list, isFree, current) {
+        const opts = list.map((v, i) => ({
+            value: v,
+            text: v,
+            disabled: Boolean(isFree) && list.length > 2 && i > 0 && i < list.length - 1,
+        }));
+        const live = parseFloat(current);
+        if (isFree && isFinite(live) && !list.some((v) => Number(v) === live)) {
+            const at = opts.findIndex((o) => Number(o.value) > live);
+            opts.splice(at < 0 ? opts.length : at, 0,
+                { value: live, text: live, disabled: false });
+        }
+        return opts;
     }
 
     // ── left / right rails: same sections, order and box contents as
@@ -1111,14 +1175,17 @@
     function renderSelectors() {
         fillSelect($('s-iso'), steps.iso.map((v) => ({ value: v, text: v })), V.iso);
         // find() returns undefined when the live angle isn't in the current
-        // step table (e.g. a rejected pick on a locked shutter, or a
-        // free-stepping table rebuild); fillSelect() then leaves the select
-        // showing whatever was last chosen. Fall back to '' so a stale pick
-        // clears instead of silently lingering.
-        const shutterLive = steps.shutter_a.find((v) => String(v) === String(parseFloat(V.shutter_speed)));
-        fillSelect($('s-shutter'), steps.shutter_a.map((v) => ({ value: v, text: v })),
-            shutterLive !== undefined ? shutterLive : '');
-        fillSelect($('s-fps'), steps.fps.map((v) => ({ value: v, text: v })), V.fps);
+        // step table (e.g. a rejected pick on a locked shutter). Under free
+        // stepping freeStepBounds() carries the live value as an extra entry
+        // so it can be selected; otherwise fall back to '' so a stale pick
+        // clears instead of silently lingering (fillSelect() only writes
+        // .value when current is defined).
+        const liveShutter = parseFloat(V.shutter_speed);
+        fillSelect($('s-shutter'),
+            freeStepBounds(steps.shutter_a, truthy(V.shutter_a_free), liveShutter),
+            steps.shutter_a.find((v) => String(v) === String(liveShutter))
+                ?? (truthy(V.shutter_a_free) && isFinite(liveShutter) ? liveShutter : ''));
+        fillSelect($('s-fps'), freeStepBounds(steps.fps, truthy(V.fps_free), V.fps), V.fps);
         fillSelect($('s-wb'), steps.wb.map((v) => ({ value: v, text: v + 'K' })), V.wb);
         fillSelect($('s-res'),
             steps.resolutions.map((r) => ({ value: r.mode, text: r.resolution })),
@@ -1457,6 +1524,10 @@
             const rows = xpRow('xp-sliders');
             group.sliders.forEach((s) => rows.appendChild(buildSlider(s)));
             const wrap = xpGroup(group.title, rows);
+            // Full-width row: see .xp-group.xp-wide -- slider track length is
+            // the control's resolution. Set here rather than with :has(),
+            // which needs Safari 15.4 and this page targets older iOS.
+            wrap.classList.add('xp-wide');
             if (group.visibleKey) { xpConditionalGroups.push({ el: wrap, key: group.visibleKey }); }
             return wrap;
         });
@@ -1526,6 +1597,15 @@
             xpGroup('ACTIONS', actions)
         );
         xpBuilt = true;
+    }
+
+    // Mark the drawer while content sits below the fold, so CSS can fade the
+    // last rows. Columns fit everything on a desktop, but not at 800x480 or a
+    // landscape phone, and an overlay scrollbar says nothing.
+    function noteExperimentOverflow() {
+        const panel = $('experiment');
+        panel.classList.toggle('more-below',
+            panel.scrollHeight - panel.clientHeight - panel.scrollTop > 4);
     }
 
     function renderExperiment() {
@@ -1833,7 +1913,22 @@
         img._reloadTimer = setTimeout(() => {
             img._reloadTimer = null;
             if (img.classList.contains('hidden')) { return; }
-            img.src = img.dataset.streamBase + '?reload=' + Date.now();
+            // NO query string. cinepi-raw's MJPEG server matches the raw
+            // request-target against the one topic it publishes ("/stream"):
+            // nadjieb mjpeg_streamer.hpp reads the target with
+            // `getline(iss, target_, ' ')`, so the query is part of it, and
+            // pathExists() is an exact map lookup -- "/stream?reload=1756..."
+            // misses and the server answers 404 and closes. Every recovery
+            // path here funnels through this function, so a cache-buster did
+            // not just fail to help, it replaced a working MJPEG connection
+            // with a permanent 404 (cinepi-raw deliberately keeps the listener
+            // alive across a camera reconfigure, so the old connection would
+            // have survived on its own).
+            //
+            // Dropping src first is what makes the browser re-request an
+            // identical URL -- which is the reason the cache-buster was there.
+            img.removeAttribute('src');
+            img.src = img.dataset.streamBase;
         }, delay);
     }
     function reloadStreams() {
@@ -1908,6 +2003,7 @@
         const open = panel.classList.toggle('hidden');
         $('btn-experiment').classList.toggle('on', !open);
         render();
+        noteExperimentOverflow();
     });
 
     // The drawer changes the preview's available box without a window
@@ -1917,7 +2013,12 @@
     // child, so this cannot feed itself.
     if (window.ResizeObserver) {
         new ResizeObserver(sizePreview).observe($('preview-wrap'));
+        // Same reasoning for the drawer's own overflow flag: a rotate or a
+        // group appearing/disappearing changes it with no window resize.
+        // mask-image changes no layout, so this cannot feed itself.
+        new ResizeObserver(noteExperimentOverflow).observe($('experiment'));
     }
+    $('experiment').addEventListener('scroll', noteExperimentOverflow, { passive: true });
 
     // iPhone Safari exposes no element-fullscreen API at all; iPad does
     // (webkit-prefixed since iOS 12, unprefixed since 16.4). Probe the methods,

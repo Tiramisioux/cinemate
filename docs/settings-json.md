@@ -83,6 +83,22 @@ Wireless control API for microcontrollers (ESP32/Pico/M5Stack etc.) over the hot
 `max_sse_clients` – concurrent `/events` connections.<br>
 `broadcast` – the UDP status line: `enabled`, `port`, `hz` (rate), and `keys` (which Redis keys appear in the broadcast).
 
+### https
+
+Serves the web UI on port 5000 over TLS instead of plain HTTP. **Off by default, and not simply "more secure".**
+
+A camera is reached at `cinepi.local` or, on the hotspot, at `10.42.0.1`. No certificate authority will issue for an mDNS name or a private address, so this always means a **self-signed** certificate and a full-page browser warning on first visit — every visit in a private window, and repeatedly on iOS.
+
+Turn it on when you need a *secure browser context*. The RAW files pane's **Download into a folder…** button uses the File System Access API, which browsers only expose on a secure origin (and which only Chromium-based desktop browsers implement at all — Safari and Firefox offer it on neither http nor https).
+
+One consequence is handled for you. cinepi-raw's MJPEG preview on port 8000 speaks only plain HTTP and cannot be upgraded, and a secure page is forbidden from loading an insecure subresource — so on HTTPS the live preview would go black. CineMate detects that the page was served over TLS and routes the preview through a same-origin proxy at `/preview/<cam>/stream` instead. A plain-HTTP camera is unaffected and keeps talking straight to port 8000, so it pays nothing for this.
+
+`enabled` – `false` by default. When `true` and no usable certificate exists, one is minted at startup.<br>
+`cert_file` / `key_file` – where the pair lives. Relative paths resolve against the repo root; both are git-ignored. The key is written `0600`.<br>
+`valid_days` – lifetime of a freshly minted certificate (default 3650). An expired one is re-issued automatically on the next start.
+
+If a certificate cannot be produced — `openssl` missing, or the path unwritable — CineMate logs the reason and serves plain HTTP anyway. A camera that answers insecurely is better than one that does not answer at all.
+
 ### storage
 
 `auto_preroll` – controls the short automatic warm-up recording that prepares mounted media before the first real take. Set it to `true` to run the warm-up on startup and when RAW storage mounts. Set it to `false` to skip only the automatic startup and mount-triggered pre-rolls. Manual `storage preroll` CLI runs remain available either way. See [Storage pre-roll](storage-preroll.md).

@@ -291,6 +291,35 @@ def clearhdr_startup_values(settings: dict) -> dict:
     }
 
 
+REC_TONE_DEFAULTS = {
+    "pin": [],
+    "frequency_hz": 1000,
+    "duty_cycle": 50,
+    "relay_drop_frames": False,
+}
+
+
+def rec_tone_config(gpio_cfg: dict) -> dict:
+    """Read hardware_outputs.rec_tone, tolerating the pre-c171975e flat keys.
+
+    c171975e regrouped `rec_tone_pin` / `rec_tone_frequency_hz` /
+    `rec_tone_duty_cycle` / `rec_tone_relay_drop_frames` under a nested
+    `rec_tone` object. main.py's section name was updated; its leaf reads were
+    not, so every one of them silently fell back to a hardcoded default -- the
+    configured tone pin was ignored in favour of pwm_pin, frequency and duty
+    cycle could not be changed at all, and relay_drop_frames could never be
+    true, which meant relay_drop_frame_on_rec_tone() returned at its guard on
+    every call. settings.schema.json declares rec_tone with
+    additionalProperties:false, so the flat keys cannot appear in a current
+    file; the fallback is only for a hand-written one predating the rename.
+    """
+    nested = gpio_cfg.get("rec_tone") or {}
+    return {
+        key: nested[key] if key in nested else gpio_cfg.get(f"rec_tone_{key}", default)
+        for key, default in REC_TONE_DEFAULTS.items()
+    }
+
+
 def _apply_settings_defaults(settings: dict) -> dict:
     # ── system: splash, network, storage behavior ──────────────────────────
     system_cfg = settings.setdefault("system", {})
@@ -538,10 +567,8 @@ def _apply_settings_defaults(settings: dict) -> dict:
     outputs_cfg.setdefault("pwm_pin", 19)
     outputs_cfg.setdefault("rec_out_pin", [6, 21])
     rec_tone_cfg = outputs_cfg.setdefault("rec_tone", {})
-    rec_tone_cfg.setdefault("pin", [])
-    rec_tone_cfg.setdefault("frequency_hz", 1000)
-    rec_tone_cfg.setdefault("duty_cycle", 50)
-    rec_tone_cfg.setdefault("relay_drop_frames", False)
+    for _key, _default in REC_TONE_DEFAULTS.items():
+        rec_tone_cfg.setdefault(_key, _default)
     outputs_cfg["rec_tone"] = rec_tone_cfg
     settings["hardware_outputs"] = outputs_cfg
 

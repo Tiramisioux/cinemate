@@ -1814,6 +1814,15 @@
             </label>
           </div>
         </div>
+        <div class="card" data-search="thumbnail dng embedded preview playback mono colour color">
+          <div class="card-main">
+            <label class="card-label">DNG thumbnail</label>
+            <p class="card-help">Embedded thumbnail cinepi-raw writes into new takes' DNG files, read by the Playback pane instead of decoding the raw image. 0 off, 1 mono, 2 colour. Applied live afterwards with <span class="mono">set thumbnail</span> -- no camera restart.</p>
+          </div>
+          <div class="card-control">
+            <input class="field-input num-input" type="number" min="0" max="2" id="f-thumbnail" data-path="image_capture.thumbnail" data-type="number" data-original="0" value="0" style="width:56px">
+          </div>
+        </div>
         <div class="card" data-search="sensor database file resources sensors json advanced">
           <div class="card-main">
             <label class="card-label">Sensor database</label>

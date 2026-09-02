@@ -743,6 +743,22 @@ class CinePiController:
         self.file_size = compute_frame_size_mb(width, height, effective_bit_depth)
         self.redis_controller.set_value(ParameterKey.FILE_SIZE.value, str(self.file_size))
 
+    def set_thumbnail(self, value):
+        """Set the embedded DNG thumbnail mode: 0 off, 1 mono, 2 colour.
+
+        Applied live: cinepi-raw's CONTROL_KEY_THUMBNAIL handler takes
+        effect on the next frame with no camera restart, unlike
+        thumbnail_size (not exposed here yet -- its handler does restart
+        the camera). New takes only; nothing already on the card changes.
+        """
+        try:
+            v = max(0, min(2, int(value)))
+        except (TypeError, ValueError):
+            logging.error("thumbnail expects an integer 0 (off), 1 (mono), or 2 (colour)")
+            return
+        self.redis_controller.set_value(ParameterKey.THUMBNAIL.value, v)
+        logging.info(f"DNG thumbnail mode set to {v}")
+
     def set_log_encode(self, value=None):
         """Live control for CineMate Log (`set log`).
 

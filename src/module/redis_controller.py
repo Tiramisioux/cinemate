@@ -40,6 +40,7 @@ class ParameterKey(Enum):
     HDR_BLEND         = "hdr_blend"       # 0..8 — ClearHDR blending mode (driver menu index)
     HDR_GAIN_ADDER    = "hdr_gain_adder"  # 0..5 — ClearHDR gain adder (driver menu index, 2 = +12 dB)
     HEIGHT            = "height"
+    THUMBNAIL         = "thumbnail"       # 0 off / 1 mono / 2 colour — embedded DNG thumbnail (cinepi-raw CONTROL_KEY_THUMBNAIL)
     IR_FILTER         = "ir_filter"
     IS_BUFFERING      = "is_buffering"
     IS_MOUNTED        = "is_mounted"

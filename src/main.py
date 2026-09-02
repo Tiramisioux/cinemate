@@ -738,6 +738,16 @@ def run_application(args, log_queue):
     for _hdr_key, _hdr_value in clearhdr_startup_values(settings).items():
         redis_controller.set_value(_hdr_key, _hdr_value)
 
+    # Embedded DNG thumbnail mode (image_capture.thumbnail): 0 off, 1 mono,
+    # 2 colour. cinepi-raw's own compiled-in default (CP_DEF_THUMBNAIL) is 1
+    # if this key is never seeded at all -- for a standalone launch with no
+    # CineMate in front of it. Seeding it here means the shipped default (0,
+    # off) is what a fresh boot actually applies.
+    redis_controller.set_value(
+        ParameterKey.THUMBNAIL.value,
+        settings.get("image_capture", {}).get("thumbnail", 0)
+    )
+
     # Reset recording time
     redis_controller.set_value(ParameterKey.RECORDING_TIME.value, 0)
 

@@ -211,12 +211,10 @@ Frame-rate conform target, flicker-free input, and sync tolerances.
 }
 ```
 
-`conform_frame_rate` – the frame rate the footage is intended to be conformed to in post. Two things on the camera use it:
+`conform_frame_rate` – the frame rate the footage is intended to be conformed to in post. It has no effect on capture: the sensor always records at the camera's own `fps`. Two things on the camera use it:
 
-<br>*Timecode* – the SMPTE frame base for the time-of-day and recording-elapsed timecodes CineMate publishes to redis. Rounded to a whole number, so 23.976 gives a 24-frame base. This is **not** the timecode written into the DNG files: CinePi RAW stamps those from the rate the take was actually captured at, so shooting 50 fps against a 25 fps conform gives the two different bases, by design.
-<br>*Playback* – the rate the settings editor's Playback pane plays takes back at. A take shot above the conform rate plays as slow motion, at the speed it will run on the timeline; one shot below it plays fast. Turn *Use conform frame rate* off in that pane to watch a take at the rate it was shot instead.
-
-<br>It has no effect on recording. Takes are always captured at the camera's own `fps` — the conform rate only decides how they are counted and played back.<br>
+<br>*Timecode* – the frame base for the recording timecode tracker (`recording_tc_rec`, `recording_time_tod` in redis), whose frame field counts at the conform rate rather than the sensor's; `recording_time` is plain elapsed seconds and does not depend on it. Rounded to a whole frame base before use — 23.976 becomes a 24-frame base — so a fractional conform rate never appears in the displayed timecode. This is **not** the timecode written into the DNG files: CinePi RAW stamps those from the rate the take was actually captured at, so shooting 50 fps against a 25 fps conform gives two different bases, by design.
+<br>*Playback* – the rate the settings editor's Playback pane plays takes back at. A take shot above the conform rate plays as slow motion, at the speed it will run on the timeline; one shot below it plays fast. Turn *Use conform frame rate* off in that pane to watch a take at the rate it was shot instead.<br>
 `light_hz` – list of mains frequencies used to calculate flicker‑free shutter angles. These are added to the shutter angle steps (see [arrays](#arrays)) and also dynamically calculated upon each fps change. This way, there is always a flicker free shutter angle value close by, when toggling through shutter angles, either via the cli or using buttons/pots/rotary encoder.
 
 `sync_tolerances`:
@@ -311,6 +309,7 @@ Which resolution/bit-depth/HDR modes are practical to expose in the UI when cycl
     "blend": 0,
     "gain_adder": 1
   },
+  "thumbnail": 0,
   "custom_modes": {}
 }
 ```
@@ -319,6 +318,7 @@ Which resolution/bit-depth/HDR modes are practical to expose in the UI when cycl
 `bit_depths` – list of bit depths to expose. `16` covers the imx585 ClearHDR 16-bit modes (see [ClearHDR](clear-hdr.md)).<br>
 `hdr.sdr` / `hdr.imx585_clear_hdr` – whitelist of the ClearHDR flag. Both `true` (default) exposes the plain and the imx585 ClearHDR modes; set `imx585_clear_hdr` to `false` to hide the HDR modes, or `sdr` to `false` to show only them. Cinemate detects the HDR modes by probing `cinepi-raw --list-cameras --hdr sensor` alongside the plain list. imx585 has HDR modes at **both** 12-bit and 16-bit, and they are labelled `HDR` (simple GUI) / `:HDR` (web GUI). The legacy `[false, true]` list form still works.<br>
 `hdr.threshold_low` / `hdr.threshold_high` / `hdr.blend` / `hdr.gain_adder` – startup values for the four ClearHDR live knobs, seeded into Redis at launch. Adjust them afterwards without a restart via `set hdr threshold low/high`, `set hdr blend`, `set hdr gain adder`, or a pot/quad-rotary channel. See [ClearHDR](clear-hdr.md#live-knobs) for what each one does.<br>
+`thumbnail` – embedded DNG thumbnail mode: `0` off, `1` mono, `2` colour. Written per frame by cinepi-raw's DNG encoder from the same lores plane the HDMI/MJPEG preview already uses, alongside (not instead of) the raw image. Seeded into Redis at launch; adjust it afterwards without a restart via `set thumbnail`. New takes only — footage recorded before a rebuilt cinepi-raw supports this, or with the mode off, has no thumbnail and always falls back to a full raw decode for review. Off by default.<br>
 `custom_modes` – per-camera-name list of mode overrides and additions, keyed by sensor name. `fps_max` (from `cinepi-raw --list-cameras`) is an electrical property of the sensor — it says nothing about what your storage and CPU can actually sustain at that mode, and only trial recording can find that ceiling. An entry whose `width`/`height`/`bit_depth`/`hdr` matches an already-detected mode **corrects that mode's `fps_max` in place**; a non-matching entry **adds** a brand-new mode instead. Settings editor → *Per-mode fps ceilings* lists every sensor-detected mode with the override pre-filled if one exists — leave a field blank (or equal to the detected value) to record no override, or lower it to whatever your storage profile actually sustains. Raising it above the detected value is allowed but logged as a warning. `choose_resolution()` needs no separate logic for this: it always selects on `fps_max`, which is now the effective (overridden or detected) value.
 
 !!! note "Design: full capability vs practical exposure"

@@ -323,6 +323,13 @@
             }
           }
         },
+        "thumbnail": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2,
+          "default": 0,
+          "description": "Embedded DNG thumbnail mode written by cinepi-raw's DNG encoder: 0 off, 1 mono, 2 colour (`set thumbnail`, live, no camera restart). Off by default pending hardware verification (G10/G11) that a rebuilt cinepi-raw actually needs to ship. New takes only -- footage already on the card has no thumbnail either way and always falls back to raw decode for review."
+        },
         "custom_modes": {
           "type": "object",
           "description": "Per-camera-name list of mode overrides/additions (F-298). An entry whose width/height/bit_depth/hdr matches an already-detected mode overrides that mode's fps_max in place; a non-matching entry adds a brand-new mode.",

@@ -121,6 +121,8 @@ ACTION_METHODS = [
      "arg": {"type": "number", "min": 0, "max": 5, "placeholder": "0-5"}},
     {"group": "CineMate Log", "value": "set_log_encode", "label": "Set CineMate Log target", "no_arg": "toggle",
      "arg": {"type": "select", "options": ["off", "10", "12"]}},
+    {"group": "Thumbnail", "value": "set_thumbnail", "label": "Set DNG thumbnail mode", "no_arg": "required",
+     "arg": {"type": "select", "options": [0, 1, 2]}},
     {"group": "Zoom / anamorphic", "value": "set_zoom", "label": "Set preview zoom", "no_arg": "cycle",
      "arg": {"type": "select", "options": [1, 2], "suffix": "×"}},
     {"group": "Zoom / anamorphic", "value": "inc_zoom", "label": "Zoom in one stop"},

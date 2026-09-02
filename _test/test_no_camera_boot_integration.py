@@ -442,6 +442,53 @@ class RecordingIsRefusedWithNoCameraTests(unittest.TestCase):
         )
 
 
+class ResolutionChangeIsRefusedWithNoCameraTests(unittest.TestCase):
+    """Review item 4: `set resolution N` with no camera killed the CLI thread.
+
+    _normalize_sensor_mode_value() maps any mode not in res_modes to 0, then
+    _apply_resolution_mode() did a plain `res_modes[value]` index -- KeyError(0)
+    on an empty table. Its only handler was `except ValueError`, and neither
+    CommandExecutor.handle_received_data() nor the CLI read loop catches
+    anything, so the KeyError unwound out of a daemon thread. Nothing restarts
+    it and nothing says so: every later CLI and serial command is silently
+    ignored for the rest of the session (the-traps.md #1's shape). Over the
+    web API the caller just gets an unexplained 500.
+    """
+
+    def test_set_resolution_does_not_raise(self):
+        controller = build_real_controller()
+
+        self.assertFalse(controller.set_resolution(1))
+
+    def test_apply_resolution_mode_does_not_raise(self):
+        controller = build_real_controller()
+
+        self.assertFalse(controller._apply_resolution_mode(0))
+
+    def test_the_refusal_is_logged(self):
+        controller = build_real_controller()
+
+        with self.assertLogs(level=logging.INFO) as captured:
+            controller.set_resolution(1)
+
+        self.assertTrue(
+            any("mode table" in line.lower() for line in captured.output),
+            captured.output,
+        )
+
+    def test_the_switching_flag_is_cleared_rather_than_left_latched(self):
+        # A latched resolution_switching turns the GUI's RES field the
+        # switching colour indefinitely, for a switch that never started.
+        redis_controller = FakeRedis()
+        controller = build_real_controller(redis_controller=redis_controller)
+
+        controller.set_resolution(1)
+
+        self.assertEqual(
+            redis_controller.values.get(ParameterKey.RESOLUTION_SWITCHING.value), 0
+        )
+
+
 class GuiReadsOnlyAttributesTheControllerAlwaysHasTests(unittest.TestCase):
     """The generalisation of D1, so it cannot come back in a new attribute.
 

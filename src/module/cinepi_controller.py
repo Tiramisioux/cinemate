@@ -1971,7 +1971,23 @@ class CinePiController:
     def _apply_resolution_mode(self, value, restore_user_fps=None, *, restart_process=False):
         try:
             value = self._normalize_sensor_mode_value(value)
-            resolution_info = self.sensor_detect.res_modes[value]
+            # .get(), not [value]. _normalize_sensor_mode_value() maps any
+            # unknown mode to 0, so with an empty mode table (no camera, or a
+            # sensor missing from sensor_resolutions) this was a KeyError(0) --
+            # and the only handler below is `except ValueError`. Nothing in
+            # CommandExecutor.handle_received_data() or the CLI read loop
+            # catches it either, so `set resolution N` on a no-camera boot
+            # unwound out of the CommandExecutor daemon thread and killed it:
+            # every later CLI and serial command silently ignored for the rest
+            # of the session, with nothing to tell the operator why.
+            resolution_info = self.sensor_detect.res_modes.get(value)
+            if resolution_info is None:
+                logging.info(
+                    "No camera mode table -- resolution unavailable "
+                    "(requested mode %s)", value,
+                )
+                self.redis_controller.set_value(ParameterKey.RESOLUTION_SWITCHING.value, 0)
+                return False
             recording = self._is_recording()
             if recording:
                 logging.warning(
@@ -2022,7 +2038,11 @@ class CinePiController:
             self._schedule_resolution_switch_complete(value, resolution_info)
             return True
 
-        except ValueError as error:
+        except (KeyError, ValueError) as error:
+            # KeyError is caught as a second line of defence: the .get() above
+            # closes the known path, but this method indexes several
+            # sensor-mode dicts further down and a dead CommandExecutor thread
+            # is far too quiet a failure to risk on one guard.
             self.redis_controller.set_value(ParameterKey.RESOLUTION_SWITCHING.value, 0)
             logging.error(f"Error setting resolution: {error}")
             return False

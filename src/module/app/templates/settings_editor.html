@@ -780,12 +780,39 @@
 
   .cliplist{ border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); overflow:hidden; }
   .cliprow{
-    display:grid; grid-template-columns: 22px 1fr auto auto; gap: 16px; align-items:center;
+    display:grid; grid-template-columns: 22px 120px 1fr auto auto; gap: 16px; align-items:center;
     padding: 13px 16px; border-top: 1px solid var(--line);
   }
   .cliprow:first-child{ border-top:0; }
   .cliprow.is-hidden{ display:none; }
   .cliprow input[type="checkbox"]{ width:16px; height:16px; accent-color: var(--accent); }
+
+  /* A quick per-take frame check, not a player -- the real transport lives
+     on the Playback pane. Between the checkbox and the name, wide enough to
+     scrub with some precision without crowding the name/badges column next
+     to it. Degrades to an empty, non-interactive strip for a take with no
+     embedded thumbnail (raw decode is not used as a fallback here either):
+     the img's onerror marks .is-empty. */
+  .clip-thumb{
+    position:relative; width:100%; height:40px; border-radius:4px; overflow:hidden;
+    background: var(--panel-2); border:1px solid var(--line); cursor:pointer;
+  }
+  .clip-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .clip-thumb.is-empty{ cursor:default; }
+  .clip-thumb.is-empty img{ visibility:hidden; }
+  .clip-thumb-play{
+    position:absolute; left:3px; bottom:3px; width:16px; height:16px; border-radius:50%;
+    background:rgba(0,0,0,.6); border:none; display:flex; align-items:center; justify-content:center;
+    color:#fff; padding:0; cursor:pointer;
+  }
+  .clip-thumb-play svg{ margin-left:1px; }
+  .clip-thumb.is-empty .clip-thumb-play{ display:none; }
+  .clip-thumb-scrub{
+    position:absolute; left:0; right:0; bottom:0; height:7px; cursor:col-resize;
+    background:rgba(0,0,0,.3);
+  }
+  .clip-thumb.is-empty .clip-thumb-scrub{ display:none; }
+  .clip-thumb-scrub-fill{ position:absolute; left:0; top:0; bottom:0; width:0%; background: var(--accent); }
   .clip-name{ font-family: ui-monospace, monospace; font-size: 12.5px; font-weight:600; }
   .clip-meta{ font-size: 12px; color: var(--muted); margin-top:3px; }
   .clip-badges{ display:flex; gap:6px; margin-top:7px; flex-wrap:wrap; }
@@ -809,7 +836,8 @@
 
   @media (max-width: 640px){
     .cliprow{ grid-template-columns: 20px 1fr; }
-    .clip-size, .clip-actions{ grid-column: 2; justify-self:start; }
+    .clip-thumb{ grid-column: 1 / -1; width:100%; height:34px; margin-top:8px; }
+    .clip-size, .clip-actions{ grid-column: 1 / -1; justify-self:start; margin-top:6px; }
   }
 
   /* ---------- Live view ----------
@@ -2169,7 +2197,6 @@
 
       <p class="eyebrow" style="margin-top:0">Takes on card</p>
       <div class="takestrip" id="pbTakeStrip"></div>
-      <p class="card-help" id="pbTakeFooter"></p>
 
       <div class="pb-stage" id="pbStage">
         <img id="pbFrame" alt="Current frame">
@@ -2202,7 +2229,6 @@
         <span class="pb-count mono"><span id="pbFrameNo">0</span><span class="of" id="pbFrameTotal"> / 0</span></span>
       </div>
 
-      <p class="eyebrow">Take metadata — read from the DNG, not from live state</p>
       <div class="pb-hud">
         <div class="pb-hud-item"><span class="pb-hud-label">FPS</span><span class="pb-hud-value" id="pbMetaFps">—</span></div>
         <div class="pb-hud-item"><span class="pb-hud-label">Resolution</span><span class="pb-hud-value" id="pbMetaRes">—</span></div>
@@ -4138,6 +4164,113 @@
     });
   }
 
+  /* A quick per-take frame check on the RAW files pane -- not a player,
+     the real transport is the Playback pane (pbJumpToTake() below bridges
+     to it). Reuses pbFrameUrl()/the same /frame/<index> route the
+     Playback pane's own take-strip thumbnails already call; pbRenderToken/
+     pbState are module-scope and initialised at page load regardless of
+     whether the Playback tab has ever been opened, so this is safe to use
+     from here. Only one row auto-previews at a time (clipThumbAuto) --
+     the server's decode-slot pool is shared and small, and letting every
+     row on a long card auto-advance at once would just make them all 503
+     each other. */
+  var clipThumbAuto = null;   // { thumbEl, interval }
+  function clipThumbStopAuto(){
+    if (clipThumbAuto){
+      clearInterval(clipThumbAuto.interval);
+      var btn = clipThumbAuto.thumbEl.querySelector('.clip-thumb-play');
+      if (btn) btn.setAttribute('aria-pressed', 'false');
+      clipThumbAuto = null;
+    }
+  }
+
+  function wireClipThumb(el, take){
+    var img = el.querySelector('img');
+    var fill = el.querySelector('.clip-thumb-scrub-fill');
+    var frames = take.frame_count || 0;
+    if (frames < 1){ el.classList.add('is-empty'); return; }
+
+    // Coalescing loader for interactive requests (scrub/play): a fast
+    // drag fires many wanted indices per second, but only one request is
+    // ever in flight -- newer wants simply replace older ones rather than
+    // queuing, so the thumbnail catches up to wherever the pointer
+    // actually is instead of animating through every position it passed.
+    // The FIRST load is the exception -- see below.
+    var lastIndex = -1, wantIndex = 0, fetchInFlight = false, ready = false;
+    function frameAt(i){
+      if (!ready) return;   // initial load still queued -- see pbQueueThumb() below
+      i = Math.max(0, Math.min(frames - 1, i));
+      wantIndex = i;
+      if (fetchInFlight || i === lastIndex) return;
+      fetchInFlight = true;
+      lastIndex = i;
+      img.src = pbFrameUrl(take.name, i, 8) + '&q=40';
+    }
+    img.addEventListener('load', function(){
+      fetchInFlight = false;
+      if (ready && wantIndex !== lastIndex) frameAt(wantIndex);
+    });
+    img.addEventListener('error', function(){
+      fetchInFlight = false;
+      if (ready && wantIndex !== lastIndex) frameAt(wantIndex);
+    });
+    // A row full of thumbnails all wanting frame 0 the instant the RAW
+    // files pane loads is exactly the stampede pbQueueThumb()/
+    // pbPumpThumbs() already exists to avoid for the Playback pane's own
+    // take-strip (the server's decode-slot pool is small and shared) --
+    // reuse it here rather than a second serialization scheme, or firing
+    // every row's probe at once and reading 503s as "no thumbnail."
+    pbQueueThumb(img, pbFrameUrl(take.name, 0, 8) + '&q=40', function(){
+      el.classList.add('is-empty');
+    });
+    img.addEventListener('load', function onFirstLoad(){
+      lastIndex = 0; ready = true;
+      img.removeEventListener('load', onFirstLoad);
+    }, { once: true });
+
+    var scrub = el.querySelector('.clip-thumb-scrub');
+    var dragging = false;
+    function scrubTo(clientX){
+      var r = scrub.getBoundingClientRect();
+      var frac = r.width ? Math.max(0, Math.min(1, (clientX - r.left) / r.width)) : 0;
+      fill.style.width = (frac * 100) + '%';
+      frameAt(Math.round(frac * (frames - 1)));
+    }
+    scrub.addEventListener('pointerdown', function(e){
+      if (el.classList.contains('is-empty')) return;
+      dragging = true;
+      clipThumbStopAuto();
+      scrubTo(e.clientX);
+      e.stopPropagation();
+      try { scrub.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    scrub.addEventListener('pointermove', function(e){ if (dragging) scrubTo(e.clientX); });
+    scrub.addEventListener('pointerup', function(){ dragging = false; });
+    scrub.addEventListener('click', function(e){ e.stopPropagation(); });
+
+    var playBtn = el.querySelector('.clip-thumb-play');
+    playBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      if (el.classList.contains('is-empty') || frames < 2) return;
+      if (clipThumbAuto && clipThumbAuto.thumbEl === el){ clipThumbStopAuto(); return; }
+      clipThumbStopAuto();
+      playBtn.setAttribute('aria-pressed', 'true');
+      var n = Math.min(frames, 24);   // a quick flip through the take, not a real playback rate
+      var step = 0;
+      clipThumbAuto = { thumbEl: el, interval: setInterval(function(){
+        step = (step + 1) % n;
+        fill.style.width = (step / (n - 1) * 100) + '%';
+        frameAt(Math.floor(step * (frames - 1) / Math.max(1, n - 1)));
+      }, 220) };
+    });
+
+    el.addEventListener('click', function(){
+      if (el.classList.contains('is-empty')) return;
+      clipThumbStopAuto();
+      pbJumpToTake(take.name);
+    });
+  }
+
   function renderClipList(){
     var list = document.getElementById('clipList');
     var footer = document.getElementById('clipListFooter');
@@ -4159,11 +4292,18 @@
       row.setAttribute('data-size', String(t.size_bytes || 0));
       row.innerHTML =
         '<input type="checkbox" class="clip-check">' +
+        '<div class="clip-thumb" data-frames="' + (t.frame_count || 0) + '">' +
+          '<img alt="" loading="lazy">' +
+          '<button type="button" class="clip-thumb-play" title="Preview frames" aria-label="Preview frames">' +
+            '<svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
+          '</button>' +
+          '<div class="clip-thumb-scrub"><div class="clip-thumb-scrub-fill"></div></div>' +
+        '</div>' +
         '<div>' +
-          '<div class="clip-name">' + t.name + '</div>' +
+          '<div class="clip-name">' + escapeHtml(t.name) + '</div>' +
           '<div class="clip-meta">' + formatDate(t.mtime) + ' — ' + t.frame_count + ' frames</div>' +
           '<div class="clip-badges">' +
-            '<span class="chip">' + t.storage + '</span>' +
+            '<span class="chip">' + escapeHtml(t.storage) + '</span>' +
             (t.has_wav ? '<span class="chip chip-live">WAV</span>' : '') +
           '</div>' +
         '</div>' +
@@ -4172,6 +4312,7 @@
           '<button class="icon-action" data-download title="Download" aria-label="Download this take">' + DOWNLOAD_ICON + '</button>' +
           '<button class="icon-action danger" data-delete title="Delete" aria-label="Delete this take">' + DELETE_ICON + '</button>' +
         '</div>';
+      wireClipThumb(row.querySelector('.clip-thumb'), t);
       list.appendChild(row);
     });
 
@@ -4404,23 +4545,20 @@
       strip.appendChild(b);
       if (c.frame_count) pbQueueThumb(b.querySelector('.take-thumb'), pbFrameUrl(c.name, 0, 8));
     });
-    pbEl('pbTakeFooter').textContent = pbClips.length
-      ? 'Showing ' + pbClips.length + ' take' + (pbClips.length === 1 ? '' : 's') + ' across mounted storage.'
-      : 'No takes found on mounted storage.';
   }
 
   /* Thumbnails load one at a time. The camera caps concurrent decodes and
      answers 503 past that, so firing a stripful at once would mostly bounce --
      and would compete with playback for the same cores. */
   var pbThumbQueue = [], pbThumbBusy = false;
-  function pbQueueThumb(img, url){ pbThumbQueue.push([img, url]); pbPumpThumbs(); }
+  function pbQueueThumb(img, url, onFail){ pbThumbQueue.push([img, url, onFail]); pbPumpThumbs(); }
   function pbPumpThumbs(){
     if (pbThumbBusy || !pbThumbQueue.length) return;
     pbThumbBusy = true;
     var job = pbThumbQueue.shift();
     var probe = new Image();
     probe.onload = function(){ job[0].src = job[1]; pbThumbBusy = false; pbPumpThumbs(); };
-    probe.onerror = function(){ pbThumbBusy = false; pbPumpThumbs(); };
+    probe.onerror = function(){ if (job[2]) job[2](); pbThumbBusy = false; pbPumpThumbs(); };
     probe.src = job[1];
   }
 
@@ -4466,6 +4604,15 @@
     } else {
       pbBuildFilmstrip();
       pbShow(0);
+    }
+  }
+
+  /* The RAW files pane's scrub thumbnail is a quick check, not a transport --
+     clicking it hands off to the real Playback pane on the same take. */
+  function pbJumpToTake(name){
+    setActivePage('playback');
+    for (var i = 0; i < pbClips.length; i++){
+      if (pbClips[i].name === name){ pbSelectTake(i); return; }
     }
   }
 

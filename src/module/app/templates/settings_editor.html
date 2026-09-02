@@ -105,6 +105,17 @@
   }
 
   *{ box-sizing: border-box; }
+  /* The page hides 15 things with `el.hidden`, and every one of them carries
+     an author `display` rule -- .card is grid, .pill and .btn are flex,
+     .action-args is inline-flex. An author display declaration beats the UA
+     stylesheet's `[hidden]{display:none}` whatever the specificity, so none of
+     them actually hid: measured on this page, a hidden #saveBtn stayed
+     109px wide, the unsaved-count pill 98px, a .card 834px, and the REC-tone
+     "at [1000] Hz" field rendered on every tally row, where a frequency is
+     meaningless (tally pins never get a PWM object -- gpio_output.py writes a
+     bare level). One author rule restores the attribute's meaning for all of
+     them; !important is what makes it beat the class rules. */
+  [hidden]{ display:none !important; }
   html,body{ height:auto; }
   body{
     margin:0;
@@ -1923,7 +1934,18 @@
       <div class="add-control-row">
         <button class="btn btn-ghost" type="button" id="addGpioOutBtn">+ Add pin</button>
       </div>
-      <div class="cards" style="margin-top:14px">
+      <!-- Both cards describe the slate tone, so they only mean anything once
+           a pin above is set to REC tone. Hidden together by syncToneCards(). -->
+      <div class="cards" style="margin-top:14px" id="toneCards">
+        <div class="card" data-search="rec tone frequency hz pitch slate">
+          <div class="card-main">
+            <label class="card-label" for="f-tonehz">Slate tone frequency</label>
+            <p class="card-help">Pitch of the tone, in hertz. One value for every pin set to REC tone.</p>
+          </div>
+          <div class="card-control">
+            <input class="field-input num-input" type="number" min="1" max="20000" id="f-tonehz" data-path="hardware_outputs.rec_tone.frequency_hz" data-type="number" data-original="1000" value="1000"> Hz
+          </div>
+        </div>
         <div class="card" data-search="rec tone duty cycle pulse width">
           <div class="card-main">
             <label class="card-label" for="f-toneduty">Slate tone duty cycle</label>
@@ -3549,11 +3571,37 @@
      defaults in config_loader.py) on every save regardless of what page the
      operator was actually editing. Adding a second tally/tone pin was
      impossible for the same reason: there was nowhere to put it. */
-  /* rec_tone.frequency_hz has no [data-path] widget (the per-row Hz fields
-     come and go with their rows), so it is carried here and written back in
-     applyGpioOutToState() on every save -- including when no tone pin
-     exists, so the key never vanishes from the file. */
+  /* One frequency for every tone pin. It now has a permanent [data-path]
+     card (#f-tonehz) so buildState round-trips it even with no tone pin
+     mapped, but the per-row "at [x] Hz" fields come and go with their rows,
+     so the live value is still mirrored here and pushed both ways by
+     syncToneHz(). */
   var currentToneHz = 1000;
+
+  /* Write the shared frequency to the card and to every visible row field,
+     without re-entering their own change handlers. */
+  function syncToneHz(hz, skipEl){
+    currentToneHz = hz;
+    var card = document.getElementById('f-tonehz');
+    if (card && card !== skipEl) card.value = String(hz);
+    document.querySelectorAll('.tone-freq-wrap input').forEach(function(inp){
+      if (inp !== skipEl) inp.value = String(hz);
+    });
+  }
+
+  /* The frequency and duty-cycle cards describe the tone, so they are only
+     meaningful once some pin is set to REC tone. Now that [hidden] actually
+     hides (see the rule at the top of this stylesheet), this works. */
+  function syncToneCards(){
+    var cards = document.getElementById('toneCards');
+    if (!cards) return;
+    var anyTone = false;
+    document.querySelectorAll('#gpioOutList [data-control-type="gpio-out"]').forEach(function(row){
+      var el = document.getElementById(row.getAttribute('data-prefix') + '-method');
+      if (el && el.value === 'tone') anyTone = true;
+    });
+    cards.hidden = !anyTone;
+  }
   function buildGpioOutRow(pin, method){
     var prefix = nextControlPrefix();
     var row = document.createElement('div');
@@ -3599,15 +3647,13 @@
     freqWrap.hidden = method !== 'tone';
     methodSel.addEventListener('change', function(){
       freqWrap.hidden = methodSel.value !== 'tone';
+      syncToneCards();
       markControlsDirtyIfNeeded();
     });
     freqInput.addEventListener('change', function(){
       var v = parseFloat(freqInput.value);
       if (!isNaN(v) && v > 0){
-        currentToneHz = v;
-        document.querySelectorAll('#gpioOutList .tone-freq').forEach(function(inp){
-          if (inp !== freqInput) inp.value = String(v);
-        });
+        syncToneHz(v, freqInput);
       } else {
         freqInput.value = String(currentToneHz);
       }
@@ -3629,7 +3675,7 @@
   function populateGpioOut(settings){
     var out = (settings && settings.hardware_outputs) || {};
     var loadedHz = out.rec_tone && parseFloat(out.rec_tone.frequency_hz);
-    if (loadedHz && !isNaN(loadedHz)) currentToneHz = loadedHz;
+    if (loadedHz && !isNaN(loadedHz)) syncToneHz(loadedHz);
     var list = document.getElementById('gpioOutList');
     list.innerHTML = '';
     (out.rec_out_pin || []).forEach(function(pin){
@@ -3642,14 +3688,34 @@
       list.appendChild(row);
       row.querySelectorAll('.gpio-select').forEach(initGpioSelect);
     });
+    syncToneCards();
   }
+
+  /* One frequency, two places to type it. */
+  (function(){
+    var card = document.getElementById('f-tonehz');
+    if (!card) return;
+    card.addEventListener('change', function(){
+      var v = parseFloat(card.value);
+      if (!isNaN(v) && v > 0) { syncToneHz(v, card); }
+      else { card.value = String(currentToneHz); }
+    });
+  })();
 
   document.getElementById('addGpioOutBtn').addEventListener('click', function(){
     var row = buildGpioOutRow(null, 'tally');
     document.getElementById('gpioOutList').appendChild(row);
     row.querySelectorAll('.gpio-select').forEach(initGpioSelect);
+    syncToneCards();
     markControlsDirtyIfNeeded();
   });
+
+  /* Removing the last tone row must retire the cards too, and rows are
+     removed by a generic button that knows nothing about tones. */
+  if (window.MutationObserver) {
+    new MutationObserver(syncToneCards)
+      .observe(document.getElementById('gpioOutList'), { childList: true });
+  }
 
   /* Called after buildState()'s generic [data-path] walk already populated
      state.hardware_outputs.rec_tone.{frequency_hz,duty_cycle,relay_drop_frames}
@@ -3673,7 +3739,10 @@
     state.hardware_outputs.rec_out_pin = recOutPins;
     state.hardware_outputs.rec_tone = state.hardware_outputs.rec_tone || {};
     state.hardware_outputs.rec_tone.pin = tonePins;
-    state.hardware_outputs.rec_tone.frequency_hz = currentToneHz;
+    var hzCard = document.getElementById('f-tonehz');
+    var cardHz = hzCard && parseFloat(hzCard.value);
+    state.hardware_outputs.rec_tone.frequency_hz =
+      (cardHz && !isNaN(cardHz)) ? cardHz : currentToneHz;
     var prevOutputs = lastLoadedSettings && lastLoadedSettings.hardware_outputs;
     if (prevOutputs && prevOutputs.pwm_pin !== undefined && state.hardware_outputs.pwm_pin === undefined){
       state.hardware_outputs.pwm_pin = prevOutputs.pwm_pin;

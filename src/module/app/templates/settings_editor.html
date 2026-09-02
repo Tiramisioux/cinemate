@@ -1728,16 +1728,16 @@
         <div class="card" data-search="hdr threshold low high blend gain adder clearhdr knobs">
           <div class="card-main">
             <label class="card-label">ClearHDR startup knobs</label>
-            <p class="card-help">Applied when a ClearHDR mode is selected. Adjust live afterwards with <span class="mono">set hdr …</span> or a pot/quad‑rotary channel.</p>
+            <p class="card-help">Applied when a ClearHDR mode is selected. Adjust live afterwards with <span class="mono">set hdr …</span> or a pot/quad‑rotary channel. Leave a threshold blank to keep the sensor driver’s own pair (low 0, high 4095) — setting both to the same value flattens the image.</p>
           </div>
           <div class="card-control" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
             <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
               <span class="live-cap" style="color:var(--muted)">Threshold low</span>
-              <input class="field-input num-input" type="number" id="f-hdr-thlow" data-path="image_capture.hdr.threshold_low" data-type="number" data-original="0" value="0" style="width:70px">
+              <input class="field-input num-input" type="number" id="f-hdr-thlow" data-path="image_capture.hdr.threshold_low" data-type="number" data-original="" value="" placeholder="driver" style="width:70px">
             </label>
             <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
               <span class="live-cap" style="color:var(--muted)">Threshold high</span>
-              <input class="field-input num-input" type="number" id="f-hdr-thhigh" data-path="image_capture.hdr.threshold_high" data-type="number" data-original="0" value="0" style="width:70px">
+              <input class="field-input num-input" type="number" id="f-hdr-thhigh" data-path="image_capture.hdr.threshold_high" data-type="number" data-original="" value="" placeholder="driver" style="width:70px">
             </label>
             <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
               <span class="live-cap" style="color:var(--muted)">Blend</span>
@@ -1770,7 +1770,7 @@
     <section class="group" id="fpsceilings" data-page="settings">
       <header class="group-head">
         <h2>Per-mode fps ceilings</h2>
-        <p class="group-sub">A mode's advertised fps_max is an electrical property of the sensor, not a guarantee this storage/CPU can sustain it. Leave a field blank to keep using the detected value; fill one in only for a mode you've found a lower real-world ceiling for by trial. Raising above the detected value is allowed but logged as a warning -- the sensor never reported it.</p>
+        <p class="group-sub">These are what <span class="mono">cinepi-raw --list-cameras</span> reported on this board, not a fixed property of the sensor: the figure is clamped by the RP1 pixel rate, so enabling the RP1 overclock can raise it (imx585 4K 12-bit reads 43 stock, 50 overclocked), and it is rounded <em>down</em> to a whole frame — 43 can mean 43.98. It is also not a guarantee this storage/CPU can sustain it. Leave a field blank to keep using the detected value; fill one in only for a mode you've found a lower real-world ceiling for by trial. Raising above the detected value is allowed but logged as a warning — the sensor never reported it.</p>
       </header>
       <div class="cards" id="fpsCeilingsList"><p class="card-help">Loading detected modes…</p></div>
     </section>

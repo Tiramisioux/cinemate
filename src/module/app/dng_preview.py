@@ -329,6 +329,18 @@ def _load_rows(path, meta, row_step):
         row_bytes = width * 3 // 2
     elif bits == 16:
         row_bytes = width * 2
+    elif bits == 10:
+        # cinepi-raw writes contiguous 10-bit for every 10-bit sensor mode
+        # (imx296's only mode, imx477 1332x990, imx283 modes 3-5) and for
+        # every log-encoded take on a 12-bit mode (10 is the only
+        # --log-encode target on those). Every 10-bit mode has a width
+        # that is a multiple of 4 (1332, 1456, 3936, 5568) -- dng_pack.hpp's
+        # pack_row_10bit() relies on the same guarantee to skip its
+        # partial-group path -- so this can assume it too rather than
+        # implement a case the writer never produces.
+        if width % 4:
+            raise DngError(f"10-bit width {width} is not a multiple of 4")
+        row_bytes = width * 10 // 8
     else:
         raise DngError(f"unsupported BitsPerSample {bits}")
 
@@ -364,6 +376,20 @@ def _load_rows(path, meta, row_step):
 
     if bits == 16:
         return rows.view("<u2").reshape(len(wanted), width)
+
+    if bits == 10:
+        # Inverse of dng_pack.hpp's pack_group_10bit() (4 px in 5 bytes,
+        # MSB-first): p0 = dst0[7:0]:dst1[7:6], p1 = dst1[5:0]:dst2[7:4],
+        # p2 = dst2[3:0]:dst3[7:2], p3 = dst3[1:0]:dst4[7:0]. Derived by
+        # hand from the packer's own bit-for-bit comment, not by running
+        # cinepi-raw -- see _test/test_dng_preview.py for the pin.
+        groups = rows.reshape(-1, 5).astype(np.uint16)
+        out = np.empty((groups.shape[0], 4), np.uint16)
+        out[:, 0] = (groups[:, 0] << 2) | (groups[:, 1] >> 6)
+        out[:, 1] = ((groups[:, 1] & 0x3F) << 4) | (groups[:, 2] >> 4)
+        out[:, 2] = ((groups[:, 2] & 0x0F) << 6) | (groups[:, 3] >> 2)
+        out[:, 3] = ((groups[:, 3] & 0x03) << 8) | groups[:, 4]
+        return out.reshape(len(wanted), width)
 
     # TIFF MSB-first 12-bit: 2 pixels per 3 bytes.
     triples = rows.reshape(-1, 3).astype(np.uint16)

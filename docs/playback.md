@@ -53,7 +53,7 @@ Everything in this row is read from the take's own DNG files, not from what the 
 
 | Box | Meaning |
 |---|---|
-| `12b`, `16b` | Bits per sample as stored in the file |
+| `10b`, `12b`, `16b` | Bits per sample as stored in the file. `10b` is a log-encoded take on a 12-bit mode, or one of the sensor modes that are 10-bit natively (imx296's only mode, imx477 1332×990, imx283 modes 3-5) |
 | `SDR` | Standard-range capture |
 | `HDR` | The take holds more range than a 12-bit sensor mode can carry — ClearHDR, in either its 16-bit linear or 12-bit companded form |
 | `LIN` | The samples are linear |

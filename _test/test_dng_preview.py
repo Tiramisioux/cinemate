@@ -59,14 +59,29 @@ def build_dng(path, width=64, height=32, bits=12, white=None, black=200,
     if white is None:
         white = (1 << bits) - 1
 
-    row_bytes = width * 3 // 2 if bits == 12 else width * 2
     if bits == 12:
+        row_bytes = width * 3 // 2
         # TIFF MSB-first: two pixels per three bytes.
         pair = bytes(((fill >> 4) & 0xFF,
                       ((fill & 0x0F) << 4) | ((fill >> 8) & 0x0F),
                       fill & 0xFF))
         row = (pair * (width // 2))[:row_bytes]
+    elif bits == 10:
+        row_bytes = width * 10 // 8
+        # Forward of dng_pack.hpp's pack_group_10bit (4 px in 5 bytes,
+        # MSB-first). Every pixel in this fixture is the same `fill`
+        # value, so one group's bytes repeat for the whole row.
+        p = fill & 0x3FF
+        group = bytes((
+            p >> 2,
+            ((p << 6) | (p >> 4)) & 0xFF,
+            ((p << 4) | (p >> 6)) & 0xFF,
+            ((p << 2) | (p >> 8)) & 0xFF,
+            p & 0xFF,
+        ))
+        row = group * (width // 4)
     else:
+        row_bytes = width * 2
         row = struct.pack("<H", fill) * width
     strip = row * height
 
@@ -216,6 +231,39 @@ class DngPreviewTest(unittest.TestCase):
         data, size = dng_preview.decode_frame(p, None, scale=2)
         self.assertEqual(size, (32, 16))
         self.assertEqual(data[:2], b"\xff\xd8")
+
+    def test_ten_bit_frames_decode(self):
+        """The blocker: _load_rows raised for anything but 12/16, but
+        cinepi-raw writes contiguous 10-bit for imx296's only mode,
+        imx477 1332x990, imx283 modes 3-5, and every log-encoded take on a
+        12-bit mode. Every 10-bit take 404'd on every frame."""
+        p = build_dng(self.dir / "f.dng", width=64, height=32, bits=10,
+                      white=1023, black=64, fill=700)
+        data, size = dng_preview.decode_frame(p, None, scale=2)
+        self.assertEqual(size, (32, 16))
+        self.assertEqual(data[:2], b"\xff\xd8")
+
+    def test_ten_bit_unpack_matches_the_stored_value(self):
+        """decode_frame() alone can't tell a correct unpack from a
+        consistently wrong one (both would "just decode") -- this checks
+        the actual recovered sample value, mono so gamma/CFA averaging
+        don't obscure it. 700/1023 (~68%) is comfortably off both 0 and
+        255 so a shifted or byte-swapped unpack would visibly miss."""
+        p = build_dng(self.dir / "g.dng", width=64, height=32, bits=10,
+                      white=1023, black=0, fill=700, cfa=None)
+        jpeg, _ = dng_preview.decode_frame(p, None, scale=2, mono=True)
+        rendered = np.asarray(Image.open(io.BytesIO(jpeg))).astype(float).mean()
+        expected = ((700 / 1023) ** (1 / 2.2)) * 255
+        self.assertAlmostEqual(rendered, expected, delta=3.0)
+
+    def test_ten_bit_width_not_a_multiple_of_four_is_refused(self):
+        """Every 10-bit sensor mode cinepi-raw actually ships has a
+        width that's a multiple of 4 (dng_pack.hpp's pack_row_10bit()
+        relies on the same guarantee) -- refuse rather than silently
+        misinterpret a shape the writer never produces."""
+        p = build_dng(self.dir / "h.dng", width=62, height=32, bits=10, fill=700)
+        with self.assertRaises(dng_preview.DngError):
+            dng_preview.decode_frame(p, None, scale=2)
 
     def test_mode_inference_across_the_modes_cinepi_writes(self):
         sdr = build_dng(self.dir / "sdr.dng", bits=12, white=4095, black=200)

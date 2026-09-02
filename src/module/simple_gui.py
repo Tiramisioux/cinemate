@@ -856,13 +856,16 @@ class SimpleGUI(threading.Thread):
         }
         # No camera detected: `cameras` is the shared state signal both GUI
         # surfaces ride (start_all() writes it to "[]" before aborting).
-        # camera_missing drives the CAM-section warning badge below; "NO
-        # CAM" reaches the web GUI for free through V.sensor (see
-        # template.html) since sensor_left is already "" on an empty
-        # cam_list and this overwrites it.
+        # The flag drives the CAMERA NOT FOUND message in the preview area,
+        # and that message is the whole indicator -- there is deliberately
+        # no badge and no placeholder text in the CAM section. `sensor` is
+        # already "" on an empty cam_list, and the section layout skips any
+        # item whose text is empty, so the box where the sensor name
+        # normally goes simply isn't drawn (operator preference, after the
+        # 2026-09-02 hardware confirmation: a red NO CAM box next to an
+        # already-unmissable full-width message was noise). The web GUI
+        # rides the same empty `sensor` value.
         values["camera_missing"] = not bool(cam_list)
-        if values["camera_missing"]:
-            values["sensor"] = "NO CAM"
         # CineMate Log per-cam badge text. Read from log_encode_camN -- what
         # that camera was actually LAUNCHED with, published by
         # CinePiProcess._build_args() -- never from settings or the live
@@ -1349,7 +1352,8 @@ class SimpleGUI(threading.Thread):
         lines = [
             ("CAMERA NOT FOUND", DESIGN_TOKENS["value"], 40),
             ("Check camera cable and cinemate settings", DESIGN_TOKENS["label"], 22),
-            ("POWER OFF BEFORE CONNECTING OR DISCONNECTING THE CAMERA",
+            ("BE SURE TO DISCONNECT POWER BEFORE CONNECTING/DISCONNECTING "
+             "CAMERA SENSOR BOARD",
              NO_CAM_WARNING_COLOR, 26),
         ]
 
@@ -1434,17 +1438,6 @@ class SimpleGUI(threading.Thread):
                     draw.text((tx, ty), part, font=part_font, fill=TEXT_COLOR)
 
                     y += BOX_H + BOX_GAP
-
-            if section == self.left_section_layout[0] and values.get("camera_missing"):
-                self._draw_status_box(
-                    draw,
-                    [box_x, y, box_x + BOX_W, y + BOX_H],
-                    "NO CAM",
-                    NO_CAM_WARNING_COLOR,
-                    box_font,
-                    TEXT_COLOR,
-                )
-                y += BOX_H + BOX_GAP
 
             if section == self.left_section_layout[0] and values.get("log_badge_cam0"):
                 self._draw_status_box(

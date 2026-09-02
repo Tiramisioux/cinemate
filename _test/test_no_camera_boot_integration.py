@@ -365,7 +365,10 @@ class PopulateValuesAgainstRealControllerTests(unittest.TestCase):
         values = gui.populate_values()
 
         self.assertTrue(values["camera_missing"])
-        self.assertEqual(values["sensor"], "NO CAM")
+        # No badge, no placeholder: the CAMERA NOT FOUND message in the
+        # preview area is the whole indicator, and the empty sensor value
+        # means the CAM box isn't drawn on either surface.
+        self.assertEqual(values["sensor"], "")
 
     def test_disk_space_shows_free_space_not_a_fabricated_duration(self):
         # With no usable frame size, a minutes-remaining figure would be a

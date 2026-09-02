@@ -125,13 +125,17 @@ class PopulateValuesNoCameraTests(unittest.TestCase):
     flag the degraded state and never throw, even with fps_user absent from
     a fresh Redis (SimpleGUI.run() has no per-iteration exception catch)."""
 
-    def test_sets_camera_missing_and_no_cam_sensor(self):
+    def test_sets_camera_missing_and_leaves_the_sensor_box_empty(self):
+        # The CAMERA NOT FOUND message in the preview area is the whole
+        # indicator. No badge, and no placeholder text in the CAM section --
+        # the section layout skips any item whose text is empty, so the box
+        # where the sensor name normally goes is not drawn at all.
         gui = make_gui(cameras_json="[]")
 
         values = gui.populate_values()
 
         self.assertTrue(values["camera_missing"])
-        self.assertEqual(values["sensor"], "NO CAM")
+        self.assertEqual(values["sensor"], "")
 
     def test_does_not_throw_with_fps_user_absent(self):
         gui = make_gui(cameras_json="[]")
@@ -162,6 +166,23 @@ class PopulateValuesNoCameraTests(unittest.TestCase):
 
         self.assertEqual(gui.width, 1920)
         self.assertEqual(gui.height, 1080)
+
+    def test_no_cam_badge_is_not_drawn(self):
+        # Operator preference after the 2026-09-02 hardware confirmation: a
+        # red NO CAM box next to an already-unmissable full-width message
+        # was noise. Assert the CAM section draws no status box at all,
+        # rather than trusting the source to stay that way.
+        from PIL import Image, ImageDraw
+
+        gui = make_gui(cameras_json="[]")
+        boxes = []
+        gui._draw_status_box = lambda draw, rect, text, *a, **k: boxes.append(text)
+        image = Image.new("RGBA", (1920, 1080), (0, 0, 0, 255))
+
+        values = gui.populate_values()
+        gui.draw_left_sections(ImageDraw.Draw(image), values)
+
+        self.assertNotIn("NO CAM", boxes)
 
     def test_draw_no_camera_message_renders_the_power_off_warning(self):
         from PIL import Image, ImageDraw

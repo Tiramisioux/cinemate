@@ -232,7 +232,6 @@
         .box.small { font-size: calc(var(--box-height) * 0.48); }
         .box.zoom-active { background: var(--zoom-hi); }
         .box.log { background: var(--log-badge); }
-        .box.no-cam { background: var(--no-cam); }
         .box.drop { background: var(--drop); }
         .box.sync { background: var(--sync); position: relative; }
         /* _draw_status_box(crossed=True) strikes the SYNC box through */
@@ -660,7 +659,7 @@
                 <div id="no-cam-overlay" class="hidden">
                     <div class="line title">CAMERA NOT FOUND</div>
                     <div class="line hint">Check camera cable and cinemate settings</div>
-                    <div class="line warn">POWER OFF BEFORE CONNECTING OR DISCONNECTING THE CAMERA</div>
+                    <div class="line warn">BE SURE TO DISCONNECT POWER BEFORE CONNECTING/DISCONNECTING CAMERA SENSOR BOARD</div>
                 </div>
             </div>
         </div>
@@ -832,12 +831,13 @@
         // only logged, never set_value()'d -- so SYNC stays word-only rather
         // than this display change quietly growing into new live-path
         // telemetry with no Pi available to verify it.
+        // No NO CAM badge here: the CAMERA NOT FOUND overlay already fills
+        // the preview area, and V.sensor is empty so the CAM box isn't
+        // rendered either. Same presentation choice as the framebuffer GUI
+        // (see populate_values()) -- these two surfaces share state, so
+        // letting the badge live on in one of them is exactly the kind of
+        // drift that starts here.
         const out = [];
-        if (V.camera_missing) {
-            const noCam = box('NO CAM', 'no-cam small');
-            noCam.title = 'No camera detected — connect the camera, then run: restart cinemate';
-            out.push(noCam);
-        }
         if (V.drop_frame_latched) {
             const count = Number(V.drop_frame_count) || 0;
             const label = count > 0 ? `DROP ${count}` : 'DROP';

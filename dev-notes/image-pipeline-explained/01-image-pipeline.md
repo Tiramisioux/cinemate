@@ -62,14 +62,14 @@ A sensor does not have one resolution. It has **modes** — different ways of re
 
 | Sensor | Mode | Readout | Bit depth |
 |--------|------|---------|-----------|
-| IMX477 | 2028×1080 | 2×2 binned | 12-bit |
+| IMX477 | 2028×1080 | 2×2 binned + 16:9 crop | 12-bit |
 | IMX477 | 1332×990 | 2×2 binned + cropped, fast (120 fps) | 10-bit |
 | IMX585 | 1920×1080 | 2×2 binned | 12-bit |
 | IMX585 | 3840×2160 | all-pixel (native 4K) | 12-bit |
 
 Note the 1332×990 row: the driver reads a 2664×1980 central crop and bins it 2×2, so the field of view is that of the 2664×1980 region, not a native 1332-pixel crop — and it is a **10-bit** mode, which is exactly why it is the fast one (the 12-bit variant of that geometry needs thousands of pixels of extra blanking per line).[^imx477src]
 
-The IMX585 driver Cinemate now ships (branch `cinemate-7modes`) defines a **seven-mode matrix** around a 3840×2160 active area: the two 12-bit SDR modes above, a 10-bit RAW10 4K mode (up to 90 fps at high link rates), 12-bit companded ClearHDR variants, and 16-bit linear ClearHDR entries at 1920×1100 / 3840×2200 (the extra rows are optical-black padding the DNG crop discards).[^imx585modes] The legacy `6.12.y` branch had exactly two modes at the older readout dims 1928×1090 / 3856×2180 — numbers you will still meet in older docs. The IMX477 driver defines several modes, of which Cinemate exposes the fast ones. See Camera sensors and frame rates for the full tables.
+The IMX585 driver Cinemate now ships (branch `cinemate-7modes`) defines a **seven-mode matrix** around a 3840×2160 active area: the two 12-bit SDR modes above, a 10-bit RAW10 4K mode (up to 90 fps at high link rates), 12-bit companded ClearHDR variants, and 16-bit linear ClearHDR entries at 1920×1100 / 3840×2200 (the extra rows are optical-black padding — they are recorded in the DNG and sit at the black pedestal; it is the preview path's centered crop that skips them).[^imx585modes] The legacy `6.12.y` branch had exactly two modes at the older readout dims 1928×1090 / 3856×2180 — numbers you will still meet in older docs. The IMX477 driver defines several modes, of which Cinemate exposes the fast ones. See Camera sensors and frame rates for the full tables.
 
 ### Frame rate is a frame-*length* setting
 
@@ -320,7 +320,7 @@ A 12-bit DNG therefore stores 1.5 bytes per pixel. The published sensor tables c
 | IMX585 4K all-pixel, 12-bit | 12.61 MB | 40 | ~504 MB/s |
 | IMX585 4K ClearHDR, 16-bit | 16.81 MB | 33 | ~555 MB/s |
 
-(Sizes from the published tables, which still use the legacy 1928×1090 / 3856×2180 readout dims; on the current `cinemate-7modes` driver the 1920×1080 / 3840×2160 geometry makes each frame a few percent smaller. CineMate Log shrinks frames further by re-encoding to 10 or 12 bits.)[^sizes]
+(Sizes from the published tables, which still use the legacy 1928×1090 / 3856×2180 readout dims; on the current `cinemate-7modes` driver the 12-bit frames come out about 1% smaller (1920×1080 / 3840×2160), while the 16-bit 4K frame grows slightly — 3840×2200 with its OB rows, ≈ 16.9 MB. CineMate Log shrinks frames by re-encoding to 10 or 12 bits.)[^sizes]
 
 Mind the 4K rows: ~500 MB/s sustained is fast-NVMe territory. When the required rate exceeds what the card sustains, the buffer fills, frames drop, and eventually the take stops.
 
@@ -411,7 +411,7 @@ Continue with [[20260722223403 CINEMATE IMAGE_PIPELINE_MAP kernel_drivers_dtover
 [^poolstop]: `cinepi-raw/cinepi/cinepi_raw.cpp` — `buffer_full()` ⇒ `controller.setRecording(false)`, warning "RAM pool exhausted — recording stopped".
 [^writefail]: `cinepi-raw/cinepi/dng_encoder.cpp` — `write_failures_` counter surfaced as a live warning.
 [^pack]: `cinepi-raw/cinepi/dng_encoder.cpp` — `write12bit_` set when a trusted sensor mode delivers ≤12-bit data in a 16-bit container (`sensor_mode_trusted_ && bits==16 && sensor_mode_bit_depth_ != 16`); true-16 modes keep full depth. `--keep16` removed 2026-08-05 (commit 599ceca) in favour of `--log-encode`.
-[^sizes]: Cinemate `docs/sensors.md` — per-mode frame sizes computed as `ceil(width × bit-depth / 8) × height` plus a small header ("calculated dynamically, not read from a fixed table"); ClearHDR 16-bit 4K ≈ 16.81 MB per `docs/clear-hdr.md`.
+[^sizes]: Cinemate `docs/sensors.md` — per-mode frame sizes computed as `ceil(width × bit-depth / 8) × height` plus a small header ("calculated dynamically, not read from a fixed table"); ClearHDR 16-bit 4K: 16.81 MB (legacy 3856×2180) per `docs/sensors.md`; the current 3840×2200 frame is ≈ 16.9 MB per `docs/clear-hdr.md`.
 [^preroll]: Cinemate `src/module/storage_preroll.py` (records then deletes a ~2 s clip "so the media is 'warmed up'"); `docs/storage-preroll.md` ("Storage pre-roll warm-up"; drop/SYNC warnings suppressed while active).
 
 ---

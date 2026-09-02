@@ -422,8 +422,18 @@
             overflow-y: auto;
             overscroll-behavior: contain;
             scrollbar-width: thin;
-            display: flex;
-            flex-direction: column;
+            /* Columns, not one stack. The drawer's groups were laid out full
+               width at every size, so on a 1440px screen seven groups of
+               ~60px stacked into 570px of content inside a 367px box and a
+               third of the panel was unreachable. auto-fit uses the width
+               that was already there instead of taking height from the
+               preview: measured at 1440x800, content 570 -> 514, and the
+               groups that carry sliders keep the full width below. Below
+               ~340px + gap it resolves to one column, i.e. exactly today's
+               layout on a phone. */
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            align-content: start;
             gap: calc(var(--gap) * 0.55);
             /* The fixed right padding is for the panel's own scrollbar. An
                overlay scrollbar (macOS, iOS, Android) reserves no width and
@@ -436,6 +446,11 @@
         }
 
         .xp-group { display: flex; flex-direction: column; gap: calc(var(--gap) * 0.3); }
+        /* A slider group always spans the whole row. The rule below ("track
+           length IS the resolution of the control") is the reason: letting a
+           0-4095 threshold fall into a 340px column would put ~19 counts on
+           every pixel. Measured at 1440x800: 1148px of track either way. */
+        .xp-group.xp-wide { grid-column: 1 / -1; }
         .xp-title {
             font-weight: 700;
             font-size: var(--label-size);
@@ -453,6 +468,15 @@
             display: grid;
             grid-template-columns: minmax(0, 1fr);
             gap: calc(var(--gap) * 0.2);
+        }
+        /* Overlay scrollbars (macOS, iOS, Android) reserve no width and paint
+           nothing until a scroll is already under way, so a clipped drawer
+           reads as a finished one. Columns close the gap on a desktop but not
+           at 800x480 or a landscape phone; fade the last rows there so the
+           remainder is visible as missing. */
+        #experiment.more-below {
+            -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.2em), transparent);
+            mask-image: linear-gradient(to bottom, #000 calc(100% - 2.2em), transparent);
         }
         .xp-slider { display: flex; align-items: center; gap: 0.55em; }
         .xp-slider .label {
@@ -1372,6 +1396,10 @@
             const rows = xpRow('xp-sliders');
             group.sliders.forEach((s) => rows.appendChild(buildSlider(s)));
             const wrap = xpGroup(group.title, rows);
+            // Full-width row: see .xp-group.xp-wide -- slider track length is
+            // the control's resolution. Set here rather than with :has(),
+            // which needs Safari 15.4 and this page targets older iOS.
+            wrap.classList.add('xp-wide');
             if (group.visibleKey) { xpConditionalGroups.push({ el: wrap, key: group.visibleKey }); }
             return wrap;
         });
@@ -1441,6 +1469,15 @@
             xpGroup('ACTIONS', actions)
         );
         xpBuilt = true;
+    }
+
+    // Mark the drawer while content sits below the fold, so CSS can fade the
+    // last rows. Columns fit everything on a desktop, but not at 800x480 or a
+    // landscape phone, and an overlay scrollbar says nothing.
+    function noteExperimentOverflow() {
+        const panel = $('experiment');
+        panel.classList.toggle('more-below',
+            panel.scrollHeight - panel.clientHeight - panel.scrollTop > 4);
     }
 
     function renderExperiment() {
@@ -1750,6 +1787,7 @@
         const open = panel.classList.toggle('hidden');
         $('btn-experiment').classList.toggle('on', !open);
         render();
+        noteExperimentOverflow();
     });
 
     // The drawer changes the preview's available box without a window
@@ -1759,7 +1797,12 @@
     // child, so this cannot feed itself.
     if (window.ResizeObserver) {
         new ResizeObserver(sizePreview).observe($('preview-wrap'));
+        // Same reasoning for the drawer's own overflow flag: a rotate or a
+        // group appearing/disappearing changes it with no window resize.
+        // mask-image changes no layout, so this cannot feed itself.
+        new ResizeObserver(noteExperimentOverflow).observe($('experiment'));
     }
+    $('experiment').addEventListener('scroll', noteExperimentOverflow, { passive: true });
 
     const fsBtn = $('btn-fullscreen');
     function toggleFullScreen() {

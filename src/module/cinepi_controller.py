@@ -370,6 +370,21 @@ class CinePiController:
         if mode is not None and mode in self.sensor_detect.res_modes:
             return mode
 
+        if not self.sensor_detect.res_modes:
+            # No mode table at all (no camera, or a sensor missing from
+            # sensor_resolutions). Every stored mode looks "unavailable"
+            # here, and the fallback below would compute 0 and persist it --
+            # silently losing the operator's mode for the next good boot
+            # (hardware-confirmed 2026-09-02: "Stored sensor mode 6 not
+            # available -- falling back to mode 0", and the camera then came
+            # back in mode 0). Read the stored value, write nothing.
+            # _recompute_file_size()'s res_modes.get() tolerates any index.
+            logging.info(
+                "No usable camera mode table -- keeping stored sensor mode "
+                "%s unvalidated rather than persisting a fallback.", mode,
+            )
+            return mode if mode is not None else 0
+
         # Stored mode is missing or no longer valid -- e.g. settings.jsonc
         # now filters resolutions (k_steps/bit_depths/hdr) down to a smaller
         # set than when this mode index was saved, so res_modes was
@@ -416,11 +431,18 @@ class CinePiController:
             ParameterKey.DYNAMIC_RESOLUTION_ACTIVE.value,
             1 if self.dynamic_resolution_active else 0,
         )
-        if self.dynamic_resolution_desired_mode is not None:
+        if (
+            self.dynamic_resolution_desired_mode is not None
+            and self.sensor_detect.res_modes
+        ):
             self.redis_controller.set_value(
                 ParameterKey.DYNAMIC_RESOLUTION_DESIRED_MODE.value,
                 self.dynamic_resolution_desired_mode,
             )
+        # With no mode table, _get_startup_dynamic_resolution_desired_mode()
+        # can only return self.sensor_mode -- same derived-from-nothing
+        # value as the sensor_mode fallback above. Leave the stored desired
+        # mode for the next good boot.
 
     def set_dynamic_resolution_enabled(self, value=None):
         if value is not None:
@@ -459,7 +481,41 @@ class CinePiController:
             desired_mode=self.dynamic_resolution_desired_mode,
         )
 
+    def _stored_fps_max(self):
+        """The last stored fps_max, read only -- never seeded, never written.
+
+        Falls back to the highest configured fps step rather than to
+        _sensor_readout_fps_max()'s 1, so a fresh Redis with no camera still
+        gets a usable step table instead of collapsing to [1]."""
+        raw = self.redis_controller.get_value(ParameterKey.FPS_MAX.value)
+        try:
+            stored = int(float(raw))
+        except (TypeError, ValueError):
+            stored = 0
+        if stored > 0:
+            return stored
+        steps = []
+        for step in (self.fps_steps or []):
+            try:
+                value = float(step)
+            except (TypeError, ValueError):
+                continue
+            if value > 0:
+                steps.append(value)
+        return int(max(steps)) if steps else STARTUP_FPS_DEFAULT
+
     def _refresh_fps_max(self):
+        if not self.sensor_detect.res_modes:
+            # No mode table: _sensor_readout_fps_max() returns its 1
+            # fallback and the dynamic-resolution context has no modes to
+            # pick from, so the only ceiling available here is fabricated.
+            # Persisting it is the corruption C3.1 set out to stop -- it
+            # collapses fps_steps to [1] (hardware-confirmed 2026-09-02:
+            # "Changed value: fps_max = 1", "Initialized fps_steps: [1]")
+            # and it is what the next good boot reads back. Keep the stored
+            # ceiling in memory; write nothing.
+            self.fps_max = self._stored_fps_max()
+            return self.fps_max
         sensor_max = self._sensor_readout_fps_max()
         dynamic_max = self._dynamic_context_fps_max()
         fps_max = int(dynamic_max) if dynamic_max is not None else sensor_max
@@ -1001,9 +1057,16 @@ class CinePiController:
             return []
 
     def initialize_fps_steps(self, fps_steps):
-        self.fps_max = int(self.redis_controller.get_value(ParameterKey.FPS_MAX.value))
-        
-        self.redis_controller.set_value(ParameterKey.FPS_MAX.value, self.fps_max)
+        # Audit: this was a bare int(get_value(...)) -- TypeError on a fresh
+        # Redis where nothing has written fps_max yet, on the boot path.
+        # _stored_fps_max() reads the same key and never writes.
+        self.fps_max = self._stored_fps_max()
+
+        if self.sensor_detect.res_modes:
+            self.redis_controller.set_value(ParameterKey.FPS_MAX.value, self.fps_max)
+        # else: degraded session -- _refresh_fps_max() deliberately left the
+        # stored ceiling alone, so echoing it back here would only risk
+        # re-persisting a value we did not derive from a real sensor.
 
         """Initialize fps_steps based on the provided list and capped by fps_max."""
         self.fps_steps_dynamic = self._fps_steps_capped_at_max(fps_steps)

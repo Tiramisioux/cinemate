@@ -214,6 +214,122 @@ class RealInitNoCameraTests(unittest.TestCase):
         self.assertEqual(redis_controller.writes_to(ParameterKey.FILE_SIZE), [])
 
 
+# The keys a no-camera boot must leave exactly as it found them. Acceptance
+# item 6 of the C3 brief: capture before and after, diff, do not assume.
+OPERATOR_STATE_KEYS = (
+    ParameterKey.SENSOR_MODE,
+    ParameterKey.FPS_LAST,
+    ParameterKey.FPS_USER,
+    ParameterKey.FPS,
+    ParameterKey.FPS_MAX,
+)
+
+WARM_REDIS = {
+    ParameterKey.SENSOR_MODE.value: "6",
+    ParameterKey.FPS_LAST.value: "50",
+    ParameterKey.FPS_USER.value: "50",
+    ParameterKey.FPS.value: "50",
+    ParameterKey.FPS_MAX.value: "60",
+    ParameterKey.SHUTTER_A.value: "172.8",
+    ParameterKey.ZOOM.value: "1.0",
+    ParameterKey.DYNAMIC_RESOLUTION_DESIRED_MODE.value: "6",
+}
+
+
+class WarmRedisIsNotOverwrittenTests(unittest.TestCase):
+    """D4: a no-camera boot must READ stored values and never WRITE derived
+    ones back. With res_modes == {} every derived value is fabricated --
+    sensor_mode falls back to 0, fps_max to 1, fps_steps to [1] -- and each
+    of those is what the NEXT good boot reads."""
+
+    def test_no_writes_to_operator_state_keys(self):
+        redis_controller = FakeRedis(WARM_REDIS)
+
+        build_real_controller(redis_controller=redis_controller)
+
+        for key in OPERATOR_STATE_KEYS:
+            with self.subTest(key=key.value):
+                self.assertEqual(redis_controller.writes_to(key), [])
+
+    def test_warm_redis_comes_through_byte_identical(self):
+        redis_controller = FakeRedis(WARM_REDIS)
+        before = dict(redis_controller.values)
+
+        build_real_controller(redis_controller=redis_controller)
+
+        for key in OPERATOR_STATE_KEYS:
+            with self.subTest(key=key.value):
+                self.assertEqual(
+                    redis_controller.values[key.value], before[key.value]
+                )
+
+    def test_stored_sensor_mode_survives_a_degraded_boot(self):
+        # Hardware-confirmed 2026-09-02: "Stored sensor mode 6 not available
+        # -- falling back to mode 0", persisted, and the camera then came
+        # back in mode 0 on the next boot with the ribbon reattached.
+        redis_controller = FakeRedis(WARM_REDIS)
+
+        controller = build_real_controller(redis_controller=redis_controller)
+
+        self.assertEqual(redis_controller.values[ParameterKey.SENSOR_MODE.value], "6")
+        self.assertEqual(controller.sensor_mode, 6)
+
+    def test_fps_max_and_the_step_table_do_not_collapse_to_one(self):
+        # Hardware-confirmed 2026-09-02: "Changed value: fps_max = 1" then
+        # "Initialized fps_steps: [1]".
+        redis_controller = FakeRedis(WARM_REDIS)
+
+        controller = build_real_controller(redis_controller=redis_controller)
+
+        self.assertEqual(redis_controller.values[ParameterKey.FPS_MAX.value], "60")
+        self.assertEqual(controller.fps_max, 60)
+        self.assertNotEqual(controller.fps_steps_dynamic, [1])
+
+    def test_stored_dynamic_resolution_desired_mode_is_left_alone(self):
+        redis_controller = FakeRedis(WARM_REDIS)
+
+        build_real_controller(redis_controller=redis_controller)
+
+        self.assertEqual(
+            redis_controller.writes_to(ParameterKey.DYNAMIC_RESOLUTION_DESIRED_MODE),
+            [],
+        )
+
+    def test_boot_plus_clean_shutdown_leaves_state_identical(self):
+        # The shutdown half of the chain: run_application()'s cleanup writes
+        # fps_last = fps (src/main.py). With fps untouched by the degraded
+        # boot that is a same-value write, so the operator's frame rate
+        # survives. This is the assertion that fails if any future change
+        # lets fps drift during a no-camera boot.
+        redis_controller = FakeRedis(WARM_REDIS)
+        before = {key.value: redis_controller.values[key.value]
+                  for key in OPERATOR_STATE_KEYS}
+
+        build_real_controller(redis_controller=redis_controller)
+        redis_controller.set_value(
+            ParameterKey.FPS_LAST.value,
+            redis_controller.get_value(ParameterKey.FPS.value),
+        )
+
+        after = {key.value: redis_controller.values[key.value]
+                 for key in OPERATOR_STATE_KEYS}
+        self.assertEqual(after, before)
+
+    def test_fresh_redis_still_seeds_the_fps_defaults(self):
+        # Seed-if-absent is the other half of C3.1 and must not regress into
+        # "never write anything": a genuinely empty Redis still needs its
+        # startup defaults.
+        redis_controller = FakeRedis()
+
+        build_real_controller(redis_controller=redis_controller)
+
+        self.assertEqual(redis_controller.writes_to(ParameterKey.FPS_LAST), [24])
+        self.assertEqual(redis_controller.writes_to(ParameterKey.FPS_USER), [24])
+        # ...but nothing mode-derived, even on a fresh Redis.
+        self.assertEqual(redis_controller.writes_to(ParameterKey.SENSOR_MODE), [])
+        self.assertEqual(redis_controller.writes_to(ParameterKey.FPS_MAX), [])
+
+
 class WhiteBalanceCurveNoCameraTests(unittest.TestCase):
     """D3: with no sensor there is no tuning file to read, but there is still
     a generic default ct_curve. An empty wb_cg_rb_array is not a fallback --

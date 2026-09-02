@@ -3,15 +3,21 @@
 # camera-ready.sh - Camera Detection Verification Script
 #
 # This script waits for the camera sensor to be properly initialized before
-# allowing the Cinemate service to start. This solves the "black screen on boot"
-# issue where the GUI starts before the IMX283 (or other) sensor is ready.
+# systemd launches Cinemate. This solves the "black screen on boot" issue
+# where the GUI starts before the IMX283 (or other) sensor is ready.
+#
+# The wait is ADVISORY, not a gate. The unit runs this as
+# `ExecStartPre=-/usr/local/bin/camera-ready.sh` (note the leading `-`), so a
+# non-zero exit here does not stop Cinemate: it starts anyway and shows a
+# CAMERA NOT FOUND message. Exiting 1 only means "we waited and gave up",
+# which shortens the wait for a boot that was never going to find a camera.
 #
 # Used by: systemd cinemate-autostart.service
 # Location: /usr/local/bin/camera-ready.sh
 #
 # Exit Codes:
 #   0 - Camera detected and ready
-#   1 - Camera not detected after timeout
+#   1 - Camera not detected after timeout (advisory -- Cinemate still starts)
 #
 # Author: Cinemate Community
 # Version: 1.0.0
@@ -184,7 +190,7 @@ main() {
     # Timeout reached - camera not detected
     log_error "Camera detection timeout after ${MAX_ATTEMPTS} attempts (${MAX_ATTEMPTS}s)"
     print_error "Camera not detected after ${MAX_ATTEMPTS} seconds"
-    print_error "Cinemate will start anyway, with a NO CAM indicator in both GUIs"
+    print_error "Cinemate will start anyway, showing CAMERA NOT FOUND in the preview area of both GUIs"
 
     # Log helpful troubleshooting info
     log_error "Troubleshooting hints:"

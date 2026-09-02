@@ -802,11 +802,12 @@ class SimpleGUI(threading.Thread):
             # smpte_frame_base, not round(): the number shown here is the base
             # the operator reads the recorded timecode against, so it has to
             # agree with the C++ side at half-integer rates (F-253).
-            # `or 24` guards a fresh Redis directly: run() has no
-            # per-iteration exception handling, so this read must never
-            # throw regardless of whether cinepi_controller.py has seeded
-            # fps_user yet (it does, but this is belt-and-braces on a
-            # thread that cannot die).
+            # `or 24` is a display default, not a crash guard: on a fresh
+            # Redis this key can be absent, and "24" is a truer thing to
+            # show than the blank a None would produce. (It predates c3.11,
+            # when run() had no per-iteration except and the same read was
+            # load-bearing against a thread that could die; run() now
+            # catches per frame, so this is about what the operator sees.)
             "fps":            smpte_frame_base(self.redis_controller.get_value(ParameterKey.FPS_USER.value) or 24),
             "wb_label":       "WB",
             "color_temp":     f"{self.redis_controller.get_value(ParameterKey.WB_USER.value)} K",
@@ -1960,12 +1961,13 @@ class SimpleGUI(threading.Thread):
         left_bottom_y = self.draw_left_sections(draw, values)
 
         # Get sensor resolution. No camera ever having reported WIDTH/HEIGHT
-        # (fresh Redis, no camera) must not throw here -- draw_gui() runs
-        # every frame from run()'s draw loop, which has no per-iteration
-        # exception catch (see populate_values()'s fps_user guard for the
-        # same concern). Fall back to self.width/self.height, already
-        # guarded moments earlier this frame by load_sensor_values_from_redis()
-        # inside populate_values().
+        # (fresh Redis, no camera) leaves these keys absent, so fall back to
+        # self.width/self.height -- already guarded moments earlier this
+        # frame by load_sensor_values_from_redis() inside populate_values().
+        # run() does catch per-frame since c3.11, so a throw here would be
+        # survivable; the fallback is still the right answer because the
+        # alternative is a dropped frame and a logged fault every frame for
+        # a state that is entirely expected.
         self.width = int(self.redis_controller.get_value(ParameterKey.WIDTH.value) or self.width)
         self.height = int(self.redis_controller.get_value(ParameterKey.HEIGHT.value) or self.height)
         try:

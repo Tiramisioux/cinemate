@@ -83,8 +83,9 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def camera_present_from_cameras_value(raw) -> bool:
     """True when start_all()'s ParameterKey.CAMERAS write indicates at least
     one discovered camera. That key is written unconditionally, before the
-    early-return that follows when discovery finds nothing, and is JSON
-    "[]" for both a no-camera boot and a Redis key that was never set."""
+    early-return that follows when discovery finds nothing, so it is JSON
+    "[]" on a no-camera boot, and None if the key was never written (fresh
+    Redis) -- which is why both are checked here."""
     return raw not in (None, "[]")
 
 

@@ -390,5 +390,71 @@ class PopulateValuesAgainstRealControllerTests(unittest.TestCase):
         self.assertTrue(values["disk_space"].endswith("MIN"))
 
 
+class GuiReadsOnlyAttributesTheControllerAlwaysHasTests(unittest.TestCase):
+    """The generalisation of D1, so it cannot come back in a new attribute.
+
+    `file_size` reached hardware because SimpleGUI's frame path reads it
+    every frame while CinePiController only assigned it on a camera-present
+    path -- and the hand-written FakeController in
+    test_simple_gui_no_camera.py happened to define it, so nothing caught the
+    gap. This walks the GUI frame path in the source, collects every
+    `self.cinepi_controller.<attr>` it reads, and checks each one against a
+    controller built by the real __init__ with no camera at all.
+
+    A new camera-only controller attribute read from the GUI fails here at a
+    desk instead of killing the GUI thread on a Pi.
+    """
+
+    GUI_FRAME_METHODS = {
+        "populate_values",
+        "draw_gui",
+        "_refresh_slow_values",
+        "load_sensor_values_from_redis",
+        "estimate_resolution_in_k",
+        "update_smoothed_vu_levels",
+    }
+
+    def _controller_attributes_read_by_the_gui(self):
+        import ast
+
+        source = (ROOT / "src" / "module" / "simple_gui.py").read_text()
+        gui_class = next(
+            node for node in ast.parse(source).body
+            if isinstance(node, ast.ClassDef) and node.name == "SimpleGUI"
+        )
+        names = set()
+        for func in gui_class.body:
+            if not isinstance(func, ast.FunctionDef):
+                continue
+            if func.name not in self.GUI_FRAME_METHODS:
+                continue
+            for node in ast.walk(func):
+                if (
+                    isinstance(node, ast.Attribute)
+                    and isinstance(node.ctx, ast.Load)
+                    and isinstance(node.value, ast.Attribute)
+                    and node.value.attr == "cinepi_controller"
+                    and isinstance(node.value.value, ast.Name)
+                    and node.value.value.id == "self"
+                ):
+                    names.add(node.attr)
+        return names
+
+    def test_every_gui_read_attribute_exists_on_a_no_camera_controller(self):
+        names = self._controller_attributes_read_by_the_gui()
+        self.assertIn("file_size", names, "the D1 attribute should still be in scope")
+
+        controller = build_real_controller()
+
+        for name in sorted(names):
+            with self.subTest(attribute=name):
+                self.assertTrue(
+                    hasattr(controller, name),
+                    f"SimpleGUI reads cinepi_controller.{name} every frame, but "
+                    f"CinePiController.__init__ does not assign it on a "
+                    f"no-camera boot -- this is the D1 failure shape.",
+                )
+
+
 if __name__ == "__main__":
     unittest.main()

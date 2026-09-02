@@ -1160,7 +1160,12 @@ class CinePiController:
 
         # No per-sensor fps correction factor: the cinepi-raw phase lock drives the
         # recorded cadence onto the nominal fps, so the hardware fps == the user fps.
-        fps_max = int(float(self.redis_controller.get_value(ParameterKey.FPS_MAX.value)))
+        # Audit: was int(float(get_value(FPS_MAX))) -- a TypeError whenever
+        # that key is absent, which since c3.13 includes every degraded
+        # session on a fresh Redis (a no-camera boot deliberately never
+        # writes a fabricated ceiling). An operator typing `set fps 24` with
+        # no camera attached would have taken down the dispatch path.
+        fps_max = self._stored_fps_max()
 
         # ── choose the final fps value ──────────────────────────────────────
         if self.shutter_a_sync_mode == 1 or self.fps_free:
@@ -2778,7 +2783,7 @@ class CinePiController:
                     )
                     if not self.set_resolution(target_mode, restart_process=False):
                         return
-                    self.fps_max = int(self.redis_controller.get_value(ParameterKey.FPS_MAX.value))
+                    self.fps_max = self._stored_fps_max()
                 target_fps = min(target_fps, self.fps_max)
                 self.set_fps(target_fps)
         else:

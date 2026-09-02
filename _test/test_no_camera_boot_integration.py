@@ -19,6 +19,7 @@ clear_startup_flag timer whose non-daemon thread would otherwise hold the
 test process open.
 """
 
+import logging
 import sys
 import types
 import unittest
@@ -104,6 +105,9 @@ class FakeSSDMonitor:
 
     def get_latest_recording_info(self):
         return (None, 0, 0, -1)
+
+    def get_space_left(self):
+        return self.space_left
 
 
 class _NoopTimer:
@@ -391,6 +395,51 @@ class PopulateValuesAgainstRealControllerTests(unittest.TestCase):
         values = gui.populate_values()
 
         self.assertTrue(values["disk_space"].endswith("MIN"))
+
+
+class RecordingIsRefusedWithNoCameraTests(unittest.TestCase):
+    """Review item 3: `rec` gated only on the disk, never on the camera.
+
+    With a RAW disk mounted and no camera, every input surface -- CLI, serial,
+    `POST /api/v1/cmd`, a GPIO button, a tap on the web preview area -- wrote
+    `is_recording = 1`, fired the rec tone and broadcast, and armed the
+    RAM-buffer watchdog, with no cinepi-raw process in existence to ever clear
+    it. A phantom take that cannot end.
+    """
+
+    def _controller_with_a_mounted_disk(self):
+        redis_controller = FakeRedis()
+        controller = build_real_controller(redis_controller=redis_controller)
+        controller.ssd_monitor.is_mounted = True
+        controller.ssd_monitor.space_left = 120.0
+        return controller, redis_controller
+
+    def test_start_recording_does_not_flip_is_recording(self):
+        controller, redis_controller = self._controller_with_a_mounted_disk()
+
+        controller.start_recording()
+
+        self.assertEqual(redis_controller.writes_to(ParameterKey.IS_RECORDING), [])
+
+    def test_start_recording_does_not_publish_a_record_gate(self):
+        controller, redis_controller = self._controller_with_a_mounted_disk()
+
+        controller.start_recording()
+
+        self.assertEqual(redis_controller.writes_to(ParameterKey.RECORD_CAMS), [])
+
+    def test_the_refusal_is_logged(self):
+        # Fail visible, never silent: a button press that does nothing has to
+        # leave a trace, or the operator is debugging a dead rec button.
+        controller, _redis = self._controller_with_a_mounted_disk()
+
+        with self.assertLogs(level=logging.INFO) as captured:
+            controller.start_recording()
+
+        self.assertTrue(
+            any("no camera" in line.lower() for line in captured.output),
+            captured.output,
+        )
 
 
 class GuiReadsOnlyAttributesTheControllerAlwaysHasTests(unittest.TestCase):

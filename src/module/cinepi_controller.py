@@ -1682,6 +1682,22 @@ class CinePiController:
                          current or "—", merged, preview)
 
     def start_recording(self, record_override=None):
+        # No camera, no take. This gate is here rather than at any call site
+        # because every input surface reaches recording through this one
+        # method -- CLI, serial, POST /api/v1/cmd, GPIO buttons, the settings
+        # editor, and the web GUI's tap-to-record. Without it, a no-camera
+        # boot with a RAW disk mounted would write is_recording = 1, publish
+        # a record gate, fire the rec tone and broadcast, and arm the
+        # RAM-buffer watchdog -- with no cinepi-raw process in existence to
+        # ever clear any of it. A take that cannot end.
+        #
+        # Same predicate as the other degraded-boot guards (_apply_startup_fps,
+        # _get_startup_sensor_mode, _refresh_fps_max): an empty mode table
+        # covers both "no camera attached" and "a sensor that isn't in
+        # sensor_resolutions", which behave identically from here.
+        if not self.sensor_detect.res_modes:
+            logging.info("rec ignored -- no camera detected")
+            return
         # Safety: refuse to start a new take while the previous take's frames are
         # still flushing from RAM to disk (the green is_writing_buf state). Letting
         # the buffer finish means no recorded frame is lost; the operator presses

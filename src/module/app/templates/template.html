@@ -1783,7 +1783,17 @@
     $('s-wb').addEventListener('change', (e) => cmd('set wb ' + e.target.value));
     $('s-res').addEventListener('change', (e) => cmd('set resolution ' + e.target.value));
 
-    $('preview-frame').addEventListener('click', () => cmd('rec'));
+    // Tap-to-record, gated on the camera. The CAMERA NOT FOUND overlay sits
+    // inside #preview-frame with pointer-events: none, so a tap anywhere on
+    // that message would otherwise pass straight through to this handler and
+    // fire `rec`. The controller refuses it either way (start_recording()
+    // gates on the sensor mode table), but a tap that silently does nothing
+    // is worse than one that was never sent -- this keeps the request off
+    // the wire and out of the log.
+    $('preview-frame').addEventListener('click', () => {
+        if (V.camera_missing) { return; }
+        cmd('rec');
+    });
     $('btn-log').addEventListener('click', () => cmd('set log'));
     $('btn-unmount').addEventListener('click', () => cmd('unmount'));
 

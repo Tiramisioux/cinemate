@@ -23,7 +23,9 @@ DESIGN_TOKENS = {
     "guide": (249, 249, 249),  # preview-guide outline, un-zoomed state
     "zoom_hi": (255, 221, 0),  # preview-guide outline once zoomed in
     "drop": (120, 40, 180),
+    "drop_text": (255, 255, 255),  # W3: black-on-purple was 2.76:1, fails AA
     "sync": (255, 0, 255),
+    "no_cam": (220, 30, 30),
     "log_badge": (205, 205, 205),
     "hdr_badge": (205, 205, 205),
     "sdr_badge": (120, 120, 120),

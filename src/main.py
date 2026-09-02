@@ -16,15 +16,18 @@ from module.config_loader import (
     auto_storage_preroll_enabled,
     clearhdr_startup_values,
     thumbnail_startup_value,
+    rec_tone_config,
     load_settings,
     DEFAULT_CONFORM_FRAME_RATE,
     DEFAULT_SETTINGS_PATH,
 )
+from module.https_settings import ssl_context_for
 from module.logger import configure_logging, log_directory
 from module.redis_controller import RedisController, ParameterKey
 from module.ssd_monitor import SSDMonitor
 from module.usb_monitor import USBMonitor
 from module.gpio_output import GPIOOutput
+from module.installed_files import log_installed_file_drift
 from module.cinepi_controller import CinePiController
 from module.simple_gui import SimpleGUI
 from module.sensor_detect import SensorDetect, pi_family
@@ -77,6 +80,17 @@ SYSTEM_SHUTDOWN_TARGETS = frozenset(
     }
 )
 CINEMATE_LOCKFILE = "/tmp/cinemate.lock"
+# This file is <repo>/src/main.py, so the repo root is one level up.
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def camera_present_from_cameras_value(raw) -> bool:
+    """True when start_all()'s ParameterKey.CAMERAS write indicates at least
+    one discovered camera. That key is written unconditionally, before the
+    early-return that follows when discovery finds nothing, so it is JSON
+    "[]" on a no-camera boot, and None if the key was never written (fresh
+    Redis) -- which is why both are checked here."""
+    return raw not in (None, "[]")
 
 
 def _release_run_lock() -> None:
@@ -626,18 +640,19 @@ def initialize_system(settings, pi_model="unknown"):
     usb_monitor = USBMonitor(ssd_monitor, settings=settings, redis_controller=redis_controller)
 
     gpio_cfg = settings["hardware_outputs"]
-    rec_tone_pins = gpio_cfg.get("rec_tone_pin")
+    rec_tone_cfg = rec_tone_config(gpio_cfg)
+    rec_tone_pins = rec_tone_cfg["pin"]
     if rec_tone_pins in (None, []):
-        # Backward compatibility: if no explicit rec_tone_pin is configured,
+        # Backward compatibility: if no explicit rec_tone pin is configured,
         # fall back to pwm_pin for REC sync tone output.
         rec_tone_pins = gpio_cfg.get("pwm_pin")
 
     gpio_output = GPIOOutput(
         rec_out_pins=gpio_cfg["rec_out_pin"],
         rec_tone_pins=rec_tone_pins,
-        rec_tone_frequency_hz=gpio_cfg.get("rec_tone_frequency_hz", 1000),
-        rec_tone_duty_cycle=gpio_cfg.get("rec_tone_duty_cycle", 50),
-        rec_tone_relay_drop_frames=gpio_cfg.get("rec_tone_relay_drop_frames", False),
+        rec_tone_frequency_hz=rec_tone_cfg["frequency_hz"],
+        rec_tone_duty_cycle=rec_tone_cfg["duty_cycle"],
+        rec_tone_relay_drop_frames=rec_tone_cfg["relay_drop_frames"],
         pi_model=pi_model,
     )
     dmesg_monitor = DmesgMonitor()
@@ -696,6 +711,16 @@ def run_application(args, log_queue):
     # Detect Raspberry Pi model
     pi_model = get_raspberry_pi_model()
     logging.info(f"Detected Raspberry Pi model: {pi_model}")
+
+    # The systemd unit and the /usr/local/bin helpers are COPIED into place
+    # by `sudo make install`, not symlinked -- so an operator who updates by
+    # pulling keeps whatever was installed the day they ran the installer.
+    # Warn, loudly and with the exact remedy; never act. (This is advisory
+    # only: it must not be able to stop a boot.)
+    try:
+        log_installed_file_drift(REPO_ROOT)
+    except Exception as exc:
+        logging.debug("Installed-file drift check skipped: %s", exc)
 
     # Start WiFi hotspot if configured
     start_hotspot(settings)
@@ -772,6 +797,10 @@ def run_application(args, log_queue):
     
     cinepi.start_all()
 
+    camera_present = camera_present_from_cameras_value(
+        redis_controller.get_value(ParameterKey.CAMERAS.value)
+    )
+
     # cinepi.set_log_level('INFO')
     # cinepi.message.subscribe(handle_vu_output)
 
@@ -798,7 +827,7 @@ def run_application(args, log_queue):
     )
 
     gpio_cfg = settings.get("hardware_outputs", {})
-    rec_tone_pins = gpio_cfg.get("rec_tone_pin")
+    rec_tone_pins = rec_tone_config(gpio_cfg)["pin"]
     if rec_tone_pins in (None, []):
         rec_tone_pins = gpio_cfg.get("pwm_pin")
 
@@ -925,9 +954,13 @@ def run_application(args, log_queue):
         splash_thread.join()
         claim_console_for_framebuffer()
 
-    if restart_camera_after_startup_handoff:
+    if restart_camera_after_startup_handoff and camera_present:
         logging.info("Restarting cinepi-raw after startup handoff so preview binds above Cinemate")
         cinepi_controller.restart_camera(preview_enabled=True)
+    elif restart_camera_after_startup_handoff:
+        logging.info(
+            "No camera detected -- skipping post-Plymouth preview restart"
+        )
 
     tol_cfg = settings.get("settings", {}).get("sync_tolerances", {})
     redis_listener = RedisListener(
@@ -974,7 +1007,17 @@ def run_application(args, log_queue):
             redis_controller, cinepi_controller, simple_gui, sensor_detect,
             command_executor, settings,
         )
-        stream = threading.Thread(target=socketio.run, args=(app,), kwargs={'host': '0.0.0.0', 'port': 5000, 'allow_unsafe_werkzeug': True})
+        run_kwargs = {'host': '0.0.0.0', 'port': 5000, 'allow_unsafe_werkzeug': True}
+        # Flask-SocketIO's threading async mode forwards **kwargs to
+        # app.run(), which hands ssl_context to Werkzeug. None of that is
+        # reached unless system.https.enabled is true, and ssl_context_for()
+        # returns None (rather than raising) if a certificate cannot be
+        # issued -- a camera answering on plain HTTP beats one not answering.
+        ssl_context = ssl_context_for(settings)
+        if ssl_context:
+            run_kwargs['ssl_context'] = (str(ssl_context[0]), str(ssl_context[1]))
+            logging.info("Web UI on https://<host>:5000 (self-signed certificate)")
+        stream = threading.Thread(target=socketio.run, args=(app,), kwargs=run_kwargs)
         stream.start()
         logging.info("Stream module loaded")
     else:

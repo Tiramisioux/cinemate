@@ -1013,7 +1013,24 @@ sudo make enable
 
 #### Further notes
 
-`sudo make install` also places `/usr/local/bin/camera-ready.sh`, `/usr/local/bin/cinemate-startup-failure-display.sh`, and `/usr/local/bin/cinemate-console-handoff.sh` on the system. The camera-ready helper waits for `cinepi-raw` to report a camera before systemd launches Cinemate, the startup-failure helper preserves early crash diagnostics on `tty1`, and the console-handoff helper restores the CLI on a normal Cinemate stop while leaving `tty1` available for Plymouth during full system shutdown.
+`sudo make install` also places `/usr/local/bin/camera-ready.sh`, `/usr/local/bin/cinemate-startup-failure-display.sh`, and `/usr/local/bin/cinemate-console-handoff.sh` on the system. The camera-ready helper waits up to 8 seconds for `cinepi-raw` to report a camera before systemd launches Cinemate — but that wait is now advisory, not a startup gate: if no camera ever shows up, Cinemate still starts, showing a full-width **CAMERA NOT FOUND** message in the preview area of both the HDMI and web GUI (see [Troubleshooting](troubleshooting.md)) rather than failing to boot. The startup-failure helper preserves early crash diagnostics on `tty1`, and the console-handoff helper restores the CLI on a normal Cinemate stop while leaving `tty1` available for Plymouth during full system shutdown.
+
+!!! warning "Updating an existing install — `git pull` is not enough"
+
+    `cinemate-autostart.service` and the helper scripts under `/usr/local/bin/` are **copied** into place by `sudo make install`, not symlinked. A `git pull` on the Pi updates the repo but leaves the installed copies exactly as they were, however long ago you installed.
+
+    That matters here: the camera-ready gate was made advisory in the unit file, and `camera-ready.sh` was shortened from 30 s to 8 s. Without the copy step, a Pi keeps the **strict** gate — with no camera attached, systemd fails the unit before Cinemate ever runs, and you get a bare terminal on `tty1` with no Cinemate error to explain it.
+
+    On a Pi that was set up before this change:
+
+    ```shell
+    cd /home/pi/cinemate/
+    sudo make install               # re-copies the service file and the helper scripts
+    sudo systemctl daemon-reload
+    sudo systemctl restart cinemate-autostart   # or reboot
+    ```
+
+    Cinemate checks this for you at startup and logs a warning naming this exact command if any installed copy is out of date with the repo. Re-running the full installer does the same thing, since it calls `sudo make install` itself.
 
 You now have a 12 bit RAW image capturing system on your Raspberry Pi!
 

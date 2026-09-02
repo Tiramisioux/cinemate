@@ -413,7 +413,19 @@ class SensorDetect:
         """
         # ── add or correct user-defined custom modes ─────────────────
         for cam, extras in self.custom_modes.items():
-            sensors.setdefault(cam, [])
+            # Only ever extend or correct a camera the probe actually found.
+            # This used to be sensors.setdefault(cam, []), which invented the
+            # camera when it wasn't detected -- so a settings.jsonc entry for
+            # a sensor that isn't plugged in produced a fabricated mode table
+            # for it. custom_modes exists to add modes to a real sensor and to
+            # correct a detected fps_max (F-298), never to declare a camera.
+            if cam not in sensors:
+                logging.warning(
+                    "custom_modes has an entry for %s, which was not detected "
+                    "-- ignoring it. custom_modes extends a camera that is "
+                    "present; it cannot declare one that isn't.", cam,
+                )
+                continue
             for extra in extras:
                 w, h = int(extra["width"]), int(extra["height"])
                 bd   = int(extra["bit_depth"])
@@ -605,6 +617,24 @@ class SensorDetect:
                         "likely because something already held the sensor "
                         "subdev when Cinemate started."
                     )
+
+            # No camera header line parsed. This is NOT the same test as the
+            # `not out.strip()` one above: cinepi-raw prints "No cameras
+            # available!" to stdout, so the output is non-empty and that
+            # guard never fires. Stop here rather than in _finalize_modes(),
+            # because the custom_modes loop there would otherwise manufacture
+            # a camera out of a settings key -- leaving res_modes non-empty
+            # and camera_model set on a boot with no sensor attached, which
+            # bypasses every `if not res_modes` degraded-boot guard in
+            # cinepi_controller.py and storage_preroll.py.
+            if not merged:
+                logging.warning(
+                    "No camera parsed from the cinepi-raw listing -- treating "
+                    "this as no camera attached."
+                )
+                self.camera_model = None
+                self.res_modes = {}
+                return
 
             # full assembly → {model → {mode_idx → mode_dict}}
             sensors = self._finalize_modes(merged)

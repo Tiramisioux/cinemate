@@ -20,16 +20,28 @@ That fixed the operator-reported bug: the settings editor had **no doctype and n
 meta at all**, so phones laid it out at the 980px fallback viewport and its `≤860px`
 hamburger — which already existed — never fired in portrait. **This step is the rest.**
 
-## Status
+## Status — closed, 2026-09-02
 
-**Code written, hardware gate open.** All ten findings (W1–W10) have code against them on
-`fix/web-ui-portrait`, merged into `feature/web-ui-combined` (which also reconciles W9/W10's
-download client against a second one built independently on `fix/web-ui-round2` — see that
-branch's merge commit for the conflict-by-conflict resolution). Every desk gate in the
-Verification section below passes on that branch. None of it has run on a camera. The
-Verification section's original "two items the desk cannot close" undersold this: it is not
-just W5 and the W1 tap targets — nothing here has been loaded on a Pi, so every item stays a
-code-level claim, not a fixed one, until G-series hardware gates say otherwise.
+**Shipped to `dev`.** All ten findings (W1–W10) landed via
+[PR #184](https://github.com/Tiramisioux/cinemate/pull/184) (`feature/web-ui-combined`),
+merge commit `98db1925`. That branch also reconciled W9/W10's download client against a
+second one built independently on `fix/web-ui-round2` — see PR #184's merge commit for the
+conflict-by-conflict resolution. Every desk gate in the Verification section below passed on
+that branch before it merged.
+
+**What the same-day hardware pass actually covers, and what it doesn't.** The merged commit
+was spot-checked on the real production unit 2026-09-02 (full write-up:
+`cinemate-handbook/lessons/hardware-log.md`, same-day entry) — both web pages render against
+a real camera with no console errors, and W9's replacement download mechanism specifically
+was exercised end to end (a real ~928 MB stream off the production Werkzeug server, a
+mid-stream client abort, no semaphore leak). That pass was **not** a per-finding
+re-verification: W1/W2's rail-shrink geometry, W3's DROP contrast/crowding, W4's
+locked-select styling, W5's fullscreen probe on an actual iPhone, W6's dead-CSS removal, W7's
+pinned-Save position, W8's select-inset behaviour, and W10's folder-picker client were not
+individually re-checked against the live page. Closing this entry means the workstream is
+shipped and no longer open work to track here, not that every original claim has a fresh
+hardware verdict — a reader chasing one of those specific findings should still treat it as
+desk-verified only until it's exercised directly.
 
 ## The remaining findings
 
@@ -96,6 +108,5 @@ Two items the desk cannot close, and should not be claimed as done without a Pi:
 - Any tap-target change is geometry on desk; whether a finger lands where predicted is a
   phone-on-the-rig check. The same is true of the W1 options.
 
-**Branch:** `fix/web-ui-portrait` (or per-finding branches) off `dev`, cinemate only — every
-item here is template/CSS/JS plus, for W3, one Python token dict. No cinepi-raw side, no
-rebuild.
+**Branch:** shipped via `fix/web-ui-portrait` + `fix/web-ui-round2`, reconciled on
+`feature/web-ui-combined` and merged to `dev` as `98db1925` ([PR #184](https://github.com/Tiramisioux/cinemate/pull/184)) — cinemate only, no cinepi-raw side, no rebuild.

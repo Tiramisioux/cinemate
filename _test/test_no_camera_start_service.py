@@ -1,3 +1,4 @@
+import re
 import unittest
 from pathlib import Path
 
@@ -39,6 +40,37 @@ class CameraReadyGateNonFatalTests(unittest.TestCase):
             install_target,
         )
         self.assertIn("sudo systemctl daemon-reload", install_target)
+
+
+class CameraReadyGateTimeoutTests(unittest.TestCase):
+    """D7: with the gate advisory, a missing camera is a supported state, so
+    the wait is a boot-time cost with no payoff once a slow sensor has had
+    long enough. Kept, but shortened from 30 s (system-review F-236)."""
+
+    SCRIPT = ROOT / "services" / "cinemate-autostart" / "camera-ready.sh"
+
+    def _setting(self, name):
+        match = re.search(
+            rf"^readonly {name}=(\d+)", self.SCRIPT.read_text(), re.MULTILINE
+        )
+        self.assertIsNotNone(match, f"{name} not found in camera-ready.sh")
+        return int(match.group(1))
+
+    def test_the_gate_still_exists(self):
+        # It fixed a real black-screen-on-boot race with slow sensors.
+        # Shortening it is not the same as dropping it.
+        self.assertGreater(self._setting("MAX_ATTEMPTS"), 0)
+
+    def test_the_no_camera_boot_penalty_is_at_most_ten_seconds(self):
+        penalty = self._setting("MAX_ATTEMPTS") * self._setting("RETRY_INTERVAL")
+        self.assertLessEqual(penalty, 10)
+
+    def test_the_timeout_message_says_cinemate_starts_anyway(self):
+        # The old message said "Cinemate may start with black screen", which
+        # predates C3.4 and now contradicts the actual behaviour.
+        text = self.SCRIPT.read_text()
+        self.assertIn("Cinemate will start anyway", text)
+        self.assertNotIn("Cinemate may start with black screen", text)
 
 
 if __name__ == "__main__":

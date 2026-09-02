@@ -21,7 +21,17 @@
 set -euo pipefail
 
 # Configuration
-readonly MAX_ATTEMPTS=30           # Maximum number of detection attempts
+#
+# MAX_ATTEMPTS was 30. The gate exists to fix a real black-screen-on-boot
+# race with slow sensors, so it stays -- but since C3.4 made it advisory
+# (`ExecStartPre=-`), a missing camera is a supported state rather than a
+# startup failure, and the full 30 s was being burned on every no-camera
+# boot before main.py even started (system-review F-236). 8 s still covers
+# a slow sensor's enumeration while cutting the no-camera penalty by more
+# than two thirds. Raise it again if a sensor is ever seen needing longer;
+# the cost of being wrong here is a slower boot, not a broken one, because
+# CineMate now starts either way.
+readonly MAX_ATTEMPTS=8            # Maximum number of detection attempts
 readonly RETRY_INTERVAL=1          # Seconds between attempts
 readonly LOG_TAG="camera-ready"    # Tag for systemd journal logging
 
@@ -174,7 +184,7 @@ main() {
     # Timeout reached - camera not detected
     log_error "Camera detection timeout after ${MAX_ATTEMPTS} attempts (${MAX_ATTEMPTS}s)"
     print_error "Camera not detected after ${MAX_ATTEMPTS} seconds"
-    print_error "Cinemate may start with black screen"
+    print_error "Cinemate will start anyway, with a NO CAM indicator in both GUIs"
 
     # Log helpful troubleshooting info
     log_error "Troubleshooting hints:"

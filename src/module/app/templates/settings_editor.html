@@ -4328,6 +4328,40 @@
       .catch(function(){ /* best-effort, same as the RAW pane */ });
   }
 
+  /* refreshPlaybackPane() only ever runs once, at page load -- nothing
+     re-checked the recording flag afterwards, so a take started while the
+     pane was already open left the stage unlocked, frames failing 409 with
+     no visible feedback (an <img>'s onerror cannot read a JSON body, so it
+     can't even tell a 409 apart from any other failure), and nothing
+     recovering once recording stopped -- the opposite of what the docs
+     promise ("the picture greys out ... becomes available again as soon
+     as recording stops"). This is the lightweight recheck: same recording
+     flag the initial load already reads, without pbRenderTakes()/
+     pbSelectTake() resetting the operator's place in the take strip. */
+  function pbCheckRecording(){
+    fetch('/settings-editor/api/playback/clips')
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res || !res.ok) return;
+        var wasLocked = pbEl('pbStage').classList.contains('is-locked');
+        pbSetLocked(!!res.recording);
+        if (wasLocked && !res.recording && pbClip) pbShow(pbState.i);  /* resume showing frames once clear */
+      })
+      .catch(function(){ /* best-effort; the next poll or the next frame's onerror tries again */ });
+  }
+  pbEl('pbFrame').onerror = function(){
+    pbPause();
+    pbCheckRecording();
+  };
+  /* "Achieved" used to count pbShow() calls -- i.e. .src assignments -- not
+     frames the browser actually finished loading, so a camera that was
+     refusing or too slow to decode still reported the full target rate
+     with zero skips, and G3 reads this number as its primary observable.
+     Counting onload instead measures what the name promises: frames that
+     actually arrived, in the same windowed-average pbTick() already computes. */
+  pbEl('pbFrame').onload = function(){ pbState.shown++; };
+  setInterval(pbCheckRecording, 3000);
+
   function pbRenderTakes(){
     var strip = pbEl('pbTakeStrip');
     strip.innerHTML = '';
@@ -4488,7 +4522,7 @@
       if (!pbState.loop){ pbShow(total - 1); pbPause(); return; }
       want = 0; pbState.startFrame = 0; pbState.t0 = now;
     }
-    if (want !== pbState.i){ pbShow(want); pbState.shown++; }
+    if (want !== pbState.i){ pbShow(want); }
 
     if (now - pbState.windowAt > 500){
       var fps = pbState.shown / ((now - pbState.windowAt) / 1000);

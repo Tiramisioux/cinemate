@@ -37,7 +37,7 @@ from module.config_loader import (
 )
 from module.app import boot_config, playback, raw_files
 from module.jsonc_edit import apply_updates
-from module.redis_controller import ParameterKey
+from module.redis_controller import ParameterKey, smpte_frame_base
 from module.web_api_settings import web_api_settings
 
 logger = logging.getLogger(__name__)
@@ -520,9 +520,20 @@ def get_sensor_modes():
 def get_playback_clips():
     conform = DEFAULT_CONFORM_FRAME_RATE
     settings = current_app.config.get("SETTINGS") or {}
+    raw_conform = settings.get("settings", {}).get(
+        "conform_frame_rate", DEFAULT_CONFORM_FRAME_RATE)
     try:
-        conform = int(settings.get("settings", {}).get(
-            "conform_frame_rate", DEFAULT_CONFORM_FRAME_RATE))
+        # smpte_frame_base(), not int(): the same "round to a whole frame
+        # base" rule redis_controller._format_timecode() applies to this
+        # exact setting (F-253 already records four sites with three
+        # different rounding rules -- a plain int() truncation here would
+        # have been a fifth, and 23.976 -> 23 both paced playback ~4% slow
+        # and disagreed with the redis/DNG frame base of 24). float() first
+        # so a genuinely unreadable value falls back to
+        # DEFAULT_CONFORM_FRAME_RATE below rather than smpte_frame_base()'s
+        # own internal fallback of 1 -- a 1 fps pane on a typo is a worse
+        # failure mode than the shipped default.
+        conform = smpte_frame_base(float(raw_conform))
     except (TypeError, ValueError):
         logger.debug("playback: unreadable conform_frame_rate, using %s", conform)
     return jsonify({"ok": True, "clips": playback.list_clips(),

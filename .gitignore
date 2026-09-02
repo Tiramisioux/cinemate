@@ -219,3 +219,10 @@ branches/
 # Local copied camera media and benchmarks
 pi-test-takes/
 pi-test-takes-speed-bench/
+
+# Self-signed TLS material minted at runtime by module/https_settings.py.
+# A private key must never be committed, and every camera should mint its own.
+resources/certs/
+*.crt
+*.key
+*.pem

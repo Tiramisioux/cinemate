@@ -9,6 +9,10 @@ than trusting a number here, since it moves as fields get added to either side.
 
 - the control UI listens on port `5000`, with the URL `http://cinepi.local:5000/`.
 - the clean MJPEG preview stream is available on port `8000` with the URL `http://cinepi.local:8000/stream`.
+  A bare `http://cinepi.local:8000/` serves the same stream once cinepi-raw is rebuilt from `fix/mjpeg-clean-preview`; before that it returns 404, as does the `/stream` URL itself until the first frame is published.
+- with [`system.https`](settings-json.md#https) enabled the UI is served over TLS, and the preview is
+  routed through a same-origin proxy at `/preview/<cam>/stream` — a secure page may not load port
+  8000 directly, since cinepi-raw serves it over plain HTTP.
 
 Every control action posts a CLI command line to [`/api/v1/cmd`](web-api.md) — the same dispatcher
 the CLI and serial paths use, so the browser cannot drift from them. GPIO, the analog pots, the

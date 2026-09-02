@@ -50,6 +50,17 @@
             }
           }
         },
+        "https": {
+          "description": "TLS for the web UI on port 5000. Off by default -- cinepi.local and the hotspot address can never hold a publicly-trusted certificate, so this always means a self-signed one and a browser interstitial. Needed for the RAW pane's folder download, which requires a secure browser context.",
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "cert_file": { "type": "string", "default": "resources/certs/cinemate.crt" },
+            "key_file": { "type": "string", "default": "resources/certs/cinemate.key" },
+            "valid_days": { "type": "integer", "minimum": 1, "default": 3650 }
+          },
+          "additionalProperties": false
+        },
         "web_api": {
           "type": "object",
           "description": "HTTP/UDP control API over the Wi-Fi hotspot (docs/web-api.md). A missing or partial block behaves as the defaults shown here.",

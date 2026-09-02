@@ -19,6 +19,7 @@ from module.config_loader import (
     load_settings,
     DEFAULT_SETTINGS_PATH,
 )
+from module.https_settings import ssl_context_for
 from module.logger import configure_logging, log_directory
 from module.redis_controller import RedisController, ParameterKey
 from module.ssd_monitor import SSDMonitor
@@ -952,7 +953,17 @@ def run_application(args, log_queue):
             redis_controller, cinepi_controller, simple_gui, sensor_detect,
             command_executor, settings,
         )
-        stream = threading.Thread(target=socketio.run, args=(app,), kwargs={'host': '0.0.0.0', 'port': 5000, 'allow_unsafe_werkzeug': True})
+        run_kwargs = {'host': '0.0.0.0', 'port': 5000, 'allow_unsafe_werkzeug': True}
+        # Flask-SocketIO's threading async mode forwards **kwargs to
+        # app.run(), which hands ssl_context to Werkzeug. None of that is
+        # reached unless system.https.enabled is true, and ssl_context_for()
+        # returns None (rather than raising) if a certificate cannot be
+        # issued -- a camera answering on plain HTTP beats one not answering.
+        ssl_context = ssl_context_for(settings)
+        if ssl_context:
+            run_kwargs['ssl_context'] = (str(ssl_context[0]), str(ssl_context[1]))
+            logging.info("Web UI on https://<host>:5000 (self-signed certificate)")
+        stream = threading.Thread(target=socketio.run, args=(app,), kwargs=run_kwargs)
         stream.start()
         logging.info("Stream module loaded")
     else:

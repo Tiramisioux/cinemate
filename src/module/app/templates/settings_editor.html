@@ -2094,6 +2094,7 @@
       <div class="bulk-bar" id="bulkBar">
         <span id="bulkCount">0 selected</span>
         <span class="actions">
+          <button class="btn btn-primary" id="bulkDownloadFolder" hidden>Download into a folder…</button>
           <button class="btn btn-primary" id="bulkDownload">Download selected</button>
           <button class="btn btn-danger-outline" id="bulkDelete">Delete selected</button>
         </span>
@@ -4188,6 +4189,58 @@
     });
     if (names.length > 1) showToast('Downloading ' + names.length + ' takes one at a time…');
   });
+
+  /* ---------- download straight into a chosen folder ----------
+     showDirectoryPicker() is the only browser API that can write into a
+     directory the operator names, and it exists only on a SECURE context --
+     so on plain HTTP it is undefined and this button stays hidden, with the
+     plain per-take download still there. Turn on system.https in
+     settings.jsonc to get it. It is also Chromium-only today: Safari and
+     Firefox expose neither, on http or https.
+
+     It also sidesteps the bulk-download race below: each take is fetched and
+     written to completion before the next one starts, instead of n top-level
+     navigations 800 ms apart cancelling each other. */
+  var folderDownloadSupported = (typeof window.showDirectoryPicker === 'function');
+  (function(){
+    var btn = document.getElementById('bulkDownloadFolder');
+    if (!btn) { return; }
+    btn.hidden = !folderDownloadSupported;
+    if (!folderDownloadSupported) { return; }
+    btn.addEventListener('click', function(){
+      var names = selectedClipNames();
+      if (!names.length) { return; }
+      var dir;
+      window.showDirectoryPicker({ mode: 'readwrite', startIn: 'downloads' })
+        .then(function(handle){
+          dir = handle;
+          btn.disabled = true;
+          return names.reduce(function(chain, name, i){
+            return chain.then(function(){
+              showToast('Saving ' + (i + 1) + ' of ' + names.length + ': ' + name);
+              return fetch('/settings-editor/api/raw/takes/' +
+                           encodeURIComponent(name) + '/download')
+                .then(function(res){
+                  if (!res.ok) { throw new Error(name + ' — ' + res.status); }
+                  return dir.getFileHandle(name + '.zip', { create: true })
+                    .then(function(fh){ return fh.createWritable(); })
+                    .then(function(w){ return res.body.pipeTo(w); });
+                });
+            });
+          }, Promise.resolve());
+        })
+        .then(function(){
+          if (dir) { showToast('Saved ' + names.length +
+                               (names.length === 1 ? ' take' : ' takes')); }
+        })
+        .catch(function(err){
+          // AbortError is the operator dismissing the picker, not a failure.
+          if (err && err.name === 'AbortError') { return; }
+          showToast('Download failed: ' + (err && err.message ? err.message : err));
+        })
+        .then(function(){ btn.disabled = false; });
+    });
+  })();
 
   /* ---------- initial load ---------- */
   loadSettings();

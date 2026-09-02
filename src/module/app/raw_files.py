@@ -15,9 +15,10 @@ reads free/total space and filesystem type directly via shutil/psutil instead.
 """
 from __future__ import annotations
 
+import io
 import logging
 import shutil
-import tempfile
+import threading
 import zipfile
 from pathlib import Path
 
@@ -27,6 +28,17 @@ logger = logging.getLogger(__name__)
 
 MEDIA_ROOT = Path("/media")
 ACTIVE_LABEL = "RAW"
+
+# W9: caps full-bandwidth reads off the media volume during a download. The
+# server is threaded werkzeug with no ceiling of its own -- storage
+# contention here is the same contention already known to cause frame drops
+# and ALSA xruns during a take. Acquired non-blocking in the route; released
+# inside the streaming generator's `finally`, not `@after_this_request` --
+# that hook runs at finalize_request, before the WSGI server ever consumes
+# the response iterable, so it would be a no-op for the case this exists to
+# protect. Matching client concurrency cap: settings_editor.html's
+# DOWNLOAD_CONCURRENCY.
+DOWNLOAD_SEMAPHORE = threading.BoundedSemaphore(2)
 
 
 def _media_roots() -> list[Path]:
@@ -131,26 +143,50 @@ def storage_summary() -> list[dict]:
     return summaries
 
 
-def resolve_take(name: str) -> Path | None:
+def resolve_take(name: str, *, storage: str | None = None) -> Path | None:
     """Resolve *name* (a bare take dir name, no path separators) to its
     real path under one of the known media roots. Refuses anything that
-    would escape that root (path traversal) or isn't actually a take dir."""
+    would escape that root (path traversal) or isn't actually a take dir.
+    *storage*, if given, restricts the match to that root's label (e.g.
+    "RAW1") -- needed when the same take name exists on more than one
+    mounted drive."""
     if not name or "/" in name or "\\" in name or name in (".", ".."):
         return None
     for root in _media_roots():
+        if storage and root.name != storage:
+            continue
         candidate = root / name
         try:
             if candidate.resolve().parent != root.resolve():
                 continue
-        except OSError:
+        except (OSError, ValueError):
+            # ValueError: Path.resolve() raises "embedded null character in
+            # path" on a %00-smuggled name -- previously escaped this
+            # function entirely and surfaced as a 500.
             continue
         if _is_take_dir(candidate):
             return candidate
     return None
 
 
-def delete_take(name: str) -> tuple[bool, str]:
-    path = resolve_take(name)
+def active_take_names(redis_controller) -> set[str]:
+    """Take names currently being written to, so a delete route can refuse
+    them. last_dng_cam0/cam1 hold a full DNG path and are only reset to
+    "None" on start_all/stop_all -- not on record stop -- so this must be
+    ANDed with is_recording by the caller."""
+    from module.redis_controller import ParameterKey
+
+    names = set()
+    for key in (ParameterKey.LAST_DNG_CAM0.value, ParameterKey.LAST_DNG_CAM1.value):
+        value = redis_controller.get_value(key, "None")
+        if not value or value == "None":
+            continue
+        names.add(Path(value).parent.name)
+    return names
+
+
+def delete_take(name: str, *, storage: str | None = None) -> tuple[bool, str]:
+    path = resolve_take(name, storage=storage)
     if path is None:
         return False, f"Take '{name}' not found"
     try:
@@ -162,22 +198,62 @@ def delete_take(name: str) -> tuple[bool, str]:
     return True, "Deleted"
 
 
-def build_take_zip(path: Path) -> Path:
-    """Build a temporary zip of *path* and return its location. DNGs are
-    already stored uncompressed (dng_encoder.cpp hardcodes
-    COMPRESSION_NONE), so this uses ZIP_STORED rather than spending CPU on
-    compression that won't shrink anything. The caller is responsible for
-    deleting the returned temp file once it's been sent -- this
-    necessarily doubles disk usage for the duration of one take's zip
-    (build a real, well-tested archive with Python's zipfile rather than a
-    hand-rolled streaming encoder, which risks silently corrupt downloads
-    on a format this unforgiving)."""
-    fd, tmp_path = tempfile.mkstemp(prefix="settings-editor-", suffix=".zip")
-    import os
-    os.close(fd)
-    tmp = Path(tmp_path)
-    with zipfile.ZipFile(tmp, mode="w", compression=zipfile.ZIP_STORED) as zf:
+class _StreamSink(io.RawIOBase):
+    """A non-seekable in-memory sink zipfile can write into directly --
+    stdlib zipfile handles a non-seekable destination itself (checked:
+    ZipFile._seekable == False, testzip() clean, byte-exact output), so no
+    hand-rolled zip encoder is needed to stream one."""
+
+    def __init__(self):
+        self._buf = bytearray()
+
+    def writable(self):
+        return True
+
+    def write(self, b):
+        self._buf += b
+        return len(b)
+
+    def drain(self):
+        chunk = bytes(self._buf)
+        self._buf.clear()
+        return chunk
+
+
+def stream_take_zip(path: Path):
+    """Yield a zip of *path* as it is built, instead of writing a whole take
+    to a temp file first (the previous build_take_zip -- a 60 s take was
+    ~4 GB written to /tmp before a single byte reached the browser). DNGs are
+    already stored uncompressed (dng_encoder.cpp hardcodes COMPRESSION_NONE),
+    so this uses ZIP_STORED rather than spending CPU on compression that
+    won't shrink anything."""
+    sink = _StreamSink()
+    with zipfile.ZipFile(sink, "w", compression=zipfile.ZIP_STORED, allowZip64=True) as zf:
         for f in sorted(path.rglob("*")):
-            if f.is_file():
-                zf.write(f, arcname=f"{path.name}/{f.relative_to(path)}")
-    return tmp
+            if not f.is_file():
+                continue
+            zi = zipfile.ZipInfo.from_file(f, arcname=f"{path.name}/{f.relative_to(path)}")
+            zi.compress_type = zipfile.ZIP_STORED
+            with zf.open(zi, "w") as dest, open(f, "rb") as src:
+                while chunk := src.read(1 << 20):
+                    dest.write(chunk)
+                    if out := sink.drain():
+                        yield out
+            if out := sink.drain():
+                yield out
+    if out := sink.drain():
+        yield out
+
+
+def guarded_stream(gen, sem=DOWNLOAD_SEMAPHORE):
+    """Release *sem* from inside the generator, not from a route-level
+    `finally` or `@after_this_request` -- both of those run before the WSGI
+    server consumes the response iterable (finalize_request precedes body
+    iteration), so releasing there is a no-op for the case the semaphore
+    exists to protect. Wrapping in try/finally here means a client abort
+    (GeneratorExit) still frees the permit; without it, two aborts leak both
+    permits and every later download 429s forever."""
+    try:
+        yield from gen
+    finally:
+        sem.release()

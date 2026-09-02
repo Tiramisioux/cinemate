@@ -18,12 +18,13 @@ from pathlib import Path
 
 from flask import (
     Blueprint,
-    after_this_request,
+    Response,
     current_app,
     jsonify,
     render_template,
     request,
-    send_file,
+    send_from_directory,
+    stream_with_context,
 )
 
 from module.config_loader import (
@@ -477,29 +478,88 @@ def get_raw_takes():
     return jsonify({"ok": True, "takes": raw_files.list_takes()})
 
 
+def _recording_take_names() -> set[str]:
+    """Names currently being written to -- empty unless a recording is
+    actually in progress, since last_dng_cam0/cam1 are only reset to "None"
+    on start_all/stop_all, not on record stop."""
+    redis_controller = current_app.config.get("REDIS_CONTROLLER")
+    if redis_controller is None:
+        return set()
+    rec = str(redis_controller.get_value(ParameterKey.IS_RECORDING.value, "0") or "0").strip()
+    if rec != "1":
+        return set()
+    return raw_files.active_take_names(redis_controller)
+
+
 @settings_editor_bp.route("/api/raw/takes/<name>", methods=["DELETE"])
 def delete_raw_take(name):
-    ok, message = raw_files.delete_take(name)
+    storage = request.args.get("storage") or None
+    if name in _recording_take_names():
+        return jsonify({"ok": False, "message": "Refusing to delete while recording"}), 409
+    ok, message = raw_files.delete_take(name, storage=storage)
     return jsonify({"ok": ok, "message": message}), (200 if ok else 404)
 
 
 @settings_editor_bp.route("/api/raw/takes/<name>/download", methods=["GET"])
 def download_raw_take(name):
-    path = raw_files.resolve_take(name)
+    storage = request.args.get("storage") or None
+    path = raw_files.resolve_take(name, storage=storage)
     if path is None:
         return jsonify({"ok": False, "message": f"Take '{name}' not found"}), 404
 
-    zip_path = raw_files.build_take_zip(path)
+    if not raw_files.DOWNLOAD_SEMAPHORE.acquire(blocking=False):
+        return jsonify({"ok": False, "message": "A download is already in progress"}), 429, {"Retry-After": "5"}
 
-    @after_this_request
-    def _cleanup(response):
+    return Response(
+        stream_with_context(raw_files.guarded_stream(raw_files.stream_take_zip(path))),
+        mimetype="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{name}.zip"'},
+    )
+
+
+@settings_editor_bp.route("/api/raw/takes/<name>/files", methods=["GET"])
+def raw_take_manifest(name):
+    """Feeds the folder-picker client path (W10): the file list and sizes
+    it needs before it can start writing into a chosen directory."""
+    storage = request.args.get("storage") or None
+    path = raw_files.resolve_take(name, storage=storage)
+    if path is None:
+        return jsonify({"ok": False, "message": f"Take '{name}' not found"}), 404
+
+    files = []
+    total_bytes = 0
+    for f in sorted(path.rglob("*")):
+        if not f.is_file():
+            continue
         try:
-            zip_path.unlink(missing_ok=True)
+            stat = f.stat()
         except OSError:
-            logger.warning("Could not remove temp zip %s", zip_path)
-        return response
+            continue
+        files.append({"name": str(f.relative_to(path)), "size_bytes": stat.st_size, "mtime": stat.st_mtime})
+        total_bytes += stat.st_size
 
-    return send_file(zip_path, as_attachment=True, download_name=f"{name}.zip")
+    return jsonify({
+        "ok": True,
+        "take": name,
+        "storage": path.parent.name,
+        "file_count": len(files),
+        "total_bytes": total_bytes,
+        "recording": name in _recording_take_names(),
+        "files": files,
+    })
+
+
+@settings_editor_bp.route("/api/raw/takes/<name>/files/<path:filename>", methods=["GET"])
+def raw_take_file(name, filename):
+    """Per-file fetch for the folder-picker path. werkzeug's safe_join
+    (inside send_from_directory) is the traversal guard here, not
+    raw_files.resolve_take -- but resolve_take still confines *name* to a
+    real take dir before *path* is ever handed to it."""
+    storage = request.args.get("storage") or None
+    path = raw_files.resolve_take(name, storage=storage)
+    if path is None:
+        return jsonify({"ok": False, "message": f"Take '{name}' not found"}), 404
+    return send_from_directory(path, filename, conditional=True, max_age=0)
 
 
 @settings_editor_bp.route("/api/raw/bulk", methods=["POST"])
@@ -509,6 +569,18 @@ def bulk_raw_action():
     names = body.get("names") or []
     if action != "delete" or not isinstance(names, list):
         return jsonify({"ok": False, "message": "Expected {action: 'delete', names: [...]}"}), 400
+
+    # Whole-request refusal, not a per-name skip: a partial delete that
+    # silently dropped the recording take would be worse than a refusal the
+    # operator can see. Duplicate-name ambiguity across /media/RAW and
+    # /media/RAW1 is a separate, still-open issue -- bulk stays name-only.
+    blocked = _recording_take_names() & set(names)
+    if blocked:
+        return jsonify({
+            "ok": False,
+            "message": "Refusing to delete while recording",
+            "recording": sorted(blocked),
+        }), 409
 
     results = {}
     for name in names:

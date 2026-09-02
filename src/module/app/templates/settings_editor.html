@@ -16,92 +16,36 @@
     font-display: swap;
   }
 
+  /* W6: this used to be a light "paper" palette, permanently overridden by
+     #app.skin-hud (below) -- #app carries that class unconditionally, so
+     nothing outside #app (the raw-file drawer, the toast, the confirm
+     modal) ever saw the HUD look; they flipped with the OS colour scheme
+     instead. Promoted to the live palette so the whole page is one skin.
+     --focus is the one declaration #app.skin-hud does not shadow -- every
+     keyboard focus ring on the page resolves against this block. */
   :root{
-    --bg: #f7f3ec;
-    --panel: #ffffff;
-    --panel-2: #f1ece1;
-    --line: #e3dbcb;
-    --ink: #211d17;
-    --muted: #6f6656;
-    --accent: #a6631c;
-    --accent-ink: #fffaf1;
-    --accent-soft: #f0e0c8;
-    --ok: #3f7c43;
-    --ok-soft: #e2ecdf;
-    --danger: #a23830;
-    --danger-soft: #f3e2df;
-    --restart: var(--accent);
-    --restart-soft: var(--accent-soft);
-    --dirty: var(--accent);
-    --dirty-soft: var(--accent-soft);
-    --shadow: 0 1px 0 rgba(33,29,23,0.05);
-    --radius: 3px;
-    --radius-lg: 5px;
+    --bg: #050403;
+    --panel: #0c0b09;
+    --panel-2: #131210;
+    --line: #262420;
+    --ink: #f9f9f9;
+    --muted: #8a8a8a;
+    --accent: #90ee90;
+    --accent-ink: #04210c;
+    --accent-soft: #12291a;
+    --ok: #90ee90;
+    --ok-soft: #12291a;
+    --danger: #ff4136;
+    --danger-soft: #2c0f0d;
+    --restart: #ffdd00;
+    --restart-soft: #2e2600;
+    --dirty: #ff33ff;
+    --dirty-soft: #2c0e2c;
+    --shadow: none;
+    --radius: 0px;
+    --radius-lg: 0px;
     --focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
-  }
-  @media (prefers-color-scheme: dark){
-    :root{
-      --bg: #100e0c;
-      --panel: #1a1713;
-      --panel-2: #221d17;
-      --line: #33301f2b;
-      --line: #363026;
-      --ink: #f2ede4;
-      --muted: #a49a89;
-      --accent: #dd9a45;
-      --accent-ink: #221704;
-      --accent-soft: #382a13;
-      --ok: #7fbb79;
-      --ok-soft: #1e2b1c;
-      --danger: #d9695f;
-      --danger-soft: #341c19;
-      --restart: var(--accent);
-      --restart-soft: var(--accent-soft);
-      --dirty: var(--accent);
-      --dirty-soft: var(--accent-soft);
-      --shadow: 0 1px 0 rgba(0,0,0,0.4);
-      --focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
-    }
-  }
-  :root[data-theme="dark"]{
-    --bg: #100e0c;
-    --panel: #1a1713;
-    --panel-2: #221d17;
-    --line: #363026;
-    --ink: #f2ede4;
-    --muted: #a49a89;
-    --accent: #dd9a45;
-    --accent-ink: #221704;
-    --accent-soft: #382a13;
-    --ok: #7fbb79;
-    --ok-soft: #1e2b1c;
-    --danger: #d9695f;
-    --danger-soft: #341c19;
-    --restart: var(--accent);
-    --restart-soft: var(--accent-soft);
-    --dirty: var(--accent);
-    --dirty-soft: var(--accent-soft);
-    --shadow: 0 1px 0 rgba(0,0,0,0.4);
-  }
-  :root[data-theme="light"]{
-    --bg: #f7f3ec;
-    --panel: #ffffff;
-    --panel-2: #f1ece1;
-    --line: #e3dbcb;
-    --ink: #211d17;
-    --muted: #6f6656;
-    --accent: #a6631c;
-    --accent-ink: #fffaf1;
-    --accent-soft: #f0e0c8;
-    --ok: #3f7c43;
-    --ok-soft: #e2ecdf;
-    --danger: #a23830;
-    --danger-soft: #f3e2df;
-    --restart: var(--accent);
-    --restart-soft: var(--accent-soft);
-    --dirty: var(--accent);
-    --dirty-soft: var(--accent-soft);
-    --shadow: 0 1px 0 rgba(33,29,23,0.05);
+    color-scheme: dark;
   }
 
   *{ box-sizing: border-box; }
@@ -178,12 +122,20 @@
     border-bottom: 1px solid var(--line);
     background: var(--panel);
     position: sticky; top:0; z-index: 20;
-    /* The toolbar is a nowrap flex row needing ~760px. Without these it sets
-       the whole grid's minimum width and the PAGE scrolls sideways instead;
-       scroll the toolbar inside itself, the way .page-tabs already does. */
-    min-width: 0; overflow-x: auto; scrollbar-width: none;
+    /* Only .topbar-scroll (below) scrolls now. #dirtyPill and #saveBtn are
+       pinned outside it so the one action that matters cannot scroll out of
+       reach; min-width:0 still stops the PAGE scrolling sideways -- that was
+       this rule's original job, before Save could end up 400px+ off screen
+       inside it on a phone. */
+    min-width: 0;
   }
-  .topbar::-webkit-scrollbar{ display:none; }
+  .topbar-scroll{
+    flex: 1 1 auto; min-width: 0;
+    display:flex; align-items:center; gap:14px;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .topbar-scroll::-webkit-scrollbar{ display:none; }
+  #dirtyPill, #saveBtn{ flex: 0 0 auto; }
   .hamburger{
     display:none;
     width:34px; height:34px; border-radius: var(--radius);
@@ -221,6 +173,11 @@
   }
   .pill.is-dirty{ color: var(--dirty); border-color: var(--dirty); background: var(--dirty-soft); }
   .pill .dot{ width:6px; height:6px; border-radius:50%; background: currentColor; }
+  /* .pill/.btn/.icon-action/.card all set their own `display`, which beats
+     the UA's [hidden]{display:none} rule -- so hidden="" alone does nothing
+     on any of them (#dirtyPill showed "0 UNSAVED" permanently; five RAW/Live
+     controls and two CSI-2 link cards stayed rendered while "hidden"). */
+  #dirtyPill[hidden], .btn[hidden], .icon-action[hidden], .card[hidden]{ display:none !important; }
 
   .btn{
     font-family:'DIN2014',sans-serif; font-weight:700; font-size:12.5px; letter-spacing:0.04em;
@@ -664,12 +621,11 @@
   .status-text b{ font-family:'DIN2014',sans-serif; }
 
   .console{
-    background: #0c0a08; color: #d8cdb8; border-radius: var(--radius);
+    color: #d8cdb8; border-radius: var(--radius);
     font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.7;
     padding: 12px 14px; max-height: 220px; overflow-y: auto;
     display: none;
   }
-  :root[data-theme="light"] .console, .console{ }
   .console.open{ display:block; }
   .console .ln{ opacity:0; animation: rise .25s ease forwards; white-space: pre-wrap; word-break: break-word; }
   @media (prefers-reduced-motion: reduce){ .console .ln{ opacity:1; animation:none; } }
@@ -791,6 +747,14 @@
   .clip-badges{ display:flex; gap:6px; margin-top:7px; flex-wrap:wrap; }
   .clip-size{ font-variant-numeric: tabular-nums; font-size: 13px; text-align:right; white-space:nowrap; }
   .clip-actions{ display:flex; gap:6px; align-items:center; }
+  /* W10: only the folder-picker download path (fetch + a readable stream)
+     can report real byte progress -- a plain <a download> hands off to the
+     browser's own download manager, which owns its own UI. Hidden unless
+     .is-downloading is set on the row. */
+  .clip-progress{ grid-column: 1 / -1; display:none; align-items:center; gap:10px; margin-top:9px; }
+  .cliprow.is-downloading .clip-progress{ display:flex; }
+  .clip-progress .capacity-track{ flex:1; }
+  .clip-progress-text{ font-size:12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space:nowrap; }
   .chip-log{ color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
   .chip-danger{ color: var(--danger); border-color: var(--danger); background: var(--danger-soft); }
 
@@ -887,28 +851,6 @@
      SYNC_WARNING flash color, red = LOCK). Always on — #app carries this
      class permanently, there's no Manual/HUD switch anymore.
      ========================================================================== */
-  #app.skin-hud{
-    --bg: #050403;
-    --panel: #0c0b09;
-    --panel-2: #131210;
-    --line: #262420;
-    --ink: #f9f9f9;
-    --muted: #8a8a8a;
-    --accent: #90ee90;
-    --accent-ink: #04210c;
-    --accent-soft: #12291a;
-    --ok: #90ee90;
-    --ok-soft: #12291a;
-    --danger: #ff4136;
-    --danger-soft: #2c0f0d;
-    --restart: #ffdd00;
-    --restart-soft: #2e2600;
-    --dirty: #ff33ff;
-    --dirty-soft: #2c0e2c;
-    --radius: 0px;
-    --radius-lg: 0px;
-    --shadow: none;
-  }
   #app.skin-hud,
   #app.skin-hud .card-label,
   #app.skin-hud .lede,
@@ -988,20 +930,22 @@
     <button class="hamburger" id="hamburger" aria-label="Toggle sections menu" aria-expanded="false">
       <span></span>
     </button>
-    <label class="search">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-      <input id="searchInput" type="text" placeholder="Search settings — e.g. “gain”, “phase lock”, GPIO 13" autocomplete="off">
-    </label>
-    <div class="topbar-spacer"></div>
-    <span class="pill" id="dirtyPill" hidden><span class="dot"></span><span id="dirtyCount">0</span> unsaved</span>
-    <button class="btn btn-ghost" id="openJson" title="View the raw file this page edits">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m0 8v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3m0-8V5a2 2 0 0 0-2-2h-3"/></svg>
-      <span id="openJsonLabel">settings.jsonc</span>
-    </button>
-    <button class="btn btn-ghost" id="revertBtn" title="Load the stock defaults into this form (not saved until you click Save)">Revert</button>
-    <button class="btn btn-ghost" id="downloadBtn" title="Download the current form state as a file">Download</button>
-    <button class="btn btn-ghost" id="uploadBtn" title="Load a file into this form (not saved until you click Save)">Upload</button>
+    <div class="topbar-scroll">
+      <label class="search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="searchInput" type="text" placeholder="Search settings — e.g. “gain”, “phase lock”, GPIO 13" autocomplete="off">
+      </label>
+      <div class="topbar-spacer"></div>
+      <button class="btn btn-ghost" id="openJson" title="View the raw file this page edits">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m0 8v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3m0-8V5a2 2 0 0 0-2-2h-3"/></svg>
+        <span id="openJsonLabel">settings.jsonc</span>
+      </button>
+      <button class="btn btn-ghost" id="revertBtn" title="Load the stock defaults into this form (not saved until you click Save)">Revert</button>
+      <button class="btn btn-ghost" id="downloadBtn" title="Download the current form state as a file">Download</button>
+      <button class="btn btn-ghost" id="uploadBtn" title="Load a file into this form (not saved until you click Save)">Upload</button>
+    </div>
     <input type="file" id="uploadInput" accept=".json,.jsonc,.txt" hidden>
+    <span class="pill" id="dirtyPill" hidden><span class="dot"></span><span id="dirtyCount">0</span> unsaved</span>
     <button class="btn btn-primary" id="saveBtn" disabled>Save changes</button>
   </header>
 
@@ -3871,6 +3815,44 @@
      populating fixed markup. See raw_files.py for the on-disk scan. ---------- */
   var DOWNLOAD_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>';
   var DELETE_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
+  var CANCEL_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>';
+
+  /* ---------- RAW take download (W9/W10) ----------
+     window.location was a top-level navigation: a 404/500 replaced the whole
+     settings editor, tore down the live-GUI iframe, and discarded unsaved
+     form edits with no beforeunload guard. An <a download> click hands the
+     request to the browser's download manager instead, so none of that can
+     happen -- the document never navigates. showDirectoryPicker() needs a
+     secure context (HTTPS); the camera is only ever reached over plain HTTP
+     (hotspot or mDNS), so CAN_PICK_FOLDER is expected false there and this
+     capability-gates rather than assumes. */
+  var CAN_PICK_FOLDER = !!(window.isSecureContext && window.showDirectoryPicker);
+  var DOWNLOAD_CONCURRENCY = 2; // matches raw_files.DOWNLOAD_SEMAPHORE
+  var refreshSuppressed = false;
+
+  function takeDownloadUrl(name, storage){
+    var url = '/settings-editor/api/raw/takes/' + encodeURIComponent(name) + '/download';
+    return storage ? url + '?storage=' + encodeURIComponent(storage) : url;
+  }
+  function takeFilesUrl(name, storage){
+    var url = '/settings-editor/api/raw/takes/' + encodeURIComponent(name) + '/files';
+    return storage ? url + '?storage=' + encodeURIComponent(storage) : url;
+  }
+  function takeFileUrl(name, storage, file){
+    return takeFilesUrl(name, storage) + '/' + encodeURIComponent(file);
+  }
+  function downloadViaAnchor(url, filename){
+    var a = document.createElement('a');
+    a.href = url; a.download = filename; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  // Cheap pre-flight: catches "take deleted / drive unmounted since the list
+  // was last drawn" without paying for a zip build first.
+  function takeStillListed(name){
+    return fetch('/settings-editor/api/raw/takes').then(function(r){ return r.json(); }).then(function(res){
+      return !!(res.ok && res.takes.some(function(t){ return t.name === name; }));
+    }).catch(function(){ return true; }); // best-effort; do not block a download on a flaky fetch
+  }
 
   function formatBytes(n){
     if (n == null) return '—';
@@ -3976,6 +3958,7 @@
       var row = document.createElement('div');
       row.className = 'cliprow';
       row.setAttribute('data-name', t.name);
+      row.setAttribute('data-storage', t.storage);
       row.setAttribute('data-search', t.name.toLowerCase() + ' ' + t.storage.toLowerCase());
       row.setAttribute('data-ts', String(t.mtime || 0));
       row.setAttribute('data-size', String(t.size_bytes || 0));
@@ -3993,6 +3976,11 @@
         '<div class="clip-actions">' +
           '<button class="icon-action" data-download title="Download" aria-label="Download this take">' + DOWNLOAD_ICON + '</button>' +
           '<button class="icon-action danger" data-delete title="Delete" aria-label="Delete this take">' + DELETE_ICON + '</button>' +
+        '</div>' +
+        '<div class="clip-progress">' +
+          '<div class="capacity-track"><div class="capacity-fill" data-progress-fill style="width:0%"></div></div>' +
+          '<span class="clip-progress-text" data-progress-text>Starting…</span>' +
+          '<button class="icon-action" data-cancel-download title="Cancel" aria-label="Cancel download">' + CANCEL_ICON + '</button>' +
         '</div>';
       list.appendChild(row);
     });
@@ -4000,6 +3988,15 @@
     footer.textContent = takes.length
       ? 'Showing all ' + takes.length + ' take' + (takes.length === 1 ? '' : 's') + ' across mounted storage.'
       : 'No takes found on mounted storage.';
+    // showDirectoryPicker() needs a secure context; this page is served
+    // over plain HTTP on the hotspot and over mDNS, so it is unreachable
+    // here on every browser. Say so rather than let a missing folder
+    // picker read as a bug.
+    if (!CAN_PICK_FOLDER) {
+      footer.textContent += ' This page is served over plain HTTP, so it cannot ask where to save a ' +
+        'download — enable "Ask where to save each file" in your browser’s download settings to ' +
+        'choose a folder yourself.';
+    }
 
     wireClipRowActions();
     updateBulkBar();
@@ -4019,8 +4016,115 @@
   }
 
   function refreshRawPane(){
+    // A mid-download refresh rebuilds every row via renderClipList()'s
+    // list.innerHTML = '', destroying the row holding the progress bar and
+    // wiring a fresh (uninstrumented) button under the operator's cursor.
+    if (refreshSuppressed) { return; }
     loadRawStorage();
     loadRawTakes();
+  }
+
+  // ---------- picker-path download (only reachable when CAN_PICK_FOLDER) ----------
+  var pickerAbort = null; // AbortController for the take currently in flight
+  function savePickedTake(dirRoot, take, storage, files, onProgress){
+    var total = files.reduce(function(a, f){ return a + f.size_bytes; }, 0), done = 0;
+    pickerAbort = new AbortController();
+    return dirRoot.getDirectoryHandle(take, { create: true }).then(function(dir){
+      return files.reduce(function(chain, f){
+        return chain.then(function(){
+          var writable;
+          return dir.getFileHandle(f.name, { create: true })
+            .then(function(fh){ return fh.createWritable(); })
+            .then(function(w){
+              writable = w;
+              return fetch(takeFileUrl(take, storage, f.name), { signal: pickerAbort.signal });
+            })
+            .then(function(res){
+              if (!res.ok) { throw new Error('HTTP ' + res.status + ' on ' + f.name); }
+              var reader = res.body.getReader();
+              function pump(){
+                return reader.read().then(function(r){
+                  if (r.done) { return writable.close(); }
+                  done += r.value.length;
+                  onProgress(total ? done / total : 1);
+                  return writable.write(r.value).then(pump);
+                });
+              }
+              return pump();
+            })
+            .catch(function(err){
+              // createWritable() truncates on open -- a half-written file
+              // must be removed, not just closed, or a cancel/error leaves a
+              // truncated file behind instead of no file at all.
+              var cleanup = writable ? writable.abort() : Promise.resolve();
+              return cleanup
+                .then(function(){ return dir.removeEntry(f.name); })
+                .catch(function(){ /* best effort */ })
+                .then(function(){ throw err; });
+            });
+        });
+      }, Promise.resolve());
+    });
+  }
+
+  function downloadErrorToast(err){
+    switch (err && err.name) {
+      case 'AbortError':      return null; // operator cancelled -- not an error
+      case 'NotAllowedError': return 'Permission denied for that folder';
+      case 'SecurityError':   return 'Folder picker unavailable here';
+      case 'QuotaExceededError': return 'Not enough space in that folder';
+      default: return 'download failed — ' + ((err && err.message) || err);
+    }
+  }
+
+  function startPickedDownload(name, storage, row){
+    var fill = row.querySelector('[data-progress-fill]');
+    var text = row.querySelector('[data-progress-text]');
+    var cancelBtn = row.querySelector('[data-cancel-download]');
+    var onCancel = function(){ if (pickerAbort) { pickerAbort.abort(); } };
+    window.showDirectoryPicker({ id: 'cinemate-raw-downloads' }).then(function(dirRoot){
+      return fetch(takeFilesUrl(name, storage)).then(function(r){ return r.json(); }).then(function(manifest){
+        if (!manifest.ok) { throw new Error(manifest.message || 'could not read that take'); }
+        row.classList.add('is-downloading');
+        fill.style.width = '0%';
+        text.textContent = 'Starting…';
+        cancelBtn.addEventListener('click', onCancel);
+        refreshSuppressed = true;
+        return savePickedTake(dirRoot, name, storage, manifest.files, function(frac){
+          var pct = Math.round(frac * 100);
+          fill.style.width = pct + '%';
+          text.textContent = pct + '%';
+        }).then(function(){
+          showToast('Saved ' + name);
+        }, function(err){
+          var msg = downloadErrorToast(err);
+          if (msg) { showToast(msg); }
+        }).then(function(){
+          cancelBtn.removeEventListener('click', onCancel);
+          row.classList.remove('is-downloading');
+          refreshSuppressed = false;
+        });
+      });
+    }).catch(function(err){
+      if (err && err.name === 'AbortError') { return; } // picker dialog dismissed
+      showToast('Folder picker unavailable here — using a normal download instead.');
+      downloadViaAnchor(takeDownloadUrl(name, storage), name + '.zip');
+    });
+  }
+
+  function startTakeDownload(name, storage, row){
+    takeStillListed(name).then(function(stillThere){
+      if (!stillThere) {
+        showToast('That take is no longer on the drive.');
+        refreshRawPane();
+        return;
+      }
+      if (CAN_PICK_FOLDER) {
+        startPickedDownload(name, storage, row);
+      } else {
+        downloadViaAnchor(takeDownloadUrl(name, storage), name + '.zip');
+      }
+    });
   }
 
   function selectedClipNames(){
@@ -4034,6 +4138,15 @@
     document.getElementById('bulkCount').textContent = names.length + ' selected';
     bar.classList.toggle('show', names.length > 0);
     document.getElementById('selectAllClips').checked = names.length > 0 && names.length === currentTakes.length;
+    // No server-side combined-zip endpoint exists, and N parallel per-take
+    // downloads race each other (see raw_files.DOWNLOAD_SEMAPHORE) -- so
+    // "download selected" is honest only for exactly one take at a time.
+    var bulkDownloadBtn = document.getElementById('bulkDownload');
+    var tooManyForDownload = names.length > 1;
+    bulkDownloadBtn.disabled = tooManyForDownload;
+    bulkDownloadBtn.title = tooManyForDownload
+      ? 'Download one take at a time — select a single take to download it'
+      : '';
   }
 
   function wireClipRowActions(){
@@ -4042,8 +4155,8 @@
     });
     document.querySelectorAll('.cliprow [data-download]').forEach(function(btn){
       btn.addEventListener('click', function(){
-        var name = btn.closest('.cliprow').getAttribute('data-name');
-        window.location = '/settings-editor/api/raw/takes/' + encodeURIComponent(name) + '/download';
+        var row = btn.closest('.cliprow');
+        startTakeDownload(row.getAttribute('data-name'), row.getAttribute('data-storage'), row);
       });
     });
     document.querySelectorAll('.cliprow [data-delete]').forEach(function(btn){
@@ -4082,17 +4195,13 @@
     }, null, { title: 'Delete ' + names.length + ' take(s)?', okLabel: 'Delete', danger: true });
   });
   document.getElementById('bulkDownload').addEventListener('click', function(){
-    // One take at a time client-side rather than a multi-take zip endpoint
-    // -- see raw_files.py's build_take_zip() docstring: even a single
-    // take's zip briefly doubles disk usage on a storage-constrained Pi,
-    // so a real multi-take zip endpoint isn't a safe default here yet.
+    // No server-side combined-zip endpoint exists (W9), and the old
+    // window.location-per-take stagger raced itself -- the button is
+    // disabled above >1 selection, so this only ever fires for exactly one.
     var names = selectedClipNames();
-    names.forEach(function(name, i){
-      setTimeout(function(){
-        window.location = '/settings-editor/api/raw/takes/' + encodeURIComponent(name) + '/download';
-      }, i * 800);
-    });
-    if (names.length > 1) showToast('Downloading ' + names.length + ' takes one at a time…');
+    if (names.length !== 1) { return; }
+    var row = document.querySelector('.cliprow[data-name="' + CSS.escape(names[0]) + '"]');
+    if (row) { startTakeDownload(names[0], row.getAttribute('data-storage'), row); }
   });
 
   /* ---------- initial load ---------- */

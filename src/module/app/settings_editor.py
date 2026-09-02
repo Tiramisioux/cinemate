@@ -584,6 +584,16 @@ def get_playback_frame(name, index):
 
 @settings_editor_bp.route("/api/playback/clips/<name>/audio", methods=["GET"])
 def get_playback_audio(name):
+    # Same lockout as get_playback_frame() -- this route had none, so a
+    # hotspot client could stream a take's WAV off the card mid-recording,
+    # exactly the storage contention the frame lockout exists to prevent.
+    # A WAV is also unfinalised mid-take by construction (its data-chunk
+    # size is only written on a clean stop), so serving it during a take
+    # was never just a performance question.
+    blocked, reason = _playback_blocked()
+    if blocked:
+        return jsonify({"ok": False, "message": reason}), 409
+
     path = playback.wav_path(name)
     if path is None:
         return jsonify({"ok": False, "message": "no audio for this take"}), 404

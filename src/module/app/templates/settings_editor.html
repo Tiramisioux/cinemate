@@ -4592,7 +4592,25 @@
   }
   var pageTabButtons = document.querySelectorAll('[data-page-tab]');
   var pageLedes = document.querySelectorAll('[data-page-lede]');
-  function setActivePage(page){
+  /* Which page a reload lands on. The rail's links already put a section id
+     in the hash (#cam0, #steps, ...) and every section declares its page via
+     data-page, so the hash alone answers this -- a separate storage key would
+     be a second source of truth that can contradict a URL like
+     .../settings-editor/#cam0 with no principled winner. An unknown or stale
+     id falls back to the default rather than showing nothing. */
+  var PAGE_LANDING = { config: 'bootconfig', settings: 'welcome', raw: 'clips', live: 'live' };
+  var DEFAULT_PAGE = 'settings';
+  function pageFromHash(){
+    var id = (location.hash || '').slice(1);
+    if (!id) return DEFAULT_PAGE;
+    var el = document.getElementById(id);
+    var group = el && el.closest('.group[data-page]');
+    var page = group && group.getAttribute('data-page');
+    return Object.prototype.hasOwnProperty.call(PAGE_LANDING, page) ? page : DEFAULT_PAGE;
+  }
+
+  function setActivePage(page, opts){
+    opts = opts || {};
     /* loadConfigTxt() only ever ran once, at page load (see the bottom of
        this script). config.txt can change underneath an open tab without
        any of this page's own doing -- an SSH edit, a save from a different
@@ -4602,7 +4620,7 @@
        on every arrival at the config page instead, skipped only when there
        are unsaved edits already in progress (configDirty) so this can't
        silently discard those. */
-    if (page === 'config' && activePage !== 'config' && !configDirty) loadConfigTxt();
+    if (page === 'config' && activePage !== 'config' && !configDirty && !opts.skipConfigLoad) loadConfigTxt();
     activePage = page;
     pageTabButtons.forEach(function(b){
       var isActive = b.getAttribute('data-page-tab') === page;
@@ -4615,7 +4633,13 @@
     });
     updateGroupVisibility();
     syncTopbarForPage();
-    window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+    /* pushState, not replaceState: the rail's anchors push real history
+       entries, so replacing here would silently destroy the deep-link the
+       operator is standing on (at #steps, a tab click would rewrite that
+       entry and Back would skip past it). A tab click is a navigation the
+       operator made; giving it its own entry keeps Back meaning "undo that". */
+    if (!opts.keepHash) history.pushState(null, '', '#' + PAGE_LANDING[page]);
+    if (!opts.keepScroll) window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
   }
   pageTabButtons.forEach(function(b){ b.addEventListener('click', function(){ setActivePage(b.getAttribute('data-page-tab')); }); });
   document.querySelectorAll('[data-goto-page]').forEach(function(a){
@@ -4741,7 +4765,25 @@
   styleTag.textContent = '@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}';
   document.head.appendChild(styleTag);
 
-  setActivePage('settings');
+  /* Restore the page the operator was on. Only the page: the section is
+     already handled -- on a fresh load the browser's fragment scroll lands on
+     the hash, and on a reload Chrome restores the exact prior offset, which is
+     finer than any scrollIntoView we could do. keepHash so this does not
+     rewrite the URL it just read; keepScroll so it does not fight either of
+     those; skipConfigLoad because config.txt is fetched unconditionally above. */
+  setActivePage(pageFromHash(), { keepHash: true, keepScroll: true, skipConfigLoad: true });
+  /* Back/forward across panes. The browser's fragment scroll fires BEFORE
+     hashchange, so at that moment the target section is still display:none and
+     the scroll is a no-op on a box-less element; scroll again once the page
+     that owns it is visible. */
+  window.addEventListener('hashchange', function(){
+    var page = pageFromHash();
+    if (page !== activePage){
+      setActivePage(page, { keepHash: true, keepScroll: true });
+      var target = document.getElementById((location.hash || '').slice(1));
+      if (target) target.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
+  });
   refreshDrawer();
 })();
 </script>

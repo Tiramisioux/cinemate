@@ -4369,7 +4369,15 @@
       var b = document.createElement('button');
       b.type = 'button'; b.className = 'take';
       b.setAttribute('aria-current', idx === 0 ? 'true' : 'false');
-      var badges = '<span class="chip">' + (c.storage || 'RAW') + '</span>';
+      /* c.name is a take DIRECTORY NAME off the card, not a value this
+         page generated -- escapeHtml() every piece of it before it goes
+         into innerHTML. The page inlines the API token and has no CSP, so
+         a crafted directory name (a card handed over, or written by
+         anything else with access to /media/RAW) landing here unescaped
+         is stored XSS with a route straight to /api/v1/cmd, take-delete
+         and format. c.storage is camera-controlled (a mount label, not
+         attacker-writable) but escaped too -- it costs nothing here. */
+      var badges = '<span class="chip">' + escapeHtml(c.storage || 'RAW') + '</span>';
       if (c.hdr) badges += '<span class="chip chip-restart">HDR</span>';
       if (c.has_wav) badges += '<span class="chip chip-live">WAV</span>';
       var factor = c.fps ? pbConform / c.fps : 1;
@@ -4378,7 +4386,7 @@
       }
       b.innerHTML =
         '<img class="take-thumb" alt="" loading="lazy">' +
-        '<div class="take-body"><div class="take-name">' + c.name + '</div>' +
+        '<div class="take-body"><div class="take-name">' + escapeHtml(c.name) + '</div>' +
         '<div class="take-meta">' + (c.frame_count || 0) + ' frames · ' +
         (c.fps ? c.fps.toFixed(3) + ' fps' : 'rate unknown') + '</div>' +
         '<div class="take-badges">' + badges + '</div></div>';

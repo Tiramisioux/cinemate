@@ -92,7 +92,7 @@ def _frame_names(take_dir: Path) -> list[str]:
         if cached and cached[0] == mtime:
             return cached[1]
 
-    names = sorted(p.name for p in take_dir.glob("*.dng"))
+    names = sorted(p.name for p in raw_files.safe_take_children(take_dir, "*.dng"))
 
     with _frame_cache_lock:
         _frame_cache[key] = (mtime, names)
@@ -114,7 +114,7 @@ def clip_info(name: str) -> dict:
     info = {
         "name": name,
         "frame_count": len(names),
-        "has_wav": any(take_dir.glob("*.wav")),
+        "has_wav": any(raw_files.safe_take_children(take_dir, "*.wav")),
     }
     if not names:
         return info
@@ -234,4 +234,4 @@ def wav_path(name: str) -> Path | None:
     take_dir = raw_files.resolve_take(name)
     if take_dir is None:
         return None
-    return next(iter(sorted(take_dir.glob("*.wav"))), None)
+    return next(iter(sorted(raw_files.safe_take_children(take_dir, "*.wav"))), None)

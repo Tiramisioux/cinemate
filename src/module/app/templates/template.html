@@ -1733,7 +1733,22 @@
         img._reloadTimer = setTimeout(() => {
             img._reloadTimer = null;
             if (img.classList.contains('hidden')) { return; }
-            img.src = img.dataset.streamBase + '?reload=' + Date.now();
+            // NO query string. cinepi-raw's MJPEG server matches the raw
+            // request-target against the one topic it publishes ("/stream"):
+            // nadjieb mjpeg_streamer.hpp reads the target with
+            // `getline(iss, target_, ' ')`, so the query is part of it, and
+            // pathExists() is an exact map lookup -- "/stream?reload=1756..."
+            // misses and the server answers 404 and closes. Every recovery
+            // path here funnels through this function, so a cache-buster did
+            // not just fail to help, it replaced a working MJPEG connection
+            // with a permanent 404 (cinepi-raw deliberately keeps the listener
+            // alive across a camera reconfigure, so the old connection would
+            // have survived on its own).
+            //
+            // Dropping src first is what makes the browser re-request an
+            // identical URL -- which is the reason the cache-buster was there.
+            img.removeAttribute('src');
+            img.src = img.dataset.streamBase;
         }, delay);
     }
     function reloadStreams() {

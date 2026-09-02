@@ -357,6 +357,84 @@ class WhiteBalanceCurveNoCameraTests(unittest.TestCase):
         self.assertTrue(redis_controller.writes_to(ParameterKey.WB_USER))
 
 
+class WhiteBalanceCurveWithNoTuningFileTests(unittest.TestCase):
+    """Review item 5: c3.12 closed this for the no-SENSOR case only.
+
+    The tuning-file open() sits inside the outer try, so a sensor whose
+    tuning file is absent from the hardcoded /home/pi/libcamera path -- any
+    sensor on a Pi 4, or an imx477/imx296 whose libcamera checkout lives
+    elsewhere -- raises FileNotFoundError, lands in the broad
+    `except Exception` at the bottom, and that handler sets
+    wb_cg_rb_array = {}, discarding the `ct_curve = default_ct_curve` already
+    assigned above it. Exactly the defect c3.12's message says it closed,
+    still live on the sensor-present path.
+
+    (No tuning file exists on the machine running this test either, which is
+    the point: the assertion is about the fallback, not about the file.)
+    """
+
+    def test_a_sensor_with_no_tuning_file_still_gets_a_curve(self):
+        controller = build_real_controller(
+            sensor_detect=FakeSensorDetect(camera_model="imx477", res_modes={})
+        )
+
+        self.assertTrue(controller.wb_cg_rb_array)
+        self.assertEqual(
+            sorted(controller.wb_cg_rb_array), sorted(controller.wb_steps)
+        )
+
+    def test_set_wb_actually_writes_for_such_a_sensor(self):
+        redis_controller = FakeRedis()
+        controller = build_real_controller(
+            redis_controller=redis_controller,
+            sensor_detect=FakeSensorDetect(camera_model="imx477", res_modes={}),
+        )
+
+        controller.set_wb(controller.wb_steps[0])
+
+        self.assertTrue(redis_controller.writes_to(ParameterKey.CG_RB))
+        self.assertTrue(redis_controller.writes_to(ParameterKey.WB_USER))
+
+    def test_a_present_tuning_file_still_overrides_the_default(self):
+        # The other half of the refactor: moving the file read into its own
+        # handler must not stop a real tuning file from winning.
+        import json
+        from unittest import mock
+
+        tuning = {"algorithms": [{"rpi.awb": {"ct_curve": [
+            2000.0, 0.5, 0.5,
+            8000.0, 0.25, 0.9,
+        ]}}]}
+        controller = CinePiController.__new__(CinePiController)
+        controller.current_sensor = "imx585"
+        controller.wb_steps = [5600]
+        controller.wb_cg_rb_array = {}
+
+        with mock.patch("builtins.open",
+                        mock.mock_open(read_data=json.dumps(tuning))):
+            controller.initialize_wb_cg_rb_array()
+
+        self.assertEqual(sorted(controller.wb_cg_rb_array), [5600])
+        # Interpolated from the stubbed curve, not from imx585's built-in
+        # default: at 5600K, 0.6 of the way from 2000K to 8000K, r is
+        # 0.35 and b is 0.74, and the array holds their reciprocals.
+        # imx585's own default curve gives ~1.8 there, so this genuinely
+        # distinguishes the two.
+        self.assertEqual(controller.wb_cg_rb_array[5600], (2.9, 1.4))
+
+    def test_the_missing_tuning_file_is_reported_not_swallowed(self):
+        with self.assertLogs(level=logging.INFO) as captured:
+            build_real_controller(
+                sensor_detect=FakeSensorDetect(camera_model="imx477", res_modes={})
+            )
+
+        self.assertTrue(
+            any("tuning file" in line.lower() and "default" in line.lower()
+                for line in captured.output),
+            captured.output,
+        )
+
+
 class PopulateValuesAgainstRealControllerTests(unittest.TestCase):
     """D1 regression, driven the way the Pi drives it: the real
     populate_values() reading the real controller."""

@@ -2593,27 +2593,31 @@ class CinePiController:
 
         self.wb_cg_rb_array = {}  # Ensuring it is initialized as a dictionary
 
-        try:
-            # Start from the default and let the tuning file override it, so
-            # every failure below -- no sensor, no tuning file, no rpi.awb
-            # block, no ct_curve in it -- lands on a usable curve instead of
-            # an empty array. Anything that throws past this point still
-            # reaches the handlers at the bottom, but nothing on the
-            # no-camera path throws any more.
-            ct_curve = default_ct_curve
+        # Start from the default; the tuning file, if there is one, overrides
+        # it. Reading that file has its OWN handler, deliberately, because the
+        # broad `except Exception` guarding the interpolation loop below ends
+        # with `wb_cg_rb_array = {}` -- and an empty array is not a fallback.
+        # set_wb() then misses for every temperature, logs "White balance
+        # value not found", and writes neither cg_rb nor wb_user, so the
+        # operator's WB control silently does nothing. Letting a missing file
+        # reach that handler discarded the perfectly good default curve
+        # already assigned here. Sensors without a file at this hardcoded pisp
+        # path are ordinary, not exotic: any sensor on a Pi 4, or an
+        # imx477/imx296 whose libcamera checkout lives elsewhere.
+        ct_curve = default_ct_curve
 
-            if not sensor_key:
-                logging.info(
-                    "No sensor detected -- using the default ct_curve for "
-                    "white balance (no tuning file to read)."
-                )
-            else:
-                tuning_file_path = (
-                    f"/home/pi/libcamera/src/ipa/rpi/pisp/data/"
-                    f"{sensor_key}.json"
-                )
-                logging.info(f"Loading tuning file from: {tuning_file_path}")
-
+        if not sensor_key:
+            logging.info(
+                "No sensor detected -- using the default ct_curve for "
+                "white balance (no tuning file to read)."
+            )
+        else:
+            tuning_file_path = (
+                f"/home/pi/libcamera/src/ipa/rpi/pisp/data/"
+                f"{sensor_key}.json"
+            )
+            logging.info(f"Loading tuning file from: {tuning_file_path}")
+            try:
                 with open(tuning_file_path, 'r') as file:
                     data = json.load(file)
                     logging.info("Tuning data loaded successfully.")
@@ -2629,7 +2633,18 @@ class CinePiController:
                     else:
                         ct_curve = tuning_ct_curve
                         logging.info(f"Retrieved ct_curve: {ct_curve}")
+            except (OSError, ValueError, TypeError, KeyError) as exc:
+                # OSError covers FileNotFoundError and permission problems;
+                # ValueError covers json.JSONDecodeError (its base class);
+                # TypeError/KeyError cover a file whose shape isn't what
+                # data['algorithms'] expects. All of them mean the same thing:
+                # keep the default curve and say why.
+                logging.warning(
+                    "Could not read tuning file %s (%s) -- using the default "
+                    "ct_curve for white balance.", tuning_file_path, exc,
+                )
 
+        try:
             temperatures = ct_curve[0::3]
             r_values = ct_curve[1::3]
             b_values = ct_curve[2::3]

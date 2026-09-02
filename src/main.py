@@ -23,6 +23,7 @@ from module.redis_controller import RedisController, ParameterKey
 from module.ssd_monitor import SSDMonitor
 from module.usb_monitor import USBMonitor
 from module.gpio_output import GPIOOutput
+from module.installed_files import log_installed_file_drift
 from module.cinepi_controller import CinePiController
 from module.simple_gui import SimpleGUI
 from module.sensor_detect import SensorDetect, pi_family
@@ -75,6 +76,8 @@ SYSTEM_SHUTDOWN_TARGETS = frozenset(
     }
 )
 CINEMATE_LOCKFILE = "/tmp/cinemate.lock"
+# This file is <repo>/src/main.py, so the repo root is one level up.
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def camera_present_from_cameras_value(raw) -> bool:
@@ -701,6 +704,16 @@ def run_application(args, log_queue):
     # Detect Raspberry Pi model
     pi_model = get_raspberry_pi_model()
     logging.info(f"Detected Raspberry Pi model: {pi_model}")
+
+    # The systemd unit and the /usr/local/bin helpers are COPIED into place
+    # by `sudo make install`, not symlinked -- so an operator who updates by
+    # pulling keeps whatever was installed the day they ran the installer.
+    # Warn, loudly and with the exact remedy; never act. (This is advisory
+    # only: it must not be able to stop a boot.)
+    try:
+        log_installed_file_drift(REPO_ROOT)
+    except Exception as exc:
+        logging.debug("Installed-file drift check skipped: %s", exc)
 
     # Start WiFi hotspot if configured
     start_hotspot(settings)

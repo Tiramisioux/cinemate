@@ -522,11 +522,21 @@ def download_raw_take(name):
     if not raw_files.DOWNLOAD_SEMAPHORE.acquire(blocking=False):
         return jsonify({"ok": False, "message": "A download is already in progress"}), 429, {"Retry-After": "5"}
 
-    return Response(
-        stream_with_context(raw_files.guarded_stream(raw_files.stream_take_zip(path))),
+    # Two release paths for one acquire: guarded_stream()'s generator-finally
+    # covers a GET whose body is iterated (to completion, or aborted mid-
+    # stream); call_on_close covers a HEAD, whose body Werkzeug never
+    # iterates -- the generator's own code, including that finally, never
+    # runs, so the acquire above would otherwise leak on every HEAD. _Permit
+    # makes it safe for whichever of the two actually fires to be the one
+    # that releases.
+    permit = raw_files._Permit(raw_files.DOWNLOAD_SEMAPHORE)
+    response = Response(
+        stream_with_context(raw_files.guarded_stream(raw_files.stream_take_zip(path), sem=permit)),
         mimetype="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{name}.zip"'},
     )
+    response.call_on_close(permit.release)
+    return response
 
 
 @settings_editor_bp.route("/api/raw/takes/<name>/files", methods=["GET"])

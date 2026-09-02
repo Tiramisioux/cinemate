@@ -142,17 +142,27 @@ class FolderDownloadTests(unittest.TestCase):
     def setUpClass(cls):
         cls.html = TEMPLATE.read_text(encoding="utf-8")
 
-    def test_the_button_is_hidden_until_the_api_is_known_to_exist(self):
+    def test_folder_download_is_gated_on_a_real_capability_check(self):
         # showDirectoryPicker is undefined on a plain-HTTP origin and in
-        # Safari/Firefox entirely, so the button must not be offered blindly.
-        self.assertIn('id="bulkDownloadFolder" hidden', self.html)
-        self.assertIn("typeof window.showDirectoryPicker === 'function'", self.html)
+        # Safari/Firefox entirely, so nothing must assume it exists. There is
+        # no longer a dedicated hidden button for this (the per-row download
+        # button and the bulk button both branch on CAN_PICK_FOLDER instead,
+        # falling back to the existing <a download> path) -- see
+        # test_web_ui_combined_download_reconciliation.py for the merge that
+        # replaced round2's separate bulkDownloadFolder button with this.
+        self.assertIn(
+            "var CAN_PICK_FOLDER = !!(window.isSecureContext && window.showDirectoryPicker);",
+            self.html,
+        )
 
     def test_takes_are_written_one_at_a_time(self):
         # The old bulk path fired n top-level navigations 800ms apart, which
-        # cancel each other; this chains them instead.
+        # cancel each other; the merged client chains them through a single
+        # picked folder instead -- one take's writes (savePickedTakeIntoRow,
+        # a manual reader/writer pump with real per-file progress, not a
+        # bulk res.body.pipeTo(w)) complete before the next take starts.
         self.assertIn("names.reduce(function(chain, name, i)", self.html)
-        self.assertIn("res.body.pipeTo(w)", self.html)
+        self.assertIn("savePickedTakeIntoRow(dirRoot, name,", self.html)
 
     def test_dismissing_the_picker_is_not_reported_as_a_failure(self):
         self.assertIn("err.name === 'AbortError'", self.html)

@@ -185,12 +185,6 @@
   }
   .pill.is-dirty{ color: var(--dirty); border-color: var(--dirty); background: var(--dirty-soft); }
   .pill .dot{ width:6px; height:6px; border-radius:50%; background: currentColor; }
-  /* .pill/.btn/.icon-action/.card all set their own `display`, which beats
-     the UA's [hidden]{display:none} rule -- so hidden="" alone does nothing
-     on any of them (#dirtyPill showed "0 UNSAVED" permanently; five RAW/Live
-     controls and two CSI-2 link cards stayed rendered while "hidden"). */
-  #dirtyPill[hidden], .btn[hidden], .icon-action[hidden], .card[hidden]{ display:none !important; }
-
   .btn{
     font-family:'DIN2014',sans-serif; font-weight:700; font-size:12.5px; letter-spacing:0.04em;
     border-radius: var(--radius);
@@ -2038,7 +2032,6 @@
       <div class="bulk-bar" id="bulkBar">
         <span id="bulkCount">0 selected</span>
         <span class="actions">
-          <button class="btn btn-primary" id="bulkDownloadFolder" hidden>Download into a folder…</button>
           <button class="btn btn-primary" id="bulkDownload">Download selected</button>
           <button class="btn btn-danger-outline" id="bulkDelete">Delete selected</button>
         </span>
@@ -3904,11 +3897,12 @@
      form edits with no beforeunload guard. An <a download> click hands the
      request to the browser's download manager instead, so none of that can
      happen -- the document never navigates. showDirectoryPicker() needs a
-     secure context (HTTPS); the camera is only ever reached over plain HTTP
-     (hotspot or mDNS), so CAN_PICK_FOLDER is expected false there and this
-     capability-gates rather than assumes. */
+     secure context: HTTPS (module.https_settings, off by default -- see
+     settings.jsonc's system.https), or a plain browser secure-context
+     exemption such as http://localhost. A camera reached over the hotspot's
+     plain-HTTP address or over mDNS has neither, so CAN_PICK_FOLDER is
+     false there and this capability-gates rather than assumes. */
   var CAN_PICK_FOLDER = !!(window.isSecureContext && window.showDirectoryPicker);
-  var DOWNLOAD_CONCURRENCY = 2; // matches raw_files.DOWNLOAD_SEMAPHORE
   var refreshSuppressed = false;
 
   function takeDownloadUrl(name, storage){
@@ -4069,14 +4063,17 @@
     footer.textContent = takes.length
       ? 'Showing all ' + takes.length + ' take' + (takes.length === 1 ? '' : 's') + ' across mounted storage.'
       : 'No takes found on mounted storage.';
-    // showDirectoryPicker() needs a secure context; this page is served
-    // over plain HTTP on the hotspot and over mDNS, so it is unreachable
-    // here on every browser. Say so rather than let a missing folder
-    // picker read as a bug.
+    // showDirectoryPicker() needs a secure context, and even there only
+    // Chromium implements it -- Safari and Firefox expose it on neither http
+    // nor https. Two different reasons read as the same missing button, so
+    // say which one applies rather than let it look like a bug either way.
     if (!CAN_PICK_FOLDER) {
-      footer.textContent += ' This page is served over plain HTTP, so it cannot ask where to save a ' +
-        'download — enable "Ask where to save each file" in your browser’s download settings to ' +
-        'choose a folder yourself.';
+      footer.textContent += window.isSecureContext
+        ? ' This browser has no folder picker (Chromium only, today) — enable ' +
+          '"Ask where to save each file" in your download settings to choose a folder yourself.'
+        : ' This page is served over plain HTTP, so it cannot ask where to save a download — turn on ' +
+          'system.https in settings.jsonc, or enable "Ask where to save each file" in your browser’s ' +
+          'download settings to choose a folder yourself.';
     }
 
     wireClipRowActions();
@@ -4158,33 +4155,59 @@
     }
   }
 
-  function startPickedDownload(name, storage, row){
+  // The folder is picked once, whether one take or several are queued --
+  // asking again per take would re-prompt for permission on every file.
+  function pickFolder(){
+    // mode:'readwrite' up front, rather than letting the first
+    // createWritable() request it implicitly: that first request lands after
+    // an async manifest fetch, by which point user activation can have
+    // expired, turning one prompt into a second one (or a NotAllowedError).
+    return window.showDirectoryPicker({
+      id: 'cinemate-raw-downloads', mode: 'readwrite', startIn: 'downloads',
+    });
+  }
+
+  // One take, into an already-picked folder. Returns a promise so the bulk
+  // path below can chain N of these; refreshSuppressed is the caller's job
+  // (set once for a whole batch, not toggled per take -- see refreshRawPane's
+  // comment on why a mid-batch refresh would destroy the row it is showing
+  // progress on).
+  function savePickedTakeIntoRow(dirRoot, name, storage, row){
     var fill = row.querySelector('[data-progress-fill]');
     var text = row.querySelector('[data-progress-text]');
     var cancelBtn = row.querySelector('[data-cancel-download]');
     var onCancel = function(){ if (pickerAbort) { pickerAbort.abort(); } };
-    window.showDirectoryPicker({ id: 'cinemate-raw-downloads' }).then(function(dirRoot){
-      return fetch(takeFilesUrl(name, storage)).then(function(r){ return r.json(); }).then(function(manifest){
-        if (!manifest.ok) { throw new Error(manifest.message || 'could not read that take'); }
-        row.classList.add('is-downloading');
-        fill.style.width = '0%';
-        text.textContent = 'Starting…';
-        cancelBtn.addEventListener('click', onCancel);
-        refreshSuppressed = true;
-        return savePickedTake(dirRoot, name, storage, manifest.files, function(frac){
-          var pct = Math.round(frac * 100);
-          fill.style.width = pct + '%';
-          text.textContent = pct + '%';
-        }).then(function(){
-          showToast('Saved ' + name);
-        }, function(err){
-          var msg = downloadErrorToast(err);
-          if (msg) { showToast(msg); }
-        }).then(function(){
-          cancelBtn.removeEventListener('click', onCancel);
-          row.classList.remove('is-downloading');
-          refreshSuppressed = false;
-        });
+    return fetch(takeFilesUrl(name, storage)).then(function(r){ return r.json(); }).then(function(manifest){
+      if (!manifest.ok) { throw new Error(manifest.message || 'could not read that take'); }
+      row.classList.add('is-downloading');
+      fill.style.width = '0%';
+      text.textContent = 'Starting…';
+      cancelBtn.addEventListener('click', onCancel);
+      return savePickedTake(dirRoot, name, storage, manifest.files, function(frac){
+        var pct = Math.round(frac * 100);
+        fill.style.width = pct + '%';
+        text.textContent = pct + '%';
+      });
+    }).then(function(){
+      cancelBtn.removeEventListener('click', onCancel);
+      row.classList.remove('is-downloading');
+    }, function(err){
+      cancelBtn.removeEventListener('click', onCancel);
+      row.classList.remove('is-downloading');
+      throw err;
+    });
+  }
+
+  function startPickedDownload(name, storage, row){
+    pickFolder().then(function(dirRoot){
+      refreshSuppressed = true;
+      return savePickedTakeIntoRow(dirRoot, name, storage, row).then(function(){
+        showToast('Saved ' + name);
+      }, function(err){
+        var msg = downloadErrorToast(err);
+        if (msg) { showToast(msg); }
+      }).then(function(){
+        refreshSuppressed = false;
       });
     }).catch(function(err){
       if (err && err.name === 'AbortError') { return; } // picker dialog dismissed
@@ -4219,11 +4242,14 @@
     document.getElementById('bulkCount').textContent = names.length + ' selected';
     bar.classList.toggle('show', names.length > 0);
     document.getElementById('selectAllClips').checked = names.length > 0 && names.length === currentTakes.length;
-    // No server-side combined-zip endpoint exists, and N parallel per-take
-    // downloads race each other (see raw_files.DOWNLOAD_SEMAPHORE) -- so
-    // "download selected" is honest only for exactly one take at a time.
+    // With a folder picker, several takes download sequentially into it, one
+    // write stream at a time -- see the bulk handler below. Without one there
+    // is no server-side combined-zip endpoint, and N parallel per-take
+    // <a download> clicks would race each other (raw_files.DOWNLOAD_SEMAPHORE
+    // caps concurrent server-side reads at 2), so "download selected" stays
+    // honest only for exactly one take at a time on that fallback path.
     var bulkDownloadBtn = document.getElementById('bulkDownload');
-    var tooManyForDownload = names.length > 1;
+    var tooManyForDownload = !CAN_PICK_FOLDER && names.length > 1;
     bulkDownloadBtn.disabled = tooManyForDownload;
     bulkDownloadBtn.title = tooManyForDownload
       ? 'Download one take at a time — select a single take to download it'
@@ -4253,7 +4279,14 @@
           btn.disabled = true;
           var row = btn.closest('.cliprow');
           if (row) { row.classList.add('is-busy'); }
-          fetch('/settings-editor/api/raw/takes/' + encodeURIComponent(name), { method: 'DELETE' })
+          // Same idiom as the download path: without ?storage=, a take name
+          // duplicated across /media/RAW and /media/RAW1 resolves to
+          // whichever mounted root delete_take() checks first, which can be
+          // the wrong copy.
+          var deleteUrl = '/settings-editor/api/raw/takes/' + encodeURIComponent(name);
+          var storage = row ? row.getAttribute('data-storage') : null;
+          if (storage) { deleteUrl += '?storage=' + encodeURIComponent(storage); }
+          fetch(deleteUrl, { method: 'DELETE' })
             .then(function(r){ return r.json(); }).then(function(res){
               showToast(res.ok ? 'Deleted ' + name : 'Delete failed: ' + res.message);
               if (res.ok) { refreshRawPane(); }
@@ -4282,74 +4315,65 @@
       fetch('/settings-editor/api/raw/bulk', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'delete', names: names })
-      }).then(function(r){ return r.json(); }).then(function(res){
-        showToast(res.ok ? 'Deleted ' + names.length + ' take(s)' : 'Some deletes failed — see console');
-        if (!res.ok) console.warn('Bulk delete results', res.results);
+      }).then(function(r){
+        return r.json().then(function(res){ return { status: r.status, res: res }; });
+      }).then(function(result){
+        var status = result.status, res = result.res;
+        if (status === 409) {
+          // Whole-request refusal (a recording take was in the selection):
+          // res.recording names which ones, rather than the generic
+          // "Some deletes failed" this used to collapse into.
+          var blocked = (res.recording || []).join(', ');
+          showToast(blocked ? res.message + ': ' + blocked : res.message);
+          return;
+        }
+        if (res.ok) {
+          showToast('Deleted ' + names.length + ' take(s)');
+        } else {
+          var failedNames = Object.keys(res.results || {})
+            .filter(function(n){ return !res.results[n].ok; });
+          var firstReason = failedNames.length
+            ? res.results[failedNames[0]].message : '';
+          showToast('Some deletes failed (' + failedNames.length + '/' + names.length + '): ' +
+            failedNames[0] + ' — ' + firstReason +
+            (failedNames.length > 1 ? ' (see console for the rest)' : ''));
+          console.warn('Bulk delete results', res.results);
+        }
         refreshRawPane();
       }).catch(function(err){ showToast('Bulk delete failed: ' + err); });
     }, null, { title: 'Delete ' + names.length + ' take(s)?', okLabel: 'Delete', danger: true });
   });
   document.getElementById('bulkDownload').addEventListener('click', function(){
-    // No server-side combined-zip endpoint exists (W9), and the old
-    // window.location-per-take stagger raced itself -- the button is
-    // disabled above >1 selection, so this only ever fires for exactly one.
     var names = selectedClipNames();
-    if (names.length !== 1) { return; }
-    var row = document.querySelector('.cliprow[data-name="' + CSS.escape(names[0]) + '"]');
-    if (row) { startTakeDownload(names[0], row.getAttribute('data-storage'), row); }
-  });
-
-  /* ---------- download straight into a chosen folder ----------
-     showDirectoryPicker() is the only browser API that can write into a
-     directory the operator names, and it exists only on a SECURE context --
-     so on plain HTTP it is undefined and this button stays hidden, with the
-     plain per-take download still there. Turn on system.https in
-     settings.jsonc to get it. It is also Chromium-only today: Safari and
-     Firefox expose neither, on http or https.
-
-     It also sidesteps the bulk-download race below: each take is fetched and
-     written to completion before the next one starts, instead of n top-level
-     navigations 800 ms apart cancelling each other. */
-  var folderDownloadSupported = (typeof window.showDirectoryPicker === 'function');
-  (function(){
-    var btn = document.getElementById('bulkDownloadFolder');
-    if (!btn) { return; }
-    btn.hidden = !folderDownloadSupported;
-    if (!folderDownloadSupported) { return; }
-    btn.addEventListener('click', function(){
-      var names = selectedClipNames();
-      if (!names.length) { return; }
-      var dir;
-      window.showDirectoryPicker({ mode: 'readwrite', startIn: 'downloads' })
-        .then(function(handle){
-          dir = handle;
-          btn.disabled = true;
-          return names.reduce(function(chain, name, i){
-            return chain.then(function(){
-              showToast('Saving ' + (i + 1) + ' of ' + names.length + ': ' + name);
-              return fetch('/settings-editor/api/raw/takes/' +
-                           encodeURIComponent(name) + '/download')
-                .then(function(res){
-                  if (!res.ok) { throw new Error(name + ' — ' + res.status); }
-                  return dir.getFileHandle(name + '.zip', { create: true })
-                    .then(function(fh){ return fh.createWritable(); })
-                    .then(function(w){ return res.body.pipeTo(w); });
-                });
-            });
-          }, Promise.resolve());
-        })
-        .then(function(){
-          if (dir) { showToast('Saved ' + names.length +
-                               (names.length === 1 ? ' take' : ' takes')); }
-        })
-        .catch(function(err){
-          // AbortError is the operator dismissing the picker, not a failure.
-          if (err && err.name === 'AbortError') { return; }
-          showToast('Download failed: ' + (err && err.message ? err.message : err));
-        })
-        .then(function(){ btn.disabled = false; });
+    if (!names.length) { return; }
+    if (names.length === 1) {
+      var row = document.querySelector('.cliprow[data-name="' + CSS.escape(names[0]) + '"]');
+      if (row) { startTakeDownload(names[0], row.getAttribute('data-storage'), row); }
+      return;
+    }
+    // More than one take is only reachable here with a folder picker --
+    // updateBulkBar() disables this button above one selection otherwise.
+    if (!CAN_PICK_FOLDER) { return; }
+    pickFolder().then(function(dirRoot){
+      refreshSuppressed = true;
+      return names.reduce(function(chain, name, i){
+        return chain.then(function(){
+          var row = document.querySelector('.cliprow[data-name="' + CSS.escape(name) + '"]');
+          if (!row) { return; } // no longer listed -- skip rather than fail the batch
+          showToast('Saving ' + (i + 1) + ' of ' + names.length + ': ' + name);
+          return savePickedTakeIntoRow(dirRoot, name, row.getAttribute('data-storage'), row);
+        });
+      }, Promise.resolve());
+    }).then(function(){
+      refreshSuppressed = false;
+      showToast('Saved ' + names.length + ' takes');
+    }, function(err){
+      refreshSuppressed = false;
+      if (err && err.name === 'AbortError') { return; } // picker dismissed, or a take cancelled
+      var msg = downloadErrorToast(err);
+      showToast(msg || ('Download failed: ' + ((err && err.message) || err)));
     });
-  })();
+  });
 
   /* ---------- initial load ---------- */
   loadSettings();

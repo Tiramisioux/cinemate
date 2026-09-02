@@ -20,6 +20,17 @@ That fixed the operator-reported bug: the settings editor had **no doctype and n
 meta at all**, so phones laid it out at the 980px fallback viewport and its `≤860px`
 hamburger — which already existed — never fired in portrait. **This step is the rest.**
 
+## Status
+
+**Code written, hardware gate open.** All ten findings (W1–W10) have code against them on
+`fix/web-ui-portrait`, merged into `feature/web-ui-combined` (which also reconciles W9/W10's
+download client against a second one built independently on `fix/web-ui-round2` — see that
+branch's merge commit for the conflict-by-conflict resolution). Every desk gate in the
+Verification section below passes on that branch. None of it has run on a camera. The
+Verification section's original "two items the desk cannot close" undersold this: it is not
+just W5 and the W1 tap targets — nothing here has been loaded on a Pi, so every item stays a
+code-level claim, not a fixed one, until G-series hardware gates say otherwise.
+
 ## The remaining findings
 
 W1 was a decision at the time this table was written; it no longer is. The operator ruled on

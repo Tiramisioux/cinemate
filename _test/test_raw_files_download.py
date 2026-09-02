@@ -158,6 +158,68 @@ class SemaphoreTests(RawFilesFixture):
         self.assertTrue(raw_files.DOWNLOAD_SEMAPHORE.acquire(blocking=False))
         raw_files.DOWNLOAD_SEMAPHORE.release()
 
+    def test_head_does_not_leak_a_permit(self):
+        # A HEAD response's body is never iterated by Werkzeug, so
+        # guarded_stream()'s generator -- including its `finally` -- never
+        # runs: the acquire() the route makes before building the Response
+        # used to have no release path at all for this verb. Two curl -I
+        # calls alone exhausted the two-permit cap, permanently, since
+        # nothing but a restart could hand the permits back.
+        #
+        # `with c.head(...) as r:` matters here, not `c.head(...)` alone --
+        # Response.call_on_close() fires when the WSGI layer closes the
+        # response, and Flask's test client only does that within a `with`
+        # block (or an explicit r.close()); a real WSGI server does it
+        # unconditionally per the WSGI close() contract, so this is the test
+        # client reproducing production behaviour, not a testing artifact.
+        app = make_app()
+        url = f"/settings-editor/api/raw/takes/{self.take_name}/download"
+        with app.test_client() as c:
+            with c.head(url) as r1:
+                self.assertEqual(r1.status_code, 200)
+            with c.head(url) as r2:
+                self.assertEqual(r2.status_code, 200)
+
+        # Both permits must be back: two independent non-blocking acquires
+        # succeed, matching the fixed two-permit cap. try/finally so a
+        # failure here (a partial leak) does not also corrupt every test
+        # that runs after this one in the same process.
+        got = []
+        try:
+            got.append(raw_files.DOWNLOAD_SEMAPHORE.acquire(blocking=False))
+            got.append(raw_files.DOWNLOAD_SEMAPHORE.acquire(blocking=False))
+        finally:
+            for ok in got:
+                if ok:
+                    raw_files.DOWNLOAD_SEMAPHORE.release()
+        self.assertEqual(got, [True, True])
+
+    def test_permit_releases_only_once_even_if_both_paths_fire(self):
+        # _Permit must not double-release: guarded_stream()'s finally and
+        # Response.call_on_close() can both fire for an ordinary GET whose
+        # body is fully consumed (finally on generator exhaustion,
+        # call_on_close on the WSGI close() that follows). A genuine second
+        # sem.release() on a BoundedSemaphore already back at its initial
+        # count raises ValueError immediately -- verified in isolation
+        # (threading.BoundedSemaphore(2): acquire, release, release ->
+        # "Semaphore released too many times") -- so _Permit's guard is what
+        # stands between a completed download and a crashed request thread.
+        self.assertTrue(raw_files.DOWNLOAD_SEMAPHORE.acquire(blocking=False))
+        try:
+            permit = raw_files._Permit(raw_files.DOWNLOAD_SEMAPHORE)
+            permit.release()
+            permit.release()  # must be a silent no-op, not a second release
+        except ValueError:
+            self.fail("_Permit.release() called twice raised -- it must "
+                       "guard the underlying semaphore, not just forward")
+
+        # Semaphore is back at its starting count (one acquire, one real
+        # release): both permits are available again.
+        self.assertTrue(raw_files.DOWNLOAD_SEMAPHORE.acquire(blocking=False))
+        self.assertTrue(raw_files.DOWNLOAD_SEMAPHORE.acquire(blocking=False))
+        raw_files.DOWNLOAD_SEMAPHORE.release()
+        raw_files.DOWNLOAD_SEMAPHORE.release()
+
 
 class PerFileRouteTests(RawFilesFixture):
     def test_traversal_is_404(self):

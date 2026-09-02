@@ -37,9 +37,42 @@ ACTIVE_LABEL = "RAW"
 # inside the streaming generator's `finally`, not `@after_this_request` --
 # that hook runs at finalize_request, before the WSGI server ever consumes
 # the response iterable, so it would be a no-op for the case this exists to
-# protect. Matching client concurrency cap: settings_editor.html's
-# DOWNLOAD_CONCURRENCY.
+# protect. The client downloads sequentially (one take, one progress bar, at
+# a time), so it never approaches this cap on its own; it exists for the
+# case of several browser tabs, or a stray non-picker <a download> alongside
+# an in-progress picker download.
 DOWNLOAD_SEMAPHORE = threading.BoundedSemaphore(2)
+
+
+class _Permit:
+    """Releases *sem* at most once, however that happens.
+
+    guarded_stream()'s generator-finally frees the permit when a GET
+    response's body is iterated to completion, or aborted mid-stream
+    (GeneratorExit). Neither ever runs for a HEAD request: Werkzeug never
+    iterates a HEAD response's body, so the generator function's own code --
+    including its `finally` -- never executes, and the acquire() made before
+    the Response was constructed leaked forever. Two `curl -I` calls alone
+    exhausted the cap and every later download 429'd, permanently, with no
+    way to recover short of a restart.
+
+    Response.call_on_close() fires for both GET and HEAD, so the route
+    registers it as a second, always-armed release path. This class is what
+    makes 'released by whichever of the two fires first' safe, instead of a
+    double release raising on the underlying BoundedSemaphore.
+    """
+
+    def __init__(self, sem):
+        self._sem = sem
+        self._lock = threading.Lock()
+        self._released = False
+
+    def release(self):
+        with self._lock:
+            if self._released:
+                return
+            self._released = True
+        self._sem.release()
 
 
 def _media_roots() -> list[Path]:

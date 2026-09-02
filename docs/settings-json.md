@@ -89,7 +89,7 @@ Serves the web UI on port 5000 over TLS instead of plain HTTP. **Off by default,
 
 A camera is reached at `cinepi.local` or, on the hotspot, at `10.42.0.1`. No certificate authority will issue for an mDNS name or a private address, so this always means a **self-signed** certificate and a full-page browser warning on first visit — every visit in a private window, and repeatedly on iOS.
 
-Turn it on when you need a *secure browser context*. The RAW files pane's **Download into a folder…** button uses the File System Access API, which browsers only expose on a secure origin (and which only Chromium-based desktop browsers implement at all — Safari and Firefox offer it on neither http nor https).
+Turn it on when you need a *secure browser context*. The RAW files pane's own **Download**/**Download selected** controls pick this up automatically: on a secure origin, in a browser that implements the File System Access API (Chromium-based desktops only — Safari and Firefox offer it on neither http nor https), they ask where to save instead of handing the file to the browser's own download manager. Anywhere else, the same buttons fall back to a normal download with no change in behaviour.
 
 One consequence is handled for you. cinepi-raw's MJPEG preview on port 8000 speaks only plain HTTP and cannot be upgraded, and a secure page is forbidden from loading an insecure subresource — so on HTTPS the live preview would go black. CineMate detects that the page was served over TLS and routes the preview through a same-origin proxy at `/preview/<cam>/stream` instead. A plain-HTTP camera is unaffected and keeps talking straight to port 8000, so it pays nothing for this.
 

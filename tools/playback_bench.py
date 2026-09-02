@@ -75,11 +75,16 @@ def frames_in(take: Path) -> list[Path]:
 
 def take_meta(frames: list[Path]) -> dict:
     meta = dng_preview.read_metadata(frames[0])
-    hdr, encoding, label = dng_preview.describe_mode(meta)
+    hdr, encoding, label, display_bits, log10 = dng_preview.describe_mode(meta)
     return {
         "width": int(meta.get("width", 0)),
         "height": int(meta.get("height", 0)),
+        # The literal stored BitsPerSample, not describe_mode()'s
+        # display_bits substitution -- this is a diagnostic tool, and what
+        # the decoder actually reads off disk is the useful number here.
         "bits": int(meta.get("bits", 0)),
+        "source_bits": display_bits,
+        "log10": log10,
         "fps": dng_preview.frame_rate(meta),
         "mode_label": label,
         "encoding": encoding,

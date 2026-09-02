@@ -234,16 +234,26 @@ def describe_mode(meta):
         12/10          present             4095 / 1023   log-encoded SDR
         12/10          present             65535         log-encoded ClearHDR
 
-    Returns ``(hdr, encoding, label)``. ``hdr`` is True when the linear range
-    exceeds what a 12-bit sensor mode can hold, which is the thing worth
-    badging. ``encoding`` is "linear" or "companded".
+    Returns ``(hdr, encoding, label, display_bits, log10)``. ``hdr`` is True
+    when the linear range exceeds what a 12-bit sensor mode can hold, which
+    is the thing worth badging. ``encoding`` is "linear" or "companded".
 
     What this deliberately does not claim: *which* curve a LinearizationTable
-    holds. The CCMP decompand and the CineMate Log curve are written to the same
-    tag (0xC618), and when log runs on top of 12-bit ClearHDR the two are
-    composed into one table. A file carrying a table cannot be resolved into
-    "log" versus "ClearHDR companding" from the tags alone -- so this does not
-    guess, and callers should not present one.
+    holds -- with one exception, ``log10``. The CCMP decompand and the
+    CineMate Log curve are written to the same tag (0xC618), and when log
+    runs on top of 12-bit ClearHDR the two are composed into one table, so a
+    BitsPerSample-12 file carrying a table cannot be resolved into "log"
+    versus "ClearHDR companding" from the tags alone -- this still does not
+    guess there. But BitsPerSample 10 has no such ambiguity: cinepi-raw's log
+    encoder is the only thing that ever produces it (CCMP companding and
+    every native 10-bit sensor mode -- imx296, imx477 1332x990, imx283
+    modes 3-5 -- never carry a table, since log's only valid *targets* are
+    10 or 12 bit and its only valid *sources* are 12-bit SDR or 16-bit
+    ClearHDR). So BitsPerSample==10 with a table present is unambiguously a
+    log-to-10 take, and ``display_bits`` reports the *source* depth (12 or
+    16, from the same white>4095 split as ``hdr`` -- log's only two valid
+    sources) rather than the 10-bit storage encoding, which described what
+    the take was compressed to, not what it was shot at.
     """
     bits = int(meta.get("bits", 12))
     white = meta.get("white_level")
@@ -263,7 +273,11 @@ def describe_mode(meta):
         label = "HDR"          # ClearHDR via companding, or log over ClearHDR
     else:
         label = "HDR"          # 16-bit linear ClearHDR
-    return hdr, encoding, label
+
+    log10 = bits == 10 and companded
+    display_bits = (16 if hdr else 12) if log10 else bits
+
+    return hdr, encoding, label, display_bits, log10
 
 
 def _black_white(meta):

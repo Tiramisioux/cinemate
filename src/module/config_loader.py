@@ -313,12 +313,18 @@ def thumbnail_startup_value(settings: dict) -> int:
     "colour" via the other. This applies the exact same clamp as
     set_thumbnail() so both paths agree, and so a malformed value degrades
     to a safe default instead of reaching either process unvalidated.
+
+    Defaults to 2 (colour), not 0: the embedded thumbnail is now the
+    standard playback path, and playback.py's raw-decode fallback is
+    disabled (too demanding on the Pi, operator decision after G10/G11) --
+    so a take recorded with thumbnail=0, or a parse failure that used to
+    fall back to 0, would otherwise be unplayable in the pane.
     """
-    raw = settings.get("image_capture", {}).get("thumbnail", 0)
+    raw = settings.get("image_capture", {}).get("thumbnail", 2)
     try:
         return max(0, min(2, int(raw)))
     except (TypeError, ValueError):
-        return 0
+        return 2
 
 
 def _apply_settings_defaults(settings: dict) -> dict:
@@ -475,7 +481,9 @@ def _apply_settings_defaults(settings: dict) -> dict:
         # modes; set "imx585_clear_hdr" false to hide the HDR modes. See
         # SensorDetect._hdr_whitelist.
         "hdr": {"sdr": True, "imx585_clear_hdr": True},
-        "thumbnail": 0,
+        # 2 (colour): the embedded thumbnail is the standard playback path
+        # now, not an opt-in -- see thumbnail_startup_value()'s docstring.
+        "thumbnail": 2,
         "custom_modes": {},
     }
     for k, v in image_capture_defaults.items():

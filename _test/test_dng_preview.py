@@ -275,11 +275,52 @@ class DngPreviewTest(unittest.TestCase):
                           black=200, linearization=lut)
 
         self.assertEqual(dng_preview.describe_mode(dng_preview.read_metadata(sdr)),
-                         (False, "linear", "SDR"))
+                         (False, "linear", "SDR", 12, False))
         self.assertEqual(dng_preview.describe_mode(dng_preview.read_metadata(hdr16)),
-                         (True, "linear", "HDR"))
+                         (True, "linear", "HDR", 16, False))
         self.assertEqual(dng_preview.describe_mode(dng_preview.read_metadata(hdr12)),
-                         (True, "companded", "HDR"))
+                         (True, "companded", "HDR", 12, False))
+
+    def test_log10_reports_the_source_depth_not_the_storage_depth(self):
+        """BitsPerSample 10 with a table is unambiguous -- unlike 12-bit,
+        nothing but cinepi-raw's log encoder ever produces it (no native
+        10-bit sensor mode or CCMP companding carries a table at 10 bits).
+        display_bits should say what the take was actually SHOT at (12 or
+        16, from the same white>4095 split as `hdr`), not the 10-bit
+        encoding it was compressed to for storage."""
+        # log-to-10 from a 12-bit SDR source: white stays in the SDR range.
+        # The table is indexed by the STORED (10-bit) code, so it only
+        # needs 1024 entries, not the 12-bit source's 4096.
+        lut10_sdr = list(range(1024))
+        sdr_source = build_dng(self.dir / "log10_sdr.dng", bits=10, white=1023,
+                               black=64, linearization=lut10_sdr, fill=400)
+        hdr, encoding, label, display_bits, log10 = dng_preview.describe_mode(
+            dng_preview.read_metadata(sdr_source))
+        self.assertTrue(log10)
+        self.assertEqual(display_bits, 12)
+        self.assertFalse(hdr)
+
+        # log-to-10 from a 16-bit ClearHDR source: white is in the recovered
+        # 16-bit linear domain even though the stored codes are 10-bit.
+        lut10_hdr = [min(65535, i * 64) for i in range(1024)]
+        hdr_source = build_dng(self.dir / "log10_hdr.dng", bits=10, white=65535,
+                               black=3200, linearization=lut10_hdr, fill=400)
+        hdr, encoding, label, display_bits, log10 = dng_preview.describe_mode(
+            dng_preview.read_metadata(hdr_source))
+        self.assertTrue(log10)
+        self.assertEqual(display_bits, 16)
+        self.assertTrue(hdr)
+
+    def test_native_ten_bit_is_not_mistaken_for_log(self):
+        """A genuinely 10-bit sensor mode (imx296's only mode, imx477
+        1332x990, imx283 modes 3-5) has no LinearizationTable -- log10
+        must require the table, not just bits==10."""
+        native10 = build_dng(self.dir / "native10.dng", bits=10, white=1023,
+                             black=64, linearization=None)
+        hdr, encoding, label, display_bits, log10 = dng_preview.describe_mode(
+            dng_preview.read_metadata(native10))
+        self.assertFalse(log10)
+        self.assertEqual(display_bits, 10)
 
     def test_mono_forces_greyscale_because_the_file_cannot_say(self):
         """cinepi-raw tags a colour CFA even on a mono sensor."""

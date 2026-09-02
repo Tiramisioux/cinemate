@@ -49,24 +49,25 @@ Turn **Use conform frame rate** off to play each take at the rate it was shot in
 
 Everything in this row is read from the take's own DNG files, not from what the camera is set to now — so an old take reads correctly even if the camera has been reconfigured since.
 
-`FPS`, `Resolution`, `Depth` and `Sensor` come straight from the frame's tags. The grey boxes to the right are:
+`FPS`, `Resolution`, `Depth` and `Sensor` come straight from the frame's tags. `Depth` is the take's *original/source* depth, not necessarily the literal `BitsPerSample` stored in the file — a log-encoded take compresses to 10-bit for storage, and showing that number instead of what the take was actually shot at (12-bit SDR or 16-bit ClearHDR) was more confusing than useful. Look for `LOG10` if you want to know whether that compression happened. The grey boxes to the right are:
 
 | Box | Meaning |
 |---|---|
-| `10b`, `12b`, `16b` | Bits per sample as stored in the file. `10b` is a log-encoded take on a 12-bit mode, or one of the sensor modes that are 10-bit natively (imx296's only mode, imx477 1332×990, imx283 modes 3-5) |
+| `12b`, `16b` | Bits per sample the take was shot at |
 | `SDR` | Standard-range capture |
 | `HDR` | The take holds more range than a 12-bit sensor mode can carry — ClearHDR, in either its 16-bit linear or 12-bit companded form |
 | `LIN` | The samples are linear |
 | `CRV` | A curve is baked into the file and a reader must apply it before the levels mean anything |
+| `LOG10` | The take was log-encoded and stored as 10-bit — `Depth` already shows the original depth it was shot at, this just says the compression happened |
 | `WAV` | The take has audio; `—` means it does not |
 | `CNF` | The take is playing at something other than 1.00× because of the conform rate |
-| `DROP` | Playback could not hold the rate — see below |
+| `DROP N` | The *recording* is missing `N` frames — a gap in cinepi-raw's own frame-numbering, read from the filenames on disk. Nothing to do with this playback session's own speed; no badge means either zero drops or the frame numbering couldn't be read, not necessarily a clean take |
 
 !!! note ""
 
-    There is no HDR flag in a CinemaDNG file. `SDR` / `HDR` is worked out from the white level, which is why it stays correct across all of CineMate's capture modes. For the same reason `CRV` cannot say *which* curve is present: ClearHDR's companding and [CineMate Log](cinemate-log.md) are written to the same DNG tag, and when both apply they are combined into one. The badge reports that a curve exists, not which one.
+    There is no HDR flag in a CinemaDNG file. `SDR` / `HDR` is worked out from the white level, which is why it stays correct across all of CineMate's capture modes. For the same reason `CRV` cannot say *which* curve is present: ClearHDR's companding and [CineMate Log](cinemate-log.md) are written to the same DNG tag, and when both apply they are combined into one. The badge reports that a curve exists, not which one. `LOG10` is the one exception: `BitsPerSample` 10 with a table is unambiguous, since nothing else ever produces that combination (no native 10-bit sensor mode or ClearHDR companding carries a table at 10 bits), so this one badge can say more than "a curve exists."
 
-**Source** says where the picture came from: `Thumbnail` for a take that carries cinepi-raw's embedded DNG thumbnail (the fixed-size mono or colour plane it writes alongside the raw image, when built with the toggle on), `Raw decode` for one demosaiced from the raw image at the preview scale below. Never guess which you are looking at — a 720p thumbnail and a demosaiced quarter-res frame are different pictures of the same take, and only a raw decode is affected by the preview scale or monochrome-sensor settings. Source is a property of the take, not of any one frame: cinepi-raw's toggle cannot change mid-take, so every frame in a take answers the same way.
+**Source** says where the picture came from: `Thumbnail` for a take that carries cinepi-raw's embedded DNG thumbnail (the fixed-size mono or colour plane it writes alongside the raw image), `No thumbnail` for one that doesn't. A take with no thumbnail — recorded with the toggle off, or before a rebuilt cinepi-raw supported it — currently cannot be played back at all: raw decode is far more demanding on the Pi and is not used as a fallback. Source is a property of the take, not of any one frame: cinepi-raw's toggle cannot change mid-take, so every frame in a take answers the same way.
 
 ## Rate readouts
 
@@ -78,23 +79,7 @@ Everything in this row is read from the take's own DNG files, not from what the 
 | **Achieved** | The rate playback is *actually* managing, measured continuously |
 | **Frames skipped** | How many frames have been skipped to hold the clock |
 
-**Achieved is measured, not assumed.** When the camera cannot decode frames fast enough, playback holds the clock and skips frames rather than letting the take quietly run slow — so the timing you see stays honest and the cost shows up as a skip count and a `DROP` badge. If you are seeing skips, drop the preview scale.
-
-## Preview scale
-
-Decoding is what costs time, and cost falls with the size of the picture. Each option shows the pixel size it produces for the selected take:
-
-| Scale | On a 3856×2180 take | On a 2028×1520 take |
-|---|---|---|
-| `1/2` | 1928×1090 | 1014×760 |
-| `1/4` (default) | 964×545 | 507×380 |
-| `1/8` | 482×272 | 253×190 |
-
-`1/2` is as fine as it goes. Reading the card is also part of the cost, and it halves with each step — on 4K takes that is often what decides whether playback holds the rate, especially on slower storage.
-
-## Monochrome sensors
-
-CineMate tags every frame with a colour filter pattern, including on a monochrome sensor — nothing in the file distinguishes the two. Turn **Monochrome sensor** on for takes shot on a mono sensor; leaving it off renders them through a colour pattern and produces a convincing but wrong image.
+**Achieved is measured, not assumed.** When the camera cannot decode frames fast enough, playback holds the clock and skips frames rather than letting the take quietly run slow — so the timing you see stays honest and the cost shows up as a skip count.
 
 ## While recording
 

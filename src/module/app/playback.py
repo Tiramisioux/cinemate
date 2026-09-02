@@ -25,6 +25,7 @@ Two costs are worth knowing about before changing anything here:
 from __future__ import annotations
 
 import logging
+import re
 import threading
 from pathlib import Path
 
@@ -99,6 +100,40 @@ def _frame_names(take_dir: Path) -> list[str]:
     return names
 
 
+# cinepi-raw's own zero-padded, 9-digit capture-sequence suffix -- e.g.
+# "CINEPI_25-07-01_220547_F10_C00000_000000009.dng" (simple_gui.py's
+# _format_last_dng() strips this same suffix, going the other direction).
+_FRAME_INDEX_RE = re.compile(r"_(\d+)\.dng$", re.IGNORECASE)
+
+
+def dropped_frame_count(take_dir: Path) -> int | None:
+    """How many frames are missing from this take's own capture sequence.
+
+    Read purely from gaps in the frame filenames' index suffix -- no
+    redis, no recording-time telemetry -- matching this module's file-only
+    design (a take on the card is a fact on disk, reading it should not
+    need the capture pipeline to be healthy or even running). This is the
+    same guarantee _frame_names()'s own docstring already relies on: a
+    dropped frame leaves a gap in the numbering, which is exactly why
+    playback indexes by list position rather than by the number in the
+    filename. Returns None when it can't be determined (no frames, or a
+    filename that doesn't match the expected suffix) -- distinct from 0
+    (determined, and no frames were dropped).
+    """
+    names = _frame_names(take_dir)
+    if not names:
+        return None
+    indices = []
+    for name in names:
+        m = _FRAME_INDEX_RE.search(name)
+        if not m:
+            return None
+        indices.append(int(m.group(1)))
+    indices.sort()
+    span = indices[-1] - indices[0] + 1
+    return max(0, span - len(indices))
+
+
 def clip_info(name: str) -> dict:
     """Index one take: frame count plus what its first frame's tags report.
 
@@ -115,6 +150,11 @@ def clip_info(name: str) -> dict:
         "name": name,
         "frame_count": len(names),
         "has_wav": any(raw_files.safe_take_children(take_dir, "*.wav")),
+        # From the RECORDING, not from playback's own render speed -- a
+        # gap in cinepi-raw's own frame-index suffix, not whether this
+        # decode session kept up. Independent of whether the take's tags
+        # can even be read, so computed before the early-return below.
+        "dropped_frames": dropped_frame_count(take_dir),
     }
     if not names:
         return info
@@ -128,11 +168,15 @@ def clip_info(name: str) -> dict:
         info["unreadable"] = True
         return info
 
-    hdr, encoding, label = dng_preview.describe_mode(meta)
+    hdr, encoding, label, display_bits, log10 = dng_preview.describe_mode(meta)
     info.update({
         "width": int(meta.get("width", 0)),
         "height": int(meta.get("height", 0)),
-        "bits": int(meta.get("bits", 0)),
+        # The take's ORIGINAL/source depth, not the 10-bit storage encoding
+        # a log-to-10 take is compressed to -- describe_mode() only makes
+        # that substitution when it's unambiguous (bits==10 with a table).
+        "bits": display_bits,
+        "log10": log10,
         "fps": dng_preview.frame_rate(meta),
         "hdr": hdr,
         "encoding": encoding,
@@ -148,7 +192,16 @@ def clip_info(name: str) -> dict:
 
 
 def list_clips() -> list[dict]:
-    """Every take on mounted storage, newest first, with its playback metadata."""
+    """Every take on mounted storage, in SHOOTING order (oldest first), with
+    its playback metadata.
+
+    raw_files.list_takes() itself stays newest-first -- that ordering is
+    right for the RAW files pane (most recent take at the top for quick
+    access/deletion) and this function must not change it for that caller.
+    Re-sorted here, scoped to the Playback pane only, so the take strip
+    reads left-to-right in the order it was shot: first take upper-left,
+    each later take to its right.
+    """
     clips = []
     for take in raw_files.list_takes():
         info = clip_info(take["name"])
@@ -160,6 +213,7 @@ def list_clips() -> list[dict]:
             "mtime": take.get("mtime"),
         })
         clips.append(info)
+    clips.sort(key=lambda c: c["mtime"] or 0)
     return clips
 
 
@@ -169,6 +223,17 @@ def list_clips() -> list[dict]:
 # them is worth judging focus on. Reported per frame, all the way to the HUD.
 SOURCE_THUMBNAIL = "thumbnail"   # the embedded lores plane cinepi-raw writes
 SOURCE_DECODE = "decode"         # demosaiced from the raw image
+
+# Operator decision, after hardware verification: raw decode is far more
+# demanding on the Pi than serving the embedded thumbnail (no demosaic, no
+# LinearizationTable, no bit-unpacking) and is no longer the pane's
+# fallback for a take with none. decode_frame()/_load_rows()/etc. in
+# dng_preview.py are all still here, untouched, in case this is revisited
+# -- flipping this one flag is the entire re-enable. frame_source() still
+# answers SOURCE_DECODE for a thumbnail-less take (it is still a true
+# statement about what WOULD serve it); this flag only gates whether
+# frame_jpeg() actually acts on that answer or refuses instead.
+_RAW_DECODE_FALLBACK_ENABLED = False
 
 
 def frame_source(meta: dict) -> str:
@@ -219,9 +284,14 @@ def frame_jpeg(name: str, index: int, scale: int = 4, mono: bool = False,
         if source == SOURCE_THUMBNAIL:
             data, (width, height) = dng_preview.decode_thumbnail(
                 path, meta, quality=quality)
-        else:
+        elif _RAW_DECODE_FALLBACK_ENABLED:
             data, (width, height) = dng_preview.decode_frame(
                 path, meta, scale=scale, mono=mono, quality=quality)
+        else:
+            raise PlaybackError(
+                "this take has no embedded thumbnail (recorded before "
+                "thumbnail=1/2 was set, or on cinepi-raw without Phase 0) "
+                "-- raw playback is currently disabled")
         return data, width, height, source
     except dng_preview.DngError as exc:
         raise PlaybackError(str(exc)) from exc

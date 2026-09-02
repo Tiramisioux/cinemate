@@ -1138,15 +1138,15 @@
     <div class="page-tabs" role="tablist" aria-label="Cinemate app pages">
       <button type="button" data-page-tab="config" role="tab">config.txt<span class="tab-hint">boot &amp; sensors</span></button>
       <button type="button" data-page-tab="settings" role="tab" class="active" aria-selected="true">settings.jsonc<span class="tab-hint">cameras, audio, controls</span></button>
-      <button type="button" data-page-tab="raw" role="tab">RAW files<span class="tab-hint">browse &amp; download</span></button>
-      <button type="button" data-page-tab="playback" role="tab">Playback<span class="tab-hint">review takes</span></button>
       <button type="button" data-page-tab="live" role="tab">Live view<span class="tab-hint">shoot now</span></button>
+      <button type="button" data-page-tab="playback" role="tab">Playback<span class="tab-hint">review takes</span></button>
+      <button type="button" data-page-tab="raw" role="tab">RAW files<span class="tab-hint">browse &amp; download</span></button>
     </div>
-    <p class="lede" data-page-lede="config" hidden><strong>This edits <code class="mono">config.txt</code> on the boot partition</strong> — sensor overlays, hardware buses, the RP1 overclock. It's a different file from Cinemate's own settings, and every change here needs a reboot, not just a restart.</p>
-    <p class="lede" data-page-lede="settings"><strong>This edits <code class="mono">settings.jsonc</code> on the camera</strong> — every field below is one line in that file. Change something, the file preview updates live, and nothing touches the SD card until you save. Restarting Cinemate applies it.</p>
-    <p class="lede" data-page-lede="raw" hidden><strong>Browse what's on the active storage device</strong> and pull takes off over Wi‑Fi — no card swap, no file to save, nothing to restart.</p>
-    <p class="lede" data-page-lede="playback" hidden><strong>Watch a take back on the camera</strong> — frames are decoded from the CinemaDNG on the card as you play, so nothing is transcoded and nothing is written back. Playback runs at the conform frame rate, so a take shot faster than the conform reads as slow motion, exactly as it will on the timeline.</p>
-    <p class="lede" data-page-lede="live" hidden><strong>The shooting screen</strong> — the same image and readouts <span class="mono">simple_gui.py</span> already draws on the HDMI overlay, mirrored to the browser so you can shoot from off the rig.</p>
+    <p class="lede" data-page-lede="config" hidden></p>
+    <p class="lede" data-page-lede="settings"><strong>This edits <code class="mono">/home/pi/cinemate/settings.jsonc</code> on the camera</strong> — every field below is one line in that file. Change something, the file preview updates live, and nothing touches the SD card until you save. Restarting Cinemate applies it.</p>
+    <p class="lede" data-page-lede="live" hidden></p>
+    <p class="lede" data-page-lede="playback" hidden></p>
+    <p class="lede" data-page-lede="raw" hidden></p>
 
     <!-- WELCOME -->
     <section class="group" id="welcome" data-page="settings">
@@ -1814,15 +1814,20 @@
             </label>
           </div>
         </div>
-        <div class="card" data-search="thumbnail dng embedded preview playback mono colour color">
-          <div class="card-main">
-            <label class="card-label">DNG thumbnail</label>
-            <p class="card-help">Embedded thumbnail cinepi-raw writes into new takes' DNG files, read by the Playback pane instead of decoding the raw image. 0 off, 1 mono, 2 colour. Applied live afterwards with <span class="mono">set thumbnail</span> -- no camera restart.</p>
-          </div>
-          <div class="card-control">
-            <input class="field-input num-input" type="number" min="0" max="2" id="f-thumbnail" data-path="image_capture.thumbnail" data-type="number" data-original="0" value="0" style="width:56px">
-          </div>
-        </div>
+        <!-- No visible card here: the embedded DNG thumbnail is now the
+             standard playback path (image_capture.thumbnail defaults to 2,
+             colour), not an operator-facing toggle -- the 0/1/2 field with
+             its "off / mono / colour, applied live" explanation was found
+             confusing now that "off" isn't really a supported playback
+             configuration (playback.py's raw-decode fallback is disabled).
+             Still adjustable via `set thumbnail` (CLI) if you want mono for
+             a lighter write cost. This hidden input is NOT decorative: it
+             is what keeps buildState() from silently dropping
+             image_capture.thumbnail from settings.jsonc on the next editor
+             save (B-2's exact bug, reintroduced by removing the visible
+             field without this) -- every [data-path] element participates
+             in the save payload whether or not it is shown. -->
+        <input type="hidden" data-path="image_capture.thumbnail" data-type="number" data-original="2" value="2">
         <div class="card" data-search="sensor database file resources sensors json advanced">
           <div class="card-main">
             <label class="card-label">Sensor database</label>
@@ -2175,8 +2180,8 @@
           </div>
         </div>
         <div class="pb-lock">
-          <span class="pb-lock-title">Playback held — recording</span>
-          <span class="pb-lock-body">Reading the card while a take is being written to it risks audio xruns and dropped frames. Playback resumes when recording stops.</span>
+          <span class="pb-lock-title" id="pbLockTitle">Playback held — recording</span>
+          <span class="pb-lock-body" id="pbLockBody">Reading the card while a take is being written to it risks audio xruns and dropped frames. Playback resumes when recording stops.</span>
         </div>
       </div>
 
@@ -2227,26 +2232,17 @@
           </div>
           <div class="card-control"><button class="toggle" role="switch" aria-checked="true" id="pbToggleConform"></button></div>
         </div>
-        <div class="card" data-search="preview scale resolution decode quality">
-          <div class="card-main">
-            <div class="card-label">Preview scale</div>
-            <div class="card-help">Decode cost and card read bandwidth both fall with scale. A half is the finest a Bayer cell allows without interpolating.</div>
-          </div>
-          <div class="card-control">
-            <select class="field-input" id="pbScale">
-              <option value="2">1/2</option>
-              <option value="4" selected>1/4</option>
-              <option value="8">1/8</option>
-            </select>
-          </div>
-        </div>
-        <div class="card" data-search="monochrome mono sensor colour color">
-          <div class="card-main">
-            <div class="card-label">Monochrome sensor</div>
-            <div class="card-help">cinepi-raw tags every frame with a colour filter array even on a mono sensor, so nothing on the card distinguishes them. Set it per take.</div>
-          </div>
-          <div class="card-control"><button class="toggle" role="switch" aria-checked="false" id="pbToggleMono"></button></div>
-        </div>
+        <!-- Preview scale and Monochrome sensor were removed: both only
+             ever affected decode_frame() (the raw-decode path), which is
+             now disabled (playback.py's _RAW_DECODE_FALLBACK_ENABLED) --
+             they controlled nothing for a thumbnail-sourced frame and just
+             sat there as dead, confusing UI. decode_frame(scale=, mono=)
+             itself is untouched; pbScale/pbToggleMono's ids are gone too,
+             so re-adding them needs new markup, not just flipping a flag,
+             if this is ever revisited. pbState.scale/pbState.mono stay at
+             their fixed defaults (4, false) purely because pbFrameUrl()
+             still puts them in the query string the server-side route
+             validates -- values a thumbnail-sourced response ignores. -->
       </div>
     </section>
 
@@ -2403,7 +2399,6 @@
     <section class="group" id="live" data-page="live">
       <header class="group-head">
         <h2>Live view</h2>
-        <p class="group-sub">The real Cinemate live-camera page, embedded and scaled to fit this column. Every control here is the genuine on-camera preview + <span class="mono">/api/v1/cmd</span> control surface — nothing here is a mockup.</p>
       </header>
       <div class="live-embed-wrap">
         <iframe id="liveEmbedFrame" class="live-embed-frame" src="/" title="Cinemate live camera preview" loading="lazy"></iframe>
@@ -4296,7 +4291,14 @@
      wrong speed while the readout named a different one. */
   var pbClips = [], pbClip = null, pbConform = 25, pbRenderToken = '0';
   var pbState = { i:0, playing:false, loop:false, conform:true, mono:false, scale:4,
-                  skipped:0, timer:null, t0:0, startFrame:0, windowAt:0, shown:0 };
+                  skipped:0, timer:null, t0:0, startFrame:0, windowAt:0, shown:0,
+                  /* Two independent reasons the stage can be locked -- kept
+                     separate so pbCheckRecording()'s 3s poll (which only
+                     knows about recording state) can't un-lock a take that
+                     is locked because IT has no thumbnail, and so selecting
+                     a different, playable take can't be blocked by a stale
+                     recording-lock check. See pbApplyLock(). */
+                  recordingLocked:false, noThumbnail:false };
 
   function pbEl(id){ return document.getElementById(id); }
   function pbFrameUrl(name, i, scale){
@@ -4320,10 +4322,15 @@
         pbConform = res.conform_frame_rate || 25;   /* config_loader.DEFAULT_CONFORM_FRAME_RATE */
         pbRenderToken = res.render_token || '0';
         pbEl('pbConformLabel').textContent = pbConform;
-        pbClips = res.clips || [];
+        pbClips = res.clips || [];   // shooting order, oldest first (playback.list_clips())
         pbRenderTakes();
         pbSetLocked(!!res.recording);
-        if (pbClips.length) pbSelectTake(0);
+        // Default to the most recently shot take (the last one in shooting
+        // order), not the first -- opening the pane is almost always "I
+        // just shot this, let me check it," and the strip's own left-to-
+        // right layout already shows the full shooting order for anyone
+        // who wants an earlier one.
+        if (pbClips.length) pbSelectTake(pbClips.length - 1);
       })
       .catch(function(){ /* best-effort, same as the RAW pane */ });
   }
@@ -4343,9 +4350,12 @@
       .then(function(r){ return r.json(); })
       .then(function(res){
         if (!res || !res.ok) return;
-        var wasLocked = pbEl('pbStage').classList.contains('is-locked');
+        var wasRecordingLocked = pbState.recordingLocked;
         pbSetLocked(!!res.recording);
-        if (wasLocked && !res.recording && pbClip) pbShow(pbState.i);  /* resume showing frames once clear */
+        // Resume only if THIS was what was locking us -- a take with no
+        // thumbnail must stay locked once recording clears, not flip to
+        // retrying frame loads that will keep failing.
+        if (wasRecordingLocked && !res.recording && !pbState.noThumbnail && pbClip) pbShow(pbState.i);
       })
       .catch(function(){ /* best-effort; the next poll or the next frame's onerror tries again */ });
   }
@@ -4420,6 +4430,11 @@
     if (!pbClip) return;
     [].forEach.call(pbEl('pbTakeStrip').children, function(el, i){
       el.setAttribute('aria-current', i === idx ? 'true' : 'false');
+      // The default selection is now the newest take -- the last, rightmost
+      // one in shooting order -- so it needs to be scrolled into view on a
+      // card with enough takes to overflow the strip, not just the first.
+      if (i === idx) el.scrollIntoView({ block: 'nearest', inline: 'nearest',
+                                         behavior: reduceMotion ? 'auto' : 'smooth' });
     });
     pbState.skipped = 0;
     pbEl('pbName').textContent = pbClip.name;
@@ -4428,27 +4443,30 @@
     pbEl('pbMetaDepth').textContent = pbClip.bits ? pbClip.bits + '-bit' : '—';
     pbEl('pbMetaSensor').textContent = pbClip.sensor || '—';
     /* Open decision 8: never let a 720p embedded proxy and a demosaiced
-       quarter-res frame look like the same picture in the HUD. */
+       quarter-res frame look like the same picture in the HUD.
+       source === 'decode' means "no embedded thumbnail" here, not "raw
+       decode is happening" -- that path is disabled (see playback.py's
+       _RAW_DECODE_FALLBACK_ENABLED), so the label says so rather than
+       claiming a fallback that will not actually serve anything. */
     pbEl('pbMetaSource').textContent =
       pbClip.source === 'thumbnail' ? 'Thumbnail' :
-      pbClip.source === 'decode' ? 'Raw decode' : '—';
+      pbClip.source === 'decode' ? 'No thumbnail' : '—';
     pbEl('pbScrub').max = Math.max(0, (pbClip.frame_count || 1) - 1);
     pbEl('pbFrameTotal').textContent = ' / ' + Math.max(0, (pbClip.frame_count || 1) - 1);
-    pbLabelScales();
-    pbBuildFilmstrip();
     pbApplyRate();
-    pbShow(0);
-  }
 
-  /* Scale options carry the pixel size they actually produce for THIS take --
-     the same divisor means very different frames on a 2K sensor and on UHD,
-     and that difference is what decides whether playback holds the rate. */
-  function pbLabelScales(){
-    [].forEach.call(pbEl('pbScale').options, function(opt){
-      var d = parseInt(opt.value, 10);
-      opt.textContent = '1/' + d + (pbClip && pbClip.width
-        ? ' · ' + Math.floor(pbClip.width / d) + '×' + Math.floor(pbClip.height / d) : '');
-    });
+    // A take with no embedded thumbnail cannot be played at all right now
+    // (raw decode is disabled) -- lock the stage with a clear reason
+    // instead of attempting frame/filmstrip requests that will all 404.
+    pbState.noThumbnail = pbClip.source !== 'thumbnail';
+    pbApplyLock();
+    if (pbState.noThumbnail){
+      pbEl('pbFrame').removeAttribute('src');
+      pbEl('pbFilmstrip').innerHTML = '';
+    } else {
+      pbBuildFilmstrip();
+      pbShow(0);
+    }
   }
 
   function pbBuildFilmstrip(){
@@ -4485,15 +4503,27 @@
     boxes.push('<span class="pb-box badge">' + (pbClip.mode_label || '—') + '</span>');
     /* A LinearizationTable means a curve is baked in, but tag 0xC618 cannot say
        whether it is the CCMP decompand, CineMate Log, or the two composed --
-       so this says "curve", never "log". */
+       so this says "curve", never "log". LOG10 is the one exception: bits==10
+       with a table is unambiguous (see describe_mode()'s docstring), so it can
+       say more than "a curve exists" -- and pbClip.bits already shows the
+       ORIGINAL depth this was shot at (12/16), not the 10-bit storage
+       encoding, so this badge is what says the compression happened at all. */
     var curved = pbClip.encoding === 'companded';
     boxes.push('<span class="pb-box ' + (curved ? 'badge' : 'off') + '">' + (curved ? 'CRV' : 'LIN') + '</span>');
+    if (pbClip.log10) boxes.push('<span class="pb-box badge">LOG10</span>');
     boxes.push('<span class="pb-box ' + (pbClip.has_wav ? '' : 'off') + '">' + (pbClip.has_wav ? 'WAV' : '—') + '</span>');
     if (pbClip.fps && pbState.conform && Math.abs(pbRate() / pbClip.fps - 1) > 0.001){
       boxes.push('<span class="pb-box badge" title="Conformed to ' + pbConform + ' fps">CNF</span>');
     }
-    if (pbState.playing && pbState.actualFps && pbState.actualFps < pbRate() * 0.97){
-      boxes.push('<span class="pb-box drop" title="Playback could not hold the rate">DROP</span>');
+    /* Property of the RECORDING (a gap in cinepi-raw's own frame-index
+       suffix), not of this playback session's render speed -- dropping
+       frames on decode was much more likely when raw decode was the only
+       path; the thumbnail path is cheap enough that it is rarely the
+       bottleneck, so the badge is more useful pointed at the take itself.
+       null means "couldn't be determined", not "zero" -- no badge either way. */
+    if (pbClip.dropped_frames){
+      boxes.push('<span class="pb-box drop" title="' + pbClip.dropped_frames +
+        ' frame(s) missing from the recording itself">DROP ' + pbClip.dropped_frames + '</span>');
     }
     pbEl('pbMetaBoxes').innerHTML = boxes.join('');
   }
@@ -4560,9 +4590,33 @@
     pbEl('pbPlayLabel').textContent = 'PLAY';
     pbEl('pbPlayIcon').innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
   }
-  function pbSetLocked(locked){
+  var PB_LOCK_RECORDING = ['Playback held — recording',
+    'Reading the card while a take is being written to it risks audio xruns and dropped frames. Playback resumes when recording stops.'];
+  var PB_LOCK_NO_THUMBNAIL = ['No embedded thumbnail',
+    'This take has no thumbnail — recorded with the toggle off, or before a rebuilt cinepi-raw supported it. Raw decode is far more demanding on the Pi and is not currently used as a fallback.'];
+
+  /* The single place that reconciles the two independent lock reasons
+     (pbState.recordingLocked, driven by pbCheckRecording()'s poll; and
+     pbState.noThumbnail, driven by pbSelectTake() and fixed per selected
+     take) into the one visible lock overlay. Recording takes the message
+     when both are true -- it's the more urgent, more dynamic one. */
+  function pbApplyLock(){
+    var locked = pbState.recordingLocked || pbState.noThumbnail;
+    var msg = pbState.recordingLocked ? PB_LOCK_RECORDING : PB_LOCK_NO_THUMBNAIL;
+    pbEl('pbLockTitle').textContent = msg[0];
+    pbEl('pbLockBody').textContent = msg[1];
     pbEl('pbStage').classList.toggle('is-locked', locked);
     if (locked) pbPause();
+  }
+
+  /* Recording-state half only -- called by refreshPlaybackPane() and
+     pbCheckRecording()'s poll. Must never touch pbState.noThumbnail: that
+     poll runs every 3s regardless of which take is selected, and a take
+     with no thumbnail stays locked for that reason even while nothing is
+     recording. */
+  function pbSetLocked(locked){
+    pbState.recordingLocked = locked;
+    pbApplyLock();
   }
 
   pbEl('pbPlay').addEventListener('click', function(){ pbState.playing ? pbPause() : pbPlay(); });
@@ -4576,19 +4630,11 @@
     this.classList.toggle('is-on', pbState.loop);
   });
   pbEl('pbScrub').addEventListener('input', function(){ pbPause(); pbShow(parseInt(this.value, 10)); });
-  pbEl('pbScale').addEventListener('change', function(){
-    pbState.scale = parseInt(this.value, 10); pbShow(pbState.i);
-  });
   pbEl('pbToggleConform').addEventListener('click', function(){
     pbState.conform = this.getAttribute('aria-checked') !== 'true';
     this.setAttribute('aria-checked', String(pbState.conform));
     pbPause(); pbState.skipped = 0; pbApplyRate(); pbShow(pbState.i);
     showToast(pbState.conform ? 'Conformed to ' + pbConform + ' fps' : 'Playing at the recorded rate');
-  });
-  pbEl('pbToggleMono').addEventListener('click', function(){
-    pbState.mono = this.getAttribute('aria-checked') !== 'true';
-    this.setAttribute('aria-checked', String(pbState.mono));
-    pbBuildFilmstrip(); pbShow(pbState.i);
   });
 
   /* A backgrounded tab has its timers clamped to about 1 Hz, so playback there

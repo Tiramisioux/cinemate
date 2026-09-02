@@ -16,95 +16,51 @@
     font-display: swap;
   }
 
+  /* W6: this used to be a light "paper" palette, permanently overridden by
+     #app.skin-hud (below) -- #app carries that class unconditionally, so
+     nothing outside #app (the raw-file drawer, the toast, the confirm
+     modal) ever saw the HUD look; they flipped with the OS colour scheme
+     instead. Promoted to the live palette so the whole page is one skin.
+     --focus is the one declaration #app.skin-hud does not shadow -- every
+     keyboard focus ring on the page resolves against this block. */
   :root{
-    --bg: #f7f3ec;
-    --panel: #ffffff;
-    --panel-2: #f1ece1;
-    --line: #e3dbcb;
-    --ink: #211d17;
-    --muted: #6f6656;
-    --accent: #a6631c;
-    --accent-ink: #fffaf1;
-    --accent-soft: #f0e0c8;
-    --ok: #3f7c43;
-    --ok-soft: #e2ecdf;
-    --danger: #a23830;
-    --danger-soft: #f3e2df;
-    --restart: var(--accent);
-    --restart-soft: var(--accent-soft);
-    --dirty: var(--accent);
-    --dirty-soft: var(--accent-soft);
-    --shadow: 0 1px 0 rgba(33,29,23,0.05);
-    --radius: 3px;
-    --radius-lg: 5px;
+    --bg: #050403;
+    --panel: #0c0b09;
+    --panel-2: #131210;
+    --line: #262420;
+    --ink: #f9f9f9;
+    --muted: #8a8a8a;
+    --accent: #90ee90;
+    --accent-ink: #04210c;
+    --accent-soft: #12291a;
+    --ok: #90ee90;
+    --ok-soft: #12291a;
+    --danger: #ff4136;
+    --danger-soft: #2c0f0d;
+    --restart: #ffdd00;
+    --restart-soft: #2e2600;
+    --dirty: #ff33ff;
+    --dirty-soft: #2c0e2c;
+    --shadow: none;
+    --radius: 0px;
+    --radius-lg: 0px;
     --focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
-  }
-  @media (prefers-color-scheme: dark){
-    :root{
-      --bg: #100e0c;
-      --panel: #1a1713;
-      --panel-2: #221d17;
-      --line: #33301f2b;
-      --line: #363026;
-      --ink: #f2ede4;
-      --muted: #a49a89;
-      --accent: #dd9a45;
-      --accent-ink: #221704;
-      --accent-soft: #382a13;
-      --ok: #7fbb79;
-      --ok-soft: #1e2b1c;
-      --danger: #d9695f;
-      --danger-soft: #341c19;
-      --restart: var(--accent);
-      --restart-soft: var(--accent-soft);
-      --dirty: var(--accent);
-      --dirty-soft: var(--accent-soft);
-      --shadow: 0 1px 0 rgba(0,0,0,0.4);
-      --focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
-    }
-  }
-  :root[data-theme="dark"]{
-    --bg: #100e0c;
-    --panel: #1a1713;
-    --panel-2: #221d17;
-    --line: #363026;
-    --ink: #f2ede4;
-    --muted: #a49a89;
-    --accent: #dd9a45;
-    --accent-ink: #221704;
-    --accent-soft: #382a13;
-    --ok: #7fbb79;
-    --ok-soft: #1e2b1c;
-    --danger: #d9695f;
-    --danger-soft: #341c19;
-    --restart: var(--accent);
-    --restart-soft: var(--accent-soft);
-    --dirty: var(--accent);
-    --dirty-soft: var(--accent-soft);
-    --shadow: 0 1px 0 rgba(0,0,0,0.4);
-  }
-  :root[data-theme="light"]{
-    --bg: #f7f3ec;
-    --panel: #ffffff;
-    --panel-2: #f1ece1;
-    --line: #e3dbcb;
-    --ink: #211d17;
-    --muted: #6f6656;
-    --accent: #a6631c;
-    --accent-ink: #fffaf1;
-    --accent-soft: #f0e0c8;
-    --ok: #3f7c43;
-    --ok-soft: #e2ecdf;
-    --danger: #a23830;
-    --danger-soft: #f3e2df;
-    --restart: var(--accent);
-    --restart-soft: var(--accent-soft);
-    --dirty: var(--accent);
-    --dirty-soft: var(--accent-soft);
-    --shadow: 0 1px 0 rgba(33,29,23,0.05);
+    color-scheme: dark;
   }
 
   *{ box-sizing: border-box; }
+  /* The page hides 15 things with `el.hidden`, and every one of them carries
+     an author `display` rule -- .card is grid, .pill and .btn are flex,
+     .action-args is inline-flex. An author display declaration beats the UA
+     stylesheet's `[hidden]{display:none}` whatever the specificity, so none of
+     them actually hid: measured on this page, a hidden #saveBtn stayed
+     109px wide, the unsaved-count pill 98px, a .card 834px, and the REC-tone
+     "at [1000] Hz" field rendered on every tally row, where a frequency is
+     meaningless (tally pins never get a PWM object -- gpio_output.py writes a
+     bare level). One author rule restores the attribute's meaning for all of
+     them; !important is what makes it beat the class rules. */
+  [hidden]{ display:none !important; }
+  .cliprow.is-busy{ opacity:.5; pointer-events:none; }
   html,body{ height:auto; }
   body{
     margin:0;
@@ -178,12 +134,20 @@
     border-bottom: 1px solid var(--line);
     background: var(--panel);
     position: sticky; top:0; z-index: 20;
-    /* The toolbar is a nowrap flex row needing ~760px. Without these it sets
-       the whole grid's minimum width and the PAGE scrolls sideways instead;
-       scroll the toolbar inside itself, the way .page-tabs already does. */
-    min-width: 0; overflow-x: auto; scrollbar-width: none;
+    /* Only .topbar-scroll (below) scrolls now. #dirtyPill and #saveBtn are
+       pinned outside it so the one action that matters cannot scroll out of
+       reach; min-width:0 still stops the PAGE scrolling sideways -- that was
+       this rule's original job, before Save could end up 400px+ off screen
+       inside it on a phone. */
+    min-width: 0;
   }
-  .topbar::-webkit-scrollbar{ display:none; }
+  .topbar-scroll{
+    flex: 1 1 auto; min-width: 0;
+    display:flex; align-items:center; gap:14px;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .topbar-scroll::-webkit-scrollbar{ display:none; }
+  #dirtyPill, #saveBtn{ flex: 0 0 auto; }
   .hamburger{
     display:none;
     width:34px; height:34px; border-radius: var(--radius);
@@ -221,7 +185,6 @@
   }
   .pill.is-dirty{ color: var(--dirty); border-color: var(--dirty); background: var(--dirty-soft); }
   .pill .dot{ width:6px; height:6px; border-radius:50%; background: currentColor; }
-
   .btn{
     font-family:'DIN2014',sans-serif; font-weight:700; font-size:12.5px; letter-spacing:0.04em;
     border-radius: var(--radius);
@@ -438,6 +401,9 @@
 
   .filepath{
     font-size: 12px; color: var(--muted); display:flex; align-items:center; gap:6px;
+    /* A resolved absolute path is far longer than the relative form this
+       showed before, and .card-control is not a min-width:0 flex item. */
+    min-width:0; overflow-wrap:anywhere;
   }
   .filepath svg{ opacity:.6; flex:none; }
 
@@ -664,12 +630,11 @@
   .status-text b{ font-family:'DIN2014',sans-serif; }
 
   .console{
-    background: #0c0a08; color: #d8cdb8; border-radius: var(--radius);
+    color: #d8cdb8; border-radius: var(--radius);
     font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.7;
     padding: 12px 14px; max-height: 220px; overflow-y: auto;
     display: none;
   }
-  :root[data-theme="light"] .console, .console{ }
   .console.open{ display:block; }
   .console .ln{ opacity:0; animation: rise .25s ease forwards; white-space: pre-wrap; word-break: break-word; }
   @media (prefers-reduced-motion: reduce){ .console .ln{ opacity:1; animation:none; } }
@@ -791,6 +756,14 @@
   .clip-badges{ display:flex; gap:6px; margin-top:7px; flex-wrap:wrap; }
   .clip-size{ font-variant-numeric: tabular-nums; font-size: 13px; text-align:right; white-space:nowrap; }
   .clip-actions{ display:flex; gap:6px; align-items:center; }
+  /* W10: only the folder-picker download path (fetch + a readable stream)
+     can report real byte progress -- a plain <a download> hands off to the
+     browser's own download manager, which owns its own UI. Hidden unless
+     .is-downloading is set on the row. */
+  .clip-progress{ grid-column: 1 / -1; display:none; align-items:center; gap:10px; margin-top:9px; }
+  .cliprow.is-downloading .clip-progress{ display:flex; }
+  .clip-progress .capacity-track{ flex:1; }
+  .clip-progress-text{ font-size:12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space:nowrap; }
   .chip-log{ color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
   .chip-danger{ color: var(--danger); border-color: var(--danger); background: var(--danger-soft); }
 
@@ -887,28 +860,6 @@
      SYNC_WARNING flash color, red = LOCK). Always on — #app carries this
      class permanently, there's no Manual/HUD switch anymore.
      ========================================================================== */
-  #app.skin-hud{
-    --bg: #050403;
-    --panel: #0c0b09;
-    --panel-2: #131210;
-    --line: #262420;
-    --ink: #f9f9f9;
-    --muted: #8a8a8a;
-    --accent: #90ee90;
-    --accent-ink: #04210c;
-    --accent-soft: #12291a;
-    --ok: #90ee90;
-    --ok-soft: #12291a;
-    --danger: #ff4136;
-    --danger-soft: #2c0f0d;
-    --restart: #ffdd00;
-    --restart-soft: #2e2600;
-    --dirty: #ff33ff;
-    --dirty-soft: #2c0e2c;
-    --radius: 0px;
-    --radius-lg: 0px;
-    --shadow: none;
-  }
   #app.skin-hud,
   #app.skin-hud .card-label,
   #app.skin-hud .lede,
@@ -988,20 +939,22 @@
     <button class="hamburger" id="hamburger" aria-label="Toggle sections menu" aria-expanded="false">
       <span></span>
     </button>
-    <label class="search">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-      <input id="searchInput" type="text" placeholder="Search settings — e.g. “gain”, “phase lock”, GPIO 13" autocomplete="off">
-    </label>
-    <div class="topbar-spacer"></div>
-    <span class="pill" id="dirtyPill" hidden><span class="dot"></span><span id="dirtyCount">0</span> unsaved</span>
-    <button class="btn btn-ghost" id="openJson" title="View the raw file this page edits">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m0 8v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3m0-8V5a2 2 0 0 0-2-2h-3"/></svg>
-      <span id="openJsonLabel">settings.jsonc</span>
-    </button>
-    <button class="btn btn-ghost" id="revertBtn" title="Load the stock defaults into this form (not saved until you click Save)">Revert</button>
-    <button class="btn btn-ghost" id="downloadBtn" title="Download the current form state as a file">Download</button>
-    <button class="btn btn-ghost" id="uploadBtn" title="Load a file into this form (not saved until you click Save)">Upload</button>
+    <div class="topbar-scroll">
+      <label class="search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="searchInput" type="text" placeholder="Search settings — e.g. “gain”, “phase lock”, GPIO 13" autocomplete="off">
+      </label>
+      <div class="topbar-spacer"></div>
+      <button class="btn btn-ghost" id="openJson" title="View the raw file this page edits">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m0 8v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3m0-8V5a2 2 0 0 0-2-2h-3"/></svg>
+        <span id="openJsonLabel">settings.jsonc</span>
+      </button>
+      <button class="btn btn-ghost" id="revertBtn" title="Load the stock defaults into this form (not saved until you click Save)">Revert</button>
+      <button class="btn btn-ghost" id="downloadBtn" title="Download the current form state as a file">Download</button>
+      <button class="btn btn-ghost" id="uploadBtn" title="Load a file into this form (not saved until you click Save)">Upload</button>
+    </div>
     <input type="file" id="uploadInput" accept=".json,.jsonc,.txt" hidden>
+    <span class="pill" id="dirtyPill" hidden><span class="dot"></span><span id="dirtyCount">0</span> unsaved</span>
     <button class="btn btn-primary" id="saveBtn" disabled>Save changes</button>
   </header>
 
@@ -1714,16 +1667,16 @@
         <div class="card" data-search="hdr threshold low high blend gain adder clearhdr knobs">
           <div class="card-main">
             <label class="card-label">ClearHDR startup knobs</label>
-            <p class="card-help">Applied when a ClearHDR mode is selected. Adjust live afterwards with <span class="mono">set hdr …</span> or a pot/quad‑rotary channel.</p>
+            <p class="card-help">Applied when a ClearHDR mode is selected. Adjust live afterwards with <span class="mono">set hdr …</span> or a pot/quad‑rotary channel. Leave a threshold blank to keep the sensor driver’s own pair (low 0, high 4095) — setting both to the same value flattens the image.</p>
           </div>
           <div class="card-control" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">
             <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
               <span class="live-cap" style="color:var(--muted)">Threshold low</span>
-              <input class="field-input num-input" type="number" id="f-hdr-thlow" data-path="image_capture.hdr.threshold_low" data-type="number" data-original="0" value="0" style="width:70px">
+              <input class="field-input num-input" type="number" id="f-hdr-thlow" data-path="image_capture.hdr.threshold_low" data-type="number" data-original="" value="" placeholder="driver" style="width:70px">
             </label>
             <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
               <span class="live-cap" style="color:var(--muted)">Threshold high</span>
-              <input class="field-input num-input" type="number" id="f-hdr-thhigh" data-path="image_capture.hdr.threshold_high" data-type="number" data-original="0" value="0" style="width:70px">
+              <input class="field-input num-input" type="number" id="f-hdr-thhigh" data-path="image_capture.hdr.threshold_high" data-type="number" data-original="" value="" placeholder="driver" style="width:70px">
             </label>
             <label style="display:flex; flex-direction:column; gap:3px; align-items:flex-end">
               <span class="live-cap" style="color:var(--muted)">Blend</span>
@@ -1741,7 +1694,14 @@
             <p class="card-help">Source file describing every supported sensor's modes. Edit only if you're adding hardware support.</p>
           </div>
           <div class="card-control">
-            <span class="filepath mono"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>resources/sensors.json</span>
+            <span class="filepath mono"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>{{ sensor_db_path }}</span>
+            <!-- The card is read-only, but the key still has to round-trip:
+                 buildState() only collects [data-path] elements, so without
+                 this field a Save posts no sensors.database_file at all and
+                 _apply_settings_defaults setdefaults it back to the stock
+                 "resources/sensors.json" -- silently discarding an
+                 operator's override. -->
+            <input type="hidden" data-path="sensors.database_file">
           </div>
         </div>
       </div>
@@ -1749,7 +1709,7 @@
     <section class="group" id="fpsceilings" data-page="settings">
       <header class="group-head">
         <h2>Per-mode fps ceilings</h2>
-        <p class="group-sub">A mode's advertised fps_max is an electrical property of the sensor, not a guarantee this storage/CPU can sustain it. Leave a field blank to keep using the detected value; fill one in only for a mode you've found a lower real-world ceiling for by trial. Raising above the detected value is allowed but logged as a warning -- the sensor never reported it.</p>
+        <p class="group-sub">These are what <span class="mono">cinepi-raw --list-cameras</span> reported on this board, not a fixed property of the sensor: the figure is clamped by the RP1 pixel rate, so enabling the RP1 overclock can raise it (imx585 4K 12-bit reads 43 stock, 50 overclocked), and it is rounded <em>down</em> to a whole frame — 43 can mean 43.98. It is also not a guarantee this storage/CPU can sustain it. Leave a field blank to keep using the detected value; fill one in only for a mode you've found a lower real-world ceiling for by trial. Raising above the detected value is allowed but logged as a warning — the sensor never reported it.</p>
       </header>
       <div class="cards" id="fpsCeilingsList"><p class="card-help">Loading detected modes…</p></div>
     </section>
@@ -1913,7 +1873,18 @@
       <div class="add-control-row">
         <button class="btn btn-ghost" type="button" id="addGpioOutBtn">+ Add pin</button>
       </div>
-      <div class="cards" style="margin-top:14px">
+      <!-- Both cards describe the slate tone, so they only mean anything once
+           a pin above is set to REC tone. Hidden together by syncToneCards(). -->
+      <div class="cards" style="margin-top:14px" id="toneCards">
+        <div class="card" data-search="rec tone frequency hz pitch slate">
+          <div class="card-main">
+            <label class="card-label" for="f-tonehz">Slate tone frequency</label>
+            <p class="card-help">Pitch of the tone, in hertz. One value for every pin set to REC tone.</p>
+          </div>
+          <div class="card-control">
+            <input class="field-input num-input" type="number" min="1" max="20000" id="f-tonehz" data-path="hardware_outputs.rec_tone.frequency_hz" data-type="number" data-original="1000" value="1000"> Hz
+          </div>
+        </div>
         <div class="card" data-search="rec tone duty cycle pulse width">
           <div class="card-main">
             <label class="card-label" for="f-toneduty">Slate tone duty cycle</label>
@@ -1923,10 +1894,10 @@
             <input class="field-input num-input" type="number" min="1" max="99" id="f-toneduty" data-path="hardware_outputs.rec_tone.duty_cycle" data-type="number" data-original="50" value="50"> %
           </div>
         </div>
-        <div class="card" data-search="rec tone relay drop frames">
+        <div class="card" data-search="rec tone relay drop frames mute dropped frame marker">
           <div class="card-main">
-            <label class="card-label" for="f-relaydrop">Drop a frame for the relay</label>
-            <p class="card-help">If your tally uses a mechanical relay, this holds the first frame briefly so the relay has time to physically click over.</p>
+            <label class="card-label" for="f-relaydrop">Mute the tone on a dropped frame</label>
+            <p class="card-help">When the camera drops a frame, cut the slate tone for about one frame, then resume. The gap is audible on the recorded scratch track, so a dropped frame is findable by ear in the edit.</p>
           </div>
           <div class="card-control">
             <button class="toggle" id="f-relaydrop" data-path="hardware_outputs.rec_tone.relay_drop_frames" data-type="bool" data-original="false" role="switch" aria-checked="false"></button>
@@ -2220,12 +2191,12 @@
     <section class="group" id="live" data-page="live">
       <header class="group-head">
         <h2>Live view</h2>
-        <p class="group-sub">The real Cinemate live-camera page, embedded and scaled to fit this column. Every control here is the genuine on-camera preview + <span class="mono">/api/v1/cmd</span> control surface — nothing here is a mockup.</p>
+        <p class="group-sub">The real Cinemate live-camera page, embedded at this column’s width. Every control here is the genuine on-camera preview + <span class="mono">/api/v1/cmd</span> control surface — nothing here is a mockup.</p>
       </header>
       <div class="live-embed-wrap">
         <iframe id="liveEmbedFrame" class="live-embed-frame" src="/" title="Cinemate live camera preview" loading="lazy"></iframe>
       </div>
-      <p class="card-help" style="margin-top:14px">Opens <a class="mono" href="/" target="_blank" rel="noopener">/</a> in a scaled frame. If controls feel cramped, open it in its own tab full-size.</p>
+      <p class="card-help" style="margin-top:14px;max-width:60ch">This is the page on port <span class="mono">5000</span> with <span class="mono">/settings-editor</span> dropped off the address — <a href="/" target="_blank" rel="noopener">open it in its own tab</a> if the controls feel cramped in here. The clean feed, no controls over it, is on port <span class="mono">8000</span> at <span class="mono">/stream</span> — same address, <span class="mono">8001</span> for cam1 on a dual‑sensor rig.</p>
     </section>
 
   </main>
@@ -3539,11 +3510,37 @@
      defaults in config_loader.py) on every save regardless of what page the
      operator was actually editing. Adding a second tally/tone pin was
      impossible for the same reason: there was nowhere to put it. */
-  /* rec_tone.frequency_hz has no [data-path] widget (the per-row Hz fields
-     come and go with their rows), so it is carried here and written back in
-     applyGpioOutToState() on every save -- including when no tone pin
-     exists, so the key never vanishes from the file. */
+  /* One frequency for every tone pin. It now has a permanent [data-path]
+     card (#f-tonehz) so buildState round-trips it even with no tone pin
+     mapped, but the per-row "at [x] Hz" fields come and go with their rows,
+     so the live value is still mirrored here and pushed both ways by
+     syncToneHz(). */
   var currentToneHz = 1000;
+
+  /* Write the shared frequency to the card and to every visible row field,
+     without re-entering their own change handlers. */
+  function syncToneHz(hz, skipEl){
+    currentToneHz = hz;
+    var card = document.getElementById('f-tonehz');
+    if (card && card !== skipEl) card.value = String(hz);
+    document.querySelectorAll('.tone-freq-wrap input').forEach(function(inp){
+      if (inp !== skipEl) inp.value = String(hz);
+    });
+  }
+
+  /* The frequency and duty-cycle cards describe the tone, so they are only
+     meaningful once some pin is set to REC tone. Now that [hidden] actually
+     hides (see the rule at the top of this stylesheet), this works. */
+  function syncToneCards(){
+    var cards = document.getElementById('toneCards');
+    if (!cards) return;
+    var anyTone = false;
+    document.querySelectorAll('#gpioOutList [data-control-type="gpio-out"]').forEach(function(row){
+      var el = document.getElementById(row.getAttribute('data-prefix') + '-method');
+      if (el && el.value === 'tone') anyTone = true;
+    });
+    cards.hidden = !anyTone;
+  }
   function buildGpioOutRow(pin, method){
     var prefix = nextControlPrefix();
     var row = document.createElement('div');
@@ -3589,15 +3586,13 @@
     freqWrap.hidden = method !== 'tone';
     methodSel.addEventListener('change', function(){
       freqWrap.hidden = methodSel.value !== 'tone';
+      syncToneCards();
       markControlsDirtyIfNeeded();
     });
     freqInput.addEventListener('change', function(){
       var v = parseFloat(freqInput.value);
       if (!isNaN(v) && v > 0){
-        currentToneHz = v;
-        document.querySelectorAll('#gpioOutList .tone-freq').forEach(function(inp){
-          if (inp !== freqInput) inp.value = String(v);
-        });
+        syncToneHz(v, freqInput);
       } else {
         freqInput.value = String(currentToneHz);
       }
@@ -3619,7 +3614,7 @@
   function populateGpioOut(settings){
     var out = (settings && settings.hardware_outputs) || {};
     var loadedHz = out.rec_tone && parseFloat(out.rec_tone.frequency_hz);
-    if (loadedHz && !isNaN(loadedHz)) currentToneHz = loadedHz;
+    if (loadedHz && !isNaN(loadedHz)) syncToneHz(loadedHz);
     var list = document.getElementById('gpioOutList');
     list.innerHTML = '';
     (out.rec_out_pin || []).forEach(function(pin){
@@ -3632,14 +3627,34 @@
       list.appendChild(row);
       row.querySelectorAll('.gpio-select').forEach(initGpioSelect);
     });
+    syncToneCards();
   }
+
+  /* One frequency, two places to type it. */
+  (function(){
+    var card = document.getElementById('f-tonehz');
+    if (!card) return;
+    card.addEventListener('change', function(){
+      var v = parseFloat(card.value);
+      if (!isNaN(v) && v > 0) { syncToneHz(v, card); }
+      else { card.value = String(currentToneHz); }
+    });
+  })();
 
   document.getElementById('addGpioOutBtn').addEventListener('click', function(){
     var row = buildGpioOutRow(null, 'tally');
     document.getElementById('gpioOutList').appendChild(row);
     row.querySelectorAll('.gpio-select').forEach(initGpioSelect);
+    syncToneCards();
     markControlsDirtyIfNeeded();
   });
+
+  /* Removing the last tone row must retire the cards too, and rows are
+     removed by a generic button that knows nothing about tones. */
+  if (window.MutationObserver) {
+    new MutationObserver(syncToneCards)
+      .observe(document.getElementById('gpioOutList'), { childList: true });
+  }
 
   /* Called after buildState()'s generic [data-path] walk already populated
      state.hardware_outputs.rec_tone.{frequency_hz,duty_cycle,relay_drop_frames}
@@ -3663,7 +3678,10 @@
     state.hardware_outputs.rec_out_pin = recOutPins;
     state.hardware_outputs.rec_tone = state.hardware_outputs.rec_tone || {};
     state.hardware_outputs.rec_tone.pin = tonePins;
-    state.hardware_outputs.rec_tone.frequency_hz = currentToneHz;
+    var hzCard = document.getElementById('f-tonehz');
+    var cardHz = hzCard && parseFloat(hzCard.value);
+    state.hardware_outputs.rec_tone.frequency_hz =
+      (cardHz && !isNaN(cardHz)) ? cardHz : currentToneHz;
     var prevOutputs = lastLoadedSettings && lastLoadedSettings.hardware_outputs;
     if (prevOutputs && prevOutputs.pwm_pin !== undefined && state.hardware_outputs.pwm_pin === undefined){
       state.hardware_outputs.pwm_pin = prevOutputs.pwm_pin;
@@ -3871,6 +3889,45 @@
      populating fixed markup. See raw_files.py for the on-disk scan. ---------- */
   var DOWNLOAD_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>';
   var DELETE_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
+  var CANCEL_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>';
+
+  /* ---------- RAW take download (W9/W10) ----------
+     window.location was a top-level navigation: a 404/500 replaced the whole
+     settings editor, tore down the live-GUI iframe, and discarded unsaved
+     form edits with no beforeunload guard. An <a download> click hands the
+     request to the browser's download manager instead, so none of that can
+     happen -- the document never navigates. showDirectoryPicker() needs a
+     secure context: HTTPS (module.https_settings, off by default -- see
+     settings.jsonc's system.https), or a plain browser secure-context
+     exemption such as http://localhost. A camera reached over the hotspot's
+     plain-HTTP address or over mDNS has neither, so CAN_PICK_FOLDER is
+     false there and this capability-gates rather than assumes. */
+  var CAN_PICK_FOLDER = !!(window.isSecureContext && window.showDirectoryPicker);
+  var refreshSuppressed = false;
+
+  function takeDownloadUrl(name, storage){
+    var url = '/settings-editor/api/raw/takes/' + encodeURIComponent(name) + '/download';
+    return storage ? url + '?storage=' + encodeURIComponent(storage) : url;
+  }
+  function takeFilesUrl(name, storage){
+    var url = '/settings-editor/api/raw/takes/' + encodeURIComponent(name) + '/files';
+    return storage ? url + '?storage=' + encodeURIComponent(storage) : url;
+  }
+  function takeFileUrl(name, storage, file){
+    return takeFilesUrl(name, storage) + '/' + encodeURIComponent(file);
+  }
+  function downloadViaAnchor(url, filename){
+    var a = document.createElement('a');
+    a.href = url; a.download = filename; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  // Cheap pre-flight: catches "take deleted / drive unmounted since the list
+  // was last drawn" without paying for a zip build first.
+  function takeStillListed(name){
+    return fetch('/settings-editor/api/raw/takes').then(function(r){ return r.json(); }).then(function(res){
+      return !!(res.ok && res.takes.some(function(t){ return t.name === name; }));
+    }).catch(function(){ return true; }); // best-effort; do not block a download on a flaky fetch
+  }
 
   function formatBytes(n){
     if (n == null) return '—';
@@ -3976,6 +4033,7 @@
       var row = document.createElement('div');
       row.className = 'cliprow';
       row.setAttribute('data-name', t.name);
+      row.setAttribute('data-storage', t.storage);
       row.setAttribute('data-search', t.name.toLowerCase() + ' ' + t.storage.toLowerCase());
       row.setAttribute('data-ts', String(t.mtime || 0));
       row.setAttribute('data-size', String(t.size_bytes || 0));
@@ -3993,6 +4051,11 @@
         '<div class="clip-actions">' +
           '<button class="icon-action" data-download title="Download" aria-label="Download this take">' + DOWNLOAD_ICON + '</button>' +
           '<button class="icon-action danger" data-delete title="Delete" aria-label="Delete this take">' + DELETE_ICON + '</button>' +
+        '</div>' +
+        '<div class="clip-progress">' +
+          '<div class="capacity-track"><div class="capacity-fill" data-progress-fill style="width:0%"></div></div>' +
+          '<span class="clip-progress-text" data-progress-text>Starting…</span>' +
+          '<button class="icon-action" data-cancel-download title="Cancel" aria-label="Cancel download">' + CANCEL_ICON + '</button>' +
         '</div>';
       list.appendChild(row);
     });
@@ -4000,6 +4063,18 @@
     footer.textContent = takes.length
       ? 'Showing all ' + takes.length + ' take' + (takes.length === 1 ? '' : 's') + ' across mounted storage.'
       : 'No takes found on mounted storage.';
+    // showDirectoryPicker() needs a secure context, and even there only
+    // Chromium implements it -- Safari and Firefox expose it on neither http
+    // nor https. Two different reasons read as the same missing button, so
+    // say which one applies rather than let it look like a bug either way.
+    if (!CAN_PICK_FOLDER) {
+      footer.textContent += window.isSecureContext
+        ? ' This browser has no folder picker (Chromium only, today) — enable ' +
+          '"Ask where to save each file" in your download settings to choose a folder yourself.'
+        : ' This page is served over plain HTTP, so it cannot ask where to save a download — turn on ' +
+          'system.https in settings.jsonc, or enable "Ask where to save each file" in your browser’s ' +
+          'download settings to choose a folder yourself.';
+    }
 
     wireClipRowActions();
     updateBulkBar();
@@ -4019,8 +4094,141 @@
   }
 
   function refreshRawPane(){
+    // A mid-download refresh rebuilds every row via renderClipList()'s
+    // list.innerHTML = '', destroying the row holding the progress bar and
+    // wiring a fresh (uninstrumented) button under the operator's cursor.
+    if (refreshSuppressed) { return; }
     loadRawStorage();
     loadRawTakes();
+  }
+
+  // ---------- picker-path download (only reachable when CAN_PICK_FOLDER) ----------
+  var pickerAbort = null; // AbortController for the take currently in flight
+  function savePickedTake(dirRoot, take, storage, files, onProgress){
+    var total = files.reduce(function(a, f){ return a + f.size_bytes; }, 0), done = 0;
+    pickerAbort = new AbortController();
+    return dirRoot.getDirectoryHandle(take, { create: true }).then(function(dir){
+      return files.reduce(function(chain, f){
+        return chain.then(function(){
+          var writable;
+          return dir.getFileHandle(f.name, { create: true })
+            .then(function(fh){ return fh.createWritable(); })
+            .then(function(w){
+              writable = w;
+              return fetch(takeFileUrl(take, storage, f.name), { signal: pickerAbort.signal });
+            })
+            .then(function(res){
+              if (!res.ok) { throw new Error('HTTP ' + res.status + ' on ' + f.name); }
+              var reader = res.body.getReader();
+              function pump(){
+                return reader.read().then(function(r){
+                  if (r.done) { return writable.close(); }
+                  done += r.value.length;
+                  onProgress(total ? done / total : 1);
+                  return writable.write(r.value).then(pump);
+                });
+              }
+              return pump();
+            })
+            .catch(function(err){
+              // createWritable() truncates on open -- a half-written file
+              // must be removed, not just closed, or a cancel/error leaves a
+              // truncated file behind instead of no file at all.
+              var cleanup = writable ? writable.abort() : Promise.resolve();
+              return cleanup
+                .then(function(){ return dir.removeEntry(f.name); })
+                .catch(function(){ /* best effort */ })
+                .then(function(){ throw err; });
+            });
+        });
+      }, Promise.resolve());
+    });
+  }
+
+  function downloadErrorToast(err){
+    switch (err && err.name) {
+      case 'AbortError':      return null; // operator cancelled -- not an error
+      case 'NotAllowedError': return 'Permission denied for that folder';
+      case 'SecurityError':   return 'Folder picker unavailable here';
+      case 'QuotaExceededError': return 'Not enough space in that folder';
+      default: return 'download failed — ' + ((err && err.message) || err);
+    }
+  }
+
+  // The folder is picked once, whether one take or several are queued --
+  // asking again per take would re-prompt for permission on every file.
+  function pickFolder(){
+    // mode:'readwrite' up front, rather than letting the first
+    // createWritable() request it implicitly: that first request lands after
+    // an async manifest fetch, by which point user activation can have
+    // expired, turning one prompt into a second one (or a NotAllowedError).
+    return window.showDirectoryPicker({
+      id: 'cinemate-raw-downloads', mode: 'readwrite', startIn: 'downloads',
+    });
+  }
+
+  // One take, into an already-picked folder. Returns a promise so the bulk
+  // path below can chain N of these; refreshSuppressed is the caller's job
+  // (set once for a whole batch, not toggled per take -- see refreshRawPane's
+  // comment on why a mid-batch refresh would destroy the row it is showing
+  // progress on).
+  function savePickedTakeIntoRow(dirRoot, name, storage, row){
+    var fill = row.querySelector('[data-progress-fill]');
+    var text = row.querySelector('[data-progress-text]');
+    var cancelBtn = row.querySelector('[data-cancel-download]');
+    var onCancel = function(){ if (pickerAbort) { pickerAbort.abort(); } };
+    return fetch(takeFilesUrl(name, storage)).then(function(r){ return r.json(); }).then(function(manifest){
+      if (!manifest.ok) { throw new Error(manifest.message || 'could not read that take'); }
+      row.classList.add('is-downloading');
+      fill.style.width = '0%';
+      text.textContent = 'Starting…';
+      cancelBtn.addEventListener('click', onCancel);
+      return savePickedTake(dirRoot, name, storage, manifest.files, function(frac){
+        var pct = Math.round(frac * 100);
+        fill.style.width = pct + '%';
+        text.textContent = pct + '%';
+      });
+    }).then(function(){
+      cancelBtn.removeEventListener('click', onCancel);
+      row.classList.remove('is-downloading');
+    }, function(err){
+      cancelBtn.removeEventListener('click', onCancel);
+      row.classList.remove('is-downloading');
+      throw err;
+    });
+  }
+
+  function startPickedDownload(name, storage, row){
+    pickFolder().then(function(dirRoot){
+      refreshSuppressed = true;
+      return savePickedTakeIntoRow(dirRoot, name, storage, row).then(function(){
+        showToast('Saved ' + name);
+      }, function(err){
+        var msg = downloadErrorToast(err);
+        if (msg) { showToast(msg); }
+      }).then(function(){
+        refreshSuppressed = false;
+      });
+    }).catch(function(err){
+      if (err && err.name === 'AbortError') { return; } // picker dialog dismissed
+      showToast('Folder picker unavailable here — using a normal download instead.');
+      downloadViaAnchor(takeDownloadUrl(name, storage), name + '.zip');
+    });
+  }
+
+  function startTakeDownload(name, storage, row){
+    takeStillListed(name).then(function(stillThere){
+      if (!stillThere) {
+        showToast('That take is no longer on the drive.');
+        refreshRawPane();
+        return;
+      }
+      if (CAN_PICK_FOLDER) {
+        startPickedDownload(name, storage, row);
+      } else {
+        downloadViaAnchor(takeDownloadUrl(name, storage), name + '.zip');
+      }
+    });
   }
 
   function selectedClipNames(){
@@ -4034,6 +4242,18 @@
     document.getElementById('bulkCount').textContent = names.length + ' selected';
     bar.classList.toggle('show', names.length > 0);
     document.getElementById('selectAllClips').checked = names.length > 0 && names.length === currentTakes.length;
+    // With a folder picker, several takes download sequentially into it, one
+    // write stream at a time -- see the bulk handler below. Without one there
+    // is no server-side combined-zip endpoint, and N parallel per-take
+    // <a download> clicks would race each other (raw_files.DOWNLOAD_SEMAPHORE
+    // caps concurrent server-side reads at 2), so "download selected" stays
+    // honest only for exactly one take at a time on that fallback path.
+    var bulkDownloadBtn = document.getElementById('bulkDownload');
+    var tooManyForDownload = !CAN_PICK_FOLDER && names.length > 1;
+    bulkDownloadBtn.disabled = tooManyForDownload;
+    bulkDownloadBtn.title = tooManyForDownload
+      ? 'Download one take at a time — select a single take to download it'
+      : '';
   }
 
   function wireClipRowActions(){
@@ -4042,19 +4262,40 @@
     });
     document.querySelectorAll('.cliprow [data-download]').forEach(function(btn){
       btn.addEventListener('click', function(){
-        var name = btn.closest('.cliprow').getAttribute('data-name');
-        window.location = '/settings-editor/api/raw/takes/' + encodeURIComponent(name) + '/download';
+        var row = btn.closest('.cliprow');
+        startTakeDownload(row.getAttribute('data-name'), row.getAttribute('data-storage'), row);
       });
     });
     document.querySelectorAll('.cliprow [data-delete]').forEach(function(btn){
       btn.addEventListener('click', function(){
         var name = btn.closest('.cliprow').getAttribute('data-name');
         showConfirm('Delete take "' + name + '"? This cannot be undone.', function(){
-          fetch('/settings-editor/api/raw/takes/' + encodeURIComponent(name), { method: 'DELETE' })
+          /* rmtree is thousands of unlinks and refreshRawPane() behind it
+             stats every file on the card, so the row stays on screen well
+             after the take is gone. Without this the operator taps twice and
+             the second one used to report a failure for a delete that
+             worked. */
+          if (btn.disabled) { return; }
+          btn.disabled = true;
+          var row = btn.closest('.cliprow');
+          if (row) { row.classList.add('is-busy'); }
+          // Same idiom as the download path: without ?storage=, a take name
+          // duplicated across /media/RAW and /media/RAW1 resolves to
+          // whichever mounted root delete_take() checks first, which can be
+          // the wrong copy.
+          var deleteUrl = '/settings-editor/api/raw/takes/' + encodeURIComponent(name);
+          var storage = row ? row.getAttribute('data-storage') : null;
+          if (storage) { deleteUrl += '?storage=' + encodeURIComponent(storage); }
+          fetch(deleteUrl, { method: 'DELETE' })
             .then(function(r){ return r.json(); }).then(function(res){
               showToast(res.ok ? 'Deleted ' + name : 'Delete failed: ' + res.message);
-              if (res.ok) refreshRawPane();
-            }).catch(function(err){ showToast('Delete failed: ' + err); });
+              if (res.ok) { refreshRawPane(); }
+              else { btn.disabled = false; if (row) { row.classList.remove('is-busy'); } }
+            }).catch(function(err){
+              showToast('Delete failed: ' + err);
+              btn.disabled = false;
+              if (row) { row.classList.remove('is-busy'); }
+            });
         }, null, { title: 'Delete this take?', okLabel: 'Delete', danger: true });
       });
     });
@@ -4074,25 +4315,64 @@
       fetch('/settings-editor/api/raw/bulk', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'delete', names: names })
-      }).then(function(r){ return r.json(); }).then(function(res){
-        showToast(res.ok ? 'Deleted ' + names.length + ' take(s)' : 'Some deletes failed — see console');
-        if (!res.ok) console.warn('Bulk delete results', res.results);
+      }).then(function(r){
+        return r.json().then(function(res){ return { status: r.status, res: res }; });
+      }).then(function(result){
+        var status = result.status, res = result.res;
+        if (status === 409) {
+          // Whole-request refusal (a recording take was in the selection):
+          // res.recording names which ones, rather than the generic
+          // "Some deletes failed" this used to collapse into.
+          var blocked = (res.recording || []).join(', ');
+          showToast(blocked ? res.message + ': ' + blocked : res.message);
+          return;
+        }
+        if (res.ok) {
+          showToast('Deleted ' + names.length + ' take(s)');
+        } else {
+          var failedNames = Object.keys(res.results || {})
+            .filter(function(n){ return !res.results[n].ok; });
+          var firstReason = failedNames.length
+            ? res.results[failedNames[0]].message : '';
+          showToast('Some deletes failed (' + failedNames.length + '/' + names.length + '): ' +
+            failedNames[0] + ' — ' + firstReason +
+            (failedNames.length > 1 ? ' (see console for the rest)' : ''));
+          console.warn('Bulk delete results', res.results);
+        }
         refreshRawPane();
       }).catch(function(err){ showToast('Bulk delete failed: ' + err); });
     }, null, { title: 'Delete ' + names.length + ' take(s)?', okLabel: 'Delete', danger: true });
   });
   document.getElementById('bulkDownload').addEventListener('click', function(){
-    // One take at a time client-side rather than a multi-take zip endpoint
-    // -- see raw_files.py's build_take_zip() docstring: even a single
-    // take's zip briefly doubles disk usage on a storage-constrained Pi,
-    // so a real multi-take zip endpoint isn't a safe default here yet.
     var names = selectedClipNames();
-    names.forEach(function(name, i){
-      setTimeout(function(){
-        window.location = '/settings-editor/api/raw/takes/' + encodeURIComponent(name) + '/download';
-      }, i * 800);
+    if (!names.length) { return; }
+    if (names.length === 1) {
+      var row = document.querySelector('.cliprow[data-name="' + CSS.escape(names[0]) + '"]');
+      if (row) { startTakeDownload(names[0], row.getAttribute('data-storage'), row); }
+      return;
+    }
+    // More than one take is only reachable here with a folder picker --
+    // updateBulkBar() disables this button above one selection otherwise.
+    if (!CAN_PICK_FOLDER) { return; }
+    pickFolder().then(function(dirRoot){
+      refreshSuppressed = true;
+      return names.reduce(function(chain, name, i){
+        return chain.then(function(){
+          var row = document.querySelector('.cliprow[data-name="' + CSS.escape(name) + '"]');
+          if (!row) { return; } // no longer listed -- skip rather than fail the batch
+          showToast('Saving ' + (i + 1) + ' of ' + names.length + ': ' + name);
+          return savePickedTakeIntoRow(dirRoot, name, row.getAttribute('data-storage'), row);
+        });
+      }, Promise.resolve());
+    }).then(function(){
+      refreshSuppressed = false;
+      showToast('Saved ' + names.length + ' takes');
+    }, function(err){
+      refreshSuppressed = false;
+      if (err && err.name === 'AbortError') { return; } // picker dismissed, or a take cancelled
+      var msg = downloadErrorToast(err);
+      showToast(msg || ('Download failed: ' + ((err && err.message) || err)));
     });
-    if (names.length > 1) showToast('Downloading ' + names.length + ' takes one at a time…');
   });
 
   /* ---------- initial load ---------- */
@@ -4582,7 +4862,25 @@
   }
   var pageTabButtons = document.querySelectorAll('[data-page-tab]');
   var pageLedes = document.querySelectorAll('[data-page-lede]');
-  function setActivePage(page){
+  /* Which page a reload lands on. The rail's links already put a section id
+     in the hash (#cam0, #steps, ...) and every section declares its page via
+     data-page, so the hash alone answers this -- a separate storage key would
+     be a second source of truth that can contradict a URL like
+     .../settings-editor/#cam0 with no principled winner. An unknown or stale
+     id falls back to the default rather than showing nothing. */
+  var PAGE_LANDING = { config: 'bootconfig', settings: 'welcome', raw: 'clips', live: 'live' };
+  var DEFAULT_PAGE = 'settings';
+  function pageFromHash(){
+    var id = (location.hash || '').slice(1);
+    if (!id) return DEFAULT_PAGE;
+    var el = document.getElementById(id);
+    var group = el && el.closest('.group[data-page]');
+    var page = group && group.getAttribute('data-page');
+    return Object.prototype.hasOwnProperty.call(PAGE_LANDING, page) ? page : DEFAULT_PAGE;
+  }
+
+  function setActivePage(page, opts){
+    opts = opts || {};
     /* loadConfigTxt() only ever ran once, at page load (see the bottom of
        this script). config.txt can change underneath an open tab without
        any of this page's own doing -- an SSH edit, a save from a different
@@ -4592,7 +4890,7 @@
        on every arrival at the config page instead, skipped only when there
        are unsaved edits already in progress (configDirty) so this can't
        silently discard those. */
-    if (page === 'config' && activePage !== 'config' && !configDirty) loadConfigTxt();
+    if (page === 'config' && activePage !== 'config' && !configDirty && !opts.skipConfigLoad) loadConfigTxt();
     activePage = page;
     pageTabButtons.forEach(function(b){
       var isActive = b.getAttribute('data-page-tab') === page;
@@ -4605,7 +4903,13 @@
     });
     updateGroupVisibility();
     syncTopbarForPage();
-    window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+    /* pushState, not replaceState: the rail's anchors push real history
+       entries, so replacing here would silently destroy the deep-link the
+       operator is standing on (at #steps, a tab click would rewrite that
+       entry and Back would skip past it). A tab click is a navigation the
+       operator made; giving it its own entry keeps Back meaning "undo that". */
+    if (!opts.keepHash) history.pushState(null, '', '#' + PAGE_LANDING[page]);
+    if (!opts.keepScroll) window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
   }
   pageTabButtons.forEach(function(b){ b.addEventListener('click', function(){ setActivePage(b.getAttribute('data-page-tab')); }); });
   document.querySelectorAll('[data-goto-page]').forEach(function(a){
@@ -4731,7 +5035,25 @@
   styleTag.textContent = '@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}';
   document.head.appendChild(styleTag);
 
-  setActivePage('settings');
+  /* Restore the page the operator was on. Only the page: the section is
+     already handled -- on a fresh load the browser's fragment scroll lands on
+     the hash, and on a reload Chrome restores the exact prior offset, which is
+     finer than any scrollIntoView we could do. keepHash so this does not
+     rewrite the URL it just read; keepScroll so it does not fight either of
+     those; skipConfigLoad because config.txt is fetched unconditionally above. */
+  setActivePage(pageFromHash(), { keepHash: true, keepScroll: true, skipConfigLoad: true });
+  /* Back/forward across panes. The browser's fragment scroll fires BEFORE
+     hashchange, so at that moment the target section is still display:none and
+     the scroll is a no-op on a box-less element; scroll again once the page
+     that owns it is visible. */
+  window.addEventListener('hashchange', function(){
+    var page = pageFromHash();
+    if (page !== activePage){
+      setActivePage(page, { keepHash: true, keepScroll: true });
+      var target = document.getElementById((location.hash || '').slice(1));
+      if (target) target.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
+  });
   refreshDrawer();
 })();
 </script>

@@ -19,6 +19,7 @@ import re
 RECORDER_VU_REDIS_KEY    = "audio_vu"
 WAV_RECORDING_COLOR      = DESIGN_TOKENS["wav_rec"]   # bright grey while WAV is actively recording
 DROP_WARNING_COLOR = DESIGN_TOKENS["drop"]
+DROP_TEXT_COLOR = DESIGN_TOKENS["drop_text"]
 SYNC_WARNING_COLOR = DESIGN_TOKENS["sync"]
 NO_CAM_WARNING_COLOR = DESIGN_TOKENS["no_cam"]
 SYNC_FLASH_COLOR = "magenta"  # PIL named colour -- no CSS/design-token counterpart
@@ -1458,7 +1459,7 @@ class SimpleGUI(threading.Thread):
                     "DROP",
                     DROP_WARNING_COLOR,
                     box_font,
-                    TEXT_COLOR,
+                    DROP_TEXT_COLOR,
                 )
                 y += BOX_H + BOX_GAP
 
@@ -1603,7 +1604,7 @@ class SimpleGUI(threading.Thread):
                     "DROP",
                     DROP_WARNING_COLOR,
                     box_font,
-                    TEXT_COLOR,
+                    DROP_TEXT_COLOR,
                 )
                 y += BOX_H + BOX_GAP
 

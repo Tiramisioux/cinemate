@@ -34,6 +34,7 @@
             --box-text: #000;
             --zoom-hi: rgb(255, 221, 0);
             --drop: rgb(120, 40, 180);
+            --drop-text: rgb(255, 255, 255);
             --sync: rgb(255, 0, 255);
             --no-cam: rgb(220, 30, 30);
             --log-badge: rgb(205, 205, 205);
@@ -50,6 +51,14 @@
             --label-size: clamp(0.72rem, 1.45vw, 1.35rem);
             --box-size: clamp(38px, 3.6vw, 60px);
             --box-height: clamp(28px, 2.5vw, 40px);
+
+            /* W1+W2: the rail re-derives these four from *-base * --fit
+               (see .rail below and fitRails()). The names above stay the
+               laptop-authored minimums tools/design_token_diff.py reads. */
+            --gap-base:        clamp(8px, 1.4vw, 22px);
+            --label-size-base: clamp(0.72rem, 1.45vw, 1.35rem);
+            --box-size-base:   clamp(38px, 3.6vw, 60px);
+            --box-height-base: clamp(28px, 2.5vw, 40px);
         }
 
         /* draw_gui() switches every label and value to black once the
@@ -93,7 +102,12 @@
             flex-wrap: wrap;
             justify-content: space-between;
             align-items: baseline;
-            gap: calc(var(--gap) * 0.5) var(--gap);
+            /* Row gap must be at least twice .group select's 8px vertical
+               bleed, or the two wrapped rows' invisible hit areas meet in
+               the middle and the lower row's picker wins the upper row's
+               bottom 4px. Inert whenever the row does not wrap, so it costs
+               nothing at any width the HDMI GUI has a counterpart for. */
+            gap: max(16px, calc(var(--gap) * 0.5)) var(--gap);
         }
 
         .group {
@@ -131,11 +145,14 @@
            the text is only ~18px tall on a phone, far under the ~44px
            touch-target guideline. px, not em: em here would resolve
            against the UA's hidden control font (13-16px depending on
-           engine), not the visible text. Invisible, so the only cost is
-           ambiguity where the top row wraps on a portrait phone: rows sit
-           4px apart there, so a lower row's select reaches ~4px into the
-           row above — a tap on those descender pixels opens the lower
-           group's picker. Recoverable, and only in the wrapped layout. */
+           engine), not the visible text. Invisible, so the cost is that
+           where the top row wraps on a portrait phone, the lower row's
+           select wins a 4px strip of the row above — DOM order breaks the
+           tie between two position:absolute, z-index:auto siblings — which
+           cancels this rule's own tap-target gain for the two affected
+           groups. #top-row's row gap (below) is what prevents it; the two
+           rules are coupled. That 4px band is line-box leading, not
+           descender ink — it contains no glyph. */
         .group select {
             position: absolute;
             inset: -8px -6px;
@@ -193,13 +210,54 @@
             overflow-y: auto;
             overflow-x: hidden;
             scrollbar-width: thin;
+            /* W1+W2: --fit is written by fitRails() and is the smaller of the
+               height ratio (rail content vs stage row) and the width ratio
+               (rail budget vs viewport). The max() floors are the legibility
+               floor; when one binds, fitRails sets .clipped and the fade
+               fallback (below) shows. Operator ruling: rails stay left and
+               right at every viewport and shrink, never restack -- this is
+               the shrink. */
+            --gap:         max(6px,  calc(var(--gap-base)        * var(--fit, 1)));
+            --label-size:  max(11px, calc(var(--label-size-base) * var(--fit, 1)));
+            --box-size:    max(31px, calc(var(--box-size-base)   * var(--fit, 1)));
+            --box-height:  max(23px, calc(var(--box-height-base) * var(--fit, 1)));
             /* draw_left_sections() starts its CAM column at y=97 on the
                1080p canvas — roughly a box-height of air below the top row.
                Reproduce that offset so the rails sit like the HDMI GUI's
-               instead of hugging the top bar. */
-            padding-top: calc(var(--box-height) * 1.3);
+               instead of hugging the top bar. --rail-pad shrinks this dead
+               band once the rail is actually being fitted. */
+            padding-top: calc(var(--box-height) * var(--rail-pad, 1.3));
+            overscroll-behavior: contain;   /* matches #experiment; the rails were missed */
+        }
+        .rail.fitted { --rail-pad: 0.4; }   /* reclaim the dead band once we are shrinking */
+        /* Fallback only, once the legibility floor above stops the shrink
+           short of the rail's available height (fitRails sets .clipped).
+           A mask paints in the element's own border box and does not scroll
+           away with the content, unlike a ::after pseudo-element would. */
+        .rail.clipped.more-below {
+            -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent);
+                    mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent);
+        }
+        .rail.clipped.more-above {
+            -webkit-mask-image: linear-gradient(to bottom, transparent, #000 14px);
+                    mask-image: linear-gradient(to bottom, transparent, #000 14px);
+        }
+        .rail.clipped.more-above.more-below {
+            -webkit-mask-image: linear-gradient(to bottom, transparent, #000 14px, #000 calc(100% - 26px), transparent);
+                    mask-image: linear-gradient(to bottom, transparent, #000 14px, #000 calc(100% - 26px), transparent);
         }
         .rail:empty { display: none; }
+
+        /* W1: narrow width only, claws back the fixed chrome around the
+           rails. The rails themselves shrink through --fit (fitRails, in the
+           script below), never through this block. Width-keyed, so 812x375
+           landscape does NOT match -- unlike the @media below (:orientation),
+           which fires on landscape phones. No .rail declaration belongs here:
+           that would be a second, equal-specificity geometry mechanism. */
+        @media (max-width: 540px) {
+            #stage { gap: 6px; }
+            #app   { padding-left: 4px; padding-right: 4px; }
+        }
 
         .section { display: flex; flex-direction: column; align-items: center; }
         .section + .section { margin-top: calc(var(--gap) * 0.7); }
@@ -230,9 +288,19 @@
         /* aspect and anamorphic get the inset outline simple_gui draws */
         .box.outlined { box-shadow: inset 0 0 0 2px #000; }
         .box.small { font-size: calc(var(--box-height) * 0.48); }
+        /* A warning box may carry a count ("DROP 17"). simple_gui's box is a fixed
+           60x40 and shrinks the font instead (simple_gui.py:1290-1293); the browser
+           has room. Grow on the inline axis only, from the same --box-size floor,
+           so every box that already fits keeps the rail's pitch. */
+        .box.wide {
+            width: auto;
+            min-width: var(--box-size);
+            padding-inline: calc(var(--box-height) * 0.18);
+            white-space: nowrap;
+        }
         .box.zoom-active { background: var(--zoom-hi); }
         .box.log { background: var(--log-badge); }
-        .box.drop { background: var(--drop); }
+        .box.drop { background: var(--drop); color: var(--drop-text); }
         .box.sync { background: var(--sync); position: relative; }
         /* _draw_status_box(crossed=True) strikes the SYNC box through */
         .box.sync::after {
@@ -456,8 +524,18 @@
             overflow-y: auto;
             overscroll-behavior: contain;
             scrollbar-width: thin;
-            display: flex;
-            flex-direction: column;
+            /* Columns, not one stack. The drawer's groups were laid out full
+               width at every size, so on a 1440px screen seven groups of
+               ~60px stacked into 570px of content inside a 367px box and a
+               third of the panel was unreachable. auto-fit uses the width
+               that was already there instead of taking height from the
+               preview: measured at 1440x800, content 570 -> 514, and the
+               groups that carry sliders keep the full width below. Below
+               ~340px + gap it resolves to one column, i.e. exactly today's
+               layout on a phone. */
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            align-content: start;
             gap: calc(var(--gap) * 0.55);
             /* The fixed right padding is for the panel's own scrollbar. An
                overlay scrollbar (macOS, iOS, Android) reserves no width and
@@ -470,6 +548,11 @@
         }
 
         .xp-group { display: flex; flex-direction: column; gap: calc(var(--gap) * 0.3); }
+        /* A slider group always spans the whole row. The rule below ("track
+           length IS the resolution of the control") is the reason: letting a
+           0-4095 threshold fall into a 340px column would put ~19 counts on
+           every pixel. Measured at 1440x800: 1148px of track either way. */
+        .xp-group.xp-wide { grid-column: 1 / -1; }
         .xp-title {
             font-weight: 700;
             font-size: var(--label-size);
@@ -487,6 +570,15 @@
             display: grid;
             grid-template-columns: minmax(0, 1fr);
             gap: calc(var(--gap) * 0.2);
+        }
+        /* Overlay scrollbars (macOS, iOS, Android) reserve no width and paint
+           nothing until a scroll is already under way, so a clipped drawer
+           reads as a finished one. Columns close the gap on a desktop but not
+           at 800x480 or a landscape phone; fade the last rows there so the
+           remainder is visible as missing. */
+        #experiment.more-below {
+            -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.2em), transparent);
+            mask-image: linear-gradient(to bottom, #000 calc(100% - 2.2em), transparent);
         }
         .xp-slider { display: flex; align-items: center; gap: 0.55em; }
         .xp-slider .label {
@@ -598,9 +690,12 @@
            This used to restack #stage into rows and turn each .rail into a
            horizontal strip above/below the preview at <=900px or portrait
            -- the one thing that made the web GUI stop resembling the HDMI
-           GUI at narrow widths (simple_gui.py scales its whole 1920x1080
-           layout by a single disp_width/1920, disp_height/1080 ratio; it
-           never restacks). #stage's 3-column grid (left rail | preview |
+           GUI at narrow widths. simple_gui.py never restacks either, but it
+           does not scale its whole layout by one ratio: only the top row,
+           layout-dict positions, the HDR badge and the clip name scale by
+           disp_width/1920 / disp_height/1080 -- draw_left_sections() and
+           draw_right_sections() draw the rail boxes at a fixed BOX_H/BOX_W
+           with no shrink factor at all. #stage's 3-column grid (left rail | preview |
            right rail) and .rail's own column direction are the same at
            every width now -- --gap/--box-size/--box-height/--value-size/
            --label-size are already clamp()-based (top of this file), so
@@ -773,18 +868,58 @@
         (typeof v === 'string' && ['true', 'yes', 'on'].includes(v.trim().toLowerCase()));
 
     function fillSelect(sel, options, current) {
-        const wanted = options.map((o) => String(o.value)).join(' ');
+        // The disabled flags are part of the cache key: a free-stepping toggle
+        // can leave the value list identical while changing which entries are
+        // selectable, and without this the list would not repaint.
+        const wanted = options.map((o) => String(o.value) + (o.disabled ? '!' : '')).join(' ');
         if (sel.dataset.filled !== wanted) {
             sel.innerHTML = '';
             options.forEach((o) => {
                 const opt = document.createElement('option');
                 opt.value = o.value;
                 opt.textContent = o.text;
+                if (o.disabled) { opt.disabled = true; }
                 sel.appendChild(opt);
             });
             sel.dataset.filled = wanted;
         }
         if (current !== undefined && current !== null) { sel.value = String(current); }
+    }
+
+    // Free stepping replaces a preset table with a fine grid — 1-360 in whole
+    // degrees for SHUTTER — and the setter then accepts any value verbatim
+    // instead of snapping to the table (cinepi_controller: "In sync mode, or
+    // free-stepping, just accept it verbatim"; the fps setter clamps to
+    // 1..fps_max the same way). So the interior entries stop being the legal
+    // set and become an arbitrary sample of a continuum. Grey them, leaving
+    // the two ends, so the picker reads as the range it actually is; the value
+    // itself is dialled with the EXPERIMENT slider, a pot, an encoder or the
+    // CLI, and the live value still shows even while greyed because a
+    // disabled <option> can be selected programmatically.
+    //
+    // Only SHUTTER and FPS. NOT WB: set_wb picks the closest entry of wb_steps
+    // unconditionally and every entry has a real cg_rb pair, so under WB free
+    // stepping the interior IS the exact legal set. NOT ISO: set_iso clamps
+    // and never snaps in any mode, so iso_free changes what is offered, not
+    // what is accepted. Greying either would state something untrue.
+    // `current` is threaded in because a free grid need not contain the live
+    // value: toggle free stepping on while SHUTTER sits at a preset 172.8 and
+    // the 1-degree grid has no such entry, so the <select> would fall back to
+    // its first option and read 1 while the camera runs at 172.8. Any value is
+    // legal in this mode, so the honest thing is to carry it.
+    function freeStepBounds(list, isFree, current) {
+        const opts = list.map((v, i) => ({
+            value: v,
+            text: v,
+            disabled: Boolean(isFree) && list.length > 2 && i > 0 && i < list.length - 1,
+        }));
+        const live = parseFloat(current);
+        if (isFree && isFinite(live) && !list.some((v) => Number(v) === live)) {
+            const at = opts.findIndex((o) => Number(o.value) > live);
+            opts.splice(at < 0 ? opts.length : at, 0,
+                { value: live, text: live, disabled: false });
+        }
+        return opts;
     }
 
     // ── left / right rails: same sections, order and box contents as
@@ -841,7 +976,7 @@
         if (V.drop_frame_latched) {
             const count = Number(V.drop_frame_count) || 0;
             const label = count > 0 ? `DROP ${count}` : 'DROP';
-            out.push(box(label, 'drop' + (label.length > 4 ? ' small' : '')));
+            out.push(box(label, 'drop' + ' small' + (count > 0 ? ' wide' : '')));
         }
         if (V.frames_off_sync) { out.push(box('SYNC', 'sync')); }
         return out;
@@ -1085,9 +1220,18 @@
 
     function renderSelectors() {
         fillSelect($('s-iso'), steps.iso.map((v) => ({ value: v, text: v })), V.iso);
-        fillSelect($('s-shutter'), steps.shutter_a.map((v) => ({ value: v, text: v })),
-            steps.shutter_a.find((v) => String(v) === String(parseFloat(V.shutter_speed))));
-        fillSelect($('s-fps'), steps.fps.map((v) => ({ value: v, text: v })), V.fps);
+        // find() returns undefined when the live angle isn't in the current
+        // step table (e.g. a rejected pick on a locked shutter). Under free
+        // stepping freeStepBounds() carries the live value as an extra entry
+        // so it can be selected; otherwise fall back to '' so a stale pick
+        // clears instead of silently lingering (fillSelect() only writes
+        // .value when current is defined).
+        const liveShutter = parseFloat(V.shutter_speed);
+        fillSelect($('s-shutter'),
+            freeStepBounds(steps.shutter_a, truthy(V.shutter_a_free), liveShutter),
+            steps.shutter_a.find((v) => String(v) === String(liveShutter))
+                ?? (truthy(V.shutter_a_free) && isFinite(liveShutter) ? liveShutter : ''));
+        fillSelect($('s-fps'), freeStepBounds(steps.fps, truthy(V.fps_free), V.fps), V.fps);
         fillSelect($('s-wb'), steps.wb.map((v) => ({ value: v, text: v + 'K' })), V.wb);
         fillSelect($('s-res'),
             steps.resolutions.map((r) => ({ value: r.mode, text: r.resolution })),
@@ -1125,6 +1269,14 @@
     // is present only on a sensor that actually has ClearHDR modes — on an
     // imx477 or imx283 those four commands write redis keys nothing will ever
     // read, so offering them would be four controls that appear to do nothing.
+    // Shared with the top row's lock guard (bindTopSelect, below) so the
+    // wording exists in exactly one place.
+    const LOCK_LABELS = {
+        iso_lock: 'ISO is locked',
+        shutter_a_nom_lock: 'Shutter angle is locked',
+        fps_lock: 'Frame rate is locked',
+    };
+
     const XP_SLIDER_GROUPS = [
         {
             title: 'EXPOSURE',
@@ -1139,19 +1291,19 @@
                 // the ends off the live table means widening arrays.iso.steps
                 // widens the slider instead of silently disagreeing with it.
                 { label: 'ISO',         cmd: 'set iso',           key: 'iso',           min: 100, max: 3200, step: 1,
-                  boundsFrom: 'iso', lockKey: 'iso_lock', lockLabel: 'ISO is locked' },
+                  boundsFrom: 'iso', lockKey: 'iso_lock', lockLabel: LOCK_LABELS.iso_lock },
                 // set_shutter_a_nom() snaps to the flicker-free angle table in
                 // normal mode and accepts verbatim in free/sync mode. Indexing
                 // the table is correct in BOTH: free stepping rebuilds it as a
                 // fine continuous grid, which the setter then takes verbatim.
                 { label: 'SHUTTER NOM', cmd: 'set shutter a nom', key: 'shutter_a_nom', steps: 'shutter_a', dp: 1,
-                  lockKey: 'shutter_a_nom_lock', lockLabel: 'Shutter angle is locked' },
+                  lockKey: 'shutter_a_nom_lock', lockLabel: LOCK_LABELS.shutter_a_nom_lock },
                 // set_fps() snaps into fps_steps_dynamic. Its setter can also
                 // trigger a sensor-mode change and block for up to two seconds
                 // inside the request, so this one gets a slower throttle and
                 // stops sending while a resolution switch is in flight.
                 { label: 'FPS',         cmd: 'set fps',           key: 'fps',           steps: 'fps',
-                  lockKey: 'fps_lock', lockLabel: 'Frame rate is locked',
+                  lockKey: 'fps_lock', lockLabel: LOCK_LABELS.fps_lock,
                   busyKey: 'resolution_switching', throttle: 600 },
                 // set_wb() snaps to wb_steps unconditionally, in every mode.
                 { label: 'WB',          cmd: 'set wb',            key: 'wb',            steps: 'wb' },
@@ -1418,6 +1570,10 @@
             const rows = xpRow('xp-sliders');
             group.sliders.forEach((s) => rows.appendChild(buildSlider(s)));
             const wrap = xpGroup(group.title, rows);
+            // Full-width row: see .xp-group.xp-wide -- slider track length is
+            // the control's resolution. Set here rather than with :has(),
+            // which needs Safari 15.4 and this page targets older iOS.
+            wrap.classList.add('xp-wide');
             if (group.visibleKey) { xpConditionalGroups.push({ el: wrap, key: group.visibleKey }); }
             return wrap;
         });
@@ -1487,6 +1643,15 @@
             xpGroup('ACTIONS', actions)
         );
         xpBuilt = true;
+    }
+
+    // Mark the drawer while content sits below the fold, so CSS can fade the
+    // last rows. Columns fit everything on a desktop, but not at 800x480 or a
+    // landscape phone, and an overlay scrollbar says nothing.
+    function noteExperimentOverflow() {
+        const panel = $('experiment');
+        panel.classList.toggle('more-below',
+            panel.scrollHeight - panel.clientHeight - panel.scrollTop > 4);
     }
 
     function renderExperiment() {
@@ -1624,7 +1789,59 @@
         renderPreview();
         renderSelectors();
         renderExperiment();
+        scheduleFit();
     }
+
+    // ── W1+W2: shrink-to-fit rails ───────────────────────────────────────
+    // Operator ruling (2026-09-01, binding): the rails stay left and right at
+    // every viewport, including portrait phone. The layout never reflows or
+    // restacks -- it shrinks. See the .rail rule above for the CSS half.
+    //
+    // Each rail may take at most 8.5% of the viewport width (W1). At 375 that
+    // is 31.9px against a 38px natural box -> 0.839, landing --box-size just
+    // above its 31px floor. Inert above 447px of viewport width
+    // (447 * 0.085 == 38), so no laptop/desktop viewport is affected.
+    const RAIL_WIDTH_SHARE = 0.085;
+
+    let fitPending = false;
+    function fitRails() {
+        fitPending = false;
+        ['rail-left', 'rail-right'].forEach((id) => {
+            const el = $(id);
+            if (!el || !el.isConnected || !el.clientHeight) { return; }
+            el.classList.remove('fitted');
+            el.style.setProperty('--fit', '1');          // measure at natural size
+            const natural  = el.scrollHeight, avail = el.clientHeight;
+            const naturalW = el.getBoundingClientRect().width;
+            const fitH = Math.min(1, avail / natural);                                   // W2, height
+            const fitW = Math.min(1, (window.innerWidth * RAIL_WIDTH_SHARE) / naturalW); // W1, width
+            const fit  = Math.min(fitH, fitW);
+            if (fit < 1) { el.classList.add('fitted'); }
+            el.style.setProperty('--fit', fit.toFixed(4));
+            // The max() floors in the .rail rule can stop the shrink short of
+            // avail -- say so out loud via the fade fallback (CSS above).
+            el.classList.toggle('clipped', el.scrollHeight - el.clientHeight > 1);
+            updateRailFade(el);
+        });
+    }
+    const scheduleFit = () => { if (!fitPending) { fitPending = true; requestAnimationFrame(fitRails); } };
+
+    function updateRailFade(el) {
+        el.classList.toggle('more-above', el.scrollTop > 0);
+        el.classList.toggle('more-below', el.scrollTop + el.clientHeight < el.scrollHeight - 1);
+    }
+    ['rail-left', 'rail-right'].forEach((id) => {
+        const el = $(id);
+        if (el) { el.addEventListener('scroll', () => updateRailFade(el), { passive: true }); }
+    });
+
+    // Observe #stage, not the rails: writing --fit changes a rail's own
+    // width, which would re-trigger a ResizeObserver on the rail itself.
+    // #stage's border box is fixed by the grid and only its columns
+    // redistribute, so this cannot loop. #stage's height also changes when
+    // the EXPERIMENT drawer opens, with no window resize -- exactly the case
+    // a media query cannot see.
+    if (window.ResizeObserver) { new ResizeObserver(scheduleFit).observe($('stage')); }
 
     // ── push: server → browser only (module/app/main/events.py) ────────
     const socket = io();
@@ -1742,7 +1959,22 @@
         img._reloadTimer = setTimeout(() => {
             img._reloadTimer = null;
             if (img.classList.contains('hidden')) { return; }
-            img.src = img.dataset.streamBase + '?reload=' + Date.now();
+            // NO query string. cinepi-raw's MJPEG server matches the raw
+            // request-target against the one topic it publishes ("/stream"):
+            // nadjieb mjpeg_streamer.hpp reads the target with
+            // `getline(iss, target_, ' ')`, so the query is part of it, and
+            // pathExists() is an exact map lookup -- "/stream?reload=1756..."
+            // misses and the server answers 404 and closes. Every recovery
+            // path here funnels through this function, so a cache-buster did
+            // not just fail to help, it replaced a working MJPEG connection
+            // with a permanent 404 (cinepi-raw deliberately keeps the listener
+            // alive across a camera reconfigure, so the old connection would
+            // have survived on its own).
+            //
+            // Dropping src first is what makes the browser re-request an
+            // identical URL -- which is the reason the cache-buster was there.
+            img.removeAttribute('src');
+            img.src = img.dataset.streamBase;
         }, delay);
     }
     function reloadStreams() {
@@ -1777,11 +2009,32 @@
     }, 4000);
 
     // ── bindings ──────────────────────────────────────────────────────
-    $('s-iso').addEventListener('change', (e) => cmd('set iso ' + e.target.value));
-    $('s-shutter').addEventListener('change', (e) => cmd('set shutter a ' + e.target.value));
-    $('s-fps').addEventListener('change', (e) => cmd('set fps ' + e.target.value));
-    $('s-wb').addEventListener('change', (e) => cmd('set wb ' + e.target.value));
-    $('s-res').addEventListener('change', (e) => cmd('set resolution ' + e.target.value));
+    // A locked parameter's setter drops the write and still answers 200
+    // (cinepi_controller.set_fps / set_iso), so the only feedback today is
+    // _confirm_or_ok's generic "requested X, live value is Y" -- which never
+    // says "locked". SHUTTER is worse: the top row sends `set shutter a`,
+    // which never reads shutter_a_nom_lock, so the pill lies.
+    const TOP_LOCKS = {
+        's-iso':     { key: 'iso_lock',           label: LOCK_LABELS.iso_lock },
+        's-shutter': { key: 'shutter_a_nom_lock', label: LOCK_LABELS.shutter_a_nom_lock },
+        's-fps':     { key: 'fps_lock',           label: LOCK_LABELS.fps_lock },
+    };
+    function bindTopSelect(id, prefix) {
+        $(id).addEventListener('change', (e) => {
+            const guard = TOP_LOCKS[id];
+            if (guard && truthy(V[guard.key])) {
+                toast(guard.label);
+                renderSelectors();
+                return;
+            }
+            cmd(prefix + e.target.value);
+        });
+    }
+    bindTopSelect('s-iso',     'set iso ');
+    bindTopSelect('s-shutter', 'set shutter a ');
+    bindTopSelect('s-fps',     'set fps ');
+    bindTopSelect('s-wb',      'set wb ');
+    bindTopSelect('s-res',     'set resolution ');
 
     // Tap-to-record, gated on the camera. The CAMERA NOT FOUND overlay sits
     // inside #preview-frame with pointer-events: none, so a tap anywhere on
@@ -1806,6 +2059,7 @@
         const open = panel.classList.toggle('hidden');
         $('btn-experiment').classList.toggle('on', !open);
         render();
+        noteExperimentOverflow();
     });
 
     // The drawer changes the preview's available box without a window
@@ -1815,22 +2069,45 @@
     // child, so this cannot feed itself.
     if (window.ResizeObserver) {
         new ResizeObserver(sizePreview).observe($('preview-wrap'));
+        // Same reasoning for the drawer's own overflow flag: a rotate or a
+        // group appearing/disappearing changes it with no window resize.
+        // mask-image changes no layout, so this cannot feed itself.
+        new ResizeObserver(noteExperimentOverflow).observe($('experiment'));
     }
+    $('experiment').addEventListener('scroll', noteExperimentOverflow, { passive: true });
 
+    // iPhone Safari exposes no element-fullscreen API at all; iPad does
+    // (webkit-prefixed since iOS 12, unprefixed since 16.4). Probe the methods,
+    // never the UA, so iPad keeps the button and a future iPhone gains it. The
+    // preview is an MJPEG <img>, not a <video>, so there is no
+    // HTMLVideoElement.webkitEnterFullscreen() fallback here. Calling a missing
+    // method threw a TypeError inside the click listener that nothing caught --
+    // and button:active still flashed, so the control looked like it worked.
     const fsBtn = $('btn-fullscreen');
-    function toggleFullScreen() {
-        const el = document.documentElement;
-        const active = document.fullscreenElement || document.webkitFullscreenElement;
-        if (!active) {
-            (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
-        } else {
-            (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-        }
+    const fsRoot = document.documentElement;
+    const fsRequest = fsRoot.requestFullscreen || fsRoot.webkitRequestFullscreen;
+    const fsExit = document.exitFullscreen || document.webkitExitFullscreen;
+    const fsActive = () => document.fullscreenElement || document.webkitFullscreenElement;
+
+    show(fsBtn, Boolean(fsRequest && fsExit));
+
+    if (fsRequest && fsExit) {
+        fsBtn.addEventListener('click', () => {
+            // Both return a promise that rejects on an untrusted gesture or a
+            // blocking permissions policy. webkitRequestFullscreen returns
+            // undefined, hence the guard.
+            const p = fsActive() ? fsExit.call(document) : fsRequest.call(fsRoot);
+            if (p && p.catch) { p.catch((err) => toast('fullscreen → ' + err.message)); }
+        });
+        // Safari and iPadOS below 16.4 fire only the prefixed event and set only
+        // document.webkitFullscreenElement, so one name and one property left
+        // the label permanently stuck on 'FULLSCREEN' there.
+        ['fullscreenchange', 'webkitfullscreenchange'].forEach((ev) => {
+            document.addEventListener(ev, () => {
+                fsBtn.textContent = fsActive() ? 'EXIT FULLSCREEN' : 'FULLSCREEN';
+            });
+        });
     }
-    fsBtn.addEventListener('click', toggleFullScreen);
-    document.addEventListener('fullscreenchange', () => {
-        fsBtn.textContent = document.fullscreenElement ? 'EXIT FULLSCREEN' : 'FULLSCREEN';
-    });
 
     render();
 }());

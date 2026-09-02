@@ -116,6 +116,7 @@
      bare level). One author rule restores the attribute's meaning for all of
      them; !important is what makes it beat the class rules. */
   [hidden]{ display:none !important; }
+  .cliprow.is-busy{ opacity:.5; pointer-events:none; }
   html,body{ height:auto; }
   body{
     margin:0;
@@ -4129,11 +4130,25 @@
       btn.addEventListener('click', function(){
         var name = btn.closest('.cliprow').getAttribute('data-name');
         showConfirm('Delete take "' + name + '"? This cannot be undone.', function(){
+          /* rmtree is thousands of unlinks and refreshRawPane() behind it
+             stats every file on the card, so the row stays on screen well
+             after the take is gone. Without this the operator taps twice and
+             the second one used to report a failure for a delete that
+             worked. */
+          if (btn.disabled) { return; }
+          btn.disabled = true;
+          var row = btn.closest('.cliprow');
+          if (row) { row.classList.add('is-busy'); }
           fetch('/settings-editor/api/raw/takes/' + encodeURIComponent(name), { method: 'DELETE' })
             .then(function(r){ return r.json(); }).then(function(res){
               showToast(res.ok ? 'Deleted ' + name : 'Delete failed: ' + res.message);
-              if (res.ok) refreshRawPane();
-            }).catch(function(err){ showToast('Delete failed: ' + err); });
+              if (res.ok) { refreshRawPane(); }
+              else { btn.disabled = false; if (row) { row.classList.remove('is-busy'); } }
+            }).catch(function(err){
+              showToast('Delete failed: ' + err);
+              btn.disabled = false;
+              if (row) { row.classList.remove('is-busy'); }
+            });
         }, null, { title: 'Delete this take?', okLabel: 'Delete', danger: true });
       });
     });
